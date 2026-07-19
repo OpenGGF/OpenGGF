@@ -8,6 +8,8 @@
 
 **Tech Stack:** Java 21 + JUnit 5 (Jupiter only). No lua changes.
 
+**Load-bearing discovery (round-1 review):** `PlaybackDebugManager` is hard-gated to `GameMode.LEVEL` — `isDriving` rejects `BONUS_STAGE` (`PlaybackDebugManager.java:139-141`) and `GameLoop.updateBonusStageMode` never calls `onLevelFrameAdvanced()`/`shouldSkipCurrentGameplayTick()` (only `updateLevelMode` does, `GameLoop.java:1375,1417`), so without Task 2's bridge the bonus interior gets NO recorded input and a FROZEN cursor, desyncing everything after the first bonus entry. Task 2 is spec engine-side addition #8.
+
 ## Global Constraints
 
 - **Spec:** `docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md`. Plan (c) scope: peeks (addition #1) + chained driver + boundary assertions, gumball/pachinko chain first. SS chaining, slots, visual (plan d) are out of scope.
@@ -92,7 +94,7 @@ class TestLevelTransitionCoordinatorPeeks {
     }
 ```
 
-Also fix `Sonic3kBonusStageCoordinator`'s class javadoc ring-range examples to the verified mapping (20–34 → SLOT_MACHINE, 35–49 → GLOWING_SPHERE, 50–64 → GUMBALL; remainder mapping 0/1/2 unchanged) — deferred item from plan (b)'s review; the remainder→type code itself is correct, only prose examples change.
+Also ADD ring-range prose examples to `Sonic3kBonusStageCoordinator`'s class javadoc (verified: the existing javadoc lists only the correct remainder→type mapping and has NO wrong ranges — this adds the concrete ranges as documentation): 20–34 → SLOT_MACHINE, 35–49 → GLOWING_SPHERE, 50–64 → GUMBALL.
 
 - [ ] **Step 4:** Test green.
 - [ ] **Step 5:** CHANGELOG line `- Trace replay: non-consuming transition peeks for chained run replay.` + commit:
@@ -110,7 +112,42 @@ Skills: n/a"
 
 ---
 
-### Task 2: `TraceRunReplayWalker` (test-tree chained driver)
+### Task 2: BONUS_STAGE playback bridge (spec addition #8)
+
+**Files:**
+- Modify: `src/main/java/com/openggf/debug/playback/PlaybackDebugManager.java` (`isDriving`, ~line 139)
+- Modify: `src/main/java/com/openggf/GameLoop.java` (`updateBonusStageMode`, ~line 1488)
+- Test: `src/test/java/com/openggf/TestBonusStagePlaybackBridge.java` (new)
+
+**Interfaces:**
+- Consumes: `PlaybackDebugManager.isDriving(GameMode)` (`:139-141`, currently `mode == GameMode.LEVEL`), the two playback calls in `updateLevelMode` (`GameLoop.java:1375` `shouldSkipCurrentGameplayTick()` gate, `:1417` `onLevelFrameAdvanced()`), `getCursorFrame()` (`:351`), `startSession(movie, int)` (`:226`).
+- Produces: `isDriving` returns true for `GameMode.LEVEL` OR `GameMode.BONUS_STAGE` when a session is active; `updateBonusStageMode` mirrors `updateLevelMode`'s two calls at the equivalent points (skip-gate before the gameplay tick, `onLevelFrameAdvanced()` after a completed tick). With no active playback session both are no-ops — normal play unchanged.
+
+- [ ] **Step 1: Failing test.** Read `TestGameLoopSpecialStageSkipGate` first for the reflection idioms (GameLoop construction, `setField`, invoking private mode-update methods) and `PlaybackDebugManager`'s session API. The test (ROM-free) builds a `GameLoop`, installs a `PlaybackDebugManager` session over a small synthetic `Bk2Movie` (reuse however `TestGameLoopSpecialStageSkipGate` or `PlaybackDebugManager`'s own tests fabricate movies — if a helper exists use it; else construct via `Bk2MovieLoader` on a synthetic bk2 from test resources), forces `currentGameMode = GameMode.BONUS_STAGE` via reflection, invokes `updateBonusStageMode()` twice, and asserts `getCursorFrame()` advanced by 2. A second test asserts `isDriving(GameMode.BONUS_STAGE)` is true with an active session and false without.
+
+- [ ] **Step 2:** COMPILE/assert-fail run, then implement:
+
+In `PlaybackDebugManager.isDriving`: `return sessionActive() && (mode == GameMode.LEVEL || mode == GameMode.BONUS_STAGE);` (match the real current-body shape — read it; keep whatever session-activity predicate it already uses).
+
+In `GameLoop.updateBonusStageMode`, mirror `updateLevelMode`'s two call sites at the equivalent positions relative to `LevelFrameStep.execute` (`:1505`): the skip-gate check before the gameplay tick (advance cursor/bookkeeping without ticking on a lag row) and `onLevelFrameAdvanced()` after a completed tick. Copy the exact call pattern from `updateLevelMode:1375,1417` including any surrounding null-guard.
+
+- [ ] **Step 3:** Tests green; also re-run `mvn "-Dtest=com.openggf.game.sonic3k.TestPachinkoTitleCardIntegration" test` (uses `updateBonusStageMode` with NO session — proves the no-op path unchanged).
+- [ ] **Step 4:** CHANGELOG line `- Trace replay: BONUS_STAGE playback bridge (cursor/input feed during bonus interiors).` + commit:
+
+```bash
+git add src/main/java/com/openggf/debug/playback/PlaybackDebugManager.java src/main/java/com/openggf/GameLoop.java src/test/java/com/openggf/TestBonusStagePlaybackBridge.java CHANGELOG.md
+git commit -m "feat(trace): BONUS_STAGE playback bridge for chained replay" -m "Changelog: updated
+Guide: n/a
+Known-Discrepancies: n/a
+S3K-Known-Discrepancies: n/a
+Agent-Docs: n/a
+Configuration-Docs: n/a
+Skills: n/a"
+```
+
+---
+
+### Task 3: `TraceRunReplayWalker` (test-tree chained driver)
 
 **Files:**
 - Create: `src/test/java/com/openggf/tests/trace/runs/TraceRunReplayWalker.java`
@@ -193,7 +230,7 @@ class TestTraceRunReplayWalkerControlFlow {
 ```
 
 - [ ] **Step 2:** COMPILE FAILURE run, then implement the walker exactly per the Produces contract. `plan(...)` pairing rule: for each transition `t`, it is `plans[t.fromSegment()].exitBoundary` and `plans[t.toSegment()].entryBoundary`; a segment index not named by any transition keeps null (plain level→level boundaries carry no record — plan (a) invariant).
-- [ ] **Step 3:** Tests green. Also fix the plan-(a) synthetic fixture's selector inconsistency while here (deferred item): in `run_aiz_gumball_3seg`, change `rings_before` 25 → 55 in `run_manifest.json`, the `seg00_aiz` frame-1 rings hex `0019` → `0037`, and `seg01_gumball` metadata/notes if they echo 25 (keep `rings_after` 40 → set 70 / hex `0046` in seg02 rows for arithmetic plausibility: 55 at entry, 70 after) — then re-run `TestTraceRunSyntheticFixture` + this class green.
+- [ ] **Step 3:** Tests green. Also fix the plan-(a) synthetic fixture's selector inconsistency while here (deferred item): in `run_aiz_gumball_3seg`, change manifest `rings_before` 25 → 55 AND manifest `rings_after` 40 → 70; `seg00_aiz/physics.csv` rings column is currently `0000` on both rows — set it to `0037` (55); `seg02_aiz` rows' rings `0028` → `0046` (70). (Verified: `TestTraceRunSyntheticFixture` asserts only frame counts and offset non-overlap, never ring values, so nothing else changes.) Note: the synthetic manifest's bonus-entry `mode_change_bk2_frame` 1750 is stamped PRE-fade (before seg01's offset 1900), whereas the real recorder stamps the ARM frame — both directions sit inside the 600-frame window; leave 1750 as-is but keep this asymmetry note for when real recordings land. Re-run `TestTraceRunSyntheticFixture` + this class green.
 - [ ] **Step 4:** Commit (test-only + fixture):
 
 ```bash
@@ -209,7 +246,7 @@ Skills: n/a"
 
 ---
 
-### Task 3: Chain integration test (skip-if-missing)
+### Task 4: Chain integration test (skip-if-missing)
 
 **Files:**
 - Create: `src/test/java/com/openggf/tests/trace/runs/TestS3kBonusRoundTripChain.java`
@@ -223,7 +260,7 @@ Skills: n/a"
 2. Boot: `TraceReplayDriver`-style session for segment 0 (`zone/act` from the segment), BK2 = the run's `source_bk2`, playback cursor started at segment 0's `bk2_frame_offset`; attach a `LiveTraceComparator` bound to segment 0's `TraceData`.
 3. Step `loop.step()` while comparing; from `bk2Frame >= exitBoundary.modeChangeBk2Frame() - BOUNDARY_WINDOW_FRAMES`, poll the coordinator peek each frame via `TraceRunReplayWalker.awaitBoundary` with real `EngineHooks` (coordinator reached via `GameServices.level().getTransitions()`; current BK2 frame via the playback manager's cursor accessor — read `PlaybackDebugManager` for the exact getter). Assert `observed`.
 4. Detach the comparator (`playback.setFrameObserver(null)`), keep stepping uncompared through fade → TITLE_CARD → BONUS_STAGE; when mode == BONUS_STAGE and `bk2Frame >= segment1.bk2FrameOffset()`, attach a fresh comparator bound to segment 1's `TraceData`. Continue comparing through the bonus segment.
-5. At the bonus exit boundary: detach, step until mode returns to LEVEL (stage_exit await), then assert boundary state per the spec split: `BonusStageState`-derived engine state — rings (`GameServices.level().getLevelGamestate().getRings()`) vs the transition's `rings_after`; star-post restore via the checkpoint coordinator's bonus-return index; `GameStateManager.getEmeraldCount()` vs `emeralds_after` when present. (Extra-life flags: deferred per spec.)
+5. At the bonus exit boundary: detach, step until mode returns to LEVEL (stage_exit await), then assert boundary state per the spec split: rings (`GameServices.level().getLevelGamestate().getRings()`) vs the transition's `rings_after`; star-post restore via `LevelTransitionCoordinator.getBonusStageReturnCheckpointIndex()` (`:180`) vs the transition's `last_star_post_hit`; `GameStateManager.getEmeraldCount()` vs `emeralds_after` when present. (Extra-life flags: deferred per spec.)
 6. Attach segment 2's comparator at its offset; compare to end of its frames; assert both comparators' divergence reports are emitted to `target/trace-reports/` with run-segment-suffixed names (follow `LiveTraceComparator`'s existing report emission — read how the visual path finalizes reports; if the comparator exposes a summary/report accessor, write the JSON the same way `AbstractTraceReplayTest.writeReport` does, suffixed `_seg0/_seg1/_seg2`).
 7. The test is red-allowed on comparison content (MVP posture) but MUST fail hard on: boundary not observed, mode never reaching BONUS_STAGE/LEVEL, or manifest validation errors. Use explicit assertions for those.
 
@@ -232,7 +269,7 @@ Skills: n/a"
 
 ---
 
-### Task 4: Gate + docs
+### Task 5: Gate + docs
 
 - [ ] **Step 1:** Full suite (`mvn test`, sandbox off, detached with a log monitor if >10 min): no NEW failures vs baseline; expect +2 skips (chain tests). Watch specifically for `TestBuildToolingGuard`/`TestTraceReplayInvariantGuard`/`TestArchitecturalSourceGuard` reacting to the new files; register per convention with justification if they fire (never weaken).
 - [ ] **Step 2:** `docs/TRACE_FRONTIER_LOG.md` entry: plan-(c) chained driver landed; chain tests skip pending the same two recordings (named); walker control flow green on synthetic fixture; peeks landed.

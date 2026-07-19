@@ -391,6 +391,17 @@ no gameplay behavior change:
    zone via `withZoneAndAct`). Disclosed in the per-segment harness section;
    enumerated here because this list is the authoritative inventory of
    required production changes.
+8. **BONUS_STAGE playback bridge** (discovered in plan-(c) review,
+   2026-07-19) — `PlaybackDebugManager` is hard-gated to `GameMode.LEVEL`:
+   `isDriving` rejects `BONUS_STAGE`, and `GameLoop.updateBonusStageMode`
+   never calls `onLevelFrameAdvanced()`/`shouldSkipCurrentGameplayTick()`,
+   so during a bonus interior the BK2 forced-input feed stops and the
+   playback cursor freezes — the chained driver would silently desync at
+   the first bonus segment and every segment after it. Fix: widen
+   `isDriving` to accept `BONUS_STAGE` and mirror `updateLevelMode`'s two
+   playback calls in `updateBonusStageMode`. Replay/observability-only: with
+   no active playback session both paths are no-ops in normal play. Lives in
+   plan (c).
 
 ## Component 3 — Visual test mode
 
