@@ -137,6 +137,22 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
             // ground_vel=x_vel carry-over (trace f430: expected g_speed=-0x18,
             // engine produced 0x0000 by adding +0x18 on top of the -0x18 already
             // set by the landing).
+            //
+            // The same newly-locked branch writes anim(a1) as a WORD:
+            // `move.w #2<<8,anim(a1)` (sonic3k.asm:96422). anim/prev_anim are the
+            // adjacent bytes $1C/$1D, so this stores anim=2 (Roll) AND prev_anim=0.
+            // Because prev_anim now mismatches anim, the next Animate_Knuckles pass
+            // (loc_17D34-17D40, sonic3k.asm:33034-33037) resets anim_frame=0 and
+            // anim_frame_timer=0 -- the ball's roll spin restarts from the first
+            // AniKnuckles02 frame the frame after the catch. Without this the
+            // engine's roll animation kept advancing from its airborne index and
+            // stayed one rotation-cycle step (two script entries) ahead of the ROM
+            // for the whole flipper ride (trace f435+: expected mapping_frame 0x96,
+            // engine produced 0x97, cascading through the entire spin cycle).
+            // forceAnimationRestart() invalidates the tracked prev_anim (lastAnimationId)
+            // so the next update restarts the script, matching the one-frame-delayed
+            // ROM reset (the flipper object runs after the player's own Animate pass).
+            player.forceAnimationRestart();
             return;
         }
         if (player.isJumpJustPressed()) {
