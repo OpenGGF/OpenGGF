@@ -433,6 +433,9 @@ public final class TraceReplaySessionBootstrap {
         if ("pachinko".equals(token)) {
             return BonusStageType.GLOWING_SPHERE;
         }
+        if ("slots".equals(token)) {
+            return BonusStageType.SLOT_MACHINE;
+        }
         throw new IllegalStateException(
                 "Unsupported bonus_stage_type for headless replay: " + token);
     }
@@ -445,8 +448,12 @@ public final class TraceReplaySessionBootstrap {
      * mode, fires onEnter with a synthetic BonusStageState (frame-0 ring
      * count from the trace; interior replay never exits, so return fields
      * are zero), applies the bonus HUD layout and ring count, un-hides the
-     * player, and injects the pachinko bootstrap object when the type needs
-     * one. Returns false untouched for any other trace profile.
+     * player, injects the pachinko bootstrap object when the type needs
+     * one, and fires deferred-setup completion to initialize type-specific
+     * runtime state (a no-op for gumball/pachinko; builds the slot runtime
+     * for SLOT_MACHINE). Mirrors the live sequence THROUGH deferred setup
+     * (spec engine addition #4). Returns false untouched for any other trace
+     * profile.
      */
     public static boolean applyBonusStageEntry(TraceData trace) {
         TraceMetadata meta = trace.metadata();
@@ -495,6 +502,7 @@ public final class TraceReplaySessionBootstrap {
                         new PachinkoEnergyTrapObjectInstance(bootstrapSpawn));
             }
         }
+        provider.onDeferredSetupComplete();
         return true;
     }
 

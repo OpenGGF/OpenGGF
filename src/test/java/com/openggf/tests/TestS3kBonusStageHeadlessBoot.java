@@ -8,6 +8,8 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
+import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
@@ -21,22 +23,25 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Headless ROM-backed boot smoke coverage for the two S3K bonus-stage zones
- * that support the multi-stage trace-run bonus/pachinko route (zone 0x13
- * Gumball, zone 0x14 Glowing Spheres / Pachinko).
+ * Headless ROM-backed boot smoke coverage for the three S3K bonus-stage
+ * zones that support the multi-stage trace-run bonus route (zone 0x13
+ * Gumball, zone 0x14 Glowing Spheres / Pachinko, zone 0x15 Slot Machine).
  *
  * <p>No trace exists for these zones yet, so this test does not fabricate a
  * {@code TraceData}. Instead it exercises the same production seam that
  * {@link com.openggf.trace.replay.TraceReplaySessionBootstrap#applyBonusStageEntry}
  * performs -- provider resolve, {@code onEnter}, adapter registration, HUD
- * layout, ring seed, player unhide, and the guarded pachinko bootstrap
- * injection via {@link GameLoop#resolveBonusStageBootstrapSpawn} -- directly
- * against a headless fixture, in the same order the production helper uses.
- * This validates whether the zones boot and step headlessly at all; it is
- * the discovery task for that question.
+ * layout, ring seed, player unhide, the guarded pachinko bootstrap injection
+ * via {@link GameLoop#resolveBonusStageBootstrapSpawn}, and
+ * {@code onDeferredSetupComplete} -- directly against a headless fixture, in
+ * the same order the production helper uses. This validates whether the
+ * zones boot and step headlessly at all; it is the discovery task for that
+ * question.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kBonusStageHeadlessBoot {
@@ -95,14 +100,48 @@ public class TestS3kBonusStageHeadlessBoot {
         assertPlayerWithinLevelBounds(sprite);
     }
 
+    @Test
+    public void slotsZoneBootsHeadlesslyWithRuntime() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_SLOT_MACHINE, ACT_1)
+                .build();
+        AbstractPlayableSprite originalSprite = fixture.sprite();
+
+        performBonusStageEntry(BonusStageType.SLOT_MACHINE, FRAME0_RINGS);
+
+        BonusStageProvider provider = GameServices.module().getBonusStageProvider();
+        assertEquals(BonusStageType.SLOT_MACHINE,
+                ((Sonic3kBonusStageCoordinator) provider).getActiveType(),
+                "Slots provider must be the active bonus stage coordinator after entry");
+
+        S3kSlotBonusStageRuntime slotRuntime =
+                ((Sonic3kBonusStageCoordinator) provider).activeSlotRuntime();
+        assertNotNull(slotRuntime, "Slot runtime must be created by onDeferredSetupComplete");
+        assertTrue(slotRuntime.isInitialized(), "Slot runtime must report initialized after bootstrap");
+
+        AbstractPlayableSprite focusedSprite = GameServices.camera().getFocusedSprite();
+        assertNotSame(originalSprite, focusedSprite,
+                "Camera focus must have swapped to the slots player, proving the sprite swap happened");
+
+        fixture.stepIdleFrames(IDLE_FRAMES);
+
+        assertFalse(focusedSprite.getDead(),
+                "Camera-focused (swapped) player should not have entered the death state after 60 idle frames"
+                        + " in the slots bonus stage");
+        assertPlayerWithinLevelBounds(focusedSprite);
+    }
+
     /**
      * Mirrors {@code TraceReplaySessionBootstrap.applyBonusStageEntry}'s
      * production ordering exactly (spec 2026-07-18, engine-side addition
      * #7): setActiveBonusStageProvider -> onEnter -> registerBonusStageAdapter
      * -> rings via LevelState -> HUD layout -> player unhide loop -> guarded
-     * pachinko bootstrap injection. This test performs the same steps
-     * directly against the headless fixture rather than through a
-     * {@code TraceData}, since no trace exists yet for these zones.
+     * pachinko bootstrap injection -> onDeferredSetupComplete. This test
+     * performs the same steps directly against the headless fixture rather
+     * than through a {@code TraceData}, since no trace exists yet for these
+     * zones. {@code onDeferredSetupComplete()} is a no-op for gumball/pachinko
+     * (see {@code AbstractBonusStageCoordinator}'s default) and creates the
+     * slot runtime + swaps the camera-focused player for slots.
      */
     private void performBonusStageEntry(BonusStageType type, int frame0Rings) {
         BonusStageProvider provider = GameServices.module().getBonusStageProvider();
@@ -131,6 +170,7 @@ public class TestS3kBonusStageHeadlessBoot {
                 objectManager.addDynamicObject(new PachinkoEnergyTrapObjectInstance(bootstrapSpawn));
             }
         }
+        provider.onDeferredSetupComplete();
     }
 
     /**

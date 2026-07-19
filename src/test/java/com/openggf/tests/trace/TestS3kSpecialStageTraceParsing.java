@@ -10,8 +10,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
-import com.openggf.trace.S3kSpecialStageTraceData;
-import com.openggf.trace.S3kSpecialStageTraceFrame;
+import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData;
+import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceFrame;
 import com.openggf.trace.TraceEvent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

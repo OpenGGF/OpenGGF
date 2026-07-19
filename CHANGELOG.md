@@ -3,6 +3,8 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Trace framework: S3K special-stage trace classes moved under the game package (naming rule).
+- Trace replay: slot-machine bonus segments accepted (deferred-setup seam wired).
 - Trace framework: s3k_special_stage trace parser.
 - S3K special stage: read-only comparison snapshot for trace replay.
 - Trace replay: per-game special-stage launch config helper (dormant S3K fresh-load seam).

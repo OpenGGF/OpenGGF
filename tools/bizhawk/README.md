@@ -179,6 +179,94 @@ The test classes `TestS3kGumballBonusTraceReplay` and `TestS3kPachinkoBonusTrace
 automatically activate (skip-if-missing) once their respective `bonus_gumball/` and
 `bonus_pachinko/` directories exist in test resources.
 
+## Recording S3K Slot-Machine Round-Trip Traces
+
+A **slot-machine round-trip trace** captures a single level playthrough that includes a
+star-post bonus zone (slot machine). The trace includes both the level segment (up to
+star-post entry) and the slot-machine bonus segment (from entry to exit and return to the
+level). These are recorded as separate segment directories in a single trace run.
+
+**Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
+
+1. Start a new movie from power-on with `s3k.gen`.
+2. Play AIZ Act 1 through to a star post. Collect exactly:
+   - **20–34 rings** at the star post (selector formula `((rings-20)/15)%3` yields remainder 0),
+     referenced at ROM `sonic3k.asm:61891-61920` (SLOT_MACHINE assignment at 61897).
+   
+3. Approach and enter the star circle at the star post.
+4. Play through the slot-machine bonus stage to its conclusion (inserting tokens, collecting
+   rings, reaching exit or losing all tokens).
+5. Receive the ring bonus, return to the level, and play for 3–5 additional seconds (this
+   guarantees the re-entry segment `aiz_2` in the trace output).
+6. Stop the movie and save as `s3k-aiz-slots.bk2`.
+
+**Recording Notes:** The slot-machine bonus suppresses sidekicks at runtime (only Sonic plays),
+and the sidekick comparator columns bypass the sprite seam for slot sessions. Record **SONIC-SOLO**
+exclusively — a team recording (Sonic + Tails) adds pure noise to the comparator output.
+
+**Recorder Invocation:**
+
+Run the complete-run recorder over your movie file:
+
+```bat
+set OGGF_TRACE_OUTPUT_DIR=C:\tmp\s3k_slots_trace
+set OGGF_TRACE_RUN_ID=s3k-aiz-slots-roundtrip
+
+tools\bizhawk\run_bizhawk_lua.bat ^
+  tools\bizhawk\s3k_complete_run_recorder.lua ^
+  s3k-aiz-slots.bk2 ^
+  s3k.gen
+```
+
+The bonus round-trip detour already triggers manifest emission (per plan (a)); the
+`OGGF_TRACE_RUN_ID` env var ensures a stable `run_id` is recorded in the manifest, used for
+organizing the commit layout under `src/test/resources/traces/s3k/runs/<run_id>/`. The manifest
+records all segment transitions, including the star-post entry boundary and the bonus-exit
+return boundary.
+
+**Expected Output:**
+
+The output directory will contain:
+- `run_manifest.json` — indexed transitions for level→bonus and bonus→level boundaries.
+- `aiz/` — level segment (AIZ Act 1, frames 0 to star-post entry).
+- `slots/` — bonus segment with `trace_profile: "s3k_bonus_stage"` and `bonus_stage_type: "slots"`
+  in `metadata.json`. Both segments contain `physics.csv` and `aux_state.jsonl` (plain format;
+  gzip compression is applied at commit time).
+- `aiz_2/` — AIZ re-entry segment following the bonus return. Step 5 above guarantees this
+  segment will be present. Repeat segments are named with `_2`, `_3`, etc. to avoid
+  directory collisions.
+
+**Commit Layout:**
+
+Place the bonus segment in test resources:
+
+```
+src/test/resources/traces/s3k/bonus_slots/
+  ├── metadata.json
+  ├── physics.csv.gz
+  ├── aux_state.jsonl.gz
+  ├── s3k-aiz-slots.bk2           # or under _movies/ with source_bk2 field
+  └── ...
+```
+
+Also preserve the run directory and manifest (used by plan-(c) chain tests):
+
+```
+src/test/resources/traces/s3k/runs/s3k-aiz-slots-roundtrip/
+  ├── run_manifest.json
+  ├── aiz/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  └── slots/
+      ├── metadata.json
+      ├── physics.csv.gz
+      └── aux_state.jsonl.gz
+```
+
+The test class `TestS3kSlotsBonusTraceReplay` automatically activates (skip-if-missing) once
+the `bonus_slots/` directory exists in test resources.
+
 ## Recording S3K Blue-Spheres Round-Trip Traces
 
 A **blue-spheres round-trip trace** captures a single playthrough that includes entry into
