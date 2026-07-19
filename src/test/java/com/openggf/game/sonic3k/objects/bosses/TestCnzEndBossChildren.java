@@ -61,6 +61,24 @@ class TestCnzEndBossChildren {
     }
 
     @Test
+    void lowSpeedMagnetLandingRetainsVelocityForNextDrop() throws Exception {
+        CnzEndBossInstance boss = boss();
+        PlayableEntity player = playerAt(boss.getCentreX());
+        CnzEndBossMagnetChild magnet = magnet(boss, player);
+        field(magnet, "yVelocity").setInt(magnet, 0x70);
+        field(magnet, "ySubpixel").setInt(magnet, 0xA7);
+
+        magnet.resolveFloorContact(0);
+        magnet.reattachAtDescentBottom();
+        magnet.beginDrop();
+
+        assertEquals(0x70, magnet.yVelocityForTest(),
+                "loc_6E8D2, loc_6E920, and loc_6E87E do not clear y_vel");
+        assertEquals(0xA7, field(magnet, "ySubpixel").getInt(magnet),
+                "the same routine-only transitions preserve y_subpixel");
+    }
+
+    @Test
     void descentBottomSignalsImmediateMagnetReattach() throws Exception {
         CnzEndBossInstance boss = boss();
         boss.setServices(new StubObjectServices());

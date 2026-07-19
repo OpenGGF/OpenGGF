@@ -61,13 +61,11 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         centreX = boss.getCentreX();
         centreY = boss.getCentreY() + 0x14;
         xSubpixel = 0;
-        ySubpixel = 0;
         var nearest = services().playerQuery().nearestByRomX(
                 ObjectPlayerParticipationPolicy.NATIVE_P1_P2, centreX);
         PlayableEntity target = nearest.player();
         xVelocity = target != null && (short) (target.getCentreX() - centreX) > 0
                 ? 0x100 : -0x100;
-        yVelocity = 0;
         dropping = true;
         dropJustStarted = true;
         landed = false;
@@ -82,9 +80,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         centreX = boss.getCentreX();
         centreY = boss.getCentreY() + 0x14;
         xSubpixel = 0;
-        ySubpixel = 0;
         xVelocity = 0;
-        yVelocity = 0;
         frame = 4;
         resetAnimation();
     }
@@ -153,7 +149,6 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         if (yVelocity >= 0x80) {
             yVelocity = -(yVelocity >> 1);
         } else {
-            yVelocity = 0;
             landed = true;
         }
     }

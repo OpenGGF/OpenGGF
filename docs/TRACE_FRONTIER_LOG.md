@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ magnet retained fall state: physics f37926 -> f38610
+
+The second magnet drop began from the right integer coordinate but reached its
+low-speed floor latch several horizontal pixels late. ROM `loc_6E8D2` sets the
+landed routine and parent link without clearing `y_vel`; `loc_6E920` and the
+following `loc_6E87E` release also leave both the velocity and fractional Y
+word intact. The engine zeroed that state at landing, docking, and release, so
+every attack after the first restarted a different ballistic phase
+(`docs/skdisasm/sonic3k.asm:145999-146089`).
+
+The magnet now retains its low-speed landing velocity and `y_subpixel` across
+the routine-only dock/release transitions. A focused test covers both retained
+fields, and CNZ complete-run physics advances from f37926 `x` to f38610
+`camera_x`; animation remains at f30486 `tails_mapping_frame`. Sequential
+one-fork 4 GB full sweeps retain the established 45/58 physics and 44/58
+animation green counts, with the same non-CNZ frontiers and legacy standalone
+CNZ still at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ end-boss object-pass phase: physics f37421 -> f37926
 
 The next false boss rebound came from the second attack cycle running one
