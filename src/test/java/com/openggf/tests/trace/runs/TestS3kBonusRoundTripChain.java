@@ -211,18 +211,17 @@ class TestS3kBonusRoundTripChain {
                     "Ring carry-over after bonus stage exit for " + runDir);
         }
         if (entryTransition.lastStarPostHit() != null) {
-            // NOTE (finding for follow-up): LevelTransitionCoordinator clears
-            // bonusStageReturnCheckpointIndex back to -1 in
-            // clearBonusStageReturn(), called from GameLoop.doExitBonusStage's
-            // finally block immediately after loadZoneAndAct -- i.e. well
-            // before the title-card phase completes and mode returns to
-            // LEVEL. By the time this assertion runs (mode == LEVEL), this
-            // accessor is very likely already -1 rather than the restored
-            // star-post index. Implemented per the task brief's explicit
-            // contract; flagged in the task report for the star-post-restore
-            // source to be revisited (e.g. RespawnState/getCheckpointState()
-            // instead, which is what doExitBonusStage actually restores into).
-            int actualCheckpoint = GameServices.level().getTransitions().getBonusStageReturnCheckpointIndex();
+            // LevelTransitionCoordinator.bonusStageReturnCheckpointIndex is
+            // only a transient "this load is a bonus return" signal for
+            // onInitLevel() -- GameLoop.doExitBonusStage's finally block
+            // clears it via clearBonusStageReturn() immediately after
+            // loadZoneAndAct(), well before the title-card phase completes
+            // and mode returns to LEVEL, so it is already -1 by the time
+            // this assertion runs. The value that actually survives to this
+            // point is RespawnState.lastCheckpointIndex, restored by
+            // doExitBonusStage's cs.restoreFromSaved(...) call (confirmed by
+            // review trace of doExitBonusStage / clearBonusStageReturn).
+            int actualCheckpoint = GameServices.level().getCheckpointState().getLastCheckpointIndex();
             assertEquals(entryTransition.lastStarPostHit().intValue(), actualCheckpoint,
                     "Star-post restore after bonus stage exit for " + runDir);
         }
