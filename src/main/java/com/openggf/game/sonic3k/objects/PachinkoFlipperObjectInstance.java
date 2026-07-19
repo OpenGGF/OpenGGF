@@ -126,7 +126,16 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         boolean newlyLocked = lockedPlayer != player;
         lockPlayer(player);
         if (newlyLocked) {
-            applySurfaceAcceleration(player);
+            // ROM sub_49CFE (sonic3k.asm:96416-96434): on a NEW lock (a3 byte was
+            // 0), the routine locks control, sets roll radii/Status_Roll, and
+            // conditionally lifts y_pos, then returns via locret_49D3A WITHOUT
+            // ever touching ground_vel(a1). Acceleration (loc_49D54,
+            // sonic3k.asm:96449-96457) is only reachable through the ALREADY-locked
+            // branch (loc_49D3C, taken when (a3)!=0). Applying acceleration on the
+            // same frame as the initial lock double-counted the landing's
+            // ground_vel=x_vel carry-over (trace f430: expected g_speed=-0x18,
+            // engine produced 0x0000 by adding +0x18 on top of the -0x18 already
+            // set by the landing).
             return;
         }
         if (player.isJumpJustPressed()) {
