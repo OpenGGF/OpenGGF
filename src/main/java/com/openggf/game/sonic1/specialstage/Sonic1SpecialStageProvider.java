@@ -215,4 +215,9 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     public boolean isInitialized() {
         return manager.isInitialized();
     }
+
+    /** The backing manager, for trace-replay comparison snapshots. */
+    public Sonic1SpecialStageManager getManager() {
+        return manager;
+    }
 }

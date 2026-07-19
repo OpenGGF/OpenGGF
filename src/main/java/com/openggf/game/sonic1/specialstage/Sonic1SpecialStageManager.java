@@ -1858,6 +1858,18 @@ public final class Sonic1SpecialStageManager {
         return finished;
     }
 
+    /**
+     * Read-only comparison snapshot for trace replay (multi-stage trace run
+     * spec addition #2). Pure read — no state mutation, no caching.
+     */
+    public Sonic1SpecialStageComparisonState captureComparisonState() {
+        return new Sonic1SpecialStageComparisonState(
+                sonicPosX, sonicPosY, sonicVelX, sonicVelY, sonicInertia,
+                sonicAirborne, sonicFacingLeft, ssAngle, ssRotate, bgAnimState,
+                ringsCollected, emeraldCollected, exitTriggered, finished,
+                currentStage);
+    }
+
     Sonic1SpecialStageSnapshot captureRewindSnapshot() {
         return new Sonic1SpecialStageSnapshot(
                 initialized,
