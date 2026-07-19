@@ -343,9 +343,22 @@ public final class Sonic1SpecialStageManager {
             if (startupHoldTicksRemaining == SS_STARTUP_HOLD_TICKS - SS_WHITEOUT_TICKS - 1) {
                 // GM_Special's instant setup block (sonic.asm:3238-3291) runs
                 // here, between the PaletteWhiteOut and PaletteWhiteIn fades:
-                // clr.w (v_ssangle).w and move.w #ss_rotatespeed,(v_ssrotate).w
-                // (sonic.asm:3267-3268) fire exactly once, mid-hold, not at
-                // manager-construction time (see SS_WHITEOUT_TICKS javadoc).
+                // bsr.w PalCycle_SS (sonic.asm:3266) fires ONE time to advance
+                // the SS palette/BG-anim cycle before clr.w (v_ssangle).w and
+                // move.w #ss_rotatespeed,(v_ssrotate).w (sonic.asm:3267-3268).
+                // VBlank_SpecialStage -- the only other PalCycle_SS caller
+                // ("_inc/Special Stage Background & Palette Cycle.asm":79-135,
+                // wired at sonic.asm:888) -- never runs during either fade:
+                // both PaletteWhiteOut/PaletteWhiteIn set v_vblank_routine to
+                // id_VBlank_PaletteFade ($12), not id_VBlank_SpecialStage
+                // ("_inc/Palette Fading.asm":238,278), so this setup-time call
+                // is v_palss_time/v_palss_num's ONLY advance before SS_MainLoop.
+                // Skipping it left the engine's palette-cycle table position
+                // one full entry (byte_4A3C index 0, 4-frame duration) behind
+                // the ROM for the rest of the stage, surfacing as a constant
+                // 4-frame-late bg_anim transition (trace frame 137: expected
+                // v_ssbganim=8, engine=0).
+                updateSpecialStagePaletteCycle();
                 ssAngle = 0;
                 ssRotate = SS_INIT_ROTATION;
             }
@@ -432,6 +445,50 @@ public final class Sonic1SpecialStageManager {
     // ---- Physics (from Obj09) ----
 
     /**
+     * SonicSS_Jump's angle transform (09 Sonic in Special Stage.asm:299-302):
+     * <pre>
+     *   move.b (v_ssangle).w,d0   ; d0 = high byte of ssAngle
+     *   andi.b #$FC,d0            ; snap to nearest multiple of 4
+     *   neg.b  d0                 ; negate -- 8-bit op, wraps mod 256
+     *   subi.b #$40,d0            ; rotate perpendicular -- 8-bit op, wraps mod 256
+     * </pre>
+     * All three operations are byte-sized 68000 ops, so each intermediate
+     * result must be truncated to 8 bits (mod 256) in the order the ROM
+     * performs them: mask, THEN negate, THEN subtract. A prior version of
+     * this method negated before masking (Java's unary-minus binds tighter
+     * than {@code &}), which is a different value whenever the stage-angle's
+     * top byte isn't already a multiple of 4 -- e.g. at trace frame 173
+     * (S1 maze round-trip capture) ssAngle=0x12C0 going into the jump:
+     * correct = ((-(0x12&0xFC))&0xFF - 0x40)&0xFF = 0xB0, but the old
+     * mask-after-negate order produced 0xAC, corrupting the jump's
+     * vel_x/vel_y by a fixed offset that then persisted for the rest of the
+     * flight (gravity accumulates identically on both sides afterward).
+     */
+    private int ssJumpAngle() {
+        int masked = (ssAngle >> 8) & 0xFC;
+        int negated = (-masked) & 0xFF;
+        return (negated - 0x40) & 0xFF;
+    }
+
+    /**
+     * SonicSS_AngleSpeed's angle transform (09 Sonic in Special Stage.asm:
+     * 178-181), used to convert ground inertia into world-space movement:
+     * <pre>
+     *   move.b (v_ssangle).w,d0   ; d0 = high byte of ssAngle
+     *   addi.b #$20,d0            ; rotate 45 degrees -- 8-bit op, wraps mod 256
+     *   andi.b #$C0,d0            ; snap to nearest multiple of 90 degrees
+     *   neg.b  d0                 ; negate -- 8-bit op, wraps mod 256
+     * </pre>
+     * Same byte-truncation-order requirement as {@link #ssJumpAngle()}: add,
+     * mask, THEN negate -- not negate-then-add-then-mask.
+     */
+    private int ssMoveAngle() {
+        int added = ((ssAngle >> 8) + 0x20) & 0xFF;
+        int masked = added & 0xC0;
+        return (-masked) & 0xFF;
+    }
+
+    /**
      * Obj09_Jump: check for jump button press while on ground.
      * ROM tests {@code andi.b #btnABC,d0} on {@code v_jpadpress2} — any of the
      * A, B, or C buttons triggers the jump, not the engine's internal
@@ -443,8 +500,7 @@ public final class Sonic1SpecialStageManager {
             return;
         }
 
-        // angle = -(ssAngle>>8 & 0xFC) - 0x40
-        int angle = (-(ssAngle >> 8) & 0xFC) - 0x40;
+        int angle = ssJumpAngle();
         int sinVal = TrigLookupTable.sinHex(angle & 0xFF);
         int cosVal = TrigLookupTable.cosHex(angle & 0xFF);
 
@@ -483,8 +539,7 @@ public final class Sonic1SpecialStageManager {
         }
 
         // Convert inertia to world movement
-        // angle = (-(ssAngle>>8) + 0x20) & 0xC0
-        int angle = ((-(ssAngle >> 8)) + 0x20) & 0xC0;
+        int angle = ssMoveAngle();
         int sinVal = TrigLookupTable.sinHex(angle & 0xFF);
         int cosVal = TrigLookupTable.cosHex(angle & 0xFF);
 
