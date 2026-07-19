@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Trace replay: per-game special-stage launch config helper (dormant S3K fresh-load seam).
 - Trace framework: run_manifest.json schema + TraceRunManifest parser/validator for multi-segment trace runs (spec 2026-07-18).
 - Trace framework: per-segment run_id/segment_index/bonus_stage_type metadata fields.
 - Trace replay: bonus-stage bootstrap seam (applyBonusStageEntry) for s3k_bonus_stage segments.
