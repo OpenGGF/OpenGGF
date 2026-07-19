@@ -83,11 +83,6 @@ public final class CnzWaterLevelButtonInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean isPersistent() {
-        return true;
-    }
-
-    @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);
     }

@@ -154,6 +154,8 @@ class TestS3kCnzWaterHelpersHeadless {
         CnzWaterLevelButtonInstance button = new CnzWaterLevelButtonInstance(
                 new ObjectSpawn(0x4A40, 0x0A38, Sonic3kObjectIds.CNZ_WATER_LEVEL_BUTTON, 0, 0, false, 0));
         button.setServices(services);
+        assertFalse(button.isPersistent(),
+                "loc_65DD0 tail-calls Sprite_OnScreen_Test, so the placement button unloads outside $280");
         button.forcePressedForTest();
         button.update(1, fixture.sprite());
 

@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ water-button placement lifetime: physics f29673 -> f30660, animation f29721 -> f30486
+
+The Act 2 water-level button survives its one-shot press, but it is still an
+ordinary placement object: `loc_65DD0` tail-calls `Sprite_OnScreen_Test` on
+every dispatch. The engine's `isPersistent()` override incorrectly exempted it
+from the standard coarse-X `$280` unload window, leaving CPU Tails seated on a
+live button after the ROM had cleared its SST slot
+(`docs/skdisasm/sonic3k.asm:37262-37278,134058-134111`).
+
+The button now uses normal placement lifetime. At f29672 its slot clears after
+the playable/CPU slots, so the following Tails CPU pass observes the stale
+interact pointer's zeroed code word and runs `sub_13ECA`, preserving velocity
+while publishing the native `$7F00,0` off-screen marker
+(`docs/skdisasm/sonic3k.asm:26800-26833`).
+
+This advances CNZ complete-run physics from f29673 `tails_g_speed` to f30660
+`tails_g_speed`, and animation from f29721 `tails_mapping_frame` to f30486
+`tails_mapping_frame`. The focused water-helper and sidekick-despawn suites
+pass. Sequential one-fork 4 GB full sweeps remain 45/58 green for physics and
+44/58 green for animation, with exactly the same 13 physics and 14 animation
+non-green route sets. No non-CNZ frontier moved, and legacy standalone CNZ
+remains at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ cylinder same-slot motion and wall-unroll coordinates: physics f26050 -> f29673, animation f25614 -> f29721
 
 `Obj_CNZCylinder` initializes and falls through into its motion, rider-control,
