@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S3K Knuckles multi-bonus mega-run captured; all four stage comparators go live
+
+The S3K Knuckles-route recording (`s3-knux-multibonus-ss.bk2`, 114622 input
+frames) was captured with `s3k_complete_run_recorder.lua` (now with
+Player_mode-derived team metadata — every segment carries
+`characters ["knuckles"]`) and committed under
+`src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/`: **25 segments,
+22 transitions** — AIZ1/AIZ2 -> HCZ1/HCZ2 -> MGZ1/MGZ2 with gumball x2,
+slots x5, pachinko x1 (`starpost_bonus`, `special_bonus_entry_flag=2`,
+ring-selector values consistent with `((rings-20)/15)%3` given
+post-vs-arm ring drift) and blue spheres x3 (`giant_ring`, flag=1,
+`special_stage_index` 0/1/2, emeralds 0 -> 3). Blue-spheres self-checks
+pass in all three ss segments (`started` flips once, spheres
+non-increasing to 0). Interior copies activate all four skip-if-missing
+tests — first live baselines (branch `feature/ai-mstr-captures`, all
+first-error frontiers at **frame 0**, spawn/bootstrap state):
+
+- `TestS3kGumballBonusTraceReplay`: 145 errors / 1430 rows (f0 `x_sub`
+  0xF400 vs 0xE800)
+- `TestS3kPachinkoBonusTraceReplay`: 677 errors / 3051 rows (f0 `y_speed`
+  0 vs 0x38)
+- `TestS3kSlotsBonusTraceReplay`: 263 errors / 1200 rows (f0 `x_sub`
+  0xF400 vs 0) — Knuckles-alone recording; the SONIC-SOLO note in the
+  README applied to the old procedure, the metadata-driven bootstrap
+  handles the solo Knuckles team
+- `TestS3kSpecialStageTraceReplay`: 169 errors + 6 warnings / 4630 rows
+  (f0 `player_x` 262 vs 512 — start-cell delta)
+
+These seed the S3K stage green campaigns alongside the S1 maze frontier
+below. The S2 round-trip run (below) still awaits its chain-test consumer.
+
 ### 2026-07-19 -- S2 halfpipe round-trip captured: TWO detours in one run
 
 The first S2 halfpipe round-trip recording (`s2-ehz-halfpipe-roundtrip.bk2`,
