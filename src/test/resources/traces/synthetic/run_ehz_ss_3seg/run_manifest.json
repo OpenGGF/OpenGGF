@@ -9,6 +9,7 @@
     {"dir": "seg1_ehz1", "kind": "level", "trace_profile": "gameplay_unlock",
      "bk2_frame_offset": 500, "trace_frame_count": 2, "zone_id": 0, "act": 1},
     {"dir": "ss", "kind": "special_stage", "trace_profile": "s2_special_stage",
+     "zone_id": 0, "act": 0,
      "bk2_frame_offset": 800, "trace_frame_count": 2, "special_stage_index": 0},
     {"dir": "seg2_ehz1", "kind": "level", "trace_profile": "gameplay_unlock",
      "bk2_frame_offset": 1100, "trace_frame_count": 2, "zone_id": 0, "act": 1}

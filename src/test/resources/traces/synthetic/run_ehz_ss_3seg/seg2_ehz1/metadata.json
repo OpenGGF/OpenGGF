@@ -4,7 +4,7 @@
   "zone_id": 0,
   "rom_zone_id": 0,
   "act": 1,
-  "gameplay_segment": 1,
+  "gameplay_segment": 0,
   "bk2_frame_offset": 1100,
   "trace_frame_count": 2,
   "start_x": "0x00C0",
