@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S3K bonus-stage replay scaffolding landed (plan b)
+
+Branch `feature/ai-mstr-plan-b` landed the gumball/pachinko headless replay slice:
+the `applyBonusStageEntry` bootstrap seam (profile-gated on `s3k_bonus_stage`,
+registered in the bootstrap-policy guard baseline with justification), the
+`afterFixtureBuild` hook on the shared replay base, and two skip-if-missing
+replay tests — `TestS3kGumballBonusTraceReplay` (zone 0x13) and
+`TestS3kPachinkoBonusTraceReplay` (zone 0x14) — which SKIP until their
+recordings exist. `TestS3kBonusStageHeadlessBoot` proves both bonus zones boot
+headlessly on the LEVEL pipeline today (gumball machine from ROM layout,
+pachinko trap injected; 60 idle frames stepped clean).
+
+**Recordings needed to activate the replay tests** (procedure:
+`tools/bizhawk/README.md`, "Recording S3K Bonus Round-Trip Traces"):
+`s3k-aiz-gumball.bk2` (50-64 rings at the star post) and
+`s3k-aiz-pachinko.bk2` (35-49 rings). No trace frontiers moved; no fixtures
+touched. Full-suite gate: no new failures vs the develop baseline after guard
+conformance (`TestTraceReplayInvariantGuard`, `TestBuildToolingGuard` allowlist
+entries); `TestSonic1LavaGeyserGraphRewind` observed as an order-dependent
+flake (passes in isolation, unrelated surface).
+
 ### 2026-07-18/19 -- Complete-run recorder v6.30 no-regression sweep
 
 Verification of the multi-stage trace-run recorder branch (`feature/ai-multi-stage-trace-runs`,
