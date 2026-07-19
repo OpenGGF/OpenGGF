@@ -80,5 +80,53 @@ public class TestPachinkoFlipperObjectInstance {
 
     private record LaunchVelocity(short xSpeed, short ySpeed) {
     }
+
+    /**
+     * ROM sub_49CFE's already-locked branch (loc_49D3C -> loc_49D54 ->
+     * loc_49DE4, sonic3k.asm:96437-96521) is only reachable while the player's
+     * own object_control(a1) bit 0 stays set, which makes the player's control
+     * routine skip Sonic_Modes (RollRepel/RollSpeed/etc) entirely for that
+     * frame (sonic3k.asm:21973-21976). The engine keeps running its normal
+     * per-frame roll update instead, so pinballSpeedLock must be asserted for
+     * the whole locked ride to suppress RollSpeed's friction/deceleration/
+     * stop-rolling block -- without it, ground_vel gets corrupted by the
+     * roll-stop pinball-mode +-0x400 snap on the very next frame.
+     */
+    @Test
+    public void lockingAndReleasingTogglesPinballSpeedLock() {
+        PachinkoFlipperObjectInstance flipper = new PachinkoFlipperObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0xE7, 0, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.isDebugMode()).thenReturn(false);
+        when(player.getRolling()).thenReturn(false, true);
+        when(player.getY()).thenReturn((short) 0x100);
+        when(player.getX()).thenReturn((short) 0x100);
+        when(player.getRollHeightAdjustment()).thenReturn((short) 10);
+        when(player.isJumpJustPressed()).thenReturn(false);
+        when(player.getAir()).thenReturn(false);
+
+        flipper.setServices(new TestObjectServices());
+        SolidContact standing = new SolidContact(true, false, false, false, false, 0, false);
+
+        // Lock frame: control/pinball flags asserted, no acceleration yet.
+        flipper.onSolidContact(player, standing, 0);
+        verify(player).setPinballSpeedLock(true);
+        verify(player, never()).setGSpeed(anyShort());
+        flipper.update(0, player);
+
+        // Already-locked frame: still asserted, acceleration applied with no
+        // direction write (ROM loc_49D54 never touches status(a1)).
+        flipper.onSolidContact(player, standing, 1);
+        verify(player, times(2)).setPinballSpeedLock(true);
+        verify(player).setGSpeed(anyShort());
+        verify(player, never()).setDirection(any());
+        flipper.update(1, player);
+
+        // Player leaves contact (no onSolidContact call this frame): lock
+        // must be released on the following update().
+        flipper.update(2, player);
+        verify(player).setPinballSpeedLock(false);
+        verify(player).setControlLocked(false);
+    }
 }
 

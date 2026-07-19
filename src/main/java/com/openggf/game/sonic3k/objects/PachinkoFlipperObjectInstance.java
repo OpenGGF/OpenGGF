@@ -164,6 +164,25 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         lockedPlayer = player;
         player.setControlLocked(true);
         player.setPinballMode(true);
+        // ROM sub_49CFE reaches the already-locked branch (loc_49D3C) only via a
+        // player whose object_control(a1) bit 0 is already set from the lock
+        // frame, which makes the player's own control routine skip Sonic_Modes
+        // entirely (sonic3k.asm:21973 btst #0,object_control(a0) / beq.s
+        // loc_10C0C) -- so Obj01_MdRoll/Sonic_RollSpeed's input-friction-decel
+        // body (sonic3k.asm:22935-22970) never runs while locked; ground_vel is
+        // only ever touched by loc_49D54's plain `add.w d1,ground_vel(a1)`
+        // (sonic3k.asm:96449-96457) and by loc_49DE4's slope-driven move. The
+        // engine keeps running its normal per-frame roll update instead of
+        // skipping it outright, so pinballSpeedLock (the existing spin_dash_flag
+        // 0x81 stand-in used by AutoSpinObjectInstance) is reused here to drop
+        // just the friction/deceleration/stop-rolling block, matching the net
+        // effect of the ROM's full-routine bypass: ground_vel is left untouched
+        // by the frame's normal movement and is only modified by this object's
+        // explicit accel/launch writes. Without this, PlayableSpriteMovement's
+        // roll-stop check saw g_speed cross below min_roll_speed every frame and
+        // slammed it to the pinball-mode +-0x400 snap (trace f431: expected
+        // g_speed=0x0000, engine produced 0x0018+0x400 by the following frame).
+        player.setPinballSpeedLock(true);
         if (!player.getRolling()) {
             player.setRolling(true);
             player.applyRollingRadii(false);
@@ -172,9 +191,17 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     }
 
     private void applySurfaceAcceleration(AbstractPlayableSprite player) {
+        // ROM loc_49D54 (sonic3k.asm:96449-96457) is exactly
+        // `moveq #$18,d1 / btst #0,status(a0) / beq.s loc_49D60 / not.w d1 /
+        // loc_49D60: add.w d1,ground_vel(a1)` -- it only ever touches the
+        // flipper's own facing test to pick the sign of the accel added to
+        // ground_vel(a1); it never writes status(a1)/direction on the player.
+        // The previous unconditional setDirection() call here forced the player
+        // to face right every accelerating frame, clobbering the facing bit the
+        // player landed with (trace f431: expected status_byte=0x0D with
+        // Status_Facing set, engine produced 0x2C with the bit cleared).
         int accel = isFlippedHorizontal() ? SURFACE_ACCEL_FLIPPED : SURFACE_ACCEL;
         player.setGSpeed((short) (player.getGSpeed() + accel));
-        player.setDirection(accel < 0 ? Direction.LEFT : Direction.RIGHT);
     }
 
     private void launchPlayer(AbstractPlayableSprite player) {
@@ -203,6 +230,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         player.setGSpeed((short) 0);
         player.setControlLocked(false);
         player.setPinballMode(false);
+        player.setPinballSpeedLock(false);
         player.setDirection(xVelocity < 0 ? Direction.LEFT : Direction.RIGHT);
 
         var objectManager = services().objectManager();
@@ -221,6 +249,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         }
         lockedPlayer.setControlLocked(false);
         lockedPlayer.setPinballMode(false);
+        lockedPlayer.setPinballSpeedLock(false);
         lockedPlayer = null;
     }
 
