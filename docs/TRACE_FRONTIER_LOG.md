@@ -1,5 +1,25 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S3K angled-ceiling Bubble Shield tail: f18354 -> f18680
+
+CNZ was exact through f18353, where airborne rolling Sonic entered an angled
+ceiling with an armed Bubble Shield. The engine accepted the same `$B8`
+surface but stopped after its local wall/ceiling landing reset, leaving Sonic
+grounded with the pre-bounce velocity. Native `Player_HitCeilingAndWalls`
+calls `Player_TouchFloor_Check_Spindash`; its common landing tail invokes
+`BubbleShield_Bounce`, restores airborne roll, and rewrites X/Y velocity before
+the caller copies the post-bounce Y velocity into `ground_vel`. The shared
+angled-ceiling path now preserves that ordering
+(`docs/skdisasm/sonic3k.asm:24228-24264,24325-24426`).
+
+The focused air-landing regression suite passes. CNZ complete-run physics
+advances from f18354 to f18680; its next mismatch is an engine-only hurt from a
+CNZ enemy/hazard contact (`ground_vel -$00C8` expected, zero actual). The full
+comparison-only sweep remains 45/58 physics green with the same 13 expected-red
+routes and unchanged green AIZ, HCZ, and MGZ complete runs. Animation remains
+44/58 green with the same 14 expected-red or unsupported routes; CNZ
+complete-run animation remains at f108 and legacy standalone CNZ at f0.
+
 ### 2026-07-19 -- CNZ retained dispatch and native RNG chain: f15464 -> f18354
 
 The retained Act 2 object pass now preserves the native ownership that was
