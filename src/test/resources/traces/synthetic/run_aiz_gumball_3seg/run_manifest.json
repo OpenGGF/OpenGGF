@@ -18,8 +18,8 @@
     {"from_segment": 0, "to_segment": 1, "entry_kind": "starpost_bonus",
      "mode_change_bk2_frame": 1750, "special_bonus_entry_flag": 2,
      "saved_x_pos": 4660, "saved_y_pos": 1024, "last_star_post_hit": 1,
-     "rings_before": 25, "emeralds_before": 0},
+     "rings_before": 55, "emeralds_before": 0},
     {"from_segment": 1, "to_segment": 2, "entry_kind": "stage_exit",
-     "mode_change_bk2_frame": 2800, "rings_after": 40, "emeralds_after": 0}
+     "mode_change_bk2_frame": 2800, "rings_after": 70, "emeralds_after": 0}
   ]
 }
