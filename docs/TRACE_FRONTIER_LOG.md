@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ Clamer projectile live touch pointer: f20903 -> f22001
+
+At f20903, native CPU Tails overlapped the Clamer auto-close projectile and
+entered hurt with velocity `(-$200,-$400)`. The engine missed because the
+projectile used a copied touch snapshot two pixels ahead of its live position.
+`loc_86D5E` runs `MoveSprite2` before `Sprite_CheckDeleteTouchXY`, whose touch
+tail publishes the SST pointer; the following player pass therefore
+dereferences live `x_pos/y_pos`, just like other S3K collision-response-list
+owners. The projectile now opts into that pointer-backed touch state
+(`docs/skdisasm/sonic3k.asm:179027-179039,182257-182266`).
+
+The focused Clamer suite passes. CNZ complete-run physics advances from f20903
+to f22001; its next mismatch is Sonic one pixel left. The full comparison-only
+sweep remains 45/58 physics green with the same 13 expected-red routes and
+unchanged green AIZ, HCZ, and MGZ complete runs. Animation remains 44/58 green
+with the same 14 expected-red or unsupported routes; CNZ complete-run animation
+still begins at f108 (its downstream error count drops from 727 to 644), and
+legacy standalone CNZ remains at f0.
+
 ### 2026-07-19 -- CNZ horizontal Door render-height gate: f20805 -> f20903
 
 At f20805, CPU Tails lost terrain support as the camera rose past a horizontal

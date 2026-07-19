@@ -849,6 +849,15 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         }
 
         @Override
+        public boolean usesCurrentTouchResponseState() {
+            // loc_86D5E runs MoveSprite2 and then Sprite_CheckDeleteTouchXY,
+            // whose DrawTouch tail publishes the SST pointer. The following
+            // player pass dereferences that live x_pos; a copied snapshot is
+            // one projectile step ahead of the ROM-visible contact phase.
+            return true;
+        }
+
+        @Override
         public boolean isPersistent() {
             // Dynamic child lifetime is owned by loc_86D5E's
             // Sprite_CheckDeleteTouchXY tail, not by ObjectManager's generic

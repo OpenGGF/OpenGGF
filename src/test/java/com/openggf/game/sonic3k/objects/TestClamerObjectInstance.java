@@ -244,6 +244,8 @@ class TestClamerObjectInstance {
         assertEquals(2, services.spawnedChildren.size(),
                 "Clamer should allocate the spring child and ChildObjDat_89150 projectile");
         ObjectInstance projectile = services.spawnedChildren.get(1);
+        assertTrue(projectile.usesCurrentTouchResponseState(),
+                "Collision_response_list retains the loc_86D5E projectile SST pointer");
         assertEquals(0x0110, projectile.getX(),
                 "CreateChild5_ComplexAdjusted flips the -$10 X offset when render_flags bit 0 is set");
         assertEquals(0x0072, projectile.getY());
