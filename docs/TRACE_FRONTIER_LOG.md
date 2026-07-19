@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ two-player breakable-wall cleanup: f24799 -> f24885
+
+At f24799, Sonic and rolling CPU Tails reached the same CNZ breakable wall in
+one `SolidObjectFull` call. Sonic consumed the break first. The ROM then returns
+from `sub_2165A` to `loc_215F4`, notices Player 2's already-published pushing
+bit, restores Player 2's saved pre-contact X velocity into both `x_vel` and
+`ground_vel`, and clears `Status_Push` before the wall slot becomes debris. The
+engine retired the wall immediately after Sonic's break, leaving Tails stopped
+and pushing. The manual checkpoint now performs that native Player 2 cleanup;
+the multi-sidekick extension applies the same cleanup to every matching rolling
+sidekick contact (`docs/skdisasm/sonic3k.asm:45570-45620`).
+
+The focused breakable-wall guard passes. CNZ complete-run physics advances from
+f24799 to f24885; its next mismatch is Sonic receiving `-$00E0` instead of the
+native `-$0380` vertical response beside the underwater balloon/bubble group.
+The full comparison-only sweep remains 45/58 physics green with the same 13
+expected-red routes and unchanged green AIZ, HCZ, and MGZ complete runs.
+Animation remains 44/58 green with the same 14 expected-red or unsupported
+routes; CNZ complete-run animation still begins at f108 (1116 downstream
+errors), and legacy standalone CNZ remains at f0.
+
 ### 2026-07-19 -- CNZ retained-results panic cadence: f24268 -> f24799
 
 At f24268, native CPU Tails was charging a spindash in routine `$08` and

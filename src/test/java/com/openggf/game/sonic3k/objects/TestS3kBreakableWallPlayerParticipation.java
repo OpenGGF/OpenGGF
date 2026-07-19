@@ -123,8 +123,12 @@ class TestS3kBreakableWallPlayerParticipation {
                 "Obj_BreakableWall checks Player_1's anim/x_vel snapshot before falling through to Player_2");
         assertEquals(0x0480, sonic.getXSpeed() & 0xFFFF,
                 "Player_1 should receive the ROM-saved x_vel from $30(a0)");
-        assertEquals(0, tails.getXSpeed(),
-                "Player_2 must not consume the break when Player_1 satisfies the ROM roll-animation gate");
+        assertEquals(0x0600, tails.getXSpeed() & 0xFFFF,
+                "loc_215F4 must restore Player_2's saved velocity after Player_1 consumes the break");
+        assertEquals(0x0600, tails.getGSpeed() & 0xFFFF,
+                "loc_215F4 restores Player_2 ground velocity from the same saved x_vel");
+        assertFalse(tails.getPushing(),
+                "loc_215F4 clears Player_2 Status_Push after restoring its rolling contact velocity");
     }
 
     @Test
