@@ -1,4 +1,8 @@
-package com.openggf.trace;
+package com.openggf.game.sonic3k.specialstage;
+
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceMetadata;
 
 import java.io.BufferedReader;
 import java.io.IOException;

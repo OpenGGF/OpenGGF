@@ -5,11 +5,11 @@ import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageComparisonState;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData;
+import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceFrame;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
-import com.openggf.trace.S3kSpecialStageTraceData;
-import com.openggf.trace.S3kSpecialStageTraceFrame;
 import com.openggf.trace.Severity;
 import org.junit.jupiter.api.Test;
 

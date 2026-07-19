@@ -1,4 +1,4 @@
-package com.openggf.trace;
+package com.openggf.game.sonic3k.specialstage;
 
 /**
  * One frame of a Sonic 3&K special-stage BizHawk trace recording
