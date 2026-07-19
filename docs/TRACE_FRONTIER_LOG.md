@@ -45715,3 +45715,24 @@ expected-red routes and unchanged non-CNZ frontiers. The animation fleet
 remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ cylinder render flip/status-facing separation: f7512 -> f7708
+
+At f7512 the cylinder advances Sonic's direct mapping from `$55` to `$59` and
+sets its visual horizontal flip. ROM `loc_32610` masks and writes only bits 0-1
+of `render_flags`; `Status_Facing` remains clear. The engine used
+`setDirection(LEFT)` alongside the render flip, changing the gameplay status
+byte from the expected `$08` to `$09`
+(`docs/skdisasm/sonic3k.asm:68078-68100`).
+
+The cylinder twist path now owns only mapping-frame and render-flip state, as
+the ROM does, leaving gameplay direction untouched. All 29 focused cylinder
+tests pass, including a new assertion that frame `$59` can render flipped while
+the player remains right-facing. CNZ complete-run physics advances from f7512
+`status_byte` to f7708 `y_speed`.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.

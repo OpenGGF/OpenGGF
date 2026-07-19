@@ -1462,6 +1462,31 @@ the mismatch target.
 
 ---
 
+## P42 -- Direct mapping flips are not gameplay facing writes
+
+**Symptom.** A player-controlled object displays the correct direct mapping
+frame but changes the player's status byte, movement direction, wall-push
+semantics, or later animation branch when the mapping visually flips.
+
+**Root cause.** ROM object routines can write flip bits directly to the
+player's `render_flags` while leaving `Status_Facing` unchanged. Treating every
+visual horizontal flip as `setDirection(...)` aliases two independent native
+state fields.
+
+**Correct pattern.** When an object owns direct player mappings, translate
+native `render_flags` writes with `setRenderFlips(...)`. Call
+`setDirection(...)` only when the disassembly explicitly modifies the player
+status facing bit. Test a flipped direct frame with the opposite gameplay
+direction retained.
+
+**ROM citation.** CNZ cylinder `loc_32610` writes `PlayerTwistFrames` to
+`mapping_frame`, masks `render_flags`, and ORs `PlayerTwistFlip` without
+touching `status` at `docs/skdisasm/sonic3k.asm:68078-68100`.
+
+**Originating commit.** `<pending: CNZ cylinder render-flip milestone>`.
+
+---
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

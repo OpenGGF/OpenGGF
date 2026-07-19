@@ -934,7 +934,9 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
         player.setMappingFrame(PLAYER_TWIST_FRAMES[frameIndex]);
         boolean flipLeft = PLAYER_TWIST_FLIPS[frameIndex];
-        player.setDirection(flipLeft ? Direction.LEFT : Direction.RIGHT);
+        // loc_32610 writes only render_flags bits 0-1 from PlayerTwistFlip;
+        // it never mutates Status_Facing. Keep gameplay facing independent
+        // while the cylinder directly owns the visual twist frame.
         player.setRenderFlips(flipLeft, false);
     }
 

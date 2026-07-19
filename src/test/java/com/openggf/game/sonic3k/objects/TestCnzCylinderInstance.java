@@ -5,6 +5,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -17,6 +18,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class TestCnzCylinderInstance {
+
+    @Test
+    void twistRenderFlipDoesNotChangePlayerStatusFacing() throws Exception {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
+        cylinder.setServices(new TestObjectServices());
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setDirection(Direction.RIGHT);
+
+        Object slot = playerOneSlot(cylinder);
+        setSlotField(slot, "player", player);
+        setSlotField(slot, "active", true);
+        setSlotField(slot, "twistAngle", 0x16);
+        setSlotField(slot, "horizontalDistance", 0x10);
+
+        invokeHoldSlot(cylinder, slot);
+
+        assertEquals(0x59, player.getMappingFrame());
+        assertTrue(player.getRenderHFlip());
+        assertEquals(Direction.RIGHT, player.getDirection(),
+                "loc_32610 copies PlayerTwistFlip to render_flags only; it does not "
+                        + "write Status_Facing (docs/skdisasm/sonic3k.asm:68078-68100)");
+    }
 
     @Test
     void firstUpdateContinuesAfterRomInitFallthroughMotionPass() {
