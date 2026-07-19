@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S3K angled-landing Walk publication: animation f4116 -> f7511
+
+At f4116 spring-launched Sonic attaches to an angled CNZ wall. ROM
+`Player_HitCeilingAndWalls` enters `Player_TouchFloor_Check_Spindash`, which
+writes `anim=Walk` before clearing the airborne state; the following animator
+therefore selects the native `$2D` tumble mapping. The engine's shared angled
+landing implementation already had this behavior behind the typed
+`PlayerMovementRules.angledLandingPublishesWalk` gate for S2, but the S3K
+profile incorrectly disabled it and retained animation `$10` Spring with
+mapping `$8E` (`docs/skdisasm/sonic3k.asm:24258-24264,24325-24329`).
+
+Enabling that native game-wide rule for S3K advances CNZ complete-run
+animation from f4116 `player_animation_id` to f7511 `player_mapping_frame`.
+CNZ complete-run physics remains at f24892 `y_speed`. The sequential 4 GB full
+sweeps remain 45/58 green for physics and 44/58 green for animation, with the
+same 13 physics expected-red routes and the same eight unsupported plus six
+comparison-red animation routes. No non-CNZ frontier moved, and legacy
+standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ packed cage release and landing tumble reset: animation f1663 -> f4116
 
 At f1663 CPU Tails takes the cage's jump release one object pass before Sonic.

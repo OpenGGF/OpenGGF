@@ -300,7 +300,7 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    false,
+                    true,
                     true,
                     false,
                     true,
