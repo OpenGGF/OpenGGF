@@ -1,21 +1,29 @@
 package com.openggf.trace.replay;
 
+import com.openggf.GameLoop;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.BonusStageProvider;
+import com.openggf.game.BonusStageState;
+import com.openggf.game.BonusStageType;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplayTeamBootstrap;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kLevelAnimationManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -415,6 +423,79 @@ public final class TraceReplaySessionBootstrap {
         if (rng != null) {
             rng.setSeed(meta.initialRngSeed());
         }
+    }
+
+    /** Maps the recorder's bonus_stage_type token to the engine enum. */
+    static BonusStageType bonusStageTypeForToken(String token) {
+        if ("gumball".equals(token)) {
+            return BonusStageType.GUMBALL;
+        }
+        if ("pachinko".equals(token)) {
+            return BonusStageType.GLOWING_SPHERE;
+        }
+        throw new IllegalStateException(
+                "Unsupported bonus_stage_type for headless replay: " + token);
+    }
+
+    /**
+     * Post-load bonus-stage entry for an s3k_bonus_stage trace segment
+     * (spec 2026-07-18, engine-side addition #7). Mirrors the live
+     * doEnterBonusStage/prepareBonusStageForTitleCard sequence minus title
+     * card and music: registers the module's bonus provider on the gameplay
+     * mode, fires onEnter with a synthetic BonusStageState (frame-0 ring
+     * count from the trace; interior replay never exits, so return fields
+     * are zero), applies the bonus HUD layout and ring count, un-hides the
+     * player, and injects the pachinko bootstrap object when the type needs
+     * one. Returns false untouched for any other trace profile.
+     */
+    public static boolean applyBonusStageEntry(TraceData trace) {
+        TraceMetadata meta = trace.metadata();
+        if (!"s3k_bonus_stage".equals(meta.traceProfile())) {
+            return false;
+        }
+        BonusStageType type = bonusStageTypeForToken(meta.bonusStageType());
+        int frame0Rings = trace.getFrame(0).rings();
+
+        BonusStageProvider provider = GameServices.module().getBonusStageProvider();
+        // GameServices has NO public gameplayMode() accessor — resolve the
+        // context the way the live path does (GameLoop.doEnterBonusStage).
+        // The replay fixture guarantees an open gameplay session, so a null
+        // here is a real fixture bug and an NPE is the correct failure.
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        // Mirror the live ordering exactly (GameLoop.java:2178/2181/2184):
+        // setActiveBonusStageProvider -> onEnter -> registerBonusStageAdapter.
+        gameplayMode.setActiveBonusStageProvider(provider);
+        provider.onEnter(type, new BonusStageState(
+                0, 0, frame0Rings, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                (byte) 0x0C, (byte) 0x0D, 0, 0L));
+        gameplayMode.registerBonusStageAdapter(provider);
+
+        // Rings live on LevelState, not GameStateManager — same call the live
+        // path makes (GameLoop.prepareBonusStageForTitleCard, :2274).
+        GameServices.level().getLevelGamestate().setRings(frame0Rings);
+        GameServices.level().setBonusStageHudLayout(true);
+        for (var sprite : GameServices.sprites().getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.setHidden(false);
+                playable.setObjectControlled(false);
+            }
+        }
+        // forcePlayerHighPriorityInBonusStage (high-priority art bucket) and
+        // refreshPlayableSpriteArtCaches (DPLC cache) are render-only and
+        // deliberately skipped: headless comparison never reads either.
+        ObjectSpawn bootstrapSpawn = GameLoop.resolveBonusStageBootstrapSpawn(type);
+        var objectManager = GameServices.level().getObjectManager();
+        if (bootstrapSpawn != null && objectManager != null) {
+            // Mirror ensureBonusStageBootstrapObjectPresent's duplicate guard
+            // (GameLoop.java:2288-2293).
+            boolean present = objectManager.getActiveObjects().stream()
+                    .anyMatch(PachinkoEnergyTrapObjectInstance.class::isInstance);
+            if (!present) {
+                objectManager.addDynamicObject(
+                        new PachinkoEnergyTrapObjectInstance(bootstrapSpawn));
+            }
+        }
+        return true;
     }
 
     private static boolean shouldInterleaveS2TitleCardPrelude(TraceData trace,
