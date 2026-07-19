@@ -30,6 +30,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
     private int yVelocity;
     private int frame = 4;
     private boolean dropping;
+    private boolean dropJustStarted;
     private boolean landed;
     private int animTimer;
     private int animIndex;
@@ -68,6 +69,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
                 ? 0x100 : -0x100;
         yVelocity = 0;
         dropping = true;
+        dropJustStarted = true;
         landed = false;
         frame = 4;
         resetAnimation();
@@ -75,6 +77,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
 
     void resetForNextCycle() {
         dropping = false;
+        dropJustStarted = false;
         landed = false;
         centreX = boss.getCentreX();
         centreY = boss.getCentreY() + 0x14;
@@ -113,6 +116,10 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         if (!dropping) {
             centreX = boss.getCentreX();
             centreY = boss.getCentreY() + 0x14;
+        } else if (dropJustStarted) {
+            // loc_6E87E installs the falling routine and returns; MoveSprite
+            // starts when routine 4 is dispatched on the next object pass.
+            dropJustStarted = false;
         } else if (!landed) {
             // ROM MoveSprite: integrate the old velocity first, then add $38
             // gravity. Both halves retain their 8-bit subpixel remainder.

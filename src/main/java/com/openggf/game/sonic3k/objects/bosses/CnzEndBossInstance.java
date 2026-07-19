@@ -362,25 +362,30 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     private void updateCharge(PlayableEntity player) {
-        swingAndMove();
         if (!magneticFieldActive) {
             if (!waitExpired()) return;
             magneticFieldActive = true;
             routineTimer = MAGNET_ACTIVE_WAIT;
             spawnChild(() -> new CnzEndBossFieldChild(this, -0x0C));
             spawnChild(() -> new CnzEndBossFieldChild(this, 0x0C));
+            // The freshly allocated field children execute later in the same
+            // native object pass, so their first pull is visible immediately.
+            applyMagnetPull();
+            return;
+        }
+        if (waitExpired()) {
+            // loc_6E650 clears parent bit 2 before the field children run, so
+            // the expiry frame does not apply one final attraction step.
+            magneticFieldActive = false;
+            routine = Routine.WIND_DOWN;
+            routineTimer = MAGNET_ACTIVE_WAIT;
             return;
         }
         applyMagnetPull();
-        if (!waitExpired()) return;
-        magneticFieldActive = false;
-        routine = Routine.WIND_DOWN;
-        routineTimer = MAGNET_ACTIVE_WAIT;
     }
 
     /** ROM {@code loc_6E650/loc_6E66C}: parent bit 7 remains set for {@code $FF}. */
     private void updateWindDown() {
-        swingAndMove();
         if (!waitExpired()) return;
         routine = Routine.DESCEND;
     }
@@ -399,18 +404,22 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     private void updateDescent() {
-        swingAndMove();
-        centreY++;
+        int nextY = centreY + 1;
         int target = magnetChild.getCentreY() - 0x14;
-        if (centreY < target) return;
-        centreY = target;
+        if (nextY < target) {
+            centreY = nextY;
+            return;
+        }
+        // loc_6E69C changes routine without storing d0 (the incremented Y).
+        // The parent therefore begins ascent one pixel above the magnet target.
         magnetChild.reattachAtDescentBottom();
         routine = Routine.ASCEND;
     }
 
     private void updateAscent() {
-        if (centreY > savedHoverY) {
-            centreY--;
+        int nextY = centreY - 1;
+        if (nextY > savedHoverY) {
+            centreY = nextY;
             return;
         }
         centreY = savedHoverY;

@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ end-boss object-pass phase: physics f37421 -> f37926
+
+The next false boss rebound came from the second attack cycle running one
+pixel below the ROM. Native charge and wind-down are `Obj_Wait` handlers, and
+descent changes routine without storing the final incremented `y_pos`; the
+ascent boundary instead stores the saved hover Y and branches directly into
+tracking setup. The engine swung during the stationary handlers, stored the
+descent target, and spent an extra update at the end of ascent
+(`docs/skdisasm/sonic3k.asm:145941-146047`).
+
+The magnet and field also expose native within-pass ordering. `loc_6E87E`
+installs the falling routine and returns before `MoveSprite`; later, newly
+allocated field children execute their first pull in the allocation pass but
+observe the parent's cleared active bit on the expiry pass. Modeling those
+boundaries keeps the attraction count unchanged while restoring the boss's
+vertical swing phase (`docs/skdisasm/sonic3k.asm:146233-146281`). Focused boss
+tests pass and CNZ complete-run physics advances from f37421 `tails_y_speed`
+to f37926 `x`; animation remains at f30486 `tails_mapping_frame`.
+
+Sequential one-fork 4 GB full sweeps retain the established 45/58 physics and
+44/58 animation green counts, with the same non-CNZ frontiers and legacy
+standalone CNZ still at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ end-boss magnet exact floor contact: physics f36602 -> f37421
 
 The first dropped magnet reaches the floor with `ObjCheckFloorDist` returning

@@ -24,14 +24,19 @@ class TestCnzEndBossChildren {
         setBossRoutine(boss, CnzEndBossInstance.Routine.CHARGE);
         setBoolean(boss, "magneticFieldActive", true);
         field(boss, "routineTimer").setInt(boss, 0);
+        int heldY = boss.getCentreY();
 
         boss.update(0, null);
 
         assertEquals(CnzEndBossInstance.Routine.WIND_DOWN, boss.nativeRoutine(),
                 "loc_6E650 must enter the dedicated parent bit-7 wind-down state");
+        assertEquals(heldY, boss.getCentreY(),
+                "loc_6E62C is Obj_Wait and does not dispatch Swing_UpAndDown/MoveSprite2");
         for (int frame = 0; frame < 255; frame++) {
             boss.update(frame + 1, null);
         }
+        assertEquals(heldY, boss.getCentreY(),
+                "the entire bit-7 wind-down interval remains position-stationary");
         assertEquals(CnzEndBossInstance.Routine.WIND_DOWN, boss.nativeRoutine(),
                 "Obj_Wait with $2E=$FF remains active for 255 decrement frames");
 
@@ -65,14 +70,33 @@ class TestCnzEndBossChildren {
         field(magnet, "centreY").setInt(magnet, boss.getCentreY() + 0x10);
         field(boss, "magnetChild").set(boss, magnet);
         setBossRoutine(boss, CnzEndBossInstance.Routine.DESCEND);
+        int heldY = boss.getCentreY();
 
         boss.update(0, null);
 
         assertEquals(CnzEndBossInstance.Routine.ASCEND, boss.nativeRoutine());
+        assertEquals(heldY, boss.getCentreY(),
+                "loc_6E69C switches routine without storing the final incremented Y");
         assertFalse(magnet.isReleasedForTest(),
                 "loc_6E69C bit 3 must make loc_6E920 return the landed magnet to follow mode");
         assertEquals(boss.getCentreY() + 0x14, magnet.getCentreY(),
                 "reattachment occurs at descent bottom, not after the later ascent");
+    }
+
+    @Test
+    void finalAscentPixelBeginsTrackingInSameUpdate() throws Exception {
+        CnzEndBossInstance boss = boss();
+        boss.setServices(new StubObjectServices());
+        int hoverY = boss.getCentreY();
+        field(boss, "savedHoverY").setInt(boss, hoverY);
+        field(boss, "centreY").setInt(boss, hoverY + 1);
+        setBossRoutine(boss, CnzEndBossInstance.Routine.ASCEND);
+
+        boss.update(0, null);
+
+        assertEquals(hoverY, boss.getCentreY());
+        assertEquals(CnzEndBossInstance.Routine.TRACK, boss.nativeRoutine(),
+                "loc_6E6BC stores the hover Y and branches directly into tracking setup");
     }
 
     @Test
@@ -106,10 +130,16 @@ class TestCnzEndBossChildren {
         int startY = magnet.getCentreY();
         magnet.update(0, main);
 
-        assertEquals(startX + 1, magnet.getCentreX(), "MoveSprite applies x_vel on the release frame");
+        assertEquals(startX, magnet.getCentreX(), "loc_6E87E returns after installing the fall routine");
+        assertEquals(startY, magnet.getCentreY());
+        assertEquals(0, magnet.yVelocityForTest());
+
+        magnet.update(1, main);
+
+        assertEquals(startX + 1, magnet.getCentreX(), "MoveSprite applies x_vel on the first falling frame");
         assertEquals(startY, magnet.getCentreY(), "MoveSprite moves with the old zero y_vel first");
         assertEquals(0x38, magnet.yVelocityForTest(), "MoveSprite adds $38 gravity after movement");
-        magnet.update(1, main);
+        magnet.update(2, main);
         assertEquals(startX + 2, magnet.getCentreX(),
                 "horizontal drop velocity must persist through later fall/bounce updates");
         assertEquals(0x70, magnet.yVelocityForTest());
