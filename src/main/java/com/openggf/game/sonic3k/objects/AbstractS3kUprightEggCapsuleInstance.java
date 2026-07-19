@@ -117,6 +117,13 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     }
 
     @Override
+    public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
+        // Obj_EggCapsule calls SolidObjectFull, whose wrapper tests Player_2's
+        // render_flags sign before dispatching SolidObjectFull_1P.
+        return true;
+    }
+
+    @Override
     public int getPieceCount() {
         return 2;
     }
@@ -246,7 +253,12 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         }
         PlayerCharacter character = resolvePlayerCharacter();
         int currentAct = services().currentAct();
-        spawnChild(() -> new S3kResultsScreenObjectInstance(character, currentAct));
+        spawnChild(() -> createResultsScreen(character, currentAct));
+    }
+
+    /** Allows a retained post-capsule owner to keep control of its native handoff. */
+    protected S3kResultsScreenObjectInstance createResultsScreen(PlayerCharacter character, int act) {
+        return new S3kResultsScreenObjectInstance(character, act);
     }
 
     private List<PlayableEntity> resultParticipants(AbstractPlayableSprite player) {

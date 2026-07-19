@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ retained results and end-cannon handoff: physics f39449 -> green
+
+The generic results exit restored player control and camera ownership before
+`Obj_CNZEndBoss` observed `_unkFAA8` clear. Native `loc_6E724` is the retained
+owner: because the results object occupies a later SST slot, the boss consumes
+that clear on the following object pass, restores both players itself, and
+starts the gradual bounds workers. The following walk-to-cannon routine does
+not pin `Camera_min_X_pos`; that write resumes only after `loc_6E778` allocates
+the watched cannon (`docs/skdisasm/sonic3k.asm:146037-146080`).
+
+The native end cannon occupies slot 4 and publishes player-state byte `$30=1`
+before the slot-17 boss reaches `loc_6E7B6` in the same SST pass. A synthetic
+cannon subtype preserves that observable ordering without a zone, route, or
+frame exception. Once the boss asserts `Ctrl_1_locked`, the cannon consumes
+only `Ctrl_1_logical`; raw movie jump remains suppressed until the boss writes
+the forced launch pulse (`docs/skdisasm/sonic3k.asm:146074-146099,
+66870-66979`). Focused cannon tests and CNZ complete-run physics pass. Animation
+remains at f30486 `tails_mapping_frame`. Sequential one-fork 4 GB full sweeps
+improve physics from 45/58 to 46/58 green and retain animation at 44/58 green;
+every non-CNZ frontier is unchanged.
+
 ### 2026-07-19 -- S3K upright capsule dispatch order: physics f38728 -> f39449
 
 The shared upright capsule treated its button mapping change as an eight-pixel

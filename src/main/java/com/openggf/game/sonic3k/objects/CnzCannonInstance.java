@@ -52,6 +52,9 @@ import java.util.List;
 public final class CnzCannonInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
+    /** Synthetic subtype used by Obj_CNZEndBoss for its watched cannon slot. */
+    public static final int END_SEQUENCE_SUBTYPE = 0x80;
+
     private static final int PRIORITY = 0x280;
     private static final int FRAME_CHAMBER_IDLE = 4;
     private static final int FRAME_SPIN_MIN = 0;
@@ -186,7 +189,11 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         activePlayer.setOnObject(false);
         activePlayer.setAir(true);
 
-        if (activePlayer.isJumpPressed()) {
+        boolean endSequence = (spawn.subtype() & END_SEQUENCE_SUBTYPE) != 0;
+        boolean jumpPressed = endSequence
+                ? (activePlayer.getForcedInputMask() & AbstractPlayableSprite.INPUT_JUMP) != 0
+                : activePlayer.isJumpPressed();
+        if (jumpPressed) {
             launchPlayer(activePlayer, frameCounter);
         }
     }
@@ -257,6 +264,13 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
             objectManager.clearRidingObject(player);
+        }
+        if ((spawn.subtype() & END_SEQUENCE_SUBTYPE) != 0 && services().camera() != null) {
+            // The native end cannon occupies slot 4 while Obj_CNZEndBoss is in
+            // slot 17, so its $30=1 capture write is visible to loc_6E7B6 later
+            // in the same SST pass. Publish the watched-slot consequence here;
+            // the boss owner still owns the timer and control-lock transition.
+            services().camera().setMaxYTarget((short) 0x0200);
         }
     }
 
@@ -338,6 +352,13 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return "state=" + state + " timer=" + stateTimer
+                + " angle=" + String.format("%02X", spinAngle & 0xFF)
+                + " armed=" + spinArmed;
     }
 
     int getRenderFrameForTest() {

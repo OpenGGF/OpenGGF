@@ -573,7 +573,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (!defeatHandoffComplete || transitionRequested) {
             return;
         }
-        services().camera().setMinX(services().camera().getX());
         if (capsuleResultsComplete && !cannonSpawned) {
             releasePostCapsuleStateOnce();
             if (player instanceof AbstractPlayableSprite sprite
@@ -585,6 +584,10 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (!cannonSpawned || !(player instanceof AbstractPlayableSprite sprite)) {
             return;
         }
+        // loc_6E7B6 resumes pinning the left boundary once loc_6E778 has
+        // allocated the end cannon. The intervening walk-to-cannon routine
+        // does not write Camera_min_X_pos.
+        services().camera().setMinX(services().camera().getX());
         if (!cannonArmed && endCannon != null && endCannon.hasCapturedPlayerForEndSequence()) {
             cannonArmed = true;
             cannonLaunchTimer = CANNON_LAUNCH_WAIT;
@@ -629,7 +632,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private void spawnEndCannon() {
         cannonSpawned = true;
         endCannon = spawnChild(() -> new CnzCannonInstance(
-                new ObjectSpawn(CANNON_X, CANNON_Y, Sonic3kObjectIds.CNZ_CANNON, 0, 0, false, 0)));
+                new ObjectSpawn(CANNON_X, CANNON_Y, Sonic3kObjectIds.CNZ_CANNON,
+                        CnzCannonInstance.END_SEQUENCE_SUBTYPE, 0, false, 0)));
     }
 
     private boolean isPlayerPastIczLaunchThreshold(AbstractPlayableSprite sprite) {
@@ -672,7 +676,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         }
         restorePlayerControl();
         restoreLevelMusic();
-        services().camera().setMaxYTarget((short) 0x0200);
         setStoredMinY(0x0200);
         spawnChild(() -> CnzEndBossBoundaryController.decreaseMinY(centreX, centreY, 0x0200));
         setStoredMaxX(CANNON_BOUND_MAX_X);
@@ -733,6 +736,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     @Override
     public String traceDebugDetails() {
         return "routine=" + routine + " timer=" + routineTimer
+                + " cannon=" + cannonSpawned + "/" + cannonArmed + "/"
+                + cannonLaunched + " launchTimer=" + cannonLaunchTimer
                 + " field=" + magneticFieldActive
                 + " centre=" + String.format("%04X,%04X", centreX & 0xFFFF, centreY & 0xFFFF)
                 + " magnet=" + (magnetChild == null ? "none"

@@ -172,6 +172,33 @@ class TestCnzCannonInstance {
     }
 
     @Test
+    void endSequenceCannonIgnoresRawJumpUntilBossPublishesLogicalJump() {
+        CnzCannonInstance cannon = new CnzCannonInstance(new ObjectSpawn(
+                0x1E68, 0x0850, 0x42, CnzCannonInstance.END_SEQUENCE_SUBTYPE,
+                0, false, 0));
+        cannon.setServices(new TestObjectServices());
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x1E68);
+        player.setCentreY((short) 0x082C);
+
+        cannon.onSolidContact(player, new SolidContact(true, false, false, true, false), 4200);
+        cannon.setLaunchDelayFramesForTest(0);
+        cannon.update(4201, player);
+        player.setJumpInputPressed(true);
+        cannon.update(4202, player);
+
+        assertTrue(player.isObjectControlled(),
+                "Ctrl_1_locked prevents movie input from reaching Ctrl_1_logical");
+
+        player.setJumpInputPressed(false);
+        player.setForcedInputMask(TestPlayableSprite.INPUT_JUMP);
+        cannon.update(4203, player);
+
+        assertFalse(player.isObjectControlled(),
+                "the boss-owned logical jump launches the watched end cannon");
+    }
+
+    @Test
     void cpuSidekickStandingContactDoesNotStartCannonSwing() {
         CnzCannonInstance cannon = new CnzCannonInstance(spawn());
         cannon.setServices(new TestObjectServices());
