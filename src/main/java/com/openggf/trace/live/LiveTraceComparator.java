@@ -92,7 +92,8 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         TraceFrame previous = cursor > 0 ? trace.getFrame(cursor - 1) : null;
         TraceExecutionPhase phase =
                 TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-        return phase == TraceExecutionPhase.VBLANK_ONLY;
+        return phase == TraceExecutionPhase.VBLANK_ONLY
+                || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
     }
 
     @Override
@@ -101,16 +102,25 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         lastInputMask = frame.p1InputMask();
         lastStartPressed = frame.p1StartPressed();
         if (wasSkipped) {
+            TraceFrame skipped = cursor < trace.frameCount() ? trace.getFrame(cursor) : null;
+            TraceFrame previous = cursor > 0 ? trace.getFrame(cursor - 1) : null;
+            TraceExecutionPhase skippedPhase = skipped != null
+                    ? TraceReplayBootstrap.phaseForReplay(trace, previous, skipped)
+                    : TraceExecutionPhase.VBLANK_ONLY;
             if (cursor == 0 && TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace)) {
                 TraceReplaySessionBootstrap.applyS3kCompleteRunHandoffNativePostRowEffects(trace);
             }
             if (cursor < trace.frameCount()) {
                 currentVisualFrame = trace.getFrame(cursor);
             }
-            laggedFrames++;
-            cursor++;
-            checkComplete();
-            return;
+            if (skippedPhase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
+                advancePlayableAnimationsOnly();
+            } else {
+                laggedFrames++;
+                cursor++;
+                checkComplete();
+                return;
+            }
         }
         if (cursor >= trace.frameCount()) {
             checkComplete();
@@ -153,6 +163,19 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         absorbDivergentFields(result, expected.frame());
         cursor++;
         checkComplete();
+    }
+
+    private static void advancePlayableAnimationsOnly() {
+        SpriteManager sprites = GameServices.spritesOrNull();
+        if (sprites == null) {
+            return;
+        }
+        int animationFrame = sprites.getFrameCounter();
+        for (var candidate : sprites.getAllSprites()) {
+            if (candidate instanceof AbstractPlayableSprite playable) {
+                playable.getAnimationManager().update(animationFrame);
+            }
+        }
     }
 
     private void absorbDivergentFields(FrameComparison result, int frameNumber) {

@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S3K mid-loop playable animation phase: animation f13149 -> f13960
+
+At f13149 CPU Tails's second Wait-script `$AF` mapping was one frame late.
+The trace row at f13099 carries a native `Tails_CPU_Normal` execution hook,
+proving the playable slots and their `Animate` calls ran, but the stationary
+player state, held gameplay counter, and changed VBlank byte caused replay to
+classify the sample as a complete lag frame. Advancing the entire level on
+that evidence incorrectly ran the later miniboss/event slots early; the ROM
+sample instead falls between the playable animation slice and those later
+object slots.
+
+Replay now represents that native mid-loop boundary explicitly as
+`PLAYABLE_ANIMATION_ONLY`: it consumes the movie/VBlank row and advances each
+playable's animation script without running physics, counters, or later object
+slots. This is execution scheduling from the native hook, not trace-state
+hydration. CNZ complete-run animation advances from f13149
+`tails_mapping_frame` to f13960 `player_animation_id`, while physics remains
+at f24892 `y_speed`.
+
+The sequential 4 GB full sweeps remain 45/58 green for physics and 44/58 green
+for animation, with the same 13 physics expected-red routes and the same eight
+unsupported plus six comparison-red animation routes. No non-CNZ frontier
+moved, and legacy standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ cylinder post-increment twist mapping: animation f7511 -> f13149
 
 At f7511 Sonic's held cylinder mapping crosses from `$55` to `$59`. Native

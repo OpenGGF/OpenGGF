@@ -66,6 +66,7 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { events.add("step"); return 11; },
                 () -> { events.add("previous"); return 12; },
                 () -> { events.add("skip"); return 13; },
+                () -> events.add("animate"),
                 () -> events.add("validate"));
         events.add("compare");
 
@@ -83,6 +84,7 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { events.add("step"); return 11; },
                 () -> { events.add("previous"); return 12; },
                 () -> { events.add("skip"); return 13; },
+                () -> events.add("animate"),
                 () -> events.add("validate"));
         events.add("compare");
 
@@ -106,12 +108,31 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { s3kEvents.add("step"); return 11; },
                 () -> { s3kEvents.add("previous"); return 12; },
                 () -> { s3kEvents.add("skip"); return 13; },
+                () -> s3kEvents.add("animate"),
                 () -> s3kEvents.add("validate"));
 
         assertEquals(List.of("skip"), generalEvents);
         assertEquals(9, generalInput);
         assertEquals(List.of("skip"), s3kEvents);
         assertEquals(13, s3kInput);
+    }
+
+    @Test
+    void playableAnimationSliceSkipsThenAnimatesAndValidates() {
+        List<String> events = new ArrayList<>();
+
+        int input = TraceReplayFrameClosureDriver.driveS3k(
+                TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY,
+                false,
+                () -> { events.add("step"); return 11; },
+                () -> { events.add("previous"); return 12; },
+                () -> { events.add("skip"); return 13; },
+                () -> events.add("animate"),
+                () -> events.add("validate"));
+        events.add("compare");
+
+        assertEquals(List.of("skip", "animate", "validate", "compare"), events);
+        assertEquals(13, input);
     }
 
     @Test

@@ -700,10 +700,23 @@ public final class TraceSessionLauncher {
         public void step(Bk2FrameInput inputs) {
             int relative = Math.max(0, inputs.frameIndex() - movieBaseFrame + 1);
             int traceIndex = traceBaseFrame + relative - 1;
-            if (isVblankOnly(traceIndex)) {
+            TraceExecutionPhase phase = executionPhase(traceIndex);
+            if (phase == TraceExecutionPhase.VBLANK_ONLY
+                    || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
                 var level = GameServices.levelOrNull();
                 if (level != null && level.getObjectManager() != null) {
                     level.getObjectManager().advanceVblaCounter();
+                }
+                if (phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
+                    var sprites = GameServices.spritesOrNull();
+                    if (sprites != null) {
+                        int animationFrame = sprites.getFrameCounter();
+                        for (var candidate : sprites.getAllSprites()) {
+                            if (candidate instanceof AbstractPlayableSprite playable) {
+                                playable.getAnimationManager().update(animationFrame);
+                            }
+                        }
+                    }
                 }
                 return;
             }
@@ -739,15 +752,15 @@ public final class TraceSessionLauncher {
             }
         }
 
-        private boolean isVblankOnly(int traceIndex) {
+        private TraceExecutionPhase executionPhase(int traceIndex) {
             if (traceIndex < 0 || traceIndex >= trace.frameCount()) {
-                return false;
+                return TraceExecutionPhase.FULL_LEVEL_FRAME;
             }
             TraceFrame current = trace.getFrame(traceIndex);
             TraceFrame previous = traceIndex > 0 ? trace.getFrame(traceIndex - 1) : null;
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-            return phase == TraceExecutionPhase.VBLANK_ONLY;
+            return phase;
         }
     }
 
@@ -794,6 +807,17 @@ public final class TraceSessionLauncher {
             int mask = toReplayValidationMask(frame);
             playback.advanceCurrentFrameWithoutGameplay();
             return mask;
+        }
+
+        @Override
+        public void advancePlayableAnimationsOnly() {
+            var sprites = GameServices.sprites();
+            int animationFrame = sprites.getFrameCounter();
+            for (var candidate : sprites.getAllSprites()) {
+                if (candidate instanceof AbstractPlayableSprite playable) {
+                    playable.getAnimationManager().update(animationFrame);
+                }
+            }
         }
 
         @Override

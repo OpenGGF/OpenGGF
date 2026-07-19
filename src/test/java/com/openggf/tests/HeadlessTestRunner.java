@@ -148,6 +148,10 @@ public class HeadlessTestRunner {
         return driver.skipFrameFromRecording();
     }
 
+    public void advancePlayableAnimationsOnly() {
+        driver.advancePlayableAnimationsOnly();
+    }
+
     /**
      * Consumes one BK2 input frame without mutating gameplay or timing counters.
      */

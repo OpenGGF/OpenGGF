@@ -263,6 +263,16 @@ public final class RecordingFrameDriver {
         return mask;
     }
 
+    public void advancePlayableAnimationsOnly() {
+        var sprites = GameServices.sprites();
+        int animationFrame = sprites.getFrameCounter();
+        for (var candidate : sprites.getAllSprites()) {
+            if (candidate instanceof AbstractPlayableSprite playable) {
+                playable.getAnimationManager().update(animationFrame);
+            }
+        }
+    }
+
     private void updateHeldCounterTitleCardOverlay() {
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {

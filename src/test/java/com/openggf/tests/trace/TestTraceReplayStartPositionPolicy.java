@@ -136,6 +136,21 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
+    void s3kMidLoopSidekickHookAdvancesOnlyPlayableAnimation() throws Exception {
+        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
+        TraceFrame previous = trace.getFrame(13098);
+        TraceFrame current = trace.getFrame(13099);
+
+        assertEquals(previous.input(), current.input());
+        assertTrue(trace.getEventsForFrame(current.frame()).stream()
+                .anyMatch(TraceEvent.TailsCpuNormalStep.class::isInstance));
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceExecutionModel.forGame("s3k").phaseFor(previous, current));
+        assertEquals(TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY,
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+    }
+
+    @Test
     void preLevelPrefixInputEdgeWithoutStateAdvanceOnlyConsumesMovieInput() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 

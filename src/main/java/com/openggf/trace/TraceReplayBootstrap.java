@@ -644,6 +644,15 @@ public final class TraceReplayBootstrap {
         TraceExecutionPhase counterPhase =
                 TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
         if (counterPhase == TraceExecutionPhase.VBLANK_ONLY
+                && hasSidekickCpuExecutionHookWithoutInputEdge(trace, previous, current)) {
+            // The VBlank sample can land after the playable slots (and their
+            // Animate calls) but before the rest of Process_Sprites completes.
+            // The native Tails normal-step hook proves that prefix ran. Advance
+            // only playable animation state; a complete level tick would also
+            // run later object slots that are not yet visible in this sample.
+            return TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
+        }
+        if (counterPhase == TraceExecutionPhase.VBLANK_ONLY
                 && hasSidekickCpuExecutionHookOnInputEdge(trace, previous, current)) {
             // A Tails CPU normal-step event is emitted from inside the native
             // player/object loop, so it is direct execution evidence. Some S3K
@@ -698,6 +707,22 @@ public final class TraceReplayBootstrap {
             TraceData trace, TraceFrame previous, TraceFrame current) {
         if (trace == null || previous == null || current == null
                 || current.input() == previous.input()
+                || (current.lagCounter() >= 0 && previous.lagCounter() >= 0
+                        && current.lagCounter() > previous.lagCounter())) {
+            return false;
+        }
+        for (TraceEvent event : trace.getEventsForFrame(current.frame())) {
+            if (event instanceof TraceEvent.TailsCpuNormalStep) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasSidekickCpuExecutionHookWithoutInputEdge(
+            TraceData trace, TraceFrame previous, TraceFrame current) {
+        if (trace == null || previous == null || current == null
+                || current.input() != previous.input()
                 || (current.lagCounter() >= 0 && previous.lagCounter() >= 0
                         && current.lagCounter() > previous.lagCounter())) {
             return false;
@@ -801,7 +826,8 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean shouldCompareGameplayStateForReplay(TraceExecutionPhase phase) {
-        return phase == TraceExecutionPhase.FULL_LEVEL_FRAME;
+        return phase == TraceExecutionPhase.FULL_LEVEL_FRAME
+                || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
     }
 
     /**
