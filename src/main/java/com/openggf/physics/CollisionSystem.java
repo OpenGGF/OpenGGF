@@ -1096,6 +1096,7 @@ public class CollisionSystem {
         sprite.setRollingJump(false);
         sprite.setJumping(false);
         sprite.setFlipAngle(0);
+        sprite.setFlipType(0);
         sprite.setFlipTurned(false);
         sprite.setFlipsRemaining(0);
         sprite.setLookDelayCounter((short) 0);

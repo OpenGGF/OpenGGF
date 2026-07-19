@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ packed cage release and landing tumble reset: animation f1663 -> f4116
+
+At f1663 CPU Tails takes the cage's jump release one object pass before Sonic.
+Both native cleanup paths execute `move.w #1,anim(a1)`: because the 68000 is
+big-endian and `prev_anim` is the following byte, that word means
+`anim=$00,prev_anim=$01`. The engine had treated the word value as animation
+1, exposing Run for Tails at f1663 and Sonic at f1664. Cage release now
+publishes the two adjacent bytes separately
+(`docs/skdisasm/sonic3k.asm:69978-69994,70087-70103`).
+
+At f1809 Sonic's ordinary terrain landing clears the barber pole's retained
+flip type in ROM `Player_TouchFloor`. The engine cleared `flip_angle`,
+`flips_remaining`, and `flip_turned` but left type 2 selected, so the following
+airborne tumble used mapping `$49` rather than `$31`. Terrain, wall/ceiling,
+and object landing paths now clear the full native tumble state, including
+`flip_type` (`docs/skdisasm/sonic3k.asm:24365-24374`). Focused cage-release,
+object-landing, and CNZ replay coverage passes through both prior mismatches.
+CNZ complete-run animation advances from f1663 `tails_animation_id` to f4116
+`player_animation_id`.
+
+The sequential 4 GB comparison-only sweeps remain 45/58 green for physics and
+44/58 green for animation, with the same 13 physics expected-red routes and
+the same eight unsupported plus six comparison-red animation routes. Every
+non-CNZ frontier is unchanged; CNZ complete-run physics remains at f24892
+`y_speed`, and legacy standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ carried landing and typed barber-pole tumble: animation f108 -> f1663
 
 At f108 Sonic lands while still owned by CPU Tails's later CNZ carry slot. ROM
