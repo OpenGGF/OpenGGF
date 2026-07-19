@@ -116,6 +116,50 @@ public class Sonic3kSpecialStageManager {
     /** Current player character selection (resolved from config on init). */
     private PlayerCharacter playerCharacter = PlayerCharacter.SONIC_AND_TAILS;
 
+    // ==================== Entry Fade Hold ====================
+
+    /**
+     * True until this manager's first post-{@link #initialize(int)} call to
+     * {@link #update()} has run. ROM: the special-stage object's first
+     * per-frame routine execution (loc_903E, sonic3k.asm:11445) happens
+     * synchronously inside the boot sequence's own {@code Process_Sprites}
+     * call (sonic3k.asm:10717) -- BEFORE the first {@code Wait_VSync}
+     * (sonic3k.asm:10725) that starts real input polling. That pre-boot call
+     * is modeled as this manager's first stepped {@code update()} running
+     * normally; {@link #postBootFadeHoldFrames} then models the frames that
+     * follow it during which the ROM does NOT call {@code Process_Sprites}
+     * at all.
+     */
+    private boolean firstUpdateCall;
+
+    /**
+     * Remaining real, input-polled frames during which the ROM does not
+     * execute the special-stage object's per-frame routine at all, so
+     * {@code Special_stage_rate_timer} (and everything else the object
+     * touches) does not advance. Two ROM waits stack back to back after the
+     * boot's pre-call:
+     * <ul>
+     *   <li>{@code Pal_FadeFromWhite} (sonic3k.asm:10735, routine at
+     *       5139-5150): {@code moveq #$15,d4 / dbf d4,loc_3C8E} runs 22
+     *       {@code Wait_VSync} iterations, calling only palette-fade helpers
+     *       -- no {@code Process_Sprites}.</li>
+     *   <li>{@code loc_84C2}'s own leading {@code Wait_VSync}
+     *       (sonic3k.asm:10741) before ITS first {@code Process_Sprites}
+     *       call (sonic3k.asm:10744) -- one more real frame with no object
+     *       update.</li>
+     * </ul>
+     * Total 23 frames; this field only counts the 22 held AFTER
+     * {@link #firstUpdateCall} consumes the first (pre-boot-equivalent)
+     * call, so it initializes to 22 and the 23rd hold frame is the 1 leading
+     * {@code loc_84C2} {@code Wait_VSync} counted alongside it.
+     * <p>
+     * Pinned by BizHawk RAM trace {@code s3-knux-multibonus-ss.bk2}
+     * (segment 12): {@code Special_stage_rate_timer} reads a flat 0x707
+     * across CSV rows 135-157 (23 rows, the first interactive row plus this
+     * 22-frame hold) and only starts decrementing at row 158.
+     */
+    private int postBootFadeHoldFrames;
+
     // Debug state
     private boolean spriteDebugMode;
 
@@ -143,6 +187,8 @@ public class Sonic3kSpecialStageManager {
         this.emeraldInteractIndex = -1;
         this.ringsLeft = 0;
         this.exitSpinStarted = false;
+        this.firstUpdateCall = true;
+        this.postBootFadeHoldFrames = 22;
         this.palFadeDelay = 0;
         this.musicSpedUp = false;
 
@@ -488,6 +534,22 @@ public class Sonic3kSpecialStageManager {
         }
 
         frameCounter++;
+
+        // Entry fade hold (see postBootFadeHoldFrames javadoc): the ROM does
+        // not run the special-stage object's per-frame routine at all for a
+        // stretch of real, input-polled frames right after entry
+        // (Pal_FadeFromWhite, sonic3k.asm:10735, plus loc_84C2's own leading
+        // Wait_VSync, sonic3k.asm:10741, before its first Process_Sprites
+        // call at sonic3k.asm:10744). frameCounter above still advances --
+        // it is comparator-facing stepped-frame bookkeeping, not a ROM RAM
+        // field -- but nothing else in this method (player/tails/collision/
+        // banner/HUD/background) may observe these frames.
+        if (firstUpdateCall) {
+            firstUpdateCall = false;
+        } else if (postBootFadeHoldFrames > 0) {
+            postBootFadeHoldFrames--;
+            return;
+        }
 
         // Banner state machine
         boolean bannerTriggeredAdvance = banner.update();
@@ -963,6 +1025,8 @@ public class Sonic3kSpecialStageManager {
                 playerCharacter,
                 spriteDebugMode,
                 useSkLayouts,
+                firstUpdateCall,
+                postBootFadeHoldFrames,
                 gameState != null ? gameState.capture() : null,
                 grid.captureRewindSnapshot(),
                 player.captureRewindSnapshot(),
@@ -1015,6 +1079,8 @@ public class Sonic3kSpecialStageManager {
         playerCharacter = snapshot.playerCharacter();
         spriteDebugMode = snapshot.spriteDebugMode();
         useSkLayouts = snapshot.useSkLayouts();
+        firstUpdateCall = snapshot.firstUpdateCall();
+        postBootFadeHoldFrames = snapshot.postBootFadeHoldFrames();
 
         GameStateManager gameState = GameServices.gameStateOrNull();
         if (gameState != null && snapshot.gameState() != null) {
