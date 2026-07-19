@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ balloon pop-script continuity: physics f24892 -> f24936, animation f24993 -> f25028
+
+`sub_317AE` uses `bset #0,anim(a0)` on every overlapping balloon contact.
+The first contact changes the animation byte and selects the pop script; later
+contacts still reapply the player's launch velocity but the already-set bit
+does not restart `Animate_Sprite`. The engine now preserves that distinction,
+including the `$34` one-shot effects/SFX latch, while retaining the balloon
+SST slot as the owner of initial pop-script advancement
+(`docs/skdisasm/sonic3k.asm:66756-66829`).
+
+This advances CNZ complete-run physics from f24892 `y_speed` to f24936
+`tails_y_speed`, and animation from f24993 `player_mapping_frame` to f25028
+`tails_mapping_frame`. The sequential 4 GB full sweeps remain 45/58 green for
+physics and 44/58 green for animation, with the same 13 physics expected-red
+routes and the same eight unsupported plus six comparison-red animation
+routes. No non-CNZ frontier moved, and legacy standalone CNZ remains at f0 in
+both scopes.
+
 ### 2026-07-19 -- CNZ triangle/recovery and landing animation ownership: animation f15195 -> f24993
 
 CNZ's triangle bumper runs after the playable slots and writes raw `anim=Walk`.

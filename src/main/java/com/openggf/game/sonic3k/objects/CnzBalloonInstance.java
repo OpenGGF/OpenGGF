@@ -224,9 +224,10 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         lastLaunchFrame = frameCounter;
 
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        boolean firstPop = !popped;
         if ((subtype & 0x80) != 0) {
             player.setYSpeed((short) -0x380);
-            if (!popped && levelHasWater()) {
+            if (firstPop && levelHasWater()) {
                 spawnUnderwaterBubblerChildren();
             }
         } else {
@@ -247,15 +248,20 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         // before the x_pos/y_pos writes. In normal play the player keeps their
         // position while only y_vel/status/control are changed (sonic3k.asm:
         // 66797-66808, 66842-66856).
-        popped = true;
-        animationTimer = 0;
-        popAnimationIndex = 0;
-        frameOffset = POP_FRAME_SEQUENCE[0];
+        if (firstPop) {
+            popped = true;
+            // The later balloon SST slot owns Animate_Sprite initialization.
+            // Leave its timer/index pending here; unlike the first bset, later
+            // contacts see anim already odd and must not restart this progress.
+            animationTimer = 0;
+            popAnimationIndex = 0;
+            frameOffset = POP_FRAME_SEQUENCE[0];
 
-        try {
-            services().playSfx(Sonic3kSfx.BALLOON.id);
-        } catch (Exception ignored) {
-            // Headless tests can omit the audio backend; launch state is still valid.
+            try {
+                services().playSfx(Sonic3kSfx.BALLOON.id);
+            } catch (Exception ignored) {
+                // Headless tests can omit the audio backend; launch state is still valid.
+            }
         }
     }
 

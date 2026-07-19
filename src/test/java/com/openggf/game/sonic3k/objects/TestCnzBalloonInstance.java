@@ -228,4 +228,26 @@ class TestCnzBalloonInstance {
         assertEquals(0x7F00, balloon.getX());
         assertEquals(0, balloon.getCollisionFlags());
     }
+
+    @Test
+    void repeatedLaunchDoesNotRestartPopAnimation() {
+        CnzBalloonInstance balloon =
+                new CnzBalloonInstance(new ObjectSpawn(0x17C0, 0x860, 0x41, 0, 0, false, 0));
+        balloon.setServices(new TestObjectServices());
+        AbstractPlayableSprite player = HeadlessTestFixture.builder()
+                .withZoneAndAct(com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+
+        balloon.onTouchResponse(player, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0);
+        balloon.update(0, player);
+        balloon.update(1, player);
+        balloon.onTouchResponse(player, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 2);
+        for (int i = 2; i < 7; i++) {
+            balloon.update(i, player);
+        }
+
+        assertTrue(balloon.hasMovedOffscreenForTest(),
+                "bset #0,anim does not restart an already-selected pop script");
+    }
 }
