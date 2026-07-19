@@ -45693,6 +45693,29 @@ remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
 
+### 2026-07-19 -- S3K all-entry respawn persistence: f9618 -> f9663
+
+At f9618 the monitor at `$2CE8,$0670` has ROM code pointer `$1B588`, the
+`Sprite_OnScreen_Test` broken-shell routine, after Sonic previously collected
+its bubble shield. The engine reloaded the same layout entry as an intact
+routine-2 monitor because its Y-word bit 15 was clear and the shared placement
+controller rejected `markRemembered`. S3K does not use that S1/S2 gate:
+`Load_Sprites` advances `Object_respawn_table` for every record and stores the
+corresponding address in every spawned SST
+(`docs/skdisasm/sonic3k.asm:37513-37656,37741-37758`).
+
+Two-axis S3K placement now persists remembered destruction for every real
+layout entry while S1/S2 retain their explicit high-bit rule. Focused placement
+and monitor tests pass, and CNZ complete-run physics advances from f9618 `x`
+to f9663 `camera_x`. The implementation models the ROM respawn table and
+contains no trace hydration or route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- Spike lower-half escape push publication: f8388 -> f9618
 
 At f8388 Sonic overlaps the lower-right portion of the vertically moving spike

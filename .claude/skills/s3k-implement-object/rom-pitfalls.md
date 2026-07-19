@@ -1545,6 +1545,35 @@ while moving away.
 
 **Originating commit.** `<pending: shared spike squash-edge push milestone>`.
 
++---
+
+## P45 -- Every S3K layout entry owns a respawn-table byte
+
+**S3K-specific:**
+
+**Symptom.** A destroyed or broken object reloads as a fresh live object after
+vertical or backward camera movement even though ROM reloads its remembered
+shell/state. The layout Y word may have bit 15 clear, which makes the same
+record look non-tracked under S1/S2 parsing rules.
+
+**Root cause.** S3K `Load_Sprites` advances the `a3` respawn-table cursor for
+every six-byte layout entry and stores `a3` into the spawned SST's
+`respawn_addr`. Persistence is therefore not conditional on the S1/S2 layout
+high-bit convention. Reusing `ObjectSpawn.respawnTracked()` as the S3K
+persistence gate discards native remembered state.
+
+**Correct pattern.** When `ObjectPlacementController` is in S3K two-axis
+cursor mode, allow every real layout entry to persist remembered destruction.
+Keep the explicit `respawnTracked` gate for S1/S2 modes and for synthetic
+non-layout objects. Test an entry with bit 15 clear, mark it remembered, unload
+it, and verify a later load observes the remembered state.
+
+**ROM citation.** S3K initializes and advances `Object_respawn_table` alongside
+every layout record at `docs/skdisasm/sonic3k.asm:37513-37656`; the Camera-Y
+loader sets bit 7 and writes `respawn_addr(a1)` at lines 37741-37758.
+
+**Originating commit.** `<pending: S3K all-entry respawn persistence milestone>`.
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

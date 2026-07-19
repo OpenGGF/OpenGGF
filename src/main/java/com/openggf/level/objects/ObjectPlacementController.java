@@ -675,7 +675,13 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * ObjPosLoad pass).
      */
     private boolean persistsDestruction(ObjectSpawn spawn) {
-        return spawn != null && spawn.respawnTracked();
+        // S3K Load_Sprites assigns every six-byte layout entry an a3 byte in
+        // Object_respawn_table and always stores that address in respawn_addr
+        // (sonic3k.asm:37513-37560,37741-37758). Unlike S1/S2, persistence is
+        // not conditional on bit 15 of the layout Y word. The shared parser's
+        // respawnTracked flag retains the S1/S2 encoding, so the two-axis S3K
+        // placement mode must treat every real layout entry as tracked.
+        return spawn != null && (twoAxisCursorPlacement || spawn.respawnTracked());
     }
 
     boolean isRemembered(ObjectSpawn spawn) {
