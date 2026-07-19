@@ -137,7 +137,7 @@ public final class S3kSlotBonusStageRuntime {
 
         // Option cycle system
         if (!slotStageController.isReelsFrozen()) {
-            optionCycleSystem.tick(slotStageState, frameCounter);
+            optionCycleSystem.tick(slotStageState, globalVIntRunCounter());
             if (optionCycleSystem.isResolved(slotStageState)) {
                 slotStageController.latchResolvedPrize(
                         optionCycleSystem.lastPrizeResult(slotStageState),
@@ -629,6 +629,44 @@ public final class S3kSlotBonusStageRuntime {
 
     private DefaultObjectServices slotObjectServices() {
         return new DefaultObjectServices(bootstrapGameplayMode, EngineServices.current());
+    }
+
+    /**
+     * ROM {@code Slots_CycleOptions} (sonic3k.asm:99614-99946) reads {@code
+     * V_int_run_count} -- a longword that counts every VBlank since power-on and
+     * never resets on level load -- for every reel-spin/target/RNG-mix
+     * computation: {@code loc_4C416}'s reel-word seeds (line 99646 {@code
+     * move.b (V_int_run_count+3).w,d0}), {@code loc_4C480}'s per-reel velocity
+     * offsets and fixed-row scan seed (lines 99679-99702, same byte), and {@code
+     * loc_4C4F8}'s random-target draw (line 99722 {@code add.w
+     * (V_int_run_count+2).w,d0}) and {@code loc_4C54C}'s post-decelerate
+     * countdown extension (lines 99753-99755, same byte). This is a distinct
+     * ROM variable from {@code Level_frame_counter} (the level-local counter
+     * the reward-spawn cadence gate in {@link
+     * com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance} correctly
+     * reads via this method's {@code frameCounter} parameter). Passing the
+     * level-local {@code frameCounter} into {@link S3kSlotOptionCycleSystem}
+     * instead -- reset to whatever {@code LevelManager.getFrameCounter()} held
+     * when the bonus stage loaded, rather than a persistent run count -- fed
+     * the wrong seed into the reel-target selection, resolving a different
+     * (and differently-timed) prize than ROM and producing a rings-count
+     * divergence that starts well before any position/velocity field diverges
+     * (TestS3kSlotsBonusTraceReplay frame 269: expected rings=75, actual=76).
+     * {@code ObjectManager.vblaCounter} is this engine's persistent,
+     * never-reset-on-level-load run counter -- the same approximation of
+     * V_int_run_count that every ordinary object's {@code update(int
+     * frameCounter, ...)} dispatch already receives (see {@code
+     * ObjectManager.update} and {@code GumballMachineObjectInstance}'s matching
+     * seed comment) -- so route the option-cycle system to it explicitly here,
+     * since the slots runtime suppresses ObjectManager's own dispatch and
+     * drives its objects with a bespoke, level-local counter instead.
+     */
+    private int globalVIntRunCounter() {
+        if (bootstrapGameplayMode == null) {
+            return lastFrameCounter;
+        }
+        ObjectManager objectManager = bootstrapGameplayMode.getLevelManager().getObjectManager();
+        return objectManager != null ? objectManager.getVblaCounter() : lastFrameCounter;
     }
 
     private void registerDynamicSlotObject(com.openggf.level.objects.ObjectInstance object) {
