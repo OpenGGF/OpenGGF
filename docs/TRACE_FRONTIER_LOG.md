@@ -1,5 +1,43 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- Green campaigns round 1: blue spheres GREEN, S1 maze GREEN, bonus trio advanced
+
+Three parallel campaign lanes (workflow-orchestrated: fresh sonnet-high
+agents per frontier iteration with opus-xhigh stall escalation, adversarial
+lane reviews, merged sequentially as `afb7c6c52`/`bed16bc7b`/`474e93446`)
+drove the five live stage comparators. Post-merge verification (main tree
+at `474e93446`, explicit `-Dtest` runs of all five comparators):
+
+- **`TestS3kSpecialStageTraceReplay` (blue spheres): GREEN -- 0 errors**
+  (was 169+6w) over the 4630-row Knuckles capture. Roots: comparator
+  frame-0 stale-RAM basis, player turn-rotation early-return fallthrough,
+  stepped-frame routine pacing (`Pal_FadeFromWhite` 22-frame hold,
+  `Kos_modules_left` art-load gate), bumper different-cell unlock branch.
+  **Now MUST-STAY-GREEN**: any future red here is a regression, not debt.
+- **`TestS1SpecialStageTraceReplay` (S1 maze): GREEN -- 0 errors** (was
+  503) over the 3091-row GHZ capture. Roots: ROM 44-VBlank pre-physics
+  hold (S2 TRACE_ACCURATE precedent), mid-hold `v_ssangle`/`v_ssrotate`
+  init boundary, setup-time `PalCycle_SS`, `neg.b` angle-transform
+  ordering, `SonicSS_FindWall` four-cell last-hit scan, `SS_AniBumper`
+  flash-lockout, emerald-sparkle exit arming (`SS_AniEmeraldSparks`
+  routine write -- the maze exits via emerald, never GOAL, in this
+  capture), torn-row-1767 comparator basis. **Now MUST-STAY-GREEN.**
+- `TestS3kGumballBonusTraceReplay`: 145 -> **54 errors**, frontier f0 ->
+  f380 (x_speed/y_speed after correct ball pickup -- next shallowest root).
+- `TestS3kSlotsBonusTraceReplay`: 263 -> **217 errors**, frontier f0 ->
+  f47+ (slot-runtime ground-velocity family).
+- `TestS3kPachinkoBonusTraceReplay`: 677 -> **896 errors**, frontier f0 ->
+  f427+ (totals ROSE because the f0/orbit fixes exposed genuinely
+  different downstream physics; frontier depth is the progress metric).
+  Ten bonus-lane roots landed incl. the shared bootstrap ground-snap fix
+  (`applyBonusStageEntry` forced-air reset), slot subpixel truncation +
+  fabricated-angle removal, pachinko orbit negate-before-shift order, and
+  the gumball bumper fallback-bounce removal.
+
+Next round: bonus trio continues from f380/f47/f427 (same lane procedure);
+the chain-consumer build items are unchanged (mega-run adaptation for
+`TestS3kBonusRoundTripChain`, S2 round-trip consumer).
+
 ### 2026-07-19 -- S3K Knuckles multi-bonus mega-run captured; all four stage comparators go live
 
 The S3K Knuckles-route recording (`s3-knux-multibonus-ss.bk2`, 114622 input
