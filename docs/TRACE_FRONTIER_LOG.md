@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ retained results/title transition chain: f13968 -> f15464
+
+CNZ's Act 1 results object appeared at f13960 and the ROM allocated its child
+SSTs plus published the second `Events_fg_5` at f13968. The engine used the
+global nine-dispatch results-art gate required by HCZ/MGZ, leaving CNZ at the
+old `$32xx/$04xx` coordinates for one extra frame. The CNZ background owner
+now advertises its native `ACT1_POST_BOSS/BG_DO_TRANSITION` state through the
+transition bridge, selecting the eight-dispatch create gate only while that
+state is actually waiting. No zone, route, or trace identity is consulted.
+
+The subsequent retained-owner chain now waits for the real
+`End_of_level_flag`, preserves the results object across the seamless reload,
+defers its mutated title-card timer/ring reset to the native title dispatch,
+and records that the held level counter came from retained results. That
+counter provenance is consumed by CPU Tails after its barber-pole interact SST
+is freed and by CNZ bumper orbit publication. Barber-pole airborne latches also
+run the native `Player_TouchFloor` cleanup and use
+`Delete_Sprite_If_Not_In_Range`'s unsigned coarse-X window
+(`docs/skdisasm/sonic3k.asm:62512-62720,69348-69782`).
+
+Focused results, transition, title-card, barber-pole, bumper, sidekick, and CNZ
+event-flow tests pass. CNZ complete-run physics advances from f13968 `x` to
+f15464 `tails_x`; its next mismatch is CPU Tails held two pixels left on a CNZ
+cylinder. A full comparison-only sweep remains 45/58 physics green with the
+same 13 expected-red routes and unchanged non-CNZ frontiers. Animation remains
+44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-17 -- Review finding 10: hot-file whitespace churn removed
 
 Branch `feature/ai-trace-animation-verification`, on top of `e56e1d549`.

@@ -10,6 +10,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
+import com.openggf.game.CanonicalAnimation;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -90,6 +92,22 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // The visible CNZ pole is level art; this object owns only the ride logic.
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // Delete_Sprite_If_Not_In_Range uses the native unsigned coarse-X
+        // window, not the viewport-scaled placement window. A pole just behind
+        // Camera_X_pos_coarse_back therefore underflows and deletes immediately
+        // (sonic3k.asm:37301-37317,69348-69357).
+        int coarseBack = (cameraX - 0x80) & 0xFF80;
+        int distance = ((spawn.x() & 0xFF80) - coarseBack) & 0xFFFF;
+        return distance > 0x280;
     }
 
     @Override
@@ -229,11 +247,34 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
         if (player.getAir()) {
             player.setYSpeed((short) 0);
             player.setGSpeed(player.getXSpeed());
+            applyNativeTouchFloor(player);
         }
         player.setOnObject(true);
         player.setAir(false);
         player.setLatchedSolidObject(Sonic3kObjectIds.CNZ_BARBER_POLE, this);
         player.setAngle((byte) angle);
+    }
+
+    /** Mirrors the Player_TouchFloor/Tails_TouchFloor call in sub_337D8. */
+    private void applyNativeTouchFloor(AbstractPlayableSprite player) {
+        int oldYRadius = player.getYRadius();
+        int centreY = player.getCentreY();
+        boolean wasRolling = player.getRolling();
+        player.setRolling(false);
+        if (wasRolling) {
+            NativePositionOps.writeYPosPreserveSubpixel(
+                    player, centreY + oldYRadius - player.getStandYRadius());
+        }
+        player.setRollingJump(false);
+        player.setJumping(false);
+        player.setPushing(false);
+        player.setFlipAngle(0);
+        player.setFlipTurned(false);
+        player.setFlipsRemaining(0);
+        int walkAnimation = player.resolveAnimationId(CanonicalAnimation.WALK);
+        if (walkAnimation >= 0) {
+            player.setAnimationId(walkAnimation);
+        }
     }
 
     private void continueRide(AbstractPlayableSprite player, RiderState state) {

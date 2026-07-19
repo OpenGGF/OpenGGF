@@ -86,6 +86,24 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
+    void carriedCnzActOneResultsKeepsReloadedActStateForNativeTitleCardReset() throws Exception {
+        ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                services,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        results.setServices(services);
+        results.onCarriedAcrossSeamlessTransition(-0x3000, 0x0200);
+
+        Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+        onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
+
+        assertEquals(List.of("3:1"), services.titleCard.calls,
+                "The retained results SST mutates into the native in-level Act 2 title card");
+        verify(services.levelManager, never()).resetLevelGamestate(org.mockito.ArgumentMatchers.any(LevelState.class));
+    }
+
+    @Test
     void aizActOneMinibossTitleHandoffDefersLevelGamestateResetToTitleCard() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x00, Sonic3kMusic.AIZ2.id);
         S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
@@ -218,6 +236,7 @@ class TestS3kResultsScreenObjectInstance {
         private final Camera camera = new Camera();
         private final RecordingTitleCardProvider titleCard = new RecordingTitleCardProvider();
         private final LevelManager levelManager = mock(LevelManager.class);
+        private final ArmedTransitionOwner transitionOwner = new ArmedTransitionOwner();
         private final List<Integer> playedMusic = new ArrayList<>();
         private int apparentAct = -1;
 
@@ -239,6 +258,23 @@ class TestS3kResultsScreenObjectInstance {
         @Override
         public LevelManager levelManager() {
             return levelManager;
+        }
+
+        @Override
+        public LevelEventProvider levelEventProvider() {
+            return transitionOwner;
+        }
+
+        private final class ArmedTransitionOwner implements LevelEventProvider, S3kTransitionEventBridge {
+            @Override public void initLevel(int zone, int act) { }
+            @Override public void update() { }
+            @Override public void signalActTransition() { }
+            @Override public void requestHczPostTransitionCutscene() { }
+            @Override public boolean restorePendingPostResultsPlayerControl() {
+                return zone == 0x01 || zone == 0x02;
+            }
+            @Override public void requestMgzPostTransitionRelease() { }
+            @Override public void requestCnzPostTransitionRelease(int framesUntilRelease) { }
         }
 
         @Override

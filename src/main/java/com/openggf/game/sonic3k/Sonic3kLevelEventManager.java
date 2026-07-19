@@ -89,7 +89,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         S3kTransitionEventBridge {
     private static final Logger LOG = Logger.getLogger(Sonic3kLevelEventManager.class.getName());
     private static final int PACHINKO_TOP_EXIT_Y = -0x20;
-    private static final int CNZ_POST_TRANSITION_ACT2_SIZE_CHANGE_FRAMES = 751;
+    private static final int CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES = 9;
     private static final int CNZ2_CAMERA_MIN_X = 0x0000;
     private static final int CNZ2_CAMERA_MAX_X = 0x6000;
     private static final int CNZ2_CAMERA_MIN_Y = 0x0580;
@@ -1065,6 +1065,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public int resultsCreateGateDispatches() {
+        return cnzEvents != null && cnzEvents.isAwaitingSeamlessReloadSignal() ? 8 : 9;
+    }
+
+    @Override
     public void signalActTransition() {
         setEventsFg5ForActTransition();
     }
@@ -1098,7 +1103,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void requestCnzPostTransitionRelease(int framesUntilRelease) {
         this.cnzPendingPostTransitionReleaseFrames = Math.max(0, framesUntilRelease);
-        this.cnzPendingPostTransitionAct2SizeFrames = CNZ_POST_TRANSITION_ACT2_SIZE_CHANGE_FRAMES;
+        // Wait on the ROM-owned in-level title-card completion flag. A fixed
+        // elapsed-frame estimate drifts when object-slot/Kos queue timing moves.
+        this.cnzPendingPostTransitionAct2SizeFrames = -1;
         this.cnzPostTransitionAct2SizeActive = false;
         this.cnzAct2MinXAccumulator = 0;
         this.cnzAct2MaxXAccumulator = 0;
@@ -1203,7 +1210,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone != Sonic3kZoneIds.ZONE_CNZ || currentAct != 1) {
             return;
         }
-        if (cnzPendingPostTransitionAct2SizeFrames > 0) {
+        if (cnzPendingPostTransitionAct2SizeFrames < 0) {
+            if (!GameServices.gameState().isEndOfLevelFlag()) {
+                return;
+            }
+            // Obj_EndSignControlDoStart consumes the title-card completion flag
+            // before Change_Act2Sizes allocates the four gradual bound owners.
+            GameServices.gameState().setEndOfLevelFlag(false);
+            // The later Obj_EndSignControl owner observes the flag after its
+            // retained slot chain advances to DoStart; only then does it call
+            // Change_Act2Sizes (sonic3k.asm:180407-180419).
+            cnzPendingPostTransitionAct2SizeFrames =
+                    CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES;
+            return;
+        } else if (cnzPendingPostTransitionAct2SizeFrames > 0) {
             cnzPendingPostTransitionAct2SizeFrames--;
             if (cnzPendingPostTransitionAct2SizeFrames > 0) {
                 return;

@@ -147,6 +147,7 @@ public class SidekickCpuController {
     public enum DespawnCause {
         LEVEL_BOUNDARY,
         OFF_SCREEN_TIMEOUT,
+        FREED_INTERACT_SLOT,
         OBJECT_ID_MISMATCH,
         EXPLICIT
     }
@@ -3152,6 +3153,12 @@ public class SidekickCpuController {
                 && provider.usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(sidekick);
     }
 
+    private boolean titleCardOwnsRetainedResultsHeldLevelCounter() {
+        GameModule module = sidekick.currentGameModule();
+        var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
+        return titleCardProvider != null && titleCardProvider.ownsRetainedResultsHeldLevelCounter();
+    }
+
     public boolean hasLevelEventDormantMarkerReleasePending() {
         return levelEventDormantMarkerReleasePending;
     }
@@ -3751,7 +3758,9 @@ public class SidekickCpuController {
         diagnosticCtrl2PressedLatch = controller2Logical & MANUAL_HELD_MASK;
         int catchUpFrameCounter = catchUpFrameCounterOverride >= 0
                 ? catchUpFrameCounterOverride
-                : (catchUpUsesRomVisibleLevelFrameCounter && cpuFrameCounterFromStoredLevelFrame
+                : (catchUpUsesRomVisibleLevelFrameCounter
+                        && (cpuFrameCounterFromStoredLevelFrame
+                            || titleCardOwnsRetainedResultsHeldLevelCounter())
                         ? frameCounter + 1
                         : frameCounter);
         catchUpFrameCounterOverride = -1;
@@ -3778,7 +3787,6 @@ public class SidekickCpuController {
             // screen-boundary/movement writes recorded at CNZ1 F4790.
             return;
         }
-
         // sonic3k.asm:26487 (loc_13B50) — teleport and enter FLIGHT_AUTO_RECOVERY.
         int targetX = leader.getCentreX() & 0xFFFF;
         int targetY = leader.getCentreY() & 0xFFFF;
@@ -4372,7 +4380,7 @@ public class SidekickCpuController {
                 if ((sidekick.getLatchedSolidObjectId() & 0xFF) != 0
                         && ridingInstance != null
                         && isLatchedRideSlotFreed(ridingInstance)) {
-                    triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
+                    triggerDespawn(DespawnCause.FREED_INTERACT_SLOT);
                     return true;
                 }
             }
@@ -4676,8 +4684,17 @@ public class SidekickCpuController {
         // object/interact mismatch path originates inside loc_13F40's
         // sub_13EFC call and therefore continues into its post-warp facing
         // block.
-        applyDespawnMarker(state == State.PANIC
-                && cause == DespawnCause.OBJECT_ID_MISMATCH);
+        boolean freedInteractSlot = cause == DespawnCause.FREED_INTERACT_SLOT;
+        boolean interactMismatch = freedInteractSlot || cause == DespawnCause.OBJECT_ID_MISMATCH;
+        applyDespawnMarker(state == State.PANIC && interactMismatch);
+        if (freedInteractSlot && usesS3kCatchUpMarker()
+                && titleCardOwnsRetainedResultsHeldLevelCounter()) {
+            // sub_13EFC reaches sub_13ECA inside the current Tails CPU slot.
+            // The following routine-2 dispatch therefore observes the ROM's
+            // already-incremented Level_frame_counter, one tick ahead of the
+            // engine cadence stored for the mismatch update.
+            catchUpUsesRomVisibleLevelFrameCounter = true;
+        }
     }
 
     /**

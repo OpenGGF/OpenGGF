@@ -59,6 +59,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private static final int MUSIC_TRIGGER_FRAME = 71;    // 360 - 289 = 71 (ROM line 62626)
     private static final int RESULTS_CREATE_KOS_GATE_FRAMES = 9;
     private static final int CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES = 3;
+    private static final int MUTATED_TITLE_CARD_RESET_DISPATCHES = 38;
 
     // Time bonus table (ROM lines 62910-62918)
     private static final int[] TIME_BONUSES = {5000, 5000, 1000, 500, 400, 300, 100, 10};
@@ -89,6 +90,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int postControlHandoffDelayEntries;
     private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
     private boolean controlsReleasedAheadOfHandoff;
+    private boolean carriedAcrossSeamlessTransition;
 
     // Tally values
     private int timeBonus;
@@ -115,7 +117,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private final ResultsElement[] elements = new ResultsElement[12];
     private int exitQueueCounter;
     private int childrenRemaining;
-    private int createGateFrames = RESULTS_CREATE_KOS_GATE_FRAMES;
+    private int createGateFrames = -1;
     private boolean actTransitionSignaled;
     private int carriedResultsRenderRetireDispatches;
     private boolean exitRetireDispatchesInitialized;
@@ -394,6 +396,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             return;
         }
 
+        if (createGateFrames < 0) {
+            createGateFrames = S3kTransitionWriteSupport.resultsCreateGateDispatches(services());
+        }
+
         createGateFrames--;
         if (romResultsCreateGateReady(createGateFrames)) {
             // ROM Obj_LevelResultsInit queues three Kosinski module loads and
@@ -481,6 +487,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // children as embedded elements, so preserve the final three child
         // retirement dispatches that occur after the embedded set is gone.
         carriedResultsRenderRetireDispatches = carriedResultsRetireDispatches;
+        carriedAcrossSeamlessTransition = true;
     }
 
     // ---- Pre-tally delay with music trigger ----
@@ -607,6 +614,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     protected void onExitReady() {
         int zone = services().romZoneId();
         boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
+        boolean retainedReloadState = act == 0 && carriedAcrossSeamlessTransition;
         boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
         if (!controlsReleasedAheadOfHandoff) {
             releasePlayerControlsForExit();
@@ -626,7 +634,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         boolean iczAct2EndBossHandoff = zone == 0x05 && act == 1;
         var cam = services().camera();
         applyCameraFollowExitState(cam, lbzAct2PostBossHandoff);
-        if (shouldRestoreCameraBoundsOnExit(zone, act)
+        if (!hasSeamlessTransition && !retainedReloadState
+                && shouldRestoreCameraBoundsOnExit(zone, act)
                 && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
             if (level != null) {
@@ -689,6 +698,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 if (aizAct1MinibossTitleHandoff
                         && titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
                     s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
+                } else if (retainedReloadState
+                        && titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
+                    // This Obj_LevelResults survived an earlier Load_Level and
+                    // now mutates into Obj_TitleCard. The in-level title owner
+                    // resets Timer/Ring_count on its first Wait dispatch after
+                    // the queued create passes (sonic3k.asm:62708-62720,
+                    // 62150-62235).
+                    s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
+                            MUTATED_TITLE_CARD_RESET_DISPATCHES);
                 }
             }
 
@@ -701,7 +719,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // request above, where it becomes visible after the title children
             // reach their display positions (sonic3k.asm:62708-62720,
             // 62214-62235).
-            if (!hasSeamlessTransition && !aizAct1MinibossTitleHandoff) {
+            if (!hasSeamlessTransition && !retainedReloadState
+                    && !aizAct1MinibossTitleHandoff) {
                 resetLevelGamestateForActTransition();
             }
         }
@@ -713,6 +732,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     private void releasePlayerControlsForExit() {
         int zone = services().romZoneId();
+        // HCZ/MGZ retain a separate post-transition control owner. CNZ carries
+        // this results object through its reload and Restore_PlayerControl still
+        // belongs to the results exit itself.
         boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
         boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
         if (!hasSeamlessTransition && !lbzAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {

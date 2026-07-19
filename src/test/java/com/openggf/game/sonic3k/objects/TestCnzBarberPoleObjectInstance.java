@@ -7,6 +7,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -37,6 +38,16 @@ class TestCnzBarberPoleObjectInstance {
         pole.onUnload();
 
         assertTrue(pole.isDestroyed());
+    }
+
+    @Test
+    void usesNativeCoarseBackDeletionWindow() {
+        CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0EF0, 0x0A10, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+
+        assertFalse(pole.isCustomOutOfRange(0x0F7F));
+        assertTrue(pole.isCustomOutOfRange(0x0F80),
+                "the unsigned coarse subtraction must delete as soon as the camera's coarse-back passes the pole");
     }
 
     @Test
@@ -140,7 +151,7 @@ class TestCnzBarberPoleObjectInstance {
 
         TestPlayableSprite sonic = new TestPlayableSprite();
         sonic.setCentreX((short) 0x0100);
-        sonic.setCentreY((short) 0x00C9);
+        sonic.setCentreY((short) 0x00C7);
         sonic.setDebugMode(true);
 
         pole.update(0, sonic);
@@ -166,6 +177,29 @@ class TestCnzBarberPoleObjectInstance {
         assertTrue(sidekick.isOnObject());
         assertFalse(sidekick.getAir());
         assertEquals(Sonic3kObjectIds.CNZ_BARBER_POLE, sidekick.getLatchedSolidObjectId());
+    }
+
+    @Test
+    void airborneRollingLatchRunsNativeTouchFloorBeforeRide() {
+        TestEnvironment.resetAll();
+        CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+        pole.setServices(new TestObjectServices());
+
+        TestPlayableSprite sonic = new TestPlayableSprite();
+        sonic.setCentreX((short) 0x0100);
+        sonic.setRolling(true);
+        sonic.setCentreY((short) 0x00CA);
+        sonic.setAir(true);
+        sonic.setYSpeed((short) 0x0200);
+
+        pole.update(0, sonic);
+
+        assertTrue(sonic.isOnObject());
+        assertFalse(sonic.getAir());
+        assertFalse(sonic.getRolling(), "sub_337D8 calls Player_TouchFloor on an airborne latch");
+        assertEquals(0x00C5, sonic.getCentreY() & 0xFFFF,
+                "Player_TouchFloor subtracts the rolling-to-standing radius delta from y_pos");
     }
 
     @Test

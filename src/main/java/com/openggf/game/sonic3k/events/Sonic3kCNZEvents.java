@@ -711,6 +711,15 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         enterPostBossForegroundRefresh();
     }
 
+    /**
+     * The CNZ post-boss background owner has completed both foreground refresh
+     * passes and is polling the results object's second {@code Events_fg_5}.
+     */
+    public boolean isAwaitingSeamlessReloadSignal() {
+        return bossBackgroundMode == BossBackgroundMode.ACT1_POST_BOSS
+                && bgRoutine == BG_DO_TRANSITION;
+    }
+
     private void enterPostBossForegroundRefresh() {
         eventsFg5 = false;
         bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
