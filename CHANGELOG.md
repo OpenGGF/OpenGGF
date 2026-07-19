@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): blue ball special stage bumper different-cell unlock no longer applies the newly-reversed velocity to position on its own frame, and the chaos/super emerald art-load wait now models the ROM's `Kos_modules_left` gate with a measured frame count instead of resetting `clear_timer` instantly, closing the `TestS3kSpecialStageTraceReplay` frontier to 0 errors (sonic3k.asm:12007-12039,12613-12620).
 - Fix(s3k): blue ball special stage entry now holds the object's per-frame routine for 22 real frames after the boot's pre-call before resuming, matching the ROM's `Pal_FadeFromWhite` fade-in hold, so `Special_stage_rate`/`rate_timer` no longer advance early and desync the speed cap and downstream position/velocity later in the run (sonic3k.asm:10717,10735,10741-10744,5139-5150).
 - Fix(s3k): blue ball special stage collision-response queue entries (blue sphere/ring) fire their first animation step on the creation frame instead of a full timer cycle later (sonic3k.asm:12742-12753, 10744-10746).
 - Fix(s3k): blue ball special stage turn-completion falls through to position/collision update on the same frame instead of deferring to the next frame (sonic3k.asm:11946-11955).

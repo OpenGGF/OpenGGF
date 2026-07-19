@@ -77,6 +77,27 @@ public class Sonic3kSpecialStageManager {
     private int clearTimer;
     private int emeraldTimer;
     private int emeraldInteractIndex;
+    /**
+     * Frames remaining before the queued Chaos/Super Emerald Kosinski art
+     * module finishes background-decompressing. ROM models this as
+     * {@code Kos_modules_left} (sonic3k.constants.asm), a byte decremented
+     * once per frame by the VBlank-driven streaming Kosinski decompressor
+     * (Queue_Kos_Module, sonic3k.asm:2668) independently of the special
+     * stage's own per-frame routine; {@code loc_9C5C} (sonic3k.asm:12613-
+     * 12620) polls {@code tst.b Kos_modules_left; bne locret_9C7E} every
+     * frame and only resets {@code Special_stage_clear_timer} to 0 (and
+     * starts the emerald-approach countdown) once it reads zero. The engine
+     * does not model a byte-budgeted streaming Kosinski decompressor, so
+     * (like {@code CnzTeleporterInstance.queuedArtFramesRemaining}) this
+     * approximates the real, measured drain time with a fixed frame count:
+     * BizHawk trace {@code s3-knux-multibonus-ss.bk2} shows
+     * {@code clear_routine} flip 1-&gt;2 at physics.csv row 4362 (the
+     * transition frame itself does not run the {@code loc_9C5C} body -- see
+     * {@code updateClearEmeraldLoad}) with {@code clear_timer} flat at 0x101
+     * through row 4366, only resetting to 0 at row 4367 -- 4 blocked
+     * routine-2 calls (rows 4363-4366) before the module finishes.
+     */
+    private int emeraldArtFramesRemaining;
 
     // ==================== Remaining rings from sphere conversion ====================
     private int ringsLeft;
@@ -185,6 +206,7 @@ public class Sonic3kSpecialStageManager {
         this.clearTimer = 0;
         this.emeraldTimer = 0;
         this.emeraldInteractIndex = -1;
+        this.emeraldArtFramesRemaining = 0;
         this.ringsLeft = 0;
         this.exitSpinStarted = false;
         this.firstUpdateCall = true;
@@ -946,16 +968,24 @@ public class Sonic3kSpecialStageManager {
         player.setVelocity(CLEAR_VELOCITY);
         emeraldTimer = EMERALD_TIMER_INIT;
 
-        // Emerald art and palette are already loaded synchronously with the stage art.
+        // Emerald art/palette bytes are loaded synchronously (ROM-only asset
+        // pipeline), but the ROM's own Kos_modules_left gate in loc_9C5C is a
+        // real per-frame wait -- see emeraldArtFramesRemaining javadoc above.
+        emeraldArtFramesRemaining = EMERALD_ART_QUEUE_DRAIN_FRAMES;
     }
 
     /**
      * Clear routine state 2: wait for emerald art to load.
-     * ROM: loc_9C5C (sonic3k.asm:12613)
+     * ROM: loc_9C5C (sonic3k.asm:12613-12620) -- {@code tst.b
+     * Kos_modules_left; bne locret_9C7E} polls every frame and does nothing
+     * else (clear_timer and emerald_timer both untouched) until the queued
+     * Kosinski module finishes.
      */
     private void updateClearEmeraldLoad() {
-        // In ROM, waits for Kos_modules_left to be 0
-        // We skip this since we load synchronously
+        if (emeraldArtFramesRemaining > 0) {
+            emeraldArtFramesRemaining--;
+            return;
+        }
         clearTimer = 0;
         emeraldTimer--;
         if (emeraldTimer <= 0) {
@@ -1006,6 +1036,7 @@ public class Sonic3kSpecialStageManager {
                 clearTimer,
                 emeraldTimer,
                 emeraldInteractIndex,
+                emeraldArtFramesRemaining,
                 exitSpinStarted,
                 palFadeDelay,
                 musicSpedUp,
@@ -1060,6 +1091,7 @@ public class Sonic3kSpecialStageManager {
         clearTimer = snapshot.clearTimer();
         emeraldTimer = snapshot.emeraldTimer();
         emeraldInteractIndex = snapshot.emeraldInteractIndex();
+        emeraldArtFramesRemaining = snapshot.emeraldArtFramesRemaining();
         exitSpinStarted = snapshot.exitSpinStarted();
         palFadeDelay = snapshot.palFadeDelay();
         musicSpedUp = snapshot.musicSpedUp();
