@@ -97,6 +97,8 @@ public class SidekickCpuController {
      */
     private static final int ROM_DELETED_INTERACT_SLOT_ID = 0x00;
     private final int flyAnimId;
+    private final int flyAscendAnimId;
+    private final int flyTiredAnimId;
     private final int swimAnimId;
     private final int swimAscendAnimId;
     private final int swimTiredAnimId;
@@ -327,6 +329,8 @@ public class SidekickCpuController {
         }
         this.respawnStrategy = createDefaultRespawnStrategy();
         this.flyAnimId = sidekick.resolveAnimationId(CanonicalAnimation.FLY);
+        this.flyAscendAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_FLY_ASCEND);
+        this.flyTiredAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_FLY_TIRED);
         this.swimAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_SWIM);
         this.swimAscendAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_SWIM_ASCEND);
         this.swimTiredAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_SWIM_TIRED);
@@ -3845,6 +3849,13 @@ public class SidekickCpuController {
         sidekick.setOnObject(false);
         sidekick.setMoveLockTimer(0);
         clearRespawnAnimationState();
+        // loc_13B50 clears the complete tumble selector before installing the
+        // recovery flight state. A later object may write flip_angle without
+        // writing flip_type, so retaining an old barber-pole type changes its
+        // next native Anim_Tumble mapping (sonic3k.asm:26487-26508).
+        sidekick.setFlipType(0);
+        sidekick.setFlipsRemaining(0);
+        sidekick.setFlipSpeed(0);
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
@@ -3932,7 +3943,9 @@ public class SidekickCpuController {
             // recovery tick. That routine selects the underwater $25-$28
             // family from live Status_Underwater rather than retaining the
             // entry-time Fly byte (sonic3k.asm:26551-26555,27646-27717).
-            sidekick.setForcedAnimationId(resolveRecoveryFlightAnimation());
+            int recoveryAnimation = resolveRecoveryFlightAnimation();
+            sidekick.setAnimationId(recoveryAnimation);
+            sidekick.setForcedAnimationId(recoveryAnimation);
         }
 
         // 3. Target = Sonic's 16-frame-delayed position. ROM
@@ -4056,6 +4069,12 @@ public class SidekickCpuController {
 
     private int resolveRecoveryFlightAnimation() {
         if (!sidekick.isInWater() || swimAnimId < 0) {
+            if ((sidekick.getDoubleJumpProperty() & 0xFF) == 0 && flyTiredAnimId >= 0) {
+                return flyTiredAnimId;
+            }
+            if (sidekick.getYSpeed() < 0 && flyAscendAnimId >= 0) {
+                return flyAscendAnimId;
+            }
             return flyAnimId;
         }
         if ((sidekick.getDoubleJumpProperty() & 0xFF) == 0 && swimTiredAnimId >= 0) {

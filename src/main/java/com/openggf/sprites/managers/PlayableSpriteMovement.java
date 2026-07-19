@@ -3312,6 +3312,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
 		if (walkAnimationId >= 0) {
+			// Looking/crouching are engine-side projections of native anim writes,
+			// not independent ROM status bits. Player_TouchFloor's explicit Walk
+			// store replaces either projection on the landing frame; otherwise a
+			// stale pre-air LookUp flag can mask the new byte (CNZ2 Tails f19845).
+			sprite.setLookingUp(false);
+			sprite.setCrouching(false);
 			sprite.setAnimationId(walkAnimationId);
 		}
 	}

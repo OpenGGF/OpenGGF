@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ triangle/recovery and landing animation ownership: animation f15195 -> f24993
+
+CNZ's triangle bumper runs after the playable slots and writes raw `anim=Walk`.
+It now clears the engine's forced-animation projection so that later-slot write
+survives until CPU Tails actually executes `Tails_Set_Flying_Animation`.
+Catch-up flight entry also clears the complete native tumble selector, and its
+on-screen recovery pass selects the dry flying family from live `y_vel` and
+flight fuel (`$20` fly, `$21` ascending, `$24` tired), matching
+`loc_13B50`/`Tails_Set_Flying_Animation` (`docs/skdisasm/sonic3k.asm:
+26487-26555,27646-27717,68463-68478`).
+
+Finally, `Player_TouchFloor`'s explicit Walk publication now replaces the
+engine-side LookUp/Crouch projections as well as the raw animation byte. Those
+projections are not independent native status fields; retaining one through an
+airborne interval masked Tails's landing Walk at f19845.
+
+Together these corrections advance CNZ complete-run animation from f15195
+`tails_mapping_frame` to f24993 `player_mapping_frame`. Physics remains at
+f24892 `y_speed`, so both scopes now converge on the late Act 2 balloon/triangle
+interaction. The sequential 4 GB full sweeps remain 45/58 green for physics and
+44/58 green for animation, with the same 13 physics expected-red routes and the
+same eight unsupported plus six comparison-red animation routes. No non-CNZ
+frontier moved, and legacy standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ post-object results handoff: animation f13960 -> f15195
 
 CNZ's end sign is allocated by the background screen event after the native
