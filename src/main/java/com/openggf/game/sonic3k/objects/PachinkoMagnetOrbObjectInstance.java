@@ -192,10 +192,24 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
 
     private void placePlayerOnOrbit(AbstractPlayableSprite player, PlayerState state) {
         int radius = (TrigLookupTable.cosHex(state.angleA & 0xFF) * ORBIT_RADIUS_SCALE) >> 16;
-        int xOffset = (radius * TrigLookupTable.sinHex(state.angleB & 0xFF)) >> 8;
+        // ROM sub_4A5E0 (sonic3k.asm:97103-97119): computes the X term as
+        // `moveq #0,d2 / ... / sub.l d5,d2 / asr.l #8,d2` -- i.e. it NEGATES the
+        // full-precision product (radius*sin(angleB)) first and THEN applies the
+        // arithmetic shift, giving asr(-P, 8). The Y term has no negation:
+        // `asr.l #8,d3` on the plain product, then a plain add.
+        // asr(-P, 8) is NOT equal to -(asr(P, 8)) whenever P has a nonzero
+        // low byte: 68000 asr.l floors toward negative infinity, so negating
+        // before vs after the shift differ by exactly 1 (0x0100 in 8.8 velocity
+        // units) whenever radius*sin(angleB) isn't a multiple of 256. The previous
+        // `spawn.x() - ((radius*sin)>>8)` shifted first and negated second via the
+        // subtraction, which is the mathematically "nicer" but ROM-unfaithful
+        // rounding -- it is what produced the 1px X/x_speed drift observed while
+        // captured by a Pachinko magnet orb (trace frame 55 onward).
+        int xProduct = radius * TrigLookupTable.sinHex(state.angleB & 0xFF);
+        int xOffset = (-xProduct) >> 8;
         int yOffset = (radius * TrigLookupTable.cosHex(state.angleB & 0xFF)) >> 8;
 
-        setPlayerCenterPosition(player, spawn.x() - xOffset, spawn.y() + yOffset);
+        setPlayerCenterPosition(player, spawn.x() + xOffset, spawn.y() + yOffset);
 
         if (state.angleA < 0) {
             setRenderPriority(player, 5, false);
