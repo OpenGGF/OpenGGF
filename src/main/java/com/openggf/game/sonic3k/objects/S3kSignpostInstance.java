@@ -116,6 +116,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private boolean mainEndingPosePending;
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
+    private boolean landingSparklePending;
+    private boolean preservesPostLandingSparkleGate;
 
     /**
      * Creates the signpost at the given X position.
@@ -126,6 +128,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
      */
     public S3kSignpostInstance(int spawnX, int apparentAct) {
         this(spawnX, apparentAct, 0, 0, 0);
+    }
+
+    /**
+     * Creates an end sign whose native post-object screen-event allocation
+     * leaves one final sparkle gate visible after the engine's landing pass.
+     */
+    public S3kSignpostInstance(int spawnX, int apparentAct,
+            boolean preservesPostLandingSparkleGate) {
+        this(spawnX, apparentAct);
+        this.preservesPostLandingSparkleGate = preservesPostLandingSparkleGate;
     }
 
     S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
@@ -201,6 +213,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         if (isDestroyed()) {
             return;
         }
+        if (landingSparklePending && isRomSparkleFrame(frameCounter)) {
+            spawnRomSparkle();
+            landingSparklePending = false;
+        }
 
         switch (state) {
             case INIT -> updateInit(player);
@@ -265,8 +281,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         // ROM tests the global V_int_run_count low bits, not a counter local
         // to the signpost's allocation frame.
         if (isRomSparkleFrame(frameCounter)) {
-            spawnDynamicObject(new S3kSignpostSparkleChild(
-                    worldX, worldY + romSparkleYOffset(services().rng())));
+            spawnRomSparkle();
         }
 
         // Check bump from below
@@ -301,8 +316,15 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             subX = 0;
             subY = 0;
             state = State.LANDED;
+            landingSparklePending = preservesPostLandingSparkleGate
+                    && isRomSparkleFrame(frameCounter + 1);
             LOG.fine("S3K Signpost FALLING -> LANDED at Y=" + worldY);
         }
+    }
+
+    private void spawnRomSparkle() {
+        spawnDynamicObject(new S3kSignpostSparkleChild(
+                worldX, worldY + romSparkleYOffset(services().rng())));
     }
 
     /**

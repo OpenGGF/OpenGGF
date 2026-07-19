@@ -18,6 +18,14 @@ public interface ZoneRuntimeState {
     }
 
     /**
+     * Whether this runtime's native seamless-transition dispatch advances the
+     * inherited Oscillate_Data table once before the destination act starts.
+     */
+    default boolean advancesOscillationOnSeamlessTransition() {
+        return false;
+    }
+
+    /**
      * Captures gameplay-relevant per-zone runtime state as a byte buffer for
      * rewind. Default returns an empty array (no state to capture).
      * Implementations override and serialize their fields deterministically.

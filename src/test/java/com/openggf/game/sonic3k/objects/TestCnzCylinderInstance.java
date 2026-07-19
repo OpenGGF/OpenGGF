@@ -53,6 +53,14 @@ class TestCnzCylinderInstance {
     }
 
     @Test
+    void movingCylinderKeepsNativeSolidBitsOnTheLiveInstance() {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnWithSubtype(0x45));
+
+        assertTrue(cylinder.usesInstanceSolidStateLatchKey(),
+                "The moving dynamic spawn must not replace the SST-owned standing/pushing latch key");
+    }
+
+    @Test
     void standingContactCaptureRestoresDefaultRadiiAndClearsRolling() {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
         cylinder.setServices(new TestObjectServices());

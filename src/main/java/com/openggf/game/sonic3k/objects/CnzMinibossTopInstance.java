@@ -550,6 +550,9 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         // when the parent has entered CNZMiniboss_BossDefeated
         // (sonic3k.asm:145053-145057, 145190-145199).
         diagnosticLastMainBranch = "parent_destroyed";
+        CnzMinibossBlockExplosionControllerChild controller = spawnChild(
+                () -> new CnzMinibossBlockExplosionControllerChild(motion.x, motion.y));
+        controller.dispatchCreation();
         setDestroyed(true);
         recordTraceBranchIfNotable();
     }
@@ -795,8 +798,9 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         diagnosticArenaImpactThisFrame = true;
         diagnosticArenaImpactX = worldX;
         diagnosticArenaImpactY = worldY;
-        spawnChild(() -> new S3kBossExplosionChild(worldX, worldY));
-        services().playSfx(Sonic3kSfx.EXPLODE.id);
+        CnzMinibossBlockExplosionControllerChild controller =
+                spawnChild(() -> new CnzMinibossBlockExplosionControllerChild(worldX, worldY));
+        controller.dispatchCreation();
         S3kCnzEventWriteSupport.queueArenaChunkDestruction(
                 services(), worldX, worldY);
     }

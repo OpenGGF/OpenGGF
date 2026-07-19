@@ -78,6 +78,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     private int spinAngle;
     private int launchPuffAngle;
     private int chamberFrame = FRAME_CHAMBER_IDLE;
+    private boolean spinArmed;
     private AbstractPlayableSprite capturedPlayer;
     private AbstractPlayableSprite releasedPlayer;
     private int releasedPlayerPriorityTimer;
@@ -161,7 +162,16 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     }
 
     private void updateReadyToLaunch(int frameCounter, AbstractPlayableSprite player) {
-        advanceSpin(frameCounter);
+        // ROM sub_3192C runs before sub_319F4. On the first ready dispatch,
+        // $34(a0) is still zero while sub_3192C checks it, then sub_319F4 sees
+        // player state word $0200/$0202 and arms $34 for the following frame.
+        // Keep that read-before-write ordering so ordinary cannons retain their
+        // idle chamber frame for the first ready dispatch.
+        if (spinArmed) {
+            advanceSpin(frameCounter);
+        } else {
+            spinArmed = true;
+        }
 
         AbstractPlayableSprite activePlayer = capturedPlayer != null ? capturedPlayer : player;
         if (activePlayer == null || !activePlayer.isObjectControlled()) {
@@ -220,11 +230,11 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         capturedPlayer = player;
         short captureY = player.getCentreY();
         spinAngle = 0;
+        spinArmed = false;
         chamberFrame = FRAME_CHAMBER_IDLE;
 
         // ROM: move.w #$81,object_control(a1) / bset #Status_Roll,status(a1)
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         player.setRolling(true);
         player.applyCustomRadii(ROLL_X_RADIUS, ROLL_Y_RADIUS);
         player.setAnimationId(2);
@@ -266,7 +276,6 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         player.setYSpeed(ySpeed);
         player.setGSpeed(xSpeed);
         player.setAir(true);
-        player.setControlLocked(false);
         player.releaseFromObjectControl(frameCounter);
         player.setOnObject(false);
         player.setJumping(false);

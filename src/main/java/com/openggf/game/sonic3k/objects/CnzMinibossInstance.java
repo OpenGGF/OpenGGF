@@ -927,7 +927,11 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         // Preserve waitTimer exactly; only replace the $34 callback pointer.
         waitCallback = WaitCallback.END_GO;
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
-        spawnChild(() -> new S3kBossExplosionChild(state.x, state.y));
+        defeatExplosionController.dispatchCreation();
+        for (S3kBossExplosionController.PendingExplosion explosion
+                : defeatExplosionController.drainPendingExplosions()) {
+            spawnChild(() -> new S3kBossExplosionChild(explosion.x(), explosion.y()));
+        }
         spawnBreakApartDebris();
         spawnChild(() -> new SongFadeTransitionInstance(
                 CNZ_MINIBOSS_LEVEL_MUSIC_FADE_TIME, resolveLevelMusicId()));

@@ -557,8 +557,8 @@ class TestCnzMinibossTopPhysics {
                 .orElse(null);
         assertNotNull(explosion,
                 "CNZMiniboss_BlockExplosion must spawn the visible boss explosion animation child");
-        assertEquals(0x32D0, explosion.getX());
-        assertEquals(0x0310, explosion.getY());
+        assertTrue(Math.abs(explosion.getX() - 0x32D0) <= 0x10);
+        assertTrue(Math.abs(explosion.getY() - 0x0310) <= 0x10);
     }
 
     @Test
@@ -590,6 +590,12 @@ class TestCnzMinibossTopPhysics {
         assertTrue(top.isDestroyed(),
                 "Obj_CNZMinibossTopMain destroys itself before MoveSprite2 when parent status bit 7 is set "
                         + "(sonic3k.asm:145053-145057,145190-145199)");
+        assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
+                        .anyMatch(CnzMinibossBlockExplosionControllerChild.class::isInstance),
+                "loc_6DDD2 replaces the defeated top with Obj_CreateBossExplosion subtype 6");
+        assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
+                        .anyMatch(S3kBossExplosionChild.class::isInstance),
+                "the creation dispatch must immediately emit the first visible explosion");
         assertFalse(events.isArenaChunkDestructionQueued(),
                 "The destroyed top must not run wall/floor terrain probes or publish Events_bg+$00/$02");
     }
@@ -1057,9 +1063,20 @@ class TestCnzMinibossTopPhysics {
             this.levelEventProvider = levelEventProvider;
             doAnswer(invocation -> {
                 ObjectInstance child = invocation.getArgument(0);
+                if (child instanceof AbstractObjectInstance instance) {
+                    instance.setServices(this);
+                }
                 spawnedChildren.add(child);
                 return null;
             }).when(this.objectManager).addDynamicObjectAfterCurrent(any());
+            doAnswer(invocation -> {
+                ObjectInstance child = invocation.getArgument(0);
+                if (child instanceof AbstractObjectInstance instance) {
+                    instance.setServices(this);
+                }
+                spawnedChildren.add(child);
+                return null;
+            }).when(this.objectManager).addDynamicObjectAfterCurrentNextFrame(any());
         }
 
         @Override

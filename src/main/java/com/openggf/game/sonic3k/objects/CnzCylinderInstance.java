@@ -669,6 +669,18 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             return centerX;
         }
         int preUpdateX = getPreUpdateX();
+        ObjectServices svc = tryServices();
+        if (player.isCpuControlled()
+                && isHorizontalOscillator()
+                && svc != null
+                && svc.titleCardProvider() != null
+                && svc.titleCardProvider().ownsRetainedResultsHeldLevelCounter()) {
+            // A retained Obj_LevelResults title owner holds Level_frame_counter
+            // while the split solid callback is deferred. sub_324C0 stores the
+            // P2 distance from the cylinder's frame-entry x_pos, before the
+            // already-visible horizontal oscillator step.
+            return preUpdateX;
+        }
         // Circular loc_323EC routes can set the standing bit on one object pass
         // and consume it in sub_324C0 after the engine has stepped the center
         // again. At CNZ f11483/f11484 subtype $4C, ROM captures distance from
@@ -1008,6 +1020,17 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return false;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Obj_CNZCylinder keeps its standing/pushing bits in the live SST
+        // status byte while sub_321E2 changes x_pos/y_pos every object pass
+        // (sonic3k.asm:67656-67672). The engine mirrors that moving body by
+        // rebuilding its dynamic ObjectSpawn coordinates, so spawn identity
+        // cannot own the native solid bits: a coordinate change would orphan
+        // the prior push latch before loc_1E0A2 can clear Status_Push.
+        return true;
     }
 
     @Override

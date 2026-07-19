@@ -80,7 +80,8 @@ class TestCnzCannonInstance {
         assertTrue(player.isObjectControlled());
         assertFalse(player.isObjectControlAllowsCpu());
         assertTrue(player.isObjectControlSuppressesMovement());
-        assertTrue(player.isControlLocked());
+        assertFalse(player.isControlLocked(),
+                "Obj_CNZCannon writes object_control=$81, not Ctrl_1_locked");
         assertTrue(player.getRolling());
         assertTrue(player.getAir());
         assertEquals(0x1E68, player.getCentreX() & 0xFFFF);
@@ -113,13 +114,16 @@ class TestCnzCannonInstance {
         cannon.setLaunchDelayFramesForTest(0);
 
         assertEquals(0, cannon.getSpinAngle(), "capture resets the raw angle byte");
-        for (int frame = 3967; frame < 3970; frame++) {
+        cannon.update(3967, player);
+        assertEquals(0, cannon.getSpinAngle(),
+                "the first ready dispatch arms $34 after sub_3192C has already returned");
+        for (int frame = 3968; frame < 3970; frame++) {
             cannon.update(frame, player);
         }
-        assertEquals(0x06, cannon.getSpinAngle());
+        assertEquals(0x04, cannon.getSpinAngle());
         assertEquals(4, cannon.getRenderFrameForTest(),
-                "sub_3192C derives sub2_mapframe from old angle $04 before storing $06");
-        for (int frame = 3970; frame < 3976; frame++) {
+                "sub_3192C derives sub2_mapframe from old angle $02 before storing $04");
+        for (int frame = 3970; frame < 3977; frame++) {
             cannon.update(frame, player);
         }
         assertEquals(0x12, cannon.getSpinAngle(),
@@ -129,7 +133,7 @@ class TestCnzCannonInstance {
         assertTrue(player.isObjectControlled());
 
         player.setForcedInputMask(TestPlayableSprite.INPUT_JUMP);
-        cannon.update(3976, player);
+        cannon.update(3977, player);
 
         assertFalse(player.isObjectControlled(),
                 "the cannon's own logical-button check consumes forced jump and launches");
@@ -141,6 +145,30 @@ class TestCnzCannonInstance {
                 "mapping frame 6 launches with sin($E0)<<4; the plan's straight-up gloss was incorrect");
         assertEquals(player.getXSpeed(), player.getGSpeed());
         assertFalse(cannon.hasCapturedPlayerForEndSequence());
+    }
+
+    @Test
+    void ordinaryLaunchRetainsIdleChamberThroughNativeArmDispatch() {
+        CnzCannonInstance cannon = new CnzCannonInstance(spawn());
+        cannon.setServices(new TestObjectServices());
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x1E68);
+        player.setCentreY((short) 0x082C);
+
+        cannon.onSolidContact(player, new SolidContact(true, false, false, true, false), 4100);
+        cannon.setLaunchDelayFramesForTest(0);
+        cannon.update(4101, player); // arm $34 after the skipped sub_3192C pass
+        cannon.update(4102, player); // old angle $00 -> $02
+        cannon.update(4103, player); // old angle $02 -> $04
+        player.setJumpInputPressed(true);
+        cannon.update(4104, player); // old angle $04 -> $06, still mapping frame 4
+
+        assertFalse(player.isObjectControlled());
+        assertEquals(0x06, cannon.getSpinAngle());
+        assertEquals(0, player.getXSpeed(),
+                "mapping frame 4 launches vertically with cos($C0)<<4 == 0");
+        assertEquals((short) 0xF000, player.getYSpeed());
+        assertEquals(0, player.getGSpeed());
     }
 
     @Test

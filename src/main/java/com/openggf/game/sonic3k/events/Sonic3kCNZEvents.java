@@ -765,7 +765,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         // ROM CNZ1BGE_FGRefresh2 allocates Obj_EndSign and writes x_pos=$32C0
         // immediately before advancing to CNZ1BGE_DoTransition
         // (docs/skdisasm/sonic3k.asm:107590-107601).
-        spawnObject(() -> new S3kSignpostInstance(POST_BOSS_END_SIGN_X, 0));
+        spawnObject(() -> new S3kSignpostInstance(POST_BOSS_END_SIGN_X, 0, true));
         bgRoutine = BG_DO_TRANSITION;
     }
 

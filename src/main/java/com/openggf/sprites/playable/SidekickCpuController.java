@@ -2662,6 +2662,19 @@ public class SidekickCpuController {
             // no trace-profile-gated bridge (sonic3k.asm:26775 loc_13E9C reads the
             // post-increment (Level_frame_counter+1).b low byte).
             int autoJumpFrameCounter = frameCounter;
+            if (titleCardOwnsRetainedResultsHeldLevelCounter()) {
+                // The retained results/title owner continues native
+                // Process_Sprites dispatches while the engine's ordinary
+                // gameplay counter is held. Sonic_RecordPos runs immediately
+                // before the Player_2 CPU slot on each such dispatch, so its
+                // next-free ring index supplies the same low-six-bit phase
+                // observed by loc_13E7C/loc_13E9C. The engine records the leader
+                // after the sidekick controller, hence the two-slot projection
+                // from its latest-written entry.
+                autoJumpFrameCounter = projectRetainedResultsSpriteCadence(
+                        autoJumpFrameCounter, effectiveLeader);
+            }
+            boolean autoJumpCadence = (autoJumpFrameCounter & 0x3F) == 0;
             boolean freshAutoJumpFrame = autoJumpFrameCounter != lastNormalAutoJumpPressFrameCounter;
             boolean passesDistanceGate = pushingBypass
                     || (autoJumpFrameCounter & 0xFF) == 0
@@ -2671,7 +2684,7 @@ public class SidekickCpuController {
             if (passesDistanceGate
                     && passesHeightGate
                     && freshAutoJumpFrame
-                    && (autoJumpFrameCounter & 0x3F) == 0
+                    && autoJumpCadence
                     && sidekick.getAnimationId() != duckAnimId) {
                 inputJump = true;
                 inputJumpPress = true;
@@ -3157,6 +3170,24 @@ public class SidekickCpuController {
         GameModule module = sidekick.currentGameModule();
         var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
         return titleCardProvider != null && titleCardProvider.ownsRetainedResultsHeldLevelCounter();
+    }
+
+    private int projectRetainedResultsSpriteCadence(
+            int monotonicCounter, AbstractPlayableSprite effectiveLeader) {
+        if (!titleCardOwnsRetainedResultsHeldLevelCounter() || effectiveLeader == null) {
+            return monotonicCounter;
+        }
+        int nativeNextFreeHistorySlot =
+                (effectiveLeader.getHistorySlotIndex(0) + 2) & 0x3F;
+        // Project the monotonic engine counter onto the nearest value with the
+        // native low-six-bit sprite-dispatch phase. This preserves later cycles
+        // for one-shot guards and carries across byte boundaries ($40FF plus
+        // phase 0 becomes $4100, rather than $40C0).
+        int phaseDelta = (nativeNextFreeHistorySlot - (monotonicCounter & 0x3F)) & 0x3F;
+        if (phaseDelta > 0x1F) {
+            phaseDelta -= 0x40;
+        }
+        return monotonicCounter + phaseDelta;
     }
 
     public boolean hasLevelEventDormantMarkerReleasePending() {
@@ -3763,6 +3794,7 @@ public class SidekickCpuController {
                             || titleCardOwnsRetainedResultsHeldLevelCounter())
                         ? frameCounter + 1
                         : frameCounter);
+        catchUpFrameCounter = projectRetainedResultsSpriteCadence(catchUpFrameCounter, leader);
         catchUpFrameCounterOverride = -1;
 
         // Ctrl_2_logical A/B/C/START press → immediate trigger

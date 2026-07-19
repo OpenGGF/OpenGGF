@@ -267,6 +267,14 @@ public final class RecordingFrameDriver {
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {
             titleCardProvider.update();
+            if (titleCardProvider.ownsRetainedResultsHeldLevelCounter()) {
+                var levelEvents = GameServices.module().getLevelEventProvider();
+                if (levelEvents != null) {
+                    // The retained Obj_LevelResults -> Obj_TitleCard path still
+                    // runs fixed SST entries while Level_frame_counter is held.
+                    levelEvents.updateFixedInLevelObjects();
+                }
+            }
             if (titleCardProvider.ownsInLevelPlayerControlLock()) {
                 applyInLevelTitleCardControlLock(
                         titleCardProvider.shouldLockPlayerControlForInLevelOverlay());

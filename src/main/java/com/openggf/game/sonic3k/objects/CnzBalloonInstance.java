@@ -68,6 +68,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     private int popAnimationIndex;
     private int frameOffset;
     private int lastLaunchFrame = Integer.MIN_VALUE;
+    private int lastObjectDispatchCounter = Integer.MIN_VALUE;
 
     public CnzBalloonInstance(ObjectSpawn spawn) {
         super(spawn, "CNZBalloon");
@@ -115,13 +116,11 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
             return;
         }
 
-        if (!initialized) {
-            initializeFromRomRoutine();
-        }
-        advanceAnimation();
-        int bobbedY = baseY + bobOffset(angle);
-        updateDynamicSpawn(movedOffscreen ? OFFSCREEN_X : spawn.x(), bobbedY);
-        angle = (angle + 1) & 0xFF;
+        var objectServices = tryServices();
+        int dispatchCounter = objectServices != null && objectServices.objectManager() != null
+                ? objectServices.objectManager().getFrameCounter()
+                : frameCounter;
+        synchronizeRoutineState(dispatchCounter, true);
 
         // ROM Obj_CNZBalloon reacts only when Touch_Process sets
         // collision_property; the shared touch-response pass invokes
@@ -129,7 +128,27 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void snapshotTouchResponseState() {
+        var objectServices = tryServices();
+        if (initialized && objectServices != null && objectServices.objectManager() != null) {
+            // A retained balloon can remain in the live touch list after the
+            // seamless transition rebuilds execution slots. Catch its local
+            // routine up to the manager's Process_Sprites count before Touch_Loop.
+            synchronizeRoutineState(objectServices.objectManager().getFrameCounter(), false);
+        }
+        super.snapshotTouchResponseState();
+    }
+
+    @Override
     public int getCollisionFlags() {
+        var objectServices = tryServices();
+        if (initialized && objectServices != null && objectServices.objectManager() != null) {
+            // S3K preserves the previous Collision_response_list rather than
+            // calling snapshotTouchResponseState() for every object. Its live
+            // SST pointer still dereferences the current balloon, so catch the
+            // retained counter epoch up at the first touch-state read as well.
+            synchronizeRoutineState(objectServices.objectManager().getFrameCounter(), false);
+        }
         if (movedOffscreen) {
             return 0;
         }
@@ -326,6 +345,36 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         initialized = true;
         baseY = spawn.y();
         angle = services().rng().nextByte();
+    }
+
+    private void synchronizeRoutineState(int dispatchCounter, boolean initializeIfNeeded) {
+        if (!initialized) {
+            if (!initializeIfNeeded) {
+                return;
+            }
+            initializeFromRomRoutine();
+            lastObjectDispatchCounter = dispatchCounter - 1;
+        }
+
+        if (lastObjectDispatchCounter == Integer.MIN_VALUE) {
+            lastObjectDispatchCounter = dispatchCounter - 1;
+        }
+        if (dispatchCounter < lastObjectDispatchCounter) {
+            // Seamless act setup can re-base manager counters while the
+            // ROM-retained SST balloon survives. Resume from the new epoch.
+            lastObjectDispatchCounter = dispatchCounter - 1;
+        }
+        int dispatches = dispatchCounter - lastObjectDispatchCounter;
+        if (dispatches <= 0) {
+            return;
+        }
+        for (int i = 0; i < dispatches && !isDestroyed(); i++) {
+            advanceAnimation();
+            int bobbedY = baseY + bobOffset(angle);
+            updateDynamicSpawn(movedOffscreen ? OFFSCREEN_X : spawn.x(), bobbedY);
+            angle = (angle + 1) & 0xFF;
+        }
+        lastObjectDispatchCounter = dispatchCounter;
     }
 
     private static int bobOffset(int angle) {

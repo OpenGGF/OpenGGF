@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ retained dispatch and native RNG chain: f15464 -> f18354
+
+The retained Act 2 object pass now preserves the native ownership that was
+previously flattened across the seamless title transition. CPU Tails projects
+the results-owned held-counter cadence into horizontal catch-up; cylinders
+retain their capture anchor and per-instance solid latch; hover fans execute in
+SST order; cannons leave the idle chamber visible through `sub_3192C`'s first
+read-before-write dispatch; and balloons synchronize only when their retained
+live slot or collision-list entry is sampled. CNZ's runtime state also declares
+the one inherited `Oscillate_Data` advance at this transition. Keeping that
+declaration on `CnzZoneRuntimeState` is essential: applying the advance to every
+seamless zone moved the already-green AIZ, HCZ, and MGZ complete-run frontiers.
+
+The remaining drift was the shared `Random_Number` chain. Native CNZ miniboss
+block impacts allocate subtype-6 explosion controllers, including a second
+controller from the fatal top SST, and each controller consumes its first
+random word in the creation tail before continuing at three-dispatch cadence.
+The CNZ screen-event signpost likewise preserves the final sparkle gate that
+lands one object dispatch after its folded engine landing pass. Those real RNG
+owners align the later balloon phases without trace hydration or a route/frame
+exception (`docs/skdisasm/sonic3k.asm:145053-145199,145707-145708,
+177558-177586`).
+
+The focused cylinder, cannon, balloon, miniboss-top, boss-explosion-controller,
+and signpost suites pass. CNZ complete-run physics advances from f15464 to
+f18354; its next mismatch is player `y` (`$05C7` expected, `$05C2` actual).
+The full comparison-only physics sweep remains 45/58 green with exactly the
+same 13 expected-red routes, including unchanged green AIZ, HCZ, and MGZ
+complete runs. The animation sweep remains 44/58 green with the same 14
+expected-red or unsupported routes; CNZ complete-run animation remains at f108
+and legacy standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ retained results/title transition chain: f13968 -> f15464
 
 CNZ's Act 1 results object appeared at f13960 and the ROM allocated its child
