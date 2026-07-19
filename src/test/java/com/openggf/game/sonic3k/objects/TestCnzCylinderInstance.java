@@ -62,14 +62,13 @@ class TestCnzCylinderInstance {
     }
 
     @Test
-    void firstUpdateContinuesAfterRomInitFallthroughMotionPass() {
+    void firstUpdateRunsTheSingleRomFallthroughMotionPass() {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnWithSubtype(0xF1));
         cylinder.setServices(new TestObjectServices());
 
         cylinder.update(1, null);
 
-        int expected = 0x1BDF + (TrigLookupTable.sinHex(0x03) >> 3);
-        assertEquals(expected, cylinder.getX());
+        assertEquals(0x1BDF, cylinder.getX());
     }
 
     @Test
@@ -163,6 +162,7 @@ class TestCnzCylinderInstance {
         cylinder.onSolidContact(player, new SolidContact(true, false, false, true, false), 4310);
         cylinder.update(4311, player);
         int preReleaseY = player.getCentreY();
+        player.setMappingFrame(0x56);
 
         player.setJumpInputPressed(true);
         player.setLogicalInputState(false, false, false, false, true);
@@ -176,6 +176,8 @@ class TestCnzCylinderInstance {
         assertTrue(player.getRolling());
         assertEquals(0x1BDF + expectedOffset, player.getCentreX());
         assertEquals(preReleaseY, player.getCentreY());
+        assertEquals(0x56, player.getMappingFrame(),
+                "loc_325B6 skips loc_3260A's twist mapping write on the jump-release row");
         assertEquals(7, player.getXRadius());
         assertEquals(14, player.getYRadius());
         assertTrue(player.getYSpeed() < 0);
@@ -283,7 +285,7 @@ class TestCnzCylinderInstance {
     }
 
     @Test
-    void horizontalFirstCaptureAndHeldStepUseFrameEntryAnchorForDeferredNonCpuSolidContact() {
+    void horizontalFirstCaptureAndHeldStepUseCurrentPostMotionAnchor() {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnWithSubtype(0x42));
         cylinder.setServices(new TestObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
@@ -300,11 +302,11 @@ class TestCnzCylinderInstance {
         int thresholdByte = ((TrigLookupTable.sinHex(twistAngle) + 0x100) >> 2) & 0xFF;
         int distanceWord = (0x22 << 8) | thresholdByte;
         int expectedOffset = (TrigLookupTable.cosHex(twistAngle) * distanceWord) >> 16;
-        assertEquals(cylinder.getPreUpdateX() + expectedOffset, player.getCentreX());
+        assertEquals(cylinder.getX() + expectedOffset, player.getCentreX());
     }
 
     @Test
-    void horizontalWidePositiveStepRightSideCaptureStoresFrameEntryDistanceForNonCpuRider() throws Exception {
+    void horizontalWidePositiveStepCapturesCurrentDistanceForNonCpuRider() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x2060, 0x01A0, 0x52));
         cylinder.setServices(new TestObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
@@ -318,20 +320,20 @@ class TestCnzCylinderInstance {
 
         invokeCaptureSlot(cylinder, slot, player, true);
 
-        assertEquals(0x08, (int) getSlotField(slot, "horizontalDistance"));
-        assertNotEquals(0x06, (int) getSlotField(slot, "horizontalDistance"));
+        assertEquals(0x06, (int) getSlotField(slot, "horizontalDistance"));
+        assertNotEquals(0x08, (int) getSlotField(slot, "horizontalDistance"));
 
         setCylinderCenter(cylinder, 0x206E, 0x01A0);
         cylinder.snapshotPreUpdatePosition();
         setCylinderCenter(cylinder, 0x206F, 0x01A0);
         invokeHoldSlot(cylinder, slot);
 
-        assertEquals(0x2076, player.getCentreX());
+        assertEquals(0x2075, player.getCentreX());
         assertNotEquals(0x2074, player.getCentreX());
     }
 
     @Test
-    void horizontalNarrowNegativeStepLeftSideCaptureStoresFrameEntryDistanceForNonCpuRider() throws Exception {
+    void horizontalNarrowNegativeStepCapturesCurrentDistanceForNonCpuRider() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x2370, 0x0460, 0x41));
         cylinder.setServices(new TestObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
@@ -345,20 +347,20 @@ class TestCnzCylinderInstance {
 
         invokeCaptureSlot(cylinder, slot, player, true);
 
-        assertEquals(0x15, (int) getSlotField(slot, "horizontalDistance"));
-        assertNotEquals(0x14, (int) getSlotField(slot, "horizontalDistance"));
+        assertEquals(0x14, (int) getSlotField(slot, "horizontalDistance"));
+        assertNotEquals(0x15, (int) getSlotField(slot, "horizontalDistance"));
 
         setCylinderCenter(cylinder, 0x236B, 0x0460);
         cylinder.snapshotPreUpdatePosition();
         setCylinderCenter(cylinder, 0x236B, 0x0460);
         invokeHoldSlot(cylinder, slot);
 
-        assertEquals(0x2355, player.getCentreX());
-        assertNotEquals(0x2356, player.getCentreX());
+        assertEquals(0x2356, player.getCentreX());
+        assertNotEquals(0x2355, player.getCentreX());
     }
 
     @Test
-    void horizontalWideHeldPostPeakStepUsesFrameEntryAnchorForNonCpuRider() {
+    void horizontalWideHeldPostPeakStepUsesCurrentAnchorForNonCpuRider() {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x19E0, 0x0160, 0x42));
         cylinder.setServices(new TestObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
@@ -378,8 +380,8 @@ class TestCnzCylinderInstance {
             int currentX = cylinder.getX();
             if (currentX < preUpdateX) {
                 int expectedOffset = heldOffset(0x0C, twistAngle);
-                assertEquals(preUpdateX + expectedOffset, player.getCentreX());
-                assertNotEquals(currentX + expectedOffset, player.getCentreX());
+                assertEquals(currentX + expectedOffset, player.getCentreX());
+                assertNotEquals(preUpdateX + expectedOffset, player.getCentreX());
                 return;
             }
             holdFrames++;
@@ -389,7 +391,7 @@ class TestCnzCylinderInstance {
     }
 
     @Test
-    void horizontalWideHeldPostPeakStepUsesFrameEntryAnchorForCpuSidekickRider() {
+    void horizontalWideHeldPostPeakStepUsesCurrentAnchorForCpuSidekickRider() {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x19E0, 0x0160, 0x42));
         cylinder.setServices(new TestObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
@@ -410,8 +412,8 @@ class TestCnzCylinderInstance {
             int currentX = cylinder.getX();
             if (currentX < preUpdateX) {
                 int expectedOffset = heldOffset(0x17, twistAngle);
-                assertEquals(preUpdateX + expectedOffset, player.getCentreX());
-                assertNotEquals(currentX + expectedOffset, player.getCentreX());
+                assertEquals(currentX + expectedOffset, player.getCentreX());
+                assertNotEquals(preUpdateX + expectedOffset, player.getCentreX());
                 return;
             }
             holdFrames++;
@@ -421,7 +423,7 @@ class TestCnzCylinderInstance {
     }
 
     @Test
-    void horizontalNarrowHeldPostPeakStepUsesFrameEntryAnchorForNonCpuRider() {
+    void horizontalNarrowHeldPostPeakStepUsesCurrentAnchorForNonCpuRider() {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x1BDF, 0x07E0, 0x41));
         cylinder.setServices(new TestObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
@@ -441,8 +443,8 @@ class TestCnzCylinderInstance {
             int currentX = cylinder.getX();
             if (currentX < preUpdateX) {
                 int expectedOffset = heldOffset(0x18, twistAngle);
-                assertEquals(preUpdateX + expectedOffset, player.getCentreX());
-                assertNotEquals(currentX + expectedOffset, player.getCentreX());
+                assertEquals(currentX + expectedOffset, player.getCentreX());
+                assertNotEquals(preUpdateX + expectedOffset, player.getCentreX());
                 return;
             }
             holdFrames++;
@@ -452,7 +454,7 @@ class TestCnzCylinderInstance {
     }
 
     @Test
-    void horizontalNarrowHeldPositiveStepUsesFrameEntryAnchorForCpuSidekickRider() throws Exception {
+    void horizontalNarrowHeldPositiveStepUsesCurrentAnchorForCpuSidekickRider() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x1BA0, 0x07E0, 0x41));
         cylinder.setServices(new TestObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
@@ -473,12 +475,12 @@ class TestCnzCylinderInstance {
         invokeHoldSlot(cylinder, slot);
 
         int expectedOffset = heldOffset(0x06, 0x8E);
-        assertEquals(0x1BA0 + expectedOffset, player.getCentreX());
-        assertNotEquals(0x1BA1 + expectedOffset, player.getCentreX());
+        assertEquals(0x1BA1 + expectedOffset, player.getCentreX());
+        assertNotEquals(0x1BA0 + expectedOffset, player.getCentreX());
     }
 
     @Test
-    void circularHeldPositiveStepUsesFrameEntryAnchorForNonCpuRider() throws Exception {
+    void circularHeldPositiveStepUsesCurrentAnchorForNonCpuRider() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x1B90, 0x0120, 0x4B));
         cylinder.setServices(new TestObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
@@ -498,12 +500,12 @@ class TestCnzCylinderInstance {
         invokeHoldSlot(cylinder, slot);
 
         int expectedOffset = heldOffset(0x15, 0x80);
-        assertEquals(0x1B93 + expectedOffset, player.getCentreX());
-        assertNotEquals(0x1B94 + expectedOffset, player.getCentreX());
+        assertEquals(0x1B94 + expectedOffset, player.getCentreX());
+        assertNotEquals(0x1B93 + expectedOffset, player.getCentreX());
     }
 
     @Test
-    void circularFirstCapturePositiveStepUsesFrameEntryDistanceForNonCpuRider() throws Exception {
+    void circularFirstCapturePositiveStepUsesCurrentDistanceForNonCpuRider() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x1CE0, 0x0120, 0x4C));
         cylinder.setServices(new TestObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
@@ -517,13 +519,13 @@ class TestCnzCylinderInstance {
 
         invokeCaptureSlot(cylinder, slot, player, true);
 
-        assertEquals(0x16, (int) getSlotField(slot, "horizontalDistance"));
-        assertNotEquals(0x15, (int) getSlotField(slot, "horizontalDistance"));
+        assertEquals(0x15, (int) getSlotField(slot, "horizontalDistance"));
+        assertNotEquals(0x16, (int) getSlotField(slot, "horizontalDistance"));
         assertEquals(0x00, (int) getSlotField(slot, "twistAngle"));
     }
 
     @Test
-    void circularVerticalObjectControlledSolidContactUsesFrameEntrySupportAnchorForNonCpuRider() throws Exception {
+    void circularVerticalObjectControlledSolidContactUsesCurrentSupportAnchor() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x1CE0, 0x0120, 0x4C));
         TestPlayableSprite player = new TestPlayableSprite();
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
@@ -532,11 +534,11 @@ class TestCnzCylinderInstance {
         cylinder.snapshotPreUpdatePosition();
         setCylinderCenter(cylinder, 0x1D00, 0x0121);
 
-        assertTrue(cylinder.usesPreUpdatePositionForSolidContact(player));
+        assertFalse(cylinder.usesPreUpdatePositionForSolidContact(player));
     }
 
     @Test
-    void verticalOscillatorNewSideContactUsesFrameEntryAnchorForNonCpuRider() throws Exception {
+    void verticalOscillatorNewSideContactUsesCurrentAnchorForNonCpuRider() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x15C0, 0x04E0, 0x45));
         TestPlayableSprite player = new TestPlayableSprite();
         player.setCentreX((short) 0x15E9);
@@ -549,14 +551,12 @@ class TestCnzCylinderInstance {
         cylinder.snapshotPreUpdatePosition();
         setCylinderCenter(cylinder, 0x15C0, 0x04FE);
 
-        assertTrue(cylinder.usesPreUpdatePositionForSolidContact(player),
-                "CNZ f6678: subtype $45 must classify SolidObject_cont side contact from "
-                        + "the frame-entry y_pos to avoid loc_1E056 zeroing x_vel/ground_vel "
-                        + "one frame early (sonic3k.asm:67656-67672, 67843-67851, 41473-41495)");
+        assertFalse(cylinder.usesPreUpdatePositionForSolidContact(player),
+                "Obj_CNZCylinder moves before its same-slot SolidObjectFull call");
     }
 
     @Test
-    void verticalOscillatorHeldRiderUsesFrameEntryYAnchorOnUpStep() throws Exception {
+    void verticalOscillatorHeldRiderUsesCurrentYAnchorOnUpStep() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x2920, 0x0458, 0x46));
         TestPlayableSprite player = new TestPlayableSprite();
         player.setAir(false);
@@ -574,17 +574,14 @@ class TestCnzCylinderInstance {
 
         invokeHoldSlot(cylinder, slot);
 
-        assertTrue(cylinder.usesPreUpdatePositionForSolidContact(player));
-        assertEquals(0x041D - 0x21 - player.getYRadius(), player.getCentreY(),
-                "CNZ f13049: loc_3238C's upward step is already visible to the split engine, "
-                        + "but ROM sub_324C0/SolidObjectFull carries the held rider from the "
-                        + "frame-entry y_pos(a0) for this object pass (sonic3k.asm:67656-67672, "
-                        + "67865-67874, 41016-41040, 41667-41679)");
-        assertNotEquals(0x041C - 0x21 - player.getYRadius(), player.getCentreY());
+        assertFalse(cylinder.usesPreUpdatePositionForSolidContact(player));
+        assertEquals(0x041C - 0x21 - player.getYRadius(), player.getCentreY(),
+                "sub_321E2's upward step is visible to same-slot rider control");
+        assertNotEquals(0x041D - 0x21 - player.getYRadius(), player.getCentreY());
     }
 
     @Test
-    void verticalOscillatorCpuSidekickNewContactUsesFrameEntryYAnchorOnUpStep() throws Exception {
+    void verticalOscillatorCpuSidekickNewContactUsesCurrentYAnchorOnUpStep() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x2920, 0x0458, 0x46));
         TestPlayableSprite tails = new TestPlayableSprite();
         tails.setCpuControlled(true);
@@ -597,15 +594,12 @@ class TestCnzCylinderInstance {
         cylinder.snapshotPreUpdatePosition();
         setCylinderCenter(cylinder, 0x2920, 0x0415);
 
-        assertTrue(cylinder.usesPreUpdatePositionForSolidContact(tails),
-                "CNZ f13060: P2 SolidObjectFull must classify the first top contact from "
-                        + "the ROM-visible frame-entry y_pos=$0416, not the split engine's "
-                        + "already-stepped y_pos=$0415 (sonic3k.asm:67656-67672, "
-                        + "67865-67874, 41006-41016, 41394-41440)");
+        assertFalse(cylinder.usesPreUpdatePositionForSolidContact(tails),
+                "P2 SolidObjectFull observes the same post-motion object position as P1");
     }
 
     @Test
-    void verticalOscillatorCpuSidekickUndersideContactUsesFrameEntryYAnchorOnDownStep() throws Exception {
+    void verticalOscillatorCpuSidekickUndersideContactUsesCurrentYAnchorOnDownStep() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x14E0, 0x01E0, 0x45));
         TestPlayableSprite tails = new TestPlayableSprite();
         tails.setCpuControlled(true);
@@ -617,15 +611,12 @@ class TestCnzCylinderInstance {
         cylinder.snapshotPreUpdatePosition();
         setCylinderCenter(cylinder, 0x14E0, 0x01E8);
 
-        assertTrue(cylinder.usesPreUpdatePositionForSolidContact(tails),
-                "CNZ f20502: P2 underside separation must use the ROM-visible "
-                        + "frame-entry y_pos=$01E7, not the split engine's already-stepped "
-                        + "y_pos=$01E8 (sonic3k.asm:67656-67672, 67843-67851, "
-                        + "41006-41016, 41394-41440)");
+        assertFalse(cylinder.usesPreUpdatePositionForSolidContact(tails),
+                "P2 underside separation observes the post-motion object position");
     }
 
     @Test
-    void horizontalOscillatorCpuSidekickNewSideContactUsesFrameEntryXAnchor() throws Exception {
+    void horizontalOscillatorCpuSidekickNewSideContactUsesCurrentXAnchor() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x1415, 0x0AE0, 0x42));
         TestPlayableSprite tails = new TestPlayableSprite();
         tails.setCpuControlled(true);
@@ -637,15 +628,12 @@ class TestCnzCylinderInstance {
         cylinder.snapshotPreUpdatePosition();
         setCylinderCenter(cylinder, 0x1414, 0x0AE0);
 
-        assertTrue(cylinder.usesPreUpdatePositionForSolidContact(tails),
-                "CNZ f18259: P2 free side contact on a horizontal CNZCylinder must "
-                        + "classify/separate from the ROM-visible frame-entry x_pos=$1415, "
-                        + "not the split engine's already-stepped x_pos=$1414 "
-                        + "(sonic3k.asm:67656-67672, 41006-41010, 41394-41407, 41488-41495)");
+        assertFalse(cylinder.usesPreUpdatePositionForSolidContact(tails),
+                "P2 side separation observes sub_321E2's current x_pos");
     }
 
     @Test
-    void verticalOscillatorCpuCapturedRiderUsesFrameEntryYAnchorOnUpStep() throws Exception {
+    void verticalOscillatorCpuCapturedRiderUsesCurrentYAnchorOnUpStep() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x2920, 0x0458, 0x46));
         TestPlayableSprite tails = new TestPlayableSprite();
         tails.setCpuControlled(true);
@@ -655,11 +643,8 @@ class TestCnzCylinderInstance {
         cylinder.snapshotPreUpdatePosition();
         setCylinderCenter(cylinder, 0x2920, 0x0413);
 
-        assertTrue(cylinder.usesPreUpdatePositionForSolidContact(tails),
-                "CNZ f13062: after P2 sub_324C0 capture, the following SolidObjectFull "
-                        + "checkpoint must still use the ROM-visible frame-entry y_pos=$0414 "
-                        + "for this vertical oscillator up step (sonic3k.asm:67656-67672, "
-                        + "41006-41016, 67985-68005)");
+        assertFalse(cylinder.usesPreUpdatePositionForSolidContact(tails),
+                "capture and the following SolidObjectFull call share the post-motion anchor");
     }
 
     @Test

@@ -663,7 +663,11 @@ public class CollisionSystem {
             return false;
         }
         CollisionRules rules = collisionRulesOrNull(sprite);
-        return rules != null && rules.rightWallDeepProbePreservesPenetration();
+        if (rules != null && rules.rightWallDeepProbePreservesPenetration()) {
+            return true;
+        }
+        var registry = GameServices.zoneRuntimeRegistryOrNull();
+        return registry != null && registry.current().rightWallDeepProbePreservesPenetration();
     }
 
     private int getTerrainHeadroomDistance(AbstractPlayableSprite sprite, int hexAngle) {

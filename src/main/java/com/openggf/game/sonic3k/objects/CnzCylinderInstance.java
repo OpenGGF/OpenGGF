@@ -111,10 +111,6 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         this.mode0Velocity = 0;
         this.mode0YSubpixel = 0;
         this.currentYVelocity = 0;
-        // Obj_CNZCylinder init falls through directly into loc_32188, so the
-        // first sub_321E2 motion pass has already happened by the first full
-        // engine update after spawn.
-        updateMotion();
         updateDynamicSpawn(centerX, centerY);
     }
 
@@ -477,7 +473,8 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             }
             beginPlayerTwoDiagnostic(slot, "hold", player);
             short preHoldReleaseY = player.getCentreY();
-            holdSlot(slot);
+            boolean jumpPressed = player.isLogicalJumpPressActive();
+            holdSlot(slot, !jumpPressed);
             endPlayerTwoDiagnostic(slot, player);
             // Obj_CNZCylinder passes Ctrl_1_logical/Ctrl_2_logical in d5 to
             // sub_324C0, and loc_325B6 branches on the low-byte A/B/C press
@@ -486,7 +483,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             // word must carry the A/B/C press bits that Obj_CNZCylinder passed
             // in d5.
             slot.jumpPressedLastFrame = player.isJumpPressed();
-            if (player.isLogicalJumpPressActive()) {
+            if (jumpPressed) {
                 beginPlayerTwoDiagnostic(slot, "release_jump", player);
                 releaseSlot(slot, frameCounter, true, preHoldReleaseY);
                 endPlayerTwoDiagnostic(slot, player);
@@ -658,65 +655,16 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     }
 
     private int firstCaptureDistanceAnchorX(AbstractPlayableSprite player, boolean latchedContact) {
-        // ROM Obj_CNZCylinder runs sub_321E2, then immediately lets sub_324C0
-        // consume the standing bit that SolidObjectFull set on the prior
-        // object pass (sonic3k.asm:67656-67672,67985-67998). In the engine's
-        // split pipeline, that first standing callback arrives after object
-        // updates; when the next CNZ horizontal oscillator update consumes it,
-        // centerX has already advanced one extra sub_321E2 step. Use the
-        // frame-entry anchor for only that deferred first-capture distance.
-        if (!latchedContact) {
-            return centerX;
-        }
-        int preUpdateX = getPreUpdateX();
-        ObjectServices svc = tryServices();
-        if (player.isCpuControlled()
-                && isHorizontalOscillator()
-                && svc != null
-                && svc.titleCardProvider() != null
-                && svc.titleCardProvider().ownsRetainedResultsHeldLevelCounter()) {
-            // A retained Obj_LevelResults title owner holds Level_frame_counter
-            // while the split solid callback is deferred. sub_324C0 stores the
-            // P2 distance from the cylinder's frame-entry x_pos, before the
-            // already-visible horizontal oscillator step.
-            return preUpdateX;
-        }
-        // Circular loc_323EC routes can set the standing bit on one object pass
-        // and consume it in sub_324C0 after the engine has stepped the center
-        // again. At CNZ f11483/f11484 subtype $4C, ROM captures distance from
-        // x_pos(a0)=$1CFE, then the next held frame uses $1CFF; using the
-        // current $1CFF during capture stores a distance one pixel too short
-        // (sonic3k.asm:67656-67672, 67901-68012).
-        if (circularRoute
-                && centerX > preUpdateX
-                && !player.isCpuControlled()) {
-            return preUpdateX;
-        }
-        if (!isHorizontalOscillator()) {
-            return centerX;
-        }
-        // loc_322F0/loc_3230E-style horizontal steps write x_pos(a0), then the
-        // inactive sub_324C0 path stores the rider distance from that object
-        // pass's x_pos(a0) (sonic3k.asm:67807-67825, 67985-67998). A deferred
-        // non-CPU standing callback in the split engine can be consumed after
-        // centerX has advanced one extra step toward the rider; keep the
-        // frame-entry anchor for that first distance so the following
-        // loc_32538 held write adds the ROM distance to the ROM-visible X
-        // (sonic3k.asm:68019-68038).
-        int playerX = player.getCentreX();
-        boolean centerMovedTowardRider =
-                (centerX > preUpdateX && playerX >= centerX)
-                        || (centerX < preUpdateX && playerX <= centerX);
-        if (!player.isCpuControlled()
-                && centerMovedTowardRider) {
-            return preUpdateX;
-        }
-        int currentDistance = Math.abs(playerX - centerX);
-        int preUpdateDistance = Math.abs(playerX - preUpdateX);
-        return preUpdateDistance < currentDistance ? preUpdateX : centerX;
+        // sub_321E2 updates x_pos before sub_324C0 captures the rider distance
+        // in the same object slot (sonic3k.asm:67656-67672, 67985-67998).
+        return centerX;
     }
 
     private void holdSlot(RiderSlot slot) {
+        holdSlot(slot, true);
+    }
+
+    private void holdSlot(RiderSlot slot, boolean publishTwistMapping) {
         AbstractPlayableSprite player = slot.player;
         if (player == null) {
             return;
@@ -746,7 +694,12 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         // loc_32538 uses the current byte for GetSineCosine/position, then
         // addq.b #2 before loc_3260A selects PlayerTwistFrames.
         slot.twistAngle = (slot.twistAngle + 2) & 0xFF;
-        applyTwistFrame(player, slot.twistAngle);
+        // A/B/C takes loc_325B6 -> loc_325F2 before loc_3260A, so the jump
+        // release row keeps the prior mapping_frame even though the twist byte
+        // itself has already advanced (sonic3k.asm:68019-68078).
+        if (publishTwistMapping) {
+            applyTwistFrame(player, slot.twistAngle);
+        }
     }
 
     private void holdSlotPositionOnly(RiderSlot slot) {
@@ -771,55 +724,14 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     }
 
     private int heldAnchorX(RiderSlot slot) {
-        // ROM Obj_CNZCylinder's active rider path uses x_pos(a0) immediately in
-        // loc_32538 after the same object pass' sub_321E2 motion
-        // (sonic3k.asm:67656-67672, 68019-68038). The engine's split
-        // object/solid phases can observe a non-CPU rider's horizontal
-        // oscillator step one frame later than the ROM rider-control pass; in
-        // that case the frame-entry anchor is the x_pos consumed by loc_32538.
-        // CNZ f4320 proves this applies to loc_322F0's post-peak negative
-        // step too: ROM still writes the held rider from x_pos(a0)=$1BDF
-        // while the engine's split phase has already advanced current center
-        // to $1BDE (sonic3k.asm:67656-67672, 67807-67815, 68026-68038).
-        // The circular route loc_323EC also needs the
-        // frame-entry anchor on the proven positive step after capture: at CNZ
-        // f11310 ROM slot 13 is still at $1B93 while the engine's split phase
-        // has already advanced the current center to $1B94, and loc_32538 adds
-        // the held offset to that ROM-visible $1B93 x_pos(a0)
-        // (sonic3k.asm:67985-68038).
-        //
-        // CPU sidekick holds follow the same horizontal-oscillator object-pass
-        // anchor. CNZ f4447 has ROM slot 9 still at $1BA0 while the engine has
-        // advanced current center to $1BA1 before the P2 held write; loc_32538
-        // still adds the held offset to the ROM-visible $1BA0 x_pos(a0).
-        int preUpdateX = getPreUpdateX();
-        boolean horizontalPostMotionStep = isHorizontalOscillator() && centerX != preUpdateX;
-        boolean circularPositiveStep = circularRoute && centerX > preUpdateX;
-        if (horizontalPostMotionStep && slot.player != null) {
-            return preUpdateX;
-        }
-        if (circularPositiveStep
-                && slot.player != null
-                && !slot.player.isCpuControlled()) {
-            return preUpdateX;
-        }
+        // sub_321E2 updates x_pos before loc_32538 positions a held rider in
+        // the same object slot (sonic3k.asm:67656-67672, 68019-68038).
         return centerX;
     }
 
     private int heldSupportAnchorY() {
-        // ROM loc_3236E/loc_3238C/loc_323AA/loc_323CE update y_pos, then
-        // loc_32188 runs sub_324C0 and SolidObjectFull in the same object pass;
-        // SolidObjectFull's standing branch calls MvSonicOnPtfm, which carries
-        // the rider from that ROM-visible y_pos(a0) (sonic3k.asm:67656-67672,
-        // 67843-67884, 41016-41040, 41667-41679). In the engine split pass at
-        // CNZ f13049, subtype $46 has already advanced one upward oscillator
-        // pixel before the held-rider/support write; the frame-entry y_pos is
-        // the ROM-visible support anchor for that pass.
-        if (isVerticalOscillator()
-                && centerX == getPreUpdateX()
-                && centerY < getPreUpdateY()) {
-            return getPreUpdateY();
-        }
+        // Motion, rider control, and SolidObjectFull share one ROM object slot;
+        // the latter two therefore observe the current post-motion y_pos.
         return centerY;
     }
 
@@ -1037,91 +949,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     @Override
     public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
-        // Obj_CNZCylinder runs captured-rider logic before SolidObjectFull
-        // (sonic3k.asm:67656-67672, 67985-68038), so object-controlled riders
-        // normally keep the current post-motion anchor. Y-only object steps are
-        // the narrow exception: SolidObjectFull writes the rider's y_pos from
-        // the ROM-visible y_pos(a0) consumed by that object pass
-        // (sonic3k.asm:41016-41040, 41667-41679). In the engine split, the
-        // deferred solid-contact checkpoint can run after the cylinder body has
-        // locally advanced one extra Y step; use the frame-entry anchor for the
-        // proven circular down step at CNZ f11503 and vertical-oscillator up
-        // step at CNZ f13049.
-        if (player instanceof AbstractPlayableSprite sprite
-                && sprite.isObjectControlled()) {
-            boolean circularVerticalOnlyStep = circularRoute
-                    && centerX == getPreUpdateX()
-                    && centerY > getPreUpdateY();
-            boolean verticalOscillatorUpStep = isVerticalOscillator()
-                    && centerX == getPreUpdateX()
-                    && centerY < getPreUpdateY();
-            if (sprite.isCpuControlled()) {
-                // The same frame-entry support anchor applies after P2 capture:
-                // sub_324C0 writes object_control=$03, then the same
-                // Obj_CNZCylinder pass still calls SolidObjectFull for Player_2
-                // while render_flags is on-screen (sonic3k.asm:67656-67672,
-                // 41006-41016, 67985-68005). In the split engine pass at CNZ
-                // f13062, using the already-stepped vertical-oscillator y_pos
-                // overwrites the capture Y one pixel high.
-                return verticalOscillatorUpStep;
-            }
-            return circularVerticalOnlyStep || verticalOscillatorUpStep;
-        }
-        if (player instanceof AbstractPlayableSprite sprite
-                && sprite.isCpuControlled()
-                && !sprite.isObjectControlled()) {
-            if (isHorizontalOscillator()) {
-                // P2 reaches the same Obj_CNZCylinder SolidObjectFull call as
-                // P1 after sub_324C0 (sonic3k.asm:67656-67672), and
-                // SolidObjectFull passes the live x_pos(a0) in d4 to
-                // SolidObject_cont's side separation (sonic3k.asm:41006-41010,
-                // 41394-41407, 41488-41495). In the engine's split checkpoint,
-                // the current horizontal oscillator position can be one step
-                // ahead of the ROM-visible object-pass anchor; CNZ f18259's
-                // free Tails side contact must separate from the frame-entry
-                // x_pos=$1415, not the already-stepped $1414.
-                return true;
-            }
-            // P2 reaches the same SolidObjectFull call after sub_324C0
-            // (sonic3k.asm:67656-67672, 41006-41016). At CNZ f13060 the
-            // engine's split phase has advanced subtype $46 from
-            // y_pos=$0416 to $0415 one pass ahead of the ROM-visible object
-            // anchor; using current y_pos turns Tails' relY=-1 miss into a
-            // relY=0 landing and zeroes y_vel one frame early. The same anchor
-            // applies on a downward step: at f20502 subtype $45 moves from
-            // $01E7 to $01E8 before the split solid checkpoint, moving the
-            // underside separation one pixel too low. Use the frame-entry
-            // anchor in either direction of loc_3236E/loc_3238C movement
-            // (sonic3k.asm:67843-67874, 41394-41440).
-            return isVerticalOscillator()
-                    && centerX == getPreUpdateX()
-                    && centerY != getPreUpdateY();
-        }
-        // Horizontal oscillator contacts use the frame-entry X anchor in the
-        // engine's split inline checkpoint; SolidObject_cont then applies side
-        // separation from x_pos (sonic3k.asm:41394-41407, 41488-41495). CNZ
-        // trace f10541 exercises subtype $42, where the ROM separates from
-        // $19B2 while the engine has already advanced the cylinder body to
-        // $19B4.
-        if (!(player instanceof AbstractPlayableSprite sprite)
-                || sprite.isCpuControlled()
-                || sprite.isObjectControlled()) {
-            return false;
-        }
-        if (isHorizontalOscillator()) {
-            return true;
-        }
-        // Vertical oscillator contacts use the same frame-entry object anchor
-        // for new non-controlled side separation. Obj_CNZCylinder's loc_3236E/
-        // loc_3238C/loc_323AA/loc_323CE update y_pos before SolidObjectFull
-        // (sonic3k.asm:67843-67884, 67656-67672), and SolidObject_cont then
-        // classifies side-vs-top from x_pos/y_pos before zeroing speed in
-        // loc_1E056 (sonic3k.asm:41394-41440, 41473-41495). In the split
-        // engine pass, a one-pixel vertical body step can make that side
-        // classification one frame early; CNZ f6678 subtype $45 should still
-        // classify from the frame-entry y_pos=$04FD, not the just-stepped
-        // y_pos=$04FE.
-        return isVerticalOscillator() && centerY != getPreUpdateY();
+        // Obj_CNZCylinder calls sub_321E2 before sub_324C0 and SolidObjectFull,
+        // so every rider and free-contact branch observes the post-motion
+        // x_pos/y_pos from the current object slot (sonic3k.asm:67656-67672).
+        return false;
     }
 
     private boolean isHorizontalOscillator() {
@@ -1296,7 +1127,12 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     @Override
     public String traceDebugDetails() {
         return String.format(
-                "cyl center=%04X,%04X yv=%04X masks=%02X/%02X p2=%s pre=%04X.%02X,%02X/%02X post=%04X.%02X,%02X/%02X slot=%s,%02X,%02X,%02X",
+                "cyl sub=%02X base=%04X,%04X angle=%04X q=%d center=%04X,%04X yv=%04X masks=%02X/%02X p2=%s pre=%04X.%02X,%02X/%02X post=%04X.%02X,%02X/%02X slot=%s,%02X,%02X,%02X",
+                spawn.subtype() & 0xFF,
+                baseX & 0xFFFF,
+                baseY & 0xFFFF,
+                angle & 0xFFFF,
+                routeQuadrant,
                 centerX & 0xFFFF,
                 centerY & 0xFFFF,
                 currentYVelocity & 0xFFFF,

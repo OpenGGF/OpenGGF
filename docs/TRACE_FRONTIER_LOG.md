@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ cylinder same-slot motion and wall-unroll coordinates: physics f26050 -> f29673, animation f25614 -> f29721
+
+`Obj_CNZCylinder` initializes and falls through into its motion, rider-control,
+and `SolidObjectFull` work in one SST dispatch. The engine constructor had
+already advanced motion before that first update, while later split-phase
+compensation made capture, held placement, and solid contact read the prior
+object position. Cylinder initialization now has one motion pass, all three
+consumers read the current post-motion coordinate, and the A/B/C release path
+keeps the previous mapping because `loc_325B6` skips `loc_3260A`
+(`docs/skdisasm/sonic3k.asm:67656-67672,67985-68100`).
+
+The next right-wall roll stop exposed a separate coordinate-representation
+bug: widening the engine sprite bounds shifted centre X by five pixels, even
+though `Sonic_RollSpeed` changes only radii and `y_pos`. Preserving centre X
+lets the following invisible-block side response apply the native full
+separation. Deep right-wall penetration recovery is now disabled by default
+for S3K and enabled by AIZ1's runtime predicate, matching the explicit
+`Current_zone_and_act == 0` branch without a shared zone carve-out
+(`docs/skdisasm/sonic3k.asm:18884-18941,22924-23005,41394-41495`).
+
+This advances CNZ complete-run physics from f26050 `y_speed` to f29673
+`tails_g_speed`, and animation from f25614 `player_mapping_frame` to f29721
+`tails_mapping_frame`. The focused 244-test cylinder/movement/collision/runtime
+suite passes, as does the updated exact twist-table integration check. The
+sequential one-fork 4 GB full sweeps remain 45/58 green for physics and 44/58
+green for animation, with the same 13 physics expected-red routes and the same
+eight unsupported plus six comparison-red animation routes. AIZ complete-run
+physics remains green; no non-CNZ frontier moved, and legacy standalone CNZ
+remains at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ balloon collision-property dispatch: physics f24936 -> f26050, animation f25028 -> f25614
 
 Native `Touch_Process` records a balloon hit in `collision_property`; the

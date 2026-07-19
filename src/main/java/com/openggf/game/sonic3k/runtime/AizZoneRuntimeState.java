@@ -23,6 +23,12 @@ public final class AizZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return events.getDynamicResizeRoutine(); }
     @Override public boolean isActTransitionFlagActive() { return events.isEventsFg5(); }
+    @Override
+    public boolean rightWallDeepProbePreservesPenetration() {
+        // Player_WalkVertR applies its deep-probe recovery only when the
+        // combined zone/act word is zero: AIZ1 (sonic3k.asm:18884-18941).
+        return actIndex == 0;
+    }
     public boolean isBackedBy(Sonic3kAIZEvents candidate) { return events == candidate; }
 
     public boolean isBossFlagActive() { return events.isBossFlag(); }

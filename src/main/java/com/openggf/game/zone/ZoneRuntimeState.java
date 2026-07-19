@@ -26,6 +26,14 @@ public interface ZoneRuntimeState {
     }
 
     /**
+     * Whether a deep right-wall ground probe keeps its penetration distance
+     * instead of replacing it with the generic wall-angle recovery result.
+     */
+    default boolean rightWallDeepProbePreservesPenetration() {
+        return false;
+    }
+
+    /**
      * Captures gameplay-relevant per-zone runtime state as a byte buffer for
      * rewind. Default returns an empty array (no state to capture).
      * Implementations override and serialize their fields deterministically.

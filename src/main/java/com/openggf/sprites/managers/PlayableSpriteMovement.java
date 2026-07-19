@@ -2608,7 +2608,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					sprite.markObjectPreservedRollBoostFollowup();
 				}
 			} else {
+				// ROM roll-stop writes y_radius/x_radius and y_pos only; x_pos is
+				// unchanged (sonic3k.asm:22978-22986). On wall modes the engine
+				// represents the radius change by widening the top-left sprite box,
+				// so preserve the native centre X across that representation change.
+				short preRollStopCentreX = sprite.getCentreX();
 				sprite.setRolling(false);
+				sprite.setCentreXPreserveSubpixel(preRollStopCentreX);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
 				applyRollStopAnimationChange();
 			}
