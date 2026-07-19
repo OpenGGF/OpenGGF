@@ -151,6 +151,13 @@ public abstract class AbstractTraceReplayTest {
         // test observer hook
     }
 
+    /**
+     * Post-fixture-build hook for profile-specific entry setup (e.g. bonus
+     * stage provider registration). Default: no-op.
+     */
+    protected void afterFixtureBuild(TraceData trace) {
+    }
+
     static boolean shouldValidateRewindReferenceClosure(SonicGame game) {
         return game == SonicGame.SONIC_2 || game == SonicGame.SONIC_3K;
     }
@@ -213,6 +220,7 @@ public abstract class AbstractTraceReplayTest {
                         .startPositionIsCentre();
             }
             HeadlessTestFixture fixture = fixtureBuilder.build();
+            afterFixtureBuild(trace);
             TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
 
             if (GameServices.debugOverlay() != null) {
