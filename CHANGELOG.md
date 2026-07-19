@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Trace framework: s3k_special_stage trace parser.
 - S3K special stage: read-only comparison snapshot for trace replay.
 - Trace replay: per-game special-stage launch config helper (dormant S3K fresh-load seam).
 - Trace framework: run_manifest.json schema + TraceRunManifest parser/validator for multi-segment trace runs (spec 2026-07-18).
