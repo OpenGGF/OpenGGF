@@ -1,5 +1,25 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S3K water-before-touch player-slot order: f24885 -> f24892
+
+At f24885, Sonic crossed the CNZ water line while overlapping a subtype-$84
+balloon. The engine ran `TouchResponse` first, accepted the balloon's native
+`-$0380` launch, then ran water entry and quartered that launch to `-$00E0`.
+The ROM player slot orders movement, position history, `Sonic_Water`, animation,
+then `TouchResponse`; water entry therefore quarters the incoming fall before
+the balloon overwrites it with `-$0380`. The shared S2/S3K inline-player tick
+now updates water at that native point (`docs/skdisasm/sonic3k.asm:21995-22022,
+22203-22287,66764-66808`).
+
+The focused water and CNZ balloon suites pass. CNZ complete-run physics advances
+from f24885 to f24892; its next mismatch is the popped balloon reapplying
+`-$0380` one frame after native because its RNG-owned bob phase keeps the
+overlap alive. The full comparison-only sweep remains 45/58 physics green with
+the same 13 expected-red routes and unchanged green AIZ, HCZ, and MGZ complete
+runs. Animation remains 44/58 green with the same 14 expected-red or unsupported
+routes; CNZ complete-run animation still begins at f108 (1115 downstream
+errors), and legacy standalone CNZ remains at f0.
+
 ### 2026-07-19 -- CNZ two-player breakable-wall cleanup: f24799 -> f24885
 
 At f24799, Sonic and rolling CPU Tails reached the same CNZ breakable wall in
