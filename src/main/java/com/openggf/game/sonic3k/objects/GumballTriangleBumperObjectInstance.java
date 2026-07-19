@@ -7,7 +7,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -19,7 +18,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -49,9 +47,21 @@ import java.util.List;
  * ROM collision: SolidObjectFull with D1=$D (13), D2=8, D3=$11 (17).
  * On player standing or side push contact, applies bounce and deletes self
  * (the Gumball machine respawns bumpers). For placed-engine operation we keep
- * the bumper inert after a hit, and add a symmetric proximity fallback so
- * mirrored bumpers still trigger when the generic solid-contact classifier
- * drops an edge case.
+ * the bumper inert after a hit instead of deleting the instance.
+ * <p>
+ * Contact is resolved exclusively through the generic {@link SolidObjectProvider}
+ * / {@link SolidObjectListener} pass (matching ROM's single SolidObjectFull call
+ * per frame -- sonic3k.asm:127639-127660). A previous revision additionally ran
+ * a per-frame proximity-box "fallback" bounce with no ROM analog (a symmetric
+ * AABB using the player's full half-width/half-height on every side, rather
+ * than SolidObjectFull's actual asymmetric quadrant test), which fired a frame
+ * or more before the ROM's own SolidObjectFull would have registered contact --
+ * observed live via TestS3kGumballBonusTraceReplay: bumper slot 6 fired the
+ * fallback at trace frame 27 (player still 23px/28px away, well outside
+ * SolidObjectFull's real overlap) while the recorded ROM trace stays in normal
+ * free-fall through at least frame 29. Removing the fallback and relying on
+ * {@link #onSolidContact} alone advances the trace frontier from frame 27 to
+ * frame 112, matching ROM's own bounce-response frame for that contact.
  */
 public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
@@ -69,28 +79,6 @@ public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
     @Override
     public GumballTriangleBumperObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new GumballTriangleBumperObjectInstance(ctx.spawn());
-    }
-
-    @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (consumed) {
-            return;
-        }
-        AbstractPlayableSprite updatePlayer = playerEntity instanceof AbstractPlayableSprite player ? player : null;
-        List<PlayableEntity> participants = services().playerQuery().playersFor(
-                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
-        if (updatePlayer != null && !participants.contains(updatePlayer)) {
-            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-            withUpdatePlayer.add(updatePlayer);
-            withUpdatePlayer.addAll(participants);
-            participants = withUpdatePlayer;
-        }
-
-        for (PlayableEntity participant : participants) {
-            if (participant instanceof AbstractPlayableSprite sprite) {
-                tryFallbackBounce(sprite);
-            }
-        }
     }
 
     @Override
@@ -118,37 +106,6 @@ public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
         }
 
         if (!contact.standing() && !contact.touchSide()) {
-            return;
-        }
-
-        applyBounce(player);
-    }
-
-    private void tryFallbackBounce(AbstractPlayableSprite player) {
-        if (consumed || player == null) {
-            return;
-        }
-
-        GumballMachineObjectInstance machine = currentMachineForThisContext();
-        if (machine != null && !machine.areBumpersActive()) {
-            return;
-        }
-        if (player.isObjectControlled() || player.isControlLocked()) {
-            return;
-        }
-
-        int halfPlayerWidth = Math.max(1, player.getWidth() / 2);
-        int halfPlayerHeight = Math.max(1, player.getHeight() / 2);
-        int dx = player.getCentreX() - spawn.x();
-        int dy = player.getCentreY() - spawn.y();
-        int xRange = SOLID_PARAMS.halfWidth() + halfPlayerWidth;
-        int yRangeAbove = SOLID_PARAMS.airHalfHeight() + halfPlayerHeight;
-        int yRangeBelow = SOLID_PARAMS.groundHalfHeight() + halfPlayerHeight;
-
-        if (dx < -xRange || dx > xRange || dy < -yRangeAbove || dy > yRangeBelow) {
-            return;
-        }
-        if (!player.getAir() && !player.isOnObject() && player.getXSpeed() == 0 && player.getYSpeed() == 0) {
             return;
         }
 
