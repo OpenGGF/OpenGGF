@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S1 maze trace pipeline landed
+
+Branch `feature/ai-mstr-s1maze` gave the S1 maze special stage a real trace
+pipeline: the comparison-only seam, the `s1_special_stage` parser
+(`Sonic1SpecialStageTraceData`/`Sonic1SpecialStageTraceFrame`), recorder
+`s1_complete_run_recorder.lua` v3.15 (the `$10` detour state machine
+automatically produces `ghz1/` + `ss/` + `ghz2/` segments and
+`run_manifest.json`), a VBlank-paced replay harness
+(`AbstractS1SpecialStageTraceReplayTest`/`S1SpecialStageReplayHarness`) whose
+terminal boundary is a single `exit_state_at_end` check (the S1 maze has no
+in-segment completion marker analogous to S3K's fade-timer cycle), and the
+headless boot verify (`TestS1SpecialStageHeadlessBoot`, green today, no
+engine gap — no init hook needed). The replay test
+(`TestS1SpecialStageTraceReplay`) skips pending `s1-complete-run.bk2`
+(procedure: `tools/bizhawk/README.md`, "Recording S1 Maze Round-Trip Traces
+(s1-ghz-maze-roundtrip)"). Command: `mvn
+"-Dtest=com.openggf.tests.trace.s1.TestS1SpecialStageTraceReplay" test` --
+status: SKIPPED (assumption, no committed trace yet), compiles clean.
+
+Deferred follow-ups (explicit, not silently dropped):
+- (a) In-chain/visual SS-interior comparison is not wired for the S1 maze
+  (shared follow-up with the S3K blue-spheres pipeline -- both stop at the
+  headless replay harness today).
+- (b) Standalone visual SS launch remains `s2_special_stage`-gated in
+  `TraceSessionLauncher`/`TraceEntry` (`SpecialStageTraceData`/
+  `SpecialStageTraceFrame` are hard-locked to `trace_profile ==
+  "s2_special_stage"`); the S1 maze profile does not route through visual
+  launch yet.
+- (c) S1 SS results-tail rows recorded under `$10` may need a comparator
+  stop rule once the green campaign reaches this trace -- the recorder
+  captures through the exit ramp but the results-tail frames have not been
+  validated against a live capture yet.
+
+Full-suite gate: not affected (docs-only follow-up to the already-landed
+pipeline commits). No trace frontiers moved.
+
 ### 2026-07-19 -- S3K slot-machine bonus replay scaffolding landed (slots-depth plan)
 
 Branch `feature/ai-mstr-slots` landed the slot-machine headless replay slice:
