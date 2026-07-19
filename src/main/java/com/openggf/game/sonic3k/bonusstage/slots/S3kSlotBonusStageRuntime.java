@@ -267,6 +267,10 @@ public final class S3kSlotBonusStageRuntime {
         return slotRenderBuffers;
     }
 
+    public S3kSlotPlayerRuntime slotPlayerRuntimeForTest() {
+        return slotPlayerRuntime;
+    }
+
     public S3kSlotOptionCycleSystem optionCycleSystemForTest() {
         return optionCycleSystem;
     }
@@ -652,14 +656,27 @@ public final class S3kSlotBonusStageRuntime {
      * (and differently-timed) prize than ROM and producing a rings-count
      * divergence that starts well before any position/velocity field diverges
      * (TestS3kSlotsBonusTraceReplay frame 269: expected rings=75, actual=76).
-     * {@code ObjectManager.vblaCounter} is this engine's persistent,
-     * never-reset-on-level-load run counter -- the same approximation of
-     * V_int_run_count that every ordinary object's {@code update(int
-     * frameCounter, ...)} dispatch already receives (see {@code
-     * ObjectManager.update} and {@code GumballMachineObjectInstance}'s matching
-     * seed comment) -- so route the option-cycle system to it explicitly here,
-     * since the slots runtime suppresses ObjectManager's own dispatch and
-     * drives its objects with a bespoke, level-local counter instead.
+     * {@code ObjectManager.vblaCounter} is at least the right *shape* of
+     * approximation for {@code V_int_run_count} -- unlike {@code
+     * Level_frame_counter} it does not reset on level load -- and it is the
+     * same proxy every ordinary object's {@code update(int frameCounter, ...)}
+     * dispatch already receives (see {@code ObjectManager.update}), so route
+     * the option-cycle system to it explicitly here, since the slots runtime
+     * suppresses ObjectManager's own dispatch and drives its objects with a
+     * bespoke, level-local counter instead. It is <strong>not</strong> a
+     * validated match for {@code V_int_run_count}: {@code
+     * GumballMachineObjectInstance}'s frame-0 RNG-reseed comment and the
+     * "Gumball Machine Frame-0 RNG Reseed" entry in {@code
+     * docs/S3K_KNOWN_DISCREPANCIES.md} document {@code vblaCounter} as a
+     * per-gameplay-session counter that resets far more often, and starts from
+     * a materially smaller range, than the hardware counter a trace reflects --
+     * a disclosed approximation gap, not a proven-accurate substitute. Routing
+     * Slots' reel-word seed, per-reel velocity offsets, fixed-row scan seed,
+     * random-target draw, and post-decelerate countdown extension through this
+     * same proxy inherits that same disclosed gap (see the Slots paragraph
+     * added to that discrepancies entry); this is a like-for-like ROM-shape
+     * fix relative to the previous {@code Level_frame_counter} bug, not a
+     * claim of exact parity with real hardware.
      */
     private int globalVIntRunCounter() {
         if (bootstrapGameplayMode == null) {

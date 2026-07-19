@@ -349,6 +349,39 @@ class TestS3kSlotPlayerRuntime {
     }
 
     @Test
+    void groundProjectedOriginStaysAtPreAirMotionSnapshotWhileSlotOriginAdvances() {
+        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        Arrays.fill(buffers.expandedLayout(), (byte) 0);
+        S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(buffers, state);
+        S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
+        Sonic player = new Sonic("sonic", (short) 0x460, (short) 0x360);
+
+        runtime.initialize(player);
+        int groundProjectedYBeforeTick = runtime.groundProjectedOriginY();
+        player.setAir(true);
+        player.setGSpeed((short) 0);
+        player.setYSpeed((short) 0x1000);
+
+        runtime.tick(player, false, false, false, false, false, 0);
+
+        // ROM sub_4BDCA (ring pickup, sonic3k.asm:99144) and sub_4BE3A (tile dispatch,
+        // sonic3k.asm:99195) both read x_pos(a0)/y_pos(a0) right after sub_4BABC's
+        // ground-velocity projection and BEFORE this frame's air velocity is folded
+        // into position by MoveSprite2 (sonic3k.asm:98776-98780) -- see the
+        // groundProjectedOriginX/Y field javadoc. With gSpeed==0 the ground-projection
+        // step contributes no delta, so groundProjectedOriginY() must stay pinned at
+        // its pre-tick snapshot for this tick while the fully-stepped slotOriginY()
+        // (which S3kSlotBonusStageRuntime.currentPlayerOriginX/Y exposes, NOT what the
+        // ring/tile checks should read) advances several pixels from the large
+        // air-velocity step.
+        assertEquals(groundProjectedYBeforeTick, runtime.groundProjectedOriginY());
+        assertTrue((runtime.slotOriginY() >> 16) > groundProjectedYBeforeTick + 4,
+                "fully-stepped slotOriginY should advance well past the ground-projected "
+                        + "snapshot after a large air-velocity step this tick");
+    }
+
+    @Test
     void debugModeSuppressesCollisionState() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();

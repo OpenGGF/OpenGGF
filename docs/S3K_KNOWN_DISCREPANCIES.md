@@ -1030,5 +1030,17 @@ The Gumball bonus stage's RNG-seeded frame-0 ball-subtype roll can diverge from 
 run whenever local session timing differs from the original hardware's power-on-relative VBlank
 count — this affects trace-replay parity for that one roll and, in principle, exact reward-subtype
 determinism in live play relative to real hardware, though live play has no reference recording to
-diverge from. No other Gumball, Pachinko, or Slots behavior is affected; the RNG stream itself
-(post-seed advancement) remains ROM-faithful.
+diverge from. The RNG stream itself (post-seed advancement) remains ROM-faithful.
+
+Slots is *also* affected by this same `vblaCounter`-vs-`V_int_run_count` gap, not exempt from it:
+`S3kSlotBonusStageRuntime.globalVIntRunCounter()` feeds `ObjectManager.vblaCounter` into
+`S3kSlotOptionCycleSystem.tick(...)` as the ROM-faithful *shape* of `Slots_CycleOptions`'s several
+`V_int_run_count` reads (reel-word seeds, per-reel velocity offsets, the fixed-row scan seed, the
+random-target draw, and the post-decelerate countdown extension — sonic3k.asm:99614-99946). Because
+`vblaCounter` is a per-gameplay-session approximation with the same reset-cadence and smaller-range
+mismatch described above, all of those Slots computations can select a different (and
+differently-timed) reel target/prize than a specific recorded run whenever local session timing
+differs from the original hardware's power-on-relative VBlank count, exactly as with the Gumball
+frame-0 roll. This is the same underlying counter gap surfacing at a second, independent call site,
+not a new discrepancy; the correct fix is the same deferred persistent VBlank-driven global counter
+described above, which would resolve both sites at once.
