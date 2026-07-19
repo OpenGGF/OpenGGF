@@ -1,0 +1,136 @@
+# Multi-Stage Trace Runs — Blue Spheres Plan: S3K Special-Stage Trace Capture + Replay
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Give S3K blue-spheres special stages a real trace pipeline: the `s3k_special_stage` schema + recorder row writer (the SS detour becomes a real segment), engine additions #3 (comparison snapshot) and #6-S3K (headless-loadability proof), the per-segment replay harness (VBlank pacing + lag skips, NO PC hooks), and the live `freshLoadSignal` wire-up — per the spec's blue-spheres roadmap entry.
+
+**Architecture (verified 2026-07-19 exploration):** The manager exposes rich getters but no aggregate snapshot; the player is subpixel fixed-point on a toroidal grid (256 = 1 cell). The SS RAM block is a phase overlay at BizHawk base `0xE400` (`Stat_table`/`Pos_table_P2`) with hand-derived offsets (table below) — live verification against the first real capture is MANDATORY before the schema is declared frozen. The recorder's v6.30 detour path currently finalizes with NO rows and one merged transition; this plan flips the SS to a real `special_stage` segment with bonus-style entry+exit transitions (invariant `#transitions == #segments-1` is preserved: +1 segment, +1 transition). The harness mirrors `S2SpecialStageReplayHarness` minus everything S2-specific: single-arg `initializeStage(int)` (no startup policy, no lag compensator exists on S3K), stage index pinned from segment metadata (never `consumeStageIndexForEntry` — that consumes live progression), frameCounter compared against row ordinal (no ROM cell backs it).
+
+**Tech Stack:** Java 21 + JUnit 5 (Jupiter only); BizHawk lua (recorder).
+
+## Global Constraints
+
+- Spec: `docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md` (blue-spheres plan = additions #3, #6-S3K + schema + recorder writer + harness + freshLoadSignal). MVP red-allowed comparator per owner decision 2; slots/S1/S2 are later plans.
+- Comparison-only invariant; recorder captures generously, comparator binds incrementally.
+- **Pacing: VBlank + lag-row skips ONLY.** No RunObjects PC hooks; escalate only if a real divergence report shows pass-bisection artifacts (spec §Pacing).
+- Lua: ALL new top-level recorder state/constants are GLOBALS (200-local budget; bundled parser gate `docs/skdisasm/build_tools/lua/lua.exe -e "assert(loadfile('tools/bizhawk/s3k_complete_run_recorder.lua'))"`).
+- JUnit 5 only; commit policy as prior plans (trailer block; src/main feat → `Changelog: updated` + CRLF-verified CHANGELOG.md; stage exact paths; every commit ends with `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>` and `Claude-Session: https://claude.ai/code/session_01LPPPMPSUQBgYpxpA82bad5`).
+- Recordings absent: the replay test lands skip-if-missing on `src/test/resources/traces/s3k/special_stage/` (dedicated) and activates for run segments via the chain later; the RAM map carries a documented VERIFY-ON-FIRST-CAPTURE obligation (self-check prints in the recorder + a frontier-log note) because no SS-entering bk2 exists to probe today.
+- Guard awareness: new src/main trace classes may trip `TestBuildToolingGuard` (profile-gate patterns) and the SS harness/test naming must respect `TestTraceReplayInvariantGuard` (register the new abstract base if the test ends in `*TraceReplay.java`). Register per convention with justification; never weaken.
+
+## Verified S3K SS RAM map (BizHawk `mainmemory` addresses; phase overlay base `0xE400` = `Stat_table`, `sonic3k.constants.asm:331,1012-1057`)
+
+| Column | Symbol | Addr | Size |
+|---|---|---|---|
+| anim_frame | Special_stage_anim_frame | 0xE420 | u16 |
+| x_pos | Special_stage_X_pos | 0xE422 | u16 |
+| y_pos | Special_stage_Y_pos | 0xE424 | u16 |
+| angle | Special_stage_angle | 0xE426 | u8 |
+| velocity | Special_stage_velocity | 0xE428 | s16 |
+| turning | Special_stage_turning | 0xE42A | u8 |
+| jumping | Special_stage_jumping | 0xE432 | u8 |
+| fade_timer | Special_stage_fade_timer | 0xE433 | u8 |
+| spheres_left | Special_stage_spheres_left | 0xE438 | u16 |
+| ring_count | Special_stage_ring_count | 0xE43A | u16 |
+| rings_left | Special_stage_rings_left | 0xE442 | u16 |
+| rate | Special_stage_rate | 0xE444 | u16 |
+| rate_timer | Special_stage_rate_timer | 0xE43E | u16 |
+| clear_timer | Special_stage_clear_timer | 0xE44A | u16 |
+| clear_routine | Special_stage_clear_routine | 0xE44C | u8 |
+| started | Special_stage_started | 0xE450 | u8 |
+
+CSV schema (`ss_csv_version: 1`, profile `s3k_special_stage`): `frame,input,input_p2,lag,` + the 16 columns above in table order. `frame` decimal, `lag` 0/1 via `emu.islagged()`, rest lowercase hex (S2 SS convention). The engine `frameCounter` has NO ROM cell — the comparator compares it against the count of non-lag rows stepped, never a CSV column.
+
+---
+
+### Task 1: `Sonic3kSpecialStageComparisonState` + `captureComparisonState()` (addition #3)
+
+**Files:**
+- Create: `src/main/java/com/openggf/game/sonic3k/specialstage/Sonic3kSpecialStageComparisonState.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/specialstage/Sonic3kSpecialStageManager.java` (one new method)
+- Test: `src/test/java/com/openggf/game/sonic3k/specialstage/TestSonic3kSpecialStageComparisonState.java`
+
+**Interfaces:**
+- Consumes: existing getters — manager `getSpheresLeft():1106/getRingsCollected():1102/getRingsLeft():1110/getFrameCounter():1148/getClearRoutine():1144/getClearTimer():1140/isFinished():1058/hasEmeraldCollected():1094/getPlayer():1128`; player `getXPos()/getYPos():534-535/getAngle():536/getVelocity():537/getTurning():539/getJumping():543/getFadeTimer():548`.
+- Produces: a flat record `Sonic3kSpecialStageComparisonState(int playerX, int playerY, int angle, int velocity, int turning, int jumping, int fadeTimer, int spheresLeft, int ringsCollected, int ringsLeft, int frameCounter, int clearRoutine, int clearTimer, boolean finished, boolean emeraldCollected)` + `public Sonic3kSpecialStageComparisonState captureComparisonState()` on the manager — pure read, no mutators/caching, javadoc citing addition #3 and modeling on `Sonic2SpecialStageComparisonState`.
+
+- [ ] **Step 1:** Failing test — construct a manager via its test-reachable seams (read `TestSonic3kSpecialStageManagerSnapshot` for the established construction/placeholder-init idiom; the offsets-unverified placeholder path `initialize()` fallback at `:169-173` boots WITHOUT ROM), call `captureComparisonState()`, assert every field equals its getter counterpart, and assert two consecutive calls with no update() in between are equal (pure-read proof).
+- [ ] **Step 2:** COMPILE-FAIL → implement → green. **Step 3:** CHANGELOG line `- S3K special stage: read-only comparison snapshot for trace replay.` + commit (feat, src/main → Changelog: updated).
+
+---
+
+### Task 2: `S3kSpecialStageTraceData` / `S3kSpecialStageTraceFrame` (parser)
+
+**Files:**
+- Create: `src/main/java/com/openggf/trace/S3kSpecialStageTraceFrame.java`, `src/main/java/com/openggf/trace/S3kSpecialStageTraceData.java`
+- Test: `src/test/java/com/openggf/tests/trace/TestS3kSpecialStageTraceParsing.java`
+
+**Interfaces:**
+- Consumes: the S2 pattern (`SpecialStageTraceData.load` shape: metadata + rows + aux via `TraceData.resolveTraceFile`/`loadAuxEvents`; `SpecialStageTraceFrame.parseCsvRow` column-constant style). S2 classes stay S2-locked (their profile gate throws on anything else).
+- Produces: `S3kSpecialStageTraceFrame` record matching the 20-column schema above (ints; `lag` boolean; `parseCsvRow(String line)` hard-throws on wrong column count); `S3kSpecialStageTraceData.load(Path)` hard-gated to `trace_profile == "s3k_special_stage"`, exposing `metadata()/frames()/frameCount()/eventsForFrame(int)`.
+
+- [ ] **Step 1:** Failing parser test: hand-built header+2 rows round-trip (every column value asserted), wrong-column-count throws, wrong-profile metadata throws, gzip-or-plain resolution (write .gz variant in @TempDir).
+- [ ] **Step 2:** Implement → green. **Step 3:** CHANGELOG + commit (feat, src/main).
+
+---
+
+### Task 3: Recorder — SS detour becomes a real segment (lua)
+
+**Files:**
+- Modify: `tools/bizhawk/s3k_complete_run_recorder.lua`
+
+**Interfaces:**
+- Consumes (all verified present, v6.30+): detour handler `:5021-5054` (currently: build `pending_ss_transition` → `finalize_segment()` → `detour_active="special_stage"` → return, NO rows; the `:5045-5054` block returns during `$34/$48`), merged-transition completion at the level re-arm `:5096-5103`, SS RAM constants `:357-368`, `GAMEMODE_SPECIAL_STAGE=0x34 :371`, `start_new_segment :4762ish`, `finalize_segment`, `segment_dir_counts`, manifest writer.
+- Produces: SS detours now emit a REAL `special_stage` segment: dir token `ss` (repeat-suffixed `ss_2`… via `segment_dir_counts`), `trace_profile: "s3k_special_stage"`, `ss_csv_version: 1`, `special_stage_index` in metadata, the 20-column rows per the schema table, `lag` via `emu.islagged()`. Transition math flips to the bonus-style pair: entry `giant_ring` transition pushed at SS-segment open (indices `#segments_done-1 → #segments_done` AFTER the level segment finalized and the SS segment is about to open), exit `stage_exit` pushed at the level re-arm keyed on `segments_done[#segments_done].kind == "special_stage"` (extend the existing bonus-exit Case-2 predicate to accept either kind). The `pending_ss_transition` merged path is REMOVED (superseded); `detour_active` still gates `$48`/fade frames (no rows after the `$34` window closes — finalize the SS segment on the FIRST non-`$34` frame).
+- **Stage index derivation:** derive the `Current_special_stage` RAM address via the plan-(a) ds.b-walk method (`sonic3k.constants.asm` — the symbol exists; `HPZ_current_special_stage :503` describes itself as "a copy of Current_special_stage", proving the base symbol; cross-check both disasm halves) and read it at SS entry. If the walk is ambiguous, STOP and report BLOCKED with the candidates — do not guess an address into committed capture tooling.
+- **Self-verification prints (VERIFY-ON-FIRST-CAPTURE obligation):** at SS-segment open and every 300 SS frames, print `spheres_left`, `ring_count`, `started`, `x_pos/y_pos` — plus a finalize-time sanity summary (spheres_left non-increasing overall, started flipped 0→1 once, x/y within 0xFFFF). These prints are the schema's live verification when the first real recording happens; note them in the README section.
+
+- [ ] **Step 1:** Implement `start_ss_segment()` / `write_ss_row()` / SS finalize per above (globals only; mirror `start_new_segment`'s file/metadata handling; metadata written with the SS profile + index + `ss_csv_version`). Rework the `:5021-5054` and `:5096-5103` blocks to the two-transition shape. Update `precreate_segment_dirs` for `ss/`.
+- [ ] **Step 2:** Parse gate (bundled lua.exe). Hand-trace the three scenarios in your report: stage-free movie (all new paths unreachable — byte-identical output), aiz→SS→aiz (segments [aiz, ss, aiz_2], transitions [giant_ring 0→1, stage_exit 1→2]), aiz→gumball→aiz (unchanged from v6.30 behavior).
+- [ ] **Step 3:** Byte-identity regen gate: re-run the plan-(a) Task-8 procedure (detached BizHawk, committed complete-run movie, OGGF_TRACE_STOP_FRAME=40000) — physics.csv/aux byte-identical for the stage-free AIZ segment, no manifest. Bump `LUA_SCRIPT_VERSION` to `6.31-s3k-completerun`.
+- [ ] **Step 4:** Commit (tools-only, justified `Changelog: n/a:`).
+
+---
+
+### Task 4: Replay harness + skip-if-missing test (+ addition #6-S3K)
+
+**Files:**
+- Create: `src/test/java/com/openggf/tests/trace/s3k/S3kSpecialStageReplayHarness.java`
+- Create: `src/test/java/com/openggf/tests/trace/s3k/AbstractS3kSpecialStageTraceReplayTest.java`
+- Create: `src/test/java/com/openggf/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java`
+- Create: `src/test/java/com/openggf/tests/TestS3kSpecialStageHeadlessBoot.java` (addition #6 proof — runs TODAY)
+
+**Interfaces:**
+- Consumes: `Sonic3kSpecialStageProvider` (`initializeStage(int) :82` single-arg throws IOException, `getManager() :241`, `update()/handleInput(int,int)/handlePlayer2Input(int,int)`, `isFinished()`), `captureComparisonState()` (Task 1), `S3kSpecialStageTraceData` (Task 2), `SpecialStageInputMapper`, `RecordedInputSnapshots.fromBk2(current, previous)` press-edge vs previous PHYSICAL row, the S2 boot recipe (`AbstractS2SpecialStageTraceReplayTest.bootHarness :166-186`: GraphicsManager resetState+initHeadless → Rom.open → TestEnvironment.configureRomFixture → initHeadless), report writing per `AbstractS2SpecialStageTraceReplayTest.writeReport :701` conventions (prefix `s3k_special_stage_<idx>`).
+- Produces: harness with ONLY `stepFrame(traceFrame)` (VBlank pacing; the test loop skips lag rows: `if (frame.lag()) continue;` consuming the row without stepping — no stepPass/passBinder); comparator loop building `FrameComparison`s (ERROR severity MVP fields: playerX/playerY/angle/velocity/turning/jumping, spheresLeft, ringsCollected, ringsLeft, clearRoutine/clearTimer, started-vs-engine-phase, finished boundary; frameCounter vs stepped-non-lag count); character config set BEFORE `initializeStage` (mirror S2 harness ctor `:87-90` — S3K `resolvePlayerCharacter` reads config at init).
+- The headless-boot test (addition #6): `@RequiresRom(SonicGame.SONIC_3K)`, boots the REAL ROM path (offsets-verified branch, not the placeholder), `initializeStage(0)`, steps 60 `update()`s with idle input, asserts `isInitialized()`, spheresLeft > 0, player at the stage's start state, `captureComparisonState()` non-null and stable across a no-update double-call. If init throws headlessly (GL/art gap), that discovery is the task's purpose — report DONE_WITH_CONCERNS/BLOCKED with the stack trace, don't mask.
+
+- [ ] **Step 1:** Headless-boot test first (it runs today and de-risks the harness) → green or honest BLOCKED.
+- [ ] **Step 2:** Harness + abstract + concrete replay test; concrete skips (assume on `src/test/resources/traces/s3k/special_stage/` dir). Verify guard conformance (`*TraceReplay.java` suffix → register `AbstractS3kSpecialStageTraceReplayTest` in `TestTraceReplayInvariantGuard`'s accepted-bases list per its convention, with justification).
+- [ ] **Step 3:** Commit (test-only trailers; if the guard file changed, justify).
+
+---
+
+### Task 5: freshLoadSignal wire-up + recording docs
+
+**Files:**
+- Modify: `src/main/java/com/openggf/trace/TraceMetadata.java` (one field: `@JsonProperty("fresh_load") Boolean freshLoad` + accessor defaulting false)
+- Modify: `src/main/java/com/openggf/TraceSessionLauncher.java` (`prepareSpecialStageConfiguration :322-328`: pass `Boolean.TRUE.equals(meta.freshLoad())` instead of hardcoded `false`; update the pointing comment)
+- Modify: `tools/bizhawk/s3k_complete_run_recorder.lua` (SS segment metadata writes `"fresh_load": false` — giant-ring entries are mid-level, never fresh; the field exists for future fresh-boot SS captures)
+- Modify: `tools/bizhawk/README.md` (blue-spheres round-trip recording subsection: giant-ring entry procedure, expected `ss/` segment output, the VERIFY-ON-FIRST-CAPTURE self-check prints, `s3k-aiz-bluespheres.bk2` naming)
+- Test: extend `TestTraceSessionLauncherSsConfig` (fresh_load=true metadata → S3K_SKIP_INTROS=false through the LIVE path; fresh_load absent → untouched)
+
+- [ ] **Step 1:** Failing test → implement → green (existing 3-case helper test untouched and green). **Step 2:** Grep `new TraceMetadata(` positional call sites and append the new trailing null. **Step 3:** README + CHANGELOG + commit (feat, src/main → Changelog: updated).
+
+---
+
+### Task 6: Gate + frontier log
+
+- [ ] **Step 1:** Full suite (detached + monitor): no NEW failures vs baseline (known flakes: geyser order-dependent, wire-cage classloader — verify isolated-pass if they appear).
+- [ ] **Step 2:** Frontier-log entry: blue-spheres pipeline landed; replay test skips pending `s3k-aiz-bluespheres.bk2`; RAM map derived, VERIFY-ON-FIRST-CAPTURE obligation stated; recorder v6.31.
+- [ ] **Step 3:** Commit docs. Merge-time README release-log reminder stands.
+
+## Plan-level notes
+
+- Chain/visual integration comes free: the SS segment kind is already handled by the walker's boundary predicates (`giant_ring` → `isSpecialStageRequested`) and the visual advancer's `special_stage` expected-mode mapping — once this plan's segments exist, `TestS3kBonusRoundTripChain`-style SS chains become recordable without further foundation work.
+- Known gotchas baked in: single-arg `initializeStage`; no lag compensator on S3K (nothing to zero); frameCounter vs row ordinal; phase-overlay RAM base (live verification obligation); character config before init.
