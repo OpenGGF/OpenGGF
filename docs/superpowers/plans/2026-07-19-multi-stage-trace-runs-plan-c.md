@@ -30,7 +30,7 @@
 
 **Interfaces:**
 - Consumes: fields `specialStageRequestedFromCheckpoint` (`LevelTransitionCoordinator.java:16`), `bonusStageRequested` (`:23`, type `BonusStageType`); the peek precedent `isRespawnRequested()` (`:382-384`).
-- Produces: `public boolean isSpecialStageRequested()` (returns the flag, no clear) and `public BonusStageType peekBonusStageRequest()` (returns the pending type or null, no clear). Task 2's walker consumes both.
+- Produces: `public boolean isSpecialStageRequested()` (returns the flag, no clear) and `public BonusStageType peekBonusStageRequest()` (returns the pending type or null, no clear). Task 3's walker consumes both.
 
 - [ ] **Step 1: Failing test:**
 
