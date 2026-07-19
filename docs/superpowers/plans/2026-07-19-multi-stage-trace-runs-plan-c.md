@@ -165,7 +165,7 @@ Skills: n/a"
   - **TRANSIENT-PEEK REALITY (round-2 discovery, load-bearing):** the entry request is raised DURING the gameplay tick (star-post child object, inside `LevelFrameStep` at `GameLoop.java:1393`) and consumed LATER IN THE SAME `loop.step()` (`:1437`) — after `step()` returns, the peek is already null. Post-step polling can NEVER observe an entry. The observation point that works is the frame observer: `onLevelFrameAdvanced` fires at `GameLoop.java:1417`, between request-set and consume, so a `PlaybackFrameObserver.afterFrameAdvanced` callback CAN read the peek. The walker therefore observes boundaries from INSIDE the observer callback, never by post-step polling.
   - `public interface EngineHooks` — read INSIDE the observer callback: `int currentBk2Frame(); BonusStageType peekBonusRequest(); boolean isSpecialStageRequested(); GameMode currentMode();`.
   - `public final class BoundaryProbe implements PlaybackDebugManager.PlaybackFrameObserver` (verify the observer interface's exact name/methods by reading `PlaybackDebugManager` — `setFrameObserver`/`afterFrameAdvanced` at `:60/:189-191`) — the single observer the chain installs. It (a) delegates `afterFrameAdvanced` to the currently-attached segment comparator (a settable `LiveTraceComparator` delegate, null during transitions) and (b) when armed with a `Transition` boundary, evaluates the boundary predicate DURING the callback (`starpost_bonus` → `peekBonusRequest() != null`; `giant_ring`/`starpost_special` → `isSpecialStageRequested()`; `stage_exit` → `currentMode() == GameMode.LEVEL`, which is a persistent condition and may also be checked post-step), latching `BoundaryObservation(observed, observedBk2Frame)` on first match within the window.
-  - `public static BoundaryObservation awaitBoundary(EngineHooks hooks, TraceRunManifest.Transition boundary, Runnable stepOneFrame)` — arms the probe's predicate, steps frames until the probe latched an observation or the cursor passed `recordedEdge`; fails closed (returns `observed=false`), never throws. The unit test's StubHooks MUST model the transient semantics: the bonus peek is non-null ONLY during the simulated observer callback of the raising frame, null before and after.
+  - `public static BoundaryObservation awaitBoundary(BoundaryProbe probe, TraceRunManifest.Transition boundary, Runnable stepOneFrame)` — the probe is THE installed frame observer (constructor-injected with its `EngineHooks`, exposing `void arm(TraceRunManifest.Transition)` / `boolean latched()` / `BoundaryObservation observation()`); awaitBoundary arms it, steps frames, and returns when the probe latched or the cursor passed `recordedEdge`; fails closed, never throws. **Dual observation path:** transient kinds (`starpost_bonus`, `giant_ring`, `starpost_special`) latch INSIDE `afterFrameAdvanced` (the only point the peek is visible); `stage_exit` is a PERSISTENT condition (`currentMode() == LEVEL`) and is checked by awaitBoundary post-step, because no observer callback fires during the frozen return transition. The unit test's StubHooks MUST model the transient semantics: the bonus peek is non-null ONLY during the simulated observer callback of the raising frame, null before and after; the stub's `step()` invokes `probe.afterFrameAdvanced(...)` synchronously, mirroring `onLevelFrameAdvanced` firing inside `loop.step()`.
 
 - [ ] **Step 1: Failing control-flow test** (uses the plan-(a) synthetic fixture at `src/test/resources/traces/synthetic/run_aiz_gumball_3seg`):
 
@@ -212,8 +212,10 @@ class TestTraceRunReplayWalkerControlFlow {
         var hooks = new StubHooks();               // simulates the real engine's transient peek:
         hooks.bonusRequestDuringFrame = 1700;      // peek non-null ONLY inside frame 1700's
                                                    // observer callback; null before AND after
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        hooks.installedProbe = probe;              // stub's step() invokes probe.afterFrameAdvanced
         var boundary = boundaryOfKind("starpost_bonus", 1750);
-        var obs = TraceRunReplayWalker.awaitBoundary(hooks, boundary, hooks::step);
+        var obs = TraceRunReplayWalker.awaitBoundary(probe, boundary, hooks::step);
         assertTrue(obs.observed());
         assertEquals(1700, obs.observedBk2Frame());
         // Post-step polling would have missed it — assert the stub really is transient:
@@ -223,9 +225,21 @@ class TestTraceRunReplayWalkerControlFlow {
     @Test
     void awaitBoundaryFailsClosedWhenWindowExhausted() {
         var hooks = new StubHooks();               // peek never fires
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        hooks.installedProbe = probe;
         var boundary = boundaryOfKind("starpost_bonus", 1750);
-        var obs = TraceRunReplayWalker.awaitBoundary(hooks, boundary, hooks::step);
+        var obs = TraceRunReplayWalker.awaitBoundary(probe, boundary, hooks::step);
         assertFalse(obs.observed());
+    }
+
+    @Test
+    void stageExitObservedByPersistentModePoll() {
+        var hooks = new StubHooks();
+        hooks.modeBecomesLevelAtFrame = 2850;      // persistent condition; NO observer callback
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        hooks.installedProbe = probe;
+        var obs = TraceRunReplayWalker.awaitBoundary(probe, boundaryOfKind("stage_exit", 2800 + 600), hooks::step);
+        assertTrue(obs.observed());
     }
     // StubHooks + boundaryOfKind helper: implement inline in this test class.
     // StubHooks implements EngineHooks with an int frame counter; step() advances the
@@ -268,8 +282,8 @@ Skills: n/a"
 - [ ] **Step 1: Write the test.** Skeleton contract (one method per run id, gumball + pachinko):
 
 1. `Assumptions.assumeTrue(Files.isDirectory(RUN_DIR))` for `src/test/resources/traces/s3k/runs/s3k-aiz-gumball-roundtrip/` — skip until the recording lands. Load + validate manifest; `TraceRunReplayWalker.plan(...)`.
-2. Boot: `TraceReplayDriver`-style session for segment 0 (`zone/act` from the segment), BK2 = the run's `source_bk2`, playback cursor started at segment 0's `bk2_frame_offset`; attach a `LiveTraceComparator` bound to segment 0's `TraceData`.
-3. Step `loop.step()` while comparing; from `bk2Frame >= exitBoundary.modeChangeBk2Frame() - BOUNDARY_WINDOW_FRAMES`, poll the coordinator peek each frame via `TraceRunReplayWalker.awaitBoundary` with real `EngineHooks` (coordinator reached via `GameServices.level().getTransitions()`; current BK2 frame via the playback manager's cursor accessor — read `PlaybackDebugManager` for the exact getter). Assert `observed`.
+2. Boot: `TraceReplayDriver`-style session for segment 0 (`zone/act` from the segment), BK2 = the run's `source_bk2`, playback cursor started at segment 0's `bk2_frame_offset`. **Then REPLACE the observer `TraceReplayDriver.start` installed** (it sets the raw comparator at `TraceReplayDriver.java:153`): construct the real-`EngineHooks` `BoundaryProbe` (hooks: coordinator via `GameServices.level().getTransitions()`, cursor via `PlaybackDebugManager.getCursorFrame()`, mode via the GameLoop accessor), call `playback.setFrameObserver(probe)`, and set the probe's delegate to segment 0's `LiveTraceComparator` — the probe is the ONLY observer for the rest of the chain; comparators are attached/detached solely through its delegate.
+3. Step `loop.step()` while comparing; entering the boundary window (`bk2Frame >= exitBoundary.modeChangeBk2Frame() - BOUNDARY_WINDOW_FRAMES`), use `TraceRunReplayWalker.awaitBoundary(probe, boundary, loop::step)` — the probe latches the transient entry peek inside its `afterFrameAdvanced` callback (post-step polling can NEVER see it). Assert `observed`.
 4. **Segment-boundary handoff (load-bearing — round-2 discovery):** the BK2 cursor FREEZES during transitions (fade runs LEVEL with `freezeForNonRewindableTransition` skipping the `:1417` advance; TITLE_CARD advances nothing), so segment offsets desync unless re-seeked. At the handoff: clear the probe's comparator delegate (transition frames uncompared), keep stepping `loop.step()` through fade → TITLE_CARD; when mode == BONUS_STAGE, **re-seek the cursor to the segment's exact offset** — `playback.startSession(movie, segment1.bk2FrameOffset())` (read `PlaybackDebugManager.startSession`/its seek surface first; if re-calling startSession resets observer/forced-input state, re-install the probe and re-apply whatever session state it cleared — say what you found in the report) — then set the probe's delegate to a fresh `LiveTraceComparator` bound to segment 1's `TraceData` at `initialCursor=0`. Transition-frame inputs are NOT replayed faithfully (frozen cursor repeats a row) — acceptable: fade/title-card frames ignore gameplay input, and the re-seek restores exact alignment at the interior's first frame. Continue comparing through the bonus segment (input feed + cursor advance work in BONUS_STAGE via Task 2's bridge).
 5. At the bonus exit boundary: detach, step until mode returns to LEVEL (stage_exit await), then assert boundary state per the spec split: rings (`GameServices.level().getLevelGamestate().getRings()`) vs the transition's `rings_after`; star-post restore via `LevelTransitionCoordinator.getBonusStageReturnCheckpointIndex()` (`:180`) vs the transition's `last_star_post_hit`; `GameStateManager.getEmeraldCount()` vs `emeralds_after` when present. (Extra-life flags: deferred per spec.)
 6. Same handoff for the return: after the exit boundary and mode == LEVEL with control restored, re-seek to segment 2's `bk2_frame_offset` and set the probe's delegate to segment 2's comparator; compare to end of its frames; assert both comparators' divergence reports are emitted to `target/trace-reports/` with run-segment-suffixed names (follow `LiveTraceComparator`'s existing report emission — read how the visual path finalizes reports; if the comparator exposes a summary/report accessor, write the JSON the same way `AbstractTraceReplayTest.writeReport` does, suffixed `_seg0/_seg1/_seg2`).
@@ -282,7 +296,7 @@ Skills: n/a"
 
 ### Task 5: Gate + docs
 
-- [ ] **Step 1:** Full suite (`mvn test`, sandbox off, detached with a log monitor if >10 min): no NEW failures vs baseline; expect +2 skips (chain tests). Watch specifically for `TestBuildToolingGuard`/`TestTraceReplayInvariantGuard`/`TestArchitecturalSourceGuard` reacting to the new files; register per convention with justification if they fire (never weaken).
+- [ ] **Step 1:** Full suite (`mvn test`, sandbox off, detached with a log monitor if >10 min): no NEW failures vs baseline; expect +2 skips (chain tests). Watch specifically for `TestBuildToolingGuard`/`TestTraceReplayInvariantGuard`/`TestArchitecturalSourceGuard` reacting to the new files; register per convention with justification if they fire (never weaken). Also specifically verify no existing level trace test changed behavior from the `isDriving` BONUS_STAGE widening — no committed level trace crosses a bonus entry today, so any such delta is a real bug in Task 2.
 - [ ] **Step 2:** `docs/TRACE_FRONTIER_LOG.md` entry: plan-(c) chained driver landed; chain tests skip pending the same two recordings (named); walker control flow green on synthetic fixture; peeks landed.
 - [ ] **Step 3:** Commit docs; merge-time README reminder stands.
 
