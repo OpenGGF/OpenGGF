@@ -91,6 +91,26 @@ public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
         return SOLID_PARAMS;
     }
 
+    /**
+     * ROM {@code SolidObjectFull_1P}'s new-contact path (the branch taken
+     * whenever the player isn't already recorded as standing on this bumper)
+     * falls through {@code loc_1DF88} directly into the shared
+     * {@code SolidObject_cont} X-overlap test (sonic3k.asm:41395-41406), which
+     * rejects only when {@code d0 > d3} ({@code bhi}) -- an exact edge touch
+     * ({@code d0 == d3}, i.e. {@code relX == halfWidth*2}) still counts as
+     * contact. {@code Obj_GumballTriangleBumper} calls {@code SolidObjectFull}
+     * directly (sonic3k.asm:127651), so it inherits that inclusive boundary.
+     * Without this override the engine's default exclusive right edge drops
+     * the bounce for exactly one frame whenever the player's approach lines
+     * up flush with the bumper's half-width, matching the frame-112 divergence
+     * observed live via TestS3kGumballBonusTraceReplay (x_speed/y_speed still
+     * pre-bounce at f112, bounce values only appear at f113).
+     */
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        return true;
+    }
+
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (!(playerEntity instanceof AbstractPlayableSprite player)) {
