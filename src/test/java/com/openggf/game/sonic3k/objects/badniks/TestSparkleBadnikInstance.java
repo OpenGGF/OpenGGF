@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.game.PlayableEntity;
 import org.mockito.InOrder;
 import org.junit.jupiter.api.Test;
 
@@ -176,6 +177,24 @@ class TestSparkleBadnikInstance {
 
         assertEquals(1, spawned.size());
         assertEquals("SparkleLightningWarning", spawned.get(0).getName());
+    }
+
+    @Test
+    void chargeActivationUsesNearestNativePlayersHorizontalDistance() {
+        SparkleBadnikInstance sparkle = new SparkleBadnikInstance(new ObjectSpawn(
+                0x0100, 0x0100, Sonic3kObjectIds.SPARKLE, 0, 0, false, 0));
+        PlayableEntity sonic = mock(PlayableEntity.class);
+        PlayableEntity tails = mock(PlayableEntity.class);
+        sparkle.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+
+        when(sonic.getCentreX()).thenReturn((short) 0x0200);
+        when(tails.getCentreX()).thenReturn((short) 0x017F);
+
+        sparkle.update(0, sonic);
+
+        assertTrue(sparkle.traceDebugDetails().contains("state=CHARGE"),
+                "Obj_Sparkle uses Find_SonicTails, so native P2 can start the charge "
+                        + "while Player 1 remains outside the $80-pixel activation window");
     }
 
     @Test

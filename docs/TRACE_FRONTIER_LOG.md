@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ Sparkle off-screen execution and cork balance width: f24136 -> f24268
+
+At f24136, native CPU Tails entered hurt from the tall `$AB` warning child of
+the Sparkle at `(1B80,0474)`. The engine parent had reached only 11 of the 16
+terminal charge loops because its state machine stopped whenever its centre
+left the camera viewport. `Obj_WaitOffscreen` instead owns only the initial
+`$20` placeholder: after Render_Sprites restores the saved `Obj_Sparkle`
+operation, the charge continues on every SST pass. Sparkle now models that
+one-time handoff and uses `Find_SonicTails`' nearest-native-player distance for
+activation, allowing the warning child to enter the prior collision-response
+list on the native frame (`docs/skdisasm/sonic3k.asm:180266-180297,
+186058-186167`).
+
+The corrected hurt exposed Sonic's balance read on the intact CNZ Cork Floor.
+The ROM initializes that floor with `width_pixels=$20`, while the engine's
+shared object default supplied `$10`; the narrower value falsely classified
+Sonic as precariously beyond the right edge and flipped his facing bit. Cork
+Floor now exposes its zone-selected native width to the shared balance routine,
+separately from `SolidObjectFull`'s `$B` collision extension
+(`docs/skdisasm/sonic3k.asm:22455-22529,58420-58521`).
+
+The focused Sparkle, object-participation, and CNZ complete-run checks pass
+through both corrected windows. CNZ complete-run physics advances from f24136
+to f24268; its next mismatch is CPU Tails' logical held input missing bit `$10`.
+The full comparison-only sweep remains 45/58 physics green with the same 13
+expected-red routes and unchanged green AIZ, HCZ, and MGZ complete runs.
+Animation remains 44/58 green with the same 14 expected-red or unsupported
+routes; CNZ complete-run animation still begins at f108 (1135 downstream
+errors), and legacy standalone CNZ remains at f0.
+
 ### 2026-07-19 -- CNZ cutscene visibility, cork order, lag, and push latch: f22001 -> f24136
 
 The first CNZ2 Knuckles cutscene previously survived its final jump until a

@@ -165,6 +165,13 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Sonic_Move reads the object's width_pixels byte, not the default
+        // 16-pixel render width nor SolidObjectFull's +$B side extension.
+        return config.halfWidth;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return false;
     }
