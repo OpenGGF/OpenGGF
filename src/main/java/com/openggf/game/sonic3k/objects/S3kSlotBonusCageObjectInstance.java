@@ -116,8 +116,18 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        player.setCentreX(SNAP_X);
-        player.setCentreY(SNAP_Y);
+        // ROM loc_4C026 (sonic3k.asm:99395-99396) writes the capture position with
+        // move.w #$460,x_pos(a1) / move.w #$430,y_pos(a1) -- a word-sized store that
+        // only overwrites the pixel half of the 32-bit x_pos/y_pos, leaving the
+        // subpixel half (x_sub/y_sub, 2 bytes further into the same long -- see
+        // MoveSprite2's own comment at sonic3k.asm:36057) exactly as this frame's
+        // own ground/air movement (sub_4BABC/sub_4BCB0 + MoveSprite2, already run
+        // earlier in the same object dispatch) left it. setCentreX/setCentreY would
+        // zero that subpixel fraction, which measurably diverges the trace (e.g.
+        // TestS3kSlotsBonusTraceReplay frame 47: expected x_sub/y_sub 0x8800/0xE000
+        // vs a wrongly-zeroed 0x0000/0x0000).
+        player.setCentreXPreserveSubpixel(SNAP_X);
+        player.setCentreYPreserveSubpixel(SNAP_Y);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -146,8 +156,15 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
     }
 
     private void updateSpawnRewards(AbstractPlayableSprite player, int frameCounter) {
-        player.setCentreX(SNAP_X);
-        player.setCentreY(SNAP_Y);
+        // ROM's hold state (loc_4C0AA/loc_4C172, sonic3k.asm:99416-99509) never
+        // writes x_pos/y_pos/x_vel/y_vel for the captured player again once
+        // object_control is set by loc_4C026 -- the player's own routine already
+        // skips ground/air movement entirely while object-controlled (loc_4BA62,
+        // sonic3k.asm:98751-98752 tst.b object_control(a0)/bne). Re-snapping the
+        // pixel position here every frame (as this used to) stomped the subpixel
+        // fraction captureSlotOriginFromPlayer/syncPlayerToSlotOrigin otherwise
+        // preserve, re-zeroing it on the very next tick after the capture fix
+        // above and reproducing the same trace divergence one frame later.
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
 
