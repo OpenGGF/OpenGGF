@@ -91,6 +91,88 @@ Metropolis Act 3 is recorded as route `mtz3`; Sonic 2 stores it as raw ROM zone 
 with act byte `0`, so the recorder reports metadata act `3` while preserving the raw
 zone/act in aux diagnostics.
 
+## Recording S3K Bonus Round-Trip Traces
+
+A **bonus round-trip trace** captures a single level playthrough that includes a
+star-post bonus zone (gumball or pachinko). The trace includes both the level
+segment (up to star-post entry) and the bonus stage segment (from entry to
+exit and return to the level). These are recorded as separate segment
+directories in a single trace run.
+
+**Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
+
+1. Start a new movie from power-on with `s3k.gen`.
+2. Play AIZ Act 1 through to a star post. Collect either:
+   - **20–34 rings** for a gumball bonus (selector formula `((rings-20)/15)%3` yields remainder 2),
+     referenced at ROM `loc_2D47E` (`sonic3k.asm:61886-61912`), or
+   - **35–49 rings** for a glowing-sphere/pachinko bonus (selector remainder 1).
+3. Approach and enter the star circle at the star post.
+4. Play through the bonus stage to its conclusion (collecting orbs, reaching exit).
+5. Receive the ring bonus, return to the level, and play for 3–5 additional seconds.
+6. Stop the movie and save as either `s3k-aiz-gumball.bk2` or `s3k-aiz-pachinko.bk2`.
+
+**Recorder Invocation:**
+
+Run the complete-run recorder over your movie file:
+
+```bat
+set OGGF_TRACE_OUTPUT_DIR=C:\tmp\s3k_bonus_trace
+set OGGF_TRACE_RUN_ID=s3k-aiz-gumball-roundtrip
+
+tools\bizhawk\run_bizhawk_lua.bat ^
+  tools\bizhawk\s3k_complete_run_recorder.lua ^
+  s3k-aiz-gumball.bk2 ^
+  s3k.gen
+```
+
+Replace `s3k-aiz-gumball-roundtrip` and the file paths for pachinko runs. The recorder
+emits `run_manifest.json` only because `OGGF_TRACE_RUN_ID` is explicitly set. The manifest
+records all segment transitions, including the star-post entry boundary and the bonus-exit
+return boundary.
+
+**Expected Output:**
+
+The output directory will contain:
+- `run_manifest.json` — indexed transitions for level→bonus and bonus→level boundaries.
+- `aiz/` — level segment (AIZ Act 1, frames 0 to star-post entry).
+- `gumball/` or `pachinko/` — bonus segment with `trace_profile: "s3k_bonus_stage"` in
+  `metadata.json`. Both segments contain compressed `physics.csv.gz` and `aux_state.jsonl.gz`.
+- `aiz_2/` — (optional) AIZ re-entry segment if the movie continues after the bonus with
+  additional gameplay in the same zone. Repeat segments are named with `_2`, `_3`, etc.
+  to avoid directory collisions.
+
+**Commit Layout:**
+
+Place the bonus segment in test resources:
+
+```
+src/test/resources/traces/s3k/bonus_gumball/
+  ├── metadata.json
+  ├── physics.csv.gz
+  ├── aux_state.jsonl.gz
+  ├── s3k-aiz-gumball.bk2           # or under _movies/ with source_bk2 field
+  └── ...
+```
+
+Also preserve the run directory and manifest (used by plan-(c) chain tests):
+
+```
+src/test/resources/traces/s3k/runs/s3k-aiz-gumball-roundtrip/
+  ├── run_manifest.json
+  ├── aiz/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  └── gumball/
+      ├── metadata.json
+      ├── physics.csv.gz
+      └── aux_state.jsonl.gz
+```
+
+The test classes `TestS3kGumballBonusTraceReplay` and `TestS3kPachinkoBonusTraceReplay`
+automatically activate (skip-if-missing) once their respective `bonus_gumball/` and
+`bonus_pachinko/` directories exist in test resources.
+
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.
 
