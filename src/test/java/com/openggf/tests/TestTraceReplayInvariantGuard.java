@@ -230,7 +230,8 @@ class TestTraceReplayInvariantGuard {
             if (!text.contains("extends AbstractTraceReplayTest")
                     && !text.contains("extends AbstractCreditsDemoTraceReplayTest")
                     && !text.contains("extends AbstractS2LevelSelectTraceReplayTest")
-                    && !text.contains("extends AbstractS2SpecialStageTraceReplayTest")) {
+                    && !text.contains("extends AbstractS2SpecialStageTraceReplayTest")
+                    && !text.contains("extends AbstractS3kBonusStageTraceReplayTest")) {
                 violations.add(normalized);
             }
         }
