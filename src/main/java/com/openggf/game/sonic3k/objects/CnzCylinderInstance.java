@@ -838,11 +838,14 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             player.setGSpeed((short) 0);
             player.suppressNextJumpPress();
         } else {
+            // ROM loc_325F2 is also the off-screen/invalid-rider release tail.
+            // It sets Status_InAir, restores priority, and clears
+            // object_control, but does not touch x_vel, y_vel, or ground_vel
+            // (sonic3k.asm:68019-68025,68069-68078). In particular, a rider
+            // released just after loc_32594 must retain its $0800 launch
+            // ground speed for the following CPU slot.
             player.setAir(true);
             player.setJumping(false);
-            player.setXSpeed((short) 0);
-            player.setYSpeed((short) 0);
-            player.setGSpeed((short) 0);
         }
     }
 

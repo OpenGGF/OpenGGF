@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ cylinder off-screen release velocity: physics f31050 -> f33084
+
+An active cylinder rider can cross out of the render window after
+`loc_32594` has established `ground_vel=$0800`. Native `loc_325F2` then sets
+`Status_InAir`, restores priority, and clears `object_control`; it does not
+clear any velocity word. The engine's shared non-jump release tail instead
+zeroed X, Y, and ground velocity, shifting CPU Tails' subsequent marker and
+position history (`docs/skdisasm/sonic3k.asm:68019-68025,68045-68078`).
+
+Non-jump cylinder releases now preserve the active rider's velocity fields
+while retaining the existing air/control/priority writes. The jump path keeps
+its explicit native launch values. Focused tests cover both first-capture
+ground-speed timing and off-screen release preservation.
+
+This advances CNZ complete-run physics from f31050 `tails_g_speed` to f33084
+`y`; animation remains at f30486 `tails_mapping_frame`. Sequential one-fork
+4 GB full sweeps retain the established 45/58 physics and 44/58 animation
+frontiers, with the same 13 physics and 14 animation non-green route sets. No
+non-CNZ frontier moved, and legacy standalone CNZ remains at f0 in both
+scopes.
+
 ### 2026-07-19 -- CNZ cylinder first-capture launch phase: physics f30660 -> f31050
 
 `sub_324C0`'s inactive rider path clears `ground_vel`, installs

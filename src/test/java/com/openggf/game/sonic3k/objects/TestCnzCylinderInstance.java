@@ -697,6 +697,28 @@ class TestCnzCylinderInstance {
     }
 
     @Test
+    void nonJumpReleasePreservesActiveRiderVelocity() throws Exception {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
+        cylinder.setServices(new TestObjectServices());
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setXSpeed((short) 0x0123);
+        player.setYSpeed((short) -0x0456);
+        player.setGSpeed((short) 0x0800);
+        Object slot = playerOneSlot(cylinder);
+        setSlotField(slot, "active", true);
+        setSlotField(slot, "player", player);
+
+        invokeReleaseSlot(cylinder, slot, 31050, false, (short) 0);
+
+        assertTrue(player.getAir());
+        assertFalse(player.isObjectControlled());
+        assertEquals((short) 0x0123, player.getXSpeed());
+        assertEquals((short) -0x0456, player.getYSpeed());
+        assertEquals((short) 0x0800, player.getGSpeed(),
+                "loc_325F2 must preserve loc_32594's active-rider launch speed");
+    }
+
+    @Test
     void mode0VerticalControllerUsesCurrentHeldInputWhileStandingOnCylinder() throws Exception {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawnAtWithSubtype(0x28A0, 0x04E0, 0x20));
         cylinder.setServices(new TestObjectServices());
