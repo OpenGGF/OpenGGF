@@ -409,7 +409,7 @@ Then copy the `ss/` segment (its `metadata.json`, `physics.csv`, and the source 
 **Mandatory bk2 rename:** commit the movie as `s1-complete-run.bk2` inside both trace
 directories (the run's root and the copied `special_stage/` directory). Do not rename the
 movie file and edit `source_bk2` in the copied SS metadata instead — the level segments'
-metadata hardcodes the literal `"s1-complete-run.bk2"` (recorder `write_metadata`, L498), so
+metadata hardcodes the literal `"s1-complete-run.bk2"` (recorder `write_metadata`, L516), so
 editing only the copy's `source_bk2` would leave the run bundle internally inconsistent.
 
 **VERIFY-ON-FIRST-CAPTURE Self-Check:**
