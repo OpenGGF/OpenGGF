@@ -5,6 +5,7 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.trace.TraceRunManifest;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;

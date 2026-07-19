@@ -21,6 +21,7 @@ import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.live.LiveTraceComparator;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.live.MismatchEntry;
 import com.openggf.trace.replay.TraceReplayDriver;
 import com.openggf.trace.replay.TraceReplayFixture;
