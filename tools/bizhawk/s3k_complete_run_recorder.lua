@@ -5078,6 +5078,7 @@ function write_ss_metadata()
     if run_id ~= nil then
         meta_file:write('  "run_id": "' .. run_id .. '",\n')
     end
+    meta_file:write('  "fresh_load": false,\n')
     meta_file:write('  "segment_index": ' .. #segments_done .. '\n')
     meta_file:write("}\n")
     meta_file:close()

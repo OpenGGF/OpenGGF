@@ -315,17 +315,14 @@ public final class TraceSessionLauncher {
     /**
      * Applies per-game special-stage configuration for trace replay. Routes
      * through the static helper to centralize the shared team / cross-game /
-     * S3K fresh-load policy.
+     * S3K fresh-load policy. Reads the fresh_load metadata field to determine
+     * whether to override the S3K intro-skip gate.
      *
-     * @param meta the trace metadata (provides recorded team and game id)
+     * @param meta the trace metadata (provides recorded team, game id, and fresh_load flag)
      */
-    private static void prepareSpecialStageConfiguration(TraceMetadata meta) {
+    static void prepareSpecialStageConfiguration(TraceMetadata meta) {
         SonicConfigurationService config = GameServices.configuration();
-        // No honest fresh-load signal exists today (S2 SS traces do not report
-        // whether they require a fresh level load). Pass false to prevent
-        // unintended S3K_SKIP_INTROS overrides; the blue-spheres plan owns
-        // wiring the real signal.
-        applyPerGameSpecialStageConfig(config, meta, false);
+        applyPerGameSpecialStageConfig(config, meta, meta.isFreshLoad());
     }
 
     /**

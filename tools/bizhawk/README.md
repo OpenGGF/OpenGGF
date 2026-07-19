@@ -179,6 +179,71 @@ The test classes `TestS3kGumballBonusTraceReplay` and `TestS3kPachinkoBonusTrace
 automatically activate (skip-if-missing) once their respective `bonus_gumball/` and
 `bonus_pachinko/` directories exist in test resources.
 
+## Recording S3K Blue-Spheres Round-Trip Traces
+
+A **blue-spheres round-trip trace** captures a single playthrough that includes entry into
+a special stage (blue-spheres, accessed via giant ring) mid-level, completion or failure of
+the stage, and return to the level. The trace includes both the level segment and a dedicated
+`special_stage` segment with the 20-column S3K special-stage schema.
+
+**Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
+
+1. Start a new movie from power-on with `s3k.gen`.
+2. Play AIZ Act 1 through to the giant ring entrance (typically at the midpoint).
+3. Enter the giant ring to trigger the blue-spheres special stage.
+4. Play through the blue-spheres stage to its conclusion (collecting spheres, reaching exit,
+   or failing to collect enough). The stage ends when fade timer completes the exit animation.
+5. Return to the level after blue-spheres completion and play for 3–5 additional seconds
+   (this guarantees the re-entry segment `aiz_2` in the trace output).
+6. Stop the movie and save as `s3k-aiz-bluespheres.bk2`.
+
+**Recorder Invocation:**
+
+Run the complete-run recorder over your movie file:
+
+```bat
+set OGGF_TRACE_OUTPUT_DIR=C:\tmp\s3k_ss_trace
+set OGGF_TRACE_RUN_ID=s3k-aiz-bluespheres-roundtrip
+
+tools\bizhawk\run_bizhawk_lua.bat ^
+  tools\bizhawk\s3k_complete_run_recorder.lua ^
+  s3k-aiz-bluespheres.bk2 ^
+  s3k.gen
+```
+
+The special-stage detour already triggers manifest emission. The `OGGF_TRACE_RUN_ID` env var
+ensures a stable `run_id` for organizing trace history.
+
+**Expected Output:**
+
+The output directory will contain:
+- `run_manifest.json` — indexed transitions for level→special-stage and special-stage→level boundaries.
+- `aiz/` — level segment (AIZ Act 1, frames 0 to giant-ring entry).
+- `ss/` — special-stage segment with `trace_profile: "s3k_special_stage"`, `ss_csv_version: 1`,
+  and `special_stage_index` in `metadata.json`. Both segments contain `physics.csv` and
+  `aux_state.jsonl` (plain format; gzip compression is applied at commit time).
+  The special-stage segment metadata also includes `"fresh_load": false` (giant-ring entry
+  is mid-level, never a fresh stage boot).
+- `aiz_2/` — AIZ re-entry segment following the special-stage return. Step 5 above guarantees
+  this segment will be present.
+
+**VERIFY-ON-FIRST-CAPTURE Self-Check:**
+
+At SS-segment open and every 300 frames during the stage, the recorder prints diagnostics
+to stdout:
+
+```
+SS segment armed at BizHawk frame N (dir=ss, special_stage_index=0).
+SS frame 0: spheres_left=8 ring_count=0 started=1 x_pos=0x0080 y_pos=0x0080
+SS frame 300: spheres_left=7 ring_count=5 started=1 x_pos=0x0120 y_pos=0x0150
+```
+
+These prints verify the RAM map (documented in the plan) against the first real capture.
+Eyeball the progression to confirm spheres_left decreases toward 0, started stays 1 after
+the first frame, and x_pos/y_pos remain within 0xFFFF. These diagnostics are mandatory
+for validating that the schema addresses are correctly mapped to the ROM's special-stage
+state block.
+
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.
 

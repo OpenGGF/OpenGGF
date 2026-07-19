@@ -97,7 +97,57 @@ class TestTraceSessionLauncherSsConfig {
         assertEquals(false, config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS));
     }
 
+    @Test
+    void s3kMetadataWithFreshLoadFieldTrueSetsSkipIntrosFalse() {
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+
+        TraceMetadata meta = metadataWithFreshLoad("s3k", "sonic", true, "tails");
+        TraceSessionLauncher.prepareSpecialStageConfiguration(meta);
+
+        // Team and cross-game settings are applied.
+        assertEquals("sonic", config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("tails", config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertFalse((Boolean) config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+        // S3K_SKIP_INTROS should be set to false (the fresh-load field is true).
+        assertEquals(false, config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS));
+    }
+
+    @Test
+    void s3kMetadataWithFreshLoadFieldFalsePreservesConfig() {
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+
+        TraceMetadata meta = metadataWithFreshLoad("s3k", "sonic", false, "tails");
+        TraceSessionLauncher.prepareSpecialStageConfiguration(meta);
+
+        // Team and cross-game settings are applied.
+        assertEquals("sonic", config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("tails", config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertFalse((Boolean) config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+        // S3K_SKIP_INTROS should not be modified (the fresh-load field is false).
+        assertEquals(true, config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS));
+    }
+
+    @Test
+    void s3kMetadataWithAbsentFreshLoadPreservesConfig() {
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+
+        TraceMetadata meta = metadataWithTeam("s3k", "sonic", "tails");
+        TraceSessionLauncher.prepareSpecialStageConfiguration(meta);
+
+        // Team and cross-game settings are applied.
+        assertEquals("sonic", config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("tails", config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertFalse((Boolean) config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+        // S3K_SKIP_INTROS should not be modified (the fresh-load field is absent/null).
+        assertEquals(true, config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS));
+    }
+
     private TraceMetadata metadataWithTeam(String gameId, String mainChar, String... sidekicks) {
+        return metadataWithFreshLoad(gameId, mainChar, null, sidekicks);
+    }
+
+    private TraceMetadata metadataWithFreshLoad(String gameId, String mainChar, Boolean freshLoad,
+                                                 String... sidekicks) {
         return new TraceMetadata(
                 gameId,
                 "TEST",
@@ -133,6 +183,7 @@ class TestTraceSessionLauncherSsConfig {
                 null,
                 null,
                 null,
-                null);
+                null,
+                freshLoad);
     }
 }
