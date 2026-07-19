@@ -398,6 +398,26 @@ public class PlayableSpriteAnimation {
 
         int d0 = flipAngle & 0xFF;
         boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
+        int flipType = sprite.getFlipType() & 0x7F;
+        int typedBase = profile != null ? profile.getTumbleTypeFrameBase(flipType) : -1;
+        if (typedBase >= 0 && flipType >= 1 && flipType <= 3) {
+            boolean hFlip = facingLeft;
+            boolean vFlip = false;
+            int adjusted;
+            if (flipType == 1) {
+                adjusted = (d0 - 8) & 0xFF;
+            } else if ((flipType == 2 && !facingLeft) || (flipType == 3 && facingLeft)) {
+                adjusted = (d0 + 0x0B) & 0xFF;
+                vFlip = facingLeft;
+            } else {
+                adjusted = (-d0 + 0x8F) & 0xFF;
+                vFlip = !facingLeft;
+            }
+            sprite.setRenderFlips(hFlip, vFlip);
+            sprite.setMappingFrame((adjusted / 0x16) + typedBase);
+            sprite.setAnimationTick(0);
+            return;
+        }
         if (!facingLeft) {
             sprite.setRenderFlips(false, false);
             int frame = ((d0 + 0x0B) & 0xFF) / 0x16;

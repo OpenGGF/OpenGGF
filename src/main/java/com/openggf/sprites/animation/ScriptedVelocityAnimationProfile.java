@@ -70,6 +70,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     private boolean doubleWalkRunAnimationSpeedWhenSliding;
     // Tumble/rotation frame base: S2 = 0x5F (s2.asm:38216), S3K = 0x31 (sonic3k.asm:24955).
     private int tumbleFrameBase = 0x5F;
+    // Optional native flip_type-indexed tumble bases. S3K uses
+    // byte_1286E={0,$3D,$49,$49} for types 0-3.
+    private int[] tumbleTypeFrameBases = new int[0];
 
     public ScriptedVelocityAnimationProfile() {
     }
@@ -133,6 +136,10 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setHighSpeedSlopeFrameStride(int value) { this.highSpeedSlopeFrameStride = value; return this; }
     public ScriptedVelocityAnimationProfile setDoubleWalkRunAnimationSpeedWhenSliding(boolean value) { this.doubleWalkRunAnimationSpeedWhenSliding = value; return this; }
     public ScriptedVelocityAnimationProfile setTumbleFrameBase(int tumbleFrameBase) { this.tumbleFrameBase = tumbleFrameBase; return this; }
+    public ScriptedVelocityAnimationProfile setTumbleTypeFrameBases(int... values) {
+        this.tumbleTypeFrameBases = values != null ? values.clone() : new int[0];
+        return this;
+    }
 
     @Override
     public Integer resolveAnimationId(AbstractPlayableSprite sprite, int frameCounter, int scriptCount) {
@@ -625,6 +632,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         return tumbleFrameBase;
     }
 
+    public int getTumbleTypeFrameBase(int flipType) {
+        return flipType >= 0 && flipType < tumbleTypeFrameBases.length
+                ? tumbleTypeFrameBases[flipType]
+                : -1;
+    }
+
     public ScriptedVelocityAnimationProfile withRunSpeedThreshold(int newThreshold) {
         ScriptedVelocityAnimationProfile copy = new ScriptedVelocityAnimationProfile();
         copy.idleAnimId = this.idleAnimId;
@@ -664,6 +677,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         copy.highSpeedSlopeFrameStride = this.highSpeedSlopeFrameStride;
         copy.doubleWalkRunAnimationSpeedWhenSliding = this.doubleWalkRunAnimationSpeedWhenSliding;
         copy.tumbleFrameBase = this.tumbleFrameBase;
+        copy.tumbleTypeFrameBases = this.tumbleTypeFrameBases.clone();
         return copy;
     }
 }

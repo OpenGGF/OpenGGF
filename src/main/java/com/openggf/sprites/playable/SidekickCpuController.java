@@ -4156,6 +4156,13 @@ public class SidekickCpuController {
         }
         sidekick.setControlLocked(false);
         sidekick.setForcedAnimationId(mgzBossTransitionCarry ? flyAnimId : -1);
+        if (!mgzBossTransitionCarry && cooldownFrames == 0) {
+            // loc_14016 clears Tails's anim byte before the same object slot
+            // continues through Tails_FlyingSwimming/Animate_Tails. The shared
+            // engine separates CPU control from animation selection, so publish
+            // the resulting ordinary flight animation at the handoff here.
+            sidekick.setAnimationId(flyAnimId);
+        }
         mgzCarryIntroAscend = false;
         mgzReleasedChaseLatched = false;
         if (mgzBossTransitionCarry) {

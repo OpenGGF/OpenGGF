@@ -59,6 +59,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.TailsCarryController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -468,10 +469,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     /**
      * S3K {@code Player_TouchFloor_Check_Spindash} writes {@code anim=Walk}
      * before the current player slot reaches Animate
-     * (sonic3k.asm:24325-24329). Only consume the write while the existing
-     * SpawnLevelMainSprites intro-fall state owns this sprite's forced
-     * animation; ordinary Hurt/Fall and recovery-flight landings are not level
-     * event state.
+     * (sonic3k.asm:24325-24329). The ordinary movement path already consumes
+     * that write; this callback releases forced-animation owners and mirrors
+     * CNZ's later-slot carried-Sonic handoff.
      */
     @Override
     public void onPlayableLandingAnimationWrite(AbstractPlayableSprite playable) {
@@ -480,6 +480,26 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // latch here before this landing reaches Animate.
         HCZWaterTunnelHandler.consumeExitAnimationOnLanding(playable);
         AbstractPlayableSprite focused = GameServices.camera().getFocusedSprite();
+        // A carried main player lands in Tails's later object slot, after its
+        // own Animate pass, and remains object-controlled until the following
+        // CPU pass. Preserve the ROM-visible Walk/previous-animation handoff so
+        // release does not restart the shared carried frame/timer. Ordinary
+        // player-slot landings still let Animate observe the byte change and
+        // reset normally.
+        if (playable == focused) {
+            for (AbstractPlayableSprite sidekick :
+                    sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (sidekick.getTailsCarryController() != null
+                        && sidekick.getTailsCarryController().isCarryingMainCharacter()
+                        && sidekick.getTailsCarryController().getContext()
+                        == TailsCarryController.CarryContext.CNZ) {
+                    playable.setAnimationId(Sonic3kAnimationIds.WALK);
+                    playable.getAnimationManager()
+                            .publishPreviousAnimationId(Sonic3kAnimationIds.WALK.id());
+                    break;
+                }
+            }
+        }
         if (introFallActiveOnPlayer && playable == focused) {
             playable.setForcedAnimationId(-1);
             playable.setAnimationId(Sonic3kAnimationIds.WALK);

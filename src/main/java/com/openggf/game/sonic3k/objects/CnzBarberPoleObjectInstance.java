@@ -253,6 +253,9 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
         player.setAir(false);
         player.setLatchedSolidObject(Sonic3kObjectIds.CNZ_BARBER_POLE, this);
         player.setAngle((byte) angle);
+        // loc_33418/loc_334A4 select tumble set 2 for the normal pole;
+        // loc_33648/loc_336D2 select set 3 for the mirrored orientation.
+        player.setFlipType(mirrored ? 3 : 2);
     }
 
     /** Mirrors the Player_TouchFloor/Tails_TouchFloor call in sub_337D8. */

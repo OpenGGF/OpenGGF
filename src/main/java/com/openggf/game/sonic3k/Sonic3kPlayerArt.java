@@ -133,6 +133,7 @@ public class Sonic3kPlayerArt {
                 .setFallbackFrame(0)
                 .setWalkRunPublishesFrameBeforeTimerAdvance(true)
                 .setAnglePreAdjust(true)       // sonic3k.asm:24816 — subq.b #1,d0
+                .setTumbleTypeFrameBases(0, 0x3D, 0x49, 0x49)
                 .setTumbleFrameBase(0x31);     // sonic3k.asm:24955 — addi.b #$31,d0
 
         cachedSonic = new SpriteArtSet(
@@ -223,6 +224,7 @@ public class Sonic3kPlayerArt {
                 .setFallbackFrame(0)
                 .setWalkRunPublishesFrameBeforeTimerAdvance(true)
                 .setAnglePreAdjust(true)       // sonic3k.asm:29358 — Tails uses same subq.b #1,d0
+                .setTumbleTypeFrameBases(0, 0x3D, 0x49, 0x49)
                 .setTumbleFrameBase(0x31);     // sonic3k.asm:24955 — shared Anim_Tumble
 
         cachedTails = new SpriteArtSet(
@@ -290,6 +292,7 @@ public class Sonic3kPlayerArt {
                 .setFallbackFrame(0)
                 .setWalkRunPublishesFrameBeforeTimerAdvance(true)
                 .setAnglePreAdjust(true)       // S3K shared subq.b #1,d0
+                .setTumbleTypeFrameBases(0, 0x3D, 0x49, 0x49)
                 .setTumbleFrameBase(0x31);     // S3K shared Anim_Tumble
 
         cachedKnuckles = new SpriteArtSet(
@@ -414,6 +417,7 @@ public class Sonic3kPlayerArt {
                 .setFallbackFrame(0)
                 .setWalkRunPublishesFrameBeforeTimerAdvance(true)
                 .setAnglePreAdjust(true)       // sonic3k.asm:24816 — same subq.b #1,d0
+                .setTumbleTypeFrameBases(0, 0x3D, 0x49, 0x49)
                 .setTumbleFrameBase(0x31);     // sonic3k.asm:24955 — shared Anim_Tumble
 
         cachedSuperSonic = new SpriteArtSet(

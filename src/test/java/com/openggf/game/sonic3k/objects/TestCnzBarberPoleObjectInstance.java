@@ -76,6 +76,8 @@ class TestCnzBarberPoleObjectInstance {
         assertEquals(0x0F4E, tails.getCentreX() & 0xFFFF);
         assertEquals(0x07B9, tails.getCentreY() & 0xFFFF);
         assertEquals(0x0E, tails.getFlipAngle() & 0xFF);
+        assertEquals(2, tails.getFlipType(),
+                "loc_334A4 selects the normal-pole tumble mapping set");
     }
 
     @Test

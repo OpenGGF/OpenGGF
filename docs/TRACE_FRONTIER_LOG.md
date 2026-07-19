@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ carried landing and typed barber-pole tumble: animation f108 -> f1663
+
+At f108 Sonic lands while still owned by CPU Tails's later CNZ carry slot. ROM
+`Player_TouchFloor_Check_Spindash` writes `anim=Walk`; the later Tails release
+leaves that byte visible and returns Tails to its ordinary flying animation.
+The engine's earlier Player 1 animation pass re-applied the forced carry id and
+then retained the carry mapping on both sprites. The CNZ carry context now
+publishes the landing `Walk` handoff and restores the grounded main player's
+Walk id on release, while ordinary non-MGZ ground release selects Tails's
+flying animation (`docs/skdisasm/sonic3k.asm:24325-24329,26851-27070`).
+
+The following barber-pole sequence also now preserves the native tumble type:
+`loc_33418`/`loc_334A4` install flip types 2 and 3, and the S3K animation
+profile maps those types through the `$49` frame set with their corresponding
+horizontal/vertical orientation instead of treating every nonzero type as the
+ordinary `$3D` tumble (`docs/skdisasm/sonic3k.asm:69348-69782`). Focused carry,
+barber-pole, and animator tests pass. CNZ complete-run animation advances from
+f108 `player_animation_id` to f1663 `tails_animation_id`; its new mismatch is
+the wire-cage movement retaining raw Walk while the engine exposes Run.
+
+The sequential 4 GB comparison-only sweeps remain 45/58 green for physics and
+44/58 green for animation, with exactly the same expected-red/unsupported
+routes and no non-CNZ frontier movement. CNZ complete-run physics remains at
+f24892 `y_speed`, and legacy standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- S3K water-before-touch player-slot order: f24885 -> f24892
 
 At f24885, Sonic crossed the CNZ water line while overlapping a subtype-$84
