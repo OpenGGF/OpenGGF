@@ -242,7 +242,47 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         // response; add it if a future flipper ride is recorded hitting a board edge.
     }
 
+    /**
+     * ROM loc_49DE4's ground_vel/d5 nudge-toward-zero step (sonic3k.lst:96509-96524),
+     * shared by both the accelerate-and-drive path ({@link #driveLockedPlayer}, where
+     * d5 is always 0 for this idle-hands ride) and the launch-trigger path
+     * ({@link #launchPlayer}, where d5 is the action-button mask that fired the
+     * trigger). See {@code loc_49DF8}/{@code loc_49E06}: subtract/add d5 toward
+     * zero, clamping there (the {@code bcc} guard) rather than overshooting past it.
+     */
+    private void nudgeGSpeedTowardZero(AbstractPlayableSprite player, int d5) {
+        if (d5 == 0) {
+            return;
+        }
+        int gSpeed = player.getGSpeed();
+        if (gSpeed > 0) {
+            gSpeed = Math.max(0, gSpeed - d5);
+        } else if (gSpeed < 0) {
+            gSpeed = Math.min(0, gSpeed + d5);
+        }
+        player.setGSpeed((short) gSpeed);
+    }
+
+    private void applyLaunchTriggerFrameGroundVelDecel(AbstractPlayableSprite player) {
+        nudgeGSpeedTowardZero(player, AbstractPlayableSprite.INPUT_JUMP);
+    }
+
     private void launchPlayer(AbstractPlayableSprite player) {
+        // ROM loc_49D68 (sonic3k.lst:96460-96462, "held button" branch of
+        // sub_49CFE) is taken on the SAME per-player call that clears the
+        // per-player standing counter and fires the trigger, but it still falls
+        // through to loc_49DE4 (sonic3k.lst:96509-96524) before the top-level
+        // routine consumes the $38(a0) trigger flag and calls sub_49D72 (this
+        // method). loc_49DE4 nudges ground_vel(a1) toward zero by d5 -- the
+        // Ctrl_x_logical action-button mask that was just tested nonzero --
+        // clamping at 0; it never overwrites x_vel/y_vel, so this ground_vel
+        // change is NOT superseded by the launch trig write below. The engine
+        // collapses A/B/C into one INPUT_JUMP bit (0x10, matching ROM's
+        // button_B_mask), the best available stand-in for d5 given the engine's
+        // unified jump input. Omitting this left g_speed 0x10 high at launch
+        // (pachinko1 trace f454: expected g_speed=0x0200, engine produced
+        // 0x0210 once the launch no longer zeroed g_speed outright).
+        applyLaunchTriggerFrameGroundVelDecel(player);
         int launchDistance = player.getCentreX() - spawn.x();
         if (isFlippedHorizontal()) {
             launchDistance = -launchDistance;
@@ -265,7 +305,15 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         player.setAir(true);
         player.setOnObject(false);
         player.setPushing(false);
-        player.setGSpeed((short) 0);
+        // ROM sub_49D72 (sonic3k.lst:96469-96504, 49D72-49DE4) writes x_vel/y_vel,
+        // Status_InAir/Status_OnObj, routine=2, and object_control=0, but never
+        // touches ground_vel(a1). g_speed/ground_vel is left at whatever value
+        // the last loc_49D54 accel step produced -- it simply isn't consumed
+        // again until the player next lands and the ordinary ground-landing code
+        // re-derives it from x_vel. Zeroing it here diverged g_speed from the
+        // trace at the launch frame (pachinko1 f454: expected g_speed=0x0200,
+        // engine produced 0x0000) and cascaded into x/y position and status_byte
+        // on every frame after.
         player.setControlLocked(false);
         player.setPinballMode(false);
         player.setPinballSpeedLock(false);
