@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ balloon collision-property dispatch: physics f24936 -> f26050, animation f25028 -> f25614
+
+Native `Touch_Process` records a balloon hit in `collision_property`; the
+balloon consumes that bit later in its own `ExecuteObjects` slot. The engine
+applied the launch immediately and also allocated the four underwater Bubbler
+children during the player touch pass. That admitted three children into the
+same frame's pre-object execution order, consuming three extra RNG values at
+f24450. The shifted shared seed assigned the late subtype-`$82` balloon a bob
+phase that missed CPU Tails by one pixel at f24936.
+
+The launch remains visible in the contact frame, but the first-contact Bubbler
+allocation is now deferred to the balloon's own object routine before its bob,
+matching `sub_317AE`/`sub_3181E`. Direct unmanaged test instances also use the
+supplied dispatch counter while live SST instances continue to use the object
+manager counter (`docs/skdisasm/sonic3k.asm:66764-66856`).
+
+This advances CNZ complete-run physics from f24936 `tails_y_speed` to f26050
+`y_speed`, and animation from f25028 `tails_mapping_frame` to f25614
+`player_mapping_frame`. Focused balloon/traversal tests pass. The sequential
+4 GB full sweeps remain 45/58 green for physics and 44/58 green for animation,
+with the same 13 physics expected-red routes and the same eight unsupported
+plus six comparison-red animation routes. No non-CNZ frontier moved, and
+legacy standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- CNZ balloon pop-script continuity: physics f24892 -> f24936, animation f24993 -> f25028
 
 `sub_317AE` uses `bset #0,anim(a0)` on every overlapping balloon contact.

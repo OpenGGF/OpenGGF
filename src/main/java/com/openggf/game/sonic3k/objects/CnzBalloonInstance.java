@@ -69,6 +69,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     private int frameOffset;
     private int lastLaunchFrame = Integer.MIN_VALUE;
     private int lastObjectDispatchCounter = Integer.MIN_VALUE;
+    private boolean pendingUnderwaterBubblerSpawn;
 
     public CnzBalloonInstance(ObjectSpawn spawn) {
         super(spawn, "CNZBalloon");
@@ -117,9 +118,14 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         }
 
         var objectServices = tryServices();
-        int dispatchCounter = objectServices != null && objectServices.objectManager() != null
+        int dispatchCounter = getSlotIndex() >= 0
+                && objectServices != null && objectServices.objectManager() != null
                 ? objectServices.objectManager().getFrameCounter()
                 : frameCounter;
+        if (pendingUnderwaterBubblerSpawn) {
+            pendingUnderwaterBubblerSpawn = false;
+            spawnUnderwaterBubblerChildren();
+        }
         synchronizeRoutineState(dispatchCounter, true);
 
         // ROM Obj_CNZBalloon reacts only when Touch_Process sets
@@ -228,7 +234,13 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         if ((subtype & 0x80) != 0) {
             player.setYSpeed((short) -0x380);
             if (firstPop && levelHasWater()) {
-                spawnUnderwaterBubblerChildren();
+                // Touch_Process only sets collision_property in the player slot.
+                // Obj_CNZBalloon consumes it later in its own ExecuteObjects slot,
+                // where sub_3181E allocates the four Bubbler children. Deferring
+                // allocation until update() keeps those children out of an
+                // already-built pre-object execution order and preserves native
+                // first-update/RNG timing.
+                pendingUnderwaterBubblerSpawn = true;
             }
         } else {
             player.setYSpeed((short) -ROM_BOUNCE_Y_SPEED);
