@@ -81,10 +81,16 @@ public class TestPachinkoFlipperObjectInstance {
         flipper.onSolidContact(player, standing, 0);
         flipper.onSolidContact(player, standing, 1);
 
+        // ROM loc_49D68's fall-through to loc_49DE4 (sonic3k.asm:96460-96462,
+        // 96532-96541) projects ground_vel onto angle into x_vel/y_vel and moves
+        // the player BEFORE sub_49D72 (sonic3k.asm:96469-96504) overwrites
+        // x_vel/y_vel with the distance-based launch velocity, so setXSpeed/
+        // setYSpeed are each invoked twice on a launch frame. ArgumentCaptor.
+        // getValue() returns the LAST captured value, i.e. the launch overwrite.
         ArgumentCaptor<Short> xSpeed = ArgumentCaptor.forClass(Short.class);
         ArgumentCaptor<Short> ySpeed = ArgumentCaptor.forClass(Short.class);
-        verify(player).setXSpeed(xSpeed.capture());
-        verify(player).setYSpeed(ySpeed.capture());
+        verify(player, times(2)).setXSpeed(xSpeed.capture());
+        verify(player, times(2)).setYSpeed(ySpeed.capture());
         return new LaunchVelocity(xSpeed.getValue(), ySpeed.getValue());
     }
 

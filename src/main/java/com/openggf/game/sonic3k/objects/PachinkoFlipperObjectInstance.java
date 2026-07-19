@@ -13,7 +13,6 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -229,6 +228,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         // It never writes status(a1)/direction on the player.
         int accel = isFlippedHorizontal() ? SURFACE_ACCEL_FLIPPED : SURFACE_ACCEL;
         int gSpeed = (short) (player.getGSpeed() + accel);
+        player.setGSpeed((short) gSpeed);
 
         // loc_49DE4 friction (sonic3k.asm:96511-96524): ground_vel is nudged toward
         // zero by d5 = the raw controller-input word, clamping at 0 (bcc guard).
@@ -238,17 +238,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         // (input == 0 across trace frames 431-453), so ground_vel friction is left as
         // that verified no-op rather than modelled from lossy input bits.
 
-        // loc_49E0A (sonic3k.asm:96525-96534): project ground_vel onto the player's
-        // angle, then MoveSprite_TestGravity2 -> MoveSprite2 (pure 16:16 velocity
-        // add, no gravity under normal gravity). The player's angle is set by the
-        // flipper's sloped-solid snap; it is 0 on the flat span the player rides.
-        player.setGSpeed((short) gSpeed);
-        int angle = player.getAngle() & 0xFF;
-        short xVel = (short) ((gSpeed * TrigLookupTable.cosHex(angle)) >> 8);
-        short yVel = (short) ((gSpeed * TrigLookupTable.sinHex(angle)) >> 8);
-        player.setXSpeed(xVel);
-        player.setYSpeed(yVel);
-        player.move(xVel, yVel);
+        projectGroundVelAndMove(player);
 
         // loc_49E28-49E56 (CheckLeftWallDist/CheckRightWallDist): push the player out
         // of a terrain wall and zero ground_vel WITHOUT setting Status_Push and
@@ -256,6 +246,25 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         // launches before reaching any board wall, so this probe fires on nothing for
         // this ride and is deliberately not ported here to avoid an unverified wall
         // response; add it if a future flipper ride is recorded hitting a board edge.
+    }
+
+    /**
+     * ROM loc_49E0A (sonic3k.asm:96532-96541): project {@code ground_vel(a1)} onto the
+     * player's own {@code angle(a1)} via {@code GetSineCosine}/{@code muls.w}/{@code asr.l #8},
+     * write the result into {@code y_vel}/{@code x_vel}, then {@code jsr MoveSprite_TestGravity2}
+     * moves {@code x_pos}/{@code y_pos} by that velocity. Shared by the idle-ride drive path
+     * ({@link #driveLockedPlayer}) and the launch-trigger fall-through
+     * ({@link #launchPlayer}, reached via {@code loc_49D68}'s {@code bra.w loc_49DE4}
+     * sonic3k.asm:96460-96462).
+     */
+    private void projectGroundVelAndMove(AbstractPlayableSprite player) {
+        int gSpeed = player.getGSpeed();
+        int angle = player.getAngle() & 0xFF;
+        short xVel = (short) ((gSpeed * TrigLookupTable.cosHex(angle)) >> 8);
+        short yVel = (short) ((gSpeed * TrigLookupTable.sinHex(angle)) >> 8);
+        player.setXSpeed(xVel);
+        player.setYSpeed(yVel);
+        player.move(xVel, yVel);
     }
 
     /**
@@ -299,6 +308,23 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         // (pachinko1 trace f454: expected g_speed=0x0200, engine produced
         // 0x0210 once the launch no longer zeroed g_speed outright).
         applyLaunchTriggerFrameGroundVelDecel(player);
+
+        // loc_49D68's bra.w loc_49DE4 (sonic3k.asm:96462) does not stop at the
+        // ground_vel nudge above -- it falls all the way through loc_49E0A
+        // (sonic3k.asm:96532-96541), which projects the just-nudged ground_vel
+        // onto the player's angle into x_vel/y_vel and runs MoveSprite_TestGravity2,
+        // moving x_pos/y_pos BEFORE the top-level Obj_PachinkoFlipper routine
+        // consumes $38(a0) and calls sub_49D72 (sonic3k.asm:96469-96504). sub_49D72
+        // then measures `x_pos(a1)-x_pos(a0)` (sonic3k.asm:96472-96473) using that
+        // ALREADY-MOVED position, not the pre-trigger position. Skipping this move
+        // left the distance measurement 2px short (ground_vel=0x200 at angle=0
+        // moves the player +2px this same frame), which fed the wrong
+        // launchDistance into the sine/cosine launch-velocity formula and diverged
+        // x_speed/y_speed for the whole subsequent flight (pachinko1 trace f454:
+        // expected x=0x0093/x_speed=0x0427/y_speed=-0x0DB4, engine produced
+        // x=0x0091/x_speed=0x0415/y_speed=-0x0D77).
+        projectGroundVelAndMove(player);
+
         int launchDistance = player.getCentreX() - spawn.x();
         if (isFlippedHorizontal()) {
             launchDistance = -launchDistance;
@@ -336,7 +362,17 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         // ROM sub_49D72 clears object_control(a1) (sonic3k.asm:96505); drop the
         // engine movement gate so the launched player runs its own air physics.
         ObjectControlState.setMovementSuppressionPreservingOwnership(player, false);
-        player.setDirection(xVelocity < 0 ? Direction.LEFT : Direction.RIGHT);
+        // sub_49D72's bset/bclr pair (sonic3k.asm:96498-96499) only touches
+        // Status_InAir/Status_OnObj -- it never writes Status_Facing (bit 0) or
+        // calls anything that would flip the player's facing direction, so the
+        // launch keeps whatever facing the player had while locked to the flipper
+        // even when the launch velocity points the opposite way. Deriving facing
+        // from xVelocity's sign here was an unmodelled write: the flipper ride in
+        // pachinko1 locks the player facing left (status bit 0 set, e.g. frames
+        // 445-453 status=0x0D) while this launch's xVelocity is rightward
+        // (x_speed=0x0427), so setting facing from the sign flipped the bit off
+        // (pachinko1 trace f454: expected status_byte=0x0007, engine produced
+        // 0x0006 once x/x_speed/y_speed already matched).
 
         var objectManager = services().objectManager();
         if (objectManager != null) {
