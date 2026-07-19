@@ -659,11 +659,19 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         return SUBTYPE_LOOKUP[r];
     }
 
-    /** Called by ContainerDisplayChild when it activates (parent bit 3 set). */
-    public void onContainerSpawnBall(int x, int y) {
+    /**
+     * Called by ContainerDisplayChild when it activates (parent bit 3 set).
+     * <p>
+     * {@code parentYSupplier} lets the spawned ball track its spawning container's
+     * LIVE y (ROM: {@code parent3(a0)}, the container/crank child), matching ROM
+     * loc_60EE0's per-frame clamp that keeps the ball from rising above its
+     * spawner while the machine itself may still be drifting downward
+     * (sonic3k.asm:127609-127616).
+     */
+    public void onContainerSpawnBall(int x, int y, java.util.function.IntSupplier parentYSupplier) {
         int subtype = chooseBallSubtype();
         ObjectSpawn gumballSpawn = new ObjectSpawn(x, y, 0xEB, subtype, 0, false, 0);
-        spawnChild(() -> new GumballItemObjectInstance(gumballSpawn, 0, true));
+        spawnChild(() -> new GumballItemObjectInstance(gumballSpawn, 0, true, parentYSupplier));
         LOGGER.fine("GumballMachine: container spawned ball, subtype=" + subtype);
     }
 
@@ -1020,7 +1028,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
                     animTimer = ANIM_PAIRS[0][1] + 1;
                     currentFrame = ANIM_PAIRS[0][0];
                     int spawnY = parent.getCurrentY() + offsetFromMachine;
-                    parent.onContainerSpawnBall(spawn.x(), spawnY);
+                    parent.onContainerSpawnBall(spawn.x(), spawnY, this::getY);
                 }
                 return;
             }
