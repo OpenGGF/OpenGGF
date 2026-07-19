@@ -1574,6 +1574,35 @@ loader sets bit 7 and writes `respawn_addr(a1)` at lines 37741-37758.
 
 **Originating commit.** `<pending: S3K all-entry respawn persistence milestone>`.
 
+---
+
+## P46 -- `Obj_WaitOffscreen` uses the render box, not the placement window
+
+**S3K-specific:**
+
+**Symptom.** An object whose normal routine begins with a formation, timer, or
+child allocation starts that sequence before the sprite is visibly on-screen.
+The object may become interactive while its ROM counterpart is still using the
+inert off-screen mapping.
+
+**Root cause.** S3K `Obj_WaitOffscreen` replaces the operation pointer and sets
+`width_pixels`/`height_pixels` to `$20`. It restores the saved operation only
+after Render_Sprites publishes the sign bit in `render_flags`. A generic
+placement margin, spawn window, or point-in-camera test is not equivalent to
+that render-box overlap.
+
+**Correct pattern.** Preserve the object's wait state until its native render
+box overlaps the viewport, including the ROM's exclusive touching edge. Start
+normal animation and gameplay work only after that boundary; do not use a wider
+object-placement margin as an activation proxy.
+
+**ROM citation.** `Obj_WaitOffscreen` installs the `$20` extents and restores
+the saved operation from the render flag at
+`docs/skdisasm/sonic3k.asm:180271-180303`; the special-stage entry ring invokes
+it before animation/collision dispatch at lines 128219-128269.
+
+**Originating commit.** `<pending: S3K entry-ring render activation milestone>`.
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

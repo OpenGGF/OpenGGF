@@ -45693,6 +45693,28 @@ remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
 
+### 2026-07-19 -- S3K entry-ring render activation: f9663 -> f12024
+
+At f9663 Sonic is inside the special-stage entry ring's eventual
+`SSEntry_Range`, and the engine has already enabled collision and frozen the
+player/camera. The ROM ring remains in routine 2 without touching Sonic because
+its grow-in mapping has not yet reached frame 8. `Obj_WaitOffscreen` initially
+replaces the ring operation with an inert placeholder using `$20`-pixel
+`width_pixels` and `height_pixels`; only a Render_Sprites on-screen flag restores
+the real routine (`docs/skdisasm/sonic3k.asm:128219-128269,180271-180303`).
+
+The entry ring now begins formation at that native render-box overlap instead
+of the generic 128-pixel placement margin. The focused formation suite covers
+the exclusive touching edge and first overlapping pixel, and CNZ complete-run
+physics advances from f9663 `camera_x` to f12024 `g_speed`. The implementation
+contains no trace hydration or zone/route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- S3K all-entry respawn persistence: f9618 -> f9663
 
 At f9618 the monitor at `$2CE8,$0670` has ROM code pointer `$1B588`, the
