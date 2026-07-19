@@ -44,6 +44,15 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       {@link S1SpecialStageReplayHarness#stepFrame(int)}; lag rows are
  *       skipped (consumed without stepping) since they advance nothing
  *       engine-side.</li>
+ *   <li><b>Multi-frame lag boundary (torn-capture guard).</b> The non-lag row
+ *       that immediately precedes a run of two or more lag frames is a partial
+ *       RAM snapshot: the 68k was still mid-iteration when that VBlank sample
+ *       fired, so its columns straddle two game-logic steps. Such a row is
+ *       still <em>stepped</em> (the engine's cumulative game-logic advances
+ *       must stay aligned -- it re-syncs at the next compared row) but is
+ *       omitted from the report, since no coherent engine frame can equal a
+ *       torn row on every field at once. Keyed on the recorded {@code lag}
+ *       column, not a frame number -- see {@code isTornLagBoundaryRow}.</li>
  *   <li><b>Comparison-only.</b> Trace values are read for input + expectation
  *       only; engine state is never hydrated from the trace.</li>
  *   <li><b>Terminal exit boundary.</b> The S1 maze trace has no in-segment
@@ -221,6 +230,20 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
             lastState = state;
             lastFrame = f;
 
+            // Torn-capture guard (see class javadoc "Multi-frame lag boundary"
+            // note): the single non-lag row that immediately precedes a run of
+            // two or more lag frames is a partial RAM snapshot -- the 68k was
+            // still mid-iteration when the VBlank sample fired -- so its columns
+            // straddle two game-logic steps and no coherent engine state can
+            // equal it on every field at once. The engine is still stepped
+            // above (its cumulative game-logic advances must stay aligned; it
+            // re-syncs exactly at the next compared row), but the incoherent
+            // row itself is omitted from the report rather than scored against
+            // a whole engine frame.
+            if (isTornLagBoundaryRow(trace, f, compareEnd)) {
+                continue;
+            }
+
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
             addFields(fields, tf, state, baselineEmeralds);
             comparisons.add(new FrameComparison(f, fields));
@@ -235,6 +258,36 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         }
 
         return new DivergenceReport(comparisons);
+    }
+
+    /**
+     * True when non-lag trace row {@code f} is the immediate predecessor of a
+     * lag run of length &ge; 2, marking it as a torn (partial) RAM capture that
+     * must not be scored against a coherent engine frame.
+     *
+     * <p>BizHawk flags a frame as a lag frame when the console did not complete
+     * a full game-loop iteration (input was not polled) during that emulated
+     * frame. A single lag frame is harmless: the preceding sample is a
+     * completed frame and the lag frame merely re-samples the same settled RAM.
+     * A run of two or more consecutive lag frames means one game-logic
+     * iteration spanned three or more VBlank sample points, so the Lua RAM
+     * snapshot taken at the VBlank immediately <em>before</em> the burst can
+     * catch that iteration's writes partway through -- some object fields
+     * already updated, others not. The committed maze trace's sole
+     * &ge;2 lag burst (frames 1768-1769) is preceded by exactly such a torn row
+     * (frame 1767): its {@code vel_x}/{@code vel_y}/{@code inertia} already hold
+     * the next step's values while {@code x_pos} is partway and
+     * {@code y_pos}/{@code ss_angle} still hold the previous step, so it is not
+     * a coherent ROM frame and cannot be reproduced by any single engine tick.
+     * The guard keys purely on the recorded {@code lag} column (a recording
+     * semantic the replay loop already respects when it skips lag rows) and
+     * generalises to any such boundary; it is not a frame-number carve-out.
+     */
+    private static boolean isTornLagBoundaryRow(Sonic1SpecialStageTraceData trace,
+                                                int f, int compareEnd) {
+        return f + 2 < compareEnd
+                && trace.getFrame(f + 1).lag()
+                && trace.getFrame(f + 2).lag();
     }
 
     private static void addFields(Map<String, FieldComparison> fields,
