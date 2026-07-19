@@ -53,7 +53,36 @@ public final class S3kSlotPlayerRuntime {
         debugActive = false;
         debugSavedStatTable = 0;
         debugSavedScalarIndex1 = 0;
+        primeSpawnFrameFallthrough(player);
         syncPlayerToSlotOrigin(player);
+    }
+
+    /**
+     * ROM {@code Obj_Sonic_RotatingSlotBonus}'s routine==0 init handler
+     * ({@code loc_4B9CE}, sonic3k.asm:98710-98741) falls straight through --
+     * with no intervening {@code rts} -- into the per-frame movement
+     * dispatcher ({@code loc_4BA4E}, sonic3k.asm:98742-98784) on the very
+     * same call that creates the object: {@code routine(a0)} is bumped from
+     * 0 to 2 ({@code addq.b #2,routine(a0)}), {@code Status_InAir} is set,
+     * and then that SAME invocation immediately runs {@code sub_4BABC}
+     * (ground velocity), {@code sub_4BCB0} (air gravity/velocity),
+     * {@code sub_4BDCA}, {@code sub_4BE3A}, and {@code MoveSprite2}
+     * (position update, sonic3k.asm:98780) before returning -- a full
+     * physics tick baked into the object's own spawn frame. That spawn
+     * frame belongs to the scripted level-reload/fade transition that
+     * precedes the first frame the headless trace fixture drives (the same
+     * Restart_level_flag handoff already modelled in applyBonusStageEntry
+     * for Gumball/Pachinko), so bootstrap must run this fallthrough tick
+     * once before the first driven frame -- otherwise the exposed
+     * y_speed/x_sub/y_sub lag the ROM by exactly one gravity/velocity
+     * application (observed: engine y_speed=0x002A vs ROM 0x0054, engine
+     * y_sub=0x2A00 vs ROM 0x7E00 at trace frame 0).
+     */
+    private void primeSpawnFrameFallthrough(AbstractPlayableSprite player) {
+        applyMoveWithCollision(player, false, false);
+        applyAirMotionWithCollision(player);
+        applyVelocityStep(player);
+        advanceRotation(false);
     }
 
     public void syncFromController(S3kSlotStageController controller) {
@@ -366,9 +395,21 @@ public final class S3kSlotPlayerRuntime {
         slotOriginY += player.getYSpeed() << SPEED_TO_POSITION_SHIFT;
     }
 
+    /**
+     * Inverse of {@link #syncPlayerToSlotOrigin}: must round-trip the full
+     * 16.16 ROM position, not just the truncated pixel word. Reading only
+     * {@code getCentreX()/getCentreY()} here would silently drop the
+     * subpixel fraction on every external resync (e.g. {@code
+     * resetSlotOrigin} right after {@link #initialize}, or the
+     * object-controlled/debug-mode transitions below) -- which previously
+     * discarded exactly the fraction {@link #primeSpawnFrameFallthrough}
+     * establishes, reproducing the same ROM x_pos/y_pos 32-bit-word
+     * (sonic3k.asm:98780 MoveSprite2) truncation bug from the opposite
+     * direction.
+     */
     private void captureSlotOriginFromPlayer(AbstractPlayableSprite player) {
-        slotOriginX = player.getCentreX() << POSITION_SHIFT;
-        slotOriginY = player.getCentreY() << POSITION_SHIFT;
+        slotOriginX = (player.getCentreX() << POSITION_SHIFT) | player.getXSubpixelRaw();
+        slotOriginY = (player.getCentreY() << POSITION_SHIFT) | player.getYSubpixelRaw();
     }
 
     private void captureExternalSlotOriginIfNeeded(AbstractPlayableSprite player) {
@@ -380,8 +421,24 @@ public final class S3kSlotPlayerRuntime {
         }
     }
 
+    /**
+     * ROM Obj_Sonic_RotatingSlotBonus stores the player's position as a
+     * standard 32-bit ROM position word (pixel:16 | subpixel:16), and
+     * MoveSprite2 (sonic3k.asm) writes the full 32-bit result back with
+     * {@code move.l d2,x_pos} -- the subpixel fraction is never truncated
+     * between frames. {@code slotOriginX}/{@code slotOriginY} mirror that
+     * same 16.16 layout (pixel in the high word, subpixel in the low word --
+     * see {@link com.openggf.sprites.AbstractSprite#move}). Using
+     * {@code setCentreX}/{@code setCentreY} here would zero the sprite's
+     * subpixel fields every frame (AbstractSprite.java:67-75), silently
+     * discarding the fractional position this runtime already tracks
+     * correctly and desyncing the player's exposed x_sub/y_sub (and any
+     * gravity/velocity math downstream that reads them back via
+     * captureSlotOriginFromPlayer) from the ROM's 32-bit accumulation.
+     */
     private void syncPlayerToSlotOrigin(AbstractPlayableSprite player) {
-        player.setCentreX((short) (slotOriginX >> POSITION_SHIFT));
-        player.setCentreY((short) (slotOriginY >> POSITION_SHIFT));
+        player.setCentreXPreserveSubpixel((short) (slotOriginX >> POSITION_SHIFT));
+        player.setCentreYPreserveSubpixel((short) (slotOriginY >> POSITION_SHIFT));
+        player.setSubpixelRaw(slotOriginX & 0xFFFF, slotOriginY & 0xFFFF);
     }
 }

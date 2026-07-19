@@ -45,7 +45,13 @@ class TestS3kSlotPlayerRuntime {
         assertTrue(player.getRolling());
         assertEquals(0, player.getGSpeed());
         assertEquals(0, player.getXSpeed());
-        assertEquals(0, player.getYSpeed());
+        // ROM Obj_Sonic_RotatingSlotBonus's routine==0 init handler falls
+        // straight through into the per-frame movement dispatcher on the
+        // same spawn-frame call (sonic3k.asm:98710-98784 loc_4B9CE ->
+        // loc_4BA4E, no intervening rts) -- one gravity tick (AIR_GRAVITY
+        // 0x2A) is already baked into y_speed by the time initialize()
+        // returns.
+        assertEquals(0x2A, player.getYSpeed());
         assertEquals(0, state.lastCollisionTileId());
         assertEquals(-1, state.lastCollisionIndex());
         assertTrue(runtime.slotOriginX() > 0);
@@ -131,7 +137,10 @@ class TestS3kSlotPlayerRuntime {
 
         assertTrue(player.getAir());
         assertEquals(0, player.getXSpeed());
-        assertEquals(0x2A, player.getYSpeed());
+        // initialize()'s spawn-frame fallthrough already applies one gravity
+        // tick (0x2A); this explicit tick() applies a second, matching ROM's
+        // first regular per-frame dispatch after the object's creation frame.
+        assertEquals(0x54, player.getYSpeed());
         assertTrue(player.getY() > 0x360);
     }
 
@@ -166,7 +175,10 @@ class TestS3kSlotPlayerRuntime {
 
         runtime.tick(player, false, false, false, false, false, 0);
 
-        assertEquals(0x40, state.rawStatTable());
+        // initialize()'s spawn-frame fallthrough already advances Stat_table
+        // by SStage_scalar_index_1 (0x40) once; this tick() advances it a
+        // second time, matching ROM's loc_4BA4E tail (sonic3k.asm:98781-98783).
+        assertEquals(0x80, state.rawStatTable());
     }
 
     @Test
@@ -227,9 +239,13 @@ class TestS3kSlotPlayerRuntime {
 
         runtime.tick(player, false, false, false, false, false, 0);
 
-        assertEquals(0x2A, player.getYSpeed());
+        // initialize()'s primed fallthrough tick already contributed one
+        // gravity application (y_speed 0x2A, +0x2A00 subpixel) before this
+        // explicit tick() runs a second, giving y_speed 0x54 and a
+        // cumulative +0x7E00 subpixel -- see initializeUsesRomBootstrapState.
+        assertEquals(0x54, player.getYSpeed());
         assertEquals(startCentreY, player.getCentreY());
-        assertEquals((startCentreY << 16) + (0x2A << 8), runtime.slotOriginY());
+        assertEquals((startCentreY << 16) + 0x7E00, runtime.slotOriginY());
     }
 
     @Test
