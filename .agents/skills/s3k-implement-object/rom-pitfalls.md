@@ -1405,6 +1405,33 @@ X bound with `bhs` (`docs/skdisasm/sonic3k.asm:47957-48024`).
 
 ---
 
+## P40 -- Moving touch objects publish live SST coordinates
+
+**Symptom.** A moving or oscillating S3K touch object overlaps the player at an
+exact boundary in the ROM, but the engine callback fires one frame late even
+though the shared overlap comparison itself is correct.
+
+**Root cause.** S3K `Collision_response_list` stores SST pointers rather than
+copied coordinates. When an object moves before calling a draw-and-touch helper,
+the next player-slot `Touch_Loop` reads the object's live post-move `x_pos/y_pos`.
+Using the engine's older pre-update coordinate adds an unintended second frame
+of position latency.
+
+**What to check.** Confirm the object's routine order around movement and its
+collision-list publishing helper. If movement precedes publication, opt the
+object into `usesCurrentTouchResponseState()` and test an edge that differs by
+one movement unit. Do not change the global overlap geometry or bypass the
+previous-list membership rule.
+
+**ROM citation.** CNZ `Obj_CNZBalloon` updates its sine-bobbed `y_pos` before
+`Sprite_CheckDeleteTouch3` at
+`docs/skdisasm/sonic3k.asm:66776-66795`; `Touch_Loop` dereferences the queued
+SST pointer at `docs/skdisasm/sonic3k.asm:20656-20710`.
+
+**Originating commit.** `<pending: CNZ balloon live-touch milestone>`.
+
+---
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

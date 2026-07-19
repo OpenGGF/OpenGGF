@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **CNZ balloons now publish touch collisions from their live post-bob SST coordinate:** S3K's collision-response list retains the balloon pointer after its sine update, so exact-edge contacts no longer use a one-frame-older Y snapshot. This advances CNZ complete-run physics from frame 6706 to frame 6820 (`docs/skdisasm/sonic3k.asm:66776-66795,20656-20710`).
 - **S3K horizontal springs now reject the native exclusive `+$28` proactive-trigger edge:** `sub_2326C` uses `bhs` for its upper X bound, so CPU Tails standing exactly 40 pixels to the right is no longer launched early. This advances CNZ complete-run physics from frame 6696 to frame 6706 (`docs/skdisasm/sonic3k.asm:47957-48024`).
 - **CNZ Clamers now gate their auto-close projectile on the full native render box:** frame 8 tests the retained on-screen render flag with the parent's `$14x$10` extents, so a vertically off-screen Clamer no longer emits a projectile that falsely hurts CPU Tails. This advances CNZ complete-run physics from frame 4610 to frame 6696 (`docs/skdisasm/sonic3k.asm:185930-185942,186052-186058`).
 - **S3K vertical and diagonal springs now return hurt players to the normal control routine:** the engine models each native `routine=2` write after a spring launch instead of leaving the player in routine 4 hurt physics. This advances CNZ complete-run physics from frame 4100 to frame 4610 (`docs/skdisasm/sonic3k.asm:47720-47729,48139-48143,48213-48217,48304-48308`).

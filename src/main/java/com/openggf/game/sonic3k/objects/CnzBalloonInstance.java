@@ -169,6 +169,16 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Obj_CNZBalloon updates y_pos through its sine bob before tail-calling
+        // Sprite_CheckDeleteTouch3. S3K's Collision_response_list stores the
+        // balloon's SST pointer, so the next player-slot Touch_Loop dereferences
+        // that live post-bob y_pos rather than the older pre-update coordinate
+        // (docs/skdisasm/sonic3k.asm:66776-66795,20656-20710).
+        return true;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_BALLOON);
         if (renderer == null) {

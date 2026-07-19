@@ -41,6 +41,15 @@ class TestCnzBalloonInstance {
     }
 
     @Test
+    void collisionResponseListDereferencesLiveBobPosition() {
+        CnzBalloonInstance balloon =
+                new CnzBalloonInstance(new ObjectSpawn(0x1920, 0x022C, 0x41, 2, 0, false, 0));
+
+        assertTrue(balloon.usesCurrentTouchResponseState(),
+                "S3K Touch_Loop dereferences the live SST y_pos published after the balloon bob");
+    }
+
+    @Test
     void touchResponseProfileStopsContinuousCallbacksAfterMovingOffscreen() {
         CnzBalloonInstance balloon =
                 new CnzBalloonInstance(new ObjectSpawn(0x17C0, 0x860, 0x41, 0, 0, false, 0));

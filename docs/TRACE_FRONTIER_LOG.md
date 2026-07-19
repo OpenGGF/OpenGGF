@@ -45670,3 +45670,25 @@ The full physics fleet remains 45/58 green with 13 expected-red routes; the
 full animation fleet remains 44/58 green with the same 14 non-green methods.
 No non-CNZ frontier moved, CNZ complete-run animation remains at f108, and
 standalone CNZ remains at f0.
+
+### 2026-07-19 -- CNZ balloon live bob touch coordinate: f6706 -> f6820
+
+At f6706 Sonic's post-movement touch boundary meets the second balloon's
+native `$1920,$022E` collision box exactly. The engine's shared S3K touch pass
+found the same inclusive overlap only on the following frame because it tested
+the balloon's older pre-update `$022D` snapshot. ROM `Obj_CNZBalloon` updates
+`y_pos` from its sine bob before `Sprite_CheckDeleteTouch3` publishes the SST
+pointer; the following player-slot `Touch_Loop` dereferences that live post-bob
+coordinate (`docs/skdisasm/sonic3k.asm:66776-66795,20656-20710`).
+
+`CnzBalloonInstance` now opts into the existing current-touch-state contract.
+All 10 existing balloon tests plus the new live-coordinate contract test pass,
+and CNZ complete-run physics advances from f6706 `y_speed` to f6820 `tails_x`.
+The change contains no trace hydration, tolerance, or zone/route/frame
+predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The full animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
