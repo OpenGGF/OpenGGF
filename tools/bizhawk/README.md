@@ -53,6 +53,27 @@ The `OGGF_TRACE_RUN_ID` environment variable forces manifest emission and sets t
 field, allowing trace runs with no detours to be tracked explicitly (useful for complete-game
 runs or for organizing capture sessions).
 
+## Capture Launch Notes (verified live 2026-07-19)
+
+Facts established during the first round-trip captures — they override any older
+invocation text in this file:
+
+- **Output location:** BizHawk's Lua working directory is the LUA SCRIPT'S OWN
+  DIRECTORY, so every recorder writes to `<dir containing the .lua>/trace_output/`
+  (e.g. `tools/bizhawk/trace_output/` of whichever checkout's script you launched).
+  No recorder reads an `OGGF_TRACE_OUTPUT_DIR` variable.
+- **Direct launch works and is the simplest route:**
+  `docs\BizHawk-2.11-win-x64\EmuHawk.exe --chromeless --lua=<script> --movie=<bk2> <rom>`
+  (note the `=` forms). `run_bizhawk_lua.bat` also works now that all three recorders
+  carry the guard-satisfying `pcall(client.SetSoundOn, false)` snippet.
+- **Lua errors are INVISIBLE in `--chromeless` mode** — a script that errors at load
+  produces no console output and no files, and EmuHawk either exits quickly or idles.
+  If a capture produces nothing, re-run WITHOUT `--chromeless` and watch for the error
+  dialog before suspecting anything else.
+- **Console `print()` output never reaches stdout** in either mode; judge success by
+  the output files, and validate with the VERIFY-ON-FIRST-CAPTURE checks directly
+  against the CSVs.
+
 Schema v3 records the execution counters used by replay:
 
 - `gameplay_frame_counter` changes only when the level main loop completed
@@ -120,7 +141,6 @@ directories in a single trace run.
 Run the complete-run recorder over your movie file:
 
 ```bat
-set OGGF_TRACE_OUTPUT_DIR=C:\tmp\s3k_bonus_trace
 set OGGF_TRACE_RUN_ID=s3k-aiz-gumball-roundtrip
 
 tools\bizhawk\run_bizhawk_lua.bat ^
@@ -209,7 +229,6 @@ exclusively — a team recording (Sonic + Tails) adds pure noise to the comparat
 Run the complete-run recorder over your movie file:
 
 ```bat
-set OGGF_TRACE_OUTPUT_DIR=C:\tmp\s3k_slots_trace
 set OGGF_TRACE_RUN_ID=s3k-aiz-slots-roundtrip
 
 tools\bizhawk\run_bizhawk_lua.bat ^
@@ -290,7 +309,6 @@ the stage, and return to the level. The trace includes both the level segment an
 Run the complete-run recorder over your movie file:
 
 ```bat
-set OGGF_TRACE_OUTPUT_DIR=C:\tmp\s3k_ss_trace
 set OGGF_TRACE_RUN_ID=s3k-aiz-bluespheres-roundtrip
 
 tools\bizhawk\run_bizhawk_lua.bat ^
@@ -352,20 +370,18 @@ segment.
    acceptable for this recording.
 5. Continue into GHZ2 and keep playing until control is settled (a few seconds of normal
    act-2 gameplay after the transition).
-6. Stop the movie and save as `s1-complete-run.bk2`.
+6. Stop the movie and save under a descriptive name (e.g. `s1-ghz-maze-roundtrip.bk2`; see
+   the truthful-name commit rule below).
 
-**Recorder Invocation:**
-
-Run the complete-run recorder over your movie file:
+**Recorder Invocation** (verified 2026-07-19 — the direct launch used for the committed
+capture; see "Capture Launch Notes" above for where the output lands):
 
 ```bat
-set OGGF_TRACE_OUTPUT_DIR=C:\tmp\s1_maze_trace
 set OGGF_TRACE_RUN_ID=s1-ghz-maze-roundtrip
 
-tools\bizhawk\run_bizhawk_lua.bat ^
-  tools\bizhawk\s1_complete_run_recorder.lua ^
-  s1-complete-run.bk2 ^
-  s1.gen
+docs\BizHawk-2.11-win-x64\EmuHawk.exe --chromeless ^
+  --lua=tools/bizhawk/s1_complete_run_recorder.lua ^
+  --movie=docs/BizHawk-2.11-win-x64/Movies/s1-ghz-maze-roundtrip.bk2 s1.gen
 ```
 
 The `$10` (special-stage) detour is handled automatically by the recorder's state machine — no
@@ -406,11 +422,16 @@ src/test/resources/traces/s1/runs/s1-ghz-maze-roundtrip/
 Then copy the `ss/` segment (its `metadata.json`, `physics.csv`, and the source bk2) to
 `src/test/resources/traces/s1/special_stage/` to activate `TestS1SpecialStageTraceReplay`.
 
-**Mandatory bk2 rename:** commit the movie as `s1-complete-run.bk2` inside both trace
-directories (the run's root and the copied `special_stage/` directory). Do not rename the
-movie file and edit `source_bk2` in the copied SS metadata instead — the level segments'
-metadata hardcodes the literal `"s1-complete-run.bk2"` (recorder `write_metadata`, L516), so
-editing only the copy's `source_bk2` would leave the run bundle internally inconsistent.
+**Commit the bk2 under its TRUTHFUL name** (superseding the earlier rename-to-
+`s1-complete-run.bk2` mandate): the shared `traces/s1/_movies/s1-complete-run.bk2` is a
+DIFFERENT movie (the original complete-run), and `TraceCatalog.resolveBk2` resolves the
+shared `_movies/` name FIRST — a same-named round-trip bk2 in `special_stage/` would be
+shadowed by the wrong movie. Instead commit the movie under its own name (e.g.
+`s1-ghz-maze-roundtrip.bk2`) in both trace directories and patch `source_bk2` in the
+bundle's `run_manifest.json` + every segment `metadata.json` to match (the recorder
+hardcodes `"s1-complete-run.bk2"` at `write_metadata`; patching ALL copies keeps the
+bundle internally consistent — this is what the committed
+`traces/s1/runs/s1-ghz-maze-roundtrip/` bundle does).
 
 **VERIFY-ON-FIRST-CAPTURE Self-Check:**
 
