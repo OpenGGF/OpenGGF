@@ -2206,6 +2206,7 @@ public class SidekickCpuController {
                 || !restrictUnderwaterPushBypassToContactPulses
                 || delayedObjectOrPushContext
                 || sidekick.isPushFromGroundWallCollision()
+                || hasLiveObjectPushingLatch()
                 || isUnderwaterCurrentPushPulse()))
                 || frameStartPushBypass;
         boolean clearReleasedUnderwaterPushAfterCpu = currentPushBypass

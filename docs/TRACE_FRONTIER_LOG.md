@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ cutscene visibility, cork order, lag, and push latch: f22001 -> f24136
+
+The first CNZ2 Knuckles cutscene previously survived its final jump until a
+wide generic off-screen margin expired. `loc_623FE` instead reads the prior
+`Draw_Sprite` render flag using `ObjSlot_CutsceneKnux` extents `$1C/$18`, so
+the cutscene now deletes at the native boundary. At the late-water cork pair,
+the helper-created right floor occupied an earlier engine slot than the direct
+left placement. The rolling landing therefore ran the right floor first and
+missed the native left seam push. A right rolling-break floor now resolves only
+an adjacent, intact, later-slot left sibling before its own checkpoint,
+reconstructing the native left-to-right `SolidObjectFull` order from object
+identity, geometry, and slot state.
+
+The fragment-heavy break then exposed a ROM VBlank-only row whose recorder
+counters are byte-stale: both moving players repeat exactly and the advertised
+per-frame Tails normal-step hook disappears. Replay phase detection now treats
+that moving, non-object-held execution gap as VBlank-only while retaining full
+ticks for controller-held plateaus such as HCZ's carried players. Finally,
+underwater CPU Tails now lets a live object-owned pushing latch satisfy
+`loc_13DD0`; this suppresses the follow X nudge and preserves the native input
+acceleration against the spring seam (`docs/skdisasm/sonic3k.asm:58493-58554,
+129120,134030-134083,134795,26696-26729`).
+
+The focused cutscene, execution-model, and CNZ complete-run checks pass through
+the corrected windows. CNZ complete-run physics advances from f22001 to f24136;
+its next mismatch is CPU Tails missing a `-$200` vertical response. The full
+comparison-only sweep remains 45/58 physics green with the same 13 expected-red
+routes and unchanged green AIZ, HCZ, and MGZ complete runs. Animation remains
+44/58 green with the same 14 expected-red or unsupported routes; CNZ
+complete-run animation still begins at f108, and legacy standalone CNZ remains
+at f0.
+
 ### 2026-07-19 -- CNZ Clamer projectile live touch pointer: f20903 -> f22001
 
 At f20903, native CPU Tails overlapped the Clamer auto-close projectile and

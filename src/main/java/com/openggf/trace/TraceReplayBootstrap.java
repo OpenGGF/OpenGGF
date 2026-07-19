@@ -638,6 +638,9 @@ public final class TraceReplayBootstrap {
         if (isSonic3kTransitionModeFrozenRow(trace, previous, current)) {
             return TraceExecutionPhase.VBLANK_ONLY;
         }
+        if (isSonic3kMissingCpuExecutionLagRow(trace, previous, current)) {
+            return TraceExecutionPhase.VBLANK_ONLY;
+        }
         TraceExecutionPhase counterPhase =
                 TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
         if (counterPhase == TraceExecutionPhase.VBLANK_ONLY
@@ -656,6 +659,39 @@ public final class TraceReplayBootstrap {
             return TraceExecutionPhase.FULL_LEVEL_FRAME;
         }
         return counterPhase;
+    }
+
+    private static boolean isSonic3kMissingCpuExecutionLagRow(
+            TraceData trace, TraceFrame previous, TraceFrame current) {
+        if (trace == null || previous == null || current == null
+                || !"s3k".equals(trace.metadata().game())
+                || !trace.metadata().hasPerFrameTailsCpuNormalStep()
+                || !current.stateEquals(previous)
+                || current.gameplayFrameCounter() != previous.gameplayFrameCounter()
+                || current.vblankCounter() != previous.vblankCounter()
+                || current.lagCounter() != previous.lagCounter()
+                || !hasRecordedVelocity(current)
+                || (current.statusByte() & 0x08) != 0
+                || (current.sidekick() != null
+                        && (current.sidekick().statusByte() & 0x08) != 0)) {
+            return false;
+        }
+        for (String sidekick : trace.metadata().recordedSidekicks()) {
+            if (trace.tailsCpuNormalStepForFrame(previous.frame(), sidekick) != null
+                    && trace.tailsCpuNormalStepForFrame(current.frame(), sidekick) == null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasRecordedVelocity(TraceFrame frame) {
+        if (frame.xSpeed() != 0 || frame.ySpeed() != 0 || frame.gSpeed() != 0) {
+            return true;
+        }
+        TraceCharacterState sidekick = frame.sidekick();
+        return sidekick != null
+                && (sidekick.xSpeed() != 0 || sidekick.ySpeed() != 0 || sidekick.gSpeed() != 0);
     }
 
     private static boolean hasSidekickCpuExecutionHookOnInputEdge(

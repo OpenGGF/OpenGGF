@@ -189,6 +189,34 @@ class TestCutsceneKnucklesCnz2Instance {
     }
 
     @Test
+    void firstCnzCutsceneUsesNativeRenderBoundsForFinalJumpDeletion() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x1D00);
+        camera.setY((short) 0x0280);
+        AbstractObjectInstance.updateCameraBounds(0x1D00, 0x0280, 0x1E40, 0x0360, 0);
+
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+        setPrivateEnumField(knuckles, "phase", "FINAL_JUMP");
+        setPrivateIntField(knuckles, "currentX", 0x1E40 + 0x1C);
+        setPrivateIntField(knuckles, "currentY", 0x02A0);
+        knuckles.snapshotPreUpdatePosition();
+
+        knuckles.update(0, null);
+
+        assertEquals(0x1C, knuckles.getOnScreenHalfWidth(),
+                "ObjSlot_CutsceneKnux width_pixels is $1C");
+        assertEquals(0x18, knuckles.getOnScreenHalfHeight(),
+                "ObjSlot_CutsceneKnux height_pixels is $18");
+        assertTrue(knuckles.isDestroyed(),
+                "loc_623FE observes the prior Draw_Sprite render flag; the right edge is exclusive");
+    }
+
+    @Test
     void secondCnzCutsceneExitDoesNotEnterPlayableKnucklesTeleporterRoute() throws Exception {
         RecordingCnzBridge bridge = new RecordingCnzBridge();
         Camera camera = new Camera();

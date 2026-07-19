@@ -45,6 +45,9 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     private static final int FIRST_JUMP_Y_VEL = -0x0600;
     private static final int FINAL_JUMP_X_VEL = 0x0400;
     private static final int FINAL_JUMP_Y_VEL = -0x0600;
+    // ObjSlot_CutsceneKnux: width_pixels=$1C, height_pixels=$18.
+    private static final int RENDER_HALF_WIDTH = 0x1C;
+    private static final int RENDER_HALF_HEIGHT = 0x18;
 
     private static final int[] JUMP_FRAMES = {8, 4, 8, 5, 8, 6, 8, 7};
     private static final int JUMP_DELAY = 2;
@@ -288,7 +291,11 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
 
     private void routineFinalJump() {
         updateJumpMotion();
-        if (isOnScreen(96)) {
+        // loc_623FE tests render_flags bit 7 after MoveSprite. That flag was
+        // produced by the preceding frame's Draw_Sprite, so its position is
+        // this frame's pre-update anchor, with the ObjSlot_CutsceneKnux
+        // width/height bytes as the renderer's bounds.
+        if (isPreUpdateWithinRenderSpriteBounds(RENDER_HALF_WIDTH, RENDER_HALF_HEIGHT)) {
             return;
         }
 
@@ -305,6 +312,16 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         }
         activeInstance = null;
         setDestroyed(true);
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return RENDER_HALF_WIDTH;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return RENDER_HALF_HEIGHT;
     }
 
     private void snapshotPaletteLine2() {
