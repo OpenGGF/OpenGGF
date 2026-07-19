@@ -612,8 +612,14 @@ public final class TraceSessionLauncher {
             return;
         }
         TraceRunReplayWalker.SegmentPlan segment = runSegments.get(action.nextSegmentIndex());
+        // firstErrorCallback = loop::toggleUserPause, matching the live
+        // TraceReplayDriver constructor's onComparatorPause (segment 0's
+        // comparator, built via TraceReplayDriver.start, gets the same
+        // callback) -- every segment must pause on its first divergence,
+        // not just segment 0.
         this.comparator = new LiveTraceComparator(
-                segment.trace(), ToleranceConfig.DEFAULT, 0, loop::getMainPlayableSprite);
+                segment.trace(), ToleranceConfig.DEFAULT, 0,
+                loop::getMainPlayableSprite, loop::toggleUserPause);
         this.cameraFocusController = new TraceCameraFocusController(
                 comparator,
                 loop::getMainPlayableSprite,
