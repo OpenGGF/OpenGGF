@@ -63,6 +63,16 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
+    void retainedResultsPublishesRestorePlayerControlWaitAnimation() {
+        assertTrue(S3kResultsScreenObjectInstance
+                .shouldPublishWaitAnimationOnControlRestore(0, true));
+        assertTrue(S3kResultsScreenObjectInstance
+                .shouldPublishWaitAnimationOnControlRestore(1, false));
+        assertFalse(S3kResultsScreenObjectInstance
+                .shouldPublishWaitAnimationOnControlRestore(0, false));
+    }
+
+    @Test
     void cnzActOneExitStartsActTwoTitleCardAndMusic() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
         S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(

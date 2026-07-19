@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- CNZ post-object results handoff: animation f13960 -> f15195
+
+CNZ's end sign is allocated by the background screen event after the native
+object loop. The engine retains that sign across the folded Act 1 transition,
+but the missing creation-loop tail left its routine-6 ending-pose writes one
+dispatch late. The post-object allocation path now preserves that real owner
+boundary: Player 1's ending pose is published at the landed/results boundary,
+Player 2 follows on the next sign dispatch, and results allocation keeps its
+existing timing so the seamless reload does not move.
+
+The carried results owner also now publishes `Restore_PlayerControl`'s Wait
+animation before the next playable animation pass. Its retained child-retire
+count releases control one dispatch earlier while a separate handoff entry
+keeps the later title-card mutation, timer, and ring reset on their original
+frame (`docs/skdisasm/sonic3k.asm:176198-176272,180359-180419,
+181919-181988`).
+
+CNZ complete-run animation advances from f13960 `player_animation_id` to
+f15195 `tails_mapping_frame`; physics remains at f24892 `y_speed`. The
+sequential 4 GB full sweeps remain 45/58 green for physics and 44/58 green for
+animation, with the same 13 physics expected-red routes and the same eight
+unsupported plus six comparison-red animation routes. No non-CNZ frontier
+moved, and legacy standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-19 -- S3K mid-loop playable animation phase: animation f13149 -> f13960
 
 At f13149 CPU Tails's second Wait-script `$AF` mapping was one frame late.

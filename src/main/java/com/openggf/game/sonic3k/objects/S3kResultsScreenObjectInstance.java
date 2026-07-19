@@ -744,15 +744,22 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     sprite.setControlLocked(false);
                     ObjectControlState.none().applyTo(sprite);
                     sprite.setForcedAnimationId(-1);
-                    if (waitDurationAdjustment > 0) {
-                        // This retained results owner runs after player animation.
-                        // Publish Restore_PlayerControl's animation word while
-                        // retaining the current mapping for this object entry.
+                    if (shouldPublishWaitAnimationOnControlRestore(
+                            waitDurationAdjustment, carriedAcrossSeamlessTransition)) {
+                        // Restore_PlayerControl writes anim/prev_anim to Wait.
+                        // A retained results owner runs after player animation,
+                        // so publish the new animation id while retaining the
+                        // current mapping for this object entry.
                         sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
                     }
                 }
             }
         }
+    }
+
+    static boolean shouldPublishWaitAnimationOnControlRestore(
+            int waitDurationAdjustment, boolean carriedAcrossSeamlessTransition) {
+        return waitDurationAdjustment > 0 || carriedAcrossSeamlessTransition;
     }
 
     static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {
