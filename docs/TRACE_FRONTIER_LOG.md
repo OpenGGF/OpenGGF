@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S2 retrofit landed (recorder run mode + synthetic fixture)
+
+Branch `feature/ai-mstr-s2retrofit` retrofitted the multi-stage trace-run
+foundation onto `s2_trace_recorder.lua` (now v9.12-s2): an env-gated run mode
+(`OGGF_TRACE_RUN_ID`) adds a stage-detour state machine for the S2 giant-ring
+special-stage round trip (level -> `ss` -> level), numbered per-segment
+output subdirs (`seg1_ehz1/`, `ss/`, `seg2_ehz1/`), and a `run_manifest.json`
+emitter matching `TraceRunManifest`'s schema; level segments keep the pinned
+default `trace_profile: "gameplay_unlock"`. Plain-mode output is unchanged
+(byte-identical to v9.11-s2 except the version string). `TestS2SyntheticRunFixture`
+validates the synthetic 3-segment fixture (`run_ehz_ss_3seg`) against
+`TraceRunManifest`/`SpecialStageTraceData`/`TraceData`; `TestTraceRunManifest`
+and `TestTraceRunSyntheticFixture` continue to cover the shared manifest
+plumbing. The recording procedure ("Recording S2 Halfpipe Round-Trip Traces
+(s2-ehz-halfpipe-roundtrip)", `tools/bizhawk/README.md`) is now documented;
+the actual `s2-ehz-halfpipe-roundtrip.bk2` capture and its
+`src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/` commit are
+still pending — no replay test consumes it yet.
+
+Deferred follow-ups (explicit, not silently dropped):
+- (a) The run-mode `ss/` segment has a reduced aux surface (no
+  `run_objects_end` stream) versus the interior `s2_ss_trace_recorder.lua` --
+  RunObjects-hook aux for run `ss/` segments is deferred; revisit after the
+  first real capture, per the recording procedure's VERIFY-ON-FIRST-CAPTURE
+  obligation.
+- (b) A chain test for the S2 round-trip (`TestS3kBonusRoundTripChain`-style
+  continuous-engine chaining) is not implemented -- shared deferral with the
+  S3K/S1 round-trip chain follow-ups already on record.
+- (c) In-chain/visual SS-interior comparison remains unwired for S2 (existing
+  shared item, same gap noted for the S1 maze and S3K blue-spheres
+  pipelines).
+
+Full-suite gate: docs-only follow-up to the already-landed recorder/fixture
+commits on this branch; no trace frontiers moved.
+
 ### 2026-07-19 -- S1 maze trace pipeline landed
 
 Branch `feature/ai-mstr-s1maze` gave the S1 maze special stage a real trace
