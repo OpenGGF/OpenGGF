@@ -43,7 +43,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     private static final int BUTTON_HALF_WIDTH = 0x1B;
     private static final int BUTTON_AIR_HALF_HEIGHT = 4;
     private static final int BUTTON_GROUND_HALF_HEIGHT = 6;
-    private static final int BUTTON_RECESS = 8;
     private static final int POST_OPEN_DELAY = 0x40;
 
     private int centreX;
@@ -52,7 +51,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     private boolean opened;
     private boolean resultsStarted;
     private int postOpenTimer;
-    private int buttonRecess;
     protected S3kBossExplosionController explosionController;
 
     protected AbstractS3kUprightEggCapsuleInstance(ObjectSpawn spawn, String name) {
@@ -87,9 +85,10 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        boolean buttonWasTriggered = buttonTriggered;
         checkpointAll();
         if (!opened) {
-            if (buttonTriggered) {
+            if (buttonWasTriggered) {
                 openCapsule();
             }
             return;
@@ -100,10 +99,9 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
             updateAfterResultsStarted(frameCounter, player);
             return;
         }
-        if (postOpenTimer > 0) {
-            postOpenTimer--;
-        }
-        if (postOpenTimer == 0 && player instanceof AbstractPlayableSprite sprite && !sprite.getAir()) {
+        postOpenTimer--;
+        if (postOpenTimer < 0
+                && player instanceof AbstractPlayableSprite sprite && !sprite.getAir()) {
             startResults(sprite);
         }
     }
@@ -131,7 +129,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     @Override
     public int getPieceY(int pieceIndex) {
         return pieceIndex == PIECE_BUTTON
-                ? centreY + BUTTON_Y_OFFSET + buttonRecess
+                ? centreY + BUTTON_Y_OFFSET
                 : centreY;
     }
 
@@ -166,6 +164,11 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         return -8;
     }
 
+    /** ROM {@code sub_865DE}: every upright route except MGZ sets signed {@code Ctrl_2_locked}. */
+    protected boolean locksNativeP2CpuOnOpen() {
+        return true;
+    }
+
     protected void updateAfterResultsStarted(int frameCounter, PlayableEntity player) {
     }
 
@@ -180,7 +183,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
 
     private void triggerButton() {
         buttonTriggered = true;
-        buttonRecess = BUTTON_RECESS;
     }
 
     private void openCapsule() {
@@ -189,6 +191,14 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         }
         opened = true;
         postOpenTimer = POST_OPEN_DELAY;
+        if (locksNativeP2CpuOnOpen()
+                && services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                && sidekick.getCpuController() != null) {
+            // The capsule slot runs after Player_2, so this suppresses CPU input
+            // generation beginning with the following player pass while the
+            // already-latched Ctrl_2_logical word continues to drive physics.
+            sidekick.getCpuController().setController2SignedLocked(true);
+        }
         services().playSfx(Sonic3kSfx.EXPLODE.id);
         explosionController = new S3kBossExplosionController(centreX, centreY, 3, services().rng());
         spawnAnimals();
@@ -225,7 +235,13 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         }
         for (PlayableEntity candidate : resultParticipants(player)) {
             if (candidate instanceof AbstractPlayableSprite sprite) {
-                lockForResults(sprite);
+                if (sprite == player || sprite.getCpuController() == null) {
+                    lockForResults(sprite);
+                } else {
+                    // sub_868F8 ends Player_1 immediately; the following
+                    // Check_TailsEndPose dispatch ends Player_2 one SST pass later.
+                    sprite.getCpuController().queueNativeEndingPoseForNextPlayerSlot();
+                }
             }
         }
         PlayerCharacter character = resolvePlayerCharacter();
@@ -270,6 +286,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         }
         renderer.drawFrameIndex(opened ? 1 : 0, centreX, centreY, false, false);
         renderer.drawFrameIndex(buttonTriggered ? 0x0C : 5,
-                centreX, centreY + BUTTON_Y_OFFSET + buttonRecess, false, false);
+                centreX, centreY + BUTTON_Y_OFFSET, false, false);
     }
 }

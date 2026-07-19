@@ -683,6 +683,9 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     private void releaseSprite(AbstractPlayableSprite sprite) {
+        if (sprite.getCpuController() != null) {
+            sprite.getCpuController().setController2SignedLocked(false);
+        }
         sprite.setControlLocked(false);
         ObjectControlState.none().applyTo(sprite);
         sprite.setHidden(false);

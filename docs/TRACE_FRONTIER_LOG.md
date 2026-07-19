@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- S3K upright capsule dispatch order: physics f38728 -> f39449
+
+The shared upright capsule treated its button mapping change as an eight-pixel
+solid displacement, and its manual checkpoint let the button signal and parent
+opening run in one engine update. ROM `loc_8672A` leaves `child_dy=-$24`
+unchanged and signals an already-executed parent, so opening waits for the next
+parent SST pass. The post-open `$40` word also waits for signed underflow rather
+than firing at zero (`docs/skdisasm/sonic3k.asm:181501-181555,181713-181738,
+181900-181918`).
+
+Opening now asserts the existing signed `Ctrl_2_locked` model, preserving the
+latched left input while suppressing CPU input generation; the MGZ capsule
+subtype retains the ROM's Current-zone-2 exemption. `sub_868F8` ends Player 1
+and starts results first, while the following `Check_TailsEndPose` dispatch
+ends Player 2 one SST pass later (`docs/skdisasm/sonic3k.asm:181548-181555,
+181924-181945`). Focused CNZ/ICZ/MGZ/MHZ capsule suites pass. CNZ complete-run
+physics advances from f38728 `y` to f39449 `camera_x`; animation remains at
+f30486 `tails_mapping_frame`. Sequential one-fork 4 GB full sweeps retain the
+established 45/58 physics and 44/58 animation green counts, with all non-CNZ
+frontiers unchanged.
+
 ### 2026-07-19 -- CNZ defeat wait dispatch phase: physics f38610 -> f38728
 
 The final boss hit installs `BossDefeated`'s `$3F` wait during touch response,
