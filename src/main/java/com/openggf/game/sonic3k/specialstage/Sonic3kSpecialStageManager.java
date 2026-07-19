@@ -1059,6 +1059,31 @@ public class Sonic3kSpecialStageManager {
         return finished;
     }
 
+    /**
+     * Captures a read-only per-frame comparison snapshot of this manager and its player
+     * for trace replay comparison (multi-stage trace run spec addition #3). Pure read,
+     * no mutators, no caching. See {@link Sonic3kSpecialStageComparisonState}.
+     */
+    public Sonic3kSpecialStageComparisonState captureComparisonState() {
+        return new Sonic3kSpecialStageComparisonState(
+                player.getXPos(),
+                player.getYPos(),
+                player.getAngle(),
+                player.getVelocity(),
+                player.getTurning(),
+                player.getJumping(),
+                player.getFadeTimer(),
+                player.isStarted(),
+                spheresLeft,
+                ringsCollected,
+                ringsLeft,
+                frameCounter,
+                clearRoutine,
+                clearTimer,
+                finished,
+                emeraldCollected);
+    }
+
     public void reset() {
         if (renderer != null) {
             renderer.resetStageGeometryCache();

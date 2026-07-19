@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+### 2026-07-19 -- Blue-spheres trace pipeline landed
+
+Branch `feature/ai-mstr-bluespheres` gave the S3K special stage a real trace
+pipeline: `Sonic3kSpecialStageComparisonState` (16-field read-only snapshot),
+the `s3k_special_stage` parser (`S3kSpecialStageTraceData`/`Frame`, 20-column
+schema), recorder v6.31 (the `$34` detour now emits a real `ss/` segment with
+rows from the hand-derived phase-overlay RAM map — twice independently
+re-verified — plus giant_ring/stage_exit transitions), a VBlank-paced replay
+harness whose finish boundary anchors on the trace's exit-spin completion
+(fade_timer 0→nonzero→0; clear_routine terminal is NOT the anchor — engine
+`finished` flips ≥96 frames later; covers success and RED_SPHERE failure
+exits), and live `fresh_load` launch-config wiring. KEY RESULT: the S3K SS
+provider boots headlessly through the real ROM art/PLC path with no engine
+gap (`TestS3kSpecialStageHeadlessBoot`, green today). The replay test skips
+pending `s3k-aiz-bluespheres.bk2` (procedure in the BizHawk README); the RAM
+map carries a VERIFY-ON-FIRST-CAPTURE obligation via the recorder's
+self-check prints. Full-suite gate: failing set identical to the develop
+baseline. No trace frontiers moved.
+
 ### 2026-07-19 -- Visual run chaining landed (plan d)
 
 Branch `feature/ai-mstr-plan-d` completed the multi-stage trace-run foundation:

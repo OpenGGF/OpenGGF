@@ -48,7 +48,8 @@ public record TraceMetadata(
     @JsonProperty("special_stage_index") Integer specialStageIndex,
     @JsonProperty("run_id") String runId,
     @JsonProperty("segment_index") Integer segmentIndex,
-    @JsonProperty("bonus_stage_type") String bonusStageType
+    @JsonProperty("bonus_stage_type") String bonusStageType,
+    @JsonProperty("fresh_load") Boolean freshLoad
 ) {
 
     /**
@@ -456,6 +457,16 @@ public record TraceMetadata(
     public boolean hasSidekickSeedFramePrelude() {
         return auxSchemaExtras != null
                 && auxSchemaExtras.contains("sidekick_seed_frame_prelude");
+    }
+
+    /**
+     * Whether this trace requires a fresh level load when entering a special
+     * stage (e.g., blue-spheres giant-ring entry without a preceding level).
+     * Returns false if the field is absent (legacy traces) or null.
+     * Used by the S3K special-stage replay harness to set the intro-skip gate.
+     */
+    public boolean isFreshLoad() {
+        return freshLoad != null && freshLoad;
     }
 
     /**

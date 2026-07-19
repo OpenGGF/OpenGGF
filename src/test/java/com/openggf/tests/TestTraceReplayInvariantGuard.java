@@ -231,7 +231,12 @@ class TestTraceReplayInvariantGuard {
                     && !text.contains("extends AbstractCreditsDemoTraceReplayTest")
                     && !text.contains("extends AbstractS2LevelSelectTraceReplayTest")
                     && !text.contains("extends AbstractS2SpecialStageTraceReplayTest")
-                    && !text.contains("extends AbstractS3kBonusStageTraceReplayTest")) {
+                    && !text.contains("extends AbstractS3kBonusStageTraceReplayTest")
+                    // AbstractS3kSpecialStageTraceReplayTest is the S3K analogue of
+                    // AbstractS2SpecialStageTraceReplayTest above: the SS provider is a
+                    // standalone MiniGameProvider (no level pipeline), so it intentionally
+                    // does not extend AbstractTraceReplayTest.
+                    && !text.contains("extends AbstractS3kSpecialStageTraceReplayTest")) {
                 violations.add(normalized);
             }
         }
