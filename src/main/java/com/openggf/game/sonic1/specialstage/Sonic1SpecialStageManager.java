@@ -670,6 +670,38 @@ public final class Sonic1SpecialStageManager {
         return checkCollisionAt(sonicPosX, sonicPosY);
     }
 
+    /**
+     * SonicSS_FindWall (09 Sonic in Special Stage.asm:520-583): checks the
+     * four block-buffer cells around a probe position and reports whether
+     * any of them is solid.
+     *
+     * <p><b>All four cells are visited unconditionally -- no early return.</b>
+     * The ROM's {@code SonicSS_FindWall_CheckType} (sub_1BD30, lines
+     * 561-583) is called once per cell -- top-left, top-right, bottom-left,
+     * bottom-right, in that order (lines 547-555) -- and every solid hit
+     * unconditionally overwrites {@code sonss_touchedblock_id}/
+     * {@code sonss_touchedblock_ram} (lines 579-580); the "collision found"
+     * flag {@code d5} is only tested once, after all four cells have been
+     * visited (line 557). So when two of the four cells are solid, the LAST
+     * one visited in scan order -- not the first -- is the one whose id
+     * survives into {@code sonss_touchedblock_id} and therefore drives
+     * {@code Obj09_ChkItems2}'s block-specific reaction (bumper bounce, GOAL,
+     * UP/DOWN, glass, ...).
+     *
+     * <p>A prior version of this method returned as soon as it found the
+     * FIRST solid cell in scan order, which is observably different: at the
+     * S1 maze round-trip capture's trace frame 319, Sonic's fall probe hits a
+     * plain wall block ($19) at the top-right cell while a bumper block
+     * ($25) sits solid at the bottom-right cell one row below. The ROM's
+     * unconditional-last-wins scan lands on the bumper, so
+     * {@code Obj09_ChkItems2} (see the "Bumper ($25)" branch in
+     * {@link #processItemInteraction()}) fires {@link #processBumper()} that
+     * same tick, producing the recorded bounce (large outward vel_x/vel_y,
+     * in-air flag set). The early-return version never saw the bumper cell,
+     * so it stayed grounded against the wall with the fall's clamped-to-zero
+     * velocity -- a divergence that then cascaded through position/velocity/
+     * airborne for the rest of the recorded segment.
+     */
     private boolean checkCollisionAt(long posXFixed, long posYFixed) {
         int posX = (int) (posXFixed >> 16);
         int posY = (int) (posYFixed >> 16);
@@ -677,7 +709,12 @@ public final class Sonic1SpecialStageManager {
         int gridCol = (posX + 0x14) / SS_BLOCK_SIZE_PX;
         int gridRow = (posY + 0x44) / SS_BLOCK_SIZE_PX;
 
-        // Check 2x2 cells
+        boolean solidFound = false;
+
+        // Check all 2x2 cells -- top-left, top-right, bottom-left,
+        // bottom-right -- with NO early return (see javadoc above): a later
+        // solid cell must overwrite the earlier one's touched-block id/row/
+        // col, matching the ROM's unconditional four-cell scan.
         for (int dr = 0; dr < 2; dr++) {
             for (int dc = 0; dc < 2; dc++) {
                 int r = gridRow + dr;
@@ -690,11 +727,11 @@ public final class Sonic1SpecialStageManager {
                     lastCollisionBlockId = blockId;
                     lastCollisionRow = r;
                     lastCollisionCol = c;
-                    return true;
+                    solidFound = true;
                 }
             }
         }
-        return false;
+        return solidFound;
     }
 
     // ---- Item Checks (from Obj09_ChkItems / Obj09_ChkItems2) ----
