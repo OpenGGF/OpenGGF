@@ -310,20 +310,23 @@ public final class S3kSlotPlayerRuntime {
             }
         } else if (left) {
             if (gSpeed > 0) {
+                // ROM sub_4BB54 loc_4BB76 (sonic3k.asm:98871-98878): subi.w #$40,d0 is
+                // stored unconditionally -- the trailing "bcc.s loc_4BB7E / nop" is dead
+                // code (both paths fall into the same move.w d0,ground_vel(a0)). Unlike
+                // the neutral-decel path (loc_4BAF0, which DOES clamp at 0 via a real
+                // branch-around-move), reversal decel is allowed to overshoot straight
+                // through zero into the opposite sign in a single frame.
                 gSpeed -= GROUND_REVERSAL_DECEL;
-                if (gSpeed < 0) {
-                    gSpeed = 0;
-                }
             } else {
                 gSpeed = Math.max(-GROUND_MAX_SPEED, gSpeed - GROUND_ACCEL);
             }
             player.setDirection(com.openggf.physics.Direction.LEFT);
         } else {
             if (gSpeed < 0) {
+                // ROM sub_4BB84 loc_4BBA4 (sonic3k.asm:98899-98905): addi.w #$40,d0
+                // is likewise stored unconditionally with no zero clamp -- mirror image
+                // of the left-reversal case above.
                 gSpeed += GROUND_REVERSAL_DECEL;
-                if (gSpeed > 0) {
-                    gSpeed = 0;
-                }
             } else {
                 gSpeed = Math.min(GROUND_MAX_SPEED, gSpeed + GROUND_ACCEL);
             }
