@@ -78,7 +78,12 @@ public class TestPachinkoMagnetOrbObjectInstance {
 
         verify(main).setControlLocked(false);
         verify(main).setRolling(true);
-        verify(main, atLeastOnce()).getRollHeightAdjustment();
+        // ROM loc_4A4F6 (sonic3k.asm:97029-97042) sets y_radius/x_radius and the
+        // Status_Roll bit with NO y_pos write, so the release must preserve the player's
+        // centre rather than apply Sonic_Roll's feet-planted getRollHeightAdjustment shift.
+        // mockPlayerAt stubs getCentreY() as y+20 (0x100 + 20 = 0x114).
+        verify(main).setCentreYPreserveSubpixel((short) 0x114);
+        verify(main, never()).getRollHeightAdjustment();
         verify(main, atLeastOnce()).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(main, atLeastOnce()).setJumping(false);
         verify(main).setFlipAngle(0);

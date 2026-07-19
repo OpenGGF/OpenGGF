@@ -236,8 +236,17 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         player.setAir(true);
         player.setOnObject(false);
         if (!player.getRolling()) {
+            // ROM loc_4A4F6 (sonic3k.asm:97029-97042) asserts y_radius=$E, x_radius=7
+            // and the Status_Roll bit as direct writes with NO y_pos modification --
+            // unlike Sonic_Roll's feet-planted `addq.w #5,y_pos`, the magnet-orb
+            // release keeps the player's centre (y_pos) fixed while the collision box
+            // shrinks to ball size. The engine tracks position as top-left, so
+            // setRolling() shrinking the box height moves getCentreY() unless the
+            // centre is restored; without this the reported y_pos landed 5px too low
+            // at the release frame (Pachinko trace frame 94: y 0x0EBF vs ROM 0x0EBA).
+            short centreYBeforeRoll = player.getCentreY();
             player.setRolling(true);
-            player.setY((short) (player.getY() + player.getRollHeightAdjustment()));
+            player.setCentreYPreserveSubpixel(centreYBeforeRoll);
         }
         player.setRollingJump(false);
         player.setJumping(false);
