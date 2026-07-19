@@ -220,11 +220,14 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
                                   S3kSpecialStageTraceFrame tf,
                                   Sonic3kSpecialStageComparisonState state,
                                   int steppedNonLagCount) {
-        // Tier-1
+        // Tier-1. player_x/player_y are raw unsigned u16 on both sides (the
+        // grid is toroidal and the ROM word wraps through 0x8000 constantly,
+        // Sonic3kSpecialStagePlayer.xPos/yPos are masked & 0xFFFF) -- do NOT
+        // route these through signedWord(), unlike velocity below.
         fields.put("player_x", cmp("player_x",
-                str(signedWord(tf.xPos())), str(state.playerX()), Severity.ERROR));
+                str(tf.xPos()), str(state.playerX()), Severity.ERROR));
         fields.put("player_y", cmp("player_y",
-                str(signedWord(tf.yPos())), str(state.playerY()), Severity.ERROR));
+                str(tf.yPos()), str(state.playerY()), Severity.ERROR));
         fields.put("angle", cmp("angle", str(tf.angle()), str(state.angle()), Severity.ERROR));
         fields.put("velocity", cmp("velocity",
                 str(signedWord(tf.velocity())), str(state.velocity()), Severity.ERROR));
@@ -286,7 +289,9 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
 
     /**
      * Maps a raw 68000 word to the signed value used by the ROM's SS-space
-     * coordinate/velocity arithmetic.
+     * velocity arithmetic. NOT used for player_x/player_y: those are
+     * unsigned u16 on both the trace and engine sides (the SS grid is
+     * toroidal, so the word wraps through 0x8000 constantly).
      */
     private static int signedWord(int rawWord) {
         return (short) rawWord;
