@@ -48,14 +48,25 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       engine-side.</li>
  *   <li><b>Comparison-only.</b> Trace values are read for input + expectation
  *       only; engine state is never hydrated from the trace.</li>
- *   <li><b>Finish boundary.</b> The trace's {@code clear_routine} column
- *       reaches its ROM terminal state ({@link #CLEAR_ROUTINE_TERMINAL}) the
+ *   <li><b>Finish boundary.</b> The engine's {@code finished} flag flips only
+ *       when the exit-spin animation completes ({@code fade_timer} rises
+ *       from 0 to nonzero, then returns to 0 --
+ *       {@code Sonic3kSpecialStageManager.java:604-625}), on BOTH the
+ *       success (emerald collected) and failure (landed on a red sphere,
+ *       {@code Sonic3kSpecialStageManager.java:699-706}) exit paths. The
+ *       trace's {@code clear_routine} column reaching its ROM terminal state
+ *       ({@link #CLEAR_ROUTINE_TERMINAL}) is NOT that boundary: on the
+ *       success path {@code clear_routine} jumps to its terminal value the
  *       instant the player reaches the emerald cell
  *       ({@code Sonic3kSpecialStageManager.collectEmerald()},
- *       ROM {@code sub_9B62}/sonic3k.asm:12530-12664). A Tier-1
- *       {@code finished_transition_frame} check asserts the engine's
+ *       ROM {@code sub_9B62}/sonic3k.asm:12530-12664), roughly 96+ frames
+ *       before {@code finished} actually flips, and the failure path never
+ *       touches {@code clear_routine} at all. A Tier-1
+ *       {@code finished_transition_frame} check therefore anchors on
+ *       {@link #exitSpinCompletionFrame} (the trace's own {@code fade_timer}
+ *       0&rarr;nonzero&rarr;0 cycle) and asserts the engine's
  *       {@code captureComparisonState().finished()} first becomes true at
- *       that same frame.</li>
+ *       that frame.</li>
  * </ul>
  *
  * <h2>Release-ratcheted comparator surface</h2>
@@ -88,9 +99,12 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
      * 0=normal play, 1=fly-away timer, 2=emerald-art-load wait,
      * 3=emerald approach, 4=complete. Set the instant the player reaches the
      * emerald cell in {@code collectEmerald()}
-     * (Sonic3kSpecialStageManager.java:777) -- note this precedes the exit
-     * spin, so the engine's {@code finished} flag may flip on a LATER frame
-     * than this one; see the class doc's finish-boundary note.
+     * (Sonic3kSpecialStageManager.java:777). Documented for reference only
+     * (compared per-frame like every other {@code clear_routine} column
+     * value) -- it is NOT the finish-boundary anchor: it precedes the
+     * engine's {@code finished} flip by 96+ frames on the success path, and
+     * the failure (red-sphere) exit path never sets {@code clear_routine} at
+     * all. See {@link #exitSpinCompletionFrame} for the actual boundary.
      */
     private static final int CLEAR_ROUTINE_TERMINAL = 4;
 
@@ -165,7 +179,7 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
 
     static DivergenceReport compareReplay(S3kSpecialStageTraceData trace,
                                           S3kSpecialStageReplayHarness harness) {
-        OptionalInt finishFrame = clearRoutineTerminalFrame(trace);
+        OptionalInt finishFrame = exitSpinCompletionFrame(trace);
         int compareEnd = trace.frameCount();
 
         List<FrameComparison> comparisons = new ArrayList<>();
@@ -244,14 +258,28 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
     }
 
     /**
-     * First trace frame whose {@code clear_routine} column reaches the ROM
-     * terminal clear-routine state.
+     * The trace frame where the exit-spin animation completes: the first
+     * return of {@code fade_timer} to 0 after its first 0&rarr;nonzero rise.
+     * Covers both exit paths -- {@code fade_timer} is set to 1 by
+     * {@code collectEmerald()} on success (Sonic3kSpecialStageManager.java:778)
+     * and by the {@code RED_SPHERE} case on failure
+     * (Sonic3kSpecialStageManager.java:701) -- and matches the engine's own
+     * finish condition ({@code exitSpinStarted && fadeTimer == 0},
+     * Sonic3kSpecialStageManager.java:619-625).
      */
-    private static OptionalInt clearRoutineTerminalFrame(S3kSpecialStageTraceData trace) {
+    private static OptionalInt exitSpinCompletionFrame(S3kSpecialStageTraceData trace) {
+        int spinStartFrame = -1;
+        int previousFadeTimer = 0;
         for (int f = 0; f < trace.frameCount(); f++) {
-            if (trace.getFrame(f).clearRoutine() == CLEAR_ROUTINE_TERMINAL) {
+            int fadeTimer = trace.getFrame(f).fadeTimer();
+            if (spinStartFrame < 0) {
+                if (previousFadeTimer == 0 && fadeTimer != 0) {
+                    spinStartFrame = f;
+                }
+            } else if (fadeTimer == 0) {
                 return OptionalInt.of(f);
             }
+            previousFadeTimer = fadeTimer;
         }
         return OptionalInt.empty();
     }
