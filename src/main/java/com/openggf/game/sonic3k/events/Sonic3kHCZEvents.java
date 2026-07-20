@@ -267,7 +267,6 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     /** Remaining loc_6A2A0 controller dispatches that create loc_6A710 children. */
     private int transitionBubbleSpawnFrames;
-    @RewindTransient(reason = "read-only runtime dependency; GameRng state is captured by GameplayModeContext")
     private final IntSupplier randomWordSource;
 
     public Sonic3kHCZEvents(IntSupplier randomWordSource) {
