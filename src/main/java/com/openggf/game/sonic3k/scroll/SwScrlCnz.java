@@ -9,7 +9,6 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 
 import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
-import static com.openggf.level.scroll.M68KMath.asrWord;
 import static com.openggf.level.scroll.M68KMath.negWord;
 
 /**
@@ -136,7 +135,9 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
      * {@code Events_bg+$10} when deriving the animated tile phase.
      */
     private int cnzPhaseSource(int cameraX) {
-        return asrWord(cameraX, 2) + asrWord(cameraX, 4);
+        // CNZ1_Deform extracts this after subtracting three 1/16 steps from
+        // its 16.16 half-speed accumulator, so the 5/16 result rounds once.
+        return (short) (((long) (short) cameraX * 5) >> 4);
     }
 
     /**
@@ -146,7 +147,8 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
      * logic treats as {@code Camera_X_pos_BG_copy}.
      */
     private int cnzPublishedBgCameraX(int cameraX) {
-        return asrWord(cameraX, 1) - asrWord(cameraX, 4);
+        // As above, preserve the ROM's single 16.16 rounding operation.
+        return (short) (((long) (short) cameraX * 7) >> 4);
     }
 
     /**
