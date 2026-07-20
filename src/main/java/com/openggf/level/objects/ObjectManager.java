@@ -1737,8 +1737,15 @@ public class ObjectManager {
         boolean removed = dynamicObjects.remove(object);
         if (removed) {
             auxiliaryDynamicObjects.remove(object);
+            notifyObjectManagerRemoval(object);
         }
         return removed;
+    }
+
+    private static void notifyObjectManagerRemoval(ObjectInstance object) {
+        if (object instanceof AbstractObjectInstance instance) {
+            instance.onRemovedFromObjectManager();
+        }
     }
 
     /**
@@ -2868,6 +2875,7 @@ public class ObjectManager {
                 }
                 inst.onUnload();
                 solidContacts.evictLatchForDestroyedInstance(inst);
+                notifyObjectManagerRemoval(inst);
                 iter.remove();
                 changed = true;
             }
@@ -3459,6 +3467,7 @@ public class ObjectManager {
         ObjectInstance removed = activeObjects.remove(spawn);
         if (removed != null) {
             instanceToSpawn.remove(removed);
+            notifyObjectManagerRemoval(removed);
             // Prune the live-map so rewindObjectIds stays lean during normal play.
             // (Not strictly required — stale entries are harmless since rewindCaptureContext
             //  only iterates activeObjects/dynamicObjects, but trimming prevents unbounded growth.)
