@@ -39,15 +39,29 @@ function Invoke-Case {
     param(
         [Parameter(Mandatory)] [string] $Name,
         [Parameter(Mandatory)] [scriptblock] $Action,
-        [Parameter(Mandatory)] [bool] $ExpectSuccess
+        [Parameter(Mandatory)] [bool] $ExpectSuccess,
+        [string] $ExpectedOutput
     )
 
-    $actionResult = & $Action 2>$null
-    $succeeded = if ($null -eq $actionResult) { $LASTEXITCODE -eq 0 } else { [bool] $actionResult }
+    $actionResult = & $Action
+    $succeeded = $actionResult.ExitCode -eq 0
     if ($succeeded -ne $ExpectSuccess) {
-        throw "Case '$Name' expected success=$ExpectSuccess but exit code was $LASTEXITCODE."
+        throw "Case '$Name' expected success=$ExpectSuccess but exit code was $($actionResult.ExitCode): $($actionResult.Output)"
+    }
+    if ($ExpectedOutput -and $actionResult.Output -notmatch $ExpectedOutput) {
+        throw "Case '$Name' did not print the expected output '$ExpectedOutput'."
     }
     Write-Output "PASS $Name"
+}
+
+function Invoke-Comparator {
+    param([Parameter(Mandatory)] [string[]] $Arguments)
+
+    $output = @(& $powerShell -NoProfile -File $comparator @Arguments 2>&1)
+    return [pscustomobject]@{
+        ExitCode = $LASTEXITCODE
+        Output = [string]::Join("`n", @($output | ForEach-Object ToString))
+    }
 }
 
 try {
@@ -61,35 +75,32 @@ try {
     $report = Join-Path $reports 'TEST-example.xml'
 
     Write-SurefireReport -Path $report -TestCases @([pscustomobject]@{ ClassName = 'example.RedTest'; Name = 'fails'; Kind = 'failure' })
-    Invoke-Case -Name 'exact-match' -ExpectSuccess $true -Action { & $powerShell -NoProfile -File $comparator -ReportsPath $reports -ExpectedPath $expected }
+    Invoke-Case -Name 'exact-match' -ExpectSuccess $true -ExpectedOutput 'failures=1 errors=0 skipped_disabled=0' -Action { Invoke-Comparator @('-ReportsPath', $reports, '-ExpectedPath', $expected) }
 
     Write-SurefireReport -Path $report -TestCases @(
         [pscustomobject]@{ ClassName = 'example.RedTest'; Name = 'fails'; Kind = 'failure' },
         [pscustomobject]@{ ClassName = 'example.RedTest'; Name = 'fails'; Kind = 'error' }
     )
-    Invoke-Case -Name 'duplicate-rejected' -ExpectSuccess $false -Action { & $powerShell -NoProfile -File $comparator -ReportsPath $reports }
+    Invoke-Case -Name 'duplicate-rejected' -ExpectSuccess $false -Action { Invoke-Comparator @('-ReportsPath', $reports) }
 
     Write-SurefireReport -Path $report -TestCases @()
-    Invoke-Case -Name 'missing-rejected' -ExpectSuccess $false -Action { & $powerShell -NoProfile -File $comparator -ReportsPath $reports -ExpectedPath $expected }
+    Invoke-Case -Name 'missing-rejected' -ExpectSuccess $false -ExpectedOutput 'missing expected' -Action { Invoke-Comparator @('-ReportsPath', $reports, '-ExpectedPath', $expected) }
 
     Write-SurefireReport -Path $report -TestCases @(
         [pscustomobject]@{ ClassName = 'example.RedTest'; Name = 'fails'; Kind = 'failure' },
         [pscustomobject]@{ ClassName = 'example.RedTest'; Name = 'extra'; Kind = 'error' }
     )
-    Invoke-Case -Name 'extra-rejected' -ExpectSuccess $false -Action { & $powerShell -NoProfile -File $comparator -ReportsPath $reports -ExpectedPath $expected }
+    Invoke-Case -Name 'extra-rejected' -ExpectSuccess $false -Action { Invoke-Comparator @('-ReportsPath', $reports, '-ExpectedPath', $expected) }
 
     Write-SurefireReport -Path $report -Malformed
-    Invoke-Case -Name 'malformed-rejected' -ExpectSuccess $false -Action { & $powerShell -NoProfile -File $comparator -ReportsPath $reports }
+    Invoke-Case -Name 'malformed-rejected' -ExpectSuccess $false -Action { Invoke-Comparator @('-ReportsPath', $reports) }
 
     Write-SurefireReport -Path $report -TestCases @([pscustomobject]@{ ClassName = 'example.SkippedTest'; Name = 'disabled'; Kind = 'skipped' })
-    Invoke-Case -Name 'skipped-rejected' -ExpectSuccess $false -Action { & $powerShell -NoProfile -File $comparator -ReportsPath $reports }
+    Invoke-Case -Name 'skipped-rejected' -ExpectSuccess $false -ExpectedOutput 'failures=0 errors=0 skipped_disabled=1' -Action { Invoke-Comparator @('-ReportsPath', $reports) }
 
     Set-Content -LiteralPath $expected -Value 'example.CaseTest#lower'
     Write-SurefireReport -Path $report -TestCases @([pscustomobject]@{ ClassName = 'example.CaseTest'; Name = 'LOWER'; Kind = 'failure' })
-    Invoke-Case -Name 'case-distinct-rejected' -ExpectSuccess $false -Action {
-        & $powerShell -NoProfile -File $comparator -ReportsPath $reports -ExpectedPath $expected
-        return $LASTEXITCODE -eq 0
-    }
+    Invoke-Case -Name 'case-distinct-rejected' -ExpectSuccess $false -Action { Invoke-Comparator @('-ReportsPath', $reports, '-ExpectedPath', $expected) }
 
     $actualOutput = Join-Path $scratch 'actual.txt'
     Write-SurefireReport -Path $report -TestCases @(
@@ -97,11 +108,22 @@ try {
         [pscustomobject]@{ ClassName = 'example.OrderTest'; Name = 'A'; Kind = 'error' }
     )
     Invoke-Case -Name 'case-distinct-ordinal-order' -ExpectSuccess $true -Action {
-        & $powerShell -NoProfile -File $comparator -ReportsPath $reports -WriteActualPath $actualOutput
-        if ($LASTEXITCODE -ne 0) { return $false }
-        $actualText = [string]::Join("`n", @(Get-Content -LiteralPath $actualOutput))
-        return $actualText -ceq "example.OrderTest#A`nexample.OrderTest#a"
+        $result = Invoke-Comparator @('-ReportsPath', $reports, '-WriteActualPath', $actualOutput)
+        if ($result.ExitCode -ne 0) { return $result }
+        if (([string]::Join("`n", @(Get-Content -LiteralPath $actualOutput))) -cne "example.OrderTest#A`nexample.OrderTest#a") { $result.ExitCode = 1 }
+        return $result
     }
+
+    Set-Content -LiteralPath $expected -Value @('# exported inventory comment', '', 'example.CommentedTest#red')
+    Write-SurefireReport -Path $report -TestCases @([pscustomobject]@{ ClassName = 'example.CommentedTest'; Name = 'red'; Kind = 'failure' })
+    Invoke-Case -Name 'commented-allowlist' -ExpectSuccess $true -Action { Invoke-Comparator @('-ReportsPath', $reports, '-ExpectedPath', $expected) }
+
+    Set-Content -LiteralPath $expected -Value @('# empty red-set', '')
+    Write-SurefireReport -Path $report -TestCases @()
+    Invoke-Case -Name 'empty-actual-empty-expected' -ExpectSuccess $true -ExpectedOutput 'failures=0 errors=0 skipped_disabled=0' -Action { Invoke-Comparator @('-ReportsPath', $reports, '-ExpectedPath', $expected) }
+
+    Set-Content -LiteralPath $expected -Value 'example.RedTest#fails'
+    Invoke-Case -Name 'empty-actual-missing-expected' -ExpectSuccess $false -ExpectedOutput 'missing expected' -Action { Invoke-Comparator @('-ReportsPath', $reports, '-ExpectedPath', $expected) }
 }
 finally {
     if (Test-Path -LiteralPath $scratch) {

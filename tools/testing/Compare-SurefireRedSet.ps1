@@ -20,7 +20,7 @@ function Fail-Contract {
 }
 
 function Get-OrdinalDuplicates {
-    param([Parameter(Mandatory)] [string[]] $Identities)
+    param([AllowEmptyCollection()] [string[]] $Identities = @())
 
     $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
     $duplicates = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
@@ -33,7 +33,7 @@ function Get-OrdinalDuplicates {
 }
 
 function Sort-Ordinal {
-    param([Parameter(Mandatory)] [string[]] $Identities)
+    param([AllowEmptyCollection()] [string[]] $Identities = @())
 
     $sorted = [string[]] @($Identities)
     [System.Array]::Sort($sorted, [System.StringComparer]::Ordinal)
@@ -50,7 +50,7 @@ function Get-ExpectedIdentities {
     $identities = @(
         Get-Content -LiteralPath $Path | ForEach-Object {
             $identity = $_.Trim()
-            if ($identity.Length -gt 0) { $identity }
+            if ($identity.Length -gt 0 -and -not $identity.StartsWith('#', [System.StringComparison]::Ordinal)) { $identity }
         }
     )
     $duplicates = @(Get-OrdinalDuplicates -Identities $identities)
@@ -93,6 +93,10 @@ if ($reports.Count -eq 0) {
 }
 
 $actual = [System.Collections.Generic.List[string]]::new()
+$failureCount = 0
+$errorCount = 0
+$skippedDisabledCount = 0
+$skippedDisabledIdentities = [System.Collections.Generic.List[string]]::new()
 foreach ($report in $reports) {
     foreach ($testCase in (Get-SurefireTestCases -Path $report.FullName)) {
         $className = $testCase.GetAttribute('classname')
@@ -106,14 +110,22 @@ foreach ($report in $reports) {
         $disabledAttribute = $testCase.GetAttribute('disabled')
         $statusAttribute = $testCase.GetAttribute('status')
         if ($disabled.Count -gt 0 -or $disabledAttribute -eq 'true' -or $statusAttribute -in @('skipped', 'disabled')) {
-            Fail-Contract "Skipped or disabled testcase found: $className#$testName in '$($report.FullName)'."
+            $skippedDisabledCount++
+            [void] $skippedDisabledIdentities.Add("$className#$testName in '$($report.FullName)'")
+            continue
         }
 
         $outcomeNodes = @($children | Where-Object { $_.LocalName -in @('failure', 'error') })
         foreach ($outcome in $outcomeNodes) {
             [void] $actual.Add("$className#$testName")
+            if ($outcome.LocalName -eq 'failure') { $failureCount++ } else { $errorCount++ }
         }
     }
+}
+
+Write-Output "Surefire red-set summary: failures=$failureCount errors=$errorCount skipped_disabled=$skippedDisabledCount"
+if ($skippedDisabledCount -gt 0) {
+    Fail-Contract ("Skipped or disabled testcase found: " + ((Sort-Ordinal -Identities $skippedDisabledIdentities) -join ', ') + '.')
 }
 
 $actual = @(Sort-Ordinal -Identities $actual)
@@ -131,15 +143,17 @@ if ($WriteActualPath) {
 }
 
 if ($ExpectedPath) {
-    $expected = Get-ExpectedIdentities -Path $ExpectedPath
+    $expected = @(Get-ExpectedIdentities -Path $ExpectedPath)
     $matches = [System.Linq.Enumerable]::SequenceEqual(
         [string[]] $expected,
         [string[]] $actual,
         [System.StringComparer]::Ordinal
     )
     if (-not $matches) {
-        $actualSet = [System.Collections.Generic.HashSet[string]]::new([string[]] $actual, [System.StringComparer]::Ordinal)
-        $expectedSet = [System.Collections.Generic.HashSet[string]]::new([string[]] $expected, [System.StringComparer]::Ordinal)
+        $actualSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+        $expectedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+        foreach ($identity in $actual) { [void] $actualSet.Add($identity) }
+        foreach ($identity in $expected) { [void] $expectedSet.Add($identity) }
         $missing = @($expected | Where-Object { -not $actualSet.Contains($_) })
         $extra = @($actual | Where-Object { -not $expectedSet.Contains($_) })
         $details = [System.Collections.Generic.List[string]]::new()
