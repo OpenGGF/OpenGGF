@@ -73,6 +73,34 @@ public class TraceData {
         return new TraceData(metadata, frames, events);
     }
 
+    /**
+     * Loads only {@code metadata.json} (plus aux events, if present), skipping
+     * the {@code physics.csv} parse entirely. For chain-drive interiors that
+     * are advance-uncompared (a {@code special_stage} segment under the SS-
+     * interior policy — see {@link com.openggf.trace.replay.runs.TraceRunReplayWalker#isUncomparedInterior}),
+     * no per-frame comparator is ever built from this segment's frames,
+     * so its {@code physics.csv} schema need not match one of {@link TraceFrame}'s
+     * known column widths — per-game special-stage physics CSVs (S1's maze
+     * schema, S2's halfpipe schema, S3K's blue-spheres schema) are structurally
+     * distinct from the primary-level physics schema {@link TraceFrame} parses,
+     * and per-frame special-stage comparison is a later, separate workflow.
+     * {@link #frameCount()} on the returned instance is always {@code 0}; callers
+     * needing the segment's declared length must read
+     * {@link com.openggf.trace.TraceRunManifest.Segment#traceFrameCount()} from
+     * the manifest instead.
+     */
+    public static TraceData loadMetadataOnly(Path traceDirectory) throws IOException {
+        Path metadataPath = traceDirectory.resolve("metadata.json");
+        Path auxPath = resolveTraceFile(traceDirectory, "aux_state.jsonl");
+
+        TraceMetadata metadata = TraceMetadata.load(metadataPath);
+        Map<Integer, List<TraceEvent>> events = auxPath != null
+            ? loadAuxEvents(auxPath)
+            : Collections.emptyMap();
+
+        return new TraceData(metadata, Collections.emptyList(), events);
+    }
+
     public TraceMetadata metadata() { return metadata; }
     public int frameCount() { return frames.size(); }
 
