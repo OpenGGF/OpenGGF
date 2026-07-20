@@ -25,6 +25,7 @@ import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
@@ -1784,9 +1785,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Knuckles has slid off a ledge → enter fall state.
 		sprite.move(sprite.getXSpeed(), (short) 0);
 
-		// Probe floor distance and snap
-		var floorResult = ObjectTerrainUtils.checkFloorDist(
-				sprite.getCentreX(), sprite.getCentreY() + sprite.getYRadius());
+		// Probe floor distance and snap. ROM's sub_11FD6 (Sonic_CheckFloor) probes
+		// both foot sensors, not just center -- see checkGlideFloorDist() javadoc.
+		var floorResult = checkGlideFloorDist(
+				sprite.getCentreX(), sprite.getCentreY(), sprite.getXRadius(), sprite.getYRadius());
 		if (floorResult != null) {
 			if (floorResult.distance() >= 14) {
 				// Slid off a ledge — enter fall state
@@ -2066,7 +2068,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Check floor (only when descending or level)
 		if (sprite.getYSpeed() >= 0) {
-			var result = ObjectTerrainUtils.checkFloorDist(cx, cy + yRad);
+			var result = checkGlideFloorDist(cx, cy, xRad, yRad);
 			if (result != null && result.distance() < 0) {
 				sprite.setY((short) (sprite.getY() + result.distance()));
 				sprite.setAngle(result.angle());
@@ -2089,6 +2091,37 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setX((short) (sprite.getX() - result.distance()));
 			}
 		}
+	}
+
+	/**
+	 * ROM: Sonic_CheckFloor / {@code sub_11FD6} (sonic3k.asm:19839-19891,
+	 * 24127-24135). Unlike {@link ObjectTerrainUtils}' single center-point
+	 * object probes, the PLAYER floor check probes BOTH foot sensors --
+	 * {@code x_pos + x_radius} ("Primary") and {@code x_pos - x_radius}
+	 * ("Secondary") -- and keeps whichever found the closer floor (the
+	 * smaller/more-negative distance): {@code cmp.w d0,d1; ble.s ...} picks
+	 * the secondary (left) sensor's result unless the primary (right) sensor
+	 * is strictly closer, in which case it swaps to that one. A center-only
+	 * probe is blind to a floor edge under one foot but not the other (e.g. a
+	 * staircase lip) and lands several frames late -- reproduced via a
+	 * standalone replay of traces/s3k/runs/s3-knux-multibonus-ss/aiz/: at
+	 * trace frame 1570 the right-foot sensor already reports floor contact
+	 * (distance -4) while the center probe still reports clear air (distance
+	 * +22), so {@link #doGlideCollision()}'s prior center-only check missed
+	 * the landing for 6 more frames and the resulting position drift
+	 * cascaded into a ~1800px trajectory divergence by the end of the
+	 * segment.
+	 */
+	private TerrainCheckResult checkGlideFloorDist(int cx, int cy, int xRad, int yRad) {
+		var right = ObjectTerrainUtils.checkFloorDist(cx + xRad, cy + yRad);
+		var left = ObjectTerrainUtils.checkFloorDist(cx - xRad, cy + yRad);
+		if (left == null) {
+			return right;
+		}
+		if (right == null) {
+			return left;
+		}
+		return left.distance() <= right.distance() ? left : right;
 	}
 
 	/**
