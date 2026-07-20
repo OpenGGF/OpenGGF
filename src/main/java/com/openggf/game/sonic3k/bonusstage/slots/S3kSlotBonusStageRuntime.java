@@ -137,7 +137,7 @@ public final class S3kSlotBonusStageRuntime {
 
         // Option cycle system
         if (!slotStageController.isReelsFrozen()) {
-            optionCycleSystem.tick(slotStageState, frameCounter);
+            optionCycleSystem.tick(slotStageState, globalVIntRunCounter());
             if (optionCycleSystem.isResolved(slotStageState)) {
                 slotStageController.latchResolvedPrize(
                         optionCycleSystem.lastPrizeResult(slotStageState),
@@ -155,8 +155,16 @@ public final class S3kSlotBonusStageRuntime {
         // Reward objects
         updateRewards(frameCounter);
 
-        // Ring pickup from grid
-        if (slotRenderBuffers != null && slotPlayer != null && !slotPlayer.isDebugMode()) {
+        // Ring pickup from grid. ROM loc_4BA62 (sonic3k.asm:98750-98757) tests
+        // object_control(a0) BEFORE dispatching into the movement/ring/tile chain
+        // (loc_4BA94/loc_4BA98 -> sub_4BABC..sub_4BE3A) -- when the player is held
+        // by the cage grab (sub_4AF80/loc_4B130, sonic3k.asm:98136 sets
+        // object_control(a1)=3), it branches straight to loc_4BA80 and returns,
+        // never reaching sub_4BDCA (the ring-pickup check). Running the ring probe
+        // unconditionally let the engine award a ring for whatever grid cell the
+        // player happened to be parked over while grabbed, which ROM never checks.
+        if (slotRenderBuffers != null && slotPlayer != null && !slotPlayer.isDebugMode()
+                && !slotPlayer.isObjectControlled()) {
             checkRingPickup();
         }
 
@@ -257,6 +265,10 @@ public final class S3kSlotBonusStageRuntime {
 
     public S3kSlotRenderBuffers renderBuffersForTest() {
         return slotRenderBuffers;
+    }
+
+    public S3kSlotPlayerRuntime slotPlayerRuntimeForTest() {
+        return slotPlayerRuntime;
     }
 
     public S3kSlotOptionCycleSystem optionCycleSystemForTest() {
@@ -397,8 +409,14 @@ public final class S3kSlotBonusStageRuntime {
     }
 
     private void checkRingPickup() {
+        // ROM sub_4BDCA reads x_pos(a0)/y_pos(a0) as they stand right after
+        // sub_4BABC's ground-velocity projection (sonic3k.asm:98776-98778), before
+        // MoveSprite2 folds air x_vel/y_vel into position (sonic3k.asm:98780). Using
+        // the fully-stepped position here (currentPlayerOriginX/Y, which reflects
+        // this frame's air-velocity step too) lets the engine reach a ring cell one
+        // step early/late relative to ROM. See S3kSlotPlayerRuntime.groundProjectedOriginX/Y.
         S3kSlotCollisionSystem.RingCheck ring = slotCollisionSystem.checkRingPickup(
-                currentPlayerOriginX(), currentPlayerOriginY());
+                slotPlayerRuntime.groundProjectedOriginX(), slotPlayerRuntime.groundProjectedOriginY());
         if (ring.foundRing()) {
             slotCollisionSystem.consumeRing(ring);
             slotRenderBuffers.startRingAnimationAt(ring.layoutIndex());
@@ -427,7 +445,10 @@ public final class S3kSlotBonusStageRuntime {
 
     /**
      * Dispatch tile interaction based on collision detected during player physics.
-     * ROM sub_4BE3A reads $30(a0) which was set by sub_4BDA2 during collision.
+     * ROM sub_4BE3A reads $30(a0) which was set by sub_4BDA2 during collision, and
+     * (for the bumper-launch branch) reads x_pos(a0)/y_pos(a0) directly at
+     * sonic3k.asm:99224-99225 -- the same pre-MoveSprite2 snapshot sub_4BDCA uses
+     * (see checkRingPickup and S3kSlotPlayerRuntime.groundProjectedOriginX/Y).
      */
     private void dispatchTileInteraction() {
         int tileId = slotStageState.lastCollisionTileId();
@@ -442,7 +463,8 @@ public final class S3kSlotBonusStageRuntime {
         short tileAnchorY = S3kSlotCollisionSystem.tileResponseAnchorY(expandedIndex);
 
         S3kSlotCollisionSystem.TileResponse response = slotCollisionSystem.resolveTileResponse(
-                tileId, (short) currentPlayerOriginX(), (short) currentPlayerOriginY(), tileAnchorX, tileAnchorY);
+                tileId, (short) slotPlayerRuntime.groundProjectedOriginX(),
+                (short) slotPlayerRuntime.groundProjectedOriginY(), tileAnchorX, tileAnchorY);
 
         handleTileResponse(response, layoutIndex, tileId);
         slotStageController.setScalarIndex(slotStageState.scalarIndex1());
@@ -611,6 +633,57 @@ public final class S3kSlotBonusStageRuntime {
 
     private DefaultObjectServices slotObjectServices() {
         return new DefaultObjectServices(bootstrapGameplayMode, EngineServices.current());
+    }
+
+    /**
+     * ROM {@code Slots_CycleOptions} (sonic3k.asm:99614-99946) reads {@code
+     * V_int_run_count} -- a longword that counts every VBlank since power-on and
+     * never resets on level load -- for every reel-spin/target/RNG-mix
+     * computation: {@code loc_4C416}'s reel-word seeds (line 99646 {@code
+     * move.b (V_int_run_count+3).w,d0}), {@code loc_4C480}'s per-reel velocity
+     * offsets and fixed-row scan seed (lines 99679-99702, same byte), and {@code
+     * loc_4C4F8}'s random-target draw (line 99722 {@code add.w
+     * (V_int_run_count+2).w,d0}) and {@code loc_4C54C}'s post-decelerate
+     * countdown extension (lines 99753-99755, same byte). This is a distinct
+     * ROM variable from {@code Level_frame_counter} (the level-local counter
+     * the reward-spawn cadence gate in {@link
+     * com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance} correctly
+     * reads via this method's {@code frameCounter} parameter). Passing the
+     * level-local {@code frameCounter} into {@link S3kSlotOptionCycleSystem}
+     * instead -- reset to whatever {@code LevelManager.getFrameCounter()} held
+     * when the bonus stage loaded, rather than a persistent run count -- fed
+     * the wrong seed into the reel-target selection, resolving a different
+     * (and differently-timed) prize than ROM and producing a rings-count
+     * divergence that starts well before any position/velocity field diverges
+     * (TestS3kSlotsBonusTraceReplay frame 269: expected rings=75, actual=76).
+     * {@code ObjectManager.vblaCounter} is at least the right *shape* of
+     * approximation for {@code V_int_run_count} -- unlike {@code
+     * Level_frame_counter} it does not reset on level load -- and it is the
+     * same proxy every ordinary object's {@code update(int frameCounter, ...)}
+     * dispatch already receives (see {@code ObjectManager.update}), so route
+     * the option-cycle system to it explicitly here, since the slots runtime
+     * suppresses ObjectManager's own dispatch and drives its objects with a
+     * bespoke, level-local counter instead. It is <strong>not</strong> a
+     * validated match for {@code V_int_run_count}: {@code
+     * GumballMachineObjectInstance}'s frame-0 RNG-reseed comment and the
+     * "Gumball Machine Frame-0 RNG Reseed" entry in {@code
+     * docs/S3K_KNOWN_DISCREPANCIES.md} document {@code vblaCounter} as a
+     * per-gameplay-session counter that resets far more often, and starts from
+     * a materially smaller range, than the hardware counter a trace reflects --
+     * a disclosed approximation gap, not a proven-accurate substitute. Routing
+     * Slots' reel-word seed, per-reel velocity offsets, fixed-row scan seed,
+     * random-target draw, and post-decelerate countdown extension through this
+     * same proxy inherits that same disclosed gap (see the Slots paragraph
+     * added to that discrepancies entry); this is a like-for-like ROM-shape
+     * fix relative to the previous {@code Level_frame_counter} bug, not a
+     * claim of exact parity with real hardware.
+     */
+    private int globalVIntRunCounter() {
+        if (bootstrapGameplayMode == null) {
+            return lastFrameCounter;
+        }
+        ObjectManager objectManager = bootstrapGameplayMode.getLevelManager().getObjectManager();
+        return objectManager != null ? objectManager.getVblaCounter() : lastFrameCounter;
     }
 
     private void registerDynamicSlotObject(com.openggf.level.objects.ObjectInstance object) {

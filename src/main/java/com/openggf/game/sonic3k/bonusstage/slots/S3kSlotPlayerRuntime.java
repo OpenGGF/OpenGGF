@@ -20,6 +20,16 @@ public final class S3kSlotPlayerRuntime {
     private final S3kSlotCollisionSystem collisionSystem;
     private int slotOriginX;
     private int slotOriginY;
+    // ROM x_pos(a0)/y_pos(a0) as they stand right after sub_4BABC's ground-velocity
+    // projection (sonic3k.asm:98789-98848) -- the value sub_4BDCA (ring pickup,
+    // sonic3k.asm:99144) and sub_4BE3A (tile dispatch, sonic3k.asm:99195) both read
+    // directly from memory. sub_4BCB0 (air gravity, sonic3k.asm:99010-99075) only
+    // updates x_vel/y_vel from LOCAL copies (d2/d3); it never writes x_pos/y_pos.
+    // MoveSprite2 -- which folds x_vel/y_vel into x_pos/y_pos -- runs AFTER both
+    // sub_4BDCA and sub_4BE3A (sonic3k.asm:98776-98780). So the ring/tile checks
+    // must see the ground-only position, not the fully-stepped one.
+    private int groundProjectedOriginX;
+    private int groundProjectedOriginY;
     private S3kSlotExitSequence exitSequence;
     private boolean debugActive;
     private int debugSavedStatTable;
@@ -49,6 +59,8 @@ public final class S3kSlotPlayerRuntime {
         player.setOnObject(false);
         slotOriginX = initialOriginX << POSITION_SHIFT;
         slotOriginY = initialOriginY << POSITION_SHIFT;
+        groundProjectedOriginX = slotOriginX;
+        groundProjectedOriginY = slotOriginY;
         exitSequence = null;
         debugActive = false;
         debugSavedStatTable = 0;
@@ -80,6 +92,7 @@ public final class S3kSlotPlayerRuntime {
      */
     private void primeSpawnFrameFallthrough(AbstractPlayableSprite player) {
         applyMoveWithCollision(player, false, false);
+        captureGroundProjectedOrigin();
         applyAirMotionWithCollision(player);
         applyVelocityStep(player);
         advanceRotation(false);
@@ -172,6 +185,7 @@ public final class S3kSlotPlayerRuntime {
         }
 
         applyMoveWithCollision(player, left, right);
+        captureGroundProjectedOrigin();
         applyAirMotionWithCollision(player);
         applyVelocityStep(player);
         advanceRotation(false);
@@ -186,6 +200,25 @@ public final class S3kSlotPlayerRuntime {
 
     public int slotOriginY() {
         return slotOriginY;
+    }
+
+    private void captureGroundProjectedOrigin() {
+        groundProjectedOriginX = slotOriginX;
+        groundProjectedOriginY = slotOriginY;
+    }
+
+    /**
+     * Pixel-space player origin as of ROM sub_4BABC's completion (ground-velocity
+     * projection already applied, air-gravity/MoveSprite2 step not yet applied).
+     * This is the position sub_4BDCA (ring pickup) and sub_4BE3A (tile dispatch)
+     * read -- see the field javadoc above.
+     */
+    public int groundProjectedOriginX() {
+        return groundProjectedOriginX >> POSITION_SHIFT;
+    }
+
+    public int groundProjectedOriginY() {
+        return groundProjectedOriginY >> POSITION_SHIFT;
     }
 
     public void startGoalExit(AbstractPlayableSprite player) {

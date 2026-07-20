@@ -1026,3 +1026,16 @@ run-history seed on every path. Trace replay reproduces the recorded run's subty
 past the spurious early ring award); live play keeps run-dependent variety without a reference
 recording to diverge from. No other Gumball, Pachinko, or Slots behavior is affected; the RNG stream
 itself (post-seed advancement) is unchanged and remains ROM-faithful.
+
+Slots is *also* affected by a `vblaCounter`-vs-`V_int_run_count` gap (the counter-provenance mismatch the Gumball roll previously had):
+`S3kSlotBonusStageRuntime.globalVIntRunCounter()` feeds `ObjectManager.vblaCounter` into
+`S3kSlotOptionCycleSystem.tick(...)` as the ROM-faithful *shape* of `Slots_CycleOptions`'s several
+`V_int_run_count` reads (reel-word seeds, per-reel velocity offsets, the fixed-row scan seed, the
+random-target draw, and the post-decelerate countdown extension — sonic3k.asm:99614-99946). Because
+`vblaCounter` is a per-gameplay-session approximation with the same reset-cadence and smaller-range
+mismatch described above, all of those Slots computations can select a different (and
+differently-timed) reel target/prize than a specific recorded run whenever local session timing
+differs from the original hardware's power-on-relative VBlank count, exactly as with the Gumball
+frame-0 roll. This is the same underlying counter gap surfacing at a second, independent call site,
+not a new discrepancy; the correct fix is the same deferred persistent VBlank-driven global counter
+described above, which would resolve both sites at once.
