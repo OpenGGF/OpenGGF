@@ -232,8 +232,27 @@ public abstract class AbstractTraceReplayTest {
                         .startPositionIsCentre();
             }
             HeadlessTestFixture fixture = fixtureBuilder.build();
-            afterFixtureBuild(trace);
+            // ROM/production ordering: GameLoop.doEnterBonusStage loads the
+            // bonus zone through the normal level path (LevelManager
+            // .loadZoneAndAct -> LevelManager.initCameraForLevel, which resets
+            // ObjectManager's dynamic-object set for S3K's two-axis cursor
+            // placement -- LevelManager.java:2564-2577) and only THEN calls
+            // ensureBonusStageBootstrapObjectPresent (GameLoop.java:2314,
+            // inside prepareBonusStageForTitleCard, itself called after
+            // loadZoneAndAct at GameLoop.java:2229/2245). Running
+            // afterFixtureBuild's bonus-entry bootstrap object injection
+            // (TraceReplaySessionBootstrap.applyBonusStageEntry ->
+            // Obj_PachinkoEnergyTrap) BEFORE applyStartPositionAndGroundSnap
+            // (which calls the same initCameraForLevel reset) silently wiped
+            // the freshly-injected trap every frame, so it never executed and
+            // Sonic's escape-through-the-top exit trigger never fired --
+            // producing a same-frame-only camera_x divergence at the exact
+            // frame ROM's Restart_level_flag check skips DeformBgLayer
+            // (sonic3k.asm:7895-7896) after Process_Sprites. Apply the ground
+            // snap/camera reset first so any bonus-entry object injection
+            // survives it, matching production's load-then-inject order.
             TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+            afterFixtureBuild(trace);
 
             if (GameServices.debugOverlay() != null) {
                 GameServices.debugOverlay().setEnabled(DebugOverlayToggle.TOUCH_RESPONSE, true);

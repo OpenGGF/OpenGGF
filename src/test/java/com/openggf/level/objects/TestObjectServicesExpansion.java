@@ -10,7 +10,6 @@ import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
-import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -110,39 +109,51 @@ class TestObjectServicesExpansion {
     }
 
     @Test
-    void defaultObjectServices_bonusStageActionsUseInjectedGameplayProviderNotActiveSession() {
-        // After the activeBonusStageProvider migration to GameplayModeContext,
-        // the provider is gameplay-scoped. DefaultObjectServices
-        // captures the provider snapshot at construction time. This test verifies
-        // that the captured snapshot is used by bonus-stage forwarding methods,
-        // even after the active session's provider is changed afterwards.
-        GameplayModeContext gameplayA = TestEnvironment.activeGameplayMode();
+    void defaultObjectServices_bonusStageActionsFollowLiveProviderOnOwningSession() {
+        // DefaultObjectServices resolves bonus-stage forwarding through the
+        // OWNING GameplayModeContext's CURRENT activeBonusStageProvider,
+        // rather than a value snapshotted at construction time. This matters
+        // because the level's ObjectManager/DefaultObjectServices is built
+        // during normal level load, while bonus-stage entry registers the
+        // provider on that SAME session afterwards (GameLoop
+        // .doEnterBonusStage: setActiveBonusStageProvider precedes the fresh
+        // loadZoneAndAct-built ObjectManager in production, but trace-replay
+        // bootstraps that reuse a pre-built fixture level register the
+        // provider AFTER services already exist -- TraceReplaySessionBootstrap
+        // .applyBonusStageEntry). A frozen snapshot would make an object's
+        // requestBonusStageExit() (e.g. Obj_PachinkoEnergyTrap's
+        // escape-through-top trigger) permanently no-op in that ordering.
+        GameplayModeContext gameplay = TestEnvironment.activeGameplayMode();
+
+        // Services built BEFORE any bonus-stage provider is registered still
+        // reach the provider once it is later set on the SAME session.
+        DefaultObjectServices services = sessionServices(gameplay);
         CountingBonusStageProvider providerA = new CountingBonusStageProvider();
-        gameplayA.setActiveBonusStageProvider(providerA);
+        gameplay.setActiveBonusStageProvider(providerA);
 
-        // Capture providerA into the services BEFORE switching the active session.
-        DefaultObjectServices servicesFromGameplayA = sessionServices(gameplayA);
-
-        GameplayModeContext gameplayB = SessionManager.openGameplaySession(GameServices.module());
-        CountingBonusStageProvider providerB = new CountingBonusStageProvider();
-        gameplayB.setActiveBonusStageProvider(providerB);
-
-        servicesFromGameplayA.requestBonusStageExit();
-        servicesFromGameplayA.addBonusStageRings(7);
-        servicesFromGameplayA.setBonusStageShield(com.openggf.game.ShieldType.LIGHTNING);
+        services.requestBonusStageExit();
+        services.addBonusStageRings(7);
+        services.setBonusStageShield(com.openggf.game.ShieldType.LIGHTNING);
 
         assertEquals(1, providerA.requestExitCount,
-                "requestBonusStageExit should call provider captured at construction");
+                "requestBonusStageExit should call the session's current provider");
         assertEquals(7, providerA.ringsAdded,
-                "addBonusStageRings should add rings on the captured provider");
+                "addBonusStageRings should add rings on the session's current provider");
         assertEquals(1, providerA.shieldsSet,
-                "setBonusStageShield should forward to the captured provider");
-        assertEquals(0, providerB.requestExitCount,
-                "later-swapped session provider must not receive captured-services calls");
-        assertEquals(0, providerB.ringsAdded,
-                "later-swapped session provider must not receive captured-services calls");
-        assertEquals(0, providerB.shieldsSet,
-                "later-swapped session provider must not receive captured-services calls");
+                "setBonusStageShield should forward to the session's current provider");
+
+        // A later re-registration on the SAME session (e.g. exiting and
+        // re-entering a bonus stage) is also picked up live, not pinned to
+        // whichever provider happened to be active at construction time.
+        CountingBonusStageProvider providerB = new CountingBonusStageProvider();
+        gameplay.setActiveBonusStageProvider(providerB);
+
+        services.requestBonusStageExit();
+
+        assertEquals(1, providerA.requestExitCount,
+                "the former provider must not receive calls once replaced");
+        assertEquals(1, providerB.requestExitCount,
+                "requestBonusStageExit should follow the session's newly-registered provider");
     }
 
     private static final class CountingBonusStageProvider implements BonusStageProvider {
