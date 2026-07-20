@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+### 2026-07-20 -- ALL SIX STAGE COMPARATORS GREEN (rounds 2-3 + counter-seed fix)
+
+Rounds 2 and 3 of the workflow-orchestrated campaigns (parallel per-stage
+lanes, fresh sonnet-high iterations with opus-xhigh stall escalation,
+adversarial lane reviews) plus the V_int_run_count capture fix closed the
+remaining boards. Final verification (main tree at the round-3 merges,
+explicit `-Dtest` runs): **TestS3kGumballBonusTraceReplay 0,
+TestS3kPachinkoBonusTraceReplay 0, TestS3kSlotsBonusTraceReplay 0** --
+joining TestS3kSpecialStageTraceReplay, TestS1SpecialStageTraceReplay, and
+TestS2SpecialStageTraceReplay at zero. Every stage trace comparator in the
+engine is now green and MUST-STAY-GREEN. Representative level replays
+(TestS1Ghz1CompleteRunTraceReplay, TestS2Ehz1TraceReplay,
+TestS3kAizCompleteRunTraceReplay) re-verified green after the shared
+`prev_anim` SWITCH end-action and `AbstractPlayableSprite` seam changes.
+
+Round-2/3 root highlights (all disasm-cited; ~40 roots across the three
+boards): gumball's ejected-ball Check_PlayerInRange self-poll model,
+half-open activation boxes, 17-frame spin / 29-frame container cadences,
+spring-child landing-snap override, and the shared SWITCH ($FD) end-action
+no longer eagerly syncing prev_anim; slots' metadata-primed
+V_int_run_count base (recorder v6.32 captures it at bonus arm; replay
+advances it VBlank-true INCLUDING lag frames), cage release timing,
+tile-anchor reconstruction, reel-wall flash cadence, goal-exit pair;
+pachinko's reward subtype/ring coupling (ROM awards a SHIELD from the
+recorded orb), bumper applyBounce compound, flipper catch/ride/launch
+fidelity, bumper off-screen self-despawn, and the LevelFrameStep
+bonus-exit frame skip modeling ROM LevelLoop's Restart_level_flag branch
+(sonic3k.asm:7884-7896 -- NOTE: also active in live play for all S3K
+bonus-stage exits; review-verified ROM-faithful).
+
+Remaining trace debt is now LEVEL-side only (the pre-existing frontier
+entries below) plus the deferred build items: chain-test adaptation to the
+mega-run, S2 round-trip consumer, in-chain/visual SS-interior comparison.
+
 ### 2026-07-19 -- Green campaigns round 1: blue spheres GREEN, S1 maze GREEN, bonus trio advanced
 
 Three parallel campaign lanes (workflow-orchestrated: fresh sonnet-high
