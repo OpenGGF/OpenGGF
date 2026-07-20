@@ -9,8 +9,10 @@ import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.ToIntFunction;
 import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.GL_BLEND;
@@ -39,6 +41,8 @@ public final class NativeModNoticeScreen {
     public static final int MAX_VISIBLE_MOD_LINES = 12;
     private static final int SCREEN_W = 320;
     private static final int SCREEN_H = 224;
+    private static final int BODY_MAX_WIDTH = SCREEN_W - 32;
+    private static final int MAX_RENDERED_LINES = 12;
     private static final float BODY_SCALE = 1f;
 
     private final FadeManager fadeManager;
@@ -49,6 +53,7 @@ public final class NativeModNoticeScreen {
     private TexturedQuadRenderer renderer;
     private PixelFont font;
     private int solidWhiteTextureId;
+    private List<String> wrappedNoticeLines = List.of();
 
     public NativeModNoticeScreen(FadeManager fadeManager, List<String> noticeLines) {
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
@@ -61,6 +66,9 @@ public final class NativeModNoticeScreen {
             renderer.init();
             font = new PixelFont();
             font.init("pixel-font.png", renderer);
+            wrappedNoticeLines = wrapLines(noticeLines,
+                    line -> font.measureWidth(line, BODY_SCALE),
+                    BODY_MAX_WIDTH, MAX_RENDERED_LINES);
             solidWhiteTextureId = createSolidWhiteTexture();
             fadeManager.startFadeFromBlack(null);
             LOGGER.info("Native mod notice screen initialized");
@@ -93,7 +101,7 @@ public final class NativeModNoticeScreen {
                 0f, 0f, 0f, 1f);
         font.beginMegaBatch();
         int y = 40;
-        for (String line : noticeLines) {
+        for (String line : wrappedNoticeLines) {
             int x = (SCREEN_W - font.measureWidth(line, BODY_SCALE)) / 2;
             font.drawText(line, x, y, BODY_SCALE, 0.95f, 0.95f, 0.95f, 1f);
             y += 12;
@@ -101,6 +109,78 @@ public final class NativeModNoticeScreen {
         font.drawTextCentered("Press any key to continue", SCREEN_W, SCREEN_H - 20,
                 0.8f, 0.8f, 0.8f, 1f);
         font.endMegaBatch();
+    }
+
+    static List<String> wrapLines(List<String> lines,
+                                  ToIntFunction<String> measure,
+                                  int maxWidth,
+                                  int maxLines) {
+        Objects.requireNonNull(lines, "lines");
+        Objects.requireNonNull(measure, "measure");
+        if (maxWidth <= 0 || maxLines <= 0) {
+            throw new IllegalArgumentException("Wrap dimensions must be positive");
+        }
+
+        List<String> wrapped = new ArrayList<>();
+        for (String line : lines) {
+            wrapped.addAll(wrapLine(Objects.requireNonNull(line, "line"), measure, maxWidth));
+        }
+        if (wrapped.size() <= maxLines) {
+            return List.copyOf(wrapped);
+        }
+        List<String> visible = new ArrayList<>(wrapped.subList(0, maxLines - 1));
+        visible.add("...");
+        return List.copyOf(visible);
+    }
+
+    private static List<String> wrapLine(String line,
+                                         ToIntFunction<String> measure,
+                                         int maxWidth) {
+        if (line.isBlank()) {
+            return List.of("");
+        }
+        List<String> wrapped = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (String word : line.trim().split("\\s+")) {
+            if (measure.applyAsInt(word) > maxWidth) {
+                flush(current, wrapped);
+                splitOversizedWord(word, measure, maxWidth, wrapped);
+                continue;
+            }
+            String candidate = current.isEmpty() ? word : current + " " + word;
+            if (measure.applyAsInt(candidate) <= maxWidth) {
+                current.setLength(0);
+                current.append(candidate);
+            } else {
+                flush(current, wrapped);
+                current.append(word);
+            }
+        }
+        flush(current, wrapped);
+        return wrapped;
+    }
+
+    private static void splitOversizedWord(String word,
+                                           ToIntFunction<String> measure,
+                                           int maxWidth,
+                                           List<String> output) {
+        StringBuilder chunk = new StringBuilder();
+        for (int index = 0; index < word.length(); index++) {
+            char next = word.charAt(index);
+            if (!chunk.isEmpty() && measure.applyAsInt(chunk.toString() + next) > maxWidth) {
+                output.add(chunk.toString());
+                chunk.setLength(0);
+            }
+            chunk.append(next);
+        }
+        flush(chunk, output);
+    }
+
+    private static void flush(StringBuilder line, List<String> output) {
+        if (!line.isEmpty()) {
+            output.add(line.toString());
+            line.setLength(0);
+        }
     }
 
     public void setProjectionMatrix(float[] projectionMatrix) {
