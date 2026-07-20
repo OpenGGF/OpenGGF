@@ -2855,15 +2855,8 @@ public class GameLoop {
                 }
             }
         }
-        applyTitleCardControlLock(true);
-
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            int freshPlayerPreludeFrames = GameServices.module()
-                    .getLevelInitProfile()
-                    .freshMainPlayablePreludeFrames();
-            spriteManager.warmUpFreshMainPlayableOnly(
-                    freshPlayerPreludeFrames, levelManager, playable);
-        }
+        InLevelTitleCardCoordinator.prepareResultsTransition(
+                sprite, this::applyTitleCardControlLock, GameServices::module, spriteManager, levelManager);
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
