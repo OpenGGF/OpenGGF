@@ -990,18 +990,30 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
      */
     static class ContainerDisplayChild extends AbstractObjectInstance implements RewindRecreatable {
 
-        // ROM byte_6145B pairs (frame, timer-value). Timer value+1 runs frames.
-        private static final int[][] ANIM_PAIRS = {
-                {2, 3}, {3, 3}, {4, 0xF}, {3, 3}, {2, 3}
-        };
+        // ROM byte_6145B (sonic3k.asm:128) — flat (mapping_frame, delay) pairs
+        // terminated by the $F4 control byte (which runs the object's $34 routine,
+        // loc_60EA2, clearing machine bits 1+3). Animate_RawNoSSTMultiDelay
+        // (sonic3k.asm Animate_RawNoSSTMultiDelay) decrements anim_frame_timer each
+        // call and, when it goes negative, does `addq.w #2,anim_frame` then loads the
+        // next (frame,delay). The $F4 handler loc_845CC does `clr.b anim_frame`, so
+        // every animation run restarts at offset 0 with a stale-negative timer — the
+        // FIRST animating frame therefore advances immediately past the leading
+        // (2,$3) pair to the (3,$3) pair. The visible run is frames 3,4,3,2 and it
+        // lasts exactly 29 frames from ball spawn to bit-1 clear, verified against the
+        // recorded ROM trace (container ANIM state spans f139-f167, f189-f217,
+        // f627-f656, f675-f704 … = 29 frames every cycle). The prior model iterated
+        // all five pairs (32 frames), making the machine dispense cycle 3 frames too
+        // long; the cadence drifted enough to drop the f675 push-ball so the player
+        // was never launched at f728.
+        private static final int[] ANIM_TABLE = {2, 3, 3, 3, 4, 0xF, 3, 3, 2, 3, 0xF4};
         private static final int IDLE_FRAME = 2;
 
         private enum State { DORMANT, ANIMATING }
         private GumballMachineObjectInstance parent;
         private int offsetFromMachine; // Y offset (ROM: +$24)
         private State state = State.DORMANT;
-        private int animStep;
-        private int animTimer;
+        private int animStep;  // ROM anim_frame: byte offset into ANIM_TABLE
+        private int animTimer;  // ROM anim_frame_timer
         private int currentFrame = IDLE_FRAME;
 
         ContainerDisplayChild(ObjectSpawn spawn, GumballMachineObjectInstance parent,
@@ -1041,26 +1053,33 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
             if (state == State.DORMANT) {
                 if (parent.isBit3Set()) {
                     state = State.ANIMATING;
+                    // ROM: anim_frame is 0 (cleared by the previous run's $F4 handler)
+                    // and anim_frame_timer is stale-negative, so the first ANIMATING
+                    // frame advances at once. currentFrame stays IDLE this frame:
+                    // loc_60E5C spawns the ball but does not animate the container
+                    // until the following frame's loc_60E8C call.
                     animStep = 0;
-                    animTimer = ANIM_PAIRS[0][1] + 1;
-                    currentFrame = ANIM_PAIRS[0][0];
+                    animTimer = 0;
                     int spawnY = parent.getCurrentY() + offsetFromMachine;
                     parent.onContainerSpawnBall(spawn.x(), spawnY, this::getY);
                 }
                 return;
             }
-            // ANIMATING
-            animTimer--;
-            if (animTimer <= 0) {
-                animStep++;
-                if (animStep >= ANIM_PAIRS.length) {
+            // ANIMATING — Animate_RawNoSSTMultiDelay emulation.
+            animTimer--;                 // subq.b #1,anim_frame_timer
+            if (animTimer < 0) {         // bpl skips the advance while timer stays >= 0
+                animStep += 2;           // addq.w #2,anim_frame
+                int frame = ANIM_TABLE[animStep];
+                if (frame >= 0x80) {     // bmi: control byte ($F4)
+                    // loc_845CC: run $34 (loc_60EA2 clears machine bits 1+3) + clr.b anim_frame.
                     parent.onContainerAnimComplete();
                     state = State.DORMANT;
                     currentFrame = IDLE_FRAME;
+                    animStep = 0;
                     return;
                 }
-                currentFrame = ANIM_PAIRS[animStep][0];
-                animTimer = ANIM_PAIRS[animStep][1] + 1;
+                currentFrame = frame;
+                animTimer = ANIM_TABLE[animStep + 1];
             }
         }
 
