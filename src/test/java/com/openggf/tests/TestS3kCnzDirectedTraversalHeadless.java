@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1004,10 +1005,13 @@ public class TestS3kCnzDirectedTraversalHeadless {
         player.setHurt(true);
         fixture.stepFrame(false, false, false, false, false);
 
-        assertFalse(player.isObjectControlled());
-        assertFalse(player.isJumping());
-        assertEquals(0, player.getYSpeed());
-        assertFalse(isPlayerOneSlotActive(cylinder));
+        assertAll(
+                () -> assertFalse(player.isObjectControlled()),
+                () -> assertFalse(player.isOnObject()),
+                () -> assertEquals(0, player.getLatchedSolidObjectId()),
+                () -> assertFalse(player.isJumping()),
+                () -> assertEquals(0, player.getYSpeed()),
+                () -> assertFalse(isPlayerOneSlotActive(cylinder)));
     }
 
     private static void invokeLaunchDelayHook(CnzCannonInstance cannon, int frames) {
