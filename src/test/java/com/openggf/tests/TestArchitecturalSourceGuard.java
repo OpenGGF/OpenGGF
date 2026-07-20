@@ -833,6 +833,21 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void playableSpriteDelegatesFrameStateAnimationAndControlledContactBehavior() throws IOException {
+        String sprite = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/sprites/playable/AbstractPlayableSprite.java"));
+        String controller = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/sprites/playable/PlayableSpriteController.java"));
+
+        assertTrue(sprite.contains("controller.captureFrameStartState();"));
+        assertTrue(sprite.contains("controller.publishRawAnimation(CanonicalAnimation.HURT);"));
+        assertTrue(sprite.contains("controller.notifyObjectControlledSolidContact(candidate, contact);"));
+        assertTrue(controller.contains("void captureFrameStartState()"));
+        assertTrue(controller.contains("void publishRawAnimation(CanonicalAnimation animation)"));
+        assertTrue(controller.contains("void notifyObjectControlledSolidContact("));
+    }
+
+    @Test
     void objectArtDataDoesNotGainNewGameOrZoneSpecificSurface() throws IOException {
         String source = stripCommentsAndStrings(Files.readString(
                 SRC_MAIN.resolve("com/openggf/level/objects/ObjectArtData.java")));
