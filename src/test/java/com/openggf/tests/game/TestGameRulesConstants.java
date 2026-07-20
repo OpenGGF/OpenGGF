@@ -21,6 +21,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestGameRulesConstants {
 
     @Test
+    void angledLandingAnimationPublicationIsOwnedByAnimationRules() {
+        assertFalse(GameRules.SONIC_1.playerAnimation().angledLandingPublishesWalk());
+        assertTrue(GameRules.SONIC_2.playerAnimation().angledLandingPublishesWalk());
+        assertFalse(GameRules.SONIC_3K.playerAnimation().angledLandingPublishesWalk());
+    }
+
+    @Test
     void directConstantsExposeCoreGameDifferences() {
         assertFalse(GameRules.SONIC_1.playerCapability().spindashEnabled());
         assertFalse(GameRules.SONIC_1.playerCapability().tailsFlightEnabled());

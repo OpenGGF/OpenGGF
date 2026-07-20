@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
@@ -1031,6 +1032,7 @@ public class CollisionSystem {
         }
 
         PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
+        PlayerAnimationRules animationRules = playerAnimationRulesOrNull(sprite);
         boolean preservePinballRoll = rules != null && rules.pinballLandingPreservesRoll();
         boolean preservePinballMode = rules != null && rules.pinballLandingPreservesPinballMode();
         if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
@@ -1073,8 +1075,8 @@ public class CollisionSystem {
             sprite.setPinballMode(false);
         }
         if (!sprite.getPinballMode()
-                && rules != null
-                && rules.angledLandingPublishesWalk()) {
+                && animationRules != null
+                && animationRules.angledLandingPublishesWalk()) {
             // Sonic_ResetOnFloor publishes Walk before clearing the airborne
             // state on every accepted S2 terrain landing, including the angled
             // ceiling/wall path (s2.asm:38049-38052, 38123-38127). S1's angled
@@ -1204,6 +1206,17 @@ public class CollisionSystem {
         GameRules rules = sprite.getGameRules();
         if (rules != null && rules.playerMovement() != null) {
             return rules.playerMovement();
+        }
+        return null;
+    }
+
+    private static PlayerAnimationRules playerAnimationRulesOrNull(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return null;
+        }
+        GameRules rules = sprite.getGameRules();
+        if (rules != null && rules.playerAnimation() != null) {
+            return rules.playerAnimation();
         }
         return null;
     }
