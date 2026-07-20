@@ -26,6 +26,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.LevelManager;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -526,6 +528,23 @@ class TestSonic2TriggerParticipation {
         assertRomObjControlBitOneState(player, "Breakable Plating obj_control=1");
         assertTrue(plating.requiresContinuousTouchCallbacks(),
                 "Touch_Special must refresh ObjC1 collision_property during sustained overlap");
+    }
+
+    @Test
+    void breakablePlatingDeclaresContinuousTouchResponseProfile() {
+        BreakablePlatingObjectInstance plating = new BreakablePlatingObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_PLATING, 0, 0, false, 0),
+                "BreakablePlating");
+
+        assertDoesNotThrow(() -> BreakablePlatingObjectInstance.class
+                .getDeclaredMethod("getTouchResponseProfile"));
+        assertDoesNotThrow(() -> BreakablePlatingObjectInstance.class
+                .getDeclaredMethod("getTouchResponseProfile", boolean.class));
+
+        TouchResponseProfile profile = plating.getTouchResponseProfile();
+        assertTrue(profile.continuousCallbacks(),
+                "Touch_Special must republish the ObjC1 overlap signal on every sustained-overlap frame");
+        assertEquals(profile, plating.getTouchResponseProfile(false));
     }
 
     @Test

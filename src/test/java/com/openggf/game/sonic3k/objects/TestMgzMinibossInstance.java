@@ -24,7 +24,9 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.objects.boss.BossStateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -46,6 +48,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -200,6 +203,28 @@ class TestMgzMinibossInstance {
         assertTrue(spire instanceof TouchResponseProvider,
                 "Spire debris should remain the only harmful touch-active debris");
         assertEquals(0x84, ((TouchResponseProvider) spire).getCollisionFlags());
+    }
+
+    @Test
+    void ceilingSpireDeclaresAndConsumesShieldDeflectProfile() throws Exception {
+        Class<?> spireClass = Class.forName(
+                "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild");
+        var spireCtor = spireClass.getDeclaredConstructor(int.class, int.class, int.class);
+        spireCtor.setAccessible(true);
+        TouchResponseProvider spire = (TouchResponseProvider) spireCtor.newInstance(0x100, 0x80, 0);
+
+        assertDoesNotThrow(() -> spireClass.getDeclaredMethod("getTouchResponseProfile"));
+        assertDoesNotThrow(() -> spireClass.getDeclaredMethod("getTouchResponseProfile", boolean.class));
+
+        TouchResponseProfile profile = spire.getTouchResponseProfile();
+        assertEquals(TouchShieldDeflectCapability.SHIELD_DEFLECT, profile.shieldDeflectCapability());
+        assertEquals(0x08, profile.shieldReactionFlags());
+
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x120, (short) 0x80);
+        assertTrue(spire.onShieldDeflect(player));
+        assertEquals(0, spire.getCollisionFlags(),
+                "loc_88820 clears the spire's collision response after the shield deflect");
     }
 
     @Test

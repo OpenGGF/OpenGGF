@@ -88,6 +88,34 @@ public record TouchResponseProfile(
                 TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
     }
 
+    public static TouchResponseProfile singleRegionContinuousCallbacks() {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                true,
+                true,
+                false,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                false,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+    }
+
+    public static TouchResponseProfile singleRegionShieldDeflect() {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                false,
+                TouchShieldDeflectCapability.SHIELD_DEFLECT,
+                SHIELD_REACTION_BOUNCE_BIT,
+                false,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+    }
+
     private static TouchCategoryDecodeMode decodeMode(TouchResponseProvider provider) {
         boolean sonic1 = provider.usesSonic1TouchSpecialPropertyResponse();
         boolean sonic2 = provider.usesSonic2TouchSpecialPropertyResponse();
