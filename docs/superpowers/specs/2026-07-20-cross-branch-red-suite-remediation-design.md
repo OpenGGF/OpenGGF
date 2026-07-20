@@ -8,7 +8,7 @@
 
 Restore green in-scope test suites on both `develop` and `next` without duplicating shared fixes, weakening ROM-parity assertions, or treating unfinished Sonic & Knuckles zone implementations as release blockers.
 
-The measured union contains 179 red `class#method` identities: 36 on `develop`, 170 on merged `next`, and 27 shared by both. The current scope excludes 96 gameplay and trace reds owned by unfinished Sonic & Knuckles zones (including MHZ, FBZ, SOZ, and later S&K content). Cross-cutting architecture and rewind guards remain in scope even when their diagnostics mention unfinished S&K objects. This leaves 83 unique in-scope reds: all 36 `develop` reds plus 47 additional `next`-only reds.
+The measured union contains 179 red `class#method` identities: 36 on `develop`, 170 on merged `next`, and 27 shared by both. The current scope excludes 96 gameplay, trace, and zone-evidence-tooling reds owned solely by unfinished Sonic & Knuckles zones (including MHZ, FBZ, SOZ, and later S&K content). Cross-cutting architecture, rewind, service-ownership, and singleton-closure guards remain in scope even when their diagnostics mention unfinished S&K objects or FBZ-named tooling. This leaves 83 unique in-scope reds: all 36 `develop` reds plus 47 additional `next`-only reds.
 
 ## Scope
 
@@ -22,7 +22,7 @@ The measured union contains 179 red `class#method` identities: 36 on `develop`, 
 
 ### Out of scope
 
-- Gameplay parity and trace replay for unfinished S&K zones, including MHZ, FBZ, SOZ, and later S&K content.
+- Gameplay parity, trace replay, and zone-evidence tooling owned solely by unfinished S&K zones, including MHZ, FBZ, SOZ, and later S&K content.
 - Implementing missing S&K objects, bosses, events, or route completion merely to turn those zone tests green.
 - Disabling tests, broad Maven exclusions, tolerance inflation, trace-to-engine state hydration, or zone/route/frame carve-outs.
 
@@ -38,7 +38,7 @@ Use forward-fix waves.
 4. Re-inventory `next`; remove reds already eliminated by the forward merge.
 5. Fix only the remaining `next`-specific reds on `next`.
 
-Each wave uses its own `bugfix/ai-*` branch and independently reviewable PR. Shared fixes are never implemented separately on both branches. A fix discovered on `next` that belongs to shared code is moved to `develop` first and then merged forward.
+Each target uses an isolated `bugfix/ai-*` implementation branch. Shared fixes are never implemented separately on both branches. A fix discovered on `next` that belongs to shared code is moved to `develop` first and then merged forward. This execution does not publish PRs; if publication is requested, the develop and next PRs are finished in separate sessions so each session publishes from one branch.
 
 ## Failure Triage Model
 
@@ -80,23 +80,23 @@ Parameterized tests count as separate red identities. The inventory records `bra
 
 Recalculate counts after merging green `develop`. The current upper bound is 47 additional in-scope reds.
 
-#### N1: Mod API and SDK compatibility — up to 23 current reds
+#### N1: Mod API and SDK compatibility — up to 20 current reds
 
 - Reconcile published Mod API signatures and annotations intentionally; preserve documented compatibility constructors.
 - Repair sample-mod level loading, pattern-window allocation, mod-zone runtime/rewind setup, and SDK documentation generation.
 - Treat API removals as breaking changes requiring an explicit version decision, never a silent signature-baseline rewrite.
 
-#### N2: Rewind and runtime registration — up to 8 current reds
+#### N2: Rewind and runtime registration — up to 10 current reds
 
 - Resolve null snapshots, duplicate registrations, compact-policy reachability, and nested object-graph restoration.
 - Preserve identity-table and comparison-only trace invariants.
 
-#### N3: Architecture and resource ownership — up to 4 current reds
+#### N3: Architecture and resource ownership — up to 7 current reds
 
 - Remove forbidden singleton access and reconcile S3K object-set inventories.
 - Repair pattern-range and service ownership at their registries rather than weakening guards.
 
-#### N4: Remaining S3-era gameplay and rendering — up to 12 current reds
+#### N4: Remaining S3-era gameplay and rendering — up to 10 current reds
 
 - Address remaining MGZ and isolated AIZ/CNZ/HCZ/ICZ/Pachinko/rendering failures.
 - Exclude unfinished S&K-zone gameplay and trace cases from this wave while retaining their catalogue entries.
