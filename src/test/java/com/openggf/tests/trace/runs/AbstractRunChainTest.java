@@ -103,9 +103,16 @@ abstract class AbstractRunChainTest {
         SegmentPlan first = plans.get(0);
         assertEquals("level", first.segment().kind(), "First segment must be a level: " + runDir);
         Integer bootZone = first.segment().zoneId();
-        Integer bootAct = first.segment().act();
+        Integer manifestBootAct = first.segment().act();
         assertNotNull(bootZone, "First segment must declare a zone_id: " + runDir);
-        assertNotNull(bootAct, "First segment must declare an act: " + runDir);
+        assertNotNull(manifestBootAct, "First segment must declare an act: " + runDir);
+        // Manifest `act` is 1-based (matches TraceMetadata/metadata.json convention,
+        // e.g. "act": 1 == Act 1); engine act indices are 0-based (see
+        // TraceCatalog#resolveTraceEntry: engineAct = meta.act() - 1, and every
+        // standalone lane's AbstractTraceReplayTest#act() override returns 0 for
+        // Act 1). Convert once here so the boot call sites below never see the
+        // raw manifest value.
+        Integer bootAct = engineAct(manifestBootAct);
 
         // --- Step 2: boot segment 0 ---------------------------------------------
         TraceData trace0 = first.trace();
@@ -335,7 +342,10 @@ abstract class AbstractRunChainTest {
         if (returnAct != null && preAct != null) {
             assertNotEquals(preAct.intValue(), returnAct.intValue(),
                     "Manifest next-act shape: return act must differ from pre-entry act for " + runDir);
-            assertEquals(returnAct.intValue(), GameServices.level().getCurrentAct(),
+            // Manifest `act` is 1-based; GameServices.level().getCurrentAct() is the
+            // engine's 0-based act index (see the boot-act conversion note in
+            // runChain / engineAct below) -- convert before comparing.
+            assertEquals(engineAct(returnAct).intValue(), GameServices.level().getCurrentAct(),
                     "Next-act advance (act) after special-stage return for " + runDir);
         }
         Integer returnZone = returnLevel.segment().zoneId();
@@ -360,6 +370,20 @@ abstract class AbstractRunChainTest {
             assertEquals(exit.emeraldsAfter().intValue(), actualEmeralds,
                     "Emerald count after stage exit for " + runDir);
         }
+    }
+
+    /**
+     * Converts a manifest {@code act} (1-based, matching the recorder's
+     * {@code metadata.json}/{@code run_manifest.json} convention -- e.g.
+     * {@code "act": 1} means Act 1) to the engine's 0-based act index consumed
+     * by {@code loadZoneAndAct}/{@code getCurrentAct()} and every standalone
+     * lane's {@code AbstractTraceReplayTest#act()} override (which returns 0
+     * for Act 1). Mirrors {@code TraceCatalog}'s {@code engineAct = meta.act() - 1}
+     * conversion so the chain driver never feeds a raw 1-based manifest value
+     * to an engine act parameter.
+     */
+    private static Integer engineAct(Integer manifestAct) {
+        return manifestAct == null ? null : Math.max(0, manifestAct - 1);
     }
 
     // -------------------------------------------------------------------------
