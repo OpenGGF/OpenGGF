@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2 forced-spin triggers now keep the Roll animation when Obj84's pinball-mode byte is mirrored into the engine's spindash flag. The shared animation profile distinguishes the state-driven `pinball + rolling + spindash` alias from a genuine charging spindash, whose explicitly published animation byte remains untouched.
 - Fix: Ordinary nonzero solid-object side corrections once again snap the player's native X position to an integer pixel, while exact-edge and explicitly profiled subpixel-preserving contacts retain their fractional motion.
 - Refactor: playable frame snapshots, raw animation publication, and object-controlled solid-contact ownership now live in `PlayableSpriteController`, preserving the existing public sprite API and rewind schema while returning `AbstractPlayableSprite` below its release-critical source-size budget.
 - Refactor: HCZ transition-bubble creation now receives its `Random_Number` word source from `Sonic3kLevelEventManager` instead of reaching through `GameServices` inside the zone handler. This is behavior-neutral: production still consumes exactly one shared S3K RNG result per bubble, while the event runtime-access guard now remains green.

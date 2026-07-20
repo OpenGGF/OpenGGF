@@ -223,10 +223,14 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // those writes, SolidObject_TestClearPush may legally publish Walk while
         // the flag remains set (s2.asm:35462-35487); that byte must survive until
         // another native routine changes it. S2 Obj84's forced-spin pinball mode
-        // mirrors the same flag but also writes Status_Roll/anim=Roll, so let the
-        // ordinary rolling branch below keep that explicit Roll byte.
-        if (sprite.getSpindash() && spindashAnimId >= 0
-                && !(sprite.getPinballMode() && sprite.getRolling())) {
+        // mirrors the same flag but also writes Status_Roll/anim=Roll. Treat that
+        // forced-spin state as distinct from a genuine charge before the generic
+        // grounded-roll preservation rule below: Obj84 is the animation owner on
+        // entry, so its Roll write must be published explicitly.
+        if (sprite.getSpindash() && sprite.getPinballMode() && sprite.getRolling()) {
+            return rollAnimId;
+        }
+        if (sprite.getSpindash() && spindashAnimId >= 0) {
             return null;
         }
         // LZWaterSlides writes Slide only while grounded. A jump/roll dispatch
