@@ -573,10 +573,26 @@ public final class S3kSlotBonusStageRuntime {
         if (bootstrapGameplayMode == null || slotPlayer == null) {
             return;
         }
-        drainPendingRingRewards();
-        drainPendingSpikeRewards();
+        // Tick already-active rewards BEFORE draining newly queued ones so a
+        // reward object spawned this call is not also ticked this same call.
+        // ROM's AllocateObject (sonic3k.asm:37911-37914, jsr'd from the cage's
+        // reward-spawn routine at sonic3k.asm:99474) scans Dynamic_object_RAM
+        // forward from its very first slot for a free entry -- not "after
+        // current" like AllocateObjectAfterCurrent (sonic3k.asm:37917-37921,
+        // used elsewhere) -- so a newly spawned Obj_SlotRing/Obj_SlotSpike
+        // typically lands in a slot at or before the cage's own position in
+        // the object table. The single ascending-index main object dispatch
+        // pass has already visited that slot earlier this frame, so the new
+        // object's first Obj_SlotRing routine-0 tick (sonic3k.asm:35850-35887,
+        // the $40(a0) 0x1A-frame countdown seeded at sonic3k.asm:99482) does
+        // not run until the NEXT frame. Ticking it inline on the spawn frame
+        // let the engine's $40 countdown reach zero (and grant the ring via
+        // GiveRing) one frame before ROM: TestS3kSlotsBonusTraceReplay frame
+        // 307 expected rings=75 (ROM grants at 308) vs engine's already-76.
         updateActiveRewards(slotRingRewards, frameCounter);
         updateActiveRewards(slotSpikeRewards, frameCounter);
+        drainPendingRingRewards();
+        drainPendingSpikeRewards();
     }
 
     private void drainPendingRingRewards() {
