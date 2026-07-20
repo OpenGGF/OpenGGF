@@ -227,10 +227,22 @@ public final class LevelFrameStep {
                 && bonusStageProvider.updateDuringLevelFrame();
         boolean suppressDefaultCamera = bonusStageProvider != null
                 && bonusStageProvider.suppressesDefaultCameraStep();
+        // ROM: LevelLoop (sonic3k.asm:7895-7896) checks Restart_level_flag
+        // immediately after Process_Sprites (object execution) and branches
+        // away to `Level` (skipping DeformBgLayer, the camera-scroll routine)
+        // whenever an object set the flag during that same object pass —
+        // e.g. Obj_PachinkoEnergyTrap's exit trigger (sonic3k.asm:96682) when
+        // Sonic escapes through the top of the Glowing Spheres board. Mirror
+        // that skip: once this frame's object pass has flagged bonus-stage
+        // completion, the camera must not advance further this same frame
+        // (S3K Pachinko trace frame 2903: ROM camera_x holds at the prior
+        // frame's value while Sonic's position still updated one last time).
+        boolean bonusStageExitRequestedThisFrame = bonusStageProvider != null
+                && bonusStageProvider.isStageComplete();
 
         // 4a. Camera scroll (ROM ScrollHoriz + ScrollVertical): move + clamp to the
         //     prior-frame bottom boundary, BEFORE the zone event handler runs.
-        if (!suppressDefaultCamera && !cameraDrivenScroll) {
+        if (!suppressDefaultCamera && !cameraDrivenScroll && !bonusStageExitRequestedThisFrame) {
             wrapper.wrap("camera-scroll", camera::updatePosition);
         }
 
@@ -255,7 +267,7 @@ public final class LevelFrameStep {
         // 4d. Boundary easing (ROM DynamicLevelEvents boundary tail): ease the
         //     bottom boundary toward target reading the post-scroll camera, and
         //     record the boundary state for the NEXT frame's scroll clamp.
-        if (!suppressDefaultCamera && !cameraDrivenScroll) {
+        if (!suppressDefaultCamera && !cameraDrivenScroll && !bonusStageExitRequestedThisFrame) {
             wrapper.wrap("camera-boundary", camera::updateBoundaryEasing);
         }
 
