@@ -5,7 +5,6 @@ import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.TexturedQuadRenderer;
-import com.openggf.mods.NativeUnsupportedMods;
 import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
@@ -51,10 +50,9 @@ public final class NativeModNoticeScreen {
     private PixelFont font;
     private int solidWhiteTextureId;
 
-    public NativeModNoticeScreen(FadeManager fadeManager, List<String> modDisplayNames) {
+    public NativeModNoticeScreen(FadeManager fadeManager, List<String> noticeLines) {
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
-        this.noticeLines = NativeUnsupportedMods.noticeLines(
-                List.copyOf(modDisplayNames), MAX_VISIBLE_MOD_LINES);
+        this.noticeLines = List.copyOf(noticeLines);
     }
 
     public void initialize() {

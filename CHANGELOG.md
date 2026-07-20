@@ -7,8 +7,8 @@ All notable changes to the OpenGGF project are documented in this file.
   GraalVM native-image.** Such mods are skipped, shown as `UNSUPPORTED` in the Mod
   Manager (and cannot be enabled), removed from standalone launch choices, and
   listed in a boot notice plus console warning. Data-only music packs and reskins
-  are unaffected. Boot-notice wiring remains internal and does not expand the
-  frozen Mod API 2.4 surface.
+  are unaffected. Boot-notice wiring remains internal, does not expand the
+  frozen Mod API 2.4 surface, and preserves the runtime package boundaries.
 - **fix: MHZ1 now completes its miniboss, signpost, results, and Act 2 handoff.**
   The miniboss defeat timer, floor probe, camera-boundary worker, signpost landing
   envelope, results dispatch ordering, and transition state now follow their ROM

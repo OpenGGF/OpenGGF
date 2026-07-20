@@ -1207,7 +1207,9 @@ public class Engine {
 				+ String.join(", ", unsupported.stream()
 						.map(descriptor -> descriptor.manifest().id()).toList()));
 		nativeModNoticeScreen = new com.openggf.game.NativeModNoticeScreen(
-				graphicsManager.getFadeManager(), names);
+				graphicsManager.getFadeManager(),
+				com.openggf.mods.NativeUnsupportedMods.noticeLines(
+						names, com.openggf.game.NativeModNoticeScreen.MAX_VISIBLE_MOD_LINES));
 		nativeModNoticeScreen.initialize();
 		gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
 		gameLoop.setGameMode(GameMode.NATIVE_MOD_NOTICE);
