@@ -103,9 +103,19 @@ abstract class AbstractRunChainTest {
         SegmentPlan first = plans.get(0);
         assertEquals("level", first.segment().kind(), "First segment must be a level: " + runDir);
         Integer bootZone = first.segment().zoneId();
-        Integer bootAct = first.segment().act();
+        Integer bootActManifest = first.segment().act();
         assertNotNull(bootZone, "First segment must declare a zone_id: " + runDir);
-        assertNotNull(bootAct, "First segment must declare an act: " + runDir);
+        assertNotNull(bootActManifest, "First segment must declare an act: " + runDir);
+        // The recorder writes the 1-based ROM/human act number into the manifest
+        // (act 1 / act 2), but the engine's loadZoneAndAct and getCurrentAct are
+        // 0-based (act 1 == engine index 0), matching every standalone
+        // *CompleteRunTraceReplay lane (e.g. AIZ act 1 uses act()==0, GHZ act 2
+        // uses act()==1). Convert once here so segment 0 boots the recorded act's
+        // terrain -- loading the raw manifest act boots act 2 for an act-1 segment,
+        // dropping the teleported player onto the wrong floor and launching it off
+        // the first driven frame. Uniform across every game/segment; not a
+        // zone/route carve-out.
+        int bootAct = engineAct(bootActManifest);
 
         // --- Step 2: boot segment 0 ---------------------------------------------
         TraceData trace0 = first.trace();
@@ -343,7 +353,9 @@ abstract class AbstractRunChainTest {
         if (returnAct != null && preAct != null) {
             assertNotEquals(preAct.intValue(), returnAct.intValue(),
                     "Manifest next-act shape: return act must differ from pre-entry act for " + runDir);
-            assertEquals(returnAct.intValue(), GameServices.level().getCurrentAct(),
+            // getCurrentAct() is the engine's 0-based act index; the manifest act
+            // is the 1-based ROM act number. Convert before comparing.
+            assertEquals(engineAct(returnAct), GameServices.level().getCurrentAct(),
                     "Next-act advance (act) after special-stage return for " + runDir);
         }
         Integer returnZone = returnLevel.segment().zoneId();
@@ -378,6 +390,20 @@ abstract class AbstractRunChainTest {
         for (int f = 0; f < frameCount; f++) {
             loop.step();
         }
+    }
+
+    /**
+     * Converts a manifest's 1-based ROM act number (act 1 / act 2, as the
+     * recorder writes it) to the engine's 0-based act index used by
+     * {@code LevelManager.loadZoneAndAct} and {@code getCurrentAct()}. This is the
+     * same convention every standalone {@code *CompleteRunTraceReplay} lane
+     * encodes by hand (AIZ act 1 -&gt; {@code act()==0}, GHZ act 2 -&gt;
+     * {@code act()==1}); the manifest keeps the ROM-facing value so it stays
+     * human-readable and game-agnostic. Level segments only (special-stage
+     * segments carry act 0 and never reach a level load through this path).
+     */
+    private static int engineAct(int manifestAct) {
+        return manifestAct - 1;
     }
 
     /**
