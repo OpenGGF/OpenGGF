@@ -109,7 +109,7 @@ class TestEngineRenderDispatcher {
         assertEquals(List.of("level"), actions.calls);
     }
 
-    private static final class RecordingClearActions implements EngineRenderDispatcher.ClearActions {
+    static final class RecordingClearActions implements EngineRenderDispatcher.ClearActions {
         final List<String> calls = new ArrayList<>();
 
         @Override public void specialStage() { calls.add("specialStage"); }
@@ -122,10 +122,11 @@ class TestEngineRenderDispatcher {
         @Override public void level() { calls.add("level"); }
     }
 
-    private static final class RecordingDrawActions implements EngineRenderDispatcher.DrawActions {
+    static final class RecordingDrawActions implements EngineRenderDispatcher.DrawActions {
         final List<String> calls = new ArrayList<>();
 
         @Override public void legalDisclaimer() { calls.add("legalDisclaimer"); }
+        @Override public void nativeModNotice() { calls.add("nativeModNotice"); }
         @Override public void masterTitle() { calls.add("masterTitle"); }
         @Override public void editor() { calls.add("editor"); }
         @Override public void specialStage() { calls.add("specialStage"); }

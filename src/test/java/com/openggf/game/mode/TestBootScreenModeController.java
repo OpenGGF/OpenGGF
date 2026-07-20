@@ -30,6 +30,7 @@ class TestBootScreenModeController {
     @Test
     void handlesOnlyBootScreenModes() {
         assertTrue(controller.handles(GameMode.LEGAL_DISCLAIMER));
+        assertTrue(controller.handles(GameMode.NATIVE_MOD_NOTICE));
         assertTrue(controller.handles(GameMode.MASTER_TITLE_SCREEN));
         assertFalse(controller.handles(GameMode.LEVEL));
         assertFalse(controller.handles(GameMode.TITLE_SCREEN));

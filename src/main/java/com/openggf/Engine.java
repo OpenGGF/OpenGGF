@@ -237,6 +237,7 @@ public class Engine {
 
 	// Legal disclaimer screen (pre-ROM disclaimer)
 	private LegalDisclaimerScreen legalDisclaimerScreen;
+	private com.openggf.game.NativeModNoticeScreen nativeModNoticeScreen;
 
 	// Viewport parameters for aspect-ratio-correct rendering
 	private int viewportX = 0;
@@ -303,6 +304,8 @@ public class Engine {
 		this.gameLoop.setStandaloneMasterTitleExitHandler(this::exitStandaloneMasterTitle);
 		this.gameLoop.setLegalDisclaimerScreenSupplier(() -> legalDisclaimerScreen);
 		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
+		this.gameLoop.setNativeModNoticeScreenSupplier(() -> nativeModNoticeScreen);
+		this.gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
 		this.gameLoop.setTimeAttackLaunchHandler(this::launchTimeAttack);
 		this.gameLoop.setTimeAttackNetworkHandler(new com.openggf.game.timeattack.TimeAttackMenu.NetworkStarter() {
@@ -526,8 +529,6 @@ public class Engine {
 
 		// === Check legal disclaimer / master title screen before Phase 2 ===
 		boolean showLegalDisclaimer = configService.getBoolean(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP);
-		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
-
 		if (showLegalDisclaimer) {
 			legalDisclaimerScreen = new com.openggf.game.LegalDisclaimerScreen(
 					graphicsManager.getFadeManager());
@@ -535,14 +536,8 @@ public class Engine {
 			gameLoop.setGameMode(GameMode.LEGAL_DISCLAIMER);
 			// master title (if enabled) or Phase 2 init is deferred to
 			// exitLegalDisclaimer once the user dismisses the screen.
-		} else if (masterTitleOnStartup) {
-			masterTitleScreen = createMasterTitleScreen();
-			masterTitleScreen.initialize();
-			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
-			// Skip Phase 2 entirely - will be called on game selection
 		} else {
-			// === PHASE 2: ROM loading, sprites, audio, level ===
-			initializeGame();
+			enterBootModNoticeOrProceed(false);
 		}
 
 		// Eagerly initialize debug renderer resources before the main loop starts.
@@ -1177,7 +1172,12 @@ public class Engine {
 			legalDisclaimerScreen = null;
 		}
 
-		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
+		enterBootModNoticeOrProceed(true);
+	}
+
+	private void proceedToMasterTitleOrGame(boolean fadeFromBlack) {
+		boolean masterTitleOnStartup = configService.getBoolean(
+				SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
 		if (masterTitleOnStartup) {
 			masterTitleScreen = createMasterTitleScreen();
 			masterTitleScreen.initialize();
@@ -1186,7 +1186,39 @@ public class Engine {
 			initializeGame();
 		}
 
-		graphicsManager.getFadeManager().startFadeFromBlack(null);
+		if (fadeFromBlack) {
+			graphicsManager.getFadeManager().startFadeFromBlack(null);
+		}
+	}
+
+	private void enterBootModNoticeOrProceed(boolean fadeFromBlackWhenNoNotice) {
+		List<com.openggf.mods.ModDescriptor> unsupported =
+				com.openggf.mods.NativeUnsupportedMods.compute(
+						ModSubsystem.current().processCatalog().scanned(),
+						ModSubsystem.current().startupModState(),
+						compiledModsSupported);
+		if (unsupported.isEmpty()) {
+			proceedToMasterTitleOrGame(fadeFromBlackWhenNoNotice);
+			return;
+		}
+		List<String> names = unsupported.stream()
+				.map(descriptor -> descriptor.manifest().name()).toList();
+		LOGGER.warning(com.openggf.mods.NativeUnsupportedMods.NOTICE_HEADER + " "
+				+ String.join(", ", unsupported.stream()
+						.map(descriptor -> descriptor.manifest().id()).toList()));
+		nativeModNoticeScreen = new com.openggf.game.NativeModNoticeScreen(
+				graphicsManager.getFadeManager(), names);
+		nativeModNoticeScreen.initialize();
+		gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
+		gameLoop.setGameMode(GameMode.NATIVE_MOD_NOTICE);
+	}
+
+	private void exitNativeModNotice() {
+		if (nativeModNoticeScreen != null) {
+			nativeModNoticeScreen.cleanup();
+			nativeModNoticeScreen = null;
+		}
+		proceedToMasterTitleOrGame(true);
 	}
 
 	private void resetForGameplayFromMasterTitle() {
@@ -2988,6 +3020,7 @@ public class Engine {
 
 	private final class EngineDrawActions implements EngineRenderDispatcher.DrawActions {
 		@Override public void legalDisclaimer() { drawLegalDisclaimer(); }
+		@Override public void nativeModNotice() { drawNativeModNotice(); }
 		@Override public void masterTitle() { drawMasterTitle(); }
 		@Override public void editor() { drawEditor(); }
 		@Override public void specialStage() { drawSpecialStage(); }
@@ -3310,6 +3343,14 @@ public class Engine {
 		if (legalDisclaimerScreen != null) {
 			legalDisclaimerScreen.setProjectionMatrix(getProjectionMatrixBuffer());
 			legalDisclaimerScreen.draw();
+		}
+	}
+
+	private void drawNativeModNotice() {
+		resetCameraForScreenSpaceIfPresent();
+		if (nativeModNoticeScreen != null) {
+			nativeModNoticeScreen.setProjectionMatrix(getProjectionMatrixBuffer());
+			nativeModNoticeScreen.draw();
 		}
 	}
 
