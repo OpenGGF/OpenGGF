@@ -804,6 +804,18 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void objectManagerDelegatesPlacementLifecycleAndVerticalFiltering() throws IOException {
+        String manager = Files.readString(SRC_MAIN.resolve(OBJECT_MANAGER_PATH));
+
+        assertTrue(manager.contains("placement.reallocateToFirstFreeDynamicSlot("));
+        assertTrue(manager.contains("placement.releaseSpawnForRespawn("));
+        assertTrue(manager.contains("placement.dispatchDestroyRemoveFromActive("));
+        assertTrue(manager.contains("placement.isSpawnVerticallyEligibleForTwoAxisYPass("));
+        assertTrue(manager.contains("ObjectPlacementController.isNonCounterSpawnVerticallyEligible("));
+        assertTrue(manager.contains("solidContacts.captureExecStartPlayerCentreY("));
+    }
+
+    @Test
     void releaseCriticalLargeClassesDoNotGrowWithoutExtraction() throws IOException {
         List<String> violations = new ArrayList<>();
         for (Map.Entry<String, Integer> budget
