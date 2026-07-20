@@ -282,10 +282,10 @@ Expected: PASS with no blanket baseline count increase.
 - Modify: `src/main/java/com/openggf/game/sonic3k/objects/S3kBossDefeatSignpostFlow.java`
 - Test: `src/test/java/com/openggf/tests/TestS3kIczMinibossObject.java`
 
-- [ ] Run the named PalPointers method; expected the live object palette line remains blank.
-- [ ] Preserve the ownership-registry assertion, publish through `S3kPaletteWriteSupport`, and resolve pending writes at cleanup.
-- [ ] Run the full ICZ class and palette-ownership tests; expected PASS.
-- [ ] Commit as `fix: restore ICZ2 post-boss palette`, updating `CHANGELOG.md`.
+- [x] Run the named PalPointers method; the assertion stopped one object pass before cleanup after the ROM-accurate initialization-pass split.
+- [x] Preserve the registry-backed `S3kPaletteWriteSupport`/immediate-resolution path and assert the ICZ miniboss owner on both ends of the restored line.
+- [x] Run the full ICZ class and palette-ownership tests; expected PASS.
+- [x] Commit as `test: align ICZ2 post-boss palette cleanup`, updating `CHANGELOG.md`.
 
 ### Task D3.3: Initialize the CNZ electric ball from Obj51
 

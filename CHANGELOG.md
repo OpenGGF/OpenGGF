@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Test: ICZ2 post-miniboss cleanup coverage now follows the ROM's separate `Obj_EndSignControl` installation pass before its `$77` wait, then verifies the PalPointers line is both composed into the live object palette and attributed to the ICZ miniboss owner when cleanup executes.
 - Fix: CNZ cylinders now release a rider who entered the frame hurt even when the grounded hurt-landing routine clears the live hurt flag before Obj47 executes. The forced branch clears cylinder support, its solid latch, and object control without applying jump state or launch velocity, and rejects a same-frame re-contact from the invalid rider.
 - Fix: AIZ/LRZ pushable-rock participation coverage now models native P2's saved pre-helper `Status_Push` independently from the rock's prior-contact bit. Sustained sidekick pushes move that sidekick and preserve its native X subpixel word, while first-contact and cleared-status pushes remain deferred.
 - Fix: Sonic 2 forced-spin triggers now keep the Roll animation when Obj84's pinball-mode byte is mirrored into the engine's spindash flag. The shared animation profile distinguishes the state-driven `pinball + rolling + spindash` alias from a genuine charging spindash, whose explicitly published animation byte remains untouched.
