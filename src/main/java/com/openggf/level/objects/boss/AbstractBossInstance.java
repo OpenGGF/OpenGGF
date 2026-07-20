@@ -146,6 +146,10 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         for (BossChildComponent child : List.copyOf(childComponents)) {
             child.update(frameCounter, player);
         }
+        // A child may destroy itself while the parent is updating it. Prune again
+        // before ObjectManager's later same-pass removal makes that child's
+        // identity unavailable to a rewind capture.
+        childComponents.removeIf(BossChildComponent::isDestroyed);
     }
 
     public int getCollisionFlags() {
