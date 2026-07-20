@@ -492,7 +492,14 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     }
 
     private void onCollectPachinkoRingReward(PlayableEntity player) {
-        int amount = PACHINKO_RING_TABLE[motionState.y & 0x0F];
+        // ROM loc_4A3B6 (sonic3k.asm:96921-96924):
+        //   move.b  y_pos(a0),d0   ; big-endian byte read = HIGH byte of the y_pos word
+        //   andi.w  #$F,d0         ; -> (y_pos >> 8) & $F
+        //   move.b  (byte_1E44C4,d0.w),d0
+        // The ring-count table is indexed by the HIGH byte of y_pos, not the low nibble of
+        // the full position -- the same `move.b`-on-a-big-endian-word idiom as the subtype
+        // roll in PachinkoItemOrbObjectInstance.resolveRewardSubtype.
+        int amount = PACHINKO_RING_TABLE[(motionState.y >> 8) & 0x0F];
         awardRingsToCoordinator(amount);
         awardRingsToHud(player, amount);
         playSfx(Sonic3kSfx.RING_RIGHT);

@@ -8,10 +8,15 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -38,7 +43,25 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
             6, 4, 6, 4, 7, 3, 3, 5, 4, 3, 4, 6, 3, 4, 3, 7, 4, 3, 4, 3,
             4, 3, 4, 3
     };
-    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.standardEnemy();
+    // ROM collision_flags $D7 -> $C0 category (Touch_Special / collision_property notify):
+    // Add_SpriteToCollisionResponseList (loc_4A31A) re-registers the orb every frame and the
+    // player's Touch_Loop sets collision_property for EVERY overlapping $C0 object each pass, so
+    // the orb polls continuously (not once per overlap edge). The armed->convert state machine
+    // relies on that per-frame poll to detect RELEASE (collision_property reading clear), which
+    // is when the reward subtype is rolled -- an edge-triggered profile would report release one
+    // frame after the first touch and roll the subtype against the wrong Level_frame_counter
+    // phase. Mirror standardEnemy() but with continuousCallbacks=true.
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            true,
+            true,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            false,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     private int animationFrameCounter;
 
@@ -186,7 +209,18 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
     }
 
     static int resolveRewardSubtype(int yPos, int levelFrameCounter) {
-        int rewardIndex = (((yPos & 0x0F) << 2) + (levelFrameCounter & 3)) & 0x3F;
+        // ROM loc_4A238 (sonic3k.asm:96795-96802):
+        //   move.b  y_pos(a0),d1   ; big-endian byte read = HIGH byte of the y_pos word
+        //   andi.w  #$F,d1         ; -> (y_pos >> 8) & $F, i.e. bits 8-11 of the pixel Y
+        //   lsl.w   #2,d1
+        //   move.w  (Level_frame_counter).w,d0 / andi.w #3,d0 / add.w d1,d0
+        //   move.b  (byte_1E4484,d0.w),subtype(a0)
+        // The reward index keys on the HIGH byte of y_pos, NOT the low nibble of the full
+        // position (`move.b` on a big-endian word reads the MSB). Reading the low nibble
+        // (`yPos & $F`) collapses the base to a wrong 0-15 band and selects the wrong
+        // reward subtype (e.g. the y=$08B0 orb resolves to subtype 7 / bubble shield via
+        // base ($08 & $F)<<2 = $20, not subtype 1/3 via base 0).
+        int rewardIndex = ((((yPos >> 8) & 0x0F) << 2) + (levelFrameCounter & 3)) & 0x3F;
         return REWARD_TABLE[rewardIndex];
     }
 
