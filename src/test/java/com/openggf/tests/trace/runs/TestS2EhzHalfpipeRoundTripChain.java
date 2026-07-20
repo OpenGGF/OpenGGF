@@ -31,35 +31,58 @@ import java.nio.file.Path;
  * {@code S2SpecialStageReplayHarness}) plus the paired {@code GameLoop}/
  * {@code Sonic2SpecialStageManager} fixes documented on {@code doEnterSpecialStage}
  * (TRACE_ACCURATE startup + {@code setLagCompensation(0)} for a BK2-driven organic
- * entry). Diagnostic instrumentation (added and removed in the same investigation
- * pass) proved the driven replay tracks the recorded run byte-accurately for the
- * first ~1500 SS frames: ring count (17 @ row 1200, 34 @ row 1500) and half-pipe
- * track segment index (matching the trace's {@code current_segment} column exactly
- * at every sampled row, e.g. engine/trace segment 15 at the divergence point) both
- * agree with the recorded {@code physics.csv}. The FIRST checkpoint (marker
- * {@code $FE}) also fires correctly: {@code currentSpecialAct} reaches 1 (not a
- * miscounted 4), so {@code Sonic2SpecialStageCheckpoint#resolveCheckpointResult}
- * correctly resolves it as {@code PASSED} (not {@code STAGE_COMPLETE}).
+ * entry).
  *
- * <p>The stage nonetheless completes immediately after: at track segment 15 (of a
- * true run length that reaches segment ~0x2b/43 by frame 5100 and only finishes
- * around frame 5400 per the recorded trace), the engine spawns and awards the
- * EMERALD object ({@code Sonic2SpecialStageObjectManager#handleEmerald}, marker
- * {@code $FD}) -- three checkpoints and ~28 further track segments too early. Since
- * the segment/drawing-index counters are independently verified correct at this
- * exact frame, the bug is isolated to the parsed
- * {@code objectLocationData} marker stream for special-stage index 0: marker
- * {@code $FD} is being reached right after the first {@code $FE}, rather than after
- * three more {@code $FE} markers. This looks like a genuine ROM-data-table
- * divergence in {@code Sonic2SpecialStageManager}'s special-stage 0 object/marker
- * location data (independent of chain-drive mechanics -- it would misfire in
- * interactive play too), not a trace-replay-only artifact. Root-causing which ROM
- * table/offset feeds the marker stream (cross-referencing s2disasm's special-stage
- * object location data for stage 0) is the next concrete step; until then this lane
- * fails at the {@code emeralds_after} boundary assertion (expected 1, engine
- * organically produces 1 too -- just three checkpoints early -- so {@code combinedRings}
- * resets to 0 well before the manifest's recorded {@code stage_exit}, and the
- * chain's `emeralds_after` check on the SECOND cycle also fails as a knock-on).
+ * <p><b>Corrected root cause (superseding an earlier, disproven "premature emerald /
+ * corrupted marker-stream" hypothesis)</b>: a raw dump of the ROM's decompressed
+ * {@code objectLocationData} for special-stage index 0 shows its stream is intact --
+ * roughly 40 marker bytes span its full ~489-byte span (offsets 0xe-0x1f7), which
+ * lines up with the recorded run's own ~44 {@code current_segment} transitions
+ * (0..0x2b) to the emerald in {@code ss/physics.csv}. The object/marker table is
+ * NOT corrupted or short. Temporary instrumentation in
+ * {@code Sonic2SpecialStageObjectManager#handleMarker} /
+ * {@code Sonic2SpecialStageManager#handleCheckpoint} /
+ * {@code #handleCheckpointResolved} / {@code #markFailed} (added and removed in the
+ * same investigation pass, not landed) pinned the actual failure: the engine
+ * correctly consumes the no-checkpoint-enable marker ({@code $FC}) and the first
+ * checkpoint marker ({@code $FE}) from the ROM stream at the right segment (matching
+ * the trace's own rings-to-go-display cadence), and correctly resolves the team-mode
+ * ring requirement for checkpoint 1 as 40 (verified directly against the raw ROM
+ * bytes at {@code RING_REQ_TEAM_OFFSET}, stage 0 quarter 0 = 40; solo would be 30, so
+ * team-mode detection itself is right). But
+ * {@code Sonic2SpecialStageManager#tryStartPendingCheckpoint}'s straight-segment gate
+ * ({@code CHECKPOINT_TRIGGER_FRAME}/{@code CHECKPOINT_TRIGGER_OFFSET}, comment:
+ * "alignment tuned") fires on the FIRST straight-type segment/frame combination
+ * reached after the checkpoint becomes pending, because
+ * {@code Sonic2TrackAnimator#currentFrameInSegment} resets to 0 on every
+ * {@code advanceSegment()} call -- so the single-exact-frame-match heuristic is
+ * satisfied as soon as ANY straight-type segment begins, rather than modeling the
+ * ROM's actual {@code SSTrack_last_mappings_copy} pointer-identity check
+ * ({@code Obj5A_Init}, s2.asm:71409-71420, comparing the currently-drawn track
+ * mapping address against {@code MapSpec_Straight4}/{@code MapSpec_Drop1}, which is
+ * NOT segment-relative). Concretely, the instrumented run showed the gate firing and
+ * resolving at engine frame ~1229 with only 36/40 rings collected
+ * ({@code handleCheckpointResolved result=FAILED num=1 req=40 had=36 final=false}),
+ * roughly 350 frames (about one full segment) before the recorded run's own
+ * {@code rings_togo_bcd} column reaches 0 (40/40) at frame ~1580 in
+ * {@code ss/physics.csv}. The premature evaluation comes up 4 rings short and
+ * resolves checkpoint 1 as {@code FAILED} instead of {@code PASSED}, which
+ * immediately calls {@code markFailed()} and ejects the player back to LEVEL mode --
+ * the special stage never reaches the {@code $FD} emerald marker at all in this run.
+ *
+ * <p>Because {@code CHECKPOINT_TRIGGER_FRAME}/{@code CHECKPOINT_TRIGGER_OFFSET} is
+ * empirically tuned against the standalone {@code s2_special_stage} fixture
+ * ({@code TestS2SpecialStageTraceReplay}, ALSO special-stage index 0, must-stay-green)
+ * and a ROM-faithful fix requires modeling the ROM's actual
+ * {@code SSTrack_last_mappings_copy} pointer-range identity (verifying the
+ * {@code Ani_SSTrack}-family table position of {@code MapSpec_Straight4} /
+ * {@code MapSpec_Drop1} relative to segment boundaries) rather than re-tuning the
+ * single-frame offset blind, that ROM-side verification is the next concrete step;
+ * re-tuning the constant without it risks silently regressing the must-stay-green
+ * standalone trace, which currently depends on the same tuned value producing ITS
+ * OWN correct gate timing. Until then this lane fails at the {@code emeralds_after}
+ * boundary assertion (expected 1, engine returns 0 because the special stage is
+ * failed/ejected rather than completed).
  */
 @RequiresRom(SonicGame.SONIC_2)
 class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
