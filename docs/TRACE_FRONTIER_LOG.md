@@ -1,5 +1,38 @@
 # Trace Frontier Log
 
+### 2026-07-20 -- Chain-replay foundation merged; S1 chain GREEN; two engine frontiers opened
+
+Workflow A (chain consumers) merged: the run walker is manifest-driven with
+per-entry-kind boundary assertions (incl. positional restore on S3K
+bonus/SS returns), a derived step cap, and the SS-comparison seam. Truth on
+the merged base (explicit `-Dtest` runs):
+
+- **TestS1GhzMazeRoundTripChain: GREEN** -- the full ghz1 -> maze -> ghz2
+  round trip replays on the continuous engine with giant_ring + next-act
+  boundary assertions passing. First green chain test.
+- `TestS2EhzHalfpipeRoundTripChain`: RED at the second star-post cycle.
+  Primary root FIXED (SS-return handoff: frozen BK2 cursor pre-seek, SS
+  input override released at mode exit, fall-through comparator attach --
+  seg2 faithful for ~906 frames, first positional-restore + rings-zero
+  assertions pass). Remaining blocker: the engine's organic SS-return
+  title card runs a different frame count than the ROM's, over-advancing
+  the free-running OscillationManager + sidekick catch-up (phase-offset
+  moving platform at f907). RULING: engine-side title-card duration parity
+  (ROM Obj79 return -> Level_TtlCard timing), per the organic-transition
+  spec mandate and the free-running-counter parity precedent; follow-up
+  dispatched. Instrumented disproof on record: the checkpoint gate fires
+  at identical fc=939 in chain and standalone boots.
+- `TestS3kMegaRunChain`: RED at the first starpost_bonus boundary --
+  Knuckles glide/vine physics divergence ~trace frame 1934 in the AIZ
+  Knuckles-solo segment (first-ever Knuckles trace coverage). Real fixes
+  banked en route: manifest act indexing (1-based) into 0-based
+  loadZoneAndAct; Knuckles glide centreY/dual-foot-sensor/forced-anim-byte
+  (sonic3k.asm:31563); TraceReplayDriver ground-snap contract;
+  BK2-driven organic SS entry now TRACE_ACCURATE + lag-comp-off.
+
+The chains protect the boundary layer from here; both red frontiers are
+targeted follow-ups, not blind rounds.
+
 ### 2026-07-20 -- ALL SIX STAGE COMPARATORS GREEN (rounds 2-3 + counter-seed fix)
 
 Rounds 2 and 3 of the workflow-orchestrated campaigns (parallel per-stage
