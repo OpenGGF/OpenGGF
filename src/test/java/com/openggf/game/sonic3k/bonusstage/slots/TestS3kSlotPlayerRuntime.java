@@ -286,11 +286,19 @@ class TestS3kSlotPlayerRuntime {
 
     @Test
     void tileResponseAnchorMatchesRomPointerMath() {
+        // ROM sub_4BE3A (sonic3k.asm:99214-99223): $32(a0) holds the post-increment
+        // sub_4BDA2 pointer (TABLE + idx + 1), and subi.l #-$CFFF,d1 (sonic3k.asm:99215)
+        // adds it back -- TABLE's low word is $3000, and $3000 + $CFFF + 1 == $10000,
+        // so the low-word reconstruction is exactly idx (the "+1" cancels out, it does
+        // NOT carry through to the recovered row/col). See
+        // S3kSlotCollisionSystem.tileResponseAnchorX/Y javadoc for the full derivation,
+        // confirmed against src/test/resources/traces/s3k/bonus_slots frame 445/446
+        // (a bumper launch whose expected direction only matches with no +1).
         int row = 57;
         int col = 47;
         int expandedIndex = row * S3kSlotCollisionSystem.EXPANDED_STRIDE + col;
 
-        assertEquals(((col + 1) * S3kSlotCollisionSystem.CELL_SIZE) - S3kSlotCollisionSystem.COLLISION_X_OFFSET,
+        assertEquals((col * S3kSlotCollisionSystem.CELL_SIZE) - S3kSlotCollisionSystem.COLLISION_X_OFFSET,
                 S3kSlotCollisionSystem.tileResponseAnchorX(expandedIndex));
         assertEquals((row * S3kSlotCollisionSystem.CELL_SIZE) - S3kSlotCollisionSystem.COLLISION_Y_OFFSET,
                 S3kSlotCollisionSystem.tileResponseAnchorY(expandedIndex));
