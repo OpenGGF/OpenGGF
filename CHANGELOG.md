@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: MGZ Knuckles boss choreography and HCZ blade-impact effects now retire through the shared object-lifetime operations with explicit one-shot, non-respawnable semantics; the lifecycle guard keeps its 582 ceiling while accepting reductions below that budget.
 - Fix: S3K Slots player synchronization, Pachinko magnet-orb roll release, and Slots cage capture now route their native playable-position word writes through `NativePositionOps`, preserving the same integer centres and subpixel fractions behind the canonical shared API.
 - Fix: WFZ breakable plating and the MGZ miniboss ceiling spire now declare their sustained-overlap and shield-deflect behavior through canonical touch-response profiles, keeping the legacy hooks and dispatcher policy sourced from the same typed values.
 - Fix(s3k): HCZ transition bubbles and the HCZ end-boss water-column child graph now restore through rewind with their captured dynamic identities, slots, parent links, and state intact.
