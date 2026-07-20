@@ -52,6 +52,12 @@ public final class S3kSlotBonusStageRuntime {
     private S3kSlotRenderBuffers.VisibleCells visibleCells = S3kSlotRenderBuffers.VisibleCells.empty();
     private int lastFrameCounter = -1;
     private final List<SuppressedSidekick> suppressedSidekicks = new ArrayList<>();
+    // Trace-replay-only bootstrap seed for globalVIntRunCounter() -- see
+    // primeVIntRunCountForReplay(). null on the live path, where
+    // globalVIntRunCounter() falls back to the raw ObjectManager.vblaCounter
+    // approximation documented on that method.
+    private Long vIntRunCountBase;
+    private int vIntRunCountBaseVbla;
 
     public void bootstrap() {
         initialized = false;
@@ -66,6 +72,8 @@ public final class S3kSlotBonusStageRuntime {
         visibleCells = S3kSlotRenderBuffers.VisibleCells.empty();
         lastFrameCounter = -1;
         suppressedSidekicks.clear();
+        vIntRunCountBase = null;
+        vIntRunCountBaseVbla = 0;
         slotStageState = S3kSlotStageState.bootstrap();
         slotRenderBuffers = S3kSlotRenderBuffers.fromRomData();
         optionCycleSystem.bootstrap(slotStageState);
@@ -679,11 +687,44 @@ public final class S3kSlotBonusStageRuntime {
      * claim of exact parity with real hardware.
      */
     private int globalVIntRunCounter() {
+        int rawVbla = rawVblaCounter();
+        if (vIntRunCountBase != null) {
+            // Trace replay only: recordedBase + ticks elapsed since the
+            // priming call (bonus-stage entry) -- see
+            // primeVIntRunCountForReplay(). Mirrors the ROM's free-running
+            // V_int_run_count from the recorded entry value instead of the
+            // raw per-session vblaCounter approximation below.
+            long delta = rawVbla - vIntRunCountBaseVbla;
+            return (int) ((vIntRunCountBase.longValue() + delta) & 0xFFFFFFFFL);
+        }
+        return rawVbla;
+    }
+
+    private int rawVblaCounter() {
         if (bootstrapGameplayMode == null) {
             return lastFrameCounter;
         }
         ObjectManager objectManager = bootstrapGameplayMode.getLevelManager().getObjectManager();
         return objectManager != null ? objectManager.getVblaCounter() : lastFrameCounter;
+    }
+
+    /**
+     * Trace-replay-only bootstrap seam (comparison-bootstrap pattern, same
+     * shape as {@code TraceReplaySessionBootstrap.applyInitialRngSeedForReplay}
+     * / {@code metadata.rng_seed}). Called once, immediately after {@link
+     * #bootstrap()} succeeds and before the first {@link #update(int)}, from
+     * {@code TraceReplaySessionBootstrap.applyBonusStageEntry} when the trace's
+     * {@code metadata.v_int_run_count} is present (recorder v6.32-s3k+,
+     * bonus segments only). Primes {@link #globalVIntRunCounter()} so it
+     * returns {@code recordedBase + ticks-since-entry} rather than the raw
+     * {@code ObjectManager.vblaCounter} value, letting {@link
+     * S3kSlotOptionCycleSystem#tick} reproduce the recorded ROM
+     * {@code V_int_run_count}-seeded reel outcomes. No effect on live play,
+     * which never calls this method.
+     */
+    public void primeVIntRunCountForReplay(long recordedVIntRunCount) {
+        vIntRunCountBase = recordedVIntRunCount;
+        vIntRunCountBaseVbla = rawVblaCounter();
     }
 
     private void registerDynamicSlotObject(com.openggf.level.objects.ObjectInstance object) {

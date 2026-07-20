@@ -247,6 +247,7 @@ class TestPreludeFramesKnobsZero {
                 /* runId */ null,
                 /* segmentIndex */ null,
                 /* bonusStageType */ null,
-                /* freshLoad */ null);
+                /* freshLoad */ null,
+                /* vIntRunCount */ null);
     }
 }

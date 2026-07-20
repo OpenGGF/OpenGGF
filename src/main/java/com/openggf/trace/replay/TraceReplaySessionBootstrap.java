@@ -14,6 +14,7 @@ import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
 import com.openggf.game.sonic3k.Sonic3kLevelAnimationManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
@@ -533,6 +534,20 @@ public final class TraceReplaySessionBootstrap {
             }
         }
         provider.onDeferredSetupComplete();
+        // Comparison-bootstrap seam (same pattern as applyInitialRngSeedForReplay
+        // / metadata.rng_seed above): when the trace recorded the ROM's
+        // free-running V_int_run_count at bonus-stage entry (recorder
+        // v6.32-s3k+, bonus segments only -- see TraceMetadata#recordedVIntRunCount),
+        // prime the slots runtime's counter base so Slots_CycleOptions's
+        // recorded reel outcomes become reproducible instead of approximated
+        // by the per-session ObjectManager.vblaCounter (S3K-Known-Discrepancies,
+        // "Slots is also affected"). No-op for gumball/pachinko or legacy traces.
+        if (type == BonusStageType.SLOT_MACHINE
+                && meta.recordedVIntRunCount() != null
+                && provider instanceof Sonic3kBonusStageCoordinator coordinator
+                && coordinator.activeSlotRuntime() != null) {
+            coordinator.activeSlotRuntime().primeVIntRunCountForReplay(meta.recordedVIntRunCount());
+        }
         return true;
     }
 
