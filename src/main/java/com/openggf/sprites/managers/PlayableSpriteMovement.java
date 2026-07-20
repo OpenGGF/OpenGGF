@@ -1559,10 +1559,33 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Initiates glide from airborne state.
 	 */
 	private void activateGlide() {
+		// ROM: Knux_Test_For_Glide (sonic3k.asm:32560-32566) writes y_radius/
+		// x_radius directly and never touches y_pos -- y_pos is ROM's centre
+		// coordinate and is unaffected by a radius change. This engine instead
+		// derives centreY from a top-left yPixel plus a separate `height` field
+		// (see AbstractSprite#getCentreY), and setRolling(false) below has the
+		// side effect of resetting `height` to the STANDING value (runHeight)
+		// when Knuckles was mid-roll-jump (the common case entering glide from
+		// a jump). applyCustomRadii(10, 10) then overwrites the radii to the
+		// glide dimensions but leaves that stale standing `height` in place, so
+		// getCentreY() silently jumps by (runHeight - the prior roll height) / 2
+		// before any velocity-driven movement even happens -- an engine-internal
+		// bookkeeping artifact ROM has no equivalent of. Capture centreY here and
+		// restore it (subpixel-preserving, matching a ROM move.w) after the
+		// radius/height bookkeeping below so entering glide is a pure radius
+		// change, matching ROM. Reproduced via a standalone replay of
+		// traces/s3k/runs/s3-knux-multibonus-ss/aiz/: at trace frame 1562 this
+		// stale-height jump alone accounted for +5px of centreY, compounding
+		// with the correct +5px velocity-driven move into a +10px error that
+		// desynced Knuckles' subsequent wall-glide-grab timing for the rest of
+		// the segment.
+		short preActivationCentreY = sprite.getCentreY();
+
 		// Clear rolling state and set glide radii (0x0A x 0x0A)
 		sprite.setRolling(false);
 		sprite.setRollingJump(false);
 		sprite.applyCustomRadii(10, 10);
+		sprite.setCentreYPreserveSubpixel(preActivationCentreY);
 
 		// Add 0x200 to y_vel, cap at 0 if negative result
 		int newYVel = sprite.getYSpeed() + 0x200;
