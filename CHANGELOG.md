@@ -3,11 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Added native-build classification and a class-loader backstop for enabled
-  code-bearing mods. The Mod Manager now marks them unsupported and refuses
-  native enable cascades, and standalone code mods are removed from native launch
-  choices. A boot notice and console warning list enabled unsupported mods, while
-  data-only music and reskin support remains available.
+- **feat: Native builds now guard code-bearing mods that cannot load under
+  GraalVM native-image.** Such mods are skipped, shown as `UNSUPPORTED` in the Mod
+  Manager (and cannot be enabled), removed from standalone launch choices, and
+  listed in a boot notice plus console warning. Data-only music packs and reskins
+  are unaffected.
 - **fix: MHZ1 now completes its miniboss, signpost, results, and Act 2 handoff.**
   The miniboss defeat timer, floor probe, camera-boundary worker, signpost landing
   envelope, results dispatch ordering, and transition state now follow their ROM

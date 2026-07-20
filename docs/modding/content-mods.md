@@ -70,6 +70,12 @@ above is useful for printing the sorted findings for an existing jar. Copy the j
 into `mods/`, start the engine, enable it in the Mod Manager, confirm the code-trust
 warning, and restart.
 
+Code-bearing mods require the JVM jar because GraalVM native-image builds cannot
+load new classes under closed-world AOT. On native builds they remain disabled for
+the current process and appear as `UNSUPPORTED` in the Mod Manager; data-only music
+packs and reskins continue to work. Run `OpenGGF-<ver>-jar-with-dependencies.jar`
+(or the universal jar) to use code-bearing mods.
+
 For an explicit local development launch, use `ggfmod run target/classes`. This is
 the only exploded-directory entry point. The engine snapshots that directory once;
 later source-tree changes are not observed by the running session. Deterministic
