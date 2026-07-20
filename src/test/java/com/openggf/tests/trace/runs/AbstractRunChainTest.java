@@ -175,6 +175,27 @@ abstract class AbstractRunChainTest {
             if (entryMode == BoundaryEntryMode.LEVEL_MODE) {
                 // This segment is an INTERIOR; its exit (stage_exit) returns to a
                 // level. Await the mode==LEVEL poll, assert carry-over, rebind.
+                //
+                // NOTE (investigated, not yet fixed here): a special_stage interior
+                // is advance-UNCOMPARED (SS-INTERIOR POLICY v1) but is also currently
+                // input-uncontrolled -- the production input bridge
+                // (PlaybackDebugManager.isDriving) only covers LEVEL/BONUS_STAGE, and
+                // GameLoop's SPECIAL_STAGE tick reads steering from
+                // InputHandler.logical() (SpecialStageInputMapper), never the
+                // forced-input-mask path, so the headless InputHandler here supplies
+                // constant no-input for the whole interior. Feeding the shared movie's
+                // recorded input via InputHandler.setLogicalOverride (mirroring
+                // TraceSessionLauncher#applySpecialStageTraceInputIfActive) was tried
+                // and confirmed to thread real recorded steering through to
+                // SpecialStageInputMapper (verified: non-zero direction bits from the
+                // movie DO reach the SS provider), but the SS still did not reproduce
+                // the recorded emerald outcome and shifted the post-return settle by
+                // one frame (a new 1px X mismatch upstream of the emerald assertion).
+                // Reproducing the recorded SS outcome faithfully likely needs the same
+                // lag/pass-aware driving AbstractS2SpecialStageTraceReplayTest's
+                // S2SpecialStageReplayHarness uses, not a naive 1:1 movie-frame feed --
+                // left as the documented next step rather than landing a change that
+                // doesn't close the gap.
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, () -> stepEngineFrame(loop));
                 assertTrue(obs.observed(),
@@ -295,7 +316,7 @@ abstract class AbstractRunChainTest {
 
         ReturnAssertionMode mode = TraceRunReplayWalker.returnAssertionMode(entry);
         switch (mode) {
-            case POSITIONAL_RESTORE -> assertPositionalRestore(entry, runDir);
+            case POSITIONAL_RESTORE -> assertPositionalRestore(entry, returnLevel, runDir);
             case CHECKPOINT_RESTORE -> assertCheckpointRestore(entry, runDir);
             case NEXT_ACT -> assertNextActAdvance(plans, interiorIndex, returnLevel, runDir);
             case RINGS_EMERALDS_ONLY -> { /* rings + emeralds only, asserted below */ }
@@ -303,17 +324,46 @@ abstract class AbstractRunChainTest {
         assertRingsAndEmeralds(exit, runDir);
     }
 
-    /** S2 starpost_special: player restored to Saved_x/y (ROM Saved_x/y_pos). */
-    protected void assertPositionalRestore(TraceRunManifest.Transition entry, Path runDir) {
+    /**
+     * S2 starpost_special: player restored to Saved_x/y (ROM {@code Obj79_LoadData}:
+     * {@code move.w (Saved_x_pos).w,(MainCharacter+x_pos).w} /
+     * {@code move.w (Saved_y_pos).w,(MainCharacter+y_pos).w}).
+     *
+     * <p>The comparison target is the RETURN LEVEL segment's own recorded frame 0
+     * (ground truth captured live from the ROM), not the entry transition's raw
+     * {@code saved_x_pos}/{@code saved_y_pos} fields. Those fields are a snapshot of
+     * the ROM {@code Saved_x_pos}/{@code Saved_y_pos} RAM cells taken at CHECKPOINT
+     * TOUCH time (ROM {@code Obj79_SaveData}: {@code move.w x_pos(a0),(Saved_x_pos).w}
+     * where {@code a0} is the checkpoint OBJECT, not the player) -- i.e. the
+     * checkpoint's own static placement, which is not guaranteed to sit exactly on
+     * the floor. X is unaffected by gravity so both sources agree, but after the
+     * {@code Obj79_LoadData} write restores Y verbatim, the ROM's own level physics
+     * keeps running every frame through the ensuing title-card phase (player input
+     * is locked but gravity is not), settling the player onto the actual floor
+     * before {@code mode_change_bk2_frame}/{@code stage_exit} is reached. Confirmed
+     * against the committed run's {@code seg2_ehz1} physics.csv: frame 0 already
+     * reads {@code player_y=00AD} (173), not the transition's {@code saved_y_pos=170}
+     * -- so asserting the raw entry-time snapshot against the settled return
+     * position would fail on ROM-faithful engine output. The return level's frame 0
+     * is recorded at the exact same {@code mode_change_bk2_frame}
+     * ({@code segment.bk2FrameOffset() == transition.modeChangeBk2Frame()} for every
+     * {@code stage_exit} in this run), so it is the correct ground truth for this
+     * boundary.
+     */
+    protected void assertPositionalRestore(
+            TraceRunManifest.Transition entry, SegmentPlan returnLevel, Path runDir) {
         AbstractPlayableSprite sprite = GameServices.camera().getFocusedSprite();
         assertNotNull(sprite, "Focused sprite missing on special-stage return for " + runDir);
+        assertTrue(returnLevel.trace().frameCount() > 0,
+                "Return level segment has no recorded frames: " + runDir);
+        var restored = returnLevel.trace().getFrame(0);
         if (entry.savedXPos() != null) {
-            assertEquals(entry.savedXPos().intValue(), (int) sprite.getCentreX(),
-                    "Saved_x_pos restore after special-stage return for " + runDir);
+            assertEquals(restored.x(), (int) sprite.getCentreX(),
+                    "Player X restore after special-stage return for " + runDir);
         }
         if (entry.savedYPos() != null) {
-            assertEquals(entry.savedYPos().intValue(), (int) sprite.getCentreY(),
-                    "Saved_y_pos restore after special-stage return for " + runDir);
+            assertEquals(restored.y(), (int) sprite.getCentreY(),
+                    "Player Y restore after special-stage return for " + runDir);
         }
     }
 
