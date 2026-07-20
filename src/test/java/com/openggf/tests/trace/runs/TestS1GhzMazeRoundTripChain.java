@@ -1,11 +1,20 @@
 package com.openggf.tests.trace.runs;
 
+import com.openggf.GameLoop;
+import com.openggf.control.InputHandler;
+import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.debug.playback.Bk2Movie;
+import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceData;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.trace.TraceRunManifest;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -60,5 +69,61 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
             assertEquals(exit.emeraldsAfter().intValue(), actualEmeralds,
                     "Emerald count after stage exit for " + runDir);
         }
+    }
+
+    /**
+     * S1-specific lag-aware special-stage stepper. The generic base's
+     * {@link AbstractRunChainTest#specialStageDrivenStep} feeds every
+     * recorded BK2 row as a full {@code Sonic1SpecialStageProvider.update()}
+     * tick, but a BizHawk "lag" row is a real elapsed console VBlank where
+     * the ROM's OWN game logic did NOT advance (the same reason
+     * {@code S1SpecialStageReplayHarness.stepFrame} /
+     * {@code AbstractS1SpecialStageTraceReplayTest}'s comparator loop skip
+     * lag rows rather than stepping them -- see that class's "VBlank-paced"
+     * javadoc section). Stepping the provider on a lag row runs an EXTRA
+     * physics tick beyond what the recorded outcome reflects; over this
+     * fixture's 72 lag rows (of 3091) that is enough drift in a
+     * rotation-driven maze to miss the emerald entirely. Loads the same
+     * {@code Sonic1SpecialStageTraceData} the standalone harness uses,
+     * purely as a read-only lag/pacing signal (comparison-only invariant:
+     * no field from it is ever hydrated into engine state) and skips lag
+     * rows without stepping the engine, mirroring the harness's
+     * {@code if (tf.lag()) continue;}.
+     */
+    @Override
+    protected Runnable uncomparedInteriorStep(
+            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
+        Path ssDir = RUN_DIR.resolve(interior.segment().dir());
+        Sonic1SpecialStageTraceData trace;
+        try {
+            trace = Sonic1SpecialStageTraceData.load(ssDir);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to load S1 special-stage lag trace: " + ssDir, e);
+        }
+        int bk2FrameOffset = interior.segment().bk2FrameOffset();
+        int[] traceRow = {0};
+        return () -> {
+            while (traceRow[0] < trace.frameCount() && trace.getFrame(traceRow[0]).lag()) {
+                traceRow[0]++;
+            }
+            if (traceRow[0] >= trace.frameCount()) {
+                // Trace exhausted before stage_exit latched -- fall back to a
+                // plain engine step so the boundary await can still detect a
+                // late mode flip or trip its step cap instead of looping on
+                // an out-of-range trace read.
+                AbstractRunChainTest.stepEngineFrame(loop);
+                return;
+            }
+            int absoluteRow = bk2FrameOffset + traceRow[0];
+            Bk2FrameInput current = movie.getFrame(absoluteRow);
+            Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
+            inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
+            try {
+                AbstractRunChainTest.stepEngineFrame(loop);
+            } finally {
+                inputHandler.clearLogicalOverride();
+            }
+            traceRow[0]++;
+        };
     }
 }
