@@ -9,8 +9,8 @@ develop+next	com.openggf.game.rewind.TestRewindArchitectureGuard#objectRewindAnn
 develop+next	com.openggf.game.rewind.TestRewindTransientGuard#fieldsCoveredByDefaultTransientPolicyDoNotNeedExplicitAnnotations	failure	not-run	rewind	D	observed-red	in-scope
 next	com.openggf.game.rewind.TestS3kBadnikChildGraphRewind#dragonflyFollowAnchorFailsForObjectWithoutRegisteredRewindIdentity	failure	not-run	rewind	N2	observed-red	in-scope
 next	com.openggf.game.rewind.TestS3kBadnikChildGraphRewind#dragonflyLinkedBodyGraphRestoresExactParentAndPreviousSegmentByIdentity	failure	not-run	rewind	N2	observed-red	in-scope
-develop+next	com.openggf.game.rewind.TestS3kBadnikChildGraphRewind#mantisChildRelinksToRestoredParentAndParentSlot	failure	not-run	rewind	N2	observed-red	in-scope
-develop+next	com.openggf.game.rewind.TestS3kBadnikChildGraphRewind#spikerTopSpikeRestoresExactParentAndCooldownState	failure	not-run	rewind	N2	observed-red	in-scope
+develop+next	com.openggf.game.rewind.TestS3kBadnikChildGraphRewind#mantisChildRelinksToRestoredParentAndParentSlot	failure	not-run	rewind	D	observed-red	in-scope
+develop+next	com.openggf.game.rewind.TestS3kBadnikChildGraphRewind#spikerTopSpikeRestoresExactParentAndCooldownState	failure	not-run	rewind	D	observed-red	in-scope
 next	com.openggf.game.rewind.TestS3kMhzSwingBarLiveRewind#horizontalSwingBarHangStateSurvivesRewindRestore	failure	not-run	MHZ	excluded	deferred-zone	excluded
 next	com.openggf.game.rewind.TestS3kNestedHurtboxGraphRewind#hczVortexBubbleRestoresFreshAndPreservesPullState	failure	not-run	rewind	N2	observed-red	in-scope
 next	com.openggf.game.session.TestGameplayModeContextRewindRegistry#decoratedStockEventsRegisterRewindStateAndCustomZonesRemoveIt	error	not-run	rewind	N2	observed-red	in-scope

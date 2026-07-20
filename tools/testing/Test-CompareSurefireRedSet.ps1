@@ -64,6 +64,25 @@ function Invoke-Comparator {
     }
 }
 
+function Assert-RepositoryInventory {
+    $inventoryPath = Join-Path $repositoryRoot 'docs/testing/red-suite-inventory.tsv'
+    $exclusionsPath = Join-Path $repositoryRoot 'docs/testing/unfinished-sk-zone-red-exclusions.txt'
+    $inventory = @(Import-Csv -LiteralPath $inventoryPath -Delimiter "`t")
+    $exclusions = @(Get-Content -LiteralPath $exclusionsPath | Where-Object { $_ -and -not $_.StartsWith('#') })
+    $developRows = @($inventory | Where-Object { $_.branch -in @('develop', 'develop+next') })
+    $nextScopeRows = @($inventory | Where-Object { $_.branch -eq 'next' -and $_.disposition -eq 'in-scope' })
+
+    if (@($developRows | Where-Object wave -ne 'D').Count -gt 0) {
+        throw 'Develop/shared inventory rows must use wave D.'
+    }
+    if ($inventory.Count -ne 179 -or $developRows.Count -ne 36 -or @($inventory | Where-Object branch -eq 'next').Count -ne 143 -or $nextScopeRows.Count -ne 47 -or $exclusions.Count -ne 96) {
+        throw 'Repository inventory totals changed unexpectedly.'
+    }
+    if (@($nextScopeRows | Where-Object wave -eq 'N1').Count -ne 20 -or @($nextScopeRows | Where-Object wave -eq 'N2').Count -ne 10 -or @($nextScopeRows | Where-Object wave -eq 'N3').Count -ne 7 -or @($nextScopeRows | Where-Object wave -eq 'N4').Count -ne 10) {
+        throw 'Next-only in-scope inventory wave totals are incorrect.'
+    }
+}
+
 try {
     New-Item -ItemType Directory -Path $scratch | Out-Null
 
@@ -124,6 +143,9 @@ try {
 
     Set-Content -LiteralPath $expected -Value 'example.RedTest#fails'
     Invoke-Case -Name 'empty-actual-missing-expected' -ExpectSuccess $false -ExpectedOutput 'missing expected' -Action { Invoke-Comparator @('-ReportsPath', $reports, '-ExpectedPath', $expected) }
+
+    Assert-RepositoryInventory
+    Write-Output 'PASS repository-inventory'
 }
 finally {
     if (Test-Path -LiteralPath $scratch) {
