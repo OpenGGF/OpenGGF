@@ -182,6 +182,15 @@ public class LevelManager {
         worldSession.setCurrentLevel(level);
     }
     int frameCounter = 0;
+    // When set, the NEXT advanceGlobalOscillation() call skips the global
+    // oscillator advance. GameLoop sets it for a title-card wait-loop object
+    // pass: the ROM advances the global oscillator (OscillateNumDo) only inside
+    // Level_MainLoop (docs/s2disasm/s2.asm:5108), never in the title-card wait
+    // loops (s2.asm:4914-4924, 5060-5066) which run RunObjects only. S1 mirrors
+    // this (docs/s1disasm/sonic.asm: OscillateNumInit 2913 and OscillateNumDo
+    // 3030 are both outside Level_TtlCardLoop 2811-2839). Consumed on the next
+    // object pass so it never leaks into the first Level_MainLoop gameplay frame.
+    private boolean suppressGlobalOscillationForTitleCardPass = false;
     ObjectManager objectManager;
     private int ringFloorCheckCounterPhase;
     RingManager ringManager;
@@ -972,7 +981,28 @@ public class LevelManager {
         advanceGlobalOscillation();
     }
 
+    /**
+     * Requests that the next {@link #advanceGlobalOscillation()} call skip the
+     * global-oscillator advance, matching the ROM title-card wait loops which
+     * run {@code RunObjects} but not {@code OscillateNumDo} (the oscillator only
+     * advances inside {@code Level_MainLoop}; docs/s2disasm/s2.asm:5108 vs the
+     * wait loops at s2.asm:4914-4924 / 5060-5066, and docs/s1disasm/sonic.asm
+     * where {@code OscillateNumDo} at 3030 is outside {@code Level_TtlCardLoop}
+     * 2811-2839). Called by {@code GameLoop.updateTitleCardMode} for each locked
+     * title-card object pass so the oscillator holds at its {@code OscillateNumInit}
+     * baseline until gameplay unlocks. Without it, every locked title-card frame
+     * over-advances the global oscillator, phase-offsetting oscillation-driven
+     * moving platforms (e.g. Obj18) when control returns.
+     */
+    public void suppressGlobalOscillationForTitleCardPass() {
+        this.suppressGlobalOscillationForTitleCardPass = true;
+    }
+
     private void advanceGlobalOscillation() {
+        if (suppressGlobalOscillationForTitleCardPass) {
+            suppressGlobalOscillationForTitleCardPass = false;
+            return;
+        }
         int featureZone = getFeatureZoneId();
         int featureAct = getFeatureActId();
         if (zoneFeatureProvider != null
