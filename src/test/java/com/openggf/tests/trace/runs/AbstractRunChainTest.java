@@ -56,7 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * emeralds) carries over.
  *
  * <p>All three committed runs drive through this one {@link #runChain} body,
- * each via its own lane subclass: {@link TestS3kMultiBonusSpecialStageRunChain}
+ * each via its own lane subclass: {@link TestS3kMegaRunChain}
  * for {@code s3-knux-multibonus-ss} (25 seg), {@link TestS1GhzMazeRoundTripChain}
  * for {@code s1-ghz-maze-roundtrip} (3 seg), {@link TestS2EhzHalfpipeRoundTripChain}
  * for {@code s2-ehz-halfpipe-roundtrip} (5 seg). A lane subclass supplies only
@@ -114,11 +114,22 @@ abstract class AbstractRunChainTest {
         // Act 1). Convert once here so the boot call sites below never see the
         // raw manifest value.
         Integer bootAct = engineAct(manifestBootAct);
-
         // --- Step 2: boot segment 0 ---------------------------------------------
         TraceData trace0 = first.trace();
         Path bk2Path = resolveRunBk2(runDir, run.sourceBk2());
         Bk2Movie movie = new Bk2MovieLoader().load(bk2Path);
+
+        // Must run before the FIRST HeadlessTestFixture build below (recorded
+        // team, cross-game off, S3K intro-skip derived from trace metadata) --
+        // not just before driver.start()'s internal loadZoneAndAct. The
+        // throwaway build still performs a real team registration + level load
+        // via its own bootstrap path; running it against a leftover/default
+        // team (e.g. Sonic+Tails) instead of the recorded one would register
+        // the wrong sidekick roster before driver.start()'s reset. Configuring
+        // the team before EVERY level load -- including the throwaway one --
+        // matches the standalone AbstractTraceReplayTest ordering
+        // (prepareConfiguration before its one and only fixture build).
+        TraceReplaySessionBootstrap.prepareConfiguration(trace0, trace0.metadata());
 
         // Mirrors TestPachinkoTitleCardIntegration's engine setup: a
         // HeadlessTestFixture build initializes the headless engine before a real
@@ -129,10 +140,6 @@ abstract class AbstractRunChainTest {
         HeadlessTestFixture.builder().withZoneAndAct(bootZone, bootAct).build();
         InputHandler inputHandler = new InputHandler();
         GameLoop loop = new GameLoop(inputHandler);
-
-        // Must run before driver.start()'s internal loadZoneAndAct (recorded
-        // team, cross-game off, S3K intro-skip derived from trace metadata).
-        TraceReplaySessionBootstrap.prepareConfiguration(trace0, trace0.metadata());
 
         LiveEngineFixture fixture = new LiveEngineFixture(movie);
         TraceReplayDriver driver = new TraceReplayDriver(
@@ -226,10 +233,16 @@ abstract class AbstractRunChainTest {
                 playback.startSession(movie, returnOffset);
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, stepOneFrame);
+                // Write the interior's comparator report BEFORE asserting the
+                // boundary was observed -- a boundary miss is frequently caused
+                // by an upstream interior divergence, and without this report a
+                // failed assertTrue below would otherwise leave no artifact to
+                // triage it from (maybeWriteReport is a no-op for uncompared
+                // special-stage interiors).
+                maybeWriteReport(run.runId(), i, activeComparator);
                 assertTrue(obs.observed(),
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
-                maybeWriteReport(run.runId(), i, activeComparator);
                 assertReturnBoundary(plans, i, runDir);
                 // The uncompared title-card-exit fall-through LEVEL frame(s) have
                 // already advanced the BK2 cursor past the return offset and faithfully
@@ -247,9 +260,13 @@ abstract class AbstractRunChainTest {
                 // off into the interior mode.
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, () -> stepEngineFrame(loop));
+                // Report BEFORE asserting -- see the stage_exit branch above for
+                // why: a level segment's own interior divergence is the usual
+                // cause of a missed entry boundary, and this is the only report
+                // this segment's comparator will ever get if the assert throws.
+                maybeWriteReport(run.runId(), i, activeComparator);
                 assertTrue(obs.observed(), "Segment exit boundary (" + exit.entryKind()
                         + ") was never observed within the boundary window for " + runDir);
-                maybeWriteReport(run.runId(), i, activeComparator);
                 activeComparator = handoffIntoInterior(
                         loop, playback, probe, movie, plans.get(i + 1), stepCap, fixture);
                 i++;
@@ -530,8 +547,7 @@ abstract class AbstractRunChainTest {
             // Manifest `act` is 1-based; GameServices.level().getCurrentAct() is the
             // engine's 0-based act index (see the boot-act conversion note in
             // runChain / engineAct below) -- convert before comparing.
-            assertEquals(engineAct(returnAct).intValue(), GameServices.level().getCurrentAct(),
-                    "Next-act advance (act) after special-stage return for " + runDir);
+            assertEquals(engineAct(returnAct).intValue(), GameServices.level().getCurrentAct(),                    "Next-act advance (act) after special-stage return for " + runDir);
         }
         Integer returnZone = returnLevel.segment().zoneId();
         if (returnZone != null) {
@@ -643,6 +659,20 @@ abstract class AbstractRunChainTest {
         for (int f = 0; f < frameCount; f++) {
             stepEngineFrame(loop);
         }
+    }
+
+    /**
+     * Converts a manifest's 1-based ROM act number (act 1 / act 2, as the
+     * recorder writes it) to the engine's 0-based act index used by
+     * {@code LevelManager.loadZoneAndAct} and {@code getCurrentAct()}. This is the
+     * same convention every standalone {@code *CompleteRunTraceReplay} lane
+     * encodes by hand (AIZ act 1 -&gt; {@code act()==0}, GHZ act 2 -&gt;
+     * {@code act()==1}); the manifest keeps the ROM-facing value so it stays
+     * human-readable and game-agnostic. Level segments only (special-stage
+     * segments carry act 0 and never reach a level load through this path).
+     */
+    private static int engineAct(int manifestAct) {
+        return manifestAct - 1;
     }
 
     /**

@@ -63,8 +63,9 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
      * at that later observation point by construction, not by an engine bug.
      */
     @Override
-    protected void assertRingsAndEmeralds(TraceRunManifest.Transition exit, Path runDir) {
-        if (exit.emeraldsAfter() != null) {
+    protected void assertRingsAndEmeralds(
+            TraceRunManifest.Transition exit, Path runDir, boolean assertEmeralds) {
+        if (assertEmeralds && exit.emeraldsAfter() != null) {
             int actualEmeralds = GameServices.gameState().getEmeraldCount();
             assertEquals(exit.emeraldsAfter().intValue(), actualEmeralds,
                     "Emerald count after stage exit for " + runDir);
