@@ -14,6 +14,8 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -257,14 +259,12 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         // (input == 0 across trace frames 431-453), so ground_vel friction is left as
         // that verified no-op rather than modelled from lossy input bits.
 
+        // loc_49E28-49E56 (CheckLeftWallDist/CheckRightWallDist) is reached via
+        // projectGroundVelAndMove -> applyBoardWallPush below: it pushes the player out
+        // of a board wall and zeros ground_vel WITHOUT setting Status_Push and WITHOUT
+        // touching x_vel, once a later flipper ride's flat span ran the player into the
+        // pachinko board's left wall (pachinko1 trace f2085).
         projectGroundVelAndMove(player);
-
-        // loc_49E28-49E56 (CheckLeftWallDist/CheckRightWallDist): push the player out
-        // of a terrain wall and zero ground_vel WITHOUT setting Status_Push and
-        // WITHOUT touching x_vel. The player rides only the flipper's flat span and
-        // launches before reaching any board wall, so this probe fires on nothing for
-        // this ride and is deliberately not ported here to avoid an unverified wall
-        // response; add it if a future flipper ride is recorded hitting a board edge.
     }
 
     /**
@@ -284,6 +284,47 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         player.setXSpeed(xVel);
         player.setYSpeed(yVel);
         player.move(xVel, yVel);
+        applyBoardWallPush(player);
+    }
+
+    /**
+     * ROM loc_49E28-loc_49E56 (sonic3k.asm:96542-96557), reached immediately after the
+     * ground_vel move above (both from the idle-ride accel branch via
+     * {@code loc_49D54->loc_49D60->bra.w loc_49DE4} and the launch-trigger branch via
+     * {@code loc_49D68->bra.w loc_49DE4}): {@code jsr (CheckLeftWallDist).l / tst.w d1 /
+     * bpl.s loc_49E42 / sub.w d1,x_pos(a0) / move.w #0,ground_vel(a0)}, then the mirrored
+     * {@code jsr (CheckRightWallDist).l / tst.w d1 / bpl.s loc_49E56 / add.w d1,x_pos(a0) /
+     * move.w #0,ground_vel(a0)}. {@code CheckLeftWallDist}/{@code CheckRightWallDist}
+     * (sonic3k.asm:20505, 20188) probe from the player's own x_pos +/-0xA (the
+     * non-Competition_mode path taken here) at y_pos with no y_radius offset, distinct
+     * from the {@code Obj}-prefixed object variants. Only x_pos is patched by the
+     * returned (negative-when-overlapping) distance and ground_vel(a1) is zeroed --
+     * x_vel/y_vel and Status_Push are left untouched, so this is a raw position/ground_vel
+     * correction on top of the velocity already written above, not a full landing
+     * response.
+     *
+     * <p>Previously unported (see prior revision's comment on this method) on the
+     * assumption the player launches before reaching any board wall. A later ride
+     * proved that wrong: the flipper's flat span runs into the pachinko board's left
+     * wall, and the un-pushed post-move position combined with the un-zeroed ground_vel
+     * diverged both fields from the very next frame (pachinko1 trace f2085: expected
+     * x=0x007A/g_speed=0x0000, engine produced x=0x0075 -- the naive post-move position
+     * -- with g_speed left at the just-accelerated -0x0477 instead of zeroed by the wall
+     * push).
+     */
+    private void applyBoardWallPush(AbstractPlayableSprite player) {
+        TerrainCheckResult left =
+                ObjectTerrainUtils.checkLeftWallDist(player.getCentreX() - 0xA, player.getCentreY());
+        if (left != null && left.distance() < 0) {
+            player.setX((short) (player.getX() - left.distance()));
+            player.setGSpeed((short) 0);
+        }
+        TerrainCheckResult right =
+                ObjectTerrainUtils.checkRightWallDist(player.getCentreX() + 0xA, player.getCentreY());
+        if (right != null && right.distance() < 0) {
+            player.setX((short) (player.getX() + right.distance()));
+            player.setGSpeed((short) 0);
+        }
     }
 
     /**
