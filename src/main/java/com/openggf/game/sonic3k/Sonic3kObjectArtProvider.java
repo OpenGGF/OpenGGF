@@ -76,7 +76,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     // Tracks which level tile indices each level-art sheet depends on.
     // Used by Sonic3kPlcLoader.refreshAffectedRenderers() to find which
     // renderers need GPU texture re-upload after PLC application.
-    private final Map<String, Sonic3kPlcLoader.TileRange> levelArtTileRanges = new HashMap<>();
+    private final Map<String, List<Sonic3kPlcLoader.TileRange>> levelArtTileRanges = new HashMap<>();
 
     // Shield DPLC-driven renderers and art sets
     private final Map<String, PlayerSpriteRenderer> dplcRenderers = new HashMap<>();
@@ -1018,9 +1018,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private void registerLevelArtSheet(String key, ObjectSpriteSheet sheet, Sonic3kObjectArt art) {
         registerSheet(key, sheet);
         if (sheet != null && art.getLastBuildStartTile() >= 0) {
-            levelArtTileRanges.put(key, new Sonic3kPlcLoader.TileRange(
-                    art.getLastBuildStartTile(), art.getLastBuildTileCount()));
+            List<Sonic3kPlcLoader.TileRange> ranges = art.getLastBuildTileRanges();
+            if (ranges.isEmpty()) {
+                ranges = List.of(new Sonic3kPlcLoader.TileRange(
+                        art.getLastBuildStartTile(), art.getLastBuildTileCount()));
+            }
+            levelArtTileRanges.put(key, ranges);
         }
+        art.clearLastBuildTileRanges();
     }
 
     private void loadEggCapsuleArt() throws IOException {
@@ -1685,15 +1690,19 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     public List<String> getAffectedRendererKeys(List<Sonic3kPlcLoader.TileRange> modifiedRanges) {
         List<String> affected = new ArrayList<>();
         for (var entry : levelArtTileRanges.entrySet()) {
-            Sonic3kPlcLoader.TileRange sheetRange = entry.getValue();
-            int sheetStart = sheetRange.startTileIndex();
-            int sheetEnd = sheetStart + sheetRange.tileCount();
+            for (Sonic3kPlcLoader.TileRange sheetRange : entry.getValue()) {
+                int sheetStart = sheetRange.startTileIndex();
+                int sheetEnd = sheetStart + sheetRange.tileCount();
 
-            for (Sonic3kPlcLoader.TileRange modified : modifiedRanges) {
-                int modStart = modified.startTileIndex();
-                int modEnd = modStart + modified.tileCount();
-                if (modStart < sheetEnd && modEnd > sheetStart) {
-                    affected.add(entry.getKey());
+                for (Sonic3kPlcLoader.TileRange modified : modifiedRanges) {
+                    int modStart = modified.startTileIndex();
+                    int modEnd = modStart + modified.tileCount();
+                    if (modStart < sheetEnd && modEnd > sheetStart) {
+                        affected.add(entry.getKey());
+                        break;
+                    }
+                }
+                if (affected.contains(entry.getKey())) {
                     break;
                 }
             }

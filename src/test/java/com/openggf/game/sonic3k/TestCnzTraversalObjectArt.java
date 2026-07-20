@@ -21,7 +21,9 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -85,6 +87,57 @@ public class TestCnzTraversalObjectArt {
                 "Vacuum Tube stays controller-only because Obj_CNZVacuumTube has inline S&K-side logic and no mappings/make_art_tile ownership");
         assertNull(provider.getSheet("cnz_spiral_tube"),
                 "Spiral Tube stays controller-only because its S&K-side off_33320 controller routes still have no mappings/make_art_tile ownership");
+    }
+
+    @Test
+    public void hoverFanAppliesItsArtTileWordBeforeResolvingBladePatterns() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+
+        ObjectSpriteSheet hoverFan = currentCnzObjectArtProvider().getSheet(Sonic3kObjectArtKeys.CNZ_HOVER_FAN);
+        SpriteMappingPiece blade = hoverFan.getFrame(0).pieces().get(0);
+        SpriteMappingPiece body = hoverFan.getFrame(0).pieces().get(1);
+
+        assertEquals(12, hoverFan.getPatterns().length,
+                "The Hover Fan sheet should retain only the four blade and eight body tiles it uses");
+        assertEquals(0, hoverFan.getPaletteIndex(),
+                "The mapping pieces already contain the final palette after ROM art-tile addition");
+        assertEquals(0, blade.tileIndex(),
+                "$43E8 + $FF1C resolves the blade source tile to $304, compacted at sheet index 0");
+        assertFalse(blade.hFlip(), "The full-word carry clears the blade H-flip bit");
+        assertFalse(blade.vFlip(), "The full-word carry clears the blade V-flip bit");
+        assertEquals(2, blade.paletteIndex(), "The full-word carry resolves the blade to palette line 2");
+        assertFalse(blade.priority(), "The full-word carry clears the blade priority bit");
+        assertEquals(4, body.tileIndex(), "The body tiles follow the four compacted blade tiles");
+        assertSame(GameServices.level().getCurrentLevel().getPattern(0x304), hoverFan.getPatterns()[0],
+                "Blade art must read native VDP tile $304, not the unwrapped $B04");
+        assertSame(GameServices.level().getCurrentLevel().getPattern(0x3E8), hoverFan.getPatterns()[4],
+                "Body art must retain native VDP tile $3E8");
+
+        Sonic3kObjectArtProvider provider = currentCnzObjectArtProvider();
+        assertTrue(provider.getAffectedRendererKeys(List.of(new Sonic3kPlcLoader.TileRange(0x304, 4)))
+                        .contains(Sonic3kObjectArtKeys.CNZ_HOVER_FAN),
+                "The blade AniPLC destination must refresh the Hover Fan texture");
+        assertFalse(provider.getAffectedRendererKeys(List.of(new Sonic3kPlcLoader.TileRange(0x328, 4)))
+                        .contains(Sonic3kObjectArtKeys.CNZ_HOVER_FAN),
+                "Unrelated CNZ AniPLC destinations must not refresh the Hover Fan texture");
+
+        for (int frameIndex = 0; frameIndex < hoverFan.getFrameCount(); frameIndex++) {
+            int moduleCount = Math.min(frameIndex + 1, 4);
+            List<SpriteMappingPiece> pieces = hoverFan.getFrame(frameIndex).pieces();
+            assertEquals(moduleCount * 2, pieces.size(), "Hover Fan frame " + frameIndex + " module count");
+            for (int module = 0; module < moduleCount; module++) {
+                SpriteMappingPiece moduleBlade = pieces.get(module * 2);
+                SpriteMappingPiece moduleBody = pieces.get(module * 2 + 1);
+                assertEquals(0, moduleBlade.tileIndex(), "Hover Fan frame " + frameIndex + " blade tile");
+                assertEquals(4, moduleBody.tileIndex(), "Hover Fan frame " + frameIndex + " body tile");
+                assertFalse(moduleBlade.hFlip(), "Hover Fan frame " + frameIndex + " blade H-flip");
+                assertFalse(moduleBlade.vFlip(), "Hover Fan frame " + frameIndex + " blade V-flip");
+                assertEquals(2, moduleBlade.paletteIndex(), "Hover Fan frame " + frameIndex + " blade palette");
+                assertFalse(moduleBlade.priority(), "Hover Fan frame " + frameIndex + " blade priority");
+            }
+        }
     }
 
     @Test
