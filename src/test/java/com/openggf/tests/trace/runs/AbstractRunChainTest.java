@@ -176,7 +176,7 @@ abstract class AbstractRunChainTest {
                 // This segment is an INTERIOR; its exit (stage_exit) returns to a
                 // level. Await the mode==LEVEL poll, assert carry-over, rebind.
                 BoundaryObservation obs =
-                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, loop::step);
+                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, () -> stepEngineFrame(loop));
                 assertTrue(obs.observed(),
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
@@ -189,7 +189,7 @@ abstract class AbstractRunChainTest {
                 // interior at i+1. Await the transient entry request, then hand
                 // off into the interior mode.
                 BoundaryObservation obs =
-                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, loop::step);
+                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, () -> stepEngineFrame(loop));
                 assertTrue(obs.observed(), "Segment exit boundary (" + exit.entryKind()
                         + ") was never observed within the boundary window for " + runDir);
                 maybeWriteReport(run.runId(), i, activeComparator);
@@ -392,7 +392,7 @@ abstract class AbstractRunChainTest {
 
     private static void stepFrames(GameLoop loop, int frameCount) {
         for (int f = 0; f < frameCount; f++) {
-            loop.step();
+            stepEngineFrame(loop);
         }
     }
 
@@ -404,7 +404,7 @@ abstract class AbstractRunChainTest {
     protected int waitForMode(GameLoop loop, GameMode target, int maxSteps) {
         int steps = 0;
         while (loop.getCurrentGameMode() != target) {
-            loop.step();
+            stepEngineFrame(loop);
             steps++;
             if (steps >= maxSteps) {
                 throw new AssertionError("Mode never reached " + target + " within "
@@ -417,13 +417,37 @@ abstract class AbstractRunChainTest {
     private static void waitForModeToLeave(GameLoop loop, GameMode from, int maxSteps) {
         int steps = 0;
         while (loop.getCurrentGameMode() == from) {
-            loop.step();
+            stepEngineFrame(loop);
             steps++;
             if (steps >= maxSteps) {
                 throw new AssertionError("Mode never left " + from + " within "
                         + maxSteps + " frames (expected an act/zone title-card cycle)");
             }
         }
+    }
+
+    /**
+     * Advances one engine frame the way {@code Engine.display()} does in live
+     * play: fade state is updated FIRST (via {@code UiRenderPipeline.updateFade()}
+     * -> {@code FadeManager.update()}), THEN {@code GameLoop.step()} runs gameplay
+     * (Engine.java: {@code uiPipeline.updateFade()} precedes {@code update()} in
+     * the per-frame {@code display()} body). The chain drive steps the headless
+     * {@link GameLoop} directly and never calls {@code Engine.display()}, so
+     * without this the {@code FadeManager} instance {@code GameLoop} installs
+     * (see the boundary-entry {@code fadeManager.startFadeToWhite(...)} calls
+     * gating special/bonus stage entry) never advances and its completion
+     * callback -- the one that flips {@code currentGameMode} to
+     * {@code SPECIAL_STAGE}/{@code BONUS_STAGE} -- never fires, hanging
+     * {@link #waitForMode} forever on a fade-gated boundary. This is bootstrap
+     * plumbing parity with the production per-frame call order, not trace-data
+     * hydration.
+     */
+    private static void stepEngineFrame(GameLoop loop) {
+        var fade = GameServices.fadeOrNull();
+        if (fade != null) {
+            fade.update();
+        }
+        loop.step();
     }
 
     // -------------------------------------------------------------------------
