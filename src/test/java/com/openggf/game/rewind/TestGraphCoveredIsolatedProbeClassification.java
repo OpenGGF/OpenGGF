@@ -217,6 +217,29 @@ class TestGraphCoveredIsolatedProbeClassification {
     }
 
     @Test
+    void hczTransitionAndMgzBossChildrenAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic3k.objects.HczTransitionBubbleInstance",
+                "com.openggf.game.sonic3k.objects.TestHczTransitionBubbleInstance",
+                "com.openggf.game.sonic3k.objects.MgzEndBossKnuxDrillChild",
+                "com.openggf.game.sonic3k.objects.TestMgzEndBossKnuxInstance",
+                "com.openggf.game.sonic3k.objects.MgzEndBossRenderChild",
+                "com.openggf.game.sonic3k.objects.TestMgzEndBossKnuxInstance",
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossBubbleParticle",
+                HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossLowerHousing",
+                HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikHead",
+                HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterSprayChild",
+                HCZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterSurfaceChild",
+                HCZ_END_BOSS_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
     void mhzEndBossChildrenAreReportedAsGraphCovered() {
         Map<String, String> expected = Map.of(
                 "com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance",

@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameId;
 import com.openggf.game.rewind.RewindRoundTripHarness;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.ObjectInstance;
@@ -94,6 +95,9 @@ class TestMgzEndBossKnuxInstance {
         List<MgzEndBossRenderChild> sourceChildren = compositeChildren(sourceBoss);
         assertEquals(8, sourceChildren.size(), "precondition: the live MGZ boss owns all eight composite children");
         assertCompositeRolesAndParents(sourceBoss, sourceChildren);
+        List<ObjectRefId> sourceChildIds = sourceChildren.stream()
+                .map(child -> manager.captureIdentityContext().requireIdentityTable().idFor(child))
+                .toList();
 
         harness.roundTrip();
 
@@ -110,6 +114,9 @@ class TestMgzEndBossKnuxInstance {
         assertEquals(8, restoredChildren.size(),
                 "restored boss childComponents must own every captured composite child exactly once");
         assertCompositeRolesAndParents(restoredBoss, restoredChildren);
+        assertEquals(sourceChildIds, restoredChildren.stream()
+                .map(child -> manager.captureIdentityContext().requireIdentityTable().idFor(child))
+                .toList(), "each composite child role must retain its captured rewind identity");
 
         List<MgzEndBossRenderChild> managedChildren = manager.getActiveObjects().stream()
                 .filter(MgzEndBossRenderChild.class::isInstance)
@@ -120,6 +127,35 @@ class TestMgzEndBossKnuxInstance {
             assertTrue(managedChildren.contains(child),
                     "each childComponents entry must be the exact restored object managed by ObjectManager");
         }
+    }
+
+    @Test
+    void rewindRoundTripRecreatesDrillChildWithRestoredParentAndState() throws Exception {
+        RewindRoundTripHarness harness = RewindRoundTripHarness.buildPlaced(
+                GameId.S3K, Sonic3kObjectIds.MGZ_END_BOSS_KNUX);
+        var manager = harness.objectManager();
+        MgzEndBossKnuxInstance sourceBoss = manager.getActiveObjects().stream()
+                .filter(MgzEndBossKnuxInstance.class::isInstance)
+                .map(MgzEndBossKnuxInstance.class::cast)
+                .findFirst().orElseThrow();
+        manager.update(0, null, List.of(), 0, false);
+        MgzEndBossKnuxDrillChild sourceChild = onlyDrillChild(manager);
+        ObjectRefId sourceId = manager.captureIdentityContext().requireIdentityTable().idFor(sourceChild);
+        int sourceTimer = intField(sourceChild, "timer");
+        int sourceRoutine = intField(sourceChild, "nativeRoutine");
+
+        harness.roundTrip();
+
+        MgzEndBossKnuxInstance restoredBoss = manager.getActiveObjects().stream()
+                .filter(MgzEndBossKnuxInstance.class::isInstance)
+                .map(MgzEndBossKnuxInstance.class::cast)
+                .findFirst().orElseThrow();
+        MgzEndBossKnuxDrillChild restoredChild = onlyDrillChild(manager);
+        assertNotSame(sourceChild, restoredChild);
+        assertEquals(sourceId, manager.captureIdentityContext().requireIdentityTable().idFor(restoredChild));
+        assertSame(restoredBoss, parentOf(restoredChild));
+        assertEquals(sourceTimer, intField(restoredChild, "timer"));
+        assertEquals(sourceRoutine, intField(restoredChild, "nativeRoutine"));
     }
 
     @Test
@@ -201,9 +237,33 @@ class TestMgzEndBossKnuxInstance {
         }
     }
 
-    private static Object parentOf(AbstractBossChild child) throws Exception {
-        Field parent = AbstractBossChild.class.getDeclaredField("parent");
-        parent.setAccessible(true);
-        return parent.get(child);
+    private static Object parentOf(Object child) throws Exception {
+        Class<?> type = child.getClass();
+        while (type != null) {
+            try {
+                Field parent = type.getDeclaredField("parent");
+                parent.setAccessible(true);
+                return parent.get(child);
+            } catch (NoSuchFieldException ignored) {
+                type = type.getSuperclass();
+            }
+        }
+        throw new AssertionError("missing parent field on " + child.getClass().getName());
+    }
+
+    private static MgzEndBossKnuxDrillChild onlyDrillChild(
+            com.openggf.level.objects.ObjectManager manager) {
+        List<MgzEndBossKnuxDrillChild> children = manager.getActiveObjects().stream()
+                .filter(MgzEndBossKnuxDrillChild.class::isInstance)
+                .map(MgzEndBossKnuxDrillChild.class::cast)
+                .toList();
+        assertEquals(1, children.size(), "the boss graph must own exactly one drill child slot");
+        return children.getFirst();
+    }
+
+    private static int intField(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(target);
     }
 }

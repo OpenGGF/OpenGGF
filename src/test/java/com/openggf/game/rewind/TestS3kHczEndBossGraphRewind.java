@@ -29,7 +29,9 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -85,6 +87,8 @@ class TestS3kHczEndBossGraphRewind {
 
         assertAllReferencesPointAtRestoredGraph(restored);
         assertRestoredObjectsAreFresh(before, restored);
+        assertEquals(before.dependentState(), restored.dependentState(),
+                "nested HCZ children must retain their captured scalar state");
     }
 
     @Test
@@ -139,6 +143,11 @@ class TestS3kHczEndBossGraphRewind {
         assertNotSame(before.chute3(), restored.chute3());
         assertNotSame(before.chute4(), restored.chute4());
         assertNotSame(before.waterColumn(), restored.waterColumn());
+        assertEquals(before.dependentChildren().size(), restored.dependentChildren().size());
+        for (int i = 0; i < before.dependentChildren().size(); i++) {
+            assertNotSame(before.dependentChildren().get(i), restored.dependentChildren().get(i),
+                    "nested HCZ child must be recreated, not retained in place");
+        }
     }
 
     private record Harness(ObjectManager objectManager) {
@@ -185,15 +194,20 @@ class TestS3kHczEndBossGraphRewind {
             HczEndBossBladeWaterChute chute0,
             HczEndBossBladeWaterChute chute1,
             HczEndBossBladeWaterChute chute2,
-            HczEndBossBladeWaterChute chute3,
-            HczEndBossBladeWaterChute chute4,
-            HczEndBossWaterColumn waterColumn) {
+             HczEndBossBladeWaterChute chute3,
+             HczEndBossBladeWaterChute chute4,
+             HczEndBossWaterColumn waterColumn,
+             List<ObjectInstance> dependentChildren) {
 
         static HczGraph spawnRepresentativeFamily(ObjectManager objectManager) {
             HczEndBossInstance boss = only(objectManager, HczEndBossInstance.class);
             invokeNoArg(boss, "spawnChildren");
             HczEndBossTurbine turbine = only(objectManager, HczEndBossTurbine.class);
             spawnWaterColumnViaTurbine(boss, turbine);
+            HczEndBossWaterColumn column = only(objectManager, HczEndBossWaterColumn.class);
+            column.update(0, null);
+            invokeNoArg(column, "onSpinupComplete");
+            only(objectManager, HczEndBossRobotnikShip.class).update(0, null);
             HczEndBossBlade blade0 = bladeBySubtype(objectManager, 0);
             setIntField(blade0, "currentX", 0x4140);
             invokeNoArg(blade0, "spawnSplash");
@@ -215,6 +229,7 @@ class TestS3kHczEndBossGraphRewind {
                             .toList();
             assertEquals(3, blades.size(), "expected exactly three live HCZ end-boss blades");
             assertEquals(5, chutes.size(), "expected exactly five live HCZ blade water chutes");
+            List<ObjectInstance> dependentChildren = TestS3kHczEndBossGraphRewind.dependentChildren(objectManager);
             return new HczGraph(
                     only(objectManager, HczEndBossInstance.class),
                     only(objectManager, HczEndBossRobotnikShip.class),
@@ -229,7 +244,8 @@ class TestS3kHczEndBossGraphRewind {
                     chutes.get(2),
                     chutes.get(3),
                     chutes.get(4),
-                    only(objectManager, HczEndBossWaterColumn.class));
+                    only(objectManager, HczEndBossWaterColumn.class),
+                    dependentChildren);
         }
 
         Map<Class<?>, Integer> counts() {
@@ -257,6 +273,12 @@ class TestS3kHczEndBossGraphRewind {
             ids.put("chute3", table.idFor(chute3));
             ids.put("chute4", table.idFor(chute4));
             ids.put("waterColumn", table.idFor(waterColumn));
+            Map<String, Integer> ordinals = new HashMap<>();
+            for (ObjectInstance child : dependentChildren) {
+                String key = child.getClass().getName() + "#"
+                        + ordinals.merge(child.getClass().getName(), 1, Integer::sum);
+                ids.put(key, table.idFor(child));
+            }
             return ids;
         }
 
@@ -267,14 +289,53 @@ class TestS3kHczEndBossGraphRewind {
         }
 
         private List<ObjectInstance> objects() {
-            return List.of(boss, ship, turbine, blade0, blade1, blade2, splash, impact,
-                    chute0, chute1, chute2, chute3, chute4, waterColumn);
+            List<ObjectInstance> objects = new ArrayList<>(List.of(
+                    boss, ship, turbine, blade0, blade1, blade2, splash, impact,
+                    chute0, chute1, chute2, chute3, chute4, waterColumn));
+            objects.addAll(dependentChildren);
+            return objects;
         }
 
         private List<ObjectInstance> dynamicChildren() {
-            return List.of(ship, turbine, blade0, blade1, blade2, splash, impact,
-                    chute0, chute1, chute2, chute3, chute4, waterColumn);
+            List<ObjectInstance> children = new ArrayList<>(List.of(
+                    ship, turbine, blade0, blade1, blade2, splash, impact,
+                    chute0, chute1, chute2, chute3, chute4, waterColumn));
+            children.addAll(dependentChildren);
+            return children;
         }
+
+        Map<String, List<Integer>> dependentState() {
+            Map<String, List<Integer>> state = new LinkedHashMap<>();
+            state.put("HczEndBossWaterSurfaceChild.xOffset", fieldValues("HczEndBossWaterSurfaceChild", "xOffset"));
+            state.put("HczEndBossBubbleParticle.waitTimer", fieldValues("HczEndBossBubbleParticle", "waitTimer"));
+            return state;
+        }
+
+        private List<Integer> fieldValues(String simpleName, String fieldName) {
+            return dependentChildren.stream()
+                    .filter(child -> child.getClass().getSimpleName().equals(simpleName))
+                    .map(child -> readIntField(child, fieldName))
+                    .toList();
+        }
+    }
+
+    private static List<ObjectInstance> dependentChildren(ObjectManager objectManager) {
+        Map<String, Integer> expected = Map.of(
+                "HczEndBossLowerHousing", 1,
+                "HczEndBossRobotnikHead", 1,
+                "HczEndBossWaterSurfaceChild", 2,
+                "HczEndBossBubbleParticle", 20,
+                "HczEndBossWaterSprayChild", 1);
+        List<ObjectInstance> children = objectManager.getActiveObjects().stream()
+                .filter(object -> expected.containsKey(object.getClass().getSimpleName()) && !object.isDestroyed())
+                .toList();
+        Map<String, Long> counts = new HashMap<>();
+        for (ObjectInstance child : children) {
+            counts.merge(child.getClass().getSimpleName(), 1L, Long::sum);
+        }
+        expected.forEach((type, count) -> assertEquals(count.longValue(), counts.getOrDefault(type, 0L),
+                "expected exact managed HCZ child-slot count for " + type));
+        return children;
     }
 
     private static void spawnWaterColumnViaTurbine(HczEndBossInstance boss, HczEndBossTurbine turbine) {

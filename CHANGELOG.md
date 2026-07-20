@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): HCZ transition bubbles and the HCZ end-boss water-column child graph now restore through rewind with their captured dynamic identities, slots, parent links, and state intact.
 - Fix: Boss rewind child collections now detach components whenever ObjectManager removes their live identity, including self-destruction during a parent update before a same-frame capture. Deferred boss helpers retain explicit owner-driven updates without entering that captured structural graph. Together this preserves graph closure generically and restores MGZ Knuckles' managed eight-part composite graph with its parent-owned collection, child roles, and child-to-parent links intact.
 - Fix(s3k): Mantis now establishes its managed visual-child graph before the wait-offscreen handoff, keeping each parent's child identity and back-reference available for rewind restoration.
 - Fix(s3k): Spiker's rewind-settle cleanup now recognizes its restored dynamic side launchers and top spike as live managed objects. The compact schema already restores each parent child-slot reference through the rewind identity table, but the cleanup previously checked only the placed-object map and immediately cleared those dynamic child slots. Spiker now retains the exact recreated child identities and their captured cooldown state after a rewind.

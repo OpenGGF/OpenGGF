@@ -66,6 +66,11 @@ public final class HczTransitionBubbleInstance extends AbstractObjectInstance
         this.lifetime = LIFETIME_FRAMES;
     }
 
+    /** Probe-compatible construction path for the generic dynamic rewind recreator. */
+    private HczTransitionBubbleInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), 0, 0, false);
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         // CreateChild6_Simple can place this child after its controller in the

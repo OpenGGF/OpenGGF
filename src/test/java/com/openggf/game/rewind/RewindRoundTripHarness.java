@@ -387,6 +387,30 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn",
                     "TestS3kHczEndBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossBubbleParticle",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossLowerHousing",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikHead",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterSprayChild",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterSurfaceChild",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.HczTransitionBubbleInstance",
+                    "com.openggf.game.sonic3k.objects.TestHczTransitionBubbleInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.MgzEndBossKnuxDrillChild",
+                    "com.openggf.game.sonic3k.objects.TestMgzEndBossKnuxInstance"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.MgzEndBossRenderChild",
+                    "com.openggf.game.sonic3k.objects.TestMgzEndBossKnuxInstance"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton",
                     "com.openggf.game.sonic3k.objects.TestS3kSelfContainedTransientRewind"),
             Map.entry(
