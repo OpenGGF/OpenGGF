@@ -1222,6 +1222,17 @@ public class GameLoop {
         //     Use the legacy minimal pre-orchestration path so the
         //     S3K AIZ trace and S1 Level_TtlCardLoop parity hold.
         beginGameplayAudioFrameForTick();
+        // ROM: the title-card wait loops (docs/s2disasm/s2.asm:4914-4924 and
+        // 5060-5066; docs/s1disasm/sonic.asm Level_TtlCardLoop 2811-2839) run
+        // RunObjects but NOT OscillateNumDo -- the global oscillator only
+        // advances inside Level_MainLoop (s2.asm:5108). Suppress the oscillator
+        // advance for this locked title-card object pass so it holds at its
+        // OscillateNumInit baseline until gameplay unlocks. Without this, each
+        // locked title-card frame over-advances the global oscillator, phase-
+        // offsetting oscillation-driven moving platforms (Obj18) when control
+        // returns -- visible after a special-stage return where the engine runs
+        // the real title card (rather than the trace bootstrap that skips it).
+        levelManager.suppressGlobalOscillationForTitleCardPass();
         if (tcpCard.shouldRunPlayerPhysics()) {
             // S2: full title-card frame step.
             spriteManager.publishHeldInputForLevelEvents(inputHandler);

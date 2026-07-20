@@ -59,24 +59,37 @@ import java.nio.file.Path;
  * the SS INTERIOR (which the chain never does — it is advance-uncompared) and the live
  * emerald count; it does NOT drive the seg2 divergence.
  *
- * <h2>Remaining blocker (RED): SS-return title-card-duration parity gap</h2>
- * <p>After the handoff fix, {@code seg2_ehz1} diverges at frame 907: the engine player
- * LANDS on an {@code OscillationManager}-driven moving platform (object id 0x18,
- * {@code ARZPlatformObjectInstance}) that the recorded player falls past. The platform
- * is phase-offset because the engine's SS-return title card runs a DIFFERENT number of
- * frames than the ROM's before gameplay-unlock, over-advancing the GLOBAL oscillator
- * ({@code OscillationManager.getByte(0x18)}) and the CPU sidekick catch-up (recorded
- * Tails is still catching up LEFT of Sonic at frame 0 with g_speed 0x84; the engine's
- * Tails has overshot to Sonic's RIGHT at rest — the engine title card ran too long).
- * A fresh boot hides this because {@code TraceReplaySessionBootstrap.applyBootstrap}
- * SKIPS the real title card and re-derives the oscillator/sidekick phase from segment
- * metadata; the chain, by design (spec §"lets GameLoop run its real transition"),
- * runs the engine's real title card and must reproduce the ROM phase organically.
- * Greening the full round-trip requires an ENGINE fix so the SS-return title-card
- * duration (and the objects/sidekick it advances) matches the ROM — a src/main
- * SS-return-timing parity change, not a chain-test change, and out of scope for this
- * comparison-only handoff fix. The design question (organic SS-return parity vs a
- * re-bootstrap of the returning segment) is recorded for the owner.
+ * <h2>SS-return oscillator-phase parity (RESOLVED, engine fix)</h2>
+ * <p>Before the engine fix, {@code seg2_ehz1} diverged at frame 907: the engine player
+ * LANDED on an {@code OscillationManager}-driven moving platform (object id 0x18,
+ * {@code ARZPlatformObjectInstance}) that the recorded player falls past, so the
+ * player's trajectory drifted and the second {@code starpost_special} was never
+ * reached. Root cause: the engine advanced the GLOBAL oscillator on every locked
+ * title-card frame, but the ROM runs {@code OscillateNumDo} only inside
+ * {@code Level_MainLoop} (docs/s2disasm/s2.asm:5108) — the title-card wait loops
+ * (s2.asm:4914-4924, 5060-5066) run {@code RunObjects} but NOT {@code OscillateNumDo},
+ * so the oscillator holds at its {@code OscillateNumInit} baseline until gameplay
+ * unlocks. Over the engine's title card (which includes an artificial display hold) the
+ * oscillator over-advanced, phase-offsetting Obj18 when control returned. A fresh boot
+ * hid this because {@code TraceReplaySessionBootstrap.applyBootstrap} SKIPS the real
+ * title card and re-derives the oscillator phase from segment metadata; this chain, by
+ * design (spec §"lets GameLoop run its real transition"), runs the engine's real title
+ * card and must reproduce the ROM phase organically. Fixed in {@code src/main} by
+ * gating the global-oscillator advance during the locked title-card object pass
+ * ({@code GameLoop.updateTitleCardMode} -&gt;
+ * {@code LevelManager.suppressGlobalOscillationForTitleCardPass()}), which is
+ * game-general (S1 mirrors it: sonic.asm {@code OscillateNumDo} 3030 sits outside
+ * {@code Level_TtlCardLoop} 2811-2839) and correct for live play — not a trace-derived
+ * value or a re-bootstrap of the returning segment.
+ *
+ * <p><b>Known remaining diagnostic divergence (does NOT fail this test):</b> the CPU
+ * sidekick still over-catches-up during the engine's longer-than-ROM title card
+ * (recorded Tails at seg2 frame 1 is still LEFT of Sonic with g_speed 0x90; the engine's
+ * Tails has overshot to Sonic's RIGHT at rest). That is a comparison-only diagnostic
+ * mismatch on the {@code sidekick_*} fields; it does not affect Sonic's replayed
+ * trajectory (CPU Tails does not collide with or steer Sonic), so both {@code starpost}
+ * boundaries and every carry-over assertion still hold. Closing it is a separate
+ * title-card-duration parity item and is left for a follow-up.
  *
  * <h2>Emerald boundary-model correction (retained + tightened)</h2>
  * <p>Asserting the LIVE {@code emeralds_after} count across an <b>advance-uncompared</b>
