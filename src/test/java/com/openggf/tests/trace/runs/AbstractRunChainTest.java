@@ -392,9 +392,19 @@ abstract class AbstractRunChainTest {
         ReturnAssertionMode mode = TraceRunReplayWalker.returnAssertionMode(entry);
         switch (mode) {
             case POSITIONAL_RESTORE -> assertPositionalRestore(entry, returnLevel, runDir);
-            case CHECKPOINT_RESTORE -> assertCheckpointRestore(entry, runDir);
+            // Core-review fix: S3K bonus and special-stage returns ALSO restore
+            // the recorded Saved_X_pos/Saved_Y_pos (every starpost_bonus and
+            // giant_ring transition in the committed 25-segment run carries
+            // them non-null); assertPositionalRestore null-guards on field
+            // presence, so adding it here upgrades 11 of that run's 22
+            // transitions from zero positional verification to the same
+            // centre-position comparison the S2 path already gets.
+            case CHECKPOINT_RESTORE -> {
+                assertCheckpointRestore(entry, runDir);
+                assertPositionalRestore(entry, returnLevel, runDir);
+            }
             case NEXT_ACT -> assertNextActAdvance(plans, interiorIndex, returnLevel, runDir);
-            case RINGS_EMERALDS_ONLY -> { /* rings (+ emeralds when reproduced) asserted below */ }
+            case RINGS_EMERALDS_ONLY -> assertPositionalRestore(entry, returnLevel, runDir);
         }
         boolean liveEmeraldVerifiable = emeraldCarryOverIsVerifiable(interior);
         assertRingsAndEmeralds(exit, runDir, liveEmeraldVerifiable);
