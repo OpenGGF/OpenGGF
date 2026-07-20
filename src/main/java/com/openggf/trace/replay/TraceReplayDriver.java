@@ -132,6 +132,26 @@ public final class TraceReplayDriver {
         // after applyBootstrap would clobber subpixel state the
         // helper's hydration steps wrote for seeded traces.
         TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+        // applyStartPositionAndGroundSnap's own terrain snap is gated off for
+        // S3K complete-run / bonus-stage segments (their metadata centre is
+        // already the recorded ROM handoff/spawn row and must not be
+        // adjusted again -- see TraceReplayBootstrap
+        // .shouldGroundSnapMetadataStartForTraceReplay). That gate assumes a
+        // PRIOR unconditional snap already ran, matching
+        // HeadlessTestFixture.Builder.build()'s step 12
+        // (GameServices.collision().resolveGroundAttachment(sprite, 14, ...))
+        // which every headless trace-replay test gets for free from the
+        // fixture builder. This driver has no such prior step, so a
+        // complete-run/bonus-stage segment booted here never establishes the
+        // player's ground/angle/sensor state at the teleported centre --
+        // observed as the boot segment's very first driven frame going
+        // airborne with a garbage x_speed. Run the same one-time,
+        // unconditional snap here so this driver matches the fixture
+        // builder's contract regardless of which gate the shared helper took.
+        AbstractPlayableSprite bootSprite = fixture.sprite();
+        if (bootSprite != null) {
+            GameServices.collision().resolveGroundAttachment(bootSprite, 14, () -> false);
+        }
         TraceReplaySessionBootstrap.BootstrapResult boot =
                 TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
 

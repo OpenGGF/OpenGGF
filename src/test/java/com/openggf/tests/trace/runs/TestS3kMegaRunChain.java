@@ -17,7 +17,7 @@ import java.nio.file.Path;
  * assertion this run carries.
  */
 @RequiresRom(SonicGame.SONIC_3K)
-class TestS3kMultiBonusSpecialStageRunChain extends AbstractRunChainTest {
+class TestS3kMegaRunChain extends AbstractRunChainTest {
 
     private static final Path RUN_DIR = Path.of(
             "src", "test", "resources", "traces", "s3k", "runs", "s3-knux-multibonus-ss");

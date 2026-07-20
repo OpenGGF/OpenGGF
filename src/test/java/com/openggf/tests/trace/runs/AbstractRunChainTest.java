@@ -55,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * emeralds) carries over.
  *
  * <p>All three committed runs drive through this one {@link #runChain} body,
- * each via its own lane subclass: {@link TestS3kMultiBonusSpecialStageRunChain}
+ * each via its own lane subclass: {@link TestS3kMegaRunChain}
  * for {@code s3-knux-multibonus-ss} (25 seg), {@link TestS1GhzMazeRoundTripChain}
  * for {@code s1-ghz-maze-roundtrip} (3 seg), {@link TestS2EhzHalfpipeRoundTripChain}
  * for {@code s2-ehz-halfpipe-roundtrip} (5 seg). A lane subclass supplies only
@@ -112,6 +112,18 @@ abstract class AbstractRunChainTest {
         Path bk2Path = resolveRunBk2(runDir, run.sourceBk2());
         Bk2Movie movie = new Bk2MovieLoader().load(bk2Path);
 
+        // Must run before the FIRST HeadlessTestFixture build below (recorded
+        // team, cross-game off, S3K intro-skip derived from trace metadata) --
+        // not just before driver.start()'s internal loadZoneAndAct. The
+        // throwaway build still performs a real team registration + level load
+        // via its own bootstrap path; running it against a leftover/default
+        // team (e.g. Sonic+Tails) instead of the recorded one would register
+        // the wrong sidekick roster before driver.start()'s reset. Configuring
+        // the team before EVERY level load -- including the throwaway one --
+        // matches the standalone AbstractTraceReplayTest ordering
+        // (prepareConfiguration before its one and only fixture build).
+        TraceReplaySessionBootstrap.prepareConfiguration(trace0, trace0.metadata());
+
         // Mirrors TestPachinkoTitleCardIntegration's engine setup: a
         // HeadlessTestFixture build initializes the headless engine before a real
         // GameLoop is constructed. Its sprite()/gameplayMode() are never read
@@ -121,10 +133,6 @@ abstract class AbstractRunChainTest {
         HeadlessTestFixture.builder().withZoneAndAct(bootZone, bootAct).build();
         InputHandler inputHandler = new InputHandler();
         GameLoop loop = new GameLoop(inputHandler);
-
-        // Must run before driver.start()'s internal loadZoneAndAct (recorded
-        // team, cross-game off, S3K intro-skip derived from trace metadata).
-        TraceReplaySessionBootstrap.prepareConfiguration(trace0, trace0.metadata());
 
         LiveEngineFixture fixture = new LiveEngineFixture(movie);
         TraceReplayDriver driver = new TraceReplayDriver(
