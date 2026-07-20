@@ -45,20 +45,23 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Reusable base for multi-stage trace RUN chain tests (spec:
- * docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md; API
- * contract: chain-core-contract.md on feature/ai-chain-core). Drives ONE
- * continuous {@link GameLoop} through EVERY segment of a {@link TraceRunManifest}
- * — with NO hardcoded segment count and NO zone/route/frame carve-out — and
- * asserts that the engine organically raises each transition and that boundary
- * state (position / checkpoint / rings / emeralds) carries over.
+ * Reusable base for multi-stage trace RUN chain tests (spec/API contract:
+ * "Decisions locked with the owner" and Component 2 in
+ * docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md). Drives
+ * ONE continuous {@link GameLoop} through EVERY segment of a
+ * {@link TraceRunManifest} — with NO hardcoded segment count and NO
+ * zone/route/frame carve-out — and asserts that the engine organically raises
+ * each transition and that boundary state (position / checkpoint / rings /
+ * emeralds) carries over.
  *
- * <p>All three committed runs drive through this one {@link #runChain} body:
- * {@code s3-knux-multibonus-ss} (25 seg), {@code s1-ghz-maze-roundtrip} (3 seg),
- * {@code s2-ehz-halfpipe-roundtrip} (5 seg). A lane subclass supplies only its
- * run directory and {@code @RequiresRom} game; every behavioral branch keys on
- * manifest data ({@code segment.kind()} / {@code transition.entryKind()} / field
- * presence), never on identity.
+ * <p>All three committed runs drive through this one {@link #runChain} body,
+ * each via its own lane subclass: {@link TestS3kMultiBonusSpecialStageRunChain}
+ * for {@code s3-knux-multibonus-ss} (25 seg), {@link TestS1GhzMazeRoundTripChain}
+ * for {@code s1-ghz-maze-roundtrip} (3 seg), {@link TestS2EhzHalfpipeRoundTripChain}
+ * for {@code s2-ehz-halfpipe-roundtrip} (5 seg). A lane subclass supplies only
+ * its run directory and {@code @RequiresRom} game; every behavioral branch keys
+ * on manifest data ({@code segment.kind()} / {@code transition.entryKind()} /
+ * field presence), never on identity.
  *
  * <p>Comparison-only throughout: no trace field is ever hydrated into engine
  * state; every comparator and boundary assertion observes an engine that reached
@@ -249,7 +252,8 @@ abstract class AbstractRunChainTest {
      * SS-INTERIOR SEAM (policy v1 = ADVANCE-UNCOMPARED). Per-frame special-stage
      * field comparison is an explicitly LATER workflow; when it lands, build the
      * special-stage comparator HERE instead of returning {@code null} for a
-     * {@code special_stage} segment. See chain-core-contract.md section 5.
+     * {@code special_stage} segment. See "Decisions locked with the owner" item 1
+     * in docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md.
      *
      * <p>v1: a {@code bonus_stage} interior returns a per-frame
      * {@link LiveTraceComparator}; a {@code special_stage} interior returns

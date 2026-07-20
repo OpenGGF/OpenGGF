@@ -153,7 +153,8 @@ public final class TraceRunReplayWalker {
      * {@code bonus_stage} interiors ARE compared per-frame. Per-frame
      * special-stage comparison is an explicitly later workflow — see the
      * SS-interior seam documented on {@link #interSegmentStepCap} callers and
-     * chain-core-contract.md section 5.
+     * "Decisions locked with the owner" item 1 in
+     * docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md.
      */
     public static boolean isUncomparedInterior(TraceRunManifest.Segment segment) {
         return "special_stage".equals(segment.kind());
@@ -260,7 +261,16 @@ public final class TraceRunReplayWalker {
 
         TraceData[] traces = new TraceData[segmentCount];
         for (int i = 0; i < segmentCount; i++) {
-            traces[i] = TraceData.load(runDir.resolve(segments.get(i).dir()));
+            TraceRunManifest.Segment segment = segments.get(i);
+            Path segmentDir = runDir.resolve(segment.dir());
+            // A special_stage interior is advance-uncompared under SS-interior
+            // policy v1 (see isUncomparedInterior): attachInteriorComparator never
+            // builds a per-frame comparator from its frames, so its physics.csv --
+            // which uses a per-game special-stage schema structurally distinct
+            // from TraceFrame's primary-level columns -- need not parse there.
+            traces[i] = isUncomparedInterior(segment)
+                ? TraceData.loadMetadataOnly(segmentDir)
+                : TraceData.load(segmentDir);
         }
 
         BoundaryPairing pairing = pairBoundaries(run);
