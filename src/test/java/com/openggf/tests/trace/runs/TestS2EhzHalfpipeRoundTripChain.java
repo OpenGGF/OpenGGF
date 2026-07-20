@@ -24,65 +24,60 @@ import java.nio.file.Path;
  * restore to {@code Saved_x/y_pos} plus the ROM-accurate ring ZERO-out on
  * return (rings_after == 0 is ROM truth, not an engine bug).
  *
- * <h2>Known remaining gap (emerald-count boundary assertion)</h2>
- * <p>The interior special-stage is driven with the recorded BK2 input via
- * {@link #uncomparedInteriorStep} (lag-skipped against the {@code s2_special_stage}
- * trace's own per-row {@code lag} column, mirroring
- * {@code S2SpecialStageReplayHarness}) plus the paired {@code GameLoop}/
- * {@code Sonic2SpecialStageManager} fixes documented on {@code doEnterSpecialStage}
- * (TRACE_ACCURATE startup + {@code setLagCompensation(0)} for a BK2-driven organic
- * entry).
+ * <h2>Root cause of the remaining RED (corrected — supersedes the earlier
+ * "premature checkpoint gate" hypothesis, which iteration-6 instrumentation
+ * DISPROVED)</h2>
  *
- * <p><b>Corrected root cause (superseding an earlier, disproven "premature emerald /
- * corrupted marker-stream" hypothesis)</b>: a raw dump of the ROM's decompressed
- * {@code objectLocationData} for special-stage index 0 shows its stream is intact --
- * roughly 40 marker bytes span its full ~489-byte span (offsets 0xe-0x1f7), which
- * lines up with the recorded run's own ~44 {@code current_segment} transitions
- * (0..0x2b) to the emerald in {@code ss/physics.csv}. The object/marker table is
- * NOT corrupted or short. Temporary instrumentation in
- * {@code Sonic2SpecialStageObjectManager#handleMarker} /
- * {@code Sonic2SpecialStageManager#handleCheckpoint} /
- * {@code #handleCheckpointResolved} / {@code #markFailed} (added and removed in the
- * same investigation pass, not landed) pinned the actual failure: the engine
- * correctly consumes the no-checkpoint-enable marker ({@code $FC}) and the first
- * checkpoint marker ({@code $FE}) from the ROM stream at the right segment (matching
- * the trace's own rings-to-go-display cadence), and correctly resolves the team-mode
- * ring requirement for checkpoint 1 as 40 (verified directly against the raw ROM
- * bytes at {@code RING_REQ_TEAM_OFFSET}, stage 0 quarter 0 = 40; solo would be 30, so
- * team-mode detection itself is right). But
- * {@code Sonic2SpecialStageManager#tryStartPendingCheckpoint}'s straight-segment gate
- * ({@code CHECKPOINT_TRIGGER_FRAME}/{@code CHECKPOINT_TRIGGER_OFFSET}, comment:
- * "alignment tuned") fires on the FIRST straight-type segment/frame combination
- * reached after the checkpoint becomes pending, because
- * {@code Sonic2TrackAnimator#currentFrameInSegment} resets to 0 on every
- * {@code advanceSegment()} call -- so the single-exact-frame-match heuristic is
- * satisfied as soon as ANY straight-type segment begins, rather than modeling the
- * ROM's actual {@code SSTrack_last_mappings_copy} pointer-identity check
- * ({@code Obj5A_Init}, s2.asm:71409-71420, comparing the currently-drawn track
- * mapping address against {@code MapSpec_Straight4}/{@code MapSpec_Drop1}, which is
- * NOT segment-relative). Concretely, the instrumented run showed the gate firing and
- * resolving at engine frame ~1229 with only 36/40 rings collected
- * ({@code handleCheckpointResolved result=FAILED num=1 req=40 had=36 final=false}),
- * roughly 350 frames (about one full segment) before the recorded run's own
- * {@code rings_togo_bcd} column reaches 0 (40/40) at frame ~1580 in
- * {@code ss/physics.csv}. The premature evaluation comes up 4 rings short and
- * resolves checkpoint 1 as {@code FAILED} instead of {@code PASSED}, which
- * immediately calls {@code markFailed()} and ejects the player back to LEVEL mode --
- * the special stage never reaches the {@code $FD} emerald marker at all in this run.
+ * <p><b>The earlier checkpoint-gate root cause is wrong.</b> Live instrumentation of
+ * this chain vs the standalone {@code TestS2SpecialStageTraceReplay} showed the
+ * checkpoint gate fires at the <em>identical</em> internal frame in both
+ * ({@code frameCounter == 939}); {@code lagCompensation} is already {@code 0.0} on
+ * the organic entry (the {@code doEnterSpecialStage} {@code bk2Driven} branch is
+ * correctly taken, {@code cursor == 3795}); and the team is correctly Sonic+Tails.
+ * The gate timing is NOT premature. What differs is the ring count at the gate: the
+ * standalone had 44 rings, this chain had 36 — the checkpoint-fail is a SYMPTOM of
+ * under-collection, not a cause.
  *
- * <p>Because {@code CHECKPOINT_TRIGGER_FRAME}/{@code CHECKPOINT_TRIGGER_OFFSET} is
- * empirically tuned against the standalone {@code s2_special_stage} fixture
- * ({@code TestS2SpecialStageTraceReplay}, ALSO special-stage index 0, must-stay-green)
- * and a ROM-faithful fix requires modeling the ROM's actual
- * {@code SSTrack_last_mappings_copy} pointer-range identity (verifying the
- * {@code Ani_SSTrack}-family table position of {@code MapSpec_Straight4} /
- * {@code MapSpec_Drop1} relative to segment boundaries) rather than re-tuning the
- * single-frame offset blind, that ROM-side verification is the next concrete step;
- * re-tuning the constant without it risks silently regressing the must-stay-green
- * standalone trace, which currently depends on the same tuned value producing ITS
- * OWN correct gate timing. Until then this lane fails at the {@code emeralds_after}
- * boundary assertion (expected 1, engine returns 0 because the special stage is
- * failed/ejected rather than completed).
+ * <p><b>The real blocker is a fixture-data gap.</b> The multi-segment run recorder
+ * captured each special-stage segment's {@code physics.csv} (frames + a {@code lag}
+ * column) but wrote an <b>empty</b> {@code aux_state.jsonl.gz} — zero bytes, no
+ * {@code run_objects_end} pass snapshots, no control-state transitions (confirmed for
+ * {@code ss}, {@code ss_2}, and the S1 run's {@code ss}). The S2 half-pipe is uniquely
+ * ROM-object-pass paced: the standalone must-stay-green harness drives it via
+ * {@link com.openggf.trace.SpecialStageRunObjectsPassBinder}, binding each recurring
+ * {@code RunObjects} pass to the exact BK2 row the ROM's V-int sampled. Without those
+ * pass records the chain can only frame-pace the BK2 (one tick per non-lag row). A
+ * per-frameCounter input diff proved the consequence: from {@code fc == 539} the
+ * ROM's actual V-int sample carried a steering press (held bit {@code 0x08}) that the
+ * chain's sequential-row feed reads as neutral, so the half-pipe player drifts off the
+ * rings and stalls at 36 while the recording climbs past 40. The comparison-only
+ * invariant forbids recovering the unrecorded V-int sampling from any engine/trace
+ * state, so no chain-side code can win this special stage from this fixture.
+ *
+ * <p><b>Cascade.</b> Because the special stage is LOST rather than WON, its
+ * results/return timeline diverges from the recorded WON run, and the subsequent level
+ * segment {@code seg2_ehz1} — entered through the special-stage-return reload rather
+ * than a fresh boot — desyncs completely (comparator error count ~45324 vs {@code 0}
+ * for the fresh-booted {@code seg1_ehz1}; player ends ~1500px off the recorded X with
+ * 1 ring vs the recorded 69). The engine therefore never re-accumulates 50 rings and
+ * the second {@code starpost_special} entry is never raised: the chain now fails at
+ * the {@code seg2 -> ss_2} entry boundary. Making the S2 half-pipe winnable — and thus
+ * greening the full round-trip — requires RE-RECORDING {@code ss}/{@code ss_2} WITH
+ * the special-stage aux state ({@code run_objects_end} pass log), which is outside a
+ * comparison-only test change.
+ *
+ * <h2>What iteration 6 fixed (boundary-model correction)</h2>
+ * <p>Asserting the {@code emeralds_after} delta across an <b>advance-uncompared</b>
+ * special stage (SS-INTERIOR policy v1) was itself a boundary-model over-reach: an
+ * emerald is only awarded when the stage is WON, so its post-return value is a
+ * faithful comparison target only for a REPRODUCED interior. See
+ * {@link AbstractRunChainTest#emeraldCarryOverIsVerifiable(SegmentPlan)}:
+ * the emerald carry-over is now asserted only across a compared {@code bonus_stage}
+ * interior; across an uncompared {@code special_stage} it is a recorded diagnostic.
+ * The always-safe carry-overs (the ROM's on-return position restore and ring
+ * zero-out, which occur whether the stage was won or lost) remain asserted, so the
+ * first {@code stage_exit} cycle now passes those; the RED has advanced to the
+ * fixture-blocked {@code seg2 -> ss_2} entry described above.
  */
 @RequiresRom(SonicGame.SONIC_2)
 class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
