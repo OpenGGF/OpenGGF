@@ -2131,10 +2131,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/**
 	 * ROM: Knuckles_Set_Gliding_Animation (sonic3k.asm:31560-31581).
-	 * Directly sets mapping_frame from a lookup table based on glide turn angle.
-	 * Does NOT use the scripted animation system.
+	 * Sets {@code anim(a0)} to $20 (sonic3k.asm:31563: {@code move.w
+	 * #($20<<8)|$20,anim(a0) ; and prev_anim}) THEN sets mapping_frame directly
+	 * from a lookup table based on glide turn angle -- the mapping_frame write
+	 * bypasses the scripted animation system, but the {@code anim} byte itself
+	 * is still written and is what a trace's {@code player_animation_id} field
+	 * observes.
 	 */
 	private void setGlideAnimation() {
+		// ROM sonic3k.asm:31563. Word write also sets prev_anim(a0), which this
+		// engine does not model as a separate field. Must go through
+		// setForcedAnimationId, not setAnimationId directly: PlayableSpriteAnimation
+		// .update() recomputes animationId from the scripted velocity resolver every
+		// frame BEFORE consulting isObjectMappingFrameControl(), so a plain
+		// setAnimationId() here is stomped back to the resolver's idea (0) on the
+		// very next animation-manager pass. forcedAnimationId is the established
+		// override channel (see enterFallFromGlide()/clearGlideAnimationState()).
+		sprite.setForcedAnimationId(0x20);
 		// Enable direct mapping frame control (bypasses animation manager)
 		sprite.setObjectMappingFrameControl(true);
 		sprite.setPushing(false);
