@@ -183,6 +183,14 @@ class TestS3kSlotBonusCageObjectInstance {
         assertFalse(player.isTouchResponseSuppressedByObjectControl());
         assertFalse(player.isControlLocked());
         assertTrue(player.getAir());
+        // ROM loc_4C250 (sonic3k.asm:99566-99578): GetSineCosine returns sin in d0 / cos
+        // in d1, and x_vel takes d0 (sin) while y_vel takes d1 (cos) -- the opposite
+        // pairing from the jump-launch convention (sub_4BBB2). At angle 0, sin=0 and
+        // cos=0x100, so the release must leave x_speed at 0 and y_speed at 0x400 (both
+        // scaled by the release's `asl.w #2` == *4). A cos->x/sin->y swap here silently
+        // produced x_speed=0x400/y_speed=0x0000 instead.
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0x400, player.getYSpeed());
     }
 
     private void forceOptionCycleState(S3kSlotStageController controller, int stateValue) throws Exception {

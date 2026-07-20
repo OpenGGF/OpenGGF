@@ -212,9 +212,17 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        // ROM loc_4C250 (sonic3k.asm:99566-99578): GetSineCosine returns sin in
+        // d0 / cos in d1 (sonic3k.asm:3014-3015), and the launch write order is
+        // `move.w d0,x_vel(a1)` then `move.w d1,y_vel(a1)` -- i.e. x_vel is the
+        // SINE term and y_vel is the COSINE term. Swapping these (cos->x,
+        // sin->y, matching sub_4BBB2's jump-launch convention instead) produced
+        // x_speed=-0x400/y_speed=0x0000 at the release angle used by
+        // TestS3kSlotsBonusTraceReplay frame 332, where ROM expects the
+        // opposite: x_speed=0x0000/y_speed=-0x400.
         int angle = controller.angle() & 0xFC;
-        short vx = (short) (TrigLookupTable.cosHex(angle) * 4);
-        short vy = (short) (TrigLookupTable.sinHex(angle) * 4);
+        short vx = (short) (TrigLookupTable.sinHex(angle) * 4);
+        short vy = (short) (TrigLookupTable.cosHex(angle) * 4);
         player.setXSpeed(vx);
         player.setYSpeed(vy);
         ObjectControlState.none().applyTo(player);

@@ -648,7 +648,16 @@ public final class S3kSlotBonusStageRuntime {
             boolean inactive = reward instanceof S3kSlotRingRewardObjectInstance ring && !ring.isActive()
                     || reward instanceof S3kSlotSpikeRewardObjectInstance spike && !spike.isActive();
             if (reward.isDestroyed() || inactive) {
-                slotStageController.onRewardExpired();
+                // Obj_SlotSpike (sonic3k.asm:99568-99604) decrements the cage's
+                // active count at the same instant it destroys itself -- no
+                // separate sparkle phase -- so this call still applies here for
+                // spikes. Ring rewards already reported their active-count
+                // decrement at grant time (see S3kSlotRingRewardObjectInstance
+                // .tickSlotRuntime); calling onRewardExpired() again here on
+                // eventual sparkle-end destruction would double-decrement.
+                if (!(reward instanceof S3kSlotRingRewardObjectInstance)) {
+                    slotStageController.onRewardExpired();
+                }
                 unregisterDynamicSlotObject(reward);
                 iterator.remove();
             }
