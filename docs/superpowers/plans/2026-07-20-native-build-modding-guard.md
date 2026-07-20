@@ -158,6 +158,24 @@ class TestNativeUnsupportedMods {
         assertFalse(NativeUnsupportedMods.blocksStandalone(descriptor("s", true), true));
         assertFalse(NativeUnsupportedMods.blocksStandalone(descriptor("s", false), false));
     }
+
+    @Test
+    void freshDropInWithoutStateEntryExcluded() {
+        // A code jar present in scanned but absent from ModState is disabled-by-default.
+        List<ModCatalogEntry> scanned = List.of(descriptor("codenew", true));
+        assertTrue(NativeUnsupportedMods.compute(scanned, ModState.EMPTY, false).isEmpty());
+    }
+
+    @Test
+    void enabledStandaloneCodeModIncluded() {
+        // Standalone mods are always code-bearing; compute() must list them
+        // (they also feed blocksStandalone for master-title suppression).
+        List<ModCatalogEntry> scanned = List.of(descriptor("standalone", true));
+        ModState st = state(new ModState.Entry("standalone", true, 0));
+        assertEquals(List.of("standalone"),
+                NativeUnsupportedMods.compute(scanned, st, false).stream()
+                        .map(d -> d.manifest().id()).toList());
+    }
 }
 ```
 
@@ -757,6 +775,7 @@ This is the highest-integration task. Implement in the sub-order below.
 - Modify: `src/main/java/com/openggf/game/mode/BootScreenModeController.java` (`handles` + update method)
 - Modify: `src/main/java/com/openggf/GameLoop.java` (supplier + exit-handler + dispatch)
 - Modify: `src/main/java/com/openggf/Engine.java` (screen field, supplier/exit registration, boot-chain insertion, draw hook)
+- Modify: `src/test/java/com/openggf/render/TestEngineRenderDispatcher.java` (existing `RecordingDrawActions` must implement the new interface method — see Step 2)
 - Test: `src/test/java/com/openggf/game/TestNativeModNoticeLines.java`, `src/test/java/com/openggf/render/TestEngineRenderDispatcherNativeNotice.java`
 
 **Interfaces:**
@@ -817,6 +836,16 @@ Add to the `DrawActions` interface (after line 77):
 ```java
         void nativeModNotice();
 ```
+
+**REQUIRED — fix the existing implementor (else the test tree fails to compile).** `EngineRenderDispatcher.DrawActions` is implemented by `RecordingDrawActions` in `src/test/java/com/openggf/render/TestEngineRenderDispatcher.java` (~line 125). Add the new method there, mirroring its existing record-a-call methods:
+
+```java
+        @Override public void nativeModNotice() { calls.add("nativeModNotice"); }
+```
+
+(Match the exact field/idiom `RecordingDrawActions` already uses — e.g. `calls.add(...)`. `ClearActions` is unaffected: `NATIVE_MOD_NOTICE` reuses the existing `black()` arm, so `RecordingClearActions` needs no change.) The production impl `EngineDrawActions` (Engine.java:2976) is handled in Step 7. There are no other `DrawActions` implementors in the tree.
+
+**Also:** the new `TestEngineRenderDispatcherNativeNotice` stub below is an anonymous `DrawActions` — after this change it must implement **all 17** methods (16 existing + `nativeModNotice()`); the non-asserted ones throw `AssertionError`. Consider instead reusing/subclassing `RecordingDrawActions` if it is accessible, to avoid a 17-method anonymous class.
 
 - [ ] **Step 3: The notice line-builder is already tested (Task 1).** Add `TestNativeModNoticeLines.java` only if you want the screen's `MAX_VISIBLE_MOD_LINES` constant asserted:
 
@@ -1143,7 +1172,7 @@ Expected: PASS.
 - [ ] **Step 10: Commit**
 
 ```bash
-git add src/main/java/com/openggf/game/GameMode.java src/main/java/com/openggf/game/NativeModNoticeScreen.java src/main/java/com/openggf/render/EngineRenderDispatcher.java src/main/java/com/openggf/game/mode/BootScreenModeController.java src/main/java/com/openggf/GameLoop.java src/main/java/com/openggf/Engine.java src/test/java/com/openggf/render/TestEngineRenderDispatcherNativeNotice.java src/test/java/com/openggf/game/TestNativeModNoticeLines.java
+git add src/main/java/com/openggf/game/GameMode.java src/main/java/com/openggf/game/NativeModNoticeScreen.java src/main/java/com/openggf/render/EngineRenderDispatcher.java src/main/java/com/openggf/game/mode/BootScreenModeController.java src/main/java/com/openggf/GameLoop.java src/main/java/com/openggf/Engine.java src/test/java/com/openggf/render/TestEngineRenderDispatcher.java src/test/java/com/openggf/render/TestEngineRenderDispatcherNativeNotice.java src/test/java/com/openggf/game/TestNativeModNoticeLines.java
 # include any TestBootScreenModeController update
 git commit  # Changelog: updated
 ```
@@ -1220,6 +1249,10 @@ Expected: PASS (default the flag to `true` everywhere means legacy behavior is u
 Run any ArchUnit/guard tests that could be affected by the new classes (e.g. package-boundary guards). If a guard freezes on the new `mods` class, confirm `NativeUnsupportedMods` has no `Engine`/`ModSubsystem` import and re-run. Do not weaken a guard baseline without documenting the reason.
 
 - [ ] **Step 5: Manual native/JVM sanity (documented, not automated)**
+
+**Coverage note (from the spec's Testing section):** the boot-chain insert/skip decision itself (`enterBootModNoticeOrProceed` inserting `NATIVE_MOD_NOTICE` only when the list is non-empty, and never on a JVM boot) lives in GL-bound `Engine` code and is **manual-only** here — the automated coverage is `NativeUnsupportedMods.compute` emptiness (Task 1) plus the dispatcher arms (Task 6). This is a deliberate scope decision, not an oversight.
+
+Also note the accepted edge case (spec + review): if a code mod is *already* enabled in persisted config from a prior JVM run and the user enables a data-only dependent on native, the cascade guard (which only sees the *disabled* dependency closure) will not block it; the dependency then fails to load at runtime (`DEPENDENCY_UNAVAILABLE`). This is reversible and corrupts no persisted state — accepted.
 
 Because the guard is native-only, record in the PR description:
 - JVM run: mods behave exactly as before (build+run `mvn -Dmse=off package`, launch the jar with a code mod enabled → loads).
