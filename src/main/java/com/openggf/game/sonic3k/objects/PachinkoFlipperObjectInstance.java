@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -151,6 +152,24 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
             // forceAnimationRestart() invalidates the tracked prev_anim (lastAnimationId)
             // so the next update restarts the script, matching the one-frame-delayed
             // ROM reset (the flipper object runs after the player's own Animate pass).
+            // The word write's HIGH byte (anim=2/Roll) is NOT delayed -- it lands this
+            // same frame, immediately visible to any same-frame reader, even though the
+            // mapping/frame recompute driven by prev_anim waits for next frame's Animate
+            // pass. This landing runs through the shared applyObjectLandingState ->
+            // clearRollingOnLanding path first (same checkpoint, earlier in this same
+            // frame's resolution), which -- since the player is still curled from the
+            // prior airborne hop -- clears rolling and publishes anim=Walk exactly as
+            // Sonic_ResetOnFloor does. sub_49CFE's word write must republish anim=Roll
+            // afterward so the two ROM writes net out to Roll, matching the disasm
+            // ordering (Sonic_ResetOnFloor -> object loop -> flipper's own write).
+            // forceAnimationRestart() alone never touches animationId (pachinko1 trace
+            // f2084: expected player_animation_id=0x0002, engine produced 0x0000 while
+            // player_mapping_frame matched at 0x0035 both sides -- proving only the id
+            // write, not the mapping recompute, was missing).
+            int rollAnimationId = player.resolveAnimationId(CanonicalAnimation.ROLL);
+            if (rollAnimationId >= 0) {
+                player.setAnimationId(rollAnimationId);
+            }
             player.forceAnimationRestart();
             return;
         }
