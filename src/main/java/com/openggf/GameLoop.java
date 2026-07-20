@@ -2055,8 +2055,37 @@ public class GameLoop {
      */
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                                      boolean fadeFromBlack) {
-        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack,
-                SpecialStageStartupPolicy.FAST);
+        // FAST fast-forwards the ROM's observable pre-physics hold synchronously
+        // inside initializeStage, without stepping real engine frames -- correct
+        // for ordinary interactive play, but it desyncs a BK2-driven caller's
+        // per-frame recorded input from the hold's own tick count.
+        // TraceSessionLauncher's own dedicated special-stage trace session
+        // already selects TRACE_ACCURATE directly for the same reason; select it
+        // here too whenever a PlaybackDebugManager BK2 session is actively
+        // playing, covering the organic giant-ring/checkpoint-star entry path
+        // (used both by ordinary gameplay, where no BK2 session is ever
+        // playing, and by any BK2-driven session that reaches this transition).
+        boolean bk2Driven = playbackDebugManager.isSessionPlaying();
+        SpecialStageStartupPolicy startupPolicy = bk2Driven
+                ? SpecialStageStartupPolicy.TRACE_ACCURATE
+                : SpecialStageStartupPolicy.FAST;
+        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy);
+        if (bk2Driven) {
+            // TraceSessionLauncher#enterSpecialStageTrace pairs its own
+            // TRACE_ACCURATE entry with provider.setLagCompensation(0) --
+            // "startup observations and external frame pacing are independent
+            // contracts". A BK2-driven caller reaching this organic entry path
+            // (e.g. a checkpoint-star/giant-ring transition mid-playback) needs
+            // the same pairing: the provider's own stateless lag model
+            // (Sonic2SpecialStageLagModel) predicts and inserts ADDITIONAL
+            // synthetic skipped frames on top of whatever real cadence the
+            // caller is already driving, desyncing ring-pickup/object timing
+            // from the recorded run. Disabling it here (any time before the
+            // provider's first post-entry tick; ssProvider.reset() above does
+            // not touch this field) is the same force-off switch TraceSessionLauncher
+            // and the standalone SS trace-replay harnesses already require.
+            ssProvider.setLagCompensation(0);
+        }
     }
 
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,

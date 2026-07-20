@@ -8,6 +8,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
@@ -176,28 +177,31 @@ abstract class AbstractRunChainTest {
                 // This segment is an INTERIOR; its exit (stage_exit) returns to a
                 // level. Await the mode==LEVEL poll, assert carry-over, rebind.
                 //
-                // NOTE (investigated, not yet fixed here): a special_stage interior
-                // is advance-UNCOMPARED (SS-INTERIOR POLICY v1) but is also currently
-                // input-uncontrolled -- the production input bridge
-                // (PlaybackDebugManager.isDriving) only covers LEVEL/BONUS_STAGE, and
-                // GameLoop's SPECIAL_STAGE tick reads steering from
-                // InputHandler.logical() (SpecialStageInputMapper), never the
-                // forced-input-mask path, so the headless InputHandler here supplies
-                // constant no-input for the whole interior. Feeding the shared movie's
-                // recorded input via InputHandler.setLogicalOverride (mirroring
-                // TraceSessionLauncher#applySpecialStageTraceInputIfActive) was tried
-                // and confirmed to thread real recorded steering through to
-                // SpecialStageInputMapper (verified: non-zero direction bits from the
-                // movie DO reach the SS provider), but the SS still did not reproduce
-                // the recorded emerald outcome and shifted the post-return settle by
-                // one frame (a new 1px X mismatch upstream of the emerald assertion).
-                // Reproducing the recorded SS outcome faithfully likely needs the same
-                // lag/pass-aware driving AbstractS2SpecialStageTraceReplayTest's
-                // S2SpecialStageReplayHarness uses, not a naive 1:1 movie-frame feed --
-                // left as the documented next step rather than landing a change that
-                // doesn't close the gap.
+                // An uncompared interior (special_stage, SS-INTERIOR POLICY v1) is
+                // NOT driven by PlaybackDebugManager's forced-input bridge --
+                // GameLoop.isDriving() only forces input for LEVEL/BONUS_STAGE
+                // (syncPlaybackInputBridge), and the shared BK2 cursor itself
+                // freezes in SPECIAL_STAGE mode (onLevelFrameAdvanced is only
+                // called from the LEVEL/BONUS_STAGE tick paths). Left undriven, the
+                // special stage runs with a neutral/no-op InputHandler for its
+                // whole duration, producing an engine-organic outcome that does not
+                // match the recorded run. Feed the SAME recorded BK2 rows this
+                // segment was captured from as a logical-input override -- the
+                // identical mechanism S1SpecialStageReplayHarness/LiveRewindStepper/
+                // SpecialStageStepper/TraceSessionLauncher already use via
+                // RecordedInputSnapshots.fromBk2 -- via a segment-local row counter
+                // (independent of the frozen shared cursor) so the engine actually
+                // replays the special stage the recorded inputs drove. Still
+                // comparison-only: the trace's control input is read to drive the
+                // engine, exactly like the LEVEL/BONUS_STAGE forced-input path
+                // already does; no trace FIELD is ever hydrated into engine state,
+                // and no field comparison happens during this segment
+                // (attachInteriorComparator keeps returning null for special_stage).
+                Runnable stepOneFrame = TraceRunReplayWalker.isUncomparedInterior(seg.segment())
+                        ? uncomparedInteriorStep(loop, inputHandler, movie, seg)
+                        : () -> stepEngineFrame(loop);
                 BoundaryObservation obs =
-                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, () -> stepEngineFrame(loop));
+                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, stepOneFrame);
                 assertTrue(obs.observed(),
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
@@ -440,6 +444,59 @@ abstract class AbstractRunChainTest {
     // Stepping helpers
     // -------------------------------------------------------------------------
 
+    /**
+     * Builds the step function used to drive an uncompared (special_stage)
+     * interior. Overridable so a lane with a per-game special-stage trace
+     * format (carrying a per-row lag flag, e.g. {@code SpecialStageTraceData}
+     * for S2 or {@code Sonic1SpecialStageTraceData} for S1) can skip lag rows
+     * the way the standalone SS trace-replay harnesses do. Default: feed
+     * EVERY recorded BK2 row as a full physics tick via
+     * {@link #specialStageDrivenStep} (no lag-skip) -- correct as long as the
+     * interior's actual outcome carry-over is not asserted, or a lane
+     * overrides this.
+     */
+    protected Runnable uncomparedInteriorStep(
+            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
+        return specialStageDrivenStep(loop, inputHandler, movie, interior.segment().bk2FrameOffset());
+    }
+
+    /**
+     * Builds a step function that drives an uncompared (special_stage)
+     * interior with the SAME recorded BK2 rows the segment was captured
+     * from, using a segment-local row counter starting at
+     * {@code bk2FrameOffset} -- independent of the shared
+     * {@code PlaybackDebugManager} cursor, which never advances in
+     * SPECIAL_STAGE mode (see the call-site comment in {@link #runChain}).
+     * Sets an {@link InputHandler} logical override for the duration of one
+     * {@link GameLoop#step()} call and clears it immediately after, mirroring
+     * {@code S1SpecialStageReplayHarness.stepFrame} / {@code
+     * TraceSessionLauncher#applySpecialStageTraceInputIfActive}. The "previous"
+     * row for press-edge detection is always the immediately preceding
+     * physical BK2 row, matching the same rule those callers use.
+     *
+     * <p>Package-visible (not private) so a lane's {@link #uncomparedInteriorStep}
+     * override can build its own lag-aware variant of this same input-feed/
+     * step/clear sequence (see {@code stepEngineFrame}, also package-visible
+     * for the same reason) instead of duplicating {@link #runChain}'s
+     * plumbing.
+     */
+    static Runnable specialStageDrivenStep(
+            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, int bk2FrameOffset) {
+        int[] localRow = {0};
+        return () -> {
+            int absoluteRow = bk2FrameOffset + localRow[0];
+            Bk2FrameInput current = movie.getFrame(absoluteRow);
+            Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
+            inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
+            try {
+                stepEngineFrame(loop);
+            } finally {
+                inputHandler.clearLogicalOverride();
+            }
+            localRow[0]++;
+        };
+    }
+
     private static void stepFrames(GameLoop loop, int frameCount) {
         for (int f = 0; f < frameCount; f++) {
             stepEngineFrame(loop);
@@ -492,7 +549,7 @@ abstract class AbstractRunChainTest {
      * plumbing parity with the production per-frame call order, not trace-data
      * hydration.
      */
-    private static void stepEngineFrame(GameLoop loop) {
+    static void stepEngineFrame(GameLoop loop) {
         var fade = GameServices.fadeOrNull();
         if (fade != null) {
             fade.update();
