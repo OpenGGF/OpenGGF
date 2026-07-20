@@ -49,7 +49,8 @@ public record TraceMetadata(
     @JsonProperty("run_id") String runId,
     @JsonProperty("segment_index") Integer segmentIndex,
     @JsonProperty("bonus_stage_type") String bonusStageType,
-    @JsonProperty("fresh_load") Boolean freshLoad
+    @JsonProperty("fresh_load") Boolean freshLoad,
+    @JsonProperty("v_int_run_count") Integer vIntRunCount
 ) {
 
     /**
@@ -477,6 +478,21 @@ public record TraceMetadata(
     public boolean hasPreLevelIntroPrefix() {
         return auxSchemaExtras != null
                 && auxSchemaExtras.contains("pre_level_intro_prefix");
+    }
+
+    /**
+     * The ROM {@code V_int_run_count} free-running VBlank counter
+     * (sonic3k.constants.asm:790, {@code ds.l 1}) captured once at segment-arm
+     * time, or {@code null} for traces recorded before the v6.32-s3k recorder
+     * or for non-bonus segments. {@code Slots_CycleOptions}
+     * (sonic3k.asm:99614-99946) reads this counter's low byte/word to seed the
+     * reel words/targets on each slots bonus-stage cycle, so replay primes the
+     * bonus-stage counter base from this recorded value instead of the
+     * engine's per-session approximation (see
+     * {@code S3kSlotBonusStageRuntime}).
+     */
+    public Long recordedVIntRunCount() {
+        return vIntRunCount != null ? (vIntRunCount.longValue() & 0xFFFFFFFFL) : null;
     }
 
     /** Load metadata from a metadata.json file. */
