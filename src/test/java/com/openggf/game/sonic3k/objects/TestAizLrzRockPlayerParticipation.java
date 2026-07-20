@@ -88,7 +88,7 @@ class TestAizLrzRockPlayerParticipation {
                 new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.AIZLRZ_ROCK, 0x02, 0, false, 0));
         rock.setCheckpointBatch(new SolidCheckpointBatch(rock, Map.of(
                 sonic, noContact(false),
-                tails, pushContact(true, false, Sonic3kAnimationIds.PUSH.id())
+                tails, pushContact(true, false, false, Sonic3kAnimationIds.PUSH.id())
         )));
         rock.setServices(queryOnlyServices(sonic, List.of(tails)));
 
@@ -110,7 +110,7 @@ class TestAizLrzRockPlayerParticipation {
                 new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.AIZLRZ_ROCK, 0x02, 0, false, 0));
         rock.setCheckpointBatch(new SolidCheckpointBatch(rock, Map.of(
                 sonic, noContact(false),
-                tails, pushContact(true, true, Sonic3kAnimationIds.PUSH.id())
+                tails, pushContact(true, true, true, Sonic3kAnimationIds.PUSH.id())
         )));
         rock.setServices(queryOnlyServices(sonic, List.of(tails)));
 
@@ -122,6 +122,25 @@ class TestAizLrzRockPlayerParticipation {
         assertEquals(0x5A00, tails.getXSubpixelRaw(),
                 "subq.w #1,x_pos must not clear the adjacent x_sub word");
         assertEquals(0x0F00, sonic.getCentreX() & 0xFFFF);
+    }
+
+    @Test
+    void previousRockContactWithoutSavedStatusPushDoesNotMoveRock() {
+        TestablePlayableSprite sonic = player("sonic", 0x0F00, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1100, 0x1000);
+        TestableAizLrzRockObjectInstance rock = new TestableAizLrzRockObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.AIZLRZ_ROCK, 0x02, 0, false, 0));
+        rock.setCheckpointBatch(new SolidCheckpointBatch(rock, Map.of(
+                sonic, noContact(false),
+                tails, pushContact(true, true, false, Sonic3kAnimationIds.PUSH.id())
+        )));
+        rock.setServices(queryOnlyServices(sonic, List.of(tails)));
+
+        rock.update(1, sonic);
+
+        assertEquals(0x1000, rock.getX(),
+                "sub_200A2 must stop when the concrete player's saved pre-helper Status_Push is clear");
+        assertEquals(0x1100, tails.getCentreX() & 0xFFFF);
     }
 
     @Test
@@ -163,10 +182,11 @@ class TestAizLrzRockPlayerParticipation {
     }
 
     private static PlayerSolidContactResult pushContact(
-            boolean pushingNow, boolean pushingLastFrame, int animationId) {
+            boolean pushingNow, boolean pushingLastFrame, boolean preContactPushing, int animationId) {
         return new PlayerSolidContactResult(ContactKind.SIDE, false, false,
                 pushingNow, pushingLastFrame,
-                new PreContactState((short) 0, (short) 0, false, animationId), null, 0);
+                new PreContactState((short) 0, (short) 0, false, false,
+                        animationId, preContactPushing), null, 0);
     }
 
     private static PlayerSolidContactResult noContact(boolean pushingLastFrame) {

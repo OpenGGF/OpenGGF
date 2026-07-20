@@ -486,14 +486,13 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
 
     private void handlePush(AbstractPlayableSprite player, PlayerSolidContactResult result) {
         // ROM sub_200A2/sub_200CC moves the concrete player whose pushing bit is
-        // set only when the rock's saved per-player contact state also had
-        // Status_Push (sonic3k.asm:44446-44478). The checkpoint registry owns
-        // that previous-frame bit per rock and player; the actor's global
-        // pre-contact Status_Push may already have been cleared by another
-        // solid. Using the old aggregate latch could let P2's first contact
-        // move P1 one frame early.
+        // set only when that player's saved pre-helper status also had
+        // Status_Push (sonic3k.asm:44446-44478). The checkpoint preserves both
+        // phases per player; using the old aggregate latch could let P2's first
+        // contact move P1 one frame early.
         if (player == null || result == null
-                || !result.pushingNow() || !result.pushingLastFrame()) {
+                || !result.pushingNow() || !result.pushingLastFrame()
+                || !result.preContact().pushing()) {
             return;
         }
 
