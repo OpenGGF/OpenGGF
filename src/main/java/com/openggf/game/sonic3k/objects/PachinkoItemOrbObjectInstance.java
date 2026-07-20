@@ -19,10 +19,13 @@ import java.util.List;
 /**
  * Object 0xED - Pachinko Item Orb.
  *
- * <p>ROM reference: {@code Obj_PachinkoItemOrb}. The orb animates until touched, then
- * arms itself and resolves to a reward subtype on the following update based on the
- * orb's Y position and {@code Level_frame_counter}, turning into the shared
- * {@link GumballItemObjectInstance} Pachinko reward object.
+ * <p>ROM reference: {@code Obj_PachinkoItemOrb} (sonic3k.asm:96767-96811). The orb animates
+ * until touched, then arms itself ({@code loc_4A218}) and waits for the player to break
+ * contact before resolving a reward subtype from the orb's Y position and
+ * {@code Level_frame_counter} ({@code loc_4A238}, sonic3k.asm:96789-96804), turning into the
+ * shared {@link GumballItemObjectInstance} Pachinko reward object. A touch that never releases
+ * (collision_property stays set) never converts — ROM re-checks the touch signal every pass
+ * ({@code loc_4A274}) and only proceeds once it reads clear.
  */
 public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
@@ -38,7 +41,23 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.standardEnemy();
 
     private int animationFrameCounter;
-    private boolean pendingRewardConversion;
+
+    /**
+     * Mirrors ROM {@code collision_property}: set by {@link #onTouchResponse} whenever the
+     * touch-response pass (which runs after this object's own {@link #update}) resolves an
+     * overlap this frame, and consumed at the top of the NEXT {@link #update} call — matching
+     * the ROM's one-frame-delayed collision-response-list signal.
+     */
+    private boolean touchedLastResolvedFrame;
+
+    /**
+     * Mirrors the ROM state split between {@code loc_4A218} (idle, waiting for the first touch)
+     * and {@code loc_4A238} (armed, waiting for the player to RELEASE contact before the orb
+     * converts). ROM: sonic3k.asm:96777-96786 (loc_4A218 arms on touch, does not convert same
+     * frame) and sonic3k.asm:96789-96791 (loc_4A238 re-checks collision_property and stays armed
+     * — loc_4A274 — for as long as the touch persists).
+     */
+    private boolean armed;
     private GumballItemObjectInstance rewardItem;
 
     public PachinkoItemOrbObjectInstance(ObjectSpawn spawn) {
@@ -56,9 +75,57 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        if (pendingRewardConversion) {
-            pendingRewardConversion = false;
-            convertToReward(frameCounter);
+        // ROM sonic3k.asm:96790 (loc_4A238): tst.b collision_property(a0) / bne.s loc_4A274 —
+        // conversion only proceeds once the touch signal reads clear (the player has broken
+        // contact since arming). Consume the resolved signal now; onTouchResponse will set it
+        // again if the touch-response pass (which runs after this update) finds a fresh overlap.
+        boolean touchedNow = touchedLastResolvedFrame;
+        touchedLastResolvedFrame = false;
+
+        if (!armed) {
+            // ROM sonic3k.asm:96778-96781 (loc_4A218): tst.b collision_property(a0) / beq.s
+            // loc_4A228 — a nonzero property arms the orb but does NOT convert this frame.
+            if (touchedNow) {
+                armed = true;
+            }
+            return;
+        }
+
+        if (touchedNow) {
+            // ROM loc_4A238->loc_4A274: still touching — stay armed, try again next frame.
+            return;
+        }
+
+        // ROM loc_4A238 fallthrough (sonic3k.asm:96792-96804): touch has been released —
+        // resolve the reward subtype from Level_frame_counter and convert.
+        //
+        // NOTE: this method's own `frameCounter` parameter is ObjectManager's internal
+        // `vblaCounter` (ObjectManager.java: `instance.update(vblaCounter, player)`), which
+        // carries a large constant bootstrap offset relative to ObjectManager's own
+        // `frameCounter` field (empirically ~3071 frames in a representative trace run, not a
+        // multiple of 4), corrupting the `&3` phase used by the REWARD_TABLE lookup below and
+        // selecting an entirely wrong reward subtype. Other Level_frame_counter-driven S3K
+        // objects read the ROM-aligned counter explicitly (e.g. HczMinibossInstance uses
+        // services().objectManager().getFrameCounter()) instead of trusting a raw per-object
+        // update() parameter — do the same here. (LevelManager also exposes a getFrameCounter(),
+        // used by CnzBumperObjectInstance/AizFallingLogObjectInstance, but it is a separate
+        // field from ObjectManager's and is not interchangeable with it — this call site needs
+        // ObjectManager's counter, which is what advances alongside this object's own vblaCounter
+        // dispatch.)
+        int romFrameCounter = resolveRomFrameCounter(frameCounter);
+        convertToReward(romFrameCounter);
+    }
+
+    /**
+     * Resolves the ROM-aligned {@code Level_frame_counter} equivalent for subtype selection.
+     * Falls back to the raw {@code update()} parameter only when the object manager is
+     * unavailable (e.g. bare unit-test construction without full services wiring).
+     */
+    private int resolveRomFrameCounter(int updateParamFrameCounter) {
+        try {
+            return services().objectManager().getFrameCounter();
+        } catch (Exception e) {
+            return updateParamFrameCounter;
         }
     }
 
@@ -88,7 +155,7 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
             rewardItem.onTouchResponse(player, result, frameCounter);
             return;
         }
-        pendingRewardConversion = true;
+        touchedLastResolvedFrame = true;
     }
 
     @Override

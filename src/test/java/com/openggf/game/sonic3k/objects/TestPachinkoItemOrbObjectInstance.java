@@ -33,21 +33,63 @@ class TestPachinkoItemOrbObjectInstance {
         }
     }
 
+    /**
+     * ROM sonic3k.asm:96777-96786 (loc_4A218) arms the orb on touch but does not convert the
+     * same pass, and sonic3k.asm:96789-96791 (loc_4A238 -&gt; loc_4A274) re-checks
+     * collision_property next pass and stays armed for as long as the touch persists — the orb
+     * only converts once a pass resolves with the touch signal clear (contact released).
+     */
     @Test
-    void firstTouchOnlyArmsOrb_andNextUpdateUsesFollowingFrameCounter() {
+    void touchArmsOrb_conversionWaitsForReleaseBeforeUsingReleaseFrameCounter() {
         PachinkoItemOrbObjectInstance orb =
                 new PachinkoItemOrbObjectInstance(new ObjectSpawn(0x140, 0x183, 0xED, 0, 0, false, 0));
         orb.setServices(new TestObjectServices());
 
         orb.onTouchResponse(null, null, 0);
+        orb.update(1, null);
+
+        // Armed, but not yet converted: still-touching still resolves at update(1).
+        assertEquals(0xED, orb.getSpawn().objectId());
+        assertEquals(0, orb.getSpawn().subtype());
+
+        // Contact persists into the next pass (loc_4A274): stays armed, does not convert.
+        orb.onTouchResponse(null, null, 1);
+        orb.update(2, null);
 
         assertEquals(0xED, orb.getSpawn().objectId());
         assertEquals(0, orb.getSpawn().subtype());
 
-        orb.update(1, null);
+        // Touch signal resolves clear (player released contact): converts now, using this
+        // release pass's frame counter (3; TestObjectServices has no ObjectManager wired, so
+        // resolveRomFrameCounter falls back to the raw update() parameter). yNibble=3
+        // (0x183 & 0xF), 3&3=3 -> REWARD_TABLE[(3<<2)+3]=REWARD_TABLE[15]=5.
+        orb.update(3, null);
 
         assertEquals(0xEB, orb.getSpawn().objectId());
-        assertEquals(7, orb.getSpawn().subtype());
+        assertEquals(5, orb.getSpawn().subtype());
+    }
+
+    /**
+     * A single touch that is never repeated still requires one additional touch-clear pass
+     * before converting (ROM never converts on the same pass collision_property was set).
+     */
+    @Test
+    void singleTouchArmsButDoesNotConvertOnTheImmediatelyFollowingUpdate() {
+        PachinkoItemOrbObjectInstance orb =
+                new PachinkoItemOrbObjectInstance(new ObjectSpawn(0x140, 0x183, 0xED, 0, 0, false, 0));
+        orb.setServices(new TestObjectServices());
+
+        orb.onTouchResponse(null, null, 0);
+        orb.update(1, null);
+
+        assertEquals(0xED, orb.getSpawn().objectId());
+        assertEquals(0, orb.getSpawn().subtype());
+
+        // yNibble=3 (0x183 & 0xF), 2&3=2 -> REWARD_TABLE[(3<<2)+2]=REWARD_TABLE[14]=6.
+        orb.update(2, null);
+
+        assertEquals(0xEB, orb.getSpawn().objectId());
+        assertEquals(6, orb.getSpawn().subtype());
     }
 
     @Test

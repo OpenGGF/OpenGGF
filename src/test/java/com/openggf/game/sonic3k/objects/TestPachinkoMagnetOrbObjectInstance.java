@@ -27,8 +27,8 @@ public class TestPachinkoMagnetOrbObjectInstance {
 
         verify(main).setControlLocked(true);
         verify(sidekick).setControlLocked(true);
-        verify(main).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
-        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(main).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
+        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
         verify(main).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(sidekick).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(main, never()).setRolling(true);
@@ -47,7 +47,7 @@ public class TestPachinkoMagnetOrbObjectInstance {
 
         orb.update(0, main);
 
-        verify(sidekick, times(1)).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(sidekick, times(1)).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
         assertEquals(0, services.sfxCount);
     }
 
@@ -61,8 +61,8 @@ public class TestPachinkoMagnetOrbObjectInstance {
         orb.setServices(new TestObjectServices().withSidekicks(List.of(sidekick)));
         orb.update(0, main);
 
-        verify(main).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
-        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(main).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
+        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
     }
 
     @Test
@@ -102,7 +102,7 @@ public class TestPachinkoMagnetOrbObjectInstance {
         orb.update(1, main);
         orb.update(2, main);
 
-        verify(main, times(1)).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(main, times(1)).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
     }
 
     @Test
