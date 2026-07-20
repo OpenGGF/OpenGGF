@@ -711,9 +711,8 @@ public final class S3kSlotBonusStageRuntime {
     /**
      * Trace-replay-only bootstrap seam (comparison-bootstrap pattern, same
      * shape as {@code TraceReplaySessionBootstrap.applyInitialRngSeedForReplay}
-     * / {@code metadata.rng_seed}). Called once, immediately after {@link
-     * #bootstrap()} succeeds and before the first {@link #update(int)}, from
-     * {@code TraceReplaySessionBootstrap.applyBonusStageEntry} when the trace's
+     * / {@code metadata.rng_seed}). Called once from {@code
+     * TraceReplaySessionBootstrap.applyBonusStageEntry} when the trace's
      * {@code metadata.v_int_run_count} is present (recorder v6.32-s3k+,
      * bonus segments only). Primes {@link #globalVIntRunCounter()} so it
      * returns {@code recordedBase + ticks-since-entry} rather than the raw
@@ -721,10 +720,36 @@ public final class S3kSlotBonusStageRuntime {
      * S3kSlotOptionCycleSystem#tick} reproduce the recorded ROM
      * {@code V_int_run_count}-seeded reel outcomes. No effect on live play,
      * which never calls this method.
+     *
+     * <p>{@code initialVblankCounter} must be the trace's own {@code
+     * TraceData.initialVblankCounter()} (trace frame 0's recorded {@code
+     * vblank_counter}), NOT a live read of {@code rawVblaCounter()} taken at
+     * priming time. {@code applyBonusStageEntry} runs from {@code
+     * afterFixtureBuild}, which fires <em>before</em> {@code
+     * TraceReplaySessionBootstrap.applyBootstrap} seeds {@code
+     * ObjectManager.vblaCounter} via {@code initVblaCounter(trace.initialVblankCounter()
+     * - objectPreludeFrames - 1)} (see {@code AbstractTraceReplayTest} steps 4-4b:
+     * {@code afterFixtureBuild(trace)} precedes {@code applyBootstrap(trace, ...)}).
+     * A live read at priming time therefore captured the pre-seed counter (0 on a
+     * freshly loaded bonus-zone level) instead of the trace's real starting value
+     * (e.g. 1024 for {@code bonus_slots}), baking a large constant error into every
+     * later {@link #globalVIntRunCounter()} read. Because most {@code V_int_run_count}
+     * consumers in {@code Slots_CycleOptions} only read the low byte ({@code
+     * move.b (V_int_run_count+3).w,d0}, sonic3k.asm:99646/99679/99684/99701/99753 --
+     * bits 0-7), a constant error confined to bit 8 and above (1024 = 0x400 = bit 10)
+     * left those reads untouched, which is why the first spin's reel *symbols*
+     * already matched (044cf51fd). It corrupted the bit-8-and-up consumers instead:
+     * the reel-2 velocity offset ({@code move.b (V_int_run_count+2).w,d0 / andi.b
+     * #7,d0}, sonic3k.asm:99690-99694, reads bits 8-10) and the random-target draw's
+     * word addend ({@code add.w (V_int_run_count+2).w,d0}, sonic3k.asm:99722, reads
+     * bits 0-15), which feed the DECELERATE/LOCK_REELS reel-search timing and so
+     * shifted when the reels actually finish locking (TestS3kSlotsBonusTraceReplay
+     * frame 301: engine's first ring grant at local frame 275+26=301 vs the
+     * recorded 282+26=308).
      */
-    public void primeVIntRunCountForReplay(long recordedVIntRunCount) {
+    public void primeVIntRunCountForReplay(long recordedVIntRunCount, int initialVblankCounter) {
         vIntRunCountBase = recordedVIntRunCount;
-        vIntRunCountBaseVbla = rawVblaCounter();
+        vIntRunCountBaseVbla = initialVblankCounter;
     }
 
     private void registerDynamicSlotObject(com.openggf.level.objects.ObjectInstance object) {

@@ -546,7 +546,8 @@ public final class TraceReplaySessionBootstrap {
                 && meta.recordedVIntRunCount() != null
                 && provider instanceof Sonic3kBonusStageCoordinator coordinator
                 && coordinator.activeSlotRuntime() != null) {
-            coordinator.activeSlotRuntime().primeVIntRunCountForReplay(meta.recordedVIntRunCount());
+            coordinator.activeSlotRuntime().primeVIntRunCountForReplay(
+                    meta.recordedVIntRunCount(), trace.initialVblankCounter());
         }
         return true;
     }
