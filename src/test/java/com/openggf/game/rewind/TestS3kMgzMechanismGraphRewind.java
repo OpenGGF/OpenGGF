@@ -162,7 +162,8 @@ class TestS3kMgzMechanismGraphRewind {
 
     private static void seedPachinkoOrb(PachinkoItemOrbObjectInstance orb) {
         writeInt(orb, "animationFrameCounter", 5);
-        writeBoolean(orb, "pendingRewardConversion", false);
+        writeBoolean(orb, "touchedLastResolvedFrame", false);
+        writeBoolean(orb, "armed", true);
     }
 
     private static Map<String, Object> launcherScalars(MGZTopLauncherObjectInstance launcher) {
@@ -178,7 +179,7 @@ class TestS3kMgzMechanismGraphRewind {
     }
 
     private static Map<String, Object> pachinkoScalars(PachinkoItemOrbObjectInstance orb) {
-        return scalars(orb, "animationFrameCounter", "pendingRewardConversion");
+        return scalars(orb, "animationFrameCounter", "touchedLastResolvedFrame", "armed");
     }
 
     private static Map<String, Object> scalars(Object target, String... fields) {
