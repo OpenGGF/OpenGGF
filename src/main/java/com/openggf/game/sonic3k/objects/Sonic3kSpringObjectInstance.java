@@ -197,6 +197,10 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // frames where ROM has it cleared, biasing Tails CPU follow-steering at
         // loc_13DA6 (sonic3k.asm:26690) which reads the leader's Status_OnObj.
         player.setOnObject(false);
+        // ROM sub_22F98 unconditionally writes routine(a1)=2 after launching
+        // the player (sonic3k.asm:47727-47733). If routine was 4 (hurt), this
+        // immediately restores normal control and air/water processing.
+        player.setHurt(false);
 
         // ROM: sub_22F98 line 47729-47731 - if bit 7 set, clear x velocity
         if ((spawn.subtype() & 0x80) != 0) {
@@ -231,6 +235,9 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // ROM sub_233CA (sonic3k.asm:48139-48140) bclr #Status_OnObj after
         // bset #Status_InAir; mirrors sub_22F98 for the down-spring trigger.
         player.setOnObject(false);
+        // ROM sub_233CA writes routine(a1)=2 after its airborne state writes
+        // (sonic3k.asm:48143-48148), ending an active hurt routine immediately.
+        player.setHurt(false);
 
         // ROM: sub_233CA line 48103-48105 - if bit 7 set, clear x velocity
         if ((spawn.subtype() & 0x80) != 0) {
@@ -325,6 +332,10 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // x_vel/y_vel but leaves ground_vel untouched unless subtype bit 0
         // takes the flip path (sonic3k.asm:48200-48217, 48225-48241).
         player.setOnObject(false);
+        // ROM's up- and down-diagonal tails both write routine(a1)=2 after
+        // launching the player (sonic3k.asm:48218-48222, 48306-48310), so
+        // diagonal springs also end hurt routine 4.
+        player.setHurt(false);
         player.recordMgzTopPlatformSpringHandoff(player.getXSpeed(), player.getYSpeed());
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 

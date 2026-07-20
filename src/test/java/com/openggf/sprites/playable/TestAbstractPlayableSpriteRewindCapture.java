@@ -798,16 +798,18 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertTrue(legacyCarry.carryParentagePending());
         assertEquals(expectedCarry.cooldown(), legacyCarry.releaseCooldown());
 
-        // Excludes both "tailsCarryState" (added post-API-1.1) and "subclassExtra"
-        // (added in Mod API 2.2.0) to rebuild the API 1.1 compatibility
+        // Excludes every component added after API 1.1 to rebuild its compatibility
         // constructor's argument list. The constructor is located by its exact
         // parameter TYPE sequence (not arity): parameter-count matching broke
         // once before, when the subclassExtra component made two compat
         // constructors collide in arity, and would break again on the next
         // component addition.
         RecordComponent[] api11Components = java.util.Arrays.stream(
-                        PlayerRewindExtra.class.getRecordComponents())
-                .filter(component -> !component.getName().equals("tailsCarryState")
+                PlayerRewindExtra.class.getRecordComponents())
+                .filter(component -> !component.getName().equals("onObjectAtPreviousFrameStart")
+                        && !component.getName().equals("invulnerabilityDisplayTimerDecrementedThisFrame")
+                        && !component.getName().equals("tailsCarryState")
+                        && !component.getName().equals("superStateState")
                         && !component.getName().equals("subclassExtra"))
                 .toArray(RecordComponent[]::new);
         Object[] api11Arguments = java.util.Arrays.stream(api11Components)
@@ -857,7 +859,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         SpindashDustController.RewindState spindash =
                 new SpindashDustController.RewindState(2, 3, 4, true);
         PlayableSpriteController.RewindState expected = new PlayableSpriteController.RewindState(
-                movement, spindash, animation, drowning, carry);
+                movement, spindash, animation, drowning, carry, null);
         sonic.controller.restoreRewindState(expected);
 
         PerObjectRewindSnapshot snapshot = sonic.captureRewindState();

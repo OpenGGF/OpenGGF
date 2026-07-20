@@ -1,0 +1,21 @@
+{
+  "run_schema": 1,
+  "game": "s2",
+  "run_id": "s2-ehz-halfpipe-roundtrip",
+  "source_bk2": "s2-ehz-halfpipe-roundtrip.bk2",
+  "rom_checksum": "7B905383",
+  "lua_script_version": "9.12-s2",
+  "segments": [
+    {"dir": "seg1_ehz1", "kind": "level", "trace_profile": "gameplay_unlock", "bk2_frame_offset": 825, "trace_frame_count": 2969, "zone_id": 0, "act": 1},
+    {"dir": "ss", "kind": "special_stage", "trace_profile": "s2_special_stage", "bk2_frame_offset": 3795, "trace_frame_count": 5733, "zone_id": 0, "act": 0, "special_stage_index": 0},
+    {"dir": "seg2_ehz1", "kind": "level", "trace_profile": "gameplay_unlock", "bk2_frame_offset": 9701, "trace_frame_count": 2903, "zone_id": 0, "act": 1},
+    {"dir": "ss_2", "kind": "special_stage", "trace_profile": "s2_special_stage", "bk2_frame_offset": 12605, "trace_frame_count": 6381, "zone_id": 0, "act": 0, "special_stage_index": 1},
+    {"dir": "seg3_ehz1", "kind": "level", "trace_profile": "gameplay_unlock", "bk2_frame_offset": 19159, "trace_frame_count": 3452, "zone_id": 0, "act": 1}
+  ],
+  "transitions": [
+    {"from_segment": 0, "to_segment": 1, "entry_kind": "starpost_special", "mode_change_bk2_frame": 3795, "special_bonus_entry_flag": 1, "saved_x_pos": 3568, "saved_y_pos": 170, "last_star_post_hit": 1, "rings_before": 50, "emeralds_before": 0},
+    {"from_segment": 1, "to_segment": 2, "entry_kind": "stage_exit", "mode_change_bk2_frame": 9701, "rings_after": 0, "emeralds_after": 1},
+    {"from_segment": 2, "to_segment": 3, "entry_kind": "starpost_special", "mode_change_bk2_frame": 12605, "special_bonus_entry_flag": 1, "saved_x_pos": 6336, "saved_y_pos": 680, "last_star_post_hit": 2, "rings_before": 69, "emeralds_before": 1},
+    {"from_segment": 3, "to_segment": 4, "entry_kind": "stage_exit", "mode_change_bk2_frame": 19159, "rings_after": 0, "emeralds_after": 2}
+  ]
+}

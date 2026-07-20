@@ -89,7 +89,10 @@ class TestS3kSlotRenderBuffers {
         assertEquals(0x0D, buffers.layout()[layoutIndex] & 0xFF);
         assertEquals(0x0D, buffers.expandedLayout()[expandedIndex] & 0xFF);
 
-        for (int i = 0; i < S3kSlotRomData.SLOT_WALL_COLOR_FRAMES.length; i++) {
+        // ROM loc_4B65A advances one flash colour frame every SLOT_WALL_COLOR_DELAY ticks
+        // (the reset+1 timer period), so the flash runs frames.length * delay ticks before it
+        // restores the advanced tile.
+        for (int i = 0; i < S3kSlotRomData.SLOT_WALL_COLOR_FRAMES.length * S3kSlotRomData.SLOT_WALL_COLOR_DELAY; i++) {
             buffers.tickTransientAnimations();
         }
 

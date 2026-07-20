@@ -155,6 +155,12 @@ public class Sonic1SpecialStageManagerTest {
     @Test
     public void testAnimCountersMatchRomStartupPhaseAfterFirstUpdate() throws Exception {
         manager.initialize(0);
+        // Skip the ROM's 44-VBlank-tick pre-physics hold (PaletteWhiteOut +
+        // instant setup + PaletteWhiteIn, see
+        // Sonic1SpecialStageManager.SS_STARTUP_HOLD_TICKS) so this update()
+        // lands on Obj09's real first ExecuteObjects tick, matching what this
+        // test asserts ("ROM parity" on "first tick").
+        manager.advanceToEntryPresentation();
         manager.update();
 
         Field ringAnimFrameField = Sonic1SpecialStageManager.class.getDeclaredField("ringAnimFrame");
@@ -210,8 +216,19 @@ public class Sonic1SpecialStageManagerTest {
         assertTrue(!graphicsManager.isUseUnderwaterPaletteForBackground(), "S1 special stage reset should disable underwater background palette mode");
     }
 
+    /**
+     * Collecting an emerald must NOT arm the special-stage exit. The ROM's
+     * SonicSS_ChkEmerald/SonicSS_GetEmerald path only inserts the color into
+     * v_emldlist, increments (v_emeralds).w and queues bgm_Emerald -- it never
+     * touches obRoutine(a0) (docs/s1disasm/_incObj/09 Sonic in Special
+     * Stage.asm:670-700). Only SonicSS_ChkGOAL's `addq.b #2,obRoutine(a0)` on a
+     * GOAL block ($27) advances Obj09 into SonicSS_ExitStage (asm:823-832).
+     * (Regression guard: an earlier engine build wrongly set
+     * exitTriggered/exitPhase/exitTimer in the emerald branch, freezing Sonic
+     * into the exit spin-up the tick after any emerald pickup.)
+     */
     @Test
-    public void testCollectingEmeraldTriggersExitSequence() throws Exception {
+    public void testCollectingEmeraldDoesNotTriggerExitSequence() throws Exception {
         manager.initialize(0);
 
         Field sonicPosXField = Sonic1SpecialStageManager.class.getDeclaredField("sonicPosX");
@@ -239,7 +256,8 @@ public class Sonic1SpecialStageManagerTest {
         checkItemsMethod.invoke(manager);
 
         assertTrue(manager.isEmeraldCollected(), "Emerald collection flag should be set");
-        assertTrue(exitTriggeredField.getBoolean(manager), "Collecting an emerald should trigger special-stage exit");
+        assertFalse(exitTriggeredField.getBoolean(manager),
+                "Collecting an emerald must not arm the special-stage exit (only a GOAL block does)");
     }
 
     @Test

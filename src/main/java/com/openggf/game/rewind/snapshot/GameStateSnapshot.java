@@ -16,6 +16,7 @@ public record GameStateSnapshot(
         int emeraldCount,
         boolean[] gotEmeralds,
         boolean[] gotSuperEmeralds,
+        boolean emeraldsConverted,
         int currentBossId,
         boolean bossDefeatedFlag,
         boolean screenShakeActive,

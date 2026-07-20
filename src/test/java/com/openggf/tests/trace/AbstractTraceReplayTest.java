@@ -151,6 +151,25 @@ public abstract class AbstractTraceReplayTest {
         // test observer hook
     }
 
+    /**
+     * Post-fixture-build hook for profile-specific entry setup (e.g. bonus
+     * stage provider registration). Default: no-op.
+     */
+    protected void afterFixtureBuild(TraceData trace) {
+    }
+
+    /**
+     * The sprite compared against the recorded trace for this frame. Default:
+     * the fixture's primary sprite (unchanged behavior for every existing
+     * trace replay). Override when the runtime under test can swap which
+     * playable object the ROM camera/comparator actually tracks (see
+     * {@code AbstractS3kBonusStageTraceReplayTest} for the slot-runtime
+     * player-swap case).
+     */
+    protected AbstractPlayableSprite comparedSprite(HeadlessTestFixture fixture) {
+        return fixture.sprite();
+    }
+
     static boolean shouldValidateRewindReferenceClosure(SonicGame game) {
         return game == SonicGame.SONIC_2 || game == SonicGame.SONIC_3K;
     }
@@ -213,7 +232,27 @@ public abstract class AbstractTraceReplayTest {
                         .startPositionIsCentre();
             }
             HeadlessTestFixture fixture = fixtureBuilder.build();
+            // ROM/production ordering: GameLoop.doEnterBonusStage loads the
+            // bonus zone through the normal level path (LevelManager
+            // .loadZoneAndAct -> LevelManager.initCameraForLevel, which resets
+            // ObjectManager's dynamic-object set for S3K's two-axis cursor
+            // placement -- LevelManager.java:2564-2577) and only THEN calls
+            // ensureBonusStageBootstrapObjectPresent (GameLoop.java:2314,
+            // inside prepareBonusStageForTitleCard, itself called after
+            // loadZoneAndAct at GameLoop.java:2229/2245). Running
+            // afterFixtureBuild's bonus-entry bootstrap object injection
+            // (TraceReplaySessionBootstrap.applyBonusStageEntry ->
+            // Obj_PachinkoEnergyTrap) BEFORE applyStartPositionAndGroundSnap
+            // (which calls the same initCameraForLevel reset) silently wiped
+            // the freshly-injected trap every frame, so it never executed and
+            // Sonic's escape-through-the-top exit trigger never fired --
+            // producing a same-frame-only camera_x divergence at the exact
+            // frame ROM's Restart_level_flag check skips DeformBgLayer
+            // (sonic3k.asm:7895-7896) after Process_Sprites. Apply the ground
+            // snap/camera reset first so any bonus-entry object injection
+            // survives it, matching production's load-then-inject order.
             TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+            afterFixtureBuild(trace);
 
             if (GameServices.debugOverlay() != null) {
                 GameServices.debugOverlay().setEnabled(DebugOverlayToggle.TOUCH_RESPONSE, true);
@@ -309,7 +348,7 @@ public abstract class AbstractTraceReplayTest {
                     // ROM stores centre coordinates at $D008/$D00C. With startPositionIsCentre(),
                     // the sprite's xPixel/yPixel are set to the correct top-left position,
                     // so getCentreX()/getCentreY() now return the actual ROM centre values.
-                    var sprite = fixture.sprite();
+                    var sprite = comparedSprite(fixture);
 
                     // Capture engine-side diagnostic state for context window
                     EngineDiagnostics engineDiag = captureEngineDiagnostics(sprite, comparisonExpected);
@@ -422,7 +461,7 @@ public abstract class AbstractTraceReplayTest {
      * left null/empty (the comparator emits WARNING entries for those).
      */
     private EngineSnapshot captureEngineSnapshot(HeadlessTestFixture fixture) {
-        AbstractPlayableSprite sprite = fixture != null ? fixture.sprite() : null;
+        AbstractPlayableSprite sprite = fixture != null ? comparedSprite(fixture) : null;
         short[] xHistory = sprite != null ? sprite.copyXHistory() : null;
         short[] yHistory = sprite != null ? sprite.copyYHistory() : null;
         short[] inputHistory = sprite != null ? sprite.copyInputHistory() : null;
@@ -470,8 +509,8 @@ public abstract class AbstractTraceReplayTest {
             TraceFrame seededFrame = trace.getFrame(replayStart.seededTraceIndex());
             TraceReplayBootstrap.ReplayPrimaryState seededPrimary =
                     TraceReplayBootstrap.capturePrimaryReplayStateForComparison(
-                            trace, seededFrame, fixture.sprite());
-            EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite(), seededFrame);
+                            trace, seededFrame, comparedSprite(fixture));
+            EngineDiagnostics engineDiag = captureEngineDiagnostics(comparedSprite(fixture), seededFrame);
             String romDiag = combineDiagnostics(
                     seededFrame.hasExtendedData() ? seededFrame.formatDiagnostics() : "",
                     TraceEventFormatter.summariseFrameEvents(
@@ -600,7 +639,7 @@ public abstract class AbstractTraceReplayTest {
                     driveTraceIndex, bk2Input, driveFrame.input()));
             }
 
-            S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), fixture.sprite());
+            S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), comparedSprite(fixture));
             TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
 
             if (TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
@@ -609,9 +648,9 @@ public abstract class AbstractTraceReplayTest {
                                 trace, driveTraceIndex, previousDriveFrame, driveFrame, phase);
                 TraceReplayBootstrap.ReplayPrimaryState actualPrimary =
                         TraceReplayBootstrap.capturePrimaryReplayStateForComparison(
-                                trace, comparisonExpected, fixture.sprite());
+                                trace, comparisonExpected, comparedSprite(fixture));
                 EngineDiagnostics engineDiag =
-                        captureEngineDiagnostics(fixture.sprite(), comparisonExpected);
+                        captureEngineDiagnostics(comparedSprite(fixture), comparisonExpected);
                 String romDiag = combineDiagnostics(
                         comparisonExpected.hasExtendedData()
                                 ? comparisonExpected.formatDiagnostics() : "",

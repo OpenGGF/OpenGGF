@@ -76,7 +76,8 @@ public class PlayableSpriteController {
                 spindashDust != null ? spindashDust.captureRewindState() : null,
                 animation != null ? animation.captureRewindState() : null,
                 drowning != null ? drowning.captureRewindState() : null,
-                tailsCarry != null ? tailsCarry.capture() : null);
+                tailsCarry != null ? tailsCarry.capture() : null,
+                superState != null ? superState.captureRewindState() : null);
     }
 
     public void restoreRewindState(RewindState state) {
@@ -130,6 +131,7 @@ public class PlayableSpriteController {
         SpindashDustController.RewindState spindashState = state != null ? state.spindashDustState() : null;
         PlayableSpriteAnimation.RewindState animationState = state != null ? state.animationState() : null;
         DrowningController.RewindState drowningState = state != null ? state.drowningState() : null;
+        SuperStateController.RewindState superStateState = state != null ? state.superStateState() : null;
         if (movement != null) {
             movement.restoreRewindState(movementState);
         }
@@ -141,6 +143,9 @@ public class PlayableSpriteController {
         }
         if (drowning != null) {
             drowning.restoreRewindState(drowningState);
+        }
+        if (superState != null && superStateState != null) {
+            superState.restoreRewindState(superStateState);
         }
     }
 
@@ -168,6 +173,7 @@ public class PlayableSpriteController {
             SpindashDustController.RewindState spindashDustState,
             PlayableSpriteAnimation.RewindState animationState,
             DrowningController.RewindState drowningState,
-            TailsCarryController.Snapshot tailsCarryState
+            TailsCarryController.Snapshot tailsCarryState,
+            SuperStateController.RewindState superStateState
     ) {}
 }

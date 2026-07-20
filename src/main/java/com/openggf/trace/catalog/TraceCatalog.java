@@ -2,6 +2,7 @@ package com.openggf.trace.catalog;
 
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.TraceRunManifest;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -57,6 +58,7 @@ public final class TraceCatalog {
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Could not scan " + root, e);
         }
+        scanRuns(root, entries);
         entries.sort(Comparator
                 .comparing(TraceEntry::gameId, GAME_ORDER)
                 .thenComparingInt(TraceEntry::zone)
@@ -69,6 +71,72 @@ public final class TraceCatalog {
         Path rel = root.relativize(dir);
         return rel.getNameCount() > 0
                 && "synthetic".equals(rel.getName(0).toString());
+    }
+
+    /**
+     * Discovers multi-segment trace runs under {@code <root>/<game>/runs/*}
+     * and appends one {@link TraceEntry} per valid run. A run that fails to
+     * load, fails structural validation, or can't resolve its shared BK2
+     * movie is skipped rather than failing the whole scan.
+     */
+    private static void scanRuns(Path root, List<TraceEntry> entries) {
+        try (Stream<Path> gameDirs = Files.list(root)) {
+            for (Path gameDir : gameDirs.filter(Files::isDirectory).toList()) {
+                Path runsDir = gameDir.resolve("runs");
+                if (!Files.isDirectory(runsDir)) {
+                    continue;
+                }
+                try (Stream<Path> runDirs = Files.list(runsDir)) {
+                    for (Path runDir : runDirs.filter(Files::isDirectory).toList()) {
+                        tryLoadRun(runDir).ifPresent(entries::add);
+                    }
+                } catch (IOException e) {
+                    LOGGER.log(Level.FINE, "Could not list runs under " + runsDir, e);
+                }
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.FINE, "Could not list game dirs under " + root, e);
+        }
+    }
+
+    private static Optional<TraceEntry> tryLoadRun(Path runDir) {
+        Path manifestPath = runDir.resolve("run_manifest.json");
+        if (!Files.isRegularFile(manifestPath)) {
+            return Optional.empty();
+        }
+        try {
+            TraceRunManifest manifest = TraceRunManifest.load(manifestPath);
+            manifest.validate(runDir);
+            Path bk2 = resolveRunBk2(runDir, manifest);
+            if (bk2 == null) {
+                return Optional.empty();
+            }
+            return Optional.of(TraceEntry.forRun(runDir, manifest, bk2));
+        } catch (IOException | RuntimeException e) {
+            // TraceRunManifest.validate throws IllegalStateException; a
+            // malformed manifest should be skipped, never crash the picker.
+            LOGGER.log(Level.FINE, "Could not load run at " + runDir, e);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Resolve a run's shared BK2 movie under the sibling
+     * {@code <game>/_movies/} directory, mirroring {@link #resolveBk2}'s
+     * shared-movie convention. Runs have no legacy per-dir {@code .bk2}
+     * fallback since a run always references a shared movie.
+     */
+    private static Path resolveRunBk2(Path runDir, TraceRunManifest manifest) {
+        if (manifest.sourceBk2() == null || manifest.sourceBk2().isBlank()) {
+            return null;
+        }
+        Path runsDir = runDir.getParent();
+        Path gameDir = runsDir != null ? runsDir.getParent() : null;
+        if (gameDir == null) {
+            return null;
+        }
+        Path shared = gameDir.resolve("_movies").resolve(manifest.sourceBk2());
+        return Files.isRegularFile(shared) ? shared : null;
     }
 
     private static Optional<TraceEntry> tryLoad(Path dir) {
@@ -157,7 +225,7 @@ public final class TraceCatalog {
      * while the engine's {@code Sonic1ZoneRegistry} uses play order
      * (GHZ=0, MZ=1, SYZ=2, LZ=3, SLZ=4, SBZ=5, FZ=6).
      */
-    private static int romZoneToProgressionIndex(String gameId, int romZoneId) {
+    static int romZoneToProgressionIndex(String gameId, int romZoneId) {
         if ("s1".equals(gameId)) {
             return switch (romZoneId) {
                 case 0 -> 0;  // GHZ

@@ -45,7 +45,12 @@ public record TraceMetadata(
     @JsonProperty("input_source") String inputSource,
     @JsonProperty("credits_demo_index") Integer creditsDemoIndex,
     @JsonProperty("credits_demo_slug") String creditsDemoSlug,
-    @JsonProperty("special_stage_index") Integer specialStageIndex
+    @JsonProperty("special_stage_index") Integer specialStageIndex,
+    @JsonProperty("run_id") String runId,
+    @JsonProperty("segment_index") Integer segmentIndex,
+    @JsonProperty("bonus_stage_type") String bonusStageType,
+    @JsonProperty("fresh_load") Boolean freshLoad,
+    @JsonProperty("v_int_run_count") Integer vIntRunCount
 ) {
 
     /**
@@ -456,6 +461,16 @@ public record TraceMetadata(
     }
 
     /**
+     * Whether this trace requires a fresh level load when entering a special
+     * stage (e.g., blue-spheres giant-ring entry without a preceding level).
+     * Returns false if the field is absent (legacy traces) or null.
+     * Used by the S3K special-stage replay harness to set the intro-skip gate.
+     */
+    public boolean isFreshLoad() {
+        return freshLoad != null && freshLoad;
+    }
+
+    /**
      * Whether trace frame 0 intentionally starts before the first comparable
      * LEVEL-mode row. Replay drives this native prefix from frame 0 instead of
      * jumping to the first level frame.
@@ -463,6 +478,21 @@ public record TraceMetadata(
     public boolean hasPreLevelIntroPrefix() {
         return auxSchemaExtras != null
                 && auxSchemaExtras.contains("pre_level_intro_prefix");
+    }
+
+    /**
+     * The ROM {@code V_int_run_count} free-running VBlank counter
+     * (sonic3k.constants.asm:790, {@code ds.l 1}) captured once at segment-arm
+     * time, or {@code null} for traces recorded before the v6.32-s3k recorder
+     * or for non-bonus segments. {@code Slots_CycleOptions}
+     * (sonic3k.asm:99614-99946) reads this counter's low byte/word to seed the
+     * reel words/targets on each slots bonus-stage cycle, so replay primes the
+     * bonus-stage counter base from this recorded value instead of the
+     * engine's per-session approximation (see
+     * {@code S3kSlotBonusStageRuntime}).
+     */
+    public Long recordedVIntRunCount() {
+        return vIntRunCount != null ? (vIntRunCount.longValue() & 0xFFFFFFFFL) : null;
     }
 
     /** Load metadata from a metadata.json file. */
@@ -484,7 +514,9 @@ public record TraceMetadata(
                 strings(node, "sidekicks"), integer(node, "pre_trace_osc_frames"),
                 text(node, "rng_seed"), text(node, "trace_type"), text(node, "input_source"),
                 integer(node, "credits_demo_index"), text(node, "credits_demo_slug"),
-                integer(node, "special_stage_index"));
+                integer(node, "special_stage_index"), text(node, "run_id"),
+                integer(node, "segment_index"), text(node, "bonus_stage_type"),
+                bool(node, "fresh_load"), integer(node, "v_int_run_count"));
     }
 
     private static String text(JsonNode node, String name) {
@@ -495,6 +527,11 @@ public record TraceMetadata(
     private static Integer integer(JsonNode node, String name) {
         JsonNode value = node.get(name);
         return value == null || value.isNull() ? null : value.asInt();
+    }
+
+    private static Boolean bool(JsonNode node, String name) {
+        JsonNode value = node.get(name);
+        return value == null || value.isNull() ? null : value.asBoolean();
     }
 
     private static int intValue(JsonNode node, String name) {

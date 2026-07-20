@@ -4,8 +4,8 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.rules.GameRules;
 import com.openggf.game.ShieldType;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
@@ -143,6 +143,12 @@ public class TestPlayableSpriteMovement {
                 Method method = PlayableSpriteMovement.class.getDeclaredMethod("tryShieldAbility");
                 method.setAccessible(true);
                 return (Boolean) method.invoke(manager);
+        }
+
+        private void invokeDoJumpHeight() throws Exception {
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doJumpHeight");
+                method.setAccessible(true);
+                method.invoke(manager);
         }
 
         private void collectAllChaosEmeralds() {
@@ -691,9 +697,11 @@ public class TestPlayableSpriteMovement {
                 assertEquals(50, mockSprite.getRingCount(), "test precondition: 50 rings");
                 assertTrue(mockSprite.getSuperStateController() != null, "test precondition: Super controller installed");
 
-                boolean handled = invokeTryShieldAbility();
+                setMovementField("jumpReleasedSinceJump", true);
+                setMovementField("inputJumpPress", true);
+                setMovementField("inputJump", true);
+                invokeDoJumpHeight();
 
-                assertTrue(handled, "S3K Sonic_ShieldMoves should consume the second jump by starting transformation");
                 assertTrue(mockSprite.isSuperSonic(), "Eligible S3K Sonic should transform before insta-shielding");
                 assertEquals(0, mockSprite.getDoubleJumpFlag(),
                                 "Starting Super/Hyper should not arm the insta-shield double-jump state");
@@ -745,6 +753,78 @@ public class TestPlayableSpriteMovement {
                                 "S2 should still start Super Sonic from the normal airborne jump trigger");
                 assertTrue(mockSprite.isSuperSonic(),
                                 "S2 Super Sonic activation should set the player super flag immediately");
+        }
+
+        @Test
+        public void s3kJumpDoesNotAutomaticallyActivateSuperSonic() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                mockSprite.setSuperStateController(new Sonic3kSuperStateController(mockSprite));
+                installCurrentModuleLevelState();
+                collectAllChaosEmeralds();
+                mockSprite.setRingCount(50);
+                mockSprite.setAir(true);
+                mockSprite.setJumping(true);
+                mockSprite.setYSpeed((short) 0);
+
+                mockSprite.getSuperStateController().update();
+
+                assertEquals(SuperState.NORMAL, mockSprite.getSuperStateController().getState(),
+                                "S3K must wait for a second jump-button press instead of auto-transforming");
+                assertFalse(mockSprite.isSuperSonic());
+        }
+
+        @Test
+        public void s3kSecondPressWaitsForNormalAirAbilityThreshold() throws Exception {
+                prepareEligibleS3kSonicSecondPress((short) -0x401, false);
+
+                invokeDoJumpHeight();
+
+                assertEquals(SuperState.NORMAL, mockSprite.getSuperStateController().getState());
+        }
+
+        @Test
+        public void s3kSecondPressActivatesAtNormalAirAbilityThreshold() throws Exception {
+                prepareEligibleS3kSonicSecondPress((short) -0x400, false);
+
+                invokeDoJumpHeight();
+
+                assertEquals(SuperState.TRANSFORMING, mockSprite.getSuperStateController().getState());
+        }
+
+        @Test
+        public void s3kSecondPressWaitsForUnderwaterAirAbilityThreshold() throws Exception {
+                prepareEligibleS3kSonicSecondPress((short) -0x201, true);
+
+                invokeDoJumpHeight();
+
+                assertEquals(SuperState.NORMAL, mockSprite.getSuperStateController().getState());
+        }
+
+        @Test
+        public void s3kSecondPressActivatesAtUnderwaterAirAbilityThreshold() throws Exception {
+                prepareEligibleS3kSonicSecondPress((short) -0x200, true);
+
+                invokeDoJumpHeight();
+
+                assertEquals(SuperState.TRANSFORMING, mockSprite.getSuperStateController().getState());
+        }
+
+        private void prepareEligibleS3kSonicSecondPress(short ySpeed, boolean underwater) throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                mockSprite.setSuperStateController(new Sonic3kSuperStateController(mockSprite));
+                installCurrentModuleLevelState();
+                collectAllChaosEmeralds();
+                mockSprite.setRingCount(50);
+                mockSprite.setAir(true);
+                mockSprite.setJumping(true);
+                mockSprite.setInWater(underwater);
+                mockSprite.setYSpeed(ySpeed);
+                mockSprite.setDoubleJumpFlag(0);
+                setMovementField("jumpReleasedSinceJump", true);
+                setMovementField("inputJumpPress", true);
+                setMovementField("inputJump", true);
         }
 
         @Test

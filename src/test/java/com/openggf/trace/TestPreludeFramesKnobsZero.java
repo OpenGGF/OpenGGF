@@ -243,6 +243,11 @@ class TestPreludeFramesKnobsZero {
                 /* inputSource */ null,
                 /* creditsDemoIndex */ null,
                 /* creditsDemoSlug */ null,
-                /* specialStageIndex */ null);
+                /* specialStageIndex */ null,
+                /* runId */ null,
+                /* segmentIndex */ null,
+                /* bonusStageType */ null,
+                /* freshLoad */ null,
+                /* vIntRunCount */ null);
     }
 }

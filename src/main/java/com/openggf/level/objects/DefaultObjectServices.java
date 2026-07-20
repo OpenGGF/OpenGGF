@@ -73,6 +73,20 @@ public class DefaultObjectServices implements ObjectServices {
     private final SolidExecutionRegistry solidExecutionRegistry;
     private final EngineContext engineServices;
     private final BonusStageProvider bonusStageProvider;
+    // Nullable: only set by the primary session-backed constructor. The bonus
+    // stage provider is registered on GameplayModeContext (GameLoop
+    // .doEnterBonusStage / TraceReplaySessionBootstrap.applyBonusStageEntry)
+    // AFTER the level's ObjectManager/DefaultObjectServices already exists in
+    // trace-replay bootstraps that reuse a pre-built fixture level (production
+    // always creates a fresh ObjectManager via loadZoneAndAct AFTER
+    // registering the provider, so this never goes stale there). Without a
+    // live re-read, the captured `bonusStageProvider` above stays pinned to
+    // the pre-registration NoOpBonusStageProvider default forever, so an
+    // object's requestBonusStageExit() (e.g. Obj_PachinkoEnergyTrap's
+    // escape-through-top trigger) silently no-ops. Resolve through this
+    // context when present so bonus-stage forwarding always targets the
+    // CURRENT registered provider.
+    private final GameplayModeContext gameplayMode;
 
     /**
      * Primary constructor backed by the session-owned gameplay context.
@@ -96,7 +110,8 @@ public class DefaultObjectServices implements ObjectServices {
                 gameplayMode.getSolidExecutionRegistry(),
                 gameplayMode.getBackgroundPlaneCollisionProvider(),
                 engineServices,
-                gameplayMode.getActiveBonusStageProvider());
+                gameplayMode.getActiveBonusStageProvider(),
+                gameplayMode);
     }
 
     private DefaultObjectServices(LevelManager levelManager,
@@ -117,6 +132,32 @@ public class DefaultObjectServices implements ObjectServices {
                                  BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider,
                                  EngineContext engineServices,
                                  BonusStageProvider bonusStageProvider) {
+        this(levelManager, camera, gameState, spriteManager, fadeManager, waterSystem,
+                parallaxManager, collisionSystem, worldSession, rng, zoneRuntimeRegistry,
+                kosinskiModuleQueue, paletteOwnershipRegistry, zoneLayoutMutationPipeline,
+                solidExecutionRegistry, backgroundPlaneCollisionProvider,
+                engineServices, bonusStageProvider, null);
+    }
+
+    private DefaultObjectServices(LevelManager levelManager,
+                                 Camera camera,
+                                 GameStateManager gameState,
+                                 SpriteManager spriteManager,
+                                 FadeManager fadeManager,
+                                 WaterSystem waterSystem,
+                                 ParallaxManager parallaxManager,
+                                 CollisionSystem collisionSystem,
+                                 WorldSession worldSession,
+                                 GameRng rng,
+                                 ZoneRuntimeRegistry zoneRuntimeRegistry,
+                                 KosinskiModuleQueue kosinskiModuleQueue,
+                                 PaletteOwnershipRegistry paletteOwnershipRegistry,
+                                 ZoneLayoutMutationPipeline zoneLayoutMutationPipeline,
+                                 SolidExecutionRegistry solidExecutionRegistry,
+                                 BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider,
+                                 EngineContext engineServices,
+                                 BonusStageProvider bonusStageProvider,
+                                 GameplayModeContext gameplayMode) {
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
         this.camera = Objects.requireNonNull(camera, "camera");
         this.gameState = Objects.requireNonNull(gameState, "gameState");
@@ -136,10 +177,21 @@ public class DefaultObjectServices implements ObjectServices {
                 backgroundPlaneCollisionProvider, "backgroundPlaneCollisionProvider");
         this.engineServices = Objects.requireNonNull(engineServices, "engineServices");
         this.bonusStageProvider = Objects.requireNonNull(bonusStageProvider, "bonusStageProvider");
+        this.gameplayMode = gameplayMode;
     }
 
     private LevelManager lm() {
         return levelManager;
+    }
+
+    /**
+     * Resolves the CURRENT bonus stage provider registered on the owning
+     * GameplayModeContext when one is available, else falls back to the
+     * provider captured at construction time (legacy manual-wiring
+     * constructor callers with no session context).
+     */
+    private BonusStageProvider currentBonusStageProvider() {
+        return gameplayMode != null ? gameplayMode.getActiveBonusStageProvider() : bonusStageProvider;
     }
 
     // ── Level state ─────────────────────────────────────────────────────
@@ -464,7 +516,7 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public void requestBonusStageExit() {
         try {
-            bonusStageProvider.requestExit();
+            currentBonusStageProvider().requestExit();
         } catch (Exception e) {
             LOG.warning("requestBonusStageExit failed: " + e.getMessage());
         }
@@ -472,13 +524,13 @@ public class DefaultObjectServices implements ObjectServices {
 
     @Override
     public BonusStageProvider bonusStageProviderOrNull() {
-        return bonusStageProvider;
+        return currentBonusStageProvider();
     }
 
     @Override
     public void addBonusStageRings(int count) {
         try {
-            bonusStageProvider.addRings(count);
+            currentBonusStageProvider().addRings(count);
         } catch (Exception e) {
             LOG.warning("addBonusStageRings failed: " + e.getMessage());
         }
@@ -487,7 +539,7 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public void setBonusStageShield(com.openggf.game.ShieldType type) {
         try {
-            bonusStageProvider.setAwardedShield(type);
+            currentBonusStageProvider().setAwardedShield(type);
         } catch (Exception e) {
             LOG.warning("setBonusStageShield failed: " + e.getMessage());
         }

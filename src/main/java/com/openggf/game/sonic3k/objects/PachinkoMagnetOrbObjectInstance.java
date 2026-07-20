@@ -137,8 +137,16 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         int previousX = player.getCentreX();
         int previousY = player.getCentreY();
         placePlayerOnOrbit(player, state);
-        player.setXSpeed((short) (-(player.getCentreX() - previousX) << 8));
-        player.setYSpeed((short) (-(player.getCentreY() - previousY) << 8));
+        // ROM sub_4A428 loc_4A464 (sonic3k.asm:96974-96989): saves the OLD x_pos/y_pos,
+        // recomputes the new orbit position via sub_4A5E0, then computes
+        // `sub.w x_pos(a1),d1` (old-new) followed by `asl.w #8,d1` and `neg.w d1`,
+        // yielding x_vel = -(old-new)<<8 = (new-old)<<8 -- i.e. plain per-frame
+        // displacement, NOT displacement negated. The extra unary minus here inverted
+        // the sign of both axes, so a player orbiting downward reported y_speed going
+        // the wrong direction (observed: engine y_speed=-0x0100 vs ROM +0x0100 while
+        // captured by a Pachinko energy-trap-adjacent magnet orb).
+        player.setXSpeed((short) ((player.getCentreX() - previousX) << 8));
+        player.setYSpeed((short) ((player.getCentreY() - previousY) << 8));
         player.setGSpeed((short) 0x0800);
         player.setAir(true);
 
@@ -170,9 +178,18 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0x0800);
         player.setControlLocked(true);
-        // Engine movement skips only when objectControlled is true, so mirror the
-        // ROM's captured-player ownership with the engine's full-control policy.
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97091): `move.b #1,object_control(a1)`
+        // sets ONLY bit 0 (movement-suppress) of object_control, not bit 7. The
+        // Sonic_Control dispatcher's own TouchResponse gate (sonic3k.asm:22019-22022:
+        // `move.b object_control(a0),d0 / andi.b #$A0,d0 / bne.s locret_10C8E / jsr
+        // (TouchResponse).l`) only skips TouchResponse (which runs BOTH
+        // Test_Ring_Collisions/GiveRing and the general Touch_Loop) when bits 5 or 7
+        // ($A0) are set -- bit 0 alone (this orb's capture flag) leaves TouchResponse
+        // running every frame. The bit-7 "full control" state used here previously
+        // wrongly blocked ring pickups for the whole capture duration -- observed as
+        // a permanent -1 ring desync starting at the first ring touched while
+        // orbiting the magnet orb (Pachinko trace frame 1252).
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setAir(true);
         player.setOnObject(false);
         player.setJumping(false);
@@ -184,10 +201,24 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
 
     private void placePlayerOnOrbit(AbstractPlayableSprite player, PlayerState state) {
         int radius = (TrigLookupTable.cosHex(state.angleA & 0xFF) * ORBIT_RADIUS_SCALE) >> 16;
-        int xOffset = (radius * TrigLookupTable.sinHex(state.angleB & 0xFF)) >> 8;
+        // ROM sub_4A5E0 (sonic3k.asm:97103-97119): computes the X term as
+        // `moveq #0,d2 / ... / sub.l d5,d2 / asr.l #8,d2` -- i.e. it NEGATES the
+        // full-precision product (radius*sin(angleB)) first and THEN applies the
+        // arithmetic shift, giving asr(-P, 8). The Y term has no negation:
+        // `asr.l #8,d3` on the plain product, then a plain add.
+        // asr(-P, 8) is NOT equal to -(asr(P, 8)) whenever P has a nonzero
+        // low byte: 68000 asr.l floors toward negative infinity, so negating
+        // before vs after the shift differ by exactly 1 (0x0100 in 8.8 velocity
+        // units) whenever radius*sin(angleB) isn't a multiple of 256. The previous
+        // `spawn.x() - ((radius*sin)>>8)` shifted first and negated second via the
+        // subtraction, which is the mathematically "nicer" but ROM-unfaithful
+        // rounding -- it is what produced the 1px X/x_speed drift observed while
+        // captured by a Pachinko magnet orb (trace frame 55 onward).
+        int xProduct = radius * TrigLookupTable.sinHex(state.angleB & 0xFF);
+        int xOffset = (-xProduct) >> 8;
         int yOffset = (radius * TrigLookupTable.cosHex(state.angleB & 0xFF)) >> 8;
 
-        setPlayerCenterPosition(player, spawn.x() - xOffset, spawn.y() + yOffset);
+        setPlayerCenterPosition(player, spawn.x() + xOffset, spawn.y() + yOffset);
 
         if (state.angleA < 0) {
             setRenderPriority(player, 5, false);
@@ -214,8 +245,17 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         player.setAir(true);
         player.setOnObject(false);
         if (!player.getRolling()) {
+            // ROM loc_4A4F6 (sonic3k.asm:97029-97042) asserts y_radius=$E, x_radius=7
+            // and the Status_Roll bit as direct writes with NO y_pos modification --
+            // unlike Sonic_Roll's feet-planted `addq.w #5,y_pos`, the magnet-orb
+            // release keeps the player's centre (y_pos) fixed while the collision box
+            // shrinks to ball size. The engine tracks position as top-left, so
+            // setRolling() shrinking the box height moves getCentreY() unless the
+            // centre is restored; without this the reported y_pos landed 5px too low
+            // at the release frame (Pachinko trace frame 94: y 0x0EBF vs ROM 0x0EBA).
+            short centreYBeforeRoll = player.getCentreY();
             player.setRolling(true);
-            player.setY((short) (player.getY() + player.getRollHeightAdjustment()));
+            player.setCentreYPreserveSubpixel(centreYBeforeRoll);
         }
         player.setRollingJump(false);
         player.setJumping(false);

@@ -2159,7 +2159,8 @@ public class Engine {
 				lives,
 				continues,
 				readIntList(payload.get("chaosEmeralds")),
-				readIntList(payload.get("superEmeralds")));
+				readIntList(payload.get("superEmeralds")),
+				payload.get("emeraldsConverted") instanceof Boolean converted ? converted : null);
 	}
 
 	private static SelectedTeam teamFromPayload(Map<String, Object> payload, SelectedTeam fallback) {

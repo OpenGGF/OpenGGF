@@ -57,6 +57,7 @@ class TestS3kSaveSnapshotProvider {
         assertEquals(3, payload.get("lives"));
         assertEquals(List.of(), payload.get("chaosEmeralds"));
         assertEquals(List.of(), payload.get("superEmeralds"));
+        assertEquals(false, payload.get("emeraldsConverted"));
         assertEquals(false, payload.get("clear"));
     }
 
@@ -76,6 +77,7 @@ class TestS3kSaveSnapshotProvider {
         when(gameState.getContinues()).thenReturn(5);
         when(gameState.getCollectedChaosEmeraldIndices()).thenReturn(List.of(0, 2, 4, 6));
         when(gameState.getCollectedSuperEmeraldIndices()).thenReturn(List.of(2));
+        when(gameState.isEmeraldsConverted()).thenReturn(true);
 
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
@@ -88,6 +90,7 @@ class TestS3kSaveSnapshotProvider {
         assertEquals(5, payload.get("continues"));
         assertEquals(List.of(0, 2, 4, 6), payload.get("chaosEmeralds"));
         assertEquals(List.of(2), payload.get("superEmeralds"));
+        assertEquals(true, payload.get("emeraldsConverted"));
     }
 
     @Test

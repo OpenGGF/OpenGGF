@@ -23,6 +23,7 @@ record Sonic3kSpecialStageSnapshot(
         int clearTimer,
         int emeraldTimer,
         int emeraldInteractIndex,
+        int emeraldArtFramesRemaining,
         boolean exitSpinStarted,
         int palFadeDelay,
         boolean musicSpedUp,
@@ -42,6 +43,8 @@ record Sonic3kSpecialStageSnapshot(
         PlayerCharacter playerCharacter,
         boolean spriteDebugMode,
         boolean useSkLayouts,
+        boolean firstUpdateCall,
+        int postBootFadeHoldFrames,
         GameStateSnapshot gameState,
         GridSnapshot grid,
         PlayerSnapshot player,
@@ -59,12 +62,12 @@ record Sonic3kSpecialStageSnapshot(
                 0, false, false, false, false,
                 0, 0, 0, 0,
                 0, 0, 0,
-                0, 0, 0, 0, false, 0, false,
+                0, 0, 0, 0, 0, false, 0, false,
                 0, 0, 0, 0, 0,
                 0, 0, 0, 1, 0, 0L, 0L,
                 true,
                 PlayerCharacter.SONIC_AND_TAILS,
-                false, false, null,
+                false, false, false, 0, null,
                 null, null, null, null, null, null, null, null, null, null);
     }
 

@@ -1,15 +1,15 @@
 # Rewind Round-Trip Probe
 
-Generated: 2026-07-16
+Generated: 2026-07-20
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
-| Total classes discovered | 934 |
-| Probed: | 821 |
-| Skipped/Unprobed: | 113 |
-| Probe coverage | 87.9% |
+| Total classes discovered | 950 |
+| Probed: | 797 |
+| Skipped/Unprobed: | 153 |
+| Probe coverage | 83.9% |
 | REAL gaps found | 0 |
 
 ## Real Gaps (fields that differ after capture → restore)
@@ -94,12 +94,17 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | HczEndBossBladeImpactExplosion | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeI... |
 | HczEndBossBladeSplash | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeS... |
 | HczEndBossBladeWaterChute | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeW... |
+| HczEndBossBubbleParticle | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossBubble... |
 | HczEndBossEggCapsuleButton | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | HczEndBossEggCapsuleInstance$HczEndBossResultsScreenObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | HczEndBossInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossInstan... |
+| HczEndBossLowerHousing | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossLowerH... |
+| HczEndBossRobotnikHead | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotn... |
 | HczEndBossRobotnikShip | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotn... |
 | HczEndBossTurbine | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbin... |
 | HczEndBossWaterColumn | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterC... |
+| HczEndBossWaterSprayChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterS... |
+| HczEndBossWaterSurfaceChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterS... |
 | LbzEndBossInstance$LbzEndBossTubeSegmentChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstan... |
 | LbzEndBossInstance$LbzEndBossSmokePuffChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstan... |
 | LbzFinalBoss1Instance$DeathEggMiniatureChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Ins... |
@@ -133,6 +138,7 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | HCZConveyorBeltObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | HCZHandLauncherObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | HCZSpinningColumnObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| HczTransitionBubbleInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.HczTransitionBubbleInst... |
 | HCZTwistingLoopObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | IczCrushingColumnObjectInstance$BottomDecoration | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | IczFreezerObjectInstance$FrozenPlayerBlock | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
@@ -150,9 +156,9 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | LbzTubeElevatorInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | LightningShieldObjectInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.LightningShieldObjectIn... |
 | Mgz2ResultsScreenObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| MgzEndBossRenderChild | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MgzEndBossRenderChild (... |
 | MGZPulleyObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | MGZTwistingLoopObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
-| Mhz1CutsceneDoorInstance | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | MhzMinibossEscapeShardInstance | NoSuchMethodError: No probe-compatible constructor found for com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardI... |
 | MhzMinibossFlameInstance | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
@@ -160,6 +166,7 @@ Silence is NOT success — absence of gap evidence does not mean no gap exists.
 | MhzPulleyLiftObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | MhzStickyVineObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | MhzSwingVineObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
+| PachinkoBumperObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | PachinkoEnergyTrapObjectInstance | restoreRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |
 | PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild | captureRewindState threw: IllegalStateException: RewindIdentityTable is required for player-reference rewind fields. |

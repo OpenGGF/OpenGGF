@@ -206,6 +206,41 @@ public class TestGameStateManager {
     }
 
     @Test
+    public void explicitConvertedSaveStateSupportsZeroSuperEmeralds() {
+        gsm.restoreSaveProgress(3, 0,
+                java.util.List.of(0, 1, 2, 3, 4, 5, 6), java.util.List.of(), true);
+
+        assertTrue(gsm.isEmeraldsConverted());
+        assertTrue(gsm.getCollectedSuperEmeraldIndices().isEmpty());
+    }
+
+    @Test
+    public void legacySaveInfersConversionFromSuperEmeralds() {
+        gsm.restoreSaveProgress(3, 0,
+                java.util.List.of(0, 1, 2, 3, 4, 5, 6), java.util.List.of(2), null);
+
+        assertTrue(gsm.isEmeraldsConverted());
+    }
+
+    @Test
+    public void resetSessionClearsEmeraldConversion() {
+        gsm.setEmeraldsConverted(true);
+
+        gsm.resetSession();
+
+        assertFalse(gsm.isEmeraldsConverted());
+    }
+
+    @Test
+    public void collectingFirstSuperEmeraldMarksChaosEmeraldsConverted() {
+        gsm.markEmeraldCollected(0);
+
+        gsm.markSuperEmeraldCollected(0);
+
+        assertTrue(gsm.isEmeraldsConverted());
+    }
+
+    @Test
     public void testS3kSpecialStageSelectionSkipsCollectedChaosEmeraldStages() {
         gsm.markEmeraldCollected(0);
         gsm.markEmeraldCollected(1);
@@ -267,5 +302,3 @@ public class TestGameStateManager {
         assertFalse(gsm.isTimeAttackActive(), "resetSession() must clear timeAttackActive");
     }
 }
-
-

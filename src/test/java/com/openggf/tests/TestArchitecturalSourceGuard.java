@@ -36,15 +36,21 @@ class TestArchitecturalSourceGuard {
     // existing restore orchestration boundary; it does not move collaborator logic back here.
     // 2026-07-12: ratchet inherited develop growth to 2910, plus a four-line public
     // delegate into ObjectRewindReferenceClosureValidator. Traversal stays extracted.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2914;
+    // 2026-07-20: develop's trace-run and bonus-stage state integration combines
+    // with next's mod/runtime ownership surface at 3020 effective lines.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3020;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
             // refactor (d9b727925) settled the sprite at 3115 effective lines.
             // 2026-07-09: 3115 -> 3159 for drowning, speed-shoes, and fixed-skid
             // controller state captured by the playable rewind schema.
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3159,
-            "com/openggf/level/LevelManager.java", 2500,
+            // 2026-07-20: merged super-state rewind capture with next's Mod API
+            // playable hooks; freeze the resulting combined surface.
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3239,
+            // 2026-07-20: merged develop's trace/bonus bootstrap dependencies with
+            // next's mod-zone and editor/session integration.
+            "com/openggf/level/LevelManager.java", 2819,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
             // 2026-07-04: 2890 -> 2962. The solo-ghost-racing phase-1 tasks (time
@@ -71,7 +77,9 @@ class TestArchitecturalSourceGuard {
             // branches both added lifecycle hooks around existing mode boundaries.
             // Their merge produces 3168 effective lines; freeze that exact combined
             // shape so subsequent work must still extract before growing GameLoop.
-            GAME_LOOP_PATH, 3168
+            // 2026-07-20: multi-stage trace-run dispatch adds its focused all-mode hook
+            // on top of that combined shape; the state machine remains launcher-owned.
+            GAME_LOOP_PATH, 3188
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -102,7 +110,9 @@ class TestArchitecturalSourceGuard {
             new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 142),
             new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 105),
             new MethodBudget(GAME_LOOP_PATH, "loadEndingDemoZone", 95),
-            new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 91),
+            // 2026-07-20: merged multi-segment run handoff with next's title-card
+            // destination policy and time-attack lifecycle hooks.
+            new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 98),
             // 2026-07-07: enterBonusStage 86 -> 93 in the develop->next merge (bonus-stage
             // coordinator rewind-adapter register on bonus entry).
             new MethodBudget(GAME_LOOP_PATH, "enterBonusStage", 93)

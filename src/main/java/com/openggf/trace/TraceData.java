@@ -798,9 +798,10 @@ public class TraceData {
         return frames;
     }
 
-    // Package-visible so other trace-profile loaders (e.g. SpecialStageTraceData)
-    // can reuse the aux jsonl parsing without duplicating it.
-    static Map<Integer, List<TraceEvent>> loadAuxEvents(Path auxPath)
+    // Public so other trace-profile loaders (e.g. SpecialStageTraceData,
+    // com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData) can
+    // reuse the aux jsonl parsing without duplicating it.
+    public static Map<Integer, List<TraceEvent>> loadAuxEvents(Path auxPath)
             throws IOException {
         Map<Integer, List<TraceEvent>> map = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
@@ -817,9 +818,10 @@ public class TraceData {
         return map;
     }
 
-    // Package-visible so other trace-profile loaders (e.g. SpecialStageTraceData)
-    // can reuse the gzip-or-plain file resolution without duplicating it.
-    static Path resolveTraceFile(Path traceDirectory, String fileName) {
+    // Public so other trace-profile loaders (e.g. SpecialStageTraceData,
+    // com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData) can
+    // reuse the gzip-or-plain file resolution without duplicating it.
+    public static Path resolveTraceFile(Path traceDirectory, String fileName) {
         Path plainPath = traceDirectory.resolve(fileName);
         if (Files.exists(plainPath)) {
             return plainPath;
@@ -828,9 +830,10 @@ public class TraceData {
         return Files.exists(gzipPath) ? gzipPath : null;
     }
 
-    // Package-visible so other trace-profile loaders (e.g. SpecialStageTraceData)
-    // can reuse gzip-or-plain reader opening without duplicating it.
-    static BufferedReader openTraceReader(Path path) throws IOException {
+    // Public so other trace-profile loaders (e.g. SpecialStageTraceData,
+    // com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData) can
+    // reuse gzip-or-plain reader opening without duplicating it.
+    public static BufferedReader openTraceReader(Path path) throws IOException {
         if (path.getFileName().toString().endsWith(".gz")) {
             InputStream input = Files.newInputStream(path);
             try {

@@ -1,21 +1,30 @@
 package com.openggf.trace.replay;
 
+import com.openggf.GameLoop;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.BonusStageProvider;
+import com.openggf.game.BonusStageState;
+import com.openggf.game.BonusStageType;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplayTeamBootstrap;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
 import com.openggf.game.sonic3k.Sonic3kLevelAnimationManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -432,6 +441,132 @@ public final class TraceReplaySessionBootstrap {
         if (rng != null) {
             rng.setSeed(meta.initialRngSeed());
         }
+        // NOTE: GumballMachineObjectInstance previously performed its own
+        // frame-0 reseed here (sonic3k.asm:127412) using the engine's local
+        // vblaCounter approximation of hardware V_int_run_count, which
+        // clobbered this bootstrap-applied trace seed. That reseed has been
+        // removed -- see docs/S3K_KNOWN_DISCREPANCIES.md, "Resolution (no
+        // longer a divergence)" -- so GumballMachineObjectInstance no longer
+        // calls services().rng().setSeed(...); RNG state after this point
+        // comes solely from native per-frame advancement.
+    }
+
+    /** Maps the recorder's bonus_stage_type token to the engine enum. */
+    static BonusStageType bonusStageTypeForToken(String token) {
+        if ("gumball".equals(token)) {
+            return BonusStageType.GUMBALL;
+        }
+        if ("pachinko".equals(token)) {
+            return BonusStageType.GLOWING_SPHERE;
+        }
+        if ("slots".equals(token)) {
+            return BonusStageType.SLOT_MACHINE;
+        }
+        throw new IllegalStateException(
+                "Unsupported bonus_stage_type for headless replay: " + token);
+    }
+
+    /**
+     * Post-load bonus-stage entry for an s3k_bonus_stage trace segment
+     * (spec 2026-07-18, engine-side addition #7). Mirrors the live
+     * doEnterBonusStage/prepareBonusStageForTitleCard sequence minus title
+     * card and music: registers the module's bonus provider on the gameplay
+     * mode, fires onEnter with a synthetic BonusStageState (frame-0 ring
+     * count from the trace; interior replay never exits, so return fields
+     * are zero), applies the bonus HUD layout and ring count, un-hides the
+     * player, injects the pachinko bootstrap object when the type needs
+     * one, and fires deferred-setup completion to initialize type-specific
+     * runtime state (a no-op for gumball/pachinko; builds the slot runtime
+     * for SLOT_MACHINE). Mirrors the live sequence THROUGH deferred setup
+     * (spec engine addition #4). Returns false untouched for any other trace
+     * profile.
+     */
+    public static boolean applyBonusStageEntry(TraceData trace) {
+        TraceMetadata meta = trace.metadata();
+        if (!"s3k_bonus_stage".equals(meta.traceProfile())) {
+            return false;
+        }
+        BonusStageType type = bonusStageTypeForToken(meta.bonusStageType());
+        int frame0Rings = trace.getFrame(0).rings();
+
+        BonusStageProvider provider = GameServices.module().getBonusStageProvider();
+        // GameServices has NO public gameplayMode() accessor — resolve the
+        // context the way the live path does (GameLoop.doEnterBonusStage).
+        // The replay fixture guarantees an open gameplay session, so a null
+        // here is a real fixture bug and an NPE is the correct failure.
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        // Mirror the live ordering exactly (GameLoop.java:2178/2181/2184):
+        // setActiveBonusStageProvider -> onEnter -> registerBonusStageAdapter.
+        gameplayMode.setActiveBonusStageProvider(provider);
+        provider.onEnter(type, new BonusStageState(
+                0, 0, frame0Rings, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                (byte) 0x0C, (byte) 0x0D, 0, 0L));
+        gameplayMode.registerBonusStageAdapter(provider);
+
+        // Rings live on LevelState, not GameStateManager — same call the live
+        // path makes (GameLoop.prepareBonusStageForTitleCard, :2274).
+        GameServices.level().getLevelGamestate().setRings(frame0Rings);
+        GameServices.level().setBonusStageHudLayout(true);
+        for (var sprite : GameServices.sprites().getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.setHidden(false);
+                playable.setObjectControlled(false);
+                // Undo the fixture's generic pre-frame-0 ground-snap probe
+                // (HeadlessTestFixture.Builder.build step 12 / GroupCollisionSystem
+                // .resolveGroundAttachment threshold=14), which has no ROM
+                // equivalent for bonus-stage entry and can wrongly latch
+                // Status_InAir a tick early. ROM's bonus-stage spawn is a
+                // Restart_level_flag level reload: Object_RAM (Player_1 included)
+                // is fully cleared -- Status_InAir off -- before Get_LevelSizeStart
+                // repositions the player from the zone's Start Location table
+                // (sonic3k.asm:7619 clearRAM Object_RAM; 38160-38183
+                // Get_LevelSizeStart). SpawnLevelMainSprites' zone-specific
+                // air/animation branches (the only code that would otherwise set
+                // Status_InAir before the level loop starts) are skipped whenever
+                // Special_bonus_entry_flag is set, which bonus-stage entry always
+                // does (sonic3k.asm:8117-8118 tst.b Special_bonus_entry_flag / bne
+                // locret_69B6; 61896 move.b #2,Special_bonus_entry_flag). So the
+                // ground/air transition for Gumball/Pachinko/Slots is decided
+                // exclusively by frame 0's own Player_AnglePos probe, not a
+                // bootstrap pre-check. S3kSlotBonusStageRuntime.bootstrap()
+                // re-asserts Status_InAir on its dedicated slot sprite afterwards
+                // when the ROM's slot-machine capture genuinely starts airborne,
+                // so this reset only affects the fixture's pre-existing sprite.
+                playable.setAir(false);
+            }
+        }
+        // forcePlayerHighPriorityInBonusStage (high-priority art bucket) and
+        // refreshPlayableSpriteArtCaches (DPLC cache) are render-only and
+        // deliberately skipped: headless comparison never reads either.
+        ObjectSpawn bootstrapSpawn = GameLoop.resolveBonusStageBootstrapSpawn(type);
+        var objectManager = GameServices.level().getObjectManager();
+        if (bootstrapSpawn != null && objectManager != null) {
+            // Mirror ensureBonusStageBootstrapObjectPresent's duplicate guard
+            // (GameLoop.java:2288-2293).
+            boolean present = objectManager.getActiveObjects().stream()
+                    .anyMatch(PachinkoEnergyTrapObjectInstance.class::isInstance);
+            if (!present) {
+                objectManager.addDynamicObject(
+                        new PachinkoEnergyTrapObjectInstance(bootstrapSpawn));
+            }
+        }
+        provider.onDeferredSetupComplete();
+        // Comparison-bootstrap seam (same pattern as applyInitialRngSeedForReplay
+        // / metadata.rng_seed above): when the trace recorded the ROM's
+        // free-running V_int_run_count at bonus-stage entry (recorder
+        // v6.32-s3k+, bonus segments only -- see TraceMetadata#recordedVIntRunCount),
+        // prime the slots runtime's counter base so Slots_CycleOptions's
+        // recorded reel outcomes become reproducible instead of approximated
+        // by the per-session ObjectManager.vblaCounter (S3K-Known-Discrepancies,
+        // "Slots is also affected"). No-op for gumball/pachinko or legacy traces.
+        if (type == BonusStageType.SLOT_MACHINE
+                && meta.recordedVIntRunCount() != null
+                && provider instanceof Sonic3kBonusStageCoordinator coordinator
+                && coordinator.activeSlotRuntime() != null) {
+            coordinator.activeSlotRuntime().primeVIntRunCountForReplay(
+                    meta.recordedVIntRunCount(), trace.initialVblankCounter());
+        }
+        return true;
     }
 
     private static boolean shouldInterleaveS2TitleCardPrelude(TraceData trace,

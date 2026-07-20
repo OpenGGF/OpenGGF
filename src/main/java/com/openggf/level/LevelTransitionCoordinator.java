@@ -102,6 +102,16 @@ public class LevelTransitionCoordinator {
     }
 
     /**
+     * Non-consuming peek at a pending special-stage entry request. The LEVEL
+     * tick's {@link #consumeSpecialStageRequest()} remains the only consumer;
+     * this exists so trace-run replay can observe an organically raised
+     * transition without swallowing it (spec 2026-07-18, addition #1).
+     */
+    public boolean isSpecialStageRequested() {
+        return specialStageRequestedFromCheckpoint;
+    }
+
+    /**
      * Consumes and clears the pending level-reload request for special-stage
      * return.
      *
@@ -168,6 +178,14 @@ public class LevelTransitionCoordinator {
         BonusStageType requested = bonusStageRequested;
         bonusStageRequested = null;
         return requested;
+    }
+
+    /**
+     * Non-consuming peek at a pending bonus-stage entry request; null when
+     * none is pending. Mirrors {@link #isRespawnRequested()}.
+     */
+    public BonusStageType peekBonusStageRequest() {
+        return bonusStageRequested;
     }
 
     /**

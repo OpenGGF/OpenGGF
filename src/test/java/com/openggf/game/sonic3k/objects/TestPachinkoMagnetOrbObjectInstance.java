@@ -27,8 +27,8 @@ public class TestPachinkoMagnetOrbObjectInstance {
 
         verify(main).setControlLocked(true);
         verify(sidekick).setControlLocked(true);
-        verify(main).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
-        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(main).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
+        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
         verify(main).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(sidekick).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(main, never()).setRolling(true);
@@ -47,7 +47,7 @@ public class TestPachinkoMagnetOrbObjectInstance {
 
         orb.update(0, main);
 
-        verify(sidekick, times(1)).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(sidekick, times(1)).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
         assertEquals(0, services.sfxCount);
     }
 
@@ -61,8 +61,8 @@ public class TestPachinkoMagnetOrbObjectInstance {
         orb.setServices(new TestObjectServices().withSidekicks(List.of(sidekick)));
         orb.update(0, main);
 
-        verify(main).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
-        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(main).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
+        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
     }
 
     @Test
@@ -78,7 +78,12 @@ public class TestPachinkoMagnetOrbObjectInstance {
 
         verify(main).setControlLocked(false);
         verify(main).setRolling(true);
-        verify(main, atLeastOnce()).getRollHeightAdjustment();
+        // ROM loc_4A4F6 (sonic3k.asm:97029-97042) sets y_radius/x_radius and the
+        // Status_Roll bit with NO y_pos write, so the release must preserve the player's
+        // centre rather than apply Sonic_Roll's feet-planted getRollHeightAdjustment shift.
+        // mockPlayerAt stubs getCentreY() as y+20 (0x100 + 20 = 0x114).
+        verify(main).setCentreYPreserveSubpixel((short) 0x114);
+        verify(main, never()).getRollHeightAdjustment();
         verify(main, atLeastOnce()).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(main, atLeastOnce()).setJumping(false);
         verify(main).setFlipAngle(0);
@@ -97,7 +102,7 @@ public class TestPachinkoMagnetOrbObjectInstance {
         orb.update(1, main);
         orb.update(2, main);
 
-        verify(main, times(1)).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(main, times(1)).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
     }
 
     @Test

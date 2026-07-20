@@ -467,6 +467,7 @@ public record PerObjectRewindSnapshot(
             com.openggf.sprites.managers.PlayableSpriteAnimation.RewindState animationState,
             com.openggf.sprites.playable.DrowningController.RewindState drowningState,
             com.openggf.sprites.playable.TailsCarryController.Snapshot tailsCarryState,
+            com.openggf.sprites.playable.SuperStateController.RewindState superStateState,
             SidekickCpuRewindExtra sidekickCpuExtra,
             // Sidekick follow-history circular buffers (read by SidekickCpuController
             // each frame to position the follower; the leader writes new entries every
@@ -573,7 +574,7 @@ public record PerObjectRewindSnapshot(
                     waterPhysicsActive, wasInWater, waterSkimActive, preventTailsRespawn, badnikChainCounter,
                     bubbleAnimId, initPhysicsActive, objectMappingFrameControl, mappingFrame, animationId,
                     forcedAnimationId, animationFrameIndex, animationTick, debugMode, movementState,
-                    spindashDustState, animationState, drowningState, tailsCarryState, sidekickCpuExtra,
+                    spindashDustState, animationState, drowningState, tailsCarryState, null, sidekickCpuExtra,
                     xHistory, yHistory, inputHistory, jumpPressHistory, statusHistory,
                     null);
         }
@@ -656,14 +657,15 @@ public record PerObjectRewindSnapshot(
                     waterPhysicsActive, wasInWater, waterSkimActive, preventTailsRespawn, badnikChainCounter,
                     bubbleAnimId, initPhysicsActive, objectMappingFrameControl, mappingFrame, animationId,
                     forcedAnimationId, animationFrameIndex, animationTick, debugMode, movementState,
-                    spindashDustState, animationState, drowningState, null, sidekickCpuExtra, xHistory, yHistory,
+                    spindashDustState, animationState, drowningState, null, null, sidekickCpuExtra, xHistory, yHistory,
                     inputHistory, jumpPressHistory, statusHistory, null);
         }
 
         /** Reassembles the controller-owned rewind state introduced in API 1.2. */
         public com.openggf.sprites.playable.PlayableSpriteController.RewindState controllerState() {
             return new com.openggf.sprites.playable.PlayableSpriteController.RewindState(
-                    movementState, spindashDustState, animationState, drowningState, tailsCarryState);
+                    movementState, spindashDustState, animationState, drowningState,
+                    tailsCarryState, superStateState);
         }
     }
 
