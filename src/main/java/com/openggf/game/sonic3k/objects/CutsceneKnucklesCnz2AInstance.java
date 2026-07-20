@@ -49,13 +49,13 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     private static final int RENDER_HALF_WIDTH = 0x1C;
     private static final int RENDER_HALF_HEIGHT = 0x18;
 
-    private static final int[] JUMP_FRAMES = {8, 4, 8, 5, 8, 6, 8, 7};
-    private static final int JUMP_DELAY = 2;
-    private static final int[] LAUGH_LOOP = {0x1E, 0x1F};
-    private static final int[] LAUGH_STAND_LOOP = {0x1C, 0x1C, 0x1D};
-    private static final int LAUGH_DELAY = 8;
+    // Raw animation data at byte_666AF, byte_666B9, and byte_666BF.
+    private static final int[] RAW_JUMP = {1, 8, 4, 8, 5, 8, 6, 8, 7, 0xFC};
+    private static final int[] RAW_LAND_TO_LAUGH = {7, 0x1C, 0x1C, 0x1D, 0xF8, 6};
+    private static final int[] RAW_LAUGH_LOOP = {7, 0x1E, 0x1F, 0xFC};
 
     private enum Phase { INIT, CAMERA_LOCK, PRE_JUMP_WAIT, MULTI_BOUNCE, LAUGH_WAIT, FINAL_JUMP }
+    private enum RawAnimationScript { LAUGH_LOOP, JUMP, LAND_TO_LAUGH }
 
     private Phase phase = Phase.INIT;
     private int currentX;
@@ -69,6 +69,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     private int mappingFrame;
     private int animationTick;
     private int animationIndex;
+    private RawAnimationScript rawAnimationScript = RawAnimationScript.LAUGH_LOOP;
     private int storedMinX;
     private int storedMaxX;
     private int storedMinY;
@@ -197,9 +198,12 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
                 MUSIC_FADE_WAIT);
         activeInstance = this;
         phase = Phase.CAMERA_LOCK;
-        mappingFrame = 0x1E;
+        // ObjSlot_CutsceneKnux supplies mapping_frame=$16. loc_622E4 installs
+        // byte_666BF but leaves the fresh SST animation timer/index at zero.
+        mappingFrame = 0x16;
         animationTick = 0;
         animationIndex = 0;
+        rawAnimationScript = RawAnimationScript.LAUGH_LOOP;
 
         // ROM loc_622E4: CreateChild1_Normal(ChildObjDat_66560) spawns the invisible
         // SolidObjectFull2 wall (loc_62458) that blocks Sonic from running past
@@ -211,7 +215,8 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     }
 
     private void routineCameraLock() {
-        animateLoop(LAUGH_LOOP, LAUGH_DELAY);
+        animateRaw();
+        constrainUpcomingHorizontalScrollToNativeLock();
         if (!cameraGate.update(services().camera(),
                 () -> services().playMusic(Sonic3kMusic.KNUCKLES.id))) {
             return;
@@ -220,8 +225,26 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         phase = Phase.PRE_JUMP_WAIT;
     }
 
+    /**
+     * Object execution precedes {@code ScrollHoriz} in the engine frame, so the
+     * current camera word may still be just left of the target while the pending
+     * scroll would cross it. The CNZ2 ROM trace reaches {@code Camera_X_pos=$1D00}
+     * exactly (frame $5494) and loc_85CA4 then installs $1D00 as both horizontal
+     * limits. Publish that right limit for the pending scroll when it would reach
+     * or cross the same target; the gate still observes and completes the native
+     * lock on the following object pass.
+     */
+    private void constrainUpcomingHorizontalScrollToNativeLock() {
+        Camera camera = services().camera();
+        int cameraX = camera.getX() & 0xFFFF;
+        int nextCameraX = camera.previewNextX() & 0xFFFF;
+        if (cameraX < CAMERA_LOCK_X && nextCameraX >= CAMERA_LOCK_X) {
+            camera.setMaxX((short) CAMERA_LOCK_X);
+        }
+    }
+
     private void routinePreJumpWait() {
-        animateLoop(LAUGH_LOOP, LAUGH_DELAY);
+        animateRaw();
         if (timer > 0) {
             timer--;
             return;
@@ -267,6 +290,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         mappingFrame = 0x1C;
         animationTick = 0;
         animationIndex = 0;
+        rawAnimationScript = RawAnimationScript.LAND_TO_LAUGH;
     }
 
     @Override
@@ -279,7 +303,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     }
 
     private void routineLaughWait() {
-        animateLoop(LAUGH_STAND_LOOP, LAUGH_DELAY);
+        animateRaw();
         if (timer > 0) {
             timer--;
             return;
@@ -406,10 +430,11 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         mappingFrame = 8;
         animationTick = 0;
         animationIndex = 0;
+        rawAnimationScript = RawAnimationScript.JUMP;
     }
 
     private void updateJumpMotion() {
-        animateLoop(JUMP_FRAMES, JUMP_DELAY);
+        animateRaw();
         SubpixelMotion.State motion = new SubpixelMotion.State(
                 currentX, currentY, xSub, ySub, xVel, yVel);
         SubpixelMotion.objectFallXY(motion, SubpixelMotion.S3K_GRAVITY);
@@ -427,13 +452,41 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
                 services().configuration()) == PlayerCharacter.KNUCKLES;
     }
 
-    private void animateLoop(int[] frames, int delay) {
-        if (animationTick <= 0) {
-            mappingFrame = frames[animationIndex];
-            animationIndex = (animationIndex + 1) % frames.length;
-            animationTick = delay;
+    /** Mirrors Animate_Raw/Animate_RawNoSST for the three CNZ2A scripts. */
+    private void animateRaw() {
+        animationTick = (animationTick - 1) & 0xFF;
+        if ((animationTick & 0x80) == 0) {
+            return;
         }
-        animationTick--;
+
+        int[] script = rawAnimationData();
+        animationIndex = (animationIndex + 1) & 0xFF;
+        int value = script[animationIndex + 1];
+        if (value < 0x80) {
+            animationTick = script[0];
+            mappingFrame = value;
+            return;
+        }
+
+        if (value == 0xF8) {
+            // byte_666B9's relative +6 target is byte_666BF.
+            rawAnimationScript = RawAnimationScript.LAUGH_LOOP;
+            script = RAW_LAUGH_LOOP;
+        } else if (value != 0xFC) {
+            throw new IllegalStateException("Unsupported CutsceneKnux raw animation command: " + value);
+        }
+
+        animationIndex = 0;
+        animationTick = script[0];
+        mappingFrame = script[1];
+    }
+
+    private int[] rawAnimationData() {
+        return switch (rawAnimationScript) {
+            case LAUGH_LOOP -> RAW_LAUGH_LOOP;
+            case JUMP -> RAW_JUMP;
+            case LAND_TO_LAUGH -> RAW_LAND_TO_LAUGH;
+        };
     }
 
     @Override

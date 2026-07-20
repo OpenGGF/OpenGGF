@@ -20,6 +20,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -171,6 +172,138 @@ class TestCutsceneKnucklesCnz2Instance {
         assertNotEquals(0x1D00, camera.getMaxX() & 0xFFFF,
                 "Camera_max_X_pos must remain on the pre-cutscene bound until loc_85CA4 observes "
                         + "Camera_X_pos reaching the target");
+    }
+
+    @Test
+    void firstCnzCutsceneStopsPostObjectCameraScrollExactlyAtNativeLock() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        Camera camera = fixture.camera();
+        camera.setFocusedSprite(fixture.sprite());
+        camera.setX((short) 0x1CE0);
+        camera.setY((short) 0x0280);
+        camera.setMinX((short) 0x0000);
+        camera.setMaxX((short) 0x4000);
+
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1DE0, 0x032C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+        knuckles.update(0, fixture.sprite());
+
+        // S3K executes objects before ScrollHoriz. Put the camera one frame before
+        // the lock with Sonic far enough right that the uncapped result would be
+        // $1D01. The ROM reference reaches and then holds Camera_X_pos=$1D00
+        // (cnz_completerun physics frames $5494 onward).
+        camera.setX((short) 0x1CF1);
+        fixture.sprite().setCentreX((short) 0x1DA2);
+        knuckles.update(1, fixture.sprite());
+        camera.updatePosition();
+
+        assertEquals(0x1D00, camera.getX() & 0xFFFF,
+                "loc_85CA4's $1D00/$1D00 lock must not allow the later same-frame "
+                        + "ScrollHoriz step to cross one pixel past the encounter boundary");
+        assertEquals(0x1D00, camera.getMaxX() & 0xFFFF);
+
+        knuckles.update(2, fixture.sprite());
+        assertEquals(0x1D00, camera.getMinX() & 0xFFFF);
+        assertEquals(0x1D00, camera.getMaxX() & 0xFFFF);
+        fixture.sprite().setCentreX((short) 0x1D80);
+        camera.updatePosition();
+        assertEquals(0x1D00, camera.getX() & 0xFFFF,
+                "the completed native lock must reject leftward camera movement");
+        fixture.sprite().setCentreX((short) 0x1DC0);
+        camera.updatePosition();
+        assertEquals(0x1D00, camera.getX() & 0xFFFF,
+                "the completed native lock must reject rightward camera movement");
+    }
+
+    @Test
+    void firstCnzCutsceneUsesObjSlotFrameThenExactLaughRawScript() throws Exception {
+        CutsceneKnucklesCnz2AInstance knuckles = initializeFirstCutsceneAtNativeLock();
+
+        assertEquals(0x16, getPrivateIntField(knuckles, "mappingFrame"),
+                "ObjSlot_CutsceneKnux initializes mapping_frame=$16 on the setup frame");
+
+        for (int frame = 1; frame <= 8; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1F, getPrivateIntField(knuckles, "mappingFrame"),
+                    "byte_666BF starts with frame $1F because Animate_Raw increments anim_frame before lookup");
+        }
+        for (int frame = 9; frame <= 16; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1E, getPrivateIntField(knuckles, "mappingFrame"),
+                    "byte_666BF command $FC restarts on frame $1E with delay 7");
+        }
+        knuckles.update(17, null);
+        assertEquals(0x1F, getPrivateIntField(knuckles, "mappingFrame"));
+    }
+
+    @Test
+    void firstCnzCutsceneJumpUsesExactByte666AfFrameTiming() throws Exception {
+        CutsceneKnucklesCnz2AInstance knuckles = initializeFirstCutsceneAtNativeLock();
+        setPrivateEnumField(knuckles, "phase", "MULTI_BOUNCE");
+        invokePrivateStartJump(knuckles, 0x0140, -0x0600);
+
+        int[] expected = {4, 4, 8, 8, 5, 5, 8, 8, 6, 6, 8, 8, 7, 7, 8, 8};
+        for (int frame = 0; frame < expected.length; frame++) {
+            knuckles.update(frame + 1, null);
+            assertEquals(expected[frame], getPrivateIntField(knuckles, "mappingFrame"),
+                    "byte_666AF is delay 1 with frames $08,$04,$08,$05,$08,$06,$08,$07 and $FC restart");
+        }
+    }
+
+    @Test
+    void firstCnzCutsceneLandingScriptJumpsIntoLaughLoop() throws Exception {
+        CutsceneKnucklesCnz2AInstance knuckles = initializeFirstCutsceneAtNativeLock();
+        setPrivateIntField(knuckles, "bounceIndex", 2);
+        invokePrivateFloorContact(knuckles, -1);
+
+        assertEquals(0x1C, getPrivateIntField(knuckles, "mappingFrame"),
+                "loc_62056 publishes frame $1C on the landing frame");
+        for (int frame = 1; frame <= 8; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1C, getPrivateIntField(knuckles, "mappingFrame"));
+        }
+        for (int frame = 9; frame <= 16; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1D, getPrivateIntField(knuckles, "mappingFrame"));
+        }
+        for (int frame = 17; frame <= 24; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1E, getPrivateIntField(knuckles, "mappingFrame"),
+                    "byte_666B9 command $F8,+6 jumps into byte_666BF at frame $1E");
+        }
+        knuckles.update(25, null);
+        assertEquals(0x1F, getPrivateIntField(knuckles, "mappingFrame"));
+    }
+
+    @Test
+    void firstCnzCutsceneReachesRomLandingCoordinateAndActivatesButton() {
+        CutsceneKnucklesCnz2AInstance knuckles = initializeFirstCutsceneAtNativeLock();
+        Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(
+                new ObjectSpawn(0x1E00, 0x0338,
+                        Sonic3kObjectIds.CUTSCENE_BUTTON, 4, 0, false, 0));
+        button.setServices(TestEnvironment.objectServices());
+
+        boolean reachedLanding = false;
+        for (int frame = 1; frame <= 500; frame++) {
+            knuckles.update(frame, null);
+            button.update(frame, null);
+            if (knuckles.getRoutine() == 8) {
+                reachedLanding = true;
+                break;
+            }
+        }
+
+        assertTrue(reachedLanding, "CutsceneKnux_CNZ2A must complete its three floor contacts");
+        assertTrue(button.isPressedForTest(),
+                "the $1E00/$033C button must activate during Knuckles' physical jump path");
+        assertEquals(0x1E27, knuckles.getX(),
+                "ROM aux trace enters loc_62056/routine 8 at x_pos=$1E27 (frame 21921)");
+        assertEquals(0x032C, knuckles.getY(),
+                "ROM aux trace enters loc_62056/routine 8 at y_pos=$032C (frame 21921)");
     }
 
     @Test
@@ -346,6 +479,37 @@ class TestCutsceneKnucklesCnz2Instance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static CutsceneKnucklesCnz2AInstance initializeFirstCutsceneAtNativeLock() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        GameServices.camera().setX((short) 0x1D00);
+        GameServices.camera().setY((short) 0x0280);
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1DE0, 0x032C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+        knuckles.update(0, null);
+        return knuckles;
+    }
+
+    private static void invokePrivateFloorContact(CutsceneKnucklesCnz2AInstance target, int distance)
+            throws ReflectiveOperationException {
+        Method method = CutsceneKnucklesCnz2AInstance.class
+                .getDeclaredMethod("applyFloorContact", int.class);
+        method.setAccessible(true);
+        method.invoke(target, distance);
+    }
+
+    private static void invokePrivateStartJump(
+            CutsceneKnucklesCnz2AInstance target, int xVelocity, int yVelocity)
+            throws ReflectiveOperationException {
+        Method method = CutsceneKnucklesCnz2AInstance.class
+                .getDeclaredMethod("startJump", int.class, int.class);
+        method.setAccessible(true);
+        method.invoke(target, xVelocity, yVelocity);
     }
 
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {
