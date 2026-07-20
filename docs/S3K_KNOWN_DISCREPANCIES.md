@@ -980,55 +980,49 @@ None on the shipped Gumball/Pachinko rewind support. The Slot Machine bonus stag
 pre-existing (non-rewindable) behavior; holding rewind while it is active is a no-op, matching its
 behavior before this change.
 
-## Gumball Machine Frame-0 RNG Reseed: Local Session Counter vs Hardware `V_int_run_count`
+## Gumball Machine Frame-0 RNG Reseed: Preserve Run-History Entropy, Do Not Clobber With a Session Counter
 
-`GumballMachineObjectInstance` seeds the shared RNG once, on its first update tick, mirroring ROM
-`Obj_GumballMachine`'s init code:
+ROM `Obj_GumballMachine` seeds `RNG_seed` from `V_int_run_count` on init:
 
 ```
 move.l (V_int_run_count).w,(RNG_seed).w   ; sonic3k.asm:127412
 ```
 
-`V_int_run_count` on real hardware is a persistent counter incremented every VBlank interrupt since
-power-on, so its value at the moment the bonus stage's gumball machine spawns depends on how long
-the console has been running before that point (menu time, prior acts, etc.) — a value a recorded
-trace's `metadata.rng_seed` captures exactly, because the recording *is* that exact hardware run.
+`V_int_run_count` is a persistent counter incremented every VBlank interrupt since power-on. The
+purpose of this write is to fold *run-history entropy* (menu time, prior acts, etc.) into the
+bonus-stage RNG so the ball-subtype roll (`sub_612A8`, `sonic3k.asm:127988-128008`) varies
+run-to-run.
 
-This engine has no equivalent persistent, VBlank-driven global counter. The nearest analog,
-`ObjectManager.vblaCounter`, is a per-gameplay-session object-dispatch counter that resets far more
-often (every gameplay-session rebuild, e.g. `SessionManager.openGameplaySession`) and starts from a
-materially smaller range than the hardware counter a trace reflects (observed `0x0400` locally vs.
-`0x1598` recorded in trace metadata for the same trace/frame-0 tick). Seeding from `vblaCounter`
-therefore reseeds the RNG to the *wrong* value on this one tick, which can flip the ball-subtype RNG
-roll (`sub_612A8`, `sonic3k.asm:127988-128008`) to a different subtype than the recorded run
-produced (e.g. awarding 10 rings for a ball that never actually dispensed as a reward in the
-original run).
+### Resolution (no longer a divergence)
 
-### Why this stays a local counter approximation (not trace-gated)
+`GumballMachineObjectInstance` previously re-derived that seed from its `update` `frameCounter`
+argument — `ObjectManager.vblaCounter`, a per-gameplay-session object-dispatch counter that resets
+on every session rebuild and lives in a materially smaller range than the hardware run counter
+(observed `0x0400` locally vs. `0x1598` recorded for the same frame-0 tick). That was the actual
+bug: `vblaCounter` is *not* `V_int_run_count`, so seeding from it clobbered a correct seed with a
+wrong per-session count and flipped the ball subtype (e.g. awarding 10 rings for a ball the recorded
+run never dispensed as a reward).
 
-An earlier iteration had `TraceReplaySessionBootstrap` suppress this object's own reseed
-specifically during trace replay, once the bootstrap had already primed the RNG from the trace's
-recorded seed — letting the trace-injected value survive the frame that's supposed to
-independently (re)compute it. That is exactly the kind of engine-state-hydrated-from-trace shortcut
-the comparison-only invariant forbids: it made trace replay diverge behaviorally from live play
-(replay silently skips the reseed; live play keeps the wrong one forever) while leaving the
-underlying local-counter approximation unfixed and undocumented for live gameplay. That suppression
-was reverted.
+The engine's shared RNG **already carries** run-history entropy when the machine spawns: it has been
+advanced by all prior gameplay in live play, and in trace replay
+`TraceReplaySessionBootstrap.applyInitialRngSeedForReplay` has already primed it to the recorded
+run's exact seed (that recording's `V_int_run_count`) — uniformly for every trace carrying
+`metadata.rng_seed`, as ordinary initial-state reconstruction, not per-frame hydration. So the ROM
+invariant `RNG_seed == V_int_run_count` is already satisfied by the RNG's own established state on
+this tick. Modeling the reseed is therefore a read of that same value — a no-op — and the object no
+longer performs the erroneous `setSeed`. This is applied **uniformly** to live play and trace
+replay (no trace-identity gating, no simulation-time trace read), so there is no live/replay
+behavioral split.
 
-### Correct fix (deferred)
-
-A faithful fix requires a real persistent, VBlank-driven global run counter that survives session
-rebuilds (title screen, act transitions, editor round-trips, etc.) and increments once per hardware
-VBlank the way `V_int_run_count` does, so the object's own ROM-modeled reseed computes the right
-value in both live play and trace replay without depending on trace metadata. That is a
-cross-cutting addition (a new persistent counter owned outside any single `GameplayModeContext`
-rebuild) and is out of scope for a single-object fix; it is tracked as a follow-up.
+An earlier iteration instead had `TraceReplaySessionBootstrap` suppress the reseed *only during
+trace replay*; that trace-gated split was reverted. The current fix removes the wrong reseed for
+every caller, which both closes the trace divergence and keeps live play on the RNG's genuine
+run-dependent entropy rather than the acknowledged-wrong session counter.
 
 ### Impact
 
-The Gumball bonus stage's RNG-seeded frame-0 ball-subtype roll can diverge from a specific recorded
-run whenever local session timing differs from the original hardware's power-on-relative VBlank
-count — this affects trace-replay parity for that one roll and, in principle, exact reward-subtype
-determinism in live play relative to real hardware, though live play has no reference recording to
-diverge from. No other Gumball, Pachinko, or Slots behavior is affected; the RNG stream itself
-(post-seed advancement) remains ROM-faithful.
+The Gumball bonus stage's frame-0 ball-subtype roll now consumes the RNG's established
+run-history seed on every path. Trace replay reproduces the recorded run's subtypes (the frontier
+past the spurious early ring award); live play keeps run-dependent variety without a reference
+recording to diverge from. No other Gumball, Pachinko, or Slots behavior is affected; the RNG stream
+itself (post-seed advancement) is unchanged and remains ROM-faithful.

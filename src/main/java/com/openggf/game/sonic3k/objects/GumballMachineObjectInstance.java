@@ -69,12 +69,19 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // ===== ROM constants =====
 
     // ROM word_60D16: dc.w -$24, $48, -8, $10 = (xOffset=-36, width=72, yOffset=-8, height=16)
-    // Check_PlayerInRange uses (xOffset..xOffset+width) x (yOffset..yOffset+height),
-    // giving a 72x16 pixel activation zone centered around the machine.
-    private static final int ACTIVATE_X_MIN = -36;  // xOffset
-    private static final int ACTIVATE_X_MAX = 36;   // xOffset + width
-    private static final int ACTIVATE_Y_MIN = -8;   // yOffset
-    private static final int ACTIVATE_Y_MAX = 8;    // yOffset + height
+    // Check_PlayerInRange / sub_8592C (sonic3k.asm:179994-180031) builds the box as
+    //   left = objX + xOffset, right = left + width, top = objY + yOffset, bottom = top + height
+    // and tests it HALF-OPEN: `cmp right,px / bhs out` and `cmp bottom,py / bhs out`
+    // reject px>=right and py>=bottom, so the inclusive edges are only the low ones
+    // (left/top). The box is therefore [left,right) x [top,bottom). Using `<=` on the
+    // high edges fires one frame early on an approach that lands flush on the bottom
+    // edge (py == objY+8): the S3K gumball trace has the player rising through py=objY+8
+    // one frame before it truly enters the ROM box, which dispenses the ball a frame
+    // early and desyncs its fall position at the eventual player pickup.
+    private static final int ACTIVATE_X_MIN = -36;  // left  = objX + xOffset   (inclusive)
+    private static final int ACTIVATE_X_MAX = 36;   // right = objX + xOffset+width (exclusive)
+    private static final int ACTIVATE_Y_MIN = -8;   // top    = objY + yOffset   (inclusive)
+    private static final int ACTIVATE_Y_MAX = 8;    // bottom = objY + yOffset+height (exclusive)
 
     // ROM: ObjDat_GumballMachine priority $0100 → bucket 2 (same as Sonic).
     // Draw_Sprite uses priority as byte offset into Sprite_table_input ($80/bucket).
@@ -185,13 +192,27 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // Piles/glass render behind high-priority FG tiles, visible through transparent areas.
     private static final int BODY_PRIORITY_BUCKET = 4;
 
-    // ROM: byte_61450 = [3, 5, 6, 7, $14, 5, $FF]
-    // First byte (3) is the per-frame timer, NOT a mapping frame.
-    // Actual animation frames: 5, 6, 7, $14, 5.
-    // ROM timer stores (value) then decrements via bpl check (runs value+1 frames).
-    private static final int[] SPIN_FRAMES = {5, 6, 7, 0x14, 5};
+    // ROM loc_60D1E runs Animate_RawNoSST(byte_61450), byte_61450 = [3, 5, 6, 7, $14, 5, $F4, ...].
+    // First byte (3) is the per-frame timer; frames are 5, 6, 7, $14, 5, then the $F4
+    // control byte invokes the object's $34 routine (loc_60D32) which sets machine bit 3
+    // and dispenses the ball.
+    // ROM Animate_RawNoSST (sonic3k.asm:177341): `subq.b #1,anim_frame_timer / bpl skip`,
+    // else reload anim_frame_timer from the duration byte (3, i.e. held 4 calls) and
+    // advance to the NEXT table entry. anim_frame_timer is 0 on SPIN entry
+    // (SetUp_ObjAttributes clears it and the IDLE state never animates), so the FIRST
+    // call's `subq.b #1` immediately goes negative and advances past table[0]=5 (never
+    // displayed) straight to table[1]=6 -- table[0]=5 is only ever the frame set by
+    // SetUp_ObjAttributes on entry into SPIN, held for zero Animate calls. Each
+    // subsequent entry (7, $14, 5) is held for a full duration+1=4 calls, so the
+    // displayed sequence is 6x4, 7x4, $14x4, 5x4 = 16 calls, and the 17th call is the
+    // one that finally decodes the $F4 control byte (dispensing the ball) without
+    // changing the displayed frame. Total: 16 held + 1 control-detect = 17.
+    private static final int[] SPIN_FRAMES = {6, 7, 0x14, 5};
     private static final int SPIN_FRAME_DURATION = 4; // ROM timer=3 + 1 for bpl check
-    private static final int SPIN_TOTAL_FRAMES = SPIN_FRAMES.length * SPIN_FRAME_DURATION;
+    // Verified against the recorded ROM trace: IDLE->SPIN at frame 122, ball dispensed at
+    // frame 139 (delta 17); the previous 5x4,6x4,7x4,$14x4,5x1 model got the same total
+    // (17) but the wrong per-value durations/order -- see SPIN_FRAMES citation above.
+    private static final int SPIN_TOTAL_FRAMES = SPIN_FRAMES.length * SPIN_FRAME_DURATION + 1;
 
     // ROM: ObjDat_GumballMachine byte 2 = 5 — default mapping frame (machine body)
     private static final int IDLE_MAPPING_FRAME = 5;
@@ -415,16 +436,31 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // so tests can exercise drift logic without requiring services()).
         if (!driftInitialized) {
             // ROM: Obj_GumballMachine seeds RNG_seed from V_int_run_count at init
-            // (move.l (V_int_run_count).w,(RNG_seed).w, sonic3k.asm:127412).
-            // KNOWN DISCREPANCY (see docs/S3K_KNOWN_DISCREPANCIES.md): this engine
-            // has no persistent, VBlank-driven global run counter matching hardware
-            // V_int_run_count -- frameCounter here is ObjectManager's per-session
-            // object-dispatch counter (vblaCounter), a materially different,
-            // smaller-range value. Trace replay must NOT be special-cased to dodge
-            // this divergence (comparison-only invariant); it is left as an honest,
-            // documented gap affecting only the RNG-derived ball-subtype roll on
-            // this object's first tick.
-            services().rng().setSeed(frameCounter & 0xFFFFFFFFL);
+            // (move.l (V_int_run_count).w,(RNG_seed).w, sonic3k.asm:127412). The
+            // intent is to fold run-history entropy (VBlanks since power-on: menu
+            // time, prior acts, etc.) into the bonus-stage RNG so the ball-subtype
+            // roll (sub_612A8, sonic3k.asm:127988-128008) varies run-to-run.
+            //
+            // The engine's shared RNG ALREADY carries that run-history entropy when
+            // the machine spawns: it has been advanced by all prior gameplay in live
+            // play, and in trace replay the bootstrap has already primed it to the
+            // recorded run's exact seed (V_int_run_count for that recording;
+            // TraceReplaySessionBootstrap.applyInitialRngSeedForReplay, uniform for
+            // every trace carrying metadata.rng_seed). So the ROM invariant
+            // "RNG_seed == V_int_run_count" is already satisfied by the RNG's own
+            // established state on this tick, and modeling the reseed here is a
+            // read of that same value -- i.e. a no-op.
+            //
+            // The one value that is NOT V_int_run_count is the frameCounter argument:
+            // it is ObjectManager's per-gameplay-session object-dispatch counter
+            // (vblaCounter), which resets on every session rebuild and lives in a
+            // materially smaller range than the hardware run counter (observed 0x0400
+            // vs 0x1598 for the same recorded frame-0 tick). Re-deriving the reseed
+            // from vblaCounter therefore CLOBBERS the correct run-history seed with a
+            // wrong per-session count, flipping the ball subtype (e.g. awarding 10
+            // rings for a ball the recorded run never dispensed as a reward). This is
+            // applied uniformly to live play and trace replay -- it is not gated on
+            // trace identity and reads no trace data at simulation time.
             initDrift();
         }
 
@@ -560,8 +596,9 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         int dx = playerX - spawn.x();
         int dy = playerY - currentY;
 
-        if (dx >= ACTIVATE_X_MIN && dx <= ACTIVATE_X_MAX
-                && dy >= ACTIVATE_Y_MIN && dy <= ACTIVATE_Y_MAX) {
+        // ROM sub_8592C: half-open box — low edges inclusive, high edges exclusive (bhs).
+        if (dx >= ACTIVATE_X_MIN && dx < ACTIVATE_X_MAX
+                && dy >= ACTIVATE_Y_MIN && dy < ACTIVATE_Y_MAX) {
             // ROM: play sfx_GumballTab, determine flip, transition to SPIN
             try {
                 services().playSfx(Sonic3kSfx.GUMBALL_TAB.id);
@@ -644,11 +681,19 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         return SUBTYPE_LOOKUP[r];
     }
 
-    /** Called by ContainerDisplayChild when it activates (parent bit 3 set). */
-    public void onContainerSpawnBall(int x, int y) {
+    /**
+     * Called by ContainerDisplayChild when it activates (parent bit 3 set).
+     * <p>
+     * {@code parentYSupplier} lets the spawned ball track its spawning container's
+     * LIVE y (ROM: {@code parent3(a0)}, the container/crank child), matching ROM
+     * loc_60EE0's per-frame clamp that keeps the ball from rising above its
+     * spawner while the machine itself may still be drifting downward
+     * (sonic3k.asm:127609-127616).
+     */
+    public void onContainerSpawnBall(int x, int y, java.util.function.IntSupplier parentYSupplier) {
         int subtype = chooseBallSubtype();
         ObjectSpawn gumballSpawn = new ObjectSpawn(x, y, 0xEB, subtype, 0, false, 0);
-        spawnChild(() -> new GumballItemObjectInstance(gumballSpawn, 0, true));
+        spawnChild(() -> new GumballItemObjectInstance(gumballSpawn, 0, true, parentYSupplier));
         LOGGER.fine("GumballMachine: container spawned ball, subtype=" + subtype);
     }
 
@@ -950,18 +995,30 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
      */
     static class ContainerDisplayChild extends AbstractObjectInstance implements RewindRecreatable {
 
-        // ROM byte_6145B pairs (frame, timer-value). Timer value+1 runs frames.
-        private static final int[][] ANIM_PAIRS = {
-                {2, 3}, {3, 3}, {4, 0xF}, {3, 3}, {2, 3}
-        };
+        // ROM byte_6145B (sonic3k.asm:128) — flat (mapping_frame, delay) pairs
+        // terminated by the $F4 control byte (which runs the object's $34 routine,
+        // loc_60EA2, clearing machine bits 1+3). Animate_RawNoSSTMultiDelay
+        // (sonic3k.asm Animate_RawNoSSTMultiDelay) decrements anim_frame_timer each
+        // call and, when it goes negative, does `addq.w #2,anim_frame` then loads the
+        // next (frame,delay). The $F4 handler loc_845CC does `clr.b anim_frame`, so
+        // every animation run restarts at offset 0 with a stale-negative timer — the
+        // FIRST animating frame therefore advances immediately past the leading
+        // (2,$3) pair to the (3,$3) pair. The visible run is frames 3,4,3,2 and it
+        // lasts exactly 29 frames from ball spawn to bit-1 clear, verified against the
+        // recorded ROM trace (container ANIM state spans f139-f167, f189-f217,
+        // f627-f656, f675-f704 … = 29 frames every cycle). The prior model iterated
+        // all five pairs (32 frames), making the machine dispense cycle 3 frames too
+        // long; the cadence drifted enough to drop the f675 push-ball so the player
+        // was never launched at f728.
+        private static final int[] ANIM_TABLE = {2, 3, 3, 3, 4, 0xF, 3, 3, 2, 3, 0xF4};
         private static final int IDLE_FRAME = 2;
 
         private enum State { DORMANT, ANIMATING }
         private GumballMachineObjectInstance parent;
         private int offsetFromMachine; // Y offset (ROM: +$24)
         private State state = State.DORMANT;
-        private int animStep;
-        private int animTimer;
+        private int animStep;  // ROM anim_frame: byte offset into ANIM_TABLE
+        private int animTimer;  // ROM anim_frame_timer
         private int currentFrame = IDLE_FRAME;
 
         ContainerDisplayChild(ObjectSpawn spawn, GumballMachineObjectInstance parent,
@@ -1001,26 +1058,33 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
             if (state == State.DORMANT) {
                 if (parent.isBit3Set()) {
                     state = State.ANIMATING;
+                    // ROM: anim_frame is 0 (cleared by the previous run's $F4 handler)
+                    // and anim_frame_timer is stale-negative, so the first ANIMATING
+                    // frame advances at once. currentFrame stays IDLE this frame:
+                    // loc_60E5C spawns the ball but does not animate the container
+                    // until the following frame's loc_60E8C call.
                     animStep = 0;
-                    animTimer = ANIM_PAIRS[0][1] + 1;
-                    currentFrame = ANIM_PAIRS[0][0];
+                    animTimer = 0;
                     int spawnY = parent.getCurrentY() + offsetFromMachine;
-                    parent.onContainerSpawnBall(spawn.x(), spawnY);
+                    parent.onContainerSpawnBall(spawn.x(), spawnY, this::getY);
                 }
                 return;
             }
-            // ANIMATING
-            animTimer--;
-            if (animTimer <= 0) {
-                animStep++;
-                if (animStep >= ANIM_PAIRS.length) {
+            // ANIMATING — Animate_RawNoSSTMultiDelay emulation.
+            animTimer--;                 // subq.b #1,anim_frame_timer
+            if (animTimer < 0) {         // bpl skips the advance while timer stays >= 0
+                animStep += 2;           // addq.w #2,anim_frame
+                int frame = ANIM_TABLE[animStep];
+                if (frame >= 0x80) {     // bmi: control byte ($F4)
+                    // loc_845CC: run $34 (loc_60EA2 clears machine bits 1+3) + clr.b anim_frame.
                     parent.onContainerAnimComplete();
                     state = State.DORMANT;
                     currentFrame = IDLE_FRAME;
+                    animStep = 0;
                     return;
                 }
-                currentFrame = ANIM_PAIRS[animStep][0];
-                animTimer = ANIM_PAIRS[animStep][1] + 1;
+                currentFrame = frame;
+                animTimer = ANIM_TABLE[animStep + 1];
             }
         }
 
