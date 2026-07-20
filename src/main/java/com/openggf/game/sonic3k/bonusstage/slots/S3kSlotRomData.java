@@ -81,7 +81,16 @@ public final class S3kSlotRomData {
             0x0D, 0x0E, 0x0F,
             0x0D, 0x0E, 0x0F
     };
-    public static final int SLOT_WALL_COLOR_DELAY = 1;
+    // ROM slot-wall flash animation (sonic3k.asm loc_4B65A, 98499-98515) advances one
+    // colour frame every 2 game-frames: the timer idiom `subq.b #1,2(a0) / bpl (wait) /
+    // move.b #1,2(a0)` reloads the countdown with 1, giving a period of reset+1 = 2 ticks
+    // per frame (not 1). With 24 colour frames (byte_4B688) that is a ~48-frame flash. The
+    // flash keeps the hit reel cell a plain-solid (0x0D-0x0F, non-special) until it restores
+    // the advanced tile, which gates how fast a reel wall re-advances 1->2->3->4 on repeated
+    // hits (tile 4 is the goal, loc_4BED0/loc_4BF30). A period of 1 flashed twice as fast,
+    // turning a repeatedly-hit reel cell into a goal ~72 frames early and firing a spurious
+    // goal-exit (slots trace frame 809: cell 188 became tile 4 at ~666 vs ROM ~738).
+    public static final int SLOT_WALL_COLOR_DELAY = 2;
 
     private S3kSlotRomData() {
     }
