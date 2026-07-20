@@ -290,13 +290,13 @@ Expected: PASS with no blanket baseline count increase.
 ### Task D3.3: Initialize the CNZ electric ball from Obj51
 
 **Files:**
-- Modify: `src/main/java/com/openggf/game/sonic2/objects/bosses/CNZBossElectricBall.java`
+- Inspect: `src/main/java/com/openggf/game/sonic2/objects/bosses/CNZBossElectricBall.java`
 - Test: `src/test/java/com/openggf/tests/TestCNZBossArtAndAnimation.java`
 
-- [ ] Run `electricBallUsesObj51ProjectileMappingFrames`; expected frame `0x12` at X=0 instead of `0x2A46`.
-- [ ] Add attached/split position assertions and initialize native centre coordinates from the owning Obj51 relationship before first render.
-- [ ] Run the full class; expected PASS.
-- [ ] Commit as `fix: attach CNZ electric ball mapping`, updating `CHANGELOG.md`.
+- [x] Run `electricBallUsesObj51ProjectileMappingFrames`; observed frame `0x12` at X=0 instead of `0x2A46`.
+- [x] Trace Obj51 allocation ownership: production already captures the ROM-visible parent `x_pos` in the child `ObjectSpawn`; correct the synthetic fixture to use that canonical coordinate and assert attached native centre coordinates before first render. Existing split-position coverage remains in `TestSonic2CNZBossCollision`.
+- [x] Run the full class, CNZ boss collision/position suite, and ROM-backed Obj51 mapping decoder; all 18 tests pass.
+- [x] Commit as `test: align CNZ electric ball mapping fixture`, updating `CHANGELOG.md`.
 
 ### Task D3.4: Restore the S3K seamless-results ready handshake
 
