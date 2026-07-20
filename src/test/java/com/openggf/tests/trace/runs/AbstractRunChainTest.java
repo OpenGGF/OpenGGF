@@ -106,6 +106,14 @@ abstract class AbstractRunChainTest {
         Integer bootAct = first.segment().act();
         assertNotNull(bootZone, "First segment must declare a zone_id: " + runDir);
         assertNotNull(bootAct, "First segment must declare an act: " + runDir);
+        // Manifest `act` is 1-indexed ROM act numbering (Act 1, Act 2, ...) --
+        // the same convention TraceCatalog.TraceEntry already applies
+        // (engineAct = act - 1) -- while loadZoneAndAct/HeadlessTestFixture take
+        // a 0-indexed act (see e.g. TestS1Ghz1CompleteRunTraceReplay.act()==0 for
+        // GHZ Act 1). Convert once here at boot; every other manifest-driven
+        // caller in this class does the same conversion where it compares
+        // against engine state (see assertNextActAdvance).
+        int bootActIndex = bootAct - 1;
 
         // --- Step 2: boot segment 0 ---------------------------------------------
         TraceData trace0 = first.trace();
@@ -118,7 +126,7 @@ abstract class AbstractRunChainTest {
         // afterward -- TraceReplayDriver.start() performs its own full reset +
         // team registration + level load, so a stale cached sprite reference
         // would desync from the engine's actual roster.
-        HeadlessTestFixture.builder().withZoneAndAct(bootZone, bootAct).build();
+        HeadlessTestFixture.builder().withZoneAndAct(bootZone, bootActIndex).build();
         InputHandler inputHandler = new InputHandler();
         GameLoop loop = new GameLoop(inputHandler);
 
@@ -129,7 +137,7 @@ abstract class AbstractRunChainTest {
         LiveEngineFixture fixture = new LiveEngineFixture(movie);
         TraceReplayDriver driver = new TraceReplayDriver(
                 trace0, movie, fixture, loop, fixture::sprite, () -> { });
-        driver.start(bootZone, bootAct);
+        driver.start(bootZone, bootActIndex);
 
         PlaybackDebugManager playback = GameServices.playbackDebug();
         RealEngineHooks hooks = new RealEngineHooks(loop);
@@ -169,7 +177,7 @@ abstract class AbstractRunChainTest {
                 // This segment is an INTERIOR; its exit (stage_exit) returns to a
                 // level. Await the mode==LEVEL poll, assert carry-over, rebind.
                 BoundaryObservation obs =
-                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, loop::step);
+                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, () -> stepEngineFrame(loop));
                 assertTrue(obs.observed(),
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
@@ -182,7 +190,7 @@ abstract class AbstractRunChainTest {
                 // interior at i+1. Await the transient entry request, then hand
                 // off into the interior mode.
                 BoundaryObservation obs =
-                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, loop::step);
+                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, () -> stepEngineFrame(loop));
                 assertTrue(obs.observed(), "Segment exit boundary (" + exit.entryKind()
                         + ") was never observed within the boundary window for " + runDir);
                 maybeWriteReport(run.runId(), i, activeComparator);
@@ -335,7 +343,9 @@ abstract class AbstractRunChainTest {
         if (returnAct != null && preAct != null) {
             assertNotEquals(preAct.intValue(), returnAct.intValue(),
                     "Manifest next-act shape: return act must differ from pre-entry act for " + runDir);
-            assertEquals(returnAct.intValue(), GameServices.level().getCurrentAct(),
+            // Manifest `act` is 1-indexed ROM act numbering; getCurrentAct() is
+            // 0-indexed (see the boot-time conversion note in runChain).
+            assertEquals(returnAct.intValue() - 1, GameServices.level().getCurrentAct(),
                     "Next-act advance (act) after special-stage return for " + runDir);
         }
         Integer returnZone = returnLevel.segment().zoneId();
@@ -368,7 +378,30 @@ abstract class AbstractRunChainTest {
 
     private static void stepFrames(GameLoop loop, int frameCount) {
         for (int f = 0; f < frameCount; f++) {
-            loop.step();
+            stepEngineFrame(loop);
+        }
+    }
+
+    /**
+     * Advances one engine frame AND pumps {@link com.openggf.graphics.FadeManager#update()}.
+     * The real windowed loop advances the fade every frame via
+     * {@code UiRenderPipeline.updateFade()}, called from {@code Engine.display()}
+     * during rendering -- {@link GameLoop#step()} itself never touches
+     * {@code FadeManager} (rendering is a separate concern from the headless
+     * gameplay tick). A ROM-accurate transition that gates its completion
+     * callback behind a fade (e.g. S1's Got-Through-card ->
+     * {@code requestSpecialStageFromCheckpoint()} after
+     * {@code fadeManager.startFadeToWhite(...)}) would otherwise never fire in
+     * this headless, render-less chain drive: the fade would stay armed forever
+     * and the transient boundary request it raises would never latch. Every
+     * {@code loop.step()} call in this class routes through this helper so the
+     * chain matches production's per-frame fade advancement.
+     */
+    private static void stepEngineFrame(GameLoop loop) {
+        loop.step();
+        var fade = GameServices.fadeOrNull();
+        if (fade != null) {
+            fade.update();
         }
     }
 
@@ -380,7 +413,7 @@ abstract class AbstractRunChainTest {
     protected int waitForMode(GameLoop loop, GameMode target, int maxSteps) {
         int steps = 0;
         while (loop.getCurrentGameMode() != target) {
-            loop.step();
+            stepEngineFrame(loop);
             steps++;
             if (steps >= maxSteps) {
                 throw new AssertionError("Mode never reached " + target + " within "
@@ -393,7 +426,7 @@ abstract class AbstractRunChainTest {
     private static void waitForModeToLeave(GameLoop loop, GameMode from, int maxSteps) {
         int steps = 0;
         while (loop.getCurrentGameMode() == from) {
-            loop.step();
+            stepEngineFrame(loop);
             steps++;
             if (steps >= maxSteps) {
                 throw new AssertionError("Mode never left " + from + " within "
