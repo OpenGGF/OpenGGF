@@ -2055,8 +2055,21 @@ public class GameLoop {
      */
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                                      boolean fadeFromBlack) {
-        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack,
-                defaultSpecialStageStartupPolicy());
+        SpecialStageStartupPolicy startupPolicy = defaultSpecialStageStartupPolicy();
+        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy);
+        if (startupPolicy == SpecialStageStartupPolicy.TRACE_ACCURATE) {
+            // TraceSessionLauncher#enterSpecialStageTrace pairs its TRACE_ACCURATE
+            // entry with provider.setLagCompensation(0) -- "startup observations
+            // and external frame pacing are independent contracts". A BK2-driven
+            // caller reaching this organic entry path needs the same pairing: the
+            // provider's stateless lag model would insert ADDITIONAL synthetic
+            // skipped frames on top of the real cadence the caller drives,
+            // desyncing object timing from the recorded run. Disabling it here
+            // (before the provider's first post-entry tick; reset() does not
+            // touch this field) is the same force-off switch the standalone SS
+            // trace-replay harnesses already require.
+            ssProvider.setLagCompensation(0);
+        }
     }
 
     /**
