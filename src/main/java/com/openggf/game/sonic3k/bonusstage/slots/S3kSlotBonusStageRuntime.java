@@ -140,6 +140,18 @@ public final class S3kSlotBonusStageRuntime {
             if (slotPlayerRuntime.isExitComplete()) {
                 exitTriggered = true;
             }
+            // ROM's per-frame object dispatch always falls through to the shared
+            // loc_4B97C tail -- Animate, DPLC, sub_4BBF4 (camera track), Draw_Sprite
+            // -- no matter which routine(a0) branch ran, including the goal-exit
+            // handler (loc_4BC1E, sonic3k.asm:98964-99005) and its self-modified
+            // palette-fade successor (loc_4BC54, sonic3k.asm:98981-99005, which
+            // itself ends with `bra.w loc_4B97C`). Skipping updateCamera() here
+            // left the engine's camera frozen at whatever value it held the frame
+            // before the goal fired, instead of the ROM's actively-recomputed (but
+            // numerically stable, since the player's position is frozen too) value
+            // (TestS3kSlotsBonusTraceReplay frame 868: expected camera=(04D2,02C8)
+            // vs the engine's stale (04D3,02C9) held from frame 867).
+            updateCamera();
             updateVisuals();
             return;
         }
