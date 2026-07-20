@@ -183,7 +183,7 @@ class TestS3kSlotBonusCageObjectInstance {
         assertFalse(player.isTouchResponseSuppressedByObjectControl());
         assertFalse(player.isControlLocked());
         assertTrue(player.getAir());
-        // ROM loc_4C250 (sonic3k.asm:99566-99578): GetSineCosine returns sin in d0 / cos
+        // ROM loc_4C250 (sonic3k.asm:99533-99552): GetSineCosine returns sin in d0 / cos
         // in d1, and x_vel takes d0 (sin) while y_vel takes d1 (cos) -- the opposite
         // pairing from the jump-launch convention (sub_4BBB2). At angle 0, sin=0 and
         // cos=0x100, so the release must leave x_speed at 0 and y_speed at 0x400 (both

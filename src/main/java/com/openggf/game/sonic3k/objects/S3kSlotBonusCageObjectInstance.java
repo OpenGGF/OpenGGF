@@ -212,7 +212,7 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM loc_4C250 (sonic3k.asm:99566-99578): GetSineCosine returns sin in
+        // ROM loc_4C250 (sonic3k.asm:99533-99552): GetSineCosine returns sin in
         // d0 / cos in d1 (sonic3k.asm:3014-3015), and the launch write order is
         // `move.w d0,x_vel(a1)` then `move.w d1,y_vel(a1)` -- i.e. x_vel is the
         // SINE term and y_vel is the COSINE term. Swapping these (cos->x,
