@@ -1516,6 +1516,21 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         }
 
         @Override
+        public boolean usesPlatformObjectLandingSnap() {
+            // ROM loc_60DAC calls SolidObjectFull2_1P (sonic3k.asm:127528), whose
+            // "d6 clear" fresh-contact path falls through to the shared
+            // SolidObject_cont -> loc_1E154 top-landing branch (sonic3k.asm:41070-
+            // 41072, 41399, 41611-41637): `subq.w #1,y_pos(a1) / sub.w d3,y_pos(a1)`
+            // -- the same relative playerY-distY placement resolveContactInternal
+            // already produces. It is NOT PlatformObject_ChkYRange's absolute
+            // anchorY-groundHalfHeight-yRadius-1 snap, so that override must be
+            // skipped here or it overwrites the correct landing Y before
+            // sub_22F98's addq.w #8,y_pos(a1) bounce-compression nudge is applied,
+            // landing the player 8px too high (S3K gumball bonus trace f895).
+            return false;
+        }
+
+        @Override
         public boolean isSolidFor(PlayableEntity playerEntity) {
             return !triggered && !falling;
         }
