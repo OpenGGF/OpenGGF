@@ -188,10 +188,16 @@ abstract class AbstractRunChainTest {
                 // level. Await the mode==LEVEL poll, assert carry-over, rebind.
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, loop::step);
+                // Write the interior's comparator report BEFORE asserting the
+                // boundary was observed -- a boundary miss is frequently caused
+                // by an upstream interior divergence, and without this report a
+                // failed assertTrue below would otherwise leave no artifact to
+                // triage it from (maybeWriteReport is a no-op for uncompared
+                // special-stage interiors).
+                maybeWriteReport(run.runId(), i, activeComparator);
                 assertTrue(obs.observed(),
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
-                maybeWriteReport(run.runId(), i, activeComparator);
                 assertReturnBoundary(plans, i, runDir);
                 activeComparator = attachLevelSegment(playback, probe, movie, plans.get(i + 1), fixture);
                 i++;
@@ -201,9 +207,13 @@ abstract class AbstractRunChainTest {
                 // off into the interior mode.
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, loop::step);
+                // Report BEFORE asserting -- see the stage_exit branch above for
+                // why: a level segment's own interior divergence is the usual
+                // cause of a missed entry boundary, and this is the only report
+                // this segment's comparator will ever get if the assert throws.
+                maybeWriteReport(run.runId(), i, activeComparator);
                 assertTrue(obs.observed(), "Segment exit boundary (" + exit.entryKind()
                         + ") was never observed within the boundary window for " + runDir);
-                maybeWriteReport(run.runId(), i, activeComparator);
                 activeComparator = handoffIntoInterior(
                         loop, playback, probe, movie, plans.get(i + 1), stepCap, fixture);
                 i++;
