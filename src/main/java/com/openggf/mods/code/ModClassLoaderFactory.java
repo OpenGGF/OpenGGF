@@ -55,6 +55,12 @@ public final class ModClassLoaderFactory {
 
     public ModRuntime create(EffectiveModCatalog catalog, Set<String> trustedCodeOwners)
             throws IOException {
+        return create(catalog, trustedCodeOwners, true);
+    }
+
+    public ModRuntime create(EffectiveModCatalog catalog, Set<String> trustedCodeOwners,
+                             boolean compiledModsSupported)
+            throws IOException {
         Objects.requireNonNull(catalog, "catalog");
         Set<String> trusted = Set.copyOf(Objects.requireNonNull(trustedCodeOwners,
                 "trustedCodeOwners"));
@@ -67,6 +73,11 @@ public final class ModClassLoaderFactory {
         try {
             for (ModDescriptor descriptor : catalog.orderedEnabled()) {
                 String owner = descriptor.manifest().id();
+                if (descriptor.containsCode() && !compiledModsSupported) {
+                    rejections.put(owner, rejection(ModRuntime.RejectionReason.NATIVE_UNSUPPORTED,
+                            "code-bearing mods are unsupported on OpenGGF native builds"));
+                    continue;
+                }
                 if (descriptor.containsCode() && !trusted.contains(owner)) continue;
                 String unavailableDependency = descriptor.manifest().dependencies().stream()
                         .map(ModDependency::id)
