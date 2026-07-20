@@ -590,12 +590,12 @@ public class GameLoop {
         this.legalDisclaimerExitHandler = legalDisclaimerExitHandler;
     }
 
-    public void setNativeModNoticeScreenSupplier(
+    void setNativeModNoticeScreenSupplier(
             Supplier<com.openggf.game.NativeModNoticeScreen> supplier) {
         this.nativeModNoticeSupplier = supplier;
     }
 
-    public void setNativeModNoticeExitHandler(Runnable handler) {
+    void setNativeModNoticeExitHandler(Runnable handler) {
         this.nativeModNoticeExitHandler = handler;
     }
 
