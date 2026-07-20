@@ -27,12 +27,13 @@ class TestTopSolidRoutineProfileAdoption {
         assertEquals(SolidRoutineProfile.class, method.getReturnType());
         assertTrue(platform.isTopSolidOnly());
 
-        // Independent expectation: the floating platform is a top-solid object that
-        // inherits the default sticky-contact buffer (it does not override
-        // usesStickyContactBuffer()), so its profile must equal topSolid(true) built
-        // without reference to the SUT's own accessor.
+        // Independent expectations from Obj_FloatingPlatform's SolidObjectTop call:
+        // d3 is height_pixels + 1 and landing keeps SolidObjectTop's relative
+        // y_pos += d0 + 3 result instead of PlatformObject's absolute snap.
         SolidRoutineProfile profile = platform.getSolidRoutineProfile();
-        assertEquals(SolidRoutineProfile.topSolid(true), profile);
+        assertEquals(0x21, platform.getSolidParams().groundHalfHeight());
+        assertTrue(profile.usesGroundHalfHeightForTopSolidContact());
+        assertFalse(profile.usesPlatformLandingSnap());
 
         // Concrete observable fields of the top-solid routine.
         assertEquals(SolidRoutineKind.TOP_SOLID_ONLY, profile.kind());
