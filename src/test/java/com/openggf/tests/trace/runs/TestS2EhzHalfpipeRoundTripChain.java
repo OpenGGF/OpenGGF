@@ -97,7 +97,7 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
 
     @Test
     void ehzHalfpipeRoundTrip() throws Exception {
-        runChain(RUN_DIR);
+        assertChainReplay(RUN_DIR);
     }
 
     /**

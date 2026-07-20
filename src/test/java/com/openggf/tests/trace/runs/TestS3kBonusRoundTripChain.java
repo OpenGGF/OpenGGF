@@ -35,13 +35,13 @@ class TestS3kBonusRoundTripChain extends AbstractRunChainTest {
     void gumballRoundTrip() throws Exception {
         Assumptions.assumeTrue(Files.isDirectory(RUN_DIR_GUMBALL),
                 "Run directory not found: " + RUN_DIR_GUMBALL);
-        runChain(RUN_DIR_GUMBALL);
+        assertChainReplay(RUN_DIR_GUMBALL);
     }
 
     @Test
     void pachinkoRoundTrip() throws Exception {
         Assumptions.assumeTrue(Files.isDirectory(RUN_DIR_PACHINKO),
                 "Run directory not found: " + RUN_DIR_PACHINKO);
-        runChain(RUN_DIR_PACHINKO);
+        assertChainReplay(RUN_DIR_PACHINKO);
     }
 }

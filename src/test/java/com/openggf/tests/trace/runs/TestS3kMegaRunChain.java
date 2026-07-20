@@ -24,6 +24,6 @@ class TestS3kMegaRunChain extends AbstractRunChainTest {
 
     @Test
     void multiBonusSpecialStageRoundTrip() throws Exception {
-        runChain(RUN_DIR);
+        assertChainReplay(RUN_DIR);
     }
 }

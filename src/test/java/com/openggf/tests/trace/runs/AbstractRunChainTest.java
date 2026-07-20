@@ -81,7 +81,7 @@ abstract class AbstractRunChainTest {
      * and plans the run, boots segment 0, then walks every segment, awaiting
      * each boundary the engine raises and asserting return-boundary carry-over.
      */
-    protected void runChain(Path runDir) throws Exception {
+    protected void assertChainReplay(Path runDir) throws Exception {
         // --- Step 1: load + validate manifest, plan segments (manifest-driven) --
         TraceRunManifest run;
         try {

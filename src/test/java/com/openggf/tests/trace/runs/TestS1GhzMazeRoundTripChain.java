@@ -35,7 +35,7 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
 
     @Test
     void ghzMazeRoundTrip() throws Exception {
-        runChain(RUN_DIR);
+        assertChainReplay(RUN_DIR);
     }
 
     /**
