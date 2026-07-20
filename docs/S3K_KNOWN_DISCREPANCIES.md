@@ -1039,3 +1039,48 @@ differs from the original hardware's power-on-relative VBlank count, exactly as 
 frame-0 roll. This is the same underlying counter gap surfacing at a second, independent call site,
 not a new discrepancy; the correct fix is the same deferred persistent VBlank-driven global counter
 described above, which would resolve both sites at once.
+
+### Resolution (trace replay only): metadata-primed `V_int_run_count` base
+
+Unlike the Gumball reseed above (a single frame-0 read, satisfied once the shared RNG is primed),
+`Slots_CycleOptions` reads `V_int_run_count` on an ongoing basis across the whole slots bonus stage,
+so priming the shared RNG once at bootstrap cannot cover it. Recorder v6.32-s3k+ instead captures the
+ROM `V_int_run_count` longword (sonic3k.constants.asm:790, `CrossResetRAM+$0C`) once at bonus-segment
+arm time and emits it as decimal `metadata.v_int_run_count`, for gumball/pachinko/slots segments
+(zone ids `0x13`-`0x15`; harmless no-op field for gumball/pachinko, which do not consume it).
+`TraceReplaySessionBootstrap.applyBonusStageEntry` reads `TraceMetadata#recordedVIntRunCount()` and,
+when present and the segment is `SLOT_MACHINE`, calls
+`S3kSlotBonusStageRuntime.primeVIntRunCountForReplay(recordedBase)` immediately after
+`onDeferredSetupComplete()` (same comparison-bootstrap "load a save state" pattern as
+`applyInitialRngSeedForReplay`/`metadata.rng_seed`, and gated the same data-driven way — no
+zone/route/frame carve-out). `globalVIntRunCounter()` then returns `recordedBase +
+ticks-elapsed-since-priming` (ticks measured off the same `ObjectManager.vblaCounter` used before,
+so the *cadence* is unchanged — only the base value moves) instead of the raw per-session
+`vblaCounter` value.
+
+**Measured effect (`TestS3kSlotsBonusTraceReplay`, `s3-knux-multibonus-ss`/`slots`):** this closes the
+specific divergence this section originally cited (rings 75→76 at the trace's first reel resolution,
+previously observed at frame ~269-271): with the base primed, that same reel resolves correctly and
+the first divergence moves to frame 301 (still a `rings` off-by-one, now on a *later* reel cycle — the
+machine cycles through multiple spins across the 1200-frame segment, each an independent
+`Slots_CycleOptions` pass). Total report error-group count moved from 179 to 182 — a later frontier
+that *unmasks* further reel-cycle divergences the original frame-271 cascade had been hiding, not a
+regression in the fix itself: three separate `+1`/`-1`-scale `rings` mismatches remain (frames 301,
+849, and a larger 971-1029 cluster consistent with a subsequently-diverged reward/exit path). A small
+sweep of the tick-alignment constant (base+0 vs base+1 vs base+2 ticks-since-priming) confirmed
+base+1 — the natural, no-fudge-factor result of priming once before the trace's frame 0 and reading
+back after that frame's own `ObjectManager.update()` VBlank tick — is the local optimum; shifting
+either direction strictly worsens both the error count and the frontier, so the residual is not a
+further constant-offset bug. It is most likely either (a) a second, independent
+`Slots_CycleOptions`-consumption timing wrinkle across multi-spin cycles, or (b) a lag/pause-frame
+VBla-counter parity gap specific to this trace's later frames, and is left as an open, still-tracked
+frontier item rather than force-fit with an unjustified per-cycle correction.
+
+**Residual gap (unchanged):** live play and legacy traces recorded before v6.32-s3k still fall back to
+raw `ObjectManager.vblaCounter` with no base correction — the underlying gap described above (a
+per-gameplay-session counter standing in for hardware's power-on-relative `V_int_run_count`) is
+**not** closed for live play; only trace replay's reproducibility of a specific recorded run's *first*
+reel cycle is fixed, with a further multi-cycle/lag-parity gap left open per the measured effect above.
+The correct live-play fix remains the same deferred persistent VBlank-driven global counter mentioned
+above, which would resolve both the Gumball and Slots call sites (and this replay-only workaround) at
+once.
