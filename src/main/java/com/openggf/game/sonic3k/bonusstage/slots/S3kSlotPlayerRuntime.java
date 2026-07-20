@@ -30,6 +30,16 @@ public final class S3kSlotPlayerRuntime {
     // must see the ground-only position, not the fully-stepped one.
     private int groundProjectedOriginX;
     private int groundProjectedOriginY;
+    // ROM loc_4BA98 (sonic3k.asm:98776-98780) runs sub_4BDCA (ring pickup) and
+    // sub_4BE3A (tile dispatch -- bumper launch, goal, spike, reel) BEFORE the
+    // jsr MoveSprite2 that folds the just-updated x_vel/y_vel into x_pos/y_pos.
+    // The bumper branch (loc_4BE5A, sonic3k.asm:99213-99239) overwrites x_vel/y_vel
+    // with the launch velocity, so MoveSprite2 advances the player by the launch
+    // velocity on the SAME frame the bumper fires. This hook lets the stage runtime
+    // splice its ring/tile-dispatch work in at that exact point (between
+    // applyAirMotionWithCollision and applyVelocityStep) so the launch velocity is
+    // applied to position this frame rather than lagging into the next one.
+    private Runnable preMoveInteractionHook;
     private S3kSlotExitSequence exitSequence;
     private boolean debugActive;
     private int debugSavedStatTable;
@@ -42,6 +52,15 @@ public final class S3kSlotPlayerRuntime {
 
     public S3kSlotStageState stageState() {
         return stageState;
+    }
+
+    /**
+     * Registers the ring-pickup / tile-dispatch work (ROM sub_4BDCA + sub_4BE3A)
+     * that must run in the movement branch after air-gravity collision and before
+     * the MoveSprite2 velocity step. See {@link #preMoveInteractionHook}.
+     */
+    public void setPreMoveInteractionHook(Runnable preMoveInteractionHook) {
+        this.preMoveInteractionHook = preMoveInteractionHook;
     }
 
     public void initialize(AbstractPlayableSprite player) {
@@ -187,6 +206,12 @@ public final class S3kSlotPlayerRuntime {
         applyMoveWithCollision(player, left, right);
         captureGroundProjectedOrigin();
         applyAirMotionWithCollision(player);
+        // ROM sub_4BDCA (ring) + sub_4BE3A (tile dispatch) run here, before
+        // MoveSprite2 (sonic3k.asm:98776-98780). The bumper branch overwrites
+        // x_vel/y_vel with the launch velocity, so applyVelocityStep must see it.
+        if (preMoveInteractionHook != null) {
+            preMoveInteractionHook.run();
+        }
         applyVelocityStep(player);
         advanceRotation(false);
         syncPlayerToSlotOrigin(player);

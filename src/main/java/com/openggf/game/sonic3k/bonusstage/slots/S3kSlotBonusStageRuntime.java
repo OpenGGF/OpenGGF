@@ -79,6 +79,13 @@ public final class S3kSlotBonusStageRuntime {
         optionCycleSystem.bootstrap(slotStageState);
         slotCollisionSystem = new S3kSlotCollisionSystem(slotRenderBuffers, slotStageState);
         slotPlayerRuntime = new S3kSlotPlayerRuntime(slotStageState, slotCollisionSystem);
+        // ROM runs sub_4BDCA (ring) + sub_4BE3A (tile dispatch, incl. bumper launch)
+        // inside the player object tick, before MoveSprite2 (sonic3k.asm:98776-98780).
+        // Splice that work into the player runtime's movement branch so a bumper's
+        // launch velocity advances the player's position on the firing frame instead
+        // of lagging one frame (slots trace f446 bumper: y_pos was one MoveSprite2
+        // step behind the ROM because the dispatch ran after applyVelocityStep).
+        slotPlayerRuntime.setPreMoveInteractionHook(this::runPreMovePlayerInteractions);
         exitTriggered = false;
         slotStageController = new S3kSlotStageController(slotStageState);
         slotStageController.bootstrap();
@@ -139,10 +146,6 @@ public final class S3kSlotBonusStageRuntime {
 
         // ROM line 98745: move.b #0,$30(a0) — clear collision tile at start of frame
 
-        if (slotCollisionSystem != null) {
-            slotCollisionSystem.tickFrameState();
-        }
-
         // Option cycle system
         if (!slotStageController.isReelsFrozen()) {
             optionCycleSystem.tick(slotStageState, globalVIntRunCounter());
@@ -163,29 +166,21 @@ public final class S3kSlotBonusStageRuntime {
         // Reward objects
         updateRewards(frameCounter);
 
-        // Ring pickup from grid. ROM loc_4BA62 (sonic3k.asm:98750-98757) tests
-        // object_control(a0) BEFORE dispatching into the movement/ring/tile chain
-        // (loc_4BA94/loc_4BA98 -> sub_4BABC..sub_4BE3A) -- when the player is held
-        // by the cage grab (sub_4AF80/loc_4B130, sonic3k.asm:98136 sets
-        // object_control(a1)=3), it branches straight to loc_4BA80 and returns,
-        // never reaching sub_4BDCA (the ring-pickup check). Running the ring probe
-        // unconditionally let the engine award a ring for whatever grid cell the
-        // player happened to be parked over while grabbed, which ROM never checks.
-        if (slotRenderBuffers != null && slotPlayer != null && !slotPlayer.isDebugMode()
-                && !slotPlayer.isObjectControlled()) {
-            checkRingPickup();
-        }
-
-        // Tile interaction dispatch — collision was already handled inline by player physics.
-        // Read stored tile ID from controller (set during physics collision check).
-        if (slotPlayer != null && slotStageState != null && !slotPlayer.isDebugMode()
-                && slotStageState.lastCollisionTileId() > 0) {
-            dispatchTileInteraction();
-            int collisionTileId = slotStageState.lastCollisionTileId();
-            if (collisionTileId < 1 || collisionTileId > 3) {
-                slotStageState.clearSlotWallContact();
+        // Ring pickup (sub_4BDCA) + tile dispatch (sub_4BE3A) + throttle tick now
+        // run inside the player runtime's movement branch via the pre-move hook
+        // (runPreMovePlayerInteractions), which fires between air-gravity collision
+        // and MoveSprite2 (sonic3k.asm:98776-98780) -- so a bumper's launch velocity
+        // advances the player's position on the firing frame. When the player is
+        // object-controlled (cage grab) or in debug/placement mode, that movement
+        // branch (and thus the hook) never runs -- mirroring ROM loc_4BA80, which
+        // skips the whole sub_4BABC..sub_4BE3A chain. Keep the per-frame throttle
+        // tick + slot-wall contact reset for those frames so their timers still bleed
+        // down exactly as they did when this ran unconditionally at frame top.
+        if (slotStageState != null && (slotPlayer == null || slotPlayer.isDebugMode()
+                || slotPlayer.isObjectControlled())) {
+            if (slotCollisionSystem != null) {
+                slotCollisionSystem.tickFrameState();
             }
-        } else if (slotStageState != null) {
             slotStageState.clearSlotWallContact();
         }
 
@@ -277,6 +272,17 @@ public final class S3kSlotBonusStageRuntime {
 
     public S3kSlotPlayerRuntime slotPlayerRuntimeForTest() {
         return slotPlayerRuntime;
+    }
+
+    /**
+     * Runs the movement-branch ring/tile-dispatch hook (ROM sub_4BDCA + sub_4BE3A)
+     * directly, without driving a full player physics tick. Tests that inject a
+     * ground-projected origin and a grid tile use this to exercise ring pickup /
+     * tile dispatch in isolation, matching the point where the player runtime
+     * invokes it in production (between air collision and MoveSprite2).
+     */
+    public void runPreMovePlayerInteractionsForTest() {
+        runPreMovePlayerInteractions();
     }
 
     public S3kSlotOptionCycleSystem optionCycleSystemForTest() {
@@ -414,6 +420,40 @@ public final class S3kSlotBonusStageRuntime {
                 panelY,
                 S3kSlotMachineRenderer.computeDisplayScreenX(panelX, 0),
                 S3kSlotMachineRenderer.computeDisplayScreenY(panelY, 0));
+    }
+
+    /**
+     * ROM movement-path tail (loc_4BA98, sonic3k.asm:98776-98780): sub_4BDCA (ring
+     * pickup) then sub_4BE3A (tile dispatch + throttle bleed-down) run here, before
+     * {@code jsr MoveSprite2} folds the just-updated x_vel/y_vel into x_pos/y_pos.
+     * Registered as the player runtime's pre-move hook so a bumper launch
+     * (loc_4BE5A) overwrites x_vel/y_vel in time for this frame's velocity step.
+     * Only reached on free-movement frames; object-controlled (cage grab) and debug
+     * frames skip the movement branch entirely and are covered by the throttle/
+     * slot-wall fallback in {@link #update}, mirroring ROM loc_4BA80.
+     */
+    private void runPreMovePlayerInteractions() {
+        // ROM sub_4BE3A bleeds its $36/$37 throttles down on the no-special-tile
+        // path; the engine keeps a single per-frame throttle tick immediately before
+        // dispatch so the spike/slot-wall gates observe the same pre-decrement value
+        // they saw when this ran at frame top.
+        if (slotCollisionSystem != null) {
+            slotCollisionSystem.tickFrameState();
+        }
+        if (slotRenderBuffers != null && slotPlayer != null && !slotPlayer.isDebugMode()
+                && !slotPlayer.isObjectControlled()) {
+            checkRingPickup();
+        }
+        if (slotPlayer != null && slotStageState != null && !slotPlayer.isDebugMode()
+                && slotStageState.lastCollisionTileId() > 0) {
+            dispatchTileInteraction();
+            int collisionTileId = slotStageState.lastCollisionTileId();
+            if (collisionTileId < 1 || collisionTileId > 3) {
+                slotStageState.clearSlotWallContact();
+            }
+        } else if (slotStageState != null) {
+            slotStageState.clearSlotWallContact();
+        }
     }
 
     private void checkRingPickup() {

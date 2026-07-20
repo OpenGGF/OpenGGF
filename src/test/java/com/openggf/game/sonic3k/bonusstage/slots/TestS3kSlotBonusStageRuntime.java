@@ -330,7 +330,11 @@ class TestS3kSlotBonusStageRuntime {
         // doesn't fire on stale state and stomp the ring tile this test just placed.
         runtime.stageStateForTest().clearCollision();
 
-        runtime.update(0);
+        // Ring pickup (ROM sub_4BDCA) now runs inside the player runtime's movement
+        // branch, spliced in before MoveSprite2 (sonic3k.asm:98776-98780) so a bumper
+        // launch reaches the same frame's velocity step. update() no longer owns it;
+        // drive the hook directly here after seeding the ground-projected origin.
+        runtime.runPreMovePlayerInteractionsForTest();
 
         // consumeRing zeroes both layout arrays at this index, but startRingAnimationAt
         // (called right after, in the same checkRingPickup branch) immediately writes
