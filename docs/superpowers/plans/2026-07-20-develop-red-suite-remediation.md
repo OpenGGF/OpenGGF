@@ -282,7 +282,7 @@ Expected: PASS with no blanket baseline count increase.
 - Modify: `src/main/java/com/openggf/game/sonic3k/objects/S3kBossDefeatSignpostFlow.java`
 - Test: `src/test/java/com/openggf/tests/TestS3kIczMinibossObject.java`
 
-- [x] Run the named PalPointers method; the assertion stopped one object pass before cleanup after the ROM-accurate initialization-pass split.
+- [x] Run the named PalPointers method; the assertion stopped after the installation call plus 119 `WAIT_FADE` decrements (call 120), one object call before cleanup (call 121).
 - [x] Preserve the registry-backed `S3kPaletteWriteSupport`/immediate-resolution path and assert the ICZ miniboss owner on both ends of the restored line.
 - [x] Run the full ICZ class and palette-ownership tests; expected PASS.
 - [x] Commit as `test: align ICZ2 post-boss palette cleanup`, updating `CHANGELOG.md`.

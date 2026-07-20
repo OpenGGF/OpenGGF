@@ -450,15 +450,15 @@ class TestS3kIczMinibossObject {
             flow.update(frame, player);
         }
 
-        // Obj_EndSignControl's installation pass returns before Obj_Wait starts.
-        // The $77 timer then invokes AfterBoss_Cleanup after 120 wait passes.
+        // Obj_EndSignControl's installation call returns before Obj_Wait starts.
+        // Calls 2-120 perform 119 WAIT_FADE decrements; call 121 runs cleanup.
         assertColorWord(palettes[1], 1, 0x0000);
         flow.update(121, player);
 
         assertColorWord(palettes[1], 1, 0x0EEE);
         assertColorWord(palettes[1], 15, 0x0CCC);
         assertEquals(S3kPaletteOwners.ICZ_MINIBOSS,
-                services.paletteOwnershipRegistry.ownerAt(PaletteSurface.NORMAL, 1, 1));
+                services.paletteOwnershipRegistry.ownerAt(PaletteSurface.NORMAL, 1, 0));
         assertEquals(S3kPaletteOwners.ICZ_MINIBOSS,
                 services.paletteOwnershipRegistry.ownerAt(PaletteSurface.NORMAL, 1, 15));
     }
