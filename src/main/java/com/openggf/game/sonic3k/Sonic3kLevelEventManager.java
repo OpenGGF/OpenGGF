@@ -207,7 +207,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             cnzEvents = null;
         }
         if (zone == Sonic3kZoneIds.ZONE_HCZ) {
-            hczEvents = new Sonic3kHCZEvents();
+            hczEvents = new Sonic3kHCZEvents(() -> GameServices.rng().nextRaw());
             hczEvents.init(act);
         } else {
             hczEvents = null;
@@ -1805,7 +1805,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     private static Object newHczFramingProbe() {
-        Sonic3kHCZEvents probe = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents probe = new Sonic3kHCZEvents(() -> 0);
         probe.init(0);
         return probe;
     }

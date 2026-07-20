@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Refactor: HCZ transition-bubble creation now receives its `Random_Number` word source from `Sonic3kLevelEventManager` instead of reaching through `GameServices` inside the zone handler. This is behavior-neutral: production still consumes exactly one shared S3K RNG result per bubble, while the event runtime-access guard now remains green.
 - Fix: MGZ Knuckles boss choreography and HCZ blade-impact effects now retire through the shared object-lifetime operations with explicit one-shot, non-respawnable semantics; the lifecycle guard keeps its 582 ceiling while accepting reductions below that budget.
 - Fix: S3K Slots player synchronization, Pachinko magnet-orb roll release, and Slots cage capture now route their native playable-position word writes through `NativePositionOps`, preserving the same integer centres and subpixel fractions behind the canonical shared API.
 - Fix: WFZ breakable plating and the MGZ miniboss ceiling spire now declare their sustained-overlap and shield-deflect behavior through canonical touch-response profiles, keeping the legacy hooks and dispatcher policy sourced from the same typed values.

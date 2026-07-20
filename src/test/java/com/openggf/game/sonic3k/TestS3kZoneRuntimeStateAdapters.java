@@ -59,7 +59,7 @@ class TestS3kZoneRuntimeStateAdapters {
 
     @Test
     void hczAdapterMirrorsTransitionFlagAndRoutine() {
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
         events.init(0);
         events.setEventsFg5(true);
         events.setDynamicResizeRoutine(8);
@@ -76,7 +76,7 @@ class TestS3kZoneRuntimeStateAdapters {
 
     @Test
     void hczAdapterExposesBackgroundPlaneWindowInAllAct2BgStates() {
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
         events.init(1);
         HczZoneRuntimeState state = new HczZoneRuntimeState(
                 1, PlayerCharacter.SONIC_AND_TAILS, events);
@@ -92,7 +92,7 @@ class TestS3kZoneRuntimeStateAdapters {
 
     @Test
     void hczAdapterReportsNoBackgroundPlaneWindowInAct1() {
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
         events.init(0);
         HczZoneRuntimeState state = new HczZoneRuntimeState(
                 0, PlayerCharacter.SONIC_AND_TAILS, events);
