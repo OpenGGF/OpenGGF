@@ -196,18 +196,23 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // First byte (3) is the per-frame timer; frames are 5, 6, 7, $14, 5, then the $F4
     // control byte invokes the object's $34 routine (loc_60D32) which sets machine bit 3
     // and dispenses the ball.
-    private static final int[] SPIN_FRAMES = {5, 6, 7, 0x14, 5};
+    // ROM Animate_RawNoSST (sonic3k.asm:177341): `subq.b #1,anim_frame_timer / bpl skip`,
+    // else reload anim_frame_timer from the duration byte (3, i.e. held 4 calls) and
+    // advance to the NEXT table entry. anim_frame_timer is 0 on SPIN entry
+    // (SetUp_ObjAttributes clears it and the IDLE state never animates), so the FIRST
+    // call's `subq.b #1` immediately goes negative and advances past table[0]=5 (never
+    // displayed) straight to table[1]=6 -- table[0]=5 is only ever the frame set by
+    // SetUp_ObjAttributes on entry into SPIN, held for zero Animate calls. Each
+    // subsequent entry (7, $14, 5) is held for a full duration+1=4 calls, so the
+    // displayed sequence is 6x4, 7x4, $14x4, 5x4 = 16 calls, and the 17th call is the
+    // one that finally decodes the $F4 control byte (dispensing the ball) without
+    // changing the displayed frame. Total: 16 held + 1 control-detect = 17.
+    private static final int[] SPIN_FRAMES = {6, 7, 0x14, 5};
     private static final int SPIN_FRAME_DURATION = 4; // ROM timer=3 + 1 for bpl check
-    // ROM Animate_RawNoSST (sonic3k.asm:177341): `subq.b #1,anim_frame_timer / bpl skip`.
-    // anim_frame_timer is 0 on SPIN entry (SetUp_ObjAttributes clears it and the IDLE
-    // state never animates), so the FIRST call advances immediately (1 game-frame), and
-    // each of the remaining 4 frames holds for timer+1 = 4. The $F4 control byte / bit-3
-    // dispense is therefore reached 1 + 4*4 = 17 frames after SPIN entry, NOT 5*4 = 20.
     // Verified against the recorded ROM trace: IDLE->SPIN at frame 122, ball dispensed at
-    // frame 139 (delta 17); the previous 20-frame model dispensed the ball 2 frames late,
-    // desyncing its fall position (and the arctan bump velocity it imparts) at pickup.
-    private static final int SPIN_TOTAL_FRAMES =
-            1 + (SPIN_FRAMES.length - 1) * SPIN_FRAME_DURATION;
+    // frame 139 (delta 17); the previous 5x4,6x4,7x4,$14x4,5x1 model got the same total
+    // (17) but the wrong per-value durations/order -- see SPIN_FRAMES citation above.
+    private static final int SPIN_TOTAL_FRAMES = SPIN_FRAMES.length * SPIN_FRAME_DURATION + 1;
 
     // ROM: ObjDat_GumballMachine byte 2 = 5 — default mapping frame (machine body)
     private static final int IDLE_MAPPING_FRAME = 5;

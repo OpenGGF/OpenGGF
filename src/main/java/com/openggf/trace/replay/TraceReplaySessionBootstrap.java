@@ -423,14 +423,14 @@ public final class TraceReplaySessionBootstrap {
         if (rng != null) {
             rng.setSeed(meta.initialRngSeed());
         }
-        // NOTE: GumballMachineObjectInstance performs its own ROM-faithful
-        // frame-0 reseed (sonic3k.asm:127412) shortly after this bootstrap
-        // seed is applied, using the engine's local vblaCounter approximation
-        // of hardware V_int_run_count. That is a real, documented divergence
-        // (see docs/S3K_KNOWN_DISCREPANCIES.md) -- it is intentionally left
-        // alone here rather than suppressed, since bootstrap code must not
-        // special-case an object's own ROM-modeled computation to protect a
-        // trace-injected value (comparison-only invariant).
+        // NOTE: GumballMachineObjectInstance previously performed its own
+        // frame-0 reseed here (sonic3k.asm:127412) using the engine's local
+        // vblaCounter approximation of hardware V_int_run_count, which
+        // clobbered this bootstrap-applied trace seed. That reseed has been
+        // removed -- see docs/S3K_KNOWN_DISCREPANCIES.md, "Resolution (no
+        // longer a divergence)" -- so GumballMachineObjectInstance no longer
+        // calls services().rng().setSeed(...); RNG state after this point
+        // comes solely from native per-frame advancement.
     }
 
     /** Maps the recorder's bonus_stage_type token to the engine enum. */
