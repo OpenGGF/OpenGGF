@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Ordinary nonzero solid-object side corrections once again snap the player's native X position to an integer pixel, while exact-edge and explicitly profiled subpixel-preserving contacts retain their fractional motion.
 - Refactor: playable frame snapshots, raw animation publication, and object-controlled solid-contact ownership now live in `PlayableSpriteController`, preserving the existing public sprite API and rewind schema while returning `AbstractPlayableSprite` below its release-critical source-size budget.
 - Refactor: HCZ transition-bubble creation now receives its `Random_Number` word source from `Sonic3kLevelEventManager` instead of reaching through `GameServices` inside the zone handler. This is behavior-neutral: production still consumes exactly one shared S3K RNG result per bubble, while the event runtime-access guard now remains green.
 - Fix: MGZ Knuckles boss choreography and HCZ blade-impact effects now retire through the shared object-lifetime operations with explicit one-shot, non-respawnable semantics; the lifecycle guard keeps its 582 ceiling while accepting reductions below that budget.

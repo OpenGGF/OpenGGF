@@ -4102,7 +4102,7 @@ final class ObjectSolidContactController {
                         if (preserveSubpixels) {
                             player.move((short) (-distX * 256), (short) 0);
                         } else {
-                            writeNativePlayerCentreX(player, playerCenterX - distX);
+                            writeSnappedPlayerCentreX(player, playerCenterX - distX);
                         }
                     }
                 }
@@ -4345,6 +4345,14 @@ final class ObjectSolidContactController {
     private void writeNativePlayerCentreX(PlayableEntity player, int centreX) {
         if (player instanceof AbstractPlayableSprite sprite) {
             NativePositionOps.writeXPosPreserveSubpixel(sprite, centreX);
+        } else {
+            player.setCentreX((short) centreX);
+        }
+    }
+
+    private void writeSnappedPlayerCentreX(PlayableEntity player, int centreX) {
+        if (player instanceof AbstractPlayableSprite sprite) {
+            NativePositionOps.writeXPosResetSubpixel(sprite, centreX);
         } else {
             player.setCentreX((short) centreX);
         }
