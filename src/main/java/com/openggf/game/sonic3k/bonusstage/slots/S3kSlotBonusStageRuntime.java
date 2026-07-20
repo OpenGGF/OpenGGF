@@ -4,11 +4,15 @@ package com.openggf.game.sonic3k.bonusstage.slots;
 import com.openggf.game.session.EngineServices;
 import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.S3kSpriteDataLoader;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance;
@@ -16,6 +20,8 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -46,6 +52,15 @@ public final class S3kSlotBonusStageRuntime {
     private S3kSlotBonusCageObjectInstance slotCage;
     private boolean continueAwarded;
     private boolean exitFadeStarted;
+    // ROM loc_4BC1E's goal-fade trigger executes `move.w #60,$38(a0)`
+    // (sonic3k.asm:98971). $38 is the character_id offset
+    // (sonic3k.constants.asm:66), so the high byte of 60 (=$003C) overwrites
+    // character_id with 0. From that frame on, the shared animate dispatcher
+    // sub_4B99E (sonic3k.asm:98683) reads character_id==0 and jumps to
+    // Animate_Sonic instead of Animate_Knuckles/Tails, so the frozen player's
+    // roll animation switches from AniKnux02/AniTails02 to AniSonic02. Latched
+    // once when the fade begins.
+    private boolean goalFadeRollOverrideApplied;
     private final List<S3kSlotRingRewardObjectInstance> slotRingRewards = new ArrayList<>();
     private final List<S3kSlotSpikeRewardObjectInstance> slotSpikeRewards = new ArrayList<>();
     private short[] pointGrid;
@@ -66,6 +81,7 @@ public final class S3kSlotBonusStageRuntime {
         slotCage = null;
         continueAwarded = false;
         exitFadeStarted = false;
+        goalFadeRollOverrideApplied = false;
         slotRingRewards.clear();
         slotSpikeRewards.clear();
         pointGrid = null;
@@ -132,6 +148,19 @@ public final class S3kSlotBonusStageRuntime {
 
         if (slotPlayerRuntime != null && slotPlayerRuntime.isExiting()) {
             slotPlayerRuntime.tickExitFrame(slotPlayer);
+            // ROM loc_4BC1E (sonic3k.asm:98964-98972): when the goal-exit
+            // rotation wind-down reaches SStage_scalar_index_1 == $1800, the
+            // trigger runs `move.w #60,$38(a0)` (sonic3k.asm:98971). $38 is the
+            // character_id field (sonic3k.constants.asm:66), so 60 (=$003C)'s
+            // high byte clobbers character_id to 0, and the shared animate
+            // dispatch sub_4B99E (sonic3k.asm:98683) thereafter runs
+            // Animate_Sonic for the frozen player -- switching the roll mapping
+            // sequence to AniSonic02 for the remaining fade frames. Latched at
+            // the same frame the fade begins.
+            if (slotPlayerRuntime.isExitFading() && !goalFadeRollOverrideApplied) {
+                applyGoalFadeSonicRollOverride();
+                goalFadeRollOverrideApplied = true;
+            }
             var fade = GameServices.fadeOrNull();
             if (slotPlayerRuntime.isExitFading() && !exitFadeStarted && fade != null) {
                 fade.startFadeToBlack(null, 0, S3kSlotExitSequence.FADE_FRAMES);
@@ -231,6 +260,7 @@ public final class S3kSlotBonusStageRuntime {
         slotCage = null;
         continueAwarded = false;
         exitFadeStarted = false;
+        goalFadeRollOverrideApplied = false;
         slotRingRewards.clear();
         slotSpikeRewards.clear();
         pointGrid = null;
@@ -543,6 +573,7 @@ public final class S3kSlotBonusStageRuntime {
                 if (GameServices.audio() != null) GameServices.audio().playSfx(Sonic3kSfx.GOAL.id);
                 slotPlayerRuntime.startGoalExit(slotPlayer);
                 exitFadeStarted = false;
+                goalFadeRollOverrideApplied = false;
             }
             case SPIKE_REVERSAL -> {
                 if (GameServices.audio() != null) GameServices.audio().playSfx(Sonic3kSfx.LAUNCH_GO.id);
@@ -873,6 +904,53 @@ public final class S3kSlotBonusStageRuntime {
         target.setControlLocked(false);
         ObjectControlState.none().applyTo(target);
         target.setOnObject(source.isOnObject());
+    }
+
+    /**
+     * ROM loc_4BC1E's goal-fade trigger overwrites {@code character_id} with 0
+     * via {@code move.w #60,$38(a0)} (sonic3k.asm:98971; {@code $38} is the
+     * character_id offset, sonic3k.constants.asm:66), so the shared animate
+     * dispatcher sub_4B99E (sonic3k.asm:98683) switches the frozen player's
+     * per-frame animate call from {@code Animate_Knuckles}/{@code Animate_Tails}
+     * to {@code Animate_Sonic}. The object keeps its own {@code mappings}
+     * (Map_Knuckles etc.), so only the mapping-frame index sequence changes:
+     * the roll script it reads becomes AniSonic02/03 instead of AniKnux02/03
+     * (which interleave {@code $9A} as the rest frame) or AniTails02/03. Model
+     * that by swapping the ROLL and ROLL2 scripts in the slot player's animation
+     * set to the Sonic-half scripts parsed from ROM, leaving anim_frame/timer
+     * (the sprite's own state, untouched by the character_id write) in phase.
+     * Runs for every character, matching the ROM's unconditional write (a no-op
+     * when the player is already Sonic).
+     */
+    private void applyGoalFadeSonicRollOverride() {
+        if (slotPlayer == null) {
+            return;
+        }
+        SpriteAnimationSet currentSet = slotPlayer.getAnimationSet();
+        if (currentSet == null) {
+            return;
+        }
+        try {
+            RomByteReader reader = RomByteReader.fromRom(GameServices.rom().getRom());
+            int base = Sonic3kConstants.SONIC_ANIM_DATA_ADDR;
+            int rollId = Sonic3kAnimationIds.ROLL.id();
+            int roll2Id = Sonic3kAnimationIds.ROLL2.id();
+            SpriteAnimationScript sonicRoll = S3kSpriteDataLoader.parseAnimationScript(
+                    reader, base + reader.readU16BE(base + rollId * 2));
+            SpriteAnimationScript sonicRoll2 = S3kSpriteDataLoader.parseAnimationScript(
+                    reader, base + reader.readU16BE(base + roll2Id * 2));
+            // Isolated copy: the live (non-slot) player, restored when the bonus
+            // ends, shares its animation set here -- keep its own roll frames.
+            SpriteAnimationSet overriddenSet = new SpriteAnimationSet();
+            for (var entry : currentSet.getAllScripts().entrySet()) {
+                overriddenSet.addScript(entry.getKey(), entry.getValue());
+            }
+            overriddenSet.addScript(rollId, sonicRoll);
+            overriddenSet.addScript(roll2Id, sonicRoll2);
+            slotPlayer.setAnimationSet(overriddenSet);
+        } catch (Exception ignored) {
+            // ROM unavailable in some harnesses: leave the character's own roll.
+        }
     }
 
     private void suppressCpuSidekicks() {
