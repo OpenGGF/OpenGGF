@@ -52,6 +52,7 @@ public final class ModManagerScreen {
     private final List<InvalidModEntry> invalidEntries;
     private final List<RepositoryScanFailure> repositoryFailures;
     private final PatternWindowState patternWindows;
+    private final boolean compiledModsSupported;
 
     private List<Row> rows = List.of();
     private int selectedIndex;
@@ -74,11 +75,18 @@ public final class ModManagerScreen {
     public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
                             ModRuntimeFindingStore runtimeFindings, TextSink text,
                             PatternWindowState patternWindows) {
+        this(catalog, editor, runtimeFindings, text, patternWindows, true);
+    }
+
+    public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
+                            ModRuntimeFindingStore runtimeFindings, TextSink text,
+                            PatternWindowState patternWindows, boolean compiledModsSupported) {
         this.catalog = Objects.requireNonNull(catalog, "catalog");
         this.editor = Objects.requireNonNull(editor, "editor");
         this.runtimeFindings = Objects.requireNonNull(runtimeFindings, "runtimeFindings");
         this.text = text;
         this.patternWindows = Objects.requireNonNull(patternWindows, "patternWindows");
+        this.compiledModsSupported = compiledModsSupported;
         Map<String, ModDescriptor> descriptors = new LinkedHashMap<>();
         Map<String, Integer> counts = new LinkedHashMap<>();
         List<ModDescriptor> scannedDescriptors = new ArrayList<>();
@@ -159,7 +167,8 @@ public final class ModManagerScreen {
             for (RowView row : visibleRows()) {
                 boolean selected = rows.get(selectedIndex).identity().equals(row.identity());
                 String prefix = selected ? "> " : "  ";
-                String enabled = row.valid() ? (row.enabled() ? "[ON] " : "[OFF]") : "[--] ";
+                String enabled = (!row.valid() || row.notLoaded()) ? "[--] "
+                        : (row.enabled() ? "[ON] " : "[OFF]");
                 String badges = row.badges().isEmpty() ? "" : " [" + String.join(",", row.badges()) + "]";
                 float brightness = selected ? 1f : 0.62f;
                 draw(prefix + enabled + " " + row.label() + badges, 8, y,
@@ -293,6 +302,17 @@ public final class ModManagerScreen {
                 ? enabledDependentClosure(id) : disabledDependencyClosure(id);
         cascade.add(id);
         if (!enabled) {
+            if (!compiledModsSupported) {
+                for (String cascadeId : cascade) {
+                    ModDescriptor cascadeDescriptor = descriptorsById.get(cascadeId);
+                    if (cascadeDescriptor != null && cascadeDescriptor.containsCode()) {
+                        statusMessage = id + " is not supported on native builds";
+                        armedCascade = null;
+                        armedTrust = null;
+                        return;
+                    }
+                }
+            }
             String refusal = enableRefusal(cascade, id);
             if (refusal != null) {
                 statusMessage = id + " cannot be enabled: " + refusal;
@@ -580,7 +600,8 @@ public final class ModManagerScreen {
 
     private RowView toView(Row row) {
         if (row.invalid() != null) {
-            return new RowView(row.identity(), row.identity(), false, false, List.of("ERROR"));
+            return new RowView(row.identity(), row.identity(), false, false, false,
+                    List.of("ERROR"));
         }
         ModDescriptor descriptor = row.descriptor();
         String id = descriptor.manifest().id();
@@ -588,12 +609,14 @@ public final class ModManagerScreen {
         ModEligibility eligibility = catalog.eligibility().get(id);
         if (eligibility != null && eligibility.status() == ModEligibility.Status.BLOCKED) badges.add("BLOCKED");
         if (descriptor.containsCode() && !isTrusted(descriptor)) badges.add("TRUST REQUIRED");
+        boolean notLoaded = descriptor.containsCode() && !compiledModsSupported;
+        if (notLoaded) badges.add("UNSUPPORTED");
         addFindingBadges(badges, descriptor.findings(), false);
         addFindingBadges(badges, runtimeFindings.findingsFor(id), true);
         String label = descriptorCounts.getOrDefault(id, 0) > 1
                 ? descriptor.manifest().name() + " (" + filename(descriptor.jarPath()) + ")"
                 : descriptor.manifest().name();
-        return new RowView(row.identity(), label, isEnabled(id), true,
+        return new RowView(row.identity(), label, isEnabled(id), true, notLoaded,
                 List.copyOf(badges));
     }
 
@@ -687,7 +710,7 @@ public final class ModManagerScreen {
     }
 
     public record RowView(String identity, String label, boolean enabled, boolean valid,
-                          List<String> badges) {
+                          boolean notLoaded, List<String> badges) {
         public RowView {
             badges = List.copyOf(badges);
         }

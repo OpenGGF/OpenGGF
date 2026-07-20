@@ -4,7 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 - Added native-build classification and a class-loader backstop for enabled
-  code-bearing mods while preserving data-only music and reskin support.
+  code-bearing mods. The Mod Manager now marks them unsupported and refuses
+  native enable cascades while preserving data-only music and reskin support.
 - **fix: MHZ1 now completes its miniboss, signpost, results, and Act 2 handoff.**
   The miniboss defeat timer, floor probe, camera-boundary worker, signpost landing
   envelope, results dispatch ordering, and transition state now follow their ROM

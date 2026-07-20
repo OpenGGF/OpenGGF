@@ -8,9 +8,11 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
 import com.openggf.graphics.PixelFont;
+import com.openggf.game.session.PatternWindowState;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.mods.EffectiveModCatalog;
+import com.openggf.mods.EffectiveCatalogBuilder;
 import com.openggf.mods.InvalidModEntry;
 import com.openggf.mods.ModCatalog;
 import com.openggf.mods.ModCatalogEntry;
@@ -657,8 +659,8 @@ class TestModManagerScreen {
         return new ModCatalog(List.copyOf(descriptors), EffectiveModCatalog.EMPTY, eligibility);
     }
 
-    private static ModDescriptor descriptor(String id, String name, List<ModDependency> dependencies,
-                                            List<ModFinding> findings) {
+    static ModDescriptor descriptor(String id, String name, List<ModDependency> dependencies,
+                                    List<ModFinding> findings) {
         return descriptorAt(id, name, Path.of(id + ".jar"), dependencies, findings);
     }
 
@@ -679,12 +681,12 @@ class TestModManagerScreen {
         return new ModDescriptor(path, manifest, "a".repeat(64), false, findings);
     }
 
-    private static ModDescriptor codeDescriptor(String id, String name, String hash) {
+    static ModDescriptor codeDescriptor(String id, String name, String hash) {
         return codeDescriptor(id, name, hash, List.of());
     }
 
-    private static ModDescriptor codeDescriptor(String id, String name, String hash,
-                                                List<ModDependency> dependencies) {
+    static ModDescriptor codeDescriptor(String id, String name, String hash,
+                                        List<ModDependency> dependencies) {
         ModManifest manifest = new ModManifest(1, id, name, SemanticVersion.parse("1.2.3"),
                 List.of("Alice"), "Compiled mod", VersionRange.parse(">=2.0.0 <3.0.0"),
                 ModType.PATCH, "s2", "example.Code", dependencies, Map.of(), Map.of(), null,
@@ -719,7 +721,7 @@ class TestModManagerScreen {
         return state(new boolean[]{first, second, third}, firstId, secondId, thirdId);
     }
 
-    private static ModState state(boolean[] enabled, String... ids) {
+    static ModState state(boolean[] enabled, String... ids) {
         List<ModState.Entry> entries = new ArrayList<>();
         for (int index = 0; index < ids.length; index++) {
             entries.add(new ModState.Entry(ids[index], enabled[index], index));
@@ -727,7 +729,7 @@ class TestModManagerScreen {
         return new ModState(ModState.CURRENT_FORMAT_VERSION, entries);
     }
 
-    private static boolean enabled(ModManagerScreen screen, String id) {
+    static boolean enabled(ModManagerScreen screen, String id) {
         return screen.pendingState().entries().stream()
                 .filter(entry -> entry.id().equals(id)).findFirst().orElseThrow().enabled();
     }
@@ -739,6 +741,30 @@ class TestModManagerScreen {
     private static void press(ModManagerScreen screen, Action action) {
         screen.update(menu(logical(action)));
         screen.update(ModManagerScreen.MenuInput.NEUTRAL);
+    }
+
+    static void accept(ModManagerScreen screen) {
+        press(screen, Action.ACCEPT);
+    }
+
+    static void select(ModManagerScreen screen, String id) {
+        List<ModManagerScreen.RowView> rows = screen.rows();
+        for (int index = 0; index < rows.size(); index++) {
+            if (rows.get(index).identity().equals(id)) {
+                screen.select(index);
+                return;
+            }
+        }
+        throw new AssertionError("Missing mod manager row: " + id);
+    }
+
+    static ModManagerScreen nativeGuardScreen(Path root, List<ModDescriptor> descriptors,
+                                               ModState startup, boolean compiledModsSupported) {
+        ModCatalog catalog = new EffectiveCatalogBuilder().build(descriptors, startup);
+        PendingModStateEditor editor = new PendingModStateEditor(startup, catalog.scanned(),
+                new ModStateStore(root.toAbsolutePath().normalize()));
+        return new ModManagerScreen(catalog, editor, new ModRuntimeFindingStore(), null,
+                PatternWindowState.EMPTY, compiledModsSupported);
     }
 
     private static LogicalInputSnapshot logical(Action action) {
