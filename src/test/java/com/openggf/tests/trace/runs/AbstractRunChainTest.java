@@ -200,6 +200,30 @@ abstract class AbstractRunChainTest {
                 Runnable stepOneFrame = TraceRunReplayWalker.isUncomparedInterior(seg.segment())
                         ? uncomparedInteriorStep(loop, inputHandler, movie, seg)
                         : () -> stepEngineFrame(loop);
+                // Pre-seek the shared BK2 cursor to the RETURN level segment's
+                // gameplay-unlock offset BEFORE awaiting the stage_exit. The engine's
+                // title-card exit does not settle into LEVEL cleanly: updateTitleCardMode
+                // releases control and FALLS THROUGH to LEVEL processing in the SAME
+                // loop.step() (GameLoop: "Continue to LEVEL mode processing this frame"),
+                // so one LEVEL "fall-through" frame runs -- and advances the BK2 cursor --
+                // BEFORE the persistent stage_exit boundary (mode==LEVEL) latches and the
+                // return comparator can attach. The shared cursor stays frozen at the
+                // interior-ENTRY offset through the whole interior (SS/RESULTS/fade/
+                // title-card never call onLevelFrameAdvanced), so without this that
+                // fall-through frame reads the STALE entry-offset row -- the star-post
+                // touch frame, which for this run holds a direction press -- and
+                // accelerates the player one frame from rest, corrupting the return
+                // level's frame-0 physics. Seeking to the return segment's own offset
+                // makes the fall-through frame read that segment's recorded frame-0 input
+                // (the gameplay-unlock frame). It pairs with the SS stepper's mode guard
+                // (uncomparedInteriorStep stops overriding logical input once the engine
+                // leaves SPECIAL_STAGE, so the transition frames are driven by this
+                // forced-input cursor rather than a stale special-stage trace row).
+                // Comparison-only: this seeks the input cursor exactly as
+                // handoffIntoInterior/attachLevelSegment already do -- no trace FIELD is
+                // hydrated into engine state.
+                int returnOffset = plans.get(i + 1).segment().bk2FrameOffset();
+                playback.startSession(movie, returnOffset);
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, stepOneFrame);
                 assertTrue(obs.observed(),
@@ -207,7 +231,15 @@ abstract class AbstractRunChainTest {
                                 + "boundary window for " + runDir);
                 maybeWriteReport(run.runId(), i, activeComparator);
                 assertReturnBoundary(plans, i, runDir);
-                activeComparator = attachLevelSegment(playback, probe, movie, plans.get(i + 1), fixture);
+                // The uncompared title-card-exit fall-through LEVEL frame(s) have
+                // already advanced the BK2 cursor past the return offset and faithfully
+                // reproduced the return segment's leading frame(s) from its own recorded
+                // input. Attach the return comparator at that consumed frame index WITHOUT
+                // re-seeking, so recording-frame index and BK2 cursor stay in lockstep and
+                // no already-run frame is replayed a second time.
+                int framesConsumed = playback.getCursorFrame() - returnOffset;
+                activeComparator = attachReturnedLevelSegment(
+                        probe, plans.get(i + 1), fixture, framesConsumed);
                 i++;
             } else {
                 // This segment is a LEVEL; its exit is an ENTRY boundary into the
@@ -260,6 +292,28 @@ abstract class AbstractRunChainTest {
         playback.startSession(movie, level.segment().bk2FrameOffset());
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, 0, fixture::sprite);
+        probe.setDelegate(comparator);
+        return comparator;
+    }
+
+    /**
+     * Attaches the comparator for a level segment reached on RETURN from an
+     * interior, when the engine's title-card-exit fall-through has already run
+     * (and faithfully reproduced) {@code framesConsumed} leading LEVEL frames of
+     * that segment from its own recorded input.
+     *
+     * <p>Unlike {@link #attachLevelSegment}, this does NOT re-seek the BK2 cursor:
+     * the interior branch pre-seeked it to the return segment's offset, and the
+     * fall-through frame(s) advanced it to {@code returnOffset + framesConsumed}.
+     * Starting the comparator at {@code framesConsumed} keeps the recording-frame
+     * index and the BK2 cursor in lockstep, so the already-run leading frame(s)
+     * are neither replayed a second time (which would double-apply a moving
+     * gameplay-unlock frame like {@code seg3_ehz1} frame 0) nor skipped.
+     */
+    private LiveTraceComparator attachReturnedLevelSegment(
+            BoundaryProbe probe, SegmentPlan level, LiveEngineFixture fixture, int framesConsumed) {
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                level.trace(), ToleranceConfig.DEFAULT, framesConsumed, fixture::sprite);
         probe.setDelegate(comparator);
         return comparator;
     }
@@ -325,7 +379,38 @@ abstract class AbstractRunChainTest {
             case NEXT_ACT -> assertNextActAdvance(plans, interiorIndex, returnLevel, runDir);
             case RINGS_EMERALDS_ONLY -> { /* rings (+ emeralds when reproduced) asserted below */ }
         }
-        assertRingsAndEmeralds(exit, runDir, emeraldCarryOverIsVerifiable(interior));
+        boolean liveEmeraldVerifiable = emeraldCarryOverIsVerifiable(interior);
+        assertRingsAndEmeralds(exit, runDir, liveEmeraldVerifiable);
+        if (!liveEmeraldVerifiable) {
+            assertRecordedEmeraldProgression(entry, exit, runDir);
+        }
+    }
+
+    /**
+     * When the live engine emerald count is NOT an organically verifiable boundary
+     * (an advance-uncompared {@code special_stage} whose win/lose outcome the chain
+     * does not reproduce — see {@link #emeraldCarryOverIsVerifiable(SegmentPlan)}),
+     * this asserts the one emerald fact that IS verifiable: the RECORDED manifest's
+     * own emerald progression across the interior. It does not touch engine state.
+     *
+     * <p>An S2 special stage banks exactly one emerald when cleared, so a recorded
+     * run that entered with {@code emeralds_before} and returned with
+     * {@code emeralds_after} must satisfy {@code emeralds_after == emeralds_before + 1}
+     * (the committed {@code s2-ehz-halfpipe-roundtrip} run clears both halfpipes,
+     * banking 0->1 then 1->2). Asserting this recorded-truth invariant replaces the
+     * former silent no-op, so a manifest that fails to record the emerald award (or
+     * records an impossible delta) is caught even while the live count stays a
+     * diagnostic. Gated on both recorded fields being present and overridable for a
+     * lane whose recorded special stage was NOT a clear.
+     */
+    protected void assertRecordedEmeraldProgression(
+            TraceRunManifest.Transition entry, TraceRunManifest.Transition exit, Path runDir) {
+        if (entry.emeraldsBefore() == null || exit.emeraldsAfter() == null) {
+            return;
+        }
+        assertEquals(entry.emeraldsBefore() + 1, exit.emeraldsAfter().intValue(),
+                "Recorded emerald bank across a cleared special stage (emeralds_after == "
+                        + "emeralds_before + 1) for " + runDir);
     }
 
     /**

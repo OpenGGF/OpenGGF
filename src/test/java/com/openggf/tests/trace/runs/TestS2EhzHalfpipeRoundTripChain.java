@@ -2,6 +2,7 @@ package com.openggf.tests.trace.runs;
 
 import com.openggf.GameLoop;
 import com.openggf.control.InputHandler;
+import com.openggf.game.GameMode;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.RecordedInputSnapshots;
@@ -25,59 +26,68 @@ import java.nio.file.Path;
  * return (rings_after == 0 is ROM truth, not an engine bug).
  *
  * <h2>Root cause of the remaining RED (corrected — supersedes the earlier
- * "premature checkpoint gate" hypothesis, which iteration-6 instrumentation
- * DISPROVED)</h2>
+ * "premature checkpoint gate" AND "fixture-data gap / seg2 desyncs completely"
+ * hypotheses, both DISPROVEN by frame-level instrumentation)</h2>
  *
- * <p><b>The earlier checkpoint-gate root cause is wrong.</b> Live instrumentation of
- * this chain vs the standalone {@code TestS2SpecialStageTraceReplay} showed the
- * checkpoint gate fires at the <em>identical</em> internal frame in both
- * ({@code frameCounter == 939}); {@code lagCompensation} is already {@code 0.0} on
- * the organic entry (the {@code doEnterSpecialStage} {@code bk2Driven} branch is
- * correctly taken, {@code cursor == 3795}); and the team is correctly Sonic+Tails.
- * The gate timing is NOT premature. What differs is the ring count at the gate: the
- * standalone had 44 rings, this chain had 36 — the checkpoint-fail is a SYMPTOM of
- * under-collection, not a cause.
+ * <p><b>The primary root was the special-stage-RETURN handoff, now FIXED (see
+ * {@link AbstractRunChainTest#runChain} LEVEL_MODE interior branch and this class's
+ * {@link #uncomparedInteriorStep} mode guard).</b> The engine's title-card exit
+ * does not settle into LEVEL cleanly: {@code updateTitleCardMode} releases control and
+ * FALLS THROUGH to LEVEL processing in the same {@code loop.step()}, so one LEVEL
+ * "fall-through" frame runs before the persistent {@code stage_exit} boundary
+ * (mode==LEVEL) latches. Two bugs corrupted that frame: (1) the shared BK2 cursor
+ * stayed frozen at the interior-ENTRY offset (the star-post row, holding a direction
+ * press) through the whole interior, so the fall-through read a stale steering input;
+ * and (2) the special-stage stepper kept overriding {@code InputHandler.logical()}
+ * with the recorded SS-trace row even after the engine left {@code SPECIAL_STAGE},
+ * injecting an SS steering row into the title-card / fall-through frames. Together
+ * these accelerated the player one frame from rest (observed {@code xSpeed 0x0B /
+ * gSpeed 0x0C} = the recorded frame-1 accel) so {@code seg2_ehz1} frame 0 compared an
+ * already-moving player against the recorded at-rest gameplay-unlock state. The fix
+ * pre-seeks the cursor to the return offset, stops the SS override once the engine
+ * leaves {@code SPECIAL_STAGE}, and attaches the return comparator at the consumed
+ * fall-through frame index without re-seeking. With it, {@code seg2_ehz1} now replays
+ * the PLAYER faithfully for ~906 frames (was: diverged at frame 0).
  *
- * <p><b>The real blocker is a fixture-data gap.</b> The multi-segment run recorder
- * captured each special-stage segment's {@code physics.csv} (frames + a {@code lag}
- * column) but wrote an <b>empty</b> {@code aux_state.jsonl.gz} — zero bytes, no
- * {@code run_objects_end} pass snapshots, no control-state transitions (confirmed for
- * {@code ss}, {@code ss_2}, and the S1 run's {@code ss}). The S2 half-pipe is uniquely
- * ROM-object-pass paced: the standalone must-stay-green harness drives it via
- * {@link com.openggf.trace.SpecialStageRunObjectsPassBinder}, binding each recurring
- * {@code RunObjects} pass to the exact BK2 row the ROM's V-int sampled. Without those
- * pass records the chain can only frame-pace the BK2 (one tick per non-lag row). A
- * per-frameCounter input diff proved the consequence: from {@code fc == 539} the
- * ROM's actual V-int sample carried a steering press (held bit {@code 0x08}) that the
- * chain's sequential-row feed reads as neutral, so the half-pipe player drifts off the
- * rings and stalls at 36 while the recording climbs past 40. The comparison-only
- * invariant forbids recovering the unrecorded V-int sampling from any engine/trace
- * state, so no chain-side code can win this special stage from this fixture.
+ * <p><b>The earlier "fixture-data gap" story is wrong.</b> It claimed the empty
+ * {@code aux_state.jsonl.gz} (no {@code run_objects_end} pass log) made the half-pipe
+ * unwinnable, so the LOST stage made {@code seg2} "desync completely (~45324 errors,
+ * player ~1500px off)". Instrumentation disproves the causal chain: {@code seg2}'s
+ * position restore, ring zero-out and 906 frames of player physics are all faithful
+ * regardless of the SS win/lose outcome (position + rings + BK2 input are identical
+ * either way). The SS-pass-pacing fixture gap only blocks a per-frame comparison of
+ * the SS INTERIOR (which the chain never does — it is advance-uncompared) and the live
+ * emerald count; it does NOT drive the seg2 divergence.
  *
- * <p><b>Cascade.</b> Because the special stage is LOST rather than WON, its
- * results/return timeline diverges from the recorded WON run, and the subsequent level
- * segment {@code seg2_ehz1} — entered through the special-stage-return reload rather
- * than a fresh boot — desyncs completely (comparator error count ~45324 vs {@code 0}
- * for the fresh-booted {@code seg1_ehz1}; player ends ~1500px off the recorded X with
- * 1 ring vs the recorded 69). The engine therefore never re-accumulates 50 rings and
- * the second {@code starpost_special} entry is never raised: the chain now fails at
- * the {@code seg2 -> ss_2} entry boundary. Making the S2 half-pipe winnable — and thus
- * greening the full round-trip — requires RE-RECORDING {@code ss}/{@code ss_2} WITH
- * the special-stage aux state ({@code run_objects_end} pass log), which is outside a
- * comparison-only test change.
+ * <h2>Remaining blocker (RED): SS-return title-card-duration parity gap</h2>
+ * <p>After the handoff fix, {@code seg2_ehz1} diverges at frame 907: the engine player
+ * LANDS on an {@code OscillationManager}-driven moving platform (object id 0x18,
+ * {@code ARZPlatformObjectInstance}) that the recorded player falls past. The platform
+ * is phase-offset because the engine's SS-return title card runs a DIFFERENT number of
+ * frames than the ROM's before gameplay-unlock, over-advancing the GLOBAL oscillator
+ * ({@code OscillationManager.getByte(0x18)}) and the CPU sidekick catch-up (recorded
+ * Tails is still catching up LEFT of Sonic at frame 0 with g_speed 0x84; the engine's
+ * Tails has overshot to Sonic's RIGHT at rest — the engine title card ran too long).
+ * A fresh boot hides this because {@code TraceReplaySessionBootstrap.applyBootstrap}
+ * SKIPS the real title card and re-derives the oscillator/sidekick phase from segment
+ * metadata; the chain, by design (spec §"lets GameLoop run its real transition"),
+ * runs the engine's real title card and must reproduce the ROM phase organically.
+ * Greening the full round-trip requires an ENGINE fix so the SS-return title-card
+ * duration (and the objects/sidekick it advances) matches the ROM — a src/main
+ * SS-return-timing parity change, not a chain-test change, and out of scope for this
+ * comparison-only handoff fix. The design question (organic SS-return parity vs a
+ * re-bootstrap of the returning segment) is recorded for the owner.
  *
- * <h2>What iteration 6 fixed (boundary-model correction)</h2>
- * <p>Asserting the {@code emeralds_after} delta across an <b>advance-uncompared</b>
- * special stage (SS-INTERIOR policy v1) was itself a boundary-model over-reach: an
- * emerald is only awarded when the stage is WON, so its post-return value is a
- * faithful comparison target only for a REPRODUCED interior. See
- * {@link AbstractRunChainTest#emeraldCarryOverIsVerifiable(SegmentPlan)}:
- * the emerald carry-over is now asserted only across a compared {@code bonus_stage}
- * interior; across an uncompared {@code special_stage} it is a recorded diagnostic.
- * The always-safe carry-overs (the ROM's on-return position restore and ring
- * zero-out, which occur whether the stage was won or lost) remain asserted, so the
- * first {@code stage_exit} cycle now passes those; the RED has advanced to the
- * fixture-blocked {@code seg2 -> ss_2} entry described above.
+ * <h2>Emerald boundary-model correction (retained + tightened)</h2>
+ * <p>Asserting the LIVE {@code emeralds_after} count across an <b>advance-uncompared</b>
+ * special stage is a boundary-model over-reach (an emerald is awarded only on a WON
+ * stage, which the chain does not reproduce) — see
+ * {@link AbstractRunChainTest#emeraldCarryOverIsVerifiable(SegmentPlan)}. Instead of
+ * silently no-op'ing, the base now asserts the RECORDED manifest's own emerald
+ * progression across a cleared special stage
+ * ({@link AbstractRunChainTest#assertRecordedEmeraldProgression}: emeralds_after ==
+ * emeralds_before + 1). The always-safe carry-overs (position restore + ring zero-out)
+ * remain asserted.
  */
 @RequiresRom(SonicGame.SONIC_2)
 class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
@@ -120,6 +130,20 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
         int bk2FrameOffset = interior.segment().bk2FrameOffset();
         int[] traceRow = {0};
         return () -> {
+            // Once the engine has left the special stage itself (results screen,
+            // fade, and the special-stage-return title card), stop feeding the
+            // special-stage trace as a logical-input override. The recorded SS
+            // physics.csv covers only the SPECIAL_STAGE phase; continuing to
+            // override input through the RESULTS/TITLE_CARD/return frames would
+            // inject a stale SS steering row into the title-card-exit fall-through
+            // LEVEL frame, accelerating the player off the return segment's
+            // gameplay-unlock rest state. Plain-step instead, so the forced-input
+            // cursor (pre-seeked by runChain to the return segment's offset) drives
+            // the fall-through frame.
+            if (loop.getCurrentGameMode() != GameMode.SPECIAL_STAGE) {
+                AbstractRunChainTest.stepEngineFrame(loop);
+                return;
+            }
             while (traceRow[0] < trace.frameCount() && trace.getFrame(traceRow[0]).lag()) {
                 traceRow[0]++;
             }
