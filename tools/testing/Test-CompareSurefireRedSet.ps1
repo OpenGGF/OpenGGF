@@ -42,8 +42,8 @@ function Invoke-Case {
         [Parameter(Mandatory)] [bool] $ExpectSuccess
     )
 
-    & $Action 2>$null
-    $succeeded = $LASTEXITCODE -eq 0
+    $actionResult = & $Action 2>$null
+    $succeeded = if ($null -eq $actionResult) { $LASTEXITCODE -eq 0 } else { [bool] $actionResult }
     if ($succeeded -ne $ExpectSuccess) {
         throw "Case '$Name' expected success=$ExpectSuccess but exit code was $LASTEXITCODE."
     }
@@ -83,6 +83,25 @@ try {
 
     Write-SurefireReport -Path $report -TestCases @([pscustomobject]@{ ClassName = 'example.SkippedTest'; Name = 'disabled'; Kind = 'skipped' })
     Invoke-Case -Name 'skipped-rejected' -ExpectSuccess $false -Action { & $powerShell -NoProfile -File $comparator -ReportsPath $reports }
+
+    Set-Content -LiteralPath $expected -Value 'example.CaseTest#lower'
+    Write-SurefireReport -Path $report -TestCases @([pscustomobject]@{ ClassName = 'example.CaseTest'; Name = 'LOWER'; Kind = 'failure' })
+    Invoke-Case -Name 'case-distinct-rejected' -ExpectSuccess $false -Action {
+        & $powerShell -NoProfile -File $comparator -ReportsPath $reports -ExpectedPath $expected
+        return $LASTEXITCODE -eq 0
+    }
+
+    $actualOutput = Join-Path $scratch 'actual.txt'
+    Write-SurefireReport -Path $report -TestCases @(
+        [pscustomobject]@{ ClassName = 'example.OrderTest'; Name = 'a'; Kind = 'failure' },
+        [pscustomobject]@{ ClassName = 'example.OrderTest'; Name = 'A'; Kind = 'error' }
+    )
+    Invoke-Case -Name 'case-distinct-ordinal-order' -ExpectSuccess $true -Action {
+        & $powerShell -NoProfile -File $comparator -ReportsPath $reports -WriteActualPath $actualOutput
+        if ($LASTEXITCODE -ne 0) { return $false }
+        $actualText = [string]::Join("`n", @(Get-Content -LiteralPath $actualOutput))
+        return $actualText -ceq "example.OrderTest#A`nexample.OrderTest#a"
+    }
 }
 finally {
     if (Test-Path -LiteralPath $scratch) {

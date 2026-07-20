@@ -19,6 +19,27 @@ function Fail-Contract {
     exit 1
 }
 
+function Get-OrdinalDuplicates {
+    param([Parameter(Mandatory)] [string[]] $Identities)
+
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    $duplicates = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    foreach ($identity in $Identities) {
+        if (-not $seen.Add($identity)) {
+            [void] $duplicates.Add($identity)
+        }
+    }
+    return @($duplicates)
+}
+
+function Sort-Ordinal {
+    param([Parameter(Mandatory)] [string[]] $Identities)
+
+    $sorted = [string[]] @($Identities)
+    [System.Array]::Sort($sorted, [System.StringComparer]::Ordinal)
+    return $sorted
+}
+
 function Get-ExpectedIdentities {
     param([Parameter(Mandatory)] [string] $Path)
 
@@ -32,11 +53,11 @@ function Get-ExpectedIdentities {
             if ($identity.Length -gt 0) { $identity }
         }
     )
-    $duplicates = @($identities | Group-Object | Where-Object Count -gt 1)
+    $duplicates = @(Get-OrdinalDuplicates -Identities $identities)
     if ($duplicates.Count -gt 0) {
-        Fail-Contract ("Expected red-set contains duplicate identities: " + (($duplicates | ForEach-Object Name) -join ', '))
+        Fail-Contract ("Expected red-set contains duplicate identities: " + ((Sort-Ordinal -Identities $duplicates) -join ', '))
     }
-    return @($identities | Sort-Object)
+    return @(Sort-Ordinal -Identities $identities)
 }
 
 function Get-SurefireTestCases {
@@ -66,7 +87,7 @@ if (-not (Test-Path -LiteralPath $ReportsPath -PathType Container)) {
     Fail-Contract "Reports path does not exist or is not a directory: $ReportsPath"
 }
 
-$reports = @(Get-ChildItem -LiteralPath $ReportsPath -Filter 'TEST-*.xml' -File -Recurse | Sort-Object FullName)
+$reports = @(Get-ChildItem -LiteralPath $ReportsPath -Filter 'TEST-*.xml' -File -Recurse)
 if ($reports.Count -eq 0) {
     Fail-Contract "No TEST-*.xml files found under: $ReportsPath"
 }
@@ -95,10 +116,10 @@ foreach ($report in $reports) {
     }
 }
 
-$actual = @($actual | Sort-Object)
-$actualDuplicates = @($actual | Group-Object | Where-Object Count -gt 1)
+$actual = @(Sort-Ordinal -Identities $actual)
+$actualDuplicates = @(Get-OrdinalDuplicates -Identities $actual)
 if ($actualDuplicates.Count -gt 0) {
-    Fail-Contract ("Actual red set contains duplicate identities: " + (($actualDuplicates | ForEach-Object Name) -join ', '))
+    Fail-Contract ("Actual red set contains duplicate identities: " + ((Sort-Ordinal -Identities $actualDuplicates) -join ', '))
 }
 
 if ($WriteActualPath) {
@@ -111,9 +132,16 @@ if ($WriteActualPath) {
 
 if ($ExpectedPath) {
     $expected = Get-ExpectedIdentities -Path $ExpectedPath
-    $missing = @($expected | Where-Object { $_ -notin $actual })
-    $extra = @($actual | Where-Object { $_ -notin $expected })
-    if ($missing.Count -gt 0 -or $extra.Count -gt 0) {
+    $matches = [System.Linq.Enumerable]::SequenceEqual(
+        [string[]] $expected,
+        [string[]] $actual,
+        [System.StringComparer]::Ordinal
+    )
+    if (-not $matches) {
+        $actualSet = [System.Collections.Generic.HashSet[string]]::new([string[]] $actual, [System.StringComparer]::Ordinal)
+        $expectedSet = [System.Collections.Generic.HashSet[string]]::new([string[]] $expected, [System.StringComparer]::Ordinal)
+        $missing = @($expected | Where-Object { -not $actualSet.Contains($_) })
+        $extra = @($actual | Where-Object { -not $expectedSet.Contains($_) })
         $details = [System.Collections.Generic.List[string]]::new()
         if ($missing.Count -gt 0) { [void] $details.Add("missing expected: $($missing -join ', ')") }
         if ($extra.Count -gt 0) { [void] $details.Add("unexpected actual: $($extra -join ', ')") }
