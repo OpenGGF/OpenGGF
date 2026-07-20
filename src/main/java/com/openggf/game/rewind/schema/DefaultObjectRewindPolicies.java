@@ -330,6 +330,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance", "carriedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzMinibossInstance", "knucklesFightParent"), RewindFieldPolicy.CAPTURED),
+            // The MGZ zoom source is immutable ROM art loaded lazily for an instance-local
+            // renderer. Pattern[] and renderer fields already use declared-type transient policy.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance", "airZoomCueSourceRaster"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance", "endBossDefeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild", "parent"), RewindFieldPolicy.CAPTURED),
@@ -382,6 +385,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractObjectInstance", "spawn"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossChild", "dynamicSpawn"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossInstance", "dynamicSpawn"), RewindFieldPolicy.DEFERRED),
+            // Boss childComponents is an identity-bearing live graph. The compact collection
+            // codec retains its exact managed children and their roles for restore/relink.
+            Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossInstance", "childComponents"), RewindFieldPolicy.CAPTURED),
             // childSpawnOrdinalCounters is fully derivable from live children and is
             // re-derived post-restore by AbstractBossInstance#afterRewindRestoreSettled()
             // (max(child.getChildOrdinal()) + 1 per class) once every child's own restore
