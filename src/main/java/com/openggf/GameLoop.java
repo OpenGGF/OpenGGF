@@ -2056,7 +2056,31 @@ public class GameLoop {
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                                      boolean fadeFromBlack) {
         doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack,
-                SpecialStageStartupPolicy.FAST);
+                defaultSpecialStageStartupPolicy());
+    }
+
+    /**
+     * FAST ordinarily fast-forwards the ROM's observable pre-physics hold
+     * ({@code Sonic1SpecialStageManager.SS_STARTUP_HOLD_TICKS}-style tick
+     * count) synchronously inside {@code initializeStage}, without stepping
+     * real engine frames. That is correct for ordinary interactive play, but
+     * when a {@link PlaybackDebugManager} BK2 session is actively driving
+     * playback -- the dev movie-playback hotkeys, or a headless multi-stage
+     * trace-run chain drive (see {@code AbstractRunChainTest}) -- the caller
+     * needs the hold itself to be frame-stepped so recorded per-frame input
+     * lines up 1:1 with the special stage's own physics ticks instead of
+     * skewing by the fast-forwarded tick count. {@code TraceSessionLauncher}'s
+     * own dedicated special-stage trace session already calls
+     * {@code TRACE_ACCURATE} directly for the same reason (it owns its
+     * transition trigger); this generalizes the same ROM-state predicate
+     * (a BK2 session is playing) to the organic giant-ring/checkpoint-star
+     * entry path used by ordinary gameplay AND by any other BK2-driven
+     * session that reaches this transition.
+     */
+    private SpecialStageStartupPolicy defaultSpecialStageStartupPolicy() {
+        return playbackDebugManager.isSessionPlaying()
+                ? SpecialStageStartupPolicy.TRACE_ACCURATE
+                : SpecialStageStartupPolicy.FAST;
     }
 
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
