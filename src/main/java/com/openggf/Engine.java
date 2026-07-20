@@ -257,6 +257,7 @@ public class Engine {
 	// Static instance for singleton access
 	private static Engine instance;
 	private ModRuntime modRuntime = ModRuntime.empty();
+	private final boolean compiledModsSupported = !isNativeImage();
 	private java.util.function.BiConsumer<com.openggf.game.patch.ResolutionResult.LaunchAborted, Boolean>
 			patchLaunchAbortHandler = this::handlePatchLaunchAbort;
 
@@ -1139,6 +1140,12 @@ public class Engine {
 						&& value.manifest().id().equals(standalone.owner()))
 				.findFirst().orElseThrow(() -> new IllegalArgumentException(
 						"Standalone entry is no longer effective: " + standalone.owner()));
+		if (com.openggf.mods.NativeUnsupportedMods.blocksStandalone(
+				descriptor, compiledModsSupported)) {
+			throw new IllegalStateException(
+					"Standalone mod requires the JVM build (code unsupported on native): "
+							+ standalone.owner());
+		}
 		refreshLaunchSessionCachedConfig();
 		applyResolvedDisplayDimensions();
 		if (masterTitleScreen != null) {
@@ -1395,7 +1402,8 @@ public class Engine {
 		ModSubsystem.installAtBoot(policy, ModSubsystem.normalBootLoader(
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
-				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)));
+				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)),
+				compiledModsSupported);
 		modRuntime = replaceModRuntime(modRuntime, ModRuntime.empty());
 		ModSubsystem.current().installRewindClassResolver(
 				com.openggf.level.objects.RewindClassResolver.ENGINE_ONLY);
@@ -1404,7 +1412,8 @@ public class Engine {
 			ModSubsystem.current().transferDevelopmentSourceOwnership();
 			modRuntime = replaceModRuntime(modRuntime,
 					new ModClassLoaderFactory(Engine.class.getClassLoader())
-							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners()));
+							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners(),
+									compiledModsSupported));
 			modRuntime.installFaultBoundary(ModSubsystem.current().createFaultBoundary(modRuntime));
 			modRuntime.installSaveFindingSink((owner, finding) ->
 					ModSubsystem.current().runtimeFindings().upsertOwnerFinding(owner,
@@ -1456,6 +1465,10 @@ public class Engine {
 		for (com.openggf.mods.ModDescriptor descriptor
 				: ModSubsystem.current().processCatalog().effective().orderedEnabled()) {
 			if (descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) continue;
+			if (com.openggf.mods.NativeUnsupportedMods.blocksStandalone(
+					descriptor, compiledModsSupported)) {
+				continue;
+			}
 			String owner = descriptor.manifest().id();
 			boolean canContinue = false;
 			try {
