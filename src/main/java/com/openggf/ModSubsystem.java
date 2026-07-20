@@ -59,18 +59,20 @@ public final class ModSubsystem implements AutoCloseable {
     private long sessionEpoch;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
     private AutoCloseable bootResource = () -> { };
+    private final ModState startupModState;
+    private boolean compiledModsSupported = true;
 
     public ModSubsystem(ModCatalog processCatalog, ModRuntimeFindingStore runtimeFindings,
                         SessionViewFactory sessionFactory) {
         this(processCatalog, null, runtimeFindings, sessionFactory,
                 new DirectSessionAudioBoundary(),
-                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of());
+                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of(), ModState.EMPTY);
     }
 
     public ModSubsystem(ModCatalog processCatalog, ModRuntimeFindingStore runtimeFindings,
                         SessionViewFactory sessionFactory, SessionAudioBoundary audioBoundary) {
         this(processCatalog, null, runtimeFindings, sessionFactory, audioBoundary,
-                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of());
+                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of(), ModState.EMPTY);
     }
 
     public ModSubsystem(ModCatalog processCatalog, PendingModStateEditor pendingEditor,
@@ -78,7 +80,7 @@ public final class ModSubsystem implements AutoCloseable {
                         SessionViewFactory sessionFactory) {
         this(processCatalog, Objects.requireNonNull(pendingEditor, "pendingEditor"),
                 runtimeFindings, sessionFactory, new DirectSessionAudioBoundary(),
-                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of());
+                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of(), ModState.EMPTY);
     }
 
     public ModSubsystem(ModCatalog processCatalog, PendingModStateEditor pendingEditor,
@@ -86,13 +88,14 @@ public final class ModSubsystem implements AutoCloseable {
                         SessionViewFactory sessionFactory, SessionAudioBoundary audioBoundary) {
         this(processCatalog, Objects.requireNonNull(pendingEditor, "pendingEditor"),
                 runtimeFindings, sessionFactory, audioBoundary,
-                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of());
+                new ExternalContentPolicy(ExternalContentMode.NORMAL), Set.of(), ModState.EMPTY);
     }
 
     private ModSubsystem(ModCatalog processCatalog, PendingModStateEditor pendingEditor,
                          ModRuntimeFindingStore runtimeFindings,
                          SessionViewFactory sessionFactory, SessionAudioBoundary audioBoundary,
-                         ExternalContentPolicy policy, Set<String> trustedCodeOwners) {
+                         ExternalContentPolicy policy, Set<String> trustedCodeOwners,
+                         ModState startupModState) {
         this.processCatalog = Objects.requireNonNull(processCatalog, "processCatalog");
         this.runtimeFindings = Objects.requireNonNull(runtimeFindings, "runtimeFindings");
         this.sessionFactory = Objects.requireNonNull(sessionFactory, "sessionFactory");
@@ -105,6 +108,7 @@ public final class ModSubsystem implements AutoCloseable {
         this.policy = Objects.requireNonNull(policy, "policy");
         this.trustedCodeOwners = Set.copyOf(Objects.requireNonNull(
                 trustedCodeOwners, "trustedCodeOwners"));
+        this.startupModState = Objects.requireNonNull(startupModState, "startupModState");
     }
 
     public static ModSubsystem current() { return PROCESS.get(); }
@@ -118,11 +122,18 @@ public final class ModSubsystem implements AutoCloseable {
     /** The supplier owns all root resolution and discovery, so the disabled path invokes none of it. */
     public static void installAtBoot(ExternalContentPolicy policy,
                                      Supplier<ModSubsystem> normalBootLoader) {
+        installAtBoot(policy, normalBootLoader, true);
+    }
+
+    public static void installAtBoot(ExternalContentPolicy policy,
+                                     Supplier<ModSubsystem> normalBootLoader,
+                                     boolean compiledModsSupported) {
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(normalBootLoader, "normalBootLoader");
         ModSubsystem replacement = policy.mayScanAtBoot()
                 ? Objects.requireNonNull(normalBootLoader.get(), "normalBootLoader result")
                 : disabled(policy);
+        replacement.compiledModsSupported = compiledModsSupported;
         installProcess(replacement);
     }
 
@@ -138,6 +149,10 @@ public final class ModSubsystem implements AutoCloseable {
     public synchronized ExternalContentPolicy policy() { return policy; }
 
     public ModCatalog processCatalog() { return processCatalog; }
+
+    public ModState startupModState() { return startupModState; }
+
+    public boolean compiledModsSupported() { return compiledModsSupported; }
 
     public Set<String> trustedCodeOwners() { return trustedCodeOwners; }
 
@@ -228,7 +243,8 @@ public final class ModSubsystem implements AutoCloseable {
         }
         ModManagerScreen.TextSink text = font == null ? null : ModManagerScreenHost.textSink(font);
         return new ModManagerScreenHost(new ModManagerScreen(
-                processCatalog, pendingEditor, runtimeFindings, text, patternWindowAllocator));
+                processCatalog, pendingEditor, runtimeFindings, text, patternWindowAllocator,
+                compiledModsSupported));
     }
 
     public synchronized SessionExternalContentView sessionView() { return sessionView; }
@@ -302,7 +318,7 @@ public final class ModSubsystem implements AutoCloseable {
                 null, new ModRuntimeFindingStore(),
                 (rate, game) -> SessionExternalContentView.EMPTY,
                 new DirectSessionAudioBoundary(),
-                policy, Set.of());
+                policy, Set.of(), ModState.EMPTY);
     }
 
     /** Production preparation path: decode, build immutable indexes, then transfer the lease. */
@@ -407,7 +423,7 @@ public final class ModSubsystem implements AutoCloseable {
             ModSubsystem subsystem = new ModSubsystem(catalog, editor, findings,
                     preparedAudioFactory(preparer, catalog.effective(), validated.registry(), validated.sfxRegistry()),
                     audioBoundary, new ExternalContentPolicy(ExternalContentMode.NORMAL),
-                    trustedOwners);
+                    trustedOwners, startup);
             if (development != null) subsystem.bootResource = development;
             completed=true;
             return subsystem;

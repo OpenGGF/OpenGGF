@@ -237,6 +237,7 @@ public class Engine {
 
 	// Legal disclaimer screen (pre-ROM disclaimer)
 	private LegalDisclaimerScreen legalDisclaimerScreen;
+	private com.openggf.game.NativeModNoticeScreen nativeModNoticeScreen;
 
 	// Viewport parameters for aspect-ratio-correct rendering
 	private int viewportX = 0;
@@ -257,6 +258,7 @@ public class Engine {
 	// Static instance for singleton access
 	private static Engine instance;
 	private ModRuntime modRuntime = ModRuntime.empty();
+	private final boolean compiledModsSupported = !isNativeImage();
 	private java.util.function.BiConsumer<com.openggf.game.patch.ResolutionResult.LaunchAborted, Boolean>
 			patchLaunchAbortHandler = this::handlePatchLaunchAbort;
 
@@ -302,6 +304,8 @@ public class Engine {
 		this.gameLoop.setStandaloneMasterTitleExitHandler(this::exitStandaloneMasterTitle);
 		this.gameLoop.setLegalDisclaimerScreenSupplier(() -> legalDisclaimerScreen);
 		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
+		this.gameLoop.setNativeModNoticeScreenSupplier(() -> nativeModNoticeScreen);
+		this.gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
 		this.gameLoop.setTimeAttackLaunchHandler(this::launchTimeAttack);
 		this.gameLoop.setTimeAttackNetworkHandler(new com.openggf.game.timeattack.TimeAttackMenu.NetworkStarter() {
@@ -525,8 +529,6 @@ public class Engine {
 
 		// === Check legal disclaimer / master title screen before Phase 2 ===
 		boolean showLegalDisclaimer = configService.getBoolean(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP);
-		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
-
 		if (showLegalDisclaimer) {
 			legalDisclaimerScreen = new com.openggf.game.LegalDisclaimerScreen(
 					graphicsManager.getFadeManager());
@@ -534,14 +536,8 @@ public class Engine {
 			gameLoop.setGameMode(GameMode.LEGAL_DISCLAIMER);
 			// master title (if enabled) or Phase 2 init is deferred to
 			// exitLegalDisclaimer once the user dismisses the screen.
-		} else if (masterTitleOnStartup) {
-			masterTitleScreen = createMasterTitleScreen();
-			masterTitleScreen.initialize();
-			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
-			// Skip Phase 2 entirely - will be called on game selection
 		} else {
-			// === PHASE 2: ROM loading, sprites, audio, level ===
-			initializeGame();
+			enterBootModNoticeOrProceed(false);
 		}
 
 		// Eagerly initialize debug renderer resources before the main loop starts.
@@ -1139,6 +1135,12 @@ public class Engine {
 						&& value.manifest().id().equals(standalone.owner()))
 				.findFirst().orElseThrow(() -> new IllegalArgumentException(
 						"Standalone entry is no longer effective: " + standalone.owner()));
+		if (com.openggf.mods.NativeUnsupportedMods.blocksStandalone(
+				descriptor, compiledModsSupported)) {
+			throw new IllegalStateException(
+					"Standalone mod requires the JVM build (code unsupported on native): "
+							+ standalone.owner());
+		}
 		refreshLaunchSessionCachedConfig();
 		applyResolvedDisplayDimensions();
 		if (masterTitleScreen != null) {
@@ -1170,7 +1172,12 @@ public class Engine {
 			legalDisclaimerScreen = null;
 		}
 
-		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
+		enterBootModNoticeOrProceed(true);
+	}
+
+	private void proceedToMasterTitleOrGame(boolean fadeFromBlack) {
+		boolean masterTitleOnStartup = configService.getBoolean(
+				SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
 		if (masterTitleOnStartup) {
 			masterTitleScreen = createMasterTitleScreen();
 			masterTitleScreen.initialize();
@@ -1179,7 +1186,41 @@ public class Engine {
 			initializeGame();
 		}
 
-		graphicsManager.getFadeManager().startFadeFromBlack(null);
+		if (fadeFromBlack) {
+			graphicsManager.getFadeManager().startFadeFromBlack(null);
+		}
+	}
+
+	private void enterBootModNoticeOrProceed(boolean fadeFromBlackWhenNoNotice) {
+		List<com.openggf.mods.ModDescriptor> unsupported =
+				com.openggf.mods.NativeUnsupportedMods.compute(
+						ModSubsystem.current().processCatalog().scanned(),
+						ModSubsystem.current().startupModState(),
+						compiledModsSupported);
+		if (unsupported.isEmpty()) {
+			proceedToMasterTitleOrGame(fadeFromBlackWhenNoNotice);
+			return;
+		}
+		List<String> names = unsupported.stream()
+				.map(descriptor -> descriptor.manifest().name()).toList();
+		LOGGER.warning(com.openggf.mods.NativeUnsupportedMods.NOTICE_HEADER + " "
+				+ String.join(", ", unsupported.stream()
+						.map(descriptor -> descriptor.manifest().id()).toList()));
+		nativeModNoticeScreen = new com.openggf.game.NativeModNoticeScreen(
+				graphicsManager.getFadeManager(),
+				com.openggf.mods.NativeUnsupportedMods.noticeLines(
+						names, com.openggf.game.NativeModNoticeScreen.MAX_VISIBLE_MOD_LINES));
+		nativeModNoticeScreen.initialize();
+		gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
+		gameLoop.setGameMode(GameMode.NATIVE_MOD_NOTICE);
+	}
+
+	private void exitNativeModNotice() {
+		if (nativeModNoticeScreen != null) {
+			nativeModNoticeScreen.cleanup();
+			nativeModNoticeScreen = null;
+		}
+		proceedToMasterTitleOrGame(true);
 	}
 
 	private void resetForGameplayFromMasterTitle() {
@@ -1395,7 +1436,8 @@ public class Engine {
 		ModSubsystem.installAtBoot(policy, ModSubsystem.normalBootLoader(
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
-				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)));
+				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)),
+				compiledModsSupported);
 		modRuntime = replaceModRuntime(modRuntime, ModRuntime.empty());
 		ModSubsystem.current().installRewindClassResolver(
 				com.openggf.level.objects.RewindClassResolver.ENGINE_ONLY);
@@ -1404,7 +1446,8 @@ public class Engine {
 			ModSubsystem.current().transferDevelopmentSourceOwnership();
 			modRuntime = replaceModRuntime(modRuntime,
 					new ModClassLoaderFactory(Engine.class.getClassLoader())
-							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners()));
+							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners(),
+									compiledModsSupported));
 			modRuntime.installFaultBoundary(ModSubsystem.current().createFaultBoundary(modRuntime));
 			modRuntime.installSaveFindingSink((owner, finding) ->
 					ModSubsystem.current().runtimeFindings().upsertOwnerFinding(owner,
@@ -1456,6 +1499,10 @@ public class Engine {
 		for (com.openggf.mods.ModDescriptor descriptor
 				: ModSubsystem.current().processCatalog().effective().orderedEnabled()) {
 			if (descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) continue;
+			if (com.openggf.mods.NativeUnsupportedMods.blocksStandalone(
+					descriptor, compiledModsSupported)) {
+				continue;
+			}
 			String owner = descriptor.manifest().id();
 			boolean canContinue = false;
 			try {
@@ -2975,6 +3022,7 @@ public class Engine {
 
 	private final class EngineDrawActions implements EngineRenderDispatcher.DrawActions {
 		@Override public void legalDisclaimer() { drawLegalDisclaimer(); }
+		@Override public void nativeModNotice() { drawNativeModNotice(); }
 		@Override public void masterTitle() { drawMasterTitle(); }
 		@Override public void editor() { drawEditor(); }
 		@Override public void specialStage() { drawSpecialStage(); }
@@ -3297,6 +3345,14 @@ public class Engine {
 		if (legalDisclaimerScreen != null) {
 			legalDisclaimerScreen.setProjectionMatrix(getProjectionMatrixBuffer());
 			legalDisclaimerScreen.draw();
+		}
+	}
+
+	private void drawNativeModNotice() {
+		resetCameraForScreenSpaceIfPresent();
+		if (nativeModNoticeScreen != null) {
+			nativeModNoticeScreen.setProjectionMatrix(getProjectionMatrixBuffer());
+			nativeModNoticeScreen.draw();
 		}
 	}
 

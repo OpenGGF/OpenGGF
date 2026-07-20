@@ -9,6 +9,16 @@ launch-only teams, deterministic input filters, and row-only HUD profiles; the
 defines their ordering, replay, persistence, width, stock-default, and owner-fault
 contracts.
 
+## Native builds vs. the JVM jar
+
+Code-bearing mods (objects, characters, zones, and standalone games) require the
+**JVM jar**. They are loaded at runtime by the engine's mod classloader, which a
+GraalVM native-image binary cannot use under closed-world AOT. Native builds do
+not load these mods: the Mod Manager marks them `UNSUPPORTED` and refuses to
+enable them, and a boot notice lists any that were enabled. **Data-only music
+packs and reskins are unaffected and work on native builds.** To use code-bearing
+mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
+
 1. [Music pack](quickstarts/music-pack.md)
 2. [Data-only art reskin](quickstarts/reskin.md)
 3. [Object or badnik](quickstarts/object.md)

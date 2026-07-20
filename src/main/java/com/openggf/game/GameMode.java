@@ -42,6 +42,9 @@ public enum GameMode {
     /** Legal disclaimer screen shown on engine startup before MASTER_TITLE_SCREEN. */
     LEGAL_DISCLAIMER,
 
+    /** Native-build notice: enabled code mods cannot load on the native binary. */
+    NATIVE_MOD_NOTICE,
+
     /** Post-credits "TRY AGAIN" or "END" screen (Sonic 1) */
     TRY_AGAIN_END,
 
