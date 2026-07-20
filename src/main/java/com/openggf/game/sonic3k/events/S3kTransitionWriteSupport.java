@@ -20,7 +20,13 @@ public final class S3kTransitionWriteSupport {
         }
     }
 
-    public static boolean restorePendingPostResultsPlayerControl(ObjectServices services) {
+    /**
+     * Completes any event-owned post-results handoff and reports whether that
+     * retained native owner still owns publication of the transition-ready
+     * flag. The event provider, rather than the results object, decides this
+     * from its live transition state.
+     */
+    public static boolean completePostResultsHandoff(ObjectServices services) {
         Object provider = services.levelEventProvider();
         if (provider instanceof S3kTransitionEventBridge bridge) {
             return bridge.restorePendingPostResultsPlayerControl();

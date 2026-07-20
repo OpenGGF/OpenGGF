@@ -305,10 +305,10 @@ Expected: PASS with no blanket baseline count increase.
 - Modify: `src/main/java/com/openggf/game/sonic3k/events/S3kTransitionWriteSupport.java`
 - Test: `src/test/java/com/openggf/game/sonic3k/objects/TestS3kResultsScreenObjectInstance.java`
 
-- [ ] Run the named HCZ/MGZ method; expected native ready flag remains clear when no retained control owner exists.
-- [ ] Add a provider/runtime-state assertion for armed seamless handoff, and set the ready flag from that state without raw zone comparisons.
-- [ ] Run results and transition-control tests; expected PASS.
-- [ ] Commit as `fix: restore seamless results handoff`, updating `CHANGELOG.md`.
+- [x] Run the named HCZ/MGZ method; confirmed the native ready flag remains clear when no retained control owner exists.
+- [x] Add a provider/runtime-state assertion for an armed seamless handoff, and set the ready flag from that state without raw zone comparisons.
+- [x] Run the full results class plus transition bridge, HCZ event, CNZ event-flow, in-level title-card, and act-transition tests; all 48 tests pass.
+- [x] Commit as `fix: restore seamless results handoff`, updating `CHANGELOG.md`.
 
 ### Task D3.5: Poll MGZ collapse rumble every 16 frames
 
