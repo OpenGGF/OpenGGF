@@ -30,6 +30,7 @@ class TestS3kSlotBonusCageObjectInstance {
         player.setXSpeed((short) 0x0123);
         player.setYSpeed((short) -0x0456);
         player.setGSpeed((short) 0x0789);
+        player.setSubpixelRaw(0x8800, 0xE000);
         player.setAir(false);
         player.setOnObject(true);
 
@@ -37,6 +38,8 @@ class TestS3kSlotBonusCageObjectInstance {
 
         assertEquals(spawn.x(), player.getCentreX());
         assertEquals(spawn.y(), player.getCentreY());
+        assertEquals(0x8800, player.getXSubpixelRaw());
+        assertEquals(0xE000, player.getYSubpixelRaw());
         assertEquals(0, player.getXSpeed());
         assertEquals(0, player.getYSpeed());
         assertEquals(0, player.getGSpeed());
@@ -211,5 +214,4 @@ class TestS3kSlotBonusCageObjectInstance {
         statTableField.setInt(stageState, (angle & 0xFF) << 8);
     }
 }
-
 

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K Slots player synchronization, Pachinko magnet-orb roll release, and Slots cage capture now route their native playable-position word writes through `NativePositionOps`, preserving the same integer centres and subpixel fractions behind the canonical shared API.
 - Fix: WFZ breakable plating and the MGZ miniboss ceiling spire now declare their sustained-overlap and shield-deflect behavior through canonical touch-response profiles, keeping the legacy hooks and dispatcher policy sourced from the same typed values.
 - Fix(s3k): HCZ transition bubbles and the HCZ end-boss water-column child graph now restore through rewind with their captured dynamic identities, slots, parent links, and state intact.
 - Fix: Boss rewind child collections now detach components whenever ObjectManager removes their live identity, including self-destruction during a parent update before a same-frame capture. Deferred boss helpers retain explicit owner-driven updates without entering that captured structural graph. Together this preserves graph closure generically and restores MGZ Knuckles' managed eight-part composite graph with its parent-owned collection, child roles, and child-to-parent links intact.

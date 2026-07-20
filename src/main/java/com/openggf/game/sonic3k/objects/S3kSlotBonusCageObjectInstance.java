@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -126,8 +127,8 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
         // zero that subpixel fraction, which measurably diverges the trace (e.g.
         // TestS3kSlotsBonusTraceReplay frame 47: expected x_sub/y_sub 0x8800/0xE000
         // vs a wrongly-zeroed 0x0000/0x0000).
-        player.setCentreXPreserveSubpixel(SNAP_X);
-        player.setCentreYPreserveSubpixel(SNAP_Y);
+        NativePositionOps.writeXPosPreserveSubpixel(player, SNAP_X);
+        NativePositionOps.writeYPosPreserveSubpixel(player, SNAP_Y);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
