@@ -246,15 +246,39 @@ public final class S3kSlotPlayerRuntime {
         return groundProjectedOriginY >> POSITION_SHIFT;
     }
 
+    /**
+     * ROM loc_4BED0 (sonic3k.asm:99247-99253): the goal-tile dispatch branch that
+     * fires this transition does nothing but {@code addq.b #2,routine(a0)} (2->4)
+     * and play {@code sfx_Goal} -- it never touches {@code status(a0)}. By the time
+     * sub_4BE3A (tile dispatch) runs this frame, sub_4BCB0 (air gravity, called
+     * earlier in the same per-frame chain, sonic3k.asm:98776-98777) has already
+     * cleared {@code Status_InAir} for whichever axis (X wall or Y floor) the goal
+     * tile collided on -- touching a solid special tile at all guarantees a
+     * same-frame {@code bclr #Status_InAir,status(a0)} (sonic3k.asm:99032/99050).
+     * Forcing {@code player.setAir(true)} here overwrote that already-correct
+     * grounded state with a fabricated airborne one for the entire frozen
+     * goal-exit sequence (TestS3kSlotsBonusTraceReplay frame 868: expected
+     * air=0/status_byte=0x05 vs engine's air=1/status_byte=0x07). Leave air
+     * (and rolling, already true since spawn per Status_Roll, sonic3k.asm:98727)
+     * exactly as sub_4BCB0's collision resolution left them.
+     */
     public void startGoalExit(AbstractPlayableSprite player) {
         if (exitSequence != null) {
             return;
         }
         player.setControlLocked(true);
         ObjectControlState.none().applyTo(player);
-        player.setAir(true);
+        // Status_Roll is set once at spawn (sonic3k.asm:98727) and never cleared for
+        // the rest of the object's lifetime -- restate it defensively rather than
+        // assume it's still true (unlike Status_InAir, ROM has no branch here that
+        // would leave it false).
         player.setRolling(true);
         player.setOnObject(false);
+        // Mirrors ROM loc_4BED0's addq.b #2,routine(a0) (2->4): routine(a0) never
+        // changes again for the rest of the exit sequence (loc_4BC1E onward only
+        // swaps the object's own dispatch address, sonic3k.asm:98970), so this is
+        // a one-shot latch, not a per-frame recompute.
+        player.setObjectRoutineOverride(4);
         exitSequence = new S3kSlotExitSequence(new S3kSlotStageController(stageState));
     }
 

@@ -101,6 +101,14 @@ public record TraceCharacterState(
         if (sprite == null) {
             return -1;
         }
+        Integer override = sprite.getObjectRoutineOverride();
+        if (override != null) {
+            // See AbstractPlayableSprite#objectRoutineOverride: a custom ROM object has
+            // swapped out Player_1's dispatch and reuses routine(a0) for its own state
+            // machine (e.g. Obj_Sonic_RotatingSlotBonus, sonic3k.asm:98700-98703). Report
+            // that raw value verbatim rather than deriving one from hurt/dead/CPU state.
+            return override;
+        }
         if (sprite.getDead()) {
             return 0x06;
         }

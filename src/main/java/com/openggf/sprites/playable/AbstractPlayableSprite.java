@@ -442,6 +442,21 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean hurt = false;
 
         /**
+         * Raw ROM {@code routine(a0)} byte for player objects whose dispatch has been
+         * temporarily swapped out for a custom ROM object (e.g. {@code
+         * Obj_Sonic_RotatingSlotBonus}, sonic3k.asm:98656) that reuses {@code Player_1}'s
+         * {@code routine} field for its own state machine (values 0/2/4 selecting the
+         * object's init/main-loop/goal-exit handlers, sonic3k.asm:98700-98703) rather than
+         * the standard Sonic control routine values {@link #hurt}/{@link #dead} already
+         * model. When non-null, {@code TraceCharacterState.routineFromSprite} reports this
+         * value verbatim instead of deriving one from hurt/dead/CPU state, matching a
+         * hardware trace recorder that samples the raw memory offset regardless of which
+         * object code is running there. Null (the default) preserves the existing
+         * hurt/dead-derived heuristic for ordinary player control.
+         */
+        protected Integer objectRoutineOverride = null;
+
+        /**
          * Countdown frames before level reload after death.
          * Set to 60 when player falls off screen, decrements each frame.
          * When it reaches 0, triggers level reload.
@@ -2457,6 +2472,21 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setHurt(boolean hurt) {
                 this.hurt = hurt;
+        }
+
+        /**
+         * See {@link #objectRoutineOverride}.
+         */
+        public Integer getObjectRoutineOverride() {
+                return objectRoutineOverride;
+        }
+
+        /**
+         * See {@link #objectRoutineOverride}. Pass {@code null} to restore the default
+         * hurt/dead-derived routine heuristic.
+         */
+        public void setObjectRoutineOverride(Integer objectRoutineOverride) {
+                this.objectRoutineOverride = objectRoutineOverride;
         }
 
         public int getDeathCountdown() {
