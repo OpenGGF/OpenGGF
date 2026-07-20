@@ -12,6 +12,15 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -21,18 +30,22 @@ import java.util.List;
 /**
  * Object 0x4A in zone 0x14 - Pachinko round bumper.
  *
- * <p>This shares the same core bumper physics as the CNZ bumper path in the ROM, but
- * uses the Pachinko-specific mappings and vertical off-screen despawn behavior.
+ * <p>This shares the same core bumper physics as the CNZ bumper path in the ROM (both
+ * branches funnel through the shared {@code sub_32F34}/{@code sub_32F56} bounce routine),
+ * but uses the Pachinko-specific mappings and vertical off-screen despawn behavior. Mirrors
+ * {@link CnzBumperObjectInstance}'s stationary-bumper touch handling.
  */
-public class PachinkoBumperObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class PachinkoBumperObjectInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
+    private static final int COLLISION_FLAGS = 0x40 | 0x17;
     private static final int BOUNCE_VELOCITY = 0x700;
-    private static final int COLLISION_HALF_WIDTH = 8;
-    private static final int COLLISION_HALF_HEIGHT = 8;
     private static final int ANIM_DURATION = 8;
 
     private int animFrame;
     private int animTimer;
+    private AbstractPlayableSprite pendingPrimaryTouch;
+    private AbstractPlayableSprite pendingSidekickTouch;
 
     public PachinkoBumperObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PachinkoBumper");
@@ -82,29 +95,78 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance impleme
             return;
         }
 
-        // ROM sub_32F34 (sonic3k.asm:68934-68949) has no cooldown timer: it clears
-        // collision_property and re-bounces every frame the bit reads set, i.e. every
-        // frame Add_SpriteToCollisionResponseList's touch-loop still finds the player
-        // overlapping (matching the general S3K ENEMY-touch per-frame poll, not an
-        // edge-triggered "already hit" latch). The player's hitbox can stay inside the
-        // bumper's for 2+ consecutive frames after a bounce (observed: Pachinko trace
-        // frame 1318 then 1319 both resolve a fresh bounce from the bumper at
-        // (0x104,0x7E0), each using that frame's already-updated player position --
-        // an invented per-object cooldown here suppressed the second resolve and froze
-        // x_speed/y_speed at the frame-1318 value instead of the frame-1319 re-bounce).
-        if (playerEntity instanceof AbstractPlayableSprite player
-                && !player.isHurt()
-                && !player.getDead()
-                && checkCollision(player)) {
-            applyBounce(player, frameCounter);
+        // ROM loc_32EF0/loc_32EAA (sonic3k.asm:68877-68880, 68906-68908):
+        // `tst.b collision_property(a0) / beq.s ... / bsr.w sub_32F34`. The bounce
+        // is gated on the ROM's own Touch_Loop-populated collision_property bit,
+        // not a hand-rolled distance check against the player's terrain
+        // x_radius/y_radius. The engine's prior ad-hoc `checkCollision(player)`
+        // (dx < 16 && dy < 8+player.getYRadius()) used the player's full rolling
+        // y_radius (14, matching Sonic_Roll) as the box half-height, which is
+        // WIDER than the real Touch_Loop overlap test the ROM actually gates on
+        // -- it kept reporting an overlap for a second frame after the player's
+        // post-bounce position had already cleared the true touch box, firing a
+        // second, unwanted sub_32F56 bounce and corrupting x_speed/y_speed off a
+        // position the player was already leaving (pachinko1 trace f2705:
+        // expected x_speed=-0x0206/y_speed=-0x0674 constant ballistic flight,
+        // engine produced x_speed=-0x01DC/y_speed=-0x06BA from a spurious re-bounce).
+        // Driving this through the shared TouchResponseProvider/onTouchResponse
+        // path (mirroring CnzBumperObjectInstance) uses the same ROM-accurate
+        // touch-box overlap test the rest of the engine's enemy/object touch
+        // system already gets right, and defers the resolved touch to this
+        // update() call exactly as sub_32F34's own per-routine bounce does.
+        processPendingTouches(frameCounter);
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        return COLLISION_FLAGS;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                true,
+                true,
+                multiRegionSource,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+    }
+
+    @Override
+    public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
+        if (!(playerEntity instanceof AbstractPlayableSprite player)
+                || player.isHurt() || player.getDead()) {
+            return;
+        }
+        if (player.isCpuControlled()) {
+            pendingSidekickTouch = player;
+        } else {
+            pendingPrimaryTouch = player;
         }
     }
 
-    private boolean checkCollision(AbstractPlayableSprite player) {
-        int dx = Math.abs(player.getCentreX() - spawn.x());
-        int dy = Math.abs(player.getCentreY() - spawn.y());
-        return dx < (COLLISION_HALF_WIDTH + 8)
-                && dy < (COLLISION_HALF_HEIGHT + player.getYRadius());
+    private void processPendingTouches(int frameCounter) {
+        int romFrameCounter = resolveRomFrameCounter(frameCounter);
+        AbstractPlayableSprite primary = pendingPrimaryTouch;
+        AbstractPlayableSprite sidekick = pendingSidekickTouch;
+        pendingPrimaryTouch = null;
+        pendingSidekickTouch = null;
+
+        if (primary != null) {
+            applyBounce(primary, romFrameCounter);
+        }
+        if (sidekick != null) {
+            applyBounce(sidekick, romFrameCounter);
+        }
     }
 
     /**
@@ -130,7 +192,7 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance impleme
         return delta > 0x200;
     }
 
-    private void applyBounce(AbstractPlayableSprite player, int frameCounter) {
+    private void applyBounce(AbstractPlayableSprite player, int romFrameCounter) {
         int dx = spawn.x() - player.getCentreX();
         int dy = spawn.y() - player.getCentreY();
         int angle = TrigLookupTable.calcAngle((short) dx, (short) dy);
@@ -146,7 +208,6 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance impleme
         // PachinkoItemOrbObjectInstance.resolveRomFrameCounter). Mirrors the S2
         // CNZ Obj_Bumper port (BumperObjectInstance.applyBounce, s2.asm:44675-44677)
         // which reads the same ROM-aligned counter for the identical bias term.
-        int romFrameCounter = resolveRomFrameCounter(frameCounter);
         angle = (angle + ((romFrameCounter >> 8) & 3)) & 0xFF;
 
         int cosVal = TrigLookupTable.cosHex(angle);
@@ -154,6 +215,9 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance impleme
         player.setXSpeed((short) (cosVal * -BOUNCE_VELOCITY >> 8));
         player.setYSpeed((short) (sinVal * -BOUNCE_VELOCITY >> 8));
         player.setAir(true);
+        // ROM sub_32F56 (sonic3k.asm:68976-68977): `bclr #Status_RollJump,status(a1)`
+        // alongside the Status_InAir set and Status_Push clear already ported below.
+        player.setRollingJump(false);
         player.setPushing(false);
         player.setJumping(false);
         // ROM sub_32F56 never writes ground_vel(a1) -- the pre-bounce inertia is
