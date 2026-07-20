@@ -280,6 +280,16 @@
 -- and special_stage). A movie truncating mid-$34 finalizes as a correctly-
 -- labeled (WARNING-flagged) truncated special_stage segment rather than
 -- being folded into an invalid manifest record.
+--
+-- v6.32-s3k-completerun: emits a decimal "v_int_run_count" metadata field
+-- (ADDR_V_INT_RUN_COUNT = 0xFE0C, see the BONUS_TOKENS block below for the
+-- disasm citation) captured once at segment-arm time, gated on
+-- current_segment_is_bonus (the existing BONUS_TOKENS zone-id 0x13-0x15
+-- lookup) -- gumball/pachinko/slots segments only. Seeds trace replay's
+-- bonus-stage bootstrap with the ROM's free-running V-int counter so
+-- Slots_CycleOptions's recorded reel outcomes become reproducible instead of
+-- approximated by the engine's per-session vblaCounter. Field omitted for
+-- level segments (start_v_int_run_count stays nil). CSV schema unchanged.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -314,7 +324,7 @@ LIGHTWEIGHT_REGEN = os.getenv("OGGF_TRACE_LIGHTWEIGHT") == "1"
 BIZHAWK_VERSION = "2.11"
 GENESIS_CORE = "Genplus-gx"
 S3K_ROM_CHECKSUM = "C5B1C655C19F462ADE0AC4E17A844D10"
-LUA_SCRIPT_VERSION = "6.31-s3k-completerun"   -- no "v" prefix (existing convention)
+LUA_SCRIPT_VERSION = "6.32-s3k-completerun"   -- no "v" prefix (existing convention)
 -- Overridable so non-default movies (e.g. the Knuckles multi-bonus route)
 -- get truthful source_bk2 metadata instead of the complete-run default.
 SOURCE_BK2_NAME = os.getenv("OGGF_BK2_BASENAME") or "s3k-complete-sonic-tails.bk2"
@@ -397,6 +407,21 @@ BONUS_ZONE_MAX = 0x15
 -- game_mode is in the level family (glowing spheres / gumball / pachinko
 -- / slots bonus stages occupy zone ids 0x13-0x15).
 BONUS_TOKENS = {[0x13] = "gumball", [0x14] = "pachinko", [0x15] = "slots"}
+-- V_int_run_count (sonic3k.constants.asm:790, `ds.l 1`, CrossResetRAM+$0C).
+-- Verified by the same sequential ds.b/ds.w/ds.l walk used for
+-- Current_special_stage below: Debug_camera_speed (ds.b 1) ends the walk at
+-- CrossResetRAM+$0C, and V_int_run_count (ds.l 1) then ends it at
+-- CrossResetRAM+$10 = Current_zone (matches ADDR_ZONE = 0xFE10 below). A
+-- free-running VBlank counter incremented once per V-int (sonic3k.asm:714,
+-- `addq.l #1,(V_int_run_count).w`) that never resets during a play session.
+-- Slots_CycleOptions (sonic3k.asm:99614-99946, e.g. lines 99646/99679/
+-- 99684/99690/99701) reads its low byte/word (`(V_int_run_count+3).w`,
+-- `(V_int_run_count+2).w`) to seed the reel words/targets on each slots
+-- bonus-stage cycle -- captured here (bonus segments only) so trace replay
+-- can reproduce the recorded reel outcomes instead of approximating with a
+-- per-session counter (docs/S3K_KNOWN_DISCREPANCIES.md "Slots is also
+-- affected").
+ADDR_V_INT_RUN_COUNT = 0xFE0C
 
 -- Current_special_stage (sonic3k.constants.asm:796, CrossResetRAM+$16).
 -- Verified by the same sequential ds.b/ds.w/ds.l walk from CrossResetRAM
@@ -855,6 +880,11 @@ local start_zone_id = 0
 local start_zone_name = "unknown"
 local start_act = 0
 local start_rng_seed = 0
+-- v_int_run_count captured only for bonus-stage segments (gumball/pachinko/
+-- slots, zone ids 0x13-0x15 via BONUS_TOKENS) -- see ADDR_V_INT_RUN_COUNT
+-- below. nil for level segments (field omitted from their metadata.json).
+-- GLOBAL (no `local`): the main chunk is already at Lua's 200-local limit.
+start_v_int_run_count = nil
 local start_gameplay_frame_counter = 0
 
 local prev_status = 0
@@ -1192,6 +1222,7 @@ local function reset_recording_state(keep_files)
     start_zone_name = "unknown"
     start_act = 0
     start_rng_seed = 0
+    start_v_int_run_count = nil
     start_gameplay_frame_counter = 0
     prev_status = 0
     prev_routine = 0
@@ -1422,6 +1453,9 @@ local function write_metadata()
     if current_segment_is_bonus then
         meta_file:write('  "trace_profile": "s3k_bonus_stage",\n')
         meta_file:write('  "bonus_stage_type": "' .. (BONUS_TOKENS[start_zone_id] or "") .. '",\n')
+        if start_v_int_run_count ~= nil then
+            meta_file:write('  "v_int_run_count": ' .. start_v_int_run_count .. ',\n')
+        end
     else
         meta_file:write('  "trace_profile": "' .. TRACE_PROFILE .. '",\n')
     end
@@ -5034,6 +5068,10 @@ function start_new_segment(zone_id)
     start_gameplay_frame_counter = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
     start_zone_name = zone_token_for(zone_id)
     current_segment_is_bonus = (BONUS_TOKENS[zone_id] ~= nil)
+    -- Only bonus segments (gumball/pachinko/slots) need the free-running
+    -- V-int counter base; level segments leave it nil (field omitted).
+    start_v_int_run_count = current_segment_is_bonus
+        and mainmemory.read_u32_be(ADDR_V_INT_RUN_COUNT) or nil
 
     open_files()
     write_metadata()
