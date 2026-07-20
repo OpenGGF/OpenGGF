@@ -178,9 +178,18 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0x0800);
         player.setControlLocked(true);
-        // Engine movement skips only when objectControlled is true, so mirror the
-        // ROM's captured-player ownership with the engine's full-control policy.
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97091): `move.b #1,object_control(a1)`
+        // sets ONLY bit 0 (movement-suppress) of object_control, not bit 7. The
+        // Sonic_Control dispatcher's own TouchResponse gate (sonic3k.asm:22019-22022:
+        // `move.b object_control(a0),d0 / andi.b #$A0,d0 / bne.s locret_10C8E / jsr
+        // (TouchResponse).l`) only skips TouchResponse (which runs BOTH
+        // Test_Ring_Collisions/GiveRing and the general Touch_Loop) when bits 5 or 7
+        // ($A0) are set -- bit 0 alone (this orb's capture flag) leaves TouchResponse
+        // running every frame. The bit-7 "full control" state used here previously
+        // wrongly blocked ring pickups for the whole capture duration -- observed as
+        // a permanent -1 ring desync starting at the first ring touched while
+        // orbiting the magnet orb (Pachinko trace frame 1252).
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setAir(true);
         player.setOnObject(false);
         player.setJumping(false);
