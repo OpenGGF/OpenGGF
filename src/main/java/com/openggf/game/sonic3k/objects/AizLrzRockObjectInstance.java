@@ -29,6 +29,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -485,13 +486,14 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
 
     private void handlePush(AbstractPlayableSprite player, PlayerSolidContactResult result) {
         // ROM sub_200A2/sub_200CC moves the concrete player whose pushing bit is
-        // set only when that player's saved pre-helper status also had
-        // Status_Push (sonic3k.asm:44446-44478). The checkpoint preserves both
-        // phases per player; using the old aggregate latch could let P2's first
-        // contact move P1 one frame early.
+        // set only when the rock's saved per-player contact state also had
+        // Status_Push (sonic3k.asm:44446-44478). The checkpoint registry owns
+        // that previous-frame bit per rock and player; the actor's global
+        // pre-contact Status_Push may already have been cleared by another
+        // solid. Using the old aggregate latch could let P2's first contact
+        // move P1 one frame early.
         if (player == null || result == null
-                || !result.pushingNow() || !result.pushingLastFrame()
-                || !result.preContact().pushing()) {
+                || !result.pushingNow() || !result.pushingLastFrame()) {
             return;
         }
 
@@ -513,7 +515,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         currentX--;
         // subq.w #1,x_pos(a1) changes only the ROM integer word and keeps
         // x_sub untouched (sonic3k.asm:44472-44473).
-        player.setCentreXPreserveSubpixel((short) (playerX - 1));
+        NativePositionOps.addXPosPreserveSubpixel(player, -1);
         int halfHeight = SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][1];
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, halfHeight);
         if (floor.foundSurface()) {
