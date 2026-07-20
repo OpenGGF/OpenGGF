@@ -32,8 +32,21 @@ class TestTopSolidRoutineProfileAdoption {
         // y_pos += d0 + 3 result instead of PlatformObject's absolute snap.
         SolidRoutineProfile profile = platform.getSolidRoutineProfile();
         assertEquals(0x21, platform.getSolidParams().groundHalfHeight());
-        assertTrue(profile.usesGroundHalfHeightForTopSolidContact());
-        assertFalse(profile.usesPlatformLandingSnap());
+        assertEquals(new SolidRoutineProfile(
+                SolidRoutineKind.TOP_SOLID_ONLY,
+                true,
+                false,
+                0,
+                false,
+                true,
+                false,
+                false,
+                true,
+                false,
+                false,
+                true,
+                false,
+                false), profile);
 
         // Concrete observable fields of the top-solid routine.
         assertEquals(SolidRoutineKind.TOP_SOLID_ONLY, profile.kind());
