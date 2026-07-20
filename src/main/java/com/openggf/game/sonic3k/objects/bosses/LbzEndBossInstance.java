@@ -118,6 +118,9 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     private transient LbzEndBossRunnerChild runnerChild;
     @RewindTransient(reason = "Structural child link; platform chain is rebuilt by the boss reconstruction path.")
     private transient LbzEndBossPlatformChild platformLeader;
+    // This helper owns a non-deterministic explosion emitter and is deliberately
+    // DEFERRED for rewind. It must still be ticked by direct boss updates while live.
+    private transient LbzEndBossExplosionControllerChild deferredExplosionControllerChild;
     // Deterministic reconstruction order for the graph children whose constructor args
     // (chain subtype / sibling link, tube offsets) are structural and re-derived from the
     // spawn order rather than captured. Reset in initializeBossState before children recreate.
@@ -162,6 +165,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         launchedSpikeBallRomSubtypes = new ArrayList<>();
         platformLeader = null;
         runnerChild = null;
+        deferredExplosionControllerChild = null;
         platformRecreateIndex = 0;
         tubeRecreateIndex = 0;
         requestStartupAssets();
@@ -200,6 +204,25 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             case ROUTINE_WAIT_PLATFORM_GATE -> updateWaitPlatformGate();
             default -> {
             }
+        }
+    }
+
+    @Override
+    protected void updateOwnerManagedChildren(int frameCounter, PlayableEntity player) {
+        LbzEndBossExplosionControllerChild controller = deferredExplosionControllerChild;
+        if (controller == null) {
+            return;
+        }
+        if (controller.isDestroyed()) {
+            onDeferredExplosionControllerRemoved(controller);
+            return;
+        }
+        // ObjectManager may also dispatch this live dynamic helper in the same
+        // frame. Its beginUpdate guard keeps that second path from advancing the
+        // ROM emitter twice, while direct/headless boss updates still drive it.
+        controller.update(frameCounter, player);
+        if (controller.isDestroyed()) {
+            onDeferredExplosionControllerRemoved(controller);
         }
     }
 
@@ -716,8 +739,16 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             defeatStoredMaxX = POST_DEFEAT_CAMERA_MAX_X;
             // loc_7403A: Camera_stored_max_X_pos=$3AB8 + Child6_IncLevX child.
             recordChild(spawnChild(() -> new LbzEndBossGradualMaxXExtenderChild(this)));
-            recordDeferredOwnedChild(spawnChild(() -> new LbzEndBossExplosionControllerChild(this)));
+            deferredExplosionControllerChild = recordDeferredOwnedChild(
+                    spawnChild(() -> new LbzEndBossExplosionControllerChild(this)));
         }
+    }
+
+    private void onDeferredExplosionControllerRemoved(LbzEndBossExplosionControllerChild controller) {
+        if (deferredExplosionControllerChild == controller) {
+            deferredExplosionControllerChild = null;
+        }
+        ownedChildren.remove(controller);
     }
 
     private void updateDefeat() {
@@ -1680,6 +1711,12 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
 
         private LbzEndBossInstance boss() {
             return (LbzEndBossInstance) parent;
+        }
+
+        @Override
+        protected void onRemovedFromObjectManager() {
+            super.onRemovedFromObjectManager();
+            boss().onDeferredExplosionControllerRemoved(this);
         }
     }
 
