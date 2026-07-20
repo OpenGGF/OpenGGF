@@ -5,7 +5,10 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.camera.Camera;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -49,6 +52,36 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance impleme
             }
         }
 
+        // ROM loc_32EF0 (sonic3k.asm:68905-68919 -- the Pachinko-zone vertical
+        // variant of Obj_Bumper's on-screen test, reached via the
+        // `cmpi.b #$14,(Current_zone).w / bne.s ... / bra.w loc_32EF0` dispatch
+        // at sonic3k.asm:68836-68841):
+        // `move.w y_pos(a0),d0 / andi.w #$FF80,d0 / sub.w
+        // (Camera_Y_pos_coarse_back).w,d0 / cmpi.w #$200,d0 / bhi.s loc_32F22`.
+        // The subtraction is unsigned 16-bit; when the object's Y chunk sits more
+        // than 0x200 past the trailing camera band, loc_32F22 clears the SST's
+        // respawn_addr bit 7 (so the level's placement table can spawn it again)
+        // and deletes the sprite. Camera_Y_pos_coarse_back = (Camera_Y_pos - 0x80)
+        // & $FF80 (sonic3k.asm:37551-37554), which for chunk-aligned arithmetic is
+        // interchangeable with (Camera_Y_pos & $FF80) - 0x80.
+        //
+        // Without this, the engine's generic S3K windowing (ObjectWindowingStrategy
+        // .LEGACY, X-only) never unloads a Pachinko bumper as the board scrolls
+        // vertically far past it -- the board's X range stays essentially camera-
+        // relative the whole descent, so the X-based unload distance never trips.
+        // Round bumpers spawned near the top of the board then occupy dynamic SST
+        // slots for the rest of the run, eventually exhausting the 89-slot pool and
+        // silently dropping a later bumper's one-shot vertical placement window
+        // (pachinko1 trace f2704: engine never constructs the bumper at
+        // (0x1C4,0x148) because tryLoadPlacementSpawnForTwoAxisYPass's allocateSlot()
+        // fails with all 89 dynamic slots occupied at the exact frame its vertical
+        // band is crossed, while the ROM trace shows that same bumper legitimately
+        // spawning and despawning multiple times over the run via this check).
+        if (isOffScreenVertically()) {
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+            return;
+        }
+
         // ROM sub_32F34 (sonic3k.asm:68934-68949) has no cooldown timer: it clears
         // collision_property and re-bounces every frame the bit reads set, i.e. every
         // frame Add_SpriteToCollisionResponseList's touch-loop still finds the player
@@ -72,6 +105,29 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance impleme
         int dy = Math.abs(player.getCentreY() - spawn.y());
         return dx < (COLLISION_HALF_WIDTH + 8)
                 && dy < (COLLISION_HALF_HEIGHT + player.getYRadius());
+    }
+
+    /**
+     * ROM loc_32EF0's on-screen band test (sonic3k.asm:68913-68917): the
+     * bumper's y_pos, chunk-aligned to $FF80, minus the trailing camera band
+     * (Camera_Y_pos_coarse_back), is compared unsigned against $200. This
+     * round bumper never moves for the Pachinko variant (only the CNZ/
+     * competition branches of Obj_Bumper write an orbiting x_pos/y_pos), so
+     * {@code spawn.y()} is the same value ROM's y_pos(a0) holds every frame.
+     */
+    private boolean isOffScreenVertically() {
+        ObjectServices svc = tryServices();
+        Camera camera = svc != null ? svc.camera() : null;
+        if (camera == null) {
+            return false;
+        }
+        // ROM Camera_Y_pos_coarse_back = (Camera_Y_pos - 0x80) & $FF80
+        // (sonic3k.asm:37551-37554); chunk-aligned arithmetic makes that
+        // interchangeable with (Camera_Y_pos & $FF80) - 0x80.
+        int cameraYCoarseBack = (camera.getY() & 0xFF80) - 0x80;
+        int objChunkY = spawn.y() & 0xFF80;
+        int delta = (objChunkY - cameraYCoarseBack) & 0xFFFF;
+        return delta > 0x200;
     }
 
     private void applyBounce(AbstractPlayableSprite player, int frameCounter) {
