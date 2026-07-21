@@ -76,6 +76,8 @@ class TestS3kIczSwingingPlatformObject {
         assertTrue(platform.airborneStaleStandingBitReturnsNoContact(mock(PlayableEntity.class)));
         assertFalse(platform.usesCollisionHalfWidthForTopLanding(),
                 "SolidObjectFull re-reads the child slot's $20 width_pixels after the broad $2B overlap");
+        assertTrue(platform.usesInclusiveRightEdge(),
+                "SolidObjectFull's broad child overlap rejects only values above the right edge");
     }
 
     @Test

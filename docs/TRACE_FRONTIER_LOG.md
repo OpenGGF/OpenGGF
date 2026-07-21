@@ -47579,3 +47579,23 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:188958-189143,189320-189369,41030-41055,41605-41637`).
 - All eight focused swinging-platform tests pass, and the previously green
   f1708 jump-off path remains exact.
+
+## 2026-07-21 - S3K ICZ swinging-platform exact edge advances both frontiers
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczSwingingPlatformObject,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f5512 to f5536 and animation advanced
+  from f5513 to f5984.** Total errors fell from 3,492 to 3,466: physics from
+  3,164 to 3,151 and animation from 328 to 315.
+- Root: while Sonic rides the lower child, the adjacent upper child reaches an
+  exact `+d1` X overlap. S3K `SolidObjectFull` rejects this broad edge with
+  unsigned `bhi`, not `bhs`, so equality remains inside and sets
+  `Status_Push`. The engine used an exclusive right edge for ObjB4, clearing
+  the native push bit and allowing Walk's mapping script to advance instead of
+  holding frame `$B6`. ObjB4 now declares the inclusive full-solid boundary
+  used by its child callbacks
+  (`docs/skdisasm/sonic3k.asm:189320-189369,41380-41444`).
+- All eight focused swinging-platform tests pass with the boundary contract
+  pinned.

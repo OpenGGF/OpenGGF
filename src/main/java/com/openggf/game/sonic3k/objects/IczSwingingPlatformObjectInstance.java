@@ -296,6 +296,13 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // S3K SolidObjectFull rejects the broad X overlap with `bhi`, so a
+        // player exactly +d1 from either child remains inside its side box.
+        return true;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return LOWER_PARAMS;
     }
