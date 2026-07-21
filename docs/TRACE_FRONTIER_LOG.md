@@ -18,13 +18,30 @@ Root fixed: the Knuckles animation profile
 While Knuckles stood at rest against an AIZ rock (`AizLrzRockObjectInstance`
 slot 14, `Status_Push` set), the engine kept re-publishing the walk
 script's next frame (`mapping_frame` 7 -> 8) instead of freezing the last
-frame the way ROM `Animate_Knuckles`/`loc_17ECC` does
-(sonic3k.asm:33124-33125, 33095-33158). The push-timer reload shift also
-differs (Knuckles `lsr.w #8` at :33161 vs Sonic `lsr.w #6` at :25193),
-modelled via a new `pushDelayShift` profile field (default 6). After the
-fix seg0 holds `mapping_frame`=7 for f638-645 then switches to 0xCF at
-f646, matching the ROM; the whole downstream cascade (including what
-earlier looked like a separate f3793 `anim_id`=4 cluster) re-syncs.
+frame the way ROM `Animate_Knuckles`/`loc_17ECC` does (btst/bne at
+sonic3k.asm:33124-33125; loc_17ECC at 33203-33219; its subq/bpl freeze at
+33204-33205). The push-timer reload shift also differs (Knuckles `lsr.w #8`
+at :33216 vs Sonic `lsr.w #6` at :25193), modelled via a new
+`pushDelayShift` profile field (default 6). After the fix seg0 holds
+`mapping_frame`=7 for f638-645 then switches to 0xCF at f646, matching the
+ROM; the whole downstream cascade (including what earlier looked like a
+separate f3793 `anim_id`=4 cluster) re-syncs.
+
+Timing reconciliation (why the same missing flag showed two failure modes):
+pre-fix, the no-flag path runs the substituting `resolveAnimationId` overload
+that returns PUSH(4) whenever `getPushing()` is true at animation-resolve time
+(ScriptedVelocityAnimationProfile.java:344). At f638-652 Knuckles is at rest
+(`g_speed`=0); the pre-fix `[ROCK]`/`[ANIM]` diagnostics DIRECTLY SHOWED the
+rock's SolidObject pass asserts push AFTER the player animates, so
+animation-resolve-time `getPushing()` read false and only the mapping desynced
+(`anim` stayed 0 -- observed). At the f3789-3799 window Knuckles is moving
+(`g_speed`~0x30) and the substitution DID fire (`anim`=4 observed in the pre-fix
+report); the consistent -- but not separately instrumented -- inference is that
+the push was already set at animation-resolve time there (wall/collision push
+set earlier in the player's own step). Same missing-flag root under two
+push-set timings; the flag makes the anim byte push-independent and fixes both.
+(`status_byte` never diverged because it is sampled at frame end, after the rock
+re-asserts push.)
 
 Validation across all 12 recorded seg0 Status_Push windows (f637-652,
 f731, f892-902, f1198, f1779-1798, f2350-2371, f2389-2392, f2576-2591,

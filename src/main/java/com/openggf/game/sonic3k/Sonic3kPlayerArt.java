@@ -275,12 +275,13 @@ public class Sonic3kPlayerArt {
                 // Animate_Knuckles' Walk $FF handler tests Status_Push and
                 // branches to loc_17ECC (AniKnuckles04) instead of writing a raw
                 // anim=Push byte, exactly mirroring Animate_Sonic/loc_12A72
-                // (sonic3k.asm:33124-33125,33095-33158). loc_17ECC freezes
-                // mapping_frame while its reload timer counts, so a Knuckles at
-                // rest against a solid holds the last-published walk frame.
+                // (btst/bne at sonic3k.asm:33124-33125; loc_17ECC at 33203-33219).
+                // loc_17ECC's subq/bpl (33204-33205) freezes mapping_frame while
+                // its reload timer counts, so a Knuckles at rest against a solid
+                // holds the last-published walk frame.
                 .setPushUsesWalkSpecialHandler(true)
                 // Knuckles' loc_17ECC reload shift is lsr.w #8 (delay 8 at rest),
-                // unlike Sonic's loc_12A72 lsr.w #6 (sonic3k.asm:33161 vs 25193).
+                // unlike Sonic's loc_12A72 lsr.w #6 (sonic3k.asm:33216 vs 25193).
                 .setPushDelayShift(8)
                 .setDuckAnimId(Sonic3kAnimationIds.DUCK)
                 .setLookUpAnimId(Sonic3kAnimationIds.LOOK_UP)

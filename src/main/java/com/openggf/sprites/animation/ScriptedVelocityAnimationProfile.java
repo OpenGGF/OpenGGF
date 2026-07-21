@@ -24,7 +24,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     private boolean pushUsesWalkSpecialHandler;
     // Reload-timer shift for the $FF Walk handler's push sub-branch:
     // ROM Animate_Sonic/loc_12A72 uses lsr.w #6 (sonic3k.asm:25193), while
-    // Animate_Knuckles/loc_17ECC uses lsr.w #8 (sonic3k.asm:33161). Defaults
+    // Animate_Knuckles/loc_17ECC uses lsr.w #8 (sonic3k.asm:33216). Defaults
     // to 6 so existing Sonic/Tails/S2 profiles are unaffected.
     private int pushDelayShift = 6;
     // S3K's Player_ChkWalk clears Duck before its no-input preservation tail;
