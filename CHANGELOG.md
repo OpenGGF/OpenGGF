@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ crushing columns now include the exact right edge accepted by S3K `SolidObjectFull`'s unsigned `bhi` broad-X gate, restoring the native zero-distance side-push contact. Complete-run physics advances from frame 7100 to 7257 and animation from frame 7101 to 7274.
 - Fix: ICZ crushing-column return routines now compare the next one-pixel step against saved spawn Y before writing it, matching the ROM's `spawnY+1` upward-return and `spawnY-1` downward-return rest positions. Complete-run physics advances from frame 6972 to 7100 and animation from frame 7019 to 7101.
 - Fix: solid providers can now keep ordinary sidekick follow steering active when a stale engine push-grace window overlaps a live native support. ICZ swinging platforms use the CPU-phase riding/interact latch to preserve the ROM's follow nudge after `Status_Push` clears, advancing complete-run physics from frame 6139 to 6972 and animation from frame 6188 to 7019.
 - Fix: folded multi-piece solid callbacks now expose whether each child SST's standing bit was set at routine entry. ICZ's lower swinging-platform child uses that native continued-contact state to halve the rider's speed before deriving swing velocity, advancing complete-run physics from frame 5980 to 6139 and animation from frame 5984 to 6188.

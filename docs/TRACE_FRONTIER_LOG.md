@@ -47697,3 +47697,19 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:188160-188185`).
 - All eleven focused crushing-column tests pass with both endpoint semantics
   and the resulting second-cycle timing pinned.
+
+## 2026-07-21 - ICZ crushing-column edge advances both frontiers
+
+- Command: focused `TestS3kIczCrushingColumnObject` plus
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f7100 to f7257 and animation advanced
+  from f7101 to f7274.** Total errors fell from 2,984 to 2,960: physics from
+  2,610 to 2,608 and animation from 374 to 352.
+- Root: Sonic reaches `$524B` against the adjacent column centred at `$5220`,
+  exactly `$2B` from its centre. ObjAF calls S3K `SolidObjectFull` with
+  `d1=$2B`; its unsigned `bhi` broad-X rejection includes equality, producing
+  the native zero-distance side contact and `Status_Push`. The column inherited
+  the engine's exclusive default and published the push state one frame late.
+  ObjAF now declares the verified inclusive full-solid boundary
+  (`docs/skdisasm/sonic3k.asm:188007-188020,41380-41444`).
+- All eleven focused crushing-column tests pass.

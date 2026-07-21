@@ -339,6 +339,13 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // S3K SolidObjectFull's broad X gate rejects only with unsigned bhi;
+        // relX == d1*2 remains a valid zero-distance side contact.
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (contact != null && contact.standing()) {
             standingLatched = true;

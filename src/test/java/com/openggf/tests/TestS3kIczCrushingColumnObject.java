@@ -58,6 +58,7 @@ class TestS3kIczCrushingColumnObject {
         assertEquals(5, column.getPriorityBucket());
         assertTrue(column.hasBottomDecorationForTesting());
         assertTrue(column.usesInstanceSolidStateLatchKey());
+        assertTrue(column.usesInclusiveRightEdge());
     }
 
     @Test
