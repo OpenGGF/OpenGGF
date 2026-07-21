@@ -82,6 +82,15 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     }
 
     /**
+     * Whether {@link #getPieceLandingHalfWidth(int)} publishes the native
+     * per-piece top width directly, rather than relying on the shared
+     * {@code collisionHalfWidth - $B} SolidObject heuristic.
+     */
+    default boolean usesPieceSpecificLandingHalfWidths() {
+        return false;
+    }
+
+    /**
      * Called when a piece makes contact with the player.
      * Allows the object to track which pieces are being touched.
      *

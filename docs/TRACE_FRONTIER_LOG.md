@@ -47555,3 +47555,27 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:190568-190627,190657-190711,190833`).
 - All nine focused Penguinator tests pass, including raw hop-phase, complete
   slide-recovery, and flipped-slope branch regressions.
+
+## 2026-07-21 - S3K ICZ swinging-platform child widths advance physics
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczSwingingPlatformObject,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f5501 to f5512.** Animation remains at
+  f5513, while total errors fell from 5,525 to 3,492: physics from 4,221 to
+  3,164 and animation from 1,304 to 328.
+- Root: the platform folds three native child SSTs into one multi-piece engine
+  object. `SolidObjectFull` first uses the child's broad `$2B/$0F` overlap but
+  `loc_1E154` re-reads that child slot's `width_pixels` for a fresh top landing.
+  The engine had explicitly treated the broad overlap as the landing width, so
+  the idle lower child accepted Sonic three frames early at f5500-f5502. The
+  shared multi-piece contract can now publish an explicit per-piece landing
+  width; the idle lower trigger supplies its native `$20` window, while the
+  armed child retains the broad continued-contact window needed by the folded
+  standing-bit model. Airborne stale child standing also returns after clearing
+  its own bit, matching `SolidObjectFull_1P` rather than re-entering fresh
+  contact in the same pass
+  (`docs/skdisasm/sonic3k.asm:188958-189143,189320-189369,41030-41055,41605-41637`).
+- All eight focused swinging-platform tests pass, and the previously green
+  f1708 jump-off path remains exact.

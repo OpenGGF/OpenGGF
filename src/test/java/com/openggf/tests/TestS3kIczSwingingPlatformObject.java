@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -56,6 +57,7 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(0x1200, platform.getPieceX(0));
         assertEquals(0x0708, platform.getPieceY(0));
         assertEquals(0x2B, lower.halfWidth());
+        assertEquals(0x20, platform.getPieceLandingHalfWidth(0));
         assertEquals(8, lower.airHalfHeight());
         assertEquals(8, lower.groundHalfHeight());
 
@@ -63,6 +65,7 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(0x121C, platform.getPieceX(1));
         assertEquals(0x06F8, platform.getPieceY(1));
         assertEquals(0x0F, upper.halfWidth());
+        assertEquals(0x0F, platform.getPieceLandingHalfWidth(1));
         assertEquals(8, upper.airHalfHeight());
         assertEquals(8, upper.groundHalfHeight());
 
@@ -70,7 +73,9 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(0x0700, platform.getY());
         assertEquals(1, platform.getPriorityBucket());
         assertTrue(platform.usesPieceScopedStandingBits());
-        assertTrue(platform.usesCollisionHalfWidthForTopLanding());
+        assertTrue(platform.airborneStaleStandingBitReturnsNoContact(mock(PlayableEntity.class)));
+        assertFalse(platform.usesCollisionHalfWidthForTopLanding(),
+                "SolidObjectFull re-reads the child slot's $20 width_pixels after the broad $2B overlap");
     }
 
     @Test
@@ -90,6 +95,8 @@ class TestS3kIczSwingingPlatformObject {
         when(player.getXSpeed()).thenReturn((short) 0x1000);
 
         platform.onPieceContact(0, player, standingContact(), 0);
+        assertEquals(0x2B, platform.getPieceLandingHalfWidth(0),
+                "the armed child keeps its broad continued-contact window while its standing bit owns the rider");
         platform.update(1, player);
 
         assertEquals(0x1200, platform.getX(),

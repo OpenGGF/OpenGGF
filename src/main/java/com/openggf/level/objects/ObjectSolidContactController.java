@@ -3730,7 +3730,7 @@ final class ObjectSolidContactController {
                 && slopedProfile.usesGroundedStandingCatchWindow()
                 && relY >= 0
                 && relY <= maxTop
-                && isWithinTopLandingWidth(instance, player, relX, halfWidth)) {
+                && isWithinTopLandingWidth(instance, player, relX, halfWidth, -1)) {
             if (apply) {
                 // ROM parity: S2 SlopedSolid_cont (s2.asm:34927-35099) still
                 // enters SolidObject_Landed (s2.asm:35178-35383) before Obj41's
@@ -3841,7 +3841,7 @@ final class ObjectSolidContactController {
             }
             // ROM: Solid_Landed uses narrow obActWid for NEW landings only.
             // When sticky (already riding), ROM uses ExitPlatform's full collision width.
-            if (!sticky && !isWithinTopLandingWidth(instance, player, relX, halfWidth)) {
+            if (!sticky && !isWithinTopLandingWidth(instance, player, relX, halfWidth, pieceIndex)) {
                 return null;
             }
             if (apply) {
@@ -4000,7 +4000,7 @@ final class ObjectSolidContactController {
                 }
                 if (landingFrame > 0) {
                     // ROM: Solid_Landed narrow width only for NEW landings
-                    if (!sticky && !isWithinTopLandingWidth(instance, player, relX, halfWidth)) {
+                    if (!sticky && !isWithinTopLandingWidth(instance, player, relX, halfWidth, pieceIndex)) {
                         return null;
                     }
                     if (apply) {
@@ -4211,7 +4211,7 @@ final class ObjectSolidContactController {
             // effect; for the upward-velocity branch the player is by
             // definition not standing on the object so sticky doesn't apply.
             if (useTopLandingWidth && !sticky && !topSolidOnly
-                    && !isWithinTopLandingWidth(instance, player, relX, halfWidth)) {
+                    && !isWithinTopLandingWidth(instance, player, relX, halfWidth, pieceIndex)) {
                 // ROM loc_1E154 branches to loc_1E198 here. Unlike the ordinary
                 // no-overlap path at loc_1E0A2, this does not call sub_1E0C2, so
                 // a previously set native pushing bit remains authoritative.
@@ -4394,16 +4394,21 @@ final class ObjectSolidContactController {
     }
 
     private boolean isWithinTopLandingWidth(ObjectInstance instance, PlayableEntity player, int relX,
-            int collisionHalfWidth) {
+            int collisionHalfWidth, int pieceIndex) {
         if (!(instance instanceof SolidObjectProvider provider)) {
             return true;
         }
 
-        int configuredHalfWidth = provider.getTopLandingHalfWidth(player, collisionHalfWidth);
+        boolean pieceConfigured = pieceIndex >= 0
+                && provider instanceof MultiPieceSolidProvider multiPiece
+                && multiPiece.usesPieceSpecificLandingHalfWidths();
+        int configuredHalfWidth = pieceConfigured
+                ? ((MultiPieceSolidProvider) provider).getPieceLandingHalfWidth(pieceIndex)
+                : provider.getTopLandingHalfWidth(player, collisionHalfWidth);
         int allowedHalfWidth;
         if (provider.getSolidRoutineProfile().usesCollisionHalfWidthForTopLanding()) {
             allowedHalfWidth = collisionHalfWidth;
-        } else if (configuredHalfWidth != collisionHalfWidth) {
+        } else if (pieceConfigured || configuredHalfWidth != collisionHalfWidth) {
             // Provider explicitly set a landing width distinct from its side/body
             // collision half-width — use it directly (narrower OR wider). ROM
             // SolidObjectFull's top-slice clamp (loc_1E154 / Solid_Landed) re-reads

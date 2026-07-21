@@ -279,6 +279,23 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getPieceLandingHalfWidth(int pieceIndex) {
+        // SolidObjectFull's loc_1E154 re-reads each child SST's width_pixels:
+        // word_8B158 publishes $20 for the lower trigger, while word_8B15E
+        // publishes $30 for the adjusted upper solid. These are independent of
+        // the broad d1 values ($2B/$0F) passed into the initial overlap check.
+        if (pieceIndex == PIECE_UPPER) {
+            return UPPER_PARAMS.halfWidth();
+        }
+        return phase == Phase.IDLE ? 0x20 : LOWER_PARAMS.halfWidth();
+    }
+
+    @Override
+    public boolean usesPieceSpecificLandingHalfWidths() {
+        return true;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return LOWER_PARAMS;
     }
@@ -289,10 +306,11 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean usesCollisionHalfWidthForTopLanding() {
-        // Obj_ICZSwingingPlatform child slots pass d1=$2B/$0F directly to
-        // SolidObjectFull, rather than the obActWid+$0B width used by many
-        // generic solid callers.
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // Each solid child is a real SolidObjectFull SST slot. If its own
+        // standing bit is still set when a rider jumps, loc_1DC98 clears that
+        // bit and returns; the same slot cannot immediately re-enter the fresh
+        // top-contact branch and apply loc_1E154's upward-player lift.
         return true;
     }
 
