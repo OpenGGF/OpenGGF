@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ hand launchers again follow the native capture and top-solid contract:** launcher grabs now set positive `object_control=1`, preserve the player's X subpixel word, retain continued solid support for object-controlled riders, and use the literal `$11` `SolidObjectTop` height and relative landing boundaries while clearing folded ride ownership on release.
 - **HCZ1 miniboss vortex bubbles now retain their native fractional pull:** the bubble child preserves the low word of its 16.16 position while accumulating signed 8.8 horizontal velocity and half-pixel vertical steps, preventing far-left bubbles from freezing and matching `sub_6AA30` throughout the spin sequence (`docs/skdisasm/sonic3k.asm:140265-140315`).
 - **feat: Native builds now guard code-bearing mods that cannot load under
   GraalVM native-image.** Such mods are skipped, shown as `UNSUPPORTED` in the Mod
