@@ -514,7 +514,7 @@ OBJ_CNZ_CYLINDER            = 0x00032188
 local OBJ_CNZ_MINIBOSS_SCROLL_CONTROL = 0x00052004
 local OBJ_ID_CNZ_BALLOON    = 0x41
 
-local ADDR_FRAMECOUNT       = 0xFE08
+local ADDR_FRAMECOUNT       = 0xFE04  -- Level_frame_counter (was 0xFE08 = Debug_placement_mode, dead-zero since inception; matches S1/S2 recorders)
 -- Oscillating_table address ($FFFFFE6E in S3K RAM, $42 bytes total).
 -- First word ($FE6E/$FE6F) is the control bitfield (Osc_Data $0000 first dc.w),
 -- followed by 16 (value, delta) word pairs. Computed from
