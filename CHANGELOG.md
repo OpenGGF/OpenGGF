@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: MGZ drilling-boss thruster touch and rendering now resolve the ROM `V_int_run_count` phase through the injected object-service clock. Manager-backed trace replay retains its reconstructed low-bit offset, while isolated/headless objects use the normal zero-phase gameplay clock instead of dereferencing a missing object manager.
 - Fix: CNZ rewind structural links now use the central object policy: boss/ship ownership is rebuilt with the restored graph, the lights-flash owner relinks from the captured button reference, and field-child offsets reconstruct from their signed spawn subtype without per-class transient annotations.
 - Fixed out-of-place rewind reconstruction for CNZ end-boss charge and defeat child graphs, preserving field, explosion, flame, and gradual-boundary identities, slots, and owner links while detaching the absent defeat-phase magnet candidate.
 - Test: MGZ drilling-Robotnik music-transition coverage now follows the native separate init pass and `Obj_Wait` signed-underflow callback: zone music fades once on init, all 120 timer decrements complete without an early theme change, and End Boss music starts once on the following SST pass.

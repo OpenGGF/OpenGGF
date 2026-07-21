@@ -1789,7 +1789,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     private int vIntRunCounter(int objectUpdateCounter) {
-        return objectUpdateCounter + services().objectManager().getVIntRunCounterPhaseOffset();
+        return services().vIntRunCounter(objectUpdateCounter);
     }
 
     /**

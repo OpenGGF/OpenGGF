@@ -509,10 +509,10 @@ Expected: all selected tests PASS, no tail rows, no baseline debt, and the exact
 - Modify only if absent: the existing gameplay-clock accessor in `src/main/java/com/openggf/level/objects/ObjectServices.java`
 - Test: `src/test/java/com/openggf/tests/TestS3kMgzBossMusicTransition.java`
 
-- [ ] Run `endBossThrusterFlameTouchUsesGameplayFrameWithoutRenderPass`; expected null object-manager dereference.
-- [ ] Add alternating phase assertions without drawing, then source phase from the runtime gameplay/VInt clock with a valid neutral value when no manager exists.
-- [ ] Run the full class; expected PASS without test-only branches.
-- [ ] Commit as `fix: drive MGZ thruster touch from gameplay clock`, updating `CHANGELOG.md`.
+- [x] Run `endBossThrusterFlameTouchUsesGameplayFrameWithoutRenderPass`; reproduced the null object-manager dereference while reading the V-int phase.
+- [x] Preserve the alternating no-render assertions and source phase from the injected runtime gameplay/V-int clock, whose compatible default uses zero phase when no manager exists and the manager-owned replay offset when present.
+- [x] Run the full class; all seven methods pass without a render dependency or test-only branch. The latest-origin merge had already completed D3.12's canonical multi-region profile independently.
+- [x] Commit as `fix: drive MGZ thruster touch from gameplay clock`, updating `CHANGELOG.md`.
 
 ### Task D3.12: Expose MGZ multi-region touch dispatch
 
