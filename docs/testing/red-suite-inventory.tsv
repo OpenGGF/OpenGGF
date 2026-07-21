@@ -109,7 +109,7 @@ next	com.openggf.game.TestProductionSingletonClosureGuard#productionCodeOnlyUses
 develop+next	com.openggf.game.TestZoneEventRuntimeAccessGuard#zoneEventImplementations_shouldNotReferenceGameServicesDirectly	failure	not-run	runtime	D	observed-red	in-scope
 next	com.openggf.graphics.TestPatternAtlasDynamicRanges#dynamicallyRegisteredAlignedRangeGovernsItsPatternIds	failure	not-run	pattern-atlas	N3	observed-red	in-scope
 develop+next	com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectLifecycleRawCallCountsDoNotGrow	failure	not-run	runtime	D	observed-red	in-scope
-develop+next	com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations	failure	not-run	runtime	D	observed-red	in-scope
+develop+next	com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations	failure	failure:3-origin-cnz-multi-region-profile-hooks	runtime	D	observed-red	in-scope
 develop+next	com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionPlayableNativePositionRawPreserveSubpixelWriteFilesDoNotGrow	failure	not-run	runtime	D	observed-red	in-scope
 develop	com.openggf.physics.TestObjectTerrainUtils#floorFullTileEdgeChecksPreviousFullTileLikeSubF30C	error	not-run	runtime	D	observed-red	in-scope
 develop	com.openggf.physics.TestObjectTerrainUtils#floorFullTileEdgeKeepsPreviousCollisionAngleWhenItsSampleIsEmpty	error	not-run	runtime	D	observed-red	in-scope
@@ -120,8 +120,8 @@ next	com.openggf.sprites.managers.TestSpriteManagerDebugEmeraldGrant#giveEmerald
 next	com.openggf.sprites.playable.TestPlayableSubclassRewind#preservedOldCanonicalConstructorCompilesAndYieldsNullSubclassExtra	error	not-run	rewind	N1	observed-red	in-scope
 develop+next	com.openggf.tests.game.TestPerGameRuleArchitectureGuard#typedRuleRecordsStaySmallEnoughToReview	failure	not-run	runtime	D	observed-red	in-scope
 develop	com.openggf.tests.TestArchitecturalSourceGuard#objectManagerFacadeStaysWithinExtractedCollaboratorBudget	failure	not-run	runtime	D	observed-red	in-scope
-develop	com.openggf.tests.TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction	failure	not-run	runtime	D	observed-red	in-scope
-develop	com.openggf.tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets	failure	not-run	runtime	D	observed-red	in-scope
+develop	com.openggf.tests.TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction	failure	failure:GameLoop-3024>3005-after-origin-bonus-roundtrip	runtime	D	observed-red	in-scope
+develop	com.openggf.tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets	failure	failure:GameLoop-doExitBonusStage-167>142+enterBonusStage-119>86	runtime	D	observed-red	in-scope
 develop+next	com.openggf.tests.TestCNZBossArtAndAnimation#electricBallUsesObj51ProjectileMappingFrames	failure	not-run	runtime	D	observed-red	in-scope
 next	com.openggf.tests.TestFbzAct2RouteHeadless#nativeStartWaveCompletesFbz2AndRequestsSandopolisAct0	failure	not-run	FBZ	excluded	deferred-zone	excluded
 next	com.openggf.tests.TestFbzActTransitionHeadless#screenEventReloadPreservesLiveTeamStateAndUsesShiftedWindows	failure	not-run	FBZ	excluded	deferred-zone	excluded

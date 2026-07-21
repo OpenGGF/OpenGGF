@@ -221,6 +221,48 @@ Expected: all selected tests PASS, no tail rows, no baseline debt, and the exact
 - [ ] Run focused tests and the named guard; expected PASS.
 - [ ] Commit as `fix: declare object touch-response profiles`, updating `CHANGELOG.md`.
 
+### Task D1.5a: Declare origin-integrated CNZ multi-region touch profiles
+
+This task owns three diagnostics introduced inside the already-counted D1.5 guard method by the `origin/develop` integration at `6af04f87e`. It adds no JUnit method identity to the ledger and does not change the historical `36 develop / 179 union / 83 in-scope` accounting. The three CNZ publishers always return a non-null, native-centre `TouchRegion[]`; their missing declaration is canonical profile debt, not a reason to add them to `TRIAGED_TOUCH_PROFILE_HOOK_FILES`.
+
+**Files:**
+- Modify: `src/main/java/com/openggf/game/profiles/touchresponse/TouchResponseProfile.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossInstance.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossArmChild.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossMagnetChild.java`
+- Create: `src/test/java/com/openggf/game/sonic3k/objects/bosses/TestCnzEndBossTouchResponseProfiles.java`
+- Verify unchanged: `src/test/java/com/openggf/level/objects/TestObjectPhysicsStandardizationGuard.java`
+
+- [ ] Reproduce the exact origin-integrated diagnostic:
+
+```powershell
+mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations" test
+```
+
+Expected: one failing JUnit method whose only three violations are `TOUCH_PROFILE_HOOK_WITHOUT_PROFILE` for `CnzEndBossInstance`, `CnzEndBossArmChild`, and `CnzEndBossMagnetChild` at `getMultiTouchRegions()`.
+
+- [ ] Add `TestCnzEndBossTouchResponseProfiles` with `bossArmAndMagnetDeclareCanonicalMultiRegionEnemyProfiles`. Construct one boss, one phase-zero arm, and one magnet in the package-local test. For each publisher, assert both profile overloads are declared on its concrete class, `getTouchResponseProfile()` equals `getTouchResponseProfile(true)`, and the result has exactly `NORMAL`, `continuousCallbacks=false`, `requiresRenderFlagForTouch=true`, `multiRegionSource=true`, `NONE` shield deflection with flags `0`, `STANDARD_ENEMY_KILL`, `MAIN_FULL_SIDEKICK_HURT_ONLY`, and `STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY`. Also assert each current `getMultiTouchRegions()` result is non-null and contains exactly one region at that object's native centre; this prevents satisfying the source guard with a profile that changes the existing collision geometry.
+
+- [ ] Run the new test before production changes:
+
+```powershell
+mvn "-Dtest=com.openggf.game.sonic3k.objects.bosses.TestCnzEndBossTouchResponseProfiles#bossArmAndMagnetDeclareCanonicalMultiRegionEnemyProfiles" test
+```
+
+Expected: FAIL because the three concrete classes do not declare `getTouchResponseProfile()` and `getTouchResponseProfile(boolean)`.
+
+- [ ] Add `TouchResponseProfile.standardEnemy(boolean multiRegionSource)` to the canonical `com.openggf.game.profiles.touchresponse` record. It must preserve every field from `standardEnemy()` while selecting `STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY` when `multiRegionSource` is true and `STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS` otherwise; make the existing no-argument factory delegate to `standardEnemy(false)`. In each CNZ class, cache the compatibility profile created with `com.openggf.level.objects.TouchResponseProfile.fromCanonical(TouchResponseProfile.standardEnemy(true))`, implement both overloads, and return that fixed multi-region profile. Do not call `fromProvider(this)` from the override, which would recurse through `getTouchResponseProfile`, and do not alter collision flags, regions, callbacks, or attack behavior.
+
+- [ ] Run the focused profile test, the source guard, and the nearby CNZ behavior suites:
+
+```powershell
+mvn "-Dtest=com.openggf.game.sonic3k.objects.bosses.TestCnzEndBossTouchResponseProfiles,com.openggf.game.sonic3k.objects.bosses.TestCnzEndBossChildren,com.openggf.game.sonic3k.objects.bosses.TestCnzEndBossDefeatScatter,com.openggf.tests.TestS3kCnzEndBossHeadless,com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations" test
+```
+
+Expected: all selected tests PASS; the guard reports no CNZ hooks and neither its triage set nor any budget changes.
+
+- [ ] Commit as `fix: declare CNZ boss touch-response profiles`, updating `CHANGELOG.md` and using the required policy trailers.
+
 ### Task D1.6: Route playable writes through NativePositionOps
 
 **Files:**
@@ -306,6 +348,61 @@ Expected: all selected tests PASS, no tail rows, no baseline debt, and the exact
 - [ ] Add/retain transition delegation tests, perform behavior-neutral extraction, and keep the root method at or below 91.
 - [ ] Run transition tests and named guard; expected PASS.
 - [ ] Commit as `refactor: extract results title-card transition` with explicit changelog justification.
+
+### Task D1.11a: Extract origin-integrated bonus-stage transition state
+
+Run this leaf after D1.11. The earlier results/title-card extraction is already present; the current source reds instead come from the star-post return and live-ring carry-over blocks added to `enterBonusStage` and `doExitBonusStage` by recent `origin/develop` bonus-round-trip parity commits. Both overruns are one responsibility: capturing level state before a bonus-stage boundary and restoring it after the level reload. Keep loading, provider lifecycle, fades, title-card setup, audio, and `GameMode` changes in `GameLoop`.
+
+**Files:**
+- Create: `src/main/java/com/openggf/game/BonusStageTransitionCoordinator.java`
+- Modify: `src/main/java/com/openggf/GameLoop.java`
+- Create: `src/test/java/com/openggf/game/TestBonusStageTransitionCoordinator.java`
+- Modify only if a delegation seam needs coverage: `src/test/java/com/openggf/TestGameLoop.java`
+- Verify unchanged: `src/test/java/com/openggf/tests/TestArchitecturalSourceGuard.java`
+- Regression: `src/test/java/com/openggf/game/sonic3k/TestBonusStageReturnWaterRestore.java`
+- Regression: `src/test/java/com/openggf/game/sonic3k/TestPachinkoTitleCardIntegration.java`
+
+- [ ] Reproduce both exact guard methods together:
+
+```powershell
+mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+releaseCriticalLargeClassesDoNotGrowWithoutExtraction" test
+```
+
+Expected: two failing JUnit methods with only these diagnostics: `GameLoop#doExitBonusStage 167 > 142`, `GameLoop#enterBonusStage 119 > 86`, and `GameLoop 3024 > 3005` effective source lines.
+
+- [ ] Write `TestBonusStageTransitionCoordinator#captureEntryUsesActiveStarPostStateAndRomZeroCheckpointIndex`. Build an active `RespawnState` with distinct saved player coordinates, checkpoint subtype/activation mark, plus mocked level game state, event routines, camera, collision bits, timer, and water height. Assert the returned `EntryCapture` contains a `BonusStageState` whose player position is the star-post position rather than the live player position, whose `savedLastStarPostHit()` is ROM value `0`, and whose remaining ring/timer/camera/event/collision/water fields exactly match the inputs; assert `pendingStarPostActivationMark()` retains the activation high-water. Add `captureEntryWithoutCheckpointUsesLivePlayerPositionAndNoActivationMark` for the inactive/null-checkpoint path.
+
+- [ ] Write `TestBonusStageTransitionCoordinator#restoreReturnStatePreservesLiveInteriorRingsCheckpointMarkAndRuntimeState`. Given a saved state, a distinct live interior HUD ring total, a saved activation mark, rewards containing both rings and lives, and mocks/fakes for the checkpoint, event manager, playable, camera, water system, game state, and life sink, invoke the coordinator after the simulated level reload. Assert it restores the checkpoint index and activation mark separately, restores both event routine bytes, restores player centre/collision bits and zeroes all three speeds, resolves the supplied shield without adding reward rings, clears bonus high-priority state, restores camera/max-Y/water/timer, carries the live interior ring total exactly, and awards only `rewards.lives()`. Add `captureInteriorExitRingCountFallsBackToSavedEntryRingsWithoutLiveGameState` and assert it returns `savedState.savedRingCount()`; add the defensive null-state case separately and assert `0`.
+
+- [ ] Run only the new coordinator test before creating production code:
+
+```powershell
+mvn "-Dtest=com.openggf.game.TestBonusStageTransitionCoordinator" test
+```
+
+Expected: FAIL to compile because `BonusStageTransitionCoordinator` and its `EntryCapture` contract do not exist.
+
+- [ ] Implement a gameplay-agnostic `BonusStageTransitionCoordinator` under `com.openggf.game`. Move, without semantic edits, the entry snapshot block currently in `GameLoop.enterBonusStage` into `captureEntry(...)`, returning an immutable `EntryCapture(BonusStageState savedState, int pendingStarPostActivationMark)`. Move `captureInteriorExitRingCount(...)` and the post-reload checkpoint/event/player/camera/water/HUD/life restoration into focused coordinator methods. Pass explicit `LevelManager`, `Camera`, `WaterSystem`, playable, event-provider, shield, rewards, and life-award dependencies; the collaborator must not call `GameServices`, change modes, load levels, control fades/audio/title cards, or own a `BonusStageProvider`. Preserve the current ordering: capture live rings before `provider.onExit()`, load the level in `GameLoop`, then restore checkpoint/event/player/camera/water/HUD/lives.
+
+- [ ] Replace the moved blocks in `GameLoop` with thin calls. Keep `pendingBonusReturnStarPostMark` only if it remains the minimal boundary handoff; otherwise store the returned mark in a narrowly named coordinator field, with `-1` retaining its existing no-entry meaning. Keep `resolveShieldToRestore`, `pendingBonusStageShieldRestore`, provider/session registration, level-load exception paths, title-card initialization, music, fades, and game-mode listener dispatch in `GameLoop`. Do not move unrelated bonus gameplay or increase any architecture budget.
+
+- [ ] Run the coordinator tests and bonus-boundary regression set:
+
+```powershell
+mvn "-Dtest=com.openggf.game.TestBonusStageTransitionCoordinator,com.openggf.TestGameLoop#testDoExitBonusStageDoesNotWriteSaveForActiveSlot,com.openggf.game.sonic3k.TestBonusStageReturnWaterRestore,com.openggf.game.sonic3k.TestPachinkoTitleCardIntegration,com.openggf.game.sonic3k.TestBonusStageLifecycle" test
+```
+
+Expected: all selected tests PASS; star-post position/activation, live-ring carry-over, water restoration, title-card preparation, and provider lifecycle are unchanged.
+
+- [ ] Run both architecture guards and the complete `TestGameLoop` class:
+
+```powershell
+mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+releaseCriticalLargeClassesDoNotGrowWithoutExtraction,com.openggf.TestGameLoop" test
+```
+
+Expected: all selected tests PASS; `enterBonusStage <= 86`, `doExitBonusStage <= 142`, and `GameLoop <= 3005` effective lines with the existing budgets unchanged.
+
+- [ ] Commit as `refactor: extract bonus-stage transition state` with `Changelog: n/a: behavior-neutral responsibility extraction` and the remaining required policy trailers.
 
 ### Task D1.12: Extract playable-sprite growth into its controller
 
@@ -539,12 +636,14 @@ Each task uses its row below for the initial red run and final green regression 
 | D1.4 | `mvn "-Dtest=com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test` | `mvn "-Dtest=com.openggf.game.rewind.TestParentDependentGraphCoverageGuard,com.openggf.game.rewind.TestRemainingRewindTailInventory" test` |
 | D1.4a | `mvn "-Dtest=com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test` | `mvn "-Dtest=com.openggf.game.rewind.TestS3kCnzEndBossGraphRewind,com.openggf.game.rewind.TestGraphCoveredIsolatedProbeClassification#cnzEndBossChildrenAreReportedAsGraphCovered,com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test` |
 | D1.5 | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations" test` | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard" test` |
+| D1.5a | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations" test` | `mvn "-Dtest=com.openggf.game.sonic3k.objects.bosses.TestCnzEndBossTouchResponseProfiles,com.openggf.game.sonic3k.objects.bosses.TestCnzEndBossChildren,com.openggf.game.sonic3k.objects.bosses.TestCnzEndBossDefeatScatter,com.openggf.tests.TestS3kCnzEndBossHeadless,com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations" test` |
 | D1.6 | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionPlayableNativePositionRawPreserveSubpixelWriteFilesDoNotGrow" test` | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard" test` |
 | D1.7 | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectLifecycleRawCallCountsDoNotGrow" test` | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard" test` |
 | D1.8 | `mvn "-Dtest=com.openggf.game.TestZoneEventRuntimeAccessGuard#zoneEventImplementations_shouldNotReferenceGameServicesDirectly" test` | `mvn "-Dtest=com.openggf.game.TestZoneEventRuntimeAccessGuard" test` |
 | D1.9 | `mvn "-Dtest=com.openggf.tests.game.TestPerGameRuleArchitectureGuard#typedRuleRecordsStaySmallEnoughToReview" test` | `mvn "-Dtest=com.openggf.tests.game.TestPerGameRuleArchitectureGuard" test` |
 | D1.10 | `mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard#objectManagerFacadeStaysWithinExtractedCollaboratorBudget" test` | `mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard" test` |
 | D1.11 | `mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets" test` | `mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard" test` |
+| D1.11a | `mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+releaseCriticalLargeClassesDoNotGrowWithoutExtraction" test` | `mvn "-Dtest=com.openggf.game.TestBonusStageTransitionCoordinator,com.openggf.TestGameLoop,com.openggf.game.sonic3k.TestBonusStageReturnWaterRestore,com.openggf.game.sonic3k.TestPachinkoTitleCardIntegration,com.openggf.tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+releaseCriticalLargeClassesDoNotGrowWithoutExtraction" test` |
 | D1.12 | `mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction" test` | `mvn "-Dtest=com.openggf.tests.TestArchitecturalSourceGuard" test` |
 | D2.1 | `mvn "-Dtest=com.openggf.physics.TestObjectTerrainUtils#floorFullTileEdgeChecksPreviousFullTileLikeSubF30C+floorFullTileEdgeKeepsPreviousCollisionAngleWhenItsSampleIsEmpty+floorRegressToEmptyPreviousTileMatchesSubF30CEmptyResult+floorRegressToPreviousSlopeUsesSingleRomTileOffset" test` | `mvn "-Dtest=com.openggf.physics.TestObjectTerrainUtils" test` |
 | D2.2 | `mvn "-Dtest=com.openggf.level.objects.TestSolidObjectManager#zeroDistanceOnlyMotionHookPreservesExactEdgeWithoutChangingNonzeroCorrection" test` | `mvn "-Dtest=com.openggf.level.objects.TestSolidObjectManager" test` |

@@ -12,6 +12,8 @@ The measured union contains 179 red `class#method` identities: 36 on `develop`, 
 
 After the 2026-07-21 integration of `origin/develop` at `00498f16e`, the same two already-catalogued rewind inventory methods expose eight additional CNZ end-boss object-class gaps: five no-probe constructors and three parent-dependent children. These are nested diagnostic identities, not additional Surefire `class#method` identities, so the historical `179 / 36 / 170 / 27 / 83` method accounting and branch ownership do not change. CNZ is in scope; the eight classes require executable graph or isolated-probe evidence and may not be converted into baseline debt merely to restore aggregate totals.
 
+The later `origin/develop` integration at `6af04f87e` likewise changes diagnostics inside three existing guard identities without adding method rows. `TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations` now reports the always-multi-region `CnzEndBossInstance`, `CnzEndBossArmChild`, and `CnzEndBossMagnetChild` because they publish `getMultiTouchRegions()` without declaring a canonical touch-response profile. `TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets` reports `GameLoop#doExitBonusStage` at `167 > 142` and `GameLoop#enterBonusStage` at `119 > 86`; `releaseCriticalLargeClassesDoNotGrowWithoutExtraction` reports `GameLoop` at `3024 > 3005`. These remain in scope, retain the frozen method accounting, and must be resolved through explicit profile adoption and behavior-neutral bonus-transition extraction rather than guard baselines or budget increases.
+
 ## Scope
 
 ### In scope
