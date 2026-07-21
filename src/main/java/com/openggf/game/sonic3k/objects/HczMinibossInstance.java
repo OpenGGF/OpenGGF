@@ -1477,9 +1477,13 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         private int phase;
         private int timer;
         private short xVel;
+        private int xSub;
+        private int ySub;
         private boolean vortexEnded;
 
-        private record RewindState(int x, int y, int phase, int timer, short xVel, boolean vortexEnded) {}
+        private record RewindState(
+                int x, int y, int xSub, int ySub,
+                int phase, int timer, short xVel, boolean vortexEnded) {}
 
         private VortexBubbleChild(ObjectSpawn spawn) {
             this(spawn.x(), spawn.y(), 0, 0, 0);
@@ -1543,14 +1547,26 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
                 if (!left) xAccel = -xAccel;
             }
             xVel = (short) (xVel + xAccel);
-            curX += xVel >> 8;
+
+            // ROM sub_6AA30 sign-extends the 8.8 velocity, shifts it by eight,
+            // and adds it to the full 16.16 x_pos (sonic3k.asm:140301-140315).
+            // Retaining the low word is essential here: distant left-side
+            // bubbles reset to +$40 every frame, so dropping the fraction
+            // leaves them permanently still.
+            int xFixed = (curX << 16) | (xSub & 0xFFFF);
+            xFixed += ((int) xVel) << 8;
+            curX = xFixed >> 16;
+            xSub = xFixed & 0xFFFF;
 
             int yDist = curY - vortexY;
+            int yFixed = (curY << 16) | (ySub & 0xFFFF);
             if (yDist < -0x10) {
-                curY++;
+                yFixed += 0x8000;
             } else if (yDist > 0x10) {
-                curY--;
+                yFixed -= 0x8000;
             }
+            curY = yFixed >> 16;
+            ySub = yFixed & 0xFFFF;
 
             updateDynamicSpawn(curX, curY);
         }
@@ -1571,12 +1587,16 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
 
         @Override
         public RewindState captureRewindStateValue() {
-            return new RewindState(getSpawn().x(), getSpawn().y(), phase, timer, xVel, vortexEnded);
+            return new RewindState(
+                    getSpawn().x(), getSpawn().y(), xSub, ySub,
+                    phase, timer, xVel, vortexEnded);
         }
 
         @Override
         public void restoreRewindStateValue(RewindState state) {
             updateDynamicSpawn(state.x(), state.y());
+            xSub = state.xSub();
+            ySub = state.ySub();
             phase = state.phase();
             timer = state.timer();
             xVel = state.xVel();

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **HCZ1 miniboss vortex bubbles now retain their native fractional pull:** the bubble child preserves the low word of its 16.16 position while accumulating signed 8.8 horizontal velocity and half-pixel vertical steps, preventing far-left bubbles from freezing and matching `sub_6AA30` throughout the spin sequence (`docs/skdisasm/sonic3k.asm:140265-140315`).
 - **feat: Native builds now guard code-bearing mods that cannot load under
   GraalVM native-image.** Such mods are skipped, shown as `UNSUPPORTED` in the Mod
   Manager (and cannot be enabled), removed from standalone launch choices, and
