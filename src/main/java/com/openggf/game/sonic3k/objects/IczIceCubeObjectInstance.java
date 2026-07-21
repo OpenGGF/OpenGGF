@@ -101,6 +101,14 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // loc_8B384 calls S3K SolidObjectFull with d1=$23. Its unsigned
+        // broad-X rejection is `bhi`, so a player exactly +$23 from the cube
+        // still reaches the zero-distance side/push path.
+        return true;
+    }
+
+    @Override
     public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
         return true;
     }

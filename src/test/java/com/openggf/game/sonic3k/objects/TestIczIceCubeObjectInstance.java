@@ -58,6 +58,7 @@ class TestIczIceCubeObjectInstance {
         assertEquals(0x10, params.airHalfHeight());
         assertEquals(0x10, params.groundHalfHeight());
         assertEquals(0x18, cube.getTopLandingHalfWidth(null, params.halfWidth()));
+        assertTrue(cube.usesInclusiveRightEdge());
         assertEquals(0x1200, cube.getX());
         assertEquals(0x0700, cube.getY());
         assertEquals(0x2E, cube.getCollisionFlags());

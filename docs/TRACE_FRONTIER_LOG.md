@@ -47776,3 +47776,21 @@ standalone CNZ remains at f0 in both scopes.
   its pre-existing two ring-timing errors (f9396 and f16780-f16781); restoring
   Obj04's original fresh-contact predicate produces the same two errors, so
   this frontier does not add that regression.
+
+## 2026-07-21 - ICZ ice-cube edge advances both frontiers
+
+- Commands: focused `TestIczIceCubeObjectInstance`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f7606 to f8227 and animation advanced
+  from f7595 to f8227.** Total errors fell from 5,050 to 4,680: physics from
+  3,827 to 3,487 and animation from 1,223 to 1,193.
+- Root: at f7594 CPU Tails is exactly `$23` pixels right of ObjB6's centre.
+  `loc_8B384` passes `d1=$23` to S3K `SolidObjectFull`, whose unsigned `bhi`
+  broad-X rejection includes equality. ROM therefore retains `Status_Push`
+  before `Animate_Tails`; the expired Walk-handler tick selects mapping `$AA`
+  at f7595. The cube inherited the engine's exclusive default, cleared push a
+  frame early, and left mapping `$08`. ObjB6 now declares the verified
+  inclusive full-solid boundary
+  (`docs/skdisasm/sonic3k.asm:189703-189741,41380-41444`).
+- The focused eight-case ICZ ice-cube suite passes with the boundary contract
+  pinned alongside its existing shatter and debris behavior.
