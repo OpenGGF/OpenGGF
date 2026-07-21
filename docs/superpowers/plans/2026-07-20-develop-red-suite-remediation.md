@@ -499,7 +499,7 @@ Expected: all selected tests PASS, no tail rows, no baseline debt, and the exact
 - [x] Run `drillingRobotnikFadesZoneMusicBeforeDelayedBossMusic`; reproduced its stale expectation that boss music would start on frame 119.
 - [x] Preserve the trace-accurate production cadence: the placement init pass writes `$2E=120`, frames 1 through 120 perform the 120 `Obj_Wait` decrements, and the signed-underflow callback starts End Boss music on frame 121.
 - [x] Strengthen coverage for one fade, no early play, fade-before-theme order, and one boss-music command. The exact method passes.
-- [x] Run the full class; the five completed D3.9/D3.10 checks pass and only the separately planned D3.11/D3.12 gameplay-clock/profile errors remain.
+- [x] Run the full class; the five completed D3.9/D3.10 checks pass and only the separately planned D3.11 gameplay-clock null dereference remains, which also prevents D3.12 from evaluating its pre-existing profile.
 - [x] Commit as `test: preserve MGZ boss music callback timing`, updating `CHANGELOG.md`; no production change was required because the July trace-cadence fix already matches the ROM.
 
 ### Task D3.11: Drive thruster touch from the gameplay clock
@@ -511,7 +511,7 @@ Expected: all selected tests PASS, no tail rows, no baseline debt, and the exact
 
 - [x] Run `endBossThrusterFlameTouchUsesGameplayFrameWithoutRenderPass`; reproduced the null object-manager dereference while reading the V-int phase.
 - [x] Preserve the alternating no-render assertions and source phase from the injected runtime gameplay/V-int clock, whose compatible default uses zero phase when no manager exists and the manager-owned replay offset when present.
-- [x] Run the full class; all seven methods pass without a render dependency or test-only branch. The latest-origin merge had already completed D3.12's canonical multi-region profile independently.
+- [x] Run the full class; all seven methods pass without a render dependency or test-only branch. The canonical multi-region profile already existed in ancestor commit `0c7b3b4f95`; D3.11 solely removed the evaluation null dereference that made D3.12 red.
 - [x] Commit as `fix: drive MGZ thruster touch from gameplay clock`, updating `CHANGELOG.md`.
 
 ### Task D3.12: Expose MGZ multi-region touch dispatch
@@ -521,10 +521,10 @@ Expected: all selected tests PASS, no tail rows, no baseline debt, and the exact
 - Modify only if canonical vocabulary lacks it: `src/main/java/com/openggf/game/profiles/touchresponse/TouchResponseProfile.java`
 - Test: `src/test/java/com/openggf/tests/TestS3kMgzBossMusicTransition.java`
 
-- [x] Run `endBossTouchProfileExposesMultiRegionDispatch`; after D3.11, the method passes because the merged latest-origin code already exposes the canonical profile and profile evaluation can now read the gameplay clock without a render pass.
+- [x] Run `endBossTouchProfileExposesMultiRegionDispatch`; after D3.11, the method passes because the canonical profile from ancestor commit `0c7b3b4f95` can now evaluate its multi-touch regions through the gameplay clock without a render pass.
 - [x] Confirm the existing assertions cover `multiRegionSource()` and `STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY`; the adjacent no-render touch test evaluates the actual body, drill, and alternating flame regions from the gameplay clock.
 - [x] Run the full class and touch standardization guard. All seven MGZ methods pass; the guard's only violations are the separately owned latest-origin CNZ multi-region classes (`CnzEndBossInstance`, `CnzEndBossArmChild`, and `CnzEndBossMagnetChild`), not MGZ.
-- [x] No production, test, or changelog change is required: this catalogue entry was stale after latest-origin supplied the profile and D3.11 removed its evaluation blocker. Record this disposition in the plan rather than creating an empty behavior commit.
+- [x] No production, test, or changelog change is required: the profile predates the initial plan, and D3.11 removed its sole evaluation blocker. Record this stale-red disposition in the plan rather than creating an empty behavior commit.
 
 ## Literal Maven command contract
 
