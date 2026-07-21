@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: folded multi-piece solid callbacks now expose whether each child SST's standing bit was set at routine entry. ICZ's lower swinging-platform child uses that native continued-contact state to halve the rider's speed before deriving swing velocity, advancing complete-run physics from frame 5980 to 6139 and animation from frame 5984 to 6188.
 - Fix: ICZ swinging-platform upper children now re-read their native `$30` `width_pixels` value after the broad `$0F` `SolidObjectFull` overlap. This restores S3K's upward-player position lift at the child's exact broad edge and advances complete-run physics from frame 5545 to 5980.
 - Fix: airborne stale-standing dispatch for folded multi-piece solids now returns per native child rather than suppressing every sibling. ObjB4’s ridden lower child can clear its bit while the later upper child still applies its legitimate S3K top-contact lift, advancing ICZ complete-run physics from frame 5536 to 5545.
 - Fix: ICZ swinging-platform child solids now include the exact right boundary used by S3K `SolidObjectFull`, restoring the native side-push bit and push-animation hold while Sonic rides between the folded child pieces. Complete-run physics advances from frame 5512 to 5536 and animation from frame 5513 to 5984.

@@ -2896,6 +2896,8 @@ final class ObjectSolidContactController {
         boolean anyPushing = false;
         SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
         for (int i = 0; i < ridingPieceIndex && i < multiPiece.getPieceCount(); i++) {
+            boolean standingBitWasSetAtEntry = hasObjectStandingBit(player, instance, i)
+                    || wasObjectStandingBitSetThisFrame(player, instance, i);
             SolidObjectParams params = multiPiece.getPieceParams(i);
             int anchorX = multiPiece.getPieceX(i) + params.offsetX();
             int anchorY = multiPiece.getPieceY(i) + params.offsetY();
@@ -2919,7 +2921,8 @@ final class ObjectSolidContactController {
                 if (contact.pushing()) {
                     anyPushing = true;
                 }
-                multiPiece.onPieceContact(i, player, contact, frameCounter);
+                multiPiece.onPieceContact(i, player, contact, frameCounter,
+                        standingBitWasSetAtEntry);
             }
         }
         return anyPushing;
@@ -2982,6 +2985,8 @@ final class ObjectSolidContactController {
                 && thisAoiGate.getSlotIndex() < riddenAoiGate.getSlotIndex();
 
         for (int i = 0; i < pieceCount; i++) {
+            boolean standingBitWasSetAtEntry = hasObjectStandingBit(player, instance, i)
+                    || wasObjectStandingBitSetThisFrame(player, instance, i);
             // ROM slot-order parity: when the earlier slots of this ridden object
             // were already side-pushed ahead of the ride-bounds re-check
             // (resolveEarlierMultiPieceSiblings set multiPieceEarlierPiecesResolvedUpTo
@@ -3013,7 +3018,7 @@ final class ObjectSolidContactController {
                     standingPieceX = pieceX;
                     standingPieceY = pieceY;
                 }
-                multiPiece.onPieceContact(i, player, SolidContact.STANDING, frameCounter);
+                multiPiece.onPieceContact(i, player, SolidContact.STANDING, frameCounter, true);
                 continue;
             }
             int anchorX = pieceX + params.offsetX();
@@ -3131,7 +3136,8 @@ final class ObjectSolidContactController {
                 anyPushing = true;
             }
 
-            multiPiece.onPieceContact(i, player, contact, frameCounter);
+            multiPiece.onPieceContact(i, player, contact, frameCounter,
+                    standingBitWasSetAtEntry);
         }
 
         SolidContact aggregateContact = (anyStanding || anyTouchTop || anyTouchBottom

@@ -103,4 +103,15 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
                                 SolidContact contact, int frameCounter) {
         // Default no-op - objects can override to track piece-specific contact
     }
+
+    /**
+     * Piece-contact callback with the native child SST's standing-bit state at
+     * routine entry. Folded child objects can use this when their post-contact
+     * behavior distinguishes a continued ride from a fresh landing.
+     */
+    default void onPieceContact(int pieceIndex, PlayableEntity player,
+                                SolidContact contact, int frameCounter,
+                                boolean standingBitWasSetAtEntry) {
+        onPieceContact(pieceIndex, player, contact, frameCounter);
+    }
 }

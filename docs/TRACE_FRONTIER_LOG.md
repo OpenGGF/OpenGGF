@@ -47639,3 +47639,25 @@ standalone CNZ remains at f0 in both scopes.
   restores the native +2-pixel upward-velocity lift
   (`docs/skdisasm/sonic3k.asm:189402-189417,189467-189472,41605-41637`).
 - All eight focused swinging-platform tests pass with both child widths pinned.
+
+## 2026-07-21 - ICZ continued trigger advances both frontiers
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczSwingingPlatformObject,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f5980 to f6139 and animation advanced
+  from f5984 to f6188.** The later route now exposes 3,785 errors (3,249
+  physics and 536 animation), replacing the prior 3,458-error downstream
+  cascade rather than representing a like-for-like count reduction.
+- Root: ObjB4's lower child saves its standing status before calling
+  `SolidObjectFull`. If the child was already supporting the player,
+  `sub_8B0B0` halves `x_vel` once before its ordinary swing derivation. The
+  folded provider callback previously received only the resulting contact, so
+  it treated the continued `$08F8` rider speed as a fresh contact and clamped
+  it to `$0800`; native output is `$047C`. Multi-piece callbacks now receive
+  their piece's standing-bit-at-entry state, and ObjB4 consumes it for the
+  saved-status branch
+  (`docs/skdisasm/sonic3k.asm:189419-189466`).
+- All nine focused swinging-platform tests pass, including fresh-contact clamp
+  and continued-contact halving cases.

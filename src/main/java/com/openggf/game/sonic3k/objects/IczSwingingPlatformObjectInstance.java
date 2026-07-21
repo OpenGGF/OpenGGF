@@ -328,6 +328,12 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onPieceContact(int pieceIndex, PlayableEntity player, SolidContact contact, int frameCounter) {
+        onPieceContact(pieceIndex, player, contact, frameCounter, false);
+    }
+
+    @Override
+    public void onPieceContact(int pieceIndex, PlayableEntity player, SolidContact contact, int frameCounter,
+            boolean standingBitWasSetAtEntry) {
         if (pieceIndex != PIECE_LOWER_TRIGGER || player == null || !contact.standing() || phase != Phase.IDLE) {
             return;
         }
@@ -342,7 +348,8 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        int swing = clamp(sign16(speed) >> 1, -MAX_SWING_VELOCITY, MAX_SWING_VELOCITY);
+        int triggerSpeed = standingBitWasSetAtEntry ? sign16(speed) >> 1 : speed;
+        int swing = clamp(sign16(triggerSpeed) >> 1, -MAX_SWING_VELOCITY, MAX_SWING_VELOCITY);
         swingVelocity = swing;
         // ROM child routine sub_8B0B0 sets parent flag/velocity and returns;
         // parent loc_8AD20 switches to the swing routine on its next update,

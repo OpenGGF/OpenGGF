@@ -112,6 +112,19 @@ class TestS3kIczSwingingPlatformObject {
     }
 
     @Test
+    void continuedStandingTriggerHalvesSpeedBeforeSwingClamp() {
+        IczSwingingPlatformObjectInstance platform = new IczSwingingPlatformObjectInstance(
+                new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM, 0, 0, false, 0));
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getXSpeed()).thenReturn((short) 0x08F8);
+
+        platform.onPieceContact(0, player, standingContact(), 0, true);
+
+        verify(player).setXSpeed((short) 0x047C);
+        verify(player).setGSpeed((short) 0x047C);
+    }
+
+    @Test
     void wrongDirectionDoesNotStartSwing() {
         IczSwingingPlatformObjectInstance platform = new IczSwingingPlatformObjectInstance(
                 new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM, 0, 0, false, 0));
