@@ -220,6 +220,8 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
 
 Highlights:
 
+- **Star-post bonus round-trips made ROM-faithful in the chain (2026-07-21):** three roots — the chain driver no longer pre-seeks the live-cursor bonus interiors (that was an SS-only need), star posts now keep a persistent activation mark modeling the ROM respawn bit (the ROM zeroes the checkpoint index on bonus entry and never restores it — the respawn bit is what prevents re-triggering), and the bonus return restores the player to the star post's recorded position rather than the live touch centre. The mega-run chain now clears the gumball interior's boundary/checkpoint/positional assertions; the remaining root is interior RNG fidelity under organic entry.
+
 - **Knuckles glide activation freed from a Sonic-only gate (2026-07-21):** the glide branch sat behind the invincibility check modeling Sonic_FireShield's Status_Invincible test — the ROM's Knux_Test_For_Glide carries no such suppression, so gliding while star-invincible was wrongly refused. With the branch reordered, the mega-run chain replays the entire AIZ Knuckles segment into the first bonus stage; the frontier moved to the chain driver's bonus-interior exit handling.
 - **Knuckles glide-slide landing parity (2026-07-21):** the glide->fall->slide landing now matches the ROM bit-exactly — the slide runs airborne-flagged as loc_1693E never clears Status_InAir, the floor probe applies Sonic_CheckFloor's odd-angle rule, and the fall/slide run move-before-accel in ROM order (the prior ordering biased every fall by one air-accel step per frame). Fixes the mega-run chain's vine-grab miss; the AIZ frontier advanced to a distinct glide-activation root now under investigation.
 

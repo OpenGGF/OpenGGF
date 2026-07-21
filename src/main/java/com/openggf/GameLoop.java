@@ -190,6 +190,11 @@ public class GameLoop {
     // Bonus stage entry/exit state
     private boolean bonusStageTransitionPending;
     private BonusStageProvider activeBonusStageProvider;
+    // Star-post activation high-water captured at bonus entry (ROM: the star post's
+    // respawn bit, kept across the reload by Respawn_table_keep). Restored on bonus
+    // exit so the return star post stays used even though Last_star_post_hit was
+    // zeroed (sonic3k.asm:61924). -1 when no bonus entry is in flight.
+    private int pendingBonusReturnStarPostMark = -1;
 
     // Flag to freeze level updates during the final-boss fade into ending mode.
     private boolean endingTransitionPending;
@@ -2191,6 +2196,22 @@ public class GameLoop {
             savedShieldStatus = encodeSavedShieldStatus(playable);
         }
 
+        // ROM: the bonus RETURN restores the player to the STAR POST's position,
+        // not the player's live centre at touch time. The star-post touch saves
+        // the star post's own x_pos/y_pos (sub_2D164: move.w x_pos(a0),(Saved_X_pos).w
+        // where a0 is the star post, sonic3k.asm:61705-61706; the Special_bonus_entry
+        // return in loc_2D2C2/loc_2D274 reloads Player_1 from those saved cells),
+        // and the player is typically a few pixels off the post when the collision
+        // fires. The engine already captured the star post's spawn x/y into the
+        // checkpoint state via Sonic3kStarPostObjectInstance.activate ->
+        // saveCheckpoint(spawn.x, spawn.y), so prefer that over the live centre to
+        // reproduce the ROM return position exactly.
+        RespawnState entryCheckpoint = levelManager.getCheckpointState();
+        if (entryCheckpoint != null && entryCheckpoint.isActive()) {
+            playerX = entryCheckpoint.getSavedX();
+            playerY = entryCheckpoint.getSavedY();
+        }
+
         LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
         int resizeFg = 0, resizeBg = 0;
         if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
@@ -2207,13 +2228,30 @@ public class GameLoop {
             savedTimerFrames = levelManager.getLevelGamestate().getTimerFrames();
         }
 
+        // ROM: a star-post BONUS entry (the only way S3K reaches a bonus stage)
+        // zeroes Last_star_post_hit at the moment it commits the entry --
+        // Obj_StarPost routine 8 / loc_2D4CA: move.b #0,(Last_star_post_hit).w
+        // (sonic3k.asm:61924). The star post's own checkpoint save (sub_2D164:
+        // move.b subtype(a0),(Last_star_post_hit).w, :61704) is overwritten here,
+        // and the bonus-return path (Load_Starpost_Settings -> loc_2D2C2, :61795)
+        // never restores Last_star_post_hit, so after the round trip it is 0 --
+        // NOT the star post's subtype. Capture that zero so the restored
+        // checkpoint index (doExitBonusStage -> cs.restoreFromSaved) matches the
+        // ROM. isBonusStageReturn() still latches on index >= 0, so intro-skip is
+        // unaffected. (Reading getLastCheckpointIndex() here was the pre-fix bug:
+        // it saved the subtype and mis-restored a non-zero checkpoint on return.)
         int lastStarPostHit = 0;
-        RespawnState cs = levelManager.getCheckpointState();
-        if (cs != null && cs.isActive()) {
-            // getLastCheckpointIndex() returns the ROM 1-based subtype (spawn.subtype() & 0x7F)
-            // that was passed into saveCheckpoint(), so no +1 adjustment is needed.
-            lastStarPostHit = cs.getLastCheckpointIndex();
-        }
+        // Capture the star-post ACTIVATION high-water (the just-activated star
+        // post's subtype) so doExitBonusStage can re-establish it after the return
+        // reload zeroes it. ROM keeps the star post's respawn bit set across the
+        // reload (Respawn_table_keep=1, sonic3k.asm:61930); without this the
+        // returned star post -- which the player is repositioned onto -- would fail
+        // its activation guard (mark >= subtype) and re-trigger, re-saving its
+        // subtype as the checkpoint index and defeating the zero above.
+        pendingBonusReturnStarPostMark =
+                (entryCheckpoint != null && entryCheckpoint.isActive())
+                        ? entryCheckpoint.getStarPostActivationMark()
+                        : -1;
 
         BonusStageState savedState = new BonusStageState(
                 zoneAndAct,
@@ -2479,8 +2517,14 @@ public class GameLoop {
                         savedState.playerX(), savedState.playerY(),
                         savedState.cameraX(), savedState.cameraY(),
                         savedState.savedLastStarPostHit());
+                // Re-establish the star-post activation high-water zeroed by the
+                // reload's clear() (ROM Respawn_table_keep). The checkpoint index
+                // above is the ROM-faithful 0; the mark keeps the return star post
+                // recognised as used so it does not re-trigger onto the player.
+                cs.restoreStarPostActivationMark(pendingBonusReturnStarPostMark);
             }
         }
+        pendingBonusReturnStarPostMark = -1;
 
         // Restore event routine state (prevents camera lock replay)
         LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();

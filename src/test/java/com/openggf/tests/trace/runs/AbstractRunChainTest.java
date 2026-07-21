@@ -204,33 +204,50 @@ abstract class AbstractRunChainTest {
                 // already does; no trace FIELD is ever hydrated into engine state,
                 // and no field comparison happens during this segment
                 // (attachInteriorComparator keeps returning null for special_stage).
-                Runnable stepOneFrame = TraceRunReplayWalker.isUncomparedInterior(seg.segment())
+                boolean uncomparedInterior = TraceRunReplayWalker.isUncomparedInterior(seg.segment());
+                Runnable stepOneFrame = uncomparedInterior
                         ? uncomparedInteriorStep(loop, inputHandler, movie, seg)
                         : () -> stepEngineFrame(loop);
-                // Pre-seek the shared BK2 cursor to the RETURN level segment's
-                // gameplay-unlock offset BEFORE awaiting the stage_exit. The engine's
-                // title-card exit does not settle into LEVEL cleanly: updateTitleCardMode
-                // releases control and FALLS THROUGH to LEVEL processing in the SAME
-                // loop.step() (GameLoop: "Continue to LEVEL mode processing this frame"),
-                // so one LEVEL "fall-through" frame runs -- and advances the BK2 cursor --
-                // BEFORE the persistent stage_exit boundary (mode==LEVEL) latches and the
-                // return comparator can attach. The shared cursor stays frozen at the
-                // interior-ENTRY offset through the whole interior (SS/RESULTS/fade/
-                // title-card never call onLevelFrameAdvanced), so without this that
-                // fall-through frame reads the STALE entry-offset row -- the star-post
-                // touch frame, which for this run holds a direction press -- and
-                // accelerates the player one frame from rest, corrupting the return
-                // level's frame-0 physics. Seeking to the return segment's own offset
-                // makes the fall-through frame read that segment's recorded frame-0 input
-                // (the gameplay-unlock frame). It pairs with the SS stepper's mode guard
-                // (uncomparedInteriorStep stops overriding logical input once the engine
-                // leaves SPECIAL_STAGE, so the transition frames are driven by this
-                // forced-input cursor rather than a stale special-stage trace row).
-                // Comparison-only: this seeks the input cursor exactly as
-                // handoffIntoInterior/attachLevelSegment already do -- no trace FIELD is
-                // hydrated into engine state.
                 int returnOffset = plans.get(i + 1).segment().bk2FrameOffset();
-                playback.startSession(movie, returnOffset);
+                // The shared BK2 cursor is handled OPPOSITELY for the two interior
+                // kinds, because they advance it oppositely:
+                //
+                //  * UNCOMPARED (special_stage): the shared cursor FREEZES at the
+                //    interior-ENTRY offset for the whole interior -- SPECIAL_STAGE /
+                //    RESULTS / fade / title-card never call onLevelFrameAdvanced -- and
+                //    the SS itself is driven by uncomparedInteriorStep's own segment-local
+                //    counter. Pre-seek the frozen cursor to the RETURN level segment's
+                //    gameplay-unlock offset here so the ONE title-card-exit fall-through
+                //    LEVEL frame (updateTitleCardMode releases control and FALLS THROUGH to
+                //    LEVEL processing in the SAME loop.step(): GameLoop "Continue to LEVEL
+                //    mode processing this frame") reads that segment's recorded frame-0
+                //    input instead of the STALE entry-offset row (the star-post touch frame,
+                //    which for this run holds a direction press) -- reading the stale row
+                //    would accelerate the player one frame from rest and corrupt the return
+                //    level's frame-0 physics. framesConsumed then == 1 (the fall-through
+                //    frame advanced the seeked cursor by one).
+                //
+                //  * COMPARED (bonus_stage): the shared cursor is LIVE -- BONUS_STAGE runs
+                //    on the level pipeline (GameLoop.updateBonusStageMode) and calls
+                //    onLevelFrameAdvanced every frame, so the cursor drives the bonus stage
+                //    forward from the interior offset and organically arrives at the return
+                //    offset as the stage exits (each recorded segment gap == trace_frame_count
+                //    + 1, the +1 being exactly that single fall-through boundary frame). It
+                //    must NOT be pre-seeked: startSession(returnOffset) would jump the very
+                //    cursor that drives the bonus stage straight to the stage_exit edge
+                //    (returnOffset == modeChangeBk2Frame for every stage_exit in this run),
+                //    so the first driven bonus frame pushes the cursor PAST the edge and
+                //    awaitBoundary returns NOT_OBSERVED before the stage ever completes.
+                //    Leaving it live lets the fade/title-card freeze (no onLevelFrameAdvanced)
+                //    and the fall-through frame supply the +1, landing the cursor exactly on
+                //    returnOffset (framesConsumed == 0).
+                //
+                // Comparison-only either way: this only positions the INPUT cursor, exactly
+                // as handoffIntoInterior/attachLevelSegment already do -- no trace FIELD is
+                // hydrated into engine state.
+                if (uncomparedInterior) {
+                    playback.startSession(movie, returnOffset);
+                }
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, stepOneFrame);
                 // Write the interior's comparator report BEFORE asserting the
@@ -244,12 +261,14 @@ abstract class AbstractRunChainTest {
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
                 assertReturnBoundary(plans, i, runDir);
-                // The uncompared title-card-exit fall-through LEVEL frame(s) have
-                // already advanced the BK2 cursor past the return offset and faithfully
-                // reproduced the return segment's leading frame(s) from its own recorded
-                // input. Attach the return comparator at that consumed frame index WITHOUT
+                // Attach the return comparator at the already-consumed frame index WITHOUT
                 // re-seeking, so recording-frame index and BK2 cursor stay in lockstep and
-                // no already-run frame is replayed a second time.
+                // no already-run frame is replayed a second time. framesConsumed differs by
+                // interior kind (see the cursor-handling note above): a pre-seeked SS
+                // interior's single fall-through frame consumed the return segment's frame 0
+                // (framesConsumed == 1), while a live-cursor bonus interior lands the cursor
+                // exactly on returnOffset with no return-segment frame yet consumed
+                // (framesConsumed == 0).
                 int framesConsumed = playback.getCursorFrame() - returnOffset;
                 activeComparator = attachReturnedLevelSegment(
                         probe, plans.get(i + 1), fixture, framesConsumed);
