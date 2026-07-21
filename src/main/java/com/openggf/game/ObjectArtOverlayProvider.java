@@ -78,6 +78,14 @@ public class ObjectArtOverlayProvider implements ObjectArtProvider {
         return List.copyOf(keys);
     }
 
+    @Override public int getRegularPatternCount() {
+        int count = base.getRegularPatternCount();
+        for (ObjectSpriteSheet sheet : sheets.values()) {
+            count = Math.addExact(count, sheet.getPatterns().length);
+        }
+        return count;
+    }
+
     @Override public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
         int next = base.ensurePatternsCached(graphicsManager, baseIndex);
         for (String key : sheets.keySet()) {

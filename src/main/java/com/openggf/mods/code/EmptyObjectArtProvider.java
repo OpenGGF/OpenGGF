@@ -37,6 +37,8 @@ final class EmptyObjectArtProvider implements ObjectArtProvider {
 
     @Override public List<String> getRendererKeys() { return List.of(); }
 
+    @Override public int getRegularPatternCount() { return 0; }
+
     @Override public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
         return baseIndex;
     }

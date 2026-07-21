@@ -46,6 +46,7 @@ class TestLevelManagerModPatternWindows {
         when(graphics.getPatternAtlas()).thenReturn(atlas);
         EngineContext engine = engineContext(graphics);
         ObjectArtProvider provider = mock(ObjectArtProvider.class);
+        when(provider.getRegularPatternCount()).thenReturn(1);
         when(provider.ensurePatternsCached(any(), anyInt())).thenAnswer(invocation -> {
             events.add("cache");
             assertDoesNotThrow(() -> atlas.cachePatternHeadless(new Pattern(), MOD_BASE));
@@ -75,7 +76,7 @@ class TestLevelManagerModPatternWindows {
         invokeInitObjectArt(resumed.getLevelManager());
 
         List<String> oneCycle = List.of(
-                "clear", "register:mod:owner-one", "cache", "cache", "register:Objects");
+                "clear", "register:mod:owner-one", "register:Objects", "cache");
         List<String> expected = new ArrayList<>();
         for (int cycle = 0; cycle < 4; cycle++) expected.addAll(oneCycle);
         assertEquals(expected, events);
