@@ -79,6 +79,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
     private int frostPuffsSpawned;
     private int captureCloudsSpawned;
     private CaptureCloud lastCaptureCloud;
+    private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
 
     public IczFreezerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "ICZFreezer");
@@ -90,6 +92,22 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        // Obj_WaitOffscreen installs a $20-by-$20 placeholder. Render_Sprites
+        // sets its on-screen bit after object execution, then the next object
+        // pass restores Obj_ICZFreezer and returns; initialization begins on
+        // the following pass. Isolated unit fixtures have no object manager
+        // and enter the routine directly.
+        ObjectServices objectServices = tryServices();
+        if (waitingForOnscreen && objectServices != null && objectServices.objectManager() != null) {
+            if (!placeholderRenderedOnscreen) {
+                return;
+            }
+            waitingForOnscreen = false;
+            placeholderRenderedOnscreen = false;
+            return;
+        }
+        waitingForOnscreen = false;
+
         if (!frostCycleActive) {
             if (nearestPlayerXDistance(playerEntity) < ACTIVATE_X_RANGE) {
                 startFrostCycle();
@@ -246,6 +264,13 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         PatternSpriteRenderer renderer = getRenderer(ART_KEY);
         if (renderer != null) {
             renderer.drawFrameIndex(MAPPING_FRAME, x, y, hFlip, verticalFlip, 1);
+        }
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(0x20, 0x20);
         }
     }
 

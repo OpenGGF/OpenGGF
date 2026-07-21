@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ Freezers now remain in their native `$20`-square `Obj_WaitOffscreen` placeholder until `Render_Sprites` marks them visible, then restore their real entry point on the following object pass. This prevents offscreen Freezers from spawning capture clouds and advances both ICZ complete-run trace frontiers to frame 11588.
 - Fix: S3K buttons now include the exact `d1` right boundary accepted by `SolidObjectFull`'s unsigned `bhi` gate, restoring Sonic's push state and push animation at the ICZ Act 1 button. ICZ complete-run physics advances from frame 10128 to 11058 and animation from frame 10132 to 11058.
 - Fix: ICZ path-follow platforms now preserve `x_sub` when their falling path hits a wall; native `loc_8A154` corrects only `x_pos` and clears `x_vel`. This prevents a delayed diagonal-slope rider offset and advances ICZ complete-run physics from frame 9504 to 10128.
 - Fix: fresh ICZ path-follow platform landings now seed continued carry from the post-move object X; the saved pre-move `d4` is consumed only by an already-standing `SolidObjectFull` path. ICZ complete-run physics advances from frame 9126 to 9504 and animation from frame 9206 to 10132.

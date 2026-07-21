@@ -19,6 +19,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.SolidTile;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
@@ -117,6 +118,33 @@ class TestS3kIczFreezerObject {
         assertEquals(1, freezer.captureCloudsSpawnedForTesting());
         assertEquals(33, freezer.frostPuffsSpawnedForTesting(),
                 "ROM spawns a frost puff immediately, then every second active frame");
+    }
+
+    @Test
+    void managedFreezerWaitsForPlaceholderRenderBeforeInitialization() {
+        ObjectManager manager = mock(ObjectManager.class);
+        RecordingServices services = new RecordingServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        };
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0200, (short) 0x0100);
+
+        freezer.update(0, player);
+        assertFalse(freezer.isFrostCycleActiveForTesting());
+
+        freezer.refreshPostCameraRenderState();
+        freezer.update(1, player);
+        assertFalse(freezer.isFrostCycleActiveForTesting(),
+                "Obj_WaitOffscreen restores the saved entry point and returns");
+
+        freezer.update(2, player);
+        assertTrue(freezer.isFrostCycleActiveForTesting());
     }
 
     @Test
@@ -590,7 +618,7 @@ class TestS3kIczFreezerObject {
         }
     }
 
-    private static final class RecordingServices extends StubObjectServices {
+    private static class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
         private final List<Integer> lostRingSpawnFrames = new ArrayList<>();
         private Camera camera;

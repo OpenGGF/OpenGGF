@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+### 2026-07-21 -- ICZ complete-run f11058 false offscreen Freezer capture FIXED; frontier f11588
+
+The engine Freezer at `(0x61D0,0x06FC)` ran its proximity/phase logic as soon
+as placement materialized it, spawned a capture cloud at `(0x61D0,0x072C)`,
+and froze CPU Tails at f11058. The ROM has no live Freezer or capture child at
+that point. `Obj_ICZFreezer` first calls `Obj_WaitOffscreen`, which publishes a
+temporary `$20`-square render box and suppresses all real logic until
+`Render_Sprites` sets bit 7. The helper restores the saved entry point and
+returns; real initialization begins on the next SST dispatch.
+
+`IczFreezerObjectInstance` now retains that post-render visibility latch and
+the separate restore pass. A managed-object regression test covers the three
+phases while isolated object tests retain direct entry. The focused trace
+improves from 4240 to 4195 errors: physics frontier 11058 -> 11588 (the later
+cascade reshapes the physics count from 3096 to 3115) and animation frontier
+11058 -> 11589 (1144 -> 1080 errors). The joint next root begins at f11588,
+where ROM Tails retains `y_vel=$03B8` but the engine clears it.
+
 ### 2026-07-21 -- ICZ complete-run f10128 button exact-edge push FIXED; frontier f11058
 
 Sonic reaches the ordinary subtype-4 button at `(0x6140,0x0200)` with his
