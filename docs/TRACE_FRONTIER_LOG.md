@@ -47620,3 +47620,22 @@ standalone CNZ remains at f0 in both scopes.
   remain executable (`docs/skdisasm/sonic3k.asm:189132-189143,41017-41035,41605-41637`).
 - The eight focused swinging-platform cases remain green, including the earlier
   f1708 jump-off path.
+
+## 2026-07-21 - ICZ upper-child width advances physics
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczSwingingPlatformObject,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f5545 to f5980.** Animation remains at
+  f5984; total errors fell from 3,465 to 3,458, with physics falling from 3,150
+  to 3,143 and animation remaining at 315.
+- Root: the upper ObjB4 child passes broad half-width `$0F` to
+  `SolidObjectFull`, but `loc_1E154` re-reads that child SST's independent
+  `width_pixels=$30` before applying its position correction. The provider's
+  comment recorded `$30` while its implementation incorrectly returned `$0F`.
+  Sonic's exact `+d1` overlap therefore passed the broad S3K `bhi` boundary but
+  was wrongly rejected by the engine's narrow landing gate. Publishing `$30`
+  restores the native +2-pixel upward-velocity lift
+  (`docs/skdisasm/sonic3k.asm:189402-189417,189467-189472,41605-41637`).
+- All eight focused swinging-platform tests pass with both child widths pinned.

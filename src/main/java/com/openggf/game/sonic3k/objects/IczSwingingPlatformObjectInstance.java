@@ -285,7 +285,7 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
         // publishes $30 for the adjusted upper solid. These are independent of
         // the broad d1 values ($2B/$0F) passed into the initial overlap check.
         if (pieceIndex == PIECE_UPPER) {
-            return UPPER_PARAMS.halfWidth();
+            return 0x30;
         }
         return phase == Phase.IDLE ? 0x20 : LOWER_PARAMS.halfWidth();
     }

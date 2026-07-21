@@ -65,7 +65,7 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(0x121C, platform.getPieceX(1));
         assertEquals(0x06F8, platform.getPieceY(1));
         assertEquals(0x0F, upper.halfWidth());
-        assertEquals(0x0F, platform.getPieceLandingHalfWidth(1));
+        assertEquals(0x30, platform.getPieceLandingHalfWidth(1));
         assertEquals(8, upper.airHalfHeight());
         assertEquals(8, upper.groundHalfHeight());
 
@@ -75,7 +75,7 @@ class TestS3kIczSwingingPlatformObject {
         assertTrue(platform.usesPieceScopedStandingBits());
         assertTrue(platform.airborneStaleStandingBitReturnsNoContact(mock(PlayableEntity.class)));
         assertFalse(platform.usesCollisionHalfWidthForTopLanding(),
-                "SolidObjectFull re-reads the child slot's $20 width_pixels after the broad $2B overlap");
+                "SolidObjectFull re-reads each child slot's width_pixels after the broad overlap");
         assertTrue(platform.usesInclusiveRightEdge(),
                 "SolidObjectFull's broad child overlap rejects only values above the right edge");
     }
