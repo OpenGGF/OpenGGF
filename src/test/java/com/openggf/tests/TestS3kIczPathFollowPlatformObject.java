@@ -65,6 +65,8 @@ class TestS3kIczPathFollowPlatformObject {
         assertEquals(5, platform.getPriorityBucket());
         assertTrue(platform.usesInclusiveRightEdge(),
                 "SolidObjectFull includes the exact +$2B right edge");
+        assertTrue(platform.usesInstanceSolidStateLatchKey(),
+                "moving spawn coordinates must not change the native SST latch identity");
     }
 
     @Test

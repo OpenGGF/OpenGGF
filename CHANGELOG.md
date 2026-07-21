@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ path-follow platforms now keep their native standing/pushing latch identity on the live SST instance while their dynamic spawn coordinates move, allowing no-contact passes to clear `Status_Push` instead of leaking stale keys. ICZ complete-run physics advances from frame 9039 to 9125 and animation from frame 9040 to 9206.
 - Fix: ICZ path-follow platforms now include the exact `$2B` right edge accepted by S3K `SolidObjectFull`, restoring Sonic's native one-frame push contact against the stationary platform. ICZ complete-run physics advances from frame 8411 to 9039 while animation remains at frame 9040.
 - Fix: S3K attracted-ring motion now wraps native position words and uses the 68000's unsigned target comparisons across `$0000/$FFFF`, preventing offscreen lightning-shield rings from reversing toward Sonic early. ICZ complete-run physics advances from frame 8386 to 8411.
 - Fix: CPU sidekick follow now samples sliding leader speed after player physics but before the late zone-feature write, matching the ROM phase when terrain projection crosses the `$400` lead-offset threshold. ICZ complete-run physics advances from frame 8227 to 8386 and animation from frame 8227 to 9040.

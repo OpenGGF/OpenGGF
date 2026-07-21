@@ -124,6 +124,13 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Dynamic spawn coordinates follow the moving platform, but native
+        // standing/pushing bits remain owned by this one SST instance.
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;

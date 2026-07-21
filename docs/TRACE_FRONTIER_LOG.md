@@ -47850,3 +47850,22 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:187437-187458,41380-41444`).
 - The focused path-follow platform suites pass, with the `$2B` boundary
   contract pinned alongside the existing subtype, movement, and rewind tests.
+
+## 2026-07-22 - ICZ moving-platform latch identity advances both frontiers
+
+- Commands: focused `TestS3kIczPathFollowPlatformObject` and
+  `TestS3kIcz1PathFollowPlatformHeadless`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f9039 to f9125 and animation advanced
+  from f9040 to f9206.** Total errors fell from 4,455 to 4,448: physics from
+  3,267 to 3,262 and animation from 1,188 to 1,186.
+- Root: ObjB0 updates its dynamic engine spawn as it follows the floor, but
+  native standing/pushing bits belong to the stable SST status byte. The
+  shared latch map therefore inserted a new value-keyed `ObjectSpawn` for each
+  moving contact and could not remove the old coordinate key on the following
+  no-contact pass. The platform now uses its stable live instance as the
+  standing/pushing latch key, matching the same established contract used by
+  other moving S3K full solids. This restores the ROM's alternating push clear
+  and lets Walk animation advance normally.
+- The focused path-follow platform suites pass with both moving-latch identity
+  and inclusive-edge contracts pinned.
