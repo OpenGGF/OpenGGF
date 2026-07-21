@@ -47447,3 +47447,23 @@ standalone CNZ remains at f0 in both scopes.
   Mockito-backed cases because the checkout is running Java 26 while the
   bundled Byte Buddy supports through Java 24; the production trace replay
   executed normally and proved the frontier movement.
+
+## 2026-07-21 - S3K ICZ trigger-bridge rider ownership advances animation
+
+- Command: `mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczCompleteRunTraceReplay' test`.
+- **`s3k_icz1` advanced from f2519 to f3174 and from 3,375 to 3,374 total
+  errors.** Physics remains at f3174 `rings` with 3,206 errors; animation
+  advanced from f2519 `player_mapping_frame` (169 errors) to f3858
+  `player_mapping_frame` (168 errors).
+- Root: the bridge collapse-wave snapshot used the player's global
+  `Status_OnObj` equivalent. When ICZ's trigger-mode Obj0F shattered while
+  Sonic was standing on a Star Pointer, the engine invented a bridge rider;
+  its later release wrote native `prev_anim=1` and spuriously restarted the
+  unchanged Walk script. ROM `Check_CollapsePlayerRelease` runs only when that
+  bridge's own P1/P2 standing bit is set
+  (`docs/skdisasm/sonic3k.asm:45379-45413`). Rider seeding now uses the
+  object-specific riding/standing latches.
+- `TestS3kCollapsingBridgeParity` passes all 11 focused cases, including a new
+  different-support ownership regression.

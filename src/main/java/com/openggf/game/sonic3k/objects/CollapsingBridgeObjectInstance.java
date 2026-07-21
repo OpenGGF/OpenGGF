@@ -15,6 +15,7 @@ import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
@@ -989,14 +990,21 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     }
 
     private boolean shouldTrackCollapseRider(AbstractPlayableSprite player) {
-        if (player.isOnObject()) {
-            return true;
-        }
         try {
-            return services().objectManager() != null && services().objectManager().isRidingObject(player, this);
+            ObjectManager objectManager = services().objectManager();
+            if (objectManager != null) {
+                // The native collapse wave snapshots this bridge's own P1/P2
+                // standing bits, not the player's global Status_OnObj bit. A
+                // trigger-mode bridge may shatter while Sonic is standing on
+                // an unrelated solid; treating that global bit as ownership
+                // invents a rider and later writes prev_anim=1 on release.
+                return objectManager.isRidingObject(player, this)
+                        || objectManager.hasObjectStandingBit(player, this);
+            }
         } catch (Exception e) {
-            return false;
+            // Reflection-level tests may instantiate the bridge without services.
         }
+        return player.isOnObject();
     }
 
     private void seedCollapseWaveRiders(AbstractPlayableSprite fallbackPlayer) {

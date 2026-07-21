@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K collapsing bridges now seed their collapse-wave riders from the bridge's own standing/riding latch rather than global `Status_OnObj`, preventing a trigger-mode bridge from claiming and later resetting the animation of a player supported by another solid.
 - Fix: ICZ ice cubes now test each standing player's animation byte captured before `SolidObjectFull` changes landing state, matching the ROM's saved `$3A/$3B` roll check and restoring the native cube-shatter launch.
 - Fix: bonus-stage return now reapplies the captured object respawn table inside the fresh object manager's reset, after placement bookkeeping is cleared but before the initial camera window is materialized. Initially visible remembered objects therefore remain suppressed instead of surviving as live instances created by the reload.
 - Refactor: bonus-stage level-state capture and return restoration now live in a dedicated transition coordinator, preserving star-post activation, live interior rings, event routines, player/camera/water state, HUD timing, shields, and lives while keeping provider lifecycle and presentation in `GameLoop`.
