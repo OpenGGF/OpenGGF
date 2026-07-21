@@ -182,6 +182,11 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         boss.unlinkMagnetChild(this);
     }
 
+    @Override
+    protected void onDroppedAsUnmatchedRewindReconstructionChild() {
+        boss.unlinkMagnetChild(this);
+    }
+
     @Override public boolean isPersistent() { return true; }
 
     /** ROM parent-bit-4 signal: replace the magnet slot with two ordered spark children. */

@@ -3,7 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Fixed out-of-place rewind reconstruction for CNZ end-boss charge and defeat child graphs, preserving field, explosion, flame, and gradual-boundary identities and owner links.
+- Fixed out-of-place rewind reconstruction for CNZ end-boss charge and defeat child graphs, preserving field, explosion, flame, and gradual-boundary identities, slots, and owner links while detaching the absent defeat-phase magnet candidate.
 - Test: MGZ drilling-Robotnik music-transition coverage now follows the native separate init pass and `Obj_Wait` signed-underflow callback: zone music fades once on init, all 120 timer decrements complete without an early theme change, and End Boss music starts once on the following SST pass.
 - Test: the MGZ end-boss music-transition coverage now renders the managed boss graph and verifies the rear drill child at ROM priority `$380` before the `$300` parent body, matching its independent `ChildObjDat_6D7C0` SST ownership.
 - Test: MGZ drilling-boss composite rendering coverage now traverses the complete managed parent/child graph by the runtime's clamped ROM priority-bucket, tile-priority, and SST-slot contract. This preserves the `$300` rear flame behind the `$300` body, followed by the `$280` Robotnik pod and `$180` front flame, instead of accidentally asserting the managed children's enum order after the July graph migration.

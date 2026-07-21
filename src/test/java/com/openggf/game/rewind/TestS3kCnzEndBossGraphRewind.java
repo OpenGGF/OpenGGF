@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -153,6 +155,7 @@ class TestS3kCnzEndBossGraphRewind {
                 objectManager, sourceShip, sourceHead, sourceMagnet,
                 sourceArms.get(0), sourceArms.get(1), sourceArms.get(2), sourceArms.get(3));
         ObjectRefId bossId = objectId(objectManager, sourceBoss);
+        Map<ObjectRefId, Integer> slots = slotsFor(objectManager, sourceBoss, ids);
         Map<ObjectRefId, Integer> angles = new LinkedHashMap<>();
         for (ObjectInstance arm : sourceArms) {
             angles.put(ids.get(arm), readIntField(arm, "angle"));
@@ -169,6 +172,7 @@ class TestS3kCnzEndBossGraphRewind {
 
         CnzEndBossInstance restoredBoss = objectById(
                 objectManager, CnzEndBossInstance.class, bossId);
+        assertSlots(objectManager, slots);
         ObjectInstance restoredShip = objectById(objectManager, ids.get(sourceShip));
         ObjectInstance restoredHead = objectById(objectManager, ids.get(sourceHead));
         ObjectInstance restoredMagnet = objectById(objectManager, ids.get(sourceMagnet));
@@ -214,6 +218,7 @@ class TestS3kCnzEndBossGraphRewind {
         Map<ObjectInstance, ObjectRefId> ids = idsFor(objectManager,
                 sourceFields.get(0), sourceFields.get(1));
         ObjectRefId bossId = objectId(objectManager, sourceBoss);
+        Map<ObjectRefId, Integer> slots = slotsFor(objectManager, sourceBoss, ids);
         Map<ObjectRefId, Integer> offsets = new LinkedHashMap<>();
         Map<ObjectRefId, Integer> frames = new LinkedHashMap<>();
         for (ObjectInstance field : sourceFields) {
@@ -229,6 +234,7 @@ class TestS3kCnzEndBossGraphRewind {
 
         CnzEndBossInstance restoredBoss = objectById(
                 objectManager, CnzEndBossInstance.class, bossId);
+        assertSlots(objectManager, slots);
         for (ObjectInstance sourceField : sourceFields) {
             ObjectRefId id = ids.get(sourceField);
             ObjectInstance restoredField = objectById(objectManager, id);
@@ -270,6 +276,10 @@ class TestS3kCnzEndBossGraphRewind {
                 objectManager, "CnzEndBossBoundaryController");
         assertEquals(3, sourceBoundaries.size(),
                 "defeat and post-capsule handoffs must allocate all three gradual boundary controllers");
+        assertEquals(0, liveBySimpleName(objectManager, "CnzEndBossMagnetChild").size(),
+                "production defeat scatter must remove the magnet before capture");
+        assertNull(readObjectField(sourceBoss, "magnetChild"),
+                "production defeat scatter must clear the boss magnet slot before capture");
 
         Map<ObjectInstance, ObjectRefId> ids = new LinkedHashMap<>();
         ids.putAll(idsFor(objectManager, sourceShip, sourceExplosion, sourceFlame));
@@ -277,6 +287,7 @@ class TestS3kCnzEndBossGraphRewind {
         for (ObjectInstance boundary : sourceBoundaries) {
             ids.put(boundary, objectId(objectManager, boundary));
         }
+        Map<ObjectRefId, Integer> slots = slotsFor(objectManager, sourceBoss, ids);
         Map<ObjectRefId, Object> axes = new LinkedHashMap<>();
         Map<ObjectRefId, Integer> targets = new LinkedHashMap<>();
         Map<ObjectRefId, Integer> accumulators = new LinkedHashMap<>();
@@ -307,6 +318,9 @@ class TestS3kCnzEndBossGraphRewind {
 
         CnzEndBossInstance restoredBoss = objectById(
                 objectManager, CnzEndBossInstance.class, bossId);
+        assertSlots(objectManager, slots);
+        assertNull(readObjectField(restoredBoss, "magnetChild"),
+                "unmatched magnet reconstruction candidate must detach from the restored boss");
         ObjectInstance restoredShip = objectById(objectManager, ids.get(sourceShip));
         ObjectInstance restoredExplosion = objectById(objectManager, ids.get(sourceExplosion));
         ObjectInstance restoredFlame = objectById(objectManager, ids.get(sourceFlame));
@@ -331,6 +345,14 @@ class TestS3kCnzEndBossGraphRewind {
         assertSame(restoredShip, readObjectField(restoredFlame, "ship"));
         assertEquals(explosionInterval, readIntField(restoredExplosion, "interval"));
         assertEquals(flameVisible, readBooleanField(restoredFlame, "visible"));
+
+        CompositeSnapshot secondSnapshot = registry.capture();
+        registry.restore(secondSnapshot);
+        CnzEndBossInstance twiceRestoredBoss = objectById(
+                objectManager, CnzEndBossInstance.class, bossId);
+        assertSlots(objectManager, slots);
+        assertNull(readObjectField(twiceRestoredBoss, "magnetChild"),
+                "a second out-of-place restore must retain the absent magnet without a dangling reference");
     }
 
     private record Harness(ObjectManager objectManager, ObjectServices services) {
@@ -404,6 +426,35 @@ class TestS3kCnzEndBossGraphRewind {
             ids.put(object, objectId(objectManager, object));
         }
         return ids;
+    }
+
+    private static Map<ObjectRefId, Integer> slotsFor(
+            ObjectManager objectManager,
+            ObjectInstance owner,
+            Map<ObjectInstance, ObjectRefId> graphIds) {
+        Map<ObjectRefId, Integer> slots = new LinkedHashMap<>();
+        int ownerSlot = slotOf(owner);
+        assertTrue(ownerSlot >= 0, "graph owner must occupy a managed SST slot");
+        slots.put(objectId(objectManager, owner), ownerSlot);
+        graphIds.forEach((object, id) -> {
+            int slot = slotOf(object);
+            assertTrue(slot >= 0, "graph object " + id + " must occupy a managed SST slot");
+            slots.put(id, slot);
+        });
+        return slots;
+    }
+
+    private static void assertSlots(ObjectManager objectManager, Map<ObjectRefId, Integer> expectedSlots) {
+        expectedSlots.forEach((id, expectedSlot) -> assertEquals(
+                expectedSlot.intValue(),
+                slotOf(objectById(objectManager, id)),
+                "restored graph object " + id + " must retain its exact SST slot"));
+    }
+
+    private static int slotOf(ObjectInstance object) {
+        assertTrue(object instanceof AbstractObjectInstance,
+                "graph object must expose its managed SST slot: " + object.getClass().getSimpleName());
+        return ((AbstractObjectInstance) object).getSlotIndex();
     }
 
     private static ObjectInstance onlyBySimpleName(ObjectManager objectManager, String simpleName) {
