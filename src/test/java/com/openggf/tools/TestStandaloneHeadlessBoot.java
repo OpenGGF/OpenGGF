@@ -111,6 +111,32 @@ class TestStandaloneHeadlessBoot {
         assertTrue(objectServices.contains("public RomByteReader romReader() throws IOException"));
     }
 
+    @Test
+    void constructorReleasesPartiallyInitializedNativeContext() {
+        EngineContext services = EngineContext.fromLegacySingletonsForBootstrap();
+        RecordingNativeLifecycle lifecycle = new RecordingNativeLifecycle(false);
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> new HeadlessGameBoot(320, 224, services, lifecycle));
+
+        assertEquals("native init failed", failure.getMessage());
+        assertTrue(lifecycle.closed);
+        assertFalse(lifecycle.allocated);
+    }
+
+    @Test
+    void constructorPreservesInitializationFailureWhenNativeCleanupAlsoFails() {
+        EngineContext services = EngineContext.fromLegacySingletonsForBootstrap();
+        RecordingNativeLifecycle lifecycle = new RecordingNativeLifecycle(true);
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> new HeadlessGameBoot(320, 224, services, lifecycle));
+
+        assertEquals("native init failed", failure.getMessage());
+        assertEquals(1, failure.getSuppressed().length);
+        assertEquals("native cleanup failed", failure.getSuppressed()[0].getMessage());
+    }
+
     private static GameDataSource missingSource() {
         return new GameDataSource() {
             @Override public Optional<com.openggf.data.Rom> rom() { return Optional.empty(); }
@@ -119,5 +145,31 @@ class TestStandaloneHeadlessBoot {
             }
             @Override public String identity() { return "mod:owner-game:test"; }
         };
+    }
+
+    private static final class RecordingNativeLifecycle
+            implements HeadlessGameBoot.NativeGlLifecycle {
+        private final boolean failCleanup;
+        private boolean allocated;
+        private boolean closed;
+
+        private RecordingNativeLifecycle(boolean failCleanup) {
+            this.failCleanup = failCleanup;
+        }
+
+        @Override
+        public void initialize(HeadlessGameBoot boot) {
+            allocated = true;
+            throw new IllegalStateException("native init failed");
+        }
+
+        @Override
+        public void close(HeadlessGameBoot boot) {
+            closed = true;
+            allocated = false;
+            if (failCleanup) {
+                throw new IllegalStateException("native cleanup failed");
+            }
+        }
     }
 }

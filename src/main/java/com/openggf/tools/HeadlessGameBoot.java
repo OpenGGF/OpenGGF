@@ -78,9 +78,22 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  */
 public final class HeadlessGameBoot implements AutoCloseable {
 
+    private static final NativeGlLifecycle LWJGL_NATIVE_GL = new NativeGlLifecycle() {
+        @Override
+        public void initialize(HeadlessGameBoot boot) {
+            boot.initGl();
+        }
+
+        @Override
+        public void close(HeadlessGameBoot boot) {
+            boot.closeNativeGl();
+        }
+    };
+
     private final int width;
     private final int height;
     private final EngineContext engineServices;
+    private final NativeGlLifecycle nativeGlLifecycle;
 
     private long window = NULL;
 
@@ -99,10 +112,26 @@ public final class HeadlessGameBoot implements AutoCloseable {
     }
 
     public HeadlessGameBoot(int width, int height, EngineContext engineServices) {
+        this(width, height, engineServices, LWJGL_NATIVE_GL);
+    }
+
+    HeadlessGameBoot(int width, int height, EngineContext engineServices,
+                     NativeGlLifecycle nativeGlLifecycle) {
         this.width = width;
         this.height = height;
         this.engineServices = java.util.Objects.requireNonNull(engineServices, "engineServices");
-        initGl();
+        this.nativeGlLifecycle = java.util.Objects.requireNonNull(
+                nativeGlLifecycle, "nativeGlLifecycle");
+        try {
+            nativeGlLifecycle.initialize(this);
+        } catch (RuntimeException | Error initializationFailure) {
+            try {
+                nativeGlLifecycle.close(this);
+            } catch (RuntimeException | Error cleanupFailure) {
+                initializationFailure.addSuppressed(cleanupFailure);
+            }
+            throw initializationFailure;
+        }
     }
 
     /**
@@ -344,10 +373,19 @@ public final class HeadlessGameBoot implements AutoCloseable {
             }
             rom = null;
         }
+        nativeGlLifecycle.close(this);
+    }
+
+    private void closeNativeGl() {
         if (window != NULL) {
             glfwDestroyWindow(window);
             window = NULL;
         }
         glfwTerminate();
+    }
+
+    interface NativeGlLifecycle {
+        void initialize(HeadlessGameBoot boot);
+        void close(HeadlessGameBoot boot);
     }
 }
