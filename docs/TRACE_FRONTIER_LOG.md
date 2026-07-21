@@ -1,5 +1,51 @@
 # Trace Frontier Log
 
+### 2026-07-21 -- S3K mega-run chain: Option B return-attach + seg2 (aiz_2) blocker classified as landing-fidelity, NOT exit-hold
+
+Command (worktree `.claude/worktrees/green-bonus`, branch
+`feature/ai-chain-interior-rng` on top of merged 7fc6c7a74):
+
+`mvn -q surefire:test -Dtest=com.openggf.tests.trace.runs.TestS3kMegaRunChain -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsurefire.argLine=-Xshare:off -Xmx4g' -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+Status: RED, "starpost_bonus never observed" (seg2->seg3). Per-segment first
+divergence (from `LiveTraceComparator` FIRST-ERROR stderr + a temporary
+non-animation-error probe, since removed):
+
+- seg0 aiz: first ERROR f638 (mapping_frame, cosmetic); first NON-anim f1766 (y_speed).
+- seg1 gumball: first ERROR f1276 (x delta 1) -- the near-perfect interior.
+- seg2 aiz_2: first ERROR **f186** = `player_animation_id` 0x00 (ROM) vs 0x20
+  (engine), SAME `mapping_frame` 0xC0, and ALL physics MATCH at f186 (x/y/speeds/
+  angle/air=0/ground_mode) -- i.e. the player lands correctly but the engine keeps
+  the airborne anim id one frame. First NON-anim divergence **f192** = `y` 0x24B
+  (ROM) vs 0x24A (engine), a 1px landing-settle difference that then cascades to
+  physics by f2002 (angle/g_speed/y_speed) so the player misses the second star post.
+
+CLASSIFICATION: the seg2 blocker is a LANDING animation-state + 1px settle-height
+fidelity slip at f186/f192, NOT the exit-hold/cursor accounting and NOT a
+free-running-counter reset (physics match through the landing frame f186). aiz_2
+replays position/physics within tolerance for 185 frames, so the return-cursor
+handling is already correct.
+
+CHANGE: replaced the `framesConsumed < 0` defensive guard in
+`AbstractRunChainTest.assertChainReplay`'s bonus-interior return-attach with the
+approved Option B -- re-anchor the cursor to `returnOffset+1` and attach the return
+comparator at frame 1 (the BONUS->LEVEL fall-through consumed the return segment's
+neutral-input frame 0). This is a clean model of the fall-through, not a fix for the
+f186 slip (verified: seg2 first error stays f186 with frame-0 vs frame-1 attach).
+The engine-side exit choreography is deliberately NOT reproduced -- documented as an
+intentional divergence in docs/S3K_KNOWN_DISCREPANCIES.md (the ROM's ~152-frame
+game_mode-0x8C exit tail includes ~80 clearRAM/reload frames with no engine
+equivalent; nothing the comparator checks depends on the duration). The
+`updateBonusStageMode` exit-fade cursor/VBla advance is KEPT as correct V_int
+modeling. Must-stay-green re-verified: TestS1GhzMazeRoundTripChain,
+TestS2EhzHalfpipeRoundTripChain, TestS3kGumballBonusTraceReplay.
+
+NEXT FRONTIER: aiz_2 landing fidelity at f186/f192 -- why the engine holds the
+airborne anim id (0x20) one frame past the landing and settles the grounded player
+1px lower than the ROM. Likely a landing anim-transition / y_radius-on-land / subpixel
+ground-snap difference exposed by the bonus-return level reload; needs a focused
+physics trace, not exit-sequence work.
+
 ### 2026-07-21 -- S3K mega-run chain: gumball interior CLOSED; frontier moved seg1-entry -> seg2->seg3 return
 
 Command (worktree `.claude/worktrees/green-bonus`, branch
