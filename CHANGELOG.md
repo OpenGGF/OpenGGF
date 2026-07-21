@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ crushing columns now preserve the native routine-0 initialization pass before subtype movement and key their standing/pushing status to the stable SST instance rather than mutable motion coordinates. This advances ICZ complete-run physics from frame 3856 to 4895 and animation from frame 3858 to 4900.
 - Fix: S3K post-player invisible hurt blocks now materialize their Obj37 spill in the native phase while deferring `Ring_count` ownership to the first ring slot; lost-ring touch consumes the previously published collision-list position and `GiveRing` runs from Obj37 rather than the player touch callback. This advances the ICZ complete-run physics frontier from frame 3174 to frame 3856.
 - Fix: S3K collapsing bridges now seed their collapse-wave riders from the bridge's own standing/riding latch rather than global `Status_OnObj`, preventing a trigger-mode bridge from claiming and later resetting the animation of a player supported by another solid.
 - Fix: ICZ ice cubes now test each standing player's animation byte captured before `SolidObjectFull` changes landing state, matching the ROM's saved `$3A/$3B` roll check and restoring the native cube-shatter launch.

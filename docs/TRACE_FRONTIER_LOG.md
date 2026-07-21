@@ -47490,3 +47490,26 @@ standalone CNZ remains at f0 in both scopes.
   35683-35742`). No trace data or zone/frame exception is consulted.
 - All eight focused invisible-hurt-block tests, all ten lost-ring ordering
   tests, and all thirty lost-ring object tests pass.
+
+## 2026-07-21 - S3K ICZ crushing-column init advances both frontiers
+
+- Command: `mvn -Dmse=off -Dnet.bytebuddy.experimental=true
+  '-Dtest=TestS3kIczCrushingColumnObject' test`, followed by
+  `mvn -Dmse=off '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczCompleteRunTraceReplay' test`.
+- **`s3k_icz1` physics advanced from f3856 to f4895 and animation advanced
+  from f3858 to f4900.** The combined report currently has 6,148 errors:
+  4,783 physics and 1,365 animation. The larger residual is a downstream
+  cascade from the new f4895 vertical-velocity frontier, not an earlier
+  regression.
+- Root: native ObjAF routine 0 installs attributes and selects `subtype*2`,
+  then returns before the selected movement routine
+  (`docs/skdisasm/sonic3k.asm:187956-188025`). The constructor had already
+  selected the subtype routine, so the first engine dispatch moved every
+  column one frame early. A first-dispatch latch now preserves the native init
+  boundary. The moving column also rewrites its engine spawn coordinates;
+  using that mutable value as the solid-status key accumulated one stale
+  pushing key per Y position. ObjAF now uses the existing instance-key policy,
+  matching the single standing/pushing status byte owned by its live SST.
+- All eleven focused ICZ crushing-column tests pass on Java 26 with Byte Buddy's
+  experimental compatibility flag.

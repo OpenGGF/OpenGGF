@@ -57,12 +57,29 @@ class TestS3kIczCrushingColumnObject {
         assertEquals(Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN, column.getArtKeyForTesting());
         assertEquals(5, column.getPriorityBucket());
         assertTrue(column.hasBottomDecorationForTesting());
+        assertTrue(column.usesInstanceSolidStateLatchKey());
+    }
+
+    @Test
+    void nativeInitDispatchDoesNotRunSubtypeMovement() {
+        IczCrushingColumnObjectInstance column =
+                new IczCrushingColumnObjectInstance(spawn(6));
+
+        column.update(0, null);
+
+        assertEquals(0x0700, column.getY());
+        assertEquals(0x0C, column.getRoutineByteForTesting());
+
+        column.update(1, null);
+
+        assertEquals(0x06FF, column.getY());
     }
 
     @Test
     void subtypeOneStartsCrushingUpwardWhenStoodOnThenReturnsToSpawnY() {
         TestableColumn column = new TestableColumn(spawn(1));
         PlayableEntity player = mock(PlayableEntity.class);
+        column.update(-1, player);
 
         column.onSolidContact(player, standingContact(), 0);
         column.update(0, player);
@@ -115,6 +132,7 @@ class TestS3kIczCrushingColumnObject {
 
             manager.updateSolidContacts(player);
             column.update(0, player);
+            column.update(1, player);
 
             assertFalse(player.getAir(),
                     "Subtype 1 should receive a real SolidObjectFull standing contact when the column top is on screen");
@@ -131,6 +149,7 @@ class TestS3kIczCrushingColumnObject {
     void subtypeOneRetainsVelocityForSecondCrushCycleTiming() {
         TestableColumn column = new TestableColumn(spawn(1));
         PlayableEntity player = mock(PlayableEntity.class);
+        column.update(-1, player);
 
         column.onSolidContact(player, standingContact(), 0);
         column.update(0, player);
@@ -184,6 +203,7 @@ class TestS3kIczCrushingColumnObject {
     void subtypeThreeUsesPlayerSideBeforeFastFloorCrushAndWaitsToReturn() {
         TestableColumn column = new TestableColumn(spawn(3));
         PlayableEntity player = mock(PlayableEntity.class);
+        column.update(-1, player);
         when(player.getCentreX()).thenReturn((short) 0x1750);
 
         column.update(0, player);
@@ -250,7 +270,10 @@ class TestS3kIczCrushingColumnObject {
     }
 
     private static IczCrushingColumnObjectInstance create(int subtype) {
-        return new IczCrushingColumnObjectInstance(spawn(subtype));
+        IczCrushingColumnObjectInstance column =
+                new IczCrushingColumnObjectInstance(spawn(subtype));
+        column.update(-1, null);
+        return column;
     }
 
     private static ObjectSpawn spawn(int subtype) {
