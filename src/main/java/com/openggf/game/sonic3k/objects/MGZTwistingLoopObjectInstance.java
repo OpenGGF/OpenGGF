@@ -181,27 +181,28 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     }
 
     private void releaseExtensionOwnership(int frameCounter, PlayableEntity entity, PlayerState state) {
-        if (entity instanceof AbstractPlayableSprite player && (state.active || state.releaseFrames > 0)) {
+        if (entity instanceof AbstractPlayableSprite player
+                && (state.active || state.releaseFrames > 0 || state.convexReleaseFrames > 0)) {
             if (hasOwnedControlFingerprint(player, state)) {
-                player.setObjectMappingFrameControl(false);
-                player.setSuppressGroundWallCollision(false);
-                player.setControlLocked(false);
-                player.setOnObject(false);
-                player.setHighPriority(false);
+                boolean ownsControlPhase = state.active || state.releaseFrames > 0;
+                if (ownsControlPhase) {
+                    player.setObjectMappingFrameControl(false);
+                    player.setSuppressGroundWallCollision(false);
+                    player.setControlLocked(false);
+                    player.setOnObject(false);
+                    player.setHighPriority(false);
+                }
                 player.setStickToConvex(false);
-                player.releaseFromObjectControl(frameCounter);
+                if (player.isObjectControlled()) {
+                    player.releaseFromObjectControl(frameCounter);
+                }
             }
         }
-        state.active = false;
-        state.releaseFrames = 0;
-        state.cooldownFrames = 0;
-        state.convexReleaseFrames = 0;
-        state.controlGeneration = 0;
-        state.compensateReleaseHandoff = false;
+        state.reset();
     }
 
     private static boolean hasOwnedControlFingerprint(AbstractPlayableSprite player, PlayerState state) {
-        if (player.getObjectControlGeneration() != state.controlGeneration) {
+        if (!hasOwnedControlGeneration(player, state)) {
             return false;
         }
         if (state.active) {
@@ -209,7 +210,14 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             // player input is deliberately unlocked while native movement remains active.
             return player.isObjectMappingFrameControl();
         }
-        return player.isObjectControlled() && player.getAnimationId() == RELEASE_ANIMATION;
+        if (state.releaseFrames > 0) {
+            return player.isObjectControlled() && player.getAnimationId() == RELEASE_ANIMATION;
+        }
+        return state.convexReleaseFrames > 0 && player.isStickToConvex();
+    }
+
+    private static boolean hasOwnedControlGeneration(AbstractPlayableSprite player, PlayerState state) {
+        return player != null && player.getObjectControlGeneration() == state.controlGeneration;
     }
 
     @Override
@@ -225,7 +233,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     }
 
     private void releaseMainOwnership(PlayerState state) {
-        if (!state.active && state.releaseFrames == 0) {
+        if (!state.active && state.releaseFrames == 0 && state.convexReleaseFrames == 0) {
             return;
         }
         ObjectServices services = tryServices();
@@ -256,6 +264,10 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             return;
         }
         if (state.convexReleaseFrames > 0) {
+            if (!hasOwnedControlGeneration(player, state)) {
+                state.reset();
+                return;
+            }
             state.convexReleaseFrames--;
             if (state.convexReleaseFrames == 0 && player != null) {
                 player.setStickToConvex(false);
@@ -343,6 +355,10 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     }
 
     private void updateCapturedPlayer(int frameCounter, AbstractPlayableSprite player, PlayerState state) {
+        if (!hasOwnedControlGeneration(player, state)) {
+            state.reset();
+            return;
+        }
         if (player == null || player.getDead() || player.isHurt() || player.isDebugMode()) {
             releaseCapturedPlayer(frameCounter, player, state, false);
             return;
@@ -484,8 +500,8 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     }
 
     private void updateReleasedPlayer(int frameCounter, AbstractPlayableSprite player, PlayerState state) {
-        if (player == null) {
-            state.releaseFrames = 0;
+        if (!hasOwnedControlGeneration(player, state)) {
+            state.reset();
             return;
         }
 

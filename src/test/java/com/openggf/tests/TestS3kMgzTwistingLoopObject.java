@@ -192,6 +192,117 @@ class TestS3kMgzTwistingLoopObject {
     }
 
     @Test
+    void mgzTwistingLoopActiveTickDoesNotMutateReplacementControl() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite player = createDirectEntryPlayer();
+        loop.update(0, player);
+        installReplacementControl(player);
+
+        loop.update(1, player);
+
+        assertReplacementControlUnchanged(player);
+    }
+
+    @Test
+    void mgzTwistingLoopActiveExtensionTickDoesNotMutateReplacementControl() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite nativeP2 = createDirectEntryPlayer("tails", LOOP_X + 0x100);
+        TestablePlayableSprite extension = createDirectEntryPlayer("knuckles", LOOP_X + 2);
+        loop.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extension)));
+        loop.update(0, main);
+        installReplacementControl(extension);
+
+        loop.update(1, main);
+
+        assertReplacementControlUnchanged(extension);
+    }
+
+    @Test
+    void mgzTwistingLoopJumpReleaseTickDoesNotMutateReplacementControl() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite player = createDirectEntryPlayer();
+        loop.update(0, player);
+        player.setJumpInputPressed(true);
+        loop.update(1, player);
+        installReplacementControl(player);
+
+        loop.update(2, player);
+
+        assertReplacementControlUnchanged(player);
+    }
+
+    @Test
+    void mgzTwistingLoopJumpReleaseExtensionTickDoesNotMutateReplacementControl() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite nativeP2 = createDirectEntryPlayer("tails", LOOP_X + 0x100);
+        TestablePlayableSprite extension = createDirectEntryPlayer("knuckles", LOOP_X + 2);
+        loop.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extension)));
+        loop.update(0, main);
+        extension.setJumpInputPressed(true);
+        loop.update(1, main);
+        installReplacementControl(extension);
+
+        loop.update(2, main);
+
+        assertReplacementControlUnchanged(extension);
+    }
+
+    @Test
+    void mgzTwistingLoopUnloadClearsConvexLeaseBeforeDeferredControlRelease() {
+        MGZTwistingLoopObjectInstance loop = createImmediateRollingReleaseLoop();
+        TestablePlayableSprite player = createImmediateRollingReleasePlayer();
+        loop.setServices(new QueryOnlyPlayerServices(player, List.of()));
+        loop.update(0, player);
+        advanceToConvexRelease(loop, player);
+        assertTrue(player.isObjectControlled());
+        assertTrue(player.isStickToConvex());
+
+        loop.onUnload();
+
+        assertFalse(player.isObjectControlled(), "unload must clear the deferred loop control lease");
+        assertFalse(player.isStickToConvex(), "unload must clear the loop's convex latch");
+    }
+
+    @Test
+    void mgzTwistingLoopUnloadClearsConvexLeaseAfterDeferredControlRelease() {
+        MGZTwistingLoopObjectInstance loop = createImmediateRollingReleaseLoop();
+        TestablePlayableSprite player = createImmediateRollingReleasePlayer();
+        loop.setServices(new QueryOnlyPlayerServices(player, List.of()));
+        loop.update(0, player);
+        advanceToConvexRelease(loop, player);
+        player.endOfTick();
+        assertFalse(player.isObjectControlled());
+        assertTrue(player.isStickToConvex());
+
+        loop.onUnload();
+
+        assertFalse(player.isStickToConvex(), "convex ownership survives deferred object-control cleanup");
+    }
+
+    @Test
+    void mgzTwistingLoopUnloadPreservesNewerConvexLeaseGeneration() {
+        MGZTwistingLoopObjectInstance loop = createImmediateRollingReleaseLoop();
+        TestablePlayableSprite player = createImmediateRollingReleasePlayer();
+        loop.setServices(new QueryOnlyPlayerServices(player, List.of()));
+        loop.update(0, player);
+        advanceToConvexRelease(loop, player);
+        player.endOfTick();
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        player.setStickToConvex(true);
+
+        loop.onUnload();
+
+        assertTrue(player.isObjectControlled(), "newer control generation must survive stale loop cleanup");
+        assertTrue(player.isStickToConvex(), "newer generation owns the replacement convex latch");
+    }
+
+    @Test
     void mgzTwistingLoopPreservesNativeP2ThenProcessesExtraSidekicks() {
         MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
                 new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
@@ -456,6 +567,60 @@ class TestS3kMgzTwistingLoopObject {
         player.setRolling(false);
         player.setJumping(false);
         return player;
+    }
+
+    private static MGZTwistingLoopObjectInstance createImmediateRollingReleaseLoop() {
+        return new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x00, 0, false, 0));
+    }
+
+    private static TestablePlayableSprite createImmediateRollingReleasePlayer() {
+        TestablePlayableSprite player = createDirectEntryPlayer();
+        player.setRolling(true);
+        player.setCentreY((short) LOOP_Y);
+        return player;
+    }
+
+    private static void advanceToConvexRelease(MGZTwistingLoopObjectInstance loop,
+                                               TestablePlayableSprite player) {
+        for (int frame = 1; frame <= 32 && !player.isStickToConvex(); frame++) {
+            loop.update(frame, player);
+        }
+        assertTrue(player.isStickToConvex(), "rolling entry must reach its compensated convex handoff");
+    }
+
+    private static void installReplacementControl(TestablePlayableSprite player) {
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        player.setObjectMappingFrameControl(false);
+        player.setSuppressGroundWallCollision(false);
+        player.setControlLocked(true);
+        player.setOnObject(false);
+        player.setHighPriority(true);
+        player.setCentreX((short) 0x2222);
+        player.setCentreY((short) 0x0333);
+        player.setXSpeed((short) 0x0123);
+        player.setYSpeed((short) -0x0234);
+        player.setGSpeed((short) 0x0345);
+        player.setAnimationId(5);
+        player.setMappingFrame(0x66);
+    }
+
+    private static void assertReplacementControlUnchanged(TestablePlayableSprite player) {
+        assertTrue(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
+        assertFalse(player.isObjectMappingFrameControl());
+        assertFalse(player.isSuppressGroundWallCollision());
+        assertTrue(player.isControlLocked());
+        assertFalse(player.isOnObject());
+        assertTrue(player.isHighPriority());
+        assertEquals(0x2222, player.getCentreX() & 0xFFFF);
+        assertEquals(0x0333, player.getCentreY() & 0xFFFF);
+        assertEquals(0x0123, player.getXSpeed());
+        assertEquals(-0x0234, player.getYSpeed());
+        assertEquals(0x0345, player.getGSpeed());
+        assertEquals(5, player.getAnimationId());
+        assertEquals(0x66, player.getMappingFrame());
     }
 
     private static final class QueryOnlyPlayerServices extends TestObjectServices {

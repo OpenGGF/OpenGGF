@@ -6,7 +6,9 @@ All notable changes to the OpenGGF project are documented in this file.
 - **MGZ twisting-loop cleanup now releases the rider that actually owns its control lease:**
   native P2 and extension-sidekick roster changes retain the loop's captured owner,
   unload clears direct-mapping, object-control, and ground/wall-suppression state,
-  and a later matching-looking control acquisition remains untouched.
+  active and jump-release ticks stop at newer control generations, compensated
+  convex latches are released before or after deferred control cleanup, and a
+  later matching-looking control acquisition remains untouched.
 - **FBZ visual capture tooling now shares one explicit engine-service owner:**
   hidden-GL configuration setup, headless boot, and session-override cleanup use
   the same bootstrap `EngineContext`; failed GL initialization clears overrides
