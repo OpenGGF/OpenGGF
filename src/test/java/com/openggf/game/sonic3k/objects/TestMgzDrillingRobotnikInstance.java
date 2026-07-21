@@ -22,6 +22,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.MgzObjectEventBridge;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -1458,16 +1459,15 @@ class TestMgzDrillingRobotnikInstance {
     private static void renderBossGraph(MgzDrillingRobotnikInstance boss) {
         List<ObjectInstance> renderGraph = new ArrayList<>();
         renderGraph.add(boss);
-        renderGraph.addAll(boss.getChildComponents().stream()
-                .filter(MgzEndBossRenderChild.class::isInstance)
-                .map(MgzEndBossRenderChild.class::cast)
-                .toList());
+        renderGraph.addAll(boss.getChildComponents());
         renderGraph.sort(TestMgzDrillingRobotnikInstance::compareRuntimeRenderOrder);
         renderGraph.forEach(instance -> instance.appendRenderCommands(new ArrayList<>()));
     }
 
     private static int compareRuntimeRenderOrder(ObjectInstance left, ObjectInstance right) {
-        int bucketOrder = Integer.compare(right.getPriorityBucket(), left.getPriorityBucket());
+        int bucketOrder = Integer.compare(
+                RenderPriority.clamp(right.getPriorityBucket()),
+                RenderPriority.clamp(left.getPriorityBucket()));
         if (bucketOrder != 0) {
             return bucketOrder;
         }
