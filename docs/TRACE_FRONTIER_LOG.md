@@ -47714,7 +47714,7 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:188007-188020,41380-41444`).
 - All eleven focused crushing-column tests pass.
 
-## 2026-07-21 - ICZ move-lock follow phase advances both frontiers
+## 2026-07-21 - ICZ sliding follow phase advances both frontiers
 
 - Commands: focused `TestSidekickCpuFollowParity`, followed by
   `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
@@ -47722,16 +47722,33 @@ standalone CNZ remains at f0 in both scopes.
   from f7274 to f7350.** The later route exposes 2,980 errors (2,627 physics
   and 353 animation), replacing the prior 2,960-error downstream cascade
   rather than representing a like-for-like count reduction.
-- Root: at f7257 the move-locked leader enters the frame with native
+- Root: at f7257 the sliding leader enters the frame with native
   `ground_vel=$03C4`, then the engine's earlier movement projection publishes
   `$0419` before Tails' CPU pass. ROM `Tails_CPU_Control` executes before that
   projection and therefore takes the signed `<$0400` branch, subtracting the
   `$20` lead offset from the delayed `$527B` position to target `$525B`. The
   engine instead treated the leader as fast, targeted `$527B`, and applied a
   +1 follow nudge to right-facing Tails. The lead-offset gate now consumes the
-  leader's pre-physics ground speed only while native `move_lock` is active;
+  leader's pre-physics ground speed only while native slide state is active;
   ordinary movement retains the established live phase because globally
   using the snapshot regresses earlier follow decisions
   (`docs/skdisasm/sonic3k.asm:26683-26724`).
 - The focused 102-case sidekick follow suite passes, including the exact
-  `$03C4` to `$0419` locked-frame threshold crossing.
+  `$03C4` to `$0419` sliding-frame threshold crossing.
+
+## 2026-07-21 - ICZ slide-exit follow phase advances both frontiers
+
+- Commands: focused `TestSidekickCpuFollowParity`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f7327 to f7350 and animation advanced
+  from f7350 to the same f7350 shared divergence.** Total errors fell from
+  2,980 to 2,954: physics from 2,627 to 2,603 and animation from 353 to 351.
+- Root: the initial f7257 fix used positive `move_lock` as a proxy for the
+  later ICZ terrain-event write, but f7327 is deliberately the inverse case.
+  Sonic has left slide terrain, retains `move_lock=4`, and player physics has
+  already reduced `ground_vel` from `$0A2B` to `$0070` before Tails' CPU slot.
+  ROM therefore subtracts the `$20` lead offset and suppresses the engine's
+  extra right nudge. The phase gate now keys on the native slide-state bit
+  that actually owns the later velocity write, not the independent lock
+  countdown (`docs/skdisasm/sonic3k.asm:26683-26724,28918-28958`).
+- The focused 102-case sidekick follow suite remains green.

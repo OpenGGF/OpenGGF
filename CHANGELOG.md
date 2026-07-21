@@ -3,7 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Fix: S3K CPU Tails now evaluates the follow lead-offset threshold from the leader's pre-physics ground speed while native `move_lock` is active, matching the ROM's CPU-before-projection phase. ICZ complete-run physics advances from frame 7257 to 7327 and animation from frame 7274 to 7350.
+- Fix: S3K CPU Tails now evaluates the follow lead-offset threshold from the leader's pre-event ground speed while slide terrain owns inertia, then returns to the live post-physics value after slide exit. ICZ complete-run physics advances from frame 7257 to 7350 and animation from frame 7274 to 7350.
 - Fix: ICZ crushing columns now include the exact right edge accepted by S3K `SolidObjectFull`'s unsigned `bhi` broad-X gate, restoring the native zero-distance side-push contact. Complete-run physics advances from frame 7100 to 7257 and animation from frame 7101 to 7274.
 - Fix: ICZ crushing-column return routines now compare the next one-pixel step against saved spawn Y before writing it, matching the ROM's `spawnY+1` upward-return and `spawnY-1` downward-return rest positions. Complete-run physics advances from frame 6972 to 7100 and animation from frame 7019 to 7101.
 - Fix: solid providers can now keep ordinary sidekick follow steering active when a stale engine push-grace window overlaps a live native support. ICZ swinging platforms use the CPU-phase riding/interact latch to preserve the ROM's follow nudge after `Status_Push` clears, advancing complete-run physics from frame 6139 to 6972 and animation from frame 6188 to 7019.

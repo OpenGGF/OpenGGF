@@ -2108,14 +2108,14 @@ public class SidekickCpuController {
         // matches ROM's mid-frame view and the air filter is no longer required;
         // ROM btst #Status_OnObj at sonic3k.asm:26690 has no air gate.
         boolean leaderStatusOnObject = effectiveLeader.getOnObjectAtFrameStart();
-        // A positive move_lock means the leader's movement routine is still
-        // consuming the locked-frame ground velocity while the engine has
-        // already projected the next value. ROM Tails_CPU_Control runs before
-        // that projection, so loc_13DA6's signed $400 lead-offset gate sees the
-        // pre-physics sample in this state (sonic3k.asm:26690-26694). Keep the
-        // established live sample for ordinary movement: using the snapshot
-        // unconditionally moves earlier follow decisions one phase backward.
-        short leaderFollowGateGSpeed = effectiveLeader.getMoveLockTimer() > 0
+        // Slide terrain is processed by the later level-event pass. The engine
+        // has already published that pass's next ground velocity when Tails'
+        // CPU slot runs, while ROM loc_13DA6 still sees the value from before
+        // the event update (sonic3k.asm:26690-26694, 28918-28958). Use the
+        // pre-physics sample while status_secondary's slide bit owns inertia.
+        // Ordinary movement, including the move_lock countdown after leaving
+        // the slide, uses the established live value seen after player physics.
+        short leaderFollowGateGSpeed = effectiveLeader.isSliding()
                 ? effectiveLeader.getPrePhysicsGSpeed()
                 : effectiveLeader.getGSpeed();
         if (leadOffset > 0
