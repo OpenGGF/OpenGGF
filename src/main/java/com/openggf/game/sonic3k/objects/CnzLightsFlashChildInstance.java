@@ -58,6 +58,8 @@ public final class CnzLightsFlashChildInstance extends AbstractObjectInstance im
 
     private boolean restoreAfter;
 
+    private Cnz2CutsceneButtonInstance owner;
+
     private byte[] flashData;
     private int step;
     private int timer;
@@ -69,8 +71,14 @@ public final class CnzLightsFlashChildInstance extends AbstractObjectInstance im
      *                     for the water button (restore Pal_CNZ, lights on).
      */
     public CnzLightsFlashChildInstance(ObjectSpawn spawn, boolean restoreAfter) {
+        this(spawn, restoreAfter, null);
+    }
+
+    CnzLightsFlashChildInstance(ObjectSpawn spawn, boolean restoreAfter,
+            Cnz2CutsceneButtonInstance owner) {
         super(spawn, "CNZLightsFlash");
         this.restoreAfter = restoreAfter;
+        this.owner = owner;
     }
 
     CnzLightsFlashChildInstance(ObjectSpawn spawn) {
@@ -152,7 +160,24 @@ public final class CnzLightsFlashChildInstance extends AbstractObjectInstance im
                 LOG.warning("CNZ: failed to restore Pal_CNZ after flash: " + e.getMessage());
             }
         }
+        if (owner != null) {
+            owner.clearCompletedFlash(this);
+            owner = null;
+        }
         setDestroyed(true);
+    }
+
+    @Override
+    protected void afterRewindRestoreSettled() {
+        if (owner != null || services().objectManager() == null) {
+            return;
+        }
+        for (var object : services().objectManager().getActiveObjects()) {
+            if (object instanceof Cnz2CutsceneButtonInstance button && button.ownsFlash(this)) {
+                owner = button;
+                return;
+            }
+        }
     }
 
     private void applyLine(int paletteIndex, byte[] lineData) {

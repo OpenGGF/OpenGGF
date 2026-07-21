@@ -175,6 +175,11 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
     }
 
     @Override
+    public boolean isHighPriority() {
+        return planePriority;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) {
             return;

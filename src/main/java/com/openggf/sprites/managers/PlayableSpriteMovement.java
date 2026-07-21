@@ -25,6 +25,7 @@ import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
@@ -906,22 +907,70 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE;
 
 		if (inGlide && glideState == 1) {
-			// Active glide — custom physics replace normal airborne
-			updateKnucklesGlide();
-			// updateGliding() may have changed state (e.g., released jump → state 2)
-			if (sprite.getDoubleJumpFlag() != 1) {
-				// State changed during update (e.g., entered fall-from-glide)
-				// Continue with normal airborne physics for this frame
-			} else {
-				doLevelBoundary();
-				if (isCpuLevelBoundaryKillActive()) {
-					return;
-				}
-				sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
-				// ROM: Knux_DoLevelCollision_CheckRet — custom collision for glide
-				doGlideCollision();
+			// Active glide — custom physics replace normal airborne.
+			// ROM Knux_Glide_Freespace (sonic3k.asm:30675-30679): Move_Glide
+			// (velocity), Player_LevelBound, MoveSprite2, then Knuckles_Glide
+			// (collision + jump-release check).
+			updateKnucklesGlide();  // Knuckles_Move_Glide (velocity only, flag stays 1)
+			doLevelBoundary();
+			if (isCpuLevelBoundaryKillActive()) {
 				return;
 			}
+			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());  // MoveSprite2
+			// ROM: Knux_DoLevelCollision_CheckRet — custom collision for glide.
+			// May transition to sliding (flag 3) / wall-climb (flag 4).
+			doGlideCollision();
+			// ROM Knuckles_Glide (sonic3k.asm:30708-30729): only if the collision
+			// did NOT transition out of active glide, a released jump button
+			// enters fall-from-glide. HitFloor/HitWall take precedence and branch
+			// away before this button check.
+			if (sprite.getDoubleJumpFlag() == 1 && !inputJump) {
+				enterFallFromGlide();
+			}
+			return;
+		}
+
+		// Knuckles_Fall_From_Glide (double_jump_flag == 2). ROM dispatches this
+		// via Knux_Glide_Freespace (sonic3k.asm:30675-30682): Knuckles_Move_Glide
+		// is a no-op for flag != 1, then MoveSprite_TestGravity2 (== MoveSprite2
+		// under normal gravity: move by the CURRENT velocity, NO gravity) runs
+		// BEFORE Knuckles_Fall_From_Glide. Knuckles_Fall_From_Glide
+		// (sonic3k.asm:30895-30943) then runs Knux_ChgJumpDir (air control),
+		// applies +$38 gravity, and lands via collision. This move-then-control
+		// ordering differs from Obj01_MdAir (which runs ChgJumpDir BEFORE the
+		// move): using the post-ChgJumpDir velocity for the move biased the fall
+		// by one +0x30 air-accel step per frame (~2.5px by the landing on the AIZ
+		// giant-ride-vine approach). The hurt variant keeps the shared airborne
+		// path below (its own recoil ordering).
+		if (inGlide && glideState == 2 && !sprite.isHurt()) {
+			doLevelBoundary();                    // Player_LevelBound
+			if (isCpuLevelBoundaryKillActive()) {
+				return;
+			}
+			// MoveSprite2 (no gravity): move by the pre-control velocity first.
+			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			doChgJumpDir();                       // Knux_ChgJumpDir (air control)
+			applyGravity();                       // addi.w #$38,y_vel(a0)
+			applyUnderwaterAirGravityReduction(); // btst Status_Underwater; subi #$28
+			sprite.updateSensors(originalX, originalY);
+			boolean wasAirBeforeFallCollision = sprite.getAir();
+			doLevelCollision(sprite.isForceFloorCheck());
+			if (wasAirBeforeFallCollision && !sprite.getAir()) {
+				// Knuckles_Fall_From_Glide landing (sonic3k.asm:30913-30940):
+				// zero ground_vel/x_vel/y_vel, play GlideLand, and on a flat
+				// surface apply the 15-frame move_lock + crouch pose.
+				sprite.setGSpeed((short) 0);
+				sprite.setXSpeed((short) 0);
+				sprite.setYSpeed((short) 0);
+				audioManager.playSfx(GameSound.GLIDE_LAND);
+				int hexAngle = sprite.getAngle() & 0xFF;
+				int adjusted = (hexAngle + 0x20) & 0xC0;
+				if (adjusted == 0) {
+					sprite.setMoveLockTimer(0x0F);   // ROM: move.w #$F,move_lock(a0)
+					sprite.setForcedAnimationId(0x23); // ROM: move.b #$23,anim(a0)
+				}
+			}
+			return;
 		}
 
 		// ROM hurt routine (routine 4) has a DIFFERENT call order than
@@ -1460,6 +1509,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.getSecondaryAbility() == SecondaryAbility.FLY) {
 			return false;
 		}
+
+		// ROM: Knuckles glide (Knux_Test_For_Glide, sonic3k.asm:32539-32586) is a
+		// SEPARATE routine from Sonic_ShieldMoves. Unlike Sonic_FireShield it has
+		// NO invincibility/shield suppression -- sonic3k.asm:23412-23413 (the
+		// btst Status_Invincible gate) lives inside the Sonic-only path, so glide
+		// activates on any qualifying jump re-press even while Knuckles is
+		// star-invincible. Handle it before the Sonic shield/super/invincibility
+		// gates below; the Super/emerald transform is handled upstream in
+		// tryActivateSuperFromAirAbility (ROM Knux_Test_For_Glide loc_1785E).
+		if (sprite.getSecondaryAbility() == SecondaryAbility.GLIDE) {
+			activateGlide();
+			return true;
+		}
 		boolean hasElemental = capabilityRules.elementalShieldsEnabled();
 		boolean hasInsta = capabilityRules.instaShieldEnabled();
 		if (!hasElemental && !hasInsta) {
@@ -1507,13 +1569,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				activateInstaShield();
 				return true;
 			}
-		}
-
-		// ROM (sonic3k.asm:32539-32586): Knuckles glide activation
-		// Activates regardless of shield — shields provide passive protection only
-		if (sprite.getSecondaryAbility() == SecondaryAbility.GLIDE) {
-			activateGlide();
-			return true;
 		}
 
 		return false;
@@ -1626,10 +1681,33 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Initiates glide from airborne state.
 	 */
 	private void activateGlide() {
+		// ROM: Knux_Test_For_Glide (sonic3k.asm:32560-32566) writes y_radius/
+		// x_radius directly and never touches y_pos -- y_pos is ROM's centre
+		// coordinate and is unaffected by a radius change. This engine instead
+		// derives centreY from a top-left yPixel plus a separate `height` field
+		// (see AbstractSprite#getCentreY), and setRolling(false) below has the
+		// side effect of resetting `height` to the STANDING value (runHeight)
+		// when Knuckles was mid-roll-jump (the common case entering glide from
+		// a jump). applyCustomRadii(10, 10) then overwrites the radii to the
+		// glide dimensions but leaves that stale standing `height` in place, so
+		// getCentreY() silently jumps by (runHeight - the prior roll height) / 2
+		// before any velocity-driven movement even happens -- an engine-internal
+		// bookkeeping artifact ROM has no equivalent of. Capture centreY here and
+		// restore it (subpixel-preserving, matching a ROM move.w) after the
+		// radius/height bookkeeping below so entering glide is a pure radius
+		// change, matching ROM. Reproduced via a standalone replay of
+		// traces/s3k/runs/s3-knux-multibonus-ss/aiz/: at trace frame 1562 this
+		// stale-height jump alone accounted for +5px of centreY, compounding
+		// with the correct +5px velocity-driven move into a +10px error that
+		// desynced Knuckles' subsequent wall-glide-grab timing for the rest of
+		// the segment.
+		short preActivationCentreY = sprite.getCentreY();
+
 		// Clear rolling state and set glide radii (0x0A x 0x0A)
 		sprite.setRolling(false);
 		sprite.setRollingJump(false);
 		sprite.applyCustomRadii(10, 10);
+		sprite.setCentreYPreserveSubpixel(preActivationCentreY);
 
 		// Add 0x200 to y_vel, cap at 0 if negative result
 		int newYVel = sprite.getYSpeed() + 0x200;
@@ -1677,12 +1755,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Active glide physics — acceleration, turning, gravity balance.
 	 */
 	private void updateGliding() {
-		// Check for jump button release → fall from glide
-		boolean holdingJump = inputJump;
-		if (!holdingJump) {
-			enterFallFromGlide();
-			return;
-		}
+		// ROM Knuckles_Move_Glide (sonic3k.asm:31598-31717) runs unconditionally
+		// while gliding -- it does NOT test the jump button. The jump-release
+		// check lives later, in Knuckles_Glide (sonic3k.asm:30708-30729), AFTER
+		// MoveSprite2 and Knux_DoLevelCollision_CheckRet have already run. The
+		// caller (modeAirborne) performs that post-move release check so the
+		// release-frame move uses the full glide velocity (ROM), not the
+		// prematurely /4'd fall velocity.
 
 		// Accelerate glide speed
 		int gSpeed = sprite.getGSpeed() & 0xFFFF;
@@ -1794,18 +1873,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		// Flat surface: land first (setAir clears glide state), then enter sliding.
-		// Order matters: setAir(false) triggers landing cleanup that clears
-		// doubleJumpFlag, so sliding state must be set up AFTER.
-		sprite.setAir(false);
-		sprite.setJumping(false);
-		// Now re-enter sliding state on top of the clean landing state
+		// Flat surface: ROM Knux_Gliding_HitFloor loc_1693E
+		// (sonic3k.asm:30754-30769) sets double_jump_flag=3 and the sliding
+		// mapping frame but NEVER clears Status_InAir -- Knux_TouchFloor is only
+		// reached on the non-flat branch (sonic3k.asm:30751), so the slide runs
+		// airborne-flagged and only lands via Knuckles_Sliding .getUp or
+		// Knuckles_Fall_From_Glide. loc_1693E also plays no SFX here (it only
+		// spawns dust clouds) and leaves x_vel/ground_vel and the 0x0A glide
+		// radii untouched. Keeping Status_InAir set is required for the slide
+		// then fall-from-glide velocity path to match the ROM.
 		sprite.setDoubleJumpFlag(3);
-		sprite.applyCustomRadii(10, 10);
+		sprite.applyCustomRadii(10, 10);  // no-op: already the 0x0A glide radii
 		sprite.setObjectMappingFrameControl(true);
-		sprite.setMappingFrame(0xCC);  // ROM: sliding mapping frame
+		sprite.setMappingFrame(0xCC);  // ROM: move.b #$CC,mapping_frame(a0)
 		sprite.setForcedAnimationId(-1);
-		audioManager.playSfx(GameSound.GLIDE_LAND);
 	}
 
 	/**
@@ -1815,6 +1896,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * button released or velocity crosses zero.
 	 */
 	private void updateSliding() {
+		// ROM Knux_Glide_Freespace (sonic3k.asm:30675-30679) runs
+		// MoveSprite_TestGravity2 (== MoveSprite2 under normal gravity: move by
+		// the CURRENT velocity, no gravity) BEFORE dispatching to
+		// Knuckles_Sliding. The slide keeps y_vel = 0, so the move is purely
+		// horizontal. Doing the move here -- BEFORE the 0x20 deceleration --
+		// mirrors that order; the prior decelerate-then-move ordering used the
+		// post-decel velocity and left the slide 0x20 subpixels short of the ROM
+		// each frame.
+		sprite.move(sprite.getXSpeed(), (short) 0);
+
 		// ROM: Check if A/B/C button is held. If not → .getUp
 		if (!inputJump) {
 			slideGetUp();
@@ -1848,13 +1939,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setXSpeed((short) xVel);
 
 		// ROM .continueSliding (sonic3k.asm:30992-31020):
-		// Move horizontally, then snap to floor. If floor distance >= 14,
+		// Snap to floor. If floor distance >= 14,
 		// Knuckles has slid off a ledge → enter fall state.
-		sprite.move(sprite.getXSpeed(), (short) 0);
-
-		// Probe floor distance and snap
-		var floorResult = ObjectTerrainUtils.checkFloorDist(
-				sprite.getCentreX(), sprite.getCentreY() + sprite.getYRadius());
+		// Probe floor distance and snap. ROM's sub_11FD6 (Sonic_CheckFloor) probes
+		// both foot sensors, not just center -- see checkGlideFloorDist() javadoc.
+		var floorResult = checkGlideFloorDist(
+				sprite.getCentreX(), sprite.getCentreY(), sprite.getXRadius(), sprite.getYRadius());
 		if (floorResult != null) {
 			if (floorResult.distance() >= 14) {
 				// Slid off a ledge — enter fall state
@@ -2134,7 +2224,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Check floor (only when descending or level)
 		if (sprite.getYSpeed() >= 0) {
-			var result = ObjectTerrainUtils.checkFloorDist(cx, cy + yRad);
+			var result = checkGlideFloorDist(cx, cy, xRad, yRad);
 			if (result != null && result.distance() < 0) {
 				sprite.setY((short) (sprite.getY() + result.distance()));
 				sprite.setAngle(result.angle());
@@ -2157,6 +2247,51 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setX((short) (sprite.getX() - result.distance()));
 			}
 		}
+	}
+
+	/**
+	 * ROM: Sonic_CheckFloor / {@code sub_11FD6} (sonic3k.asm:19839-19891,
+	 * 24127-24135). Unlike {@link ObjectTerrainUtils}' single center-point
+	 * object probes, the PLAYER floor check probes BOTH foot sensors --
+	 * {@code x_pos + x_radius} ("Primary") and {@code x_pos - x_radius}
+	 * ("Secondary") -- and keeps whichever found the closer floor (the
+	 * smaller/more-negative distance): {@code cmp.w d0,d1; ble.s ...} picks
+	 * the secondary (left) sensor's result unless the primary (right) sensor
+	 * is strictly closer, in which case it swaps to that one. A center-only
+	 * probe is blind to a floor edge under one foot but not the other (e.g. a
+	 * staircase lip) and lands several frames late -- reproduced via a
+	 * standalone replay of traces/s3k/runs/s3-knux-multibonus-ss/aiz/: at
+	 * trace frame 1570 the right-foot sensor already reports floor contact
+	 * (distance -4) while the center probe still reports clear air (distance
+	 * +22), so {@link #doGlideCollision()}'s prior center-only check missed
+	 * the landing for 6 more frames and the resulting position drift
+	 * cascaded into a ~1800px trajectory divergence by the end of the
+	 * segment.
+	 */
+	private TerrainCheckResult checkGlideFloorDist(int cx, int cy, int xRad, int yRad) {
+		var right = ObjectTerrainUtils.checkFloorDist(cx + xRad, cy + yRad);
+		var left = ObjectTerrainUtils.checkFloorDist(cx - xRad, cy + yRad);
+		TerrainCheckResult chosen;
+		if (left == null) {
+			chosen = right;
+		} else if (right == null) {
+			chosen = left;
+		} else {
+			chosen = left.distance() <= right.distance() ? left : right;
+		}
+		if (chosen == null) {
+			return null;
+		}
+		// ROM Sonic_CheckFloor loc_F7F0 (sonic3k.asm:19884-19888): after picking
+		// the winning foot sensor, {@code btst #0,d3; beq locret; move.b d2,d3}
+		// forces the returned angle to 0 whenever the tile's stored angle byte is
+		// odd (bit 0 set). AIZ's flagged/curved landing tile stores angle 0xFF
+		// (odd), so the ROM reads floor angle 0x00 there; without this rule the
+		// glide land wrote angle 0xFF and the compared field diverged.
+		if ((chosen.angle() & 1) != 0) {
+			chosen = new TerrainCheckResult(chosen.distance(), (byte) 0, chosen.tileIndex());
+		}
+		return chosen;
 	}
 
 	/**
@@ -2199,10 +2334,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/**
 	 * ROM: Knuckles_Set_Gliding_Animation (sonic3k.asm:31560-31581).
-	 * Directly sets mapping_frame from a lookup table based on glide turn angle.
-	 * Does NOT use the scripted animation system.
+	 * Sets {@code anim(a0)} to $20 (sonic3k.asm:31563: {@code move.w
+	 * #($20<<8)|$20,anim(a0) ; and prev_anim}) THEN sets mapping_frame directly
+	 * from a lookup table based on glide turn angle -- the mapping_frame write
+	 * bypasses the scripted animation system, but the {@code anim} byte itself
+	 * is still written and is what a trace's {@code player_animation_id} field
+	 * observes.
 	 */
 	private void setGlideAnimation() {
+		// ROM sonic3k.asm:31563. Word write also sets prev_anim(a0), which this
+		// engine does not model as a separate field. Must go through
+		// setForcedAnimationId, not setAnimationId directly: PlayableSpriteAnimation
+		// .update() recomputes animationId from the scripted velocity resolver every
+		// frame BEFORE consulting isObjectMappingFrameControl(), so a plain
+		// setAnimationId() here is stomped back to the resolver's idea (0) on the
+		// very next animation-manager pass. forcedAnimationId is the established
+		// override channel (see enterFallFromGlide()/clearGlideAnimationState()).
+		sprite.setForcedAnimationId(0x20);
 		// Enable direct mapping frame control (bypasses animation manager)
 		sprite.setObjectMappingFrameControl(true);
 		sprite.setPushing(false);
@@ -2690,7 +2838,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					sprite.markObjectPreservedRollBoostFollowup();
 				}
 			} else {
+				// ROM roll-stop writes y_radius/x_radius and y_pos only; x_pos is
+				// unchanged (sonic3k.asm:22978-22986). On wall modes the engine
+				// represents the radius change by widening the top-left sprite box,
+				// so preserve the native centre X across that representation change.
+				short preRollStopCentreX = sprite.getCentreX();
 				sprite.setRolling(false);
+				sprite.setCentreXPreserveSubpixel(preRollStopCentreX);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
 				applyRollStopAnimationChange();
 			}
@@ -3378,6 +3532,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setJumping(false);
 		// ROM: s2.asm:37769-37771 - reset flip/tumble state on landing
 		sprite.setFlipAngle(0);
+		sprite.setFlipType(0);
 		sprite.setFlipTurned(false);
 		sprite.setFlipsRemaining(0);
 		// ROM: s2.asm:37772 - reset look delay counter on landing
@@ -3399,6 +3554,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
 		if (walkAnimationId >= 0) {
+			// Looking/crouching are engine-side projections of native anim writes,
+			// not independent ROM status bits. Player_TouchFloor's explicit Walk
+			// store replaces either projection on the landing frame; otherwise a
+			// stale pre-air LookUp flag can mask the new byte (CNZ2 Tails f19845).
+			sprite.setLookingUp(false);
+			sprite.setCrouching(false);
 			sprite.setAnimationId(walkAnimationId);
 		}
 	}

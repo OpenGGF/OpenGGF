@@ -14,6 +14,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -255,7 +256,7 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
             // at the release frame (Pachinko trace frame 94: y 0x0EBF vs ROM 0x0EBA).
             short centreYBeforeRoll = player.getCentreY();
             player.setRolling(true);
-            player.setCentreYPreserveSubpixel(centreYBeforeRoll);
+            NativePositionOps.writeYPosPreserveSubpixel(player, centreYBeforeRoll);
         }
         player.setRollingJump(false);
         player.setJumping(false);

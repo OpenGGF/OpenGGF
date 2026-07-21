@@ -1,13 +1,33 @@
 package com.openggf.game;
 
 import com.openggf.level.LevelManager;
+import com.openggf.sprites.Sprite;
+import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-/** Applies a pending transparent title-card request identically in live and recorded frame drivers. */
+/** Coordinates in-level and results-return title-card preparation. */
 public final class InLevelTitleCardCoordinator {
     private InLevelTitleCardCoordinator() {
+    }
+
+    /** Locks control and runs the game-specific fresh-player prelude for a results-return title card. */
+    public static void prepareResultsTransition(Sprite sprite,
+                                                Consumer<Boolean> controlLock,
+                                                Supplier<GameModule> moduleSupplier,
+                                                SpriteManager spriteManager,
+                                                LevelManager levelManager) {
+        controlLock.accept(true);
+        if (sprite instanceof AbstractPlayableSprite playable) {
+            int freshPlayerPreludeFrames = moduleSupplier.get()
+                    .getLevelInitProfile()
+                    .freshMainPlayablePreludeFrames();
+            spriteManager.warmUpFreshMainPlayableOnly(
+                    freshPlayerPreludeFrames, levelManager, playable);
+        }
     }
 
     public static boolean startIfRequested(LevelManager levelManager,

@@ -123,6 +123,28 @@ public class TestObjectManagerLifecycle {
                 "The high-Y spawn first executes on the frame after ObjPosLoad created it");
     }
 
+    @Test
+    public void bonusReturnRespawnStateSuppressesInitiallyVisibleSpawnBeforeMaterialization() {
+        ObjectSpawn originalSpawn = new ObjectSpawn(0x0200, 0, 0x03, 0, 0, true, 0x8000);
+        ObjectManager originalManager = new ObjectManager(
+                List.of(originalSpawn), new TrackingRegistry(), 0, null, null);
+        originalManager.reset(0);
+        originalManager.markRemembered(originalSpawn);
+        PersistentRespawnState savedRespawnState = originalManager.capturePersistentRespawn();
+
+        ObjectSpawn reloadedSpawn = new ObjectSpawn(0x0200, 0, 0x03, 0, 0, true, 0x8000);
+        TrackingRegistry reloadedRegistry = new TrackingRegistry();
+        ObjectManager reloadedManager = new ObjectManager(
+                List.of(reloadedSpawn), reloadedRegistry, 0, null, null);
+
+        reloadedManager.reset(0, savedRespawnState);
+
+        assertEquals(0, reloadedRegistry.createCount,
+                "Bonus-return respawn bits must be restored before the fresh manager materializes its initial window");
+        assertTrue(reloadedManager.getActiveObjects().isEmpty(),
+                "A remembered non-stay-active spawn must remain absent after a bonus-return reload");
+    }
+
     private static final class TestRegistry implements ObjectRegistry {
         private final Set<ObjectSpawn> persistentSpawns;
         private final Map<ObjectSpawn, ObjectInstance> instances = new IdentityHashMap<>();
@@ -239,4 +261,3 @@ public class TestObjectManagerLifecycle {
         }
     }
 }
-

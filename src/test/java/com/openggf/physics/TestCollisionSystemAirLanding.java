@@ -6,6 +6,8 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GroundMode;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.ShieldType;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -248,6 +250,36 @@ class TestCollisionSystemAirLanding {
         assertFalse(sprite.getAir(), "Wall landing should clear airborne state");
         assertEquals(0, sprite.getAnimationId(),
                 "Sonic_ResetOnFloor publishes Walk on an angled ceiling/wall landing");
+    }
+
+    @Test
+    void angledCeilingLandingRunsBubbleShieldBounceBeforeGroundSpeedSample() throws Exception {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        Sonic sprite = new Sonic("sonic", (short) 0x143C, (short) 0x05BA);
+        sprite.setAir(true);
+        sprite.setRolling(true);
+        sprite.setDoubleJumpFlag(1);
+        sprite.giveShield(ShieldType.BUBBLE);
+        sprite.setXSpeed((short) 0x028B);
+        sprite.setYSpeed((short) -0x03B8);
+
+        CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+        Method method = CollisionSystem.class.getDeclaredMethod(
+                "doCeilingCollision",
+                AbstractPlayableSprite.class,
+                SensorResult[].class);
+        method.setAccessible(true);
+        method.invoke(collisionSystem, sprite, new SensorResult[] {
+                new SensorResult((byte) 0xB8, (byte) -1, 14, Direction.UP),
+                new SensorResult((byte) 0xFF, (byte) 2, 14, Direction.UP)
+        });
+
+        assertTrue(sprite.getAir(), "BubbleShield_Bounce must re-arm Status_InAir");
+        assertTrue(sprite.getRolling(), "BubbleShield_Bounce must restore rolling radii/state");
+        assertEquals((short) -0x04D0, sprite.getXSpeed());
+        assertEquals((short) -0x0249, sprite.getYSpeed());
+        assertEquals((short) 0x0249, sprite.getGSpeed(),
+                "The angled-ceiling tail samples the post-bounce y_vel");
     }
 
     private static AbstractPlayableSprite newTestSprite() {

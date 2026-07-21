@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -28,7 +29,7 @@ final class MgzEndBossKnuxCollapseEmitter extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         if (emissionsRemaining <= 0) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         if (emissionTimer-- > 0) return;
@@ -67,7 +68,7 @@ final class MgzEndBossKnuxCollapseEmitter extends AbstractObjectInstance
         }
         @Override public void update(int frameCounter, PlayableEntity player) {
             xFixed += xVel; yFixed += yVel; yVel += 0x18;
-            if (getY() > services().camera().getY() + 0x140) setDestroyed(true);
+            if (getY() > services().camera().getY() + 0x140) ObjectLifetimeOps.expireDynamic(this);
         }
         @Override public int getX() { return xFixed >> 8; }
         @Override public int getY() { return yFixed >> 8; }

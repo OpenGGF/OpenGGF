@@ -1923,8 +1923,10 @@ public class Sonic3kConstants {
     public static final int CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY = 0x08;
 
     // PLC 0x6E loads ArtNem_CNZEndBoss, ArtNem_RobotnikShip, ArtNem_BossExplosion,
-    // and ArtNem_EggCapsule for the bounded Obj_CNZEndBoss wrapper.
+    // and ArtNem_EggCapsule for Obj_CNZEndBoss and its post-defeat handoff.
     public static final int PLC_CNZ_END_BOSS = 0x6E;
+    /** Pal_CNZEndBoss, S&K-side inline palette loaded by Obj_CNZEndBoss. */
+    public static final int PAL_CNZ_END_BOSS_ADDR = 0x06EE48;
 
     // Map_CNZEndBoss - CNZ end-boss mappings. The include file has 13 dc.w entries
     // before Frame_3609C4, so the table base is 26 bytes earlier at 0x3609AA.

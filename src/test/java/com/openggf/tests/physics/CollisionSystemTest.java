@@ -770,7 +770,7 @@ public class CollisionSystemTest {
     }
 
     @Test
-    public void typedCollisionRulePreservesRightWallDeepProbeWhenBaseRulesDiffer() throws Exception {
+    public void typedCollisionRuleDisablesRightWallDeepProbePreservationForS3k() throws Exception {
         GameRulesCollisionTestSprite player = newCollisionTestSprite();
         player.setGameRules(GameRules.SONIC_1);
         GameRules base = GameRules.SONIC_1;
@@ -786,8 +786,8 @@ public class CollisionSystemTest {
                 base.powerUp(),
                 base.drowningBubble()));
 
-        assertTrue(invokePreservesRightWallPenetrationOnDeepProbe(player),
-                "CollisionSystem should read the typed CollisionRules group");
+        assertFalse(invokePreservesRightWallPenetrationOnDeepProbe(player),
+                "S3K non-AIZ deep right-wall probes retain Player_Angle's selected angle without the AIZ timer");
     }
 
     @Test

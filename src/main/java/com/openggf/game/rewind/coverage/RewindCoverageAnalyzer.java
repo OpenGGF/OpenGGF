@@ -4,6 +4,7 @@ import com.openggf.game.GameId;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.schema.RewindCodecs;
 import com.openggf.game.rewind.schema.RewindFieldPolicy;
 import com.openggf.game.rewind.schema.RewindPolicyRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -139,6 +140,7 @@ public final class RewindCoverageAnalyzer {
 
             List<String> uncapturedFinalScalars = findUncapturedFinalScalarFields(sc.fqn());
             List<String> unIdObjectRefs = findUnIdObjectRefFields(sc.fqn());
+            List<String> uncapturedHelperState = findUncapturedHelperStateFields(sc.fqn());
             boolean isDynamic = dynamicCodecClassNames.contains(sc.fqn())
                     || isRewindRecreatable(sc.fqn());
 
@@ -148,7 +150,8 @@ public final class RewindCoverageAnalyzer {
                     isDynamic,  // isDynamicSpawnable — true iff a dynamic recreate path exists
                     isDynamic,  // hasRecreatePath — true iff a dynamic recreate path exists
                     uncapturedFinalScalars,
-                    unIdObjectRefs
+                    unIdObjectRefs,
+                    uncapturedHelperState
             ));
         }
 
@@ -358,6 +361,173 @@ public final class RewindCoverageAnalyzer {
         }
         // Remaining object-ref fields are neither excluded nor explicitly id-captured.
         return true;
+    }
+
+    /**
+     * Reflects all declared fields on the concrete class and its superclasses
+     * (up to, but not including, {@link AbstractObjectInstance}) and returns
+     * the names of fields that are uncaptured-helper-state gaps.
+     *
+     * <p>This catches the fragility motivating the guard: a {@code final} helper
+     * field whose type carries mutable state but is <em>not</em> captured by any
+     * {@link RewindCodecs} codec — e.g. a future {@code FooGate}/{@code FooTracker}
+     * that neither matches the ad-hoc plain-state-holder name suffix list nor
+     * implements {@code RewindStateful}, or a plain-state holder that a future
+     * non-codec field silently knocked off the in-place path. On a backward seek
+     * such a helper's mutable fields are left stale.
+     *
+     * <p>Cardinal rule (per design): the gap test uses the <em>same</em> public
+     * predicate the compact capturer uses — {@link RewindCodecs#codecFor(Class)} —
+     * so the guard and the capturer can never disagree about what is captured.
+     *
+     * <p>If the class cannot be loaded the method returns an empty list, so CI does
+     * not die on partial classpaths.
+     */
+    private static List<String> findUncapturedHelperStateFields(String fqn) {
+        Class<?> cls;
+        try {
+            cls = Class.forName(fqn);
+        } catch (ClassNotFoundException e) {
+            return List.of();
+        }
+
+        List<String> gaps = new ArrayList<>();
+        for (Class<?> c = cls;
+                c != null && c != AbstractObjectInstance.class && c != Object.class;
+                c = c.getSuperclass()) {
+            for (Field field : c.getDeclaredFields()) {
+                if (isUncapturedHelperState(field)) {
+                    gaps.add(field.getName());
+                }
+            }
+        }
+        gaps.sort(String::compareTo);
+        return List.copyOf(gaps);
+    }
+
+    /**
+     * Returns {@code true} when the field is an uncaptured-helper-state gap: a
+     * {@code final} field holding a mutable <em>plain helper</em> whose type has no
+     * {@link RewindCodecs} codec, so the compact capturer drops it on rewind.
+     *
+     * <p>A field qualifies as a gap when:
+     * <ul>
+     *   <li>It is {@code final}, non-static, non-transient, and non-synthetic
+     *       (same gates as {@link #isUncapturedFinalScalar}).</li>
+     *   <li>It is NOT annotated {@code @RewindTransient} or {@code @RewindDeferred}.</li>
+     *   <li>Its declared type is a <em>plain helper</em>: a concrete non-abstract
+     *       class that extends {@code Object} directly, is not a primitive/enum/array/
+     *       record/interface, is not a {@code java.*} type, and is neither an
+     *       object-reference ({@link ObjectInstance}) nor a player-reference
+     *       ({@link AbstractPlayableSprite}) type — those are handled by the
+     *       final-scalar and object-ref gap lanes respectively.</li>
+     *   <li>{@link RewindPolicyRegistry#policyForAudit} does not mark it
+     *       {@code TRANSIENT}, {@code DEFERRED}, or {@code CAPTURED} — a registered
+     *       policy has already decided how to handle the field. This is the same gate
+     *       the two sibling lanes apply, and it is required by the guard's cardinal
+     *       rule: the compact capturer honors {@code policyForAudit} (e.g.
+     *       {@code PatternSpriteRenderer}/{@code PatternDesc} render helpers are
+     *       declared-type {@code TRANSIENT}), so the guard must too or it would flag
+     *       fields the capturer deliberately drops.</li>
+     *   <li>{@link RewindCodecs#codecFor(Class)} returns empty for that type — i.e.
+     *       the type is neither a registered codec type, a {@code RewindStateful},
+     *       nor a name-matching all-codec plain-state holder.</li>
+     *   <li>The helper declares at least one <em>mutable</em> (non-final, non-static,
+     *       non-transient) primitive-or-enum field of its own — i.e. it actually
+     *       carries frame-varying state that a stale rewind would corrupt. Helpers
+     *       with no mutable scalar state are harmless and not flagged. Only the
+     *       helper's directly-declared fields are considered (v1 scope; codecFor's
+     *       recursion covers deeper nesting for captured holders).</li>
+     * </ul>
+     *
+     * <p>This is an audit-only predicate; it has no effect on runtime rewind behaviour.
+     */
+    private static boolean isUncapturedHelperState(Field field) {
+        int mods = field.getModifiers();
+
+        // Final is the shape that motivates the guard: a helper constructed once and
+        // held for the object's lifetime, mutated in place each frame.
+        if (!Modifier.isFinal(mods)) {
+            return false;
+        }
+        if (Modifier.isStatic(mods) || Modifier.isTransient(mods) || field.isSynthetic()) {
+            return false;
+        }
+        if (field.isAnnotationPresent(RewindTransient.class)
+                || field.isAnnotationPresent(RewindDeferred.class)) {
+            return false;
+        }
+        Class<?> type = field.getType();
+        if (!isPlainHelperType(type)) {
+            return false;
+        }
+        // A registered policy already decides the field's fate. TRANSIENT/DEFERRED mean
+        // excluded-or-deferred (not a gap); CAPTURED means captured by another mechanism.
+        // Mirrors the sibling lanes and keeps the guard in step with the capturer, which
+        // honors policyForAudit (e.g. PatternSpriteRenderer/PatternDesc are declared-type
+        // TRANSIENT render helpers, not gameplay state).
+        Optional<RewindFieldPolicy> policy = RewindPolicyRegistry.policyForAudit(field);
+        if (policy.isPresent()) {
+            RewindFieldPolicy p = policy.get();
+            if (p == RewindFieldPolicy.TRANSIENT
+                    || p == RewindFieldPolicy.DEFERRED
+                    || p == RewindFieldPolicy.CAPTURED) {
+                return false;
+            }
+        }
+        // CAPTURED iff the compact capturer's own predicate has a codec for the type.
+        if (RewindCodecs.codecFor(type).isPresent()) {
+            return false;
+        }
+        // Only flag helpers that actually carry mutable frame-varying scalar state.
+        if (!declaresMutableScalarState(type)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Returns {@code true} when {@code type} is a <em>plain helper</em>: a concrete,
+     * non-abstract class extending {@code Object} directly that is not a
+     * primitive/enum/array/record/interface, not a {@code java.*} type (which excludes
+     * {@code String} and the boxed wrappers), and not an object-reference or
+     * player-reference type. Records are excluded structurally because their
+     * superclass is {@code java.lang.Record}, not {@code Object}.
+     */
+    private static boolean isPlainHelperType(Class<?> type) {
+        if (type.isPrimitive()
+                || type.isArray()
+                || type.isEnum()
+                || type.isRecord()
+                || type.isInterface()
+                || Modifier.isAbstract(type.getModifiers())
+                || type.getSuperclass() != Object.class
+                || type.getName().startsWith("java.")) {
+            return false;
+        }
+        // Object/player references are covered by the object-ref gap lane, not here.
+        return !ObjectInstance.class.isAssignableFrom(type)
+                && !AbstractPlayableSprite.class.isAssignableFrom(type);
+    }
+
+    /**
+     * Returns {@code true} when {@code type} directly declares at least one mutable
+     * (non-final, non-static, non-transient) primitive-or-enum field — the state a
+     * stale rewind would leave corrupted. Only directly-declared fields are inspected
+     * (v1 scope).
+     */
+    private static boolean declaresMutableScalarState(Class<?> type) {
+        for (Field field : type.getDeclaredFields()) {
+            int mods = field.getModifiers();
+            if (Modifier.isFinal(mods) || Modifier.isStatic(mods) || Modifier.isTransient(mods)) {
+                continue;
+            }
+            Class<?> ft = field.getType();
+            if (ft.isPrimitive() || ft.isEnum()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -99,6 +99,13 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
         parent.childComponents.remove(this);
     }
 
+    @Override
+    protected void onRemovedFromObjectManager() {
+        if (parent != null) {
+            parent.childComponents.remove(this);
+        }
+    }
+
     /**
      * True (the default) for boss children whose ONLY back-reference from the parent is
      * {@link AbstractBossInstance#childComponents} -- i.e. {@code update()} dispatch and

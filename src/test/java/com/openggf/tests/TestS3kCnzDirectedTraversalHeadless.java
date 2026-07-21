@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -71,7 +72,10 @@ public class TestS3kCnzDirectedTraversalHeadless {
         }
 
         assertTrue(captured, "CNZ cannon should capture the player before launching");
-        assertTrue(player.isControlLocked(), "CNZ cannon should lock player control while captured");
+        assertTrue(player.isObjectControlSuppressesMovement(),
+                "CNZ cannon object_control=$81 should suppress normal player movement while captured");
+        assertFalse(player.isControlLocked(),
+                "Obj_CNZCannon does not write the separate Ctrl_1_locked global");
         assertTrue(player.getRolling(), "CNZ cannon should force rolling state while captured");
         assertEquals(7, player.getXRadius(), "CNZ cannon should use the ROM rolling x-radius");
         assertEquals(14, player.getYRadius(), "CNZ cannon should use the ROM rolling y-radius");
@@ -82,7 +86,10 @@ public class TestS3kCnzDirectedTraversalHeadless {
         fixture.stepFrame(false, false, false, false, true);
 
         assertFalse(player.isObjectControlled(), "CNZ cannon should release object control after launch");
-        assertFalse(player.isControlLocked(), "CNZ cannon should release control lock after launch");
+        assertFalse(player.isObjectControlSuppressesMovement(),
+                "CNZ cannon launch should clear object_control movement suppression");
+        assertFalse(player.isControlLocked(),
+                "CNZ cannon launch should leave the separate Ctrl_1_locked global clear");
         assertTrue(player.getXSpeed() != 0 || player.getYSpeed() != 0,
                 "CNZ cannon should impart a launch vector");
     }
@@ -411,7 +418,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
 
         for (int frame = 0; frame < expected.length; frame++) {
             fixture.stepFrame(false, false, false, false, false);
-            expected[frame] = expectedTwistFrame(frame);
+            expected[frame] = expectedTwistFrame(frame + 1);
             actual[frame] = player.getMappingFrame();
         }
 
@@ -1004,10 +1011,13 @@ public class TestS3kCnzDirectedTraversalHeadless {
         player.setHurt(true);
         fixture.stepFrame(false, false, false, false, false);
 
-        assertFalse(player.isObjectControlled());
-        assertFalse(player.isJumping());
-        assertEquals(0, player.getYSpeed());
-        assertFalse(isPlayerOneSlotActive(cylinder));
+        assertAll(
+                () -> assertFalse(player.isObjectControlled()),
+                () -> assertFalse(player.isOnObject()),
+                () -> assertEquals(0, player.getLatchedSolidObjectId()),
+                () -> assertFalse(player.isJumping()),
+                () -> assertEquals(0, player.getYSpeed()),
+                () -> assertFalse(isPlayerOneSlotActive(cylinder)));
     }
 
     private static void invokeLaunchDelayHook(CnzCannonInstance cannon, int frames) {

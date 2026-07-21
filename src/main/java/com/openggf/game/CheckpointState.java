@@ -15,6 +15,13 @@ public class CheckpointState implements RespawnState {
     private static final Logger LOGGER = Logger.getLogger(CheckpointState.class.getName());
 
     private int lastCheckpointIndex = -1;
+    // Persistent star-post activation high-water: the highest star-post subtype
+    // ever activated this life. Unlike lastCheckpointIndex (ROM Last_star_post_hit,
+    // zeroed on a star-post BONUS entry), this survives that zeroing so a
+    // returned-from-bonus star post is still recognised as already-used. Models the
+    // ROM per-object respawn bit kept across the reload by Respawn_table_keep. See
+    // RespawnState#getStarPostActivationMark.
+    private int starPostActivationMark = -1;
     private int savedX;
     private int savedY;
     private int savedCameraX;
@@ -36,6 +43,7 @@ public class CheckpointState implements RespawnState {
     @com.openggf.game.ModApi
     public record RewindState(
             int lastCheckpointIndex,
+            int starPostActivationMark,
             int savedX,
             int savedY,
             int savedCameraX,
@@ -57,6 +65,7 @@ public class CheckpointState implements RespawnState {
      */
     public void clear() {
         lastCheckpointIndex = -1;
+        starPostActivationMark = -1;
         savedX = 0;
         savedY = 0;
         savedCameraX = 0;
@@ -80,6 +89,8 @@ public class CheckpointState implements RespawnState {
      */
     public void saveCheckpoint(int checkpointIndex, int x, int y, boolean cameraLockFlag) {
         this.lastCheckpointIndex = checkpointIndex;
+        // Bump the persistent activation high-water (never lowered by a save).
+        this.starPostActivationMark = Math.max(this.starPostActivationMark, checkpointIndex);
         this.savedX = x;
         this.savedY = y;
         this.cameraLock = cameraLockFlag;
@@ -168,6 +179,16 @@ public class CheckpointState implements RespawnState {
 
     public int getLastCheckpointIndex() {
         return lastCheckpointIndex;
+    }
+
+    @Override
+    public int getStarPostActivationMark() {
+        return starPostActivationMark;
+    }
+
+    @Override
+    public void restoreStarPostActivationMark(int mark) {
+        this.starPostActivationMark = mark;
     }
 
     public int getSavedX() {
@@ -274,6 +295,7 @@ public class CheckpointState implements RespawnState {
     public RewindState captureRewindState() {
         return new RewindState(
                 lastCheckpointIndex,
+                starPostActivationMark,
                 savedX,
                 savedY,
                 savedCameraX,
@@ -297,6 +319,7 @@ public class CheckpointState implements RespawnState {
             return;
         }
         this.lastCheckpointIndex = state.lastCheckpointIndex();
+        this.starPostActivationMark = state.starPostActivationMark();
         this.savedX = state.savedX();
         this.savedY = state.savedY();
         this.savedCameraX = state.savedCameraX();

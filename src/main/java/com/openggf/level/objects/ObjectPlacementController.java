@@ -203,6 +203,128 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         this.windowingStrategy = strategy != null ? strategy : ObjectWindowingStrategy.LEGACY;
     }
 
+    boolean reservedSlotWaitsForNextObjectPass(int slotIndex, boolean updating,
+            int currentExecSlot, ObjectSlotLayout slotLayout) {
+        if (!updating || currentExecSlot < 0 || !slotLayout.isDynamicSlot(slotIndex)) {
+            return false;
+        }
+        int execIndex = slotLayout.toExecIndex(slotIndex);
+        return execIndex >= 0 && execIndex <= currentExecSlot;
+    }
+
+    boolean reallocateToFirstFreeDynamicSlot(AbstractObjectInstance object,
+            SlotAllocator slotAllocator, ObjectSlotLayout slotLayout,
+            ObjectInstance[] execOrder, boolean updating,
+            BitSet slotsFreedDuringObjectPass) {
+        if (object == null || !slotLayout.isDynamicSlot(object.getSlotIndex())) {
+            return false;
+        }
+        int oldSlot = object.getSlotIndex();
+        if (updating) {
+            slotsFreedDuringObjectPass.set(oldSlot);
+        }
+        slotAllocator.release(oldSlot);
+        int newSlot = slotAllocator.allocate();
+        if (newSlot < 0) {
+            slotAllocator.reserve(oldSlot);
+            return false;
+        }
+        object.setSlotIndex(newSlot);
+        int oldExecIndex = slotLayout.toExecIndex(oldSlot);
+        if (oldExecIndex >= 0 && oldExecIndex < execOrder.length
+                && execOrder[oldExecIndex] == object) {
+            execOrder[oldExecIndex] = null;
+        }
+        return true;
+    }
+
+    boolean releaseSpawnForRespawn(ObjectInstance transformedInstance, ObjectSpawn spawn,
+            Map<ObjectSpawn, ObjectInstance> activeObjects,
+            Map<ObjectInstance, ObjectSpawn> instanceToSpawn,
+            List<ObjectInstance> dynamicObjects) {
+        if (transformedInstance == null || spawn == null
+                || activeObjects.get(spawn) != transformedInstance) {
+            return false;
+        }
+        activeObjects.remove(spawn);
+        instanceToSpawn.remove(transformedInstance);
+        dynamicObjects.add(transformedInstance);
+        removeFromActiveForUnload(spawn);
+        if (twoAxisCursorPlacement) {
+            // Camera_Y re-scans entries between the live X cursors after the
+            // transformed instance clears its placement bit.
+            markDeferredVerticalLoad(spawn);
+        }
+        return true;
+    }
+
+    boolean dispatchDestroyRemoveFromActive(ObjectInstance instance, ObjectSpawn spawn,
+            boolean rememberRespawnTrackedSpawn) {
+        if (instance.isDestroyedRespawnable()) {
+            boolean retainForTwoAxisYPass = twoAxisCursorPlacement
+                    && isBetweenLoadCursors(spawn);
+            removeFromActiveForUnload(spawn);
+            if (retainForTwoAxisYPass) {
+                // ROM loc_1B982 reconsiders every clear respawn-table entry
+                // inside the live X window on the next Y-coarse crossing.
+                markDeferredVerticalLoad(spawn);
+            }
+            return false;
+        }
+        if (rememberRespawnTrackedSpawn && spawn != null && spawn.respawnTracked()) {
+            markRemembered(spawn);
+        }
+        removeFromActive(spawn);
+        return true;
+    }
+
+    boolean isSpawnVerticallyEligibleForTwoAxisYPass(ObjectSpawn spawn,
+            int previousYCoarse, int currentYCoarse, Camera camera) {
+        if (spawn == null || currentYCoarse == previousYCoarse) {
+            return false;
+        }
+        int bandTop = currentYCoarse > previousYCoarse
+                ? currentYCoarse + 0x180
+                : currentYCoarse - 0x80;
+        int bandBottom = currentYCoarse > previousYCoarse ? bandTop + 0x80 : currentYCoarse;
+        int spawnY = spawn.rawYWord() & 0x0FFF;
+        int wrapRange = camera != null && camera.isVerticalWrapEnabled()
+                ? camera.getVerticalWrapRange()
+                : 0;
+        if (wrapRange > 0 && (short) (camera != null ? camera.getMinY() : 0) < 0) {
+            int wrapMask = wrapRange - 1;
+            bandTop &= wrapMask;
+            bandBottom &= wrapMask;
+            return bandTop <= bandBottom
+                    ? spawnY >= bandTop && spawnY <= bandBottom
+                    : spawnY >= bandTop || spawnY <= bandBottom;
+        }
+        return bandTop >= 0 && spawnY >= bandTop && spawnY <= bandBottom;
+    }
+
+    static boolean isNonCounterSpawnVerticallyEligible(ObjectSpawn spawn,
+            int cameraY, int cameraMinY, int verticalWrapRange) {
+        if ((spawn.rawYWord() & 0x8000) != 0) {
+            return true;
+        }
+        int windowTop = (cameraY & 0xFF80) - 0x80;
+        int windowBottom = (cameraY & 0xFF80) + 0x200;
+        int spawnY = spawn.rawYWord() & 0x0FFF;
+        if ((short) cameraMinY < 0) {
+            int wrapRange = verticalWrapRange > 0 ? verticalWrapRange : 0x1000;
+            int wrapMask = wrapRange - 1;
+            if (windowTop < 0) {
+                return spawnY >= (windowTop & wrapMask) || spawnY <= windowBottom;
+            }
+            if (windowBottom > wrapRange) {
+                return spawnY >= windowTop || spawnY <= (windowBottom & wrapMask);
+            }
+        } else {
+            windowTop = Math.max(0, windowTop);
+        }
+        return spawnY >= windowTop && spawnY <= windowBottom;
+    }
+
     /**
      * ROM-exact native S2 load/trim boundaries with viewport-derived widescreen extension.
      * <p>
@@ -318,6 +440,33 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 deferredVerticalLoad.toLongArray(),
                 twoAxisCameraYCoarse,
                 s2LatchedCameraX);
+    }
+
+    /**
+     * Captures just the persistent respawn-remember state (the engine's
+     * {@code Object_respawn_table} model: {@link #remembered} and
+     * {@link #stayActive}), excluding the windowing state (active set, cursors,
+     * counters) that a reload rebuilds. Used to carry the respawn table across a
+     * bonus-stage round-trip reload; see {@link PersistentRespawnState}.
+     */
+    PersistentRespawnState capturePersistentRespawn() {
+        return new PersistentRespawnState(remembered.toLongArray(), stayActive.toLongArray());
+    }
+
+    /**
+     * Re-establishes the respawn-remember state captured by
+     * {@link #capturePersistentRespawn()} into this (freshly loaded) controller,
+     * so a spawn remembered before a bonus round-trip is not respawned intact on
+     * return. OR-merges the bits, preserving anything the fresh load already
+     * marked. Spawn indices are stable because the bonus return reloads the same
+     * zone/act, so the layout (and therefore the index of each spawn) is identical.
+     */
+    void restorePersistentRespawn(PersistentRespawnState state) {
+        if (state == null) {
+            return;
+        }
+        remembered.or(BitSet.valueOf(state.rememberedBits()));
+        stayActive.or(BitSet.valueOf(state.stayActiveBits()));
     }
 
     int restoreRewindState(
@@ -690,7 +839,13 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * ObjPosLoad pass).
      */
     private boolean persistsDestruction(ObjectSpawn spawn) {
-        return spawn != null && spawn.respawnTracked();
+        // S3K Load_Sprites assigns every six-byte layout entry an a3 byte in
+        // Object_respawn_table and always stores that address in respawn_addr
+        // (sonic3k.asm:37513-37560,37741-37758). Unlike S1/S2, persistence is
+        // not conditional on bit 15 of the layout Y word. The shared parser's
+        // respawnTracked flag retains the S1/S2 encoding, so the two-axis S3K
+        // placement mode must treat every real layout entry as tracked.
+        return spawn != null && (twoAxisCursorPlacement || spawn.respawnTracked());
     }
 
     boolean isRemembered(ObjectSpawn spawn) {
@@ -1031,6 +1186,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             }
             cursorIndex++;
         }
+    }
+
+    boolean isBetweenLoadCursors(ObjectSpawn spawn) {
+        int index = getSpawnIndex(spawn);
+        return index >= leftCursorIndex && index < cursorIndex;
     }
 
     /**

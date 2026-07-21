@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.level.objects.ObjectServices;
@@ -49,17 +48,23 @@ final class AizVineHandleLogic {
             0x12, 0x13
     };
 
-    static final class PlayerState implements RewindStateful<PlayerState.Snapshot> {
+    // NB: State/PlayerState are plain scalar holders captured for rewind by
+    // RewindCodecs.PlainStateHolderCodec (their simpleName ends in "State" and
+    // every field has a scalar codec, including the two booleans below), so the
+    // owning object's final `handle` field rides keyframes automatically -- no
+    // RewindStateful/annotation needed. TestAizRideVineRewind pins this.
+    static final class PlayerState {
         int grabFlag;
         int releaseDelay;
         boolean pendingJumpRelease;
         int pendingReleaseAngle;
-
         void copyFrom(PlayerState other) {
             grabFlag = other.grabFlag;
             releaseDelay = other.releaseDelay;
             pendingJumpRelease = other.pendingJumpRelease;
             pendingReleaseAngle = other.pendingReleaseAngle;
+            rollingAtGrab = other.rollingAtGrab;
+            walkLatched = other.walkLatched;
         }
 
         void clear() {
@@ -67,24 +72,31 @@ final class AizVineHandleLogic {
             releaseDelay = 0;
             pendingJumpRelease = false;
             pendingReleaseAngle = 0;
+            rollingAtGrab = false;
+            walkLatched = false;
         }
-
-        @Override
-        public Snapshot captureRewindStateValue() {
-            return new Snapshot(grabFlag, releaseDelay, pendingJumpRelease, pendingReleaseAngle);
-        }
-
-        @Override
-        public void restoreRewindStateValue(Snapshot state) {
-            grabFlag = state.grabFlag();
-            releaseDelay = state.releaseDelay();
-            pendingJumpRelease = state.pendingJumpRelease();
-            pendingReleaseAngle = state.pendingReleaseAngle();
-        }
-
-        private record Snapshot(int grabFlag, int releaseDelay,
-                                boolean pendingJumpRelease, int pendingReleaseAngle) {
-        }
+        // ROM Status_Roll at the moment of grab. The held player is object-
+        // controlled, so movement (which would clear Roll) never runs during the
+        // hold -- Status_Roll stays at its grab value until Player_TouchFloor
+        // clears it on the first grounding. Captured at grab so the Walk latch is
+        // decided by the ROM-equivalent held Roll state, not the engine's live
+        // roll flag (which its own landing collision may clear early).
+        boolean rollingAtGrab;
+        // Latches the anim byte to Walk. ROM: CheckGrab writes anim=$14 once and
+        // the hanging hold never rewrites it (sonic3k.asm:46742, 46607-46636), so
+        // anim stays $14 while airborne. On grounding, Player_TouchFloor (dispatch
+        // at sonic3k.asm:24335; character_id branch to Knux_TouchFloor at :24339)
+        // runs the Knuckles landing body (Knux_TouchFloor label :32829), which has
+        // two independent anim-reset gates: (1) the roll gate -- btst #Status_Roll /
+        // beq skips clearing Roll+anim, so anim=0 only when rolling (:32833-32836,
+        // matching the Sonic body Player_TouchFloor :24344-24347); (2) the >=0x20
+        // gate -- cmpi.b #$20,anim / blo / move.b #0,anim resets anim only for the
+        // glide family (:32865-32867; the glide-landing lane owns that path). A held
+        // vine player is HANG2=$14 (or Walk=0), so ONLY the roll gate can fire; a
+        // not-rolling grab hits NEITHER and keeps $14. The swing branch also writes
+        // anim=0 unconditionally (HoldPlayerSwinging :46656). Once set, the hold
+        // never rewrites anim, so Walk persists for the rest of the grab.
+        boolean walkLatched;
     }
 
     static final class State {
@@ -282,6 +294,8 @@ final class AizVineHandleLogic {
         }
         player.setRenderFlips(player.getDirection() == Direction.LEFT, false);
         playerState.grabFlag = 1;
+        playerState.walkLatched = false;
+        playerState.rollingAtGrab = player.getRolling();
         if (services != null) {
             services.playSfx(Sonic3kSfx.GRAB.id);
         }
@@ -344,9 +358,9 @@ final class AizVineHandleLogic {
 
         // loc_221EC / loc_22258 hold-position paths.
         if (handle.mode == 0) {
-            setPlayerHeldMode0(handle, player, parentAngle);
+            setPlayerHeldMode0(handle, playerState, player, parentAngle);
         } else {
-            setPlayerHeldMode1(handle, player, parentAngle);
+            setPlayerHeldMode1(handle, playerState, player, parentAngle);
         }
         player.setRenderFlips(player.getDirection() == Direction.LEFT, false);
     }
@@ -431,7 +445,8 @@ final class AizVineHandleLogic {
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
     }
 
-    private static void setPlayerHeldMode0(State handle, AbstractPlayableSprite player, int parentAngle) {
+    private static void setPlayerHeldMode0(State handle, PlayerState playerState,
+            AbstractPlayableSprite player, int parentAngle) {
         player.setCentreXPreserveSubpixel((short) handle.x);
         player.setCentreYPreserveSubpixel((short) (handle.y + PLAYER_HANG_Y_OFFSET));
 
@@ -439,12 +454,36 @@ final class AizVineHandleLogic {
         if (player.getDirection() == Direction.LEFT) {
             angle = (-angle) & 0xFF;
         }
-        player.setForcedAnimationId(Sonic3kAnimationIds.HANG2);
+        // ROM anim-byte ownership during the hanging hold: CheckGrab writes
+        // anim=$14 once (sonic3k.asm:46742) and the hold NEVER rewrites it
+        // (AIZRideVineHandle_HoldPlayer only sets mapping_frame, 46607-46636).
+        // So anim stays $14 (HANG2) while the held player is airborne. On the
+        // first grounding, Player_TouchFloor (dispatch :24335, character_id branch
+        // to Knux_TouchFloor at :24339) runs the Knuckles landing body (label
+        // :32829): it writes anim=0 + clears Status_Roll ONLY when Status_Roll is
+        // set (roll gate btst #Status_Roll / beq, :32833-32836; matching the Sonic
+        // body :24344-24347), and the >=0x20 glide gate (:32865-32867) can't fire
+        // for HANG2 ($14) -- so a not-rolling grounding leaves anim at $14. Only a
+        // rolling grab latches Walk. Status_Roll during the hold equals its grab
+        // value (object_control skips movement), so gate on the captured
+        // rollingAtGrab. Because the hold never rewrites anim, Walk then latches
+        // for the rest of the grab even if the vine lifts the player airborne
+        // again. (Open note: HOW TouchFloor runs on a held player while
+        // object_control=3 nominally skips Knux_Modes is unpinned; the write +
+        // effect set are cited and match the recorded f1947 transition.)
+        if (!playerState.walkLatched && !player.getAir() && playerState.rollingAtGrab) {
+            player.setRolling(false);
+            playerState.walkLatched = true;
+        }
+        player.setForcedAnimationId(playerState.walkLatched
+                ? Sonic3kAnimationIds.WALK
+                : Sonic3kAnimationIds.HANG2);
         int index = ((angle + 8) & 0xFF) >> 4;
         player.setMappingFrame(MODE0_PLAYER_FRAMES[index]);
     }
 
-    private static void setPlayerHeldMode1(State handle, AbstractPlayableSprite player, int parentAngle) {
+    private static void setPlayerHeldMode1(State handle, PlayerState playerState,
+            AbstractPlayableSprite player, int parentAngle) {
         int angle = angleByte(parentAngle);
         if (player.getDirection() == Direction.LEFT) {
             angle = (-angle) & 0xFF;
@@ -459,6 +498,11 @@ final class AizVineHandleLogic {
             offsetX = -offsetX;
         }
 
+        // ROM AIZRideVineHandle_HoldPlayerSwinging writes anim=0 unconditionally
+        // (sonic3k.asm:46656). Latch Walk so a later swing->hang transition (mode
+        // 1->0 without a grounding) keeps anim=0, matching the ROM (the hanging
+        // hold never rewrites anim back to $14).
+        playerState.walkLatched = true;
         player.setAnimationId(Sonic3kAnimationIds.WALK);
         player.setForcedAnimationId(Sonic3kAnimationIds.WALK);
         player.setMappingFrame(frame);

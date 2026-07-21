@@ -49,16 +49,38 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
     /** Whether the initial fade-out has been issued. */
     private boolean fadeStarted;
 
+    /** Whether the ROM delay countdown starts on the update after fade initialization. */
+    private boolean deferCountdownOnFadeStart;
+
+    /** Whether initialization must wait until the object pass after allocation. */
+    private boolean deferSameFrameUpdateAfterSpawn;
+
     /**
      * @param nativeWaitWord native signed 16-bit wait word; N completes on update N+1
      * @param musicId        music ID to play when the wait word underflows
      */
     public SongFadeTransitionInstance(int nativeWaitWord, int musicId) {
+        this(nativeWaitWord, musicId, false);
+    }
+
+    SongFadeTransitionInstance(int nativeWaitWord, int musicId, boolean deferCountdownOnFadeStart) {
+        this(nativeWaitWord, musicId, deferCountdownOnFadeStart, false);
+    }
+
+    SongFadeTransitionInstance(int nativeWaitWord, int musicId,
+                               boolean deferCountdownOnFadeStart,
+                               boolean deferSameFrameUpdateAfterSpawn) {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "SongFadeTransition");
-        this.nativeWaitWord = (short) nativeWaitWord;
+        // The deferred constructors came from the frame-duration implementation:
+        // callers pass the number of post-init countdown ticks. Convert that to
+        // the signed native wait word used by the merged implementation.
+        this.nativeWaitWord = (short) (deferCountdownOnFadeStart
+                ? nativeWaitWord - 1 : nativeWaitWord);
         this.musicId = musicId;
         this.elapsedUpdates = 0;
         this.fadeStarted = false;
+        this.deferCountdownOnFadeStart = deferCountdownOnFadeStart;
+        this.deferSameFrameUpdateAfterSpawn = deferSameFrameUpdateAfterSpawn;
     }
 
     /** Creates the locked-on generic song transition helper (90 -> update 91). */
@@ -104,10 +126,18 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
     }
 
     @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        return deferSameFrameUpdateAfterSpawn;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (!fadeStarted) {
             services().audioManager().fadeOutMusic(0x28, 6);
             fadeStarted = true;
+            if (deferCountdownOnFadeStart) {
+                return;
+            }
         }
         // Native helpers decrement a signed wait word and complete only after it underflows:
         // a word of 90 completes on update 91; a word of 120 completes on update 121.

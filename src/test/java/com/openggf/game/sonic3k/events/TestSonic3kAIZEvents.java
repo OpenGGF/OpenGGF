@@ -1092,8 +1092,18 @@ public class TestSonic3kAIZEvents {
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
         Sonic3kAIZEvents events = manager.getAizEvents();
         assertNotNull(events, "AIZ event handler should be active for AIZ2");
+        List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getSidekicks();
+        assertFalse(sidekicks.isEmpty(), "The AIZ2 fixture should expose native Player 2 participation");
+        AbstractPlayableSprite tails = sidekicks.getFirst();
+        assertFalse(aiz2.sprite().isHighPriority(),
+                "The fixture should prove the boss handoff publishes the late path-switch priority");
+        assertFalse(tails.isHighPriority());
 
         events.update(1, 0);
+        assertTrue(aiz2.sprite().isHighPriority(),
+                "The AIZ2 end-boss activation should restore the native late path-switch priority");
+        assertTrue(tails.isHighPriority(),
+                "The same native boss handoff should apply to Player 2 through the participation policy");
         GameServices.level().getObjectManager().update(camera.getX(), aiz2.sprite(), List.of(), 1, false);
         GameServices.level().getZoneFeatureProvider().update(aiz2.sprite(), camera.getX(), 0);
 

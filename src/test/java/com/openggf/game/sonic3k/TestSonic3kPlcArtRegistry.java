@@ -45,6 +45,30 @@ public class TestSonic3kPlcArtRegistry {
     private static final Set<String> HARDCODED_MAPPING_BUILDERS = Set.of();
 
     @Test
+    public void cnzEndBossMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
+                    RomByteReader.fromRom(rom), Sonic3kConstants.MAP_CNZ_END_BOSS_ADDR, 13);
+
+            assertEquals(13, frames.size());
+            assertEquals(List.of(6, 2, 2, 2, 2, 4, 6, 6, 2, 0, 1, 3, 3),
+                    frames.stream().map(frame -> frame.pieces().size()).toList());
+            SpriteMappingPiece body = frames.get(0).pieces().getFirst();
+            assertEquals(4, body.widthTiles());
+            assertEquals(4, body.heightTiles());
+            assertEquals(0, body.tileIndex());
+            SpriteMappingPiece field = frames.get(6).pieces().getFirst();
+            assertEquals(4, field.widthTiles());
+            assertEquals(3, field.heightTiles());
+            assertEquals(0x2E, field.tileIndex());
+        }
+    }
+
+    @Test
     public void sharedLevelArtEntriesIncludeSpikesAndSprings() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x00, 0);
 

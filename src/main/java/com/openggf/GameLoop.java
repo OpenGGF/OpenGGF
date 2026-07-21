@@ -153,6 +153,8 @@ public class GameLoop {
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
     private final BootScreenModeController bootScreenModeController = new BootScreenModeController();
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
+    private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator =
+            new BonusStageTransitionCoordinator();
     private final PresenceManager presenceManager;
     private final EscapeToMasterTitleController escapeToMasterTitleController;
     private MasterTitleLaunchCoordinator masterTitleLaunchCoordinator;
@@ -214,6 +216,11 @@ public class GameLoop {
     // Bonus stage entry/exit state
     private boolean bonusStageTransitionPending;
     private BonusStageProvider activeBonusStageProvider;
+    // Star-post activation high-water captured at bonus entry (ROM: the star post's
+    // respawn bit, kept across the reload by Respawn_table_keep). Restored on bonus
+    // exit so the return star post stays used even though Last_star_post_hit was
+    // zeroed (sonic3k.asm:61924). -1 when no bonus entry is in flight.
+    private int pendingBonusReturnStarPostMark = -1;
 
     // Flag to freeze level updates during the final-boss fade into ending mode.
     private boolean endingTransitionPending;
@@ -1375,6 +1382,17 @@ public class GameLoop {
         //     Use the legacy minimal pre-orchestration path so the
         //     S3K AIZ trace and S1 Level_TtlCardLoop parity hold.
         beginGameplayAudioFrameForTick();
+        // ROM: the title-card wait loops (docs/s2disasm/s2.asm:4914-4924 and
+        // 5060-5066; docs/s1disasm/sonic.asm Level_TtlCardLoop 2811-2839) run
+        // RunObjects but NOT OscillateNumDo -- the global oscillator only
+        // advances inside Level_MainLoop (s2.asm:5108). Suppress the oscillator
+        // advance for this locked title-card object pass so it holds at its
+        // OscillateNumInit baseline until gameplay unlocks. Without this, each
+        // locked title-card frame over-advances the global oscillator, phase-
+        // offsetting oscillation-driven moving platforms (Obj18) when control
+        // returns -- visible after a special-stage return where the engine runs
+        // the real title card (rather than the trace bootstrap that skips it).
+        levelManager.suppressGlobalOscillationForTitleCardPass();
         if (tcpCard.shouldRunPlayerPhysics()) {
             // S2: full title-card frame step.
             spriteManager.publishHeldInputForLevelEvents(inputHandler);
@@ -1805,6 +1823,22 @@ public class GameLoop {
             playbackDebugManager.onLevelFrameAdvanced();
         } else {
             updateNonGameplayAudio(doFrameStep);
+            // ROM parity during the bonus-exit hold/fade: after the machine catches
+            // the player (Check_PlayerInRange -> loc_61076 sets Restart_level_flag),
+            // the ROM keeps running BONUS_STAGE frames while the screen fades and the
+            // level reload is staged, and V_int (the recorder's frame source) keeps
+            // ticking across them -- so the recorded interior segment includes that
+            // ~150-frame tail before its mode_change_bk2_frame. The engine's exit
+            // fade freezes gameplay here, but must still advance the shared playback
+            // cursor (and the VBla counter) once per frozen frame, exactly as the
+            // lag-skip branch above does, or the cursor lands well short of the
+            // return segment's offset and the BONUS->LEVEL fall-through feeds the
+            // return level a stale frame-0 input. onLevelFrameAdvanced is a no-op
+            // when no playback session is active.
+            if (levelManager.getObjectManager() != null) {
+                levelManager.getObjectManager().advanceVblaCounter();
+            }
+            playbackDebugManager.onLevelFrameAdvanced();
         }
 
         // Debug: F11 cycles through bucket/priority isolation for the gumball machine
@@ -2293,8 +2327,45 @@ public class GameLoop {
      */
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                                      boolean fadeFromBlack) {
-        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack,
-                SpecialStageStartupPolicy.FAST);
+        SpecialStageStartupPolicy startupPolicy = defaultSpecialStageStartupPolicy();
+        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy);
+        if (startupPolicy == SpecialStageStartupPolicy.TRACE_ACCURATE) {
+            // TraceSessionLauncher#enterSpecialStageTrace pairs its TRACE_ACCURATE
+            // entry with provider.setLagCompensation(0) -- "startup observations
+            // and external frame pacing are independent contracts". A BK2-driven
+            // caller reaching this organic entry path needs the same pairing: the
+            // provider's stateless lag model would insert ADDITIONAL synthetic
+            // skipped frames on top of the real cadence the caller drives,
+            // desyncing object timing from the recorded run. Disabling it here
+            // (before the provider's first post-entry tick; reset() does not
+            // touch this field) is the same force-off switch the standalone SS
+            // trace-replay harnesses already require.
+            ssProvider.setLagCompensation(0);
+        }
+    }
+
+    /**
+     * FAST ordinarily fast-forwards the ROM's observable pre-physics hold
+     * ({@code Sonic1SpecialStageManager.SS_STARTUP_HOLD_TICKS}-style tick
+     * count) synchronously inside {@code initializeStage}, without stepping
+     * real engine frames. That is correct for ordinary interactive play, but
+     * when a {@link PlaybackDebugManager} BK2 session is actively driving
+     * playback -- the dev movie-playback hotkeys, or a headless multi-stage
+     * trace-run chain drive (see {@code AbstractRunChainTest}) -- the caller
+     * needs the hold itself to be frame-stepped so recorded per-frame input
+     * lines up 1:1 with the special stage's own physics ticks instead of
+     * skewing by the fast-forwarded tick count. {@code TraceSessionLauncher}'s
+     * own dedicated special-stage trace session already calls
+     * {@code TRACE_ACCURATE} directly for the same reason (it owns its
+     * transition trigger); this generalizes the same ROM-state predicate
+     * (a BK2 session is playing) to the organic giant-ring/checkpoint-star
+     * entry path used by ordinary gameplay AND by any other BK2-driven
+     * session that reaches this transition.
+     */
+    private SpecialStageStartupPolicy defaultSpecialStageStartupPolicy() {
+        return playbackDebugManager.isSessionPlaying()
+                ? SpecialStageStartupPolicy.TRACE_ACCURATE
+                : SpecialStageStartupPolicy.FAST;
     }
 
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
@@ -2366,60 +2437,19 @@ public class GameLoop {
             return;
         }
 
-        // Capture state snapshot
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-
-        int playerX = 0, playerY = 0;
-        byte topSolidBit = 0, lrbSolidBit = 0;
-        int savedShieldStatus = 0;
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            playerX = playable.getCentreX();
-            playerY = playable.getCentreY();
-            topSolidBit = playable.getTopSolidBit();
-            lrbSolidBit = playable.getLrbSolidBit();
-            savedShieldStatus = encodeSavedShieldStatus(playable);
-        }
-
-        LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
-        int resizeFg = 0, resizeBg = 0;
-        if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
-            resizeFg = eventMgr.getEventRoutineFg();
-            resizeBg = eventMgr.getEventRoutineBg();
-        }
-
-        int zoneAndAct = (levelManager.getCurrentZone() << 8) | levelManager.getCurrentAct();
-        int apparentZoneAndAct = (levelManager.getCurrentZone() << 8) | levelManager.getApparentAct();
-        int ringCount = 0;
-        long savedTimerFrames = 0;
-        if (levelManager.getLevelGamestate() != null) {
-            ringCount = levelManager.getLevelGamestate().getRings();
-            savedTimerFrames = levelManager.getLevelGamestate().getTimerFrames();
-        }
-
-        int lastStarPostHit = 0;
-        RespawnState cs = levelManager.getCheckpointState();
-        if (cs != null && cs.isActive()) {
-            // getLastCheckpointIndex() returns the ROM 1-based subtype (spawn.subtype() & 0x7F)
-            // that was passed into saveCheckpoint(), so no +1 adjustment is needed.
-            lastStarPostHit = cs.getLastCheckpointIndex();
-        }
-
-        BonusStageState savedState = new BonusStageState(
-                zoneAndAct,
-                apparentZoneAndAct,
-                ringCount,
-                0, // TODO: wire to GameStateManager.getExtraLifeFlags() once API exists
-                lastStarPostHit,
-                savedShieldStatus,
-                resizeFg, resizeBg,
-                playerX, playerY,
-                camera.getX(), camera.getY(),
-                topSolidBit, lrbSolidBit,
-                camera.getMaxY(),
-                savedTimerFrames,
-                captureCurrentWaterLevelForStageReturn()
-        );
+        var sprite = spriteManager.getSprite(resolveMainCharacterCode());
+        AbstractPlayableSprite playable = sprite instanceof AbstractPlayableSprite candidate
+                ? candidate
+                : null;
+        var capture = bonusStageTransitionCoordinator.captureEntry(
+                levelManager,
+                camera,
+                waterSystem,
+                playable,
+                GameServices.module().getLevelEventProvider(),
+                encodeSavedShieldStatus(playable));
+        BonusStageState savedState = capture.savedState();
+        pendingBonusReturnStarPostMark = capture.pendingStarPostActivationMark();
 
         // Fade out music
         audioManager.fadeOutMusic();
@@ -2618,6 +2648,23 @@ public class GameLoop {
     private void doExitBonusStage(BonusStageProvider provider, BonusStageState savedState) {
         bonusStageTransitionPending = false;
 
+        // ROM: on bonus-stage exit the live HUD Ring_count is copied straight into
+        // Saved_ring_count (loc_61076: move.w (Ring_count).w,(Saved_ring_count).w,
+        // sonic3k.asm:127760; the pachinko/slots exits do the same at 96683/99001),
+        // and the returning level reload then restores Ring_count from
+        // Saved_ring_count. So the count carried back is the interior's LIVE ring
+        // total at exit, NOT the entry snapshot plus a bookkeeping reward. This
+        // matters where a machine's per-item ring award differs between the HUD
+        // Ring_count and the Saved_ring_count it also bumps: the gumball ring ball
+        // adds +10 to the HUD but +20 to Saved_ring_count (loc_6114E, :127845), and
+        // that transient +20 is discarded here by the Ring_count->Saved_ring_count
+        // copy. Capture the live HUD ring total now, before onExit()/loadZoneAndAct
+        // reset it, and restore it on return below (replacing the former
+        // savedRingCount + rewards.rings() reconstruction, which double-counted the
+        // gumball ball as +20 and returned 79 rings where the ROM returns 69).
+        int interiorExitRingCount =
+                bonusStageTransitionCoordinator.captureInteriorExitRingCount(levelManager, savedState);
+
         // Capture rewards BEFORE onExit() in case it resets counters.
         BonusStageProvider.BonusStageRewards rewards = provider.getRewards();
 
@@ -2652,6 +2699,7 @@ public class GameLoop {
             levelManager.setBonusStageReturnCheckpointIndex(savedState.savedLastStarPostHit());
             // Suppress auto-music: zone music starts below during the title card
             levelManager.setSuppressNextMusicChange(true);
+            bonusStageTransitionCoordinator.prepareReturnLoad(levelManager);
             levelManager.loadZoneAndAct(zone, act);
             // Consume the auto-generated title card request — we initialize it ourselves below
             levelManager.consumeTitleCardRequest();
@@ -2661,74 +2709,29 @@ public class GameLoop {
             levelManager.clearBonusStageReturn();
         }
 
-        // Restore checkpoint state so starposts show as activated (ROM: Saved_last_star_post_hit)
-        if (savedState.savedLastStarPostHit() >= 0) {
-            RespawnState cs = levelManager.getCheckpointState();
-            if (cs != null) {
-                cs.restoreFromSaved(
-                        savedState.playerX(), savedState.playerY(),
-                        savedState.cameraX(), savedState.cameraY(),
-                        savedState.savedLastStarPostHit());
-            }
-        }
-
-        // Restore event routine state (prevents camera lock replay)
-        LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
-        if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
-            eventMgr.restoreEventRoutineState(
-                    savedState.dynamicResizeRoutineFg(),
-                    savedState.dynamicResizeRoutineBg());
-        }
-
-        // Restore player position and collision path
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            playable.setCentreX((short) savedState.playerX());
-            playable.setCentreY((short) savedState.playerY());
-            playable.setTopSolidBit(savedState.topSolidBit());
-            playable.setLrbSolidBit(savedState.lrbSolidBit());
-            playable.setXSpeed((short) 0);
-            playable.setYSpeed((short) 0);
-            playable.setGSpeed((short) 0);
-
-            ShieldType shieldToRestore =
-                    resolveShieldToRestore(rewards, savedState.savedStatusSecondary());
+        var sprite = spriteManager.getSprite(resolveMainCharacterCode());
+        AbstractPlayableSprite playable = sprite instanceof AbstractPlayableSprite candidate
+                ? candidate
+                : null;
+        ShieldType shieldToRestore = playable != null
+                ? resolveShieldToRestore(rewards, savedState.savedStatusSecondary())
+                : null;
+        if (playable != null) {
             pendingBonusStageShieldRestore = shieldToRestore;
-            if (shieldToRestore != null) {
-                playable.giveShield(shieldToRestore);
-            }
-
-            // ROM: the player's art_tile priority bit was set to HIGH during bonus
-            // stage entry (line 127411). Reset it on exit — the normal level's player
-            // priority will be determined by plane switching / zone events.
-            // loadZoneAndAct() + resetState() should clear this, but be explicit.
-            playable.setHighPriority(false);
-            playable.setPriorityBucket(2); // RenderPriority.PLAYER_DEFAULT
         }
-
-        // Restore camera
-        camera.setX((short) savedState.cameraX());
-        camera.setY((short) savedState.cameraY());
-        camera.setMaxY((short) savedState.cameraMaxY());
-        camera.updatePosition(true);
-        restoreSavedWaterLevelForStageReturn(savedState.meanWaterLevel());
-
-        // Restore ring count + add bonus stage rewards
-        if (levelManager.getLevelGamestate() != null) {
-            levelManager.getLevelGamestate().setRings(savedState.savedRingCount() + rewards.rings());
-            // Restore HUD timer frames before resuming
-            levelManager.getLevelGamestate().setTimerFrames(savedState.savedTimerFrames());
-            // Resume HUD timer (ROM: Update_HUD_timer restored after bonus stage exit)
-            levelManager.getLevelGamestate().resumeTimer();
-        }
-
-        // Award lives collected during the bonus stage
-        if (rewards.lives() > 0) {
-            for (int i = 0; i < rewards.lives(); i++) {
-                gameState.addLife();
-            }
-        }
+        bonusStageTransitionCoordinator.restoreReturnState(
+                levelManager,
+                camera,
+                waterSystem,
+                playable,
+                GameServices.module().getLevelEventProvider(),
+                savedState,
+                pendingBonusReturnStarPostMark,
+                interiorExitRingCount,
+                shieldToRestore,
+                rewards,
+                gameState::addLife);
+        pendingBonusReturnStarPostMark = -1;
 
         // Initialize zone title card (ROM: Level routine always shows title card on reload)
         int apparentZone = (savedState.savedApparentZoneAndAct() >> 8) & 0xFF;
@@ -2756,31 +2759,6 @@ public class GameLoop {
             gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
         }
         LOGGER.info("Exiting bonus stage, entering zone title card for zone " + zone + " act " + act);
-    }
-
-    private int captureCurrentWaterLevelForStageReturn() {
-        if (waterSystem == null || levelManager == null) {
-            return 0;
-        }
-        int featureZone = levelManager.getFeatureZoneId();
-        int featureAct = levelManager.getFeatureActId();
-        if (!waterSystem.hasWater(featureZone, featureAct)) {
-            return 0;
-        }
-        return waterSystem.getWaterLevelY(featureZone, featureAct);
-    }
-
-    private void restoreSavedWaterLevelForStageReturn(int meanWaterLevel) {
-        if (meanWaterLevel <= 0 || waterSystem == null || levelManager == null) {
-            return;
-        }
-        int featureZone = levelManager.getFeatureZoneId();
-        int featureAct = levelManager.getFeatureActId();
-        if (!waterSystem.hasWater(featureZone, featureAct)) {
-            return;
-        }
-        waterSystem.setWaterLevelDirect(featureZone, featureAct, meanWaterLevel);
-        waterSystem.setWaterLevelTarget(featureZone, featureAct, meanWaterLevel);
     }
 
     static int encodeSavedShieldStatus(AbstractPlayableSprite playable) {
@@ -3093,15 +3071,8 @@ public class GameLoop {
                 }
             }
         }
-        applyTitleCardControlLock(true);
-
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            int freshPlayerPreludeFrames = GameServices.module()
-                    .getLevelInitProfile()
-                    .freshMainPlayablePreludeFrames();
-            spriteManager.warmUpFreshMainPlayableOnly(
-                    freshPlayerPreludeFrames, levelManager, playable);
-        }
+        InLevelTitleCardCoordinator.prepareResultsTransition(
+                sprite, this::applyTitleCardControlLock, GameServices::module, spriteManager, levelManager);
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
@@ -3229,6 +3200,23 @@ public class GameLoop {
 
             // Apply deferred bonus stage setup
             applyDeferredBonusStageSetup();
+
+            // Re-arm the playback forced-input bridge now that the mode is
+            // BONUS_STAGE. This exit runs mid-step and falls through to
+            // BONUS_STAGE gameplay processing in the SAME loop.step(): that
+            // fall-through frame IS the interior's first gameplay tick. The
+            // step-top syncPlaybackInputBridge already ran while the mode was
+            // still TITLE_CARD, which PlaybackDebugManager.isDriving() does not
+            // drive (only LEVEL/BONUS_STAGE), so the player's first interior tick
+            // would otherwise run with a stale/neutral forced mask -- dropping the
+            // recorded frame-0 controller input the ROM's first bonus frame reads
+            // (e.g. the gumball's frame-0 left press that produces the single
+            // grounded ground-move before the player falls into the machine).
+            // Re-syncing here, after control is released and the mode is
+            // BONUS_STAGE, applies the current forced-input mask so the
+            // fall-through tick reads the recorded input. Bonus-entry only; LEVEL
+            // title-card exits are unaffected.
+            syncPlaybackInputBridge();
 
             LOGGER.info("Exited bonus title card, entering BONUS_STAGE mode");
         } else if (returningFromSpecialStage) {

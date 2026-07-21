@@ -64,6 +64,7 @@ import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindClassResolver;
+import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
@@ -217,6 +218,15 @@ public class LevelManager {
         worldSession.setCurrentLevel(level);
     }
     int frameCounter = 0;
+    // When set, the NEXT advanceGlobalOscillation() call skips the global
+    // oscillator advance. GameLoop sets it for a title-card wait-loop object
+    // pass: the ROM advances the global oscillator (OscillateNumDo) only inside
+    // Level_MainLoop (docs/s2disasm/s2.asm:5108), never in the title-card wait
+    // loops (s2.asm:4914-4924, 5060-5066) which run RunObjects only. S1 mirrors
+    // this (docs/s1disasm/sonic.asm: OscillateNumInit 2913 and OscillateNumDo
+    // 3030 are both outside Level_TtlCardLoop 2811-2839). Consumed on the next
+    // object pass so it never leaks into the first Level_MainLoop gameplay frame.
+    private boolean suppressGlobalOscillationForTitleCardPass = false;
     ObjectManager objectManager;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
 
@@ -224,6 +234,7 @@ public class LevelManager {
         rewindClassResolver = java.util.Objects.requireNonNull(resolver, "resolver");
         if (objectManager != null) objectManager.setRewindClassResolver(resolver);
     }
+    private PersistentRespawnState persistentRespawnStateForNextObjectReset;
     private int ringFloorCheckCounterPhase;
     RingManager ringManager;
     private boolean pendingTransitionRingInitialization;
@@ -745,7 +756,19 @@ public class LevelManager {
         // constrained to the same region as the original hardware.
         camera.setMinX((short) level.getMinX());
         camera.setMaxX((short) level.getMaxX());
-        objectManager.reset(camera.getX());
+        PersistentRespawnState persistentRespawnState = persistentRespawnStateForNextObjectReset;
+        persistentRespawnStateForNextObjectReset = null;
+        objectManager.reset(camera.getX(), persistentRespawnState);
+    }
+
+    /**
+     * Arms a one-shot respawn-table restore for the next full object-system
+     * initialization. The state is consumed inside {@link #initCameraBounds()},
+     * after placement bookkeeping is reset and before any initial-window object
+     * can be materialized.
+     */
+    public void restorePersistentRespawnOnNextObjectReset(PersistentRespawnState state) {
+        persistentRespawnStateForNextObjectReset = state;
     }
 
     /**
@@ -1121,7 +1144,28 @@ public class LevelManager {
         advanceGlobalOscillation();
     }
 
+    /**
+     * Requests that the next {@link #advanceGlobalOscillation()} call skip the
+     * global-oscillator advance, matching the ROM title-card wait loops which
+     * run {@code RunObjects} but not {@code OscillateNumDo} (the oscillator only
+     * advances inside {@code Level_MainLoop}; docs/s2disasm/s2.asm:5108 vs the
+     * wait loops at s2.asm:4914-4924 / 5060-5066, and docs/s1disasm/sonic.asm
+     * where {@code OscillateNumDo} at 3030 is outside {@code Level_TtlCardLoop}
+     * 2811-2839). Called by {@code GameLoop.updateTitleCardMode} for each locked
+     * title-card object pass so the oscillator holds at its {@code OscillateNumInit}
+     * baseline until gameplay unlocks. Without it, every locked title-card frame
+     * over-advances the global oscillator, phase-offsetting oscillation-driven
+     * moving platforms (e.g. Obj18) when control returns.
+     */
+    public void suppressGlobalOscillationForTitleCardPass() {
+        this.suppressGlobalOscillationForTitleCardPass = true;
+    }
+
     private void advanceGlobalOscillation() {
+        if (suppressGlobalOscillationForTitleCardPass) {
+            suppressGlobalOscillationForTitleCardPass = false;
+            return;
+        }
         int featureZone = getFeatureZoneId();
         int featureAct = getFeatureActId();
         if (zoneFeatureProvider != null
@@ -3195,12 +3239,18 @@ public class LevelManager {
     }
 
     public void loadZoneAndAct(int zone, int act, LevelLoadMode loadMode) throws IOException {
-        writeCurrentAct(act);
-        writeApparentAct(act);
-        writeCurrentZone(zone);
-        // Clear checkpoint when manually changing level
-        checkpointCoordinator.clear();
-        loadCurrentLevel(loadMode != LevelLoadMode.PREVIEW_CAPTURE, loadMode);
+        try {
+            writeCurrentAct(act);
+            writeApparentAct(act);
+            writeCurrentZone(zone);
+            // Clear checkpoint when manually changing level
+            checkpointCoordinator.clear();
+            loadCurrentLevel(loadMode != LevelLoadMode.PREVIEW_CAPTURE, loadMode);
+        } finally {
+            // A load that fails before initCameraBounds must not leak a bonus-return
+            // respawn table into a later, potentially different, level.
+            persistentRespawnStateForNextObjectReset = null;
+        }
     }
 
     /**

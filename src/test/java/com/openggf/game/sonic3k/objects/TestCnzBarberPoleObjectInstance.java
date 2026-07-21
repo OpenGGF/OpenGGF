@@ -7,9 +7,12 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -40,6 +43,16 @@ class TestCnzBarberPoleObjectInstance {
     }
 
     @Test
+    void usesNativeCoarseBackDeletionWindow() {
+        CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0EF0, 0x0A10, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+
+        assertFalse(pole.isCustomOutOfRange(0x0F7F));
+        assertTrue(pole.isCustomOutOfRange(0x0F80),
+                "the unsigned coarse subtraction must delete as soon as the camera's coarse-back passes the pole");
+    }
+
+    @Test
     void normalRelatchUsesRomUnsignedWordCompareForInnerTrackFlag() {
         CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
                 new ObjectSpawn(0x0F70, 0x0810, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
@@ -65,6 +78,8 @@ class TestCnzBarberPoleObjectInstance {
         assertEquals(0x0F4E, tails.getCentreX() & 0xFFFF);
         assertEquals(0x07B9, tails.getCentreY() & 0xFFFF);
         assertEquals(0x0E, tails.getFlipAngle() & 0xFF);
+        assertEquals(2, tails.getFlipType(),
+                "loc_334A4 selects the normal-pole tumble mapping set");
     }
 
     @Test
@@ -140,7 +155,7 @@ class TestCnzBarberPoleObjectInstance {
 
         TestPlayableSprite sonic = new TestPlayableSprite();
         sonic.setCentreX((short) 0x0100);
-        sonic.setCentreY((short) 0x00C9);
+        sonic.setCentreY((short) 0x00C7);
         sonic.setDebugMode(true);
 
         pole.update(0, sonic);
@@ -169,6 +184,29 @@ class TestCnzBarberPoleObjectInstance {
     }
 
     @Test
+    void airborneRollingLatchRunsNativeTouchFloorBeforeRide() {
+        TestEnvironment.resetAll();
+        CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+        pole.setServices(new TestObjectServices());
+
+        TestPlayableSprite sonic = new TestPlayableSprite();
+        sonic.setCentreX((short) 0x0100);
+        sonic.setRolling(true);
+        sonic.setCentreY((short) 0x00CA);
+        sonic.setAir(true);
+        sonic.setYSpeed((short) 0x0200);
+
+        pole.update(0, sonic);
+
+        assertTrue(sonic.isOnObject());
+        assertFalse(sonic.getAir());
+        assertFalse(sonic.getRolling(), "sub_337D8 calls Player_TouchFloor on an airborne latch");
+        assertEquals(0x00C5, sonic.getCentreY() & 0xFFFF,
+                "Player_TouchFloor subtracts the rolling-to-standing radius delta from y_pos");
+    }
+
+    @Test
     void stalePoleRiderStateDoesNotOverwriteCurrentInteractPole() {
         CnzBarberPoleObjectInstance oldPole = new CnzBarberPoleObjectInstance(
                 new ObjectSpawn(0x0100, 0x0100, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
@@ -193,6 +231,39 @@ class TestCnzBarberPoleObjectInstance {
         assertEquals(0x0200, player.getCentreX() & 0xFFFF);
         assertEquals(0x0200, player.getCentreY() & 0xFFFF);
         assertEquals(currentPole, player.getLatchedSolidObjectInstance());
+    }
+
+    @Test
+    void mirroredTrackWrapsAsPackedRomLongWithoutReleasingRider() throws Exception {
+        CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x3290, 0x0810, Sonic3kObjectIds.CNZ_BARBER_POLE, 1, 0, false, 0));
+        pole.setServices(new TestObjectServices());
+        TestPlayableSprite sonic = new TestPlayableSprite();
+        sonic.setCentreX((short) 0x3290);
+        sonic.setCentreY((short) 0x07D5);
+        pole.update(0, sonic);
+        assertTrue(sonic.isOnObject());
+
+        var ridersField = CnzBarberPoleObjectInstance.class.getDeclaredField("riders");
+        ridersField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<AbstractPlayableSprite, Object> riders =
+                (Map<AbstractPlayableSprite, Object>) ridersField.get(pole);
+        Object state = riders.get(sonic);
+        var trackField = state.getClass().getDeclaredField("trackFixed");
+        trackField.setAccessible(true);
+        trackField.setLong(state, 0xFFFF_5300L);
+        var innerField = state.getClass().getDeclaredField("innerTrack");
+        innerField.setAccessible(true);
+        innerField.setBoolean(state, true);
+        sonic.setXSpeed((short) 0x0100);
+        sonic.setGSpeed((short) 0x0200);
+
+        pole.update(1, sonic);
+
+        assertTrue(sonic.isOnObject(),
+                "loc_33700 add.l wraps the track from $FFFF to $0000 before the $A0 range check");
+        assertEquals(0x0000_1300L, trackField.getLong(state));
     }
 
     @Test

@@ -164,6 +164,27 @@ public class TestSonic3kSSEntryRingFormation {
         assertTrue(ring.isForming(), "Ring should still be forming after 1 on-screen frame");
     }
 
+    @Test
+    public void formationWaitsForRomRenderBoxToReachViewport() {
+        Sonic3kSSEntryRingObjectInstance ring = createRing(0);
+
+        // Obj_WaitOffscreen sets width_pixels/height_pixels to $20. An object
+        // box whose right edge only touches the viewport is still off-screen.
+        AbstractObjectInstance.updateCameraBounds(
+                RING_X + 0x20, RING_Y - 112, RING_X + 0x20 + 320, RING_Y + 112, 0);
+        ring.update(1, null);
+        assertEquals(0, ring.getMappingFrame());
+
+        // One pixel of overlap sets the render flag and starts Animate_Raw.
+        AbstractObjectInstance.updateCameraBounds(
+                RING_X + 0x1F, RING_Y - 112, RING_X + 0x1F + 320, RING_Y + 112, 0);
+        for (int frame = 2; frame <= 7; frame++) {
+            ring.update(frame, null);
+        }
+        assertEquals(1, ring.getMappingFrame(),
+                "formation should begin at the ROM's 32-pixel render boundary");
+    }
+
     /**
      * Core test: a player standing inside the collision box must NOT trigger
      * the ring during the entire 40-frame formation period.
@@ -410,5 +431,3 @@ public class TestSonic3kSSEntryRingFormation {
         }
     }
 }
-
-

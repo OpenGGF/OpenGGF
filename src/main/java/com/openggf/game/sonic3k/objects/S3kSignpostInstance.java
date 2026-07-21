@@ -118,6 +118,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     private boolean resultsWaitedForPlayerLanding;
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
+    private boolean landingSparklePending;
+    private boolean preservesPostLandingSparkleGate;
+    private boolean preservesPostObjectResultDispatchBoundary;
 
     /**
      * Creates the signpost at the given X position.
@@ -128,6 +131,17 @@ public class S3kSignpostInstance extends AbstractObjectInstance
      */
     public S3kSignpostInstance(int spawnX, int apparentAct) {
         this(spawnX, apparentAct, 0, 0, 0);
+    }
+
+    /**
+     * Creates an end sign whose native post-object screen-event allocation
+     * leaves one final sparkle gate visible after the engine's landing pass.
+     */
+    public S3kSignpostInstance(int spawnX, int apparentAct,
+            boolean preservesPostLandingSparkleGate) {
+        this(spawnX, apparentAct);
+        this.preservesPostLandingSparkleGate = preservesPostLandingSparkleGate;
+        this.preservesPostObjectResultDispatchBoundary = preservesPostLandingSparkleGate;
     }
 
     S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
@@ -212,6 +226,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        if (landingSparklePending && isRomSparkleFrame(frameCounter)) {
+            spawnRomSparkle();
+            landingSparklePending = false;
+        }
 
         switch (state) {
             case INIT -> updateInit(player);
@@ -276,8 +294,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         // ROM tests the global V_int_run_count low bits, not a counter local
         // to the signpost's allocation frame.
         if (isRomSparkleFrame(frameCounter)) {
-            spawnDynamicObject(new S3kSignpostSparkleChild(
-                    worldX, worldY + romSparkleYOffset(services().rng())));
+            spawnRomSparkle();
         }
 
         // Check bump from below
@@ -312,8 +329,15 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             subX = 0;
             subY = 0;
             state = State.LANDED;
+            landingSparklePending = preservesPostLandingSparkleGate
+                    && isRomSparkleFrame(frameCounter + 1);
             LOG.fine("S3K Signpost FALLING -> LANDED at Y=" + worldY);
         }
+    }
+
+    private void spawnRomSparkle() {
+        spawnDynamicObject(new S3kSignpostSparkleChild(
+                worldX, worldY + romSparkleYOffset(services().rng())));
     }
 
     /**
@@ -427,6 +451,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance
                 }
             }
             state = State.RESULTS;
+            if (preservesPostObjectResultDispatchBoundary
+                    && player != null && !player.getAir()) {
+                // A sign allocated by the post-object screen event loses one
+                // later-slot entry when that native loop tail is folded into
+                // the engine transition. Publish only the routine-6 player
+                // writes here; results allocation remains on its original
+                // engine entry so the act-transition owner does not move.
+                applyMainPlayerEndingPose(player);
+                sidekickEndingPoseCheckArmed = true;
+            }
             LOG.fine("S3K Signpost LANDED -> RESULTS");
         }
     }
@@ -452,10 +486,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             return;
         }
 
-        // Obj_EndSignResults calls Set_PlayerEndingPose and advances to routine
-        // 8 in the same dispatch, regardless of whether routine 6 previously
-        // waited for Status_InAir to clear. Check_TailsEndPose belongs to the
-        // following routine-8 dispatch (sonic3k.asm:176208-176238,176244-176260).
+        boolean sidekickPoseWasAlreadyArmed = sidekickEndingPoseCheckArmed;
+        // Obj_EndSignResults applies P1's ending pose in routine 6 before
+        // allocating results and advancing to routine 8. P2 remains owned by
+        // the later Check_TailsEndPose dispatch.
         applyMainPlayerEndingPose(player);
         sidekickEndingPoseCheckArmed = true;
 
@@ -481,12 +515,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         }
         spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
-                resultsPostControlHandoffDelayEntries,
-                resultsWaitedForPlayerLanding
+                resultsPostControlHandoffDelayEntries
+                        + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
+                resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary
                         ? Math.min(resultsRetireDispatches, RESULTS_WAITED_LANDING_RETIRE_DISPATCHES)
                         : resultsRetireDispatches));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
+        if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
+            applyNativeSidekickEndingPose(player);
+        }
     }
 
     static void applySidekickInputLock(AbstractPlayableSprite sprite) {

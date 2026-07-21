@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -44,7 +45,7 @@ public final class MgzEndBossFallingDebrisChild extends AbstractObjectInstance i
         yFixed += yVel;
         yVel += GRAVITY;
         int cameraBottom = services().camera().getY() + viewportHeight();
-        if (getY() > cameraBottom + OFFSCREEN_MARGIN) setDestroyed(true);
+        if (getY() > cameraBottom + OFFSCREEN_MARGIN) ObjectLifetimeOps.expireDynamic(this);
     }
 
     @Override public int getX() { return xFixed >> 8; }

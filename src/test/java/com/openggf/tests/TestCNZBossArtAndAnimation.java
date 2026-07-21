@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -59,9 +60,13 @@ public class TestCNZBossArtAndAnimation {
                 new ObjectSpawn(0, 0, Sonic2ObjectIds.CNZ_BOSS, 0, 0, false, 0));
         boss.setServices(services);
         CNZBossElectricBall ball = new CNZBossElectricBall(
-                new ObjectSpawn(0, 0, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
+                new ObjectSpawn(0x2A46, 0x654, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
         ball.setServices(services);
 
+        assertEquals(0x2A46, ball.getX(),
+                "Obj51's allocation snapshot owns the attached ball's native x_pos");
+        assertEquals(0x654, ball.getY(),
+                "Obj51 init owns the attached ball's native y_pos");
         ball.appendRenderCommands(new ArrayList<>());
 
         inOrder(renderer).verify(renderer).drawFrameIndex(0x12, 0x2A46, 0x654, false, false);

@@ -144,9 +144,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.suppressNextObjectMoveAndFall();
         sonic.hidden = true;
         sonic.setRenderFlagOnScreen(false);
-        sonic.mgzTopPlatformSpringHandoffPending = true;
-        sonic.mgzTopPlatformSpringHandoffXVel = 0x300;
-        sonic.mgzTopPlatformSpringHandoffYVel = 0x200;
+        sonic.controller.restoreSpringHandoff(true, 0x300, 0x200);
         sonic.jumpInputPressed = true;
         sonic.jumpInputJustPressed = true;
         sonic.jumpInputPressedPreviousFrame = true;
@@ -353,9 +351,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.forceFloorCheck = false;
         sonic.hidden = false;
         sonic.setRenderFlagOnScreen(true);
-        sonic.mgzTopPlatformSpringHandoffPending = false;
-        sonic.mgzTopPlatformSpringHandoffXVel = 0;
-        sonic.mgzTopPlatformSpringHandoffYVel = 0;
+        sonic.controller.clearSpringHandoff();
         sonic.jumpInputPressed = false;
         sonic.jumpInputJustPressed = false;
         sonic.jumpInputPressedPreviousFrame = false;

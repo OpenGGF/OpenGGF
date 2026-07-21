@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.events;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.rewind.RewindTransient;
@@ -27,6 +26,8 @@ import com.openggf.sprites.playable.ObjectControlState;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.IntSupplier;
 import java.util.logging.Logger;
 
 /**
@@ -266,9 +267,11 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     /** Remaining loc_6A2A0 controller dispatches that create loc_6A710 children. */
     private int transitionBubbleSpawnFrames;
+    private final IntSupplier randomWordSource;
 
-    public Sonic3kHCZEvents() {
+    public Sonic3kHCZEvents(IntSupplier randomWordSource) {
         super();
+        this.randomWordSource = Objects.requireNonNull(randomWordSource, "randomWordSource");
     }
 
     @Override
@@ -562,7 +565,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     }
 
     private HczTransitionBubbleInstance createTransitionBubble() {
-        int random = GameServices.rng().nextRaw();
+        int random = randomWordSource.getAsInt();
         int axisX = (camera().getX() & 0xFFFF) + TRANSITION_BUBBLE_AXIS_CAMERA_OFFSET;
         int x = axisX + (byte) random;
         int randomHighWord = (random >>> 16) & 0xFFFF;

@@ -6,13 +6,11 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
-import com.openggf.game.rewind.RewindDeferred;
 
 /** Upright MGZ Knuckles capsule which releases the retained boss waiter. */
 public final class MgzEndBossKnuxEggCapsuleInstance extends AbstractS3kUprightEggCapsuleInstance
         implements SpawnRewindRecreatable {
     private boolean completionSent;
-    @RewindDeferred(reason = "Captured as an object-ref id and resolved after the boss graph is recreated.")
     private MgzEndBossKnuxInstance owner;
 
     public MgzEndBossKnuxEggCapsuleInstance(ObjectSpawn spawn) {
@@ -25,6 +23,12 @@ public final class MgzEndBossKnuxEggCapsuleInstance extends AbstractS3kUprightEg
     }
 
     MgzEndBossKnuxInstance ownerForTesting() { return owner; }
+
+    @Override
+    protected boolean locksNativeP2CpuOnOpen() {
+        // ROM sub_865DE exempts Current_zone=2 (MGZ) from Ctrl_2_locked.
+        return false;
+    }
 
     @Override
     protected void updateAfterResultsStarted(int frameCounter, PlayableEntity player) {

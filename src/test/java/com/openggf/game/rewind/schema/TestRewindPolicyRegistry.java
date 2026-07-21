@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
+import com.openggf.game.sonic3k.objects.CnzLightsFlashChildInstance;
 import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
 import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
 import com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance;
@@ -220,6 +221,48 @@ class TestRewindPolicyRegistry {
         Field endCannon = CnzEndBossInstance.class.getDeclaredField("endCannon");
 
         assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(endCannon).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesCnzEndBossMagnetReference() throws NoSuchFieldException {
+        Field magnet = CnzEndBossInstance.class.getDeclaredField("magnetChild");
+
+        assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(magnet).orElse(null));
+    }
+
+    @Test
+    void defaultObjectPolicyCentralizesCnzDerivedAndStructuralLinks() throws NoSuchFieldException {
+        String bossPackage = "com.openggf.game.sonic3k.objects.bosses.";
+        for (String className : new String[] {
+                "CnzEndBossArmChild",
+                "CnzEndBossFieldChild",
+                "CnzEndBossMagnetChild",
+                "CnzEndBossRobotnikShipChild"
+        }) {
+            assertEquals(RewindFieldPolicy.TRANSIENT,
+                    RewindPolicyRegistry.policyForAudit(
+                            classForName(bossPackage + className).getDeclaredField("boss")).orElse(null),
+                    className + ".boss");
+        }
+        for (String className : new String[] {
+                "CnzEndBossExplosionControllerChild",
+                "CnzEndBossRobotnikFlameChild",
+                "CnzEndBossRobotnikHeadChild"
+        }) {
+            assertEquals(RewindFieldPolicy.TRANSIENT,
+                    RewindPolicyRegistry.policyForAudit(
+                            classForName(bossPackage + className).getDeclaredField("ship")).orElse(null),
+                    className + ".ship");
+        }
+        assertEquals(RewindFieldPolicy.TRANSIENT,
+                RewindPolicyRegistry.policyForAudit(
+                        CnzLightsFlashChildInstance.class.getDeclaredField("owner")).orElse(null),
+                "CnzLightsFlashChildInstance.owner");
+        assertEquals(RewindFieldPolicy.TRANSIENT,
+                RewindPolicyRegistry.policyForAudit(
+                        classForName(bossPackage + "CnzEndBossFieldChild")
+                                .getDeclaredField("xOffset")).orElse(null),
+                "CnzEndBossFieldChild.xOffset");
     }
 
     @Test

@@ -77,6 +77,32 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    void restoreReinstatesPendingRuntimeArtRequest() {
+        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        provider.queueCnzTeleporterArt();
+        PlcProgressSnapshot pending = provider.capture();
+
+        Sonic3kObjectArtProvider restored = new Sonic3kObjectArtProvider();
+        restored.restore(pending);
+
+        assertTrue(restored.isCnzTeleporterArtPending());
+        assertFalse(restored.isCnzTeleporterArtComplete());
+    }
+
+    @Test
+    void restoreKeepsTeleporterAndEndBossQueuesIndependent() {
+        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        provider.queueCnzEndBossArt();
+
+        Sonic3kObjectArtProvider restored = new Sonic3kObjectArtProvider();
+        restored.restore(provider.capture());
+
+        assertTrue(restored.isCnzEndBossArtPending());
+        assertFalse(restored.isCnzEndBossArtComplete());
+        assertFalse(restored.isCnzTeleporterArtPending());
+    }
+
+    @Test
     void snapshotRecordPreservesEpoch() {
         PlcProgressSnapshot snap = new PlcProgressSnapshot(99, List.of("dynamic"));
         assertEquals(99, snap.loadEpoch());

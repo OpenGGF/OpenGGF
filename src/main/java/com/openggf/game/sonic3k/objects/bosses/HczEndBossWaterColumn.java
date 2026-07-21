@@ -278,6 +278,14 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         return restored;
     }
 
+    @Override
+    protected void recreateConstructionChildrenForRewind() {
+        // These child slots are produced after the boss root has entered the
+        // object loop. Recreate candidates while the rewind pool is active so
+        // captured dynamic entries adopt their exact identity and slot.
+        spawnWaterChildSlots();
+    }
+
     // =========================================================================
     // Main update
     // =========================================================================
@@ -347,11 +355,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         // ChildObjDat_6BDCA / ChildObjDat_6BDE6 allocate real SST children.
         // Their visuals are currently folded into the column renderer, but
         // their Process_Sprites slots and RNG consumption remain gameplay state.
-        spawnChild(() -> new HczEndBossWaterSurfaceChild(boss, -4));
-        spawnChild(() -> new HczEndBossWaterSurfaceChild(boss, 4));
-        for (int i = 0; i < 0x14; i++) {
-            spawnChild(() -> new HczEndBossBubbleParticle(boss));
-        }
+        spawnWaterSurfaceAndBubbleChildren();
 
         // Transition to ANIMATE immediately
         routine = ROUTINE_ANIMATE;
@@ -396,13 +400,30 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         yFixed = currentY << 8;
 
         // loc_6B2F8 creates loc_6B3DE as a separately executed child slot.
-        spawnChild(() -> new HczEndBossWaterSprayChild(boss));
+        spawnWaterSprayChild();
 
         // Init column animation (byte_6BE15: frames $15, $20 looping)
         columnAnimIndex = 0;
         columnAnimTimer = COLUMN_ANIM_DELAY;
 
         LOG.fine("HCZ Water Column: spin-up complete, entering RISE");
+    }
+
+    private void spawnWaterChildSlots() {
+        spawnWaterSurfaceAndBubbleChildren();
+        spawnWaterSprayChild();
+    }
+
+    private void spawnWaterSurfaceAndBubbleChildren() {
+        spawnChild(() -> new HczEndBossWaterSurfaceChild(boss, -4));
+        spawnChild(() -> new HczEndBossWaterSurfaceChild(boss, 4));
+        for (int i = 0; i < 0x14; i++) {
+            spawnChild(() -> new HczEndBossBubbleParticle(boss));
+        }
+    }
+
+    private void spawnWaterSprayChild() {
+        spawnChild(() -> new HczEndBossWaterSprayChild(boss));
     }
 
     // =========================================================================

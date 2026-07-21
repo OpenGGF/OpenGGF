@@ -189,10 +189,11 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
      * the entire update when the ring is not visible.
      */
     private void updateMain(AbstractPlayableSprite player) {
-        // ROM: Obj_WaitOffscreen — skip all processing while off-screen.
-        // This prevents the formation animation from advancing before the player
-        // can see the ring, ensuring the full grow-in is always visible.
-        if (!isOnScreen(OFFSCREEN_MARGIN)) {
+        // ROM: Obj_WaitOffscreen installs a 0x20 x 0x20 render box and does not
+        // restore the normal object routine until Render_Sprites sets bit 7.
+        // The ring therefore starts forming only when that box overlaps the
+        // viewport, rather than at the wider placement/spawn boundary.
+        if (!isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
             return;
         }
 
@@ -217,8 +218,8 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         }
     }
 
-    /** Margin for on-screen check matching ROM's Obj_WaitOffscreen tolerance. */
-    private static final int OFFSCREEN_MARGIN = 128;
+    /** ROM Obj_WaitOffscreen width_pixels/height_pixels values. */
+    private static final int OFFSCREEN_HALF_EXTENT = 0x20;
 
     /**
      * Advances animation matching ROM's Animate_Raw down-counter pattern.

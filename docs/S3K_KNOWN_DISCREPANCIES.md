@@ -1078,3 +1078,79 @@ reel cycle is fixed, with a further multi-cycle/lag-parity gap left open per the
 The correct live-play fix remains the same deferred persistent VBlank-driven global counter mentioned
 above, which would resolve both the Gumball and Slots call sites (and this replay-only workaround) at
 once.
+
+---
+
+## Gumball Bonus-Stage Exit Choreography: ~152-Frame ROM Sequence Not Reproduced
+
+### Original Implementation
+
+When the player descends to the gumball machine's exit trigger, the ROM plays a
+~152-frame exit choreography, all inside `game_mode=0x8C` (the level-restart
+variant of `Level`, `V_int` still ticking every frame). Decoded from the recorded
+run `s3-knux-multibonus-ss/gumball` tail (interior frames ~1277-1429), the
+sequence is three phases:
+
+1. **~23 frames — player held at the machine bottom.** The player reaches the exit
+   trigger and is held frozen at the chute (`y=0x35C`, `y_speed=0x0F70` clamped,
+   `present=1`, `routine=02`) while the fade-to-black plays. The exit trigger
+   (`loc_61050`: `subq.w #1,($FF2020).l` then `Check_PlayerInRange word_610AE`
+   `x[-$100,$200] y[-$10,$40]`, sonic3k.asm:127741) fires `loc_61076` on the
+   in-range frame, which sets `Restart_level_flag=1` and copies
+   `Ring_count -> Saved_ring_count` (sonic3k.asm:127754-127765).
+2. **~80 frames — `clearRAM Object_RAM` + level reload.** The player object is
+   zeroed (`air 1->0`, `routine 0`, all fields 0) while the returning level
+   decompresses/loads behind the black screen.
+3. **~50 frames — return-level fade-in.** The player is repositioned to the star
+   post (`y=0x25C`), the camera jumps to the return position, and the level fades
+   in, still `routine=0`, before gameplay proper resumes.
+
+### Our Implementation
+
+The engine's live bonus exit is a ~21-frame `FadeManager` fade-to-black
+(`GameLoop.exitBonusStage` -> `startFadeToBlack` -> `doExitBonusStage`) followed by
+a synchronous `loadZoneAndAct` (~1 frame) and the normal return title-card path.
+The ~152-frame ROM choreography is **not** reproduced; the engine returns to the
+level roughly 130 frames sooner.
+
+In the multi-stage chain replay, the return comparator is re-anchored to the
+return segment's recorded offset after `stage_exit` is observed
+(`AbstractRunChainTest.handoffIntoInterior` / the bonus branch of the return-attach
+in `assertChainReplay`) rather than relying on the cursor arriving there
+organically. `GameLoop.updateBonusStageMode`'s exit-fade freeze branch still
+advances the shared playback cursor + VBla counter once per frozen frame — that is
+retained as **correct `V_int` modeling** (the ROM's exit frames are `game_mode=0x8C`
+with `V_int` ticking), and it narrows the drift, but it cannot close it because of
+the reload phase below.
+
+### Rationale
+
+The choreography's frame count cannot be reproduced organically and reproducing it
+would buy nothing that is validated:
+
+- **~80 of the frames have no natural engine equivalent.** The ROM's phase-2 is the
+  `clearRAM Object_RAM` + level decompression that spans ~80 black-screen frames;
+  the engine performs the equivalent `loadZoneAndAct` synchronously in a single
+  frame. There is no cursor-advancing engine work to fill those frames without
+  artificial, zone-specific padding.
+- **No gameplay-visible state depends on the duration.** The choreography is a
+  fade + reload + fade-in; the player is either frozen or cleared throughout. The
+  chain validates the *boundary state* instead — ring carry-over (asserted, and
+  fixed to the ROM `Ring_count -> Saved_ring_count` copy above), checkpoint/star-post
+  restore, and the return position — all of which are independent of how many frames
+  the fade took.
+- **The exit tail has no comparator coverage anyway.** Both the standalone
+  `TestS3kGumballBonusTraceReplay` and the chain interior comparator stop diverging
+  only at the stage exit (their first error is at the descent's last frame, ~f1276);
+  neither compares the post-catch tail, so a duration-matching implementation would
+  be unverifiable.
+
+### Verification
+
+Recorded `s3-knux-multibonus-ss/gumball/physics.csv.gz` + `aux_state.jsonl.gz` tail
+decode (three phases above; `game_mode=0x8C` throughout via the frame-1277
+`zone_act_state` event). `TestS3kGumballBonusTraceReplay` stays green (interior
+comparator stops at the exit). `TestS3kMegaRunChain` clears the gumball round trip;
+the chain's remaining seg2 (aiz_2) blocker is a separate landing/animation-state
+fidelity slip at f186/f192, tracked in docs/TRACE_FRONTIER_LOG.md, not this
+divergence.

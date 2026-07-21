@@ -6,6 +6,7 @@ import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzLightsFlashChildInstance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -48,7 +49,43 @@ class TestS3kCnz2CutsceneButtonGraphRewind {
 
     @AfterEach
     void tearDown() {
+        CutsceneKnucklesCnz2AInstance.clearActiveInstanceForTests();
         GraphicsManager.getInstance().resetState();
+    }
+
+    @Test
+    void restoredUnpressedButtonUsesRecreatedActiveCutsceneForProximity() {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+
+        Cnz2CutsceneButtonInstance sourceButton = objectManager.createDynamicObject(
+                () -> new Cnz2CutsceneButtonInstance(BUTTON_SPAWN));
+        CutsceneKnucklesCnz2AInstance sourceCutscene = objectManager.createDynamicObject(
+                () -> new CutsceneKnucklesCnz2AInstance(new ObjectSpawn(
+                        0x1E00, 0x0324, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 29)));
+        setEnumField(sourceCutscene, "phase", "CAMERA_LOCK");
+        CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(sourceCutscene);
+        ObjectRefId buttonId = objectId(objectManager, sourceButton);
+        ObjectRefId cutsceneId = objectId(objectManager, sourceCutscene);
+        CompositeSnapshot snapshot = registryFor(objectManager).capture();
+
+        objectManager.removeDynamicObject(sourceButton);
+        objectManager.removeDynamicObject(sourceCutscene);
+        registryFor(objectManager).restore(snapshot);
+
+        Cnz2CutsceneButtonInstance restoredButton =
+                objectById(objectManager, Cnz2CutsceneButtonInstance.class, buttonId);
+        CutsceneKnucklesCnz2AInstance restoredCutscene =
+                objectById(objectManager, CutsceneKnucklesCnz2AInstance.class, cutsceneId);
+        assertNotSame(sourceCutscene, restoredCutscene);
+        assertSame(restoredCutscene, CutsceneKnucklesCnz2AInstance.getActiveInstance(),
+                "post-restore relink must replace the stale static cutscene identity");
+
+        restoredButton.update(0, null);
+
+        assertTrue(readBooleanField(restoredButton, "pressed"),
+                "proximity polling must resolve the recreated live cutscene, not the pre-restore object");
     }
 
     @Test
@@ -99,6 +136,8 @@ class TestS3kCnz2CutsceneButtonGraphRewind {
         assertNotSame(divergentFlash, restoredFlash, "restore must drop the divergent CNZ lights flash");
         assertSame(restoredFlash, readObjectField(restoredButton, "spawnedFlash"),
                 "CNZ2 button spawnedFlash must resolve to the restored flash child");
+        assertSame(restoredButton, readObjectField(restoredFlash, "owner"),
+                "CNZ lights flash owner must relink from the authoritative restored button reference");
         assertNotSame(sourceFlash, readObjectField(restoredButton, "spawnedFlash"),
                 "CNZ2 button must not retain the stale pre-restore flash child");
         assertTrue(readBooleanField(restoredButton, "pressed"),
@@ -237,6 +276,17 @@ class TestS3kCnz2CutsceneButtonGraphRewind {
     private static void setObjectField(Object target, String fieldName, Object value) {
         try {
             findField(target.getClass(), fieldName).set(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void setEnumField(Object target, String fieldName, String constant) {
+        try {
+            Field field = findField(target.getClass(), fieldName);
+            @SuppressWarnings({"rawtypes", "unchecked"})
+            Object value = Enum.valueOf((Class<? extends Enum>) field.getType(), constant);
+            field.set(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to write " + fieldName + " on " + target.getClass(), e);
         }

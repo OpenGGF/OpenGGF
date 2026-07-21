@@ -1,6 +1,12 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
+import com.openggf.game.CanonicalAnimation;
+import com.openggf.game.GameModule;
+import com.openggf.game.rewind.RewindDeferred;
+import com.openggf.level.objects.ObjectControlledSolidContactController;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.managers.PlayableSpriteMovement;
 import com.openggf.sprites.managers.SpindashDustController;
@@ -9,6 +15,7 @@ import com.openggf.sprites.managers.TailsTailsController;
 
 @com.openggf.game.ModApi
 public class PlayableSpriteController {
+    private final AbstractPlayableSprite sprite;
     private final PlayableSpriteMovement movement;
     private final PlayableSpriteAnimation animation;
     private final DrowningController drowning;
@@ -17,8 +24,21 @@ public class PlayableSpriteController {
     private SpindashDustController spindashDust;
     private TailsTailsController tailsTails;
     private SuperStateController superState;
+    private boolean onObjectAtFrameStart;
+    private boolean onObjectAtPreviousFrameStart;
+    private boolean pushingAtFrameStart;
+    private boolean airAtFrameStart;
+    private boolean hurtAtFrameStart;
+    private boolean hurtRecoveryCompletedThisFrame;
+    /** Narrow ownership seam for the MGZ top-platform carry's solid feedback. */
+    @RewindDeferred(reason = "active carried solid contact needs stable object identity snapshot")
+    private ObjectInstance objectControlledSolidContactOwner;
+    private boolean springHandoffPending;
+    private int springHandoffXVelocity;
+    private int springHandoffYVelocity;
 
     public PlayableSpriteController(AbstractPlayableSprite sprite) {
+        this.sprite = sprite;
         this.movement = new PlayableSpriteMovement(sprite);
         this.animation = new PlayableSpriteAnimation(sprite);
         this.drowning = new DrowningController(sprite);
@@ -165,6 +185,134 @@ public class PlayableSpriteController {
         if (superState != null) {
             superState.reset();
         }
+    }
+
+    public void captureFrameStartState() {
+        onObjectAtPreviousFrameStart = onObjectAtFrameStart;
+        onObjectAtFrameStart = sprite.isOnObject();
+        pushingAtFrameStart = sprite.getPushing();
+        airAtFrameStart = sprite.getAir();
+        hurtAtFrameStart = sprite.isHurt();
+        hurtRecoveryCompletedThisFrame = false;
+    }
+
+    public void restoreFrameStartState(boolean onObject, boolean previousOnObject,
+            boolean pushing, boolean hurt, boolean hurtRecoveryCompleted) {
+        onObjectAtFrameStart = onObject;
+        onObjectAtPreviousFrameStart = previousOnObject;
+        pushingAtFrameStart = pushing;
+        hurtAtFrameStart = hurt;
+        hurtRecoveryCompletedThisFrame = hurtRecoveryCompleted;
+    }
+
+    public boolean isOnObjectAtFrameStart() { return onObjectAtFrameStart; }
+    public boolean isOnObjectAtPreviousFrameStart() { return onObjectAtPreviousFrameStart; }
+    public boolean isPushingAtFrameStart() { return pushingAtFrameStart; }
+    public boolean isAirAtFrameStart() { return airAtFrameStart; }
+    public boolean isHurtAtFrameStart() { return hurtAtFrameStart; }
+    public boolean isHurtRecoveryCompletedThisFrame() { return hurtRecoveryCompletedThisFrame; }
+    public void markHurtRecoveryCompleted() { hurtRecoveryCompletedThisFrame = true; }
+
+    public void publishRunAsPreviousAnimation() {
+        int animationId = sprite.resolveAnimationId(CanonicalAnimation.RUN);
+        if (animationId >= 0) {
+            animation.publishPreviousAnimationId(animationId);
+        } else {
+            animation.resetLastAnimationId();
+        }
+    }
+
+    public void publishRawAnimation(CanonicalAnimation animation) {
+        int animationId = sprite.resolveAnimationId(animation);
+        if (animationId >= 0) {
+            sprite.setAnimationId(animationId);
+        }
+    }
+
+    public void publishLandingAnimationWrite() {
+        GameModule module = sprite.currentGameModule();
+        if (module != null && module.getLevelEventProvider() != null) {
+            module.getLevelEventProvider().onPlayableLandingAnimationWrite(sprite);
+        }
+    }
+
+    public boolean allowsObjectControlledSolidContact(ObjectInstance candidate) {
+        if (candidate == null || objectControlledSolidContactOwner == null) {
+            return false;
+        }
+        if (candidate == objectControlledSolidContactOwner) {
+            return true;
+        }
+        return objectControlledSolidContactOwner instanceof ObjectControlledSolidContactController owner
+                && owner.allowsObjectControlledSolidContact(sprite, candidate);
+    }
+
+    public void notifyObjectControlledSolidContact(ObjectInstance candidate, SolidContact contact) {
+        if (candidate == null || contact == null) {
+            return;
+        }
+        if (objectControlledSolidContactOwner instanceof ObjectControlledSolidContactController owner) {
+            owner.onObjectControlledSolidContact(sprite, candidate, contact);
+        }
+    }
+
+    public Short projectedObjectControlledSolidContactXSpeed(ObjectInstance candidate) {
+        if (objectControlledSolidContactOwner instanceof ObjectControlledSolidContactController owner
+                && candidate != null && owner.allowsObjectControlledSolidContact(sprite, candidate)) {
+            return owner.projectedSolidContactXSpeed(sprite, candidate);
+        }
+        return null;
+    }
+
+    public void notifyObjectControlledSolidContactInvalidated(ObjectInstance candidate) {
+        if (candidate != null
+                && objectControlledSolidContactOwner instanceof ObjectControlledSolidContactController owner) {
+            owner.onObjectControlledSolidContactInvalidated(sprite, candidate);
+        }
+    }
+
+    public void setObjectControlledSolidContactOwner(ObjectInstance owner) {
+        objectControlledSolidContactOwner = owner;
+        if (owner == null) {
+            clearSpringHandoff();
+        }
+    }
+
+    public void clearObjectControlledSolidContactOwner() {
+        objectControlledSolidContactOwner = null;
+    }
+
+    public boolean isObjectControlledSolidContactOwnedBy(ObjectInstance candidate) {
+        return objectControlledSolidContactOwner == candidate;
+    }
+
+    public boolean hasObjectControlledSolidContactOwner() {
+        return objectControlledSolidContactOwner != null;
+    }
+
+    public void recordSpringHandoff(int xVelocity, int yVelocity) {
+        if (objectControlledSolidContactOwner == null) {
+            return;
+        }
+        springHandoffPending = true;
+        springHandoffXVelocity = xVelocity;
+        springHandoffYVelocity = yVelocity;
+    }
+
+    public void restoreSpringHandoff(boolean pending, int xVelocity, int yVelocity) {
+        springHandoffPending = pending;
+        springHandoffXVelocity = xVelocity;
+        springHandoffYVelocity = yVelocity;
+    }
+
+    public boolean isSpringHandoffPending() { return springHandoffPending; }
+    public int getSpringHandoffXVelocity() { return springHandoffXVelocity; }
+    public int getSpringHandoffYVelocity() { return springHandoffYVelocity; }
+
+    public void clearSpringHandoff() {
+        springHandoffPending = false;
+        springHandoffXVelocity = 0;
+        springHandoffYVelocity = 0;
     }
 
     @com.openggf.game.ModApi

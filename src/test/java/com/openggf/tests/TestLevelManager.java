@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -124,6 +125,22 @@ public class TestLevelManager {
         assertFalse(java.util.Arrays.equals(
                         oscillationBeforeReload, OscillationManager.valuesForTest()),
                 "The native post-ScreenEvents OscillateNumDo tick must survive the skipped reload frame");
+    }
+
+    @Test
+    public void failedLoadClearsPendingBonusReturnRespawnState() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        levelManager.restorePersistentRespawnOnNextObjectReset(
+                new PersistentRespawnState(new long[]{1L}, new long[0]));
+
+        assertThrows(IndexOutOfBoundsException.class,
+                () -> levelManager.loadZoneAndAct(-1, 0));
+
+        Field pendingState = LevelManager.class.getDeclaredField(
+                "persistentRespawnStateForNextObjectReset");
+        pendingState.setAccessible(true);
+        assertNull(pendingState.get(levelManager),
+                "A failed return load must not apply its respawn table to a later level");
     }
 
     @Nested
@@ -374,4 +391,3 @@ public class TestLevelManager {
         }
     }
 }
-

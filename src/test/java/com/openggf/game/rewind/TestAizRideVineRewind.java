@@ -85,6 +85,11 @@ class TestAizRideVineRewind {
         writeInt(vine, "handle.mode", 2);
         writeInt(vine, "handle.p1.grabFlag", 1);
         writeInt(vine, "handle.p1.releaseDelay", 0x30);
+        // Held-anim latch state (grabbed rolling, TouchFloor already latched Walk):
+        // both booleans must ride the keyframe or a mid-ride rewind would revert the
+        // anim byte to HANG2 in the airborne-after-grounding window.
+        writeBoolean(vine, "handle.p1.rollingAtGrab", true);
+        writeBoolean(vine, "handle.p1.walkLatched", true);
         writeInt(vine, "handle.x", 0x1830);
         writeInt(vine, "handle.y", 0x0560);
 
@@ -102,6 +107,8 @@ class TestAizRideVineRewind {
         writeInt(vine, "handle.mode", 0);
         writeInt(vine, "handle.p1.grabFlag", 0);
         writeInt(vine, "handle.p1.releaseDelay", 0);
+        writeBoolean(vine, "handle.p1.rollingAtGrab", false);
+        writeBoolean(vine, "handle.p1.walkLatched", false);
         writeInt(vine, "handle.x", 0x1F00);
         writeInt(vine, "handle.y", 0x0400);
         writeInt(vine, "currentX", 0x1F00);
@@ -124,6 +131,10 @@ class TestAizRideVineRewind {
                 "handle release-delay countdown must survive rewind");
         assertEquals(0x1830, readInt(vine, "handle.x"), "handle X must survive rewind");
         assertEquals(0x0560, readInt(vine, "handle.y"), "handle Y must survive rewind");
+        assertTrue(readBoolean(vine, "handle.p1.rollingAtGrab"),
+                "held-anim rollingAtGrab latch must survive rewind");
+        assertTrue(readBoolean(vine, "handle.p1.walkLatched"),
+                "held-anim Walk latch must survive rewind (else HANG2 reverts on rewind)");
 
         // Root scalars that drive the chain also survive.
         assertEquals(0x1830, readInt(vine, "currentX"), "root currentX must survive rewind");

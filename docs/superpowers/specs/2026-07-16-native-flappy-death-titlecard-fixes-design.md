@@ -51,4 +51,3 @@ Stock levels have no custom-zone bridge and do not enter this path.
 - Update the native-Flappy guide and changelog, rebuild the sample mod, run the
   focused suites and full `mvn package`, then merge into `next` and repeat the
   full package gate there.
-

@@ -64,6 +64,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private static final int S3K_WAIT_DURATION = 90;      // ROM line 62676
     private static final int MUSIC_TRIGGER_FRAME = 71;    // 360 - 289 = 71 (ROM line 62626)
     private static final int CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES = 3;
+    private static final int MUTATED_TITLE_CARD_RESET_DISPATCHES = 38;
 
     // Time bonus table (ROM lines 62910-62918)
     private static final int[] TIME_BONUSES = {5000, 5000, 1000, 500, 400, 300, 100, 10};
@@ -90,6 +91,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int postControlHandoffDelayEntries;
     private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
     private boolean controlsReleasedAheadOfHandoff;
+    private boolean carriedAcrossSeamlessTransition;
 
     // Tally values
     private int timeBonus;
@@ -123,7 +125,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int carriedTitleWaitTimer;
     private int carriedResultsRenderRetireDispatches;
     private boolean exitRetireDispatchesInitialized;
-    private boolean carriedAcrossSeamlessTransition;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
         this(character, act, 0, 0, CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES, true);
@@ -501,6 +502,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // children as embedded elements, so preserve the final three child
         // retirement dispatches that occur after the embedded set is gone.
         carriedResultsRenderRetireDispatches = carriedResultsRetireDispatches;
+        carriedAcrossSeamlessTransition = true;
     }
 
     // ---- Pre-tally delay with music trigger ----
@@ -655,6 +657,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         //   MGZ (zone $02): MGZ1BGE_Transition
         boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02 || zone == 0x04);
         boolean fbzCarriedTitleOwner = act == 0 && zone == 0x04;
+        boolean retainedReloadState = act == 0 && carriedAcrossSeamlessTransition;
 
         // Restore player controls (locked by signpost in Set_PlayerEndingPose).
         // For zones with seamless transitions (HCZ), defer unlocking — the player
@@ -680,7 +683,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         boolean iczAct2EndBossHandoff = zone == 0x05 && act == 1;
         var cam = services().camera();
         applyCameraFollowExitState(cam, lbzAct2PostBossHandoff);
-        if (shouldRestoreCameraBoundsOnExit(zone, act)
+        if (!hasSeamlessTransition && !retainedReloadState
+                && shouldRestoreCameraBoundsOnExit(zone, act)
                 && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
             if (level != null) {
@@ -703,15 +707,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // through the transition bridge so only an armed native event consumes
         // it; no zone or trace identity is consulted here.
         boolean retainedTransitionFlagOwner =
-                S3kTransitionWriteSupport.restorePendingPostResultsPlayerControl(services());
+                S3kTransitionWriteSupport.completePostResultsHandoff(services());
 
-        if (isAct2OrSpecial || (hasSeamlessTransition
-                && !fbzCarriedTitleOwner && retainedTransitionFlagOwner)) {
+        if (isAct2OrSpecial || (!fbzCarriedTitleOwner && retainedTransitionFlagOwner)) {
             // ROM loc_2DCF8 sets End_of_level_flag directly for Act 2/Sky
             // Sanctuary/LRZ boss results (sonic3k.asm:62693-62705).
-            // For HCZ/MGZ Act 1, the engine's BG event handlers use the same
-            // flag as their post-results gate before executeActTransition()
-            // resets gameplay state for the reloaded act.
+            // A retained native transition owner can request the same ready
+            // flag through the event bridge without this object inferring its
+            // transition policy from the current zone.
             services().gameState().setEndOfLevelFlag(true);
         }
 
@@ -749,6 +752,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                         s3kTitleCard.useExternalInLevelGameplayOwner();
                     } else if (aizAct1MinibossTitleHandoff) {
                         s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
+                    } else if (retainedReloadState) {
+                        // This Obj_LevelResults survived an earlier Load_Level and
+                        // now mutates into Obj_TitleCard. The in-level title owner
+                        // resets Timer/Ring_count after the native create passes.
+                        s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
+                                MUTATED_TITLE_CARD_RESET_DISPATCHES);
                     }
                 }
                 if (fbzCarriedTitleOwner) {
@@ -766,7 +775,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // request above, where it becomes visible after the title children
             // reach their display positions (sonic3k.asm:62708-62720,
             // 62214-62235).
-            if (!hasSeamlessTransition && !aizAct1MinibossTitleHandoff) {
+            if (!hasSeamlessTransition && !retainedReloadState
+                    && !aizAct1MinibossTitleHandoff) {
                 resetLevelGamestateForActTransition();
             }
         }
@@ -780,6 +790,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     private void releasePlayerControlsForExit() {
         int zone = services().romZoneId();
+        // HCZ/MGZ retain a separate post-transition control owner. CNZ carries
+        // this results object through its reload and Restore_PlayerControl still
+        // belongs to the results exit itself.
         boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
         boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
         if (!hasSeamlessTransition && !lbzAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {
@@ -789,15 +802,22 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     sprite.setControlLocked(false);
                     ObjectControlState.none().applyTo(sprite);
                     sprite.setForcedAnimationId(-1);
-                    if (waitDurationAdjustment > 0 || carriedAcrossSeamlessTransition) {
-                        // This retained results owner runs after player animation.
-                        // Publish Restore_PlayerControl's animation word while
-                        // retaining the current mapping for this object entry.
+                    if (shouldPublishWaitAnimationOnControlRestore(
+                            waitDurationAdjustment, carriedAcrossSeamlessTransition)) {
+                        // Restore_PlayerControl writes anim/prev_anim to Wait.
+                        // A retained results owner runs after player animation,
+                        // so publish the new animation id while retaining the
+                        // current mapping for this object entry.
                         sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
                     }
                 }
             }
         }
+    }
+
+    static boolean shouldPublishWaitAnimationOnControlRestore(
+            int waitDurationAdjustment, boolean carriedAcrossSeamlessTransition) {
+        return waitDurationAdjustment > 0 || carriedAcrossSeamlessTransition;
     }
 
     static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {

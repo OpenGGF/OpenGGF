@@ -485,8 +485,12 @@ public final class TraceCaptureTool {
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
         }
-        if (phase == TraceExecutionPhase.VBLANK_ONLY) {
+        if (phase == TraceExecutionPhase.VBLANK_ONLY
+                || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
             frameDriver.skipFrameFromRecording();
+            if (phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
+                frameDriver.advancePlayableAnimationsOnly();
+            }
             // Mirror AbstractTraceReplayTest: the S3K complete-run handoff row
             // is skipped for comparison, but ROM ran a full LevelLoop on it and
             // incremented Level_frame_counter before Process_Sprites. Apply the
@@ -500,6 +504,9 @@ public final class TraceCaptureTool {
                 }
             }
             return false;
+        }
+        if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+            frameDriver.suppressFirstSidekickAnimationOnce();
         }
         // NOTE: the S3K replay loop in AbstractTraceReplayTest.replayS3kTrace
         // does NOT special-case ADVANCE_ONLY; only VBLANK_ONLY is skipped and
@@ -534,6 +541,14 @@ public final class TraceCaptureTool {
     /**
      * Resolves {@code --trace} against the catalog by directory name, or by
      * 0-based catalog index, or as a direct filesystem path to a trace dir.
+     *
+     * <p>Multi-segment trace <em>runs</em> ({@link TraceEntry#isRun()}) share
+     * the catalog with ordinary single-segment traces but are not capturable:
+     * a run drives the engine through mode changes (level to special/bonus stage
+     * and back), which this single-scene capture pipeline does not follow. When
+     * a spec resolves to a run, {@link #requireCapturable} rejects it up front
+     * with a clear message instead of failing opaquely mid-capture — capture the
+     * run's individual segments (each an ordinary trace) instead.
      */
     private TraceEntry resolveTrace(String spec) {
         Path catalogDir = Paths.get(GameServices.configuration()
@@ -544,7 +559,7 @@ public final class TraceCaptureTool {
         try {
             int index = Integer.parseInt(spec.trim());
             if (index >= 0 && index < entries.size()) {
-                return entries.get(index);
+                return requireCapturable(entries.get(index));
             }
         } catch (NumberFormatException ignored) {
             // not an index
@@ -553,7 +568,7 @@ public final class TraceCaptureTool {
         // by trace directory name
         for (TraceEntry e : entries) {
             if (e.dir().getFileName().toString().equalsIgnoreCase(spec)) {
-                return e;
+                return requireCapturable(e);
             }
         }
 
@@ -562,12 +577,26 @@ public final class TraceCaptureTool {
         for (TraceEntry e : TraceCatalog.scan(asPath.getParent() != null
                 ? asPath.getParent() : asPath)) {
             if (e.dir().equals(asPath) || e.dir().toAbsolutePath().equals(asPath.toAbsolutePath())) {
-                return e;
+                return requireCapturable(e);
             }
         }
 
         throw new IllegalArgumentException("No trace matched '" + spec
                 + "' (catalog " + catalogDir + " has " + entries.size() + " entries)");
+    }
+
+    /**
+     * Rejects a multi-segment trace run, which cannot be captured by this
+     * single-scene pipeline; returns any ordinary trace entry unchanged.
+     */
+    static TraceEntry requireCapturable(TraceEntry entry) {
+        if (entry.isRun()) {
+            throw new IllegalArgumentException(
+                    "Trace run '" + entry.dir().getFileName() + "' is a multi-segment run and is "
+                    + "not capturable; capture its segments individually (each segment directory "
+                    + "under the run is an ordinary trace).");
+        }
+        return entry;
     }
 
     private static String resolveFfmpeg() {
@@ -607,6 +636,16 @@ public final class TraceCaptureTool {
         @Override
         public int skipFrameFromRecording() {
             return driver.skipFrameFromRecording();
+        }
+
+        @Override
+        public void advancePlayableAnimationsOnly() {
+            driver.advancePlayableAnimationsOnly();
+        }
+
+        @Override
+        public void suppressFirstSidekickAnimationOnce() {
+            driver.suppressFirstSidekickAnimationOnce();
         }
 
         @Override

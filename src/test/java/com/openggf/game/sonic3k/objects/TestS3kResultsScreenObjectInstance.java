@@ -3,10 +3,12 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
+import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneRegistry;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.camera.Camera;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
@@ -19,12 +21,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestS3kResultsScreenObjectInstance {
+
+    @Test
+    void retainedResultsPublishesRestorePlayerControlWaitAnimation() {
+        assertTrue(S3kResultsScreenObjectInstance
+                .shouldPublishWaitAnimationOnControlRestore(0, true));
+        assertTrue(S3kResultsScreenObjectInstance
+                .shouldPublishWaitAnimationOnControlRestore(1, false));
+        assertFalse(S3kResultsScreenObjectInstance
+                .shouldPublishWaitAnimationOnControlRestore(0, false));
+    }
 
     @Test
     void cnzActOneExitStartsActTwoTitleCardAndMusic() throws Exception {
@@ -47,6 +61,24 @@ class TestS3kResultsScreenObjectInstance {
         assertEquals(1, services.apparentAct,
                 "Act 1 results exit must update Apparent_act to Act 2 before title-card handoff "
                         + "(docs/skdisasm/sonic3k.asm:62708-62720)");
+    }
+
+    @Test
+    void carriedCnzActOneResultsKeepsReloadedActStateForNativeTitleCardReset() throws Exception {
+        ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                services,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        results.setServices(services);
+        results.onCarriedAcrossSeamlessTransition(-0x3000, 0x0200);
+
+        Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+        onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
+
+        assertEquals(List.of("3:1"), services.titleCard.calls,
+                "The retained results SST mutates into the native in-level Act 2 title card");
+        verify(services.levelManager, never()).resetLevelGamestate(org.mockito.ArgumentMatchers.any(LevelState.class));
     }
 
     @Test
@@ -83,8 +115,24 @@ class TestS3kResultsScreenObjectInstance {
             onExitReady.setAccessible(true);
             onExitReady.invoke(results);
 
-            verify(services.gameState).setEndOfLevelFlag(true);
+            verify(services.gameState, never()).setEndOfLevelFlag(true);
         }
+    }
+
+    @Test
+    void armedTransitionProviderPublishesReadyFlagWithoutZoneInference() throws Exception {
+        ActTransitionRecordingServices services =
+                new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id, true);
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                services,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        results.setServices(services);
+
+        Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+        onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
+
+        verify(services.gameState).setEndOfLevelFlag(true);
     }
 
     @Test
@@ -136,11 +184,18 @@ class TestS3kResultsScreenObjectInstance {
         private final RecordingTitleCardProvider titleCard = new RecordingTitleCardProvider();
         private final LevelManager levelManager = mock(LevelManager.class);
         private final List<Integer> playedMusic = new ArrayList<>();
+        private final boolean retainedTransitionFlagOwner;
         private int apparentAct = -1;
 
         private ActTransitionRecordingServices(int zone, int act2MusicId) {
+            this(zone, act2MusicId, false);
+        }
+
+        private ActTransitionRecordingServices(int zone, int act2MusicId,
+                                               boolean retainedTransitionFlagOwner) {
             this.zone = zone;
             this.act2MusicId = act2MusicId;
+            this.retainedTransitionFlagOwner = retainedTransitionFlagOwner;
         }
 
         @Override
@@ -156,6 +211,11 @@ class TestS3kResultsScreenObjectInstance {
         @Override
         public LevelManager levelManager() {
             return levelManager;
+        }
+
+        @Override
+        public LevelEventProvider levelEventProvider() {
+            return new ResultsTransitionBridge(retainedTransitionFlagOwner);
         }
 
         @Override
@@ -186,6 +246,25 @@ class TestS3kResultsScreenObjectInstance {
         public TitleCardProvider titleCardProvider() {
             return titleCard;
         }
+    }
+
+    private static final class ResultsTransitionBridge
+            implements LevelEventProvider, S3kTransitionEventBridge {
+        private final boolean retainedTransitionFlagOwner;
+
+        private ResultsTransitionBridge(boolean retainedTransitionFlagOwner) {
+            this.retainedTransitionFlagOwner = retainedTransitionFlagOwner;
+        }
+
+        @Override public void initLevel(int zone, int act) {}
+        @Override public void update() {}
+        @Override public void signalActTransition() {}
+        @Override public void requestHczPostTransitionCutscene() {}
+        @Override public boolean restorePendingPostResultsPlayerControl() {
+            return retainedTransitionFlagOwner;
+        }
+        @Override public void requestMgzPostTransitionRelease() {}
+        @Override public void requestCnzPostTransitionRelease(int framesUntilRelease) {}
     }
 
     private static final class IczExitRecordingServices extends TestObjectServices {

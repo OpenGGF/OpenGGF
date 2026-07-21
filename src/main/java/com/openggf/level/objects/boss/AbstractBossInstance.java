@@ -138,6 +138,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
         state.lastUpdatedFrame = frameCounter;
         updateChildren(frameCounter, player);
+        updateOwnerManagedChildren(frameCounter, player);
         updateDynamicSpawn();
     }
 
@@ -146,6 +147,18 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         for (BossChildComponent child : List.copyOf(childComponents)) {
             child.update(frameCounter, player);
         }
+        // A child may destroy itself while the parent is updating it. Prune again
+        // before ObjectManager's later same-pass removal makes that child's
+        // identity unavailable to a rewind capture.
+        childComponents.removeIf(BossChildComponent::isDestroyed);
+    }
+
+    /**
+     * Updates boss-owned helper children that intentionally live outside
+     * {@link #childComponents}' compact structural rewind graph. The default
+     * has no such helpers; subclasses retain exact ownership and lifecycle.
+     */
+    protected void updateOwnerManagedChildren(int frameCounter, PlayableEntity player) {
     }
 
     public int getCollisionFlags() {

@@ -4151,6 +4151,35 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kPanicRevPulseBridgesStoredPreSpriteCounter() throws Exception {
+        GameModule previous = GameModuleRegistry.getBootstrapDefault();
+        try {
+            installStandaloneGameModule(new Sonic3kGameModule());
+            setCurrentZoneAct(3, 0);
+            clearLoadedLevelForFeatureZoneFallback();
+
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            tails.setPinballMode(true);
+            tails.setGSpeed((short) 0);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+
+            setLevelFrameCounter(0x221F);
+            controller.update(0);
+
+            assertTrue(controller.getInputJumpPress(),
+                    "A stored pre-Process_Sprites $221F counter is ROM-visible as $2220, "
+                            + "so the panic spindash branch must publish its $20-phase jump pulse");
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
     void s3kCatchUpFlightOnlyBlocksOnLeaderObjectControlSignBit() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

@@ -69,6 +69,9 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private static final int PACHINKO_LOW_SOURCE_BYTES = 0x5000;
     private static final int PACHINKO_HIGH_SOURCE_TILE = 0x300;
     private static final int PACHINKO_HIGH_SOURCE_BYTES = 0x0C00;
+    // Obj_CNZHoverFan maps its blade piece to this AniPLC destination.
+    private static final int CNZ_HOVER_FAN_BLADE_DEST_TILE = 0x304;
+    private static final int CNZ_HOVER_FAN_BLADE_TILE_COUNT = 4;
     private static final int[] PACHINKO_COPY_OFFSETS = {
             0x180, 0x120, 0x0C0, 0x060, 0x400, 0x3A0, 0x340, 0x2E0, 0x680, 0x620, 0x5C0, 0x560
     };
@@ -664,8 +667,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
 
         if (!scripts.isEmpty()) {
-            GraphicsManager graphicsManager = GameServices.graphics();
-            scripts.get(0).tick(level, graphicsManager);
+            tickScript(scripts.get(0));
         }
         if (!firstTreeApplied && firstTreePatterns != null) {
             applyPatternsToLevel(firstTreePatterns, Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_DEST_TILE);
@@ -674,9 +676,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     private void runAllScripts() {
-        GraphicsManager graphicsManager = GameServices.graphics();
         for (AniPlcScriptState script : scripts) {
-            script.tick(level, graphicsManager);
+            tickScript(script);
         }
     }
 
@@ -801,7 +802,18 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     void tickScript(AniPlcScriptState script) {
-        script.tick(level, GameServices.graphics());
+        if (script.tick(level, GameServices.graphics()) && requiresObjectRendererRefresh(script)) {
+            Sonic3kPlcLoader.refreshAffectedRenderers(
+                    List.of(new Sonic3kPlcLoader.TileRange(
+                            script.destinationTileIndex(), script.tilesPerFrame())),
+                    GameServices.level());
+        }
+    }
+
+    boolean requiresObjectRendererRefresh(AniPlcScriptState script) {
+        return zoneIndex == Sonic3kZoneIds.ZONE_CNZ
+                && script.destinationTileIndex() == CNZ_HOVER_FAN_BLADE_DEST_TILE
+                && script.tilesPerFrame() == CNZ_HOVER_FAN_BLADE_TILE_COUNT;
     }
 
     void updateHcz1BackgroundStripsForGraph() {

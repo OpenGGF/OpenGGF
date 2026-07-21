@@ -38,6 +38,7 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.game.ShieldType;
 
@@ -283,10 +284,10 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         // broader rolling status bit. The animation can lag the status byte by
         // a frame during object releases, which affects monitor break timing.
         boolean canBreak = player.getAnimationId() == Sonic3kAnimationIds.ROLL.id();
-        // Knuckles glide/slide break parity still needs a ROM-state-backed
-        // character/move-state query at this touch-response site.
-        // canBreak |= (player.getCharacter() == PlayerCharacter.KNUCKLES
-        //              && (player.getDoubleJumpFlag() == 1 || player.getDoubleJumpFlag() == 3));
+        // ROM Touch_Monitor.checkdestroy (docs/skdisasm/sonic3k.asm:20858-20866):
+        // Knuckles gliding (double_jump_flag==1) or sliding (==3) also breaks the
+        // monitor -- the identical set as the solid gate (isKnucklesGlidingOrSliding).
+        canBreak |= isKnucklesGlidingOrSliding(player);
 
         if (!canBreak) {
             return;
@@ -564,9 +565,33 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             // (docs/skdisasm/sonic3k.asm:40583-40590).
             return true;
         }
+        // ROM: SolidObject_Monitor_SonicKnux (docs/skdisasm/sonic3k.asm:40567-40573)
+        // also returns non-solid for Knuckles gliding (double_jump_flag==1) or
+        // sliding after gliding (==3), after the roll-anim check.
+        if (isKnucklesGlidingOrSliding(player)) {
+            return false;
+        }
         // ROM: SolidObject_Monitor_SonicKnux tests anim(a1) == AniIDSonAni_Roll,
         // not the broader rolling status bit (docs/skdisasm/sonic3k.asm:40559-40572).
         return player.getAnimationId() != Sonic3kAnimationIds.ROLL.id();
+    }
+
+    /**
+     * ROM parity for the monitor's Knuckles glide/slide exemptions, shared by
+     * the solid gate ({@code SolidObject_Monitor_SonicKnux},
+     * docs/skdisasm/sonic3k.asm:40567-40573) and the break gate
+     * ({@code Touch_Monitor.checkdestroy}, docs/skdisasm/sonic3k.asm:20858-20866)
+     * -- both test {@code character_id==2} then {@code double_jump_flag} 1
+     * (gliding) or 3 (sliding after gliding). Gated on the GLIDE secondary
+     * ability so Sonic's insta-shield {@code double_jump_flag==1}
+     * (InstaShieldObjectInstance) never qualifies.
+     */
+    private static boolean isKnucklesGlidingOrSliding(AbstractPlayableSprite player) {
+        if (player.getSecondaryAbility() != SecondaryAbility.GLIDE) {
+            return false;
+        }
+        int djf = player.getDoubleJumpFlag();
+        return djf == 1 || djf == 3;
     }
 
     @Override

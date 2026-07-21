@@ -1564,6 +1564,14 @@ public class SpriteManager {
 			playable.getTailsCarryController().updateAfterTailsCollision(mainCarryInput);
 		}
 		playable.recordFollowerHistoryForTick();
+		if (usesInlineSolidResolution && !hurtAtTickStart) {
+			// S2/S3K run Sonic_Water/Tails_Water after movement and the
+			// position-history write, but before animation and TouchResponse
+			// (sonic3k.asm:21995-22022). Object launchers touched on a water-entry
+			// frame therefore overwrite the quartered entry velocity, rather than
+			// having their launch velocity quartered afterward.
+			levelManager.updatePlayableWaterStateForCurrentLevel(playable);
+		}
 		if (playable.getMovementManager() instanceof PlayableSpriteMovement movement) {
 			movement.applyDeferredSpindashAnimationPushClear();
 		}
@@ -1598,9 +1606,6 @@ public class SpriteManager {
 		levelManager.applyPlaneSwitchers(playable);
 		playable.tickStatus();
 		playable.endOfTick();
-		if (usesInlineSolidResolution && !hurtAtTickStart) {
-			levelManager.updatePlayableWaterStateForCurrentLevel(playable);
-		}
 	}
 
 	private static void applySolidContacts(LevelManager levelManager, AbstractPlayableSprite playable,

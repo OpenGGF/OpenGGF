@@ -172,13 +172,13 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
         if (svc == null || svc.objectManager() == null) {
             return;
         }
-        if (leftLauncher != null && !svc.objectManager().isActiveObjectInstance(leftLauncher)) {
+        if (leftLauncher != null && !svc.objectManager().getActiveObjects().contains(leftLauncher)) {
             leftLauncher = null;
         }
-        if (rightLauncher != null && !svc.objectManager().isActiveObjectInstance(rightLauncher)) {
+        if (rightLauncher != null && !svc.objectManager().getActiveObjects().contains(rightLauncher)) {
             rightLauncher = null;
         }
-        if (topSpike != null && !svc.objectManager().isActiveObjectInstance(topSpike)) {
+        if (topSpike != null && !svc.objectManager().getActiveObjects().contains(topSpike)) {
             topSpike = null;
         }
     }

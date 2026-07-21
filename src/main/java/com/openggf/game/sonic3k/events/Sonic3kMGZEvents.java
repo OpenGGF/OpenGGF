@@ -453,15 +453,17 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             updateAct1Bg();
         } else if (act == 1) {
             updateAct2LevelSizeChange();
+            // MGZ2_ScreenEvent polls Do_ShakeSound before dispatching any of
+            // its foreground screen-event routines.
+            updateAct2ContinuousRumble(frameCounter);
             updateAct2QuakeEvent();
             updateAct2ChunkEvent();
             updateAct2BossBgScroll();
-            updateAct2Collapse();
+            updateAct2Collapse(frameCounter);
             if (includeBossTransitionObject) {
                 updateBossTransition();
             }
             updateAct2BossArena();
-            updateAct2Rumble(frameCounter);
             applyScreenShake(frameCounter);
         }
     }
@@ -1026,12 +1028,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     /** ROM: Events_fg_0 / Screen_shake_flag active while Robotnik is on-screen. */
     private boolean screenShakeActive;
 
-    /**
-     * ROM: MGZ2_ScreenEvent calls Do_ShakeSound while continuous shake is
-     * active, and MGZ2_LevelCollapse plays BigRumble on the same 16-frame
-     * cadence while the collapse is running.
-     */
-    private void updateAct2Rumble(int frameCounter) {
+    /** ROM: MGZ2_ScreenEvent calls Do_ShakeSound before its routine dispatch. */
+    private void updateAct2ContinuousRumble(int frameCounter) {
         var audioManager = audio();
         if (audioManager == null) {
             return;
@@ -1039,12 +1037,16 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (((frameCounter - 1) & RUMBLE_SFX_INTERVAL_MASK) != 0) {
             return;
         }
-        if (screenEventRoutine == SCREEN_EVENT_COLLAPSE && !collapseFinished && screenShakeActive) {
-            audioManager.playSfx(Sonic3kSfx.BIG_RUMBLE.id);
-            return;
-        }
         if (screenEventRoutine == SCREEN_EVENT_NORMAL && screenShakeActive) {
             audioManager.playSfx(Sonic3kSfx.RUMBLE_2.id);
+        }
+    }
+
+    /** ROM: {@code MGZ2_LevelCollapse} emits BigRumble from its scrolling path. */
+    private void playCollapseRumble(int frameCounter) {
+        var audioManager = audio();
+        if (audioManager != null && ((frameCounter - 1) & RUMBLE_SFX_INTERVAL_MASK) == 0) {
+            audioManager.playSfx(Sonic3kSfx.BIG_RUMBLE.id);
         }
     }
 
@@ -2040,7 +2042,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         return new MutationEffects(dirtyPatterns, dirtyRegions, redraw, redrawAll, objectResync, ringResync);
     }
 
-    private void updateAct2Collapse() {
+    private void updateAct2Collapse(int frameCounter) {
         if (collapseRequested && screenEventRoutine == SCREEN_EVENT_NORMAL) {
             // Obj_MGZEndBoss publishes Events_fg_4 from its SST. MGZ2SE_Normal
             // consumes that write on the following screen-event dispatch; it
@@ -2074,6 +2076,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             collapseMutationCount++;
             createCollapseSolids();
             collapseInitialized = true;
+            // ROM falls through from initialization into the scrolling path
+            // in this same screen-event dispatch.
+            playCollapseRumble(frameCounter);
             return;
         }
 
@@ -2091,6 +2096,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 allColumnsFinished = false;
             }
         }
+        playCollapseRumble(frameCounter);
         if (!allColumnsFinished) {
             return;
         }

@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -31,7 +32,7 @@ final class MgzEndBossKnuxDefeatPart extends AbstractObjectInstance implements S
         xFixed += xVel; yFixed += yVel;
         CameraBounds bounds = cameraBounds();
         if (getX() < bounds.left || getX() > bounds.right || getY() < bounds.top || getY() > bounds.bottom) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         }
     }
     @Override public void appendRenderCommands(List<GLCommand> commands) {

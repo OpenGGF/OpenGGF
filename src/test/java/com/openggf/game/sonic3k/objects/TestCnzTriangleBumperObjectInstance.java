@@ -57,6 +57,7 @@ class TestCnzTriangleBumperObjectInstance {
         player.setCentreX((short) 0x0200);
         player.setCentreY((short) 0x0300);
         player.setAnimationId(9);
+        player.setForcedAnimationId(0x19);
 
         bumper.update(0, player);
 
@@ -65,6 +66,8 @@ class TestCnzTriangleBumperObjectInstance {
         assertEquals((short) 0x0800, player.getGSpeed());
         assertEquals(Direction.RIGHT, player.getDirection());
         assertEquals(0, player.getAnimationId());
+        assertEquals(-1, player.getForcedAnimationId(),
+                "the later object-slot anim write must replace CPU flight animation ownership");
         assertEquals(1, player.getFlipAngle());
         assertEquals(3, player.getFlipsRemaining());
         assertEquals(8, player.getFlipSpeed());

@@ -91,12 +91,12 @@ public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance impl
         player.setMoveLockTimer(MOVE_LOCK_FRAMES);
         player.setGSpeed(xVelocity);
         if (!player.getRolling()) {
-            player.setAnimationId(0);
+            publishRomBounceAnimation(player);
         }
 
         if (player.getFlipAngle() == 0) {
             player.setFlipAngle(launchLeft ? -1 : 1);
-            player.setAnimationId(0);
+            publishRomBounceAnimation(player);
             player.setFlipsRemaining(3);
             player.setFlipSpeed(8);
         }
@@ -111,6 +111,15 @@ public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance impl
         } catch (Exception e) {
             // Gameplay state must not depend on audio availability in tests.
         }
+    }
+
+    private static void publishRomBounceAnimation(AbstractPlayableSprite player) {
+        // sub_329B8 writes anim=Walk after the earlier playable/CPU animation
+        // owner has run. Clear the engine's forced-animation projection so the
+        // write remains visible when the next CPU recovery entry does not call
+        // Tails_Set_Flying_Animation (sonic3k.asm:68463-68478,26534-26555).
+        player.setForcedAnimationId(-1);
+        player.setAnimationId(0);
     }
 
     @Override

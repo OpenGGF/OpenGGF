@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -115,6 +116,39 @@ class TestS1GhzBossGraphRewind {
                 "post-restore boss update must not spawn a duplicate wrecking ball");
         assertSame(restored.ball(), readObject(restored.boss(), "wreckingBall"),
                 "post-restore update must keep the restored ball as the boss-owned child");
+    }
+
+    @Test
+    void bossPrunesChildDestroyedDuringItsOwnUpdateBeforeSameFrameRewindCapture() {
+        Harness harness = Harness.createWithBoss();
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) APPROACH_TARGET_X, (short) DESCENT_TARGET_Y);
+        Sonic1GHZBossInstance boss = only(objectManager, Sonic1GHZBossInstance.class);
+        spawnWreckingBallThroughBossUpdate(boss, player);
+        GHZBossWreckingBall ball = only(objectManager, GHZBossWreckingBall.class);
+
+        // GHZBossWreckingBall self-destructs when its managed parent is defeated.
+        // ObjectManager then removes that dynamic child's identity in this same pass.
+        boss.getState().defeated = true;
+        objectManager.update(0, player, List.of(), 0, false);
+
+        assertTrue(ball.isDestroyed(), "precondition: the managed child must self-destruct during parent update");
+        assertFalse(objectManager.getActiveObjects().contains(ball),
+                "the same object pass must remove the destroyed child's managed identity");
+        assertFalse(childComponents(boss).contains(ball),
+                "boss childComponents must not retain an identity removed in this frame");
+
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+        assertDoesNotThrow(() -> registry.restore(snapshot),
+                "same-frame rewind capture/restore must retain reference closure after child self-destruction");
+
+        Sonic1GHZBossInstance restoredBoss = only(objectManager, Sonic1GHZBossInstance.class);
+        assertTrue(childComponents(restoredBoss).isEmpty(),
+                "restored parent must not regain the destroyed child through a stale collection link");
     }
 
     @Test

@@ -856,6 +856,11 @@ free) / `:37917` (`AllocateObjectAfterCurrent`, after parent).
 spawned as real OST slots; `docs/s1disasm/_incObj/15 Swinging Platforms.asm:67-105`).
 See `s1-implement-object/rom-pitfalls.md` P8.
 
+**S3K confirmation.** CNZ Batbot's render-only body and lamp are also real
+`CreateChild1_Normal` SSTs. Restoring their after-parent slot occupancy and
+independent raw animation advanced the complete-run physics frontier from
+f3129 to f4100 (`docs/skdisasm/sonic3k.asm:186195-186407`).
+
 ---
 
 ## P22 -- Object delete/cancel checks run only in the routines that `bsr` them, not every frame
@@ -911,6 +916,9 @@ margin) is already covered for S3K by P17 (child uses own X vs parent anchor) an
 the inline `out_of_range` camera-coarse checks (`docs/skdisasm/sonic3k.asm`
 `.enemy_out_of_range` family). Verify each short-lived object deletes on the ROM
 camera-coarse bound keyed on its width, not a fixed engine margin.
+The same rule applies to behavior gates that read retained `render_flags` bit 7:
+CNZ Clamer's frame-8 projectile needs the full `$14x$10` render box, not an
+X-only visibility check (`docs/skdisasm/sonic3k.asm:185930-185942`).
 
 ---
 
@@ -988,6 +996,11 @@ sample the pre-scroll camera instead of the render-visible camera.
 `183518-183570`.
 
 **Originating commit.** `<pending: HCZ milestone 46>`.
+
+**CNZ confirmation.** The retained routine also performs its coarse-X deletion
+while still dormant. A never-visible Batbot wrapper otherwise held slot 6 until
+the later near Batbot loaded, shifting the complete-run allocation order
+(`docs/skdisasm/sonic3k.asm:180279-180300`).
 
 ---
 
@@ -1077,9 +1090,12 @@ change previous-list snapshot semantics.
 **ROM citation.** HCZ turbine `loc_6B1A8` dispatches its routine, calls
 `Refresh_ChildPosition`, then tail-calls
 `Child_DrawTouch_Sprite2_FlickerMove`, which adds the refreshed child
-(`docs/skdisasm/sonic3k.asm:141019-141033,178139-178153`).
+(`docs/skdisasm/sonic3k.asm:141019-141033,178139-178153`). CNZ Batbot likewise
+runs `Chase_Object` and `MoveSprite2` before its draw/touch tail
+(`docs/skdisasm/sonic3k.asm:186312-186319,20656-20710`).
 
-**Originating commit.** `<pending: HCZ milestone 56>`.
+**Originating commits.** `<pending: HCZ milestone 56>`; CNZ f2920 Batbot live
+touch-coordinate milestone.
 
 ---
 
@@ -2453,6 +2469,280 @@ path at `docs/skdisasm/sonic3k.asm:41468-41483`. The MGZ invisible block calls
 milestone>`.
 
 ---
+
+## P38 -- Player `routine=2` writes must clear the engine hurt state
+
+**Symptom.** An object launch matches native position and velocity on its trigger
+frame, but the next player tick uses hurt gravity/routine 4 instead of normal
+air control. Trace replay reports a routine mismatch first, followed by velocity
+and position drift.
+
+**Root cause.** S3K objects can write `move.b #2,routine(a1)` unconditionally
+after taking over a player that arrived in routine 4. The engine represents that
+outer routine with `AbstractPlayableSprite.hurt`; copying only the launch
+velocity leaves the wrong player dispatcher active.
+
+**What to check.** Whenever an object routine writes player `routine=2`, call
+`player.setHurt(false)` at the same state boundary. Do not apply this broadly to
+interactions such as horizontal springs whose ROM tail does not write the
+routine, and do not clear the separate invulnerability timer.
+
+**ROM citation.** S3K up, down, diagonal-up, and diagonal-down spring tails at
+`docs/skdisasm/sonic3k.asm:47720-47729,48139-48143,48213-48217,48304-48308`.
+Cross-game origin: `s2-implement-object/rom-pitfalls.md` P36.
+
+**Originating commit.** `<pending: CNZ spring routine-handoff milestone>`.
+
+---
+
+## P39 -- Preserve `blo`/`bhs` half-open trigger endpoints
+
+**Symptom.** A player exactly N pixels from an object triggers one frame early,
+even though all nearby positions and approach velocity match.
+
+**Root cause.** ROM coordinate windows commonly compare the lower endpoint with
+`blo` and the upper endpoint with `bhs`, producing `[lower, upper)`. Translating
+that to a symmetric absolute-distance `<= N` check admits the exclusive upper
+edge.
+
+**What to check.** Port each signed/unsigned comparison in order. Test both
+`upper-1` and `upper`; do not infer symmetry merely because the constants are
+written as `origin-N` and `origin+N`.
+
+**ROM citation.** S3K horizontal spring `sub_2326C` rejects its computed upper
+X bound with `bhs` (`docs/skdisasm/sonic3k.asm:47957-48024`).
+
+**Originating commit.** `<pending: CNZ horizontal-spring boundary milestone>`.
+
+---
+
+## P40 -- Moving touch objects publish live SST coordinates
+
+**Symptom.** A moving or oscillating S3K touch object overlaps the player at an
+exact boundary in the ROM, but the engine callback fires one frame late even
+though the shared overlap comparison itself is correct.
+
+**Root cause.** S3K `Collision_response_list` stores SST pointers rather than
+copied coordinates. When an object moves before calling a draw-and-touch helper,
+the next player-slot `Touch_Loop` reads the object's live post-move `x_pos/y_pos`.
+Using the engine's older pre-update coordinate adds an unintended second frame
+of position latency.
+
+**What to check.** Confirm the object's routine order around movement and its
+collision-list publishing helper. If movement precedes publication, opt the
+object into `usesCurrentTouchResponseState()` and test an edge that differs by
+one movement unit. Do not change the global overlap geometry or bypass the
+previous-list membership rule.
+
+**ROM citation.** CNZ `Obj_CNZBalloon` updates its sine-bobbed `y_pos` before
+`Sprite_CheckDeleteTouch3` at
+`docs/skdisasm/sonic3k.asm:66776-66795`; `Touch_Loop` dereferences the queued
+SST pointer at `docs/skdisasm/sonic3k.asm:20656-20710`.
+
+**Originating commit.** `<pending: CNZ balloon live-touch milestone>`.
+
+---
+
+## P41 -- Persistent interact words require providers on every ridden solid
+
+**Symptom.** CPU Tails remains attached to, or merely walks away from, an
+off-screen solid where the ROM performs its `$7F00` marker warp. The current
+solid's native pointer word may appear correct in isolation, but the cached
+comparison word is zero or was refreshed too late.
+
+**Root cause.** S3K stores word 0 of the ridden object's SST code pointer in
+`Tails_CPU_interact` and retains it after contact ends. A later off-screen ride
+compares the new SST word against that persistent value. Modeling only the
+solid visible at the failing frame misses the earlier support that established
+the latch; an SST slot may also have been recycled, so current slot contents
+are not evidence of the cached object's type.
+
+**Correct pattern.** Implement `RomObjectCodePointerProvider` on every solid
+that genuinely participates in this CPU-Tails ride path, using the high word
+of the installed ROM routine pointer. Reconstruct the latch history from
+frames where `Status_OnObj` is set and the interact slot is live, not from the
+slot's contents at the eventual mismatch. Test both the earlier provider and
+the mismatch target.
+
+**ROM citation.** `sub_13EFC` retains and compares `Tails_CPU_interact` at
+`docs/skdisasm/sonic3k.asm:26816-26843`; CNZ door routines occupy
+`$00030xxx-$00031xxx` at lines 66036-66167, while spring variants occupy
+`$00022xxx-$00023xxx` at lines 47500-47540.
+
+**Originating commit.** `<pending: CNZ persistent interact-word milestone>`.
+
+---
+
+## P42 -- Direct mapping flips are not gameplay facing writes
+
+**Symptom.** A player-controlled object displays the correct direct mapping
+frame but changes the player's status byte, movement direction, wall-push
+semantics, or later animation branch when the mapping visually flips.
+
+**Root cause.** ROM object routines can write flip bits directly to the
+player's `render_flags` while leaving `Status_Facing` unchanged. Treating every
+visual horizontal flip as `setDirection(...)` aliases two independent native
+state fields.
+
+**Correct pattern.** When an object owns direct player mappings, translate
+native `render_flags` writes with `setRenderFlips(...)`. Call
+`setDirection(...)` only when the disassembly explicitly modifies the player
+status facing bit. Test a flipped direct frame with the opposite gameplay
+direction retained.
+
+**ROM citation.** CNZ cylinder `loc_32610` writes `PlayerTwistFrames` to
+`mapping_frame`, masks `render_flags`, and ORs `PlayerTwistFlip` without
+touching `status` at `docs/skdisasm/sonic3k.asm:68078-68100`.
+
+**Originating commit.** `<pending: CNZ cylinder render-flip milestone>`.
+
+---
+
+## P43 -- Respawnable self-deletes must remain in the S3K Camera-Y scan
+
+**Symptom.** An object correctly deletes after moving off-screen but never
+reappears when vertical camera motion exposes its layout row. Later shared-RNG
+objects may initialize with shifted phases even when player physics still
+matches for hundreds of frames.
+
+**Root cause.** S3K has independent X-cursor and Camera-Y placement passes.
+`Sprite_CheckDelete*` clears the live entry's respawn bit; if the layout entry
+is still between the X cursors, a later `loc_1B982` Y-strip scan can recreate
+it. Removing the engine spawn from both the live set and deferred Y-pass set
+loses that native rescan opportunity.
+
+**Correct pattern.** For a respawnable off-screen self-delete under S3K's
+two-axis placement, remove the dead SST but retain the layout entry in the
+deferred Camera-Y set. Let ordinary X-cursor trimming clear it when the entry
+actually leaves the horizontal range. Test delete, a Y-coarse transition away,
+and a later strip transition that recreates a distinct instance.
+
+**ROM citation.** `Sprite_CheckDeleteTouch3` reaches the respawn-bit-clearing
+delete path at `docs/skdisasm/sonic3k.asm:37262-37276`; the independent Y-strip
+scan is `loc_1B982` at lines 37723-37762.
+
+**Originating commit.** `<pending: S3K Y-pass self-delete respawn milestone>`.
+
+---
+
++---
+
+## P44 -- Grounded squash-edge escapes can still publish push while moving away
+
+**Symptom.** A grounded player is separated sideways from the lower half of a
+full-solid object and all positions and velocities match ROM, but
+`Status_Push` is missing for that frame. This often occurs beside upright
+spikes or another short solid when the player is moving away from the nearer
+edge.
+
+**Root cause.** `SolidObject_Squash` / the S3K lower-half branch sends an
+`abs(d0) < $10` overlap back through the normal left/right helper. The later
+AtEdge path publishes the player and object push bits for any grounded side
+separation; it does not require the player to be moving into the solid.
+Treating the squash escape as correction-only loses the transient status bit.
+
+**Correct pattern.** For concrete `SolidObjectFull` callers whose disassembly
+uses this shared escape, implement
+`groundedSquashEdgeSideContactSetsPush()`. Keep position correction and speed
+zeroing under their existing movement-direction gates; only the grounded push
+publication is unconditional. Test a lower-half overlap within $10 pixels
+while moving away.
+
+**ROM citation.** S3K `SolidObjectFull` escapes the lower-half squash at
+`docs/skdisasm/sonic3k.asm:41564-41568` and publishes grounded push through
+`loc_1E06E` at lines 41473-41495. S2 follows the corresponding
+`SolidObject_Squash -> SolidObject_LeftRight` path at
+`docs/s2disasm/s2.asm:35336-35402`.
+
+**Originating commit.** `<pending: shared spike squash-edge push milestone>`.
+
++---
+
+## P45 -- Every S3K layout entry owns a respawn-table byte
+
+**S3K-specific:**
+
+**Symptom.** A destroyed or broken object reloads as a fresh live object after
+vertical or backward camera movement even though ROM reloads its remembered
+shell/state. The layout Y word may have bit 15 clear, which makes the same
+record look non-tracked under S1/S2 parsing rules.
+
+**Root cause.** S3K `Load_Sprites` advances the `a3` respawn-table cursor for
+every six-byte layout entry and stores `a3` into the spawned SST's
+`respawn_addr`. Persistence is therefore not conditional on the S1/S2 layout
+high-bit convention. Reusing `ObjectSpawn.respawnTracked()` as the S3K
+persistence gate discards native remembered state.
+
+**Correct pattern.** When `ObjectPlacementController` is in S3K two-axis
+cursor mode, allow every real layout entry to persist remembered destruction.
+Keep the explicit `respawnTracked` gate for S1/S2 modes and for synthetic
+non-layout objects. Test an entry with bit 15 clear, mark it remembered, unload
+it, and verify a later load observes the remembered state.
+
+**ROM citation.** S3K initializes and advances `Object_respawn_table` alongside
+every layout record at `docs/skdisasm/sonic3k.asm:37513-37656`; the Camera-Y
+loader sets bit 7 and writes `respawn_addr(a1)` at lines 37741-37758.
+
+**Originating commit.** `<pending: S3K all-entry respawn persistence milestone>`.
+
+---
+
+## P46 -- `Obj_WaitOffscreen` uses the render box, not the placement window
+
+**S3K-specific:**
+
+**Symptom.** An object whose normal routine begins with a formation, timer, or
+child allocation starts that sequence before the sprite is visibly on-screen.
+The object may become interactive while its ROM counterpart is still using the
+inert off-screen mapping.
+
+**Root cause.** S3K `Obj_WaitOffscreen` replaces the operation pointer and sets
+`width_pixels`/`height_pixels` to `$20`. It restores the saved operation only
+after Render_Sprites publishes the sign bit in `render_flags`. A generic
+placement margin, spawn window, or point-in-camera test is not equivalent to
+that render-box overlap.
+
+**Correct pattern.** Preserve the object's wait state until its native render
+box overlaps the viewport, including the ROM's exclusive touching edge. Start
+normal animation and gameplay work only after that boundary; do not use a wider
+object-placement margin as an activation proxy.
+
+**ROM citation.** `Obj_WaitOffscreen` installs the `$20` extents and restores
+the saved operation from the render flag at
+`docs/skdisasm/sonic3k.asm:180271-180303`; the special-stage entry ring invokes
+it before animation/collision dispatch at lines 128219-128269.
+
+**Originating commit.** `<pending: S3K entry-ring render activation milestone>`.
+
+---
+
+## P47 -- Project later playable slots before object-local cooperative checks
+
+**S3K-specific:**
+
+**Symptom.** A moving object and CPU sidekick match the trace independently,
+but an object-local player collision happens one frame late. Correcting the
+object's motion or widening its hitbox then creates a false solid contact on
+the following frame.
+
+**Root cause.** A folded engine object update can run before the CPU sidekick's
+pending movement even when the native cooperative routine observes Player 2 at
+the later slot phase. The subsequent folded solid checkpoint may likewise need
+the object's pre-update publication because the ROM called `SolidObjectFull`
+before the cooperative bounce routine.
+
+**Correct pattern.** Follow the disassembly's P1/P2 probe order. For the later
+native player slot, project only the pending movement visible at the ROM call
+site; do not shift the whole object routine. When a post-update engine
+checkpoint folds a pre-bounce `SolidObjectFull` call, use the existing
+pre-update object-position contract for that bounded handoff, then release it
+when the native vertical contact completes.
+
+**ROM citation.** CNZ's top calls `MoveSprite2`, `SolidObjectFull`, and only
+then `CNZMinibossTop_CheckPlayerBounce`; that helper probes Player 1 followed
+by Player 2 at `docs/skdisasm/sonic3k.asm:145053-145103,145530-145578`.
+
+**Originating commit.** `<pending: CNZ miniboss P2 bounce milestone>`.
 
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root

@@ -301,6 +301,15 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Called when {@link ObjectManager} permanently removes this instance from
+     * its active object graph. Subclasses with owner-held object references may
+     * detach themselves here so those references cannot outlive the manager
+     * identity they point at.
+     */
+    protected void onRemovedFromObjectManager() {
+    }
+
+    /**
      * Rebuilds constructor-equivalent child objects while the rewind manager's
      * reconstruction pool is active. Objects whose ROM child slots are created
      * on their first update rather than in their Java constructor can override

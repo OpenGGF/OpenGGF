@@ -10,8 +10,10 @@ import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
+import com.openggf.game.sonic3k.objects.DoorObjectInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -1097,6 +1099,20 @@ class TestSidekickCpuDespawnParity {
 
     @Test
     void s3kInteractWordProvidersMatchRomCodePointerHighWords() {
+        assertEquals(0x0003,
+                new DoorObjectInstance(
+                        new ObjectSpawn(0x1230, 0x0350, 0x3C, 0x80, 0, false, 0))
+                        .romObjectCodePointerHighWord(),
+                "Obj_Door variant pointers live at 0x00030xxx-0x00031xxx, so off-screen "
+                        + "Tails retains SST word 0 as 0x0003 "
+                        + "(docs/skdisasm/sonic3k.asm:66036-66167,26816-26843)");
+        assertEquals(0x0002,
+                new Sonic3kSpringObjectInstance(
+                        new ObjectSpawn(0x1888, 0x0330, 0x07, 0x12, 0, false, 0))
+                        .romObjectCodePointerHighWord(),
+                "Obj_Spring variant pointers live at 0x00022xxx-0x00023xxx, so off-screen "
+                        + "Tails compares SST word 0 as 0x0002 "
+                        + "(docs/skdisasm/sonic3k.asm:47500-47540,26816-26843)");
         assertEquals(0x0003,
                 new MhzCurledVineObjectInstance(
                         new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0))

@@ -2193,6 +2193,7 @@ public class TestSolidObjectManager {
             player.setPushing(true);
             player.setAnimationId(2);
             player.setFlipAngle(0x80);
+            player.setFlipType(2);
             player.setFlipTurned(true);
             player.setFlipsRemaining(3);
 
@@ -2213,6 +2214,7 @@ public class TestSolidObjectManager {
             assertEquals(0, player.getAnimationId(),
                     "Object landing must publish Sonic_ResetOnFloor's id_Walk write after clearing roll");
             assertEquals(0, player.getFlipAngle());
+            assertEquals(0, player.getFlipType());
             assertFalse(player.isFlipTurned());
             assertEquals(0, player.getFlipsRemaining());
 

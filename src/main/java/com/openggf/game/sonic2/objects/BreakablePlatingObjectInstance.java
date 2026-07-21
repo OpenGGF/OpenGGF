@@ -17,6 +17,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -98,6 +99,8 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
     // In our engine, we use SPECIAL category ($40) to let the listener handle it,
     // keeping the same size index $21 for accurate touch distance.
     private static final int COLLISION_FLAGS = 0x40 | 0x21; // SPECIAL category + size index $21
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
+            com.openggf.game.profiles.touchresponse.TouchResponseProfile.singleRegionContinuousCallbacks());
 
     // Grab position offset: player placed at objX - $14 (20 pixels left of center)
     // ROM: subi.w #$14,d0 (line 80452, 80462)
@@ -522,10 +525,20 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
     public boolean requiresContinuousTouchCallbacks() {
         // Touch_Special refreshes collision_property on every overlapping frame;
         // ObjC1 may reject an early overlap and accept it later without separation.
-        return true;
+        return TOUCH_RESPONSE_PROFILE.continuousCallbacks();
     }
 
     /**

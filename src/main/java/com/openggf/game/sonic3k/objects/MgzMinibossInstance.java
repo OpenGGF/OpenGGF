@@ -28,6 +28,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -1031,6 +1032,9 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
 
     private static final class CeilingSpireChild extends CeilingDebrisChild
             implements TouchResponseProvider, SpawnCoordinateZeroScalarArgsRewindRecreatable {
+        private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
+                com.openggf.game.profiles.touchresponse.TouchResponseProfile
+                        .singleRegionShieldDeflect());
         private boolean collisionEnabled = true;
 
         private CeilingSpireChild(int x, int y, int mappingFrame) {
@@ -1048,9 +1052,19 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
 
         @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return TOUCH_RESPONSE_PROFILE;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return TOUCH_RESPONSE_PROFILE;
+        }
+
+        @Override
         public int getShieldReactionFlags() {
             // loc_88820: bset #3,shield_reaction(a0).
-            return 0x08;
+            return TOUCH_RESPONSE_PROFILE.shieldReactionFlags();
         }
 
         @Override
@@ -1335,13 +1349,15 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
-            if (services().camera() == null) {
+            var camera = services().camera();
+            if (camera == null) {
                 setDestroyed(true);
                 return;
             }
-            int nextX = services().camera().getX() + 1;
-            services().camera().setX((short) nextX);
-            services().camera().setMinX((short) nextX);
+            int nextX = Math.min((camera.getX() & 0xFFFF) + 1, targetX);
+            camera.setX((short) nextX);
+            camera.setMinX((short) nextX);
+            camera.setMaxX((short) nextX);
             if (nextX >= targetX) {
                 setDestroyed(true);
             }

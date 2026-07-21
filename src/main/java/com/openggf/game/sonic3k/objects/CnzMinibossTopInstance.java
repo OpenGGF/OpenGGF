@@ -115,6 +115,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     private String diagnosticLastMainBranch = "none";
     private boolean diagnosticHitBaseThisFrame;
     private boolean diagnosticPlayerBounceThisFrame;
+    private boolean nativeP2BounceUsesPreUpdateSolidPosition;
     private boolean diagnosticArenaImpactThisFrame;
     private int diagnosticArenaImpactX;
     private int diagnosticArenaImpactY;
@@ -229,9 +230,18 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         return routine;
     }
 
+    boolean retainsParentForTest(CnzMinibossInstance expected) {
+        return boss == expected;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         diagnosticCurrentFrameCounter = frameCounter;
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        if (nativeP2BounceUsesPreUpdateSolidPosition
+                && nativeP2 != null && nativeP2.getYSpeed() >= 0) {
+            nativeP2BounceUsesPreUpdateSolidPosition = false;
+        }
         resetTraceFrameFlags();
         // Arena collision seam is still driven by forceArenaCollisionForTest —
         // run it before the state machine so the Task-7 contract (attachBossForTest
@@ -513,10 +523,9 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
      *       logic against {@code $240}.</li>
      * </ul>
      *
-     * <p>The engine does not yet wire up real tile-collision probes,
-     * the player-bounce cooperative check, or the miniboss-base
-     * hit-detection against {@code CNZMiniboss_BaseRange}. The
-     * minimal faithful model preserves the ROM's arena edges —
+     * <p>The engine wires the tile probes, native P1/P2 cooperative bounce,
+     * and miniboss-base hit detection through the shared terrain, player-query,
+     * and boss-state paths. The arena fallback preserves the ROM's edges —
      * {@code $3200}/{@code $3380} on X and {@code $240}/{@code $380}
      * on Y — and reverses the relevant velocity whenever the next-frame
      * position would cross one of them. Horizontal arena-edge bounces
@@ -541,6 +550,9 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         // when the parent has entered CNZMiniboss_BossDefeated
         // (sonic3k.asm:145053-145057, 145190-145199).
         diagnosticLastMainBranch = "parent_destroyed";
+        CnzMinibossBlockExplosionControllerChild controller = spawnChild(
+                () -> new CnzMinibossBlockExplosionControllerChild(motion.x, motion.y));
+        controller.dispatchCreation();
         setDestroyed(true);
         recordTraceBranchIfNotable();
     }
@@ -585,7 +597,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
             }
         }
 
-        if (checkPlayerBounce(player)) {
+        if (checkNativePlayerBounce(player)) {
             diagnosticLastMainBranch = "player_bounce";
             diagnosticPlayerBounceThisFrame = true;
             motion.yVel = (short) -motion.yVel;
@@ -687,11 +699,21 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     private boolean checkPlayerBounce(PlayableEntity player) {
+        return checkPlayerBounce(player, false);
+    }
+
+    private boolean checkPlayerBounce(PlayableEntity player, boolean projectPendingMovement) {
         if (player == null || player.getYSpeed() >= 0 || motion.yVel <= 0 || !player.getRolling()) {
             return false;
         }
-        int dx = (player.getCentreX() & 0xFFFF) - motion.x;
-        int dy = (player.getCentreY() & 0xFFFF) - motion.y;
+        int playerX = player.getCentreX() & 0xFFFF;
+        int playerY = player.getCentreY() & 0xFFFF;
+        if (projectPendingMovement) {
+            playerX = (playerX + (player.getXSpeed() >> 8)) & 0xFFFF;
+            playerY = (playerY + (player.getYSpeed() >> 8)) & 0xFFFF;
+        }
+        int dx = playerX - motion.x;
+        int dy = playerY - motion.y;
         if (Math.abs(dx) > PLAYER_BOUNCE_HALF_SIZE
                 || Math.abs(dy - PLAYER_BOUNCE_Y_OFFSET) > PLAYER_BOUNCE_HALF_SIZE) {
             return false;
@@ -702,6 +724,26 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         }
         return (player.getYSpeed() < 0 && motion.yVel > 0)
                 || (player.getYSpeed() > 0 && motion.yVel < 0);
+    }
+
+    private boolean checkNativePlayerBounce(PlayableEntity player) {
+        // CNZMinibossTop_CheckPlayerBounce probes Player_1 first, then the
+        // single native Player_2 slot when P1 did not rebound the top.
+        if (checkPlayerBounce(player)) {
+            return true;
+        }
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        boolean nativeP2Bounce = nativeP2 != null && nativeP2 != player
+                && checkPlayerBounce(nativeP2, true);
+        if (nativeP2Bounce) {
+            // The native top SST performs SolidObjectFull before the bounce
+            // probe. Its following P2 checkpoint still sees the top's prior
+            // publication; the folded engine checkpoint otherwise samples
+            // the already-advanced upward position.
+            nativeP2BounceUsesPreUpdateSolidPosition = true;
+            return true;
+        }
+        return false;
     }
 
     private boolean isTerrainHit(TerrainCheckResult result) {
@@ -756,8 +798,9 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         diagnosticArenaImpactThisFrame = true;
         diagnosticArenaImpactX = worldX;
         diagnosticArenaImpactY = worldY;
-        spawnChild(() -> new S3kBossExplosionChild(worldX, worldY));
-        services().playSfx(Sonic3kSfx.EXPLODE.id);
+        CnzMinibossBlockExplosionControllerChild controller =
+                spawnChild(() -> new CnzMinibossBlockExplosionControllerChild(worldX, worldY));
+        controller.dispatchCreation();
         S3kCnzEventWriteSupport.queueArenaChunkDestruction(
                 services(), worldX, worldY);
     }
@@ -813,6 +856,15 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     @Override
     public boolean isSolidFor(PlayableEntity player) {
         return routine == ROUTINE_MAIN && !isDestroyed();
+    }
+
+    @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        if (!nativeP2BounceUsesPreUpdateSolidPosition) {
+            return false;
+        }
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        return player == nativeP2;
     }
 
     @Override

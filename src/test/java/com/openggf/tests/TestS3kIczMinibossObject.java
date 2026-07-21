@@ -4,6 +4,9 @@ import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -447,8 +450,17 @@ class TestS3kIczMinibossObject {
             flow.update(frame, player);
         }
 
+        // Obj_EndSignControl's installation call returns before Obj_Wait starts.
+        // Calls 2-120 perform 119 WAIT_FADE decrements; call 121 runs cleanup.
+        assertColorWord(palettes[1], 1, 0x0000);
+        flow.update(121, player);
+
         assertColorWord(palettes[1], 1, 0x0EEE);
         assertColorWord(palettes[1], 15, 0x0CCC);
+        assertEquals(S3kPaletteOwners.ICZ_MINIBOSS,
+                services.paletteOwnershipRegistry.ownerAt(PaletteSurface.NORMAL, 1, 0));
+        assertEquals(S3kPaletteOwners.ICZ_MINIBOSS,
+                services.paletteOwnershipRegistry.ownerAt(PaletteSurface.NORMAL, 1, 15));
     }
 
     @Test
@@ -598,6 +610,7 @@ class TestS3kIczMinibossObject {
     private static final class RecordingServices extends StubObjectServices {
         private final Camera camera = new Camera();
         private final GameStateManager gameState = new GameStateManager();
+        private final PaletteOwnershipRegistry paletteOwnershipRegistry = new PaletteOwnershipRegistry();
         private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
         private final ObjectManager objectManager;
         private Level currentLevel;
@@ -642,6 +655,11 @@ class TestS3kIczMinibossObject {
         @Override
         public Rom rom() {
             return rom;
+        }
+
+        @Override
+        public PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() {
+            return paletteOwnershipRegistry;
         }
 
         @Override
