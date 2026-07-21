@@ -7,6 +7,16 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestOscillationManagerSnapshot {
 
     @Test
+    void titleCardSuppressionCanBeConsumedBeforeExternalAdvancePolicy() {
+        OscillationManager.reset();
+        OscillationManager.suppressNextFrames(1);
+
+        assertTrue(OscillationManager.consumeSuppressedUpdate(12));
+        assertEquals(0, OscillationManager.snapshot().suppressedUpdates());
+        assertFalse(OscillationManager.consumeSuppressedUpdate(13));
+    }
+
+    @Test
     void romTableByteOffsetsIncludeTheLeadingControlWord() {
         OscillationManager.reset();
         OscillationSnapshot base = OscillationManager.snapshot();

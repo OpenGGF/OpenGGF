@@ -146,6 +146,18 @@ public final class OscillationManager {
         suppressedUpdates = Math.max(0, n);
     }
 
+    /** Consumes an armed suppression before an external advance policy is evaluated. */
+    public static boolean consumeSuppressedUpdate(int frameCounter) {
+        if (suppressedUpdates <= 0) {
+            return false;
+        }
+        if (frameCounter != lastFrame) {
+            lastFrame = frameCounter;
+            suppressedUpdates--;
+        }
+        return true;
+    }
+
     /** Advances the inherited table for the destination act's transition dispatch. */
     public static void advanceForSeamlessTransition() {
         int savedLastFrame = lastFrame;
@@ -160,12 +172,10 @@ public final class OscillationManager {
         if (frameCounter == lastFrame) {
             return;
         }
-        lastFrame = frameCounter;
-
-        if (suppressedUpdates > 0) {
-            suppressedUpdates--;
+        if (consumeSuppressedUpdate(frameCounter)) {
             return;
         }
+        lastFrame = frameCounter;
 
         for (int i = 0; i < OSC_COUNT; i++) {
             int bit = OSC_COUNT - 1 - i;

@@ -14,6 +14,9 @@ final class LevelFrameRuntimeUpdater {
     }
 
     void advanceGlobalOscillation() {
+        if (OscillationManager.consumeSuppressedUpdate(levelManager.frameCounter)) {
+            return;
+        }
         int featureZone = levelManager.getFeatureZoneId();
         int featureAct = levelManager.getFeatureActId();
         if (levelManager.zoneFeatureProvider != null

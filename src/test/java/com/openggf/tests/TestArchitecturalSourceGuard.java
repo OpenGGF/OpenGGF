@@ -773,6 +773,11 @@ class TestArchitecturalSourceGuard {
                 "Title-card oscillator suppression belongs to OscillationManager");
         assertTrue(gameLoop.contains("OscillationManager.suppressNextFrames(1)"),
                 "GameLoop should arm the oscillator-owned one-shot suppression directly");
+        String frameUpdater = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelFrameRuntimeUpdater.java")));
+        assertTrue(frameUpdater.indexOf("consumeSuppressedUpdate(")
+                        < frameUpdater.indexOf("shouldAdvanceGlobalOscillation("),
+                "Oscillator-owned suppression must be consumed before zone advance policy");
         assertTrue(!levelManager.contains("persistentRespawnStateForNextObjectReset"),
                 "Pending bonus-return respawn ownership belongs to LevelCheckpointCoordinator");
         assertTrue(checkpointCoordinator.contains("pendingPersistentRespawn"),
