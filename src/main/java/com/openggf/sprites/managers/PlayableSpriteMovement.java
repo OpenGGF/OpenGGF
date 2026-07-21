@@ -1441,6 +1441,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.getSecondaryAbility() == SecondaryAbility.FLY) {
 			return false;
 		}
+
+		// ROM: Knuckles glide (Knux_Test_For_Glide, sonic3k.asm:32539-32586) is a
+		// SEPARATE routine from Sonic_ShieldMoves. Unlike Sonic_FireShield it has
+		// NO invincibility/shield suppression -- sonic3k.asm:23412-23413 (the
+		// btst Status_Invincible gate) lives inside the Sonic-only path, so glide
+		// activates on any qualifying jump re-press even while Knuckles is
+		// star-invincible. Handle it before the Sonic shield/super/invincibility
+		// gates below; the Super/emerald transform is handled upstream in
+		// tryActivateSuperFromAirAbility (ROM Knux_Test_For_Glide loc_1785E).
+		if (sprite.getSecondaryAbility() == SecondaryAbility.GLIDE) {
+			activateGlide();
+			return true;
+		}
 		boolean hasElemental = capabilityRules.elementalShieldsEnabled();
 		boolean hasInsta = capabilityRules.instaShieldEnabled();
 		if (!hasElemental && !hasInsta) {
@@ -1488,13 +1501,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				activateInstaShield();
 				return true;
 			}
-		}
-
-		// ROM (sonic3k.asm:32539-32586): Knuckles glide activation
-		// Activates regardless of shield — shields provide passive protection only
-		if (sprite.getSecondaryAbility() == SecondaryAbility.GLIDE) {
-			activateGlide();
-			return true;
 		}
 
 		return false;
