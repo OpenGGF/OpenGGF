@@ -2380,6 +2380,17 @@ public class LevelManager {
     }
 
     public void spawnLostRingsAfterCurrentFrame(AbstractPlayableSprite player, int frameCounter) {
+        queueLostRingSpawn(player, frameCounter);
+    }
+
+    public void spawnLostRingsOnNextLevelFrame(AbstractPlayableSprite player) {
+        // processPendingLostRingSpawns increments frameCounter before testing
+        // the target. Using current+1 therefore leaves the owner pending for
+        // that update and materializes it on the following object pass.
+        queueLostRingSpawn(player, frameCounter + 1);
+    }
+
+    private void queueLostRingSpawn(AbstractPlayableSprite player, int scheduledFrame) {
         if (player == null || ringManager == null) {
             return;
         }
@@ -2414,7 +2425,7 @@ public class LevelManager {
             slotsFullyReserved = true;
         }
         pendingLostRingSpawns.add(new PendingLostRingSpawn(
-                player, count, player.getCentreX(), player.getCentreY(), frameCounter,
+                player, count, player.getCentreX(), player.getCentreY(), scheduledFrame,
                 preallocatedSlots, slotsFullyReserved));
     }
 

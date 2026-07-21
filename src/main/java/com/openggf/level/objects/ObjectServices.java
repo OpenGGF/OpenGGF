@@ -106,6 +106,14 @@ public interface ObjectServices {
         spawnLostRings(player, frameCounter);
     }
 
+    /**
+     * Queues a lost-ring owner whose native SST slot does not execute until
+     * the next level-frame object pass.
+     */
+    default void spawnLostRingsOnNextLevelFrame(PlayableEntity player) {
+        spawnLostRingsAfterCurrentFrame(player, 0);
+    }
+
     /** Returns the runtime-owned ROM-accurate pseudo-random number generator. */
     GameRng rng();
 
