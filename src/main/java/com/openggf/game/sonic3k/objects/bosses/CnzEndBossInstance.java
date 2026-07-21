@@ -24,6 +24,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.Palette;
@@ -48,6 +49,8 @@ import java.io.IOException;
  */
 public final class CnzEndBossInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
+            com.openggf.game.profiles.touchresponse.TouchResponseProfile.standardEnemy(true));
     private static final int START_CAMERA_X_MIN = 0x4660;
     private static final int START_CAMERA_X_MAX = 0x4860;
     private static final int STORED_BOUND_BASE = 0x4760;
@@ -493,6 +496,16 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         // renderer's top-left bounds for this 0x80-by-0x28 body, so publish the
         // native centre explicitly instead of shifting the hit box up-left.
         return new TouchRegion[] { new TouchRegion(centreX, centreY, getCollisionFlags()) };
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

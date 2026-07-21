@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -19,6 +20,8 @@ import java.util.List;
 /** ROM child {@code loc_6E82C}, the released magnet head. */
 final class CnzEndBossMagnetChild extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
+            com.openggf.game.profiles.touchresponse.TouchResponseProfile.standardEnemy(true));
     private final CnzEndBossInstance boss;
     private int centreX;
     private int centreY;
@@ -204,6 +207,10 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
     @Override public int getCollisionProperty() { return 0; }
     @Override public TouchRegion[] getMultiTouchRegions() {
         return new TouchRegion[] { new TouchRegion(centreX, centreY, getCollisionFlags()) };
+    }
+    @Override public TouchResponseProfile getTouchResponseProfile() { return TOUCH_RESPONSE_PROFILE; }
+    @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
     @Override public int getPriorityBucket() { return 5; }
 

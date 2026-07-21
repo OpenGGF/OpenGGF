@@ -75,17 +75,23 @@ public record TouchResponseProfile(
     }
 
     public static TouchResponseProfile standardEnemy() {
+        return standardEnemy(false);
+    }
+
+    public static TouchResponseProfile standardEnemy(boolean multiRegionSource) {
         return new TouchResponseProfile(
                 TouchCategoryDecodeMode.NORMAL,
                 false,
                 true,
-                false,
+                multiRegionSource,
                 TouchShieldDeflectCapability.NONE,
                 0,
                 false,
                 TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
                 TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
-                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+                multiRegionSource
+                        ? TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
+                        : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
     }
 
     public static TouchResponseProfile singleRegionContinuousCallbacks() {
