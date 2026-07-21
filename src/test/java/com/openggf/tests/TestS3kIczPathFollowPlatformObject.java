@@ -269,9 +269,18 @@ class TestS3kIczPathFollowPlatformObject {
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
             terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(anyInt(), anyInt(), anyInt()))
-                    .thenReturn(new TerrainCheckResult(8, (byte) 0x20, 0));
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0xE2, 0));
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(1, (byte) 0, 0));
 
             platform.update(16, player);
+        }
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(8, (byte) 0x20, 0));
+
+            platform.update(17, player);
         }
 
         int xBeforeWallStop = platform.getX();
@@ -281,12 +290,14 @@ class TestS3kIczPathFollowPlatformObject {
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(new TerrainCheckResult(-5, (byte) 0, 0));
 
-            platform.update(17, player);
+            platform.update(18, player);
         }
 
         assertEquals(0x0A, platform.getRoutineByteForTesting());
         assertEquals(xBeforeWallStop - 4, platform.getX());
         assertEquals(0, platform.getXVelocityForTesting());
+        assertEquals(0x44, platform.getXSubpixelForTesting(),
+                "loc_8A154 corrects x_pos and x_vel without clearing x_sub");
         assertTrue(platform.getYVelocityForTesting() > 0);
     }
 

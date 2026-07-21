@@ -47906,3 +47906,21 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:187437-187452,41011-41044`).
 - The focused platform suites pass with the fresh-landing baseline contract
   pinned alongside its movement behavior.
+
+## 2026-07-22 - ICZ falling-wall fraction advances physics frontier
+
+- Commands: focused `TestS3kIczPathFollowPlatformObject` and
+  `TestS3kIcz1PathFollowPlatformHeadless`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f9504 to f10128; animation remains at
+  f10132.** Total errors fell from 4,294 to 4,250: physics from 3,148 to 3,104
+  and animation remains at 1,146.
+- Root: when ObjB0's falling path detects a wall, native `loc_8A154` adds the
+  signed wall distance to the integer `x_pos` word and clears only `x_vel`.
+  The engine also cleared `x_sub`. Integer positions initially stayed equal,
+  hiding the lost `$34` fraction until a later `$F40F/$0BD3` diagonal slope
+  step crossed opposite X/Y pixel boundaries and displaced the rider by
+  `(-1,+1)`. The wall stop now preserves the fractional accumulator
+  (`docs/skdisasm/sonic3k.asm:187631-187644`).
+- The focused platform suites pass with a nonzero-subpixel wall-stop regression
+  that verifies position correction and velocity clear without fraction loss.

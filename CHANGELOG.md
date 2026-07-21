@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ path-follow platforms now preserve `x_sub` when their falling path hits a wall; native `loc_8A154` corrects only `x_pos` and clears `x_vel`. This prevents a delayed diagonal-slope rider offset and advances ICZ complete-run physics from frame 9504 to 10128.
 - Fix: fresh ICZ path-follow platform landings now seed continued carry from the post-move object X; the saved pre-move `d4` is consumed only by an already-standing `SolidObjectFull` path. ICZ complete-run physics advances from frame 9126 to 9504 and animation from frame 9206 to 10132.
 - Fix: ICZ path-follow platforms now request `Fast_V_scroll_flag` from the newly established standing contact after `SolidObjectFull`, so the camera observes a first landing in the same object pass. ICZ complete-run physics advances from frame 9125 to 9126.
 - Fix: ICZ path-follow platforms now keep their native standing/pushing latch identity on the live SST instance while their dynamic spawn coordinates move, allowing no-contact passes to clear `Status_Push` instead of leaking stale keys. ICZ complete-run physics advances from frame 9039 to 9125 and animation from frame 9040 to 9206.

@@ -317,7 +317,6 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     private void stopFallingAgainstWall(int wallDistance) {
         x += wallDistance;
         xVel = 0;
-        xSub = 0;
     }
 
     private void spawnRevealedSpring() {
@@ -509,6 +508,10 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
 
     public int getYVelocityForTesting() {
         return yVel;
+    }
+
+    public int getXSubpixelForTesting() {
+        return xSub;
     }
 
     public int getMappingFrameForTesting() {
