@@ -51,8 +51,9 @@ class TestGameplayInputFilterReplay {
                 new FadeManager(), new GameRng(GameRng.Flavour.S1_S2),
                 new DefaultSolidExecutionRegistry());
         level = mock(LevelManager.class);
+        TerrainCollisionManager terrain = mock(TerrainCollisionManager.class);
         gameplay.attachLevelManagers(new WaterSystem(), new ParallaxManager(),
-                mock(TerrainCollisionManager.class), mock(CollisionSystem.class), sprites, level);
+                terrain, new CollisionSystem(terrain), sprites, level);
         GameplayInputFilterAccess.install(gameplay, raw -> PlayerInputState.of(
                 raw.heldMask() & ~(AbstractPlayableSprite.INPUT_LEFT
                         | AbstractPlayableSprite.INPUT_RIGHT),

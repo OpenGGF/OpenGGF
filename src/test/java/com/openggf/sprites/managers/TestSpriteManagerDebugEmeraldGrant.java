@@ -66,11 +66,12 @@ class TestSpriteManagerDebugEmeraldGrant {
                 new DefaultSolidExecutionRegistry(),
                 null,
                 AudioManager.getInstance());
+        TerrainCollisionManager terrain = mock(TerrainCollisionManager.class);
         mode.attachLevelManagers(
                 new WaterSystem(),
                 new ParallaxManager(),
-                mock(TerrainCollisionManager.class),
-                mock(CollisionSystem.class),
+                terrain,
+                new CollisionSystem(terrain),
                 spriteManager,
                 mock(LevelManager.class));
         mode.attachSharedRegistries(
@@ -79,7 +80,7 @@ class TestSpriteManagerDebugEmeraldGrant {
                 new AnimatedTileChannelGraph(),
                 new SpecialRenderEffectRegistry(),
                 new AdvancedRenderModeController(),
-                mock(ZoneLayoutMutationPipeline.class));
+                new ZoneLayoutMutationPipeline());
     }
 
     @AfterEach

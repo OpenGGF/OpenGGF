@@ -24,6 +24,7 @@ import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
+import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.game.render.AdvancedRenderFrameState;
 import com.openggf.game.render.AdvancedRenderMode;
 import com.openggf.game.render.AdvancedRenderModeContext;
@@ -357,6 +358,8 @@ class TestGameplayModeContextRewindRegistry {
         when(levelManager.getGameModule()).thenReturn(module);
         when(levelManager.getCurrentZone()).thenReturn(0, 1);
         when(levelManager.levelRewindSnapshottable()).thenReturn(new LevelTestSnapshot());
+        when(levelManager.levelTilemapRewindSnapshottable())
+                .thenReturn(new LevelTilemapTestSnapshot());
 
         ctx.registerLevelAdapters(levelManager);
         CompositeSnapshot stockSnapshot = ctx.getRewindRegistry().capture();
@@ -547,6 +550,13 @@ class TestGameplayModeContextRewindRegistry {
             return new LevelSnapshot(0, null, null, null, 0);
         }
         @Override public void restore(LevelSnapshot snapshot) { }
+    }
+
+    private static final class LevelTilemapTestSnapshot
+            implements RewindSnapshottable<LevelTilemapSnapshot> {
+        @Override public String key() { return "level-tilemap"; }
+        @Override public LevelTilemapSnapshot capture() { return LevelTilemapSnapshot.invalid(); }
+        @Override public void restore(LevelTilemapSnapshot snapshot) { }
     }
 
     private static final class IntSnapshot implements RewindSnapshottable<Integer> {

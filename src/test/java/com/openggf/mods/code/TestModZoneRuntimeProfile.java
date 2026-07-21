@@ -361,7 +361,7 @@ class TestModZoneRuntimeProfile {
         SpriteManager sprites = new SpriteManager();
         ParallaxManager parallax = new ParallaxManager();
         TerrainCollisionManager terrain = mock(TerrainCollisionManager.class);
-        CollisionSystem collision = mock(CollisionSystem.class);
+        CollisionSystem collision = new CollisionSystem(terrain);
         WaterSystem water = new WaterSystem();
         gameplay.attachGameplayManagers(camera, new TimerManager(), new GameStateManager(),
                 new FadeManager(), new GameRng(GameRng.Flavour.S3K),
