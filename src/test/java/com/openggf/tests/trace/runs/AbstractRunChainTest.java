@@ -261,34 +261,28 @@ abstract class AbstractRunChainTest {
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
                 assertReturnBoundary(plans, i, runDir);
-                // Attach the return comparator at the already-consumed frame index WITHOUT
-                // re-seeking, so recording-frame index and BK2 cursor stay in lockstep and
-                // no already-run frame is replayed a second time. framesConsumed differs by
-                // interior kind (see the cursor-handling note above): a pre-seeked SS
-                // interior's single fall-through frame consumed the return segment's frame 0
-                // (framesConsumed == 1), while a live-cursor bonus interior lands the cursor
-                // exactly on returnOffset with no return-segment frame yet consumed
-                // (framesConsumed == 0). The bonus case relies on GameLoop advancing the
-                // shared cursor across its exit-fade hold frames (updateBonusStageMode's
-                // freeze branch) so the cursor tracks the recorded post-catch tail.
-                int framesConsumed = playback.getCursorFrame() - returnOffset;
-                if (framesConsumed < 0) {
-                    // The engine's interior exit consumed fewer BK2 rows than the
-                    // recording: its bonus exit-hold/fade is shorter than the ROM's
-                    // post-catch BONUS_STAGE tail (the machine holds the caught player
-                    // ~150 frames before the mode flips; see the exit-fade cursor
-                    // advance in GameLoop.updateBonusStageMode). GameLoop's exit-fade
-                    // cursor advance narrows but does not fully close that gap yet, so
-                    // the cursor can still land short of returnOffset. Re-anchor to
-                    // returnOffset and compare the return level from frame 0 rather
-                    // than feeding a negative cursor into the comparator. TODO
-                    // (docs/TRACE_FRONTIER_LOG.md): match the ROM gumball exit-hold
-                    // duration so this branch is never taken and framesConsumed == 0.
-                    playback.startSession(movie, returnOffset);
-                    framesConsumed = 0;
+                // Attach the return comparator, keying on interior kind.
+                if (uncomparedInterior) {
+                    // Pre-seeked SS interior: its single title-card-exit fall-through
+                    // frame consumed the return segment's frame 0 (framesConsumed == 1)
+                    // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
+                    int framesConsumed = playback.getCursorFrame() - returnOffset;
+                    activeComparator = attachReturnedLevelSegment(
+                            probe, plans.get(i + 1), fixture, framesConsumed);
+                } else {
+                    // OPTION B (bonus interior): the engine's bonus-exit sequence is
+                    // shorter than the recorded post-catch BONUS_STAGE tail, and ~80 of
+                    // those recorded rows are the ROM's clearRAM/level-reload frames that
+                    // the engine performs synchronously (loadZoneAndAct is one frame) --
+                    // so the cursor cannot organically reach returnOffset (see
+                    // docs/S3K_KNOWN_DISCREPANCIES.md, gumball exit choreography). The
+                    // BONUS->LEVEL title-card-exit fall-through already ran the return
+                    // segment's frame 0. Re-anchor the cursor to returnOffset+1 and
+                    // compare the return level from frame 1. Input-cursor alignment only.
+                    playback.startSession(movie, returnOffset + 1);
+                    activeComparator = attachReturnedLevelSegment(
+                            probe, plans.get(i + 1), fixture, 1);
                 }
-                activeComparator = attachReturnedLevelSegment(
-                        probe, plans.get(i + 1), fixture, framesConsumed);
                 i++;
             } else {
                 // This segment is a LEVEL; its exit is an ENTRY boundary into the
@@ -320,6 +314,10 @@ abstract class AbstractRunChainTest {
      * the interior's expected mode, re-seeks the BK2 cursor to the interior's
      * offset, then attaches the interior comparator (or leaves it detached for a
      * special stage -- see {@link #attachInteriorComparator}).
+     *
+     * <p>The comparator's initial cursor for each interior kind (compared-bonus
+     * ENTRY = 1, special = uncompared) follows the COMPARATOR FRAME BASE contract
+     * on {@link #attachReturnedLevelSegment}.
      */
     private LiveTraceComparator handoffIntoInterior(
             GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
@@ -358,7 +356,9 @@ abstract class AbstractRunChainTest {
             waitForMode(loop, target, stepCap);
             primeInteriorEntryRngFromMetadata(interior);
             // The fall-through frame already reproduced recorded frame 0 (the grounded
-            // entry tick) and advanced the cursor to offset+1, so compare from frame 1.
+            // entry tick) and advanced the cursor to offset+1, so compare from frame 1
+            // (the compared-bonus-ENTRY case of the COMPARATOR FRAME BASE contract on
+            // attachReturnedLevelSegment: initialCursor == cursorFrame - offset == 1).
             LiveTraceComparator comparator = new LiveTraceComparator(
                     interior.trace(), ToleranceConfig.DEFAULT, 1, fixture::sprite);
             probe.setDelegate(comparator);
@@ -448,6 +448,38 @@ abstract class AbstractRunChainTest {
      * index and the BK2 cursor in lockstep, so the already-run leading frame(s)
      * are neither replayed a second time (which would double-apply a moving
      * gameplay-unlock frame like {@code seg3_ehz1} frame 0) nor skipped.
+     *
+     * <p><b>COMPARATOR FRAME BASE — authoritative contract for the whole chain.</b>
+     * Every {@link LiveTraceComparator} in this class is constructed with an
+     * <em>initial cursor</em> (its third argument) equal to the trace-frame index
+     * of the FIRST frame the segment will compare. That index equals
+     * {@code framesConsumed}: the number of leading segment frames the transition
+     * machinery already ran — and faithfully reproduced from the segment's OWN
+     * recorded input — before the comparator attached. Equivalently, the BK2 input
+     * cursor at attach time sits at {@code segmentOffset + framesConsumed}, so the
+     * comparator's initial cursor and {@code (cursorFrame - segmentOffset)} are
+     * ALWAYS equal at attach. Keeping them in lockstep is what prevents replaying
+     * an already-run frame (double-applying a moving gameplay-unlock frame) or
+     * skipping one — the recurring off-by-one that corrupts a return segment's
+     * frame-0 physics. Values by transition kind (each cited at its site; do not
+     * re-derive them — reference this block):
+     * <ul>
+     *   <li><b>0</b> — plain level entry, a level RETURN via
+     *       {@link #attachLevelSegment}, and a compared bonus interior's body
+     *       start ({@link #attachInteriorComparator}): the comparator attaches
+     *       before the segment's frame 0 and the cursor is (re-)seeked to
+     *       {@code segmentOffset}.</li>
+     *   <li><b>1</b> — a compared bonus interior ENTRY
+     *       ({@link #handoffIntoInterior}'s bonus/Option-B branch): the single
+     *       title-card-exit fall-through frame already reproduced the interior's
+     *       recorded frame 0, so comparison starts at frame 1.</li>
+     *   <li><b>1</b> — a level RETURN after a special-stage (uncompared) interior
+     *       (this method): the pre-seeked frozen cursor's one fall-through frame
+     *       consumed the return segment's frame 0.</li>
+     *   <li><b>0</b> — a level RETURN after a bonus interior (this method): the
+     *       live cursor lands exactly on {@code returnOffset} with no return frame
+     *       yet consumed (the negative-cursor re-anchor guard also yields 0).</li>
+     * </ul>
      */
     private LiveTraceComparator attachReturnedLevelSegment(
             BoundaryProbe probe, SegmentPlan level, LiveEngineFixture fixture, int framesConsumed) {
@@ -484,6 +516,10 @@ abstract class AbstractRunChainTest {
      * {@link LiveTraceComparator}; a {@code special_stage} interior returns
      * {@code null} so the boundary probe forwards to no comparator across the
      * whole special-stage phase (the "VBLANK-only" advance-uncompared phase).
+     *
+     * <p>The bonus comparator's initial cursor is {@code 0} (compares from the
+     * interior's body frame 0); see the COMPARATOR FRAME BASE contract on
+     * {@link #attachReturnedLevelSegment}.
      */
     protected LiveTraceComparator attachInteriorComparator(SegmentPlan interior, LiveEngineFixture fixture) {
         if (TraceRunReplayWalker.isUncomparedInterior(interior.segment())) {

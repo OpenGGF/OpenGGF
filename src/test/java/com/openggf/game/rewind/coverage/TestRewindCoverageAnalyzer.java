@@ -159,6 +159,31 @@ class TestRewindCoverageAnalyzer {
                 "inner-class concrete child TurboSpikerBadnikInstance$TurboSpikerShellChild must be enumerated");
     }
 
+    /**
+     * POSITIVE (helper-state lane): a {@code final} helper field whose type is a
+     * name-matching all-scalar plain-state holder is captured by
+     * {@code PlainStateHolderCodec}, so it must NOT be flagged as a helper-state gap.
+     */
+    @Test
+    void nameMatchingAllScalarHelperIsNotFlaggedAsHelperState() throws Exception {
+        Field field = HelperStateFixture.class.getDeclaredField("captured");
+        assertFalse(isUncapturedHelperState(field),
+                "final field of a name-matching all-scalar plain-state holder is codec-captured "
+                        + "and must NOT be a helper-state gap");
+    }
+
+    /**
+     * NEGATIVE (helper-state lane): a {@code final} helper field whose type neither
+     * matches the plain-state-holder name suffix list nor implements {@code RewindStateful},
+     * yet carries a mutable boolean, has no codec — so it IS a helper-state gap.
+     */
+    @Test
+    void uncodecedMutableHelperIsFlaggedAsHelperState() throws Exception {
+        Field field = HelperStateFixture.class.getDeclaredField("gate");
+        assertTrue(isUncapturedHelperState(field),
+                "final field of an un-codec'd helper carrying mutable state must be a helper-state gap");
+    }
+
     private static boolean isUncapturedFinalScalar(Field field) throws Exception {
         Method method = RewindCoverageAnalyzer.class.getDeclaredMethod("isUncapturedFinalScalar", Field.class);
         method.setAccessible(true);
@@ -171,6 +196,12 @@ class TestRewindCoverageAnalyzer {
         return (boolean) method.invoke(null, field);
     }
 
+    private static boolean isUncapturedHelperState(Field field) throws Exception {
+        Method method = RewindCoverageAnalyzer.class.getDeclaredMethod("isUncapturedHelperState", Field.class);
+        method.setAccessible(true);
+        return (boolean) method.invoke(null, field);
+    }
+
     private static final class FinalScalarFixture {
         @SuppressWarnings("unused")
         private final int phase = 1;
@@ -179,5 +210,32 @@ class TestRewindCoverageAnalyzer {
     private static final class ObjectRefFixture {
         @SuppressWarnings("unused")
         private ObjectInstance target;
+    }
+
+    /** Holds one codec-captured helper and one un-codec'd mutable helper. */
+    private static final class HelperStateFixture {
+        @SuppressWarnings("unused")
+        private final CapturedState captured = new CapturedState();
+        @SuppressWarnings("unused")
+        private final FixtureGate gate = new FixtureGate();
+    }
+
+    /**
+     * Name ends with "State" and every field is scalar → matched by the plain-state-holder
+     * name heuristic AND fully codec'd → {@code RewindCodecs.codecFor} returns a codec.
+     */
+    private static final class CapturedState {
+        @SuppressWarnings("unused")
+        private int phase;
+    }
+
+    /**
+     * Name misses the plain-state-holder suffix list and the class does not implement
+     * {@code RewindStateful} → no codec — yet it carries a mutable boolean, the exact
+     * "helper silently knocked off the in-place path" bug class.
+     */
+    private static final class FixtureGate {
+        @SuppressWarnings("unused")
+        private boolean armed;
     }
 }

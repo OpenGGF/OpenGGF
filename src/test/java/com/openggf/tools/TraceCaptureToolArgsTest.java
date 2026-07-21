@@ -1,8 +1,14 @@
 package com.openggf.tools;
 
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.trace.TraceRunManifest;
+import com.openggf.trace.catalog.TraceEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.nio.file.Path;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class TraceCaptureToolArgsTest {
@@ -29,5 +35,32 @@ class TraceCaptureToolArgsTest {
         TraceCaptureTool.Args a = TraceCaptureTool.Args.parse(
                 new String[]{"--trace", "aiz1", "--no-ghosts"});
         assertFalse(a.showGhosts());
+    }
+
+    @Test
+    void multiSegmentRunIsRejectedAsNotCapturable() {
+        TraceRunManifest manifest = new TraceRunManifest(
+                TraceRunManifest.SUPPORTED_RUN_SCHEMA, "s3k", "run_aiz_gumball",
+                "shared.bk2", null, null, List.of(), List.of());
+        TraceEntry run = new TraceEntry(
+                Path.of("traces", "s3k", "runs", "run_aiz_gumball"),
+                "s3k", 0, 0, 6, 500, 0, null, null, null,
+                Path.of("traces", "s3k", "runs", "run_aiz_gumball"), manifest);
+        assertTrue(run.isRun(), "fixture must be a run entry");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> TraceCaptureTool.requireCapturable(run));
+        assertTrue(ex.getMessage().contains("not capturable"),
+                "rejection must explain runs are not capturable: " + ex.getMessage());
+    }
+
+    @Test
+    void ordinarySingleSegmentTraceIsCapturable() {
+        TraceEntry level = new TraceEntry(
+                Path.of("traces", "s3k", "aiz1"),
+                "s3k", 0, 0, 10, 0, 0, null, null, null);
+        assertFalse(level.isRun(), "fixture must be an ordinary trace");
+        assertSame(level, TraceCaptureTool.requireCapturable(level),
+                "an ordinary trace must pass the capturable guard unchanged");
     }
 }
