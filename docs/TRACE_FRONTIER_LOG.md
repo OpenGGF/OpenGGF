@@ -47832,3 +47832,21 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:35751-35875`).
 - The focused 25-case ring-manager suite passes, including a two-step
   `$0001 -> $FFFF` wraparound regression.
+
+## 2026-07-22 - ICZ path-follow platform edge advances physics frontier
+
+- Commands: focused `TestS3kIczPathFollowPlatformObject` and
+  `TestS3kIcz1PathFollowPlatformHeadless`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f8411 to f9039; animation remains at
+  f9040.** Total errors fell from 4,456 to 4,455: physics from 3,268 to 3,267
+  and animation remains at 1,188.
+- Root: at f8411 Sonic's centre is exactly `$2B` pixels right of the stationary
+  ObjB0 path-follow platform. `loc_89F64` passes `d1=$2B` to S3K
+  `SolidObjectFull`, whose unsigned `bhi` broad-X rejection accepts equality.
+  The platform inherited the engine's exclusive default and omitted the
+  one-frame native `Status_Push` contact despite otherwise identical position
+  and velocity. ObjB0 now declares the verified inclusive full-solid boundary
+  (`docs/skdisasm/sonic3k.asm:187437-187458,41380-41444`).
+- The focused path-follow platform suites pass, with the `$2B` boundary
+  contract pinned alongside the existing subtype, movement, and rewind tests.

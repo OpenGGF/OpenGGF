@@ -63,6 +63,8 @@ class TestS3kIczPathFollowPlatformObject {
         assertEquals(0, platform.getMappingFrameForTesting());
         assertEquals(Sonic3kObjectArtKeys.ICZ_PLATFORMS, platform.getArtKeyForTesting());
         assertEquals(5, platform.getPriorityBucket());
+        assertTrue(platform.usesInclusiveRightEdge(),
+                "SolidObjectFull includes the exact +$2B right edge");
     }
 
     @Test

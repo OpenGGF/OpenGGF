@@ -118,6 +118,12 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObjectFull's unsigned broad-X gate branches on BHI, so +d1 is contact.
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
