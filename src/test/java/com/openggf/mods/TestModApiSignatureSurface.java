@@ -31,15 +31,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestModApiSignatureSurface {
     // Reconciled surface lineage: 1.1.0 -> 1.2.0 (additive) -> 2.0.0 (breaking)
     // -> 2.1.0 (additive) -> 2.2.0 (additive) -> 2.3.0 (additive)
-    // -> 2.4.0 (additive). 1.1 through 2.3 are closed historical baselines;
-    // 2.4 is the published surface.
+    // -> 2.4.0 (additive) -> 2.5.0 (additive). 1.1 through 2.3 are closed
+    // historical baselines;
+    // 2.4 is a closed historical baseline; 2.5 is the published surface.
     private static final String BASELINE_11 = "mods/mod-api-signatures-1.1.txt";
     private static final String BASELINE_12 = "mods/mod-api-signatures-1.2.txt";
     private static final String BASELINE_20 = "mods/mod-api-signatures-2.0.txt";
     private static final String BASELINE_21 = "mods/mod-api-signatures-2.1.txt";
     private static final String BASELINE_22 = "mods/mod-api-signatures-2.2.txt";
     private static final String BASELINE_23 = "mods/mod-api-signatures-2.3.txt";
-    private static final String PUBLISHED_BASELINE = "mods/mod-api-signatures-2.4.txt";
+    private static final String BASELINE_24 = "mods/mod-api-signatures-2.4.txt";
+    private static final String PUBLISHED_BASELINE = "mods/mod-api-signatures-2.5.txt";
     private static final String PLATFORM_ALLOWLIST = "mods/mod-api-platform-allowlist.txt";
     private static final SemanticVersion VERSION_11 = new SemanticVersion(1, 1, 0);
     private static final SemanticVersion VERSION_12 = new SemanticVersion(1, 2, 0);
@@ -47,7 +49,8 @@ class TestModApiSignatureSurface {
     private static final SemanticVersion VERSION_21 = new SemanticVersion(2, 1, 0);
     private static final SemanticVersion VERSION_22 = new SemanticVersion(2, 2, 0);
     private static final SemanticVersion VERSION_23 = new SemanticVersion(2, 3, 0);
-    private static final SemanticVersion PUBLISHED_VERSION = new SemanticVersion(2, 4, 0);
+    private static final SemanticVersion VERSION_24 = new SemanticVersion(2, 4, 0);
+    private static final SemanticVersion PUBLISHED_VERSION = new SemanticVersion(2, 5, 0);
 
     @Retention(RetentionPolicy.CLASS)
     @Target(ElementType.TYPE_USE)
@@ -110,18 +113,56 @@ class TestModApiSignatureSurface {
     }
 
     @Test
-    void publishedTwoFourSurfaceIsPinnedToTheCurrentSurface() throws Exception {
-        List<String> published = readBaseline(PUBLISHED_BASELINE);
+    void publishedTwoFourSurfaceRemainsFrozen() throws Exception {
+        List<String> published = readBaseline(BASELINE_24);
         assertNotNull(published, "Missing published 2.4 API snapshot");
         assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
                 "Published API baseline must be unique, sorted canonical UTF-8 text");
         assertEquals(896, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
                 "Published API 2.4 baseline engine-type count is frozen");
         assertEquals(17_453, published.size(), "Published API 2.4 baseline is frozen");
+    }
+
+    @Test
+    void publishedTwoFiveSurfaceIsPinnedAndAdditive() throws Exception {
+        List<String> historical = readBaseline(BASELINE_24);
+        List<String> published = readBaseline(PUBLISHED_BASELINE);
+        Set<String> historicalSet = Set.copyOf(historical);
+        assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
+                "Published API 2.5 baseline must be unique, sorted canonical UTF-8 text");
         assertEquals(new ArrayList<>(ModApiSignatureSurface.snapshotLines()), published,
-                "Review 2.4 API changes and refresh the full published snapshot (mod-api-signatures-2.4.txt)");
+                "Review current additions and publish them under mod-api-signatures-2.5.txt");
         assertEquals(PUBLISHED_VERSION, ModApiVersion.CURRENT,
-                "The published Mod API version must match the frozen 2.4 baseline");
+                "The published Mod API version must match the 2.5 baseline");
+        assertEquals(921, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
+                "Published API 2.5 engine-type count is pinned");
+        assertEquals(18_171, published.size(), "Published API 2.5 signature count is pinned");
+        assertEquals(718, published.stream().filter(line -> !historicalSet.contains(line)).count(),
+                "Published API 2.5 additive signature count is pinned");
+        assertTrue(ModApiSignatureSurface.baselineViolations(
+                        VERSION_24, historicalSet, PUBLISHED_VERSION,
+                        Set.copyOf(published)).isEmpty(),
+                "2.4 -> 2.5 must be additive with no removals");
+        assertTrue(Set.copyOf(published).containsAll(historical),
+                "The 2.5 surface must retain every frozen 2.4 signature");
+    }
+
+    @Test
+    void postTwoFourRuntimeHelpersDoNotLeakIntoTheCreatorSurface() {
+        Set<String> current = ModApiSignatureSurface.snapshotLines();
+        assertFalse(current.stream().anyMatch(line -> line.startsWith(
+                        "METHOD com.openggf.sprites.playable.PlayableSpriteController ")
+                        && (line.contains(" captureFrameStartState(")
+                        || line.contains(" restoreFrameStartState(")
+                        || line.contains("AtFrameStart(")
+                        || line.contains("ObjectControlledSolidContact")
+                        || line.contains("SpringHandoff(")
+                        || line.contains(" publishRawAnimation(")
+                        || line.contains(" publishLandingAnimationWrite("))),
+                "Playable controller frame/contact handoff helpers are engine internals");
+        assertFalse(current.contains(
+                        "METHOD com.openggf.game.ObjectArtProvider public  void processRuntimeArtQueue()"),
+                "Runtime decompression pumping is an engine capability, not creator API");
     }
 
     @Test
@@ -260,7 +301,7 @@ class TestModApiSignatureSurface {
                 "Historical API 2.3 baseline engine-type count is immutable");
         assertEquals(17_323, historicalTwoThree.size(), "Historical API 2.3 baseline is immutable");
 
-        List<String> published = readBaseline(PUBLISHED_BASELINE);
+        List<String> published = readBaseline(BASELINE_24);
         assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
                 "Published 2.4 baseline must be unique, sorted canonical UTF-8 text");
         assertEquals(896, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
@@ -268,7 +309,7 @@ class TestModApiSignatureSurface {
         assertEquals(17_453, published.size(), "Published API 2.4 baseline is frozen");
 
         List<String> additiveViolations = ModApiSignatureSurface.baselineViolations(
-                VERSION_23, Set.copyOf(historicalTwoThree), PUBLISHED_VERSION,
+                VERSION_23, Set.copyOf(historicalTwoThree), VERSION_24,
                 Set.copyOf(published));
         assertTrue(additiveViolations.isEmpty(),
                 () -> "2.3 -> 2.4 must be a clean additive minor bump:\n"
@@ -327,13 +368,6 @@ class TestModApiSignatureSurface {
                         "METHOD com.openggf.game.save.SaveSessionContext public  com.openggf.game.save.SaveSessionContext withLaunchTeam(com.openggf.game.GameplayLaunchTeam)"),
                 "Launch-only save-context substitution must remain behind an engine access bridge");
 
-        // The published 2.4 baseline is frozen against the current surface: no removals,
-        // no unreviewed additions. Any drift from here fails and must be reviewed and
-        // refrozen (a same-major minor bump for additions, a new major for removals).
-        Set<String> current = ModApiSignatureSurface.snapshotLines();
-        List<String> publishedViolations = ModApiSignatureSurface.baselineViolations(
-                PUBLISHED_VERSION, Set.copyOf(published), ModApiVersion.CURRENT, current);
-        assertTrue(publishedViolations.isEmpty(), () -> String.join("\n", publishedViolations));
     }
 
     private List<String> readBaseline(String resource) throws IOException {

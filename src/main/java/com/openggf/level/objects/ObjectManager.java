@@ -1467,7 +1467,7 @@ public class ObjectManager {
         return occupancy;
     }
 
-    public List<TransitionSstOccupant> snapshotPersistentDynamicObjectsForTransition() {
+    public List<TransitionSstOccupant> snapshotPersistentTransitionOccupants() {
         List<TransitionSstOccupant> snapshot = new ArrayList<>();
         for (ObjectInstance instance : dynamicObjects) {
             if (instance == null || objectCallbacks.call(instance, instance::isDestroyed)
@@ -1491,6 +1491,16 @@ public class ObjectManager {
                             ? objectCallbacks.call(instance, object::getSlotIndex) : -1));
         }
         return snapshot;
+    }
+
+    /**
+     * Historical Mod API 2.4 view of persistent transition objects.
+     * Slot-aware engine transitions use {@link #snapshotPersistentTransitionOccupants()}.
+     */
+    public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
+        return snapshotPersistentTransitionOccupants().stream()
+                .map(TransitionSstOccupant::identity)
+                .toList();
     }
 
     /**

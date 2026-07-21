@@ -95,7 +95,7 @@ final class LevelActTransitionExecutor {
                 : request.objectSurvivalPolicy()
                         == SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST
                         ? levelManager.objectManager.snapshotAllLiveSstObjectsForTransition()
-                        : levelManager.objectManager.snapshotPersistentDynamicObjectsForTransition();
+                        : levelManager.objectManager.snapshotPersistentTransitionOccupants();
 
         int postOffsetCameraX = cam.getX() + request.cameraOffsetX();
         levelManager.rebuildManagersForActTransition(cam, carriedOccupants, request,

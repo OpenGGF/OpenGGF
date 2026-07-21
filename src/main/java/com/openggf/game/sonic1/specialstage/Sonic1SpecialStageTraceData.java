@@ -95,7 +95,7 @@ public final class Sonic1SpecialStageTraceData {
 
     private static List<Sonic1SpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {
         List<Sonic1SpecialStageTraceFrame> frames = new ArrayList<>();
-        try (BufferedReader reader = TraceData.openTraceReader(csvPath)) {
+        try (BufferedReader reader = com.openggf.trace.TraceDataInternalAccess.openTraceReader(csvPath)) {
             String line = reader.readLine(); // skip header
             if (line == null) return frames;
             while ((line = reader.readLine()) != null) {

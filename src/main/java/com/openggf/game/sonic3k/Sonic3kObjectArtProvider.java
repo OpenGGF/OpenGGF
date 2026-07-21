@@ -51,6 +51,7 @@ import java.util.logging.Logger;
  * after the level has been loaded.
  */
 public class Sonic3kObjectArtProvider implements ObjectArtProvider,
+        com.openggf.game.internal.RuntimeObjectArtQueue,
         com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kObjectArtProvider.class.getName());
     private static final List<String> FBZ_EXIT_ART_KEYS = List.of(

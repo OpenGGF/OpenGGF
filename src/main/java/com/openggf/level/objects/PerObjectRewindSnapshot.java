@@ -328,6 +328,7 @@ public record PerObjectRewindSnapshot(
             boolean objectOrderGracePushBypassThisFrame,
             int pendingGroundedFollowNudge,
             int pendingGroundedFollowNudgeFrame,
+            boolean aizIntroDormantMarkerPrimed,
             boolean suppressNextLevelEventNormalMovement,
             boolean catchUpUsesRomVisibleLevelFrameCounter,
             boolean levelEventDormantMarkerReleasePending,
@@ -355,7 +356,56 @@ public record PerObjectRewindSnapshot(
             int flightTimer,
             int catchUpTargetX,
             int catchUpTargetY
-    ) {}
+    ) {
+        /** Binary-compatible constructor for the Mod API 2.4 snapshot shape. */
+        public SidekickCpuRewindExtra(
+                com.openggf.sprites.playable.SidekickCpuController.State state,
+                int deadFallingRomCpuRoutine, int despawnCounter, int frameCounter,
+                int controlCounter, int controller2Held, int controller2Logical,
+                boolean inputUp, boolean inputDown, boolean inputLeft, boolean inputRight,
+                boolean inputJump, boolean inputJumpPress, boolean jumpingFlag,
+                int minXBound, int maxXBound, int minYBound, int maxYBound,
+                int lastInteractObjectId, boolean normalDespawnLastRenderFlagOffscreen,
+                boolean normalDespawnFreshRenderEntryDelayConsumed, int diagnosticS3kInteractWord,
+                int normalFrameCount, int approachFrameCount, int sidekickCount,
+                int normalPushingGraceFrames, boolean suppressNextAirbornePushFollowSteering,
+                boolean releasedUnderwaterPushConsumed, boolean objectOrderGracePushBypassThisFrame,
+                int pendingGroundedFollowNudge, int pendingGroundedFollowNudgeFrame,
+                boolean aizIntroDormantMarkerPrimed, boolean suppressNextLevelEventNormalMovement,
+                boolean catchUpUsesRomVisibleLevelFrameCounter,
+                boolean levelEventDormantMarkerReleasePending, boolean skipPhysicsThisFrame,
+                boolean deadOnObjectReenteredVisibleWindow,
+                boolean deferredDespawnDeadFallContinuingThisFrame,
+                boolean bootstrapPreludePlacementApplied, boolean cpuFrameCounterFromStoredLevelFrame,
+                int nextCpuFrameCounterOverride, int catchUpFrameCounterOverride,
+                int lastNormalAutoJumpPressFrameCounter, boolean controller2SignedLocked,
+                com.openggf.sprites.playable.SidekickCpuController.NormalStepDiagnostics latestNormalStepDiagnostics,
+                short carryLatchX, short carryLatchY, boolean flyingCarryingFlag,
+                boolean carryParentagePending, int releaseCooldown, boolean mgzCarryIntroAscend,
+                int mgzCarryFlapTimer, boolean mgzReleasedChaseLatched,
+                short mgzReleasedChaseXAccel, short mgzReleasedChaseYAccel,
+                int flightTimer, int catchUpTargetX, int catchUpTargetY) {
+            this(state, deadFallingRomCpuRoutine, despawnCounter, frameCounter, controlCounter,
+                    controller2Held, controller2Logical, inputUp, inputDown, inputLeft, inputRight,
+                    inputJump, inputJumpPress, jumpingFlag, minXBound, maxXBound, minYBound,
+                    maxYBound, lastInteractObjectId, normalDespawnLastRenderFlagOffscreen,
+                    normalDespawnFreshRenderEntryDelayConsumed, diagnosticS3kInteractWord,
+                    normalFrameCount, approachFrameCount, sidekickCount, normalPushingGraceFrames,
+                    suppressNextAirbornePushFollowSteering, releasedUnderwaterPushConsumed,
+                    objectOrderGracePushBypassThisFrame, pendingGroundedFollowNudge,
+                    pendingGroundedFollowNudgeFrame, aizIntroDormantMarkerPrimed,
+                    suppressNextLevelEventNormalMovement, catchUpUsesRomVisibleLevelFrameCounter,
+                    levelEventDormantMarkerReleasePending, skipPhysicsThisFrame,
+                    deadOnObjectReenteredVisibleWindow, deferredDespawnDeadFallContinuingThisFrame,
+                    bootstrapPreludePlacementApplied, cpuFrameCounterFromStoredLevelFrame,
+                    nextCpuFrameCounterOverride, catchUpFrameCounterOverride,
+                    lastNormalAutoJumpPressFrameCounter, controller2SignedLocked, false,
+                    latestNormalStepDiagnostics, carryLatchX, carryLatchY, flyingCarryingFlag,
+                    carryParentagePending, releaseCooldown, mgzCarryIntroAscend, mgzCarryFlapTimer,
+                    mgzReleasedChaseLatched, mgzReleasedChaseXAccel, mgzReleasedChaseYAccel,
+                    flightTimer, catchUpTargetX, catchUpTargetY);
+        }
+    }
 
     /**
      * Mutable gameplay state on AbstractPlayableSprite that AbstractObjectInstance's
@@ -491,9 +541,8 @@ public record PerObjectRewindSnapshot(
         }
 
         /**
-         * Compatibility constructor for the canonical snapshot shape published
-         * immediately before {@code subclassExtra} was added. Snapshots built
-         * through this overload have no playable-subclass payload.
+         * Binary-compatible constructor for the Mod API 2.4 snapshot shape,
+         * before super-state rewind capture was added.
          */
         public PlayerRewindExtra(
                 short xPixel, short yPixel, short xSubpixel, short ySubpixel, int width, int height,
@@ -506,7 +555,7 @@ public record PerObjectRewindSnapshot(
                 boolean preserveRollingOnNextLanding, boolean preserveRollingOnNextRollStop,
                 boolean objectPreservedRollBoostFollowup, boolean objectPreservedRollWallProbe,
                 boolean objectPreservedRollVelocityCarry, boolean tunnelMode, boolean onObject,
-                boolean onObjectAtFrameStart, boolean onObjectAtPreviousFrameStart, boolean pushingAtFrameStart,
+                boolean onObjectAtFrameStart, boolean pushingAtFrameStart,
                 boolean hurtAtFrameStart, boolean hurtRecoveryCompletedThisFrame, int latchedSolidObjectId,
                 int interactSlotIndex, boolean slopeRepelJustSlipped, boolean stickToConvex, boolean sliding,
                 boolean pushing, boolean skidding, int skidDustTimer, boolean fixedSkidDustActive,
@@ -514,7 +563,7 @@ public record PerObjectRewindSnapshot(
                 boolean springing, int springingFrames, boolean dead, boolean drowningDeath, int drownPreDeathTimer,
                 boolean hurt, int deathCountdown, int invulnerableFrames,
                 boolean suppressNextInvulnerabilityDecrement,
-                boolean invulnerabilityDisplayTimerDecrementedThisFrame, int invincibleFrames, boolean spindash,
+                int invincibleFrames, boolean spindash,
                 short spindashCounter, boolean crouching, boolean lookingUp, short lookDelayCounter,
                 int doubleJumpFlag, byte doubleJumpProperty, boolean shield,
                 com.openggf.game.ShieldType shieldType, boolean instaShieldRegistered, boolean speedShoes,
@@ -542,22 +591,21 @@ public record PerObjectRewindSnapshot(
                 com.openggf.sprites.managers.PlayableSpriteAnimation.RewindState animationState,
                 com.openggf.sprites.playable.DrowningController.RewindState drowningState,
                 com.openggf.sprites.playable.TailsCarryController.Snapshot tailsCarryState,
-                com.openggf.sprites.playable.SuperStateController.RewindState superStateState,
                 SidekickCpuRewindExtra sidekickCpuExtra, short[] xHistory, short[] yHistory, short[] inputHistory,
-                byte[] jumpPressHistory, byte[] statusHistory) {
+                byte[] jumpPressHistory, byte[] statusHistory, PlayableSubclassRewindExtra subclassExtra) {
             this(xPixel, yPixel, xSubpixel, ySubpixel, width, height, direction, layer, runningMode, xRadius, yRadius,
                     gSpeed, xSpeed, ySpeed, jump, angle, statusTertiary, loopLowPlane, topSolidBit, lrbSolidBit,
                     prePhysicsAir, prePhysicsAngle, prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
                     prePhysicsCentreX, prePhysicsCentreY, air, rolling, jumping, rollingJump, pinballMode,
                     pinballSpeedLock, preserveRollingOnNextLanding, preserveRollingOnNextRollStop,
                     objectPreservedRollBoostFollowup, objectPreservedRollWallProbe, objectPreservedRollVelocityCarry,
-                    tunnelMode, onObject, onObjectAtFrameStart, onObjectAtPreviousFrameStart, pushingAtFrameStart,
+                    tunnelMode, onObject, onObjectAtFrameStart, false, pushingAtFrameStart,
                     hurtAtFrameStart, hurtRecoveryCompletedThisFrame, latchedSolidObjectId, interactSlotIndex,
                     slopeRepelJustSlipped, stickToConvex, sliding, pushing, skidding, skidDustTimer,
                     fixedSkidDustActive, lastFixedSkidDustTickFrame, wallClimbX, rightWallPenetrationTimer,
                     balanceState, springing, springingFrames, dead, drowningDeath, drownPreDeathTimer, hurt,
                     deathCountdown, invulnerableFrames, suppressNextInvulnerabilityDecrement,
-                    invulnerabilityDisplayTimerDecrementedThisFrame, invincibleFrames, spindash, spindashCounter,
+                    false, invincibleFrames, spindash, spindashCounter,
                     crouching, lookingUp, lookDelayCounter, doubleJumpFlag, doubleJumpProperty, shield, shieldType,
                     instaShieldRegistered, speedShoes, speedShoesRemainingTicks, superSonic, forceInputRight,
                     forcedInputMask, forcedJumpPress, suppressNextJumpPress, deferredObjectControlRelease,
@@ -575,8 +623,8 @@ public record PerObjectRewindSnapshot(
                     preventTailsRespawn, badnikChainCounter, bubbleAnimId, initPhysicsActive,
                     objectMappingFrameControl, mappingFrame, animationId, forcedAnimationId, animationFrameIndex,
                     animationTick, debugMode, movementState, spindashDustState, animationState, drowningState,
-                    tailsCarryState, superStateState, sidekickCpuExtra, xHistory, yHistory, inputHistory,
-                    jumpPressHistory, statusHistory, null);
+                    tailsCarryState, null, sidekickCpuExtra, xHistory, yHistory, inputHistory,
+                    jumpPressHistory, statusHistory, subclassExtra);
         }
 
         /**

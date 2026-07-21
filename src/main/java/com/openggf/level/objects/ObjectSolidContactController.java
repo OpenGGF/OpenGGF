@@ -3305,7 +3305,8 @@ final class ObjectSolidContactController {
         }
 
         Short controlledProjectedXSpeed = expandedObjectControlledCarry
-                ? sprite.getObjectControlledSolidContactProjectedXSpeed(instance)
+                ? com.openggf.sprites.playable.PlayableSpriteInternalAccess
+                        .projectedObjectControlledSolidContactXSpeed(sprite, instance)
                 : null;
         if (expandedObjectControlledCarry && controlledProjectedXSpeed == null) {
             return null;

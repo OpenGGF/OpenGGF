@@ -42,37 +42,8 @@ import java.util.logging.Logger;
 public class GraphicsManager {
 	private static final Logger LOGGER = Logger.getLogger(GraphicsManager.class.getName());
 
-	interface UnderwaterPaletteUploadOps {
-		int createTexture();
-
-		void configureTexture(int textureId);
-
-		void uploadTexture(int textureId, int totalLines, ByteBuffer rgbaBytes);
-	}
-
 	private static final UnderwaterPaletteUploadOps OPEN_GL_UNDERWATER_PALETTE_UPLOAD_OPS =
-			new UnderwaterPaletteUploadOps() {
-				@Override
-				public int createTexture() {
-					return glGenTextures();
-				}
-
-				@Override
-				public void configureTexture(int textureId) {
-					glBindTexture(GL_TEXTURE_2D, textureId);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				}
-
-				@Override
-				public void uploadTexture(int textureId, int totalLines, ByteBuffer rgbaBytes) {
-					glBindTexture(GL_TEXTURE_2D, textureId);
-					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 16, totalLines, 0,
-							GL_RGBA, GL_UNSIGNED_BYTE, rgbaBytes);
-				}
-			};
+			new OpenGlUnderwaterPaletteUploadOps();
 
 	private static GraphicsManager graphicsManager;
 	List<GLCommandable> commands = new ArrayList<>();

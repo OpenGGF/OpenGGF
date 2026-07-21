@@ -5686,6 +5686,7 @@ public class SidekickCpuController {
                 objectOrderGracePushBypassThisFrame,
                 pendingGroundedFollowNudge,
                 pendingGroundedFollowNudgeFrame,
+                false,
                 suppressNextLevelEventNormalMovement,
                 catchUpUsesRomVisibleLevelFrameCounter,
                 levelEventDormantMarkerReleasePending,

@@ -95,7 +95,7 @@ public final class S3kSpecialStageTraceData {
 
     private static List<S3kSpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {
         List<S3kSpecialStageTraceFrame> frames = new ArrayList<>();
-        try (BufferedReader reader = TraceData.openTraceReader(csvPath)) {
+        try (BufferedReader reader = com.openggf.trace.TraceDataInternalAccess.openTraceReader(csvPath)) {
             String line = reader.readLine(); // skip header
             if (line == null) return frames;
             while ((line = reader.readLine()) != null) {

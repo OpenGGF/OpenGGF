@@ -58,7 +58,21 @@ public class CheckpointState implements RespawnState {
             boolean hasS3kRuntimeState,
             byte savedTopSolidBit,
             byte savedLrbSolidBit,
-            boolean hasSolidBits) {}
+            boolean hasSolidBits) {
+        /** Binary-compatible constructor for the Mod API 2.4 snapshot shape. */
+        public RewindState(int lastCheckpointIndex, int savedX, int savedY,
+                int savedCameraX, int savedCameraY, boolean cameraLock,
+                boolean usedForSpecialStage, int savedWaterLevel, int savedWaterRoutine,
+                boolean hasWaterState, int savedCameraMaxY, int savedDynamicResizeRoutine,
+                boolean hasS3kRuntimeState, byte savedTopSolidBit, byte savedLrbSolidBit,
+                boolean hasSolidBits) {
+            this(lastCheckpointIndex, lastCheckpointIndex, savedX, savedY,
+                    savedCameraX, savedCameraY, cameraLock, usedForSpecialStage,
+                    savedWaterLevel, savedWaterRoutine, hasWaterState, savedCameraMaxY,
+                    savedDynamicResizeRoutine, hasS3kRuntimeState, savedTopSolidBit,
+                    savedLrbSolidBit, hasSolidBits);
+        }
+    }
 
     /**
      * Clear checkpoint state (called on level start/change).

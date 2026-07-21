@@ -275,7 +275,7 @@ class TestUnderwaterPaletteUpload {
         };
     }
 
-    private static final class RecordingUnderwaterUploadOps implements GraphicsManager.UnderwaterPaletteUploadOps {
+    private static final class RecordingUnderwaterUploadOps implements UnderwaterPaletteUploadOps {
         private int createCount;
         private int uploadCount;
         private int lastTextureId;

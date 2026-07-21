@@ -8,6 +8,8 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.TilemapGpuRenderer;
 import com.openggf.graphics.TilemapTexture;
+import com.openggf.graphics.TilemapTextureInternalAccess;
+import com.openggf.graphics.TilemapTextureUploadOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
@@ -974,6 +976,24 @@ public class TestIncrementalBgTilemapWindow {
             this.width = width;
             this.height = height;
             this.physical = new byte[width * height * 4];
+            TilemapTextureInternalAccess.setUploadOps(this, new TilemapTextureUploadOps() {
+                @Override public void uploadColumns(int textureId, int destinationColumn, int columnCount,
+                        int heightTiles, ByteBuffer packedRows) {
+                    operationOrder.add("columns");
+                    int packedRowBytes = columnCount * 4;
+                    for (int row = 0; row < heightTiles; row++) {
+                        packedRows.get(physical, (row * width + destinationColumn) * 4, packedRowBytes);
+                    }
+                    packedRows.rewind();
+                }
+
+                @Override public void uploadRows(int textureId, int destinationRow, int widthTiles,
+                        int rowCount, ByteBuffer contiguousRows) {
+                    operationOrder.add("rows");
+                    contiguousRows.get(physical, destinationRow * width * 4, widthTiles * rowCount * 4);
+                    contiguousRows.rewind();
+                }
+            });
         }
 
         @Override public boolean hasStorage(int widthTiles, int heightTiles) {
@@ -984,23 +1004,6 @@ public class TestIncrementalBgTilemapWindow {
             if (hasStorage(widthTiles, heightTiles)) {
                 System.arraycopy(data, 0, physical, 0, physical.length);
             }
-        }
-
-        @Override protected void uploadSubImage(int destinationColumn, int columnCount,
-                int heightTiles, ByteBuffer packedRows) {
-            operationOrder.add("columns");
-            int packedRowBytes = columnCount * 4;
-            for (int row = 0; row < heightTiles; row++) {
-                packedRows.get(physical, (row * width + destinationColumn) * 4, packedRowBytes);
-            }
-            packedRows.rewind();
-        }
-
-        @Override protected void uploadRowsSubImage(int destinationRow, int widthTiles,
-                int rowCount, ByteBuffer contiguousRows) {
-            operationOrder.add("rows");
-            contiguousRows.get(physical, destinationRow * width * 4, widthTiles * rowCount * 4);
-            contiguousRows.rewind();
         }
 
         private void clearOperationOrder() {
@@ -1025,33 +1028,35 @@ public class TestIncrementalBgTilemapWindow {
         private RecordingTilemapTexture(int width, int height) {
             this.width = width;
             this.height = height;
+            TilemapTextureInternalAccess.setUploadOps(this, new TilemapTextureUploadOps() {
+                @Override public void uploadColumns(int textureId, int destinationColumn, int columnCount,
+                        int heightTiles, ByteBuffer packedRows) {
+                    calls++;
+                    lastDestination = destinationColumn;
+                    lastColumnCount = columnCount;
+                    lastHeight = heightTiles;
+                    lastBuffer = packedRows;
+                    lastPayload = new byte[packedRows.remaining()];
+                    packedRows.get(lastPayload);
+                    packedRows.rewind();
+                }
+
+                @Override public void uploadRows(int textureId, int destinationRow, int widthTiles,
+                        int rowCount, ByteBuffer contiguousRows) {
+                    lastRowDestination = destinationRow;
+                    lastRowWidth = widthTiles;
+                    lastRowCount = rowCount;
+                    lastRowPayload = new byte[contiguousRows.remaining()];
+                    contiguousRows.get(lastRowPayload);
+                    contiguousRows.rewind();
+                }
+            });
         }
 
         @Override public boolean hasStorage(int widthTiles, int heightTiles) {
             return widthTiles == width && heightTiles == height;
         }
 
-        @Override protected void uploadSubImage(int destinationColumn, int columnCount,
-                int heightTiles, ByteBuffer packedRows) {
-            calls++;
-            lastDestination = destinationColumn;
-            lastColumnCount = columnCount;
-            lastHeight = heightTiles;
-            lastBuffer = packedRows;
-            lastPayload = new byte[packedRows.remaining()];
-            packedRows.get(lastPayload);
-            packedRows.rewind();
-        }
-
-        @Override protected void uploadRowsSubImage(int destinationRow, int widthTiles,
-                int rowCount, ByteBuffer contiguousRows) {
-            lastRowDestination = destinationRow;
-            lastRowWidth = widthTiles;
-            lastRowCount = rowCount;
-            lastRowPayload = new byte[contiguousRows.remaining()];
-            contiguousRows.get(lastRowPayload);
-            contiguousRows.rewind();
-        }
     }
 
     // ── Stubs ───────────────────────────────────────────────────────────────

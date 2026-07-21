@@ -25,13 +25,6 @@ import java.util.List;
 public interface ObjectArtProvider {
 
     /**
-     * Processes one frame of provider-owned runtime art work.
-     * Implementations with no queued runtime decompression remain no-ops.
-     */
-    default void processRuntimeArtQueue() {
-    }
-
-    /**
      * Loads object art for the specified zone.
      *
      * @param zoneIndex the zone index (-1 for default/non-zone-specific)

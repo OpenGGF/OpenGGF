@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Mod API 2.5.0 publishes the accumulated runtime surface without breaking 2.4
+  creator binaries.** All frozen 2.4 constructors, record components, protected
+  members, and return descriptors are restored; accidental frame-handoff,
+  runtime-art, trace-reader, event, and GPU-upload helpers are narrowed behind
+  engine-internal seams. The reviewed 2.5 snapshot contains 921 recursive engine
+  types and 18,171 canonical signatures: 718 additions and zero removals from the
+  immutable 2.4 baseline. Exact signature, Javadoc, SDK, and sample-mod guards pin
+  the publication.
 - **Level loading now delegates transient handoffs to their runtime owners:**
   title-card object passes arm `OscillationManager` directly, keeping the gate
   in its rewind snapshot, while `LevelCheckpointCoordinator` owns the queued

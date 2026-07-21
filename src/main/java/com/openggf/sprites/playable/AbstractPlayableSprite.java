@@ -628,6 +628,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean objectControlSuppressesMovement = false;
         /** Monotonic discriminator for object-control acquisition/replacement. */
         protected int objectControlGeneration = 0;
+        /** @deprecated Compatibility alias retained for the frozen Mod API 2.4 ABI. */
+        @Deprecated
+        @com.openggf.game.rewind.RewindDeferred(
+                reason = "active carried solid contact needs stable object identity snapshot")
+        protected ObjectInstance mgzTopPlatformCarrySolidContactObject;
+        /** @deprecated Compatibility alias retained for the frozen Mod API 2.4 ABI. */
+        @Deprecated protected boolean mgzTopPlatformSpringHandoffPending;
+        /** @deprecated Compatibility alias retained for the frozen Mod API 2.4 ABI. */
+        @Deprecated protected int mgzTopPlatformSpringHandoffXVel;
+        /** @deprecated Compatibility alias retained for the frozen Mod API 2.4 ABI. */
+        @Deprecated protected int mgzTopPlatformSpringHandoffYVel;
         /**
          * When true, airborne terrain collision is suppressed for this frame.
          * Set by zone feature providers (e.g., HCZ vertical water tunnels) to
@@ -1142,6 +1153,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.renderVFlip = extra.renderVFlip();
                 controller.restoreSpringHandoff(extra.mgzTopPlatformSpringHandoffPending(),
                                 extra.mgzTopPlatformSpringHandoffXVel(), extra.mgzTopPlatformSpringHandoffYVel());
+                this.mgzTopPlatformSpringHandoffPending = extra.mgzTopPlatformSpringHandoffPending();
+                this.mgzTopPlatformSpringHandoffXVel = extra.mgzTopPlatformSpringHandoffXVel();
+                this.mgzTopPlatformSpringHandoffYVel = extra.mgzTopPlatformSpringHandoffYVel();
                 this.jumpInputPressed = extra.jumpInputPressed();
                 this.jumpInputJustPressed = extra.jumpInputJustPressed();
                 this.jumpInputPressedPreviousFrame = extra.jumpInputPressedPreviousFrame();
@@ -3202,7 +3216,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 controller.notifyObjectControlledSolidContact(candidate, contact);
         }
 
-        public Short getObjectControlledSolidContactProjectedXSpeed(ObjectInstance candidate) {
+        Short getObjectControlledSolidContactProjectedXSpeed(ObjectInstance candidate) {
                 return controller.projectedObjectControlledSolidContactXSpeed(candidate);
         }
 
@@ -3211,6 +3225,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setMgzTopPlatformCarrySolidContactObject(ObjectInstance instance) {
+                mgzTopPlatformCarrySolidContactObject = instance;
                 controller.setObjectControlledSolidContactOwner(instance);
         }
 
@@ -3219,22 +3234,34 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void recordMgzTopPlatformSpringHandoff(int xVel, int yVel) {
+                if (mgzTopPlatformCarrySolidContactObject != null) {
+                        mgzTopPlatformSpringHandoffPending = true;
+                        mgzTopPlatformSpringHandoffXVel = xVel;
+                        mgzTopPlatformSpringHandoffYVel = yVel;
+                }
                 controller.recordSpringHandoff(xVel, yVel);
         }
 
         public boolean hasMgzTopPlatformSpringHandoffPending() {
-                return controller.isSpringHandoffPending();
+                return mgzTopPlatformSpringHandoffPending || controller.isSpringHandoffPending();
         }
 
         public int getMgzTopPlatformSpringHandoffXVel() {
-                return controller.getSpringHandoffXVelocity();
+                return mgzTopPlatformSpringHandoffPending
+                                ? mgzTopPlatformSpringHandoffXVel
+                                : controller.getSpringHandoffXVelocity();
         }
 
         public int getMgzTopPlatformSpringHandoffYVel() {
-                return controller.getSpringHandoffYVelocity();
+                return mgzTopPlatformSpringHandoffPending
+                                ? mgzTopPlatformSpringHandoffYVel
+                                : controller.getSpringHandoffYVelocity();
         }
 
         public void clearMgzTopPlatformSpringHandoff() {
+                mgzTopPlatformSpringHandoffPending = false;
+                mgzTopPlatformSpringHandoffXVel = 0;
+                mgzTopPlatformSpringHandoffYVel = 0;
                 controller.clearSpringHandoff();
         }
 

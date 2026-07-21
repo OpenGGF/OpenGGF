@@ -5,7 +5,7 @@ public final class ModApiVersion {
      * Published compiled-mod compatibility version.
      *
      * <p>The reconciled surface lineage is a single chain 1.1.0 -&gt; 1.2.0 -&gt;
-     * 2.0.0 -&gt; 2.1.0 -&gt; 2.2.0 -&gt; 2.3.0 -&gt; 2.4.0:
+     * 2.0.0 -&gt; 2.1.0 -&gt; 2.2.0 -&gt; 2.3.0 -&gt; 2.4.0 -&gt; 2.5.0:
      *
      * <ul>
      *   <li><b>1.1.0</b> ({@code mod-api-signatures-1.1.txt}) — closed historical
@@ -46,18 +46,24 @@ public final class ModApiVersion {
      *       bump over 2.3.0 that publishes exclusive game-start insertion and
      *       destination-scoped launch-team, deterministic input-filter, and HUD
      *       presentation policies. No existing 2.3 signature was removed or
-     *       changed. This is the currently published surface.</li>
+     *       changed. Retained as a closed historical baseline.</li>
+     *   <li><b>2.5.0</b> ({@code mod-api-signatures-2.5.txt}) — an additive minor
+     *       bump over 2.4.0 that publishes the reviewed runtime evolution while
+     *       preserving every frozen 2.4 constructor and member through compatibility
+     *       overloads and aliases. Engine-only controller and runtime-art queue
+     *       helpers remain outside the creator surface. This is the currently
+     *       published surface.</li>
      * </ul>
      *
      * <p>The compatibility checks verify the full chain rather than collapsing it:
      * 1.1 -&gt; 1.2 is asserted additive, 1.2 -&gt; 2.0 is asserted to be a
-     * declared breaking transition, and 2.0 -&gt; 2.1 -&gt; 2.2 -&gt; 2.3 -&gt; 2.4 is asserted additive
+     * declared breaking transition, and 2.0 -&gt; 2.1 -&gt; 2.2 -&gt; 2.3 -&gt; 2.4 -&gt; 2.5 is asserted additive
      * at each step, so each step's changes are never silently absorbed into an
      * undocumented jump. See {@code docs/architecture/mod-api-compatibility.md}
-     * ("Mod API 2.0.0 breaking transition" and the 2.1.0 through 2.4.0 additive
+     * ("Mod API 2.0.0 breaking transition" and the 2.1.0 through 2.5.0 additive
      * bump sections) for the migration notes.
      */
-    public static final SemanticVersion CURRENT = SemanticVersion.parse("2.4.0");
+    public static final SemanticVersion CURRENT = SemanticVersion.parse("2.5.0");
 
     private ModApiVersion() {
     }

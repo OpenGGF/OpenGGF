@@ -4,16 +4,17 @@ This page is the detailed additive-content reference. New creators should start 
 the [handbook index](index.md), which orders the six quickstarts by effort and links
 the format, trust, identity, troubleshooting, and sample references.
 
-OpenGGF Mod API 2.4 supports restart-loaded music packs, code-backed objects,
+OpenGGF Mod API 2.5 supports restart-loaded music packs, code-backed objects,
 baked art, complete Sonic 2 and Sonic 3&K zones, playable characters, and no-ROM
 standalone games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The public mod API is version `2.4.0` (a deliberate breaking bump from `1.1.0` via
+The public mod API is version `2.5.0` (a deliberate breaking bump from `1.1.0` via
 the additive `1.2.0` step, followed by the additive `2.1.0` ROM-art intake step and
 the additive `2.2.0` playable-subclass rewind capture hooks, the additive `2.3.0`
-host-adapted S3K zone surface, and the additive `2.4.0` gameplay-policy surface; see
+host-adapted S3K zone surface, the additive `2.4.0` gameplay-policy surface, and the
+additive `2.5.0` compatibility publication; see
 `docs/architecture/mod-api-compatibility.md`). Mods must declare a `2.x` engine range
 such as `>=2.0.0 <3.0.0`. Start with the guide for the contribution you are building:
 

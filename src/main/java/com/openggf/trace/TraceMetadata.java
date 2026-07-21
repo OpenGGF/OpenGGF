@@ -2,7 +2,6 @@ package com.openggf.trace;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -14,44 +13,37 @@ import java.util.List;
  */
 @com.openggf.game.ModApi
 public record TraceMetadata(
-    @JsonProperty("game") String game,
-    @JsonProperty("zone") String zone,
-    @JsonProperty("zone_id") Integer zoneId,
-    @JsonProperty("act") int act,
-    @JsonProperty("bk2_frame_offset") int bk2FrameOffset,
-    @JsonProperty("ring_floor_check_counter_phase") Integer ringFloorCheckCounterPhase,
-    @JsonProperty("trace_frame_count") int traceFrameCount,
-    @JsonProperty("start_x") String startXHex,
-    @JsonProperty("start_y") String startYHex,
-    @JsonProperty("recording_date") String recordingDate,
-    @JsonProperty("lua_script_version") String luaScriptVersion,
-    @JsonProperty("trace_schema") Integer traceSchema,
-    @JsonProperty("csv_version") Integer csvVersion,
-    @JsonProperty("trace_profile") String traceProfile,
-    @JsonProperty("bizhawk_version") String bizhawkVersion,
-    @JsonProperty("genesis_core") String genesisCore,
-    @JsonProperty("aux_schema_extras") List<String> auxSchemaExtras,
-    @JsonProperty("rom_zone_id") Integer romZoneId,
-    @JsonProperty("route") String route,
-    @JsonProperty("source_bk2") String sourceBk2,
-    @JsonProperty("rom_checksum") String romChecksum,
-    @JsonProperty("notes") String notes,
-    @JsonProperty("characters") List<String> characters,
-    @JsonProperty("main_character") String mainCharacter,
-    @JsonProperty("sidekicks") List<String> sidekicks,
-    @JsonProperty("pre_trace_osc_frames") Integer preTraceOscFrames,
-    @JsonProperty("rng_seed") String rngSeedHex,
-    @JsonProperty("trace_type") String traceType,
-    @JsonProperty("input_source") String inputSource,
-    @JsonProperty("credits_demo_index") Integer creditsDemoIndex,
-    @JsonProperty("credits_demo_slug") String creditsDemoSlug,
-    @JsonProperty("special_stage_index") Integer specialStageIndex,
-    @JsonProperty("run_id") String runId,
-    @JsonProperty("segment_index") Integer segmentIndex,
-    @JsonProperty("bonus_stage_type") String bonusStageType,
-    @JsonProperty("fresh_load") Boolean freshLoad,
-    @JsonProperty("v_int_run_count") Integer vIntRunCount
+    String game, String zone, Integer zoneId, int act, int bk2FrameOffset,
+    Integer ringFloorCheckCounterPhase, int traceFrameCount, String startXHex,
+    String startYHex, String recordingDate, String luaScriptVersion, Integer traceSchema,
+    Integer csvVersion, String traceProfile, String bizhawkVersion, String genesisCore,
+    List<String> auxSchemaExtras, Integer romZoneId, String route, String sourceBk2,
+    String romChecksum, String notes, List<String> characters, String mainCharacter,
+    List<String> sidekicks, Integer preTraceOscFrames, String rngSeedHex, String traceType,
+    String inputSource, Integer creditsDemoIndex, String creditsDemoSlug,
+    Integer specialStageIndex, String runId, Integer segmentIndex, String bonusStageType,
+    Boolean freshLoad, Integer vIntRunCount
 ) {
+
+    /** Binary-compatible constructor for the Mod API 2.4 metadata shape. */
+    public TraceMetadata(String game, String zone, Integer zoneId, int act,
+            int bk2FrameOffset, int traceFrameCount, String startXHex, String startYHex,
+            String recordingDate, String luaScriptVersion, Integer traceSchema,
+            Integer csvVersion, String traceProfile, String bizhawkVersion,
+            String genesisCore, List<String> auxSchemaExtras, Integer romZoneId,
+            String route, String sourceBk2, String romChecksum, String notes,
+            List<String> characters, String mainCharacter, List<String> sidekicks,
+            Integer preTraceOscFrames, String rngSeedHex, String traceType,
+            String inputSource, Integer creditsDemoIndex, String creditsDemoSlug,
+            Integer specialStageIndex) {
+        this(game, zone, zoneId, act, bk2FrameOffset, null, traceFrameCount,
+                startXHex, startYHex, recordingDate, luaScriptVersion, traceSchema,
+                csvVersion, traceProfile, bizhawkVersion, genesisCore, auxSchemaExtras,
+                romZoneId, route, sourceBk2, romChecksum, notes, characters, mainCharacter,
+                sidekicks, preTraceOscFrames, rngSeedHex, traceType, inputSource,
+                creditsDemoIndex, creditsDemoSlug, specialStageIndex, null, null,
+                null, null, null);
+    }
 
     /**
      * Recorder version at which the engine title-card phase began executing

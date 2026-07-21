@@ -1023,6 +1023,7 @@ class TestSidekickCpuControllerCarry {
                 source.objectOrderGracePushBypassThisFrame(),
                 source.pendingGroundedFollowNudge(),
                 source.pendingGroundedFollowNudgeFrame(),
+                source.aizIntroDormantMarkerPrimed(),
                 source.suppressNextLevelEventNormalMovement(),
                 source.catchUpUsesRomVisibleLevelFrameCounter(),
                 source.levelEventDormantMarkerReleasePending(),

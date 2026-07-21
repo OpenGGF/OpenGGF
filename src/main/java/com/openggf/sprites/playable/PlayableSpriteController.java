@@ -187,7 +187,7 @@ public class PlayableSpriteController {
         }
     }
 
-    public void captureFrameStartState() {
+    void captureFrameStartState() {
         onObjectAtPreviousFrameStart = onObjectAtFrameStart;
         onObjectAtFrameStart = sprite.isOnObject();
         pushingAtFrameStart = sprite.getPushing();
@@ -196,7 +196,7 @@ public class PlayableSpriteController {
         hurtRecoveryCompletedThisFrame = false;
     }
 
-    public void restoreFrameStartState(boolean onObject, boolean previousOnObject,
+    void restoreFrameStartState(boolean onObject, boolean previousOnObject,
             boolean pushing, boolean hurt, boolean hurtRecoveryCompleted) {
         onObjectAtFrameStart = onObject;
         onObjectAtPreviousFrameStart = previousOnObject;
@@ -205,15 +205,15 @@ public class PlayableSpriteController {
         hurtRecoveryCompletedThisFrame = hurtRecoveryCompleted;
     }
 
-    public boolean isOnObjectAtFrameStart() { return onObjectAtFrameStart; }
-    public boolean isOnObjectAtPreviousFrameStart() { return onObjectAtPreviousFrameStart; }
-    public boolean isPushingAtFrameStart() { return pushingAtFrameStart; }
-    public boolean isAirAtFrameStart() { return airAtFrameStart; }
-    public boolean isHurtAtFrameStart() { return hurtAtFrameStart; }
-    public boolean isHurtRecoveryCompletedThisFrame() { return hurtRecoveryCompletedThisFrame; }
-    public void markHurtRecoveryCompleted() { hurtRecoveryCompletedThisFrame = true; }
+    boolean isOnObjectAtFrameStart() { return onObjectAtFrameStart; }
+    boolean isOnObjectAtPreviousFrameStart() { return onObjectAtPreviousFrameStart; }
+    boolean isPushingAtFrameStart() { return pushingAtFrameStart; }
+    boolean isAirAtFrameStart() { return airAtFrameStart; }
+    boolean isHurtAtFrameStart() { return hurtAtFrameStart; }
+    boolean isHurtRecoveryCompletedThisFrame() { return hurtRecoveryCompletedThisFrame; }
+    void markHurtRecoveryCompleted() { hurtRecoveryCompletedThisFrame = true; }
 
-    public void publishRunAsPreviousAnimation() {
+    void publishRunAsPreviousAnimation() {
         int animationId = sprite.resolveAnimationId(CanonicalAnimation.RUN);
         if (animationId >= 0) {
             animation.publishPreviousAnimationId(animationId);
@@ -222,21 +222,21 @@ public class PlayableSpriteController {
         }
     }
 
-    public void publishRawAnimation(CanonicalAnimation animation) {
+    void publishRawAnimation(CanonicalAnimation animation) {
         int animationId = sprite.resolveAnimationId(animation);
         if (animationId >= 0) {
             sprite.setAnimationId(animationId);
         }
     }
 
-    public void publishLandingAnimationWrite() {
+    void publishLandingAnimationWrite() {
         GameModule module = sprite.currentGameModule();
         if (module != null && module.getLevelEventProvider() != null) {
             module.getLevelEventProvider().onPlayableLandingAnimationWrite(sprite);
         }
     }
 
-    public boolean allowsObjectControlledSolidContact(ObjectInstance candidate) {
+    boolean allowsObjectControlledSolidContact(ObjectInstance candidate) {
         if (candidate == null || objectControlledSolidContactOwner == null) {
             return false;
         }
@@ -247,7 +247,7 @@ public class PlayableSpriteController {
                 && owner.allowsObjectControlledSolidContact(sprite, candidate);
     }
 
-    public void notifyObjectControlledSolidContact(ObjectInstance candidate, SolidContact contact) {
+    void notifyObjectControlledSolidContact(ObjectInstance candidate, SolidContact contact) {
         if (candidate == null || contact == null) {
             return;
         }
@@ -256,7 +256,7 @@ public class PlayableSpriteController {
         }
     }
 
-    public Short projectedObjectControlledSolidContactXSpeed(ObjectInstance candidate) {
+    Short projectedObjectControlledSolidContactXSpeed(ObjectInstance candidate) {
         if (objectControlledSolidContactOwner instanceof ObjectControlledSolidContactController owner
                 && candidate != null && owner.allowsObjectControlledSolidContact(sprite, candidate)) {
             return owner.projectedSolidContactXSpeed(sprite, candidate);
@@ -264,33 +264,33 @@ public class PlayableSpriteController {
         return null;
     }
 
-    public void notifyObjectControlledSolidContactInvalidated(ObjectInstance candidate) {
+    void notifyObjectControlledSolidContactInvalidated(ObjectInstance candidate) {
         if (candidate != null
                 && objectControlledSolidContactOwner instanceof ObjectControlledSolidContactController owner) {
             owner.onObjectControlledSolidContactInvalidated(sprite, candidate);
         }
     }
 
-    public void setObjectControlledSolidContactOwner(ObjectInstance owner) {
+    void setObjectControlledSolidContactOwner(ObjectInstance owner) {
         objectControlledSolidContactOwner = owner;
         if (owner == null) {
             clearSpringHandoff();
         }
     }
 
-    public void clearObjectControlledSolidContactOwner() {
+    void clearObjectControlledSolidContactOwner() {
         objectControlledSolidContactOwner = null;
     }
 
-    public boolean isObjectControlledSolidContactOwnedBy(ObjectInstance candidate) {
+    boolean isObjectControlledSolidContactOwnedBy(ObjectInstance candidate) {
         return objectControlledSolidContactOwner == candidate;
     }
 
-    public boolean hasObjectControlledSolidContactOwner() {
+    boolean hasObjectControlledSolidContactOwner() {
         return objectControlledSolidContactOwner != null;
     }
 
-    public void recordSpringHandoff(int xVelocity, int yVelocity) {
+    void recordSpringHandoff(int xVelocity, int yVelocity) {
         if (objectControlledSolidContactOwner == null) {
             return;
         }
@@ -299,17 +299,17 @@ public class PlayableSpriteController {
         springHandoffYVelocity = yVelocity;
     }
 
-    public void restoreSpringHandoff(boolean pending, int xVelocity, int yVelocity) {
+    void restoreSpringHandoff(boolean pending, int xVelocity, int yVelocity) {
         springHandoffPending = pending;
         springHandoffXVelocity = xVelocity;
         springHandoffYVelocity = yVelocity;
     }
 
-    public boolean isSpringHandoffPending() { return springHandoffPending; }
-    public int getSpringHandoffXVelocity() { return springHandoffXVelocity; }
-    public int getSpringHandoffYVelocity() { return springHandoffYVelocity; }
+    boolean isSpringHandoffPending() { return springHandoffPending; }
+    int getSpringHandoffXVelocity() { return springHandoffXVelocity; }
+    int getSpringHandoffYVelocity() { return springHandoffYVelocity; }
 
-    public void clearSpringHandoff() {
+    void clearSpringHandoff() {
         springHandoffPending = false;
         springHandoffXVelocity = 0;
         springHandoffYVelocity = 0;
@@ -323,5 +323,16 @@ public class PlayableSpriteController {
             DrowningController.RewindState drowningState,
             TailsCarryController.Snapshot tailsCarryState,
             SuperStateController.RewindState superStateState
-    ) {}
+    ) {
+        /** Binary-compatible constructor for Mod API 2.4 rewind snapshots. */
+        public RewindState(
+                PlayableSpriteMovement.RewindState movementState,
+                SpindashDustController.RewindState spindashDustState,
+                PlayableSpriteAnimation.RewindState animationState,
+                DrowningController.RewindState drowningState,
+                TailsCarryController.Snapshot tailsCarryState) {
+            this(movementState, spindashDustState, animationState, drowningState,
+                    tailsCarryState, null);
+        }
+    }
 }

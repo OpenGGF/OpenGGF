@@ -861,7 +861,7 @@ public class TraceData {
     // Public so other trace-profile loaders (e.g. SpecialStageTraceData,
     // com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData) can
     // reuse gzip-or-plain reader opening without duplicating it.
-    public static BufferedReader openTraceReader(Path path) throws IOException {
+    static BufferedReader openTraceReader(Path path) throws IOException {
         if (path.getFileName().toString().endsWith(".gz")) {
             InputStream input = Files.newInputStream(path);
             try {

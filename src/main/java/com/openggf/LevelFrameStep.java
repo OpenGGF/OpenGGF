@@ -134,7 +134,10 @@ public final class LevelFrameStep {
         // uses this for Queue_Kos_Module workloads whose object routines poll
         // Kos_modules_left on later frames.
         if (context.gameModule().getObjectArtProvider() != null) {
-            context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
+            if (context.gameModule().getObjectArtProvider()
+                    instanceof com.openggf.game.internal.RuntimeObjectArtQueue runtimeQueue) {
+                runtimeQueue.processRuntimeArtQueue();
+            }
         }
 
         // 0. Process dirty regions from MutableLevel (editor mutations).

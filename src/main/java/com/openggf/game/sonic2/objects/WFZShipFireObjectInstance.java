@@ -165,7 +165,8 @@ public class WFZShipFireObjectInstance extends AbstractObjectInstance implements
 
     private int getWfzBgXOffset() {
         if (services().levelEventProvider() instanceof Sonic2LevelEventManager events) {
-            return events.getWfzEvents().getBgXOffset();
+            return com.openggf.game.sonic2.Sonic2LevelEventInternalAccess
+                    .wfzEvents(events).getBgXOffset();
         }
         return services().parallaxManager() != null ? services().parallaxManager().getCameraBgXOffset() : 0;
     }

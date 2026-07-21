@@ -20,5 +20,6 @@ package com.openggf.level.objects;
  * @param rememberedBits {@link java.util.BitSet#toLongArray()} of the remembered set
  * @param stayActiveBits {@link java.util.BitSet#toLongArray()} of the stay-active set
  */
+@com.openggf.game.ModApi
 public record PersistentRespawnState(long[] rememberedBits, long[] stayActiveBits) {
 }

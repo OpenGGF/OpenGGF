@@ -337,6 +337,7 @@ public abstract class SuperStateController {
         }
     }
 
+    @com.openggf.game.ModApi
     public record RewindState(
             SuperState state,
             int ringDrainCounter,

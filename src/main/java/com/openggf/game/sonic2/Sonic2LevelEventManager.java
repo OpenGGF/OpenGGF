@@ -255,7 +255,7 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         return cnzEvents;
     }
 
-    public Sonic2WFZEvents getWfzEvents() {
+    Sonic2WFZEvents getWfzEvents() {
         return wfzEvents;
     }
 

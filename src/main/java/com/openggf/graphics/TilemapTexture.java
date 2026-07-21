@@ -3,6 +3,7 @@ package com.openggf.graphics;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE;
@@ -17,6 +18,7 @@ public class TilemapTexture {
     private int heightTiles = 0;
     private ByteBuffer uploadBuffer;
     private int uploadBufferCapacity;
+    private TilemapTextureUploadOps uploadOps = TilemapTextureUploadOps.openGl();
 
     public void init(int widthTiles, int heightTiles) {
         if (widthTiles <= 0 || heightTiles <= 0) {
@@ -88,12 +90,9 @@ public class TilemapTexture {
         return true;
     }
 
-    protected void uploadSubImage(int destinationColumn, int columnCount,
+    private void uploadSubImage(int destinationColumn, int columnCount,
             int heightTiles, ByteBuffer packedRows) {
-        glBindTexture(GL_TEXTURE_2D, textureId);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, destinationColumn, 0, columnCount, heightTiles,
-                GL_RGBA, GL_UNSIGNED_BYTE, packedRows);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        uploadOps.uploadColumns(textureId, destinationColumn, columnCount, heightTiles, packedRows);
     }
 
     /** Uploads contiguous full-width logical rows into physical texture rows. */
@@ -119,12 +118,13 @@ public class TilemapTexture {
         return true;
     }
 
-    protected void uploadRowsSubImage(int destinationRow, int widthTiles,
+    private void uploadRowsSubImage(int destinationRow, int widthTiles,
             int rowCount, ByteBuffer contiguousRows) {
-        glBindTexture(GL_TEXTURE_2D, textureId);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, destinationRow, widthTiles, rowCount,
-                GL_RGBA, GL_UNSIGNED_BYTE, contiguousRows);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        uploadOps.uploadRows(textureId, destinationRow, widthTiles, rowCount, contiguousRows);
+    }
+
+    void setUploadOps(TilemapTextureUploadOps uploadOps) {
+        this.uploadOps = Objects.requireNonNull(uploadOps);
     }
 
     public boolean hasStorage(int widthTiles, int heightTiles) {

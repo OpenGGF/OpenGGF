@@ -77,7 +77,8 @@ class TestWFZShipFireObjectInstance {
     private static Sonic2LevelEventManager wfzEventsWithBgXOffset(int offset) {
         Sonic2LevelEventManager events = new Sonic2LevelEventManager();
         events.initLevel(Sonic2LevelEventManager.ZONE_WFZ, 0);
-        events.getWfzEvents().setBgXOffsetForTest(offset);
+        com.openggf.game.sonic2.Sonic2LevelEventInternalAccess
+                .wfzEvents(events).setBgXOffsetForTest(offset);
         return events;
     }
 
