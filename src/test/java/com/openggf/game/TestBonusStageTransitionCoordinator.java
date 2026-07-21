@@ -3,6 +3,8 @@ package com.openggf.game;
 import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -135,6 +137,28 @@ class TestBonusStageTransitionCoordinator {
         verify(levelState).setTimerFrames(9_876L);
         verify(levelState).resumeTimer();
         assertEquals(2, lives.get());
+    }
+
+    @Test
+    void restoreReturnStateReappliesRespawnTableCapturedAtEntry() {
+        LevelManager level = mock(LevelManager.class);
+        ObjectManager entryObjects = mock(ObjectManager.class);
+        ObjectManager returnObjects = mock(ObjectManager.class);
+        PersistentRespawnState respawnState = new PersistentRespawnState(
+                new long[]{0x12L}, new long[]{0x04L});
+        when(level.getObjectManager()).thenReturn(entryObjects, returnObjects);
+        when(entryObjects.capturePersistentRespawn()).thenReturn(respawnState);
+
+        BonusStageState saved = coordinator.captureEntry(
+                level, mock(Camera.class), null, null, null, 0).savedState();
+        coordinator.restoreReturnState(
+                level, mock(Camera.class), null, null, null,
+                saved, -1, 0, null,
+                new BonusStageProvider.BonusStageRewards(0, 0,
+                        false, false, false, false),
+                () -> { });
+
+        verify(returnObjects).restorePersistentRespawn(respawnState);
     }
 
     @Test

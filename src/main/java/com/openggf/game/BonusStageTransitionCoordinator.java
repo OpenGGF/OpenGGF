@@ -3,6 +3,8 @@ package com.openggf.game;
 import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -11,6 +13,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * changes remain owned by the game loop.
  */
 public final class BonusStageTransitionCoordinator {
+    private PersistentRespawnState pendingRespawnState;
+
     public record EntryCapture(BonusStageState savedState,
                                int pendingStarPostActivationMark) {
     }
@@ -72,6 +76,10 @@ public final class BonusStageTransitionCoordinator {
         int activationMark = checkpointActive
                 ? checkpoint.getStarPostActivationMark()
                 : -1;
+        ObjectManager objectManager = levelManager.getObjectManager();
+        pendingRespawnState = objectManager != null
+                ? objectManager.capturePersistentRespawn()
+                : null;
         return new EntryCapture(savedState, activationMark);
     }
 
@@ -97,6 +105,12 @@ public final class BonusStageTransitionCoordinator {
                                    ShieldType shieldToRestore,
                                    BonusStageProvider.BonusStageRewards rewards,
                                    Runnable lifeAward) {
+        ObjectManager objectManager = levelManager.getObjectManager();
+        if (pendingRespawnState != null && objectManager != null) {
+            objectManager.restorePersistentRespawn(pendingRespawnState);
+        }
+        pendingRespawnState = null;
+
         if (savedState.savedLastStarPostHit() >= 0) {
             RespawnState checkpoint = levelManager.getCheckpointState();
             if (checkpoint != null) {
