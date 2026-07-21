@@ -204,12 +204,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     boolean reservedSlotWaitsForNextObjectPass(int slotIndex, boolean updating,
-            int currentExecSlot, ObjectSlotLayout slotLayout) {
-        if (!updating || currentExecSlot < 0 || !slotLayout.isDynamicSlot(slotIndex)) {
+            int currentGlobalExecSlot, ObjectSlotLayout slotLayout) {
+        if (!updating || currentGlobalExecSlot < 0 || !slotLayout.isDynamicSlot(slotIndex)) {
             return false;
         }
-        int execIndex = slotLayout.toExecIndex(slotIndex);
-        return execIndex >= 0 && execIndex <= currentExecSlot;
+        return slotIndex <= currentGlobalExecSlot;
     }
 
     boolean reallocateToFirstFreeDynamicSlot(AbstractObjectInstance object,
