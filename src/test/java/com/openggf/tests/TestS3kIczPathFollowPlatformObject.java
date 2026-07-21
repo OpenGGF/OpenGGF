@@ -67,6 +67,8 @@ class TestS3kIczPathFollowPlatformObject {
                 "SolidObjectFull includes the exact +$2B right edge");
         assertTrue(platform.usesInstanceSolidStateLatchKey(),
                 "moving spawn coordinates must not change the native SST latch identity");
+        assertFalse(platform.seedsNewRideCarryFromPreUpdateX(),
+                "a fresh SolidObjectFull landing does not consume saved d4 carry");
     }
 
     @Test

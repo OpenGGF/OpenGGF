@@ -47887,3 +47887,22 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:187437-187457,187943-187957`).
 - The focused platform suites pass with the immediate post-contact camera
   request covered.
+
+## 2026-07-22 - ICZ fresh-ride carry baseline advances both frontiers
+
+- Commands: focused `TestS3kIczPathFollowPlatformObject` and
+  `TestS3kIcz1PathFollowPlatformHeadless`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f9126 to f9504 and animation advanced
+  from f9206 to f10132.** Total errors fell from 4,447 to 4,294: physics from
+  3,261 to 3,148 and animation from 1,186 to 1,146.
+- Root: ObjB0 saves its pre-move X in `d4`, but `SolidObjectFull_1P` consumes
+  that value only when the platform's standing bit was already set and it calls
+  `MvSonicOnPtfm`. A fresh landing branches through `SolidObject_cont`, ignores
+  `d4`, and the next object pass saves the platform's new X. The provider
+  incorrectly seeded every fresh engine ride from pre-update X, adding the
+  landing frame's one-pixel move again on the first continued ride. Fresh rides
+  now use the shared post-move baseline
+  (`docs/skdisasm/sonic3k.asm:187437-187452,41011-41044`).
+- The focused platform suites pass with the fresh-landing baseline contract
+  pinned alongside its movement behavior.

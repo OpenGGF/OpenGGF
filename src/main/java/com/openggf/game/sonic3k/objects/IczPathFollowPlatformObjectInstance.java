@@ -424,13 +424,6 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean seedsNewRideCarryFromPreUpdateX() {
-        // loc_89F4E-loc_89F62 saves x_pos before ICZPathFollowPlatform_Index
-        // and passes the saved value in d4 to SolidObjectFull.
-        return true;
-    }
-
-    @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
         if (contact == null) {
             return;

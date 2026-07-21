@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: fresh ICZ path-follow platform landings now seed continued carry from the post-move object X; the saved pre-move `d4` is consumed only by an already-standing `SolidObjectFull` path. ICZ complete-run physics advances from frame 9126 to 9504 and animation from frame 9206 to 10132.
 - Fix: ICZ path-follow platforms now request `Fast_V_scroll_flag` from the newly established standing contact after `SolidObjectFull`, so the camera observes a first landing in the same object pass. ICZ complete-run physics advances from frame 9125 to 9126.
 - Fix: ICZ path-follow platforms now keep their native standing/pushing latch identity on the live SST instance while their dynamic spawn coordinates move, allowing no-contact passes to clear `Status_Push` instead of leaking stale keys. ICZ complete-run physics advances from frame 9039 to 9125 and animation from frame 9040 to 9206.
 - Fix: ICZ path-follow platforms now include the exact `$2B` right edge accepted by S3K `SolidObjectFull`, restoring Sonic's native one-frame push contact against the stationary platform. ICZ complete-run physics advances from frame 8411 to 9039 while animation remains at frame 9040.
