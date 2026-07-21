@@ -1,5 +1,22 @@
 # Trace Frontier Log
 
+### 2026-07-21 -- ICZ complete-run f10128 button exact-edge push FIXED; frontier f11058
+
+Sonic reaches the ordinary subtype-4 button at `(0x6140,0x0200)` with his
+centre exactly `d1=$1B` pixels to its right. S3K `Obj_Button` calls
+`SolidObjectFull` with `d1=$1B`; its unsigned broad-X gate rejects only values
+strictly above `d1*2` (`bhi`), so the equality case remains a side contact and
+sets `Status_Push`. The engine button used the shared exclusive-right default,
+leaving Sonic's positions and velocities correct but dropping the push bit and
+the resulting push mappings.
+
+`Sonic3kButtonObjectInstance` now declares the native inclusive right edge,
+with a focused contract test. `TestS3kIczCompleteRunTraceReplay` improves from
+4250 to 4240 errors: physics advances 10128 -> 11058 (3104 -> 3096 errors) and
+animation advances 10132 -> 11058 (1146 -> 1144 errors). The new joint frontier
+is CPU Tails at f11058: ROM continues with `y_vel=$052B`, run animation 2, while
+the engine has stopped (`y_vel=0`, animation `$1A`).
+
 ### 2026-07-21 -- S3K mega-run chain seg2 (aiz_2) f231 FIXED: broken-monitor respawn state now survives the bonus round-trip
 
 The f231 "phantom wall" root is closed. TRIPLE-PROVEN root (superseding the
