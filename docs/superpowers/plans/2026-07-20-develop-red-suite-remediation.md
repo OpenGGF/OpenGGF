@@ -82,6 +82,74 @@ Expected: PASS with no blanket baseline count increase.
 - [ ] Run both guards plus every graph test named by a changed row; expected PASS and internally consistent totals.
 - [ ] Commit as `test: reconcile rewind graph inventory` with `Changelog: n/a: rewind coverage inventory and tests`.
 
+### Task D1.4a: Close origin-integrated CNZ end-boss rewind gaps
+
+This task was added after merging `origin/develop` at `00498f16e` into the remediation branch. The merge did not add new red JUnit method identities: it exposed eight new object-class diagnostics inside the two D1.4 guard methods that were already part of the original 36-red develop ledger. Therefore the historical `36 develop / 179 union / 83 in-scope` method accounting remains unchanged while the current object-class sweep grows from `858/672/186` to `871/677/186` and has eight non-passing CNZ entries.
+
+**Files:**
+- Modify: `src/test/java/com/openggf/game/rewind/TestS3kCnzEndBossGraphRewind.java`
+- Modify: `src/test/java/com/openggf/game/rewind/TestGraphCoveredIsolatedProbeClassification.java`
+- Modify: `src/test/java/com/openggf/game/rewind/RewindRoundTripHarness.java`
+- Modify: `src/test/resources/rewind/round-trip-tail-inventory.txt`
+- Verify unchanged/empty: `src/test/resources/rewind/parent-dependent-graph-coverage-baseline.txt`
+- Modify only when a new focused graph test proves a production restore defect: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossInstance.java`
+- Modify only when its focused test proves a production restore defect: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossArmChild.java`
+- Modify only when its focused test proves a production restore defect: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossBoundaryController.java`
+- Modify only when its focused test proves a production restore defect: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossExplosionControllerChild.java`
+- Modify only when its focused test proves a production restore defect: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossFieldChild.java`
+- Modify only when its focused test proves a production restore defect: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossMagnetChild.java`
+- Modify only when its focused test proves a production restore defect: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossRobotnikFlameChild.java`
+- Modify only when its focused test proves a production restore defect: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossRobotnikHeadChild.java`
+- Modify only when its focused test proves a production restore defect: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossRobotnikShipChild.java`
+- Modify only when recreate ordering/link lookup is the proven root cause: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossRewindLinks.java`
+
+- [ ] Reproduce the origin-integrated red set exactly:
+
+```powershell
+mvn "-Dtest=com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test
+```
+
+Expected: two failing methods. The tail diagnostic is `total=871 passed=677 graphCovered=186 noCodec=0`; `no-probe-ctor` adds `CnzEndBossArmChild`, `CnzEndBossBoundaryController`, `CnzEndBossFieldChild`, `CnzEndBossRobotnikFlameChild`, and `CnzEndBossRobotnikHeadChild`; `parent-dependent` adds `CnzEndBossExplosionControllerChild`, `CnzEndBossMagnetChild`, and `CnzEndBossRobotnikShipChild`.
+
+- [ ] Add three phase-real round-trip tests to `TestS3kCnzEndBossGraphRewind`: `nativeGraphRestoresExactShipHeadMagnetAndArmIdentities`, `chargeGraphRestoresExactFieldIdentitiesAndOffsets`, and `defeatGraphRestoresExactExplosionFlameAndBoundaryControllerIdentities`. Before restore, record every participating object's `ObjectRefId` plus one meaningful non-default scalar per class. After an out-of-place restore, resolve by the recorded id and assert `assertNotSame(source, restored)`, the exact restored parent reference, boss/ship slot reference where one exists, multiplicity, and the recorded scalar. Do not accept count-only, class-name-only, or structurally equal replacement assertions.
+
+The native graph test must cover all four arms independently, the boss's exact `magnetChild`, and the ship's exact head. The charge test must cover both field children and their signed offsets. The defeat test must cover the ship-owned explosion controller and flame plus every live gradual boundary controller, including axis, target, and accumulator state.
+
+- [ ] Run the three focused graph methods before changing classification. Expected: either PASS, establishing existing production graph correctness, or a focused failure naming the exact lost identity/link/scalar. If a method fails, make the smallest production recreate-order or relink fix proven by that assertion and rerun until all three pass.
+
+```powershell
+mvn "-Dtest=com.openggf.game.rewind.TestS3kCnzEndBossGraphRewind#nativeGraphRestoresExactShipHeadMagnetAndArmIdentities+chargeGraphRestoresExactFieldIdentitiesAndOffsets+defeatGraphRestoresExactExplosionFlameAndBoundaryControllerIdentities" test
+```
+
+- [ ] Only after those graph tests pass, classify the eight owner/session-dependent classes as graph-covered. Add all eight exact FQNs to `RewindRoundTripHarness.GRAPH_COVERED_ISOLATED_PROBE_CLASSES`, each naming `TestS3kCnzEndBossGraphRewind`, and add `cnzEndBossChildrenAreReportedAsGraphCovered` to `TestGraphCoveredIsolatedProbeClassification` with this exact set:
+
+```java
+Map<String, String> expected = Map.of(
+        "com.openggf.game.sonic3k.objects.bosses.CnzEndBossArmChild", CNZ_END_BOSS_GRAPH_TEST,
+        "com.openggf.game.sonic3k.objects.bosses.CnzEndBossBoundaryController", CNZ_END_BOSS_GRAPH_TEST,
+        "com.openggf.game.sonic3k.objects.bosses.CnzEndBossExplosionControllerChild", CNZ_END_BOSS_GRAPH_TEST,
+        "com.openggf.game.sonic3k.objects.bosses.CnzEndBossFieldChild", CNZ_END_BOSS_GRAPH_TEST,
+        "com.openggf.game.sonic3k.objects.bosses.CnzEndBossMagnetChild", CNZ_END_BOSS_GRAPH_TEST,
+        "com.openggf.game.sonic3k.objects.bosses.CnzEndBossRobotnikFlameChild", CNZ_END_BOSS_GRAPH_TEST,
+        "com.openggf.game.sonic3k.objects.bosses.CnzEndBossRobotnikHeadChild", CNZ_END_BOSS_GRAPH_TEST,
+        "com.openggf.game.sonic3k.objects.bosses.CnzEndBossRobotnikShipChild", CNZ_END_BOSS_GRAPH_TEST);
+expected.forEach(this::assertGraphCovered);
+```
+
+Do not add any of these classes to a debt/baseline bucket merely to satisfy the aggregate guard. If investigation proves one class can and should be an isolated probe instead, add a probe-compatible constructor/recreate test for that class and let it increment `passed`; never both probe-pass and graph-classify the same class.
+
+- [ ] Update `round-trip-tail-inventory.txt` from the measured post-fix sweep. With all eight using the owner-backed graph classification above, the exact green summary is `total=871 passed=677 graph-covered=194 no-codec=0 no-probe-ctor=0 parent-dependent=0 other-failure=0 count-mismatch=0 scalar-mismatch=0`. Keep `parent-dependent-graph-coverage-baseline.txt` empty because all three new parent-dependent classes now have executable evidence rather than accepted debt.
+
+- [ ] Run the focused graph tests, classification test, and both inventories green:
+
+```powershell
+mvn "-Dtest=com.openggf.game.rewind.TestS3kCnzEndBossGraphRewind,com.openggf.game.rewind.TestGraphCoveredIsolatedProbeClassification#cnzEndBossChildrenAreReportedAsGraphCovered,com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test
+```
+
+Expected: all selected tests PASS, no tail rows, no baseline debt, and the exact `871/677/194/0` aggregate above.
+
+- [ ] Commit as `fix: close CNZ boss rewind graph after origin merge`. Update `CHANGELOG.md` only if production changes; otherwise use `Changelog: n/a: focused rewind graph evidence and executable inventory`, plus all required policy trailers.
+
 ### Task D1.5: Declare canonical touch-response profiles
 
 **Files:**
@@ -411,6 +479,7 @@ Each task uses its row below for the initial red run and final green regression 
 | D1.2 | `mvn "-Dtest=com.openggf.game.rewind.TestS3kBadnikChildGraphRewind#mantisChildRelinksToRestoredParentAndParentSlot" test` | `mvn "-Dtest=com.openggf.game.rewind.TestS3kBadnikChildGraphRewind" test` |
 | D1.3 | `mvn "-Dtest=com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard#noNewSilentlyDroppedRewindFieldsBeyondBaseline,com.openggf.game.rewind.TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage,com.openggf.game.rewind.TestRewindTransientGuard#fieldsCoveredByDefaultTransientPolicyDoNotNeedExplicitAnnotations" test` | `mvn "-Dtest=com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard,com.openggf.game.rewind.TestRewindArchitectureGuard,com.openggf.game.rewind.TestRewindTransientGuard,com.openggf.game.rewind.TestS3kBadnikChildGraphRewind" test` |
 | D1.4 | `mvn "-Dtest=com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test` | `mvn "-Dtest=com.openggf.game.rewind.TestParentDependentGraphCoverageGuard,com.openggf.game.rewind.TestRemainingRewindTailInventory" test` |
+| D1.4a | `mvn "-Dtest=com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test` | `mvn "-Dtest=com.openggf.game.rewind.TestS3kCnzEndBossGraphRewind,com.openggf.game.rewind.TestGraphCoveredIsolatedProbeClassification#cnzEndBossChildrenAreReportedAsGraphCovered,com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test` |
 | D1.5 | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations" test` | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard" test` |
 | D1.6 | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionPlayableNativePositionRawPreserveSubpixelWriteFilesDoNotGrow" test` | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard" test` |
 | D1.7 | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectLifecycleRawCallCountsDoNotGrow" test` | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard" test` |

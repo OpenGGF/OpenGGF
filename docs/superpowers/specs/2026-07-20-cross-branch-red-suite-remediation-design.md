@@ -10,6 +10,8 @@ Restore green in-scope test suites on both `develop` and `next` without duplicat
 
 The measured union contains 179 red `class#method` identities: 36 on `develop`, 170 on merged `next`, and 27 shared by both. The current scope excludes 96 gameplay, trace, and zone-evidence-tooling reds owned solely by unfinished Sonic & Knuckles zones (including MHZ, FBZ, SOZ, and later S&K content). Cross-cutting architecture, rewind, service-ownership, and singleton-closure guards remain in scope even when their diagnostics mention unfinished S&K objects or FBZ-named tooling. This leaves 83 unique in-scope reds: all 36 `develop` reds plus 47 additional `next`-only reds.
 
+After the 2026-07-21 integration of `origin/develop` at `00498f16e`, the same two already-catalogued rewind inventory methods expose eight additional CNZ end-boss object-class gaps: five no-probe constructors and three parent-dependent children. These are nested diagnostic identities, not additional Surefire `class#method` identities, so the historical `179 / 36 / 170 / 27 / 83` method accounting and branch ownership do not change. CNZ is in scope; the eight classes require executable graph or isolated-probe evidence and may not be converted into baseline debt merely to restore aggregate totals.
+
 ## Scope
 
 ### In scope

@@ -3,8 +3,8 @@ next	com.openggf.game.rewind.schema.TestCapturedPolicyCompactReachabilityGuard#c
 next	com.openggf.game.rewind.schema.TestCapturedPolicyCompactReachabilityGuard#hczResultAndBossReferencesUseExactCapturedPolicies	failure	not-run	rewind	N2	observed-red	in-scope
 develop	com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard#noNewSilentlyDroppedRewindFieldsBeyondBaseline	failure	not-run	rewind	D	observed-red	in-scope
 next	com.openggf.game.rewind.TestGameplayInputFilterReplay#rewindSeekResimulatesTheRawRecordedRowThroughTheGameplayFilter	error	not-run	rewind	N2	observed-red	in-scope
-develop+next	com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests	failure	not-run	rewind	D	observed-red	in-scope
-develop+next	com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory	failure	not-run	rewind	D	observed-red	in-scope
+develop+next	com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests	failure	failure:3-cnz-parent-dependent	rewind	D	observed-red	in-scope
+develop+next	com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory	failure	failure:5-cnz-no-probe+3-cnz-parent-dependent	rewind	D	observed-red	in-scope
 develop+next	com.openggf.game.rewind.TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage	failure	not-run	rewind	D	observed-red	in-scope
 develop+next	com.openggf.game.rewind.TestRewindTransientGuard#fieldsCoveredByDefaultTransientPolicyDoNotNeedExplicitAnnotations	failure	not-run	rewind	D	observed-red	in-scope
 next	com.openggf.game.rewind.TestS3kBadnikChildGraphRewind#dragonflyFollowAnchorFailsForObjectWithoutRegisteredRewindIdentity	failure	not-run	rewind	N2	observed-red	in-scope

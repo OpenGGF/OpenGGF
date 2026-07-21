@@ -20,6 +20,8 @@
 - `tools/testing/Compare-SurefireRedSet.ps1`: deterministic Surefire XML normalizer and exact red-set comparator.
 - `tools/testing/Test-CompareSurefireRedSet.ps1`: self-contained fixture harness for comparator success and failure modes.
 
+The 2026-07-21 `origin/develop` merge does not add a red Surefire method row: it adds eight CNZ object-class diagnostics inside the two existing D1.4 rewind guard rows. `docs/testing/red-suite-inventory.tsv` records those isolated diagnostics on the existing rows, while develop Task D1.4a owns their remediation. Consequently the frozen historical method counts remain 179 union, 36 develop, and 83 in scope; implementation must additionally reach a zero-tail current CNZ sweep before the develop branch gate.
+
 ### Task 0: Protect the primary checkouts and record immutable baselines
 
 **Files:**
@@ -149,6 +151,8 @@ Use the repository trailer block; `Changelog: n/a: test inventory only` is appro
 
 **Files:**
 - Execute: `docs/superpowers/plans/2026-07-20-develop-red-suite-remediation.md`
+
+Run the origin-integration Task D1.4a after D1.4 and before leaving the rewind/architecture wave. Its eight CNZ diagnostics are in scope even though they do not increase the original 36 red-method total.
 
 - [ ] **Step 1: Dispatch exactly one fresh implementer for the next unchecked leaf task**
 

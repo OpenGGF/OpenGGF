@@ -81,6 +81,15 @@ function Assert-RepositoryInventory {
     if (@($nextScopeRows | Where-Object wave -eq 'N1').Count -ne 20 -or @($nextScopeRows | Where-Object wave -eq 'N2').Count -ne 10 -or @($nextScopeRows | Where-Object wave -eq 'N3').Count -ne 7 -or @($nextScopeRows | Where-Object wave -eq 'N4').Count -ne 10) {
         throw 'Next-only in-scope inventory wave totals are incorrect.'
     }
+
+    $parentGuard = @($inventory | Where-Object test -eq 'com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests')
+    $tailGuard = @($inventory | Where-Object test -eq 'com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory')
+    if ($parentGuard.Count -ne 1 -or $parentGuard[0].isolated_result -ne 'failure:3-cnz-parent-dependent') {
+        throw 'Origin-integrated CNZ parent-dependent diagnostics are not catalogued on the existing guard identity.'
+    }
+    if ($tailGuard.Count -ne 1 -or $tailGuard[0].isolated_result -ne 'failure:5-cnz-no-probe+3-cnz-parent-dependent') {
+        throw 'Origin-integrated CNZ tail diagnostics are not catalogued on the existing guard identity.'
+    }
 }
 
 try {
