@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Special-stage trace sessions now use the canonical replay configuration bootstrap:**
+  recorded teams, disabled cross-game donation, and the resolved native 4:3 viewport
+  are applied consistently before launch, while the launcher retains only the
+  special-stage-specific S3K `fresh_load` intro rule.
 - **Child objects allocated after their parent now execute in the same object pass:**
   reserved dynamic slots are compared with the global SST execution cursor instead
   of a dynamic-window-relative index, preserving next-pass deferral only for slots

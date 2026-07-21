@@ -313,52 +313,40 @@ public final class TraceSessionLauncher {
     }
 
     /**
-     * Applies per-game special-stage configuration for trace replay. Routes
-     * through the static helper to centralize the shared team / cross-game /
-     * S3K fresh-load policy. Reads the fresh_load metadata field to determine
-     * whether to override the S3K intro-skip gate.
+     * Applies the canonical trace configuration before the special-stage-only
+     * per-game rule. Reads the fresh_load metadata field to determine whether
+     * to override the S3K intro-skip gate.
      *
      * @param meta the trace metadata (provides recorded team, game id, and fresh_load flag)
      */
     static void prepareSpecialStageConfiguration(TraceMetadata meta) {
         SonicConfigurationService config = GameServices.configuration();
+        TraceReplaySessionBootstrap.prepareConfiguration(null, meta);
         applyPerGameSpecialStageConfig(config, meta, meta.isFreshLoad());
     }
 
     /**
-     * Static helper for per-game special-stage launch configuration. Applies
-     * the shared team + cross-game settings, plus the S3K fresh-load branch
-     * when applicable (mirroring {@link TraceReplaySessionBootstrap#prepareConfiguration}).
+     * Static helper for the special-stage-only per-game launch rule. Shared
+     * team, donation, and display-aspect configuration belongs to
+     * {@link TraceReplaySessionBootstrap#prepareConfiguration}.
      *
      * <p>For S1: no special intro-skip behavior applies to special stages.
      *
      * @param config the configuration service to mutate
      * @param meta the trace metadata (provides recorded team and game id)
      * @param freshLoadSignal true when the trace requires a fresh level load
-     *     (S3K only; false is the safe default until blue-spheres plan wires
-     *     the real signal)
+     *     (S3K only)
      */
     static void applyPerGameSpecialStageConfig(SonicConfigurationService config,
                                                TraceMetadata meta,
                                                boolean freshLoadSignal) {
-        // Team: the recorded trace dictates the team.
-        String main = meta.recordedMainCharacter();
-        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
-                main == null || main.isBlank() ? "sonic" : main);
-        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                String.join(",", meta.recordedSidekicks()));
-
-        // Cross-game donation wasn't recorded; always force it off so
-        // trace physics/visuals match the base ROM.
-        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
-
         // S3K: apply the fresh-load intro-skip branch when a trace
-        // requires a fresh level load. This mirrors the level-mode branch
-        // in TraceReplaySessionBootstrap.prepareConfiguration. S1 has no
-        // intro-skip behavior in special stages.
+        // requires a fresh level load. Non-level sessions intentionally skip
+        // this rule in TraceReplaySessionBootstrap.prepareConfiguration, so
+        // the special-stage launcher applies its metadata-owned signal here.
         if (freshLoadSignal && "s3k".equals(meta.game())) {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-    }
+        }
     }
 
     private void finishSpecialStageLaunch() {

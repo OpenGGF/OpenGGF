@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-21 -- Special-stage trace launcher bootstrap: native aspect regression fixed
+
+Worktree `.worktrees/next-develop-green-merge`, branch
+`feature/ai-next-develop-green-merge`, base `4392f8ebd`. Focused RED command:
+`mvn -Dmse=off "-Dtest=TestTraceSessionLauncherSpecialStageEntry" test` --
+2 tests, 1 failure, 0 errors. The special-stage pre-launch configuration left
+`DISPLAY_ASPECT=WIDE_16_9` instead of the trace-required `NATIVE_4_3`; this is a
+bootstrap assertion before frame comparison, so there is no first-error trace
+frame/field.
+
+ROOT: ordinary level/run launches delegated shared replay configuration to
+`TraceReplaySessionBootstrap.prepareConfiguration`, but the special-stage branch
+duplicated only team and cross-game-donation writes. It omitted both the native
+aspect write and `resolveDisplayAspect()`, leaving viewport-derived state from the
+user session. FIX: special-stage preparation now calls the canonical bootstrap
+with a null level trace, then applies only its metadata-owned S3K `fresh_load`
+intro rule. Trace rows remain comparison-only; no trace data hydrates per-frame
+engine state and no fixture was regenerated.
+
+Focused GREEN command:
+`mvn -Dmse=off "-Dtest=TestTraceSessionLauncherSpecialStageEntry,TestTraceSessionLauncherSsConfig,TraceReplaySessionBootstrapConfigTest" test`
+-- 16 tests, 0 failures, 0 errors. Related launcher coverage was also run with
+`mvn -Dmse=off "-Dtest=TestTraceSessionLauncher*" test` -- 18 tests, 0 failures,
+0 errors. Final launcher/bootstrap/invariant verification:
+`mvn -Dmse=off "-Dtest=TestTraceSessionLauncher*,TraceReplaySessionBootstrapConfigTest,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault" test`
+-- 37 tests, 0 failures, 0 errors.
+
 ### 2026-07-21 -- S3K mega-run chain seg2 (aiz_2) f231 FIXED: broken-monitor respawn state now survives the bonus round-trip
 
 The f231 "phantom wall" root is closed. TRIPLE-PROVEN root (superseding the

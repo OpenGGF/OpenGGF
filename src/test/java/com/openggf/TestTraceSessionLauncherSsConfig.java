@@ -23,6 +23,7 @@ class TestTraceSessionLauncherSsConfig {
     private Object savedSidekick;
     private Object savedCrossGame;
     private Object savedSkipIntros;
+    private Object savedDisplayAspect;
 
     @BeforeEach
     void setUp() {
@@ -32,6 +33,7 @@ class TestTraceSessionLauncherSsConfig {
         savedSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
         savedCrossGame = config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED);
         savedSkipIntros = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
+        savedDisplayAspect = config.getConfigValue(SonicConfiguration.DISPLAY_ASPECT);
     }
 
     @AfterEach
@@ -48,20 +50,27 @@ class TestTraceSessionLauncherSsConfig {
         if (savedSkipIntros != null) {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, savedSkipIntros);
         }
+        if (savedDisplayAspect != null) {
+            config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, savedDisplayAspect);
+            config.resolveDisplayAspect();
+        }
     }
 
     @Test
-    void s2MetadataWithFreshLoadFalsePreservesPreChangeConfig() {
+    void s2FreshLoadSignalDoesNotApplyS3kRule() {
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, true);
         config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
 
         TraceMetadata meta = metadataWithTeam("s2", "tails", "knuckles");
         TraceSessionLauncher.applyPerGameSpecialStageConfig(config, meta, false);
 
-        // S2 should apply team and cross-game settings.
-        assertEquals("tails", config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE));
-        assertEquals("knuckles", config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
-        assertFalse((Boolean) config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
-        // S3K_SKIP_INTROS should not be touched (remains true from setup).
+        // The helper owns only the S3K rule; canonical trace configuration is
+        // applied by prepareSpecialStageConfiguration before this call.
+        assertEquals("knuckles", config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("", config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertEquals(true, config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
         assertEquals(true, config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS));
     }
 
@@ -72,10 +81,6 @@ class TestTraceSessionLauncherSsConfig {
         TraceMetadata meta = metadataWithTeam("s3k", "sonic", "tails");
         TraceSessionLauncher.applyPerGameSpecialStageConfig(config, meta, false);
 
-        // Team and cross-game settings are applied.
-        assertEquals("sonic", config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE));
-        assertEquals("tails", config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
-        assertFalse((Boolean) config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
         // S3K_SKIP_INTROS should remain true (the fresh-load signal is false).
         assertEquals(true, config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS));
     }
@@ -87,10 +92,6 @@ class TestTraceSessionLauncherSsConfig {
         TraceMetadata meta = metadataWithTeam("s3k", "sonic", "tails");
         TraceSessionLauncher.applyPerGameSpecialStageConfig(config, meta, true);
 
-        // Team and cross-game settings are applied.
-        assertEquals("sonic", config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE));
-        assertEquals("tails", config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
-        assertFalse((Boolean) config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
         // S3K_SKIP_INTROS should be set to false (the fresh-load signal is true).
         assertEquals(false, config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS));
     }
