@@ -4,7 +4,11 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.game.sonic3k.objects.MgzEndBossInstance;
+import com.openggf.game.sonic3k.objects.MgzEndBossRenderChild;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.graphics.RenderPriority;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.StubObjectServices;
@@ -19,6 +23,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -103,7 +108,27 @@ class TestS3kMgzBossMusicTransition {
         for (int frame = 0; frame < 120; frame++) {
             boss.update(frame, null);
         }
-        boss.appendRenderCommands(new ArrayList<>());
+
+        MgzEndBossRenderChild rearDrill = boss.getChildComponents().stream()
+                .filter(MgzEndBossRenderChild.class::isInstance)
+                .map(MgzEndBossRenderChild.class::cast)
+                .filter(child -> child.role() == MgzEndBossRenderChild.ROLE_STATIC_BACK)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(7, rearDrill.getPriorityBucket(),
+                "word_6D77C gives the rear drill child ROM priority $380");
+        assertFalse(rearDrill.isHighPriority(),
+                "loc_6C962 clears the managed rear-drill SST's art_tile priority bit for Obj_MGZEndBoss");
+        assertEquals(6, boss.getPriorityBucket(),
+                "ObjDat_MGZDrillBoss gives the parent body ROM priority $300");
+        assertTrue(boss.isHighPriority(),
+                "loc_6C354 sets the parent body art_tile priority bit independently of its sprite bucket");
+
+        List<ObjectInstance> managedPair = new ArrayList<>(List.of(boss, rearDrill));
+        managedPair.sort(TestS3kMgzBossMusicTransition::compareRuntimeRenderOrder);
+        assertEquals(List.of(rearDrill, boss), managedPair,
+                "the independent rear-drill SST must enter the painter before the parent body");
+        managedPair.forEach(instance -> instance.appendRenderCommands(new ArrayList<>()));
 
         InOrder order = inOrder(drillRenderer);
         order.verify(drillRenderer).drawFrameIndex(1, 0x3D0C, 0x0677, false, false);
@@ -171,6 +196,24 @@ class TestS3kMgzBossMusicTransition {
         for (int i = 0; i <= frame; i++) {
             boss.update(i, null);
         }
+    }
+
+    private static int compareRuntimeRenderOrder(ObjectInstance left, ObjectInstance right) {
+        int bucketOrder = Integer.compare(
+                RenderPriority.clamp(right.getPriorityBucket()),
+                RenderPriority.clamp(left.getPriorityBucket()));
+        if (bucketOrder != 0) {
+            return bucketOrder;
+        }
+        int tilePriorityOrder = Boolean.compare(left.isHighPriority(), right.isHighPriority());
+        if (tilePriorityOrder != 0) {
+            return tilePriorityOrder;
+        }
+        return Integer.compare(renderSlot(right), renderSlot(left));
+    }
+
+    private static int renderSlot(ObjectInstance instance) {
+        return instance instanceof AbstractObjectInstance object ? object.getSlotIndex() : Integer.MAX_VALUE;
     }
 
     private static final class RecordingServices extends StubObjectServices {

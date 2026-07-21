@@ -361,10 +361,10 @@ Expected: PASS with no blanket baseline count increase.
 - Modify: `src/test/java/com/openggf/tests/TestS3kMgzBossMusicTransition.java`
 - Modify only if managed render order is wrong: `src/main/java/com/openggf/game/sonic3k/objects/MgzEndBossRenderChild.java`
 
-- [ ] Run `endBossDrawsDrillPieceBehindMainBodyWhenItAppears`; expected obsolete parent-inline assertion fails.
-- [ ] Replace it with a managed-graph assertion for `ROLE_STATIC_BACK`, frame 1, offset `(-0x14,+0x0F)` before parent body; verify production changes only if the managed order is wrong.
-- [ ] Run the full class and render-child graph tests; expected PASS.
-- [ ] Commit as `test: assert managed MGZ drill child` unless production changes are required.
+- [x] Run `endBossDrawsDrillPieceBehindMainBodyWhenItAppears`; reproduced the obsolete parent-inline assertion: only the parent body frame was emitted when the managed child graph was skipped.
+- [x] Replace it with a managed-graph assertion for `ROLE_STATIC_BACK`, frame 1, offset `(-0x14,+0x0F)` before the parent body; production already matches `ChildObjDat_6D7C0`, `word_6D77C` (`$380`), and `ObjDat_MGZDrillBoss` (`$300`).
+- [x] Run the exact method and related render-child, handoff, Knuckles-graph, rewind-codec, and art-provider/PLC tests; all selected D3.9 checks pass. The full music class still exposes only the separately catalogued D3.10-D3.12 failures.
+- [x] Commit as `test: assert managed MGZ drill child`; no production change was required.
 
 ### Task D3.10: Start MGZ boss music after exactly 120 updates
 
