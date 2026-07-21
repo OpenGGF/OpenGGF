@@ -7,6 +7,8 @@ final class Sonic1SpecialStageSnapshot {
     final boolean finished;
     final boolean emeraldCollected;
     final boolean debugMode;
+    final int startupHoldTicksRemaining;
+    final boolean objInitPending;
     final int currentStage;
     final int ringsCollected;
     final int ssAngle;
@@ -65,6 +67,8 @@ final class Sonic1SpecialStageSnapshot {
             boolean finished,
             boolean emeraldCollected,
             boolean debugMode,
+            int startupHoldTicksRemaining,
+            boolean objInitPending,
             int currentStage,
             int ringsCollected,
             int ssAngle,
@@ -121,6 +125,8 @@ final class Sonic1SpecialStageSnapshot {
         this.finished = finished;
         this.emeraldCollected = emeraldCollected;
         this.debugMode = debugMode;
+        this.startupHoldTicksRemaining = startupHoldTicksRemaining;
+        this.objInitPending = objInitPending;
         this.currentStage = currentStage;
         this.ringsCollected = ringsCollected;
         this.ssAngle = ssAngle;

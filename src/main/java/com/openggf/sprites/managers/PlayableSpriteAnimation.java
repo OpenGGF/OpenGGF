@@ -555,6 +555,30 @@ public class PlayableSpriteAnimation {
                 // does not update prev_anim, anim_frame, or the skid condition
                 // here: a continuing brake writes Stop again next frame and
                 // resumes at this same $FD command instead of restarting it.
+                //
+                // Do NOT snapshot lastAnimationId (prev_anim) here either.
+                // Animate_Sonic's $FD handler (loc_12698, sonic3k.asm:24795-
+                // 24801) writes only the live anim byte -- it never touches
+                // prev_anim or anim_frame. When nothing else changes anim
+                // this frame, the next update() call's own anim!=lastAnimationId
+                // check (this method's caller) reproduces that deferred
+                // reset with identical timing. But when an external write
+                // republishes the SAME pre-switch anim id later in this same
+                // frame -- e.g. a second Gumball triangle bumper bounce
+                // (Obj_GumballTriangleBumper sub_60F94, sonic3k.asm:127666-
+                // 127709: `move.b #$10,anim(a1)`) landing on the exact frame
+                // Spring's own script (AniSonic10, `$2F,$8E,$FD,0`) auto-
+                // switches to Walk -- ROM's prev_anim is still the old id,
+                // so the following frame sees no change and the script
+                // silently resumes its already-past-the-end position for
+                // another full delay cycle instead of restarting. Eagerly
+                // syncing lastAnimationId here (as resetScriptState() would)
+                // desyncs from that stale-prev_anim behavior and makes the
+                // engine treat the reapplied old id as a fresh change,
+                // firing an extra spurious reset (S3K gumball bonus trace
+                // f1227: Spring->Walk switch delayed a frame after bumper
+                // slot 0x87's second mid-air bounce re-latches Spring on
+                // trace frame 1179).
                 SpriteAnimationProfile profile = sprite.getAnimationProfile();
                 boolean switchingFromSkid = profile instanceof ScriptedVelocityAnimationProfile velocityProfile
                             && velocityProfile.getSkidAnimId() == sprite.getAnimationId();
@@ -570,7 +594,6 @@ public class PlayableSpriteAnimation {
                     // the native raw-animation switch ends the skid state.
                     sprite.setSkidding(false);
                 }
-                resetScriptState();
                 return false;
             }
             case LOOP -> {

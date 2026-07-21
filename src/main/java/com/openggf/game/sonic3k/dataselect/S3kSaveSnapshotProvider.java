@@ -44,11 +44,13 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
                 : context.gameState().getCollectedChaosEmeraldIndices();
         List<Integer> superEmeralds = !hasLiveState ? List.of()
                 : context.gameState().getCollectedSuperEmeraldIndices();
+        boolean emeraldsConverted = hasLiveState && context.gameState().isEmeraldsConverted();
         boolean clear = save.isClear();
         payload.put("lives", lives);
         payload.put("continues", continues);
         payload.put("chaosEmeralds", chaosEmeralds);
         payload.put("superEmeralds", superEmeralds);
+        payload.put("emeraldsConverted", emeraldsConverted);
         payload.put("clear", clear);
         payload.put("progressCode",
                 S3kSaveProgressions.progressCodeForState(zone, act, save.selectedTeam(), clear, superEmeralds));

@@ -210,15 +210,31 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance implements Re
             xVel = THROW_X_VEL;
         }
 
-        spawnFreeChild(() -> new BadnikProjectileInstance(
-                spawn,
-                BadnikProjectileInstance.ProjectileType.COCONUT,
-                currentX + xOffset,
-                currentY + THROW_Y_OFFSET,
-                xVel,
-                THROW_Y_VEL,
-                true,
-                !facingLeft));
+        final int spawnX = currentX + xOffset;
+        final int spawnY = currentY + THROW_Y_OFFSET;
+        final int fireXVel = xVel;
+        spawnFreeChild(() -> {
+            // ROM Obj98_Init (s2.asm:74665-74666) just branches into
+            // LoadSubObject, which sets up render/collision state and bumps
+            // routine 0->2 then rts -- it never calls Obj98_Main this frame.
+            // A freshly-created coconut therefore runs ONLY that init pass on
+            // whichever frame allocates it and does not start
+            // Obj98_CoconutFall movement until the following frame. Mirrors
+            // CluckerBadnikInstance/NebulaBadnikInstance/AsteronBadnikInstance;
+            // without the defer the coconut moves one frame early and can
+            // arrive in/out of the player's touchbox a frame ahead of ROM.
+            BadnikProjectileInstance coconut = new BadnikProjectileInstance(
+                    spawn,
+                    BadnikProjectileInstance.ProjectileType.COCONUT,
+                    spawnX,
+                    spawnY,
+                    fireXVel,
+                    THROW_Y_VEL,
+                    true,
+                    !facingLeft);
+            coconut.deferFirstMovementForLoadSubObjectInit();
+            return coconut;
+        });
     }
 
     @Override

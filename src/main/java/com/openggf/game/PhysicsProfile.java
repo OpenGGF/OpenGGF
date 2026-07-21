@@ -195,7 +195,7 @@ public record PhysicsProfile(
             (short) 0xC0,  // runDecel
             (short) 0x18,  // friction (same as accel for Super)
             (short) 0x800, // max
-            (short) 0x800, // jump (Super form override)
+            (short) 0x680, // jump (Tails_Jump has no Super override)
             (short) 32,    // slopeRunning
             (short) 20,    // slopeRollingUp
             (short) 80,    // slopeRollingDown
@@ -211,6 +211,30 @@ public record PhysicsProfile(
             (short) 14,    // rollYRadius
             true,           // singleFacingBalance (Tails routine)
             (short) 4      // onObjectBalanceShift
+    );
+
+    // S3K Super/Hyper Knuckles (sonic3k.asm:32611-32613: max=$800, accel=$18, decel=$C0)
+    public static final PhysicsProfile SONIC_3K_SUPER_KNUCKLES = new PhysicsProfile(
+            (short) 0x18,  // runAccel
+            (short) 0xC0,  // runDecel
+            (short) 0x18,  // friction (same as accel for Super)
+            (short) 0x800, // max
+            (short) 0x600, // jump (Knux_Jump has no Super override)
+            (short) 32,    // slopeRunning
+            (short) 20,    // slopeRollingUp
+            (short) 80,    // slopeRollingDown
+            (short) 32,    // rollDecel
+            (short) 128,   // minStartRollSpeed
+            (short) 128,   // minRollSpeed
+            (short) 4096,  // maxRoll
+            (short) 28,    // rollHeight
+            (short) 38,    // runHeight
+            (short) 9,     // standXRadius
+            (short) 19,    // standYRadius
+            (short) 7,     // rollXRadius
+            (short) 14,    // rollYRadius
+            false,         // singleFacingBalance
+            (short) 2      // onObjectBalanceShift
     );
 
     // S2 Super Sonic (same values as S3K: max=0xA00, accel=0x30, decel=0x100)

@@ -201,19 +201,28 @@ public class Sonic3kSpecialStagePlayer {
         }
 
         // Process turning
+        // ROM: sonic3k.asm:11940-11954. After rotating the angle, the ROM only
+        // returns early (bne.w locret_972C, line 11949) while the turn is NOT
+        // yet complete (angle not aligned to a cardinal direction). Once the
+        // turn completes on this same frame, it falls straight through into
+        // loc_95F4 (line 11955, no intervening rts) and continues processing
+        // movement/position update in that same frame -- it does not wait for
+        // the next frame.
         if (turning != 0 && (axisPos & CELL_ALIGN_MASK) == 0) {
             if ((jumping & 0x80) != 0) {
-                // Can't turn while jumping; skip to position update
+                // Can't turn while jumping; skip to position update (loc_9600 falls through)
             } else {
                 angle = (angle + turning) & 0xFF;
-                if ((angle & ANGLE_ALIGN_MASK) == 0) {
-                    // Turn complete - aligned to cardinal direction
-                    turning = 0;
-                    if (velocity != 0) {
-                        turnLock = true;
-                    }
+                if ((angle & ANGLE_ALIGN_MASK) != 0) {
+                    // Turn not yet complete this frame - only rotate, return early
+                    return;
                 }
-                return; // During turn, only rotate angle
+                // Turn complete - aligned to cardinal direction; fall through
+                // to loc_95F4 and process movement/position update this frame.
+                turning = 0;
+                if (velocity != 0) {
+                    turnLock = true;
+                }
             }
         }
 
@@ -262,29 +271,45 @@ public class Sonic3kSpecialStagePlayer {
 
         // Handle bumper lock: modifies velocity for position update
         // ROM: loc_9676 (sonic3k.asm:12007)
-        int velForPosition = velocity;
+        Integer velForPosition = velocity;
         if (bumperLock) {
             velForPosition = handleBumperLock(velForPosition);
         }
 
-        // Apply velocity to position
-        applyVelocityWithValue(velForPosition);
+        // Apply velocity to position. ROM: the different-cell unlock branch
+        // (loc_96CE, sonic3k.asm:12037-12039) ends in `rts` -- it does NOT
+        // fall through to the shared position-update code at loc_96FA the
+        // way the same-cell branches (loc_96F2/loc_96F8) do. That frame
+        // writes the new ±rate velocity to RAM but leaves X/Y untouched
+        // until the *next* frame's update() call. handleBumperLock signals
+        // that early return with a null velForPosition.
+        if (velForPosition != null) {
+            applyVelocityWithValue(velForPosition);
+        }
     }
 
     /**
-     * Handle bumper lock state. Returns the velocity to use for position update.
+     * Handle bumper lock state. Returns the velocity to use for position update,
+     * or {@code null} if the ROM took the ``different cell'' unlock's early
+     * {@code rts} (sonic3k.asm:12039) and this frame must skip the position
+     * update entirely.
      * <p>
      * ROM logic (loc_9676, sonic3k.asm:12007):
      * - If at cell boundary AND on a different cell than the bumper: unlock,
-     *   set velocity to ±rate (reverse from current direction)
+     *   set velocity to ±rate (reverse from current direction), and RETURN
+     *   without updating position this frame (loc_96CE -&gt; rts, sonic3k.asm:12039).
      * - If at cell boundary AND on the same cell: if velocity=0, unlock and
-     *   set advancing + reverse velocity. If velocity!=0, negate it for position update.
-     * - If NOT at cell boundary: negate velocity for position update (bounce back).
+     *   set advancing + reverse velocity, falling through to the position
+     *   update (loc_96F2 -&gt; bra loc_96FA, sonic3k.asm:12052-12054). If
+     *   velocity!=0, negate it for position update (loc_96F8, falls through
+     *   to loc_96FA too).
+     * - If NOT at cell boundary: same-cell logic (loc_96D4) applies directly.
      *
      * @param vel the current velocity
-     * @return velocity to use for the position update (may be negated)
+     * @return velocity to use for the position update (may be negated), or
+     *         {@code null} to skip the position update this frame
      */
-    private int handleBumperLock(int vel) {
+    private Integer handleBumperLock(int vel) {
         // Check relevant axis position for cell alignment
         int relevantPos;
         if ((angle & ANGLE_AXIS_BIT) != 0) {
@@ -301,14 +326,17 @@ public class Sonic3kSpecialStagePlayer {
         // At cell boundary — check if we've moved to a different cell
         int currentIndex = Sonic3kSpecialStageGrid.positionToIndex(xPos, yPos);
         if (currentIndex != bumperInteractIndex) {
-            // Different cell: unlock and set velocity to ±rate (reverse direction)
+            // Different cell: unlock and set velocity to ±rate (reverse
+            // direction), then return WITHOUT applying it to position this
+            // frame (ROM: loc_96CE's rts, sonic3k.asm:12039 -- there is no
+            // bra to loc_96FA here, unlike the same-cell branches below).
             bumperLock = false;
             int newVel = rate;
             if (velocity >= 0) {
                 newVel = -newVel;
             }
             velocity = newVel;
-            return newVel;
+            return null;
         }
 
         // Same cell at boundary
@@ -321,7 +349,9 @@ public class Sonic3kSpecialStagePlayer {
      */
     private int handleBumperSameCell(int vel) {
         if (vel == 0) {
-            // Velocity reached zero: unlock, start advancing, reverse
+            // Velocity reached zero: unlock, start advancing, reverse.
+            // ROM: loc_96F2 falls through (bra.s loc_96FA, sonic3k.asm:12054)
+            // to the position update, unlike the different-cell branch above.
             bumperLock = false;
             advancing = true;
             int newVel = rate;
@@ -332,7 +362,7 @@ public class Sonic3kSpecialStagePlayer {
             return newVel;
         }
         // Velocity non-zero: negate for position update (bounce backward)
-        // ROM: loc_96F8: neg.w d2
+        // ROM: loc_96F8: neg.w d2, falls through to loc_96FA (position update)
         // Note: velocity in RAM stays unchanged; only the position update uses -vel
         return -vel;
     }

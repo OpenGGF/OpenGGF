@@ -10,6 +10,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.configuration.GlfwKeyNameResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.SpecialStageProvider;
@@ -26,6 +27,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.testmode.TraceCameraFocusController;
 import com.openggf.testmode.TraceHudOverlay;
 import com.openggf.trace.SpecialStageTraceData;
+import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
@@ -37,7 +39,9 @@ import com.openggf.trace.replay.TraceReplayDriver;
 import com.openggf.trace.replay.TraceGhostHook;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -86,6 +90,15 @@ public final class TraceSessionLauncher {
     private final int ssStageFinishedFrame;
     /** Cursor into the SS trace; advances one row per engine frame (lag or not). */
     private int ssCursor;
+    /**
+     * Non-null only for a multi-segment run session (parallel branch). Each
+     * entry is a planned segment (manifest record + loaded {@link TraceData}
+     * + boundary transitions) from {@link TraceRunReplayWalker#plan}. A run
+     * session drives {@link #runAdvancer} from the all-mode GameLoop hook
+     * instead of the LEVEL-only {@link #tick()} completion-hold.
+     */
+    private List<TraceRunReplayWalker.SegmentPlan> runSegments;
+    private RunSegmentAdvancer runAdvancer;
     /**
      * Snapshot of the user's gameplay-altering config taken before
      * {@link TraceReplaySessionBootstrap#prepareConfiguration} ran.
@@ -142,6 +155,26 @@ public final class TraceSessionLauncher {
         this.ssCursor = 0;
     }
 
+    /**
+     * Multi-segment run session constructor (parallel to the level/SS
+     * constructors). {@link #trace} is left null — {@link #finishRunLaunch}
+     * and each segment advance read the active segment's {@code TraceData}
+     * from {@link #runSegments} directly instead.
+     */
+    TraceSessionLauncher(TraceEntry entry, Bk2Movie movie,
+                         List<TraceRunReplayWalker.SegmentPlan> runSegments,
+                         TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot) {
+        this.entry = entry;
+        this.trace = null;
+        this.movie = movie;
+        this.configSnapshot = configSnapshot;
+        this.ssTrace = null;
+        this.ssBk2FrameOffset = 0;
+        this.ssStageFinishedFrame = 0;
+        this.ssCursor = 0;
+        this.runSegments = runSegments;
+    }
+
     public static TraceSessionLauncher active() {
         return activeSession;
     }
@@ -176,6 +209,14 @@ public final class TraceSessionLauncher {
         clearLaunchSessionOverridesBeforeTraceSnapshot(GameServices.configuration());
         TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot =
                 TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        // Multi-segment trace runs take their own branch BEFORE the
+        // special-stage profile check below: a run's entry.metadata() is
+        // segment 0's metadata, which may itself carry the SS trace_profile
+        // (a run can start with a special-stage segment) and must not be
+        // hijacked into the single-segment SS path.
+        if (entry.isRun()) {
+            return launchRun(entry, loop, configSnapshot);
+        }
         // Special-stage traces (no meaningful zone/act) take a parallel branch:
         // they skip the level driver stack entirely and drive the SS runtime
         // directly through GameLoop's SPECIAL_STAGE update.
@@ -200,6 +241,40 @@ public final class TraceSessionLauncher {
             // If we already mutated config before launchGameByEntry
             // threw, restore the user's settings so the picker
             // resumes with their preferences intact.
+            if (configMutated) {
+                TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Parallel launch path for a multi-segment trace run. Boots the game
+     * module against segment 0's zone/act exactly like the ordinary level
+     * branch (segment 0's zone/act are already engine-converted by
+     * {@link TraceEntry#forRun}), then {@link #finishRunLaunch} takes over
+     * from the game-bootstrap callback and additionally stores the planned
+     * segment list the {@link RunSegmentAdvancer} walks.
+     */
+    private static boolean launchRun(TraceEntry entry, GameLoop loop,
+            TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot) {
+        boolean configMutated = false;
+        try {
+            List<TraceRunReplayWalker.SegmentPlan> segments =
+                    TraceRunReplayWalker.plan(entry.runManifest(), entry.runDir());
+            TraceData seg0Trace = segments.get(0).trace();
+            Bk2Movie movie = new Bk2MovieLoader().load(entry.bk2Path());
+            TraceSessionLauncher session =
+                    new TraceSessionLauncher(entry, movie, segments, configSnapshot);
+            TraceReplaySessionBootstrap.prepareConfiguration(seg0Trace, seg0Trace.metadata());
+            configMutated = true;
+            loop.launchGameByEntry(
+                    resolveGameEntry(entry.gameId()),
+                    session::finishRunLaunch);
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(java.util.logging.Level.SEVERE,
+                    "Failed to launch trace run " + entry.dir(), e);
             if (configMutated) {
                 TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
             }
@@ -238,18 +313,52 @@ public final class TraceSessionLauncher {
     }
 
     /**
-     * Applies the recorded team + cross-game config for an SS session. Mirrors
-     * the team half of {@link TraceReplaySessionBootstrap#prepareConfiguration}
-     * without its level-only S3K fresh-load branch (SS traces are S2-only).
+     * Applies per-game special-stage configuration for trace replay. Routes
+     * through the static helper to centralize the shared team / cross-game /
+     * S3K fresh-load policy. Reads the fresh_load metadata field to determine
+     * whether to override the S3K intro-skip gate.
+     *
+     * @param meta the trace metadata (provides recorded team, game id, and fresh_load flag)
      */
-    private static void prepareSpecialStageConfiguration(TraceMetadata meta) {
+    static void prepareSpecialStageConfiguration(TraceMetadata meta) {
         SonicConfigurationService config = GameServices.configuration();
+        applyPerGameSpecialStageConfig(config, meta, meta.isFreshLoad());
+    }
+
+    /**
+     * Static helper for per-game special-stage launch configuration. Applies
+     * the shared team + cross-game settings, plus the S3K fresh-load branch
+     * when applicable (mirroring {@link TraceReplaySessionBootstrap#prepareConfiguration}).
+     *
+     * <p>For S1: no special intro-skip behavior applies to special stages.
+     *
+     * @param config the configuration service to mutate
+     * @param meta the trace metadata (provides recorded team and game id)
+     * @param freshLoadSignal true when the trace requires a fresh level load
+     *     (S3K only; false is the safe default until blue-spheres plan wires
+     *     the real signal)
+     */
+    static void applyPerGameSpecialStageConfig(SonicConfigurationService config,
+                                               TraceMetadata meta,
+                                               boolean freshLoadSignal) {
+        // Team: the recorded trace dictates the team.
         String main = meta.recordedMainCharacter();
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
                 main == null || main.isBlank() ? "sonic" : main);
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
                 String.join(",", meta.recordedSidekicks()));
+
+        // Cross-game donation wasn't recorded; always force it off so
+        // trace physics/visuals match the base ROM.
         config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+
+        // S3K: apply the fresh-load intro-skip branch when a trace
+        // requires a fresh level load. This mirrors the level-mode branch
+        // in TraceReplaySessionBootstrap.prepareConfiguration. S1 has no
+        // intro-skip behavior in special stages.
+        if (freshLoadSignal && "s3k".equals(meta.game())) {
+            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
+        }
     }
 
     private void finishSpecialStageLaunch() {
@@ -347,9 +456,78 @@ public final class TraceSessionLauncher {
         }
     }
 
+    /**
+     * Multi-segment run launch callback. Mirrors
+     * {@link #finishLaunchAfterGameBootstrap} EXCEPT it never calls
+     * {@link #installTraceRewindController}: the stepper/base-frame capture
+     * assumes a single fixed segment and would silently rewind against the
+     * wrong segment after a mid-run re-seek, so {@link #rewindController}
+     * stays null for the whole run session (GameLoop's realtime-rewind
+     * engagement then no-ops). Per-segment rewind support is a documented
+     * follow-up, not silently-wrong behavior. Additionally installs the
+     * {@link RunSegmentAdvancer} that walks {@link #runSegments} from the
+     * all-mode GameLoop hook.
+     */
+    private void finishRunLaunch() {
+        GameLoop loop = Engine.currentGameLoop();
+        if (loop == null) {
+            LOGGER.severe("Trace run launch callback fired after engine teardown; "
+                    + "aborting for " + entry.dir());
+            return;
+        }
+        PlaybackDebugManager playback = GameServices.playbackDebug();
+        try {
+            TraceData seg0Trace = runSegments.get(0).trace();
+            this.fixture = new LiveFixture(playback, loop);
+            TraceReplayDriver driver = new TraceReplayDriver(
+                    seg0Trace, movie, fixture, loop, loop::getMainPlayableSprite);
+            driver.start(entry.zone(), entry.act());
+
+            this.comparator = driver.comparator();
+            this.cameraFocusController = new TraceCameraFocusController(
+                    comparator,
+                    loop::getMainPlayableSprite,
+                    () -> {
+                        var sprites = GameServices.spritesOrNull();
+                        if (sprites == null) return null;
+                        var sks = sprites.getSidekicks();
+                        return sks.isEmpty() ? null : sks.get(0);
+                    },
+                    GameServices::camera,
+                    GameServices.configuration(),
+                    loop::isPaused);
+            loop.setTraceCameraFocusController(cameraFocusController);
+            this.overlay = new TraceHudOverlay(comparator,
+                    () -> cameraFocusController.currentLabel(),
+                    this::rewindStatusLabel);
+            // TraceReplayDriver.start already attached the comparator as
+            // the playback frame observer. No installTraceRewindController
+            // call here — see method javadoc.
+            this.runAdvancer = new RunSegmentAdvancer(runSegments);
+            activeSession = this;
+            TraceGhostHook.set(ghostHook);
+        } catch (Exception e) {
+            playback.endSession();
+            loop.setTraceCameraFocusController(null);
+            this.cameraFocusController = null;
+            activeSession = null;
+            GameServices.audio().setRewindHistoryArmed(false);
+            TraceGhostHook.clear(ghostHook);
+            TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
+            LOGGER.log(java.util.logging.Level.SEVERE,
+                    "Failed to finish trace run launch for " + entry.dir(), e);
+            loop.returnToMasterTitle();
+        }
+    }
+
     /** True for a special-stage visual session (parallel branch). */
     public boolean isSpecialStageSession() {
         return ssTrace != null;
+    }
+
+    /** True for a multi-segment run session (parallel branch). */
+    public boolean isRunSession() {
+        return runSegments != null;
     }
 
     /**
@@ -406,9 +584,16 @@ public final class TraceSessionLauncher {
         ssCursor++;
     }
 
-    /** Called from {@link GameLoop} each LEVEL tick while active. */
+    /**
+     * Called from {@link GameLoop} each LEVEL tick while active. A run
+     * session early-returns here: this completion-hold arms a fade the
+     * moment ANY comparator completes, which for a run would end the whole
+     * session ~1s after its FIRST segment boundary. {@link #runAdvancer}
+     * alone owns run end, via {@link #runAdvanceTickIfActive} emitting
+     * {@code END_OF_RUN}.
+     */
     public void tick() {
-        if (comparator == null || fadeStarted) {
+        if (comparator == null || fadeStarted || isRunSession()) {
             return;
         }
         if (comparator.isComplete() && !completionArmed) {
@@ -422,6 +607,73 @@ public final class TraceSessionLauncher {
                 startFadeOut();
             }
         }
+    }
+
+    /**
+     * All-mode per-frame hook for a run session's segment-advance state
+     * machine (called from GameLoop unconditionally, every mode, not just
+     * LEVEL — {@link #tick()} alone goes blind the instant the mode leaves
+     * LEVEL). No-op for a non-run session or once the fade has started. The
+     * re-seek + comparator/HUD/camera rebind for a segment advance happen
+     * here, between frames — never from inside a
+     * {@link com.openggf.debug.playback.PlaybackDebugManager.PlaybackFrameObserver}
+     * callback.
+     */
+    public void runAdvanceTickIfActive(GameMode mode, int cursorFrame) {
+        if (runAdvancer == null || fadeStarted) {
+            return;
+        }
+        RunSegmentAdvancer.Event event = runAdvancer.onFrame(mode, cursorFrame);
+        if (event instanceof RunSegmentAdvancer.AdvanceAction action) {
+            applyRunSegmentAdvance(action);
+        } else if (event instanceof RunSegmentAdvancer.EndOfRun) {
+            startFadeOut();
+        }
+    }
+
+    /**
+     * Applies a segment-advance {@link RunSegmentAdvancer.AdvanceAction}: re-seeks
+     * playback to the next segment's BK2 offset and rebinds EVERYTHING that
+     * captured the old comparator — the comparator field itself (read by
+     * ghost rendering), the camera focus controller and HUD overlay (rebuilt
+     * and re-registered, mirroring {@link #finishRunLaunch}), and the
+     * playback frame observer. A stale binding would keep showing the
+     * previous segment's counts.
+     */
+    private void applyRunSegmentAdvance(RunSegmentAdvancer.AdvanceAction action) {
+        GameLoop loop = Engine.currentGameLoop();
+        if (loop == null) {
+            return;
+        }
+        TraceRunReplayWalker.SegmentPlan segment = runSegments.get(action.nextSegmentIndex());
+        // firstErrorCallback = loop::toggleUserPause, matching the live
+        // TraceReplayDriver constructor's onComparatorPause (segment 0's
+        // comparator, built via TraceReplayDriver.start, gets the same
+        // callback) -- every segment must pause on its first divergence,
+        // not just segment 0.
+        this.comparator = new LiveTraceComparator(
+                segment.trace(), ToleranceConfig.DEFAULT, 0,
+                loop::getMainPlayableSprite, loop::toggleUserPause);
+        this.cameraFocusController = new TraceCameraFocusController(
+                comparator,
+                loop::getMainPlayableSprite,
+                () -> {
+                    var sprites = GameServices.spritesOrNull();
+                    if (sprites == null) return null;
+                    var sks = sprites.getSidekicks();
+                    return sks.isEmpty() ? null : sks.get(0);
+                },
+                GameServices::camera,
+                GameServices.configuration(),
+                loop::isPaused);
+        loop.setTraceCameraFocusController(cameraFocusController);
+        this.overlay = new TraceHudOverlay(comparator,
+                () -> cameraFocusController.currentLabel(),
+                this::rewindStatusLabel);
+        GameServices.playbackDebug().setFrameObserver(comparator);
+        GameServices.playbackDebug().startSession(movie, action.reseekOffset());
+        completionArmed = false;
+        completionHoldFrames = 0;
     }
 
     /**

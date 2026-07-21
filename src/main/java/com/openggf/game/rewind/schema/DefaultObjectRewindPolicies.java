@@ -351,6 +351,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance", "hangStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance", "hangingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarVerticalObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
+            // Pending-touch latch mirroring CnzBumperObjectInstance: the touch listener records the
+            // colliding sprite here and the update loop consumes+clears it one frame later to apply
+            // the bounce response outside the touch callback.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoBumperObjectInstance", "pendingPrimaryTouch"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoBumperObjectInstance", "pendingSidekickTouch"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild", "parent"), RewindFieldPolicy.CAPTURED),

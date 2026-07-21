@@ -1,0 +1,5 @@
+{"game": "s3k", "zone": "aiz", "zone_id": 0, "act": 1, "bk2_frame_offset": 500,
+ "trace_frame_count": 2, "trace_schema": 6, "csv_version": 7,
+ "trace_profile": "complete_run", "source_bk2": "synthetic.bk2",
+ "run_id": "run_aiz_gumball_3seg", "segment_index": 0,
+ "lua_script_version": "6.30-s3k-completerun", "start_x": "0500", "start_y": "0400"}

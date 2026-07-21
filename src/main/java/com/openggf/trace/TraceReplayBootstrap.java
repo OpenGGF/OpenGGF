@@ -512,7 +512,32 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean shouldGroundSnapMetadataStartForTraceReplay(TraceData trace) {
-        return !isS3kCompleteRunSegment(trace);
+        return !isS3kCompleteRunSegment(trace) && !isS3kBonusStageSegment(trace);
+    }
+
+    /**
+     * Identifies an S3K bonus-stage trace segment (Gumball/Pachinko/Slots).
+     * These fixtures start the player exactly at the ROM's post-Restart_level
+     * spawn coordinates (sonic3k.asm:38160-38183 Get_LevelSizeStart), which for
+     * Gumball/Pachinko is deliberately positioned at/beyond a terrain edge so
+     * the player free-falls into the machine. ROM never runs a pre-LevelLoop
+     * terrain probe against this spawn point: {@code SpawnLevelMainSprites}'s
+     * zone-specific air/animation branches are skipped whenever
+     * {@code Special_bonus_entry_flag} is set (sonic3k.asm:8117-8118), so the
+     * player's ground/air transition is decided exclusively by the first
+     * driven frame's own {@code Player_AnglePos} probe. The generic
+     * bootstrap ground-snap (positiveThreshold 14) instead runs that same
+     * detach-from-terrain probe one tick early, at bootstrap time, consuming
+     * the transition frame's own ground-accel tick and leaving frame 0 to
+     * run full air acceleration + gravity a tick ahead of the ROM.
+     */
+    private static boolean isS3kBonusStageSegment(TraceData trace) {
+        if (trace == null || trace.metadata() == null) {
+            return false;
+        }
+        TraceMetadata metadata = trace.metadata();
+        return "s3k".equals(metadata.game())
+                && "s3k_bonus_stage".equals(metadata.traceProfile());
     }
 
     /**

@@ -2975,13 +2975,27 @@ public class ObjectManager {
                     && placement.isBetweenLoadCursors(spawn);
             placement.removeFromActiveForUnload(spawn);
             if (retainForTwoAxisYPass) {
-                // S3K Sprite_CheckDeleteTouch3 clears the live entry's
-                // respawn-table bit. Even after the X cursor has passed it,
-                // loc_1B982's later Camera-Y strip scan may recreate that
-                // entry while it remains between the front/back cursors.
-                // Retain it in the deferred Y-pass set only while its layout
-                // index is currently between those cursors. Entries already
-                // trimmed from the X range must wait for normal X re-entry.
+                // ROM loc_1B982's Y-camera pass rescans EVERY entry currently
+                // between Object_load_addr_back/front (the whole live X-window
+                // range) whose respawn-table bit 7 reads clear -- not just
+                // entries freshly queued by the X-pass this frame
+                // (sonic3k.asm:37728-37773, the loc_1B982/loc_1B9A4 scan loop).
+                // A Sprite_OnScreen_Test-family
+                // off-screen self-delete (e.g. the Pachinko round bumper's
+                // loc_32EF0 Y-axis check) clears that same bit 7
+                // (sonic3k.asm:68922-68926, loc_32F22's bclr #7,(a2)), so ROM's
+                // next Y-coarse crossing reconsiders it exactly like a never-yet-spawned
+                // entry. removeFromActiveForUnload() above clears this
+                // spawn's deferredVerticalLoad bit via clearCursorLoadState,
+                // so without re-marking it here the spawn is dropped from
+                // both the X-pass queue (nothing re-triggers trySpawn() for
+                // its index unless the X-cursor happens to revisit it) and
+                // the Y-pass deferred set, permanently losing its one-shot
+                // vertical respawn window (pachinko1 trace f1318: the round
+                // bumper at (0x104,0x7E0) self-deletes off-screen at ~f1006
+                // and never respawns before the player returns to bounce off
+                // it at f1318, though the ROM trace shows it respawning at
+                // f1074 well before that).
                 placement.markDeferredVerticalLoad(spawn);
             }
         } else {

@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.objects.HczHarmfulExplosionObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -116,8 +117,10 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
         if (!isAttacking(player)) {
-            // loc_878E8 creates the HCZ water-impact child and deletes Jawz.
-            // The consolidated engine has no gameplay-bearing child state here.
+            // loc_878E8 creates HCZEndBoss_ExplosionChild through
+            // CreateChild1_Normal, then deletes Jawz. The child retains $8B
+            // hurt collision through mapping frame 2.
+            spawnChild(() -> new HczHarmfulExplosionObjectInstance(currentX, currentY));
             ObjectLifetimeOps.destroyLatched(this);
             return;
         }

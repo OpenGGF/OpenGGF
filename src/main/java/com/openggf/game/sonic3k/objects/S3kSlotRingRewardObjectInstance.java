@@ -140,6 +140,24 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
         addLiveRings(playerEntity, 1);
         services().addBonusStageRings(1);
         services().playSfx(GameSound.RING);
+        // ROM Obj_SlotRing routine 0 -> 1 (sonic3k.asm:35883-35887): the cage's
+        // active-reward count ($30(a0) on the cage, reached via this object's
+        // $2E(a0) pointer) is decremented with `subq.w #1,(a1)` at the exact
+        // grant instant -- immediately before GiveRing and the routine bump to
+        // the sparkle handler (loc_1AA56) -- not when the sparkle visual later
+        // finishes. The sparkle plays for several more frames (Ani_RingSparkle)
+        // but is purely cosmetic: it does not hold up the cage's state-1 "all
+        // rewards accounted for" check (sonic3k.asm:99416-99509 loc_4C0AA/
+        // loc_4C172, tst.w $30(a0)) that gates the release transition. Reporting
+        // this object as no-longer-pending only at S3kSlotRingRewardObjectInstance
+        // destruction (after SPARKLE_FRAMES) held the cage's active count high 8
+        // frames too long, pushing the release angle-alignment check
+        // (S3kSlotBonusCageObjectInstance.updateRelease) past its window and
+        // delaying the cage-ejection y_vel/x_vel launch by a full 16-frame
+        // rotation period (observed: TestS3kSlotsBonusTraceReplay frame 332
+        // expected y_speed=-0x400 vs engine's still-0x0000, released 15 frames
+        // late at frame 347 instead of 332).
+        controller.onRewardExpired();
         inSparkle = true;
         sparkleTimer = SPARKLE_FRAMES;
     }

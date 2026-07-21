@@ -29,6 +29,8 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     private int chaosEmeraldCount;
     private boolean[] gotEmeralds;
     private boolean[] gotSuperEmeralds;
+    /** S3K ROM: Emeralds_converted_flag. Durable across levels and rewind. */
+    private boolean emeraldsConverted;
 
     /**
      * Current boss ID (ROM: Current_Boss_ID).
@@ -178,6 +180,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
                 gotSuperEmeralds[i] = false;
             }
         }
+        this.emeraldsConverted = false;
 
         this.currentBossId = 0;
         this.bossDefeatedFlag = false;
@@ -246,6 +249,11 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     }
 
     public void restoreSaveProgress(int lives, int continues, List<Integer> chaosEmeralds, List<Integer> superEmeralds) {
+        restoreSaveProgress(lives, continues, chaosEmeralds, superEmeralds, null);
+    }
+
+    public void restoreSaveProgress(int lives, int continues, List<Integer> chaosEmeralds,
+                                    List<Integer> superEmeralds, Boolean emeraldsConverted) {
         this.lives = Math.max(0, lives);
         this.continues = Math.max(0, continues);
         this.emeraldCount = 0;
@@ -274,6 +282,9 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
                 }
             }
         }
+        this.emeraldsConverted = emeraldsConverted != null
+                ? emeraldsConverted
+                : superEmeralds != null && !superEmeralds.isEmpty();
     }
 
     public void loseLife() {
@@ -401,6 +412,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
             return;
         }
         gotSuperEmeralds[index] = true;
+        emeraldsConverted = true;
     }
 
     public boolean hasAllSuperEmeralds() {
@@ -413,6 +425,14 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
             }
         }
         return true;
+    }
+
+    public boolean isEmeraldsConverted() {
+        return emeraldsConverted;
+    }
+
+    public void setEmeraldsConverted(boolean emeraldsConverted) {
+        this.emeraldsConverted = emeraldsConverted;
     }
 
     /**
@@ -743,7 +763,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     public GameStateSnapshot capture() {
         return new GameStateSnapshot(
                 score, lives, continues, currentSpecialStageIndex, emeraldCount,
-                gotEmeralds, gotSuperEmeralds, currentBossId, bossDefeatedFlag,
+                gotEmeralds, gotSuperEmeralds, emeraldsConverted, currentBossId, bossDefeatedFlag,
                 screenShakeActive, backgroundCollisionFlag, bigRingCollected,
                 wfzFireToggle, itemBonus, reverseGravityActive,
                 collectedSpecialRings, endOfLevelActive, endOfLevelFlag, screenLocked);
@@ -758,6 +778,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         this.emeraldCount = snapshot.emeraldCount();
         this.gotEmeralds = snapshot.gotEmeralds().clone();
         this.gotSuperEmeralds = snapshot.gotSuperEmeralds().clone();
+        this.emeraldsConverted = snapshot.emeraldsConverted();
         this.currentBossId = snapshot.currentBossId();
         this.bossDefeatedFlag = snapshot.bossDefeatedFlag();
         this.screenShakeActive = snapshot.screenShakeActive();

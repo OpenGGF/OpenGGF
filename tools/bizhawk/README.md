@@ -17,8 +17,62 @@ Use this folder for the recorder scripts and local BizHawk assets:
 - `record_s3k_trace.bat` launches the Sonic 3&K recorder through the reusable no-audio/no-render launcher
 - `s3k_trace_recorder.lua` captures Sonic 3&K ROM-side trace data using schema v3, including
   `zone_act_state` diagnostics and the `aiz_end_to_end` checkpoint stream
+- `s3k_complete_run_recorder.lua` records per-zone segments from any Sonic 3&K BK2 (see
+  "Trace Run Manifests" section below)
 - `record_s1_credits_traces.bat` launches forced Sonic 1 credits-demo capture
 - `s1_credits_trace_recorder.lua` records the built-in ending replays without a BK2
+
+## Trace Run Manifests
+
+A **trace run** is a complete playthrough captured in typed per-zone or per-stage segment
+directories (`aiz/`, `hcz/`, `mgz/`, etc.), each containing `physics.csv`, `aux_state.jsonl`,
+and `metadata.json`. The `run_manifest.json` file (at the run's root) indexes all segments,
+records game-mode transitions and stage-detour boundaries (special stages, bonus zones), and
+marks the BK2 frame where each transition occurred. A manifest is emitted only when:
+- The playthrough includes a stage detour (special stage finalization via `Game_Mode=$34` or
+  bonus zone entry at zone id `0x13`–`0x15` under the level-family `Game_Mode`), or
+- The `OGGF_TRACE_RUN_ID` environment variable is explicitly set.
+
+The S3K complete-run recorder handles stage detours as follows:
+- **Special Stages** (`Game_Mode=$34`): The level segment finalizes when `Game_Mode` changes.
+  The `run_manifest.json` records a single merged transition boundary with the `giant_ring`
+  mode change frame (the blue-spheres special stage). Per-frame CSV rows are only recorded for
+  the level segment; blue-spheres row writer and segment directories land with future phases.
+- **Bonus Zones** (zone id `0x13`–`0x15`, `Game_Mode` stays level-family): Enter a new `s3k_bonus_stage` segment on the same
+  schema as level segments. The level segment also finalizes, and the manifest records both
+  mode-change boundaries explicitly.
+- **Mode Guard**: Per-frame row writes are gated on the current `Game_Mode` family (level vs.
+  stage). Stage detours trigger a transition-boundary record but do not write rows until the
+  mode changes back into a recordable category, avoiding pollution of level segments with
+  out-of-scope stage data.
+- **Repeat Segments**: If a route re-enters a zone, segment directories are named with a
+  repeat index (e.g. `aiz_2`, `aiz_3`) to avoid collisions while preserving
+  contiguous frame ranges within each segment.
+
+The `OGGF_TRACE_RUN_ID` environment variable forces manifest emission and sets the `run_id`
+field, allowing trace runs with no detours to be tracked explicitly (useful for complete-game
+runs or for organizing capture sessions).
+
+## Capture Launch Notes (verified live 2026-07-19)
+
+Facts established during the first round-trip captures — they override any older
+invocation text in this file:
+
+- **Output location:** BizHawk's Lua working directory is the LUA SCRIPT'S OWN
+  DIRECTORY, so every recorder writes to `<dir containing the .lua>/trace_output/`
+  (e.g. `tools/bizhawk/trace_output/` of whichever checkout's script you launched).
+  No recorder reads an `OGGF_TRACE_OUTPUT_DIR` variable.
+- **Direct launch works and is the simplest route:**
+  `docs\BizHawk-2.11-win-x64\EmuHawk.exe --chromeless --lua=<script> --movie=<bk2> <rom>`
+  (note the `=` forms). `run_bizhawk_lua.bat` also works now that all three recorders
+  carry the guard-satisfying `pcall(client.SetSoundOn, false)` snippet.
+- **Lua errors are INVISIBLE in `--chromeless` mode** — a script that errors at load
+  produces no console output and no files, and EmuHawk either exits quickly or idles.
+  If a capture produces nothing, re-run WITHOUT `--chromeless` and watch for the error
+  dialog before suspecting anything else.
+- **Console `print()` output never reaches stdout** in either mode; judge success by
+  the output files, and validate with the VERIFY-ON-FIRST-CAPTURE checks directly
+  against the CSVs.
 
 Schema v3 records the execution counters used by replay:
 
@@ -57,6 +111,463 @@ physics input column from the BK2 log, checks BK2 input alignment, and stores on
 Metropolis Act 3 is recorded as route `mtz3`; Sonic 2 stores it as raw ROM zone id `0x05`
 with act byte `0`, so the recorder reports metadata act `3` while preserving the raw
 zone/act in aux diagnostics.
+
+## Recording S3K Bonus Round-Trip Traces
+
+A **bonus round-trip trace** captures a single level playthrough that includes a
+star-post bonus zone (gumball or pachinko). The trace includes both the level
+segment (up to star-post entry) and the bonus stage segment (from entry to
+exit and return to the level). These are recorded as separate segment
+directories in a single trace run.
+
+**Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
+
+1. Start a new movie from power-on with `s3k.gen`.
+2. Play AIZ Act 1 through to a star post. Collect either:
+   - **50–64 rings** for a gumball bonus (selector formula `((rings-20)/15)%3` yields remainder 2),
+     referenced at ROM `sonic3k.asm:61891-61920` (GUMBALL assignment at 61917-61920), or
+   - **35–49 rings** for a glowing-sphere/pachinko bonus (selector remainder 1).
+   
+   **Warning:** 20–34 rings selects the slot-machine bonus (remainder 0), which is a deferred feature
+   — do not use for these recordings. Only gumball (50–64) and pachinko (35–49) are supported today.
+3. Approach and enter the star circle at the star post.
+4. Play through the bonus stage to its conclusion (collecting orbs, reaching exit).
+5. Receive the ring bonus, return to the level, and play for 3–5 additional seconds (this guarantees
+   the re-entry segment `aiz_2` in the trace output).
+6. Stop the movie and save as either `s3k-aiz-gumball.bk2` or `s3k-aiz-pachinko.bk2`.
+
+**Recorder Invocation:**
+
+Run the complete-run recorder over your movie file:
+
+```bat
+set OGGF_TRACE_RUN_ID=s3k-aiz-gumball-roundtrip
+
+tools\bizhawk\run_bizhawk_lua.bat ^
+  tools\bizhawk\s3k_complete_run_recorder.lua ^
+  s3k-aiz-gumball.bk2 ^
+  s3k.gen
+```
+
+Replace `s3k-aiz-gumball-roundtrip` and the file paths for pachinko runs. The bonus round-trip
+detour already triggers manifest emission (per plan (a)); the `OGGF_TRACE_RUN_ID` env var ensures
+a stable `run_id` is recorded in the manifest, used for organizing the commit layout under
+`src/test/resources/traces/s3k/runs/<run_id>/`. The manifest records all segment transitions,
+including the star-post entry boundary and the bonus-exit return boundary.
+
+**Expected Output:**
+
+The output directory will contain:
+- `run_manifest.json` — indexed transitions for level→bonus and bonus→level boundaries.
+- `aiz/` — level segment (AIZ Act 1, frames 0 to star-post entry).
+- `gumball/` or `pachinko/` — bonus segment with `trace_profile: "s3k_bonus_stage"` in
+  `metadata.json`. Both segments contain `physics.csv` and `aux_state.jsonl` (plain format;
+  gzip compression is applied at commit time).
+- `aiz_2/` — AIZ re-entry segment following the bonus return. Step 5 above guarantees this
+  segment will be present. Repeat segments are named with `_2`, `_3`, etc. to avoid
+  directory collisions.
+
+**Commit Layout:**
+
+Place the bonus segment in test resources:
+
+```
+src/test/resources/traces/s3k/bonus_gumball/
+  ├── metadata.json
+  ├── physics.csv.gz
+  ├── aux_state.jsonl.gz
+  ├── s3k-aiz-gumball.bk2           # or under _movies/ with source_bk2 field
+  └── ...
+```
+
+Also preserve the run directory and manifest (used by plan-(c) chain tests):
+
+```
+src/test/resources/traces/s3k/runs/s3k-aiz-gumball-roundtrip/
+  ├── run_manifest.json
+  ├── aiz/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  └── gumball/
+      ├── metadata.json
+      ├── physics.csv.gz
+      └── aux_state.jsonl.gz
+```
+
+The test classes `TestS3kGumballBonusTraceReplay` and `TestS3kPachinkoBonusTraceReplay`
+automatically activate (skip-if-missing) once their respective `bonus_gumball/` and
+`bonus_pachinko/` directories exist in test resources.
+
+## Recording S3K Slot-Machine Round-Trip Traces
+
+A **slot-machine round-trip trace** captures a single level playthrough that includes a
+star-post bonus zone (slot machine). The trace includes both the level segment (up to
+star-post entry) and the slot-machine bonus segment (from entry to exit and return to the
+level). These are recorded as separate segment directories in a single trace run.
+
+**Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
+
+1. Start a new movie from power-on with `s3k.gen`.
+2. Play AIZ Act 1 through to a star post. Collect exactly:
+   - **20–34 rings** at the star post (selector formula `((rings-20)/15)%3` yields remainder 0),
+     referenced at ROM `sonic3k.asm:61891-61920` (SLOT_MACHINE assignment at 61897).
+   
+3. Approach and enter the star circle at the star post.
+4. Play through the slot-machine bonus stage to its conclusion (inserting tokens, collecting
+   rings, reaching exit or losing all tokens).
+5. Receive the ring bonus, return to the level, and play for 3–5 additional seconds (this
+   guarantees the re-entry segment `aiz_2` in the trace output).
+6. Stop the movie and save as `s3k-aiz-slots.bk2`.
+
+**Recording Notes:** The slot-machine bonus suppresses sidekicks at runtime (only Sonic plays),
+and the sidekick comparator columns bypass the sprite seam for slot sessions. Record **SONIC-SOLO**
+exclusively — a team recording (Sonic + Tails) adds pure noise to the comparator output.
+
+**Recorder Invocation:**
+
+Run the complete-run recorder over your movie file:
+
+```bat
+set OGGF_TRACE_RUN_ID=s3k-aiz-slots-roundtrip
+
+tools\bizhawk\run_bizhawk_lua.bat ^
+  tools\bizhawk\s3k_complete_run_recorder.lua ^
+  s3k-aiz-slots.bk2 ^
+  s3k.gen
+```
+
+The bonus round-trip detour already triggers manifest emission (per plan (a)); the
+`OGGF_TRACE_RUN_ID` env var ensures a stable `run_id` is recorded in the manifest, used for
+organizing the commit layout under `src/test/resources/traces/s3k/runs/<run_id>/`. The manifest
+records all segment transitions, including the star-post entry boundary and the bonus-exit
+return boundary.
+
+**Expected Output:**
+
+The output directory will contain:
+- `run_manifest.json` — indexed transitions for level→bonus and bonus→level boundaries.
+- `aiz/` — level segment (AIZ Act 1, frames 0 to star-post entry).
+- `slots/` — bonus segment with `trace_profile: "s3k_bonus_stage"` and `bonus_stage_type: "slots"`
+  in `metadata.json`. Both segments contain `physics.csv` and `aux_state.jsonl` (plain format;
+  gzip compression is applied at commit time).
+- `aiz_2/` — AIZ re-entry segment following the bonus return. Step 5 above guarantees this
+  segment will be present. Repeat segments are named with `_2`, `_3`, etc. to avoid
+  directory collisions.
+
+**Commit Layout:**
+
+Place the bonus segment in test resources:
+
+```
+src/test/resources/traces/s3k/bonus_slots/
+  ├── metadata.json
+  ├── physics.csv.gz
+  ├── aux_state.jsonl.gz
+  ├── s3k-aiz-slots.bk2           # or under _movies/ with source_bk2 field
+  └── ...
+```
+
+Also preserve the run directory and manifest (used by plan-(c) chain tests):
+
+```
+src/test/resources/traces/s3k/runs/s3k-aiz-slots-roundtrip/
+  ├── run_manifest.json
+  ├── aiz/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  └── slots/
+      ├── metadata.json
+      ├── physics.csv.gz
+      └── aux_state.jsonl.gz
+```
+
+The test class `TestS3kSlotsBonusTraceReplay` automatically activates (skip-if-missing) once
+the `bonus_slots/` directory exists in test resources.
+
+## Recording S3K Blue-Spheres Round-Trip Traces
+
+A **blue-spheres round-trip trace** captures a single playthrough that includes entry into
+a special stage (blue-spheres, accessed via giant ring) mid-level, completion or failure of
+the stage, and return to the level. The trace includes both the level segment and a dedicated
+`special_stage` segment with the 20-column S3K special-stage schema.
+
+**Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
+
+1. Start a new movie from power-on with `s3k.gen`.
+2. Play AIZ Act 1 through to the giant ring entrance (typically at the midpoint).
+3. Enter the giant ring to trigger the blue-spheres special stage.
+4. Play through the blue-spheres stage to its conclusion (collecting spheres, reaching exit,
+   or failing to collect enough). The stage ends when fade timer completes the exit animation.
+5. Return to the level after blue-spheres completion and play for 3–5 additional seconds
+   (this guarantees the re-entry segment `aiz_2` in the trace output).
+6. Stop the movie and save as `s3k-aiz-bluespheres.bk2`.
+
+**Recorder Invocation:**
+
+Run the complete-run recorder over your movie file:
+
+```bat
+set OGGF_TRACE_RUN_ID=s3k-aiz-bluespheres-roundtrip
+
+tools\bizhawk\run_bizhawk_lua.bat ^
+  tools\bizhawk\s3k_complete_run_recorder.lua ^
+  s3k-aiz-bluespheres.bk2 ^
+  s3k.gen
+```
+
+The special-stage detour already triggers manifest emission. The `OGGF_TRACE_RUN_ID` env var
+ensures a stable `run_id` for organizing trace history.
+
+**Expected Output:**
+
+The output directory will contain:
+- `run_manifest.json` — indexed transitions for level→special-stage and special-stage→level boundaries.
+- `aiz/` — level segment (AIZ Act 1, frames 0 to giant-ring entry).
+- `ss/` — special-stage segment with `trace_profile: "s3k_special_stage"`, `ss_csv_version: 1`,
+  and `special_stage_index` in `metadata.json`. Both segments contain `physics.csv` and
+  `aux_state.jsonl` (plain format; gzip compression is applied at commit time).
+  The special-stage segment metadata also includes `"fresh_load": false` (giant-ring entry
+  is mid-level, never a fresh stage boot).
+- `aiz_2/` — AIZ re-entry segment following the special-stage return. Step 5 above guarantees
+  this segment will be present.
+
+**VERIFY-ON-FIRST-CAPTURE Self-Check:**
+
+At SS-segment open and every 300 frames during the stage, the recorder prints diagnostics
+to stdout:
+
+```
+SS segment armed at BizHawk frame N (dir=ss, special_stage_index=0).
+SS frame 0: spheres_left=8 ring_count=0 started=1 x_pos=0x0080 y_pos=0x0080
+SS frame 300: spheres_left=7 ring_count=5 started=1 x_pos=0x0120 y_pos=0x0150
+```
+
+These prints verify the RAM map (documented in the plan) against the first real capture.
+Eyeball the progression to confirm spheres_left decreases toward 0, started stays 1 after
+the first frame, and x_pos/y_pos remain within 0xFFFF. These diagnostics are mandatory
+for validating that the schema addresses are correctly mapped to the ROM's special-stage
+state block.
+
+## Recording S1 Maze Round-Trip Traces (s1-ghz-maze-roundtrip)
+
+An **S1 maze round-trip trace** captures a single GHZ playthrough that includes entry into
+the special stage (maze, accessed via the giant ring past the signpost) mid-act, completion
+or failure of the maze, and continuation into the next act. The trace includes the GHZ1 level
+segment, a dedicated `special_stage` segment with the S1 maze schema, and the GHZ2 level
+segment.
+
+**Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
+
+1. Start a new movie from power-on with the S1 World REV01 ROM, on a **fresh save/no-emeralds
+   state**. Do not resume from a save that already collected an emerald — after a first
+   emerald is collected, `v_lastspecial`'s pre-`SS_Load` value can name a stage the ROM's skip
+   loop rejects, mislabeling the segment.
+2. Play GHZ1, collecting at least 50 rings.
+3. Touch the giant ring past the signpost to trigger the maze special stage.
+4. Play through the maze to its conclusion — complete it, or fail out of it. Either outcome is
+   acceptable for this recording.
+5. Continue into GHZ2 and keep playing until control is settled (a few seconds of normal
+   act-2 gameplay after the transition).
+6. Stop the movie and save under a descriptive name (e.g. `s1-ghz-maze-roundtrip.bk2`; see
+   the truthful-name commit rule below).
+
+**Recorder Invocation** (verified 2026-07-19 — the direct launch used for the committed
+capture; see "Capture Launch Notes" above for where the output lands):
+
+```bat
+set OGGF_TRACE_RUN_ID=s1-ghz-maze-roundtrip
+
+docs\BizHawk-2.11-win-x64\EmuHawk.exe --chromeless ^
+  --lua=tools/bizhawk/s1_complete_run_recorder.lua ^
+  --movie=docs/BizHawk-2.11-win-x64/Movies/s1-ghz-maze-roundtrip.bk2 s1.gen
+```
+
+The `$10` (special-stage) detour is handled automatically by the recorder's state machine — no
+extra flags are needed. The `OGGF_TRACE_RUN_ID` env var ensures a stable `run_id` is recorded in
+the manifest, used for organizing the commit layout under `src/test/resources/traces/s1/runs/<run_id>/`.
+
+**Expected Output:**
+
+The output directory will contain:
+- `run_manifest.json` — indexed transitions for the GHZ1→maze and maze→GHZ2 boundaries.
+- `ghz1/` — level segment (GHZ Act 1, frames 0 to giant-ring entry).
+- `ss/` — special-stage segment with the S1 maze schema. Both segments contain `physics.csv`
+  and `aux_state.jsonl` (plain format; gzip compression is applied at commit time).
+- `ghz2/` — GHZ Act 2 segment following the maze exit. Step 5 above guarantees this segment
+  will be present.
+
+**Commit Layout:**
+
+Commit the whole run under test resources:
+
+```
+src/test/resources/traces/s1/runs/s1-ghz-maze-roundtrip/
+  ├── run_manifest.json
+  ├── ghz1/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  ├── ss/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  └── ghz2/
+      ├── metadata.json
+      ├── physics.csv.gz
+      └── aux_state.jsonl.gz
+```
+
+Then copy the `ss/` segment (its `metadata.json`, `physics.csv`, and the source bk2) to
+`src/test/resources/traces/s1/special_stage/` to activate `TestS1SpecialStageTraceReplay`.
+
+**Commit the bk2 under its TRUTHFUL name** (superseding the earlier rename-to-
+`s1-complete-run.bk2` mandate): the shared `traces/s1/_movies/s1-complete-run.bk2` is a
+DIFFERENT movie (the original complete-run), and `TraceCatalog.resolveBk2` resolves the
+shared `_movies/` name FIRST — a same-named round-trip bk2 in `special_stage/` would be
+shadowed by the wrong movie. Instead commit the movie under its own name (e.g.
+`s1-ghz-maze-roundtrip.bk2`) in both trace directories and patch `source_bk2` in the
+bundle's `run_manifest.json` + every segment `metadata.json` to match (the recorder
+hardcodes `"s1-complete-run.bk2"` at `write_metadata`; patching ALL copies keeps the
+bundle internally consistent — this is what the committed
+`traces/s1/runs/s1-ghz-maze-roundtrip/` bundle does).
+
+**VERIFY-ON-FIRST-CAPTURE Self-Check:**
+
+At SS-segment open, every 300 frames during the stage, and at finalize time, the recorder
+prints diagnostics to stdout. Confirm all of the following before committing the trace:
+- A plausible angle range in the finalize summary (`SS self-check: angle range seen=...`).
+- The final `ss_rotate` ramping toward `0x1800` (the exit ramp target).
+- Rings and emeralds behaving sensibly across the printed samples.
+- The finalize `v_lastspecial` re-read printing `(special_stage_index + 1) % 6`. Anything else
+  means the `SS_Load` emerald-skip loop fired and the recorded `special_stage_index` is
+  suspect.
+
+Any surprise in these prints means re-derive the RAM map before committing the trace — do not
+commit a trace whose self-check output looks off.
+
+## Recording S2 Halfpipe Round-Trip Traces (s2-ehz-halfpipe-roundtrip)
+
+An **S2 halfpipe round-trip trace** captures a single EHZ playthrough that includes entry into
+the circling-stars special stage (halfpipe, accessed via a star post) mid-act, completion or
+failure of the halfpipe, and continuation back into the level. This exercises the run-mode
+detour state machine added to `s2_trace_recorder.lua` (env-gated on `OGGF_TRACE_RUN_ID`): the
+level segment finalizes at the `Game_Mode=$10` edge, a minimal special-stage segment is sampled
+directly (no `event.onmemoryexecute` hooks), and the return level segment re-arms on exit.
+
+**Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
+
+1. Start a new movie from power-on with the S2 World REV01 ROM, 1-player Sonic+Tails.
+2. Play EHZ Act 1, collecting at least 50 rings. Keep the emerald count below 7 — 7 emeralds
+   changes the star-post behaviour (no special-stage entry).
+3. Touch a star post to open the circling special stars, then enter them to trigger the
+   halfpipe special stage.
+4. Play the halfpipe to its conclusion — complete it, or fail out of it. Either outcome is
+   acceptable for this recording.
+5. Continue playing in the level after the halfpipe returns you to EHZ, until control settles
+   (a few seconds of normal gameplay after the transition).
+6. Stop the movie and save as `s2-ehz-halfpipe-roundtrip.bk2`.
+
+**Recorder Invocation:**
+
+Run the S2 recorder over your movie file through `record_s2_trace.bat` (not the raw
+`run_bizhawk_lua.bat` invocation used by the S1/S3K sections above) — the wrapper is what
+populates `OGGF_BK2_BASENAME` and `OGGF_BK2_FRAME_COUNT` for you:
+
+```bat
+set OGGF_TRACE_RUN_ID=s2-ehz-halfpipe-roundtrip
+
+tools\bizhawk\record_s2_trace.bat ^
+  "s2.gen" ^
+  "s2-ehz-halfpipe-roundtrip.bk2"
+```
+
+Leave `OGGF_S2_TRACE_PROFILE` unset (do not pass a third argument) — `record_s2_trace.bat`
+defaults it to `gameplay_unlock` when omitted, and that is the profile the run's level segments
+must carry. Setting `OGGF_TRACE_RUN_ID` puts the recorder into run mode: every new
+run-mode code path is gated on `run_id ~= nil` (`s2_trace_recorder.lua`, `run_id` assignment
+near the top of the run-mode block), so plain-mode recordings are unaffected.
+
+**`OGGF_TRACE_OUTPUT_DIR` does not apply here:** unlike `s1_complete_run_recorder.lua` and
+`s3k_complete_run_recorder.lua`, `s2_trace_recorder.lua`'s `OUTPUT_DIR` is a hardcoded
+`"trace_output/"` local (not read from an env var), so output always lands under
+`tools\bizhawk\trace_output\` relative to the recorder script. Do not set that env var expecting
+it to redirect S2 output.
+
+**Expected Output:**
+
+Run mode writes numbered per-segment subdirectories under `tools\bizhawk\trace_output\`:
+- `run_manifest.json` — indexed transitions for the EHZ1→halfpipe and halfpipe→EHZ1 boundaries.
+- `seg1_ehz1/` — level segment (EHZ Act 1, frames 0 to star-post entry). Run-mode segment dirs
+  are named `seg<N>_<zone><act>`, where `N` counts level arms only (the `ss` segment does not
+  consume a number).
+- `ss/` — special-stage segment. The dir token is the literal `"ss"` with no counter (a
+  single-detour MVP; a future multi-detour run would need an S1/S3K-style repeat counter).
+- `seg2_ehz1/` — EHZ Act 1 re-entry segment following the halfpipe return. Step 5 above
+  guarantees this segment will be present.
+
+`record_s2_trace.bat`'s own post-processing step checks for a top-level `trace_output\metadata.json`
+before compressing and printing the metadata summary; run mode never writes one (metadata always
+lands inside a per-segment subdir), so the wrapper will print a benign
+`WARNING: No trace output found` and skip its own compression/summary step. This is expected —
+the `seg1_ehz1/`, `ss/`, `seg2_ehz1/`, and `run_manifest.json` files are still written correctly.
+Apply gzip compression yourself before committing, recursing into the segment subdirectories
+(`compress-traces.ps1 <path-to-trace_output> -Recurse -ThresholdBytes 0`).
+
+**PROHIBITION:** do NOT copy the run's `ss/` segment over `src/test/resources/traces/s2/special_stage`
+— the committed interior trace there is produced by `s2_ss_trace_recorder.lua` with the
+RunObjects PC hooks and is governed by the `Assert-SsAuxCoverage` contract; the run's `ss/`
+segment has a reduced aux surface (no `run_objects_end` stream) and is consumed by the run/chain
+path only.
+
+**Row-0 alignment note:** the run port's `ss/` segment samples row 0 on the *next* `$10` frame
+after entry (`bk2_frame_offset` is captured at entry, but the entry branch returns without
+writing a row) — one frame later than the interior `s2_ss_trace_recorder.lua`'s convention,
+which records frame 0 immediately at arm time. See the comment above `start_ss_segment()` in
+`s2_trace_recorder.lua` for the full rationale; keep this one-frame difference in mind for any
+future comparator work against interior-recorder `ss` traces.
+
+**Commit Layout:**
+
+Commit the whole run under test resources, with the source bk2 alongside it:
+
+```
+src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/
+  ├── run_manifest.json
+  ├── s2-ehz-halfpipe-roundtrip.bk2
+  ├── seg1_ehz1/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  ├── ss/
+  │   ├── metadata.json
+  │   ├── physics.csv.gz
+  │   └── aux_state.jsonl.gz
+  └── seg2_ehz1/
+      ├── metadata.json
+      ├── physics.csv.gz
+      └── aux_state.jsonl.gz
+```
+
+Each segment's `metadata.json` records `"source_bk2": "s2-ehz-halfpipe-roundtrip.bk2"` (from
+`OGGF_BK2_BASENAME`, populated automatically by `record_s2_trace.bat` from the bk2 filename) —
+keep the committed bk2's filename matching that recorded basename.
+
+**VERIFY-ON-FIRST-CAPTURE Self-Check:**
+
+At the halfpipe entry (`starpost_special` transition) and exit (`stage_exit` transition), the
+recorder prints every transition field to stdout. Confirm all of the following before committing
+the trace:
+- `special_bonus_entry_flag` (`f_bigring`) reads `1` at entry.
+- `saved_x_pos`/`saved_y_pos` are plausible coordinates near the star post that was touched.
+- `rings_before` is at least 50.
+- `rings_after` (printed at the `stage_exit` transition) reads `0` — the ROM zeroes ring/emerald
+  tracking on the level reload that follows a special stage, so this is the expected, correct
+  value, not a bug.
+- `special_stage_index` (printed when the `ss` segment arms) is a plausible index.
+
+Any surprise in these prints means re-verify the RAM table before committing the trace.
 
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.

@@ -761,7 +761,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         SpindashDustController.RewindState spindash =
                 new SpindashDustController.RewindState(2, 3, 4, true);
         PlayableSpriteController.RewindState expected = new PlayableSpriteController.RewindState(
-                movement, spindash, animation, drowning, carry);
+                movement, spindash, animation, drowning, carry, null);
         sonic.controller.restoreRewindState(expected);
 
         PerObjectRewindSnapshot snapshot = sonic.captureRewindState();

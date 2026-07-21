@@ -790,6 +790,437 @@ same 13 expected-red routes and unchanged non-CNZ frontiers. Animation remains
 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
+### 2026-07-21 -- S3K mega-run chain: gumball interior CLOSED; frontier moved seg1-entry -> seg2->seg3 return
+
+Command (worktree `.claude/worktrees/green-bonus`, branch
+`feature/ai-chain-interior-rng`):
+
+`mvn -q surefire:test -Dtest=com.openggf.tests.trace.runs.TestS3kMegaRunChain -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsurefire.argLine=-Xshare:off -Xmx4g' -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+Run `s3-knux-multibonus-ss` (25 seg, Knuckles). The gumball bonus interior
+(seg1, 1430 frames) went from **3709 comparator errors (stage exit never
+observed)** to **9 errors, stage exit observed, ring carry-over correct**.
+The chain now clears seg0 (aiz), seg1 (gumball) and seg2 (aiz_2) and RED-fails
+softly (no crash) at the seg2->seg3 boundary: the second-bonus entry boundary
+(`starpost_bonus`) is never observed because seg2 (aiz_2) diverges from its
+entry (~12000 errors) -- see the exit-hold blocker below.
+
+Roots fixed this session:
+
+1. **Gumball entry input alignment (primary, seg1 3709->9).** The interior's
+   first gameplay tick is the single BONUS title-card-exit fall-through frame.
+   `PlaybackDebugManager.isDriving` drives only LEVEL/BONUS_STAGE, so the
+   step-top `syncPlaybackInputBridge` (running while still TITLE_CARD) never
+   applied the recorded frame-0 forced input; the player's first tick ran
+   NEUTRAL. The ROM/standalone frame 0 is a grounded LEFT ground-move
+   (air-forced-false for one frame -> g_speed -0x0C -> then falls), so the
+   engine instead free-fell with air-accel (x_speed -0x18 + gravity) from
+   frame 0 and diverged the whole fall. FIX: `GameLoop.exitTitleCard` re-arms
+   the forced-input bridge after flipping to BONUS_STAGE (bonus branch only;
+   LEVEL title-card exits untouched), and `AbstractRunChainTest.handoffIntoInterior`
+   seeks the cursor to the interior offset BEFORE the (frozen-cursor) title
+   card so the fall-through samples recorded frame 0; the interior comparator
+   attaches at frame 1 (fall-through consumed frame 0).
+2. **Gumball ring carry-over (69 not 79).** ROM `loc_61076` copies the live
+   HUD `Ring_count` into `Saved_ring_count` on exit (sonic3k.asm:127760),
+   discarding the transient `+20` the ring ball adds to `Saved_ring_count`
+   (only `+10` reaches the HUD, loc_6114E:127845). `GameLoop.doExitBonusStage`
+   now restores the interior's live HUD ring total captured before the reload,
+   replacing `savedRingCount + rewards.rings()` which double-counted +20.
+3. **Bonus exit-fade cursor parity (partial).** The engine froze the shared
+   playback cursor during its bonus-exit fade while the ROM keeps ticking
+   V_int across the post-catch BONUS_STAGE tail. `updateBonusStageMode`'s
+   freeze branch now advances the cursor + VBla counter each frozen frame.
+
+Remaining blocker (NEW frontier): the engine's gumball exit-hold is far
+shorter than the ROM's. The ROM holds the caught player ~150 BONUS_STAGE
+frames (catch at interior frame ~1277 -> mode change at ~1430) before the
+level reload; the engine's exit fade is ~21 frames, so the return cursor lands
+~133 rows short of the return segment offset and the BONUS->LEVEL fall-through
+feeds aiz_2 a stale frame-0 input, diverging seg2. A defensive guard in
+`handoffIntoInterior` re-anchors the cursor to `returnOffset` (frame 0) instead
+of crashing on the negative index; the real fix is to reproduce the ROM's
+gumball exit-hold duration so the cursor reaches `returnOffset` organically
+(framesConsumed == 0). Must-stay-green suite re-verified GREEN with these
+changes (S3K gumball/pachinko/slots/SS standalone, S1/S2 chains, AIZ
+complete-run, AIZ1 skip).
+
+### 2026-07-20 -- Chain-replay foundation merged; S1 chain GREEN; two engine frontiers opened
+
+Workflow A (chain consumers) merged: the run walker is manifest-driven with
+per-entry-kind boundary assertions (incl. positional restore on S3K
+bonus/SS returns), a derived step cap, and the SS-comparison seam. Truth on
+the merged base (explicit `-Dtest` runs):
+
+- **TestS1GhzMazeRoundTripChain: GREEN** -- the full ghz1 -> maze -> ghz2
+  round trip replays on the continuous engine with giant_ring + next-act
+  boundary assertions passing. First green chain test.
+- `TestS2EhzHalfpipeRoundTripChain`: RED at the second star-post cycle.
+  Primary root FIXED (SS-return handoff: frozen BK2 cursor pre-seek, SS
+  input override released at mode exit, fall-through comparator attach --
+  seg2 faithful for ~906 frames, first positional-restore + rings-zero
+  assertions pass). Remaining blocker: the engine's organic SS-return
+  title card runs a different frame count than the ROM's, over-advancing
+  the free-running OscillationManager + sidekick catch-up (phase-offset
+  moving platform at f907). RULING: engine-side title-card duration parity
+  (ROM Obj79 return -> Level_TtlCard timing), per the organic-transition
+  spec mandate and the free-running-counter parity precedent; follow-up
+  dispatched. Instrumented disproof on record: the checkpoint gate fires
+  at identical fc=939 in chain and standalone boots.
+- `TestS3kMegaRunChain`: RED at the first starpost_bonus boundary --
+  Knuckles glide/vine physics divergence ~trace frame 1934 in the AIZ
+  Knuckles-solo segment (first-ever Knuckles trace coverage). Real fixes
+  banked en route: manifest act indexing (1-based) into 0-based
+  loadZoneAndAct; Knuckles glide centreY/dual-foot-sensor/forced-anim-byte
+  (sonic3k.asm:31563); TraceReplayDriver ground-snap contract;
+  BK2-driven organic SS entry now TRACE_ACCURATE + lag-comp-off.
+
+The chains protect the boundary layer from here; both red frontiers are
+targeted follow-ups, not blind rounds.
+
+### 2026-07-20 -- ALL SIX STAGE COMPARATORS GREEN (rounds 2-3 + counter-seed fix)
+
+Rounds 2 and 3 of the workflow-orchestrated campaigns (parallel per-stage
+lanes, fresh sonnet-high iterations with opus-xhigh stall escalation,
+adversarial lane reviews) plus the V_int_run_count capture fix closed the
+remaining boards. Final verification (main tree at the round-3 merges,
+explicit `-Dtest` runs): **TestS3kGumballBonusTraceReplay 0,
+TestS3kPachinkoBonusTraceReplay 0, TestS3kSlotsBonusTraceReplay 0** --
+joining TestS3kSpecialStageTraceReplay, TestS1SpecialStageTraceReplay, and
+TestS2SpecialStageTraceReplay at zero. Every stage trace comparator in the
+engine is now green and MUST-STAY-GREEN. Representative level replays
+(TestS1Ghz1CompleteRunTraceReplay, TestS2Ehz1TraceReplay,
+TestS3kAizCompleteRunTraceReplay) re-verified green after the shared
+`prev_anim` SWITCH end-action and `AbstractPlayableSprite` seam changes.
+
+Round-2/3 root highlights (all disasm-cited; ~40 roots across the three
+boards): gumball's ejected-ball Check_PlayerInRange self-poll model,
+half-open activation boxes, 17-frame spin / 29-frame container cadences,
+spring-child landing-snap override, and the shared SWITCH ($FD) end-action
+no longer eagerly syncing prev_anim; slots' metadata-primed
+V_int_run_count base (recorder v6.32 captures it at bonus arm; replay
+advances it VBlank-true INCLUDING lag frames), cage release timing,
+tile-anchor reconstruction, reel-wall flash cadence, goal-exit pair;
+pachinko's reward subtype/ring coupling (ROM awards a SHIELD from the
+recorded orb), bumper applyBounce compound, flipper catch/ride/launch
+fidelity, bumper off-screen self-despawn, and the LevelFrameStep
+bonus-exit frame skip modeling ROM LevelLoop's Restart_level_flag branch
+(sonic3k.asm:7884-7896 -- NOTE: also active in live play for all S3K
+bonus-stage exits; review-verified ROM-faithful).
+
+Remaining trace debt is now LEVEL-side only (the pre-existing frontier
+entries below) plus the deferred build items: chain-test adaptation to the
+mega-run, S2 round-trip consumer, in-chain/visual SS-interior comparison.
+
+### 2026-07-19 -- Green campaigns round 1: blue spheres GREEN, S1 maze GREEN, bonus trio advanced
+
+Three parallel campaign lanes (workflow-orchestrated: fresh sonnet-high
+agents per frontier iteration with opus-xhigh stall escalation, adversarial
+lane reviews, merged sequentially as `afb7c6c52`/`bed16bc7b`/`474e93446`)
+drove the five live stage comparators. Post-merge verification (main tree
+at `474e93446`, explicit `-Dtest` runs of all five comparators):
+
+- **`TestS3kSpecialStageTraceReplay` (blue spheres): GREEN -- 0 errors**
+  (was 169+6w) over the 4630-row Knuckles capture. Roots: comparator
+  frame-0 stale-RAM basis, player turn-rotation early-return fallthrough,
+  stepped-frame routine pacing (`Pal_FadeFromWhite` 22-frame hold,
+  `Kos_modules_left` art-load gate), bumper different-cell unlock branch.
+  **Now MUST-STAY-GREEN**: any future red here is a regression, not debt.
+- **`TestS1SpecialStageTraceReplay` (S1 maze): GREEN -- 0 errors** (was
+  503) over the 3091-row GHZ capture. Roots: ROM 44-VBlank pre-physics
+  hold (S2 TRACE_ACCURATE precedent), mid-hold `v_ssangle`/`v_ssrotate`
+  init boundary, setup-time `PalCycle_SS`, `neg.b` angle-transform
+  ordering, `SonicSS_FindWall` four-cell last-hit scan, `SS_AniBumper`
+  flash-lockout, emerald-sparkle exit arming (`SS_AniEmeraldSparks`
+  routine write -- the maze exits via emerald, never GOAL, in this
+  capture), torn-row-1767 comparator basis. **Now MUST-STAY-GREEN.**
+- `TestS3kGumballBonusTraceReplay`: 145 -> **54 errors**, frontier f0 ->
+  f380 (x_speed/y_speed after correct ball pickup -- next shallowest root).
+- `TestS3kSlotsBonusTraceReplay`: 263 -> **217 errors**, frontier f0 ->
+  f47+ (slot-runtime ground-velocity family).
+- `TestS3kPachinkoBonusTraceReplay`: 677 -> **896 errors**, frontier f0 ->
+  f427+ (totals ROSE because the f0/orbit fixes exposed genuinely
+  different downstream physics; frontier depth is the progress metric).
+  Ten bonus-lane roots landed incl. the shared bootstrap ground-snap fix
+  (`applyBonusStageEntry` forced-air reset), slot subpixel truncation +
+  fabricated-angle removal, pachinko orbit negate-before-shift order, and
+  the gumball bumper fallback-bounce removal.
+
+Next round: bonus trio continues from f380/f47/f427 (same lane procedure);
+the chain-consumer build items are unchanged (mega-run adaptation for
+`TestS3kBonusRoundTripChain`, S2 round-trip consumer).
+
+### 2026-07-19 -- S3K Knuckles multi-bonus mega-run captured; all four stage comparators go live
+
+The S3K Knuckles-route recording (`s3-knux-multibonus-ss.bk2`, 114622 input
+frames) was captured with `s3k_complete_run_recorder.lua` (now with
+Player_mode-derived team metadata — every segment carries
+`characters ["knuckles"]`) and committed under
+`src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/`: **25 segments,
+22 transitions** — AIZ1/AIZ2 -> HCZ1/HCZ2 -> MGZ1/MGZ2 with gumball x2,
+slots x5, pachinko x1 (`starpost_bonus`, `special_bonus_entry_flag=2`,
+ring-selector values consistent with `((rings-20)/15)%3` given
+post-vs-arm ring drift) and blue spheres x3 (`giant_ring`, flag=1,
+`special_stage_index` 0/1/2, emeralds 0 -> 3). Blue-spheres self-checks
+pass in all three ss segments (`started` flips once, spheres
+non-increasing to 0). Interior copies activate all four skip-if-missing
+tests — first live baselines (branch `feature/ai-mstr-captures`, all
+first-error frontiers at **frame 0**, spawn/bootstrap state):
+
+- `TestS3kGumballBonusTraceReplay`: 145 errors / 1430 rows (f0 `x_sub`
+  0xF400 vs 0xE800)
+- `TestS3kPachinkoBonusTraceReplay`: 677 errors / 3051 rows (f0 `y_speed`
+  0 vs 0x38)
+- `TestS3kSlotsBonusTraceReplay`: 263 errors / 1200 rows (f0 `x_sub`
+  0xF400 vs 0) — Knuckles-alone recording; the SONIC-SOLO note in the
+  README applied to the old procedure, the metadata-driven bootstrap
+  handles the solo Knuckles team
+- `TestS3kSpecialStageTraceReplay`: 169 errors + 6 warnings / 4630 rows
+  (f0 `player_x` 262 vs 512 — start-cell delta)
+
+These seed the S3K stage green campaigns alongside the S1 maze frontier
+below. The S2 round-trip run (below) still awaits its chain-test consumer.
+
+### 2026-07-19 -- S2 halfpipe round-trip captured: TWO detours in one run
+
+The first S2 halfpipe round-trip recording (`s2-ehz-halfpipe-roundtrip.bk2`,
+22819 input frames, Sonic+Tails) was captured with `s2_trace_recorder.lua`
+v9.12-s2 run mode and committed under
+`src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/`. The movie
+re-enters the halfpipe from a second star post, exercising the new
+`ss_segment_count` multi-detour dir tokens live: five segments
+(`seg1_ehz1` 2969 rows / `ss` 5733 / `seg2_ehz1` 2903 / `ss_2` 6381 /
+`seg3_ehz1` 3452) and four transitions (`starpost_special` with
+`f_bigring=1`, rings_before 50 and 69; `stage_exit` with the ROM-truth
+`rings_after=0`), `special_stage_index` advancing 0 -> 1. 48-column ss
+rows with halfpipe-typical ~35% lag-row density. No headless test consumes
+the run yet (the chain test remains the shared deferral); the artifacts
+are ready for it and for the visual run branch.
+
+### 2026-07-19 -- S1 maze first capture committed; comparator frontier opens at f0
+
+The first S1 maze round-trip recording (`s1-ghz-maze-roundtrip.bk2`, 9093
+input frames, fresh no-emeralds save, GHZ1 -> maze -> GHZ2) was captured
+with `s1_complete_run_recorder.lua` v3.15 and committed under
+`src/test/resources/traces/s1/runs/s1-ghz-maze-roundtrip/` (3 segments:
+`ghz1` 4182 rows / `ss` 3091 rows / `ghz2` 812 rows; `giant_ring` +
+`stage_exit` transitions; rings_before 85, emerald collected 0 -> 1). The
+`ss/` segment copy activates `TestS1SpecialStageTraceReplay`.
+VERIFY-ON-FIRST-CAPTURE passed: full 0x0000-0xFFC0 angle sweep, final
+`ss_rotate` 0x17C0 mid-ramp to the 0x1800 exit target, sane 16.16
+positions, 72 lag rows. Command:
+`mvn "-Dtest=com.openggf.tests.trace.s1.TestS1SpecialStageTraceReplay" test`
+(branch `feature/ai-mstr-captures`, worktree multi-stage-trace-runs) —
+**RED as designed (MVP comparator): 503 errors / 3020 stepped frames,
+first error frame 0** (`vel_x` expected 0xFFDE vs engine 0). First roots
+visible in the context window: the ROM holds the maze frozen through its
+intro fade (trace rows 0-8 static with `ss_rotate` 0 while the engine
+simulates from frame 0 with `SS_INIT_ROTATION` 0x40), the frame-0 spawn
+position differs (trace x 0x25AB0300 vs engine 0x03D00000), and
+`status_facing_left` starts true in the ROM. These seed the S1 maze green
+campaign. Committed-artifact note: the run's bk2 is committed under its
+truthful name `s1-ghz-maze-roundtrip.bk2` with `source_bk2` patched in the
+bundle's metadata/manifest — the README's earlier rename-to-
+`s1-complete-run.bk2` mandate collides with the pre-existing
+`traces/s1/_movies/s1-complete-run.bk2` (a DIFFERENT movie) through
+`TraceCatalog.resolveBk2`'s shared-`_movies`-first resolution.
+
+### 2026-07-19 -- S2 retrofit landed (recorder run mode + synthetic fixture)
+
+Branch `feature/ai-mstr-s2retrofit` retrofitted the multi-stage trace-run
+foundation onto `s2_trace_recorder.lua` (now v9.12-s2): an env-gated run mode
+(`OGGF_TRACE_RUN_ID`) adds a stage-detour state machine for the S2 giant-ring
+special-stage round trip (level -> `ss` -> level), numbered per-segment
+output subdirs (`seg1_ehz1/`, `ss/`, `seg2_ehz1/`), and a `run_manifest.json`
+emitter matching `TraceRunManifest`'s schema; level segments keep the pinned
+default `trace_profile: "gameplay_unlock"`. Plain-mode output is unchanged
+(byte-identical to v9.11-s2 except the version string). `TestS2SyntheticRunFixture`
+validates the synthetic 3-segment fixture (`run_ehz_ss_3seg`) against
+`TraceRunManifest`/`SpecialStageTraceData`/`TraceData`; `TestTraceRunManifest`
+and `TestTraceRunSyntheticFixture` continue to cover the shared manifest
+plumbing. The recording procedure ("Recording S2 Halfpipe Round-Trip Traces
+(s2-ehz-halfpipe-roundtrip)", `tools/bizhawk/README.md`) is now documented;
+the actual `s2-ehz-halfpipe-roundtrip.bk2` capture and its
+`src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/` commit are
+still pending — no replay test consumes it yet.
+
+Deferred follow-ups (explicit, not silently dropped):
+- (a) The run-mode `ss/` segment has a reduced aux surface (no
+  `run_objects_end` stream) versus the interior `s2_ss_trace_recorder.lua` --
+  RunObjects-hook aux for run `ss/` segments is deferred; revisit after the
+  first real capture, per the recording procedure's VERIFY-ON-FIRST-CAPTURE
+  obligation.
+- (b) A chain test for the S2 round-trip (`TestS3kBonusRoundTripChain`-style
+  continuous-engine chaining) is not implemented -- shared deferral with the
+  S3K/S1 round-trip chain follow-ups already on record.
+- (c) In-chain/visual SS-interior comparison remains unwired for S2 (existing
+  shared item, same gap noted for the S1 maze and S3K blue-spheres
+  pipelines).
+
+Full-suite gate: docs-only follow-up to the already-landed recorder/fixture
+commits on this branch; no trace frontiers moved.
+
+### 2026-07-19 -- S1 maze trace pipeline landed
+
+Branch `feature/ai-mstr-s1maze` gave the S1 maze special stage a real trace
+pipeline: the comparison-only seam, the `s1_special_stage` parser
+(`Sonic1SpecialStageTraceData`/`Sonic1SpecialStageTraceFrame`), recorder
+`s1_complete_run_recorder.lua` v3.15 (the `$10` detour state machine
+automatically produces `ghz1/` + `ss/` + `ghz2/` segments and
+`run_manifest.json`), a VBlank-paced replay harness
+(`AbstractS1SpecialStageTraceReplayTest`/`S1SpecialStageReplayHarness`) whose
+terminal boundary is a single `exit_state_at_end` check (the S1 maze has no
+in-segment completion marker analogous to S3K's fade-timer cycle), and the
+headless boot verify (`TestS1SpecialStageHeadlessBoot`, green today, no
+engine gap — no init hook needed). The replay test
+(`TestS1SpecialStageTraceReplay`) skips pending `s1-complete-run.bk2`
+(procedure: `tools/bizhawk/README.md`, "Recording S1 Maze Round-Trip Traces
+(s1-ghz-maze-roundtrip)"). Command: `mvn
+"-Dtest=com.openggf.tests.trace.s1.TestS1SpecialStageTraceReplay" test` --
+status: SKIPPED (assumption, no committed trace yet), compiles clean.
+
+Deferred follow-ups (explicit, not silently dropped):
+- (a) In-chain/visual SS-interior comparison is not wired for the S1 maze
+  (shared follow-up with the S3K blue-spheres pipeline -- both stop at the
+  headless replay harness today).
+- (b) Standalone visual SS launch remains `s2_special_stage`-gated in
+  `TraceSessionLauncher`/`TraceEntry` (`SpecialStageTraceData`/
+  `SpecialStageTraceFrame` are hard-locked to `trace_profile ==
+  "s2_special_stage"`); the S1 maze profile does not route through visual
+  launch yet.
+- (c) S1 SS results-tail rows recorded under `$10` may need a comparator
+  stop rule once the green campaign reaches this trace -- the recorder
+  captures through the exit ramp but the results-tail frames have not been
+  validated against a live capture yet.
+
+Full-suite gate: not affected (docs-only follow-up to the already-landed
+pipeline commits). No trace frontiers moved.
+
+### 2026-07-19 -- S3K slot-machine bonus replay scaffolding landed (slots-depth plan)
+
+Branch `feature/ai-mstr-slots` landed the slot-machine headless replay slice:
+the `applyBonusStageEntry` bootstrap seam accepts `bonus_stage_type: "slots"` (profile-gated,
+accepted by bonusStageTypeForToken (unknown tokens still throw)), and `TestS3kSlotsBonusTraceReplay`
+(zone 0x15) SKIPs until its recording exists. The plan-a recorder state machine (current: v6.31) was already wired to emit
+`slots/` segments with `bonus_stage_type: "slots"` in metadata.json; no recorder changes
+needed. Rewind: slots runtime sets `supportsRewind=false`; headless replay never reaches
+`updateBonusStageMode` (verified, no work). The camera columns are meaningful under the
+slot runtime's custom tracking (comparator reads the live camera; the suppressed default step
+is exactly what the ROM does). Chain/visual integration inherits automatically from the
+gumball/pachinko framework.
+
+**Recording needed to activate the replay test** (procedure:
+`tools/bizhawk/README.md`, "Recording S3K Slot-Machine Round-Trip Traces"):
+`s3k-aiz-slots.bk2` (20–34 rings at the star post, **SONIC-SOLO ONLY** — sidekick suppression
+suppresses the sprite comparator columns). No trace frontiers moved; no fixtures touched.
+Full-suite gate run controller-side; guard findings under remediation (see subsequent entry/commits).
+
+### 2026-07-19 -- Blue-spheres trace pipeline landed
+
+Branch `feature/ai-mstr-bluespheres` gave the S3K special stage a real trace
+pipeline: `Sonic3kSpecialStageComparisonState` (16-field read-only snapshot),
+the `s3k_special_stage` parser (`S3kSpecialStageTraceData`/`Frame`, 20-column
+schema), recorder v6.31 (the `$34` detour now emits a real `ss/` segment with
+rows from the hand-derived phase-overlay RAM map — twice independently
+re-verified — plus giant_ring/stage_exit transitions), a VBlank-paced replay
+harness whose finish boundary anchors on the trace's exit-spin completion
+(fade_timer 0→nonzero→0; clear_routine terminal is NOT the anchor — engine
+`finished` flips ≥96 frames later; covers success and RED_SPHERE failure
+exits), and live `fresh_load` launch-config wiring. KEY RESULT: the S3K SS
+provider boots headlessly through the real ROM art/PLC path with no engine
+gap (`TestS3kSpecialStageHeadlessBoot`, green today). The replay test skips
+pending `s3k-aiz-bluespheres.bk2` (procedure in the BizHawk README); the RAM
+map carries a VERIFY-ON-FIRST-CAPTURE obligation via the recorder's
+self-check prints. Full-suite gate: failing set identical to the develop
+baseline. No trace frontiers moved.
+
+### 2026-07-19 -- Visual run chaining landed (plan d)
+
+Branch `feature/ai-mstr-plan-d` completed the multi-stage trace-run foundation:
+`TraceRunReplayWalker` promoted to `src/main` (`com.openggf.trace.replay.runs`),
+`TraceCatalog` discovers `runs/*/run_manifest.json` and surfaces each run as one
+picker entry, `TraceSessionLauncher` gained a run-session branch (mode-flip-driven
+`RunSegmentAdvancer`, per-segment comparator/HUD/camera rebinds with
+pause-on-first-divergence, cursor re-seek per segment, no held-rewind for runs —
+documented follow-up), driven by one all-mode GameLoop hook; the special-stage
+launch config is per-game aware via a dormant `freshLoadSignal` seam (blue-spheres
+plan wires it live). Live visual validation activates when the two named bonus
+recordings land. Full-suite gate: failing set = develop baseline plus two
+isolated-pass flakes (order-dependent geyser rewind; wire-cage nested-class
+load), zero overlap with this branch's surface. No trace frontiers moved.
+
+### 2026-07-19 -- Chained run driver landed (plan c)
+
+Branch `feature/ai-mstr-plan-c` landed the continuous-engine chained replay
+stack: non-consuming transition peeks on `LevelTransitionCoordinator`, the
+BONUS_STAGE playback bridge (cursor advance + forced-input feed during bonus
+interiors — spec addition #8), `TraceRunReplayWalker`/`BoundaryProbe` (segment
+planning by explicit transition indices, dual-method observer delegation,
+transient-peek observation inside `afterFrameAdvanced`, per-segment cursor
+re-seek), and `TestS3kBonusRoundTripChain` — which SKIPS until the
+`runs/s3k-aiz-gumball-roundtrip/` and `runs/s3k-aiz-pachinko-roundtrip/`
+recordings land (same two bk2s named in the plan-b entry below). Walker
+control flow is green against the synthetic run fixture (whose ring values
+now match the `giant_ring` selector arithmetic). Full-suite gate: failing-class
+set byte-identical to the develop baseline (29F/6E), +4 expected skips. No
+trace frontiers moved; no fixtures regenerated.
+
+### 2026-07-19 -- S3K bonus-stage replay scaffolding landed (plan b)
+
+Branch `feature/ai-mstr-plan-b` landed the gumball/pachinko headless replay slice:
+the `applyBonusStageEntry` bootstrap seam (profile-gated on `s3k_bonus_stage`,
+registered in the bootstrap-policy guard baseline with justification), the
+`afterFixtureBuild` hook on the shared replay base, and two skip-if-missing
+replay tests — `TestS3kGumballBonusTraceReplay` (zone 0x13) and
+`TestS3kPachinkoBonusTraceReplay` (zone 0x14) — which SKIP until their
+recordings exist. `TestS3kBonusStageHeadlessBoot` proves both bonus zones boot
+headlessly on the LEVEL pipeline today (gumball machine from ROM layout,
+pachinko trap injected; 60 idle frames stepped clean).
+
+**Recordings needed to activate the replay tests** (procedure:
+`tools/bizhawk/README.md`, "Recording S3K Bonus Round-Trip Traces"):
+`s3k-aiz-gumball.bk2` (50-64 rings at the star post) and
+`s3k-aiz-pachinko.bk2` (35-49 rings). No trace frontiers moved; no fixtures
+touched. Full-suite gate: no new failures vs the develop baseline after guard
+conformance (`TestTraceReplayInvariantGuard`, `TestBuildToolingGuard` allowlist
+entries); `TestSonic1LavaGeyserGraphRewind` observed as an order-dependent
+flake (passes in isolation, unrelated surface).
+
+### 2026-07-18/19 -- Complete-run recorder v6.30 no-regression sweep
+
+Verification of the multi-stage trace-run recorder branch (`feature/ai-multi-stage-trace-runs`,
+commits `70efa1184` through `b5f1a2cf7`) confirmed no regression in trace output from Tasks 4–7
+(per-zone segmentation, stage-detour state machine, run manifest emission). The AIZ fixture was
+regenerated into a scratch directory for comparison only (the committed fixture was not touched
+or re-committed) at v6.30-s3k-completerun using the discovered root-level S3K ROM and test-suite
+BK2:
+
+```bash
+export OGGF_TRACE_OUTPUT_DIR="<scratch>/oggf_regen_aiz/"
+export OGGF_TRACE_STOP_FRAME="40000"
+cmd //c "tools\bizhawk\run_bizhawk_lua.bat tools\bizhawk\s3k_complete_run_recorder.lua src\test\resources\traces\s3k\_movies\s3k-complete-sonic-tails.bk2 s3k.gen"
+```
+
+Both outputs matched the committed fixture: `physics.csv` 26229 rows and `aux_state.jsonl`
+855263 lines, with divergences traced to two pre-existing, unrelated causes. Platform
+line-ending differences (recorder text-mode `\n`→`\r\n` translation on Windows, unchanged since
+commit `74cbfb634`) and 5 pre-existing `sidekick_interact_object` fields from commit `49733fa76`
+(2026-06-10, already on `develop`) that the stale fixture predates. No `run_manifest.json` was
+written; the dry-run's route did not encounter a stage detour or explicit `OGGF_TRACE_RUN_ID`.
+No committed fixtures were touched or re-committed. No trace frontiers moved.
+
+### 2026-07-18 -- AIZ/HCZ/MGZ parity-polish merge checkpoint
+
+Before merging `bugfix/aiz-hcz-mgz-polish` into `develop`, the ROM-backed
+S1/S2/S3K replay checkpoint ran from `45465ca4c` with the discovered root-level
+REV01 S1/S2 and locked-on S3K ROMs:
+
+`mvn -Ptrace-replay "-Dsurefire.argLine=-Xshare:off -Xmx3g" -Dsurefire.forkCount=1 -Dsonic1.rom.path=<root S1 ROM> -Dsonic2.rom.path=<root S2 ROM> -Ds3k.rom.path=<root S3K ROM> -Dtest='*TraceReplay' -DfailIfNoTests=false test`
+
+The suite completed 108 tests: 69 passed, 37 failed, 1 errored, and 1 skipped.
+The expected failing, errored, and skipped identities matched the documented
+frontier signature; the extra green coverage accounts for the total increasing
+from the older 92-test checkpoint. No trace frontier moved.
 
 ### 2026-07-17 -- Review finding 10: hot-file whitespace churn removed
 

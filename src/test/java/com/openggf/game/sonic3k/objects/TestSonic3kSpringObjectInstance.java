@@ -376,7 +376,7 @@ class TestSonic3kSpringObjectInstance {
     }
 
     @Test
-    void upSpringClearsStatusOnObjAfterSettingAir() throws Exception {
+    void upSpringRestoresControlAndClearsStatusOnObjAfterSettingAir() throws Exception {
         // ROM cite: sub_22F98 (sonic3k.asm:47723-47724)
         //   bset #1,status(a1)   ; Status_InAir
         //   bclr #3,status(a1)   ; Status_OnObj
@@ -403,11 +403,11 @@ class TestSonic3kSpringObjectInstance {
         assertFalse(player.isJumping(),
                 "ROM sub_22F98 clears jumping so jump release cannot cap the spring launch");
         assertFalse(player.isHurt(),
-                "ROM sub_22F98 writes routine 2 even when the player entered in the hurt routine");
+                "ROM sub_22F98 writes routine=2, ending hurt routine 4 when the spring launches");
     }
 
     @Test
-    void downSpringClearsStatusOnObjAfterSettingAir() throws Exception {
+    void downSpringRestoresControlAndClearsStatusOnObjAfterSettingAir() throws Exception {
         // ROM cite: sub_233CA (sonic3k.asm:48139-48140)
         //   bset #Status_InAir,status(a1)
         //   bclr #Status_OnObj,status(a1)
@@ -427,11 +427,12 @@ class TestSonic3kSpringObjectInstance {
         assertFalse(player.isOnObject(),
                 "ROM sub_233CA bclr Status_OnObj after setting Status_InAir for the down-spring trigger");
         assertFalse(player.isJumping(), "ROM sub_233CA clears jumping on a down-spring launch");
-        assertFalse(player.isHurt(), "ROM sub_233CA writes routine 2 on a down-spring launch");
+        assertFalse(player.isHurt(),
+                "ROM sub_233CA writes routine=2, ending hurt routine 4 when the spring launches");
     }
 
     @Test
-    void upDiagonalSpringClearsStatusOnObjAfterSettingAir() throws Exception {
+    void upDiagonalSpringRestoresControlAndClearsStatusOnObjAfterSettingAir() throws Exception {
         // ROM cite: sub_234E6 (sonic3k.asm:48213-48214)
         //   bset #Status_InAir,status(a1)
         //   bclr #Status_OnObj,status(a1)
@@ -452,7 +453,27 @@ class TestSonic3kSpringObjectInstance {
         assertFalse(player.isOnObject(),
                 "ROM sub_234E6 bclr Status_OnObj after setting Status_InAir for diagonal-up springs");
         assertFalse(player.isJumping(), "ROM diagonal-spring triggers clear jumping");
-        assertFalse(player.isHurt(), "ROM diagonal-spring triggers write routine 2");
+        assertFalse(player.isHurt(),
+                "ROM sub_234E6 writes routine=2, ending hurt routine 4 when the spring launches");
+    }
+
+    @Test
+    void downDiagonalSpringRestoresControlWhenLaunchingHurtPlayer() throws Exception {
+        // ROM cite: sub_23624 (sonic3k.asm:48306-48310) mirrors the
+        // up-diagonal tail's Status_InAir/routine=2 transition.
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x40, 0, false, 0));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        invoke(spring, "ensureInitialized");
+
+        TestableSprite player = new TestableSprite("sonic");
+        player.setHurt(true);
+
+        invoke(spring, "applyDiagonalSpring",
+                new Class<?>[]{AbstractPlayableSprite.class, boolean.class}, player, false);
+
+        assertFalse(player.isHurt(),
+                "ROM sub_23624 writes routine=2, ending hurt routine 4 on a down-diagonal launch");
     }
 
     private static Object invoke(Object target, String methodName) throws Exception {

@@ -49,7 +49,23 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - || !\"complete_run\".equals(metadata.traceProfile())",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && checkpointName.equals(checkpoint.name())) {");
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && checkpointName.equals(checkpoint.name())) {",
+            // s3k_bonus_stage profile discriminator gates the bonus-stage entry
+            // bootstrap seam (spec docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md,
+            // engine addition #7); data-driven trace_profile gate, not a
+            // zone/route/frame carve-out; comparison-only -- seeds only the
+            // bootstrap "load save state" set (frame-0 rings, mirroring ROM
+            // Saved_ring_count restore).
+            "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java - if (!\"s3k_bonus_stage\".equals(meta.traceProfile())) {",
+            // s3k_bonus_stage discriminator in the pre-frame-0 ground-snap gate
+            // (green-campaign round 1): bonus-stage segments must NOT receive
+            // the generic fixture ground-snap terrain probe -- the ROM enters
+            // bonus stages with Special_bonus_entry_flag set and skips the
+            // zone air/animation branches (sonic3k.asm:8117-8118), so snapping
+            // at bootstrap forced Status_InAir one tick early and desynced
+            // frame 0. Data-driven trace_profile gate, not a zone/route/frame
+            // carve-out; comparison-only (removes a fixture-side mutation).
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && \"s3k_bonus_stage\".equals(metadata.traceProfile());");
     private static final Set<String> REVIEWED_S3K_STATIC_SESSION_STATE = Set.of(
             "src/main/java/com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java - private static volatile AizFireOverlayData cachedAizFireOverlay;",
             "src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java - private static volatile PendingFireSequence pendingFireSequence;",
