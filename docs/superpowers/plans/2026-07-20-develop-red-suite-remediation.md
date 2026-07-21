@@ -346,13 +346,14 @@ Expected: PASS with no blanket baseline count increase.
 ### Task D3.8: Order MGZ thruster flames around the body bucket
 
 **Files:**
-- Modify: `src/main/java/com/openggf/game/sonic3k/objects/MgzDrillingRobotnikInstance.java`
+- Verify canonical owner: `src/main/java/com/openggf/game/sonic3k/objects/MgzDrillingRobotnikInstance.java`
+- Verify canonical profile: `src/main/java/com/openggf/game/sonic3k/objects/MgzEndBossRenderChild.java`
 - Test: `src/test/java/com/openggf/game/sonic3k/objects/TestMgzDrillingRobotnikInstance.java`
 
-- [ ] Run `splitsThrusterFlamesIntoRomPriorityBuckets`; expected ship frame 9 is missing between rear and front flame.
-- [ ] Preserve bucket 6→4 body tests and render rear flame, body/ship, front flame in ROM bucket order.
-- [ ] Run the full class; expected PASS.
-- [ ] Commit as `fix: restore MGZ thruster priority buckets`, updating `CHANGELOG.md`.
+- [x] Run `splitsThrusterFlamesIntoRomPriorityBuckets`; reproduced the stale role-order traversal, first as a missing ship frame 9 after the rear flame and then as a missing body frame after tightening the complete painter sequence.
+- [x] Confirm the production owners already publish the disassembly priorities (`$300` rear flame/body, `$280` pod, `$180` front flame), and make the managed-graph helper consume the runtime bucket, tile-priority, and SST-slot ordering contract rather than enum order.
+- [x] Run the full class plus related render/art and rewind tests; 2,810 selected checks passed with one ROM-conditional skip. The full music-transition class still exposes only its separately catalogued D3.9–D3.11 failures (managed rear-drill assertion, wait boundary, and flame gameplay-clock dependency).
+- [x] Commit as `fix: restore MGZ thruster priority buckets`, updating `CHANGELOG.md`.
 
 ### Task D3.9: Assert the managed MGZ rear-drill child
 

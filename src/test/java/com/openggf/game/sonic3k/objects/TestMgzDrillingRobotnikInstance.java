@@ -26,7 +26,9 @@ import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -255,9 +257,9 @@ class TestMgzDrillingRobotnikInstance {
         renderBossGraph(boss);
 
         InOrder order = inOrder(services.drillRenderer, services.shipRenderer);
-        order.verify(services.drillRenderer).drawFrameIndex(eq(0), eq(0x08E0), eq(0x0690), eq(false), eq(false));
         order.verify(services.drillRenderer)
                 .drawFrameIndex(eq(0x19), eq(0x08D4), eq(0x06B8), eq(false), eq(false), eq(0));
+        order.verify(services.drillRenderer).drawFrameIndex(eq(0), eq(0x08E0), eq(0x0690), eq(false), eq(false));
         order.verify(services.shipRenderer).drawFrameIndex(eq(9), anyInt(), anyInt(), eq(false), eq(false));
         order.verify(services.drillRenderer)
                 .drawFrameIndex(eq(0x19), eq(0x08E8), eq(0x06B8), eq(false), eq(false), eq(0));
@@ -1454,11 +1456,30 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     private static void renderBossGraph(MgzDrillingRobotnikInstance boss) {
-        boss.appendRenderCommands(new ArrayList<>());
-        boss.getChildComponents().stream()
+        List<ObjectInstance> renderGraph = new ArrayList<>();
+        renderGraph.add(boss);
+        renderGraph.addAll(boss.getChildComponents().stream()
                 .filter(MgzEndBossRenderChild.class::isInstance)
                 .map(MgzEndBossRenderChild.class::cast)
-                .forEach(child -> child.appendRenderCommands(new ArrayList<>()));
+                .toList());
+        renderGraph.sort(TestMgzDrillingRobotnikInstance::compareRuntimeRenderOrder);
+        renderGraph.forEach(instance -> instance.appendRenderCommands(new ArrayList<>()));
+    }
+
+    private static int compareRuntimeRenderOrder(ObjectInstance left, ObjectInstance right) {
+        int bucketOrder = Integer.compare(right.getPriorityBucket(), left.getPriorityBucket());
+        if (bucketOrder != 0) {
+            return bucketOrder;
+        }
+        int tilePriorityOrder = Boolean.compare(left.isHighPriority(), right.isHighPriority());
+        if (tilePriorityOrder != 0) {
+            return tilePriorityOrder;
+        }
+        return Integer.compare(renderSlot(right), renderSlot(left));
+    }
+
+    private static int renderSlot(ObjectInstance instance) {
+        return instance instanceof AbstractObjectInstance object ? object.getSlotIndex() : Integer.MAX_VALUE;
     }
 
     private static MgzEndBossInstance createEndBoss(RecordingServices services) {

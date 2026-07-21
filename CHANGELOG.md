@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Test: MGZ drilling-boss composite rendering coverage now traverses the real parent/child graph by the runtime's ROM priority-bucket, tile-priority, and SST-slot contract. This preserves the `$300` rear flame behind the `$300` body, followed by the `$280` Robotnik pod and `$180` front flame, instead of accidentally asserting the managed children's enum order after the July graph migration.
 - Fix: the MGZ Tunnelbot defeat camera helper now advances the live camera X, minimum-X lock, and maximum-X lock together until the `$2E00` handoff target, preventing a stale right boundary during the persistent auto-scroll. Entry at or beyond the target, including restored rewind state, clamps all three values to the target before releasing the helper.
 - Fix: MGZ miniboss return-cycle coverage now preserves the ROM's two callback boundaries: `StartNextCycle` clears the upside-down render bit while routine `$12` remains active for its final `$1F`-frame wait, and only the later `RestartRumble` callback re-enters tunnel-up routine `$06`.
 - Fix: MGZ2 rumble polling now preserves the ROM screen-event order: an existing continuous quake can emit `RUMBLE_2` before the collapse request is consumed, the positive `$14` startup shake emits no collapse sound, and `BIG_RUMBLE` begins only from the initialized scrolling-collapse path on the 16-frame `Level_frame_counter` cadence.
