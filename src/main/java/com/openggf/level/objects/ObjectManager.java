@@ -339,6 +339,25 @@ public class ObjectManager {
     }
 
     /**
+     * Captures the persistent respawn-remember state (broken/collected/remembered
+     * spawns) to carry across a bonus-stage round-trip reload. See
+     * {@link PersistentRespawnState} for the ROM {@code Respawn_table_keep} model.
+     */
+    public PersistentRespawnState capturePersistentRespawn() {
+        return placement.capturePersistentRespawn();
+    }
+
+    /**
+     * Re-establishes respawn-remember state captured by
+     * {@link #capturePersistentRespawn()} onto this (freshly reloaded) manager's
+     * placement, so bonus-return respawns broken/collected objects in the state
+     * the player left them (e.g. a monitor broken before the bonus stays broken).
+     */
+    public void restorePersistentRespawn(PersistentRespawnState state) {
+        placement.restorePersistentRespawn(state);
+    }
+
+    /**
      * Instantiates all spawns currently in the ObjectPlacementController window. Intended for
      * trace replay and editor state restoration that need engine object
      * instances to exist before the first {@link #update} call, so external

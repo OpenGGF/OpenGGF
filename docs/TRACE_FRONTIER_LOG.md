@@ -1,5 +1,65 @@
 # Trace Frontier Log
 
+### 2026-07-21 -- S3K mega-run chain seg2 (aiz_2) f231 FIXED: broken-monitor respawn state now survives the bonus round-trip
+
+The f231 "phantom wall" root is closed. TRIPLE-PROVEN root (superseding the
+monitor-solidity classification below): the object at (0x2B38, 0x2D3) is a monitor
+the player BROKE in seg0 (engine break confirmed at seg0 frame 3744, matching the
+recorded ROM break at f3743), reloading in aiz_2 as an inert BROKEN SHELL. Three
+independent evidence paths agreed:
+- Byte disassembly: the recorded slot-8 `object_code` 0x1B588 = `Sprite_OnScreen_Test`
+  (`3028 0010 0240 FF80 9078 F7DA`, sonic3k.asm:37262) -- the code pointer
+  `Obj_MonitorInit`'s broken branch installs (respawn bit set -> mapping_frame $B +
+  `move.l #Sprite_OnScreen_Test,(a0)` + rts, :40471-40478); the live monitor code is
+  0x1D566 (`Obj_Monitor` dispatch). A broken shell carries routine byte 2 because
+  `addq #2,routine` runs before the broken branch -- so the aux "routine 0x02,
+  unchanged" read was accurate data, not an intact monitor.
+- Two BizHawk probes (team-lead): ROM `double_jump_flag`=0/`anim`=0 across f225-240
+  (not roll/glide/slide), and PC-execute hooks on `SolidObject_Monitor_SonicKnux`
+  entry (0x1D696) + passed-gates (0x1D6BE) fired ZERO times -- the monitor's solid
+  routine never runs.
+- seg0 break-event decode: intact (0x1D566) at f3676 -> player rolls in at f3700-3706
+  -> `Obj_MonitorBreak` (0x1D61E) at f3743.
+
+ROOT: the ROM keeps `Object_respawn_table` across the star-post-bonus
+`Restart_level_flag` reload -- the bonus entry sets `Respawn_table_keep=1`
+(sonic3k.asm:61930) and the reload's clear routines skip the respawn/ring tables
+while it is set (`sub_EB1A` :18564-18570; the `Object_respawn_table` handling gated
+at :37432-37434), so the live table (with the broken bit) survives. The engine
+rebuilt a FRESH `ObjectPlacementController` (empty `remembered`) on the bonus-return
+`loadZoneAndAct`, so the monitor respawned intact/solid and side-blocked the player
+at f231, cascading to a missed seg2->slots star post.
+
+FIX: carry the persistent respawn-remember state (`ObjectPlacementController.remembered`
++ `stayActive`, the `Object_respawn_table` model) across the bonus round-trip --
+captured at bonus entry (`GameLoop`, alongside the star-post activation mark from
+58fff5dc8), re-established on the bonus-return reload (`PersistentRespawnState`,
+`ObjectManager.capturePersistentRespawn`/`restorePersistentRespawn`). Not rewound: the
+bonus round-trip is not a rewindable window and the carrier is consumed on the return
+reload before the first rewindable frame (the placement `remembered` is independently
+rewind-captured within a level, so an in-level rewind still restores the broken bit).
+Also shipped a sibling correctness fix (2b000686f): the monitor's Knuckles glide/slide
+non-solid + break exemptions (`SolidObject_Monitor_SonicKnux` :40567-40573,
+`Touch_Monitor.checkdestroy` :20858-20866) -- not the f231 root but a real live-play gap.
+
+RESULT: seg2 (aiz_2) 11651 -> 5968 errors (the f231 wall is gone; the residual is
+downstream). seg0 4, seg1 (gumball) 9, `TestS3kAizCompleteRunTraceReplay` 0,
+`TestS1GhzMazeRoundTripChain`, `TestS2EhzHalfpipeRoundTripChain`, the four bonus/SS
+replays, `TestS3kAiz1SkipHeadless`, `TestCheckpointStateRewind` all pass.
+
+NEW seg2 FRONTIER: first error still f186 = `player_animation_id` 0x20 (engine holds
+the glide anim) vs 0x00, mapping 0xC0 and all physics MATCHing -- the #1 cosmetic
+glide-anim residual (distinct from the vine-lane HANG2 fix; the ROM `Knux_TouchFloor`
+>=0x20 anim reset, :32865-32867, is not yet modelled for the object-landing glide).
+The residual 5968 is the downstream physics after the (now non-solid) monitor.
+
+LATENT-GAP FOLLOW-UP (log, not fixed here): the engine's DEATH-respawn reload also goes
+through `loadZoneAndAct` and rebuilds a fresh empty `remembered`, so a monitor broken
+after a star post would resurrect on death -- the ROM keeps it broken via the same
+`Respawn_table_keep` semantics (also set on the death/restart path). Same family as
+this fix, scoped out; fold the death path into the respawn-persistence model when a
+death-respawn trace needs it.
+
 ### 2026-07-21 -- S3K mega-run chain seg2 (aiz_2): oscillator DISPROVEN; real blocker is monitor-solidity at f231
 
 Supersedes the "landing-fidelity f186/f192" classification below. Worktree
