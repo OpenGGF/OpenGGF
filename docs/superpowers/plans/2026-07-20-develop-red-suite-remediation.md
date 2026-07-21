@@ -521,10 +521,10 @@ Expected: all selected tests PASS, no tail rows, no baseline debt, and the exact
 - Modify only if canonical vocabulary lacks it: `src/main/java/com/openggf/game/profiles/touchresponse/TouchResponseProfile.java`
 - Test: `src/test/java/com/openggf/tests/TestS3kMgzBossMusicTransition.java`
 
-- [ ] Run `endBossTouchProfileExposesMultiRegionDispatch`; expected profile evaluation errors before returning its regions.
-- [ ] Assert `multiRegionSource()` and stop policy after the gameplay-clock path, then declare/return the canonical multi-region profile.
-- [ ] Run the full class and touch standardization guard; expected PASS.
-- [ ] Commit as `fix: expose MGZ boss touch regions`, updating `CHANGELOG.md`.
+- [x] Run `endBossTouchProfileExposesMultiRegionDispatch`; after D3.11, the method passes because the merged latest-origin code already exposes the canonical profile and profile evaluation can now read the gameplay clock without a render pass.
+- [x] Confirm the existing assertions cover `multiRegionSource()` and `STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY`; the adjacent no-render touch test evaluates the actual body, drill, and alternating flame regions from the gameplay clock.
+- [x] Run the full class and touch standardization guard. All seven MGZ methods pass; the guard's only violations are the separately owned latest-origin CNZ multi-region classes (`CnzEndBossInstance`, `CnzEndBossArmChild`, and `CnzEndBossMagnetChild`), not MGZ.
+- [x] No production, test, or changelog change is required: this catalogue entry was stale after latest-origin supplied the profile and D3.11 removed its evaluation blocker. Record this disposition in the plan rather than creating an empty behavior commit.
 
 ## Literal Maven command contract
 
