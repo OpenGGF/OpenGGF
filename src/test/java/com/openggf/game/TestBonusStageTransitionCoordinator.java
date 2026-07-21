@@ -140,25 +140,18 @@ class TestBonusStageTransitionCoordinator {
     }
 
     @Test
-    void restoreReturnStateReappliesRespawnTableCapturedAtEntry() {
+    void prepareReturnLoadQueuesRespawnTableBeforeFreshManagerReset() {
         LevelManager level = mock(LevelManager.class);
         ObjectManager entryObjects = mock(ObjectManager.class);
-        ObjectManager returnObjects = mock(ObjectManager.class);
         PersistentRespawnState respawnState = new PersistentRespawnState(
                 new long[]{0x12L}, new long[]{0x04L});
-        when(level.getObjectManager()).thenReturn(entryObjects, returnObjects);
+        when(level.getObjectManager()).thenReturn(entryObjects);
         when(entryObjects.capturePersistentRespawn()).thenReturn(respawnState);
 
-        BonusStageState saved = coordinator.captureEntry(
-                level, mock(Camera.class), null, null, null, 0).savedState();
-        coordinator.restoreReturnState(
-                level, mock(Camera.class), null, null, null,
-                saved, -1, 0, null,
-                new BonusStageProvider.BonusStageRewards(0, 0,
-                        false, false, false, false),
-                () -> { });
+        coordinator.captureEntry(level, mock(Camera.class), null, null, null, 0);
+        coordinator.prepareReturnLoad(level);
 
-        verify(returnObjects).restorePersistentRespawn(respawnState);
+        verify(level).restorePersistentRespawnOnNextObjectReset(respawnState);
     }
 
     @Test

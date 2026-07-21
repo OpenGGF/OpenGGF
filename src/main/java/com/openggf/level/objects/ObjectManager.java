@@ -285,7 +285,15 @@ public class ObjectManager {
         return slotLayout.toSlotIndex(execIndex);
     }
 
-    public void reset(int cameraX) {
+    public void reset(int cameraX) { reset(cameraX, null); }
+
+    /**
+     * Resets this manager and reapplies a persistent respawn table before the
+     * initial placement window is materialized. Bonus-stage returns use this
+     * atomic path so remembered layout objects cannot be created during reset
+     * and left live by a later bit-only restore.
+     */
+    public void reset(int cameraX, PersistentRespawnState persistentRespawnState) {
         clearActiveObjects();
         dynamicObjects.clear();
         auxiliaryDynamicObjects.clear();
@@ -302,6 +310,7 @@ public class ObjectManager {
         s2LatchedObjectManagerCameraX = cameraX;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
         placement.reset(cameraX);
+        placement.restorePersistentRespawn(persistentRespawnState);
         if (registry != null) {
             registry.reportCoverage(placement.getAllSpawns());
         }

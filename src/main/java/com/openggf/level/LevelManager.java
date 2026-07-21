@@ -54,6 +54,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
@@ -192,6 +193,7 @@ public class LevelManager {
     // object pass so it never leaks into the first Level_MainLoop gameplay frame.
     private boolean suppressGlobalOscillationForTitleCardPass = false;
     ObjectManager objectManager;
+    private PersistentRespawnState persistentRespawnStateForNextObjectReset;
     private int ringFloorCheckCounterPhase;
     RingManager ringManager;
     ZoneFeatureProvider zoneFeatureProvider;
@@ -617,7 +619,19 @@ public class LevelManager {
         // constrained to the same region as the original hardware.
         camera.setMinX((short) level.getMinX());
         camera.setMaxX((short) level.getMaxX());
-        objectManager.reset(camera.getX());
+        PersistentRespawnState persistentRespawnState = persistentRespawnStateForNextObjectReset;
+        persistentRespawnStateForNextObjectReset = null;
+        objectManager.reset(camera.getX(), persistentRespawnState);
+    }
+
+    /**
+     * Arms a one-shot respawn-table restore for the next full object-system
+     * initialization. The state is consumed inside {@link #initCameraBounds()},
+     * after placement bookkeeping is reset and before any initial-window object
+     * can be materialized.
+     */
+    public void restorePersistentRespawnOnNextObjectReset(PersistentRespawnState state) {
+        persistentRespawnStateForNextObjectReset = state;
     }
 
     /**
@@ -2876,12 +2890,18 @@ public class LevelManager {
     }
 
     public void loadZoneAndAct(int zone, int act, LevelLoadMode loadMode) throws IOException {
-        writeCurrentAct(act);
-        writeApparentAct(act);
-        writeCurrentZone(zone);
-        // Clear checkpoint when manually changing level
-        checkpointCoordinator.clear();
-        loadCurrentLevel(loadMode != LevelLoadMode.PREVIEW_CAPTURE, loadMode);
+        try {
+            writeCurrentAct(act);
+            writeApparentAct(act);
+            writeCurrentZone(zone);
+            // Clear checkpoint when manually changing level
+            checkpointCoordinator.clear();
+            loadCurrentLevel(loadMode != LevelLoadMode.PREVIEW_CAPTURE, loadMode);
+        } finally {
+            // A load that fails before initCameraBounds must not leak a bonus-return
+            // respawn table into a later, potentially different, level.
+            persistentRespawnStateForNextObjectReset = null;
+        }
     }
 
     /**

@@ -2461,6 +2461,7 @@ public class GameLoop {
             levelManager.setBonusStageReturnCheckpointIndex(savedState.savedLastStarPostHit());
             // Suppress auto-music: zone music starts below during the title card
             levelManager.setSuppressNextMusicChange(true);
+            bonusStageTransitionCoordinator.prepareReturnLoad(levelManager);
             levelManager.loadZoneAndAct(zone, act);
             // Consume the auto-generated title card request — we initialize it ourselves below
             levelManager.consumeTitleCardRequest();

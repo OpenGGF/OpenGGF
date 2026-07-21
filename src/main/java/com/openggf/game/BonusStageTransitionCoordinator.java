@@ -94,6 +94,16 @@ public final class BonusStageTransitionCoordinator {
         return savedState != null ? savedState.savedRingCount() : 0;
     }
 
+    /**
+     * Transfers the captured respawn table to the level-load lifecycle before
+     * the return level is loaded. The level manager consumes it during the new
+     * object manager's reset, before initial placement materialization.
+     */
+    public void prepareReturnLoad(LevelManager levelManager) {
+        levelManager.restorePersistentRespawnOnNextObjectReset(pendingRespawnState);
+        pendingRespawnState = null;
+    }
+
     public void restoreReturnState(LevelManager levelManager,
                                    Camera camera,
                                    WaterSystem waterSystem,
@@ -105,12 +115,6 @@ public final class BonusStageTransitionCoordinator {
                                    ShieldType shieldToRestore,
                                    BonusStageProvider.BonusStageRewards rewards,
                                    Runnable lifeAward) {
-        ObjectManager objectManager = levelManager.getObjectManager();
-        if (pendingRespawnState != null && objectManager != null) {
-            objectManager.restorePersistentRespawn(pendingRespawnState);
-        }
-        pendingRespawnState = null;
-
         if (savedState.savedLastStarPostHit() >= 0) {
             RespawnState checkpoint = levelManager.getCheckpointState();
             if (checkpoint != null) {
