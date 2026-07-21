@@ -47869,3 +47869,21 @@ standalone CNZ remains at f0 in both scopes.
   and lets Walk animation advance normally.
 - The focused path-follow platform suites pass with both moving-latch identity
   and inclusive-edge contracts pinned.
+
+## 2026-07-22 - ICZ first-landing fast camera advances physics frontier
+
+- Commands: focused `TestS3kIczPathFollowPlatformObject` and
+  `TestS3kIcz1PathFollowPlatformHeadless`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f9125 to f9126; animation remains at
+  f9206.** Total errors fell from 4,448 to 4,447: physics from 3,262 to 3,261
+  and animation remains at 1,186.
+- Root: ROM ObjB0 calls `SolidObjectFull` and only then calls `sub_8A3C4`, so a
+  standing bit established by that collision sets `Fast_V_scroll_flag` before
+  the same frame's camera scroll. The split engine callback was recorded after
+  the platform update but consumed on the next update, applying only the normal
+  six-pixel camera cap on the first landing. Fast-scroll publication now occurs
+  directly from the accepted standing contact when the platform is moving
+  (`docs/skdisasm/sonic3k.asm:187437-187457,187943-187957`).
+- The focused platform suites pass with the immediate post-contact camera
+  request covered.

@@ -339,6 +339,7 @@ class TestS3kIczPathFollowPlatformObject {
             platform.onSolidContact(player, riddenPushingContact(), frame);
             platform.update(frame, player);
         }
+        platform.onSolidContact(player, standingContact(), 16);
 
         verify(camera).requestFastVerticalScroll();
     }

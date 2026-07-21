@@ -171,7 +171,6 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
             }
         }
 
-        updateFastVerticalScrollRequest(standing);
         updateDynamicSpawn(x, y);
     }
 
@@ -339,8 +338,8 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         playerEntity.setAir(true);
     }
 
-    private void updateFastVerticalScrollRequest(boolean standing) {
-        if (!standing || (xVel == 0 && yVel == 0)) {
+    private void requestFastVerticalScrollIfMoving() {
+        if (xVel == 0 && yVel == 0) {
             return;
         }
         ObjectServices services = tryServices();
@@ -438,6 +437,9 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         }
         if (contact.standing()) {
             standingThisFrame = true;
+            // sub_8A3C4 runs after SolidObjectFull and sees a newly established
+            // p1_standing_bit in this same object pass.
+            requestFastVerticalScrollIfMoving();
         }
         if (contact.pushing() && player != null) {
             pushingThisFrame = true;
