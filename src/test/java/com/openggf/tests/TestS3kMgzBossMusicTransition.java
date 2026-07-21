@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.StubObjectServices;
@@ -24,6 +25,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -100,7 +102,7 @@ class TestS3kMgzBossMusicTransition {
         when(drillRenderer.isReady()).thenReturn(true);
         when(shipRenderer.isReady()).thenReturn(true);
 
-        RecordingServices services = new RecordingServices(renderManager);
+        RecordingServices services = new RecordingServices(renderManager, true);
         MgzEndBossInstance boss = new MgzEndBossInstance(
                 new ObjectSpawn(0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0));
         boss.setServices(services);
@@ -109,12 +111,44 @@ class TestS3kMgzBossMusicTransition {
             boss.update(frame, null);
         }
 
-        MgzEndBossRenderChild rearDrill = boss.getChildComponents().stream()
+        List<MgzEndBossRenderChild> renderChildren = boss.getChildComponents().stream()
                 .filter(MgzEndBossRenderChild.class::isInstance)
                 .map(MgzEndBossRenderChild.class::cast)
+                .toList();
+        assertEquals(8, renderChildren.size(),
+                "ChildObjDat_6D7C0 and its nested children must produce the complete eight-role render graph");
+        assertEquals(List.of(0, 1, 2, 3, 4, 5, 6, 7), renderChildren.stream()
+                        .map(MgzEndBossRenderChild::role)
+                        .sorted()
+                        .toList(),
+                "every composite render role must occur exactly once");
+        List<MgzEndBossRenderChild> managedRenderChildren = services.objectManager().getActiveObjects().stream()
+                .filter(MgzEndBossRenderChild.class::isInstance)
+                .map(MgzEndBossRenderChild.class::cast)
+                .toList();
+        assertEquals(8, managedRenderChildren.size(),
+                "ObjectManager must own exactly the complete eight-role render graph");
+        assertEquals(List.of(0, 1, 2, 3, 4, 5, 6, 7), managedRenderChildren.stream()
+                        .map(MgzEndBossRenderChild::role)
+                        .sorted()
+                        .toList(),
+                "ObjectManager must own each composite render role exactly once");
+        for (MgzEndBossRenderChild child : renderChildren) {
+            assertTrue(child.getSlotIndex() >= 0, "every render child must own a real SST slot");
+            assertTrue(managedRenderChildren.stream().anyMatch(managed -> managed == child),
+                    "every boss childComponents entry must be the exact identity owned by ObjectManager");
+        }
+
+        MgzEndBossRenderChild rearDrill = managedRenderChildren.stream()
                 .filter(child -> child.role() == MgzEndBossRenderChild.ROLE_STATIC_BACK)
                 .findFirst()
                 .orElseThrow();
+        assertSame(renderChildren.stream()
+                        .filter(child -> child.role() == MgzEndBossRenderChild.ROLE_STATIC_BACK)
+                        .findFirst()
+                        .orElseThrow(),
+                rearDrill,
+                "the rendered rear drill must be the same managed instance retained by childComponents");
         assertEquals(7, rearDrill.getPriorityBucket(),
                 "word_6D77C gives the rear drill child ROM priority $380");
         assertFalse(rearDrill.isHighPriority(),
@@ -218,6 +252,7 @@ class TestS3kMgzBossMusicTransition {
 
     private static final class RecordingServices extends StubObjectServices {
         private final ObjectRenderManager renderManager;
+        private final ObjectManager objectManager;
         private int fadeOutCount;
         private final List<Integer> playedMusic = new ArrayList<>();
 
@@ -226,7 +261,19 @@ class TestS3kMgzBossMusicTransition {
         }
 
         private RecordingServices(ObjectRenderManager renderManager) {
+            this(renderManager, false);
+        }
+
+        private RecordingServices(ObjectRenderManager renderManager, boolean managerBacked) {
             this.renderManager = renderManager;
+            this.objectManager = managerBacked
+                    ? new ObjectManager(List.of(), null, 0, null, null, null, null, this)
+                    : null;
+        }
+
+        @Override
+        public ObjectManager objectManager() {
+            return objectManager;
         }
 
         @Override
