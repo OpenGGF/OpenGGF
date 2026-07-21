@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Background-plane player probes now preserve absent S3K layout rows:**
+  provider-translated `FindFloor`/`FindWall` scans consult the level's ROM row-pointer
+  presence before reading decoded padding, preventing MGZ2's state-eight rise transform
+  from turning an empty row into a false solid overlap while retaining genuine dual-plane
+  collision and the post-movement crush check.
 - **MGZ twisting-loop cleanup now releases the rider that actually owns its control lease:**
   native P2 and extension-sidekick roster changes retain the loop's captured owner,
   unload clears direct-mapping, object-control, and ground/wall-suppression state,

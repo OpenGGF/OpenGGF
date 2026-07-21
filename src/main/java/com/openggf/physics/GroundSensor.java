@@ -222,6 +222,10 @@ public class GroundSensor extends Sensor {
         if (lm == null || !state.active()) return null;
         short bgX = (short) provider.backgroundX(state, fgX, globalDirection);
         short bgY = (short) provider.backgroundY(state, fgY);
+        var currentLevel = lm.getCurrentLevel();
+        if (currentLevel != null && !currentLevel.hasBackgroundCollisionRowAt(bgY)) {
+            return null;
+        }
 
         // Perform the scan using the BG-adjusted coordinates. Do not bail out
         // early on an empty first tile: the ROM still runs the extension pass

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.CollisionMode;
+import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.SolidTile;
@@ -723,6 +724,24 @@ public class TestGroundSensor {
         assertNotNull(result, "background scan should consult live handler state before stale parallax cache");
         assertEquals(11, result.distance(),
                 "live handler bgCameraX should translate the probe onto the populated BG tile");
+    }
+
+    @Test
+    public void backgroundCollisionRejectsAbsentLayoutRowAfterProviderTranslation() throws Exception {
+        setTileAt((byte) 1, 100, 112, 1);
+        Level level = mock(Level.class);
+        when(mockLevelManager.getCurrentLevel()).thenReturn(level);
+        when(level.hasBackgroundCollisionRowAt(100)).thenReturn(false);
+
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+
+        SensorResult result = invokeBackgroundScan(
+                new GroundSensor(mockSprite, Direction.DOWN, (byte) 0, (byte) 0, true),
+                (short) 100, (short) 100, mockSprite.getLrbSolidBit(), Direction.DOWN, true);
+
+        assertNull(result,
+                "a zero BG row pointer must remain empty instead of wrapping into decoded padding");
     }
 
     @Test
