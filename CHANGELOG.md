@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ ice cubes now test each standing player's animation byte captured before `SolidObjectFull` changes landing state, matching the ROM's saved `$3A/$3B` roll check and restoring the native cube-shatter launch.
 - Fix: bonus-stage return now reapplies the captured object respawn table inside the fresh object manager's reset, after placement bookkeeping is cleared but before the initial camera window is materialized. Initially visible remembered objects therefore remain suppressed instead of surviving as live instances created by the reload.
 - Refactor: bonus-stage level-state capture and return restoration now live in a dedicated transition coordinator, preserving star-post activation, live interior rings, event routines, player/camera/water state, HUD timing, shields, and lives while keeping provider lifecycle and presentation in `GameLoop`.
 - Fix: CNZ's magnetic end-boss body, orbiting arms, and released magnet now declare their native-centre collision publishers through the canonical multi-region enemy touch-response profile, preserving their existing collision bytes and actor-overlap policy without a source-guard exception.

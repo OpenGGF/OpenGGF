@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Object 0xB6 - ICZ ice cube.
  * <p>
- * ROM reference: {@code Obj_ICZIceCube} at sonic3k.asm:189620. The cube is a
+ * ROM reference: {@code Obj_ICZIceCube} at sonic3k.asm:189703. The cube is a
  * {@code SolidObjectFull} block that shatters when a player standing on it has
  * animation {@code 2} (roll), launches that player upward, and spawns 12
  * {@code CreateChild1_Normal} ice debris pieces.
@@ -110,7 +110,14 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
         if (shattered || isDestroyed() || player == null || contact == null || !contact.standing()) {
             return;
         }
-        if (player.getAnimationId() != Sonic3kAnimationIds.ROLL.id()) {
+        // loc_8B384 snapshots Player_1/Player_2 anim into $3A/$3B before
+        // SolidObjectFull can clear rolling on a fresh landing; sub_8B3AA then
+        // tests those saved bytes (sonic3k.asm:189711-189741).
+        ObjectServices services = tryServices();
+        int preContactAnimationId = services != null && services.objectManager() != null
+                ? services.objectManager().getPreContactAnimationId()
+                : player.getAnimationId();
+        if (preContactAnimationId != Sonic3kAnimationIds.ROLL.id()) {
             return;
         }
 

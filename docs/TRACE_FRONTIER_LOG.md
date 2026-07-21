@@ -47421,3 +47421,29 @@ expected-red routes and unchanged non-CNZ frontiers. The animation fleet
 remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
+## 2026-07-21 - S3K ICZ ice-cube pre-contact animation advances both gates
+
+- Branch/worktree context: repository root on `bugfix/ai-s3k-icz-trace-green`,
+  based on `develop` commit `6a4c39488`; local user changes in `.gitignore`,
+  `.idea/vcs.xml`, and `docs/plans/cnz2-knuckles-cutscene-boss-parity-tasks.md`
+  were left untouched and excluded.
+- Command: `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczCompleteRunTraceReplay' test`.
+- **`s3k_icz1` advanced from f2472 to f2519 and from 5,763 to 3,375 total
+  errors.** The physics gate advanced from f2472 `y_speed` (4,403 errors) to
+  f3174 `rings` (3,206 errors); the animation gate advanced from f2472
+  `player_animation_id` (1,360 errors) to f2519 `player_mapping_frame`
+  (169 errors).
+- Root: `Obj_ICZIceCube` saves Player 1/Player 2 `anim` into object bytes
+  `$3A/$3B` before `SolidObjectFull`, then tests those saved bytes after the
+  solid helper may clear rolling on a fresh landing
+  (`docs/skdisasm/sonic3k.asm:189711-189741`). The engine instead tested the
+  post-contact Walk animation, so the cube did not shatter and neither the
+  native `-$300` launch nor Roll animation was published. The object now reads
+  the shared resolver's per-player pre-contact animation snapshot.
+- Focused unit command: `mvn -q -Dmse=relaxed
+  '-Dtest=TestIczIceCubeObjectInstance' test`. Assertions could not execute for
+  Mockito-backed cases because the checkout is running Java 26 while the
+  bundled Byte Buddy supports through Java 24; the production trace replay
+  executed normally and proved the frontier movement.
