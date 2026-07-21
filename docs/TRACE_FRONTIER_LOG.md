@@ -1,5 +1,60 @@
 # Trace Frontier Log
 
+### 2026-07-21 -- S3K mega-run chain: gumball interior CLOSED; frontier moved seg1-entry -> seg2->seg3 return
+
+Command (worktree `.claude/worktrees/green-bonus`, branch
+`feature/ai-chain-interior-rng`):
+
+`mvn -q surefire:test -Dtest=com.openggf.tests.trace.runs.TestS3kMegaRunChain -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsurefire.argLine=-Xshare:off -Xmx4g' -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+Run `s3-knux-multibonus-ss` (25 seg, Knuckles). The gumball bonus interior
+(seg1, 1430 frames) went from **3709 comparator errors (stage exit never
+observed)** to **9 errors, stage exit observed, ring carry-over correct**.
+The chain now clears seg0 (aiz), seg1 (gumball) and seg2 (aiz_2) and RED-fails
+softly (no crash) at the seg2->seg3 boundary: the second-bonus entry boundary
+(`starpost_bonus`) is never observed because seg2 (aiz_2) diverges from its
+entry (~12000 errors) -- see the exit-hold blocker below.
+
+Roots fixed this session:
+
+1. **Gumball entry input alignment (primary, seg1 3709->9).** The interior's
+   first gameplay tick is the single BONUS title-card-exit fall-through frame.
+   `PlaybackDebugManager.isDriving` drives only LEVEL/BONUS_STAGE, so the
+   step-top `syncPlaybackInputBridge` (running while still TITLE_CARD) never
+   applied the recorded frame-0 forced input; the player's first tick ran
+   NEUTRAL. The ROM/standalone frame 0 is a grounded LEFT ground-move
+   (air-forced-false for one frame -> g_speed -0x0C -> then falls), so the
+   engine instead free-fell with air-accel (x_speed -0x18 + gravity) from
+   frame 0 and diverged the whole fall. FIX: `GameLoop.exitTitleCard` re-arms
+   the forced-input bridge after flipping to BONUS_STAGE (bonus branch only;
+   LEVEL title-card exits untouched), and `AbstractRunChainTest.handoffIntoInterior`
+   seeks the cursor to the interior offset BEFORE the (frozen-cursor) title
+   card so the fall-through samples recorded frame 0; the interior comparator
+   attaches at frame 1 (fall-through consumed frame 0).
+2. **Gumball ring carry-over (69 not 79).** ROM `loc_61076` copies the live
+   HUD `Ring_count` into `Saved_ring_count` on exit (sonic3k.asm:127760),
+   discarding the transient `+20` the ring ball adds to `Saved_ring_count`
+   (only `+10` reaches the HUD, loc_6114E:127845). `GameLoop.doExitBonusStage`
+   now restores the interior's live HUD ring total captured before the reload,
+   replacing `savedRingCount + rewards.rings()` which double-counted +20.
+3. **Bonus exit-fade cursor parity (partial).** The engine froze the shared
+   playback cursor during its bonus-exit fade while the ROM keeps ticking
+   V_int across the post-catch BONUS_STAGE tail. `updateBonusStageMode`'s
+   freeze branch now advances the cursor + VBla counter each frozen frame.
+
+Remaining blocker (NEW frontier): the engine's gumball exit-hold is far
+shorter than the ROM's. The ROM holds the caught player ~150 BONUS_STAGE
+frames (catch at interior frame ~1277 -> mode change at ~1430) before the
+level reload; the engine's exit fade is ~21 frames, so the return cursor lands
+~133 rows short of the return segment offset and the BONUS->LEVEL fall-through
+feeds aiz_2 a stale frame-0 input, diverging seg2. A defensive guard in
+`handoffIntoInterior` re-anchors the cursor to `returnOffset` (frame 0) instead
+of crashing on the negative index; the real fix is to reproduce the ROM's
+gumball exit-hold duration so the cursor reaches `returnOffset` organically
+(framesConsumed == 0). Must-stay-green suite re-verified GREEN with these
+changes (S3K gumball/pachinko/slots/SS standalone, S1/S2 chains, AIZ
+complete-run, AIZ1 skip).
+
 ### 2026-07-20 -- Chain-replay foundation merged; S1 chain GREEN; two engine frontiers opened
 
 Workflow A (chain consumers) merged: the run walker is manifest-driven with
