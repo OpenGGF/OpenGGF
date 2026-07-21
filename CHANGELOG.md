@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Penguinator now consumes `FindFloor`'s chunk-flip-adjusted angle, preserves raw-animation phase across its hop callback, and publishes the complete slide-recovery script. This restores the ICZ Tails enemy bounce and advances complete-run physics from frame 5243 to 5501 and animation from frame 5246 to 5513.
 - Fix: Penguinator now leaves `Obj_WaitOffscreen` when its native `$20` placeholder render bounds enter the viewport, instead of waiting for the object centre. This removes a false ICZ player collision and advances complete-run physics from frame 4895 to 5243 and animation from frame 4900 to 5246.
 - Fix: ICZ crushing columns now preserve the native routine-0 initialization pass before subtype movement and key their standing/pushing status to the stable SST instance rather than mutable motion coordinates. This advances ICZ complete-run physics from frame 3856 to 4895 and animation from frame 3858 to 4900.
 - Fix: S3K post-player invisible hurt blocks now materialize their Obj37 spill in the native phase while deferring `Ring_count` ownership to the first ring slot; lost-ring touch consumes the previously published collision-list position and `GiveRing` runs from Obj37 rather than the player touch callback. This advances the ICZ complete-run physics frontier from frame 3174 to frame 3856.

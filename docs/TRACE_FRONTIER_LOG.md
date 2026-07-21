@@ -47534,3 +47534,24 @@ standalone CNZ remains at f0 in both scopes.
   active routine (`docs/skdisasm/sonic3k.asm:190431-190482`).
 - All six focused Penguinator tests pass, including a new placeholder-boundary
   activation regression.
+
+## 2026-07-21 - S3K ICZ Penguinator slope cycle advances both frontiers
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczCompleteRunTraceReplay' test`.
+- **`s3k_icz1` physics advanced from f5243 to f5501 and animation advanced
+  from f5246 to f5513.** Total errors fell from 5,824 to 5,525: physics from
+  4,463 to 4,221 and animation from 1,361 to 1,304.
+- Root: Penguinator's second patrol reached a flipped terrain block. Native
+  `ObjCheckFloorDist` applies the chunk H/V transforms to `Primary_Angle`
+  before `loc_8BB90` tests its facing-relative bit 6; the engine consumed the
+  untransformed tile angle and incorrectly entered the `$40`-frame wait branch.
+  The resulting cycle was 65 frames late and missed Tails at f5243. The ground
+  decision now consumes the existing flip-aware object-terrain result and
+  clears FindFloor's odd-angle sentinel like the ROM. The same port also keeps
+  `Animate_RawGetFaster` phase when installing the hop script and includes the
+  final frame 3 from `byte_8BE16`
+  (`docs/skdisasm/sonic3k.asm:190568-190627,190657-190711,190833`).
+- All nine focused Penguinator tests pass, including raw hop-phase, complete
+  slide-recovery, and flipped-slope branch regressions.
