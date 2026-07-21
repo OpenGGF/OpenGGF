@@ -441,9 +441,12 @@ abstract class AbstractRunChainTest {
      * (and faithfully reproduced) {@code framesConsumed} leading LEVEL frames of
      * that segment from its own recorded input.
      *
-     * <p>Unlike {@link #attachLevelSegment}, this does NOT re-seek the BK2 cursor:
-     * the interior branch pre-seeked it to the return segment's offset, and the
-     * fall-through frame(s) advanced it to {@code returnOffset + framesConsumed}.
+     * <p>Unlike {@link #attachLevelSegment}, this method does not itself re-seek
+     * the BK2 cursor. Its caller first establishes the required alignment: an
+     * uncompared special-stage return keeps the pre-seeked cursor advanced by its
+     * fall-through frame, while the bonus/Option-B return explicitly re-anchors
+     * to {@code returnOffset + 1}. In both cases the cursor reaches
+     * {@code returnOffset + framesConsumed} before this method attaches.
      * Starting the comparator at {@code framesConsumed} keeps the recording-frame
      * index and the BK2 cursor in lockstep, so the already-run leading frame(s)
      * are neither replayed a second time (which would double-apply a moving
@@ -464,10 +467,9 @@ abstract class AbstractRunChainTest {
      * frame-0 physics. Values by transition kind (each cited at its site; do not
      * re-derive them — reference this block):
      * <ul>
-     *   <li><b>0</b> — plain level entry, a level RETURN via
-     *       {@link #attachLevelSegment}, and a compared bonus interior's body
-     *       start ({@link #attachInteriorComparator}): the comparator attaches
-     *       before the segment's frame 0 and the cursor is (re-)seeked to
+     *   <li><b>0</b> — plain level entry or a level rebind via
+     *       {@link #attachLevelSegment}: the comparator attaches before the
+     *       segment's frame 0 and the cursor is (re-)seeked to
      *       {@code segmentOffset}.</li>
      *   <li><b>1</b> — a compared bonus interior ENTRY
      *       ({@link #handoffIntoInterior}'s bonus/Option-B branch): the single
@@ -476,9 +478,10 @@ abstract class AbstractRunChainTest {
      *   <li><b>1</b> — a level RETURN after a special-stage (uncompared) interior
      *       (this method): the pre-seeked frozen cursor's one fall-through frame
      *       consumed the return segment's frame 0.</li>
-     *   <li><b>0</b> — a level RETURN after a bonus interior (this method): the
-     *       live cursor lands exactly on {@code returnOffset} with no return frame
-     *       yet consumed (the negative-cursor re-anchor guard also yields 0).</li>
+     *   <li><b>1</b> — a level RETURN after a compared bonus interior (this
+     *       method): Option B has already run the return segment's frame 0, then
+     *       explicitly re-seeks the input cursor to {@code returnOffset + 1}
+     *       before attaching the comparator at frame 1.</li>
      * </ul>
      */
     private LiveTraceComparator attachReturnedLevelSegment(
