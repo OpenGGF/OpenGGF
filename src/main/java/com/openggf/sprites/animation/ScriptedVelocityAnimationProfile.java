@@ -22,6 +22,11 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     // Some character-specific $FF Walk handlers select the push script from
     // Status_Push without replacing the public raw animation byte.
     private boolean pushUsesWalkSpecialHandler;
+    // Reload-timer shift for the $FF Walk handler's push sub-branch:
+    // ROM Animate_Sonic/loc_12A72 uses lsr.w #6 (sonic3k.asm:25193), while
+    // Animate_Knuckles/loc_17ECC uses lsr.w #8 (sonic3k.asm:33216). Defaults
+    // to 6 so existing Sonic/Tails/S2 profiles are unaffected.
+    private int pushDelayShift = 6;
     // S3K's Player_ChkWalk clears Duck before its no-input preservation tail;
     // earlier movement routines retain the previously published byte there.
     private boolean duckReleasePublishesWalk;
@@ -92,6 +97,8 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setPushAnimId(int pushAnimId) { this.pushAnimId = pushAnimId; return this; }
     public ScriptedVelocityAnimationProfile setPushAnimId(AnimationId id) { return setPushAnimId(id.id()); }
     public ScriptedVelocityAnimationProfile setPushUsesWalkSpecialHandler(boolean value) { this.pushUsesWalkSpecialHandler = value; return this; }
+    public ScriptedVelocityAnimationProfile setPushDelayShift(int shift) { this.pushDelayShift = shift; return this; }
+    public int getPushDelayShift() { return pushDelayShift; }
     public ScriptedVelocityAnimationProfile setDuckReleasePublishesWalk(boolean value) { this.duckReleasePublishesWalk = value; return this; }
     public ScriptedVelocityAnimationProfile setAirborneSlidePreservesPublishedAnimation(boolean value) { this.airborneSlidePreservesPublishedAnimation = value; return this; }
     public ScriptedVelocityAnimationProfile setDuckAnimId(int duckAnimId) { this.duckAnimId = duckAnimId; return this; }
