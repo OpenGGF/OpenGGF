@@ -258,8 +258,17 @@ class TestMgzMinibossInstance {
 
         setPrivateInt(boss, "routineTimer", 0);
         boss.update(5, player);
-        assertEquals(6, state.routine);
-        assertFalse(getPrivateBoolean(boss, "upsideDown"), "Tunnel-up should clear the upside-down render state");
+        assertEquals(18, state.routine,
+                "StartNextCycle should retain the return-swing routine for its final Obj_Wait callback");
+        assertFalse(getPrivateBoolean(boss, "upsideDown"),
+                "StartNextCycle should clear the vertical render flip before tunnel-up");
+
+        setPrivateInt(boss, "routineTimer", 0);
+        boss.update(6, player);
+        assertEquals(6, state.routine,
+                "RestartRumble should enter tunnel-up only after the separate release wait");
+        assertFalse(getPrivateBoolean(boss, "upsideDown"),
+                "Tunnel-up should inherit the cleared vertical render state");
     }
 
     @Test

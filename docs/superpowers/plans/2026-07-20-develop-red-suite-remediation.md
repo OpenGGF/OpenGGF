@@ -327,10 +327,10 @@ Expected: PASS with no blanket baseline count increase.
 - Modify: `src/main/java/com/openggf/game/sonic3k/objects/MgzMinibossInstance.java`
 - Test: `src/test/java/com/openggf/game/sonic3k/objects/TestMgzMinibossInstance.java`
 
-- [ ] Run `upsideDownStatePersistsThroughDropAndRiseThenClearsBeforeTunnelUp`; expected an extra wait routine.
-- [ ] Model the native callback transition so the flip persists through drop/rise and clears immediately before tunnel-up.
-- [ ] Run the full class; expected PASS.
-- [ ] Commit as `fix: restore MGZ miniboss return routine`, updating `CHANGELOG.md`.
+- [x] Run `upsideDownStatePersistsThroughDropAndRiseThenClearsBeforeTunnelUp`; reproduced the stale assertion collapsing the native extra wait callback into the tunnel-up handoff.
+- [x] Preserve the existing native callback transition so the flip persists through drop/rise, clears in `StartNextCycle` while routine `$12` remains active for `$1F` frames, and enters tunnel-up only from the later `RestartRumble` callback; tightened the focused assertions around both boundaries.
+- [x] Run the full class plus touch, art, and rewind coverage; the D3.6 assertion and all related coverage pass, with only the independently catalogued D3.7 defeat-camera assertion still red in the full class.
+- [x] Commit as `fix: restore MGZ miniboss return routine`, updating `CHANGELOG.md`.
 
 ### Task D3.7: Lock all MGZ defeat-camera bounds atomically
 

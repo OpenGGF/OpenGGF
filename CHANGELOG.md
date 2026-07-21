@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: MGZ miniboss return-cycle coverage now preserves the ROM's two callback boundaries: `StartNextCycle` clears the upside-down render bit while routine `$12` remains active for its final `$1F`-frame wait, and only the later `RestartRumble` callback re-enters tunnel-up routine `$06`.
 - Fix: MGZ2 rumble polling now preserves the ROM screen-event order: an existing continuous quake can emit `RUMBLE_2` before the collapse request is consumed, the positive `$14` startup shake emits no collapse sound, and `BIG_RUMBLE` begins only from the initialized scrolling-collapse path on the 16-frame `Level_frame_counter` cadence.
 - Fix: S3K results exits now publish the transition-ready flag only when the live event provider reports a retained native handoff owner, removing the stale HCZ/MGZ zone inference while preserving unarmed results exits.
 - Test: CNZ Obj51 electric-ball rendering coverage now constructs the child with the parent-owned allocation snapshot used by production and asserts its native centre coordinates before checking the ROM mapping frame.
