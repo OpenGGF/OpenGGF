@@ -228,6 +228,23 @@ class TestS3kMgzTwistingLoopObject {
     }
 
     @Test
+    void mgzTwistingLoopUnloadClearsOwnedGroundWallSuppression() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite extension = createDirectEntryPlayer("knuckles", LOOP_X + 2);
+        loop.setServices(new QueryOnlyPlayerServices(main, List.of(extension)));
+        loop.update(0, main);
+        assertTrue(extension.isSuppressGroundWallCollision(),
+                "captured player must carry the loop's ground/wall suppression");
+
+        loop.onUnload();
+
+        assertFalse(extension.isSuppressGroundWallCollision(),
+                "releasing loop ownership must clear its ground/wall suppression");
+    }
+
+    @Test
     void mgzTwistingLoopUnloadDoesNotClearReplacementControl() {
         MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
                 new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
@@ -243,6 +260,29 @@ class TestS3kMgzTwistingLoopObject {
 
         assertTrue(extension.isObjectControlled(),
                 "stale loop cleanup must not release unrelated replacement control");
+    }
+
+    @Test
+    void mgzTwistingLoopUnloadDoesNotClearMatchingReplacementControl() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer("sonic", LOOP_X + 0x100);
+        TestablePlayableSprite extension = createDirectEntryPlayer("knuckles", LOOP_X + 2);
+        loop.setServices(new QueryOnlyPlayerServices(main, List.of(extension)));
+        loop.update(0, main);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(extension);
+        extension.setObjectMappingFrameControl(true);
+        extension.setControlLocked(false);
+        extension.setAnimationId(0);
+
+        loop.onUnload();
+
+        assertTrue(extension.isObjectControlled(),
+                "a newer matching-looking control lease must survive stale loop cleanup");
+        assertTrue(extension.isObjectMappingFrameControl(),
+                "stale loop cleanup must not clear the replacement owner's mapping control");
+        assertTrue(extension.isSuppressGroundWallCollision(),
+                "stale loop cleanup must not clear suppression after ownership is replaced");
     }
 
     @Test

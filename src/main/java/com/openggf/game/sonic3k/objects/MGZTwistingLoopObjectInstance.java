@@ -55,6 +55,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         int releaseFrames;
         int cooldownFrames;
         int convexReleaseFrames;
+        int controlGeneration;
         boolean compensateReleaseHandoff;
 
         void copyFrom(PlayerState state) {
@@ -64,6 +65,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             releaseFrames = state.releaseFrames;
             cooldownFrames = state.cooldownFrames;
             convexReleaseFrames = state.convexReleaseFrames;
+            controlGeneration = state.controlGeneration;
             compensateReleaseHandoff = state.compensateReleaseHandoff;
         }
 
@@ -74,6 +76,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             releaseFrames = 0;
             cooldownFrames = 0;
             convexReleaseFrames = 0;
+            controlGeneration = 0;
             compensateReleaseHandoff = false;
         }
     }
@@ -179,11 +182,9 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
 
     private void releaseExtensionOwnership(int frameCounter, PlayableEntity entity, PlayerState state) {
         if (entity instanceof AbstractPlayableSprite player && (state.active || state.releaseFrames > 0)) {
-            boolean stillOwned = state.active
-                    ? player.isObjectMappingFrameControl() && player.isControlLocked()
-                    : player.isObjectControlled() && player.getAnimationId() == RELEASE_ANIMATION;
-            if (stillOwned) {
+            if (hasOwnedControlFingerprint(player, state)) {
                 player.setObjectMappingFrameControl(false);
+                player.setSuppressGroundWallCollision(false);
                 player.setControlLocked(false);
                 player.setOnObject(false);
                 player.setHighPriority(false);
@@ -195,7 +196,20 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         state.releaseFrames = 0;
         state.cooldownFrames = 0;
         state.convexReleaseFrames = 0;
+        state.controlGeneration = 0;
         state.compensateReleaseHandoff = false;
+    }
+
+    private static boolean hasOwnedControlFingerprint(AbstractPlayableSprite player, PlayerState state) {
+        if (player.getObjectControlGeneration() != state.controlGeneration) {
+            return false;
+        }
+        if (state.active) {
+            // Active capture owns direct mapping frames under object_control=$42;
+            // player input is deliberately unlocked while native movement remains active.
+            return player.isObjectMappingFrameControl();
+        }
+        return player.isObjectControlled() && player.getAnimationId() == RELEASE_ANIMATION;
     }
 
     @Override
@@ -307,6 +321,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         // clear, so Sonic_Modes still advances native movement before this
         // later object slot overwrites the loop-owned position words.
         ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
+        state.controlGeneration = player.getObjectControlGeneration();
         player.setSuppressGroundWallCollision(true);
         player.setObjectMappingFrameControl(true);
         player.setOnObject(true);
@@ -424,6 +439,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         player.setControlLocked(false);
         if (jumpedOut) {
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+            state.controlGeneration = player.getObjectControlGeneration();
         } else if (state.compensateReleaseHandoff) {
             player.deferObjectControlRelease();
         } else {
