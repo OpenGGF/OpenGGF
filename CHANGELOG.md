@@ -6,9 +6,9 @@ All notable changes to the OpenGGF project are documented in this file.
 - **S3K custom zones now resolve implemented FBZ objects from their declared pointer table:**
   20 FBZ-only factories follow the S3KL object set without requiring a fake stock zone
   id, while the shared FBZ/DEZ player launcher remains available in both S3KL and SKL.
-  The three magnetic factories that consume stock-only `FbzZoneRuntimeState`, along
-  with factories that read a stock ROM zone, remain unavailable to custom zones
-  through explicit registry metadata.
+  The three magnetic factories that consume `FbzZoneRuntimeState` are restricted to
+  the exact stock FBZ/S3KL context, while other factories that read a stock ROM zone
+  remain unavailable to custom zones through explicit registry metadata.
 - **Playable-subclass rewind keeps its published constructor compatibility:**
   `PlayerRewindExtra` again exposes the canonical pre-subclass-payload overload,
   delegating to the current snapshot shape with a null `subclassExtra`, so mods

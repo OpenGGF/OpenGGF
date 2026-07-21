@@ -115,6 +115,45 @@ class TestSonic3kModZoneObjectSet {
     }
 
     @Test
+    void stockFbzCreatesRuntimeStateBoundMagneticFactories() {
+        Sonic3kObjectRegistry registry = new LevelBackedRegistry(stockLevel(
+                com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_FBZ));
+
+        assertInstanceOf(FbzMagneticSpikeBallObjectInstance.class,
+                registry.create(spawn(Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL)));
+        assertInstanceOf(FbzMagneticPlatformObjectInstance.class,
+                registry.create(spawn(Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM)));
+        assertInstanceOf(FbzMagneticPendulumObjectInstance.class,
+                registry.create(spawn(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM)));
+    }
+
+    @Test
+    void stockSklDoesNotCreateFbzMagneticFactoriesForRemappedIds() {
+        Sonic3kObjectRegistry registry = new LevelBackedRegistry(stockLevel(
+                com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_MHZ));
+
+        assertInstanceOf(com.openggf.level.objects.PlaceholderObjectInstance.class,
+                registry.create(spawn(Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL)));
+        assertInstanceOf(com.openggf.level.objects.PlaceholderObjectInstance.class,
+                registry.create(spawn(Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM)));
+        assertInstanceOf(com.openggf.level.objects.PlaceholderObjectInstance.class,
+                registry.create(spawn(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM)));
+    }
+
+    @Test
+    void nonFbzStockS3klDoesNotCreateRuntimeStateBoundMagneticFactories() {
+        Sonic3kObjectRegistry registry = new LevelBackedRegistry(stockLevel(
+                com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_AIZ));
+
+        assertInstanceOf(com.openggf.level.objects.PlaceholderObjectInstance.class,
+                registry.create(spawn(Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL)));
+        assertInstanceOf(com.openggf.level.objects.PlaceholderObjectInstance.class,
+                registry.create(spawn(Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM)));
+        assertInstanceOf(com.openggf.level.objects.PlaceholderObjectInstance.class,
+                registry.create(spawn(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM)));
+    }
+
+    @Test
     void bareRegistryPreservesLegacyFallbackForStockZoneBoundFactory() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
         var spawn = new com.openggf.level.objects.ObjectSpawn(
@@ -260,7 +299,7 @@ class TestSonic3kModZoneObjectSet {
     private static Set<Integer> customCompatibleStockZoneReadIds(List<String> sourceLines) throws Exception {
         Set<String> stockZoneReadingHelpers = stockZoneReadingHelpers(sourceLines);
         Pattern registration = Pattern.compile(
-                "(factories\\.put|registerStockZoneBound|registerZoneSetBound)"
+                "(factories\\.put|registerStockZoneBound|registerStockRomZoneBound|registerZoneSetBound)"
                         + "\\(Sonic3kObjectIds\\.([A-Z0-9_]+),");
         Set<Integer> violations = new HashSet<>();
         String activeConstant = null;
@@ -268,7 +307,8 @@ class TestSonic3kModZoneObjectSet {
         for (String line : sourceLines) {
             var matcher = registration.matcher(line);
             if (matcher.find()) {
-                activeCustomCompatible = !matcher.group(1).equals("registerStockZoneBound");
+                activeCustomCompatible = matcher.group(1).equals("factories.put")
+                        || matcher.group(1).equals("registerZoneSetBound");
                 activeConstant = matcher.group(2);
             } else if (line.contains("factories.forEach")) {
                 activeConstant = null;
@@ -336,6 +376,20 @@ class TestSonic3kModZoneObjectSet {
             if (value.charAt(index) == target) matches++;
         }
         return matches;
+    }
+
+    private static com.openggf.game.sonic3k.Sonic3kLevel stockLevel(int zoneId) {
+        com.openggf.game.sonic3k.Sonic3kLevel level =
+                mock(com.openggf.game.sonic3k.Sonic3kLevel.class);
+        when(level.hasStockRomZoneIdentity()).thenReturn(true);
+        when(level.getObjectZoneSet()).thenReturn(S3kZoneSet.forZone(zoneId));
+        when(level.getZoneIndex()).thenReturn(zoneId);
+        return level;
+    }
+
+    private static com.openggf.level.objects.ObjectSpawn spawn(int objectId) {
+        return new com.openggf.level.objects.ObjectSpawn(
+                10, 20, objectId, 0, 0, false, 1);
     }
 
     private static final class InspectableRegistry extends Sonic3kObjectRegistry {

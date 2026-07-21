@@ -1348,9 +1348,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new FbzFloatingPlatformObjectInstance(spawn));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_CHAIN_LINK, S3kZoneSet.S3KL,
                 (spawn, registry) -> new FbzChainLinkObjectInstance(spawn));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL,
+        registerStockRomZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL,
+                S3kZoneSet.S3KL, Sonic3kZoneIds.ZONE_FBZ,
                 (spawn, registry) -> new FbzMagneticSpikeBallObjectInstance(spawn));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM,
+        registerStockRomZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM,
+                S3kZoneSet.S3KL, Sonic3kZoneIds.ZONE_FBZ,
                 (spawn, registry) -> new FbzMagneticPlatformObjectInstance(spawn));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_SNAKE_PLATFORM, S3kZoneSet.S3KL,
                 (spawn, registry) -> new FbzSnakePlatformObjectInstance(spawn));
@@ -1386,7 +1388,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new FbzFlamethrowerObjectInstance(spawn));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_SPIDER_CRANE, S3kZoneSet.S3KL,
                 (spawn, registry) -> new FbzSpiderCraneObjectInstance(spawn));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM,
+        registerStockRomZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM,
+                S3kZoneSet.S3KL, Sonic3kZoneIds.ZONE_FBZ,
                 (spawn, registry) -> new FbzMagneticPendulumObjectInstance(spawn));
 
         factories.forEach(this::registerSetOnly);
@@ -1440,6 +1443,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(objectId, factory);
         factoryEntries.put(objectId, new FactoryEntry(factory,
                 context -> context.source() != S3kObjectCreationContext.Source.CUSTOM));
+        stockZoneBoundFactoryIds.add(objectId);
+    }
+
+    private void registerStockRomZoneBound(int objectId, S3kZoneSet zoneSet,
+                                           int romZoneId, ObjectFactory factory) {
+        factories.put(objectId, factory);
+        factoryEntries.put(objectId, new FactoryEntry(factory,
+                context -> context.source() == S3kObjectCreationContext.Source.STOCK
+                        && context.zoneSet() == zoneSet
+                        && context.stockRomZoneId().orElse(-1) == romZoneId));
         stockZoneBoundFactoryIds.add(objectId);
     }
 
