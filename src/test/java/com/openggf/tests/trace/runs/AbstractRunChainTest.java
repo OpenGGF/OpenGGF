@@ -261,34 +261,28 @@ abstract class AbstractRunChainTest {
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
                 assertReturnBoundary(plans, i, runDir);
-                // Attach the return comparator at the already-consumed frame index WITHOUT
-                // re-seeking, so recording-frame index and BK2 cursor stay in lockstep and
-                // no already-run frame is replayed a second time. framesConsumed differs by
-                // interior kind (see the cursor-handling note above): a pre-seeked SS
-                // interior's single fall-through frame consumed the return segment's frame 0
-                // (framesConsumed == 1), while a live-cursor bonus interior lands the cursor
-                // exactly on returnOffset with no return-segment frame yet consumed
-                // (framesConsumed == 0). The bonus case relies on GameLoop advancing the
-                // shared cursor across its exit-fade hold frames (updateBonusStageMode's
-                // freeze branch) so the cursor tracks the recorded post-catch tail.
-                int framesConsumed = playback.getCursorFrame() - returnOffset;
-                if (framesConsumed < 0) {
-                    // The engine's interior exit consumed fewer BK2 rows than the
-                    // recording: its bonus exit-hold/fade is shorter than the ROM's
-                    // post-catch BONUS_STAGE tail (the machine holds the caught player
-                    // ~150 frames before the mode flips; see the exit-fade cursor
-                    // advance in GameLoop.updateBonusStageMode). GameLoop's exit-fade
-                    // cursor advance narrows but does not fully close that gap yet, so
-                    // the cursor can still land short of returnOffset. Re-anchor to
-                    // returnOffset and compare the return level from frame 0 rather
-                    // than feeding a negative cursor into the comparator. TODO
-                    // (docs/TRACE_FRONTIER_LOG.md): match the ROM gumball exit-hold
-                    // duration so this branch is never taken and framesConsumed == 0.
-                    playback.startSession(movie, returnOffset);
-                    framesConsumed = 0;
+                // Attach the return comparator, keying on interior kind.
+                if (uncomparedInterior) {
+                    // Pre-seeked SS interior: its single title-card-exit fall-through
+                    // frame consumed the return segment's frame 0 (framesConsumed == 1)
+                    // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
+                    int framesConsumed = playback.getCursorFrame() - returnOffset;
+                    activeComparator = attachReturnedLevelSegment(
+                            probe, plans.get(i + 1), fixture, framesConsumed);
+                } else {
+                    // OPTION B (bonus interior): the engine's bonus-exit sequence is
+                    // shorter than the recorded post-catch BONUS_STAGE tail, and ~80 of
+                    // those recorded rows are the ROM's clearRAM/level-reload frames that
+                    // the engine performs synchronously (loadZoneAndAct is one frame) --
+                    // so the cursor cannot organically reach returnOffset (see
+                    // docs/S3K_KNOWN_DISCREPANCIES.md, gumball exit choreography). The
+                    // BONUS->LEVEL title-card-exit fall-through already ran the return
+                    // segment's frame 0. Re-anchor the cursor to returnOffset+1 and
+                    // compare the return level from frame 1. Input-cursor alignment only.
+                    playback.startSession(movie, returnOffset + 1);
+                    activeComparator = attachReturnedLevelSegment(
+                            probe, plans.get(i + 1), fixture, 1);
                 }
-                activeComparator = attachReturnedLevelSegment(
-                        probe, plans.get(i + 1), fixture, framesConsumed);
                 i++;
             } else {
                 // This segment is a LEVEL; its exit is an ENTRY boundary into the

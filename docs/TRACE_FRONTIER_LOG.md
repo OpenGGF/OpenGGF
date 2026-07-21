@@ -1,5 +1,97 @@
 # Trace Frontier Log
 
+### 2026-07-21 -- S3K mega-run chain seg2 (aiz_2): oscillator DISPROVEN; real blocker is monitor-solidity at f231
+
+Supersedes the "landing-fidelity f186/f192" classification below. Worktree
+`.claude/worktrees/green-bonus`, branch `feature/ai-chain-interior-rng`
+(develop re-merged, HEAD bfaae1295). Command unchanged (`TestS3kMegaRunChain`,
+`s3-knux-multibonus-ss`, Knuckles). Chain reaches seg2; the RED assert is the
+seg2->seg3 `starpost_bonus` (both the 0->1 and 2->3 transitions share that
+name -- the message is ambiguous).
+
+OSCILLATOR RULING WITHDRAWN. Gated instrumentation (per level-load reset seq,
+reverted) proved the global oscillator is frame-aligned: the aiz_2 fall-through
+frame advances osc[0] 0x80->0x82 == recorded f0, and engine frame N osc ==
+recorded frame N thereafter. The earlier "engine[N]==recorded[N-1]" was a
+frame-1-attach comparison artifact. Both VALUE and ORDER are correct: the engine
+advances the global oscillator AFTER object updates (`LevelManager.java:829`),
+matching S3K `OscillateNumDo` (sonic3k.asm:7909) running after `Process_Sprites`
+(7894). This closes the oscillator/frameCounter question permanently.
+
+FOLLOW-UP (platform phase, transient, NOT the blocker): the ridden FloatingPlatform
+(rideId 0x51, Square32 subtype 0x08) steps its own Y one frame late (engine f193
+vs ROM f192) even with the oscillator value aligned -- its quadrant state machine
+starts one step behind after the bonus-return level reload. Causes a 1px rider-Y
+lag at f192 that CONVERGES back to 0 by f250. Future lane: re-seed the Square32
+quadrant phase on reload; not zone-specific.
+
+REAL BLOCKER (f231 monitor solidity): after riding+leaving the platform the engine
+falls right at full speed and at f231 its x/g-speed are zeroed at cx=0x2B1F (hits a
+wall), landing dead-stopped and frozen for the rest of the segment; the ROM -- same
+position, same x_radius 9, same Primary plane bits 0x0C/0x0D -- runs straight through
+and off a ledge (cascade to f2002, misses the seg2->slots star post). Discrimination:
+the wall is an OBJECT -- engine slot 13 `Sonic3kMonitorObjectInstance`
+(isSolidFor=true), recorded as obj 0x0001B588 subtype 0x03, a stationary intact
+monitor at (0x2B38, 0x2D3) that the ROM player passes straight through (non-solid).
+Root: `Sonic3kMonitorObjectInstance.isSolidFor` (line 561) only excludes the roll anim
+(`getAnimationId()!=ROLL`); the ROM `SolidObject_Monitor_SonicKnux` (sonic3k.asm:40564)
+ALSO makes the monitor non-solid for Knuckles gliding (double_jump_flag==1) or sliding
+(==3). The engine's DJF is 0 at f231 with a STUCK glide anim 0x20 (half-ended glide);
+whether the ROM's DJF is genuinely 1/3 there (landing-DJF root) or 0 (monitor-routine
+root) needs a BizHawk `double_jump_flag` read across f186-231 -- pending. The f186
+landing reset (radii/DJF) is otherwise already correct.
+
+RECORDER DEFECT (fixed): `gameplay_frame_counter` (CSV col 6) + aux
+`level_frame_counter` were 0 across all segments (dead since the recorder's first
+commit -- ADDR_FRAMECOUNT sampled 0xFE08 = Debug_placement_mode instead of 0xFE04).
+Fixed on develop 6564667eb (0xFE08->0xFE04, matching the S1/S2 recorders); the
+re-merge carries it. Existing recordings cannot be healed without recapture.
+
+### 2026-07-21 -- S3K mega-run chain: Option B return-attach + seg2 (aiz_2) blocker classified as landing-fidelity, NOT exit-hold
+
+Command (worktree `.claude/worktrees/green-bonus`, branch
+`feature/ai-chain-interior-rng` on top of merged 7fc6c7a74):
+
+`mvn -q surefire:test -Dtest=com.openggf.tests.trace.runs.TestS3kMegaRunChain -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsurefire.argLine=-Xshare:off -Xmx4g' -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+Status: RED, "starpost_bonus never observed" (seg2->seg3). Per-segment first
+divergence (from `LiveTraceComparator` FIRST-ERROR stderr + a temporary
+non-animation-error probe, since removed):
+
+- seg0 aiz: first ERROR f638 (mapping_frame, cosmetic); first NON-anim f1766 (y_speed).
+- seg1 gumball: first ERROR f1276 (x delta 1) -- the near-perfect interior.
+- seg2 aiz_2: first ERROR **f186** = `player_animation_id` 0x00 (ROM) vs 0x20
+  (engine), SAME `mapping_frame` 0xC0, and ALL physics MATCH at f186 (x/y/speeds/
+  angle/air=0/ground_mode) -- i.e. the player lands correctly but the engine keeps
+  the airborne anim id one frame. First NON-anim divergence **f192** = `y` 0x24B
+  (ROM) vs 0x24A (engine), a 1px landing-settle difference that then cascades to
+  physics by f2002 (angle/g_speed/y_speed) so the player misses the second star post.
+
+CLASSIFICATION: the seg2 blocker is a LANDING animation-state + 1px settle-height
+fidelity slip at f186/f192, NOT the exit-hold/cursor accounting and NOT a
+free-running-counter reset (physics match through the landing frame f186). aiz_2
+replays position/physics within tolerance for 185 frames, so the return-cursor
+handling is already correct.
+
+CHANGE: replaced the `framesConsumed < 0` defensive guard in
+`AbstractRunChainTest.assertChainReplay`'s bonus-interior return-attach with the
+approved Option B -- re-anchor the cursor to `returnOffset+1` and attach the return
+comparator at frame 1 (the BONUS->LEVEL fall-through consumed the return segment's
+neutral-input frame 0). This is a clean model of the fall-through, not a fix for the
+f186 slip (verified: seg2 first error stays f186 with frame-0 vs frame-1 attach).
+The engine-side exit choreography is deliberately NOT reproduced -- documented as an
+intentional divergence in docs/S3K_KNOWN_DISCREPANCIES.md (the ROM's ~152-frame
+game_mode-0x8C exit tail includes ~80 clearRAM/reload frames with no engine
+equivalent; nothing the comparator checks depends on the duration). The
+`updateBonusStageMode` exit-fade cursor/VBla advance is KEPT as correct V_int
+modeling. Must-stay-green re-verified: TestS1GhzMazeRoundTripChain,
+TestS2EhzHalfpipeRoundTripChain, TestS3kGumballBonusTraceReplay.
+
+NEXT FRONTIER: aiz_2 landing fidelity at f186/f192 -- why the engine holds the
+airborne anim id (0x20) one frame past the landing and settles the grounded player
+1px lower than the ROM. Likely a landing anim-transition / y_radius-on-land / subpixel
+ground-snap difference exposed by the bonus-return level reload; needs a focused
+physics trace, not exit-sequence work.
 ### 2026-07-21 -- S3K mega-run chain seg0 (aiz, Knuckles): AIZ ride-vine hold anim-latch fixed; seg0 56 -> 4 errors
 
 Command (worktree `.claude/worktrees/green-s1maze`, branch
@@ -936,6 +1028,7 @@ same 13 expected-red routes and unchanged non-CNZ frontiers. Animation remains
 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-21 -- S3K mega-run chain: gumball interior CLOSED; frontier moved seg1-entry -> seg2->seg3 return
 
 Command (worktree `.claude/worktrees/green-bonus`, branch
