@@ -3,7 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Fix: MGZ2's collapse rumble poll now follows the persistent boss-owned collapse request instead of the screen-event routine that observes it one dispatch later, preserving the ROM 16-frame `Level_frame_counter` cadence without emitting off-cadence or ordinary quake sounds.
+- Fix: MGZ2 rumble polling now preserves the ROM screen-event order: an existing continuous quake can emit `RUMBLE_2` before the collapse request is consumed, the positive `$14` startup shake emits no collapse sound, and `BIG_RUMBLE` begins only from the initialized scrolling-collapse path on the 16-frame `Level_frame_counter` cadence.
 - Fix: S3K results exits now publish the transition-ready flag only when the live event provider reports a retained native handoff owner, removing the stale HCZ/MGZ zone inference while preserving unarmed results exits.
 - Test: CNZ Obj51 electric-ball rendering coverage now constructs the child with the parent-owned allocation snapshot used by production and asserts its native centre coordinates before checking the ROM mapping frame.
 - Test: ICZ2 post-miniboss cleanup coverage now follows the ROM's separate `Obj_EndSignControl` installation call, 119 `WAIT_FADE` decrements through call 120, and cleanup on call 121, then verifies the PalPointers line is both composed into the live object palette and attributed end-to-end to the ICZ miniboss owner.

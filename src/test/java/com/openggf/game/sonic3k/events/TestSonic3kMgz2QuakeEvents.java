@@ -24,6 +24,7 @@ import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -421,9 +422,33 @@ class TestSonic3kMgz2QuakeEvents {
         Camera camera = GameServices.camera();
         camera.setX((short) 0x7E0);
         events.update(1, 1);
+        verify(audio, never()).playSfx(Sonic3kSfx.RUMBLE_2.id);
+
         events.update(1, 17);
+        events.update(1, 18);
+        events.update(1, 32);
+        events.update(1, 33);
 
         verify(audio, times(2)).playSfx(Sonic3kSfx.RUMBLE_2.id);
+    }
+
+    @Test
+    void collapseRequestHandoffPollsThePreDispatchContinuousRumble() {
+        placePlayer(0x790, 0x590);
+        AudioManager audio = mock(AudioManager.class);
+        TestableMgzEvents events = new TestableMgzEvents(audio);
+        events.init(1);
+
+        events.update(1, 0);
+        GameServices.camera().setX((short) 0x7E0);
+        events.update(1, 0);
+        clearInvocations(audio);
+        events.requestLevelCollapse();
+
+        events.update(1, 1);
+
+        verify(audio).playSfx(Sonic3kSfx.RUMBLE_2.id);
+        verify(audio, never()).playSfx(Sonic3kSfx.BIG_RUMBLE.id);
     }
 
     @Test
@@ -434,13 +459,19 @@ class TestSonic3kMgz2QuakeEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        events.update(1, 1);
-        events.update(1, 2);
-        events.update(1, 16);
-        events.update(1, 17);
-        events.update(1, 18);
+        for (int frame = 1; frame <= 22; frame++) {
+            events.update(1, frame);
+        }
+        verify(audio, never()).playSfx(Sonic3kSfx.BIG_RUMBLE.id);
 
-        verify(audio, times(2)).playSfx(Sonic3kSfx.BIG_RUMBLE.id);
+        events.update(1, 23);
+        assertTrue(events.isCollapseInitialized(),
+                "the scrolling collapse starts only after the $14-frame startup shake expires");
+        events.update(1, 32);
+        events.update(1, 33);
+        events.update(1, 34);
+
+        verify(audio).playSfx(Sonic3kSfx.BIG_RUMBLE.id);
         verify(audio, never()).playSfx(Sonic3kSfx.RUMBLE_2.id);
     }
 
