@@ -1349,14 +1349,15 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
-            if (services().camera() == null) {
+            var camera = services().camera();
+            if (camera == null) {
                 setDestroyed(true);
                 return;
             }
-            int nextX = services().camera().getX() + 1;
-            services().camera().setX((short) nextX);
-            services().camera().setMinX((short) nextX);
-            services().camera().setMaxX((short) nextX);
+            int nextX = Math.min((camera.getX() & 0xFFFF) + 1, targetX);
+            camera.setX((short) nextX);
+            camera.setMinX((short) nextX);
+            camera.setMaxX((short) nextX);
             if (nextX >= targetX) {
                 setDestroyed(true);
             }

@@ -339,7 +339,7 @@ Expected: PASS with no blanket baseline count increase.
 - Test: `src/test/java/com/openggf/game/sonic3k/objects/TestMgzMinibossInstance.java`
 
 - [x] Run `defeatCameraHelperLocksBothCameraBoundsWhileScrolling`; reproduced X/minX=`0x2E00` with stale maxX=`0x2DFF`.
-- [x] Update X, minX, and maxX atomically from the persistent camera owner until the same target is reached; tightened coverage around the intermediate lock and target-time helper release.
+- [x] Update X, minX, and maxX atomically from the persistent camera owner until the same target is reached; tightened coverage around the intermediate lock, target-time helper release, and restored entry at or above the target without overshoot.
 - [x] Run the full class plus related camera, MGZ-event, and rewind tests; all selected tests pass.
 - [x] Commit as `fix: lock MGZ defeat camera bounds`, updating `CHANGELOG.md`.
 

@@ -441,6 +441,43 @@ class TestMgzMinibossInstance {
     }
 
     @Test
+    void defeatCameraHelperDoesNotAdvancePastTarget() {
+        RecordingServices services = new RecordingServices(camera);
+        MgzMinibossInstance.MgzBossCameraScrollHelper helper =
+                new MgzMinibossInstance.MgzBossCameraScrollHelper(0x2E00);
+        helper.setServices(services);
+        camera.setX((short) 0x2E00);
+        camera.setMinX((short) 0x2E00);
+        camera.setMaxX((short) 0x2E00);
+
+        helper.update(0, null);
+
+        assertCameraLockedAtTarget(helper);
+    }
+
+    @Test
+    void defeatCameraHelperClampsRestoredCameraAboveTarget() {
+        RecordingServices services = new RecordingServices(camera);
+        MgzMinibossInstance.MgzBossCameraScrollHelper helper =
+                new MgzMinibossInstance.MgzBossCameraScrollHelper(0x2E00);
+        helper.setServices(services);
+        camera.setX((short) 0x2E01);
+        camera.setMinX((short) 0x2E01);
+        camera.setMaxX((short) 0x2E01);
+
+        helper.update(0, null);
+
+        assertCameraLockedAtTarget(helper);
+    }
+
+    private void assertCameraLockedAtTarget(ObjectInstance helper) {
+        assertEquals(0x2E00, camera.getX() & 0xFFFF, "Camera X should clamp to the handoff target");
+        assertEquals(0x2E00, camera.getMinX() & 0xFFFF, "Left bound should clamp to the handoff target");
+        assertEquals(0x2E00, camera.getMaxX() & 0xFFFF, "Right bound should clamp to the handoff target");
+        assertTrue(helper.isDestroyed(), "Camera helper should release ownership at the target");
+    }
+
+    @Test
     void defeatExplosionChildRendersWhenBossExplosionRendererIsAvailable() {
         PatternSpriteRenderer explosionRenderer = mock(PatternSpriteRenderer.class);
         when(explosionRenderer.isReady()).thenReturn(true);
