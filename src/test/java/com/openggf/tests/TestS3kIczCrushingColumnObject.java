@@ -76,7 +76,7 @@ class TestS3kIczCrushingColumnObject {
     }
 
     @Test
-    void subtypeOneStartsCrushingUpwardWhenStoodOnThenReturnsToSpawnY() {
+    void subtypeOneStartsCrushingUpwardWhenStoodOnThenReturnsToNativeEndpoint() {
         TestableColumn column = new TestableColumn(spawn(1));
         PlayableEntity player = mock(PlayableEntity.class);
         column.update(-1, player);
@@ -103,7 +103,8 @@ class TestS3kIczCrushingColumnObject {
             column.update(frame, player);
         }
 
-        assertEquals(0x0700, column.getY());
+        assertEquals(0x06FF, column.getY(),
+                "loc_8A5C8 resets before writing the terminal spawn-Y step");
         assertEquals(0x02, column.getRoutineByteForTesting());
         assertEquals(0x5F, column.getTimerForTesting());
     }
@@ -165,7 +166,7 @@ class TestS3kIczCrushingColumnObject {
             column.update(frame, player);
         }
 
-        assertEquals(0x0700, column.getY());
+        assertEquals(0x06FF, column.getY());
         assertEquals(-0x40, column.getYVelocityForTesting());
 
         column.ceilingDistance = 1;
@@ -174,14 +175,9 @@ class TestS3kIczCrushingColumnObject {
         column.update(300, player);
 
         column.update(301, player);
-        assertEquals(0x0C, column.getRoutineByteForTesting());
-
-        column.update(302, player);
-        assertEquals(0x0C, column.getRoutineByteForTesting());
-
-        column.update(303, player);
         assertEquals(0x12, column.getRoutineByteForTesting());
-        assertEquals(-0xA0, column.getYVelocityForTesting());
+        assertEquals(-0x60, column.getYVelocityForTesting(),
+                "the native spawnY-1 endpoint reaches the second ceiling impact on its first movement tick");
     }
 
     @Test
@@ -234,6 +230,14 @@ class TestS3kIczCrushingColumnObject {
         when(player.getCentreX()).thenReturn((short) 0x1800);
         column.update(38, player);
         assertEquals(0x14, column.getRoutineByteForTesting());
+
+        for (int frame = 39; frame <= 49; frame++) {
+            column.update(frame, player);
+        }
+        assertEquals(0x0701, column.getY(),
+                "loc_8A5AC resets before writing the terminal spawn-Y step");
+        assertEquals(0x06, column.getRoutineByteForTesting());
+        assertEquals(0x5F, column.getTimerForTesting());
     }
 
     @Test

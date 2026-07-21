@@ -236,7 +236,6 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     private void updateReturnUp() {
         int nextY = y - RETURN_STEP;
         if (nextY <= spawnY) {
-            y = spawnY;
             timer = RESET_TIMER;
             resetToSubtypeRoutine();
             return;
@@ -247,7 +246,6 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     private void updateReturnDown() {
         int nextY = y + RETURN_STEP;
         if (nextY >= spawnY) {
-            y = spawnY;
             timer = RESET_TIMER;
             resetToSubtypeRoutine();
             return;

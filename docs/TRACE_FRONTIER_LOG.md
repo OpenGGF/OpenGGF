@@ -47679,3 +47679,21 @@ standalone CNZ remains at f0 in both scopes.
   ownership state, and ObjB4 opts in. The local-below-target grace branch now
   honors the same support contract (`docs/skdisasm/sonic3k.asm:26696-26741`).
 - All nine focused swinging-platform tests pass.
+
+## 2026-07-21 - ICZ crushing-column return endpoint advances both frontiers
+
+- Commands: focused `TestS3kIczCrushingColumnObject` plus
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path, followed
+  by the focused column suite after updating its native endpoint assertions.
+- **`s3k_icz1` physics advanced from f6972 to f7100 and animation advanced
+  from f7019 to f7101.** Total errors fell from 3,006 to 2,984: physics from
+  2,624 to 2,610 and animation from 382 to 374.
+- Root: ObjAF's return routines calculate the next one-pixel Y, compare it to
+  saved spawn Y, and branch to reset without writing that terminal step. An
+  upward return therefore rests at `spawnY+1`, and a downward return at
+  `spawnY-1`. The engine instead snapped both paths to spawn Y. The supporting
+  column at `$5260` stopped at `$0300` rather than native `$0301`, and Sonic's
+  otherwise-correct ride snap inherited the one-pixel error
+  (`docs/skdisasm/sonic3k.asm:188160-188185`).
+- All eleven focused crushing-column tests pass with both endpoint semantics
+  and the resulting second-cycle timing pinned.
