@@ -260,13 +260,24 @@ class TestMgzMinibossInstance {
         boss.update(5, player);
         assertEquals(18, state.routine,
                 "StartNextCycle should retain the return-swing routine for its final Obj_Wait callback");
+        assertEquals(0x1F, getPrivateInt(boss, "routineTimer"),
+                "StartNextCycle should install the ROM's $1F release-wait counter");
         assertFalse(getPrivateBoolean(boss, "upsideDown"),
                 "StartNextCycle should clear the vertical render flip before tunnel-up");
 
-        setPrivateInt(boss, "routineTimer", 0);
-        boss.update(6, player);
+        for (int frame = 6; frame <= 36; frame++) {
+            boss.update(frame, player);
+            assertEquals(18, state.routine,
+                    "Obj_Wait should retain routine $12 through countdown value zero");
+            assertFalse(getPrivateBoolean(boss, "upsideDown"),
+                    "The vertical render flip should stay cleared throughout the release wait");
+        }
+        assertEquals(0, getPrivateInt(boss, "routineTimer"),
+                "Thirty-one Obj_Wait dispatches should count $1F down to zero without invoking the callback");
+
+        boss.update(37, player);
         assertEquals(6, state.routine,
-                "RestartRumble should enter tunnel-up only after the separate release wait");
+                "The thirty-second Obj_Wait dispatch should go negative and invoke RestartRumble");
         assertFalse(getPrivateBoolean(boss, "upsideDown"),
                 "Tunnel-up should inherit the cleared vertical render state");
     }
@@ -456,6 +467,12 @@ class TestMgzMinibossInstance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
+    }
+
+    private static int getPrivateInt(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
     }
 
     private static void setPrivateBoolean(Object target, String fieldName, boolean value) throws Exception {
