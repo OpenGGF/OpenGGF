@@ -666,7 +666,11 @@ Each task uses its row below for the initial red run and final green regression 
 
 ## Develop wave gate
 
-- [ ] Run all 36 formerly red methods in one selection; expected zero failures/errors.
-- [ ] Run every affected package/guard batch; expected zero failures/errors.
-- [ ] Run `mvn test` twice consecutively; expected both complete develop runs green.
-- [ ] Update the inventory and dispatch whole-change spec and quality reviews; loop until approved.
+- [x] Run all 36 formerly red methods in one selection; zero failures/errors on 2026-07-21.
+- [x] Run every affected package/guard batch; 3,382 passed, zero failures/errors, three fixture-dependent skips.
+- [x] Run `mvn test` twice consecutively; both complete develop runs passed with 12,473 passed, zero failures/errors, and 15 skips per run.
+- [x] Update the inventory: all 36 frozen develop identities are now `fixed-on-develop` (shared `develop+next` identities remain unverified on `next`).
+
+### Post-origin full-gate findings
+
+The first full run after merging `origin/develop` through `3f011aa2c` exposed nine methods outside the frozen 36-method baseline. Eight were reproducible stale fixtures and are fixed by `14d5689e9` and `5610326b7`: CNZ cannon control ownership; CNZ miniboss deferred callback/live-timer cadence (three methods); MGZ debris camera-bound isolation; CNZ shake previous-sample latency; and CNZ end-boss defeat/capsule cadence (three methods). The ninth, the S1 lava-geyser rewind graph method, passed its exact rerun, full class, related rewind guards, and both final full-suite passes without a change, so it is recorded as a non-reproducing first-pass result rather than new implementation debt.
