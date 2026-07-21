@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -162,38 +163,9 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     private boolean releasePending;
     private boolean releaseSolidPassExposed;
 
-    /**
-     * One-frame flag controlling the post-update solid pass slope sample
-     * suppression. Engine flow:
-     * <ol>
-     *   <li>Engine calls {@code update()}; {@code performCollapse()} runs and
-     *       sets {@link #pendingTransitionSkip}.</li>
-     *   <li>Engine runs the post-update solid pass; this frame still samples
-     *       slope (matches ROM F3316, the last {@code loc_20594}/sub_205B6 frame).</li>
-     *   <li>Next frame's {@code update()} promotes
-     *       {@link #pendingTransitionSkip} to
-     *       {@link #transitionFrameSlopeSkip} (state==2 first ride frame).</li>
-     *   <li>That frame's post-update solid pass sees the flag and skips the
-     *       y_pos write while keeping the player attached, mirroring ROM
-     *       F3317 -- the transition frame where
-     *       {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45394)
-     *       jmps to {@code Play_SFX} without falling through to
-     *       {@code sub_205B6} (sonic3k.asm:44830).</li>
-     *   <li>Subsequent frame's {@code update()} clears the flag; ROM's
-     *       {@code loc_205DE} resumes calling {@code sub_205B6}
-     *       (sonic3k.asm:44851), so the slope sample is back on.</li>
-     * </ol>
-     *
-     * <p>The two-stage promotion accounts for the engine running
-     * {@code performCollapse()} one frame earlier than ROM's transition (the
-     * engine's {@code onSolidContact} sets {@code state=1} on the first
-     * standing frame, while ROM's {@code loc_20594} only sets {@code $3A=1}
-     * on the second standing frame at sonic3k.asm:44825). The pre-fix engine
-     * happened to write the same y_pos at F3316 (last sample frame in both)
-     * but wrote an extra slope sample at F3317 that ROM did not. The fix
-     * pushes the suppression to F3317, leaving F3316 untouched.
-     */
+    /** The current compensated native CreateFragments dispatch skips {@code sub_205B6}. */
     private boolean transitionFrameSlopeSkip;
+    /** Engine-early fragmentation pending promotion to the native transition frame. */
     private boolean pendingTransitionSkip;
 
     // Post-fragment parent fall state
@@ -280,10 +252,18 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         // ROM: loc_205DE still calls SolidObjectTopSloped2 after fragments spawn.
         boolean alreadyRiding = playerEntity != null
                 && services().objectManager().isRidingObject(playerEntity, this);
-        return solidForTransitionState(alreadyRiding);
+        boolean savedOtherPlayerStanding = pendingTransitionSkip
+                && services().playerQuery().mainPlayerOrNull() == playerEntity
+                && isWithinPendingSlopeCatchRange(playerEntity)
+                && hasSavedOtherPlayerStandingBit(playerEntity);
+        return solidForTransitionState(alreadyRiding, savedOtherPlayerStanding);
     }
 
     boolean solidForTransitionState(boolean alreadyRiding) {
+        return solidForTransitionState(alreadyRiding, false);
+    }
+
+    boolean solidForTransitionState(boolean alreadyRiding, boolean savedOtherPlayerStanding) {
         if (state >= 3) {
             // sub_205FC runs for Player 1 and Player 2 in one object dispatch.
             // Player 1 may promote the engine state before the separate P2
@@ -296,7 +276,39 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         // Existing riders retain their standing bits across that skipped pass,
         // but a second player cannot establish a fresh contact until loc_205DE
         // resumes the solid helper on the following dispatch.
-        return !(transitionFrameSlopeSkip || pendingTransitionSkip) || alreadyRiding;
+        // pendingTransitionSkip is the engine-early fragmentation pass that
+        // corresponds to ROM's final timer decrement. Ordinarily the existing
+        // compensation keeps fresh contacts suppressed until promotion. When
+        // another native player still owns this platform's saved standing bit,
+        // however, loc_20594 runs sub_205B6 on that final decrement and may seat
+        // the fresh player before CreateFragments on the following dispatch.
+        return !(transitionFrameSlopeSkip || pendingTransitionSkip)
+                || alreadyRiding
+                || (pendingTransitionSkip && savedOtherPlayerStanding);
+    }
+
+    private boolean hasSavedOtherPlayerStandingBit(PlayableEntity candidate) {
+        for (PlayableEntity player : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (player == null || player == candidate) {
+                continue;
+            }
+            if (player instanceof AbstractPlayableSprite sprite
+                    && !services().objectManager().isRidingObject(player, this)
+                    && sprite.getLatchedSolidObjectInstance() == this) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isWithinPendingSlopeCatchRange(PlayableEntity candidate) {
+        if (candidate == null || candidate.getYSpeed() < 0) {
+            return false;
+        }
+        int distanceAboveAnchor = y - candidate.getCentreY();
+        int nativeVerticalRange = config.halfHeight + candidate.getYRadius() + 4;
+        return distanceAboveAnchor >= 0 && distanceAboveAnchor <= nativeVerticalRange;
     }
 
     /**
@@ -318,24 +330,15 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     /**
      * The collapse-transition frame's airborne-rider unseat must be suppressed
      * even when the generic unseat in {@code ObjectSolidContactController} is
-     * evaluated BEFORE this platform's {@code update()} promotes
-     * {@link #pendingTransitionSkip} into {@link #transitionFrameSlopeSkip}.
+     * evaluated before this platform's {@code update()} promotes the pending
+     * transition into {@link #transitionFrameSlopeSkip}.
      * <p>
-     * {@code performCollapse()} runs in {@code update()} of frame N and sets
-     * {@link #pendingTransitionSkip}; frame N+1's {@code update()} promotes it to
-     * {@link #transitionFrameSlopeSkip} (the actual skip frame, matching ROM's
-     * {@code ObjPlatformCollapse_CreateFragments} transition). Within frame N+1,
-     * the controller's airborne-rider unseat can run during an earlier-slot
-     * object's solid pass -- before this platform's {@code update()} has run --
-     * at which point {@link #transitionFrameSlopeSkip} is still {@code false}
-     * but {@link #pendingTransitionSkip} is still {@code true} (set at frame N,
-     * not yet cleared). Reporting the OR keeps the unseat suppressed for that
-     * single frame regardless of object exec order, so the rider keeps
+     * Reporting both the pending and promoted views keeps the unseat suppressed
+     * for that single frame regardless of object execution order, so the rider keeps
      * {@code Status_OnObj} on the jump/collapse frame (aiz1 trace f3317 status
      * 0x0E) and is unseated next frame (f3318 0x06). The slope-sample
-     * suppression above intentionally does NOT include {@link #pendingTransitionSkip}
-     * because the y_pos write is sampled in this object's OWN post-update pass,
-     * one frame after performCollapse (the F6920 hold behavior).
+     * suppression above intentionally applies only after promotion, when the
+     * engine frame corresponds to the native transition dispatch.
      */
     @Override
     public boolean defersAirborneRiderUnseatThisFrame(PlayableEntity player) {
@@ -388,9 +391,10 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
             return;
         }
         if (contact.standing() && state == 0) {
-            // Player stepped on: set trigger flag (ROM: $3A)
+            // Player stepped on: set trigger flag (ROM: $3A). The engine's
+            // split contact phase enters its compensated countdown here.
             triggered = true;
-            state = 1; // begin collapse countdown
+            state = 1;
         }
     }
 
@@ -406,12 +410,6 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        // Clear last frame's transition-frame slope suppression and promote
-        // any pending suppression to active. See pendingTransitionSkip docs:
-        // the post-update solid pass runs after this update() returns, so
-        // active flag set here applies to that pass; on the next frame's
-        // update we'll clear it. Pending becomes active across exactly one
-        // frame, mirroring ROM's transition frame skipping sub_205B6.
         transitionFrameSlopeSkip = pendingTransitionSkip;
         pendingTransitionSkip = false;
         switch (state) {
@@ -569,15 +567,13 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         // fall through to sub_205B6 -- it jmps to Play_SFX. So the slope
         // sample / y_pos write is skipped on the ROM transition frame.
         //
-        // The engine performs this state transition one frame earlier than ROM
-        // (onSolidContact sets state=1 on the first standing frame, while ROM
-        // sets $3A=1 on the second standing frame; sonic3k.asm:44820,44825).
-        // We therefore defer the suppression to the NEXT frame's solid pass,
-        // which corresponds to ROM's actual transition frame.
+        // The engine reaches fragmentation one dispatch early because the
+        // split contact callback starts state 1 on the first standing frame.
+        // Promote this marker on the next update, which is the native skip.
         pendingTransitionSkip = true;
         // ROM loc_205DE resolves SolidObjectTopSloped2 before decrementing $38.
-        // ObjectManager runs object updates before the separate solid pass, so keep
-        // one extra stored tick to expose the same number of solid frames.
+        // ObjectManager updates before its split solid pass, so retain one
+        // extra stored tick to expose the same number of solid dispatches.
         solidStayTimer = config.collapseDelays[0] + 1;
 
         // Play collapse SFX

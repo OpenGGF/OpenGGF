@@ -47752,3 +47752,27 @@ standalone CNZ remains at f0 in both scopes.
   that actually owns the later velocity write, not the independent lock
   countdown (`docs/skdisasm/sonic3k.asm:26683-26724,28918-28958`).
 - The focused 102-case sidekick follow suite remains green.
+
+## 2026-07-21 - ICZ two-player collapse landing advances both frontiers
+
+- Commands: focused `TestSonic3kCollapsingPlatformTransitionSolid`, followed by
+  `TestS3kIczCompleteRunTraceReplay` and the AIZ complete-run canary with the
+  discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f7350 to f7606 and animation advanced
+  from f7350 to f7595.** The later cascade exposes 5,050 errors (3,827 physics
+  and 1,223 animation), replacing the prior 2,954-error cascade rather than
+  representing a like-for-like count increase.
+- Root: Obj04's engine state intentionally fragments one dispatch before the
+  promoted `transitionFrameSlopeSkip`, compensating for the split contact
+  phase. At f7350 that pending pass corresponds to ROM's final `$38:1 -> 0`
+  decrement, where `loc_20594` still calls `SolidObjectTopSloped2`; Player 2's
+  saved support latch remains on the platform while descending Player 1 enters
+  its native slope catch range. Treating pending state as the actual
+  `CreateFragments` skip rejected Sonic's landing, leaving him airborne with
+  Roll animation. Pending state now admits that narrowly modeled P1/P2 support
+  handoff, while the promoted transition still rejects fresh contacts and
+  retains existing riders (`docs/skdisasm/sonic3k.asm:44814-44830,45394-45442`).
+- The focused five-case transition-solid suite passes. The AIZ canary remains at
+  its pre-existing two ring-timing errors (f9396 and f16780-f16781); restoring
+  Obj04's original fresh-contact predicate produces the same two errors, so
+  this frontier does not add that regression.

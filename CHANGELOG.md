@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K collapsing platforms now expose their compensated final-decrement solid pass to a descending Player 1 when Player 2 still owns the saved support latch, while retaining the true `CreateFragments` fresh-contact skip. ICZ complete-run physics advances from frame 7350 to 7606 and animation from frame 7350 to 7595.
 - Fix: S3K CPU Tails now evaluates the follow lead-offset threshold from the leader's pre-event ground speed while slide terrain owns inertia, then returns to the live post-physics value after slide exit. ICZ complete-run physics advances from frame 7257 to 7350 and animation from frame 7274 to 7350.
 - Fix: ICZ crushing columns now include the exact right edge accepted by S3K `SolidObjectFull`'s unsigned `bhi` broad-X gate, restoring the native zero-distance side-push contact. Complete-run physics advances from frame 7100 to 7257 and animation from frame 7101 to 7274.
 - Fix: ICZ crushing-column return routines now compare the next one-pixel step against saved spawn Y before writing it, matching the ROM's `spawnY+1` upward-return and `spawnY-1` downward-return rest positions. Complete-run physics advances from frame 6972 to 7100 and animation from frame 7019 to 7101.
