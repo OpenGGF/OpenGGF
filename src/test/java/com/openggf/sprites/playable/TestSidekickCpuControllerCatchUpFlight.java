@@ -71,6 +71,9 @@ class TestSidekickCpuControllerCatchUpFlight {
         tails.setCentreY((short) 0x0500);
         tails.setObjectControlAllowsCpu(true);
         tails.setObjectControlSuppressesMovement(false);
+        tails.setFlipType(3);
+        tails.setFlipsRemaining(2);
+        tails.setFlipSpeed(8);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.forceStateForTest(SidekickCpuController.State.CATCH_UP_FLIGHT, 0);
@@ -87,6 +90,9 @@ class TestSidekickCpuControllerCatchUpFlight {
         assertEquals((short) 0, tails.getGSpeed(), "Velocities zeroed");
         assertEquals(0, tails.getDoubleJumpFlag(),
                 "ROM loc_13B50 clears double_jump_flag; catch-up flight is CPU/object-control driven");
+        assertEquals(0, tails.getFlipType());
+        assertEquals(0, tails.getFlipsRemaining());
+        assertEquals(0, tails.getFlipSpeed());
         assertTrue(tails.getAir(), "status air bit set");
         assertTrue(tails.isObjectControlled(), "ROM loc_13B50 writes object_control=$81");
         assertFalse(tails.isObjectControlAllowsCpu(),

@@ -35,6 +35,42 @@ public interface RespawnState {
     int getLastCheckpointIndex();
 
     /**
+     * The persistent star-post ACTIVATION mark: the highest star-post subtype
+     * ever activated in the current life, independent of the mutable checkpoint
+     * index ({@link #getLastCheckpointIndex()}).
+     *
+     * <p>This models the ROM's per-object star-post respawn bit
+     * ({@code Obj_StarPost} loc_2CFC0 {@code btst #0,(a2)}, sonic3k.asm:61582),
+     * which a star post consults to decide it is already activated. It is
+     * separate from {@code Last_star_post_hit} because a star-post BONUS entry
+     * zeroes {@code Last_star_post_hit} (loc_2D4CA {@code move.b #0,...},
+     * sonic3k.asm:61924) yet keeps the star post used (its respawn bit stays set
+     * across the reload via {@code Respawn_table_keep}). Star-post activation
+     * guards must consult THIS, not the checkpoint index, so a bonus return does
+     * not let the return star post re-trigger.
+     *
+     * <p>Default: equal to the checkpoint index (correct for every impl whose
+     * checkpoint index is not independently zeroed, and for normal non-bonus
+     * play where the two always coincide).
+     *
+     * @return the activation mark, or -1 if no star post has been activated
+     */
+    default int getStarPostActivationMark() {
+        return getLastCheckpointIndex();
+    }
+
+    /**
+     * Restores the star-post activation mark after a level reload cleared it
+     * (see {@link #getStarPostActivationMark()}). Used by the bonus-stage return
+     * path to re-establish the pre-entry activation high-water so the return
+     * star post stays used even though the checkpoint index was reset to 0.
+     * Default: no-op for impls that do not track the mark separately.
+     */
+    default void restoreStarPostActivationMark(int mark) {
+        // no-op by default
+    }
+
+    /**
      * Gets the saved X position.
      * @return saved X coordinate
      */

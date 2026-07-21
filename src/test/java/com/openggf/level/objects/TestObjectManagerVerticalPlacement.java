@@ -205,6 +205,48 @@ class TestObjectManagerVerticalPlacement {
     }
 
     @Test
+    void s3kRespawnableSelfDeleteRemainsEligibleForLaterCameraYPass() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        camera.setMinY((short) 0);
+        camera.setY((short) 0x0180);
+
+        ObjectSpawn balloonSpawn = new ObjectSpawn(0x1920, 0x0340, 0x41, 0, 0, false, 0x0340);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(balloonSpawn),
+                registry,
+                -1,
+                null,
+                null,
+                null,
+                camera,
+                new StubObjectServices() {
+                    @Override
+                    public Camera camera() {
+                        return camera;
+                    }
+                });
+        manager.enableExecThenLoadPlacement();
+
+        manager.reset(0x182E);
+        DummyObject original = registry.instances.get(balloonSpawn);
+        original.setDestroyedByOffscreen();
+        manager.update(0x182E, null, List.of(), 1, false);
+        assertFalse(manager.getActiveObjects().contains(original));
+
+        camera.setY((short) 0x0100);
+        manager.update(0x182E, null, List.of(), 2, false);
+        camera.setY((short) 0x0180);
+        manager.update(0x182E, null, List.of(), 3, false);
+
+        DummyObject replacement = registry.instances.get(balloonSpawn);
+        assertNotSame(original, replacement,
+                "S3K loc_1B982 must rescan an X-cursor-passed entry after "
+                        + "Sprite_CheckDeleteTouch3 clears its respawn bit");
+        assertTrue(manager.getActiveObjects().contains(replacement));
+    }
+
+    @Test
     void s3kPostCameraCatchupDoesNotPreemptNextLoadSpritesPass() {
         Camera camera = new Camera(SonicConfigurationService.getInstance());
         camera.setMinY((short) 0);

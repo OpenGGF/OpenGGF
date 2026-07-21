@@ -69,6 +69,22 @@ public class TestObjectPlacementManager {
     }
 
     @Test
+    public void testS3kTwoAxisPlacementTracksEveryLayoutEntry() {
+        ObjectSpawn monitor = new ObjectSpawn(0x2CE8, 0x0670, 0x01, 0x07, 0,
+                false, 0x0670);
+        ObjectPlacementController manager = new ObjectPlacementController(
+                List.of(monitor), () -> 320);
+        manager.setTwoAxisCursorPlacement(true);
+        manager.reset(0x2C00);
+
+        manager.markRemembered(monitor);
+
+        assertTrue(manager.isRemembered(monitor),
+                "S3K Load_Sprites assigns respawn_addr to every six-byte layout entry, "
+                        + "independent of the Y word's high bit");
+    }
+
+    @Test
     public void testRememberedObjectDoesNotRespawnOnCameraReturn() {
         // Simulates: break a block, scroll away, scroll back - block should NOT reappear
         ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x32, 0, 0, true, 0x8000);
@@ -266,4 +282,3 @@ public class TestObjectPlacementManager {
                 "Post-camera gap creation must not advance the primary placement cursor");
     }
 }
-

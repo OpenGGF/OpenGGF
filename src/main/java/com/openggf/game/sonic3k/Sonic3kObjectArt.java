@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.level.render.SpriteMappingPieces;
 import com.openggf.level.render.TileLoadRequest;
 import com.openggf.level.resources.CompressionType;
 import com.openggf.tools.KosinskiReader;
@@ -21,7 +22,9 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -51,12 +54,25 @@ public class Sonic3kObjectArt {
     // so callers can record which tiles each sheet depends on.
     private int lastBuildStartTile = -1;
     private int lastBuildTileCount = -1;
+    private List<Sonic3kPlcLoader.TileRange> lastBuildTileRanges = List.of();
 
     /** Returns the starting level tile index of the last built sheet, or -1. */
     public int getLastBuildStartTile() { return lastBuildStartTile; }
 
     /** Returns the tile count of the last built sheet, or -1. */
     public int getLastBuildTileCount() { return lastBuildTileCount; }
+
+    /**
+     * Returns the exact level-pattern ranges used by the last built sheet.
+     * Most sheets are contiguous; this captures mappings that combine source banks.
+     */
+    public List<Sonic3kPlcLoader.TileRange> getLastBuildTileRanges() {
+        return lastBuildTileRanges;
+    }
+
+    void clearLastBuildTileRanges() {
+        lastBuildTileRanges = List.of();
+    }
 
     /**
      * Builds a sprite sheet from level patterns for an object that uses level art.
@@ -1647,10 +1663,81 @@ public class Sonic3kObjectArt {
      * <p>Art tile: {@code ArtTile_CNZMisc+$97} (palette 2).
      */
     public ObjectSpriteSheet buildCnzHoverFanSheet() {
-        return buildLevelArtSheetFromRom(
-                Sonic3kConstants.MAP_CNZ_HOVER_FAN_ADDR,
-                Sonic3kConstants.ARTTILE_CNZ_HOVER_FAN,
-                2);
+        if (reader == null || level == null) {
+            lastBuildStartTile = -1;
+            lastBuildTileCount = -1;
+            lastBuildTileRanges = List.of();
+            return null;
+        }
+
+        List<SpriteMappingFrame> rawFrames = S3kSpriteDataLoader.loadMappingFrames(
+                reader, Sonic3kConstants.MAP_CNZ_HOVER_FAN_ADDR);
+        int artTileWord = Sonic3kConstants.ARTTILE_CNZ_HOVER_FAN | (2 << 13);
+        Map<Integer, Integer> compactTiles = new LinkedHashMap<>();
+        List<SpriteMappingFrame> resolvedFrames = new ArrayList<>(rawFrames.size());
+
+        int minSourceTile = Integer.MAX_VALUE;
+        int maxSourceTile = Integer.MIN_VALUE;
+        for (SpriteMappingFrame rawFrame : rawFrames) {
+            List<SpriteMappingPiece> resolvedPieces = new ArrayList<>(rawFrame.pieces().size());
+            for (SpriteMappingPiece rawPiece : rawFrame.pieces()) {
+                SpriteMappingPiece resolvedPiece = SpriteMappingPieces.withTileWord(
+                        rawPiece, (SpriteMappingPieces.toTileWord(rawPiece) + artTileWord) & 0xFFFF);
+                int tileCount = resolvedPiece.widthTiles() * resolvedPiece.heightTiles();
+                int compactStart = -1;
+                for (int tileOffset = 0; tileOffset < tileCount; tileOffset++) {
+                    int sourceTile = (resolvedPiece.tileIndex() + tileOffset) & 0x7FF;
+                    int compactIndex = compactTiles.computeIfAbsent(sourceTile, ignored -> compactTiles.size());
+                    if (tileOffset == 0) {
+                        compactStart = compactIndex;
+                    }
+                    minSourceTile = Math.min(minSourceTile, sourceTile);
+                    maxSourceTile = Math.max(maxSourceTile, sourceTile);
+                }
+                resolvedPieces.add(SpriteMappingPieces.withTileIndex(resolvedPiece, compactStart));
+            }
+            resolvedFrames.add(new SpriteMappingFrame(resolvedPieces));
+        }
+
+        Pattern[] patterns = new Pattern[compactTiles.size()];
+        for (Map.Entry<Integer, Integer> entry : compactTiles.entrySet()) {
+            int sourceTile = entry.getKey();
+            patterns[entry.getValue()] = sourceTile < level.getPatternCount()
+                    ? level.getPattern(sourceTile)
+                    : new Pattern();
+        }
+        lastBuildStartTile = minSourceTile;
+        lastBuildTileCount = maxSourceTile - minSourceTile + 1;
+        lastBuildTileRanges = contiguousTileRanges(compactTiles.keySet());
+        // The full art-tile addition above has already resolved each piece's
+        // palette bits. Supplying a sheet base here would add that palette a
+        // second time in SpritePieceRenderer.
+        return new ObjectSpriteSheet(patterns, resolvedFrames, 0, 1);
+    }
+
+    private static List<Sonic3kPlcLoader.TileRange> contiguousTileRanges(Iterable<Integer> tiles) {
+        List<Integer> sortedTiles = new ArrayList<>();
+        for (int tile : tiles) {
+            sortedTiles.add(tile);
+        }
+        sortedTiles.sort(Integer::compareTo);
+        if (sortedTiles.isEmpty()) {
+            return List.of();
+        }
+
+        List<Sonic3kPlcLoader.TileRange> ranges = new ArrayList<>();
+        int start = sortedTiles.getFirst();
+        int previous = start;
+        for (int index = 1; index < sortedTiles.size(); index++) {
+            int tile = sortedTiles.get(index);
+            if (tile != previous + 1) {
+                ranges.add(new Sonic3kPlcLoader.TileRange(start, previous - start + 1));
+                start = tile;
+            }
+            previous = tile;
+        }
+        ranges.add(new Sonic3kPlcLoader.TileRange(start, previous - start + 1));
+        return List.copyOf(ranges);
     }
 
     /**

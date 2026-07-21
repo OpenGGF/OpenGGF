@@ -97,6 +97,8 @@ public class SidekickCpuController {
      */
     private static final int ROM_DELETED_INTERACT_SLOT_ID = 0x00;
     private final int flyAnimId;
+    private final int flyAscendAnimId;
+    private final int flyTiredAnimId;
     private final int swimAnimId;
     private final int swimAscendAnimId;
     private final int swimTiredAnimId;
@@ -147,6 +149,7 @@ public class SidekickCpuController {
     public enum DespawnCause {
         LEVEL_BOUNDARY,
         OFF_SCREEN_TIMEOUT,
+        FREED_INTERACT_SLOT,
         OBJECT_ID_MISMATCH,
         EXPLICIT
     }
@@ -326,6 +329,8 @@ public class SidekickCpuController {
         }
         this.respawnStrategy = createDefaultRespawnStrategy();
         this.flyAnimId = sidekick.resolveAnimationId(CanonicalAnimation.FLY);
+        this.flyAscendAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_FLY_ASCEND);
+        this.flyTiredAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_FLY_TIRED);
         this.swimAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_SWIM);
         this.swimAscendAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_SWIM_ASCEND);
         this.swimTiredAnimId = sidekick.resolveAnimationId(CanonicalAnimation.TAILS_SWIM_TIRED);
@@ -529,8 +534,11 @@ public class SidekickCpuController {
         // "+1" is the 68000 byte address within the word, not a frame increment
         // (S3K sonic3k.asm:26869-26884; S2 s2.asm:39122-39139). At CNZ f8958
         // the ROM-visible word is $22FF, so loc_13F94 keeps DOWN held for one
-        // more frame and releases at $2300.
-        return frameCounter;
+        // more frame and releases at $2300. Bootstrap/VBlank closure paths can
+        // source the stale pre-Process_Sprites LevelManager copy; recover the
+        // already-incremented word using the same source semantic as the other
+        // low-byte CPU gates.
+        return projectRetainedResultsSpriteCadence(romVisibleLevelFrameCounter(), leader);
     }
 
     public void setController2Input(int held, int logical) {
@@ -2205,6 +2213,7 @@ public class SidekickCpuController {
                 || !restrictUnderwaterPushBypassToContactPulses
                 || delayedObjectOrPushContext
                 || sidekick.isPushFromGroundWallCollision()
+                || hasLiveObjectPushingLatch()
                 || isUnderwaterCurrentPushPulse()))
                 || frameStartPushBypass;
         boolean clearReleasedUnderwaterPushAfterCpu = currentPushBypass
@@ -2661,6 +2670,19 @@ public class SidekickCpuController {
             // no trace-profile-gated bridge (sonic3k.asm:26775 loc_13E9C reads the
             // post-increment (Level_frame_counter+1).b low byte).
             int autoJumpFrameCounter = frameCounter;
+            if (titleCardOwnsRetainedResultsHeldLevelCounter()) {
+                // The retained results/title owner continues native
+                // Process_Sprites dispatches while the engine's ordinary
+                // gameplay counter is held. Sonic_RecordPos runs immediately
+                // before the Player_2 CPU slot on each such dispatch, so its
+                // next-free ring index supplies the same low-six-bit phase
+                // observed by loc_13E7C/loc_13E9C. The engine records the leader
+                // after the sidekick controller, hence the two-slot projection
+                // from its latest-written entry.
+                autoJumpFrameCounter = projectRetainedResultsSpriteCadence(
+                        autoJumpFrameCounter, effectiveLeader);
+            }
+            boolean autoJumpCadence = (autoJumpFrameCounter & 0x3F) == 0;
             boolean freshAutoJumpFrame = autoJumpFrameCounter != lastNormalAutoJumpPressFrameCounter;
             boolean passesDistanceGate = pushingBypass
                     || (autoJumpFrameCounter & 0xFF) == 0
@@ -2670,7 +2692,7 @@ public class SidekickCpuController {
             if (passesDistanceGate
                     && passesHeightGate
                     && freshAutoJumpFrame
-                    && (autoJumpFrameCounter & 0x3F) == 0
+                    && autoJumpCadence
                     && sidekick.getAnimationId() != duckAnimId) {
                 inputJump = true;
                 inputJumpPress = true;
@@ -3150,6 +3172,30 @@ public class SidekickCpuController {
         LevelEventProvider provider = levelEventProvider();
         return provider != null
                 && provider.usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(sidekick);
+    }
+
+    private boolean titleCardOwnsRetainedResultsHeldLevelCounter() {
+        GameModule module = sidekick.currentGameModule();
+        var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
+        return titleCardProvider != null && titleCardProvider.ownsRetainedResultsHeldLevelCounter();
+    }
+
+    private int projectRetainedResultsSpriteCadence(
+            int monotonicCounter, AbstractPlayableSprite effectiveLeader) {
+        if (!titleCardOwnsRetainedResultsHeldLevelCounter() || effectiveLeader == null) {
+            return monotonicCounter;
+        }
+        int nativeNextFreeHistorySlot =
+                (effectiveLeader.getHistorySlotIndex(0) + 2) & 0x3F;
+        // Project the monotonic engine counter onto the nearest value with the
+        // native low-six-bit sprite-dispatch phase. This preserves later cycles
+        // for one-shot guards and carries across byte boundaries ($40FF plus
+        // phase 0 becomes $4100, rather than $40C0).
+        int phaseDelta = (nativeNextFreeHistorySlot - (monotonicCounter & 0x3F)) & 0x3F;
+        if (phaseDelta > 0x1F) {
+            phaseDelta -= 0x40;
+        }
+        return monotonicCounter + phaseDelta;
     }
 
     public boolean hasLevelEventDormantMarkerReleasePending() {
@@ -3751,9 +3797,12 @@ public class SidekickCpuController {
         diagnosticCtrl2PressedLatch = controller2Logical & MANUAL_HELD_MASK;
         int catchUpFrameCounter = catchUpFrameCounterOverride >= 0
                 ? catchUpFrameCounterOverride
-                : (catchUpUsesRomVisibleLevelFrameCounter && cpuFrameCounterFromStoredLevelFrame
+                : (catchUpUsesRomVisibleLevelFrameCounter
+                        && (cpuFrameCounterFromStoredLevelFrame
+                            || titleCardOwnsRetainedResultsHeldLevelCounter())
                         ? frameCounter + 1
                         : frameCounter);
+        catchUpFrameCounter = projectRetainedResultsSpriteCadence(catchUpFrameCounter, leader);
         catchUpFrameCounterOverride = -1;
 
         // Ctrl_2_logical A/B/C/START press → immediate trigger
@@ -3778,7 +3827,6 @@ public class SidekickCpuController {
             // screen-boundary/movement writes recorded at CNZ1 F4790.
             return;
         }
-
         // sonic3k.asm:26487 (loc_13B50) — teleport and enter FLIGHT_AUTO_RECOVERY.
         int targetX = leader.getCentreX() & 0xFFFF;
         int targetY = leader.getCentreY() & 0xFFFF;
@@ -3801,6 +3849,13 @@ public class SidekickCpuController {
         sidekick.setOnObject(false);
         sidekick.setMoveLockTimer(0);
         clearRespawnAnimationState();
+        // loc_13B50 clears the complete tumble selector before installing the
+        // recovery flight state. A later object may write flip_angle without
+        // writing flip_type, so retaining an old barber-pole type changes its
+        // next native Anim_Tumble mapping (sonic3k.asm:26487-26508).
+        sidekick.setFlipType(0);
+        sidekick.setFlipsRemaining(0);
+        sidekick.setFlipSpeed(0);
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
@@ -3888,7 +3943,9 @@ public class SidekickCpuController {
             // recovery tick. That routine selects the underwater $25-$28
             // family from live Status_Underwater rather than retaining the
             // entry-time Fly byte (sonic3k.asm:26551-26555,27646-27717).
-            sidekick.setForcedAnimationId(resolveRecoveryFlightAnimation());
+            int recoveryAnimation = resolveRecoveryFlightAnimation();
+            sidekick.setAnimationId(recoveryAnimation);
+            sidekick.setForcedAnimationId(recoveryAnimation);
         }
 
         // 3. Target = Sonic's 16-frame-delayed position. ROM
@@ -4012,6 +4069,12 @@ public class SidekickCpuController {
 
     private int resolveRecoveryFlightAnimation() {
         if (!sidekick.isInWater() || swimAnimId < 0) {
+            if ((sidekick.getDoubleJumpProperty() & 0xFF) == 0 && flyTiredAnimId >= 0) {
+                return flyTiredAnimId;
+            }
+            if (sidekick.getYSpeed() < 0 && flyAscendAnimId >= 0) {
+                return flyAscendAnimId;
+            }
             return flyAnimId;
         }
         if ((sidekick.getDoubleJumpProperty() & 0xFF) == 0 && swimTiredAnimId >= 0) {
@@ -4112,6 +4175,13 @@ public class SidekickCpuController {
         }
         sidekick.setControlLocked(false);
         sidekick.setForcedAnimationId(mgzBossTransitionCarry ? flyAnimId : -1);
+        if (!mgzBossTransitionCarry && cooldownFrames == 0) {
+            // loc_14016 clears Tails's anim byte before the same object slot
+            // continues through Tails_FlyingSwimming/Animate_Tails. The shared
+            // engine separates CPU control from animation selection, so publish
+            // the resulting ordinary flight animation at the handoff here.
+            sidekick.setAnimationId(flyAnimId);
+        }
         mgzCarryIntroAscend = false;
         mgzReleasedChaseLatched = false;
         if (mgzBossTransitionCarry) {
@@ -4372,7 +4442,7 @@ public class SidekickCpuController {
                 if ((sidekick.getLatchedSolidObjectId() & 0xFF) != 0
                         && ridingInstance != null
                         && isLatchedRideSlotFreed(ridingInstance)) {
-                    triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
+                    triggerDespawn(DespawnCause.FREED_INTERACT_SLOT);
                     return true;
                 }
             }
@@ -4676,8 +4746,17 @@ public class SidekickCpuController {
         // object/interact mismatch path originates inside loc_13F40's
         // sub_13EFC call and therefore continues into its post-warp facing
         // block.
-        applyDespawnMarker(state == State.PANIC
-                && cause == DespawnCause.OBJECT_ID_MISMATCH);
+        boolean freedInteractSlot = cause == DespawnCause.FREED_INTERACT_SLOT;
+        boolean interactMismatch = freedInteractSlot || cause == DespawnCause.OBJECT_ID_MISMATCH;
+        applyDespawnMarker(state == State.PANIC && interactMismatch);
+        if (freedInteractSlot && usesS3kCatchUpMarker()
+                && titleCardOwnsRetainedResultsHeldLevelCounter()) {
+            // sub_13EFC reaches sub_13ECA inside the current Tails CPU slot.
+            // The following routine-2 dispatch therefore observes the ROM's
+            // already-incremented Level_frame_counter, one tick ahead of the
+            // engine cadence stored for the mismatch update.
+            catchUpUsesRomVisibleLevelFrameCounter = true;
+        }
     }
 
     /**

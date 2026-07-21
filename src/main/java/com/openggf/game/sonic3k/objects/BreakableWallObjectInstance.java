@@ -189,12 +189,17 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         }
 
         SolidCheckpointBatch batch = checkpointAll();
-        for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
+        List<PlayableEntity> participants = playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION);
+        for (int participantIndex = 0; participantIndex < participants.size(); participantIndex++) {
+            PlayableEntity participant = participants.get(participantIndex);
             if (broken) {
                 break;
             }
             if (participant instanceof AbstractPlayableSprite sprite) {
                 applyCheckpointContact(sprite, batch.perPlayer().get(participant));
+                if (broken && participantIndex == 0) {
+                    restoreSidekickPushContactsAfterPrimaryBreak(participants, batch, participantIndex + 1);
+                }
             }
         }
         if (broken) {
@@ -203,6 +208,29 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
 
         if (triggerControlled && isTriggerActive()) {
             setDestroyed(true);
+        }
+    }
+
+    private void restoreSidekickPushContactsAfterPrimaryBreak(List<PlayableEntity> participants,
+            SolidCheckpointBatch batch, int firstSidekickIndex) {
+        // When Player_1 breaks the wall, sub_2165A returns to loc_215F4 and
+        // Obj_BreakableWall still consumes Player_2's SolidObjectFull pushing
+        // result. A rolling P2 has the velocity saved before the checkpoint
+        // restored and Status_Push cleared (sonic3k.asm:45589-45620). The
+        // checkpoint batch has already resolved both players, so mirror that
+        // post-break cleanup before the wall slot becomes a fragment.
+        for (int i = firstSidekickIndex; i < participants.size(); i++) {
+            PlayableEntity participant = participants.get(i);
+            if (!(participant instanceof AbstractPlayableSprite sidekick)) {
+                continue;
+            }
+            PlayerSolidContactResult result = batch.perPlayer().get(participant);
+            if (result == null || !result.pushingNow() || result.preContact().animationId() != ANIM_ROLL) {
+                continue;
+            }
+            sidekick.setXSpeed(result.preContact().xSpeed());
+            sidekick.setGSpeed(result.preContact().xSpeed());
+            sidekick.setPushing(false);
         }
     }
 

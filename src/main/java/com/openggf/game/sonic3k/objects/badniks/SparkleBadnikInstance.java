@@ -36,8 +36,8 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
     private static final int FIRE_WAIT = 0x20;
     private static final int FIRE_Y_OFFSET = 0x68;
     private static final int CHARGE_INITIAL_DELAY = 9;
-    private static final int CHARGE_MIN_DELAY = 1;
-    private static final int CHARGE_CYCLES = 12;
+    private static final int CHARGE_TERMINAL_LOOPS = 0x10;
+    private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
     private static final int[] CHARGE_FRAMES = {0, 1};
 
     private enum State { WAIT, CHARGE, WARNING_WAIT, FIRE_WAIT }
@@ -48,11 +48,13 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
     private int chargeTimer = CHARGE_INITIAL_DELAY;
     private int chargeFrameIndex;
     private int chargeCycles;
+    private boolean chargeRawActive;
     private boolean verticalPhaseDown;
+    private boolean waitingForOnscreen = true;
 
     public SparkleBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Sparkle", Sonic3kObjectArtKeys.CNZ_SPARKLE,
-                COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
+                COLLISION_SIZE_INDEX, PRIORITY_BUCKET, true);
         this.mappingFrame = 0;
         this.verticalPhaseDown = (spawn.renderFlags() & 0x02) != 0;
     }
@@ -62,8 +64,19 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
         if (isDestroyed()) {
             return;
         }
-        if (hasCameraContext() && !isOnScreenX()) {
-            return;
+        if (waitingForOnscreen) {
+            // Obj_WaitOffscreen owns a $20-by-$20 placeholder until Render_Sprites
+            // has brought it onscreen. Once the saved Obj_Sparkle operation is
+            // restored, later offscreen frames must not freeze an in-progress
+            // charge (sonic3k.asm:180266-180297,186058-186066).
+            if (hasCameraContext()) {
+                if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+                    return;
+                }
+                waitingForOnscreen = false;
+                return;
+            }
+            waitingForOnscreen = false;
         }
 
         switch (state) {
@@ -75,10 +88,14 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
     }
 
     private void updateWait(PlayableEntity playerEntity) {
-        if (playerEntity == null || playerEntity.getDead()) {
+        // Find_SonicTails leaves the nearest native player's horizontal
+        // distance in d2. A CPU Tails can therefore start the charge while
+        // Player 1 is still outside the $80-pixel window.
+        PlayableEntity activationTarget = closestNativePlayerByHorizontalDistance(playerEntity);
+        if (activationTarget == null || activationTarget.getDead()) {
             return;
         }
-        if (Math.abs(currentX - playerEntity.getCentreX()) >= ACTIVATION_RANGE) {
+        if (findSonicTailsHorizontalDistance(activationTarget) >= ACTIVATION_RANGE) {
             return;
         }
 
@@ -88,25 +105,44 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
         chargeDelay = CHARGE_INITIAL_DELAY;
         chargeTimer = 0;
         chargeCycles = 0;
+        chargeRawActive = false;
     }
 
     private void updateCharge() {
-        if (chargeTimer-- > 0) {
+        // Animate_RawGetFaster: the first call primes $2E/$2F, then every
+        // terminator pass reduces the delay until it reaches zero. Only the
+        // zero-delay passes count toward the script's byte-1 terminal count.
+        if (!chargeRawActive) {
+            chargeRawActive = true;
+            chargeDelay = CHARGE_INITIAL_DELAY;
+            chargeCycles = 0;
+        }
+
+        if (--chargeTimer >= 0) {
             return;
         }
 
-        chargeFrameIndex = (chargeFrameIndex + 1) % CHARGE_FRAMES.length;
-        mappingFrame = CHARGE_FRAMES[chargeFrameIndex];
-        chargeTimer = chargeDelay;
-        if (chargeDelay > CHARGE_MIN_DELAY) {
+        chargeFrameIndex++;
+        if (chargeFrameIndex >= CHARGE_FRAMES.length) {
+            chargeFrameIndex = 0;
+            if (chargeDelay == 0) {
+                chargeCycles++;
+                mappingFrame = CHARGE_FRAMES[chargeFrameIndex];
+                chargeTimer = chargeDelay;
+                if (chargeCycles >= CHARGE_TERMINAL_LOOPS) {
+                    chargeRawActive = false;
+                    chargeCycles = 0;
+                    state = State.WARNING_WAIT;
+                    timer = WARNING_WAIT;
+                    spawnChild(() -> new SparkleLightningWarningChild(spawn, this));
+                }
+                return;
+            }
             chargeDelay--;
         }
 
-        if (chargeFrameIndex == 0 && ++chargeCycles >= CHARGE_CYCLES) {
-            state = State.WARNING_WAIT;
-            timer = WARNING_WAIT;
-            spawnChild(() -> new SparkleLightningWarningChild(spawn, this));
-        }
+        mappingFrame = CHARGE_FRAMES[chargeFrameIndex];
+        chargeTimer = chargeDelay;
     }
 
     private void updateWarningWait() {
@@ -164,8 +200,8 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
 
     @Override
     public String traceDebugDetails() {
-        return String.format("state=%s timer=%d charge=%d/%d verticalPhaseDown=%s",
-                state, timer, chargeCycles, chargeDelay, verticalPhaseDown);
+        return String.format("state=%s timer=%d charge=%d/%d verticalPhaseDown=%s waiting=%s",
+                state, timer, chargeCycles, chargeDelay, verticalPhaseDown, waitingForOnscreen);
     }
 
     private abstract static class SparkleHazardChild extends AbstractObjectInstance
@@ -184,6 +220,12 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
 
         SparkleHazardChild(ObjectSpawn spawn, String name) {
             super(spawn, name);
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            // Child setup retains Obj_Sparkle's high-priority art tile.
+            return true;
         }
 
         @Override

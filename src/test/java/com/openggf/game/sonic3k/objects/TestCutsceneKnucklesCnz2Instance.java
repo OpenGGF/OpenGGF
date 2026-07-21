@@ -6,10 +6,12 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.CnzObjectEventBridge;
+import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
@@ -18,8 +20,11 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -27,9 +32,90 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCutsceneKnucklesCnz2Instance {
+    @Test
+    void secondCnzCutsceneStartsVisibleInNativePlacedStandingFrame() throws Exception {
+        CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x47A0, 0x0A2C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x10, 0, false, 0));
+
+        assertEquals(0x16, getPrivateIntField(knuckles, "mappingFrame"),
+                "ObjSlot_CutsceneKnux publishes mapping_frame=$16 before the camera reveals Knuckles");
+    }
+
+    @Test
+    void secondCnzCutsceneLandingScriptChainsIntoNativeLaughLoop() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        GameServices.camera().setX((short) 0x45C0);
+        GameServices.camera().setY((short) 0x0A00);
+        CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x47A0, 0x0A2C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x10, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+        setPrivateBooleanField(knuckles, "bounced", true);
+        invokePrivateFloorContact(knuckles, 0);
+
+        assertEquals(0x1C, getPrivateIntField(knuckles, "mappingFrame"));
+        for (int frame = 1; frame <= 8; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1C, getPrivateIntField(knuckles, "mappingFrame"));
+        }
+        for (int frame = 9; frame <= 16; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1D, getPrivateIntField(knuckles, "mappingFrame"));
+        }
+        for (int frame = 17; frame <= 24; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1E, getPrivateIntField(knuckles, "mappingFrame"),
+                    "byte_666B9 command $F8,+6 must enter byte_666BF's $1E/$1F laugh loop");
+        }
+        knuckles.update(25, null);
+        assertEquals(0x1F, getPrivateIntField(knuckles, "mappingFrame"));
+    }
+
+    @Test
+    void secondCnzCutsceneRendersClearNativeFacingBitDirectly() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        TestObjectServices services = new TestObjectServices();
+        CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x47A0, 0x0A2C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x10, 0, false, 0));
+        knuckles.setServices(services);
+
+        try (MockedStatic<AizIntroArtLoader> artLoader = mockStatic(AizIntroArtLoader.class)) {
+            artLoader.when(() -> AizIntroArtLoader.getKnucklesRenderer(services)).thenReturn(renderer);
+
+            knuckles.appendRenderCommands(new ArrayList<GLCommand>());
+        }
+
+        verify(renderer).drawFrameIndex(0x16, 0x47A0, 0x0A2C, false, false);
+    }
+
+    @Test
+    void secondCnzCutsceneFirstBounceReversesVelocityWithoutChangingFacing() throws Exception {
+        CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x47A0, 0x0A2C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x10, 0, false, 0));
+        setPrivateIntField(knuckles, "xVel", -0x0100);
+        setPrivateIntField(knuckles, "yVel", 0x0200);
+
+        invokePrivateFloorContact(knuckles, 0);
+
+        assertFalse(getPrivateBooleanField(knuckles, "facingRight"),
+                "loc_620AA negates x_vel/y_vel but does not change render_flags bit 0");
+        assertEquals(0x0100, getPrivateIntField(knuckles, "xVel"));
+        assertEquals(-0x0200, getPrivateIntField(knuckles, "yVel"));
+    }
+
     @Test
     void registryRoutesCnzAct2CutsceneSubtypesToCnzHandlers() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
@@ -100,7 +186,6 @@ class TestCutsceneKnucklesCnz2Instance {
         }.withCamera(buttonCamera));
         CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
                 new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
-        knuckles.forceButtonImpactForTest();
         CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(knuckles);
 
         button.update(0, null);
@@ -120,44 +205,22 @@ class TestCutsceneKnucklesCnz2Instance {
     }
 
     @Test
-    void firstCnzCutsceneButtonWaitsForSecondLandingImpact() {
-        RecordingCnzBridge bridge = new RecordingCnzBridge();
-        Camera buttonCamera = new Camera();
-        buttonCamera.setY((short) 0x0280);
-        Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(new ObjectSpawn(
-                0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_BUTTON, 4, 0, false, 0));
-        button.setServices(new TestObjectServices() {
-            @Override
-            public LevelEventProvider levelEventProvider() {
-                return bridge;
-            }
-        }.withCamera(buttonCamera));
-        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
-                new ObjectSpawn(0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
-        CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(knuckles);
-
-        button.update(0, null);
-
-        assertEquals(0, bridge.waterTargetY,
-                "The first CNZ2 button must not trigger from proximity during Knuckles' first rightward jump");
-
-        knuckles.forceButtonImpactForTest();
-        button.update(1, null);
-
-        assertEquals(0x0350, bridge.waterTargetY,
-                "The button fires once CutsceneKnux_CNZ2A reaches the second-landing button impact");
-    }
-
-    @Test
     void cnzVacuumTubeButtonSpawnsTubeControllersFromRomAction() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
                 .build();
+        GameServices.camera().setX((short) 0x45C0);
+        GameServices.camera().setY((short) 0x0720);
 
         CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
                 new ObjectSpawn(0x4780, 0x072C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 16, 0, false, 0));
         knuckles.setServices(TestEnvironment.objectServices());
         knuckles.update(0, fixture.sprite());
+
+        assertTrue(fixture.sprite().isObjectControlled());
+        assertFalse(fixture.sprite().isObjectControlSuppressesMovement(),
+                "loc_62528 writes object_control=$80: bit 7 suppresses touch response, "
+                        + "but Obj01_Control still runs movement because bit 0 is clear");
 
         Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(
                 new ObjectSpawn(0x4780, 0x0728, Sonic3kObjectIds.CUTSCENE_BUTTON, 6, 0, false, 0));
@@ -175,7 +238,7 @@ class TestCutsceneKnucklesCnz2Instance {
     @Test
     void firstCnzCutsceneStoresCameraTargetsWithoutSnappingImmediately() {
         Camera camera = GameServices.camera();
-        camera.setX((short) 0x1B80);
+        camera.setX((short) 0x1C80);
         camera.setY((short) 0x0180);
         camera.setMinX((short) 0x1B00);
         camera.setMaxX((short) 0x1C40);
@@ -197,7 +260,141 @@ class TestCutsceneKnucklesCnz2Instance {
     }
 
     @Test
+    void firstCnzCutsceneStopsPostObjectCameraScrollExactlyAtNativeLock() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        Camera camera = fixture.camera();
+        camera.setFocusedSprite(fixture.sprite());
+        camera.setX((short) 0x1CE0);
+        camera.setY((short) 0x0280);
+        camera.setMinX((short) 0x0000);
+        camera.setMaxX((short) 0x4000);
+
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1DE0, 0x032C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+        knuckles.update(0, fixture.sprite());
+
+        // S3K executes objects before ScrollHoriz. Put the camera one frame before
+        // the lock with Sonic far enough right that the uncapped result would be
+        // $1D01. The ROM reference reaches and then holds Camera_X_pos=$1D00
+        // (cnz_completerun physics frames $5494 onward).
+        camera.setX((short) 0x1CF1);
+        fixture.sprite().setCentreX((short) 0x1DA2);
+        knuckles.update(1, fixture.sprite());
+        camera.updatePosition();
+
+        assertEquals(0x1D00, camera.getX() & 0xFFFF,
+                "loc_85CA4's $1D00/$1D00 lock must not allow the later same-frame "
+                        + "ScrollHoriz step to cross one pixel past the encounter boundary");
+        assertEquals(0x1D00, camera.getMaxX() & 0xFFFF);
+
+        knuckles.update(2, fixture.sprite());
+        assertEquals(0x1D00, camera.getMinX() & 0xFFFF);
+        assertEquals(0x1D00, camera.getMaxX() & 0xFFFF);
+        fixture.sprite().setCentreX((short) 0x1D80);
+        camera.updatePosition();
+        assertEquals(0x1D00, camera.getX() & 0xFFFF,
+                "the completed native lock must reject leftward camera movement");
+        fixture.sprite().setCentreX((short) 0x1DC0);
+        camera.updatePosition();
+        assertEquals(0x1D00, camera.getX() & 0xFFFF,
+                "the completed native lock must reject rightward camera movement");
+    }
+
+    @Test
+    void firstCnzCutsceneUsesObjSlotFrameThenExactLaughRawScript() throws Exception {
+        CutsceneKnucklesCnz2AInstance knuckles = initializeFirstCutsceneAtNativeLock();
+
+        assertEquals(0x16, getPrivateIntField(knuckles, "mappingFrame"),
+                "ObjSlot_CutsceneKnux initializes mapping_frame=$16 on the setup frame");
+
+        for (int frame = 1; frame <= 8; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1F, getPrivateIntField(knuckles, "mappingFrame"),
+                    "byte_666BF starts with frame $1F because Animate_Raw increments anim_frame before lookup");
+        }
+        for (int frame = 9; frame <= 16; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1E, getPrivateIntField(knuckles, "mappingFrame"),
+                    "byte_666BF command $FC restarts on frame $1E with delay 7");
+        }
+        knuckles.update(17, null);
+        assertEquals(0x1F, getPrivateIntField(knuckles, "mappingFrame"));
+    }
+
+    @Test
+    void firstCnzCutsceneJumpUsesExactByte666AfFrameTiming() throws Exception {
+        CutsceneKnucklesCnz2AInstance knuckles = initializeFirstCutsceneAtNativeLock();
+        setPrivateEnumField(knuckles, "phase", "MULTI_BOUNCE");
+        invokePrivateStartJump(knuckles, 0x0140, -0x0600);
+
+        int[] expected = {4, 4, 8, 8, 5, 5, 8, 8, 6, 6, 8, 8, 7, 7, 8, 8};
+        for (int frame = 0; frame < expected.length; frame++) {
+            knuckles.update(frame + 1, null);
+            assertEquals(expected[frame], getPrivateIntField(knuckles, "mappingFrame"),
+                    "byte_666AF is delay 1 with frames $08,$04,$08,$05,$08,$06,$08,$07 and $FC restart");
+        }
+    }
+
+    @Test
+    void firstCnzCutsceneLandingScriptJumpsIntoLaughLoop() throws Exception {
+        CutsceneKnucklesCnz2AInstance knuckles = initializeFirstCutsceneAtNativeLock();
+        setPrivateIntField(knuckles, "bounceIndex", 2);
+        invokePrivateFloorContact(knuckles, -1);
+
+        assertEquals(0x1C, getPrivateIntField(knuckles, "mappingFrame"),
+                "loc_62056 publishes frame $1C on the landing frame");
+        for (int frame = 1; frame <= 8; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1C, getPrivateIntField(knuckles, "mappingFrame"));
+        }
+        for (int frame = 9; frame <= 16; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1D, getPrivateIntField(knuckles, "mappingFrame"));
+        }
+        for (int frame = 17; frame <= 24; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1E, getPrivateIntField(knuckles, "mappingFrame"),
+                    "byte_666B9 command $F8,+6 jumps into byte_666BF at frame $1E");
+        }
+        knuckles.update(25, null);
+        assertEquals(0x1F, getPrivateIntField(knuckles, "mappingFrame"));
+    }
+
+    @Test
+    void firstCnzCutsceneReachesRomLandingCoordinateAndActivatesButton() {
+        CutsceneKnucklesCnz2AInstance knuckles = initializeFirstCutsceneAtNativeLock();
+        Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(
+                new ObjectSpawn(0x1E00, 0x0338,
+                        Sonic3kObjectIds.CUTSCENE_BUTTON, 4, 0, false, 0));
+        button.setServices(TestEnvironment.objectServices());
+
+        boolean reachedLanding = false;
+        for (int frame = 1; frame <= 500; frame++) {
+            knuckles.update(frame, null);
+            button.update(frame, null);
+            if (knuckles.getRoutine() == 8) {
+                reachedLanding = true;
+                break;
+            }
+        }
+
+        assertTrue(reachedLanding, "CutsceneKnux_CNZ2A must complete its three floor contacts");
+        assertTrue(button.isPressedForTest(),
+                "the $1E00/$033C button must activate during Knuckles' physical jump path");
+        assertEquals(0x1E27, knuckles.getX(),
+                "ROM aux trace enters loc_62056/routine 8 at x_pos=$1E27 (frame 21921)");
+        assertEquals(0x032C, knuckles.getY(),
+                "ROM aux trace enters loc_62056/routine 8 at y_pos=$032C (frame 21921)");
+    }
+
+    @Test
     void firstCnzCutsceneSpawnsBlockingWallAtRomChildOffset() {
+        GameServices.camera().setX((short) 0x1D00);
+        GameServices.camera().setY((short) 0x0280);
         CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
                 new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
         knuckles.setServices(TestEnvironment.objectServices());
@@ -215,10 +412,39 @@ class TestCutsceneKnucklesCnz2Instance {
     }
 
     @Test
+    void firstCnzCutsceneUsesNativeRenderBoundsForFinalJumpDeletion() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x1D00);
+        camera.setY((short) 0x0280);
+        AbstractObjectInstance.updateCameraBounds(0x1D00, 0x0280, 0x1E40, 0x0360, 0);
+
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+        setPrivateEnumField(knuckles, "phase", "FINAL_JUMP");
+        setPrivateIntField(knuckles, "currentX", 0x1E40 + 0x1C);
+        setPrivateIntField(knuckles, "currentY", 0x02A0);
+        knuckles.snapshotPreUpdatePosition();
+
+        knuckles.update(0, null);
+
+        assertEquals(0x1C, knuckles.getOnScreenHalfWidth(),
+                "ObjSlot_CutsceneKnux width_pixels is $1C");
+        assertEquals(0x18, knuckles.getOnScreenHalfHeight(),
+                "ObjSlot_CutsceneKnux height_pixels is $18");
+        assertTrue(knuckles.isDestroyed(),
+                "loc_623FE observes the prior Draw_Sprite render flag; the right edge is exclusive");
+    }
+
+    @Test
     void secondCnzCutsceneExitDoesNotEnterPlayableKnucklesTeleporterRoute() throws Exception {
         RecordingCnzBridge bridge = new RecordingCnzBridge();
         Camera camera = new Camera();
-        camera.setY((short) 0x0600);
+        camera.setX((short) 0x45C0);
+        camera.setY((short) 0x0720);
         camera.setMinX((short) 0x4300);
         camera.setMaxX((short) 0x5000);
         AbstractObjectInstance.updateCameraBounds(0x4700, 0x0600, 0x4840, 0x06E0, 0);
@@ -241,6 +467,8 @@ class TestCutsceneKnucklesCnz2Instance {
         knuckles.update(0, player);
         knuckles.update(1, player);
 
+        assertEquals(0x1C, knuckles.getOnScreenHalfWidth());
+        assertEquals(0x18, knuckles.getOnScreenHalfHeight());
         assertEquals(0, bridge.beginTeleporterRouteCalls,
                 "CutsceneKnux_CNZ2B loc_625E2 restores Sonic/Tails control and level music; "
                         + "the $4750-$48E0 teleporter clamp belongs only to CNZ2_ScreenEvent after Player_mode==3");
@@ -250,8 +478,62 @@ class TestCutsceneKnucklesCnz2Instance {
                 "The Sonic/Tails rival-Knuckles handoff must not install the playable-Knuckles teleporter max X");
         assertFalse(player.isObjectControlled(),
                 "loc_625E2 clears Player_1 object_control before loc_6261A starts forcing left");
+        assertTrue(player.isControlLocked(),
+                "Ctrl_1_locked remains set continuously between loc_625E2 and loc_6261A");
         assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getForcedInputMask(),
                 "loc_6261A writes left into Ctrl_1_logical so Sonic/Tails walks into the vacuum tube");
+    }
+
+    @Test
+    void cnzCutscenesSkipDispatchOutsideNativeWindowButOnlyDeleteAtNativeXRange() {
+        Camera camera = new Camera();
+        camera.setX((short) 0x1BFF);
+        camera.setY((short) 0x0280);
+        CutsceneKnucklesCnz2AInstance first = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        first.setServices(new TestObjectServices().withCamera(camera));
+
+        first.update(0, null);
+
+        assertFalse(first.isDestroyed(),
+                "Check_CameraInRange skips dispatch, but Delete_Sprite_If_Not_In_Range returns while x is within $280");
+        assertEquals(0, first.getRoutine());
+
+        camera.setX((short) 0x45C0);
+        camera.setY((short) 0x071F);
+        CutsceneKnucklesCnz2BInstance second = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x45C0, 0x0720, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 16, 0, false, 0));
+        second.setServices(new TestObjectServices().withCamera(camera));
+
+        second.update(0, null);
+
+        assertFalse(second.isDestroyed());
+        assertEquals(0, second.getRoutine());
+
+        camera.setX((short) 0x4000);
+        first.update(1, null);
+
+        assertTrue(first.isDestroyed());
+        assertTrue(first.isDestroyedRespawnable(),
+                "a native-window miss deletes respawnably only when the object's rounded X is beyond $280");
+    }
+
+    @Test
+    void activeCutsceneAlsoSkipsRoutineDispatchWhenCameraLeavesNativeWindow() throws Exception {
+        Camera camera = new Camera();
+        camera.setX((short) 0x1BFF);
+        camera.setY((short) 0x0280);
+        CutsceneKnucklesCnz2AInstance first = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        first.setServices(new TestObjectServices().withCamera(camera));
+        setPrivateEnumField(first, "phase", "PRE_JUMP_WAIT");
+        setPrivateIntField(first, "timer", 7);
+
+        first.update(0, null);
+
+        assertFalse(first.isDestroyed());
+        assertEquals(7, getPrivateIntField(first, "timer"),
+                "Check_CameraInRange rewrites the return address and skips the active routine dispatch");
     }
 
     @AfterEach
@@ -275,6 +557,66 @@ class TestCutsceneKnucklesCnz2Instance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
+    }
+
+    private static void setPrivateBooleanField(Object target, String fieldName, boolean value)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
+    }
+
+    private static boolean getPrivateBooleanField(Object target, String fieldName)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(target);
+    }
+
+    private static int getPrivateIntField(Object target, String fieldName)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
+    }
+
+    private static CutsceneKnucklesCnz2AInstance initializeFirstCutsceneAtNativeLock() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        GameServices.camera().setX((short) 0x1D00);
+        GameServices.camera().setY((short) 0x0280);
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1DE0, 0x032C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+        knuckles.update(0, null);
+        return knuckles;
+    }
+
+    private static void invokePrivateFloorContact(CutsceneKnucklesCnz2AInstance target, int distance)
+            throws ReflectiveOperationException {
+        Method method = CutsceneKnucklesCnz2AInstance.class
+                .getDeclaredMethod("applyFloorContact", int.class);
+        method.setAccessible(true);
+        method.invoke(target, distance);
+    }
+
+    private static void invokePrivateFloorContact(CutsceneKnucklesCnz2BInstance target, int distance)
+            throws ReflectiveOperationException {
+        Method method = CutsceneKnucklesCnz2BInstance.class
+                .getDeclaredMethod("applyFloorContact", int.class);
+        method.setAccessible(true);
+        method.invoke(target, distance);
+    }
+
+    private static void invokePrivateStartJump(
+            CutsceneKnucklesCnz2AInstance target, int xVelocity, int yVelocity)
+            throws ReflectiveOperationException {
+        Method method = CutsceneKnucklesCnz2AInstance.class
+                .getDeclaredMethod("startJump", int.class, int.class);
+        method.setAccessible(true);
+        method.invoke(target, xVelocity, yVelocity);
     }
 
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {

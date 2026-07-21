@@ -3200,6 +3200,24 @@ public class TestPlayableSpriteMovement {
                                 "S1 Sonic_Floor writes id_Walk after ResetOnFloor on an accepted floor landing");
         }
 
+		@Test
+		public void testTerrainLandingWalkReplacesStaleLookProjection() throws Exception {
+				setGameRulesForTest(GameRules.SONIC_3K);
+				mockSprite.setAnimationId(2);
+				mockSprite.setLookingUp(true);
+				mockSprite.setAir(true);
+				mockSprite.setAngle((byte) 0x00);
+
+				Method method = PlayableSpriteMovement.class.getDeclaredMethod("calculateLanding",
+								AbstractPlayableSprite.class);
+				method.setAccessible(true);
+				method.invoke(manager, mockSprite);
+
+				assertFalse(mockSprite.getLookingUp(),
+								"Player_TouchFloor's Walk write replaces the semantic LookUp projection");
+				assertEquals(0, mockSprite.getAnimationId());
+		}
+
         @Test
         public void testLandingClearingRollStillLiftsFromRollingRadius() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);

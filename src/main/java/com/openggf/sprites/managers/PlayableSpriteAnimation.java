@@ -24,6 +24,16 @@ public class PlayableSpriteAnimation {
     private int lastGroundMovementAnimId = -1;
     private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
     private boolean groundMovementAnimationSuppressed;
+    private boolean nextUpdateSuppressed;
+
+    /**
+     * Holds one animation dispatch while the rest of the playable tick runs.
+     * Used when a native VBlank sample bisects a CPU sidekick slot after its
+     * movement path but before {@code Animate_Tails}.
+     */
+    public void suppressNextUpdate() {
+        nextUpdateSuppressed = true;
+    }
 
     /**
      * Resets the tracked animation ID so the next update sees a mismatch
@@ -110,6 +120,10 @@ public class PlayableSpriteAnimation {
 
     public void update(int frameCounter) {
         if (sprite == null) {
+            return;
+        }
+        if (nextUpdateSuppressed) {
+            nextUpdateSuppressed = false;
             return;
         }
         if (sprite.getSpindashDustController() != null) {
@@ -398,6 +412,26 @@ public class PlayableSpriteAnimation {
 
         int d0 = flipAngle & 0xFF;
         boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
+        int flipType = sprite.getFlipType() & 0x7F;
+        int typedBase = profile != null ? profile.getTumbleTypeFrameBase(flipType) : -1;
+        if (typedBase >= 0 && flipType >= 1 && flipType <= 3) {
+            boolean hFlip = facingLeft;
+            boolean vFlip = false;
+            int adjusted;
+            if (flipType == 1) {
+                adjusted = (d0 - 8) & 0xFF;
+            } else if ((flipType == 2 && !facingLeft) || (flipType == 3 && facingLeft)) {
+                adjusted = (d0 + 0x0B) & 0xFF;
+                vFlip = facingLeft;
+            } else {
+                adjusted = (-d0 + 0x8F) & 0xFF;
+                vFlip = !facingLeft;
+            }
+            sprite.setRenderFlips(hFlip, vFlip);
+            sprite.setMappingFrame((adjusted / 0x16) + typedBase);
+            sprite.setAnimationTick(0);
+            return;
+        }
         if (!facingLeft) {
             sprite.setRenderFlips(false, false);
             int frame = ((d0 + 0x0B) & 0xFF) / 0x16;

@@ -4789,6 +4789,7 @@ final class ObjectSolidContactController {
                 // ordinary platform landings. RideObject-only captures opt out
                 // through landingPreservesRolling because they never call it.
                 playableSprite.setFlipAngle(0);
+                playableSprite.setFlipType(0);
                 playableSprite.setFlipTurned(false);
                 playableSprite.setFlipsRemaining(0);
                 playableSprite.setLookDelayCounter((short) 0);

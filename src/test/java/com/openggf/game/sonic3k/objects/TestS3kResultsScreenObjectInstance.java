@@ -63,6 +63,16 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
+    void retainedResultsPublishesRestorePlayerControlWaitAnimation() {
+        assertTrue(S3kResultsScreenObjectInstance
+                .shouldPublishWaitAnimationOnControlRestore(0, true));
+        assertTrue(S3kResultsScreenObjectInstance
+                .shouldPublishWaitAnimationOnControlRestore(1, false));
+        assertFalse(S3kResultsScreenObjectInstance
+                .shouldPublishWaitAnimationOnControlRestore(0, false));
+    }
+
+    @Test
     void cnzActOneExitStartsActTwoTitleCardAndMusic() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
         S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
@@ -83,6 +93,24 @@ class TestS3kResultsScreenObjectInstance {
         assertEquals(1, services.apparentAct,
                 "Act 1 results exit must update Apparent_act to Act 2 before title-card handoff "
                         + "(docs/skdisasm/sonic3k.asm:62708-62720)");
+    }
+
+    @Test
+    void carriedCnzActOneResultsKeepsReloadedActStateForNativeTitleCardReset() throws Exception {
+        ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                services,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        results.setServices(services);
+        results.onCarriedAcrossSeamlessTransition(-0x3000, 0x0200);
+
+        Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+        onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
+
+        assertEquals(List.of("3:1"), services.titleCard.calls,
+                "The retained results SST mutates into the native in-level Act 2 title card");
+        verify(services.levelManager, never()).resetLevelGamestate(org.mockito.ArgumentMatchers.any(LevelState.class));
     }
 
     @Test

@@ -664,7 +664,11 @@ public class CollisionSystem {
             return false;
         }
         CollisionRules rules = collisionRulesOrNull(sprite);
-        return rules != null && rules.rightWallDeepProbePreservesPenetration();
+        if (rules != null && rules.rightWallDeepProbePreservesPenetration()) {
+            return true;
+        }
+        var registry = GameServices.zoneRuntimeRegistryOrNull();
+        return registry != null && registry.current().rightWallDeepProbePreservesPenetration();
     }
 
     private int getTerrainHeadroomDistance(AbstractPlayableSprite sprite, int hexAngle) {
@@ -992,6 +996,7 @@ public class CollisionSystem {
             // flag below — which, for a hurt player, also clears the hurt routine
             // (AbstractPlayableSprite.setAir).
             boolean wasHurt = sprite.isHurt();
+            int savedDoubleJumpFlag = sprite.getDoubleJumpFlag();
             if ((lowestResult.angle() & 0x01) != 0) {
                 sprite.setAngle((byte) 0x80);
             } else {
@@ -1013,6 +1018,12 @@ public class CollisionSystem {
                 sprite.setXSpeed((short) 0);
                 sprite.setGSpeed((short) 0);
             } else {
+                // Player_HitCeilingAndWalls reaches the same
+                // Player_TouchFloor_Check_Spindash tail as an ordinary floor
+                // landing. In S3K that tail can immediately re-launch Sonic
+                // through BubbleShield_Bounce before ground_vel samples the
+                // resulting y_vel (sonic3k.asm:24248-24264,24325-24426).
+                sprite.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
                 short gSpeed = sprite.getYSpeed();
                 if ((ceilingAngle & 0x80) != 0) {
                     gSpeed = (short) -gSpeed;
@@ -1077,9 +1088,10 @@ public class CollisionSystem {
         if (!sprite.getPinballMode()
                 && animationRules != null
                 && animationRules.angledLandingPublishesWalk()) {
-            // Sonic_ResetOnFloor publishes Walk before clearing the airborne
-            // state on every accepted S2 terrain landing, including the angled
-            // ceiling/wall path (s2.asm:38049-38052, 38123-38127). S1's angled
+            // Player_TouchFloor_Check_Spindash publishes Walk before clearing
+            // the airborne state on every accepted S2/S3K terrain landing,
+            // including the angled ceiling/wall path (s2.asm:38049-38052,
+            // 38123-38127; sonic3k.asm:24258-24264,24325-24329). S1's angled
             // path does not own that write and can retain Spring.
             int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
             if (walkAnimationId >= 0) {
@@ -1091,6 +1103,7 @@ public class CollisionSystem {
         sprite.setRollingJump(false);
         sprite.setJumping(false);
         sprite.setFlipAngle(0);
+        sprite.setFlipType(0);
         sprite.setFlipTurned(false);
         sprite.setFlipsRemaining(0);
         sprite.setLookDelayCounter((short) 0);

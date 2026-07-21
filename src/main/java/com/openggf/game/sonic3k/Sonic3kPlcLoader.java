@@ -198,7 +198,7 @@ public final class Sonic3kPlcLoader {
         }
 
         if (refreshed > 0) {
-            LOG.info(String.format("Refreshed %d renderer(s) for PLC tile ranges", refreshed));
+            LOG.fine(String.format("Refreshed %d renderer(s) for PLC tile ranges", refreshed));
         }
     }
 

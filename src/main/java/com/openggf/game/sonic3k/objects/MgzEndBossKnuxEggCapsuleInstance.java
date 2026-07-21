@@ -25,6 +25,12 @@ public final class MgzEndBossKnuxEggCapsuleInstance extends AbstractS3kUprightEg
     MgzEndBossKnuxInstance ownerForTesting() { return owner; }
 
     @Override
+    protected boolean locksNativeP2CpuOnOpen() {
+        // ROM sub_865DE exempts Current_zone=2 (MGZ) from Ctrl_2_locked.
+        return false;
+    }
+
+    @Override
     protected void updateAfterResultsStarted(int frameCounter, PlayableEntity player) {
         if (!completionSent && services().gameState() != null
                 && services().gameState().isEndOfLevelFlag()) {

@@ -412,7 +412,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
 
         for (int frame = 0; frame < expected.length; frame++) {
             fixture.stepFrame(false, false, false, false, false);
-            expected[frame] = expectedTwistFrame(frame);
+            expected[frame] = expectedTwistFrame(frame + 1);
             actual[frame] = player.getMappingFrame();
         }
 
