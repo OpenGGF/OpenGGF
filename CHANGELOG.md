@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Refactor: bonus-stage level-state capture and return restoration now live in a dedicated transition coordinator, preserving star-post activation, live interior rings, event routines, player/camera/water state, HUD timing, shields, and lives while keeping provider lifecycle and presentation in `GameLoop`.
 - Fix: CNZ's magnetic end-boss body, orbiting arms, and released magnet now declare their native-centre collision publishers through the canonical multi-region enemy touch-response profile, preserving their existing collision bytes and actor-overlap policy without a source-guard exception.
 - Fix: MGZ drilling-boss thruster touch and rendering now resolve the ROM `V_int_run_count` phase through the injected object-service clock. Manager-backed trace replay retains its reconstructed low-bit offset, while isolated/headless objects use the normal zero-phase gameplay clock instead of dereferencing a missing object manager.
 - Fix: CNZ rewind structural links now use the central object policy: boss/ship ownership is rebuilt with the restored graph, the lights-flash owner relinks from the captured button reference, and field-child offsets reconstruct from their signed spawn subtype without per-class transient annotations.
