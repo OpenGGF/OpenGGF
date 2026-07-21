@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -17,7 +16,6 @@ import java.util.List;
 /** One of the four {@code ChildObjDat_6EDD4 -> loc_6E95A} orbiting arms. */
 final class CnzEndBossArmChild extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
-    @RewindTransient(reason = "Structural boss graph link recreated with the parent.")
     private final CnzEndBossInstance boss;
     private int centreX;
     private int centreY;

@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -17,9 +16,7 @@ import java.util.List;
 /** ROM {@code ChildObjDat_6EDE4 -> loc_6EADA} magnetic field lobe. */
 final class CnzEndBossFieldChild extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
-    @RewindTransient(reason = "Structural boss graph link recreated with the parent.")
     private final CnzEndBossInstance boss;
-    @RewindTransient(reason = "Constructor-derived ChildObjDat_6EDE4 x offset.")
     private final int xOffset;
     private int centreX;
     private int centreY;

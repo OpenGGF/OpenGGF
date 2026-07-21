@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -20,7 +19,6 @@ import java.util.List;
 /** ROM child {@code loc_6E82C}, the released magnet head. */
 final class CnzEndBossMagnetChild extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
-    @RewindTransient(reason = "Structural boss graph link recreated with the parent.")
     private final CnzEndBossInstance boss;
     private int centreX;
     private int centreY;

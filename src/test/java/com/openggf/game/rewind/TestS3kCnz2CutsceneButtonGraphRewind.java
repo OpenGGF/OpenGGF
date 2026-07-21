@@ -136,6 +136,8 @@ class TestS3kCnz2CutsceneButtonGraphRewind {
         assertNotSame(divergentFlash, restoredFlash, "restore must drop the divergent CNZ lights flash");
         assertSame(restoredFlash, readObjectField(restoredButton, "spawnedFlash"),
                 "CNZ2 button spawnedFlash must resolve to the restored flash child");
+        assertSame(restoredButton, readObjectField(restoredFlash, "owner"),
+                "CNZ lights flash owner must relink from the authoritative restored button reference");
         assertNotSame(sourceFlash, readObjectField(restoredButton, "spawnedFlash"),
                 "CNZ2 button must not retain the stale pre-restore flash child");
         assertTrue(readBooleanField(restoredButton, "pressed"),

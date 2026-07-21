@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.graphics.GLCommand;
@@ -18,7 +17,6 @@ public final class CnzEndBossExplosionControllerChild extends AbstractObjectInst
         implements RewindRecreatable {
     private static final int RANGE = 0x20;
     private static final int CONSTANT_TIMER = 0x80;
-    @RewindTransient(reason = "Structural ship graph link recreated through CnzEndBossRewindLinks.")
     private CnzEndBossRobotnikShipChild ship;
     private int centreX;
     private int centreY;
