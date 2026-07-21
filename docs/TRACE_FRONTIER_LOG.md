@@ -1,5 +1,80 @@
 # Trace Frontier Log
 
+### 2026-07-21 -- S3K mega-run chain seg0 (aiz, Knuckles): AIZ ride-vine hold anim-latch fixed; seg0 56 -> 4 errors
+
+Command (worktree `.claude/worktrees/green-s1maze`, branch
+`bugfix/ai-s3k-vine-release-parity` off develop 9202d3b7b):
+
+`mvn surefire:test -Dtest=com.openggf.tests.trace.runs.TestS3kMegaRunChain "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsurefire.argLine=-Xshare:off -Xmx4g" -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+Run `s3-knux-multibonus-ss`, seg0 (`aiz`, Knuckles). Report
+`target/trace-reports/s3-knux-multibonus-ss_seg0_report.json`: **56 -> 4**.
+
+Root fixed: the AIZ ride-vine hanging hold force-wrote the held player's
+anim byte to HANG2 (0x14) every frame (`AizVineHandleLogic.setPlayerHeldMode0`).
+ROM: `CheckGrab` writes anim=$14 once (sonic3k.asm:46742) and the hold never
+rewrites anim (`AIZRideVineHandle_HoldPlayer` :46607-46636), so anim stays $14
+while airborne; the first floor contact runs `Player_TouchFloor` (Knuckles body
+:24339 dispatch, roll-clear+anim=0 :24344-24347, InAir-clear :24366) which
+LATCHES anim to Walk (0) for the rest of the grab (the hold still never
+rewrites it). Knuckles jumped in rolling, so the landing at trace f1947 flips
+the anim byte to Walk while the vine keeps driving mapping (0x90) + position.
+CRITICAL GATE (found in review round 1 -- a first cut without it regressed
+`TestS3kAizCompleteRunTraceReplay` 0->1 at f2577): `Player_TouchFloor` writes
+anim=0 ONLY when `Status_Roll` is set (`Knux_TouchFloor` btst #Status_Roll/beq
+:32833-32836; Sonic :24344-24347); a not-rolling grounding leaves anim at $14
+(the `cmpi #$20` clamp :32865-32867 skips HANG2). The Sonic+Tails completerun
+grabs the vine already-grounded-not-rolling -> ROM keeps HANG2. So the Walk
+latch is gated on `rollingAtGrab` (captured at grab; `Status_Roll` during the
+hold equals its grab value because object_control skips movement). The swing
+branch (`HoldPlayerSwinging` writes anim=0 unconditionally :46656) also latches
+Walk so a swing->hang keeps 0. The two latch booleans ride rewind keyframes
+via the existing plain-state-holder codec (State/PlayerState end in "State",
+all-scalar) -- no RewindStateful/annotation needed; TestAizRideVineRewind is
+extended to pin them. `Knux_TouchFloor` has TWO independent anim-reset gates:
+the roll gate (:32833-32836, the one the vine exercises) and the >=0x20 glide
+gate (`cmpi #$20,anim`/:32865-32867, owned by the glide-landing lane); a held
+vine player (HANG2=$14 or Walk=0) can only hit the roll gate. Confirmed via
+per-frame instrumentation as a FULL HOLD with an
+anim-byte-only divergence (position + mapping 0x90 match ROM), NOT a
+release-timing bug.
+
+OPEN NOTE: the exact ROM dispatch of `Player_TouchFloor` on the held player is
+unpinned -- `object_control=3` nominally skips `Knux_Modes` (which contains
+TouchFloor) via `Knuckles_Control` btst #0 (sonic3k.asm:30415), yet TouchFloor's
+effect set (InAir+Roll cleared, anim=0) demonstrably fires at f1947 on both
+sides. The write + its effects are cited and match the recorded transition
+bit-for-bit; candidate for an opportunistic BizHawk write-PC confirmation
+(anim(a1) near seg0 bk2_frame_offset 915 + ~f1947) if one is ever run near this
+window.
+
+Residual seg0 (4): f1570 glide-anim (engine WALK vs ROM 0x20) and f1766-1767
+roll-terrain-follow y_speed 1-frame swap -- both owned by the movement/glide
+lane, NOT this fix. Note: the earlier-briefed f653-659 push-release lag produces
+ZERO comparison errors in the actual seg0 report (it was a [PW]-diagnostic
+status-bit observation under the +1 capture alignment, not a compared-field
+divergence) -- deferred #2 is effectively a non-issue for trace parity.
+
+Regression: verified by EXPLICIT per-class trace runs (the plain suite excludes
+`tests/trace`, so "not in the full-suite failing set" is vacuous for trace
+classes): `TestS3kAizCompleteRunTraceReplay`=0, seg0=4, six S3K/S1/S2 stage
+comparators, `TestS3kAiz1SkipHeadless`, `TestS3kHczCompleteRunTraceReplay`,
+`TestS1GhzMazeRoundTripChain`, `TestS2EhzHalfpipeRoundTripChain`, and the rewind
+coverage/torture/inventory suites all pass. Chain still RED at the pre-existing
+seg2->seg3 boundary (another lane).
+
+### 2026-07-21 -- MHZ complete-run frontier MOVED by base drift (CNZ merge): f2986 -> f218 tails_animation_id
+
+`TestS3kMhzCompleteRunTraceReplay` (base develop 9202d3b7b) first error is now
+frame 218, `tails_animation_id` expected 0x0000 (Walk) vs actual 0x0008 (Duck),
+4651 total errors -- NOT the previously documented f2986 Madmole-arm frontier.
+A/B confirmed PRE-EXISTING and unrelated to the ride-vine change: reverting
+`AizVineHandleLogic` to base and re-running gives the identical 4651 / f218
+summary. The shape (Tails Duck-vs-Walk preservation, very early frame) matches
+the CNZ session's Tails/Duck animation changes merged into this develop base, so
+the base drift moved the MHZ Tails frontier. New MHZ complete-run frontier =
+f218 tails_animation_id Duck/Walk; the older f2986 note is superseded.
+
 ### 2026-07-21 -- S3K mega-run chain seg0 (aiz, Knuckles): Status_Push animation-freeze fixed; seg0 168 -> 56 errors
 
 Command (worktree `.claude/worktrees/green-s1maze`, branch
