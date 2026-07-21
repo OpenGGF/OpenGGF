@@ -1348,9 +1348,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new FbzFloatingPlatformObjectInstance(spawn));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_CHAIN_LINK, S3kZoneSet.S3KL,
                 (spawn, registry) -> new FbzChainLinkObjectInstance(spawn));
-        registerZoneSetBound(Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL, S3kZoneSet.S3KL,
+        registerStockZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL,
                 (spawn, registry) -> new FbzMagneticSpikeBallObjectInstance(spawn));
-        registerZoneSetBound(Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM, S3kZoneSet.S3KL,
+        registerStockZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM,
                 (spawn, registry) -> new FbzMagneticPlatformObjectInstance(spawn));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_SNAKE_PLATFORM, S3kZoneSet.S3KL,
                 (spawn, registry) -> new FbzSnakePlatformObjectInstance(spawn));
@@ -1386,7 +1386,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new FbzFlamethrowerObjectInstance(spawn));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_SPIDER_CRANE, S3kZoneSet.S3KL,
                 (spawn, registry) -> new FbzSpiderCraneObjectInstance(spawn));
-        registerZoneSetBound(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM, S3kZoneSet.S3KL,
+        registerStockZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM,
                 (spawn, registry) -> new FbzMagneticPendulumObjectInstance(spawn));
 
         factories.forEach(this::registerSetOnly);

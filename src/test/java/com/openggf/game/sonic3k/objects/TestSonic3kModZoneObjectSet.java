@@ -10,7 +10,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -58,8 +60,6 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.FBZ_WIRE_CAGE_STATIONARY,
                 Sonic3kObjectIds.FBZ_FLOATING_PLATFORM,
                 Sonic3kObjectIds.FBZ_CHAIN_LINK,
-                Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL,
-                Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM,
                 Sonic3kObjectIds.FBZ_SNAKE_PLATFORM,
                 Sonic3kObjectIds.FBZ_BENT_PIPE,
                 Sonic3kObjectIds.FBZ_ROTATING_PLATFORM,
@@ -75,8 +75,7 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.FBZ_ELEVATOR,
                 Sonic3kObjectIds.FBZ_TRAP_SPRING,
                 Sonic3kObjectIds.FBZ_FLAMETHROWER,
-                Sonic3kObjectIds.FBZ_SPIDER_CRANE,
-                Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM);
+                Sonic3kObjectIds.FBZ_SPIDER_CRANE);
 
         for (int objectId : fbzOnlyIds) {
             assertTrue(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
@@ -98,6 +97,21 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER));
         assertTrue(registry.canCreateInCustomZone(S3kZoneSet.SKL,
                 Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER));
+    }
+
+    @Test
+    void fbzRuntimeStateConsumersRemainStockZoneBound() {
+        Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
+        Set<Integer> runtimeStateBoundIds = Set.of(
+                Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL,
+                Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM,
+                Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM);
+
+        assertTrue(registry.stockZoneBoundFactoryIds().containsAll(runtimeStateBoundIds));
+        for (int objectId : runtimeStateBoundIds) {
+            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId));
+            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.SKL, objectId));
+        }
     }
 
     @Test
@@ -135,7 +149,21 @@ class TestSonic3kModZoneObjectSet {
     }
 
     @Test
-    void everyCurrentRomZoneDependentFactoryIsExplicitlyInventoried() {
+    void customCreationContextWinsBeforeLegacyRomZoneFallback() {
+        com.openggf.game.sonic3k.Sonic3kLevel custom =
+                mock(com.openggf.game.sonic3k.Sonic3kLevel.class);
+        when(custom.hasStockRomZoneIdentity()).thenReturn(false);
+        when(custom.getObjectZoneSet()).thenReturn(S3kZoneSet.S3KL);
+
+        assertInstanceOf(LbzPlayerLauncherInstance.class,
+                new LevelBackedRegistry(custom).create(
+                        new com.openggf.level.objects.ObjectSpawn(
+                                10, 20, Sonic3kObjectIds.LBZ_PLAYER_LAUNCHER,
+                                0, 0, false, 1)));
+    }
+
+    @Test
+    void everyStockZoneDependentFactoryIsExplicitlyInventoried() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
 
         assertEquals(Set.of(
@@ -149,6 +177,9 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.BUMPER,
                 Sonic3kObjectIds.CNZ_TRIANGLE_BUMPER,
                 Sonic3kObjectIds.CUTSCENE_BUTTON,
+                Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM,
+                Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM,
+                Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL,
                 Sonic3kObjectIds.JAWZ,
                 Sonic3kObjectIds.LBZ_END_BOSS,
                 Sonic3kObjectIds.LBZ_FINAL_BOSS_1,
@@ -190,18 +221,17 @@ class TestSonic3kModZoneObjectSet {
     }
 
     @Test
-    void sourceBranchesReadingRomZoneIdCannotSilentlyUseSetOnlyRegistration() throws Exception {
+    void customCompatibleFactoriesCannotReadStockZoneIdentity() throws Exception {
         Path source = Path.of("src/main/java/com/openggf/game/sonic3k/objects/"
                 + "Sonic3kObjectRegistry.java");
-        Set<Integer> sourceDependentIds = sourceDependentIds(Files.readAllLines(source));
+        Set<Integer> violations = customCompatibleStockZoneReadIds(Files.readAllLines(source));
 
-        assertEquals(new Sonic3kObjectRegistry().stockZoneBoundFactoryIds(),
-                sourceDependentIds);
+        assertEquals(Set.of(), violations);
     }
 
     @Test
     void sourceAuditAttributesCurrentRomZoneReadToCustomCompatibleFactory() throws Exception {
-        Set<Integer> sourceDependentIds = sourceDependentIds(List.of(
+        Set<Integer> violations = customCompatibleStockZoneReadIds(List.of(
                 "registerStockZoneBound(Sonic3kObjectIds.AIZ_HOLLOW_TREE,",
                 "        (spawn, registry) -> new AizHollowTreeObjectInstance(spawn));",
                 "registerZoneSetBound(Sonic3kObjectIds.FBZ_WIRE_CAGE, S3kZoneSet.S3KL,",
@@ -209,28 +239,103 @@ class TestSonic3kModZoneObjectSet {
                 "                ? new FbzWireCageObjectInstance(spawn) : null);",
                 "factories.forEach(this::registerSetOnly);"));
 
-        assertEquals(Set.of(Sonic3kObjectIds.FBZ_WIRE_CAGE), sourceDependentIds);
+        assertEquals(Set.of(Sonic3kObjectIds.FBZ_WIRE_CAGE), violations);
     }
 
-    private static Set<Integer> sourceDependentIds(List<String> sourceLines) throws Exception {
+    @Test
+    void sourceAuditFollowsHelperIndirectStockZoneRead() throws Exception {
+        Set<Integer> violations = customCompatibleStockZoneReadIds(List.of(
+                "factories.put(Sonic3kObjectIds.FBZ_WIRE_CAGE,",
+                "        (spawn, registry) -> isFbzS3kl()",
+                "                ? new FbzWireCageObjectInstance(spawn) : null);",
+                "factories.forEach(this::registerSetOnly);",
+                "private boolean isFbzS3kl() {",
+                "    return getCurrentZoneSet() == S3kZoneSet.S3KL",
+                "            && currentRomZoneId() == Sonic3kZoneIds.ZONE_FBZ;",
+                "}"));
+
+        assertEquals(Set.of(Sonic3kObjectIds.FBZ_WIRE_CAGE), violations);
+    }
+
+    private static Set<Integer> customCompatibleStockZoneReadIds(List<String> sourceLines) throws Exception {
+        Set<String> stockZoneReadingHelpers = stockZoneReadingHelpers(sourceLines);
         Pattern registration = Pattern.compile(
-                "(?:factories\\.put|registerStockZoneBound|registerZoneSetBound)"
+                "(factories\\.put|registerStockZoneBound|registerZoneSetBound)"
                         + "\\(Sonic3kObjectIds\\.([A-Z0-9_]+),");
-        Set<Integer> sourceDependentIds = new HashSet<>();
+        Set<Integer> violations = new HashSet<>();
         String activeConstant = null;
+        boolean activeCustomCompatible = false;
         for (String line : sourceLines) {
             var matcher = registration.matcher(line);
             if (matcher.find()) {
-                activeConstant = matcher.group(1);
+                activeCustomCompatible = !matcher.group(1).equals("registerStockZoneBound");
+                activeConstant = matcher.group(2);
             } else if (line.contains("factories.forEach")) {
                 activeConstant = null;
             }
-            if (activeConstant != null && line.contains("currentRomZoneId()")) {
-                sourceDependentIds.add(Sonic3kObjectIds.class
+            boolean readsStockZone = line.contains("currentRomZoneId()")
+                    || stockZoneReadingHelpers.stream().anyMatch(helper ->
+                            Pattern.compile("\\b" + Pattern.quote(helper) + "\\s*\\(")
+                                    .matcher(line).find());
+            if (activeCustomCompatible && activeConstant != null && readsStockZone) {
+                violations.add(Sonic3kObjectIds.class
                         .getField(activeConstant).getInt(null));
             }
         }
-        return sourceDependentIds;
+        return violations;
+    }
+
+    private static Set<String> stockZoneReadingHelpers(List<String> sourceLines) {
+        Pattern methodStart = Pattern.compile(
+                "^\\s*(?:private|protected|public)\\s+(?:static\\s+)?"
+                        + "[\\w<>, ?\\[\\]]+\\s+(\\w+)\\s*\\([^;]*\\)\\s*\\{\\s*$");
+        Map<String, String> methodBodies = new LinkedHashMap<>();
+        for (int index = 0; index < sourceLines.size(); index++) {
+            var matcher = methodStart.matcher(sourceLines.get(index));
+            if (!matcher.matches()) continue;
+            StringBuilder body = new StringBuilder();
+            int depth = 0;
+            for (; index < sourceLines.size(); index++) {
+                String line = sourceLines.get(index);
+                body.append(line).append('\n');
+                depth += count(line, '{') - count(line, '}');
+                if (depth == 0) break;
+            }
+            methodBodies.put(matcher.group(1), body.toString());
+        }
+
+        Set<String> readers = new HashSet<>();
+        methodBodies.forEach((name, body) -> {
+            if (body.contains("currentRomZoneId()")) readers.add(name);
+        });
+        // These context resolvers consult the ROM zone only after checking the
+        // active creation context. Custom factory execution always installs that
+        // context first, so callers receive the declared pointer-table identity.
+        readers.removeAll(Set.of(
+                "currentCreationContext", "currentRomZoneId", "getCurrentZoneSet"));
+        boolean changed;
+        do {
+            changed = false;
+            for (var method : methodBodies.entrySet()) {
+                if (readers.contains(method.getKey())) continue;
+                for (String reader : readers) {
+                    if (Pattern.compile("\\b" + Pattern.quote(reader) + "\\s*\\(")
+                            .matcher(method.getValue()).find()) {
+                        changed = readers.add(method.getKey());
+                        break;
+                    }
+                }
+            }
+        } while (changed);
+        return readers;
+    }
+
+    private static int count(String value, char target) {
+        int matches = 0;
+        for (int index = 0; index < value.length(); index++) {
+            if (value.charAt(index) == target) matches++;
+        }
+        return matches;
     }
 
     private static final class InspectableRegistry extends Sonic3kObjectRegistry {
