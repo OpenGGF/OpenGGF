@@ -402,6 +402,30 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterSurfaceChild",
                     "TestS3kHczEndBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.CnzEndBossArmChild",
+                    "TestS3kCnzEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.CnzEndBossBoundaryController",
+                    "TestS3kCnzEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.CnzEndBossExplosionControllerChild",
+                    "TestS3kCnzEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.CnzEndBossFieldChild",
+                    "TestS3kCnzEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.CnzEndBossMagnetChild",
+                    "TestS3kCnzEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.CnzEndBossRobotnikFlameChild",
+                    "TestS3kCnzEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.CnzEndBossRobotnikHeadChild",
+                    "TestS3kCnzEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.CnzEndBossRobotnikShipChild",
+                    "TestS3kCnzEndBossGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.HczTransitionBubbleInstance",
                     "com.openggf.game.sonic3k.objects.TestHczTransitionBubbleInstance"),
             Map.entry(

@@ -26,6 +26,8 @@ class TestGraphCoveredIsolatedProbeClassification {
             "TestS3kHczEndBossGraphRewind";
     private static final String HCZ_CGZ_FAN_GRAPH_TEST =
             "TestS3kHczCgzFanGraphRewind";
+    private static final String CNZ_END_BOSS_GRAPH_TEST =
+            "TestS3kCnzEndBossGraphRewind";
     private static final String MHZ_END_BOSS_GRAPH_TEST =
             "TestS3kMhzEndBossGraphRewind";
     private static final String MECHA_SONIC_GRAPH_TEST =
@@ -235,6 +237,21 @@ class TestGraphCoveredIsolatedProbeClassification {
                 HCZ_END_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterSurfaceChild",
                 HCZ_END_BOSS_GRAPH_TEST);
+
+        expected.forEach(this::assertGraphCovered);
+    }
+
+    @Test
+    void cnzEndBossChildrenAreReportedAsGraphCovered() {
+        Map<String, String> expected = Map.of(
+                "com.openggf.game.sonic3k.objects.bosses.CnzEndBossArmChild", CNZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.CnzEndBossBoundaryController", CNZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.CnzEndBossExplosionControllerChild", CNZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.CnzEndBossFieldChild", CNZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.CnzEndBossMagnetChild", CNZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.CnzEndBossRobotnikFlameChild", CNZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.CnzEndBossRobotnikHeadChild", CNZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.bosses.CnzEndBossRobotnikShipChild", CNZ_END_BOSS_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);
     }

@@ -260,8 +260,9 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         }
     }
 
-    private void spawnNativeChildren() {
-        spawnChild(() -> new CnzEndBossRobotnikShipChild(this));
+    private CnzEndBossRobotnikShipChild spawnNativeChildren() {
+        CnzEndBossRobotnikShipChild ship =
+                spawnChild(() -> new CnzEndBossRobotnikShipChild(this));
         magnetChild = spawnChild(() -> new CnzEndBossMagnetChild(this));
         // CreateChild3_NormalRepeated advances d2 by two for each child, so
         // loc_6E994 receives subtypes 0,2,4,6 and derives quarter-turn phases.
@@ -269,6 +270,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             int phase = childIndex << 6;
             spawnChild(() -> new CnzEndBossArmChild(this, phase));
         }
+        return ship;
     }
 
     @Override
@@ -276,7 +278,22 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         // loc_6E4F2 creates this fixed six-slot graph on the first native
         // routine dispatch. Rebuild candidates so restore can adopt the exact
         // captured ship/magnet/arm identities and their scalar state.
-        spawnNativeChildren();
+        CnzEndBossRobotnikShipChild ship = spawnNativeChildren();
+
+        // Routine-created CNZ graph members do not have standalone probe
+        // constructors: they require this exact restored boss/ship identity.
+        // Offer every fixed phase role as a reconstruction candidate; the
+        // ObjectManager adopts only captured entries and drops unmatched roles.
+        spawnChild(() -> new CnzEndBossExplosionControllerChild(ship, 4));
+        spawnChild(() -> new CnzEndBossRobotnikFlameChild(ship));
+        spawnChild(() -> new CnzEndBossFieldChild(this, -0x0C));
+        spawnChild(() -> new CnzEndBossFieldChild(this, 0x0C));
+        spawnChild(() -> CnzEndBossBoundaryController.increaseMaxX(
+                centreX, centreY, CAPSULE_BOUND_MAX_X));
+        spawnChild(() -> CnzEndBossBoundaryController.decreaseMinY(
+                centreX, centreY, 0x0200));
+        spawnChild(() -> CnzEndBossBoundaryController.increaseMaxX(
+                centreX, centreY, CANNON_BOUND_MAX_X));
     }
 
     private void installBossPalette() {
