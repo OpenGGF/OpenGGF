@@ -1340,78 +1340,54 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_WIRE_CAGE,
-                (spawn, registry) -> isFbzS3kl() ? new FbzWireCageObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_WIRE_CAGE_STATIONARY,
-                (spawn, registry) -> isFbzS3kl() ? new FbzWireCageStationaryObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_FLOATING_PLATFORM,
-                (spawn, registry) -> isFbzS3kl() ? new FbzFloatingPlatformObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_CHAIN_LINK,
-                (spawn, registry) -> isFbzS3kl() ? new FbzChainLinkObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL,
-                (spawn, registry) -> isFbzS3kl() ? new FbzMagneticSpikeBallObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM,
-                (spawn, registry) -> isFbzS3kl() ? new FbzMagneticPlatformObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_SNAKE_PLATFORM,
-                (spawn, registry) -> isFbzS3kl() ? new FbzSnakePlatformObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_BENT_PIPE,
-                (spawn, registry) -> isFbzS3kl() ? new FbzBentPipeObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_ROTATING_PLATFORM,
-                (spawn, registry) -> isFbzS3kl() ? new FbzRotatingPlatformObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER,
-                (spawn, registry) -> isFbzS3kl() ? new FbzDezPlayerLauncherObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_DISAPPEARING_PLATFORM,
-                (spawn, registry) -> isFbzS3kl() ? new FbzDisappearingPlatformObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_SCREW_DOOR,
-                (spawn, registry) -> isFbzS3kl() ? new FbzScrewDoorObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_SPINNING_POLE,
-                (spawn, registry) -> isFbzS3kl() ? new FbzSpinningPoleObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_PROPELLER,
-                (spawn, registry) -> isFbzS3kl() ? new FbzPropellerObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_PISTON,
-                (spawn, registry) -> isFbzS3kl() ? new FbzPistonObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_PLATFORM_BLOCKS,
-                (spawn, registry) -> isFbzS3kl() ? new FbzPlatformBlocksObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_MISSILE_LAUNCHER,
-                (spawn, registry) -> isFbzS3kl() ? new FbzMissileLauncherObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_WALL_MISSILE,
-                (spawn, registry) -> isFbzS3kl() ? new FbzWallMissileObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_MINE,
-                (spawn, registry) -> isFbzS3kl() ? new FbzMineObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_ELEVATOR,
-                (spawn, registry) -> isFbzS3kl() ? new FbzElevatorObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_TRAP_SPRING,
-                (spawn, registry) -> isFbzS3kl() ? new FbzTrapSpringObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_FLAMETHROWER,
-                (spawn, registry) -> isFbzS3kl() ? new FbzFlamethrowerObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_SPIDER_CRANE,
-                (spawn, registry) -> isFbzS3kl() ? new FbzSpiderCraneObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
-        registerStockZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM,
-                (spawn, registry) -> isFbzS3kl() ? new FbzMagneticPendulumObjectInstance(spawn)
-                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_WIRE_CAGE, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzWireCageObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_WIRE_CAGE_STATIONARY, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzWireCageStationaryObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_FLOATING_PLATFORM, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzFloatingPlatformObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_CHAIN_LINK, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzChainLinkObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzMagneticSpikeBallObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzMagneticPlatformObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_SNAKE_PLATFORM, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzSnakePlatformObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_BENT_PIPE, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzBentPipeObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_ROTATING_PLATFORM, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzRotatingPlatformObjectInstance(spawn));
+        factories.put(Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER,
+                (spawn, registry) -> new FbzDezPlayerLauncherObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_DISAPPEARING_PLATFORM, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzDisappearingPlatformObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_SCREW_DOOR, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzScrewDoorObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_SPINNING_POLE, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzSpinningPoleObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_PROPELLER, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzPropellerObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_PISTON, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzPistonObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_PLATFORM_BLOCKS, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzPlatformBlocksObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_MISSILE_LAUNCHER, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzMissileLauncherObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_WALL_MISSILE, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzWallMissileObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_MINE, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzMineObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_ELEVATOR, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzElevatorObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_TRAP_SPRING, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzTrapSpringObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_FLAMETHROWER, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzFlamethrowerObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_SPIDER_CRANE, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzSpiderCraneObjectInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM, S3kZoneSet.S3KL,
+                (spawn, registry) -> new FbzMagneticPendulumObjectInstance(spawn));
 
         factories.forEach(this::registerSetOnly);
     }
@@ -1453,6 +1429,13 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factoryEntries.putIfAbsent(objectId, new FactoryEntry(factory, ignored -> true));
     }
 
+    /** Registers a factory whose pointer-table identity is sufficient in custom zones. */
+    private void registerZoneSetBound(int objectId, S3kZoneSet zoneSet, ObjectFactory factory) {
+        factories.put(objectId, factory);
+        factoryEntries.put(objectId, new FactoryEntry(factory,
+                context -> context.zoneSet() == zoneSet));
+    }
+
     private void registerStockZoneBound(int objectId, ObjectFactory factory) {
         factories.put(objectId, factory);
         factoryEntries.put(objectId, new FactoryEntry(factory,
@@ -1479,11 +1462,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         return activeCreationContext == null
                 ? super.currentRomZoneId()
                 : activeCreationContext.stockRomZoneId().orElse(-1);
-    }
-
-    private boolean isFbzS3kl() {
-        return getCurrentZoneSet() == S3kZoneSet.S3KL
-                && currentRomZoneId() == Sonic3kZoneIds.ZONE_FBZ;
     }
 
     private S3kZoneSet getCurrentZoneSet() {

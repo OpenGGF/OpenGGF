@@ -7,12 +7,11 @@ import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Set;
-import java.util.HashSet;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,6 +46,56 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.MONITOR));
         assertTrue(registry.canCreateInCustomZone(S3kZoneSet.SKL,
                 Sonic3kObjectIds.MONITOR));
+    }
+
+    @Test
+    void implementedFbzFactoriesFollowS3klPointerTableInCustomZones() {
+        Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
+        Set<Integer> fbzOnlyIds = Set.of(
+                Sonic3kObjectIds.FBZ_WIRE_CAGE,
+                Sonic3kObjectIds.FBZ_WIRE_CAGE_STATIONARY,
+                Sonic3kObjectIds.FBZ_FLOATING_PLATFORM,
+                Sonic3kObjectIds.FBZ_CHAIN_LINK,
+                Sonic3kObjectIds.FBZ_MAGNETIC_SPIKE_BALL,
+                Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM,
+                Sonic3kObjectIds.FBZ_SNAKE_PLATFORM,
+                Sonic3kObjectIds.FBZ_BENT_PIPE,
+                Sonic3kObjectIds.FBZ_ROTATING_PLATFORM,
+                Sonic3kObjectIds.FBZ_DISAPPEARING_PLATFORM,
+                Sonic3kObjectIds.FBZ_SCREW_DOOR,
+                Sonic3kObjectIds.FBZ_SPINNING_POLE,
+                Sonic3kObjectIds.FBZ_PROPELLER,
+                Sonic3kObjectIds.FBZ_PISTON,
+                Sonic3kObjectIds.FBZ_PLATFORM_BLOCKS,
+                Sonic3kObjectIds.FBZ_MISSILE_LAUNCHER,
+                Sonic3kObjectIds.FBZ_WALL_MISSILE,
+                Sonic3kObjectIds.FBZ_MINE,
+                Sonic3kObjectIds.FBZ_ELEVATOR,
+                Sonic3kObjectIds.FBZ_TRAP_SPRING,
+                Sonic3kObjectIds.FBZ_FLAMETHROWER,
+                Sonic3kObjectIds.FBZ_SPIDER_CRANE,
+                Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM);
+
+        for (int objectId : fbzOnlyIds) {
+            assertTrue(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
+                    () -> "S3KL factory missing for " + registry.getPrimaryName(objectId, S3kZoneSet.S3KL));
+            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.SKL, objectId),
+                    () -> "SKL must retain " + registry.getPrimaryName(objectId, S3kZoneSet.SKL));
+        }
+    }
+
+    @Test
+    void sharedFbzDezLauncherFollowsBothPointerTablesInCustomZones() {
+        Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
+
+        assertEquals("FBZDEZPlayerLauncher", registry.getPrimaryName(
+                Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER, S3kZoneSet.S3KL));
+        assertEquals("FBZDEZPlayerLauncher", registry.getPrimaryName(
+                Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER, S3kZoneSet.SKL));
+        assertTrue(registry.canCreateInCustomZone(S3kZoneSet.S3KL,
+                Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER));
+        assertTrue(registry.canCreateInCustomZone(S3kZoneSet.SKL,
+                Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER));
     }
 
     @Test
@@ -126,6 +175,16 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.PACHINKO_TRIANGLE_BUMPER,
                 Sonic3kObjectIds.UPDRAFT),
                 registry.stockZoneBoundFactoryIds());
+    }
+
+    @Test
+    void stockZoneDependencyInventoryRemainsExplicitFactoryMetadata() {
+        Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
+
+        for (int objectId : registry.stockZoneBoundFactoryIds()) {
+            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId));
+            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.SKL, objectId));
+        }
     }
 
     @Test
