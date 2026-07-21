@@ -67,6 +67,63 @@ mvn "-Dtest=TestRewindFieldDispositionGuard,TestRewindArchitectureGuard,TestRewi
 Expected: PASS with no blanket baseline count increase.
 - [ ] Commit as `fix: capture MGZ boss rewind graph`, updating `CHANGELOG.md` and trailers.
 
+### Task D1.3a: Centralize origin-integrated CNZ structural rewind policies
+
+This task was added after the latest `origin/develop` integration. It does not add a red JUnit method identity: the nine new annotation occurrences are diagnostics from the already-ledgered `TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage` method owned by D1.3. The historical `36 develop / 179 union / 83 in-scope` method accounting therefore remains unchanged. Do not add these occurrences to `TestRewindArchitectureGuard.ALLOWED_ANNOTATION_COUNTS`.
+
+Root-cause triage shows three distinct dispositions. The `boss` fields on `CnzEndBossArmChild`, `CnzEndBossFieldChild`, `CnzEndBossMagnetChild`, and `CnzEndBossRobotnikShipChild` are already covered by `DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES`. The three `ship` fields are the same constructor/recreate structural-parent pattern and should be covered by the central structural field-name policy. The flash `owner` back-link and field-child `xOffset` are class-specific derived state: add exact `TRANSIENT` policies, because the button's captured `spawnedFlash` link plus `afterRewindRestoreSettled()` rebuilds `owner`, while `xOffset` is deterministically reconstructed from captured spawn subtype. Existing D1.4a graph tests prove every boss/ship identity and the signed field offsets; strengthen the flash graph test to prove the derived owner back-link. If any focused graph assertion fails, stop and implement the missing capture/recreate behavior instead of marking that field transient.
+
+**Files:**
+- Modify: `src/main/java/com/openggf/game/rewind/schema/DefaultObjectRewindPolicies.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/CnzLightsFlashChildInstance.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossArmChild.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossExplosionControllerChild.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossFieldChild.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossMagnetChild.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossRobotnikFlameChild.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossRobotnikHeadChild.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/bosses/CnzEndBossRobotnikShipChild.java`
+- Test: `src/test/java/com/openggf/game/rewind/schema/TestRewindPolicyRegistry.java`
+- Test: `src/test/java/com/openggf/game/rewind/TestS3kCnz2CutsceneButtonGraphRewind.java`
+- Verify: `src/test/java/com/openggf/game/rewind/TestS3kCnzEndBossGraphRewind.java`
+- Verify: `src/test/java/com/openggf/game/rewind/TestRewindArchitectureGuard.java`
+- Verify: `src/test/java/com/openggf/game/rewind/schema/TestRewindFieldDispositionGuard.java`
+- Verify: `src/test/java/com/openggf/game/rewind/TestRewindTransientGuard.java`
+
+- [ ] Reproduce the exact origin-integrated architecture red:
+
+```powershell
+mvn "-Dtest=com.openggf.game.rewind.TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage" test
+```
+
+Expected: one failing method reporting exactly nine unexpected `@RewindTransient` occurrences: one each in `CnzLightsFlashChildInstance`, `CnzEndBossArmChild`, `CnzEndBossExplosionControllerChild`, `CnzEndBossMagnetChild`, `CnzEndBossRobotnikFlameChild`, `CnzEndBossRobotnikHeadChild`, and `CnzEndBossRobotnikShipChild`, plus two in `CnzEndBossFieldChild`.
+
+- [ ] Add `defaultObjectPolicyCentralizesCnzDerivedAndStructuralLinks` to `TestRewindPolicyRegistry`. Resolve package-private boss children with `Class.forName(...)`, then assert `RewindPolicyRegistry.policyForAudit(...) == TRANSIENT` for all four `boss` fields, all three `ship` fields, `CnzLightsFlashChildInstance.owner`, and `CnzEndBossFieldChild.xOffset`. Run it before changing the policy. Expected: FAIL for `ship`, `owner`, and `xOffset`; the `boss` assertions already pass through the existing structural-name rule.
+
+```powershell
+mvn "-Dtest=com.openggf.game.rewind.schema.TestRewindPolicyRegistry#defaultObjectPolicyCentralizesCnzDerivedAndStructuralLinks" test
+```
+
+- [ ] Add `ship` to `DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES`. Add exact `TRANSIENT` entries for `CnzLightsFlashChildInstance.owner` and `CnzEndBossFieldChild.xOffset`, with comments naming their authoritative reconstruction paths. Do not add a package-wide rule or broaden `owner`, because other owner references have captured/deferred semantics.
+
+- [ ] Remove all nine `@RewindTransient` annotations and now-unused imports from the eight classes. Do not alter their fields, constructors, `recreateForRewind(...)`, or relink callbacks unless the next graph-test step demonstrates a real restore defect.
+
+- [ ] In `TestS3kCnz2CutsceneButtonGraphRewind#cnz2CutsceneButtonRestoresSpawnedFlashLinkWithoutDropsOrStaleRefs`, assert that the recreated flash's private `owner` is the exact recreated button after restore. Run it together with the three D1.4a end-boss graph methods. Expected: PASS, proving the new central transient policies describe derived structural state rather than hiding state loss.
+
+```powershell
+mvn "-Dtest=com.openggf.game.rewind.TestS3kCnz2CutsceneButtonGraphRewind#cnz2CutsceneButtonRestoresSpawnedFlashLinkWithoutDropsOrStaleRefs,com.openggf.game.rewind.TestS3kCnzEndBossGraphRewind#nativeGraphRestoresExactShipHeadMagnetAndArmIdentities+chargeGraphRestoresExactFieldIdentitiesAndOffsets+defeatGraphRestoresExactExplosionFlameAndBoundaryControllerIdentities" test
+```
+
+- [ ] Run the focused policy test, both complete CNZ graph classes, and all three annotation/disposition guards:
+
+```powershell
+mvn "-Dtest=com.openggf.game.rewind.schema.TestRewindPolicyRegistry#defaultObjectPolicyCentralizesCnzDerivedAndStructuralLinks,com.openggf.game.rewind.TestS3kCnz2CutsceneButtonGraphRewind,com.openggf.game.rewind.TestS3kCnzEndBossGraphRewind,com.openggf.game.rewind.TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage,com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard#noNewSilentlyDroppedRewindFieldsBeyondBaseline,com.openggf.game.rewind.TestRewindTransientGuard#fieldsCoveredByDefaultTransientPolicyDoNotNeedExplicitAnnotations" test
+```
+
+Expected: all selected tests PASS; annotation growth is zero; graph identity, back-links, signed offsets, and mutable child scalars remain exact; no architecture or field-disposition baseline changes.
+
+- [ ] Commit as `fix: centralize CNZ structural rewind policies`, updating `CHANGELOG.md` and all required policy trailers.
+
 ### Task D1.4: Reconcile parent-dependent and tail inventories
 
 **Files:**
@@ -478,6 +535,7 @@ Each task uses its row below for the initial red run and final green regression 
 | D1.1 | `mvn "-Dtest=com.openggf.game.rewind.TestS3kBadnikChildGraphRewind#spikerTopSpikeRestoresExactParentAndCooldownState" test` | `mvn "-Dtest=com.openggf.game.rewind.TestS3kBadnikChildGraphRewind" test` |
 | D1.2 | `mvn "-Dtest=com.openggf.game.rewind.TestS3kBadnikChildGraphRewind#mantisChildRelinksToRestoredParentAndParentSlot" test` | `mvn "-Dtest=com.openggf.game.rewind.TestS3kBadnikChildGraphRewind" test` |
 | D1.3 | `mvn "-Dtest=com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard#noNewSilentlyDroppedRewindFieldsBeyondBaseline,com.openggf.game.rewind.TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage,com.openggf.game.rewind.TestRewindTransientGuard#fieldsCoveredByDefaultTransientPolicyDoNotNeedExplicitAnnotations" test` | `mvn "-Dtest=com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard,com.openggf.game.rewind.TestRewindArchitectureGuard,com.openggf.game.rewind.TestRewindTransientGuard,com.openggf.game.rewind.TestS3kBadnikChildGraphRewind" test` |
+| D1.3a | `mvn "-Dtest=com.openggf.game.rewind.TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage" test` | `mvn "-Dtest=com.openggf.game.rewind.schema.TestRewindPolicyRegistry#defaultObjectPolicyCentralizesCnzDerivedAndStructuralLinks,com.openggf.game.rewind.TestS3kCnz2CutsceneButtonGraphRewind,com.openggf.game.rewind.TestS3kCnzEndBossGraphRewind,com.openggf.game.rewind.TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage,com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard#noNewSilentlyDroppedRewindFieldsBeyondBaseline,com.openggf.game.rewind.TestRewindTransientGuard#fieldsCoveredByDefaultTransientPolicyDoNotNeedExplicitAnnotations" test` |
 | D1.4 | `mvn "-Dtest=com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test` | `mvn "-Dtest=com.openggf.game.rewind.TestParentDependentGraphCoverageGuard,com.openggf.game.rewind.TestRemainingRewindTailInventory" test` |
 | D1.4a | `mvn "-Dtest=com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test` | `mvn "-Dtest=com.openggf.game.rewind.TestS3kCnzEndBossGraphRewind,com.openggf.game.rewind.TestGraphCoveredIsolatedProbeClassification#cnzEndBossChildrenAreReportedAsGraphCovered,com.openggf.game.rewind.TestParentDependentGraphCoverageGuard#parentDependentBucketMatchesBaselineAndCoveredEntriesNameGraphTests,com.openggf.game.rewind.TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory" test` |
 | D1.5 | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations" test` | `mvn "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard" test` |
