@@ -36,6 +36,24 @@ class TestTraceCatalogRunDiscovery {
     }
 
     @Test
+    void syntheticRunSubtreeIsExcludedFromDiscovery(@TempDir Path root) throws Exception {
+        // Place an OTHERWISE-VALID run under synthetic/runs/ — without the scanRuns
+        // synthetic filter it would be discovered. Assert it is excluded, mirroring
+        // the level scan's synthetic exclusion.
+        Path src = Path.of("src", "test", "resources", "traces", "synthetic", "run_aiz_gumball_3seg");
+        Path runDir = root.resolve("synthetic").resolve("runs").resolve("run_aiz_gumball_3seg");
+        Files.createDirectories(runDir.getParent());
+        copyRecursively(src, runDir);
+        Path movies = root.resolve("synthetic").resolve("_movies");
+        Files.createDirectories(movies);
+        Files.write(movies.resolve("synthetic.bk2"), new byte[] {0});
+
+        List<TraceEntry> entries = TraceCatalog.scan(root);
+        assertTrue(entries.stream().noneMatch(TraceEntry::isRun),
+                "a run under synthetic/runs/ must be excluded from discovery");
+    }
+
+    @Test
     void invalidRunIsSkippedNotFatal(@TempDir Path root) throws Exception {
         Path badRun = root.resolve("s3k").resolve("runs").resolve("broken");
         Files.createDirectories(badRun);

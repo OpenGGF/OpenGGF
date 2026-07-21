@@ -81,7 +81,12 @@ public final class TraceCatalog {
      */
     private static void scanRuns(Path root, List<TraceEntry> entries) {
         try (Stream<Path> gameDirs = Files.list(root)) {
-            for (Path gameDir : gameDirs.filter(Files::isDirectory).toList()) {
+            // Defense-in-depth: exclude a `synthetic/` game dir from run discovery,
+            // mirroring the level scan's synthetic filter (:56). Synthetic fixtures
+            // currently live under `synthetic/` (not `synthetic/runs/`) so this is
+            // a no-op today, but it keeps run discovery aligned if that ever changes.
+            for (Path gameDir : gameDirs.filter(Files::isDirectory)
+                    .filter(gd -> !isSyntheticSubtree(root, gd)).toList()) {
                 Path runsDir = gameDir.resolve("runs");
                 if (!Files.isDirectory(runsDir)) {
                     continue;
