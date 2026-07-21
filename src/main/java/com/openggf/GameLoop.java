@@ -51,6 +51,7 @@ import com.openggf.level.BigRingReturnState;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PersistentRespawnState;
 import static org.lwjgl.glfw.GLFW.*;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -195,6 +196,16 @@ public class GameLoop {
     // exit so the return star post stays used even though Last_star_post_hit was
     // zeroed (sonic3k.asm:61924). -1 when no bonus entry is in flight.
     private int pendingBonusReturnStarPostMark = -1;
+    // Persistent respawn-remember state (Object_respawn_table model) captured at
+    // bonus entry and re-established on bonus return. The ROM keeps
+    // Object_respawn_table across the star-post-bonus Restart_level_flag reload
+    // via Respawn_table_keep=1 (sonic3k.asm:61930; the reload's clear routines
+    // skip it, e.g. sub_EB1A :18564-18570), so objects broken/collected before
+    // the bonus stay that way on return; the engine rebuilds a fresh
+    // ObjectPlacementController on reload, so it carries the table here instead.
+    // Not rewound: the bonus round-trip is not a rewindable window, and this is
+    // consumed on the return reload before the first rewindable level frame.
+    private PersistentRespawnState pendingBonusReturnRespawnState;
 
     // Flag to freeze level updates during the final-boss fade into ending mode.
     private boolean endingTransitionPending;
@@ -2269,6 +2280,17 @@ public class GameLoop {
                         ? entryCheckpoint.getStarPostActivationMark()
                         : -1;
 
+        // ROM Respawn_table_keep model: capture the live respawn-remember table
+        // (broken/collected/remembered spawns) now so the bonus-return reload can
+        // re-establish it, mirroring the ROM keeping Object_respawn_table across
+        // the Restart_level_flag reload (sonic3k.asm:61930). Without this, objects
+        // the player destroyed before the bonus (e.g. a broken monitor) respawn
+        // intact/solid on return -- a phantom wall.
+        pendingBonusReturnRespawnState =
+                levelManager.getObjectManager() != null
+                        ? levelManager.getObjectManager().capturePersistentRespawn()
+                        : null;
+
         BonusStageState savedState = new BonusStageState(
                 zoneAndAct,
                 apparentZoneAndAct,
@@ -2542,6 +2564,18 @@ public class GameLoop {
         } finally {
             levelManager.clearBonusStageReturn();
         }
+
+        // Re-establish the respawn-remember table captured at bonus entry onto the
+        // freshly reloaded ObjectManager (ROM Respawn_table_keep: the live
+        // Object_respawn_table survives the Restart_level_flag reload,
+        // sonic3k.asm:61930). Objects the player destroyed/collected before the
+        // bonus stay that way on return -- e.g. a monitor broken pre-bonus reloads
+        // as its inert broken shell (Obj_MonitorInit broken branch :40471-40478)
+        // instead of a fresh solid monitor that would wall the player.
+        if (pendingBonusReturnRespawnState != null && levelManager.getObjectManager() != null) {
+            levelManager.getObjectManager().restorePersistentRespawn(pendingBonusReturnRespawnState);
+        }
+        pendingBonusReturnRespawnState = null;
 
         // Restore checkpoint state so starposts show as activated (ROM: Saved_last_star_post_hit)
         if (savedState.savedLastStarPostHit() >= 0) {
