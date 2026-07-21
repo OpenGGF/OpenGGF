@@ -189,6 +189,14 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Sonic_Move/Tails_Move read width_pixels from the ridden Obj65 SST
+        // (s2.asm:36591-36600,39712-39721). This is the properties-table width,
+        // not the default rendered half-width exposed by AbstractObjectInstance.
+        return widthPixels;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return false;
     }

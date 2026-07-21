@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -655,6 +656,29 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         int halfWidth = blockActiveWidth + 0x0B;
         return new SolidObjectParams(halfWidth, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        // CStom_MainBlock calls S1 SolidObject. Solid_ChkCollision rejects the
+        // right edge with `bhi`, so equality remains in the side-contact path.
+        return SolidRoutineProfile.fullSolid(false, true, false);
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // The oscillating block rebuilds dynamicSpawn as its Y changes, while
+        // the native standing/pushing bits remain owned by the live Obj31 SST.
+        return true;
+    }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        // Sonic_Balance reads the SST obActWid byte, while the SolidObject call
+        // extends its horizontal collision check by $B (CStom_MainBlock,
+        // _incObj/31 MZ Chained Stompers.asm). Feeding that extension back into
+        // balance makes the player appear to stand at an edge while centered.
+        return blockActiveWidth;
     }
 
     @Override

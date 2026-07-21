@@ -161,15 +161,24 @@ class TestS3kMgz2BgRiseHeadless {
     }
 
     @Test
-    void teleportIntoTriggerBox_armsSonicRiseAndTurnsOnBgCollision() {
+    void teleportIntoTriggerBox_armsSonicRiseAndRefreshesBeforeBgCollision() {
+        // Let MGZ2_BackgroundInit observe the real level-start position first;
+        // otherwise the teleport is intentionally classified as a late load.
+        fixture.stepIdleFrames(1);
         teleport(0x3500, 0x0850);
         fixture.stepIdleFrames(1);
 
         Sonic3kMGZEvents events = mgzEvents();
         assertEquals(8, events.getBgRiseRoutine(),
                 "teleport into the MGZ2 rise trigger box should arm state 8");
+        assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
+                "MGZ2BGE_Refresh should leave Background_collision_flag clear after the trigger");
+        fixture.stepIdleFrames(8);
+        assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
+                "all refresh calls and the normal ScreenEvents publication pass should keep collision clear pre-physics");
+        fixture.stepIdleFrames(1);
         assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
-                "state 8 should enable Background_collision_flag");
+                "state 8 should enable BG collision after the delayed plane refresh completes");
         assertEquals(0, events.getBgRiseOffset(),
                 "arming alone should not advance the offset");
     }
@@ -235,9 +244,14 @@ class TestS3kMgz2BgRiseHeadless {
         teleport(0x3500, 0x0850);
         fixture.stepIdleFrames(1);
 
-        // Teleport past motion + accel thresholds so the rise uses +1/frame
-        // and completes in <= 464 frames.
-        teleport(0x3E00, 0x0A90);
+        // Cross the motion threshold first, then the later acceleration
+        // threshold. Obj_MGZ2BGMoveSonic consumes the post-player position, so
+        // this mirrors the route instead of asking one teleport to cross both
+        // gates before the player slot has resolved terrain.
+        teleport(0x3800, 0x0A90);
+        fixture.stepIdleFrames(1);
+        assertTrue(mgzEvents().isBgRiseMotionStarted(), "precondition: rise object has started");
+        teleport(0x3E00, sprite.getCentreY());
         for (int frame = 0; frame < 600; frame++) {
             fixture.stepIdleFrames(1);
         }

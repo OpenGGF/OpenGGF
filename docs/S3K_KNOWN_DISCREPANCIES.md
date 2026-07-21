@@ -979,3 +979,108 @@ after an investigation spike.
 None on the shipped Gumball/Pachinko rewind support. The Slot Machine bonus stage keeps its
 pre-existing (non-rewindable) behavior; holding rewind while it is active is a no-op, matching its
 behavior before this change.
+
+## Gumball Machine Frame-0 RNG Reseed: Preserve Run-History Entropy, Do Not Clobber With a Session Counter
+
+ROM `Obj_GumballMachine` seeds `RNG_seed` from `V_int_run_count` on init:
+
+```
+move.l (V_int_run_count).w,(RNG_seed).w   ; sonic3k.asm:127412
+```
+
+`V_int_run_count` is a persistent counter incremented every VBlank interrupt since power-on. The
+purpose of this write is to fold *run-history entropy* (menu time, prior acts, etc.) into the
+bonus-stage RNG so the ball-subtype roll (`sub_612A8`, `sonic3k.asm:127988-128008`) varies
+run-to-run.
+
+### Resolution (no longer a divergence)
+
+`GumballMachineObjectInstance` previously re-derived that seed from its `update` `frameCounter`
+argument — `ObjectManager.vblaCounter`, a per-gameplay-session object-dispatch counter that resets
+on every session rebuild and lives in a materially smaller range than the hardware run counter
+(observed `0x0400` locally vs. `0x1598` recorded for the same frame-0 tick). That was the actual
+bug: `vblaCounter` is *not* `V_int_run_count`, so seeding from it clobbered a correct seed with a
+wrong per-session count and flipped the ball subtype (e.g. awarding 10 rings for a ball the recorded
+run never dispensed as a reward).
+
+The engine's shared RNG **already carries** run-history entropy when the machine spawns: it has been
+advanced by all prior gameplay in live play, and in trace replay
+`TraceReplaySessionBootstrap.applyInitialRngSeedForReplay` has already primed it to the recorded
+run's exact seed (that recording's `V_int_run_count`) — uniformly for every trace carrying
+`metadata.rng_seed`, as ordinary initial-state reconstruction, not per-frame hydration. So the ROM
+invariant `RNG_seed == V_int_run_count` is already satisfied by the RNG's own established state on
+this tick. Modeling the reseed is therefore a read of that same value — a no-op — and the object no
+longer performs the erroneous `setSeed`. This is applied **uniformly** to live play and trace
+replay (no trace-identity gating, no simulation-time trace read), so there is no live/replay
+behavioral split.
+
+An earlier iteration instead had `TraceReplaySessionBootstrap` suppress the reseed *only during
+trace replay*; that trace-gated split was reverted. The current fix removes the wrong reseed for
+every caller, which both closes the trace divergence and keeps live play on the RNG's genuine
+run-dependent entropy rather than the acknowledged-wrong session counter.
+
+### Impact
+
+The Gumball bonus stage's frame-0 ball-subtype roll now consumes the RNG's established
+run-history seed on every path. Trace replay reproduces the recorded run's subtypes (the frontier
+past the spurious early ring award); live play keeps run-dependent variety without a reference
+recording to diverge from. No other Gumball, Pachinko, or Slots behavior is affected; the RNG stream
+itself (post-seed advancement) is unchanged and remains ROM-faithful.
+
+Slots is *also* affected by a `vblaCounter`-vs-`V_int_run_count` gap (the counter-provenance mismatch the Gumball roll previously had):
+`S3kSlotBonusStageRuntime.globalVIntRunCounter()` feeds `ObjectManager.vblaCounter` into
+`S3kSlotOptionCycleSystem.tick(...)` as the ROM-faithful *shape* of `Slots_CycleOptions`'s several
+`V_int_run_count` reads (reel-word seeds, per-reel velocity offsets, the fixed-row scan seed, the
+random-target draw, and the post-decelerate countdown extension — sonic3k.asm:99614-99946). Because
+`vblaCounter` is a per-gameplay-session approximation with the same reset-cadence and smaller-range
+mismatch described above, all of those Slots computations can select a different (and
+differently-timed) reel target/prize than a specific recorded run whenever local session timing
+differs from the original hardware's power-on-relative VBlank count, exactly as with the Gumball
+frame-0 roll. This is the same underlying counter gap surfacing at a second, independent call site,
+not a new discrepancy; the correct fix is the same deferred persistent VBlank-driven global counter
+described above, which would resolve both sites at once.
+
+### Resolution (trace replay only): metadata-primed `V_int_run_count` base
+
+Unlike the Gumball reseed above (a single frame-0 read, satisfied once the shared RNG is primed),
+`Slots_CycleOptions` reads `V_int_run_count` on an ongoing basis across the whole slots bonus stage,
+so priming the shared RNG once at bootstrap cannot cover it. Recorder v6.32-s3k+ instead captures the
+ROM `V_int_run_count` longword (sonic3k.constants.asm:790, `CrossResetRAM+$0C`) once at bonus-segment
+arm time and emits it as decimal `metadata.v_int_run_count`, for gumball/pachinko/slots segments
+(zone ids `0x13`-`0x15`; harmless no-op field for gumball/pachinko, which do not consume it).
+`TraceReplaySessionBootstrap.applyBonusStageEntry` reads `TraceMetadata#recordedVIntRunCount()` and,
+when present and the segment is `SLOT_MACHINE`, calls
+`S3kSlotBonusStageRuntime.primeVIntRunCountForReplay(recordedBase)` immediately after
+`onDeferredSetupComplete()` (same comparison-bootstrap "load a save state" pattern as
+`applyInitialRngSeedForReplay`/`metadata.rng_seed`, and gated the same data-driven way — no
+zone/route/frame carve-out). `globalVIntRunCounter()` then returns `recordedBase +
+ticks-elapsed-since-priming` (ticks measured off the same `ObjectManager.vblaCounter` used before,
+so the *cadence* is unchanged — only the base value moves) instead of the raw per-session
+`vblaCounter` value.
+
+**Measured effect (`TestS3kSlotsBonusTraceReplay`, `s3-knux-multibonus-ss`/`slots`):** this closes the
+specific divergence this section originally cited (rings 75→76 at the trace's first reel resolution,
+previously observed at frame ~269-271): with the base primed, that same reel resolves correctly and
+the first divergence moves to frame 301 (still a `rings` off-by-one, now on a *later* reel cycle — the
+machine cycles through multiple spins across the 1200-frame segment, each an independent
+`Slots_CycleOptions` pass). Total report error-group count moved from 179 to 182 — a later frontier
+that *unmasks* further reel-cycle divergences the original frame-271 cascade had been hiding, not a
+regression in the fix itself: three separate `+1`/`-1`-scale `rings` mismatches remain (frames 301,
+849, and a larger 971-1029 cluster consistent with a subsequently-diverged reward/exit path). A small
+sweep of the tick-alignment constant (base+0 vs base+1 vs base+2 ticks-since-priming) confirmed
+base+1 — the natural, no-fudge-factor result of priming once before the trace's frame 0 and reading
+back after that frame's own `ObjectManager.update()` VBlank tick — is the local optimum; shifting
+either direction strictly worsens both the error count and the frontier, so the residual is not a
+further constant-offset bug. It is most likely either (a) a second, independent
+`Slots_CycleOptions`-consumption timing wrinkle across multi-spin cycles, or (b) a lag/pause-frame
+VBla-counter parity gap specific to this trace's later frames, and is left as an open, still-tracked
+frontier item rather than force-fit with an unjustified per-cycle correction.
+
+**Residual gap (unchanged):** live play and legacy traces recorded before v6.32-s3k still fall back to
+raw `ObjectManager.vblaCounter` with no base correction — the underlying gap described above (a
+per-gameplay-session counter standing in for hardware's power-on-relative `V_int_run_count`) is
+**not** closed for live play; only trace replay's reproducibility of a specific recorded run's *first*
+reel cycle is fixed, with a further multi-cycle/lag-parity gap left open per the measured effect above.
+The correct live-play fix remains the same deferred persistent VBlank-driven global counter mentioned
+above, which would resolve both the Gumball and Slots call sites (and this replay-only workaround) at
+once.

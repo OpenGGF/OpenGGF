@@ -160,6 +160,16 @@ public interface LevelEventProvider {
     }
 
     /**
+     * Publishes level-event-owned animation state when a playable clears
+     * {@code Status_InAir} during its movement slot. The callback runs before
+     * the same slot's animation dispatch; providers must ignore landings whose
+     * animation they do not currently own.
+     */
+    default void onPlayableLandingAnimationWrite(AbstractPlayableSprite playable) {
+        // Default no-op
+    }
+
+    /**
      * Called when a player falls below the bottom boundary.
      * If this returns true, the pit death is intercepted (e.g. zone transition).
      * <p>

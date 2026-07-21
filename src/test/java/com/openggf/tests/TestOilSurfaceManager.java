@@ -7,6 +7,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.sonic2.OilSurfaceManager;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -56,6 +57,20 @@ public class TestOilSurfaceManager {
         assertFalse(sprite.getAir());
         assertTrue(sprite.isOnObject());
         assertEquals(before - 1, manager.getSubmersion());
+    }
+
+    @Test
+    void rollingOilLandingPublishesWalkWithoutAdvancingMapping() {
+        sprite.setRolling(true);
+        sprite.setAnimationId(Sonic2AnimationIds.ROLL.id());
+        sprite.setMappingFrame(0x3F);
+
+        landOnOilSurface();
+
+        assertFalse(sprite.getRolling());
+        assertEquals(Sonic2AnimationIds.WALK.id(), sprite.getAnimationId());
+        assertEquals(0x3F, sprite.getMappingFrame(),
+                "Obj07 lands after Animate and only publishes the raw Walk byte this frame");
     }
 
     @Test
@@ -157,6 +172,8 @@ public class TestOilSurfaceManager {
         sprite.setXSpeed((short) 0x0200);
         sprite.setYSpeed((short) 0x0200);
         sprite.setGSpeed((short) 0);
+        sprite.setAnimationId(Sonic2AnimationIds.HURT.id());
+        sprite.setMappingFrame(0x5A);
 
         manager.update(sprite);
 
@@ -168,6 +185,10 @@ public class TestOilSurfaceManager {
         assertEquals(0x0200, sprite.getGSpeed() & 0xFFFF,
                 "RideObject_SetRide copies x_vel to inertia on the landing frame before HurtStop zeroes it");
         assertEquals(0, sprite.getYSpeed());
+        assertEquals(Sonic2AnimationIds.HURT.id(), sprite.getAnimationId(),
+                "Obj07 runs after Animate, so HurtStop does not publish Walk until the next player tick");
+        assertEquals(0x5A, sprite.getMappingFrame(),
+                "the oil landing must not advance or replace the already-rendered Hurt mapping");
     }
 
     @Test

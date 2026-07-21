@@ -39,7 +39,8 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     private static final int DESCENT_PROGRESS_SCALE = 0xC0;
     private static final int ANGLE_PROGRESS_SCALE = 0x155;
     private static final int CAPTURE_ANIMATION = 0;
-    private static final int RELEASE_ANIMATION = 1;
+    private static final int RELEASE_ANIMATION = 0;
+    private static final int RELEASE_PREVIOUS_ANIMATION = 1;
     private static final int[] TWIST_FRAMES = {
             0x76, 0x76, 0x77, 0x77, 0x6C, 0x6C, 0x6D, 0x6D, 0x6E, 0x6E, 0x6F, 0x6F,
             0x70, 0x70, 0x71, 0x71, 0x72, 0x72, 0x73, 0x73, 0x74, 0x74, 0x75, 0x75
@@ -175,8 +176,12 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             }
         }
 
-        player.setControlLocked(true);
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        player.setControlLocked(false);
+        // ROM sets object_control to $42 here (bits 6 and 1). Bit 0 remains
+        // clear, so Sonic_Modes still advances native movement before this
+        // later object slot overwrites the loop-owned position words.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
+        player.setSuppressGroundWallCollision(true);
         player.setObjectMappingFrameControl(true);
         player.setOnObject(true);
         player.setAir(false);
@@ -207,9 +212,19 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             return;
         }
 
-        int currentProgressPixels = state.progressFixed >> 16;
         int releaseThreshold = captureThreshold + (state.compensateReleaseHandoff ? RELEASE_TURN_PITCH : 0);
-        if (currentProgressPixels >= releaseThreshold) {
+        // ROM loc_33DFE compares the player's live y_pos word against the
+        // controller y_pos. Player physics has already advanced that word for
+        // this frame; the private fixed-point progress in (a2) is only used by
+        // the later spiral-position calculation.
+        int currentPlayerProgress = player.getCentreY() - centerY;
+        if (currentPlayerProgress >= releaseThreshold) {
+            // The release branch still advances the private loop position and
+            // derives one final x_pos from it before clearing object_control.
+            // It deliberately leaves the live y_pos written by player physics.
+            int ySpeed = updateCapturedGroundMotion(player);
+            int releaseProgressFixed = state.progressFixed + ySpeed * DESCENT_PROGRESS_SCALE;
+            positionPlayerHorizontally(player, state, releaseProgressFixed >> 16);
             releaseCapturedPlayer(frameCounter, player, state, false);
             return;
         }
@@ -219,11 +234,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         state.progressFixed += ySpeed * DESCENT_PROGRESS_SCALE;
         int progressPixels = state.progressFixed >> 16;
         int phaseBase = ((progressPixels * ANGLE_PROGRESS_SCALE) >> 8) & 0xFF;
-        int phase = (phaseBase + state.sidePhaseOffset) & 0xFF;
-        int cosine = TrigLookupTable.cosHex(phase);
-        int horizontalOffset = (cosine >> 3) + ((player.getYRadius() * cosine) >> 8);
-
-        player.setX((short) (centerX + horizontalOffset - (player.getWidth() / 2)));
+        positionPlayerHorizontally(player, state, progressPixels);
         player.setY((short) (centerY + progressPixels - (player.getHeight() / 2)));
         player.setAnimationId(CAPTURE_ANIMATION);
         player.setOnObject(true);
@@ -232,34 +243,33 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         applyTwistFrame(player, phaseBase);
     }
 
+    private void positionPlayerHorizontally(AbstractPlayableSprite player, PlayerState state, int progressPixels) {
+        int phaseBase = ((progressPixels * ANGLE_PROGRESS_SCALE) >> 8) & 0xFF;
+        int phase = (phaseBase + state.sidePhaseOffset) & 0xFF;
+        int cosine = TrigLookupTable.cosHex(phase);
+        int horizontalOffset = (cosine >> 3) + ((player.getYRadius() * cosine) >> 8);
+        player.setX((short) (centerX + horizontalOffset - (player.getWidth() / 2)));
+    }
+
     private int updateCapturedGroundMotion(AbstractPlayableSprite player) {
         int groundSpeed = player.getGSpeed();
         int speedSign = (groundSpeed < 0) ? -1 : 1;
-        // The ROM still runs the roll-speed ground-velocity step while this
-        // object owns bit 6 of object_control, so decay inertia locally here.
-        if (!player.isLeftPressed() && !player.isRightPressed()) {
-            int friction = player.getFriction() & 0xFFFF;
-            if (groundSpeed > 0) {
-                groundSpeed = Math.max(0, groundSpeed - friction);
-            } else if (groundSpeed < 0) {
-                groundSpeed = Math.min(0, groundSpeed + friction);
-            }
-        }
-
         int speedMagnitude = Math.abs(groundSpeed);
         if (speedMagnitude < MIN_GROUND_SPEED) {
             speedMagnitude = MIN_GROUND_SPEED;
         }
-        if (speedMagnitude > MAX_GROUND_SPEED) {
+        if (speedMagnitude >= MAX_GROUND_SPEED) {
             speedMagnitude = MAX_GROUND_SPEED;
+            // loc_33E2A/loc_33EDA publish y_vel only when the maximum clamp
+            // is taken. Below that threshold the player movement routine's
+            // live projected y_vel remains visible to the loop calculation.
+            player.setYSpeed((short) MAX_GROUND_SPEED);
         }
 
         int adjustedGroundSpeed = speedSign * speedMagnitude;
-        int adjustedYSpeed = speedMagnitude;
         player.setGSpeed((short) adjustedGroundSpeed);
         player.setXSpeed((short) 0);
-        player.setYSpeed((short) adjustedYSpeed);
-        return adjustedYSpeed;
+        return player.getYSpeed();
     }
 
     private void applyTwistFrame(AbstractPlayableSprite player, int phaseBase) {
@@ -284,6 +294,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         }
 
         player.setObjectMappingFrameControl(false);
+        player.setSuppressGroundWallCollision(false);
         player.setControlLocked(false);
         if (jumpedOut) {
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
@@ -304,6 +315,9 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         player.setX((short) (centreXBeforeRelease - (player.getWidth() / 2)));
         player.setY((short) (centreYBeforeRelease - (player.getHeight() / 2)));
         player.setAnimationId(RELEASE_ANIMATION);
+        // ROM `move.w #1,anim(a1)` is a big-endian two-byte write:
+        // anim=0 and prev_anim=1. It is not an anim=1 assignment.
+        player.getAnimationManager().publishPreviousAnimationId(RELEASE_PREVIOUS_ANIMATION);
         player.setHighPriority(false);
         player.setOnObject(false);
         ObjectServices svc = tryServices();

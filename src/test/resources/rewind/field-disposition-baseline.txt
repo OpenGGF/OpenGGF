@@ -29,7 +29,6 @@ com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance#childComponents
 com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance#childComponents
 com.openggf.game.sonic2.objects.bosses.Sonic2OOZBossInstance#childComponents
 com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance#childComponents
-com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance#elements
 com.openggf.game.sonic3k.objects.AizEndBossInstance#childComponents
 com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance#childComponents
 com.openggf.game.sonic3k.objects.AizMinibossInstance#childComponents
@@ -46,7 +45,6 @@ com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance#wallExplosions
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#panels
 com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance#standingPlayers
 com.openggf.game.sonic3k.objects.LightningSparkObjectInstance#sparkTiles
-com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance#elements
 com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance#childComponents
 com.openggf.game.sonic3k.objects.MgzEndBossInstance#childComponents
 com.openggf.game.sonic3k.objects.MgzMinibossInstance#childComponents
@@ -59,7 +57,6 @@ com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#childRiders
 com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#parentRiders
 com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#standingPlayers
 com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance#activePlayers
-com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance#elements
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#killedThisFrame
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#rawSurfaceByPlayer
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#standingNextUpdate

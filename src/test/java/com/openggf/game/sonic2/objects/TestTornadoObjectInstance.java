@@ -16,7 +16,13 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.save.SaveReason;
+import com.openggf.game.mutation.DirectLevelMutationSurface;
+import com.openggf.game.mutation.LayoutMutationContext;
+import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import org.junit.jupiter.api.AfterEach;
@@ -31,6 +37,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Level;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -41,18 +48,30 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Isolated
 @Execution(ExecutionMode.SAME_THREAD)
 public class TestTornadoObjectInstance {
 
     private GameModule previousModule;
+
+    @Test
+    void sczTornadoDoesNotSuppressFreshLogicalHorizontalInput() {
+        TornadoObjectInstance tornado = createTornado(0x700, 0x100, 0x50);
+
+        assertEquals(0, tornado.staleHorizontalLogicalInputFramesWhileRiding(null, 121),
+                "Obj01_MdNormal_Checks must see the fresh logical direction and enter Blink");
+    }
 
     @BeforeEach
     public void setUp() {
@@ -78,6 +97,8 @@ public class TestTornadoObjectInstance {
     @Test
     public void moveObeyPlayerClampsPlayerToTornado() throws Exception {
         TornadoObjectInstance tornado = createTornado(100, 0x100, 0x50);
+        assertEquals(0x60, tornado.getBalanceWidthPixels(),
+                "ObjB2 balancing uses its native width_pixels, not its smaller SolidObject width");
         TestPlayableSprite main = new TestPlayableSprite("main", (short) 200, (short) 100);
 
         invokePrivate(tornado, "moveObeyPlayer",
@@ -167,6 +188,27 @@ public class TestTornadoObjectInstance {
                 "WFZ start release should use ObjectPlayerQuery participants instead of raw sidekicks");
         assertFalse(sidekick.isOnObject());
         assertTrue(sidekick.getAir());
+    }
+
+    @Test
+    public void wfzStartShotDownPlaysScatterSfxNotRingLoss() throws Exception {
+        // ObjB2_Main_WFZ_Start_shot_down plays SndID_Scatter ($EB) every $20 frames as
+        // the Tornado is gunned down, NOT the ring-loss/RingSpill sound ($C6).
+        // Ref: docs/s2disasm/s2.asm:78890-78895 (moveq #signextendB(SndID_Scatter),d0).
+        SfxRecordingServices services = new SfxRecordingServices();
+        TornadoObjectInstance tornado = createTornado(0x700, 0x100, 0x52, services);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x700, (short) 0x100);
+
+        setField(tornado, "routineSecondary", 4);
+        setField(tornado, "scriptTimer", 0x60);
+
+        // frameCounter 0 satisfies (frameCounter & $1F) == 0, so the scatter SFX fires.
+        tornado.update(0, main);
+
+        assertTrue(services.playedSfx.contains(Sonic2Sfx.LASER_FLOOR.id),
+                "Shot-down Tornado should play SndID_Scatter ($EB)");
+        assertFalse(services.playedSfx.contains(Sonic2Sfx.RING_SPILL.id),
+                "Shot-down Tornado must not play the ring-loss sound ($C6)");
     }
 
     @Test
@@ -268,6 +310,51 @@ public class TestTornadoObjectInstance {
     }
 
     @Test
+    public void wfzJumpToPlanePatchDecodesInterleavedLayoutOffsetsIntoBackgroundLayer() throws Exception {
+        com.openggf.level.Map map = new com.openggf.level.Map(2, 128, 13);
+        int[][] starts = {{82, 0}, {82, 1}, {86, 11}, {86, 12}};
+        int[][] expected = {
+                {0x50, 0x1F, 0x00, 0x25},
+                {0x25, 0x00, 0x1F, 0x50},
+                {0x50, 0x1F, 0x00, 0x25},
+                {0x25, 0x00, 0x1F, 0x50}
+        };
+        for (int[] start : starts) {
+            for (int x = start[0]; x < start[0] + 4; x++) {
+                map.setValue(0, x, start[1], (byte) 0x6A);
+            }
+        }
+
+        Level level = mock(Level.class);
+        when(level.getMap()).thenReturn(map);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getCurrentLevel()).thenReturn(level);
+        ZoneLayoutMutationPipeline pipeline = new ZoneLayoutMutationPipeline();
+        TestObjectServices services = new TestObjectServices()
+                .withLevelManager(levelManager)
+                .withZoneLayoutMutationPipeline(pipeline);
+        TornadoObjectInstance tornado = createTornado(0x2EC4, 0x0600, 0x54, services);
+
+        invokePrivate(tornado, "applyJumpToPlaneLayoutPatch", new Class<?>[0]);
+        List<MutationEffects> effects = new ArrayList<>();
+        pipeline.flush(new LayoutMutationContext(new DirectLevelMutationSurface(level), effects::add));
+
+        for (int i = 0; i < starts.length; i++) {
+            int startX = starts[i][0];
+            int y = starts[i][1];
+            for (int j = 0; j < expected[i].length; j++) {
+                assertEquals(expected[i][j], map.getValue(1, startX + j, y) & 0xFF,
+                        "Level_Layout patch byte should target the interleaved background half-row");
+                assertEquals(0x6A, map.getValue(0, startX + j, y) & 0xFF,
+                        "ObjB2 layout patch must leave the matching foreground cell unchanged");
+            }
+        }
+        assertEquals(1, effects.size());
+        assertSame(MutationEffects.NONE, effects.get(0),
+                "ROM Level_Layout writes must not invalidate the retained Plane-B nametable");
+    }
+
+    @Test
     public void wfzApproachingShipKeepsPlayerOnPreDockPlanePosition() throws Exception {
         TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2F58, (short) 0x0550);
         TornadoObjectInstance tornado = createTornado(
@@ -319,6 +406,79 @@ public class TestTornadoObjectInstance {
         assertEquals(0x311F, main.getCentreX());
         assertEquals(0x0439, main.getCentreY());
         assertEquals(0x438, getField(tornado, "scriptTimer"));
+    }
+
+    @Test
+    public void wfzJumpToShipKeepsPlayerAnimationAfterLeavingPlane() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x311F, (short) 0x0439);
+        main.setAnimationId(Sonic2AnimationIds.ROLL);
+        main.setMappingFrame(0x25);
+        TornadoObjectInstance tornado = createTornado(
+                0x311E,
+                0x0454,
+                0x54,
+                new QueryOnlyPlayerServices(main, List.of()));
+        GameServices.camera().setFocusedSprite(main);
+
+        setField(tornado, "routineSecondary", 0x0E);
+        setField(tornado, "scriptTimer", 0x439);
+        setField(tornado, "xVel", -0x100);
+        setField(tornado, "yVel", -0x100);
+        setField(tornado, "dockVelocityIndex", 12);
+
+        invokePrivate(tornado, "wfzJumpToShip",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP, main.getForcedInputMask());
+        assertEquals(Sonic2AnimationIds.ROLL.id(), main.getAnimationId(),
+                "ObjB2_Jump_to_ship does not reapply the earlier approaching-state Wait tuple");
+        assertEquals(0x25, main.getMappingFrame());
+    }
+
+    @Test
+    public void wfzJumpToShipKeepsPlayerAnimationAtJumpWindowEnd() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x3110, (short) 0x0420);
+        main.setAnimationId(Sonic2AnimationIds.HANG);
+        main.setMappingFrame(0x3B);
+        TornadoObjectInstance tornado = createTornado(
+                0x3100,
+                0x0440,
+                0x54,
+                new QueryOnlyPlayerServices(main, List.of()));
+        GameServices.camera().setFocusedSprite(main);
+
+        setField(tornado, "routineSecondary", 0x0E);
+        setField(tornado, "scriptTimer", 0x447);
+        setField(tornado, "xVel", -0x100);
+        setField(tornado, "yVel", -0x100);
+        setField(tornado, "dockVelocityIndex", 12);
+
+        invokePrivate(tornado, "wfzJumpToShip",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0, main.getForcedInputMask());
+        assertEquals(Sonic2AnimationIds.HANG.id(), main.getAnimationId(),
+                "ObjB2_Jump_to_ship leaves the player-owned animation byte live when its jump window closes");
+        assertEquals(0x3B, main.getMappingFrame());
+    }
+
+    @Test
+    public void wfzInvisibleGrabberDoesNotRestartLiveHangScript() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x3118, (short) 0x03F0);
+        main.setAnimationId(Sonic2AnimationIds.HANG);
+        main.setAnimationFrameIndex(1);
+        main.setAnimationTick(1);
+        TornadoObjectInstance grabber = createTornado(0x3118, 0x03F0, 0x56);
+
+        setField(grabber, "routineSecondary", 2);
+        invokePrivate(grabber, "catchPlayerWithInvisibleGrabber",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(Sonic2AnimationIds.HANG.id(), main.getAnimationId());
+        assertEquals(1, main.getAnimationFrameIndex(),
+                "loc_3AC84 writes only anim=Hang and leaves anim_frame live");
+        assertEquals(1, main.getAnimationTick(),
+                "loc_3AC84 leaves anim_frame_duration live on the second catch");
     }
 
     @Test
@@ -621,6 +781,21 @@ public class TestTornadoObjectInstance {
         @Override
         public void draw() {
             // No-op for unit tests.
+        }
+    }
+
+    private static final class SfxRecordingServices extends TestObjectServices {
+        private final java.util.List<Integer> playedSfx = new java.util.ArrayList<>();
+
+        private SfxRecordingServices() {
+            withCamera(GameServices.camera());
+            withParallaxManager(GameServices.parallax());
+            withSpriteManager(GameServices.sprites());
+        }
+
+        @Override
+        public void playSfx(int soundId) {
+            playedSfx.add(soundId);
         }
     }
 

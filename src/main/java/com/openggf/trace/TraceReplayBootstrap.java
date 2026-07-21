@@ -512,7 +512,32 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean shouldGroundSnapMetadataStartForTraceReplay(TraceData trace) {
-        return !isS3kCompleteRunSegment(trace);
+        return !isS3kCompleteRunSegment(trace) && !isS3kBonusStageSegment(trace);
+    }
+
+    /**
+     * Identifies an S3K bonus-stage trace segment (Gumball/Pachinko/Slots).
+     * These fixtures start the player exactly at the ROM's post-Restart_level
+     * spawn coordinates (sonic3k.asm:38160-38183 Get_LevelSizeStart), which for
+     * Gumball/Pachinko is deliberately positioned at/beyond a terrain edge so
+     * the player free-falls into the machine. ROM never runs a pre-LevelLoop
+     * terrain probe against this spawn point: {@code SpawnLevelMainSprites}'s
+     * zone-specific air/animation branches are skipped whenever
+     * {@code Special_bonus_entry_flag} is set (sonic3k.asm:8117-8118), so the
+     * player's ground/air transition is decided exclusively by the first
+     * driven frame's own {@code Player_AnglePos} probe. The generic
+     * bootstrap ground-snap (positiveThreshold 14) instead runs that same
+     * detach-from-terrain probe one tick early, at bootstrap time, consuming
+     * the transition frame's own ground-accel tick and leaving frame 0 to
+     * run full air acceleration + gravity a tick ahead of the ROM.
+     */
+    private static boolean isS3kBonusStageSegment(TraceData trace) {
+        if (trace == null || trace.metadata() == null) {
+            return false;
+        }
+        TraceMetadata metadata = trace.metadata();
+        return "s3k".equals(metadata.game())
+                && "s3k_bonus_stage".equals(metadata.traceProfile());
     }
 
     /**
@@ -638,7 +663,161 @@ public final class TraceReplayBootstrap {
         if (isSonic3kTransitionModeFrozenRow(trace, previous, current)) {
             return TraceExecutionPhase.VBLANK_ONLY;
         }
-        return TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
+        if (isSonic3kMissingCpuExecutionLagRow(trace, previous, current)) {
+            return TraceExecutionPhase.VBLANK_ONLY;
+        }
+        TraceExecutionPhase counterPhase =
+                TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
+        if (counterPhase == TraceExecutionPhase.FULL_LEVEL_FRAME
+                && isSidekickAnimationHeldAfterRawTransition(trace, previous, current)) {
+            return TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD;
+        }
+        if (counterPhase == TraceExecutionPhase.VBLANK_ONLY
+                && hasSidekickCpuExecutionHookWithoutInputEdge(trace, previous, current)) {
+            // The VBlank sample can land after the playable slots (and their
+            // Animate calls) but before the rest of Process_Sprites completes.
+            // The native Tails normal-step hook proves that prefix ran. Advance
+            // only playable animation state; a complete level tick would also
+            // run later object slots that are not yet visible in this sample.
+            return TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
+        }
+        if (counterPhase == TraceExecutionPhase.VBLANK_ONLY
+                && hasSidekickCpuExecutionHookOnInputEdge(trace, previous, current)) {
+            // A Tails CPU normal-step event is emitted from inside the native
+            // player/object loop, so it is direct execution evidence. Some S3K
+            // captures expose a plateaued gameplay counter and a VBlank-byte
+            // change on the same row as a fresh input edge while the main player
+            // is stationary; counter/state-only classification would call that
+            // row VBlank-only even though the CPU routine, animation scripts, and
+            // object logic all ran. A lag-counter advance remains authoritative:
+            // recorder hook data on such rows belongs to the preceding completed
+            // loop. Promote only input-edge rows carrying the execution hook --
+            // sampled cpu_state values alone are not sufficient -- and keep trace
+            // data comparison-only.
+            return TraceExecutionPhase.FULL_LEVEL_FRAME;
+        }
+        return counterPhase;
+    }
+
+    /**
+     * Detects a VBlank sample that lands after CPU-sidekick movement selected a
+     * new raw animation but before the following {@code Animate_Tails} call.
+     *
+     * <p>The normal-step hook proves the CPU path executed, the changed
+     * sidekick physics proves this is still a full playable tick, and the
+     * three-row animation transition proves the first mapping remained visible
+     * for the interrupted dispatch. This is native execution scheduling; no
+     * recorded value is copied into engine state.
+     */
+    private static boolean isSidekickAnimationHeldAfterRawTransition(
+            TraceData trace, TraceFrame previous, TraceFrame current) {
+        if (trace == null || previous == null || current == null
+                || !"s3k".equals(trace.metadata().game())
+                || current.input() != previous.input()
+                || !executionCountersEqual(previous, current)
+                || !hasTailsCpuNormalStep(trace, current)
+                || current.sidekick() == null || previous.sidekick() == null
+                || current.sidekick().physicsStateEquals(previous.sidekick())) {
+            return false;
+        }
+        int index = traceIndexForFrame(trace, current);
+        if (index < 2 || index + 1 >= trace.frameCount()) {
+            return false;
+        }
+        TraceCharacterState beforeTransition = trace.getFrame(index - 2).sidekick();
+        TraceCharacterState prior = previous.sidekick();
+        TraceCharacterState sampled = current.sidekick();
+        TraceCharacterState next = trace.getFrame(index + 1).sidekick();
+        return beforeTransition != null && next != null
+                && prior.present() && sampled.present() && next.present()
+                && prior.animationId() >= 0 && prior.mappingFrame() >= 0
+                // S3K raw anim 0 is the $FF Walk special handler. Unlike
+                // ordinary delayed scripts, a fresh Walk dispatch publishes
+                // its first mapping and advances anim_frame immediately.
+                && prior.animationId() == 0
+                // Duck ($08) is selected while the CPU sidekick is held down;
+                // its movement release writes Walk before the bisected
+                // Animate_Tails dispatch. Other object-owned exits can write
+                // both anim and mapping directly and must not be held.
+                && beforeTransition.animationId() == 0x08
+                && sampled.animationId() == prior.animationId()
+                && sampled.mappingFrame() == prior.mappingFrame()
+                && next.animationId() == sampled.animationId()
+                && next.mappingFrame() != sampled.mappingFrame();
+    }
+
+    private static boolean hasTailsCpuNormalStep(TraceData trace, TraceFrame frame) {
+        for (TraceEvent event : trace.getEventsForFrame(frame.frame())) {
+            if (event instanceof TraceEvent.TailsCpuNormalStep) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isSonic3kMissingCpuExecutionLagRow(
+            TraceData trace, TraceFrame previous, TraceFrame current) {
+        if (trace == null || previous == null || current == null
+                || !"s3k".equals(trace.metadata().game())
+                || !trace.metadata().hasPerFrameTailsCpuNormalStep()
+                || !current.stateEquals(previous)
+                || current.gameplayFrameCounter() != previous.gameplayFrameCounter()
+                || current.vblankCounter() != previous.vblankCounter()
+                || current.lagCounter() != previous.lagCounter()
+                || !hasRecordedVelocity(current)
+                || (current.statusByte() & 0x08) != 0
+                || (current.sidekick() != null
+                        && (current.sidekick().statusByte() & 0x08) != 0)) {
+            return false;
+        }
+        for (String sidekick : trace.metadata().recordedSidekicks()) {
+            if (trace.tailsCpuNormalStepForFrame(previous.frame(), sidekick) != null
+                    && trace.tailsCpuNormalStepForFrame(current.frame(), sidekick) == null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasRecordedVelocity(TraceFrame frame) {
+        if (frame.xSpeed() != 0 || frame.ySpeed() != 0 || frame.gSpeed() != 0) {
+            return true;
+        }
+        TraceCharacterState sidekick = frame.sidekick();
+        return sidekick != null
+                && (sidekick.xSpeed() != 0 || sidekick.ySpeed() != 0 || sidekick.gSpeed() != 0);
+    }
+
+    private static boolean hasSidekickCpuExecutionHookOnInputEdge(
+            TraceData trace, TraceFrame previous, TraceFrame current) {
+        if (trace == null || previous == null || current == null
+                || current.input() == previous.input()
+                || (current.lagCounter() >= 0 && previous.lagCounter() >= 0
+                        && current.lagCounter() > previous.lagCounter())) {
+            return false;
+        }
+        for (TraceEvent event : trace.getEventsForFrame(current.frame())) {
+            if (event instanceof TraceEvent.TailsCpuNormalStep) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasSidekickCpuExecutionHookWithoutInputEdge(
+            TraceData trace, TraceFrame previous, TraceFrame current) {
+        if (trace == null || previous == null || current == null
+                || current.input() != previous.input()
+                || (current.lagCounter() >= 0 && previous.lagCounter() >= 0
+                        && current.lagCounter() > previous.lagCounter())) {
+            return false;
+        }
+        for (TraceEvent event : trace.getEventsForFrame(current.frame())) {
+            if (event instanceof TraceEvent.TailsCpuNormalStep) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isS3kCompleteRunInitialHandoffRow(TraceData trace,
@@ -732,7 +911,8 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean shouldCompareGameplayStateForReplay(TraceExecutionPhase phase) {
-        return phase == TraceExecutionPhase.FULL_LEVEL_FRAME;
+        return phase == TraceExecutionPhase.FULL_LEVEL_FRAME
+                || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
     }
 
     /**

@@ -91,7 +91,14 @@ public class MgzEndBossDefeatDebrisChild extends AbstractObjectInstance implemen
 
     @Override
     public int getPriorityBucket() {
-        return index == 0 ? 6 : 4;
+        // ObjDat3_6D7A8 priority word $100.
+        return 2;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // make_art_tile(ArtTile_MGZEndBossDebris,2,1).
+        return true;
     }
 
     @Override

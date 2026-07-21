@@ -23,6 +23,66 @@ public interface TitleCardProvider {
     }
 
     /**
+     * Defers a fresh level-gamestate install to the native in-level title-card
+     * display boundary. Games without that handoff can ignore the request.
+     */
+    default void requestLevelGamestateResetAtInLevelDisplay() {
+        // No-op for games without S3K's in-level act-title handoff.
+    }
+
+    default void requestLevelGamestateResetAtInLevelDisplay(int additionalDispatches) {
+        requestLevelGamestateResetAtInLevelDisplay();
+    }
+
+    default void requestLevelGamestateResetAtInLevelDisplay(
+            int additionalDispatches, int phaseOneDispatchOverlap) {
+        requestLevelGamestateResetAtInLevelDisplay(additionalDispatches);
+    }
+
+    default void requestInLevelPlayerControlLock() {
+        // No-op unless an in-level title card owns the native controller lock.
+    }
+
+    default boolean ownsInLevelPlayerControlLock() {
+        return false;
+    }
+
+    default boolean shouldLockPlayerControlForInLevelOverlay() {
+        return false;
+    }
+
+    /** Releases an in-level lock after its ROM object owner takes over. */
+    default void releaseInLevelPlayerControlLockOwnership() {
+    }
+
+    default void requestInLevelExitAdditionalDispatches(int dispatches) {
+        // No-op unless the title card models SST child retirement dispatches.
+    }
+
+    default void requestInLevelExitAdditionalDispatches(
+            int dispatches, int phaseOneDispatchOverlap) {
+        requestInLevelExitAdditionalDispatches(dispatches);
+    }
+
+    /**
+     * Whether an active in-level title owner still dispatches on replay rows
+     * whose level gameplay counter is held. Normal level-title overlays do not.
+     */
+    default boolean advancesOnHeldLevelCounter() {
+        return false;
+    }
+
+    /** Whether an in-level title owner still owns the native held-counter phase. */
+    default boolean ownsHeldLevelCounter() {
+        return false;
+    }
+
+    /** Whether that held-counter phase came from a retained results owner mutating into a title card. */
+    default boolean ownsRetainedResultsHeldLevelCounter() {
+        return false;
+    }
+
+    /**
      * Initializes the title card for a bonus stage entry.
      * S3K shows "BONUS STAGE" text; S1/S2 have no bonus stages so this is a no-op.
      */

@@ -48,6 +48,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestSonic3kMgz2CollapseEvents {
 
+    private static final int COLLAPSE_STARTUP_EVENT_CALLS = 0x17;
+
     @BeforeEach
     void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
@@ -68,6 +70,9 @@ class TestSonic3kMgz2CollapseEvents {
         events.requestLevelCollapse();
 
         events.update(1, 0);
+        assertFalse(events.isCollapseActive(),
+                "The boss SST's Events_fg_4 write becomes visible on the following screen-event dispatch");
+        events.update(1, 1);
 
         SyntheticMgzCollapseLevel level = (SyntheticMgzCollapseLevel) GameServices.level().getCurrentLevel();
         assertTrue(events.isCollapseActive());
@@ -83,7 +88,7 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
 
@@ -104,7 +109,7 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
 
@@ -123,7 +128,7 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
 
@@ -139,7 +144,7 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
         assertEquals(1, events.getCollapseMutationCount());
@@ -147,7 +152,7 @@ class TestSonic3kMgz2CollapseEvents {
 
         events.requestLevelCollapse();
         for (int frame = 0; frame < 0x14; frame++) {
-            events.update(1, 0x14 + frame);
+            events.update(1, COLLAPSE_STARTUP_EVENT_CALLS + frame);
         }
 
         assertTrue(events.isCollapseActive());
@@ -187,6 +192,16 @@ class TestSonic3kMgz2CollapseEvents {
                 0x3C90, 0x05C0, () -> 0, () -> delete[0]);
 
         assertTrue(solid.isSolidFor(null));
+        assertTrue(solid.bypassesOffscreenSolidGate(),
+                "Obj_MGZ2LevelCollapseSolid calls SolidObjectFull2 even though its sprite is always invisible");
+        assertTrue(solid.usesInclusiveRightEdge(),
+                "SolidObjectFull2 accepts the exact d1*2 right edge");
+        assertTrue(solid.airborneStaleStandingBitReturnsNoContact(null),
+                "A jumping rider must take SolidObjectFull2_1P's stale-standing-bit return, not its upward lift");
+        assertTrue(solid.usesInstanceSolidStateLatchKey(),
+                "The native standing bit must survive this carrier's per-frame dynamic-spawn Y rewrite");
+        assertEquals(0x0005, solid.romObjectCodePointerHighWord(),
+                "Tails_CPU_interact stores Obj_MGZ2LevelCollapseSolid's $0005180A pointer high word");
 
         delete[0] = true;
 
@@ -200,7 +215,7 @@ class TestSonic3kMgz2CollapseEvents {
         Sonic3kMGZEvents events = activeMgzEvents();
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
         ArrayList<Mgz2LevelCollapseSolidInstance> capturedSolids = liveCollapseSolids(objectManager);
@@ -240,7 +255,11 @@ class TestSonic3kMgz2CollapseEvents {
     }
 
     @Test
-    void collapseFinishKeepsVScrollOverrideForFinalRenderFrameOnly() {
+    void collapseFinishImmediatelyRestoresNormalVScrollAndRedrawsFinalClear() throws Exception {
+        SyntheticMgzCollapseLevel level = (SyntheticMgzCollapseLevel) GameServices.level().getCurrentLevel();
+        LevelTilemapManager tilemaps = installTilemapManager(level);
+        tilemaps.setForegroundTilemapDirty(false);
+
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
         GameServices.camera().setX((short) 0x3C80);
@@ -251,14 +270,11 @@ class TestSonic3kMgz2CollapseEvents {
             events.update(1, frame);
         }
 
-        short[] finishFrameOverride = events.buildCollapseForegroundVScrollOverride(0x3C80);
-        assertTrue(finishFrameOverride != null && finishFrameOverride[12] < 0,
-                "The finish frame must keep the collapse VScroll override so preserved terrain does not flash back to its original rows");
-
-        events.update(1, frame);
-
         assertNull(events.buildCollapseForegroundVScrollOverride(0x3C80),
-                "After the finish frame has rendered, MGZ2SE_MoveBG should own the scene without the collapse VScroll override");
+                "MGZ2SE_MoveBG must restore normal foreground VScroll immediately on the terminal clear frame");
+        assertTrue(tilemaps.isForegroundTilemapDirty(),
+                "The terminal 3x3 layout clear must rebuild Plane A before normal VScroll resumes");
+        assertCleared(level.getMap(), 121, 11, 3, 3);
     }
 
     @Test
@@ -292,26 +308,110 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
-        events.update(1, 0x14); // first active tick: column 6 has zero delay
+        events.update(1, COLLAPSE_STARTUP_EVENT_CALLS); // first active tick: column 6 has zero delay
 
         assertNull(events.buildCollapseForegroundVScrollOverride(0x3C80),
                 "ROM adds $500 to a 16:16 velocity accumulator; the first active tick has not moved a full pixel");
 
         for (int frame = 0; frame < 15; frame++) {
-            events.update(1, 0x15 + frame);
+            events.update(1, COLLAPSE_STARTUP_EVENT_CALLS + 1 + frame);
         }
         short[] override = events.buildCollapseForegroundVScrollOverride(0x3C80);
 
         assertEquals(20, override.length);
         assertEquals(0, override[0],
                 "the tilemap shader expects per-column VScroll deltas, so delayed columns need no extra offset");
-        assertTrue(override[12] < 0,
-                "falling collapse columns should use a negative delta so preserved tiles appear to move down");
+        assertEquals(-events.getCollapseScrollPositionCopy()[6], override[12],
+                "ROM writes Camera_Y_pos_copy minus displacement; the tilemap shader adds this delta to worldY, "
+                        + "so the negative value makes the preserved terrain appear to fall down");
         assertEquals(override[12], override[13],
                 "each 32px collapse block uses two 16px VScroll columns");
+    }
+
+    @Test
+    void collapseSolidReadsRawAccumulatorPastVisualScrollCap() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setScreenEventRoutine(4);
+        events.setCollapseInitialized(true);
+        events.setCollapseFrameCounter(0x20);
+
+        int[] velocity = new int[10];
+        int[] fixedPosition = new int[10];
+        int[] visualPosition = new int[10];
+        velocity[0] = 0x60000;
+        fixedPosition[0] = 0x2DF0000;
+        visualPosition[0] = 0x2DF;
+        events.setCollapseScrollVelocity(velocity);
+        events.setCollapseScrollFixedPosition(fixedPosition);
+        events.setCollapseScrollPosition(visualPosition);
+
+        assertEquals(0x2E5, events.getCollapseSolidObjectPassScrollForTest(0),
+                "Obj_MGZ2LevelCollapseSolid reads the raw high word after the pending $500 acceleration");
+
+        events.update(1, 0);
+
+        assertEquals(0x2E0, events.getCollapseScrollPositionCopy()[0],
+                "loc_51436 caps only the draw displacement and completion comparison");
+        assertEquals(0x2E5, events.getCollapseScrollFixedPositionCopy()[0] >>> 16,
+                "the HScroll-table 16:16 accumulator must retain its terminal overshoot");
+    }
+
+    @Test
+    void cappedColumnKeepsAcceleratingUntilEveryColumnFinishes() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setScreenEventRoutine(4);
+        events.setCollapseInitialized(true);
+        events.setCollapseFrameCounter(0x20);
+
+        int[] velocity = new int[10];
+        int[] fixedPosition = new int[10];
+        int[] visualPosition = new int[10];
+        velocity[0] = 0x60500;
+        fixedPosition[0] = 0x2E50500;
+        visualPosition[0] = 0x2E0;
+        events.setCollapseScrollVelocity(velocity);
+        events.setCollapseScrollFixedPosition(fixedPosition);
+        events.setCollapseScrollPosition(visualPosition);
+
+        assertEquals(0x2EB, events.getCollapseSolidObjectPassScrollForTest(0),
+                "an early capped column still projects its next raw carrier position");
+
+        events.update(1, 0);
+
+        assertEquals(0x2E0, events.getCollapseScrollPositionCopy()[0]);
+        assertEquals(0x2EB, events.getCollapseScrollFixedPositionCopy()[0] >>> 16,
+                "loc_5142A advances all raw accumulators until d1 reports every column complete");
+        assertTrue(events.isCollapseActive(),
+                "later delayed columns must keep the collapse routine active");
+    }
+
+    @Test
+    void carrierDeletesWhenPendingStepCompletesLastDelayedColumn() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setScreenEventRoutine(4);
+        events.setCollapseInitialized(true);
+        events.setCollapseFrameCounter(0x120);
+
+        int[] velocity = new int[10];
+        int[] fixedPosition = new int[10];
+        int[] visualPosition = new int[10];
+        java.util.Arrays.fill(velocity, 0x60000);
+        java.util.Arrays.fill(fixedPosition, 0x2E00000);
+        java.util.Arrays.fill(visualPosition, 0x2E0);
+        fixedPosition[8] = 0x2DF0000;
+        visualPosition[8] = 0x2DF;
+        events.setCollapseScrollVelocity(velocity);
+        events.setCollapseScrollFixedPosition(fixedPosition);
+        events.setCollapseScrollPosition(visualPosition);
+
+        assertTrue(events.isCollapseSolidDeleteStateForTest(),
+                "the carrier pass must observe that the pending event step completes all ten columns");
     }
 
     @Test
@@ -320,11 +420,11 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.requestLevelCollapse();
 
-        for (int frame = 0; frame < 0x14; frame++) {
+        for (int frame = 0; frame < COLLAPSE_STARTUP_EVENT_CALLS; frame++) {
             events.update(1, frame);
         }
         for (int frame = 0; frame < 16; frame++) {
-            events.update(1, 0x14 + frame);
+            events.update(1, COLLAPSE_STARTUP_EVENT_CALLS + frame);
         }
 
         short[] override = events.buildCollapseForegroundVScrollOverride(0x3C70);

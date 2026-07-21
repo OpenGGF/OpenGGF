@@ -29,6 +29,18 @@ public class TestSonic1FZBossDamageFlash {
         assertEquals(5, readIntField(boss, "seggFrame"), "Ani_SEgg.intube should loop back to frame 5");
     }
 
+    @Test
+    public void cylinderBalanceUsesRomActiveWidthWithoutSolidPadding() {
+        Sonic1FZBossInstance boss = new Sonic1FZBossInstance(
+                new ObjectSpawn(0, 0, Sonic1ObjectIds.FZ_BOSS, 0, 0, false, 0));
+        FZCylinder cylinder = new FZCylinder(boss, 0);
+
+        assertEquals(0x20, cylinder.getBalanceWidthPixels(),
+                "Sonic_Move reads Obj84 obActWid=64/2");
+        assertEquals(0x2B, cylinder.getSolidParams().halfWidth(),
+                "EggmanCylinder_Action adds $B only to SolidObject d1");
+    }
+
     private static int readIntField(Object target, String fieldName) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -47,5 +59,4 @@ public class TestSonic1FZBossDamageFlash {
         method.invoke(target);
     }
 }
-
 

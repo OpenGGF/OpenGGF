@@ -1,6 +1,7 @@
 package com.openggf.tests.trace;
 import com.openggf.trace.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -32,6 +33,50 @@ public class TestTraceDataParsing {
         assertEquals(3, meta.traceFrameCount());
         assertEquals((short) 0x0050, meta.startX());
         assertEquals((short) 0x03B0, meta.startY());
+    }
+
+    @Test
+    void parsesRecordedRingFloorCheckCounterPhase() throws IOException {
+        TraceMetadata hcz = TraceMetadata.load(Path.of(
+                "src/test/resources/traces/s3k/hcz_completerun/metadata.json"));
+        TraceMetadata mgz = TraceMetadata.load(Path.of(
+                "src/test/resources/traces/s3k/mgz_completerun/metadata.json"));
+
+        assertEquals(2, hcz.ringFloorCheckCounterPhase());
+        assertEquals(3, mgz.ringFloorCheckCounterPhase());
+    }
+
+    @Test
+    void csvVersionFourAcceptsStableRetroV22TwentyColumnRows() throws IOException {
+        Path dir = Files.createTempDirectory("trace-stable-retro-v22");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s1",
+              "zone": "ghz",
+              "zone_id": 0,
+              "act": 1,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": 1,
+              "start_x": "0x0050",
+              "start_y": "0x03B0",
+              "lua_script_version": "credits-retro-1.4",
+              "csv_version": 4
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,v_framecount,stand_on_obj
+            0000,0008,0050,03B0,000B,FFFE,000C,FC,0,0,0,0B00,FE00,02,0000,0300,0000,00,0000,03
+            """);
+
+        TraceFrame frame = TraceData.load(dir).getFrame(0);
+
+        assertEquals(0, frame.frame());
+        assertEquals(0x0008, frame.input());
+        assertEquals((short) 0x0050, frame.x());
+        assertEquals((short) 0x03B0, frame.y());
+        assertEquals(0x03, frame.standOnObj());
+        assertEquals(-1, frame.vblankCounter());
+        assertEquals(-1, frame.lagCounter());
     }
 
     @Test
@@ -338,6 +383,55 @@ public class TestTraceDataParsing {
         assertEquals((short) 0x0288, tails.y());
         assertEquals((short) 0x0010, tails.xSpeed());
         assertEquals(0x03, tails.standOnObj());
+        assertEquals(-1, sonic.animationId());
+        assertEquals(-1, tails.mappingFrame());
+        assertFalse(meta.hasPerFrameCharacterAnimation());
+    }
+
+    @Test
+    void v7TraceParsesPlayerAndSidekickAnimationState() throws IOException {
+        Path dir = Files.createTempDirectory("trace-v7-animation");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s2",
+              "zone": "ehz",
+              "zone_id": 0,
+              "act": 1,
+              "bk2_frame_offset": 899,
+              "trace_frame_count": 1,
+              "start_x": "0x0060",
+              "start_y": "0x0290",
+              "recording_date": "2026-07-13",
+              "lua_script_version": "9.11-s2",
+              "trace_schema": 9,
+              "csv_version": 7,
+              "characters": ["sonic", "tails"]
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,camera_x,camera_y,rings,gameplay_frame_counter,vblank_counter,lag_counter,player_present,player_x,player_y,player_x_speed,player_y_speed,player_g_speed,player_angle,player_air,player_rolling,player_ground_mode,player_x_sub,player_y_sub,player_routine,player_status_byte,player_stand_on_obj,player_animation_id,player_mapping_frame,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,sidekick_status_byte,sidekick_stand_on_obj,sidekick_animation_id,sidekick_mapping_frame
+            0000,0008,0100,0200,0007,0010,0020,0001,1,0060,0290,000C,0000,000C,00,0,0,0,0C00,0000,02,00,04,05,23,1,0050,0288,0010,FFF0,0010,08,1,0,0,8000,4000,02,0A,03,11,42
+            """);
+
+        TraceData data = TraceData.load(dir);
+        TraceCharacterState player = data.characterState(0, "sonic");
+        TraceCharacterState sidekick = data.characterState(0, "tails");
+
+        assertTrue(data.metadata().hasPerFrameCharacterAnimation());
+        assertEquals(0x05, data.getFrame(0).animationId());
+        assertEquals(0x23, data.getFrame(0).mappingFrame());
+        assertEquals(0x05, player.animationId());
+        assertEquals(0x23, player.mappingFrame());
+        assertEquals(0x11, sidekick.animationId());
+        assertEquals(0x42, sidekick.mappingFrame());
+
+        String recordedRow = Files.readAllLines(dir.resolve("physics.csv")).get(1);
+        TraceFrame animationOnlyChange = TraceFrame.parseCsvRow(
+                recordedRow.replace(",05,23,1,", ",07,24,1,")
+                        .replace(",11,42", ",12,43"),
+                7);
+        assertTrue(data.getFrame(0).stateEquals(animationOnlyChange),
+                "animation observations must not alter physics replay pacing");
     }
 
     @Test
@@ -500,6 +594,36 @@ public class TestTraceDataParsing {
         assertEquals(0x0121, frame1.vblankCounter());
         assertEquals(0, frame1.lagCounter());
         assertEquals(0x0120, data.initialVblankCounter());
+    }
+
+    @Test
+    void s3kLifeCountCaptureUsesBk2OffsetForVIntRunCounterPhase() throws IOException {
+        Path dir = Files.createTempDirectory("s3k-vint-handler-word");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s3k",
+              "zone": "mgz",
+              "zone_id": 2,
+              "act": 1,
+              "bk2_frame_offset": 58653,
+              "ring_floor_check_counter_phase": 3,
+              "trace_frame_count": 2,
+              "start_x": "0x0080",
+              "start_y": "0x03A0",
+              "trace_schema": 6,
+              "csv_version": 4
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter
+            0000,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0000,00,0800,0000
+            0001,0000,0080,03A1,0000,0038,0000,00,1,0,0,0000,3800,02,0000,0000,0000,02,0000,00,0800,0000
+            """);
+
+        TraceData data = TraceData.load(dir);
+
+        assertEquals(0x0800, data.initialVblankCounter());
+        assertEquals(1, data.initialVIntRunCounterPhaseOffset());
     }
 
     @Test
@@ -1331,6 +1455,20 @@ public class TestTraceDataParsing {
                 data.missingAdvertisedAuxSchemas());
     }
 
+    @Test
+    void parsesRunSegmentMetadataFields() throws IOException {
+        String json = """
+            {"game": "s3k", "zone": "gumball", "act": 0, "bk2_frame_offset": 1900,
+             "trace_frame_count": 800, "trace_profile": "s3k_bonus_stage",
+             "run_id": "s3k-aiz-gumball-roundtrip", "segment_index": 1,
+             "bonus_stage_type": "gumball"}
+            """;
+        TraceMetadata meta = new ObjectMapper().readValue(json, TraceMetadata.class);
+        assertEquals("s3k-aiz-gumball-roundtrip", meta.runId());
+        assertEquals(1, meta.segmentIndex());
+        assertEquals("gumball", meta.bonusStageType());
+    }
+
     private static void writeMinimalTraceFiles(Path dir) throws IOException {
         writeMinimalMetadata(dir);
         Files.writeString(dir.resolve("physics.csv"), """
@@ -1366,4 +1504,3 @@ public class TestTraceDataParsing {
         }
     }
 }
-

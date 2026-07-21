@@ -23,6 +23,7 @@ import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
+import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
@@ -36,6 +37,7 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
+import com.openggf.level.rewind.LevelTilemapRewindAdapter;
 import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.graphics.GLCommand;
@@ -55,6 +57,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.physics.CollisionSystem;
@@ -179,7 +182,17 @@ public class LevelManager {
         worldSession.setCurrentLevel(level);
     }
     int frameCounter = 0;
+    // When set, the NEXT advanceGlobalOscillation() call skips the global
+    // oscillator advance. GameLoop sets it for a title-card wait-loop object
+    // pass: the ROM advances the global oscillator (OscillateNumDo) only inside
+    // Level_MainLoop (docs/s2disasm/s2.asm:5108), never in the title-card wait
+    // loops (s2.asm:4914-4924, 5060-5066) which run RunObjects only. S1 mirrors
+    // this (docs/s1disasm/sonic.asm: OscillateNumInit 2913 and OscillateNumDo
+    // 3030 are both outside Level_TtlCardLoop 2811-2839). Consumed on the next
+    // object pass so it never leaks into the first Level_MainLoop gameplay frame.
+    private boolean suppressGlobalOscillationForTitleCardPass = false;
     ObjectManager objectManager;
+    private int ringFloorCheckCounterPhase;
     RingManager ringManager;
     ZoneFeatureProvider zoneFeatureProvider;
     private TouchResponseTable touchResponseTable;
@@ -530,6 +543,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
+        objectManager.initRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
 
         // S1 parity: counter-based respawn tracking DISABLED pending fix for
         // load/unload/reload incompatibility. The counter system prevents respawns
@@ -560,7 +574,7 @@ public class LevelManager {
         collisionSystem.setObjectManager(objectManager);
 
         // Inject PowerUpSpawner into all playable sprites
-        injectPowerUpSpawner();
+        refreshPlayablePowerUpSpawners();
     }
 
     /**
@@ -571,7 +585,17 @@ public class LevelManager {
         return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
     }
 
-    private void injectPowerUpSpawner() {
+    /**
+     * Rebinds the active playable roster to the current object manager's
+     * power-up spawner.
+     *
+     * <p>The normal level-load path calls this when it creates the object
+     * manager. Headless shared-level fixtures replace the sprite roster while
+     * retaining that manager, so they call it again after registering the new
+     * team. This keeps fixed shield objects and their ROM-allocated children on
+     * the same lifecycle path as production gameplay.</p>
+     */
+    public void refreshPlayablePowerUpSpawners() {
         DefaultPowerUpSpawner spawner = new DefaultPowerUpSpawner(objectManager);
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (player instanceof AbstractPlayableSprite playable) {
@@ -868,6 +892,8 @@ public class LevelManager {
                     objectsExecuteAfterPlayerPhysics());
         }
         if (ringManager != null && player instanceof AbstractPlayableSprite playable && !playable.getDead()) {
+            ringManager.collectAttractedRing(playable, frameCounter + 1);
+            ringManager.attractStageRings(playable);
             if (!ringManager.usesObjectTouchCollection()) {
                 ringManager.collectStageRings(playable, frameCounter + 1);
             }
@@ -884,6 +910,7 @@ public class LevelManager {
      */
     public void prepareTouchResponseSnapshots() {
         if (objectManager != null) objectManager.snapshotTouchResponseState(touchResponseUsesPreviousCollisionResponseList());
+        if (ringManager != null) ringManager.prepareAttractedRingTouchSnapshot();
     }
 
     private boolean touchResponseUsesPreviousCollisionResponseList() {
@@ -954,7 +981,28 @@ public class LevelManager {
         advanceGlobalOscillation();
     }
 
+    /**
+     * Requests that the next {@link #advanceGlobalOscillation()} call skip the
+     * global-oscillator advance, matching the ROM title-card wait loops which
+     * run {@code RunObjects} but not {@code OscillateNumDo} (the oscillator only
+     * advances inside {@code Level_MainLoop}; docs/s2disasm/s2.asm:5108 vs the
+     * wait loops at s2.asm:4914-4924 / 5060-5066, and docs/s1disasm/sonic.asm
+     * where {@code OscillateNumDo} at 3030 is outside {@code Level_TtlCardLoop}
+     * 2811-2839). Called by {@code GameLoop.updateTitleCardMode} for each locked
+     * title-card object pass so the oscillator holds at its {@code OscillateNumInit}
+     * baseline until gameplay unlocks. Without it, every locked title-card frame
+     * over-advances the global oscillator, phase-offsetting oscillation-driven
+     * moving platforms (e.g. Obj18) when control returns.
+     */
+    public void suppressGlobalOscillationForTitleCardPass() {
+        this.suppressGlobalOscillationForTitleCardPass = true;
+    }
+
     private void advanceGlobalOscillation() {
+        if (suppressGlobalOscillationForTitleCardPass) {
+            suppressGlobalOscillationForTitleCardPass = false;
+            return;
+        }
         int featureZone = getFeatureZoneId();
         int featureAct = getFeatureActId();
         if (zoneFeatureProvider != null
@@ -1198,16 +1246,13 @@ public class LevelManager {
             provider.loadArtForZone(zoneIndex);
 
             objectRenderManager = new ObjectRenderManager(provider);
-            LOGGER.info("Initializing Object Art. Base Index: " + OBJECT_PATTERN_BASE);
-            objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
-
             // Register level-tile-based object art (must be after level load)
             provider.registerLevelTileArt(level, zoneIndex);
-            int objectEndIndex = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
             if (patternAtlas != null) {
-                patternAtlas.registerRange(
-                    OBJECT_PATTERN_BASE, objectEndIndex - OBJECT_PATTERN_BASE, "Objects");
+                patternAtlas.registerRange(PatternAtlasRange.OBJECTS);
             }
+            LOGGER.info("Initializing Object Art. Base Index: " + OBJECT_PATTERN_BASE);
+            refreshObjectArtPatterns();
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
@@ -1270,6 +1315,32 @@ public class LevelManager {
         if (gameplayMode != null && provider != null) {
             gameplayMode.registerPlcArtAdapter(provider);
         }
+    }
+
+    /**
+     * Validates and caches the regular object-art allocation within its fixed
+     * virtual-pattern governance range.
+     *
+     * @return the first virtual pattern index after the cached regular object art
+     */
+    public int refreshObjectArtPatterns() {
+        if (objectRenderManager == null) {
+            throw new IllegalStateException("Object render manager is not initialized");
+        }
+        int count = objectRenderManager.getRegularPatternCount();
+        if (count < 0) {
+            throw new IllegalStateException("Invalid regular object pattern count: " + count);
+        }
+        if (count > PatternAtlasRange.OBJECTS.size()) {
+            throw new IllegalStateException("Object patterns exceed reserved atlas range: " + count);
+        }
+        int prospectiveEnd = Math.addExact(OBJECT_PATTERN_BASE, count);
+        int actualEnd = objectRenderManager.ensurePatternsCached(graphicsManager, OBJECT_PATTERN_BASE);
+        if (actualEnd != prospectiveEnd) {
+            throw new IllegalStateException("Object pattern preflight/cache mismatch: "
+                    + prospectiveEnd + " != " + actualEnd);
+        }
+        return actualEnd;
     }
 
     boolean isHudSuppressed() {
@@ -1405,9 +1476,21 @@ public class LevelManager {
     void ensureBackgroundTilemapData() {
         if (tilemapManager != null) {
             int bgCameraX = parallaxManager != null ? parallaxManager.getBgCameraX() : Integer.MIN_VALUE;
+            int bgCameraY = parallaxManager != null ? parallaxManager.getVscrollFactorBG() : 0;
+            BgTilemapUpdateMode updateMode = parallaxManager != null
+                    ? parallaxManager.getBgTilemapUpdateMode()
+                    : BgTilemapUpdateMode.STATIC_WINDOW;
             applyBackgroundTilemapWindowSelection(bgCameraX);
-            tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
-                    zoneFeatureProvider, currentZone, parallaxManager, verticalWrapEnabled);
+            if (updateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
+                tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
+                        zoneFeatureProvider, currentZone, parallaxManager,
+                        updateMode, bgCameraX, bgCameraY, verticalWrapEnabled);
+            } else {
+                // Preserve the existing stateless virtual-dispatch seam used by
+                // ad-hoc tilemap writers and focused LevelManager tests.
+                tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
+                        zoneFeatureProvider, currentZone, parallaxManager, verticalWrapEnabled);
+            }
         }
     }
 
@@ -1422,6 +1505,9 @@ public class LevelManager {
         if (tilemapManager == null) {
             return false;
         }
+        BgTilemapUpdateMode updateMode = parallaxManager != null
+                ? parallaxManager.getBgTilemapUpdateMode()
+                : BgTilemapUpdateMode.STATIC_WINDOW;
         boolean fullWidthPerLineTilemap = zoneFeatureProvider != null
                 && zoneFeatureProvider.useFullWidthBackgroundTilemapWindow(
                 currentZone, currentAct, bgCameraX, cachedBgContiguousWidthPx);
@@ -1434,14 +1520,16 @@ public class LevelManager {
                 tilemapManager.setBackgroundTilemapDirty(true);
             }
             newBgPeriodWidth = cachedBgContiguousWidthPx;
-        } else if (bgCameraX != Integer.MIN_VALUE
+        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW
+                && bgCameraX != Integer.MIN_VALUE
                 && zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally()) {
             int newBase = Math.floorDiv(bgCameraX, 16) * 16;
             if (newBase != tilemapManager.getBgTilemapBaseX()) {
                 // Window-only change: eligible for the incremental one-column shift.
                 tilemapManager.requestBgWindowBaseX(newBase);
             }
-        } else if (tilemapManager.getBgTilemapBaseX() != 0) {
+        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW
+                && tilemapManager.getBgTilemapBaseX() != 0) {
             tilemapManager.setBgTilemapBaseX(0);
             tilemapManager.setBackgroundTilemapDirty(true);
         }
@@ -2258,6 +2346,14 @@ public class LevelManager {
         return objectManager;
     }
 
+    /** Preserves the recorded Obj37 V-int low-bit phase across seamless act rebuilds. */
+    public void initRingFloorCheckCounterPhase(int phase) {
+        ringFloorCheckCounterPhase = phase;
+        if (objectManager != null) {
+            objectManager.initRingFloorCheckCounterPhase(phase);
+        }
+    }
+
     public void spawnLostRings(AbstractPlayableSprite player, int frameCounter) {
         if (ringManager == null || player == null) {
             return;
@@ -2936,6 +3032,14 @@ public class LevelManager {
      */
     void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
         int cameraX = cam.getX();
+        // V_int_run_count is global work RAM, outside Dynamic_object_RAM, and
+        // Load_Level does not clear it. The ObjectManager owns our live copy of
+        // that clock, so carry it across the manager rebuild even though the
+        // per-act object execution counter intentionally restarts.
+        int inheritedVblaCounter = objectManager != null ? objectManager.getVblaCounter() : 0;
+        int inheritedVIntRunCounterPhaseOffset = objectManager != null
+                ? objectManager.getVIntRunCounterPhaseOffset()
+                : 0;
 
         // Rebuild ObjectManager with the new act's object spawns
         objectManager = new ObjectManager(level.getObjects(),
@@ -2946,6 +3050,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
+        objectManager.initRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
         GameRules gameRules = gameModule.getRules();
         if (gameRules != null
                 && gameRules.collision() != null
@@ -2962,6 +3067,8 @@ public class LevelManager {
         }
         collisionSystem.setObjectManager(objectManager);
         objectManager.reset(cameraX);
+        objectManager.initVblaCounter(inheritedVblaCounter);
+        objectManager.initVIntRunCounterPhaseOffset(inheritedVIntRunCounterPhaseOffset);
 
         // Rebuild RingManager with the new act's ring spawns
         RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();
@@ -3105,6 +3212,51 @@ public class LevelManager {
     /** @see LevelTransitionCoordinator#requestInLevelTitleCard(int, int) */
     public void requestInLevelTitleCard(int zone, int act) { transitions.requestInLevelTitleCard(zone, act); }
 
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches) {
+        transitions.requestInLevelTitleCard(
+                zone, act, resetLevelGamestateAtDisplay, resetAdditionalDispatches);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches, boolean lockPlayerControl) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, lockPlayerControl);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches, boolean lockPlayerControl,
+                                        int exitAdditionalDispatches) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, lockPlayerControl, exitAdditionalDispatches);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches,
+                                        int resetPhaseOneDispatchOverlap,
+                                        boolean lockPlayerControl,
+                                        int exitAdditionalDispatches) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, resetPhaseOneDispatchOverlap,
+                lockPlayerControl, exitAdditionalDispatches);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches,
+                                        int resetPhaseOneDispatchOverlap,
+                                        boolean lockPlayerControl,
+                                        int exitAdditionalDispatches,
+                                        int exitPhaseOneDispatchOverlap) {
+        transitions.requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, resetPhaseOneDispatchOverlap,
+                lockPlayerControl, exitAdditionalDispatches,
+                exitPhaseOneDispatchOverlap);
+    }
+
     /** @see LevelTransitionCoordinator#isTitleCardRequested() */
     public boolean isTitleCardRequested() { return transitions.isTitleCardRequested(); }
 
@@ -3120,6 +3272,34 @@ public class LevelManager {
 
     /** @see LevelTransitionCoordinator#consumeInLevelTitleCardRequest() */
     public boolean consumeInLevelTitleCardRequest() { return transitions.consumeInLevelTitleCardRequest(); }
+
+    public boolean consumeInLevelTitleCardLevelGamestateResetRequest() {
+        return transitions.consumeInLevelTitleCardLevelGamestateResetRequest();
+    }
+
+    public boolean hasPendingInLevelTitleCardHeldCounterDispatch() {
+        return transitions.hasPendingInLevelTitleCardHeldCounterDispatch();
+    }
+
+    public int consumeInLevelTitleCardResetAdditionalDispatches() {
+        return transitions.consumeInLevelTitleCardResetAdditionalDispatches();
+    }
+
+    public int consumeInLevelTitleCardResetPhaseOneDispatchOverlap() {
+        return transitions.consumeInLevelTitleCardResetPhaseOneDispatchOverlap();
+    }
+
+    public boolean consumeInLevelTitleCardPlayerControlLockRequest() {
+        return transitions.consumeInLevelTitleCardPlayerControlLockRequest();
+    }
+
+    public int consumeInLevelTitleCardExitAdditionalDispatches() {
+        return transitions.consumeInLevelTitleCardExitAdditionalDispatches();
+    }
+
+    public int consumeInLevelTitleCardExitPhaseOneDispatchOverlap() {
+        return transitions.consumeInLevelTitleCardExitPhaseOneDispatchOverlap();
+    }
 
     /** @see LevelTransitionCoordinator#getTitleCardZone() */
     public int getTitleCardZone() { return transitions.getTitleCardZone(); }
@@ -3276,6 +3456,14 @@ public class LevelManager {
     /** @see LevelTransitionCoordinator#requestZoneAndAct(int, int, boolean) */
     public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow) { transitions.requestZoneAndAct(zone, act, deactivateLevelNow); }
 
+    /** @see LevelTransitionCoordinator#requestZoneAndAct(int, int, boolean, int) */
+    public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow, int musicId) {
+        transitions.requestZoneAndAct(zone, act, deactivateLevelNow, musicId);
+    }
+
+    /** @see LevelTransitionCoordinator#getRequestedMusicId() */
+    public int getRequestedMusicId() { return transitions.getRequestedMusicId(); }
+
     /** @see LevelTransitionCoordinator#requestSeamlessTransition(SeamlessLevelTransitionRequest) */
     public void requestSeamlessTransition(SeamlessLevelTransitionRequest request) { transitions.requestSeamlessTransition(request); }
 
@@ -3360,6 +3548,14 @@ public class LevelManager {
         // frame top and returns from RecordingFrameDriver/GameLoop, so preserve
         // that native post-ScreenEvents oscillator tick explicitly.
         advanceGlobalOscillation();
+
+        // The pending seamless reload is consumed at frame top, so this row
+        // returns before ObjectManager.update() can perform its normal V-int
+        // clock increment. V_int_run_count is global work RAM and still ticks
+        // in the ROM on that transition-only VBlank.
+        if (objectManager != null) {
+            objectManager.advanceVblaCounter();
+        }
 
         // ROM keeps Level_frame_counter ticking through AIZ's reload frame
         // (docs/skdisasm/sonic3k.asm:7884-7894); S3K Tails CPU reads it for
@@ -3553,5 +3749,10 @@ public class LevelManager {
      */
     public RewindSnapshottable<LevelSnapshot> levelRewindSnapshottable() {
         return LevelRewindSnapshotAdapter.create(this);
+    }
+
+    /** Returns the rewind adapter for the history-dependent persistent Plane B nametable. */
+    public RewindSnapshottable<LevelTilemapSnapshot> levelTilemapRewindSnapshottable() {
+        return new LevelTilemapRewindAdapter(tilemapManager);
     }
 }

@@ -82,6 +82,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private static final int SPARKLE_INTERVAL = 4;
     private static final int POST_LAND_TIMER = 0x40;
     private static final int BUMP_COOLDOWN = 0x20;
+    private static final int RESULTS_CARRIED_RETIRE_DISPATCHES = 3;
+    private static final int RESULTS_WAITED_LANDING_RETIRE_DISPATCHES = 2;
 
     // Bump detection box relative to signpost center
     private static final int BUMP_LEFT = -0x20;
@@ -107,6 +109,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
      * (the signpost's spawn is null, so the recreate hook uses a placeholder).
      */
     private int apparentAct;
+    private int resultsTimerCatchUpEntries;
+    private int resultsWaitDurationAdjustment;
+    private int resultsPostControlHandoffDelayEntries;
+    private boolean resultsWaitedForPlayerLanding;
+    private boolean mainEndingPosePending;
+    private boolean sidekickEndingPoseApplied;
+    private boolean sidekickEndingPoseCheckArmed;
+    private boolean landingSparklePending;
+    private boolean preservesPostLandingSparkleGate;
+    private boolean preservesPostObjectResultDispatchBoundary;
 
     /**
      * Creates the signpost at the given X position.
@@ -116,10 +128,29 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
      * @param apparentAct ROM's Apparent_act (0 = act 1 display, 1 = act 2 display)
      */
     public S3kSignpostInstance(int spawnX, int apparentAct) {
+        this(spawnX, apparentAct, 0, 0, 0);
+    }
+
+    /**
+     * Creates an end sign whose native post-object screen-event allocation
+     * leaves one final sparkle gate visible after the engine's landing pass.
+     */
+    public S3kSignpostInstance(int spawnX, int apparentAct,
+            boolean preservesPostLandingSparkleGate) {
+        this(spawnX, apparentAct);
+        this.preservesPostLandingSparkleGate = preservesPostLandingSparkleGate;
+        this.preservesPostObjectResultDispatchBoundary = preservesPostLandingSparkleGate;
+    }
+
+    S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
+            int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries) {
         super(null, "S3kSignpost");
         this.worldX = spawnX;
         this.worldY = 0; // Set properly in INIT
         this.apparentAct = apparentAct;
+        this.resultsTimerCatchUpEntries = Math.max(0, resultsTimerCatchUpEntries);
+        this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
+        this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
     }
 
     private S3kSignpostInstance() {
@@ -184,13 +215,17 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         if (isDestroyed()) {
             return;
         }
+        if (landingSparklePending && isRomSparkleFrame(frameCounter)) {
+            spawnRomSparkle();
+            landingSparklePending = false;
+        }
 
         switch (state) {
             case INIT -> updateInit(player);
             case FALLING -> updateFalling(frameCounter, player);
-            case LANDED -> updateLanded();
+            case LANDED -> updateLanded(player);
             case RESULTS -> updateResults(player);
-            case AFTER -> updateAfter();
+            case AFTER -> updateAfter(player);
         }
     }
 
@@ -248,8 +283,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         // ROM tests the global V_int_run_count low bits, not a counter local
         // to the signpost's allocation frame.
         if (isRomSparkleFrame(frameCounter)) {
-            spawnDynamicObject(new S3kSignpostSparkleChild(
-                    worldX, worldY + romSparkleYOffset(services().rng())));
+            spawnRomSparkle();
         }
 
         // Check bump from below
@@ -278,14 +312,21 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 return; // No floor contact yet — keep falling
             }
             landed = true;
-            postLandTimer = POST_LAND_TIMER;
+            postLandTimer = Math.max(0, POST_LAND_TIMER - resultsTimerCatchUpEntries);
             yVel = 0;
             xVel = 0;
             subX = 0;
             subY = 0;
             state = State.LANDED;
+            landingSparklePending = preservesPostLandingSparkleGate
+                    && isRomSparkleFrame(frameCounter + 1);
             LOG.fine("S3K Signpost FALLING -> LANDED at Y=" + worldY);
         }
+    }
+
+    private void spawnRomSparkle() {
+        spawnDynamicObject(new S3kSignpostSparkleChild(
+                worldX, worldY + romSparkleYOffset(services().rng())));
     }
 
     /**
@@ -364,7 +405,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // LANDED
     // =========================================================================
 
-    private void updateLanded() {
+    private void updateLanded(AbstractPlayableSprite player) {
         // If a hidden monitor cleared our landed flag, bounce back up
         if (!landed) {
             yVel = -0x200;
@@ -384,7 +425,27 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             animFrame = FACE_FRAMES[pc.ordinal()];
             xVel = 0;
             yVel = 0;
+            // loc_838D6 runs in the signpost's later object slot and writes
+            // Ctrl_2_locked=$FF. Tails_Control therefore skips Tails_CPU_Control
+            // beginning with the next player slot while retaining the last
+            // Ctrl_2_logical word for ordinary movement.
+            for (PlayableEntity candidate : playerQuery(player)
+                    .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+                if (candidate instanceof AbstractPlayableSprite sprite && sprite != player) {
+                    applySidekickInputLock(sprite);
+                }
+            }
             state = State.RESULTS;
+            if (preservesPostObjectResultDispatchBoundary
+                    && player != null && !player.getAir()) {
+                // A sign allocated by the post-object screen event loses one
+                // later-slot entry when that native loop tail is folded into
+                // the engine transition. Publish only the routine-6 player
+                // writes here; results allocation remains on its original
+                // engine entry so the act-transition owner does not move.
+                applyMainPlayerEndingPose(player);
+                sidekickEndingPoseCheckArmed = true;
+            }
             LOG.fine("S3K Signpost LANDED -> RESULTS");
         }
     }
@@ -406,20 +467,34 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
 
         // Wait for player to be on the ground
         if (player.getAir()) {
+            resultsWaitedForPlayerLanding = true;
             return;
         }
 
-        applyMainPlayerEndingPose(player);
+        boolean sidekickPoseWasAlreadyArmed = sidekickEndingPoseCheckArmed;
+        if (resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary) {
+            // Obj_EndSignResults has occupied its native routine-6 slot, either
+            // while waiting for the grounded player or through the preserved
+            // post-object boundary. Apply P1 now; P2 belongs to routine 8.
+            applyMainPlayerEndingPose(player);
+            sidekickEndingPoseCheckArmed = true;
+        } else {
+            // Preserve the engine's collapsed owner boundary for ordinary
+            // signposts whose routine 6 did not wait.
+            mainEndingPosePending = true;
+        }
 
-        // ROM line 176215: st (Ctrl_2_locked).w — lock sidekick input
-        // Also apply Set_PlayerEndingPose equivalent so Tails does a victory pose
+        // ROM Obj_EndSignLanded writes only Ctrl_2_locked before this routine;
+        // Obj_EndSignResults calls Set_PlayerEndingPose with a1=Player_1 only
+        // (sonic3k.asm:176198-176218,176229-176238). Tails keeps executing his
+        // CPU movement until Obj_LevelResults' later Check_TailsEndPose path.
         for (PlayableEntity candidate : playerQuery(player)
                 .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (candidate instanceof AbstractPlayableSprite sprite) {
                 if (sprite == player) {
                     continue;
                 }
-                applyEndingPose(sprite);
+                applySidekickInputLock(sprite);
             }
         }
 
@@ -430,18 +505,40 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             services().gameState().setEndOfLevelActive(true);
         }
         spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
-                getPlayerCharacter(), apparentAct));
+                getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
+                resultsPostControlHandoffDelayEntries
+                        + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
+                resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary
+                        ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
+                        : RESULTS_CARRIED_RETIRE_DISPATCHES));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
+        if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
+            applyNativeSidekickEndingPose(player);
+        }
     }
 
-    private void applyEndingPose(AbstractPlayableSprite sprite) {
-        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+    static void applySidekickInputLock(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return;
+        }
         sprite.setControlLocked(true);
-        sprite.setXSpeed((short) 0);
-        sprite.setYSpeed((short) 0);
-        sprite.setGSpeed((short) 0);
-        sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        if (sprite.getCpuController() != null) {
+            sprite.getCpuController().setController2SignedLocked(true);
+        }
+    }
+
+    static void applySidekickEndingPose(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return;
+        }
+        // Check_TailsEndPose clears Ctrl_2_locked immediately before tail-calling
+        // Set_PlayerEndingPose (sonic3k.asm:181919-181940).
+        sprite.setControlLocked(false);
+        if (sprite.getCpuController() != null) {
+            sprite.getCpuController().setController2SignedLocked(false);
+        }
+        applyMainPlayerEndingPose(sprite);
     }
 
     static void applyMainPlayerEndingPose(AbstractPlayableSprite sprite) {
@@ -449,7 +546,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             return;
         }
         // Set_PlayerEndingPose writes object_control=$81, victory animation,
-        // and zero velocities, but does not set Ctrl_1_locked
+        // clears spin_dash_flag / Status_Push, and zeroes velocities, but does
+        // not set Ctrl_1_locked
         // (docs/skdisasm/sonic3k.asm:181977-181988). Obj_EndSignLanded only
         // locks Ctrl_2 (docs/skdisasm/sonic3k.asm:176198-176218), so Sonic
         // keeps copying raw Ctrl_1 into Ctrl_1_logical while object_control
@@ -457,6 +555,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         // Tails' delayed follow history (docs/skdisasm/sonic3k.asm:21541-21545,
         // 22119-22136).
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+        sprite.setSpindash(false);
+        sprite.setPushing(false);
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0);
@@ -480,7 +580,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // AFTER
     // =========================================================================
 
-    private void updateAfter() {
+    private void updateAfter(AbstractPlayableSprite player) {
+        if (mainEndingPosePending) {
+            mainEndingPosePending = false;
+            applyMainPlayerEndingPose(player);
+        }
+        applyNativeSidekickEndingPose(player);
         if (isResultsScreenActive()) {
             return;
         }
@@ -489,6 +594,27 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         if (camera != null && !isWithinRomAfterRange(worldX, worldY, camera.getX(), camera.getY())) {
             setDestroyed(true);
             LOG.fine("S3K Signpost destroyed (off-screen)");
+        }
+    }
+
+    private void applyNativeSidekickEndingPose(AbstractPlayableSprite player) {
+        if (sidekickEndingPoseApplied) {
+            return;
+        }
+        if (!sidekickEndingPoseCheckArmed) {
+            // The ROM's routine-6 dispatch allocates Obj_LevelResults and returns;
+            // Check_TailsEndPose belongs to the later routine-8 dispatch. Keep
+            // that distinct entry boundary even though the engine models the
+            // results allocation as a free child (sonic3k.asm:176229-176272).
+            sidekickEndingPoseCheckArmed = true;
+            return;
+        }
+        PlayableEntity candidate = playerQuery(player).nativeP2OrNull();
+        if (candidate instanceof AbstractPlayableSprite sidekick
+                && !sidekick.getDead()
+                && !sidekick.getAir()) {
+            sidekickEndingPoseApplied = true;
+            applySidekickEndingPose(sidekick);
         }
     }
 

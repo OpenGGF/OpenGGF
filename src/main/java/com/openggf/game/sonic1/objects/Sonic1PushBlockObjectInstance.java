@@ -143,6 +143,10 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     // 0 = idle (Solid_ChkEnter), 2 = riding, 4 = falling, 6 = aligning
     private int solidState;
 
+    // A state-2 ExitPlatform frame skips Solid_ChkCollision, so the object's
+    // native Status_Push bit remains available to the next state-0 checkpoint.
+    private boolean pushReleasePendingAfterRideExit;
+
     // MZ Act 1: whether block is chained to stomper (bit 7 of obSubtype)
     private boolean chainedToStomper;
 
@@ -198,6 +202,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
 
         this.routine = 2; // Skip init, go straight to active
         this.solidState = 0;
+        this.pushReleasePendingAfterRideExit = false;
         this.inMotion = false;
         // ROM keeps obSubtype intact after init; bit 7 gates the ledge/floor
         // check in the push handler (tst.b obSubtype / bmi.s locret_C2E4).
@@ -275,7 +280,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
         //   loc_C1AA (state 4): bsr SpeedToPos / ObjFloorDist / ... / rts
         //   loc_C1F2 (state 6): bsr SpeedToPos / andi ... / subq #2,obSolid / rts
         //   loc_C218 (state 0): bsr Solid_ChkEnter (the only path that calls it)
-        boolean enteringStateUsesSolidChkEnter = (solidState == 0);
+        int enteringSolidState = solidState;
 
         if (inMotion) {
             // loc_C046: lava sliding physics (only when objoff_32 != 0)
@@ -305,14 +310,39 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             checkLavaGeyser();
         }
 
-        // Only run inline solid resolution when ROM's loc_C186 entry would have
-        // reached loc_C218 → Solid_ChkEnter. Otherwise the state-4/state-6 paths
-        // return without ever testing for the player, so any riding state the
-        // engine would establish here is one frame premature.
-        if (enteringStateUsesSolidChkEnter) {
+        // State 0 owns Solid_ChkCollision. A top landing changes obSolid to 2,
+        // which must remain distinct from the player's Status_OnObj bit: another
+        // earlier routine can clear Status_OnObj before this object's later slot,
+        // but Obj33 still enters its state-2 ExitPlatform branch and returns
+        // without falling through to Solid_ChkCollision/Solid_NoCollision.
+        if (enteringSolidState == 0) {
             SolidCheckpointBatch batch = checkpointAll();
+            pushReleasePendingAfterRideExit = false;
             if (solidState == 0 && !inMotion) {
                 applyPushContacts(batch, frameCounter);
+            }
+            if (solidState == 0
+                    && hasStandingContact(batch)
+                    && isPlayerRidingThisBlock()) {
+                solidState = 2;
+            }
+        } else if (enteringSolidState == 2) {
+            if (!isPlayerRidingThisBlock()) {
+                // PushB_SolidAction.sonicOnBlock calls ExitPlatform, then tests
+                // Sonic's live Status_OnObj. The engine's exact ride owner is the
+                // corresponding evidence: a global OnObj bit can belong to an
+                // earlier/later solid and must not keep this Obj33 state alive.
+                // Clearing obSolid returns immediately without a same-slot
+                // Solid_ChkCollision, leaving this object's Status_Push bit for
+                // the next state-0 checkpoint.
+                solidState = 0;
+                pushReleasePendingAfterRideExit = true;
+            } else {
+                SolidCheckpointBatch batch = checkpointAll();
+                if (!hasStandingContact(batch)) {
+                    solidState = 0;
+                    pushReleasePendingAfterRideExit = true;
+                }
             }
         }
 
@@ -499,6 +529,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
 
         // clr.b obSolid(a0) — transition to state 0
         solidState = 0;
+        pushReleasePendingAfterRideExit = false;
 
         // Check lava tile: move.w (a1),d0 / andi.w #$3FF,d0 / cmpi.w #$16A,d0
         int tileIndex = result.tileIndex() & 0x3FF;
@@ -573,6 +604,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             xVelocity = 0;
             yVelocity = 0;
             solidState = 0;
+            pushReleasePendingAfterRideExit = false;
             lastGeyserSpawnX = Integer.MIN_VALUE;
         }
     }
@@ -595,6 +627,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
         inMotion = false;
         airborne = false;
         solidState = 0;
+        pushReleasePendingAfterRideExit = false;
         xVelocity = 0;
         yVelocity = 0;
         motion.xSub = 0;
@@ -627,6 +660,24 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     @Override
     public SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Push/fall movement rebuilds dynamicSpawn, but obStatus belongs to the
+        // same live Obj33 SST until its next Solid_ChkEnter call.
+        return true;
+    }
+
+    @Override
+    public boolean preservesNativePushLatchAcrossSkippedSolidCheckpoints() {
+        // PushB_OnLava can carry the object's native push bit across movement
+        // frames for which the engine has no immediately preceding checkpoint.
+        // State 2 also skips Solid_ChkCollision on its ExitPlatform release
+        // frame; the following state-0 checkpoint still owns the retained bit.
+        // Outside those states an ordinary state-0 block checkpoints every
+        // frame, so a stale engine latch must not synthesize a later write.
+        return inMotion || pushReleasePendingAfterRideExit;
     }
 
     /**
@@ -761,6 +812,11 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
 
     protected SolidCheckpointBatch checkpointAll() {
         return services().solidExecution().resolveSolidNowAll();
+    }
+
+    protected boolean isPlayerRidingThisBlock() {
+        var objectManager = services().objectManager();
+        return objectManager != null && objectManager.isAnyPlayerRiding(this);
     }
 
     private void applyPushContacts(SolidCheckpointBatch batch, int frameCounter) {

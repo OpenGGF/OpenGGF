@@ -183,6 +183,18 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether an airborne rider must retain this object's riding record until
+     * this same object's inline solid checkpoint consumes its standing bit.
+     *
+     * <p>Use this for native routines whose post-{@code SolidObjectFull}
+     * behavior depends on the per-object {@code a0.d6} result. An earlier
+     * object's solid checkpoint must not consume that state on its behalf.
+     */
+    default boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a stale riding record that would be consumed by this object's
      * airborne standing-bit branch is also ineligible for pre-movement
      * ground-recovery support.
@@ -261,6 +273,17 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object's landing routine enters the full S2
+     * {@code Sonic_ResetOnFloor} entry and therefore publishes Walk even when
+     * the player was not rolling. Keep this separate from roll clearing:
+     * object-local RideObject/PlatformObject paths can establish a ride without
+     * owning the raw animation byte.
+     */
+    default boolean nonRollingLandingPublishesWalk(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether this solid uses S3K's {@code SolidObjectFull} Player 2 visibility
      * gate. That helper processes Player 1, then skips Player 2 when Player 2's
      * {@code render_flags} bit 7 is clear (sonic3k.asm:41003-41008).
@@ -310,6 +333,20 @@ public interface SolidObjectProvider {
      * edge cadence (for example Sonic 1 push blocks) can return true.
      */
     default boolean preservesEdgeSubpixelMotion() {
+        return false;
+    }
+
+    /**
+     * Whether an exact zero-distance side contact keeps the native X subpixel,
+     * horizontal speed, and ground speed unchanged.
+     * <p>
+     * This is narrower than {@link #preservesEdgeSubpixelMotion()}: it affects
+     * only {@code distX == 0} and leaves ordinary nonzero side correction on the
+     * shared pixel-snapping path. Use it for standard {@code SolidObject}
+     * callers whose inclusive edge reaches {@code SolidObject_AtEdge} without
+     * entering {@code SolidObject_StopCharacter}.
+     */
+    default boolean preservesZeroDistanceSideContactMotion() {
         return false;
     }
 
@@ -388,6 +425,19 @@ public interface SolidObjectProvider {
      * contact frame into the next no-contact clear path for the same SST slot.
      */
     default boolean usesInstanceSolidStateLatchKey() {
+        return false;
+    }
+
+    /**
+     * Whether this object's native pushing bit remains authoritative while its
+     * state machine deliberately skips solid checkpoints.
+     * <p>
+     * Use only when the ROM stores the bit in the live SST status byte and has
+     * intervening states that return without calling the solid helper. The next
+     * checkpoint then owns the delayed no-contact release even though the
+     * player's live push bit and one-frame checkpoint history have expired.
+     */
+    default boolean preservesNativePushLatchAcrossSkippedSolidCheckpoints() {
         return false;
     }
 
@@ -488,6 +538,18 @@ public interface SolidObjectProvider {
      * {@code SolidObject} status byte at the CPU read.
      */
     default boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether an approved interact-slot push bridge must also publish
+     * {@code Status_Push} to the sidekick's later movement/animation pass.
+     * <p>
+     * Most interact-slot bridges only reproduce the earlier CPU-control read.
+     * Use this narrower hook when ROM object ordering leaves the same live SST
+     * push bit visible after {@code TailsCPU_Normal} as well.
+     */
+    default boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
         return false;
     }
 

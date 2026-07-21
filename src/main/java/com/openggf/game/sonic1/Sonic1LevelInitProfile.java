@@ -42,6 +42,15 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
     }
 
     @Override
+    public int freshMainPlayablePreludeFrames() {
+        // GM_Level runs ObjPosLoad + ExecuteObjects once after creating the
+        // fresh Sonic slot, before clearing v_frame_counter and entering
+        // Level_MainLoop. That pass initializes Sonic's native control,
+        // floor/status, animation, and mapping state.
+        return 1;
+    }
+
+    @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
         // Post-load assembly: 6 steps (no SpawnSidekick — S1 has no Tails)

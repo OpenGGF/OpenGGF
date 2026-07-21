@@ -228,6 +228,7 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
         player.setFlipTurned(true);
         engagePlayer(frameCounter, player);
         player.setAnimationId(Sonic2AnimationIds.WALK);
+        player.publishRunAsPreviousAnimation();
         cylinderAngles.put(player, 0);
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);

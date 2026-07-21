@@ -10,6 +10,7 @@ class TestCheckpointStateRewind {
         CheckpointState state = new CheckpointState();
         CheckpointState.RewindState snapshot = new CheckpointState.RewindState(
                 3,
+                5,
                 0x1200,
                 0x0340,
                 0x1100,
@@ -30,6 +31,7 @@ class TestCheckpointStateRewind {
 
         assertTrue(state.isActive());
         assertEquals(3, state.getLastCheckpointIndex());
+        assertEquals(5, state.getStarPostActivationMark());
         assertEquals(0x1200, state.getSavedX());
         assertEquals(0x0340, state.getSavedY());
         assertEquals(0x1100, state.getSavedCameraX());
@@ -54,6 +56,7 @@ class TestCheckpointStateRewind {
 
         state.restoreRewindState(new CheckpointState.RewindState(
                 2,
+                2,
                 100,
                 200,
                 300,
@@ -73,6 +76,7 @@ class TestCheckpointStateRewind {
 
         assertFalse(state.isActive());
         assertEquals(-1, state.getLastCheckpointIndex());
+        assertEquals(-1, state.getStarPostActivationMark());
         assertEquals(0, state.getSavedX());
         assertEquals(0, state.getSavedY());
         assertFalse(state.hasCameraLock());

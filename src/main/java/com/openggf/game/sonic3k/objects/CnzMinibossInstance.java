@@ -141,32 +141,6 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      */
     private static final int CNZ_MINIBOSS_OPENING_WAIT = 0x7F;
 
-    /**
-     * Approximate duration of the Closing animation (sonic3k.asm:144968 —
-     * {@code Obj_CNZMinibossClosing}) before its $34 callback
-     * ({@link #onCloseGo}) fires to restart the swing cycle.
-     *
-     * <p>The ROM body is {@code jmp (Animate_RawMultiDelay).l}, whose
-     * exact frame count comes from the {@code AniRaw_CNZMinibossClosing}
-     * script. Without the full animation engine we seed a conservative
-     * {@code $40} (64-frame) wait matching the opening duration order of
-     * magnitude. The value only matters for the forced-entry test seam —
-     * natural entry from {@link #handleWaitHitHandoff()} does not write a
-     * timer, and the ROM's AniRaw engine drives the transition there.
-     */
-    private static final int CNZ_MINIBOSS_CLOSING_WAIT = 0x40;
-
-    /**
-     * Post-defeat wait before {@code Obj_CNZMinibossEndGo} fires.
-     *
-     * <p>ROM: {@code CNZMiniboss_BossDefeated} (sonic3k.asm:145464)
-     * replaces the object entry with {@code Wait_FadeToLevelMusic} and
-     * installs {@code Obj_CNZMinibossEnd} at {@code $34(a0)}. The fade
-     * loop runs for approximately {@code $60} frames before yielding to
-     * the {@code $34} callback. The engine models this with a single
-     * wait timer since the fade itself is orthogonal to workstream-D.
-     */
-    private static final int CNZ_MINIBOSS_DEFEAT_WAIT = 0x60;
     private static final int CNZ_MINIBOSS_LEVEL_MUSIC_FADE_TIME = 2 * 60;
     private static final int FRAME_BASE_CLOSED = 0;
     private static final int FRAME_BASE_OPEN = 6;
@@ -311,6 +285,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     private boolean diagnosticWaitHitHandoff;
     private WaitCallback diagnosticLastCallback = WaitCallback.NONE;
     private boolean pendingStartReleaseHandoff = true;
+    private boolean closingTerminatorDeferred;
 
     private enum WaitCallback {
         NONE,
@@ -559,6 +534,14 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     @Override
     public int getCollisionProperty() {
         return Sonic3kConstants.CNZ_MINIBOSS_COLLISION_PROPERTY;
+    }
+
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Obj_CNZMinibossStart moves the parent before tail-calling
+        // Draw_And_Touch_Sprite. Collision_response_list retains the SST
+        // pointer, so Touch_Loop observes that live post-movement position.
+        return true;
     }
 
     @Override
@@ -832,11 +815,8 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * models this as a wait-timer tick. In the natural flow,
      * {@code handleWaitHitHandoff} already armed {@link #waitCallback} =
      * {@link #onCloseGo} with {@link #waitTimer} = {@code -1}; the first
-     * frame in this body seeds a conservative
-     * {@link #CNZ_MINIBOSS_CLOSING_WAIT} countdown so subsequent frames can
-     * tick it down and eventually fire the callback. When the routine is
-     * forced by {@link #forceRoutineForTest(int)} the timer is seeded there
-     * instead, skipping the self-seeding branch below.
+     * frame cadence is defined exactly by the seven frame/delay pairs and
+     * {@code $F4} terminator in {@code AniRaw_CNZMinibossClosing}.
      */
     private void updateClosing() {
         animateRawMultiDelay(ANIM_CLOSING_FRAMES, ANIM_CLOSING_DELAYS, WaitCallback.CLOSE_GO);
@@ -913,10 +893,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      * <p>The engine collapses the three ROM stages into two callbacks: this
      * method performs the combined BossDefeated / Obj_CNZMinibossEnd work
      * (flag writes, debris spawn, and $34 arming), and {@link #onEndGo()} handles
-     * Obj_CNZMinibossEndGo. The intermediate {@code Obj_Wait} stage between
-     * them is modelled by the {@link #CNZ_MINIBOSS_DEFEAT_WAIT} timer
-     * because the ROM's actual intermediate fade / debris spawn is
-     * orthogonal to workstream-D.
+     * Obj_CNZMinibossEndGo. Wait_FadeToLevelMusic does not seed a delay: it
+     * consumes the live {@code $2E(a0)} value inherited from the interrupted
+     * boss routine (sonic3k.asm:179656-179669).
      */
     @Override
     protected void onDefeatStarted() {
@@ -944,11 +923,15 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
         // ROM sonic3k.asm:145467 + 144988 — the combined BossDefeated /
         // Obj_CNZMinibossEnd chain installs Obj_CNZMinibossEndGo at $34(a0)
-        // and relies on the fade/wait loop to tick it. Arm that here with a
-        // conservative fade-shaped wait.
-        setWait(CNZ_MINIBOSS_DEFEAT_WAIT, WaitCallback.END_GO);
+        // and relies on Wait_FadeToLevelMusic to consume the live $2E value.
+        // Preserve waitTimer exactly; only replace the $34 callback pointer.
+        waitCallback = WaitCallback.END_GO;
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
-        spawnChild(() -> new S3kBossExplosionChild(state.x, state.y));
+        defeatExplosionController.dispatchCreation();
+        for (S3kBossExplosionController.PendingExplosion explosion
+                : defeatExplosionController.drainPendingExplosions()) {
+            spawnChild(() -> new S3kBossExplosionChild(explosion.x(), explosion.y()));
+        }
         spawnBreakApartDebris();
         spawnChild(() -> new SongFadeTransitionInstance(
                 CNZ_MINIBOSS_LEVEL_MUSIC_FADE_TIME, resolveLevelMusicId()));
@@ -1286,6 +1269,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         mappingFrame = frames[0];
         rawAnimPairIndex = 0;
         rawAnimTimer = initialTimer;
+        if (frames == ANIM_CLOSING_FRAMES) {
+            closingTerminatorDeferred = false;
+        }
     }
 
     /**
@@ -1302,6 +1288,14 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
         rawAnimPairIndex++;
         if (rawAnimPairIndex >= frames.length) {
+            if (terminatorCallback == WaitCallback.CLOSE_GO && !closingTerminatorDeferred) {
+                // The previous-list touch pass consumes the final frame-0
+                // publication before CloseGo becomes visible to object motion.
+                closingTerminatorDeferred = true;
+                rawAnimTimer = 0;
+                return;
+            }
+            closingTerminatorDeferred = false;
             waitCallback = terminatorCallback;
             runWaitCallback();
             return;

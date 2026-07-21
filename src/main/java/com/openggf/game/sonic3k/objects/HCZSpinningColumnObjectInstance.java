@@ -16,9 +16,10 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -69,7 +70,6 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     private int motionStep;
     private int currentX;
     private int currentY;
-    private int currentYVelocity;
     private int mappingFrame;
     private int animFrameTimer;
 
@@ -96,7 +96,6 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        int previousY = currentY;
         switch (motionMode) {
             case MOTION_STATIONARY -> {
                 currentX = baseX;
@@ -109,8 +108,6 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
                 currentY = baseY;
             }
         }
-        currentYVelocity = (currentY - previousY) << 8;
-
         for (RiderState rider : riders) {
             updateRider(rider, frameCounter);
             rider.standingLastFrame = false;
@@ -149,7 +146,13 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        player.setControlLocked(true);
+        // ROM writes object_control=3: CPU input generation remains active,
+        // while the ordinary player movement slot is suppressed until release.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        // Obj68 does not write Ctrl_1_locked/Ctrl_2_locked. Keeping the logical
+        // pad publisher live lets Sonic_RecordPos store held-button changes for
+        // CPU Tails even while object_control suppresses movement.
+        player.setControlLocked(false);
         player.setObjectMappingFrameControl(true);
         player.restoreDefaultRadii();
         player.setRolling(false);
@@ -170,18 +173,32 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         if (rider.horizontalDistance > 0) {
             rider.horizontalDistance--;
         }
+        // ROM keeps the shrinking integer radius in byte 2(a2), but reads it
+        // together with byte 3(a2), a sine-derived fractional component, as one
+        // 8.8 word before the cosine multiply (sub_32784 loc_327FC-3283E).
+        // Dropping that low byte rounds a negative left-side offset one pixel
+        // toward zero during the column capture.
+        int sineFraction = ((TrigLookupTable.sinHex(rider.swingAngle) + 0x100) >> 2) & 0xFF;
+        int fixedRadius = (rider.horizontalDistance << 8) | sineFraction;
+        int xOffset = (TrigLookupTable.cosHex(rider.swingAngle) * fixedRadius) >> 16;
         rider.swingAngle = (rider.swingAngle + CAPTURE_SWING_STEP) & 0xFF;
-        int xOffset = (TrigLookupTable.cosHex(rider.swingAngle) * rider.horizontalDistance) >> 8;
 
-        player.setCentreX((short) (currentX + xOffset));
+        // ROM move.w writes x_pos only; the low subpixel word remains intact.
+        NativePositionOps.writeXPosPreserveSubpixel(player, currentX + xOffset);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        applyTwistAnimation(player, rider.swingAngle);
-
-        if (player.isJumpPressed()) {
+        // d5 is the Ctrl_*_logical word; andi.b addresses its low byte, which
+        // contains newly pressed A/B/C bits rather than the held byte
+        // (sonic3k.asm:68136-68148,68264-68276).
+        if (player.isJumpJustPressed()) {
             releaseRider(rider, frameCounter, true);
+            return;
         }
+        // The jump branch returns through loc_325F2 before loc_3260A can
+        // publish the incremented twist frame. A boundary-frame release must
+        // therefore retain the mapping selected on the preceding hold tick.
+        applyTwistAnimation(player, rider.swingAngle);
     }
 
     private void releaseRider(RiderState rider, int frameCounter, boolean jumpedOff) {
@@ -193,6 +210,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
 
         rider.active = false;
         player.setControlLocked(false);
+        ObjectControlState.none().applyTo(player);
         player.setObjectMappingFrameControl(false);
         player.setForcedAnimationId(-1);
         player.setOnObject(false);
@@ -202,18 +220,41 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         if (jumpedOff) {
             player.setAir(true);
             player.setJumping(true);
+            int releaseY = player.getCentreY();
             player.applyRollingRadii(false);
             player.setRolling(true);
+            // setRolling changes the engine sprite height around its top-left
+            // anchor; ROM writes the radii/status bytes in place and never
+            // adjusts y_pos, so restore the native centre after that box change.
+            NativePositionOps.writeYPosPreserveSubpixel(player, releaseY);
             player.setAnimationId(Sonic3kAnimationIds.ROLL);
-            player.setYSpeed((short) (currentYVelocity + RELEASE_Y_SPEED));
+            // sub_32784 copies y_vel(a0), not the column's direct oscillation
+            // delta. Obj_HCZSpinningColumn never writes its y_vel field, so the
+            // native launch is the literal -$680 even while its y_pos is moving.
+            player.setYSpeed((short) RELEASE_Y_SPEED);
             player.setXSpeed((short) 0);
             player.setGSpeed((short) 0);
+            publishReleasedLogicalInput(player);
             // Prevent the same held button from re-triggering the normal jump path,
             // which would add the generic jump sound on the release frame.
             player.suppressNextJumpPress();
-        } else {
-            player.setAnimationId(Sonic3kAnimationIds.WALK);
         }
+    }
+
+    private void publishReleasedLogicalInput(AbstractPlayableSprite player) {
+        int inputMask = 0;
+        if (player.isUpPressed()) inputMask |= AbstractPlayableSprite.INPUT_UP;
+        if (player.isDownPressed()) inputMask |= AbstractPlayableSprite.INPUT_DOWN;
+        if (player.isLeftPressed()) inputMask |= AbstractPlayableSprite.INPUT_LEFT;
+        if (player.isRightPressed()) inputMask |= AbstractPlayableSprite.INPUT_RIGHT;
+        if (player.isJumpPressed()) inputMask |= AbstractPlayableSprite.INPUT_JUMP;
+        // The engine's object-control latch skipped the earlier logical-pad
+        // publication, but ROM Ctrl_1_logical is global and Sonic_RecordPos has
+        // already stored this frame's word before the column slot executes.
+        // Repair that same current history entry when the column consumes the
+        // live jump press and releases control, so CPU Tails sees the press at
+        // the native delayed Stat_table index.
+        player.writeLogicalInputAndCurrentFollowerHistory(inputMask, player.isJumpJustPressed());
     }
 
     private void applyTwistAnimation(AbstractPlayableSprite player, int swingAngle) {
@@ -222,12 +263,11 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
             frameIndex = 0;
         }
         player.setMappingFrame(PLAYER_TWIST_FRAMES[frameIndex]);
-        // ROM directly writes render_flags (andi.b #$FC / or.b flip), so we must
-        // update both the logical direction AND the render flip in the same frame.
-        // setDirection alone defers the visual flip to the next animation update,
-        // causing a one-frame glitch at the two front-facing transition points.
+        // ROM directly writes render_flags (andi.b #$FC / or.b flip) without
+        // touching Status_Facing (sub_32610, sonic3k.asm:68077-68091). The twist
+        // frame may therefore flip visually while the player's logical facing
+        // remains unchanged for the post-column movement path.
         boolean flipLeft = PLAYER_TWIST_FLIPS[frameIndex];
-        player.setDirection(flipLeft ? Direction.LEFT : Direction.RIGHT);
         player.setRenderFlips(flipLeft, false);
     }
 
@@ -273,6 +313,47 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(HALF_WIDTH + 0x0B, HALF_HEIGHT, HALF_HEIGHT + 1);
+    }
+
+    @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // The native routine writes object_control=3 before calling
+        // SolidObjectFull, so the captured rider remains on its normal
+        // continued-ride contact path while movement is suppressed.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsBit7ObjectControlSideContact(PlayableEntity player) {
+        // SolidObject_cont returns on a signed object_control byte before side
+        // separation. Positive Obj68 capture value $03 still participates,
+        // while Tails' $81 catch-up-flight marker cannot be displaced.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        // The same signed test precedes new side/top classification
+        // (sonic3k.asm:41438-41440).
+        return true;
+    }
+
+    @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // loc_326B6 moves the column before loading its updated x_pos into d4
+        // for SolidObjectFull. MvSonicOnPtfm then subtracts that same current
+        // x_pos, producing a zero horizontal carry delta
+        // (sonic3k.asm:68132-68157,41016-41042,41642-41679).
+        return false;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj68 calls SolidObjectFull. SolidObject_cont rejects its initial X
+        // window with bhi, so relX == d1*2 remains a valid zero-distance side
+        // contact that sets Status_Push (sonic3k.asm:41394-41403,
+        // 68148-68157).
+        return true;
     }
 
     @Override

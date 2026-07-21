@@ -109,6 +109,61 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
+    void s3kSidekickCpuExecutionHookPromotesCounterPlateauToFullFrame() throws Exception {
+        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/mgz_completerun"));
+        int promotedIndex = -1;
+        for (int i = 1; i < trace.frameCount(); i++) {
+            TraceFrame previous = trace.getFrame(i - 1);
+            TraceFrame current = trace.getFrame(i);
+            boolean hasCpuExecutionHook = trace.getEventsForFrame(current.frame()).stream()
+                    .anyMatch(TraceEvent.TailsCpuNormalStep.class::isInstance);
+            if (hasCpuExecutionHook
+                    && current.input() != previous.input()
+                    && TraceExecutionModel.forGame("s3k").phaseFor(previous, current)
+                    == TraceExecutionPhase.VBLANK_ONLY) {
+                promotedIndex = i;
+                break;
+            }
+        }
+
+        assertTrue(promotedIndex >= 0,
+                "Fixture must contain a counter-plateau row with direct sidekick CPU execution evidence.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(
+                        trace, trace.getFrame(promotedIndex - 1), trace.getFrame(promotedIndex)),
+                "A native Tails CPU hook proves the player/object loop ran even when sampled counters "
+                        + "and stationary main-player physics resemble a VBlank-only row.");
+    }
+
+    @Test
+    void s3kMidLoopSidekickHookAdvancesOnlyPlayableAnimation() throws Exception {
+        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
+        TraceFrame previous = trace.getFrame(13098);
+        TraceFrame current = trace.getFrame(13099);
+
+        assertEquals(previous.input(), current.input());
+        assertTrue(trace.getEventsForFrame(current.frame()).stream()
+                .anyMatch(TraceEvent.TailsCpuNormalStep.class::isInstance));
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceExecutionModel.forGame("s3k").phaseFor(previous, current));
+        assertEquals(TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY,
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+    }
+
+    @Test
+    void s3kMovingSidekickDuckToWalkCanHoldOnlyItsAnimateDispatch() throws Exception {
+        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
+        TraceFrame previous = trace.getFrame(30485);
+        TraceFrame current = trace.getFrame(30486);
+
+        assertFalse(current.sidekick().physicsStateEquals(previous.sidekick()));
+        assertEquals(previous.sidekick().animationId(), current.sidekick().animationId());
+        assertEquals(previous.sidekick().mappingFrame(), current.sidekick().mappingFrame());
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD,
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+    }
+
+    @Test
     void preLevelPrefixInputEdgeWithoutStateAdvanceOnlyConsumesMovieInput() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 

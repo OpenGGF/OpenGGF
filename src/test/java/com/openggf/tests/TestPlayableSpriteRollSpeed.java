@@ -54,6 +54,27 @@ class TestPlayableSpriteRollSpeed {
     }
 
     @Test
+    void s3kWallRollStopPreservesNativeCentreX() throws Exception {
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setGameRulesForTest(GameRules.SONIC_3K);
+        sonic.setGroundMode(GroundMode.RIGHTWALL);
+        sonic.setAir(false);
+        sonic.setRolling(true);
+        sonic.setCentreX((short) 0x2AB5);
+        sonic.setCentreY((short) 0x060A);
+        sonic.setGSpeed((short) 0);
+
+        PlayableSpriteMovement movement = new PlayableSpriteMovement(
+                sonic, new NoWallCollisionSystem(), null);
+        invokeDoRollSpeed(movement);
+
+        assertFalse(sonic.getRolling());
+        assertEquals(0x2AB5, sonic.getCentreX() & 0xFFFF,
+                "S3K roll-stop changes radii and y_pos, never native x_pos");
+        assertEquals(0x0605, sonic.getCentreY() & 0xFFFF);
+    }
+
+    @Test
     void s2SonicPreservesRollingBelowMinimumRollSpeedUntilZeroInertia() throws Exception {
         TestablePlayableSprite sonic = s2Sonic((short) 0x0075);
         PlayableSpriteMovement movement = new PlayableSpriteMovement(

@@ -29,6 +29,7 @@ public record GameRules(
                     false,
                     false,
                     false,
+                    false,
                     true,
                     false,
                     true,
@@ -55,9 +56,7 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    false,
-                    false,
-                    false,
+                    new AirCollisionRules(false, false, false, false, false),
                     true,
                     false,
                     false,
@@ -74,7 +73,8 @@ public record GameRules(
             new PlayerAnimationRules(
                     false,
                     false,
-                    false
+                    false,
+                    true
             ),
             new CameraRules(
                     (short) 0,
@@ -88,6 +88,7 @@ public record GameRules(
                     3,
                     0,
                     false,
+                    32,
                     6,
                     6,
                     true,
@@ -106,13 +107,15 @@ public record GameRules(
                     true,
                     false,
                     false,
+                    false,
+                    true,
+                    false,
                     false
             ),
             new SidekickCpuRules(
                     16,
                     16384,
                     0,
-                    false,
                     false,
                     false,
                     true,
@@ -161,6 +164,7 @@ public record GameRules(
                     true,
                     true,
                     false,
+                    true,
                     false,
                     false,
                     false,
@@ -188,9 +192,7 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    false,
-                    false,
-                    false,
+                    new AirCollisionRules(false, false, false, false, false),
                     true,
                     true,
                     true,
@@ -207,7 +209,8 @@ public record GameRules(
             new PlayerAnimationRules(
                     true,
                     false,
-                    true
+                    true,
+                    false
             ),
             new CameraRules(
                     (short) 120,
@@ -221,6 +224,7 @@ public record GameRules(
                     7,
                     0,
                     true,
+                    32,
                     6,
                     6,
                     false,
@@ -239,13 +243,15 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    true
+                    true,
+                    true,
+                    true,
+                    false
             ),
             new SidekickCpuRules(
                     16,
                     16384,
                     0,
-                    false,
                     false,
                     true,
                     true,
@@ -295,6 +301,7 @@ public record GameRules(
                     false,
                     true,
                     true,
+                    true,
                     false,
                     true,
                     true,
@@ -321,9 +328,7 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    true,
-                    true,
-                    true,
+                    new AirCollisionRules(true, true, true, true, true),
                     false,
                     true,
                     true,
@@ -331,7 +336,7 @@ public record GameRules(
                     true,
                     true,
                     true,
-                    true,
+                    false,
                     false,
                     true,
                     false,
@@ -340,7 +345,8 @@ public record GameRules(
             new PlayerAnimationRules(
                     true,
                     true,
-                    true
+                    true,
+                    false
             ),
             new CameraRules(
                     (short) 120,
@@ -354,6 +360,7 @@ public record GameRules(
                     7,
                     4,
                     true,
+                    0,
                     6,
                     6,
                     false,
@@ -372,13 +379,15 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    false
+                    false,
+                    true,
+                    true,
+                    true
             ),
             new SidekickCpuRules(
                     48,
                     32512,
                     32,
-                    true,
                     true,
                     true,
                     false,

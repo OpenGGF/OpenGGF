@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -59,6 +60,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     private static final int PHASE_GEYSER_RISE = 1;
     private static final int PHASE_CARRY       = 2;
     private static final int PHASE_DONE        = 3;
+    private static final int PHASE_SETUP_DELAY = 4;
 
     // =========================================================================
     // Timing constants (ROM: loc_6B7BC)
@@ -160,6 +162,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
 
     /** True once debris children have been spawned. */
     private boolean debrisSpawned;
+    private boolean targetsNativeP2;
 
     /** ROM root object uses priority $280. */
     private static final int GEYSER_PRIORITY_BUCKET = 5;
@@ -175,10 +178,17 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
      * @param spawnY  Camera Y + SPAWN_CAMERA_Y_OFFSET at spawn time.
      */
     public HczEndBossGeyserCutscene(int spawnX, int spawnY) {
+        this(spawnX, spawnY, false, 0);
+    }
+
+    private HczEndBossGeyserCutscene(int spawnX, int spawnY,
+            boolean targetsNativeP2, int setupDelay) {
         super(new ObjectSpawn(spawnX, spawnY, 0, 0, 0, false, 0), "HCZGeyserCutscene");
         this.geyserX    = spawnX;
         this.geyserY    = spawnY;
-        this.timer      = SHAKE_DURATION;
+        this.targetsNativeP2 = targetsNativeP2;
+        this.phase = setupDelay > 0 ? PHASE_SETUP_DELAY : PHASE_SHAKE;
+        this.timer = setupDelay > 0 ? setupDelay : SHAKE_DURATION;
         this.rumbleTimer = 0;
         this.playerGrabbed = false;
         this.debrisSpawned = false;
@@ -195,15 +205,32 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite aps ? aps : null;
+        AbstractPlayableSprite player = resolveTargetPlayer(playerEntity);
 
         switch (phase) {
             case PHASE_SHAKE       -> updateShake(player);
+            case PHASE_SETUP_DELAY -> updateSetupDelay(player);
             case PHASE_GEYSER_RISE -> updateGeyserRise(player);
             case PHASE_CARRY       -> updateCarry(player);
             case PHASE_DONE        -> { /* terminal */ }
             default                -> { }
         }
+    }
+
+    private AbstractPlayableSprite resolveTargetPlayer(PlayableEntity playerEntity) {
+        if (targetsNativeP2) {
+            PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+            return nativeP2 instanceof AbstractPlayableSprite sprite ? sprite : null;
+        }
+        return playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
+    }
+
+    private void updateSetupDelay(AbstractPlayableSprite player) {
+        timer--;
+        if (timer >= 0) {
+            return;
+        }
+        setupGeyserColumn(player);
     }
 
     // =========================================================================
@@ -230,6 +257,12 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
 
         timer--;
         if (timer <= 0) {
+            if (!targetsNativeP2 && services().playerQuery().nativeP2OrNull() != null) {
+                // loc_6B804 allocates a second owner with subtype=-1 and a
+                // four-count Obj_Wait before loc_6B832 targets Player_2.
+                spawnChild(() -> new HczEndBossGeyserCutscene(
+                        geyserX, geyserY, true, 4));
+            }
             // Shake complete -- set up the geyser column (ROM: loc_6B832)
             clearScreenShake();
             setupGeyserColumn(player);
@@ -364,18 +397,30 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
             player.setY((short) (player.getY() - GEYSER_RISE_SPEED));
         }
 
+        // loc_6B8C8 moves both owners, but subtype=-1 branches back to draw
+        // before touching $2E. Only the primary owns the transition timer
+        // (sonic3k.asm:141621-141633).
+        if (targetsNativeP2) {
+            return;
+        }
+
         timer--;
-        if (timer <= 0) {
-            // Release player control before transitioning
-            if (player != null && playerGrabbed) {
-                player.deferObjectControlRelease();
-            }
+        if (timer < 0) {
             playerGrabbed = false;
             phase = PHASE_DONE;
             setDestroyed(true);
 
-            // ROM: StartNewLevel #$0200 -> MGZ Act 1
-            services().requestZoneAndAct(NEXT_ZONE, NEXT_ACT, true);
+            // loc_6B8C8 enters StartNewLevel without restoring object_control;
+            // the carried position/control state survives this dispatch. ROM
+            // exits before publishing another camera-scroll step; the engine's
+            // camera phase precedes objects, so restore that pre-dispatch Y.
+            var camera = services().camera();
+            camera.setY((short) (camera.getY() + GEYSER_RISE_SPEED));
+            // The post-results fade is still active here.  Start MGZ1 after
+            // its level load, rather than letting that source-zone fade mute
+            // the destination's ordinary level-start command.
+            services().requestZoneAndAct(
+                    NEXT_ZONE, NEXT_ACT, true, Sonic3kMusic.MGZ1.id);
             LOG.info("HCZ Geyser Cutscene: carry complete, requesting MGZ Act 1");
         }
     }
@@ -392,7 +437,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
      */
     @Override
     public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) {
-        if (isDestroyed() || phase == PHASE_SHAKE) {
+        if (isDestroyed() || phase == PHASE_SHAKE || phase == PHASE_SETUP_DELAY) {
             return;
         }
 

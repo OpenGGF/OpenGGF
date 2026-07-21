@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -21,6 +22,7 @@ import java.util.List;
  */
 public final class CnzLightBulbInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int FRAME_NORMAL = 0;
+    private static final int PRIORITY_BUCKET = 5; // Obj_CNZLightBulb: priority $280.
     private static final int FRAME_SUBMERGED = 1;
 
     private int renderFrame = FRAME_NORMAL;
@@ -28,6 +30,12 @@ public final class CnzLightBulbInstance extends AbstractObjectInstance implement
 
     public CnzLightBulbInstance(ObjectSpawn spawn) {
         super(spawn, "CNZLightBulb");
+    }
+
+
+    @Override
+    public int getPriorityBucket() {
+        return RenderPriority.clamp(PRIORITY_BUCKET);
     }
 
     @Override

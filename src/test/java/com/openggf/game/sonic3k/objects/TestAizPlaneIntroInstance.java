@@ -108,6 +108,10 @@ public class TestAizPlaneIntroInstance {
         assertTrue(player.isControlLocked());
         assertTrue(player.isObjectControlled());
         assertTrue(player.isHidden());
+        assertEquals(0, player.getMappingFrame(),
+                "Obj_AIZPlaneIntro publishes mapping_frame=0 while it owns Player 1");
+        assertTrue(player.isObjectMappingFrameControl(),
+                "object_control=$53 bit 1 suppresses Animate_Sonic during the intro");
         // ROM: camera is NOT frozen; it stays at origin naturally via
         // Level_started_flag. Intro objects use screen-coordinate rendering.
         assertFalse(camera.getFrozen());
@@ -219,4 +223,3 @@ public class TestAizPlaneIntroInstance {
         return ((List<?>) field.get(intro)).size();
     }
 }
-

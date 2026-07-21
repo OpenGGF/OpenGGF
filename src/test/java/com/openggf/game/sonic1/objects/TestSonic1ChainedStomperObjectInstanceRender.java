@@ -88,6 +88,26 @@ public class TestSonic1ChainedStomperObjectInstanceRender {
         assertEquals(0, stomper.getCollisionFlags());
     }
 
+    @Test
+    public void chainedStomperBalanceWidthUsesNativeActiveWidthNotSolidExtension() {
+        Sonic1ChainedStomperObjectInstance wide = new Sonic1ChainedStomperObjectInstance(
+                new ObjectSpawn(100, 100, Sonic1ObjectIds.CHAINED_STOMPER, 0x00, 0, false, 0));
+        Sonic1ChainedStomperObjectInstance medium = new Sonic1ChainedStomperObjectInstance(
+                new ObjectSpawn(100, 100, Sonic1ObjectIds.CHAINED_STOMPER, 0x10, 0, false, 0));
+        Sonic1ChainedStomperObjectInstance small = new Sonic1ChainedStomperObjectInstance(
+                new ObjectSpawn(100, 100, Sonic1ObjectIds.CHAINED_STOMPER, 0x20, 0, false, 0));
+
+        assertEquals(0x38, wide.getBalanceWidthPixels());
+        assertEquals(0x30, medium.getBalanceWidthPixels());
+        assertEquals(0x10, small.getBalanceWidthPixels());
+        assertEquals(0x38 + 0x0B, wide.getSolidParams().halfWidth(),
+                "CStom's SolidObject-only $B extension must remain collision-local");
+        assertTrue(wide.getSolidRoutineProfile().inclusiveRightEdge(),
+                "CStom's SolidObject BHI must retain exact-edge side contact");
+        assertTrue(wide.usesInstanceSolidStateLatchKey(),
+                "CStom status bits belong to its live SST while its Y changes");
+    }
+
     private static final class StubObjectArtProvider implements ObjectArtProvider {
         private final PatternSpriteRenderer stomperRenderer;
         private final PatternSpriteRenderer spikeRenderer;
@@ -205,5 +225,3 @@ public class TestSonic1ChainedStomperObjectInstanceRender {
         }
     }
 }
-
-

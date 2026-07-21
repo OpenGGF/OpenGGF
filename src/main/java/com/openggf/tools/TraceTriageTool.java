@@ -183,6 +183,7 @@ public final class TraceTriageTool {
     /** Likely owning subsystem for a divergent field. */
     public enum Subsystem {
         PLAYER_PHYSICS("player physics"),
+        PLAYABLE_ANIMATION("playable animation"),
         OBJECT_SOLID("object solid"),
         TOUCH_RESPONSE("touch response"),
         EVENT("event"),
@@ -228,6 +229,13 @@ public final class TraceTriageTool {
                     || f.contains("game_mode")) {
                 return Subsystem.TEST_BOOTSTRAP;
             }
+        }
+
+        // Animation fields are independently gated and must be classified
+        // before the sidekick prefix catches Tails animation mismatches.
+        if (f.endsWith("animation_id") || f.endsWith("mapping_frame")
+                || f.endsWith("animation_present")) {
+            return Subsystem.PLAYABLE_ANIMATION;
         }
 
         // Sidekick (Tails / second player) fields.
@@ -304,6 +312,12 @@ public final class TraceTriageTool {
                 terms.add("Player_Subroutines");
                 terms.add("ChkRoll");
             }
+            case PLAYABLE_ANIMATION -> {
+                terms.add("Animate_Sonic");
+                terms.add("AnimateSprite");
+                terms.add("mapping_frame");
+                terms.add("anim_frame");
+            }
             case SIDEKICK -> {
                 terms.add("Obj02");
                 terms.add("Tails_");
@@ -367,6 +381,10 @@ public final class TraceTriageTool {
                 tests.add("TestPhysicsProfile");
                 tests.add("TestCollisionModel");
                 tests.add("TestSpindashGating");
+            }
+            case PLAYABLE_ANIMATION -> {
+                tests.add("TestTraceBinder");
+                tests.add("PlayableSpriteAnimation tests");
             }
             case SIDEKICK -> tests.add("TestPhysicsProfile (sidekick profile)");
             case OBJECT_SOLID -> {

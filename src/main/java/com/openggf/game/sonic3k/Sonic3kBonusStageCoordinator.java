@@ -16,6 +16,7 @@ import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
  *   <li>1 -> GLOWING_SPHERE / Pachinko (zone $1400, music $1B)</li>
  *   <li>2 -> GUMBALL (zone $1300, music $1E)</li>
  * </ul>
+ * <p>Concrete ring ranges: 20–34 rings → SLOT_MACHINE, 35–49 rings → GLOWING_SPHERE, 50–64 rings → GUMBALL.
  * <p>
  * Note: SK_alone_flag handling is not implemented. The only supported S3K ROM
  * is the combined "Sonic and Knuckles &amp; Sonic 3 (W) [!].gen" which always sets

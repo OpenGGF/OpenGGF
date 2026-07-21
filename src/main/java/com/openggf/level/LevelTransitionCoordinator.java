@@ -30,6 +30,12 @@ public class LevelTransitionCoordinator {
     private boolean inLevelTitleCardRequested;
     private int inLevelTitleCardZone = -1;
     private int inLevelTitleCardAct = -1;
+    private boolean inLevelTitleCardLevelGamestateResetRequested;
+    private int inLevelTitleCardResetAdditionalDispatches;
+    private int inLevelTitleCardResetPhaseOneDispatchOverlap;
+    private boolean inLevelTitleCardPlayerControlLockRequested;
+    private int inLevelTitleCardExitAdditionalDispatches;
+    private int inLevelTitleCardExitPhaseOneDispatchOverlap;
 
     // ── Transition request flags (for fade-coordinated transitions) ────
     private boolean respawnRequested;
@@ -38,6 +44,7 @@ public class LevelTransitionCoordinator {
     private boolean specificZoneActRequested;
     private int requestedZone = -1;
     private int requestedAct = -1;
+    private int requestedMusicId = -1;
 
     // ── Seamless transitions ───────────────────────────────────────────
     private boolean seamlessTransitionRequested;
@@ -81,6 +88,16 @@ public class LevelTransitionCoordinator {
         boolean requested = specialStageRequestedFromCheckpoint;
         specialStageRequestedFromCheckpoint = false;
         return requested;
+    }
+
+    /**
+     * Non-consuming peek at a pending special-stage entry request. The LEVEL
+     * tick's {@link #consumeSpecialStageRequest()} remains the only consumer;
+     * this exists so trace-run replay can observe an organically raised
+     * transition without swallowing it (spec 2026-07-18, addition #1).
+     */
+    public boolean isSpecialStageRequested() {
+        return specialStageRequestedFromCheckpoint;
     }
 
     /**
@@ -153,6 +170,14 @@ public class LevelTransitionCoordinator {
     }
 
     /**
+     * Non-consuming peek at a pending bonus-stage entry request; null when
+     * none is pending. Mirrors {@link #isRespawnRequested()}.
+     */
+    public BonusStageType peekBonusStageRequest() {
+        return bonusStageRequested;
+    }
+
+    /**
      * Signals that the next level load is a bonus stage return.
      * Set before {@code loadZoneAndAct()} so that {@code onInitLevel()} can
      * detect the return and skip intros. The checkpoint index is restored
@@ -200,9 +225,59 @@ public class LevelTransitionCoordinator {
      * Requests an in-level (transparent) title card overlay.
      */
     public void requestInLevelTitleCard(int zone, int act) {
+        requestInLevelTitleCard(zone, act, false);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay) {
+        requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay, 0);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches) {
+        requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, false);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches, boolean lockPlayerControl) {
+        requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, lockPlayerControl, 0);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches, boolean lockPlayerControl,
+                                        int exitAdditionalDispatches) {
+        requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, 0, lockPlayerControl, exitAdditionalDispatches);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches,
+                                        int resetPhaseOneDispatchOverlap,
+                                        boolean lockPlayerControl,
+                                        int exitAdditionalDispatches) {
+        requestInLevelTitleCard(zone, act, resetLevelGamestateAtDisplay,
+                resetAdditionalDispatches, resetPhaseOneDispatchOverlap,
+                lockPlayerControl, exitAdditionalDispatches, 0);
+    }
+
+    public void requestInLevelTitleCard(int zone, int act, boolean resetLevelGamestateAtDisplay,
+                                        int resetAdditionalDispatches,
+                                        int resetPhaseOneDispatchOverlap,
+                                        boolean lockPlayerControl,
+                                        int exitAdditionalDispatches,
+                                        int exitPhaseOneDispatchOverlap) {
         this.inLevelTitleCardRequested = true;
         this.inLevelTitleCardZone = zone;
         this.inLevelTitleCardAct = act;
+        this.inLevelTitleCardLevelGamestateResetRequested = resetLevelGamestateAtDisplay;
+        this.inLevelTitleCardResetAdditionalDispatches = Math.max(0, resetAdditionalDispatches);
+        this.inLevelTitleCardResetPhaseOneDispatchOverlap =
+                Math.max(0, resetPhaseOneDispatchOverlap);
+        this.inLevelTitleCardPlayerControlLockRequested = lockPlayerControl;
+        this.inLevelTitleCardExitAdditionalDispatches = Math.max(0, exitAdditionalDispatches);
+        this.inLevelTitleCardExitPhaseOneDispatchOverlap =
+                Math.max(0, exitPhaseOneDispatchOverlap);
     }
 
     /**
@@ -232,6 +307,46 @@ public class LevelTransitionCoordinator {
         boolean requested = inLevelTitleCardRequested;
         inLevelTitleCardRequested = false;
         return requested;
+    }
+
+    public boolean consumeInLevelTitleCardLevelGamestateResetRequest() {
+        boolean requested = inLevelTitleCardLevelGamestateResetRequested;
+        inLevelTitleCardLevelGamestateResetRequested = false;
+        return requested;
+    }
+
+    public boolean hasPendingInLevelTitleCardHeldCounterDispatch() {
+        return inLevelTitleCardRequested && inLevelTitleCardLevelGamestateResetRequested;
+    }
+
+    public int consumeInLevelTitleCardResetAdditionalDispatches() {
+        int dispatches = inLevelTitleCardResetAdditionalDispatches;
+        inLevelTitleCardResetAdditionalDispatches = 0;
+        return dispatches;
+    }
+
+    public int consumeInLevelTitleCardResetPhaseOneDispatchOverlap() {
+        int dispatches = inLevelTitleCardResetPhaseOneDispatchOverlap;
+        inLevelTitleCardResetPhaseOneDispatchOverlap = 0;
+        return dispatches;
+    }
+
+    public boolean consumeInLevelTitleCardPlayerControlLockRequest() {
+        boolean requested = inLevelTitleCardPlayerControlLockRequested;
+        inLevelTitleCardPlayerControlLockRequested = false;
+        return requested;
+    }
+
+    public int consumeInLevelTitleCardExitAdditionalDispatches() {
+        int dispatches = inLevelTitleCardExitAdditionalDispatches;
+        inLevelTitleCardExitAdditionalDispatches = 0;
+        return dispatches;
+    }
+
+    public int consumeInLevelTitleCardExitPhaseOneDispatchOverlap() {
+        int dispatches = inLevelTitleCardExitPhaseOneDispatchOverlap;
+        inLevelTitleCardExitPhaseOneDispatchOverlap = 0;
+        return dispatches;
     }
 
     /**
@@ -345,8 +460,21 @@ public class LevelTransitionCoordinator {
      * @param deactivateLevelNow  true to freeze level updates until the transition completes
      */
     public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow) {
+        requestZoneAndAct(zone, act, deactivateLevelNow, -1);
+    }
+
+    /**
+     * Request a zone/act transition with a track that must be started only
+     * after the destination level has finished loading.
+     *
+     * <p>This is for cutscenes whose source track is still fading while they
+     * hand control to a new zone.  Deferring the destination track prevents a
+     * source-side fade command from silencing it.
+     */
+    public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow, int musicId) {
         this.requestedZone = zone;
         this.requestedAct = act;
+        this.requestedMusicId = musicId;
         this.specificZoneActRequested = true;
         this.levelInactiveForTransition = deactivateLevelNow;
     }
@@ -378,6 +506,14 @@ public class LevelTransitionCoordinator {
      */
     public int getRequestedAct() {
         return requestedAct;
+    }
+
+    /**
+     * @return a post-load music ID for the consumed zone/act request, or -1
+     * when the destination should use its ordinary level-load music.
+     */
+    public int getRequestedMusicId() {
+        return requestedMusicId;
     }
 
     // ================================================================
@@ -503,6 +639,12 @@ public class LevelTransitionCoordinator {
         inLevelTitleCardRequested = false;
         inLevelTitleCardZone = -1;
         inLevelTitleCardAct = -1;
+        inLevelTitleCardLevelGamestateResetRequested = false;
+        inLevelTitleCardResetAdditionalDispatches = 0;
+        inLevelTitleCardResetPhaseOneDispatchOverlap = 0;
+        inLevelTitleCardPlayerControlLockRequested = false;
+        inLevelTitleCardExitAdditionalDispatches = 0;
+        inLevelTitleCardExitPhaseOneDispatchOverlap = 0;
         respawnRequested = false;
         nextActRequested = false;
         nextZoneRequested = false;
@@ -514,6 +656,7 @@ public class LevelTransitionCoordinator {
         levelInactiveForTransition = false;
         requestedZone = -1;
         requestedAct = -1;
+        requestedMusicId = -1;
         pendingSeamlessTransitionRequest = null;
     }
 }

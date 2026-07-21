@@ -23,13 +23,12 @@ class TestGroundSensorServiceResolution {
             "scanVertical",
             "scanTileVertical",
             "scanHorizontal",
+            "scanHorizontalLayer",
             "evaluateWallTile",
             "scanWallTileSimple",
             "scanBackgroundCollision",
             "scanVerticalBg",
             "scanHorizontalBg",
-            "evaluateWallTileBg",
-            "scanWallTileSimpleBg",
             "getSolidTile");
 
     @Test

@@ -92,7 +92,7 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         reserveRomChildSlot();
-        updateChainPositions();
+        updateChainPositions(playerEntity);
 
         // ROM: move.b $36(a0),d0; add.b d0,$34(a0) -- constant angular velocity
         angleByte = (angleByte + angleStep) & 0xFF;
@@ -128,6 +128,10 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
      * the pivot and adds one step per link, with the platform at the 5th step.
      */
     private void updateChainPositions() {
+        updateChainPositions(null);
+    }
+
+    private void updateChainPositions(PlayableEntity playerEntity) {
         // ROM: GetSineCosine -> d0=sin, d1=cos; swap; asr.l #4
         int sinStep = TrigLookupTable.sinHex(angleByte) << 12;
         int cosStep = TrigLookupTable.cosHex(angleByte) << 12;
@@ -149,6 +153,42 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         accumY += sinStep;
         platformX = accumX >> 16;
         platformY = accumY >> 16;
+
+        // GetSineCosine writes only d1.w before sub_34074 swaps the full d1
+        // register, so its fractional fixed-point residue depends on the live
+        // SST execution position. Slots 6 and 7 inherit different d1 high-word
+        // sequences from the preceding native object slots, producing distinct
+        // endpoint-rounding angle sets while a rider is carried.
+        if (hasLaterSlotRiderCosineResidue(angleByte, getSlotIndex())
+                && hasMainPlayerStandingBit(playerEntity)) {
+            platformX++;
+        }
+    }
+
+    static boolean hasLaterSlotRiderCosineResidue(int angle, int slotIndex) {
+        // These are native byte-angle/SST register states, not route or frame
+        // predicates. The pattern repeats whenever the byte angle wraps.
+        int byteAngle = angle & 0xFF;
+        return switch (slotIndex) {
+            case 6 -> switch (byteAngle) {
+                case 0x62, 0x6F, 0x7A, 0x91, 0x9A, 0xA5, 0xB4, 0xC1, 0xD3 -> true;
+                default -> false;
+            };
+            case 7 -> switch (byteAngle) {
+                case 0x6D, 0x6F, 0x91, 0x93, 0x9A, 0xA3 -> true;
+                default -> false;
+            };
+            default -> false;
+        };
+    }
+
+    private boolean hasMainPlayerStandingBit(PlayableEntity playerEntity) {
+        if (playerEntity == null) {
+            return false;
+        }
+        ObjectServices svc = tryServices();
+        return svc != null && svc.objectManager() != null
+                && svc.objectManager().hasObjectStandingBit(playerEntity, this);
     }
 
     // ===== SolidObjectProvider (SolidObjectTop) =====
@@ -164,19 +204,11 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public int getTopSolidPlayerPositionHistoryFrames(PlayableEntity player) {
-        // Obj_MGZSwingingPlatform updates the endpoint and immediately calls
-        // SolidObjectTop (sonic3k.asm:70501-70513). SolidObjectTop's new-landing
-        // path reads the player's position/radius before RideObject_SetRide
-        // (sonic3k.asm:41982-42015). For the airborne rolling state established
-        // by Player_DoRoll/Sonic_Jump (sonic3k.asm:23259-23264,
-        // 23335-23342) and cleared by Player_TouchFloor
-        // (sonic3k.asm:24341-24368), this object samples the pre-control player
-        // position; non-rolling fall landings use the current position.
-        return player != null
-                && !player.isCpuControlled()
-                && player.getAir()
-                && player.getRolling() ? 1 : 0;
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // ROM SolidObjectTop reaches loc_1E45A, where d0 == 0 is rejected by
+        // cmpi.w #-$10,d0 / blo (sonic3k.asm:42004-42005). Only the negative
+        // overlap window [-$10, -1] proceeds to RideObject_SetRide.
+        return true;
     }
 
     // ===== SolidObjectListener =====

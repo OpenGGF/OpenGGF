@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -51,6 +52,17 @@ class TestMGZSwingingPlatformObjectInstance {
                 new ObjectSpawn(0x1200, 0x0600, Sonic3kObjectIds.MGZ_SWINGING_PLATFORM, 0x00, 0x00, false, 0));
 
         assertInstanceOf(MGZSwingingPlatformObjectInstance.class, instance);
+    }
+
+    @Test
+    void riderCosineResidueUsesTheNativeSstSpecificAngleSequence() {
+        assertTrue(MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue(0x62, 6));
+        assertFalse(MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue(0x62, 7),
+                "Slot 7 inherits an ordinary d1 high word at angle $62");
+        assertFalse(MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue(0x6D, 6));
+        assertTrue(MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue(0x6D, 7),
+                "Slot 7 inherits the rounding residue at angle $6D");
+        assertFalse(MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue(0x6D, 8));
     }
 
     @Test

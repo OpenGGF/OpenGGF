@@ -64,6 +64,26 @@ public class DivergenceReport {
     public boolean hasErrors() { return totalErrorCount() > 0; }
     public boolean hasWarnings() { return totalWarningCount() > 0; }
 
+    public List<DivergenceGroup> errors(TraceVerificationScope scope) {
+        return errors.stream()
+                .filter(group -> scope.includes(group.verificationGroup()))
+                .toList();
+    }
+
+    public List<DivergenceGroup> warnings(TraceVerificationScope scope) {
+        return warnings.stream()
+                .filter(group -> scope.includes(group.verificationGroup()))
+                .toList();
+    }
+
+    public boolean hasErrors(TraceVerificationScope scope) {
+        return totalErrorCount(scope) > 0;
+    }
+
+    public boolean hasWarnings(TraceVerificationScope scope) {
+        return totalWarningCount(scope) > 0;
+    }
+
     /** Bootstrap (frame-0) divergences, sorted ERROR-first then WARNING. */
     public List<BootstrapDivergence> bootstrapDivergences() {
         return bootstrapDivergences;
@@ -94,8 +114,13 @@ public class DivergenceReport {
      * console output with repeated context.
      */
     public String toAssertionSummary() {
-        int errorCount = totalErrorCount();
-        int warningCount = totalWarningCount();
+        return toAssertionSummary(TraceVerificationScope.ALL);
+    }
+
+    /** Assertion summary restricted to one independent verification gate. */
+    public String toAssertionSummary(TraceVerificationScope scope) {
+        int errorCount = totalErrorCount(scope);
+        int warningCount = totalWarningCount(scope);
 
         if (errorCount == 0 && warningCount == 0) {
             return "All frames match trace. No divergences.";
@@ -109,25 +134,29 @@ public class DivergenceReport {
             errorCount, errorCount == 1 ? "" : "s",
             warningCount, warningCount == 1 ? "" : "s"));
 
-        BootstrapDivergence firstBootstrapError =
-                firstBootstrapDivergence(BootstrapDivergence.Severity.ERROR);
+        BootstrapDivergence firstBootstrapError = scope.includes(VerificationGroup.PHYSICS)
+                ? firstBootstrapDivergence(BootstrapDivergence.Severity.ERROR)
+                : null;
         if (firstBootstrapError != null) {
             appendBootstrapSummary(sb, "error", firstBootstrapError, false);
             return sb.toString();
         }
-        if (!errors.isEmpty()) {
-            appendGroupSummary(sb, "error", errors.get(0));
+        List<DivergenceGroup> scopedErrors = errors(scope);
+        if (!scopedErrors.isEmpty()) {
+            appendGroupSummary(sb, "error", scopedErrors.get(0));
             return sb.toString();
         }
 
-        BootstrapDivergence firstBootstrapWarning =
-                firstBootstrapDivergence(BootstrapDivergence.Severity.WARNING);
+        BootstrapDivergence firstBootstrapWarning = scope.includes(VerificationGroup.PHYSICS)
+                ? firstBootstrapDivergence(BootstrapDivergence.Severity.WARNING)
+                : null;
         if (firstBootstrapWarning != null) {
             appendBootstrapSummary(sb, "warning", firstBootstrapWarning, false);
             return sb.toString();
         }
-        if (!warnings.isEmpty()) {
-            appendGroupSummary(sb, "warning", warnings.get(0));
+        List<DivergenceGroup> scopedWarnings = warnings(scope);
+        if (!scopedWarnings.isEmpty()) {
+            appendGroupSummary(sb, "warning", scopedWarnings.get(0));
         }
         return sb.toString();
     }
@@ -245,6 +274,10 @@ public class DivergenceReport {
             root.put("bootstrap_warning_count", bootstrapWarningCount());
             root.put("total_frames", allComparisons.size());
             root.put("summary", toCompactSummary());
+
+            ObjectNode verificationNode = root.putObject("verification_groups");
+            appendVerificationGroupJson(mapper, verificationNode, VerificationGroup.PHYSICS);
+            appendVerificationGroupJson(mapper, verificationNode, VerificationGroup.ANIMATION);
 
             int referenceFrame = summaryReferenceFrame();
             TraceEvent.Checkpoint checkpoint = latestCheckpointAtOrBefore(referenceFrame);
@@ -519,8 +552,18 @@ public class DivergenceReport {
         return errors.size() + bootstrapErrorCount();
     }
 
+    private int totalErrorCount(TraceVerificationScope scope) {
+        int count = errors(scope).size();
+        return scope.includes(VerificationGroup.PHYSICS) ? count + bootstrapErrorCount() : count;
+    }
+
     private int totalWarningCount() {
         return warnings.size() + bootstrapWarningCount();
+    }
+
+    private int totalWarningCount(TraceVerificationScope scope) {
+        int count = warnings(scope).size();
+        return scope.includes(VerificationGroup.PHYSICS) ? count + bootstrapWarningCount() : count;
     }
 
     private int bootstrapErrorCount() {
@@ -541,6 +584,15 @@ public class DivergenceReport {
 
     public boolean hasBootstrapWarnings() {
         return bootstrapWarningCount() > 0;
+    }
+
+    /** First blocking frame for the selected gate, or {@code -1} when clean. */
+    public int firstErrorFrame(TraceVerificationScope scope) {
+        if (scope.includes(VerificationGroup.PHYSICS) && hasBootstrapErrors()) {
+            return 0;
+        }
+        List<DivergenceGroup> scoped = errors(scope);
+        return scoped.isEmpty() ? -1 : scoped.getFirst().startFrame();
     }
 
     private BootstrapDivergence firstBootstrapDivergence(BootstrapDivergence.Severity severity) {
@@ -745,7 +797,7 @@ public class DivergenceReport {
                             groups.add(builder.build());
                         }
                         openGroups.put(field, new DivergenceGroupBuilder(
-                            field, comp.severity(), fc.frame(),
+                            field, comp.severity(), comp.verificationGroup(), fc.frame(),
                             comp.expected(), comp.actual()));
                     }
                 }
@@ -797,28 +849,36 @@ public class DivergenceReport {
     }
 
     private static void markCascading(List<DivergenceGroup> groups) {
-        int earliestErrorFrame = Integer.MAX_VALUE;
-        String earliestErrorField = null;
-        for (DivergenceGroup g : groups) {
-            if (g.severity() == Severity.ERROR && g.startFrame() < earliestErrorFrame) {
-                earliestErrorFrame = g.startFrame();
-                earliestErrorField = g.field();
+        for (VerificationGroup verificationGroup : VerificationGroup.values()) {
+            int earliestErrorFrame = Integer.MAX_VALUE;
+            String earliestErrorField = null;
+            for (DivergenceGroup group : groups) {
+                if (group.verificationGroup() == verificationGroup
+                        && group.severity() == Severity.ERROR
+                        && group.startFrame() < earliestErrorFrame) {
+                    earliestErrorFrame = group.startFrame();
+                    earliestErrorField = group.field();
+                }
             }
-        }
 
-        if (earliestErrorField == null) {
-            return;
-        }
+            if (earliestErrorField == null) {
+                continue;
+            }
 
-        for (int i = 0; i < groups.size(); i++) {
-            DivergenceGroup g = groups.get(i);
-            boolean cascading = g.severity() == Severity.ERROR
-                && g.startFrame() > earliestErrorFrame
-                && !g.field().equals(earliestErrorField);
-            if (cascading != g.cascading()) {
-                groups.set(i, new DivergenceGroup(g.field(), g.severity(),
-                    g.startFrame(), g.endFrame(),
-                    g.expectedAtStart(), g.actualAtStart(), cascading));
+            for (int i = 0; i < groups.size(); i++) {
+                DivergenceGroup group = groups.get(i);
+                if (group.verificationGroup() != verificationGroup) {
+                    continue;
+                }
+                boolean cascading = group.severity() == Severity.ERROR
+                        && group.startFrame() > earliestErrorFrame
+                        && !group.field().equals(earliestErrorField);
+                if (cascading != group.cascading()) {
+                    groups.set(i, new DivergenceGroup(group.field(), group.severity(),
+                            group.startFrame(), group.endFrame(),
+                            group.expectedAtStart(), group.actualAtStart(), cascading,
+                            group.verificationGroup()));
+                }
             }
         }
     }
@@ -833,7 +893,38 @@ public class DivergenceReport {
         node.put("expected_at_start", g.expectedAtStart());
         node.put("actual_at_start", g.actualAtStart());
         node.put("cascading", g.cascading());
+        node.put("verification_group", g.verificationGroup().id());
         return node;
+    }
+
+    private void appendVerificationGroupJson(
+            ObjectMapper mapper, ObjectNode parent, VerificationGroup group) {
+        TraceVerificationScope scope = group == VerificationGroup.PHYSICS
+                ? TraceVerificationScope.PHYSICS
+                : TraceVerificationScope.ANIMATION;
+        ObjectNode node = parent.putObject(group.id());
+        List<DivergenceGroup> scopedErrors = errors(scope);
+        List<DivergenceGroup> scopedWarnings = warnings(scope);
+        node.put("error_count", totalErrorCount(scope));
+        node.put("warning_count", totalWarningCount(scope));
+        boolean wroteBootstrapError = false;
+        if (group == VerificationGroup.PHYSICS) {
+            BootstrapDivergence bootstrap =
+                    firstBootstrapDivergence(BootstrapDivergence.Severity.ERROR);
+            if (bootstrap != null) {
+                node.set("first_error", bootstrapDivergenceToJson(mapper, bootstrap));
+                wroteBootstrapError = true;
+            }
+        }
+        if (!wroteBootstrapError && !scopedErrors.isEmpty()) {
+            node.set("first_error", groupToJson(mapper, scopedErrors.getFirst()));
+        }
+        if (group == VerificationGroup.PHYSICS && hasBootstrapWarnings()) {
+            node.set("first_warning", bootstrapDivergenceToJson(mapper,
+                    firstBootstrapDivergence(BootstrapDivergence.Severity.WARNING)));
+        } else if (!scopedWarnings.isEmpty()) {
+            node.set("first_warning", groupToJson(mapper, scopedWarnings.getFirst()));
+        }
     }
 
     private ObjectNode checkpointToJson(ObjectMapper mapper, TraceEvent.Checkpoint checkpoint) {
@@ -908,15 +999,18 @@ public class DivergenceReport {
     private static class DivergenceGroupBuilder {
         final String field;
         final Severity severity;
+        final VerificationGroup verificationGroup;
         final int startFrame;
         final String expectedAtStart;
         final String actualAtStart;
         int endFrame;
 
-        DivergenceGroupBuilder(String field, Severity severity, int frame,
+        DivergenceGroupBuilder(String field, Severity severity,
+                VerificationGroup verificationGroup, int frame,
                 String expected, String actual) {
             this.field = field;
             this.severity = severity;
+            this.verificationGroup = verificationGroup;
             this.startFrame = frame;
             this.endFrame = frame;
             this.expectedAtStart = expected;
@@ -925,7 +1019,7 @@ public class DivergenceReport {
 
         DivergenceGroup build() {
             return new DivergenceGroup(field, severity, startFrame, endFrame,
-                expectedAtStart, actualAtStart, false);
+                expectedAtStart, actualAtStart, false, verificationGroup);
         }
     }
 }

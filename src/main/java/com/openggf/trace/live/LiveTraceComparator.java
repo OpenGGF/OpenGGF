@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.FieldComparison;
+import com.openggf.trace.EngineDiagnostics;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.ToleranceConfig;
@@ -91,7 +92,14 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         TraceFrame previous = cursor > 0 ? trace.getFrame(cursor - 1) : null;
         TraceExecutionPhase phase =
                 TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-        return phase == TraceExecutionPhase.VBLANK_ONLY;
+        if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+            SpriteManager sprites = GameServices.spritesOrNull();
+            if (sprites != null && !sprites.getSidekicks().isEmpty()) {
+                sprites.getSidekicks().getFirst().getAnimationManager().suppressNextUpdate();
+            }
+        }
+        return phase == TraceExecutionPhase.VBLANK_ONLY
+                || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
     }
 
     @Override
@@ -100,16 +108,25 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         lastInputMask = frame.p1InputMask();
         lastStartPressed = frame.p1StartPressed();
         if (wasSkipped) {
+            TraceFrame skipped = cursor < trace.frameCount() ? trace.getFrame(cursor) : null;
+            TraceFrame previous = cursor > 0 ? trace.getFrame(cursor - 1) : null;
+            TraceExecutionPhase skippedPhase = skipped != null
+                    ? TraceReplayBootstrap.phaseForReplay(trace, previous, skipped)
+                    : TraceExecutionPhase.VBLANK_ONLY;
             if (cursor == 0 && TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace)) {
                 TraceReplaySessionBootstrap.applyS3kCompleteRunHandoffNativePostRowEffects(trace);
             }
             if (cursor < trace.frameCount()) {
                 currentVisualFrame = trace.getFrame(cursor);
             }
-            laggedFrames++;
-            cursor++;
-            checkComplete();
-            return;
+            if (skippedPhase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
+                advancePlayableAnimationsOnly();
+            } else {
+                laggedFrames++;
+                cursor++;
+                checkComplete();
+                return;
+            }
         }
         if (cursor >= trace.frameCount()) {
             checkComplete();
@@ -136,12 +153,15 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         // flagging every recorded sidekick field as divergent (EHZ1
         // etc. record Sonic+Tails).
         TraceCharacterState actualSidekick = captureFirstSidekickState();
+        EngineDiagnostics animationDiagnostics =
+                EngineDiagnostics.formattedWithCameraAndAnimation(
+                        -1, -1, sprite.getAnimationId(), sprite.getMappingFrame(), "");
         FrameComparison result = binder.compareFrame(expected,
                 sprite.getCentreX(), sprite.getCentreY(),
                 sprite.getXSpeed(), sprite.getYSpeed(), sprite.getGSpeed(),
                 sprite.getAngle(), sprite.getAir(), sprite.getRolling(),
                 sprite.getGroundMode().ordinal(),
-                null, null,
+                null, animationDiagnostics,
                 "sidekick", actualSidekick);
         if (perFrameObserver != null) {
             perFrameObserver.accept(result);
@@ -149,6 +169,19 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         absorbDivergentFields(result, expected.frame());
         cursor++;
         checkComplete();
+    }
+
+    private static void advancePlayableAnimationsOnly() {
+        SpriteManager sprites = GameServices.spritesOrNull();
+        if (sprites == null) {
+            return;
+        }
+        int animationFrame = sprites.getFrameCounter();
+        for (var candidate : sprites.getAllSprites()) {
+            if (candidate instanceof AbstractPlayableSprite playable) {
+                playable.getAnimationManager().update(animationFrame);
+            }
+        }
     }
 
     private void absorbDivergentFields(FrameComparison result, int frameNumber) {

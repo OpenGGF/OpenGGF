@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -108,6 +109,8 @@ class TestS3kSignpostInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setGameRulesForTest(GameRules.SONIC_3K);
         player.setControlLocked(false);
+        player.setSpindash(true);
+        player.setPushing(true);
         player.setLogicalInputState(false, false, false, false, false);
         player.endOfTick();
 
@@ -119,6 +122,10 @@ class TestS3kSignpostInstance {
         assertFalse(player.isControlLocked(),
                 "Set_PlayerEndingPose does not set Ctrl_1_locked; Obj_EndSignLanded only sets Ctrl_2_locked "
                         + "(docs/skdisasm/sonic3k.asm:176198-176218, 181977-181988)");
+        assertFalse(player.getSpindash(),
+                "Set_PlayerEndingPose clears spin_dash_flag before control is eventually restored");
+        assertFalse(player.getPushing(),
+                "Set_PlayerEndingPose clears Status_Push");
 
         player.setLogicalInputState(false, false, false, true, false);
         player.endOfTick();
@@ -126,6 +133,53 @@ class TestS3kSignpostInstance {
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, player.getInputHistory(0),
                 "Sonic_RecordPos must keep storing live Ctrl_1_logical for Tails' delayed follow input "
                         + "(docs/skdisasm/sonic3k.asm:21541-21545, 22119-22136)");
+    }
+
+    @Test
+    void signpostCtrl2LockDoesNotApplyEndingPoseToSidekick() {
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        SidekickCpuController cpu = new SidekickCpuController(tails, sonic);
+        tails.setXSpeed((short) 0x0060);
+        tails.setYSpeed((short) -0x0100);
+        tails.setGSpeed((short) 0x0060);
+        tails.setAnimationId(Sonic3kAnimationIds.WALK);
+
+        S3kSignpostInstance.applySidekickInputLock(tails);
+
+        assertTrue(tails.isControlLocked(),
+                "Obj_EndSignLanded writes Ctrl_2_locked before results");
+        assertTrue(cpu.isController2SignedLocked(),
+                "Ctrl_2_locked=$FF skips Tails_CPU_Control from the next player slot");
+        assertEquals(0x0060, tails.getXSpeed());
+        assertEquals(-0x0100, tails.getYSpeed());
+        assertEquals(0x0060, tails.getGSpeed());
+        assertEquals(Sonic3kAnimationIds.WALK.id(), tails.getAnimationId());
+        assertFalse(tails.isObjectControlled(),
+                "Set_PlayerEndingPose targets Player_1 here; Check_TailsEndPose runs later "
+                        + "(docs/skdisasm/sonic3k.asm:176229-176238,181914-181943)");
+    }
+
+    @Test
+    void laterCheckTailsEndPoseClearsLockAndStopsSidekick() {
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        SidekickCpuController cpu = new SidekickCpuController(tails, sonic);
+        tails.setControlLocked(true);
+        cpu.setController2SignedLocked(true);
+        tails.setXSpeed((short) 0x0054);
+        tails.setYSpeed((short) 0);
+        tails.setGSpeed((short) 0x0054);
+
+        S3kSignpostInstance.applySidekickEndingPose(tails);
+
+        assertFalse(tails.isControlLocked());
+        assertFalse(cpu.isController2SignedLocked());
+        assertTrue(tails.isObjectControlled());
+        assertEquals(0, tails.getXSpeed());
+        assertEquals(0, tails.getYSpeed());
+        assertEquals(0, tails.getGSpeed());
+        assertEquals(Sonic3kAnimationIds.VICTORY.id(), tails.getAnimationId());
     }
 
     @Test

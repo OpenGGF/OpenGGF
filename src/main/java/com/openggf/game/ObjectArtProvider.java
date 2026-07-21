@@ -24,6 +24,13 @@ import java.util.List;
 public interface ObjectArtProvider {
 
     /**
+     * Processes one frame of provider-owned runtime art work.
+     * Implementations with no queued runtime decompression remain no-ops.
+     */
+    default void processRuntimeArtQueue() {
+    }
+
+    /**
      * Loads object art for the specified zone.
      *
      * @param zoneIndex the zone index (-1 for default/non-zone-specific)
@@ -135,6 +142,17 @@ public interface ObjectArtProvider {
      * @return list of renderer keys
      */
     List<String> getRendererKeys();
+
+    /**
+     * Returns the number of regular object patterns cached contiguously from the
+     * supplied object-art base. This query must not load or cache art.
+     *
+     * @return the regular object pattern count
+     * @throws UnsupportedOperationException when a provider does not expose the count
+     */
+    default int getRegularPatternCount() {
+        throw new UnsupportedOperationException("Regular object pattern count is not exposed");
+    }
 
     /**
      * Caches all patterns to GPU memory.

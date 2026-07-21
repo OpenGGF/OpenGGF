@@ -59,8 +59,8 @@ import java.util.logging.Logger;
  * The platform object draws ONE mapping frame via Draw_Sprite. The growing
  * whirlpool body is drawn by a separate spray child (loc_6B3DE) which selects
  * progressively taller mapping frames based on the parent's $39 segment count.
- * Since the spray child is not yet its own class, this object also renders the
- * spray visual inline using the ROM's frame tables and Y-offset tables.
+ * The spray retains its own object-loop slot, while this object renders that
+ * child's visual inline using the ROM's frame tables and Y-offset tables.
  *
  * <h3>Animation scripts (Animate_Raw format: delay, frames..., command):</h3>
  * <ul>
@@ -229,6 +229,12 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     // -- Spray animation state (inline — replaces spray child loc_6B3DE) --
     private int sprayAnimIndex;
     private int sprayAnimTimer;
+    /**
+     * ROM's separately allocated loc_6B3DE spray slot runs after the column
+     * parent. When loc_6B34A selects DESCEND, that later slot still completes
+     * its final loc_6B410 suction/grab dispatch before observing parent bit 3.
+     */
+    private boolean pendingSprayTailInteraction;
 
     /** Platform wait counter for ROUTINE_PLATFORM (ROM $2E). */
     private int platformWait;
@@ -324,7 +330,10 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
 
         // Init spin-up animation (byte_6BE0C)
         spinupIndex = 0;
-        spinupTimer = SPINUP_DELAY;
+        // The setup frame already publishes byte_6BE0C's initial mapping.
+        // Seed the folded countdown at delay-1 so its pre-decrement cadence
+        // reaches the $F4 callback on the same dispatch as Animate_Raw.
+        spinupTimer = SPINUP_DELAY - 1;
 
         // Init column animation (will be used after spin-up)
         columnAnimIndex = 0;
@@ -335,6 +344,15 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         sprayAnimTimer = SPRAY_ANIM_DELAY;
 
         updateDynamicSpawn();
+
+        // ChildObjDat_6BDCA / ChildObjDat_6BDE6 allocate real SST children.
+        // Their visuals are currently folded into the column renderer, but
+        // their Process_Sprites slots and RNG consumption remain gameplay state.
+        spawnChild(() -> new HczEndBossWaterSurfaceChild(boss, -4));
+        spawnChild(() -> new HczEndBossWaterSurfaceChild(boss, 4));
+        for (int i = 0; i < 0x14; i++) {
+            spawnChild(() -> new HczEndBossBubbleParticle(boss));
+        }
 
         // Transition to ANIMATE immediately
         routine = ROUTINE_ANIMATE;
@@ -378,6 +396,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         yVel = RISE_YVEL;
         yFixed = currentY << 8;
 
+        // loc_6B2F8 creates loc_6B3DE as a separately executed child slot.
+        spawnChild(() -> new HczEndBossWaterSprayChild(boss));
+
         // Init column animation (byte_6BE15: frames $15, $20 looping)
         columnAnimIndex = 0;
         columnAnimTimer = COLUMN_ANIM_DELAY;
@@ -394,8 +415,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * Used for both RISE (routine 4) and DESCEND (routine 8).
      */
     private void updateRiseDescend(PlayableEntity player) {
+        boolean risingAtEntry = routine == ROUTINE_RISE;
         // Track turbine X during rise
-        if (routine == ROUTINE_RISE) {
+        if (risingAtEntry) {
             currentX = turbine.getCurrentX();
             xFixed = currentX << 8;
         }
@@ -417,8 +439,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         solidActive = true;
 
         // Suction (replicated from spray child sub_6B9AC + sub_6B9E2)
-        if (routine == ROUTINE_RISE) {
+        if (risingAtEntry || pendingSprayTailInteraction) {
             applySuction(player);
+            pendingSprayTailInteraction = false;
         }
     }
 
@@ -520,6 +543,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         if (!boss.isPropellerActive()) {
             // loc_6B34A: transition to DESCEND
             routine = ROUTINE_DESCEND;
+            pendingSprayTailInteraction = true;
 
             // ROM: bset #3,$38(a0) — set own flag (not used elsewhere)
             // ROM: y_vel = $80
@@ -536,6 +560,11 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
 
             LOG.fine("HCZ Water Column: propeller stopped, entering DESCEND");
         }
+    }
+
+    /** ROM parent flag bit 3 observed by loc_6B598 and loc_6B3DE. */
+    boolean isWaterChildShutdownActive() {
+        return routine >= ROUTINE_DESCEND;
     }
 
     // =========================================================================
@@ -629,15 +658,26 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     private void applySuction(PlayableEntity player) {
         // Spray Y position for grab zone calculations
         int sprayY = getSprayY();
+        // sub_6B9AC initializes d2 once, then sub_6B9C8 mutates and reuses it
+        // across the native P1 -> P2 calls. Two players on the same side of
+        // the column therefore receive opposite pushes.
+        int suctionDelta = 2;
+        // sub_6B9E2 also shares a1 between calls. Reaching loc_6BA6C consumes
+        // (a1)+, so P2 can observe the next word in word_6BAC2 after P1 carry.
+        int grabZoneWordOffset = 0;
 
         if (player instanceof AbstractPlayableSprite sprite) {
-            applyGrabAndCarry(sprite, true, sprayY);
-            applySuctionTo(sprite);
+            if (applyGrabAndCarry(sprite, true, sprayY, grabZoneWordOffset)) {
+                grabZoneWordOffset++;
+            }
+            suctionDelta = applySuctionTo(sprite, suctionDelta);
         }
         for (PlayableEntity candidate : nativeParticipants(player)) {
             if (candidate != player && candidate instanceof AbstractPlayableSprite sprite) {
-                applyGrabAndCarry(sprite, false, sprayY);
-                applySuctionTo(sprite);
+                if (applyGrabAndCarry(sprite, false, sprayY, grabZoneWordOffset)) {
+                    grabZoneWordOffset++;
+                }
+                suctionDelta = applySuctionTo(sprite, suctionDelta);
             }
         }
     }
@@ -649,9 +689,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * (not velocity-based), so the player can escape by running/swimming
      * in the opposite direction.
      */
-    private void applySuctionTo(AbstractPlayableSprite sprite) {
+    private int applySuctionTo(AbstractPlayableSprite sprite, int suctionDelta) {
         if (sprite.getDead() || sprite.isObjectControlled()) {
-            return;
+            return suctionDelta;
         }
 
         int waterY = getWaterLevelY();
@@ -660,17 +700,18 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         // ROM: cmp.w y_pos(a1),d1; bhs locret — skip if water+8 >= player_y
         // (skip when player is above water+8; apply when player is below water+8)
         if (spriteY <= waterY + 8) {
-            return;
+            return suctionDelta;
         }
 
         int spriteX = sprite.getCentreX();
         // ROM: cmp.w x_pos(a1),d0; bhs.s loc_6B9DC; neg.l d2
-        // If column_x >= sprite_x: push right (positive). Otherwise: push left.
-        if (spriteX < currentX) {
-            sprite.shiftX(2);
-        } else if (spriteX > currentX) {
-            sprite.shiftX(-2);
+        // d2 is shared between P1 and P2, so negate the incoming value rather
+        // than selecting an absolute direction independently for each player.
+        if (spriteX > currentX) {
+            suctionDelta = -suctionDelta;
         }
+        sprite.shiftX(suctionDelta);
+        return suctionDelta;
     }
 
     /**
@@ -689,7 +730,8 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * @param isPlayer1 true for main player, false for sidekick
      * @param sprayY    precomputed spray Y position for this frame
      */
-    private void applyGrabAndCarry(AbstractPlayableSprite sprite, boolean isPlayer1, int sprayY) {
+    private boolean applyGrabAndCarry(AbstractPlayableSprite sprite, boolean isPlayer1,
+            int sprayY, int grabZoneWordOffset) {
         boolean isGrabbed = isPlayer1 ? player1Grabbed : player2Grabbed;
 
         // ROM: btst #7,status(a3) — if boss defeated, release
@@ -697,7 +739,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             if (isGrabbed) {
                 releasePlayer(sprite, isPlayer1);
             }
-            return;
+            return false;
         }
 
         // ROM: cmpi.b #6,routine(a2) — dead/dying → displace off
@@ -706,7 +748,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 clearGrabFlag(isPlayer1);
                 ObjectControlState.none().applyTo(sprite);
             }
-            return;
+            return false;
         }
 
         // ROM: tst.b invulnerability_timer(a2) — invulnerable → displace off
@@ -715,7 +757,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 clearGrabFlag(isPlayer1);
                 ObjectControlState.none().applyTo(sprite);
             }
-            return;
+            return false;
         }
 
         // ROM: tst.b object_control(a2) — check if player is controlled
@@ -725,42 +767,49 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 // Another object has control. Fall through to range check
                 // (ROM falls through to loc_6BA32). But since we don't own
                 // this player, just skip.
-                return;
+                return false;
             }
             // We own this player — go to carry logic (loc_6BA6C)
-            doCarry(sprite, isPlayer1, sprayY);
-            return;
+            doCarry(sprite, isPlayer1, sprayY, grabZoneWordOffset);
+            return true;
         }
 
         // Player is NOT object-controlled — range check + initial grab (loc_6BA32)
         int idx = Math.min(segmentCount, GRAB_ZONES.length - 1);
-        int[] zone = GRAB_ZONES[idx];
 
         int spriteY = sprite.getCentreY();
-        int yTop = sprayY + zone[0];
-        int yHeight = zone[1];
+        int zoneWordIndex = idx * 2 + grabZoneWordOffset;
+        int yTop = sprayY + grabZoneWord(zoneWordIndex);
 
         // ROM: add.w (a1),d0; cmp.w d0,d2; blo locret — player above zone top
         if (spriteY < yTop) {
-            return;
+            return false;
         }
         // ROM: add.w 2(a1),d0; cmp.w d0,d2; bhs locret — player below zone bottom
-        if (spriteY >= yTop + yHeight) {
-            return;
+        if (spriteY >= yTop + grabZoneWord(zoneWordIndex + 1)) {
+            return false;
         }
 
         // ROM: x range check: sub.w d2,d0; addi.w #$10,d0; cmpi.w #$20,d0
         int spriteX = sprite.getCentreX();
         int hDist = currentX - spriteX + GRAB_H_DIST;
         if (hDist < 0 || hDist >= (GRAB_H_DIST * 2)) {
-            return;
+            return false;
         }
 
         // In range — initial grab (sub_6BADA)
         doInitialGrab(sprite, isPlayer1);
 
         // Immediately enter carry logic this frame (ROM falls through to loc_6BA6C)
-        doCarry(sprite, isPlayer1, sprayY);
+        doCarry(sprite, isPlayer1, sprayY, grabZoneWordOffset);
+        return true;
+    }
+
+    private int grabZoneWord(int wordIndex) {
+        if (wordIndex < 0 || wordIndex >= GRAB_ZONES.length * 2) {
+            return 0;
+        }
+        return GRAB_ZONES[wordIndex / 2][wordIndex & 1];
     }
 
     /**
@@ -784,6 +833,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
         // ROM: move.b #$18,anim(a2) — animation $18 = tumbling/death sprite pose.
         // In the vortex context this shows the player spinning in the water column.
+        sprite.setAnimationId(Sonic3kAnimationIds.DEATH);
         sprite.setForcedAnimationId(Sonic3kAnimationIds.DEATH.id());
         sprite.setSpindashCounter((short) 0);
         sprite.setXSpeed((short) 0);
@@ -810,13 +860,13 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      *   subq.w #2,y_pos(a2)
      * </pre>
      */
-    private void doCarry(AbstractPlayableSprite sprite, boolean isPlayer1, int sprayY) {
+    private void doCarry(AbstractPlayableSprite sprite, boolean isPlayer1,
+            int sprayY, int grabZoneWordOffset) {
         int idx = Math.min(segmentCount, GRAB_ZONES.length - 1);
-        int[] zone = GRAB_ZONES[idx];
         int spriteY = sprite.getCentreY();
 
         // ROM: check if player has risen above the top of grab zone → release
-        int yTop = sprayY + zone[0];
+        int yTop = sprayY + grabZoneWord(idx * 2 + grabZoneWordOffset);
         if (spriteY < yTop) {
             releasePlayer(sprite, isPlayer1);
             return;
@@ -865,6 +915,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         sprite.setAir(true);
         ObjectControlState.none().applyTo(sprite);
         // ROM: move.b #2,anim(a2) — roll animation
+        sprite.setAnimationId(Sonic3kAnimationIds.ROLL);
         sprite.setForcedAnimationId(Sonic3kAnimationIds.ROLL.id());
         sprite.setYSpeed((short) -0x200);
     }
@@ -949,6 +1000,10 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             LOG.fine(() -> "HczEndBossWaterColumn.getWaterLevelY: " + e.getMessage());
         }
         return FLOOR_Y_LIMIT;
+    }
+
+    int getWaterSurfaceYForChildren() {
+        return waterBaseY + 8;
     }
 
     // =========================================================================

@@ -3450,6 +3450,64 @@ their live positions (`docs/s2disasm/s2.asm:54184-54204`), while
 
 ---
 
++## P84 -- Objects that read global oscillators must not advance them
+
+**Symptom.** Every oscillating platform or hazard in the level changes phase
+while one particular object is active. The target object can look locally
+plausible, but a later unrelated platform is hundreds of oscillator ticks away
+from ROM.
+
+**Root cause.** The object port calls the engine's global oscillator update
+before reading the table. ROM object routines read `Oscillating_Data` only;
+`OscillateNumDo` advances the shared table once at the level-loop tail after
+all object slots. An object-local update therefore adds a second tick per frame,
+and a different counter domain can defeat frame-number deduplication entirely.
+
+**What to check.** When an object reads `Oscillating_Data+N`, port only the
+read and local position calculation. Keep the single global update under the
+level loop's owner. Add a test that snapshots the complete oscillator table,
+executes the object once, and proves the table is unchanged.
+
+**ROM citation.** S2's level loop calls `OscillateNumDo` after
+`ExecuteObjects` (`docs/s2disasm/s2.asm:5091-5104`). S3K's concrete
+origin is `Obj_MGZMovingSpikePlatform`
+(`docs/skdisasm/sonic3k.asm:7909,71029-71072`).
+
+**Originating commit (S3K).** `<pending: MGZ moving-spike oscillator ownership milestone>`.
+
+---
+
++---
+
+## P84 -- Grounded squash-edge escapes can still publish push while moving away
+
+**Symptom.** A grounded player is separated sideways from the lower half of a
+full-solid object and all positions and velocities match ROM, but
+`Status_Push` is missing for that frame. This often occurs beside upright
+spikes or another short solid when the player is moving away from the nearer
+edge.
+
+**Root cause.** `SolidObject_Squash` / the S3K lower-half branch sends an
+`abs(d0) < $10` overlap back through the normal left/right helper. The later
+AtEdge path publishes the player and object push bits for any grounded side
+separation; it does not require the player to be moving into the solid.
+Treating the squash escape as correction-only loses the transient status bit.
+
+**Correct pattern.** For concrete `SolidObjectFull` callers whose disassembly
+uses this shared escape, implement
+`groundedSquashEdgeSideContactSetsPush()`. Keep position correction and speed
+zeroing under their existing movement-direction gates; only the grounded push
+publication is unconditional. Test a lower-half overlap within $10 pixels
+while moving away.
+
+**ROM citation.** S3K `SolidObjectFull` escapes the lower-half squash at
+`docs/skdisasm/sonic3k.asm:41564-41568` and publishes grounded push through
+`loc_1E06E` at lines 41473-41495. S2 follows the corresponding
+`SolidObject_Squash -> SolidObject_LeftRight` path at
+`docs/s2disasm/s2.asm:35336-35402`.
+
+**Originating commit.** `<pending: shared spike squash-edge push milestone>`.
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

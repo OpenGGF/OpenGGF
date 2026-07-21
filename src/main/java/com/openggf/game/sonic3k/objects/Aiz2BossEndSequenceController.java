@@ -12,7 +12,6 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
-import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -47,7 +46,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     // those two extra object entries from the live Status_OnObj state.
     private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 4;
     private static final int RIDING_SIDEKICK_CONTROL_RESTORE_DELAY = 6;
-    private static final short POST_RESULTS_INITIAL_WALK_SPEED = 0x000C;
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
     private static final int AIRBORNE_CAMERA_TARGET_OFFSET = 0x80;
@@ -62,7 +60,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private boolean buttonHandled;
     private boolean transitionRequested;
     private boolean pendingLookUpInputAfterStop;
-    private boolean pendingButtonControlRelease;
     private boolean postButtonMaxYReleaseActive;
     private int postButtonMaxYAccumulator;
     private int postResultsControlRestoreDelay = -1;
@@ -120,6 +117,14 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         if (postResultsControlRestoreDelay > 0) {
             postResultsControlRestoreDelay--;
             holdEndingPose(player);
+            if (postResultsControlRestoreDelay == 0) {
+                // The later controller slot reaches loc_69526 after the player
+                // slot but before its separately allocated camera-bound child.
+                // Expose the logical Right word now so the next player pass
+                // owns acceleration/animation without advancing that child.
+                ObjectControlState.none().applyTo(player);
+                forceRightLogicalInput(player);
+            }
             return;
         }
 
@@ -137,13 +142,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             player.setForceInputRight(false);
             player.clearForcedInputMask();
             player.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
-        }
-
-        if (pendingButtonControlRelease) {
-            pendingButtonControlRelease = false;
-            player.clearForcedInputMask();
-            player.setForceInputRight(false);
-            player.setControlLocked(false);
         }
 
         // Phase: Walk right until reaching stop coordinate
@@ -177,13 +175,13 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             // Bridge collapses — release all player locks so the bridge's
             // ejectStandingPlayers() can set the hurt-fall state and the
             // animation system doesn't overwrite it.
-            // The button occupies an earlier SST slot than this controller. It
-            // clears Ctrl_1_locked after the player slot has already consumed
-            // the controller's final UP word; loc_69588 observes that clear and
-            // advances without writing another word. Preserve that last logical
-            // input until the next engine player pass instead of letting the
-            // shared cutscene latch erase it in this collapsed object update.
-            pendingButtonControlRelease = true;
+            // Obj_CutsceneButton clears Ctrl_1_locked in its earlier object
+            // slot. This controller then observes the shared button flag and
+            // clears its engine-side forced word so the next player dispatch
+            // reads the unlocked raw input, matching loc_65C56/loc_69588.
+            player.clearForcedInputMask();
+            player.setForceInputRight(false);
+            player.setControlLocked(false);
             services().camera().setMaxYTarget((short) POST_BUTTON_CAMERA_MAX_Y_TARGET);
             postButtonMaxYReleaseActive = true;
             postButtonMaxYAccumulator = 0;
@@ -250,7 +248,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         ObjectControlState.none().applyTo(player);
         player.setControlLocked(true);
         forceRightLogicalInput(player);
-        applyFirstForcedRightWalkTick(player);
         restoreSidekickPostResultsControl(player);
         setSidekickControlLocked(player, true);
     }
@@ -278,18 +275,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         player.setForceInputRight(false);
         player.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
         player.writeLogicalInputAndCurrentFollowerHistory(AbstractPlayableSprite.INPUT_RIGHT, false);
-    }
-
-    private void applyFirstForcedRightWalkTick(AbstractPlayableSprite player) {
-        player.setXSpeed(POST_RESULTS_INITIAL_WALK_SPEED);
-        player.setGSpeed(POST_RESULTS_INITIAL_WALK_SPEED);
-
-        int advancedSubpixel = (player.getXSubpixelRaw() & 0xFFFF)
-                + (((int) POST_RESULTS_INITIAL_WALK_SPEED) << 8);
-        if (advancedSubpixel > 0xFFFF) {
-            NativePositionOps.addXPosPreserveSubpixel(player, advancedSubpixel >>> 16);
-        }
-        player.setSubpixelRaw(advancedSubpixel & 0xFFFF, player.getYSubpixelRaw());
     }
 
     private void updatePostButtonCameraMaxYRelease() {

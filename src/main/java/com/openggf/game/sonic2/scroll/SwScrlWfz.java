@@ -1,6 +1,9 @@
 package com.openggf.game.sonic2.scroll;
 
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.runtime.WfzRuntimeState;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.scroll.FrameScrollAccumulator;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
@@ -92,14 +95,18 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
         resetScrollTracking();
         composer.reset();
 
+        WfzRuntimeState runtimeState = currentRuntimeState();
+        int bgYPos = runtimeState != null ? runtimeState.bgVscrollFactor() : bgCamera.getBgYPos();
+        int bgXPos = runtimeState != null ? runtimeState.bgXPos() : bgCamera.getBgXPos();
+
         // ==================== Step 1: Update VScroll factor ====================
         // move.w (Camera_BG_Y_pos).w,(Vscroll_Factor_BG).w
-        composer.setVscrollFactorBG((short) bgCamera.getBgYPos());
+        composer.setVscrollFactorBG((short) bgYPos);
 
         // ==================== Step 2: Build TempArray_LayerDef ====================
         // move.l (Camera_BG_X_pos).w,d0  -- reads 32-bit (integer.subpixel)
         // The bgCamera stores the integer part; we treat it as the high word of a 32-bit value
-        int bgXPosLong = bgCamera.getBgXPos() << 16;
+        int bgXPosLong = bgXPos << 16;
 
         // Layer 0 and 1: Camera_BG_X_pos (static BG and ship)
         // move.l d0,(a2)+  ; offset 0x00
@@ -138,7 +145,7 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
         // ==================== Step 4: Find first visible segment ====================
         // move.w (Camera_BG_Y_pos).w,d1
         // andi.w #$7FF,d1
-        int bgY = bgCamera.getBgYPos() & 0x7FF;
+        int bgY = bgYPos & 0x7FF;
 
         // .seg_loop:
         //   move.b (a3)+,d0      ; number of lines in segment
@@ -215,6 +222,27 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    private WfzRuntimeState currentRuntimeState() {
+        return GameServices.hasRuntime()
+                ? GameServices.zoneRuntimeRegistry().currentAs(WfzRuntimeState.class).orElse(null)
+                : null;
+    }
+
+    private int currentBgXPos() {
+        WfzRuntimeState runtimeState = currentRuntimeState();
+        return runtimeState != null ? runtimeState.bgXPos() : bgCamera.getBgXPos();
+    }
+
+    @Override
+    public int getBgCameraX() {
+        return currentBgXPos();
+    }
+
+    @Override
+    public BgTilemapUpdateMode getBgTilemapUpdateMode() {
+        return BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32;
     }
 
     private void fillFallback(int[] horizScrollBuf, int cameraX) {

@@ -56,6 +56,15 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private int currentZoneIndex = -2;
     private int currentActIndex = 0;
     private int loadEpoch = 0;
+    private RuntimeArtState cnzTeleporterArtState = RuntimeArtState.IDLE;
+    private RuntimeArtState cnzEndBossArtState = RuntimeArtState.IDLE;
+
+    private enum RuntimeArtState {
+        IDLE,
+        PENDING,
+        COMPLETE,
+        FAILED
+    }
 
     private final Map<String, PatternSpriteRenderer> renderers = new HashMap<>();
     private final Map<String, ObjectSpriteSheet> sheets = new HashMap<>();
@@ -67,7 +76,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     // Tracks which level tile indices each level-art sheet depends on.
     // Used by Sonic3kPlcLoader.refreshAffectedRenderers() to find which
     // renderers need GPU texture re-upload after PLC application.
-    private final Map<String, Sonic3kPlcLoader.TileRange> levelArtTileRanges = new HashMap<>();
+    private final Map<String, List<Sonic3kPlcLoader.TileRange>> levelArtTileRanges = new HashMap<>();
 
     // Shield DPLC-driven renderers and art sets
     private final Map<String, PlayerSpriteRenderer> dplcRenderers = new HashMap<>();
@@ -110,6 +119,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     public void loadArtForZone(int zoneIndex) throws IOException {
         currentZoneIndex = zoneIndex;
         loadEpoch++;
+        cnzTeleporterArtState = RuntimeArtState.IDLE;
+        cnzEndBossArtState = RuntimeArtState.IDLE;
 
         // Clear previous registrations
         renderers.clear();
@@ -155,12 +166,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             loadHczEndBossArt();
             loadHczGeyserCutsceneArt();
         } else if (zoneIndex == 0x03) {
-            // CNZ teleporter, miniboss, and end-boss wrappers all share these
-            // ROM-backed art paths.
-            loadCnzTeleporterArt();
+            // The teleporter art is not a level-load PLC. Obj_CNZTeleporter
+            // queues ArtKosM_CNZTeleport at runtime when Knuckles reaches it.
             loadSharedBossExplosionArt();
             loadCnzMinibossArtFromPlc();
-            loadCnzEndBossArt();
+            // Obj_CNZEndBoss issues Load_PLC($6E) after its camera-range gate.
+            // Keep this out of the level-load path so the provider exposes the
+            // same request/completion seam as the native decompression queue.
             loadCnzTraversalArt();
         } else if (zoneIndex == 0x05) {
             loadSharedBossExplosionArt();
@@ -1006,9 +1018,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private void registerLevelArtSheet(String key, ObjectSpriteSheet sheet, Sonic3kObjectArt art) {
         registerSheet(key, sheet);
         if (sheet != null && art.getLastBuildStartTile() >= 0) {
-            levelArtTileRanges.put(key, new Sonic3kPlcLoader.TileRange(
-                    art.getLastBuildStartTile(), art.getLastBuildTileCount()));
+            List<Sonic3kPlcLoader.TileRange> ranges = art.getLastBuildTileRanges();
+            if (ranges.isEmpty()) {
+                ranges = List.of(new Sonic3kPlcLoader.TileRange(
+                        art.getLastBuildStartTile(), art.getLastBuildTileCount()));
+            }
+            levelArtTileRanges.put(key, ranges);
         }
+        art.clearLastBuildTileRanges();
     }
 
     private void loadEggCapsuleArt() throws IOException {
@@ -1211,6 +1228,69 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
     }
 
+    /** Mirrors Obj_CNZTeleporter's Queue_Kos_Module request. */
+    public void queueCnzTeleporterArt() {
+        if (cnzTeleporterArtState == RuntimeArtState.IDLE
+                || cnzTeleporterArtState == RuntimeArtState.FAILED) {
+            cnzTeleporterArtState = RuntimeArtState.PENDING;
+        }
+    }
+
+    public boolean isCnzTeleporterArtPending() {
+        return cnzTeleporterArtState == RuntimeArtState.PENDING;
+    }
+
+    public boolean isCnzTeleporterArtComplete() {
+        return cnzTeleporterArtState == RuntimeArtState.COMPLETE;
+    }
+
+    /** Mirrors {@code Obj_CNZEndBoss -> Load_PLC($6E)}. */
+    public void queueCnzEndBossArt() {
+        if (cnzEndBossArtState == RuntimeArtState.IDLE
+                || cnzEndBossArtState == RuntimeArtState.FAILED) {
+            cnzEndBossArtState = RuntimeArtState.PENDING;
+        }
+    }
+
+    public boolean isCnzEndBossArtPending() {
+        return cnzEndBossArtState == RuntimeArtState.PENDING;
+    }
+
+    public boolean isCnzEndBossArtComplete() {
+        return cnzEndBossArtState == RuntimeArtState.COMPLETE;
+    }
+
+    @Override
+    public void processRuntimeArtQueue() {
+        boolean registeredRuntimeSheet = false;
+        if (cnzTeleporterArtState == RuntimeArtState.PENDING) {
+            loadCnzTeleporterArt();
+            PatternSpriteRenderer renderer = renderers.get(Sonic3kObjectArtKeys.CNZ_TELEPORTER);
+            cnzTeleporterArtState = renderer == null
+                    ? RuntimeArtState.FAILED : RuntimeArtState.COMPLETE;
+            registeredRuntimeSheet |= renderer != null;
+        }
+        if (cnzEndBossArtState == RuntimeArtState.PENDING) {
+            loadCnzEndBossArt();
+            PatternSpriteRenderer renderer = renderers.get(Sonic3kObjectArtKeys.CNZ_END_BOSS);
+            cnzEndBossArtState = renderer == null
+                    ? RuntimeArtState.FAILED : RuntimeArtState.COMPLETE;
+            registeredRuntimeSheet |= renderer != null;
+        }
+        if (registeredRuntimeSheet) {
+            // Runtime registration happens after the level-load cache pass.
+            ensurePatternsCached(GameServices.graphics(), PatternAtlasRange.OBJECTS.base());
+            if (cnzTeleporterArtState == RuntimeArtState.COMPLETE
+                    && !renderers.get(Sonic3kObjectArtKeys.CNZ_TELEPORTER).isReady()) {
+                cnzTeleporterArtState = RuntimeArtState.FAILED;
+            }
+            if (cnzEndBossArtState == RuntimeArtState.COMPLETE
+                    && !renderers.get(Sonic3kObjectArtKeys.CNZ_END_BOSS).isReady()) {
+                cnzEndBossArtState = RuntimeArtState.FAILED;
+            }
+        }
+    }
+
     /**
      * Loads CNZ miniboss art via PLC 0x5D (corrected from prior 0x5C in
      * workstream D), matching the
@@ -1314,8 +1394,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * Loads CNZ end-boss art via PLC 0x6E, matching the ROM's setup path.
      *
      * <p>PLC_6E loads the CNZ end-boss body, shared Robotnik ship art, shared
-     * boss explosion art, and the shared egg capsule art used by the bounded
-     * CNZ end-boss wrapper.
+     * boss explosion art, and the shared egg capsule art used by the native
+     * CNZ end-boss and post-defeat handoff.
      */
     private void loadCnzEndBossArt() {
         try {
@@ -1610,15 +1690,19 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     public List<String> getAffectedRendererKeys(List<Sonic3kPlcLoader.TileRange> modifiedRanges) {
         List<String> affected = new ArrayList<>();
         for (var entry : levelArtTileRanges.entrySet()) {
-            Sonic3kPlcLoader.TileRange sheetRange = entry.getValue();
-            int sheetStart = sheetRange.startTileIndex();
-            int sheetEnd = sheetStart + sheetRange.tileCount();
+            for (Sonic3kPlcLoader.TileRange sheetRange : entry.getValue()) {
+                int sheetStart = sheetRange.startTileIndex();
+                int sheetEnd = sheetStart + sheetRange.tileCount();
 
-            for (Sonic3kPlcLoader.TileRange modified : modifiedRanges) {
-                int modStart = modified.startTileIndex();
-                int modEnd = modStart + modified.tileCount();
-                if (modStart < sheetEnd && modEnd > sheetStart) {
-                    affected.add(entry.getKey());
+                for (Sonic3kPlcLoader.TileRange modified : modifiedRanges) {
+                    int modStart = modified.startTileIndex();
+                    int modEnd = modStart + modified.tileCount();
+                    if (modStart < sheetEnd && modEnd > sheetStart) {
+                        affected.add(entry.getKey());
+                        break;
+                    }
+                }
+                if (affected.contains(entry.getKey())) {
                     break;
                 }
             }
@@ -1793,6 +1877,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     }
 
     @Override
+    public int getRegularPatternCount() {
+        return sheetOrder.stream().mapToInt(sheet -> sheet.getPatterns().length).sum();
+    }
+
+    @Override
     public int ensurePatternsCached(GraphicsManager graphicsManager, int basePatternIndex) {
         int next = basePatternIndex;
         for (int i = 0; i < rendererOrder.size(); i++) {
@@ -1828,16 +1917,25 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
     @Override
     public com.openggf.game.rewind.snapshot.PlcProgressSnapshot capture() {
-        return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(loadEpoch);
+        return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(
+                loadEpoch, cnzTeleporterArtState.ordinal()
+                        | (cnzEndBossArtState.ordinal() << 2));
     }
 
     /**
-     * Restore is a no-op for v1: all PLC art is loaded at zone-load time and
-     * does not change per-frame. The epoch is recorded in the snapshot as a
-     * diagnostic check but is not re-applied here.
+     * Restores provider-owned runtime queue state. Loaded pattern data remains
+     * cached, but the state gate determines whether gameplay may observe it.
      */
     @Override
     public void restore(com.openggf.game.rewind.snapshot.PlcProgressSnapshot snap) {
-        // No per-frame PLC state to restore in v1.
+        loadEpoch = snap.loadEpoch();
+        int packedState = snap.runtimeState();
+        cnzTeleporterArtState = decodeRuntimeArtState(packedState & 3);
+        cnzEndBossArtState = decodeRuntimeArtState((packedState >>> 2) & 3);
+    }
+
+    private static RuntimeArtState decodeRuntimeArtState(int state) {
+        return state >= 0 && state < RuntimeArtState.values().length
+                ? RuntimeArtState.values()[state] : RuntimeArtState.IDLE;
     }
 }

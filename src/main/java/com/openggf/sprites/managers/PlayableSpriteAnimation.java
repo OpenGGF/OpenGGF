@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.physics.Direction;
@@ -22,6 +23,17 @@ public class PlayableSpriteAnimation {
     // ScriptedVelocityAnimationProfile.resolveGroundMovementAnimId.
     private int lastGroundMovementAnimId = -1;
     private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
+    private boolean groundMovementAnimationSuppressed;
+    private boolean nextUpdateSuppressed;
+
+    /**
+     * Holds one animation dispatch while the rest of the playable tick runs.
+     * Used when a native VBlank sample bisects a CPU sidekick slot after its
+     * movement path but before {@code Animate_Tails}.
+     */
+    public void suppressNextUpdate() {
+        nextUpdateSuppressed = true;
+    }
 
     /**
      * Resets the tracked animation ID so the next update sees a mismatch
@@ -30,6 +42,15 @@ public class PlayableSpriteAnimation {
      */
     public void resetLastAnimationId() {
         lastAnimationId = -1;
+    }
+
+    /**
+     * Publishes a native {@code prev_anim} value without changing the selected
+     * animation or its current script state. The next update restarts only when
+     * the selected animation differs from this exact ROM-visible value.
+     */
+    public void publishPreviousAnimationId(int nativePrevAnimId) {
+        lastAnimationId = nativePrevAnimId;
     }
 
     public PlayableSpriteAnimation(AbstractPlayableSprite sprite) {
@@ -78,6 +99,7 @@ public class PlayableSpriteAnimation {
 
     public void clearGroundMovementAnimSpeed() {
         groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
+        groundMovementAnimationSuppressed = false;
     }
 
     public boolean hasGroundMovementAnimSpeed() {
@@ -88,13 +110,22 @@ public class PlayableSpriteAnimation {
         return hasGroundMovementAnimSpeed() ? (short) groundMovementAnimSpeedSnapshot : sprite.getGSpeed();
     }
 
+    public void suppressGroundMovementAnimationForFrame() {
+        groundMovementAnimationSuppressed = true;
+    }
+
+    public boolean isGroundMovementAnimationSuppressed() {
+        return groundMovementAnimationSuppressed;
+    }
+
     public void update(int frameCounter) {
         if (sprite == null) {
             return;
         }
-        updateFlipAngle(frameCounter);
-        boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
-        sprite.setRenderFlips(facingLeft, false);
+        if (nextUpdateSuppressed) {
+            nextUpdateSuppressed = false;
+            return;
+        }
         if (sprite.getSpindashDustController() != null) {
             sprite.getSpindashDustController().update();
         }
@@ -113,20 +144,20 @@ public class PlayableSpriteAnimation {
             // doesn't trigger auto-unboxing NPE via JLS ternary type inference.
             Integer desiredAnimId = forced >= 0
                     ? Integer.valueOf(forced)
-                    : (profile != null
-                        ? profile.resolveAnimationId(sprite, frameCounter, sprite.getAnimationSet().getScriptCount())
-                        : null);
+                    : resolveDesiredAnimationId(profile, frameCounter);
             if (desiredAnimId != null && desiredAnimId != sprite.getAnimationId()) {
                 sprite.setAnimationId(desiredAnimId);
-                resetScriptState();
             }
+            restoreWaterTunnelPreviousAnimation(profile);
             if (sprite.isObjectMappingFrameControl()) {
+                applyDefaultFacingRenderFlips();
                 return;
             }
             updateScriptedAnimation(frameCounter);
             return;
         }
 
+        applyDefaultFacingRenderFlips();
         if (profile == null) {
             return;
         }
@@ -141,57 +172,237 @@ public class PlayableSpriteAnimation {
         sprite.setMappingFrame(frame);
     }
 
+    /**
+     * S1's player slot repairs the wind-tunnel animation immediately before
+     * Animate: while {@code f_wtunnelmode} is set, a movement-written Walk byte
+     * is replaced with {@code prev_anim}. This matters while Obj64 temporarily
+     * disables the tunnel push but leaves the mode flag active. The provider
+     * predicate keeps the shared animation code driven by native runtime state,
+     * without a game or zone branch.
+     */
+    private void restoreWaterTunnelPreviousAnimation(SpriteAnimationProfile profile) {
+        if (!(profile instanceof ScriptedVelocityAnimationProfile velocityProfile)
+                || sprite.getAnimationId() != velocityProfile.getWalkAnimId()
+                || lastAnimationId < 0) {
+            return;
+        }
+        var levelManager = sprite.currentLevelManagerIfAvailable();
+        ZoneFeatureProvider zoneFeatures = levelManager != null
+                ? levelManager.getZoneFeatureProvider()
+                : null;
+        if (zoneFeatures != null && zoneFeatures.isWaterTunnelActive()) {
+            sprite.setAnimationId(lastAnimationId);
+        }
+    }
+
     private void updateScriptedAnimation(int frameCounter) {
         var animationSet = sprite.getAnimationSet();
         if (animationSet == null) {
             return;
         }
         if (sprite.getAnimationId() != lastAnimationId) {
+            SpriteAnimationProfile profile = sprite.getAnimationProfile();
+            if (pushUsesWalkSpecialHandler()
+                    && profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {
+                // Animate_Sonic/Tails stores the raw anim byte into prev_anim
+                // even when the movement resolver is intentionally null (for
+                // example an object-landing Walk write on an airborne-start
+                // frame). Keep the walk-special tracker in step with the
+                // native comparison without collapsing the raw state.
+                PlayerAnimationRules rules = playerAnimationRulesOrNull();
+                if (lastAnimationId >= 0
+                        && rules != null
+                        && rules.animationChangeClearsPush()) {
+                    // The raw anim/prev_anim comparison is still authoritative
+                    // when the movement resolver intentionally returns null.
+                    // A post-player object landing can publish Walk after the
+                    // previous Animate pass; on the next player tick, a fresh
+                    // wall push must be cleared before Walk selects mappings.
+                    sprite.setPushing(false);
+                }
+                lastGroundMovementAnimId = groundMoveAnimByte(
+                        velocityProfile, sprite.getAnimationId());
+            }
             resetScriptState();
         }
         var script = animationSet.getScript(sprite.getAnimationId());
         if (script == null || script.frames().isEmpty()) {
+            applyDefaultFacingRenderFlips();
             return;
         }
 
+        if (!walkRunDelayLatchesRenderOrientation(script)) {
+            applyDefaultFacingRenderFlips();
+        }
+
+        // Native walk/run handlers do not all put their timer gate in the same
+        // place. S1 Sonic and S2 Tails return before selecting a new mapping;
+        // S2 Sonic and the S3K characters publish the current mapping first.
+        // Keep that ordering on the per-character animation profile.
+        int remaining = sprite.getAnimationTick() - 1;
         int delayOrFlag = script.delay() & 0xFF;
+        if (remaining >= 0 && !walkRunPublishesFrameBeforeTimerAdvance(delayOrFlag)) {
+            sprite.setAnimationTick(remaining);
+            return;
+        }
+
         if (delayOrFlag >= 0x80) {
-            updateSpecialScript(delayOrFlag, script);
+            updateSpecialScript(delayOrFlag, script, remaining);
             return;
         }
 
         updateScriptWithDelay(script, delayOrFlag, 0);
     }
 
-    private void updateSpecialScript(int startFlag, SpriteAnimationScript script) {
+    private boolean walkRunDelayLatchesRenderOrientation(SpriteAnimationScript script) {
+        PlayerAnimationRules rules = playerAnimationRulesOrNull();
+        return rules != null
+                && rules.walkRunDelayLatchesRenderOrientation()
+                && (script.delay() & 0xFF) == 0xFF
+                && sprite.getAnimationTick() > 0;
+    }
+
+    private boolean walkRunPublishesFrameBeforeTimerAdvance(int delayOrFlag) {
+        SpriteAnimationProfile profile = sprite.getAnimationProfile();
+        return delayOrFlag == 0xFF
+                && profile instanceof ScriptedVelocityAnimationProfile velocityProfile
+                && velocityProfile.isWalkRunPublishesFrameBeforeTimerAdvance();
+    }
+
+    private void applyDefaultFacingRenderFlips() {
+        boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
+        sprite.setRenderFlips(facingLeft, false);
+    }
+
+    private void updateSpecialScript(int startFlag, SpriteAnimationScript script, int remaining) {
         switch (startFlag & 0xFF) {
-            case 0xFF -> updateWalkRun(script);
-            case 0xFE -> updateRoll(script);
-            case 0xFD -> updatePush(script);
+            case 0xFF -> updateWalkRun(script, remaining);
+            case 0xFE -> updateRoll(script, remaining);
+            case 0xFD -> updatePush(script, remaining);
             default -> updateScriptWithDelay(script, 0, 0);
         }
     }
 
-    private void updateWalkRun(SpriteAnimationScript baseScript) {
+    private void updateWalkRun(SpriteAnimationScript baseScript, int remaining) {
         int flipAngle = sprite.getFlipAngle();
         if (flipAngle != 0) {
             updateTumble(flipAngle);
             return;
         }
-        int speed = Math.abs(sprite.getGSpeed());
         ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
+        int speed = Math.abs(sprite.getGSpeed());
+        if (profile != null
+                && profile.isDoubleWalkRunAnimationSpeedWhenSliding()
+                && sprite.isSliding()) {
+            speed = Math.min(0xFFFF, speed << 1);
+        }
         int runThreshold = resolveRunThreshold(profile);
 
         SpriteAnimationScript walkScript = resolveScript(profile != null ? profile.getWalkAnimId() : -1, baseScript);
         SpriteAnimationScript runScript = resolveScript(profile != null ? profile.getRunAnimId() : -1, baseScript);
-        SpriteAnimationScript active = speed >= runThreshold ? runScript : walkScript;
+        boolean highSpeedTier = profile != null
+                && profile.getHighSpeedWalkRunAnimId() >= 0
+                && profile.getHighSpeedWalkRunThreshold() > 0
+                && speed >= profile.getHighSpeedWalkRunThreshold();
+        boolean runTier = !highSpeedTier && speed >= runThreshold;
+        SpriteAnimationScript active;
+        int slopeStride;
+        if (highSpeedTier) {
+            active = resolveScript(profile.getHighSpeedWalkRunAnimId(), baseScript);
+            slopeStride = profile.getHighSpeedSlopeFrameStride();
+        } else if (runTier) {
+            active = runScript;
+            slopeStride = profile != null ? profile.getRunSlopeFrameStride() : 0;
+        } else {
+            active = walkScript;
+            slopeStride = profile != null ? profile.getWalkSlopeFrameStride() : 0;
+        }
         if (active == null) {
             active = baseScript;
         }
 
-        int slopeOffset = resolveSlopeOffset(active);
+        // S1 Sonic_Animate keeps obAnim at id_Walk while Status_Push selects
+        // SonAni_Push inside the $FF walk/run special handler. Crucially, the
+        // handler decrements obTimeFrame and returns while it is non-negative;
+        // the push bit is only tested when the animation step expires
+        // (01 Sonic.asm:2253-2282,2353-2376). Do not replace the raw animation
+        // id or reset the shared special-animation frame index when push begins.
+        int slopeOffset = resolveSlopeOffset(active, slopeStride);
         int delay = computeSpeedDelay(speed, 0x800, 8);
+        if (pushUsesWalkSpecialHandler() && sprite.getPushing()) {
+            // S2 Sonic publishes the already-selected walk/run mapping before
+            // its timer gate. A push that begins while that timer is live does
+            // not select SAnim_Push until the step expires (s2.asm:38449-38474,
+            // 38627-38649). Tails and S1 return at the earlier outer timer gate.
+            if (walkRunPublishesFrameBeforeTimerAdvance(baseScript.delay() & 0xFF)
+                    && remaining >= 0) {
+                sprite.setAnimationTick(remaining);
+                return;
+            }
+            SpriteAnimationScript pushScript = resolveScript(
+                    profile != null ? profile.getPushAnimId() : -1, baseScript);
+            int pushDelay = computeSpeedDelay(speed, 0x800, 6);
+            updateScriptWithDelay(pushScript, pushDelay, 0);
+            return;
+        }
+
+        if (walkRunPublishesFrameBeforeTimerAdvance(baseScript.delay() & 0xFF)) {
+            updateWalkRunBeforeTimerAdvance(active, delay, slopeOffset, remaining);
+            return;
+        }
         updateScriptWithDelay(active, delay, slopeOffset);
+    }
+
+    /**
+     * S2 Sonic and the S3K character walk/run handlers publish
+     * {@code mapping_frame} from the current
+     * {@code anim_frame} before decrementing the timer. Only an expired timer
+     * advances {@code anim_frame}, so the newly selected mapping becomes
+     * visible on the following object tick. S1 gates the mapping write before
+     * this point and therefore keeps the already displayed frame latched.
+     *
+     * <p>ROM: S2 Sonic's {@code SAnim_WalkRun} writes the mapping at
+     * s2.asm:38494-38495, then decrements/advances at 38496-38505. S2 Tails
+     * instead gates the whole special handler first at 41330-41336, then
+     * publishes at 41386-41396. S3K's {@code Animate_Sonic} publishes at
+     * sonic3k.asm:24859-24868 before its 24869-24879 timer/advance. S1 returns
+     * on the timer gate before selecting a walk/run mapping
+     * ({@code _incObj/01 Sonic.asm:2145-2149,2198-2209}).
+     */
+    private void updateWalkRunBeforeTimerAdvance(
+            SpriteAnimationScript script,
+            int delay,
+            int frameOffset,
+            int remaining
+    ) {
+        if (script == null || script.frames().isEmpty()) {
+            return;
+        }
+
+        int frameIndex = sprite.getAnimationFrameIndex();
+        if (frameIndex < 0) {
+            frameIndex = 0;
+            sprite.setAnimationFrameIndex(0);
+        }
+        if (frameIndex >= script.frames().size()) {
+            if (!processEndAction(script)) {
+                return;
+            }
+            frameIndex = sprite.getAnimationFrameIndex();
+            if (frameIndex < 0 || frameIndex >= script.frames().size()) {
+                frameIndex = 0;
+                sprite.setAnimationFrameIndex(0);
+            }
+        }
+
+        sprite.setMappingFrame(script.frames().get(frameIndex) + frameOffset);
+        if (remaining >= 0) {
+            sprite.setAnimationTick(remaining);
+            return;
+        }
+
+        sprite.setAnimationTick(delay);
+        sprite.setAnimationFrameIndex(frameIndex + 1);
     }
 
     private void updateTumble(int flipAngle) {
@@ -201,6 +412,26 @@ public class PlayableSpriteAnimation {
 
         int d0 = flipAngle & 0xFF;
         boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
+        int flipType = sprite.getFlipType() & 0x7F;
+        int typedBase = profile != null ? profile.getTumbleTypeFrameBase(flipType) : -1;
+        if (typedBase >= 0 && flipType >= 1 && flipType <= 3) {
+            boolean hFlip = facingLeft;
+            boolean vFlip = false;
+            int adjusted;
+            if (flipType == 1) {
+                adjusted = (d0 - 8) & 0xFF;
+            } else if ((flipType == 2 && !facingLeft) || (flipType == 3 && facingLeft)) {
+                adjusted = (d0 + 0x0B) & 0xFF;
+                vFlip = facingLeft;
+            } else {
+                adjusted = (-d0 + 0x8F) & 0xFF;
+                vFlip = !facingLeft;
+            }
+            sprite.setRenderFlips(hFlip, vFlip);
+            sprite.setMappingFrame((adjusted / 0x16) + typedBase);
+            sprite.setAnimationTick(0);
+            return;
+        }
         if (!facingLeft) {
             sprite.setRenderFlips(false, false);
             int frame = ((d0 + 0x0B) & 0xFF) / 0x16;
@@ -227,55 +458,15 @@ public class PlayableSpriteAnimation {
         sprite.setAnimationTick(0);
     }
 
-    private void updateFlipAngle(int frameCounter) {
-        int flipAngle = sprite.getFlipAngle();
-        if (flipAngle == 0) {
+    private void updateRoll(SpriteAnimationScript baseScript, int remaining) {
+        // S3K's walk/run handler publishes the current mapping before its timer
+        // gate, but loc_12A2A gates Roll before selecting a script frame. The
+        // profile flag therefore cannot be applied to every negative-delay
+        // script merely because they share the same outer dispatcher.
+        if (remaining >= 0) {
+            sprite.setAnimationTick(remaining);
             return;
         }
-        if (sprite.wasSpiralActive(frameCounter)) {
-            return;
-        }
-        int flipSpeed = sprite.getFlipSpeed();
-        if (flipSpeed == 0) {
-            return;
-        }
-        int inertia = sprite.getGSpeed();
-        if (inertia == 0) {
-            inertia = sprite.getXSpeed();
-        }
-        boolean movingLeft = inertia < 0;
-        int flipsRemaining = sprite.getFlipsRemaining();
-        if (!movingLeft || sprite.isFlipTurned()) {
-            int newAngle = flipAngle + flipSpeed;
-            if (newAngle > 0xFF) {
-                flipsRemaining -= 1;
-                if (flipsRemaining < 0) {
-                    flipsRemaining = 0;
-                    newAngle = 0;
-                } else {
-                    newAngle &= 0xFF;
-                }
-            }
-            sprite.setFlipAngle(newAngle);
-            sprite.setFlipsRemaining(flipsRemaining);
-            return;
-        }
-
-        int newAngle = flipAngle - flipSpeed;
-        if (newAngle < 0) {
-            flipsRemaining -= 1;
-            if (flipsRemaining < 0) {
-                flipsRemaining = 0;
-                newAngle = 0;
-            } else {
-                newAngle = (newAngle + 0x100) & 0xFF;
-            }
-        }
-        sprite.setFlipAngle(newAngle);
-        sprite.setFlipsRemaining(flipsRemaining);
-    }
-
-    private void updateRoll(SpriteAnimationScript baseScript) {
         int speed = Math.abs(sprite.getGSpeed());
         ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
         int runThreshold = resolveRunThreshold(profile);
@@ -292,7 +483,12 @@ public class PlayableSpriteAnimation {
         updateScriptWithDelay(active, delay, 0);
     }
 
-    private void updatePush(SpriteAnimationScript baseScript) {
+    private void updatePush(SpriteAnimationScript baseScript, int remaining) {
+        // Native loc_12A72 uses the same timer-first ordering for Push.
+        if (remaining >= 0) {
+            sprite.setAnimationTick(remaining);
+            return;
+        }
         int speed = Math.abs(sprite.getGSpeed());
         ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
 
@@ -315,15 +511,7 @@ public class PlayableSpriteAnimation {
             return;
         }
 
-        int duration = sprite.getAnimationTick() - 1;
-        if (duration >= 0) {
-            sprite.setAnimationTick(duration);
-            refreshDelayedMappingFrame(script, frameOffset);
-            return;
-        }
-
-        duration = delay;
-        sprite.setAnimationTick(duration);
+        sprite.setAnimationTick(delay);
 
         int frameIndex = sprite.getAnimationFrameIndex();
         if (frameIndex < 0) {
@@ -345,17 +533,6 @@ public class PlayableSpriteAnimation {
         sprite.setAnimationFrameIndex(frameIndex + 1);
     }
 
-    private void refreshDelayedMappingFrame(SpriteAnimationScript script, int frameOffset) {
-        int displayedFrameIndex = sprite.getAnimationFrameIndex() - 1;
-        if (displayedFrameIndex < 0) {
-            displayedFrameIndex = 0;
-        }
-        if (displayedFrameIndex >= script.frames().size()) {
-            displayedFrameIndex = script.frames().size() - 1;
-        }
-        sprite.setMappingFrame(script.frames().get(displayedFrameIndex) + frameOffset);
-    }
-
     private boolean processEndAction(SpriteAnimationScript script) {
         switch (script.endAction()) {
             case HOLD -> {
@@ -372,32 +549,51 @@ public class PlayableSpriteAnimation {
                     sprite.setAnimationFrameIndex(0);
                     return true;
                 }
-                // ROM ACCURACY: Check if the profile wants the CURRENT animation to continue.
-                // In the original game, $FD only sets 'anim' but not 'prev_anim'. If the
-                // movement code immediately sets 'anim' back to the current animation,
-                // the comparison 'anim == prev_anim' passes and no reset occurs.
-                // This allows animations like skid to HOLD on the last frame while the
-                // triggering condition (skidding) persists, rather than switching and
-                // then immediately switching back with a reset.
+                // $FD executes after the movement routine in the same player
+                // slot, so it always publishes the target raw anim byte even
+                // if braking refreshed Stop earlier in that slot. Native code
+                // does not update prev_anim, anim_frame, or the skid condition
+                // here: a continuing brake writes Stop again next frame and
+                // resumes at this same $FD command instead of restarting it.
+                //
+                // Do NOT snapshot lastAnimationId (prev_anim) here either.
+                // Animate_Sonic's $FD handler (loc_12698, sonic3k.asm:24795-
+                // 24801) writes only the live anim byte -- it never touches
+                // prev_anim or anim_frame. When nothing else changes anim
+                // this frame, the next update() call's own anim!=lastAnimationId
+                // check (this method's caller) reproduces that deferred
+                // reset with identical timing. But when an external write
+                // republishes the SAME pre-switch anim id later in this same
+                // frame -- e.g. a second Gumball triangle bumper bounce
+                // (Obj_GumballTriangleBumper sub_60F94, sonic3k.asm:127666-
+                // 127709: `move.b #$10,anim(a1)`) landing on the exact frame
+                // Spring's own script (AniSonic10, `$2F,$8E,$FD,0`) auto-
+                // switches to Walk -- ROM's prev_anim is still the old id,
+                // so the following frame sees no change and the script
+                // silently resumes its already-past-the-end position for
+                // another full delay cycle instead of restarting. Eagerly
+                // syncing lastAnimationId here (as resetScriptState() would)
+                // desyncs from that stale-prev_anim behavior and makes the
+                // engine treat the reapplied old id as a fresh change,
+                // firing an extra spurious reset (S3K gumball bonus trace
+                // f1227: Spring->Walk switch delayed a frame after bumper
+                // slot 0x87's second mid-air bounce re-latches Spring on
+                // trace frame 1179).
                 SpriteAnimationProfile profile = sprite.getAnimationProfile();
-                if (profile != null) {
-                    boolean currentSkidAnimation = profile instanceof ScriptedVelocityAnimationProfile velocityProfile
+                boolean switchingFromSkid = profile instanceof ScriptedVelocityAnimationProfile velocityProfile
                             && velocityProfile.getSkidAnimId() == sprite.getAnimationId();
-                    boolean skidRefreshed = sprite.getMovementManager() instanceof PlayableSpriteMovement movement
+                boolean skidRefreshed = switchingFromSkid
+                        && sprite.getMovementManager() instanceof PlayableSpriteMovement movement
                             && movement.isSkidAnimationRefreshedThisFrame();
-                    if (currentSkidAnimation && !skidRefreshed) {
-                        sprite.setSkidding(false);
-                    }
-                    Integer desired = profile.resolveAnimationId(sprite, 0,
-                            sprite.getAnimationSet() != null ? sprite.getAnimationSet().getScriptCount() : 0);
-                    if (desired != null && desired == sprite.getAnimationId()) {
-                        // Profile wants current animation - HOLD on last frame instead of switching
-                        sprite.setAnimationFrameIndex(script.frames().size() - 1);
-                        return true;
-                    }
-                }
                 sprite.setAnimationId(nextAnimId);
-                resetScriptState();
+                if (skidRefreshed) {
+                    return false;
+                    }
+                if (switchingFromSkid) {
+                    // Engine-only latch: once braking no longer selects Stop,
+                    // the native raw-animation switch ends the skid state.
+                    sprite.setSkidding(false);
+                }
                 return false;
             }
             case LOOP -> {
@@ -425,6 +621,23 @@ public class PlayableSpriteAnimation {
             return velocityProfile;
         }
         return null;
+    }
+
+    private Integer resolveDesiredAnimationId(SpriteAnimationProfile profile, int frameCounter) {
+        if (profile == null) {
+            return null;
+        }
+        int scriptCount = sprite.getAnimationSet().getScriptCount();
+        if (pushUsesWalkSpecialHandler()
+                && profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {
+            return velocityProfile.resolveAnimationId(sprite, frameCounter, scriptCount, false);
+        }
+        return profile.resolveAnimationId(sprite, frameCounter, scriptCount);
+    }
+
+    private boolean pushUsesWalkSpecialHandler() {
+        ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
+        return profile != null && profile.isPushUsesWalkSpecialHandler();
     }
 
     private int resolveRunThreshold(ScriptedVelocityAnimationProfile profile) {
@@ -455,7 +668,7 @@ public class PlayableSpriteAnimation {
      * frame count: {@code offset = d0 * (framesPerSet / 2)} where framesPerSet is the
      * number of frames in the base angle set (the script's frame list size).
      */
-    private int resolveSlopeOffset(SpriteAnimationScript activeScript) {
+    private int resolveSlopeOffset(SpriteAnimationScript activeScript, int configuredStride) {
         int d0 = sprite.getAngle() & 0xFF;
 
         // S2 only: subtract 1 from positive non-zero angles (s2.asm:38078-38080)
@@ -477,6 +690,10 @@ public class PlayableSpriteAnimation {
             sprite.setRenderFlips(facingLeft, false);
         }
         d0 = (d0 >> 4) & 0x6;
+
+        if (configuredStride > 0) {
+            return d0 * configuredStride;
+        }
 
         // Derive the offset multiplier from the animation script's frame count.
         // Walk: S2 has 8 frames/set → d0*(8/2)=d0*4, S1 has 6 frames/set → d0*(6/2)=d0*3

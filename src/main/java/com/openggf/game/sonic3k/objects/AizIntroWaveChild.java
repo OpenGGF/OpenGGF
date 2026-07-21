@@ -75,7 +75,8 @@ public class AizIntroWaveChild extends AbstractObjectInstance implements RewindR
 
     @Override
     public int getPriorityBucket() {
-        return 3;
+        // ROM: loc_678A0 writes priority(a0) = $100.
+        return 2;
     }
 
     @Override

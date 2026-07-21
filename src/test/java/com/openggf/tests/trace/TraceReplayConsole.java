@@ -1,6 +1,7 @@
 package com.openggf.tests.trace;
 
 import com.openggf.trace.DivergenceReport;
+import com.openggf.trace.TraceVerificationScope;
 
 final class TraceReplayConsole {
     private static final int DEFAULT_CONTEXT_RADIUS = 2;
@@ -27,8 +28,17 @@ final class TraceReplayConsole {
     }
 
     static void printSummary(DivergenceReport report) {
+        printSummary(report, TraceVerificationScope.ALL);
+    }
+
+    static void printSummary(DivergenceReport report, TraceVerificationScope scope) {
         if (PRINT_SUMMARY) {
-            System.out.println(report.toCompactSummary());
+            if (scope == TraceVerificationScope.ALL) {
+                System.out.println(report.toCompactSummary());
+            } else {
+                System.out.println("Trace verification [" + scope.name().toLowerCase() + "]: "
+                        + report.toAssertionSummary(scope));
+            }
         }
     }
 }

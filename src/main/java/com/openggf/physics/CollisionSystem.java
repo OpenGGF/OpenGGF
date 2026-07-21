@@ -1,5 +1,6 @@
 package com.openggf.physics;
 
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
 import com.openggf.game.rules.CollisionRules;
@@ -8,6 +9,7 @@ import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
@@ -335,35 +337,12 @@ public class CollisionSystem {
             return;
         }
 
-        boolean deferRepeatedObjectRideResponse = shouldDeferRepeatedObjectRideResponse(sprite, mode, predictedDx);
+        // Tails_Move/Sonic_Move applies CalcRoomInFront once. The later S2
+        // SolidObject_Always/DropOnFloor object pass does not repeat a negative
+        // terrain response; only the exactly-flush handoff above is deferred.
+        // Replaying this distance after ObjectMove doubles the stored velocity
+        // when the current probe already reports the full penetration.
         applyGroundWallVelocityResponse(sprite, mode, distance);
-        if (deferRepeatedObjectRideResponse) {
-            sprite.deferGroundWallVelocityResponse(mode, distance);
-        }
-    }
-
-    private boolean shouldDeferRepeatedObjectRideResponse(AbstractPlayableSprite sprite, int mode, short predictedDx) {
-        CollisionRules rules = collisionRulesOrNull(sprite);
-        if (rules == null
-                || !rules.repeatedObjectRideGroundWallResponseDeferred()
-                || objectManager == null
-                || !sprite.isOnObject()
-                || !sprite.getPushing()
-                || !((mode == 0x40 && predictedDx < 0) || (mode == 0xC0 && predictedDx > 0))) {
-            return false;
-        }
-        ObjectInstance ridingObject = objectManager.getRidingObject(sprite);
-        if (!(ridingObject instanceof SolidObjectProvider provider)) {
-            return false;
-        }
-        // S2's deferred repeated object-ride correction models platforms that
-        // run SolidObject_Always and then DropOnFloor after player physics
-        // (Obj30, docs/s2disasm/s2.asm:35070-35095, 49560-49604,
-        // 49674-49676). Plain PlatformObjectD5 does not call DropOnFloor
-        // after MvSonicOnPtfm, so deferring here would apply CalcRoomInFront's
-        // wall response twice (docs/s2disasm/s2.asm:35860-35894, 58905-58915).
-        return provider.dropOnFloor()
-                && isRiderOnGroundWallProbeSide(sprite, ridingObject, mode);
     }
 
     private boolean shouldDeferFlushWallResponseForRiddenDropOnFloor(
@@ -413,6 +392,59 @@ public class CollisionSystem {
         int distance = sprite.getDeferredGroundWallVelocityDistance();
         sprite.clearDeferredGroundWallVelocityResponse();
         applyGroundWallVelocityResponse(sprite, mode, distance);
+    }
+
+    /**
+     * Apply S3K's post-AnglePos background-collision wall clamps.
+     *
+     * <p>When {@code Background_collision_flag} is set, the grounded stand and
+     * roll paths call {@code CheckLeftWallDist} and {@code CheckRightWallDist}
+     * after movement, AnglePos, and SlopeRepel. These checks adjust native
+     * {@code x_pos} only; unlike CalcRoomInFront they do not alter velocity or
+     * Status_Push (sonic3k.asm:27529-27548,27741-27760).
+     */
+    public boolean hasFatalPostMovementBackgroundFloorOverlap(
+            FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
+        requireTerrainOnlyPlan(plan, "hasFatalPostMovementBackgroundFloorOverlap");
+        var gameState = GameServices.gameStateOrNull();
+        if (sprite == null || gameState == null || !gameState.isBackgroundCollisionFlag()) {
+            return false;
+        }
+
+        // ROM sub_F846 probes FindFloor at (x_pos, y_pos-4) with a3=$10 and
+        // the player's live lrb_solid_bit. A negative result is an embedded
+        // dual-plane floor and the grounded stand/roll path jumps directly to
+        // Kill_Character before running the following wall clamps.
+        calcRoomProbe.sprite = sprite;
+        SensorResult floor = calcRoomProbe.scanWorld(
+                Direction.DOWN, (short) 0, (short) -4,
+                (short) 0, (short) 0, sprite.getLrbSolidBit());
+        return floor != null && floor.distance() < 0;
+    }
+
+    public void resolvePostMovementBackgroundWallClamp(
+            FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
+        requireTerrainOnlyPlan(plan, "resolvePostMovementBackgroundWallClamp");
+        var gameState = GameServices.gameStateOrNull();
+        if (sprite == null || gameState == null || !gameState.isBackgroundCollisionFlag()) {
+            return;
+        }
+
+        calcRoomProbe.sprite = sprite;
+        int solidityBit = sprite.getLrbSolidBit();
+        SensorResult left = calcRoomProbe.scanWorld(
+                Direction.LEFT, (short) -10, (short) 0,
+                (short) 0, (short) 0, solidityBit);
+        if (left != null && left.distance() < 0) {
+            NativePositionOps.addXPosPreserveSubpixel(sprite, -left.distance());
+        }
+
+        SensorResult right = calcRoomProbe.scanWorld(
+                Direction.RIGHT, (short) 10, (short) 0,
+                (short) 0, (short) 0, solidityBit);
+        if (right != null && right.distance() < 0) {
+            NativePositionOps.addXPosPreserveSubpixel(sprite, right.distance());
+        }
     }
 
     private static void applyGroundWallVelocityResponse(AbstractPlayableSprite sprite, int mode, int distance) {
@@ -519,6 +551,7 @@ public class CollisionSystem {
         if (sprite.isOnObject()) {
             if (hasObjectSupport == null
                     || hasObjectSupport.getAsBoolean()
+                    || sprite.isObjectControlled()
                     || hasPendingStaleObjectSupportLoss(sprite)) {
                 return;
             }
@@ -556,8 +589,7 @@ public class CollisionSystem {
             if (sprite.isStickToConvex()) {
                 return;
             }
-            sprite.setAir(true);
-            sprite.setPushing(false);
+            detachFromTerrain(sprite);
             return;
         }
 
@@ -592,12 +624,24 @@ public class CollisionSystem {
                 moveForSensorResult(sprite, selectedResult);
                 return;
             }
-            sprite.setAir(true);
-            sprite.setPushing(false);
+            detachFromTerrain(sprite);
             return;
         }
 
         moveForSensorResult(sprite, selectedResult);
+    }
+
+    private void detachFromTerrain(AbstractPlayableSprite sprite) {
+        sprite.setAir(true);
+        sprite.setPushing(false);
+        // AnglePos writes Run to prev_anim when terrain support is lost. If the
+        // selected animation stays Roll, that deliberate mismatch still restarts
+        // its script on this frame; an unchanged raw Run correctly keeps its
+        // cadence. This is shared by S1 (_incObj/Sonic AnglePos.asm:113-115,
+        // 276-278,349-351,422-424), S2 (s2.asm:43108-43110,
+        // 43216-43218, 43283-43285, 43350-43352), and S3K
+        // (sonic3k.asm:18840-18842, 18965-18967, 19037-19039, 19109-19111).
+        sprite.publishRunAsPreviousAnimation();
     }
 
     private boolean hasPendingStaleObjectSupportLoss(AbstractPlayableSprite sprite) {
@@ -619,7 +663,11 @@ public class CollisionSystem {
             return false;
         }
         CollisionRules rules = collisionRulesOrNull(sprite);
-        return rules != null && rules.rightWallDeepProbePreservesPenetration();
+        if (rules != null && rules.rightWallDeepProbePreservesPenetration()) {
+            return true;
+        }
+        var registry = GameServices.zoneRuntimeRegistryOrNull();
+        return registry != null && registry.current().rightWallDeepProbePreservesPenetration();
     }
 
     private int getTerrainHeadroomDistance(AbstractPlayableSprite sprite, int hexAngle) {
@@ -761,6 +809,16 @@ public class CollisionSystem {
                                     Consumer<AbstractPlayableSprite> landingHandler,
                                     boolean forceFloorCheck) {
         requireTerrainOnlyPlan(plan, "resolveAirCollision");
+        // SonicKnux_DoLevelCollision uses explicit world-space floor, ceiling,
+        // and wall checks. The engine's sensor offsets otherwise rotate from a
+        // stale grounded mode retained after leaving a loop or wall, causing an
+        // airborne floor check to scan sideways.
+        CollisionRules collisionRules = collisionRulesOrNull(sprite);
+        if (collisionRules != null
+                && collisionRules.air() != null
+                && collisionRules.air().probesResetStaleGroundMode()) {
+            sprite.setGroundMode(GroundMode.GROUND);
+        }
         int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
         switch (quadrant) {
             case 0x00 -> {
@@ -816,12 +874,16 @@ public class CollisionSystem {
 
     private boolean airRightWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
         CollisionRules rules = collisionRulesOrNull(sprite);
-        return rules != null && rules.airRightWallHitContinuesIntoCeilingSeparation();
+        return rules != null
+                && rules.air() != null
+                && rules.air().rightWallHitContinuesIntoCeilingSeparation();
     }
 
     private boolean airLeftWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
         CollisionRules rules = collisionRulesOrNull(sprite);
-        return rules != null && rules.airLeftWallHitContinuesIntoCeilingSeparation();
+        return rules != null
+                && rules.air() != null
+                && rules.air().leftWallHitContinuesIntoCeilingSeparation();
     }
 
     /**
@@ -933,6 +995,7 @@ public class CollisionSystem {
             // flag below — which, for a hurt player, also clears the hurt routine
             // (AbstractPlayableSprite.setAir).
             boolean wasHurt = sprite.isHurt();
+            int savedDoubleJumpFlag = sprite.getDoubleJumpFlag();
             if ((lowestResult.angle() & 0x01) != 0) {
                 sprite.setAngle((byte) 0x80);
             } else {
@@ -954,6 +1017,12 @@ public class CollisionSystem {
                 sprite.setXSpeed((short) 0);
                 sprite.setGSpeed((short) 0);
             } else {
+                // Player_HitCeilingAndWalls reaches the same
+                // Player_TouchFloor_Check_Spindash tail as an ordinary floor
+                // landing. In S3K that tail can immediately re-launch Sonic
+                // through BubbleShield_Bounce before ground_vel samples the
+                // resulting y_vel (sonic3k.asm:24248-24264,24325-24426).
+                sprite.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
                 short gSpeed = sprite.getYSpeed();
                 if ((ceilingAngle & 0x80) != 0) {
                     gSpeed = (short) -gSpeed;
@@ -1014,11 +1083,25 @@ public class CollisionSystem {
         if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
             sprite.setPinballMode(false);
         }
+        if (!sprite.getPinballMode()
+                && rules != null
+                && rules.angledLandingPublishesWalk()) {
+            // Player_TouchFloor_Check_Spindash publishes Walk before clearing
+            // the airborne state on every accepted S2/S3K terrain landing,
+            // including the angled ceiling/wall path (s2.asm:38049-38052,
+            // 38123-38127; sonic3k.asm:24258-24264,24325-24329). S1's angled
+            // path does not own that write and can retain Spring.
+            int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+            if (walkAnimationId >= 0) {
+                sprite.setAnimationId(walkAnimationId);
+            }
+        }
         sprite.setAir(false);
         sprite.setPushing(false);
         sprite.setRollingJump(false);
         sprite.setJumping(false);
         sprite.setFlipAngle(0);
+        sprite.setFlipType(0);
         sprite.setFlipTurned(false);
         sprite.setFlipsRemaining(0);
         sprite.setLookDelayCounter((short) 0);

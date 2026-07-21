@@ -170,17 +170,27 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean isPersistent() {
-        return true;
-    }
-
-    @Override
     public boolean isHighPriority() {
         return true;
     }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        // ROM Check_CameraInRange aborts setup until the camera enters
+        // word_62150. On success it copies the JSR return address into (a0),
+        // permanently replacing the operation pointer with the code after the
+        // range check; later routines therefore keep running outside the
+        // rectangle. Delaying only initialization is what leaves the controller
+        // absent during the earlier spindash while still allowing the activated
+        // Knuckles walk/button sequence to finish.
+        Camera camera = services().camera();
+        int cameraX = Short.toUnsignedInt(camera.getX());
+        int cameraY = Short.toUnsignedInt(camera.getY());
+        if (!initialized && (cameraX < CAM_RANGE_X_MIN || cameraX > CAM_RANGE_X_MAX
+                || cameraY < CAM_RANGE_Y_MIN || cameraY > CAM_RANGE_Y_MAX)) {
+            return;
+        }
+
         if (!initialized) {
             initialized = true;
             activeInstance = this;
@@ -188,9 +198,6 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
             AizIntroArtLoader.loadAllIntroArt(services());
         }
 
-        // ROM: Check_CameraInRange runs every frame but does NOT skip the state
-        // machine — it only manages sprite visibility/deletion via
-        // Sprite_CheckDeleteTouchSlotted at the END of the frame.
         // Delete self if playing as Knuckles (ROM: character_id check).
         if (routine == 0 && isPlayerKnuckles()) {
             setDestroyed(true);

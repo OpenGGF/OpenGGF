@@ -2,6 +2,7 @@ package com.openggf.sprites.playable;
 
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.session.SessionManager;
 import com.openggf.physics.Direction;
 import org.junit.jupiter.api.AfterEach;
@@ -134,11 +135,14 @@ class TestSidekickCpuControllerFlightAutoRecovery {
 
     @Test
     void onScreenFlightAutoRecoveryReassertsAirBit() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         TestableSprite sonic = sonicAt(0x1000, 0x0400);
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1100);
         tails.setCentreY((short) 0x0300);
+        tails.setYSpeed((short) -0x0800);
+        tails.setDoubleJumpProperty((byte) 0xF0);
         tails.setAir(false);
         tails.setRenderFlagOnScreen(true);
 
@@ -149,6 +153,9 @@ class TestSidekickCpuControllerFlightAutoRecovery {
 
         assertTrue(tails.getAir(),
                 "ROM Tails_FlySwim_Unknown loc_13C3A ORs Status_InAir every on-screen frame");
+        assertEquals(0x21, tails.getAnimationId(),
+                "Tails_Set_Flying_Animation selects the ascending flight byte from negative y_vel");
+        assertEquals(0x21, tails.getForcedAnimationId());
     }
 
     @Test
@@ -164,6 +171,8 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         tails.setObjectControlAllowsCpu(true);
         tails.setObjectControlSuppressesMovement(true);
         tails.setDirection(Direction.LEFT);
+        tails.setAnimationId(0x20);
+        tails.setForcedAnimationId(0x20);
         // On-screen so the off-screen timer doesn't fire.
         tails.setRenderFlagOnScreen(true);
 
@@ -182,6 +191,8 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "Transition clears the object-control movement suppression mirror");
         assertFalse(tails.isControlLocked(),
                 "Transition clears the engine control-lock mirror so NORMAL CPU input reaches movement");
+        assertEquals(-1, tails.getForcedAnimationId(),
+                "loc_13CD2 releases the recovery-flight animation owner");
         assertEquals(Direction.RIGHT, tails.getDirection(),
                 "ROM loc_13CD2 masks status down to Status_InAir plus underwater, clearing Status_Facing");
         assertEquals(0, tails.getDoubleJumpFlag(),
@@ -190,6 +201,33 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                         + "loc_1384A (sonic3k.asm:26213) auto-clears the flag while "
                         + "object_control bit 0 is set; the engine's NORMAL transition clears "
                         + "object_control, so we must clear double_jump_flag explicitly.");
+    }
+
+    @Test
+    void flightTimerCarriesIntoNormalRespawnCounterWord() {
+        TestableSprite sonic = sonicAt(0x1000, 0x0400);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1000);
+        tails.setCentreY((short) 0x0400);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertSame(SidekickCpuController.State.NORMAL, controller.getState());
+        assertEquals(1, controller.getDiagnosticRespawnCounter(),
+                "Routine 4 to 6 preserves the shared Tails_CPU_flight_timer word");
+
+        tails.setRenderFlagOnScreen(false);
+        controller.update(11);
+
+        assertEquals(2, controller.getDiagnosticRespawnCounter(),
+                "Routine 6 continues incrementing that same shared word off-screen");
     }
 
     @Test

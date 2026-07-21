@@ -49,6 +49,7 @@ import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
+import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.ObjectManager;
@@ -58,6 +59,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.TailsCarryController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -88,7 +90,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         S3kTransitionEventBridge {
     private static final Logger LOG = Logger.getLogger(Sonic3kLevelEventManager.class.getName());
     private static final int PACHINKO_TOP_EXIT_Y = -0x20;
-    private static final int CNZ_POST_TRANSITION_ACT2_SIZE_CHANGE_FRAMES = 751;
+    private static final int CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES = 9;
     private static final int CNZ2_CAMERA_MIN_X = 0x0000;
     private static final int CNZ2_CAMERA_MAX_X = 0x6000;
     private static final int CNZ2_CAMERA_MIN_Y = 0x0580;
@@ -316,6 +318,17 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    @Override
+    public void updateFixedInLevelObjectsBeforeDynamicObjects() {
+        if (hczEvents != null) {
+            hczEvents.updateRetainedCarrierObjectPass(currentAct);
+        }
+        if (mgzEvents != null) {
+            mgzEvents.updateBgRiseObjectAfterPlayerPhysics(currentAct);
+            mgzEvents.updateBossTransitionObjectBeforeDynamicObjects(currentAct);
+        }
+    }
+
     private void installFixedDynamicObjects(int zone) {
         if (!GameServices.hasRuntime() || zone != Sonic3kZoneIds.ZONE_MHZ) {
             return;
@@ -336,7 +349,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         handleBonusStageTopExit();
         // After HCZ seamless transition to Act 2: start the whirlpool descent
         // cutscene that spirals Sonic down into the Act 2 starting area.
-        if (hczPendingPostTransitionCutscene && hczEvents != null) {
+        if (hczPendingPostTransitionCutscene && hczEvents != null
+                && !GameServices.gameState().isEndOfLevelActive()
+                && GameServices.module().getTitleCardProvider().ownsInLevelPlayerControlLock()
+                && !GameServices.module().getTitleCardProvider().isOverlayActive()) {
             hczPendingPostTransitionCutscene = false;
             hczEvents.startPostTransitionCutscene();
         }
@@ -362,7 +378,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             lbzEvents.update(currentAct, frameCounter);
         }
         if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ) {
-            mgzEvents.update(currentAct, frameCounter);
+            mgzEvents.updateAfterDynamicObjects(currentAct, frameCounter);
+            mgzEvents.updateBackgroundCollisionObjectRelease(currentAct);
         }
         if (mhzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MHZ) {
             mhzEvents.update(currentAct, frameCounter);
@@ -377,6 +394,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public void advanceVblankOnlyState() {
         if (aizEvents != null && currentZone == Sonic3kZoneIds.ZONE_AIZ) {
             aizEvents.advanceVblankOnlyState();
+        }
+        if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 1) {
+            mgzEvents.advanceInLevelTitleCardState();
         }
     }
 
@@ -426,6 +446,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
             if (player != null && !player.getAir()) {
                 player.setForcedAnimationId(-1);
+                player.setAnimationId(Sonic3kAnimationIds.WALK);
                 introFallActiveOnPlayer = false;
             }
         }
@@ -436,10 +457,64 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     anySidekickStillFalling = true;
                 } else if (sidekick.getForcedAnimationId() >= 0) {
                     sidekick.setForcedAnimationId(-1);
+                    sidekick.setAnimationId(Sonic3kAnimationIds.WALK);
                 }
             }
             if (!anySidekickStillFalling) {
                 introFallActiveOnSidekick = false;
+            }
+        }
+    }
+
+    /**
+     * S3K {@code Player_TouchFloor_Check_Spindash} writes {@code anim=Walk}
+     * before the current player slot reaches Animate
+     * (sonic3k.asm:24325-24329). The ordinary movement path already consumes
+     * that write; this callback releases forced-animation owners and mirrors
+     * CNZ's later-slot carried-Sonic handoff.
+     */
+    @Override
+    public void onPlayableLandingAnimationWrite(AbstractPlayableSprite playable) {
+        // HCZ's wind-tunnel exit byte is a one-shot animation owner. The zone
+        // feature pass runs after the player slot, so consume its live exit
+        // latch here before this landing reaches Animate.
+        HCZWaterTunnelHandler.consumeExitAnimationOnLanding(playable);
+        AbstractPlayableSprite focused = GameServices.camera().getFocusedSprite();
+        // A carried main player lands in Tails's later object slot, after its
+        // own Animate pass, and remains object-controlled until the following
+        // CPU pass. Preserve the ROM-visible Walk/previous-animation handoff so
+        // release does not restart the shared carried frame/timer. Ordinary
+        // player-slot landings still let Animate observe the byte change and
+        // reset normally.
+        if (playable == focused) {
+            for (AbstractPlayableSprite sidekick :
+                    sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (sidekick.getTailsCarryController() != null
+                        && sidekick.getTailsCarryController().isCarryingMainCharacter()
+                        && sidekick.getTailsCarryController().getContext()
+                        == TailsCarryController.CarryContext.CNZ) {
+                    playable.setAnimationId(Sonic3kAnimationIds.WALK);
+                    playable.getAnimationManager()
+                            .publishPreviousAnimationId(Sonic3kAnimationIds.WALK.id());
+                    break;
+                }
+            }
+        }
+        if (introFallActiveOnPlayer && playable == focused) {
+            playable.setForcedAnimationId(-1);
+            playable.setAnimationId(Sonic3kAnimationIds.WALK);
+            introFallActiveOnPlayer = false;
+            return;
+        }
+        if (!introFallActiveOnSidekick) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick :
+                sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (sidekick == playable) {
+                sidekick.setForcedAnimationId(-1);
+                sidekick.setAnimationId(Sonic3kAnimationIds.WALK);
+                return;
             }
         }
     }
@@ -952,6 +1027,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    @Override
+    public void completeDrillingRobotnikFlee() {
+        if (mgzEvents != null) {
+            mgzEvents.completeDrillingRobotnikFlee();
+        }
+    }
+
     public Sonic3kHCZEvents getHczEvents() {
         return hczEvents;
     }
@@ -1003,6 +1085,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public int resultsCreateGateDispatches() {
+        return cnzEvents != null && cnzEvents.isAwaitingSeamlessReloadSignal() ? 8 : 9;
+    }
+
+    @Override
     public void signalActTransition() {
         setEventsFg5ForActTransition();
     }
@@ -1013,6 +1100,22 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public boolean restorePendingPostResultsPlayerControl() {
+        boolean titleCardCompletionFlagStillOwned = hczPendingPostTransitionCutscene;
+        if (hczPendingPostTransitionCutscene && hczEvents != null) {
+            hczEvents.restorePostResultsPlayerControl();
+        }
+        if (mgzPendingPostTransitionRelease) {
+            // The carried Obj_LevelResults owner calls Restore_PlayerControl
+            // in its later object slot after clearing _unkFAA8. Publish the
+            // armed MGZ release here rather than waiting for the following
+            // ScreenEvents dispatch.
+            releasePendingMgzPostTransition();
+        }
+        return titleCardCompletionFlagStillOwned;
+    }
+
+    @Override
     public void requestMgzPostTransitionRelease() {
         this.mgzPendingPostTransitionRelease = true;
     }
@@ -1020,7 +1123,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void requestCnzPostTransitionRelease(int framesUntilRelease) {
         this.cnzPendingPostTransitionReleaseFrames = Math.max(0, framesUntilRelease);
-        this.cnzPendingPostTransitionAct2SizeFrames = CNZ_POST_TRANSITION_ACT2_SIZE_CHANGE_FRAMES;
+        // Wait on the ROM-owned in-level title-card completion flag. A fixed
+        // elapsed-frame estimate drifts when object-slot/Kos queue timing moves.
+        this.cnzPendingPostTransitionAct2SizeFrames = -1;
         this.cnzPostTransitionAct2SizeActive = false;
         this.cnzAct2MinXAccumulator = 0;
         this.cnzAct2MaxXAccumulator = 0;
@@ -1041,18 +1146,35 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone != Sonic3kZoneIds.ZONE_MGZ || currentAct != 1) {
             return;
         }
+        // MGZ1BGE_Transition reloads Act 2 behind the still-live
+        // Obj_LevelResults owner. Retain both ending poses until that owner
+        // clears _unkFAA8 at its actual post-tally exit.
+        if (GameServices.gameState().isEndOfLevelActive()) {
+            return;
+        }
         mgzPendingPostTransitionRelease = false;
+        if (mgzEvents != null) {
+            // The retained EndSignControl next waits for the in-level title
+            // card's End_of_level_flag before running Change_Act2Sizes. The
+            // engine's shared results exit publishes that flag to trigger
+            // seamless handlers; native MGZ1 results does not retain it after
+            // Load_Level, so clear that consumed transition signal here.
+            GameServices.gameState().setEndOfLevelFlag(false);
+            mgzEvents.armAct2LevelSizeChange();
+        }
 
         AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
         if (player != null) {
             ObjectControlState.none().applyTo(player);
             player.setControlLocked(false);
             player.setForcedAnimationId(-1);
+            player.setAnimationId(Sonic3kAnimationIds.WAIT);
         }
         for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             ObjectControlState.none().applyTo(sidekick);
             sidekick.setControlLocked(false);
             sidekick.setForcedAnimationId(-1);
+            sidekick.setAnimationId(Sonic3kAnimationIds.WAIT);
         }
         LOG.info("MGZ: released player from victory pose after Act 1 → Act 2 reload");
     }
@@ -1108,7 +1230,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone != Sonic3kZoneIds.ZONE_CNZ || currentAct != 1) {
             return;
         }
-        if (cnzPendingPostTransitionAct2SizeFrames > 0) {
+        if (cnzPendingPostTransitionAct2SizeFrames < 0) {
+            if (!GameServices.gameState().isEndOfLevelFlag()) {
+                return;
+            }
+            // Obj_EndSignControlDoStart consumes the title-card completion flag
+            // before Change_Act2Sizes allocates the four gradual bound owners.
+            GameServices.gameState().setEndOfLevelFlag(false);
+            // The later Obj_EndSignControl owner observes the flag after its
+            // retained slot chain advances to DoStart; only then does it call
+            // Change_Act2Sizes (sonic3k.asm:180407-180419).
+            cnzPendingPostTransitionAct2SizeFrames =
+                    CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES;
+            return;
+        } else if (cnzPendingPostTransitionAct2SizeFrames > 0) {
             cnzPendingPostTransitionAct2SizeFrames--;
             if (cnzPendingPostTransitionAct2SizeFrames > 0) {
                 return;
@@ -1353,6 +1488,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public boolean interceptPitDeath(AbstractPlayableSprite player) {
         if (mgzEvents != null && mgzEvents.isBossTransitionDeathPlaneDisabled()) {
+            return true;
+        }
+        // ROM loc_6C4BE sets Disable_death_plane in the later MGZ end-boss
+        // object slot. Player_LevelBound runs earlier in the same RunObjects
+        // pass, so expose that already-determined write from the boss's native
+        // routine/terrain state instead of briefly killing and reviving Sonic.
+        ObjectManager objectManager = GameServices.levelOrNull() != null
+                ? GameServices.levelOrNull().getObjectManager()
+                : null;
+        if (mgzEvents != null && objectManager != null
+                && objectManager.activeObjectsOfType(MgzDrillingRobotnikInstance.class).stream()
+                .anyMatch(MgzDrillingRobotnikInstance::willPublishDeathPlaneDisableThisObjectPass)) {
             return true;
         }
         if (isInBonusStage()) {

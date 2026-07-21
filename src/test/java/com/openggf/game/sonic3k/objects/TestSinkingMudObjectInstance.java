@@ -1,8 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
@@ -43,6 +47,7 @@ class TestSinkingMudObjectInstance {
         assertEquals(0x30, params.airHalfHeight());
         assertEquals(0x30, params.groundHalfHeight());
         assertTrue(mud.isTopSolidOnly());
+        assertEquals(0x0003, mud.romObjectCodePointerHighWord());
         assertEquals(4, mud.getPriorityBucket());
     }
 
@@ -100,6 +105,29 @@ class TestSinkingMudObjectInstance {
     void profileMarksSinkingMudImplemented() {
         Sonic3kObjectProfile profile = new Sonic3kObjectProfile();
         assertTrue(profile.getImplementedIds().contains(Sonic3kObjectIds.SINKING_MUD));
+    }
+
+    @Test
+    void collisionVolumeOnlyRendersInObjectDebugPass() {
+        SinkingMudObjectInstance mud = new SinkingMudObjectInstance(
+                new ObjectSpawn(0x100, 0x200, Sonic3kObjectIds.SINKING_MUD, 0x04, 0x00, false, 0));
+        SonicConfigurationService configuration = SonicConfigurationService.getInstance();
+        boolean previousDebugView = configuration.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+        configuration.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
+        mud.setServices(new TestObjectServices().withConfiguration(configuration));
+        List<GLCommand> normalCommands = new java.util.ArrayList<>();
+        DebugRenderContext debugContext = new DebugRenderContext();
+
+        try {
+            mud.appendRenderCommands(normalCommands);
+            mud.appendDebugRenderCommands(debugContext);
+
+            assertTrue(normalCommands.isEmpty(), "Invisible mud must not leak debug lines into gameplay rendering");
+            assertEquals(8, debugContext.getGeometryCommands().size(),
+                    "OBJECT_DEBUG should retain the four-line collision-volume outline");
+        } finally {
+            configuration.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, previousDebugView);
+        }
     }
 
     private static PlayableEntity playable() {

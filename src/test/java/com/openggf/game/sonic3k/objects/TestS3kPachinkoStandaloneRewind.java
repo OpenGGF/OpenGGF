@@ -159,7 +159,6 @@ class TestS3kPachinkoStandaloneRewind {
         assertFalse(readBooleanField(restoredGumballTriangleBumper, "consumed"));
         assertEquals(0, readIntField(restoredPachinkoBumper, "animFrame"));
         assertEquals(0, readIntField(restoredPachinkoBumper, "animTimer"));
-        assertEquals(0, readIntField(restoredPachinkoBumper, "bounceCooldown"));
         assertTrue(((Map<?, ?>) readObjectField(restoredPachinkoMagnetOrb, "playerStates")).isEmpty(),
                 "pachinko magnet orb must restore with an empty per-player capture map");
         SolidObjectParams platformSolidParams = restoredPachinkoPlatform.getSolidParams();

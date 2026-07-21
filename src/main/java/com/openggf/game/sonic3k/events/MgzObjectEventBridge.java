@@ -5,4 +5,6 @@ package com.openggf.game.sonic3k.events;
  */
 public interface MgzObjectEventBridge {
     void triggerBossCollapseHandoff();
+
+    void completeDrillingRobotnikFlee();
 }

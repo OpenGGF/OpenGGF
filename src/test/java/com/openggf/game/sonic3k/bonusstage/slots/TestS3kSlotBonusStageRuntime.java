@@ -34,6 +34,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -241,6 +242,118 @@ class TestS3kSlotBonusStageRuntime {
         assertFalse(slotPlayer.isObjectControlled());
         // Player starts airborne per ROM (bset #Status_InAir)
         assertTrue(slotPlayer.getAir());
+    }
+
+    // ROM loc_4BA62 (sonic3k.asm:98751-98752) returns straight out of the whole
+    // ground/air/ring/tile dispatch chain while object_control(a0) is set -- e.g.
+    // during the bonus cage grab (sub_4AF80/loc_4B130, sonic3k.asm:98136). Commit
+    // 2bf9ac104 added the matching `!slotPlayer.isObjectControlled()` gate around
+    // checkRingPickup(). Pin both sides: the ring is NOT consumed while object
+    // controlled (this test), and IS consumed once released, so a regression that
+    // drops or inverts the gate is caught even without a trace-frontier signal.
+    @Test
+    void ringPickupIsSuppressedWhilePlayerIsObjectControlled() throws Exception {
+        TestEnvironment.activeGameplayMode();
+        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
+
+        Tails originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
+        GameServices.sprites().addSprite(originalPlayer);
+        GameServices.camera().setFocusedSprite(originalPlayer);
+
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        runtime.bootstrap();
+
+        AbstractPlayableSprite slotPlayer = assertInstanceOf(
+                AbstractPlayableSprite.class, GameServices.sprites().getSprite("tails"));
+
+        S3kSlotRenderBuffers buffers = runtime.renderBuffersForTest();
+        int expandedIndex = buffers.compactToExpandedIndex(0);
+        int row = expandedIndex / buffers.layoutStrideBytes();
+        int col = expandedIndex % buffers.layoutStrideBytes();
+        buffers.expandedLayout()[expandedIndex] = 8; // ring tile id (S3kSlotCollisionSystem.checkRingPickup)
+        buffers.layout()[0] = 8; // keep the compact layout in sync, as real gameplay data does
+
+        int xPixel = col * S3kSlotCollisionSystem.CELL_SIZE - S3kSlotCollisionSystem.RING_X_OFFSET;
+        int yPixel = row * S3kSlotCollisionSystem.CELL_SIZE - S3kSlotCollisionSystem.RING_Y_OFFSET;
+        setGroundProjectedOrigin(runtime.slotPlayerRuntimeForTest(), xPixel, yPixel);
+
+        slotPlayer.setObjectControlled(true);
+        runtime.stageStateForTest().clearCollision();
+
+        runtime.update(0);
+
+        // consumeRing (S3kSlotCollisionSystem) zeroes the COMPACT layout[0] entry --
+        // the durable "this ring is gone" record -- and startRingAnimationAt starts a
+        // transient sparkle animation at the same compact index. Neither must fire
+        // while checkRingPickup itself is gated off.
+        assertEquals(8, buffers.layout()[0],
+                "the compact layout entry must stay unconsumed while object controlled");
+        assertEquals(8, buffers.expandedLayout()[expandedIndex] & 0xFF,
+                "the ring tile must remain in the layout, unconsumed, while object controlled");
+        assertFalse(buffers.hasActiveTransientAnimationAt(0),
+                "no pickup sparkle should start while checkRingPickup is suppressed");
+    }
+
+    @Test
+    void ringPickupRunsAndConsumesTheTileOnceObjectControlIsReleased() throws Exception {
+        TestEnvironment.activeGameplayMode();
+        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
+
+        Tails originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
+        GameServices.sprites().addSprite(originalPlayer);
+        GameServices.camera().setFocusedSprite(originalPlayer);
+
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        runtime.bootstrap();
+
+        AbstractPlayableSprite slotPlayer = assertInstanceOf(
+                AbstractPlayableSprite.class, GameServices.sprites().getSprite("tails"));
+        // ROM Cage_Timer suppresses capture for the runtime's first update() call
+        // (suppressInitialCaptureOnce) -- isObjectControlled() is already false
+        // here, matching runtimeUpdateDoesNotImmediatelyCaptureAndFreezeBootstrapPlayer.
+        assertFalse(slotPlayer.isObjectControlled());
+
+        S3kSlotRenderBuffers buffers = runtime.renderBuffersForTest();
+        int expandedIndex = buffers.compactToExpandedIndex(0);
+        int row = expandedIndex / buffers.layoutStrideBytes();
+        int col = expandedIndex % buffers.layoutStrideBytes();
+        buffers.expandedLayout()[expandedIndex] = 8;
+        buffers.layout()[0] = 8;
+
+        int xPixel = col * S3kSlotCollisionSystem.CELL_SIZE - S3kSlotCollisionSystem.RING_X_OFFSET;
+        int yPixel = row * S3kSlotCollisionSystem.CELL_SIZE - S3kSlotCollisionSystem.RING_Y_OFFSET;
+        setGroundProjectedOrigin(runtime.slotPlayerRuntimeForTest(), xPixel, yPixel);
+
+        // initialize()'s own spawn-frame collision probe (inside bootstrap(), against
+        // the real ROM layout before this test's tile injection) may have latched a
+        // stale lastCollisionTileId for the spawn cell; clear it so dispatchTileInteraction
+        // doesn't fire on stale state and stomp the ring tile this test just placed.
+        runtime.stageStateForTest().clearCollision();
+
+        // Ring pickup (ROM sub_4BDCA) now runs inside the player runtime's movement
+        // branch, spliced in before MoveSprite2 (sonic3k.asm:98776-98780) so a bumper
+        // launch reaches the same frame's velocity step. update() no longer owns it;
+        // drive the hook directly here after seeding the ground-projected origin.
+        runtime.runPreMovePlayerInteractionsForTest();
+
+        // consumeRing zeroes both layout arrays at this index, but startRingAnimationAt
+        // (called right after, in the same checkRingPickup branch) immediately writes
+        // the first ring-sparkle frame back over both arrays via setCompactTile -- so
+        // the reliable post-pickup signal is the sparkle animation becoming active
+        // and the raw ring tile id (8) no longer being present, not a literal 0.
+        assertTrue(buffers.hasActiveTransientAnimationAt(0),
+                "the pickup sparkle animation must start once checkRingPickup actually fires");
+        assertNotEquals(8, buffers.layout()[0],
+                "the raw ring tile id must no longer be present once the pickup actually runs");
+    }
+
+    private static void setGroundProjectedOrigin(S3kSlotPlayerRuntime runtime, int xPixel, int yPixel) throws Exception {
+        Field xField = S3kSlotPlayerRuntime.class.getDeclaredField("groundProjectedOriginX");
+        Field yField = S3kSlotPlayerRuntime.class.getDeclaredField("groundProjectedOriginY");
+        xField.setAccessible(true);
+        yField.setAccessible(true);
+        xField.setInt(runtime, xPixel << 16);
+        yField.setInt(runtime, yPixel << 16);
     }
 
     @Test

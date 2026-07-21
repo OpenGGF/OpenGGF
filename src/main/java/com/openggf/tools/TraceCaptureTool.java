@@ -479,8 +479,12 @@ public final class TraceCaptureTool {
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
         }
-        if (phase == TraceExecutionPhase.VBLANK_ONLY) {
+        if (phase == TraceExecutionPhase.VBLANK_ONLY
+                || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
             frameDriver.skipFrameFromRecording();
+            if (phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
+                frameDriver.advancePlayableAnimationsOnly();
+            }
             // Mirror AbstractTraceReplayTest: the S3K complete-run handoff row
             // is skipped for comparison, but ROM ran a full LevelLoop on it and
             // incremented Level_frame_counter before Process_Sprites. Apply the
@@ -494,6 +498,9 @@ public final class TraceCaptureTool {
                 }
             }
             return false;
+        }
+        if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+            frameDriver.suppressFirstSidekickAnimationOnce();
         }
         // NOTE: the S3K replay loop in AbstractTraceReplayTest.replayS3kTrace
         // does NOT special-case ADVANCE_ONLY; only VBLANK_ONLY is skipped and
@@ -601,6 +608,16 @@ public final class TraceCaptureTool {
         @Override
         public int skipFrameFromRecording() {
             return driver.skipFrameFromRecording();
+        }
+
+        @Override
+        public void advancePlayableAnimationsOnly() {
+            driver.advancePlayableAnimationsOnly();
+        }
+
+        @Override
+        public void suppressFirstSidekickAnimationOnce() {
+            driver.suppressFirstSidekickAnimationOnce();
         }
 
         @Override

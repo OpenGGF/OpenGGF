@@ -137,7 +137,8 @@ public final class PlaybackDebugManager {
     }
 
     public synchronized boolean isDriving(GameMode mode) {
-        return enabled && movie != null && timeline != null && mode == GameMode.LEVEL;
+        return enabled && movie != null && timeline != null
+                && (mode == GameMode.LEVEL || mode == GameMode.BONUS_STAGE);
     }
 
     public synchronized int getCurrentForcedInputMask() {

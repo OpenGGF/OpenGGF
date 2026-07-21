@@ -11,10 +11,10 @@ import java.util.logging.Logger;
  * Engine-owned VHS picture-search post-process for live rewind.
  * <p>
  * Owns a private {@link DisplayShaderPipeline} independent of the user's
- * display-shader selection. Prewarmed once at GL init (when live rewind and
- * the VHS effect are both enabled in config) so the first rewind press never
- * pays a shader-compile hitch; applied per frame only while the rewind effect
- * envelope intensity is above zero. On any activation or apply failure the
+ * display-shader selection. Prewarmed once at GL init when the VHS effect is
+ * enabled in config so a later launch-profile rewind override does not pay a
+ * shader-compile hitch; applied per frame only while the rewind effect envelope
+ * intensity is above zero. On any activation or apply failure the
  * pass latches failed and never retries for the session — the pipeline's own
  * logging covers the details, this class adds a single summary warning.
  */

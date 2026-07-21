@@ -19,6 +19,7 @@ public record TraceMetadata(
     @JsonProperty("zone_id") Integer zoneId,
     @JsonProperty("act") int act,
     @JsonProperty("bk2_frame_offset") int bk2FrameOffset,
+    @JsonProperty("ring_floor_check_counter_phase") Integer ringFloorCheckCounterPhase,
     @JsonProperty("trace_frame_count") int traceFrameCount,
     @JsonProperty("start_x") String startXHex,
     @JsonProperty("start_y") String startYHex,
@@ -44,7 +45,12 @@ public record TraceMetadata(
     @JsonProperty("input_source") String inputSource,
     @JsonProperty("credits_demo_index") Integer creditsDemoIndex,
     @JsonProperty("credits_demo_slug") String creditsDemoSlug,
-    @JsonProperty("special_stage_index") Integer specialStageIndex
+    @JsonProperty("special_stage_index") Integer specialStageIndex,
+    @JsonProperty("run_id") String runId,
+    @JsonProperty("segment_index") Integer segmentIndex,
+    @JsonProperty("bonus_stage_type") String bonusStageType,
+    @JsonProperty("fresh_load") Boolean freshLoad,
+    @JsonProperty("v_int_run_count") Integer vIntRunCount
 ) {
 
     /**
@@ -155,6 +161,11 @@ public record TraceMetadata(
     /** Returns whether this trace metadata explicitly records a gameplay team. */
     public boolean hasRecordedTeam() {
         return !recordedCharacters().isEmpty();
+    }
+
+    /** Whether the primary CSV carries strict per-character animation fields. */
+    public boolean hasPerFrameCharacterAnimation() {
+        return csvVersion != null && csvVersion >= 7;
     }
 
     /**
@@ -450,6 +461,16 @@ public record TraceMetadata(
     }
 
     /**
+     * Whether this trace requires a fresh level load when entering a special
+     * stage (e.g., blue-spheres giant-ring entry without a preceding level).
+     * Returns false if the field is absent (legacy traces) or null.
+     * Used by the S3K special-stage replay harness to set the intro-skip gate.
+     */
+    public boolean isFreshLoad() {
+        return freshLoad != null && freshLoad;
+    }
+
+    /**
      * Whether trace frame 0 intentionally starts before the first comparable
      * LEVEL-mode row. Replay drives this native prefix from frame 0 instead of
      * jumping to the first level frame.
@@ -459,11 +480,24 @@ public record TraceMetadata(
                 && auxSchemaExtras.contains("pre_level_intro_prefix");
     }
 
+    /**
+     * The ROM {@code V_int_run_count} free-running VBlank counter
+     * (sonic3k.constants.asm:790, {@code ds.l 1}) captured once at segment-arm
+     * time, or {@code null} for traces recorded before the v6.32-s3k recorder
+     * or for non-bonus segments. {@code Slots_CycleOptions}
+     * (sonic3k.asm:99614-99946) reads this counter's low byte/word to seed the
+     * reel words/targets on each slots bonus-stage cycle, so replay primes the
+     * bonus-stage counter base from this recorded value instead of the
+     * engine's per-session approximation (see
+     * {@code S3kSlotBonusStageRuntime}).
+     */
+    public Long recordedVIntRunCount() {
+        return vIntRunCount != null ? (vIntRunCount.longValue() & 0xFFFFFFFFL) : null;
+    }
+
     /** Load metadata from a metadata.json file. */
     public static TraceMetadata load(Path metadataFile) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         return mapper.readValue(metadataFile.toFile(), TraceMetadata.class);
     }
 }
-
-

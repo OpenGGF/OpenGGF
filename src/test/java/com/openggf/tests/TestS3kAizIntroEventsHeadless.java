@@ -130,6 +130,11 @@ public class TestS3kAizIntroEventsHeadless {
         assertTrue(tails.isControlLocked(),
                 "Engine object-control model should keep dormant intro Tails out of normal control");
         assertTrue(tails.getAir(), "ROM sub_13ECA sets Status_InAir");
+        assertEquals(0, tails.getAnimationId(),
+                "loc_13A10 does not replace the fresh Tails animation byte");
+        assertEquals(0, tails.getMappingFrame(),
+                "object_control=$83 bit 1 suppresses Animate_Tails at the dormant marker");
+        assertTrue(tails.isObjectMappingFrameControl());
 
         Sonic3kLevelEventManager levelEvents =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
@@ -139,6 +144,8 @@ public class TestS3kAizIntroEventsHeadless {
 
         assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
                 "AIZ1_Resize's prior-frame Tails_CPU_routine=2 write is visible before the next sidekick CPU slot");
+        assertTrue(tails.isObjectMappingFrameControl(),
+                "routine 2 retains object_control=$83 until its 64-frame catch-up trigger");
     }
 
     @Test

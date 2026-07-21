@@ -12,6 +12,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestObjectManagerVerticalPlacement {
@@ -158,6 +159,91 @@ class TestObjectManagerVerticalPlacement {
                 "Pending X-pass load order must rewind with ObjectManager placement state");
         assertEquals(5, registry.instances.get(deferredLowX).getSlotIndex(),
                 "Deferred Y-pass membership must rewind with ObjectManager placement state");
+    }
+
+    @Test
+    void s3kReleasedPlacementRespawnsOnLaterCameraYPassWhileTransformedObjectLives() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        camera.setMinY((short) 0);
+        camera.setY((short) 0x0180);
+
+        ObjectSpawn bridgeSpawn = new ObjectSpawn(0x1900, 0x0340, 0x0F, 0x80, 0, false, 0x0340);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(bridgeSpawn),
+                registry,
+                -1,
+                null,
+                null,
+                null,
+                camera,
+                new StubObjectServices() {
+                    @Override
+                    public Camera camera() {
+                        return camera;
+                    }
+                });
+        manager.enableExecThenLoadPlacement();
+
+        manager.reset(0x182E);
+        DummyObject transformed = registry.instances.get(bridgeSpawn);
+        assertTrue(manager.getActiveObjects().contains(transformed));
+
+        ObjectLifetimeOps.releaseSpawnForRespawn(manager, transformed, bridgeSpawn);
+        camera.setY((short) 0x0100);
+        manager.update(0x182E, null, List.of(), 1, false);
+        camera.setY((short) 0x0180);
+        manager.update(0x182E, null, List.of(), 2, false);
+
+        DummyObject replacement = registry.instances.get(bridgeSpawn);
+        assertNotSame(transformed, replacement,
+                "S3K Camera_Y pass must recreate a placement whose respawn bit was cleared in-place");
+        assertTrue(manager.getActiveObjects().contains(transformed),
+                "The original transformed SST object must keep executing as a dynamic fragment");
+        assertTrue(manager.getActiveObjects().contains(replacement),
+                "The fresh placement instance must coexist with the transformed fragment");
+    }
+
+    @Test
+    void s3kRespawnableSelfDeleteRemainsEligibleForLaterCameraYPass() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        camera.setMinY((short) 0);
+        camera.setY((short) 0x0180);
+
+        ObjectSpawn balloonSpawn = new ObjectSpawn(0x1920, 0x0340, 0x41, 0, 0, false, 0x0340);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(balloonSpawn),
+                registry,
+                -1,
+                null,
+                null,
+                null,
+                camera,
+                new StubObjectServices() {
+                    @Override
+                    public Camera camera() {
+                        return camera;
+                    }
+                });
+        manager.enableExecThenLoadPlacement();
+
+        manager.reset(0x182E);
+        DummyObject original = registry.instances.get(balloonSpawn);
+        original.setDestroyedByOffscreen();
+        manager.update(0x182E, null, List.of(), 1, false);
+        assertFalse(manager.getActiveObjects().contains(original));
+
+        camera.setY((short) 0x0100);
+        manager.update(0x182E, null, List.of(), 2, false);
+        camera.setY((short) 0x0180);
+        manager.update(0x182E, null, List.of(), 3, false);
+
+        DummyObject replacement = registry.instances.get(balloonSpawn);
+        assertNotSame(original, replacement,
+                "S3K loc_1B982 must rescan an X-cursor-passed entry after "
+                        + "Sprite_CheckDeleteTouch3 clears its respawn bit");
+        assertTrue(manager.getActiveObjects().contains(replacement));
     }
 
     @Test

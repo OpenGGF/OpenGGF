@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -26,12 +27,13 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
-import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.SwingMotion;
 
 import java.util.List;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -74,12 +76,19 @@ import java.util.logging.Logger;
  * </ol>
  */
 public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+    private static final AtomicInteger NEXT_ZOOM_ATLAS_SLOT = new AtomicInteger();
+    private static final int ZOOM_ATLAS_BASE = PatternAtlasRange.MGZ_ZOOM_CUES.base();
+    private static final int ZOOM_ATLAS_SLOT_PATTERNS = 0x80;
+    private static final int ZOOM_ATLAS_SLOT_COUNT = PatternAtlasRange.MGZ_ZOOM_CUES.size()
+            / ZOOM_ATLAS_SLOT_PATTERNS;
     private static final Logger LOG = Logger.getLogger(MgzDrillingRobotnikInstance.class.getName());
 
     /** ROM: Obj_MGZ2DrillingRobotnik $2E(a0) = 2*60 — initial wait frames. */
     private static final int INIT_WAIT_FRAMES = 2 * 60;
 
     private static final int ROUTINE_INIT = 0;
+    /** Java-only phase for the ROM's separate Obj_MGZ2DrillingRobotnikGo entry. */
+    private static final int ROUTINE_MINI_SETUP = 0x4A;
     private static final int ROUTINE_START_DROP = 2;
     private static final int ROUTINE_DRILL_DROP = 4;
     private static final int ROUTINE_HANG = 6;
@@ -157,6 +166,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private static final int INVULNERABILITY_TIME = 0x20;
     /** ROM: ObjDat_MGZDrillBoss priority word = $300 → render bucket 6. */
     private static final int PRIORITY_BUCKET = 6;
+    /** ROM: loc_6C2BE changes the defeated body to priority $200. */
+    private static final int DEFEATED_PRIORITY_BUCKET = 4;
     private static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
     private static final int MGZ_BOSS_PALETTE_LINE = 1;
     private static final int ROBOTNIK_SHIP_PALETTE_LINE = 0;
@@ -267,9 +278,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private static final int AIR_ZOOM_CUE_SCALE_FRAME_MASK = 3;
     private static final int AIR_ZOOM_CUE_MAX_ABS_Y_VEL = 0x400;
     private static final int AIR_ZOOM_CUE_MAX_MAPPING_FRAME = 0x1C;
-    private static final int AIR_ZOOM_CUE_SOURCE_WIDTH = 0x80;
-    private static final int AIR_ZOOM_CUE_SOURCE_HEIGHT = 0x40;
-    private static final int AIR_ZOOM_CUE_SOURCE_BYTES_PER_ROW = AIR_ZOOM_CUE_SOURCE_WIDTH / Pattern.PIXELS_PER_BYTE;
     /** word_6D788 collision_flags = $8B (HURT category, size $0B). */
     private static final int DRILL_HEAD_COLLISION_FLAGS = 0x8B;
     /** loc_6CF20 uses word_6D7A0: make_art_tile(ArtTile_MGZEndBoss,0,0). */
@@ -315,6 +323,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private int xSubpixel;
     private int ySubpixel;
     private int waitTimer;
+    /** The placement-created instance still owes Obj_MGZ2DrillingRobotnik's init entry. */
+    private boolean miniInitialExecutionPending;
     private boolean flipX;
     private boolean artQueued;
     private boolean palettesLoaded;
@@ -330,6 +340,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     /** Mirrors the ROM's $3A child-pose byte used by loc_6CEB0/loc_6CF20. */
     private int drillChildPose;
     private int escapeTimer;
+    /** Hit reported by touch processing, published after the current ROM routine. */
+    private boolean pendingMiniHit;
     private int airAttackPhase;
     private int airAttackPatternCounter;
     private int airAttackPatternOffset;
@@ -344,7 +356,12 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private int airZoomCueScaleStep;
     private int airZoomCueFrameCounter;
     private int airZoomCueGeneratedFrame;
+    @RewindTransient(reason = "Immutable ROM cache, recreated lazily after restore")
     private byte[] airZoomCueSourceRaster;
+    @RewindTransient(reason = "Derived render cache, recreated lazily after restore")
+    private Pattern[] airZoomCuePatterns;
+    @RewindTransient(reason = "Derived instance renderer, recreated lazily after restore")
+    private PatternSpriteRenderer airZoomCueRenderer;
     private S3kBossExplosionController endBossDefeatExplosionController;
     private boolean endBossDefeatHandoffComplete;
     private int endBossDefeatPhase;
@@ -358,12 +375,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private int endBossMiniCraftTimer;
     /** True once the 10 falling-debris chunks have been initialised (ROM: bset #7,$38). */
     private boolean fallingDebrisSpawned;
-    /** 10 × 16:8 fixed-point (x, y, xVel, yVel) rows; last slot is `alive` flag. */
-    private final int[] fallingDebrisX = new int[10];
-    private final int[] fallingDebrisY = new int[10];
-    private final int[] fallingDebrisVx = new int[10];
-    private final int[] fallingDebrisVy = new int[10];
-    private final boolean[] fallingDebrisAlive = new boolean[10];
+    private boolean compositeRenderChildrenSpawned;
     public MgzDrillingRobotnikInstance(ObjectSpawn spawn) {
         this(spawn, false);
     }
@@ -381,7 +393,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         // all false) once their initializers do fire. Do NOT index the arrays
         // here — that would NPE. Primitive field resets are safe because JVM
         // already zero-initialised them.
-        endBossMode = spawn.objectId() == Sonic3kObjectIds.MGZ_END_BOSS;
+        endBossMode = spawn.objectId() == Sonic3kObjectIds.MGZ_END_BOSS
+                || spawn.objectId() == Sonic3kObjectIds.MGZ_END_BOSS_KNUX;
         state.x = spawn.x();
         state.y = spawn.y();
         state.xFixed = state.x << 16;
@@ -393,10 +406,12 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         xSubpixel = 0;
         ySubpixel = 0;
         waitTimer = INIT_WAIT_FRAMES;
+        miniInitialExecutionPending = !endBossMode;
         artQueued = false;
         palettesLoaded = false;
         bossMusicPlayed = false;
         hit = false;
+        pendingMiniHit = false;
         floorImpactTriggered = false;
         renderTick = 0;
         swingHalfCyclesRemaining = SWING_HALF_CYCLES;
@@ -419,6 +434,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         airZoomCueFrameCounter = 0;
         airZoomCueGeneratedFrame = -1;
         airZoomCueSourceRaster = null;
+        airZoomCuePatterns = null;
+        airZoomCueRenderer = null;
         endBossDefeatExplosionController = null;
         endBossDefeatHandoffComplete = false;
         endBossDefeatPhase = END_DEFEAT_WAIT_FADE_TO_LEVEL_MUSIC;
@@ -431,6 +448,21 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         endBossMiniCraftXVel = 0;
         endBossMiniCraftTimer = 0;
         fallingDebrisSpawned = false;
+        compositeRenderChildrenSpawned = false;
+    }
+
+    private void spawnCompositeRenderChildren() {
+        for (int role = MgzEndBossRenderChild.ROLE_FIRST; role <= MgzEndBossRenderChild.ROLE_LAST; role++) {
+            int childRole = role;
+            MgzEndBossRenderChild child = spawnChild(() -> new MgzEndBossRenderChild(this, childRole));
+            childComponents.add(child);
+        }
+    }
+
+    void rewindAttachRenderChild(MgzEndBossRenderChild child) {
+        if (child != null && !childComponents.contains(child)) {
+            childComponents.add(child);
+        }
     }
 
     @Override
@@ -445,22 +477,49 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
-        queueInitialAssetsIfNeeded();
+        prepareSharedBossPresentation();
+
+        if (!endBossMode && miniInitialExecutionPending) {
+            // The ROM placement slot first executes Obj_MGZ2DrillingRobotnik,
+            // which installs Obj_Wait and its callback but does not decrement
+            // the freshly written $2E timer on that same pass.
+            miniInitialExecutionPending = false;
+            updateCustomFlash();
+            return;
+        }
 
         // ROM: Obj_MGZ2DrillingRobotnik init queues art + PLC #$6D + palette and
         // sits in Obj_Wait for 120 frames before becoming DrillingRobotnikStart.
-        if (state.routine == ROUTINE_INIT && waitTimer > 0) {
-            waitTimer--;
-            if (waitTimer == 0) {
-                playBossMusicOnce();
-                if (endBossMode) {
+        if (state.routine == ROUTINE_INIT) {
+            if (!endBossMode) {
+                // Obj_Wait invokes its callback only after the signed word
+                // underflows: values $77 through $0000 all return normally.
+                waitTimer--;
+                if (waitTimer < 0) {
+                    playBossMusicOnce();
+                    state.routine = ROUTINE_MINI_SETUP;
+                }
+                updateCustomFlash();
+                return;
+            }
+            if (waitTimer > 0) {
+                waitTimer--;
+                if (waitTimer == 0) {
+                    playBossMusicOnce();
                     state.routine = ROUTINE_END_DESCEND;
                     yVel = 0x80;
                     waitTimer = 0xBF;
-                } else {
-                    state.routine = ROUTINE_START_DROP;
                 }
+                updateCustomFlash();
+                return;
             }
+        }
+
+        if (!endBossMode && state.routine == ROUTINE_MINI_SETUP) {
+            // The underflow callback (Obj_MGZ2DrillingRobotnikGo) only installs
+            // Obj_MGZ2DrillingRobotnikStart. Its loc_6BFCA setup runs in the
+            // following ExecuteObjects pass and leaves routine 2 for the next.
+            state.routine = ROUTINE_START_DROP;
             updateCustomFlash();
             return;
         }
@@ -479,11 +538,23 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             }
         }
 
-        updateFallingDebris();
+        publishPendingMiniHit();
         updateCustomFlash();
 
         state.xFixed = state.x << 16;
         state.yFixed = state.y << 16;
+    }
+
+    /** Shared art/palette and child-SST setup used by both native MGZ end-boss variants. */
+    protected final void prepareSharedBossPresentation() {
+        ensureCompositeRenderChildren();
+        queueInitialAssetsIfNeeded();
+    }
+
+    private void ensureCompositeRenderChildren() {
+        if (compositeRenderChildrenSpawned) return;
+        compositeRenderChildrenSpawned = true;
+        spawnCompositeRenderChildren();
     }
 
     private void updateEndBossRoutine(PlayableEntity playerEntity) {
@@ -583,7 +654,11 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             case ROUTINE_END_AIR_WAIT -> {
                 if (--waitTimer < 0) {
                     yVel = -0x400;
-                    waitTimer = 0x1F;
+                    // The engine's composite boss owns the drill children inline,
+                    // while the ROM reaches loc_6C598 after their two later SST
+                    // slots have completed the recovery handoff. Preserve those
+                    // two object-pass phases before publishing the air approach.
+                    waitTimer = 0x21;
                     state.routine = ROUTINE_END_AIR_RISE;
                 }
             }
@@ -734,6 +809,14 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     private void updateWaitForResultsFlag() {
+        // ROM loc_6C8F4 pins Camera_min_X_pos to Camera_X_pos on every retained
+        // boss-waiter pass while _unkFAA8 says the capsule/results flow is still
+        // active (sonic3k.asm:143186-143190). This write is independent of the
+        // older quake-event gradual-boundary child and must therefore be
+        // republished after that child runs rather than left solely to the
+        // fixed-slot boss-transition event.
+        Camera camera = services().camera();
+        camera.setMinX(camera.getX());
         if (services().gameState() == null || !services().gameState().isEndOfLevelFlag()) {
             return;
         }
@@ -799,7 +882,12 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     private void advanceAirAttackWait() {
         if (airAttackPhase == 0) {
-            waitTimer = 0x1F;
+            // loc_6C646 configures the parent with a literal $1F Obj_Wait,
+            // then the native drill graph's later SST phase publishes the
+            // refreshed child positions before the next player touch scan.
+            // The engine folds those children into this parent, so retain the
+            // observable publication phase alongside the parent wait.
+            waitTimer = 0x20;
             airAttackPhase = 1;
             configureAirAttackFromCamera();
             return;
@@ -881,8 +969,9 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         int[] pattern = airAttackPattern();
         state.x = (cameraX + pattern[0]) & 0xFFFF;
         state.y = (cameraY + pattern[1]) & 0xFFFF;
-        xSubpixel = 0;
-        ySubpixel = 0;
+        // loc_6D710 writes the x_pos/y_pos words only. Their fractional words
+        // retain the approach/sweep phase and therefore affect the first
+        // collision-list position published by the configured attack.
         xVel = pattern[2];
         yVel = pattern[3];
         endBossAngle = pattern[4];
@@ -890,8 +979,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     private void enterAirApproach() {
-        xSubpixel = 0;
-        ySubpixel = 0;
+        // ROM loc_6C598 writes only x_pos/y_pos. The fractional words survive
+        // the preceding rise and affect the first two MoveSprite2 publications.
         state.x = 0x3E80;
         state.y = 0x0700;
         xVel = -0x80;
@@ -908,6 +997,21 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         floorImpactTriggered = true;
         services().playSfx(Sonic3kSfx.BOSS_HIT_FLOOR.id);
         S3kMgzEventWriteSupport.triggerBossCollapseHandoff(services());
+    }
+
+    /**
+     * Whether the next native object pass will execute {@code loc_6C4BE} and
+     * publish {@code Disable_death_plane}. S3K executes the player slot before
+     * this later boss slot, so the level-boundary path must be able to observe
+     * the ROM write that is already determined by the boss's retained routine
+     * and next {@code ObjHitFloor_DoRoutine} probe.
+     */
+    public boolean willPublishDeathPlaneDisableThisObjectPass() {
+        if (!endBossMode || floorImpactTriggered || state.routine != ROUTINE_END_FLOOR_DROP) {
+            return false;
+        }
+        int nextY = (((state.y << 8) | (ySubpixel & 0xFF)) + yVel) >> 8;
+        return ObjectTerrainUtils.checkFloorDist(state.x, nextY, END_BOSS_Y_RADIUS).hasCollision();
     }
 
     /** ROM: loc_6C014 — play collapse SFX, then enter the drill drop. */
@@ -952,34 +1056,9 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         int spawnY = state.y + DEBRIS_SPAWN_OFFSET_Y;
         fallingDebrisSpawned = true;
         for (int i = 0; i < 10; i++) {
-            fallingDebrisX[i] = spawnX << 8;
-            fallingDebrisY[i] = spawnY << 8;
-            int vx = FALLING_DEBRIS_VELOCITIES[i][0];
-            int vy = FALLING_DEBRIS_VELOCITIES[i][1];
-            // Mirror X-velocities when the parent is facing left.
-            fallingDebrisVx[i] = flipX ? -vx : vx;
-            fallingDebrisVy[i] = vy;
-            fallingDebrisAlive[i] = true;
-        }
-    }
-
-    /** ROM: loc_6CFB2 — per-frame debris update (MoveSprite_LightGravity). */
-    private void updateFallingDebris() {
-        if (!fallingDebrisSpawned) {
-            return;
-        }
-        int cameraBottom = (services().camera().getY() & 0xFFFF) + 240;
-        for (int i = 0; i < 10; i++) {
-            if (!fallingDebrisAlive[i]) {
-                continue;
-            }
-            fallingDebrisX[i] += fallingDebrisVx[i];
-            fallingDebrisY[i] += fallingDebrisVy[i];
-            fallingDebrisVy[i] += DEBRIS_GRAVITY;
-            int worldY = fallingDebrisY[i] >> 8;
-            if (worldY > cameraBottom + DEBRIS_OFFSCREEN_MARGIN) {
-                fallingDebrisAlive[i] = false;
-            }
+            int index = i;
+            spawnChild(() -> new MgzEndBossFallingDebrisChild(new ObjectSpawn(
+                    spawnX, spawnY, 0, index, flipX ? 1 : 0, false, 0)));
         }
     }
 
@@ -1010,7 +1089,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (ceiling.distance() < 0) {
             spawnFallingDebris();
             state.routine = ROUTINE_ESCAPE_WAIT;
-            advanceEscapeTimer();
             return;
         }
         applyYVelocity();
@@ -1025,11 +1103,21 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     private void advanceEscapeTimer() {
         escapeTimer--;
-        if (escapeTimer > 0) {
+        if (escapeTimer >= 0) {
             return;
         }
         restoreMgzPalette();
         services().playMusic(Sonic3kMusic.MGZ2.id);
+        // ROM loc_6C200 allocates the gradual boundary worker from the start
+        // of SST. A later free slot executes in this same object pass before
+        // DeformLayers scrolls the camera. Appearances 2/3 face left and use
+        // Obj_DecLevStartXGradual; appearance 1 uses Obj_IncLevEndXGradual.
+        // AllocateObject searches from the start of SST. The first appearance
+        // finds a lower slot and waits for the next pass; the third finds a
+        // later slot and executes immediately. That slot-relative distinction
+        // is observable in the camera frontier.
+        spawnFreeChild(() -> new MgzDrillingRobotnikCameraUnlockController(flipX));
+        S3kMgzEventWriteSupport.completeDrillingRobotnikFlee(services());
         setDestroyed(true);
         LOG.fine(() -> "MGZ2 Drilling Robotnik cleanup completed at y=" + state.y);
     }
@@ -1136,7 +1224,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
      */
     @Override
     public void onPlayerAttack(PlayableEntity playerEntity, TouchResponseResult result) {
-        if (state.invulnerable || state.defeated || isInitialHiddenWait()) {
+        if (state.invulnerable || pendingMiniHit || state.defeated || isInitialHiddenWait()) {
             return;
         }
         if (endBossMode) {
@@ -1152,6 +1240,20 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             }
             return;
         }
+        pendingMiniHit = true;
+    }
+
+    /**
+     * ROM {@code Obj_MGZ2DrillingRobotnik} dispatches its movement routine
+     * before {@code MGZ2_SpecialCheckHit}. Touch processing may report the
+     * overlap before this Java object's update, so retain the hit until the
+     * routine has completed instead of exposing it to {@link #updateHang()}.
+     */
+    private void publishPendingMiniHit() {
+        if (endBossMode || !pendingMiniHit) {
+            return;
+        }
+        pendingMiniHit = false;
         hit = true;
         state.invulnerable = true;
         state.invulnerabilityTimer = INVULNERABILITY_TIME;
@@ -1217,6 +1319,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (isInitialHiddenWait()
                 || state.routine == ROUTINE_CEILING_ESCAPE
                 || state.routine == ROUTINE_ESCAPE_WAIT
+                || pendingMiniHit
                 || state.defeated
                 || state.invulnerable) {
             // No collision while waiting to emerge, during the palette-flash
@@ -1229,8 +1332,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     @Override
     public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
         if (isHidden()
-                || state.routine == ROUTINE_CEILING_ESCAPE
-                || state.routine == ROUTINE_ESCAPE_WAIT
                 || state.defeated
                 || isDestroyed()) {
             return null;
@@ -1239,21 +1340,24 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         DrillPart drillHead = drillHeadPart();
         DrillPart firstFlame = thrusterFlamePart(0);
         DrillPart secondFlame = thrusterFlamePart(1);
+        int childAnchorX = foldedChildTouchAnchorX();
+        int childAnchorY = foldedChildTouchAnchorY();
         int flameFlags = shouldDrawThrusterFlames() ? THRUSTER_FLAME_COLLISION_FLAGS : 0;
         return new TouchResponseProvider.TouchRegion[] {
-                new TouchResponseProvider.TouchRegion(state.x, state.y, getCollisionFlags()),
                 new TouchResponseProvider.TouchRegion(
-                        state.x + renderOffsetX(drillHead.offX()),
-                        state.y + drillHead.offY(),
+                        foldedBodyTouchAnchorX(), foldedBodyTouchAnchorY(), getCollisionFlags()),
+                new TouchResponseProvider.TouchRegion(
+                        childAnchorX + renderOffsetX(drillHead.offX()),
+                        childAnchorY + drillHead.offY(),
                         DRILL_HEAD_COLLISION_FLAGS),
                 new TouchResponseProvider.TouchRegion(
-                        state.x + renderOffsetX(firstFlame.offX()),
-                        state.y + firstFlame.offY(),
+                        childAnchorX + renderOffsetX(firstFlame.offX()),
+                        childAnchorY + firstFlame.offY(),
                         flameFlags,
                         THRUSTER_FLAME_SHIELD_REACTION),
                 new TouchResponseProvider.TouchRegion(
-                        state.x + renderOffsetX(secondFlame.offX()),
-                        state.y + secondFlame.offY(),
+                        childAnchorX + renderOffsetX(secondFlame.offX()),
+                        childAnchorY + secondFlame.offY(),
                         flameFlags,
                         THRUSTER_FLAME_SHIELD_REACTION),
         };
@@ -1299,93 +1403,83 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         renderTick++;
 
         PatternSpriteRenderer drillRenderer = getRenderer(Sonic3kObjectArtKeys.MGZ_ENDBOSS);
-        PatternSpriteRenderer shipRenderer = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         if (endBossBodyHiddenAfterFadeHandoff) {
-            drawEndBossMiniCraft(shipRenderer);
             return;
         }
 
-        // The ROM uses separate child sprites queued by priority. Higher
-        // priority words are farther back in the S3K sprite table, so the
-        // inlined composite draws $380 pieces first, then $300, then lower
-        // front buckets like the ship/head/flames.
-
-        // 1) Back drill piece — word_6D77C priority $380, mapping frame 1.
-        if (drillRenderer != null) {
-            drawDrillPart(drillRenderer, STATIC_DRILL_PIECE[0], STATIC_DRILL_PIECE[1], STATIC_DRILL_PIECE[2]);
-            drawDrillPart(drillRenderer, lowerDrillPart(1));
-        }
-
-        // 2) Drill body — ObjDat_MGZDrillBoss priority $300, frame 0 of
-        //    Map_MGZEndBoss. The angled child also starts in the $300 bucket.
+        // The parent owns only the $300 body. ROM child SSTs are real engine
+        // objects (MgzEndBossRenderChild), allowing their $280-$380 priorities
+        // to interleave correctly with players, terrain, and other objects.
         if (drillRenderer != null) {
             drillRenderer.drawFrameIndex(currentDrillBodyFrame(), state.x, state.y, flipX, false);
-            drawDrillPart(drillRenderer, angledDrillPiece());
-            if (shouldDrawThrusterFlames()) {
-                drawThrusterFlame(drillRenderer, 1);
-            }
         }
         drawAirZoomCue();
 
-        // 3) Robotnik pod + head (ROM: Child1_MakeRoboShip3 + Child1_MakeRoboHead,
-        //    ObjDat_RobotnikShip/Head priority $280).
-        if (shipRenderer != null) {
-            int podOffX = flipX ? -POD_OFFSET_X : POD_OFFSET_X;
-            int podX = state.x + podOffX;
-            int podY = state.y + POD_OFFSET_Y;
-            shipRenderer.drawFrameIndex(currentPodFrame(), podX, podY, flipX, false);
+    }
 
-            if (isEscapePodActive()) {
-                int flameOffX = flipX ? -SHIP_FLAME_OFFSET_X : SHIP_FLAME_OFFSET_X;
-                shipRenderer.drawFrameIndex(SHIP_FLAME_FRAME,
-                        podX + flameOffX,
-                        podY + SHIP_FLAME_OFFSET_Y,
-                        flipX,
-                        false,
-                        SHIP_FLAME_PALETTE_LINE);
+    void appendCompositeChild(int role) {
+        PatternSpriteRenderer drillRenderer = getRenderer(Sonic3kObjectArtKeys.MGZ_ENDBOSS);
+        PatternSpriteRenderer shipRenderer = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
+        if (endBossBodyHiddenAfterFadeHandoff) {
+            if (role == MgzEndBossRenderChild.ROLE_POD) {
+                drawEndBossMiniCraft(shipRenderer);
             }
-
-            int headOffX = flipX ? -HEAD_OFFSET_X : HEAD_OFFSET_X;
-            int headX = podX + headOffX;
-            int headY = podY + HEAD_OFFSET_Y;
-            int headFrame = computeHeadFrame();
-            shipRenderer.drawFrameIndex(headFrame, headX, headY, flipX, false);
+            return;
         }
-
-        // 4) Front drill-piece children (ChildObjDat_6D7C0) and their visible
-        //    sub-children. The second piece carries the drill head assembly
-        //    (loc_6C9E8), while the lower thruster housings each have a flame/
-        //    drill-tip child (loc_6CF20).
-        if (drillRenderer != null) {
-            DrillPart drillHead = drillHeadPart();
-            drillRenderer.drawFrameIndex(
-                    drillHead.frame(),
-                    state.x + renderOffsetX(drillHead.offX()),
-                    state.y + drillHead.offY(),
-                    flipX,
-                    false);
-            drawDrillPart(drillRenderer, lowerDrillPart(0));
-            if (shouldDrawThrusterFlames()) {
-                drawThrusterFlame(drillRenderer, 0);
-            }
-        }
-
-        // 5) Falling debris chunks (ChildObjDat_6D7EA) — 10 particles spawned
-        //    during drop that arc outward under gravity.
-        if (fallingDebrisSpawned) {
-            PatternSpriteRenderer debrisRenderer = getRenderer(Sonic3kObjectArtKeys.MGZ_ENDBOSS_DEBRIS);
-            if (debrisRenderer != null) {
-                for (int i = 0; i < 10; i++) {
-                    if (!fallingDebrisAlive[i]) {
-                        continue;
-                    }
-                    int drawX = fallingDebrisX[i] >> 8;
-                    int drawY = fallingDebrisY[i] >> 8;
-                    debrisRenderer.drawFrameIndex(FALLING_DEBRIS_FRAMES[i], drawX, drawY,
-                            fallingDebrisVx[i] < 0, false);
+        switch (role) {
+            case MgzEndBossRenderChild.ROLE_STATIC_BACK -> {
+                if (drillRenderer != null) {
+                    drawDrillPart(drillRenderer, STATIC_DRILL_PIECE[0], STATIC_DRILL_PIECE[1], STATIC_DRILL_PIECE[2]);
                 }
             }
+            case MgzEndBossRenderChild.ROLE_ANGLED -> {
+                if (drillRenderer != null) {
+                    drawDrillPart(drillRenderer, angledDrillPiece());
+                }
+            }
+            case MgzEndBossRenderChild.ROLE_POD -> drawPodAndHead(shipRenderer);
+            case MgzEndBossRenderChild.ROLE_DRILL_HEAD -> drawPartIfReady(drillRenderer, drillHeadPart());
+            case MgzEndBossRenderChild.ROLE_LOWER_FRONT -> drawPartIfReady(drillRenderer, lowerDrillPart(0));
+            case MgzEndBossRenderChild.ROLE_LOWER_BACK -> drawPartIfReady(drillRenderer, lowerDrillPart(1));
+            case MgzEndBossRenderChild.ROLE_FLAME_FRONT -> { if (drillRenderer != null && shouldDrawThrusterFlames()) drawThrusterFlame(drillRenderer, 0); }
+            case MgzEndBossRenderChild.ROLE_FLAME_BACK -> { if (drillRenderer != null && shouldDrawThrusterFlames()) drawThrusterFlame(drillRenderer, 1); }
+            default -> { }
         }
+    }
+
+    private void drawPartIfReady(PatternSpriteRenderer renderer, DrillPart part) {
+        if (renderer != null) drawDrillPart(renderer, part);
+    }
+
+    int compositePriority(int role) {
+        return switch (role) {
+            case MgzEndBossRenderChild.ROLE_STATIC_BACK -> 7; // word_6D77C
+            case MgzEndBossRenderChild.ROLE_ANGLED -> 6; // word_6D782; sub_6D228's active table resolves to $300
+            case MgzEndBossRenderChild.ROLE_POD -> 5;
+            case MgzEndBossRenderChild.ROLE_DRILL_HEAD -> {
+                // sub_6D228 + byte_6D25A: angles 6/8/A publish $300;
+                // the remaining native angles retain $280.
+                int angleIndex = endBossAngleIndex();
+                yield angleIndex >= 3 && angleIndex <= 5 ? 6 : 5;
+            }
+            case MgzEndBossRenderChild.ROLE_LOWER_FRONT, MgzEndBossRenderChild.ROLE_FLAME_FRONT -> 3;
+            case MgzEndBossRenderChild.ROLE_LOWER_BACK -> 7; // loc_6CEB0 subtype-adjusted child
+            case MgzEndBossRenderChild.ROLE_FLAME_BACK -> 6; // loc_6CF20 subtype != 0
+            default -> 6;
+        };
+    }
+
+    private void drawPodAndHead(PatternSpriteRenderer shipRenderer) {
+        if (shipRenderer == null) return;
+        int podX = state.x + renderOffsetX(POD_OFFSET_X);
+        int podY = state.y + POD_OFFSET_Y;
+        shipRenderer.drawFrameIndex(currentPodFrame(), podX, podY, flipX, false);
+        if (isEscapePodActive()) {
+            shipRenderer.drawFrameIndex(SHIP_FLAME_FRAME, podX + renderOffsetX(SHIP_FLAME_OFFSET_X),
+                    podY + SHIP_FLAME_OFFSET_Y, flipX, false, SHIP_FLAME_PALETTE_LINE);
+        }
+        shipRenderer.drawFrameIndex(computeHeadFrame(), podX + renderOffsetX(HEAD_OFFSET_X),
+                podY + HEAD_OFFSET_Y, flipX, false);
     }
 
     /**
@@ -1460,7 +1554,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (!airZoomCueActive) {
             return;
         }
-        PatternSpriteRenderer scaledRenderer = getRenderer(Sonic3kObjectArtKeys.MGZ_ENDBOSS_SCALED);
+        PatternSpriteRenderer scaledRenderer = instanceAirZoomRenderer();
         if (scaledRenderer == null || !scaledRenderer.isReady()) {
             return;
         }
@@ -1470,57 +1564,60 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
                 MGZ_BOSS_PALETTE_LINE);
     }
 
+    private PatternSpriteRenderer instanceAirZoomRenderer() {
+        if (airZoomCueRenderer != null) return airZoomCueRenderer;
+        ObjectSpriteSheet shared = services().renderManager().getSheet(Sonic3kObjectArtKeys.MGZ_ENDBOSS_SCALED);
+        if (shared == null) return null;
+        airZoomCuePatterns = new Pattern[shared.getPatterns().length];
+        Arrays.setAll(airZoomCuePatterns, ignored -> new Pattern());
+        List<SpriteMappingFrame> frames = new java.util.ArrayList<>(shared.getFrameCount());
+        for (int i = 0; i < shared.getFrameCount(); i++) frames.add(shared.getFrame(i));
+        airZoomCueRenderer = new PatternSpriteRenderer(new ObjectSpriteSheet(
+                airZoomCuePatterns, frames, shared.getPaletteIndex(), shared.getFrameDelay()),
+                services().graphicsManager());
+        int slot = NEXT_ZOOM_ATLAS_SLOT.getAndIncrement();
+        if (slot >= ZOOM_ATLAS_SLOT_COUNT) {
+            throw new IllegalStateException("MGZ zoom-cue atlas instance capacity exhausted");
+        }
+        airZoomCueRenderer.ensurePatternsCached(services().graphicsManager(),
+                ZOOM_ATLAS_BASE + slot * ZOOM_ATLAS_SLOT_PATTERNS);
+        return airZoomCueRenderer;
+    }
+
     private int currentAirZoomCueMappingFrame() {
         return Math.min(airZoomCueScaleStep & 0x7F, AIR_ZOOM_CUE_MAX_MAPPING_FRAME);
     }
 
     private int airZoomCueRenderX() {
-        int divisor = airZoomCueScaleStep + AIR_ZOOM_CUE_INITIAL_SCALE_STEP;
-        return airZoomCueX - (divisor > 0 ? 0x100 / divisor : 0);
+        // loc_6D0A2: d4 = $100 / ($40+4), then subtract d4 from both the
+        // retained 16:8 position words before drawing Map_ScaledArt.
+        return airZoomCueX - airZoomCueNativeAnchorOffset();
     }
 
     private int airZoomCueRenderY() {
-        int divisor = airZoomCueScaleStep + AIR_ZOOM_CUE_INITIAL_SCALE_STEP;
-        return airZoomCueY - (divisor > 0 ? 0x100 / divisor : 0);
+        return airZoomCueY - airZoomCueNativeAnchorOffset();
+    }
+
+    private int airZoomCueNativeAnchorOffset() {
+        return 0x100 / ((airZoomCueScaleStep & 0x7F) + 4);
     }
 
     private void generateAirZoomCueArtIfNeeded(int frame, PatternSpriteRenderer scaledRenderer) {
-        if (airZoomCueGeneratedFrame == frame) {
-            return;
-        }
+        // The object-art sheet is shared. Regenerate immediately before every
+        // draw so another live boss/rewound instance can never leave this
+        // instance displaying its scale frame.
         ObjectSpriteSheet sheet = services().renderManager().getSheet(Sonic3kObjectArtKeys.MGZ_ENDBOSS_SCALED);
         if (sheet == null || frame < 0 || frame >= sheet.getFrameCount()) {
             return;
         }
         byte[] source = loadAirZoomCueSourceRaster();
-        Pattern[] generated = sheet.getPatterns();
+        Pattern[] generated = airZoomCuePatterns;
         if (source == null || generated == null || generated.length == 0) {
             return;
         }
 
-        for (Pattern pattern : generated) {
-            if (pattern != null) {
-                pattern.clear();
-            }
-        }
-
         SpriteMappingFrame mapping = sheet.getFrame(frame);
-        FrameExtents extents = extentsFor(mapping);
-        if (extents.width() <= 0 || extents.height() <= 0) {
-            return;
-        }
-
-        for (SpriteMappingPiece piece : mapping.pieces()) {
-            for (int tileX = 0; tileX < piece.widthTiles(); tileX++) {
-                for (int tileY = 0; tileY < piece.heightTiles(); tileY++) {
-                    int generatedTile = piece.tileIndex() + (tileX * piece.heightTiles()) + tileY;
-                    if (generatedTile < 0 || generatedTile >= generated.length || generated[generatedTile] == null) {
-                        continue;
-                    }
-                    fillScaledTile(source, generated[generatedTile], piece, tileX, tileY, extents);
-                }
-            }
-        }
+        MgzEndBossArtScaler.scale(source, airZoomCueScaleStep, mapping, generated);
         scaledRenderer.updatePatternRange(services().graphicsManager(), 0, generated.length);
         airZoomCueGeneratedFrame = frame;
     }
@@ -1540,51 +1637,51 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         return airZoomCueSourceRaster;
     }
 
-    private void fillScaledTile(byte[] source, Pattern target, SpriteMappingPiece piece,
-            int tileX, int tileY, FrameExtents extents) {
-        int baseX = piece.xOffset() + (tileX * Pattern.PATTERN_WIDTH) - extents.minX();
-        int baseY = piece.yOffset() + (tileY * Pattern.PATTERN_HEIGHT) - extents.minY();
-        for (int py = 0; py < Pattern.PATTERN_HEIGHT; py++) {
-            for (int px = 0; px < Pattern.PATTERN_WIDTH; px++) {
-                int outX = baseX + px;
-                int outY = baseY + py;
-                int sourceX = outX * AIR_ZOOM_CUE_SOURCE_WIDTH / extents.width();
-                int sourceY = outY * AIR_ZOOM_CUE_SOURCE_HEIGHT / extents.height();
-                target.setPixel(px, py, sourcePixel(source, sourceX, sourceY));
-            }
-        }
-    }
-
-    private byte sourcePixel(byte[] source, int x, int y) {
-        int clampedX = Math.max(0, Math.min(AIR_ZOOM_CUE_SOURCE_WIDTH - 1, x));
-        int clampedY = Math.max(0, Math.min(AIR_ZOOM_CUE_SOURCE_HEIGHT - 1, y));
-        int offset = clampedY * AIR_ZOOM_CUE_SOURCE_BYTES_PER_ROW + (clampedX / Pattern.PIXELS_PER_BYTE);
-        if (offset < 0 || offset >= source.length) {
-            return 0;
-        }
-        int packed = Byte.toUnsignedInt(source[offset]);
-        return (byte) ((clampedX & 1) == 0 ? (packed >> 4) & 0x0F : packed & 0x0F);
-    }
-
-    private FrameExtents extentsFor(SpriteMappingFrame frame) {
-        int minX = Integer.MAX_VALUE;
-        int minY = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE;
-        int maxY = Integer.MIN_VALUE;
-        for (SpriteMappingPiece piece : frame.pieces()) {
-            minX = Math.min(minX, piece.xOffset());
-            minY = Math.min(minY, piece.yOffset());
-            maxX = Math.max(maxX, piece.xOffset() + (piece.widthTiles() * Pattern.PATTERN_WIDTH));
-            maxY = Math.max(maxY, piece.yOffset() + (piece.heightTiles() * Pattern.PATTERN_HEIGHT));
-        }
-        if (minX == Integer.MAX_VALUE) {
-            return new FrameExtents(0, 0, 0, 0);
-        }
-        return new FrameExtents(minX, minY, maxX, maxY);
-    }
-
     private int renderOffsetX(int offX) {
         return flipX ? -offX : offX;
+    }
+
+    /**
+     * The ROM's drill children occupy later SST slots than Obj_MGZEndBoss. During
+     * the moving diagonal air attacks they refresh from the parent's
+     * post-MoveSprite2 position before adding themselves to
+     * Collision_response_list. Pattern zero's horizontal sweep already enters
+     * the retained collision list at that post-move phase; the later diagonal
+     * configurations enter from the folded parent's preceding phase and need
+     * the child-slot projection.
+     */
+    private int foldedChildTouchAnchorX() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset == 0) {
+            return state.x;
+        }
+        return (((state.x << 8) | (xSubpixel & 0xFF)) + xVel) >> 8;
+    }
+
+    private int foldedChildTouchAnchorY() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset == 0) {
+            return state.y;
+        }
+        return (((state.y << 8) | (ySubpixel & 0xFF)) + yVel) >> 8;
+    }
+
+    /**
+     * The native parent publishes its collision-list pointer before the player
+     * touch pass, then advances through the remaining object/V-int phases. The
+     * folded provider is queried from the earlier retained parent phase, so its
+     * body region must expose the position the live native pointer observes.
+     */
+    private int foldedBodyTouchAnchorX() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset != 0) {
+            return state.x;
+        }
+        return (((state.x << 8) | (xSubpixel & 0xFF)) + (xVel * 2)) >> 8;
+    }
+
+    private int foldedBodyTouchAnchorY() {
+        if (state.routine != ROUTINE_END_ATTACK_MOVE || airAttackPatternOffset != 0) {
+            return state.y;
+        }
+        return (((state.y << 8) | (ySubpixel & 0xFF)) + (yVel * 2)) >> 8;
     }
 
     private DrillPart angledDrillPiece() {
@@ -1641,16 +1738,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private record DrillPart(int frame, int offX, int offY) {
     }
 
-    private record FrameExtents(int minX, int minY, int maxX, int maxY) {
-        int width() {
-            return maxX - minX;
-        }
-
-        int height() {
-            return maxY - minY;
-        }
-    }
-
     private boolean isEscapePodActive() {
         return state.routine == ROUTINE_CEILING_ESCAPE || state.routine == ROUTINE_ESCAPE_WAIT;
     }
@@ -1687,11 +1774,15 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     private boolean shouldDrawThrusterFlamesForFrame(int frameCounter) {
-        return frameCounter >= 0 && (frameCounter & 1) == 0;
+        return frameCounter >= 0 && (vIntRunCounter(frameCounter) & 1) == 0;
     }
 
     private boolean shouldDrawShipFlame() {
-        return state.lastUpdatedFrame >= 0 && (state.lastUpdatedFrame & 1) == 0;
+        return state.lastUpdatedFrame >= 0 && (vIntRunCounter(state.lastUpdatedFrame) & 1) == 0;
+    }
+
+    private int vIntRunCounter(int objectUpdateCounter) {
+        return objectUpdateCounter + services().objectManager().getVIntRunCounterPhaseOffset();
     }
 
     /**
@@ -1740,14 +1831,17 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     @Override
     public boolean isHighPriority() {
-        // ROM: ObjDat_MGZDrillBoss uses make_art_tile(ArtTile_MGZEndBoss,1,0),
-        // so the encounter renders behind high-priority FG tiles.
-        return false;
+        // loc_6C354 explicitly sets art_tile bit 7 after loading ObjDat. The
+        // defeated body later clears its render flag in Wait_FadeToLevelMusic.
+        return endBossMode && !endBossBodyHiddenAfterFadeHandoff;
     }
 
     @Override
     public int getPriorityBucket() {
-        return PRIORITY_BUCKET;
+        // Wait_FadeToLevelMusic's callback enters loc_6C2BE, which writes $200.
+        return endBossDefeatPhase >= END_DEFEAT_WAIT_CAPSULE_CALLBACK
+                ? DEFEATED_PRIORITY_BUCKET
+                : PRIORITY_BUCKET;
     }
 
     @Override

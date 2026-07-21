@@ -138,13 +138,14 @@ class TestModeTracePickerTest {
 
     private static TraceMetadata metadataStub(String gameId) {
         return new TraceMetadata(
-                gameId, "TEST", 0, 0, 0, 0,
+                gameId, "TEST", 0, 0, 0, null, 0,
                 "0x0000", "0x0000",
                 null, null, 3,
                 null, null, null, null,
                 null /* aux_schema_extras */,
                 null, null, null,
                 null, null, null,
-                "sonic", List.of(), 0, null, null, null, null, null, null);
+                "sonic", List.of(), 0, null, null, null, null, null, null,
+                null, null, null, null, null);
     }
 }

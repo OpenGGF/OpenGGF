@@ -7,6 +7,7 @@ import com.openggf.game.sonic1.Sonic1PlayerArt;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -35,6 +36,8 @@ public class Sonic1PlayerArtTest {
         assertNotNull(sonic, "SpriteArtSet should not be null");
         int expectedTiles = Sonic1Constants.ART_UNC_SONIC_SIZE / Pattern.PATTERN_SIZE_IN_ROM;
         assertEquals(expectedTiles, sonic.artTiles().length, "Tile count should match ROM art size");
+        assertTrue(((ScriptedVelocityAnimationProfile) sonic.animationProfile())
+                .isPushUsesWalkSpecialHandler());
     }
 
     @Test
@@ -149,5 +152,4 @@ public class Sonic1PlayerArtTest {
         assertNotNull(sonic.animationProfile(), "Animation profile should be set");
     }
 }
-
 

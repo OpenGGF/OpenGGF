@@ -7,8 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.camera.Camera;
+import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -35,11 +38,30 @@ import org.mockito.MockedStatic;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestLostRingObjectInstance {
+
+    @Test
+    void deferredObj37OwnerClearsRingsOnItsFirstExecution() {
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+        player.setRingCount(11);
+        LostRingObjectInstance owner = LostRingObjectInstance.forTest(
+                0x100, 0x100, 0, 0, 0, 0xFF);
+        owner.clearMainPlayerRingsOnFirstUpdate();
+
+        assertEquals(11, player.getRingCount(),
+                "allocation into an already-passed SST slot must not clear Ring_count immediately");
+
+        owner.update(1, player);
+
+        assertEquals(0, player.getRingCount(),
+                "Obj37_Init clears Ring_count when the deferred owner slot first executes");
+    }
 
     @Test
     void obj37DoesNotUseSharedXAxisOutOfRangeMacro() {
@@ -99,7 +121,7 @@ class TestLostRingObjectInstance {
         assertEquals(0, GameRules.SONIC_1.ring().ringFloorCheckCounterPhase());
         assertEquals(0, GameRules.SONIC_2.ring().ringFloorCheckCounterPhase());
         assertEquals(4, GameRules.SONIC_3K.ring().ringFloorCheckCounterPhase(),
-                "S3K Obj37 must see the native V_int_run_count byte four counts ahead of the object clock");
+                "live S3K Obj37 starts four V-int counts ahead of the gameplay-scoped object clock");
     }
 
     @Test
@@ -157,6 +179,21 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void s3kLostRingRenderFlagUsesZeroHeightPixels() {
+        // S3K Render_Sprites reads height_pixels directly. Obj_Bouncing_Ring
+        // initializes y_radius/x_radius but leaves height_pixels zero, so a ring
+        // below the 224-line viewport clears bit 7 without S1/S2's 32 px band.
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        LatchedRenderProbeRing ring = new LatchedRenderProbeRing(
+                0x100, 0x00E0, 0, 0, GameRules.SONIC_3K.ring().lostRingRenderYMargin());
+
+        ring.update(0, null);
+
+        assertFalse(ring.renderFlagForTest(),
+                "S3K Obj37 height_pixels remains zero, making the viewport bottom exclusive");
+    }
+
+    @Test
     void s1OffscreenLostRingStillProbesTerrain() {
         // S1 RLoss_Bounce calls ObjFloorDist directly after the vblank cadence gate; unlike S2/S3K,
         // there is no render_flags bit-7 check before the floor probe.
@@ -200,6 +237,38 @@ class TestLostRingObjectInstance {
                 "Obj37 should apply the full Ring_FindFloor penetration distance");
         assertEquals(0xFFFFF617, ring.getYVelForTest(),
                 "Obj37 bounce velocity follows y_vel -= y_vel>>2; neg.w y_vel");
+    }
+
+    @Test
+    void s3kRingFindFloorIncludesActiveBackgroundCollisionPlane() {
+        TerrainBackedRing ring = new TerrainBackedRing(
+                0x3A00, 0x0910, 0, 0,
+                GameRules.SONIC_3K.ring().ringFloorCheckMask(), false, true);
+        GameStateManager gameState = mock(GameStateManager.class);
+        Camera camera = mock(Camera.class);
+        LevelManager levelManager = mock(LevelManager.class);
+        Level level = mock(Level.class);
+        when(gameState.isBackgroundCollisionFlag()).thenReturn(true);
+        when(camera.getX()).thenReturn((short) 0x3900);
+        when(camera.getY()).thenReturn((short) 0x08E0);
+        when(levelManager.getCurrentLevel()).thenReturn(level);
+        when(level.hasBackgroundCollisionRowAt(0x0918)).thenReturn(true);
+        ring.setServices(new StubObjectServices() {
+            @Override public GameStateManager gameState() { return gameState; }
+            @Override public Camera camera() { return camera; }
+            @Override public LevelManager levelManager() { return levelManager; }
+        });
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x3A00, 0x0918))
+                    .thenReturn(new TerrainCheckResult(4, (byte) 0, 0));
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDistOnLayer(
+                            0x3A00, 0x0918, (byte) 1))
+                    .thenReturn(new TerrainCheckResult(-7, (byte) 0, 1));
+
+            assertEquals(-7, ring.probeFloorForTest(0x3A00, 0x0918),
+                    "Ring_FindFloor must retain the more penetrating BG-plane result");
+        }
     }
 
     /**
@@ -281,10 +350,17 @@ class TestLostRingObjectInstance {
 
     private static final class LatchedRenderProbeRing extends LostRingObjectInstance {
         int floorProbeCount;
+        private final int renderYMargin;
 
         private LatchedRenderProbeRing(int xPixel, int yPixel, int xVel, int yVel) {
+            this(xPixel, yPixel, xVel, yVel, GameRules.SONIC_2.ring().lostRingRenderYMargin());
+        }
+
+        private LatchedRenderProbeRing(int xPixel, int yPixel, int xVel, int yVel,
+                                       int renderYMargin) {
             super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
             initFixedPointForTest(xPixel, yPixel, xVel, yVel, 0, 0xFF);
+            this.renderYMargin = renderYMargin;
         }
 
         boolean renderFlagForTest() {
@@ -299,6 +375,11 @@ class TestLostRingObjectInstance {
         @Override
         protected int resolveVblaCounter() {
             return 0;
+        }
+
+        @Override
+        protected int resolveLostRingRenderYMargin() {
+            return renderYMargin;
         }
 
         @Override
@@ -627,7 +708,8 @@ class TestLostRingObjectInstance {
     @Test
     void delayedSpawnVariantAppliesInitialObj37MovementStep() throws Exception {
         LevelManager levelManager = GameServices.level();
-        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
         setField(levelManager, "objectManager", objectManager);
 
         RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
@@ -643,7 +725,8 @@ class TestLostRingObjectInstance {
         int baselineYVel = baseline.getYVelForTest();
 
         LevelManager steppedLevelManager = GameServices.level();
-        ObjectManager steppedObjectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        ObjectManager steppedObjectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
         setField(steppedLevelManager, "objectManager", steppedObjectManager);
 
         RingManager steppedRingManager = buildRingManagerWithLevelManager(steppedLevelManager);
@@ -656,10 +739,23 @@ class TestLostRingObjectInstance {
                 steppedObjectManager.activeObjectsOfType(LostRingObjectInstance.class).get(0);
 
         assertEquals(baselineXSub + baselineXVel, stepped.getXSubpixelForTest(),
-                "S3K delayed Obj37 materialization must compensate for the same-frame MoveSprite2 step");
+                "S3K delayed Obj37 materialization must catch up the init fall-through MoveSprite2 step");
         assertEquals(baselineYSub + baselineYVel, stepped.getYSubpixelForTest());
         assertEquals(baselineYVel + 0x18, stepped.getYVelForTest(),
                 "Obj37_Main applies gravity after the same-frame position update");
+    }
+
+    @Test
+    void collectedSparkleDoesNotConsumeS3kCollisionResponseListCapacity() {
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                0x120, 0x180, 0, 0, 0, 0xFF);
+
+        assertTrue(ring.publishesTouchResponseListEntryThisFrame());
+
+        ring.markCollected(10);
+
+        assertFalse(ring.publishesTouchResponseListEntryThisFrame(),
+                "Obj37's collected sparkle routine does not call Add_SpriteToCollisionResponseList");
     }
 
     @Test
@@ -859,6 +955,10 @@ class TestLostRingObjectInstance {
 
         void setVblaForTest(int vbla) {
             this.vbla = vbla;
+        }
+
+        int probeFloorForTest(int x, int y) {
+            return ringCheckFloorDist(x, y);
         }
 
         @Override

@@ -111,6 +111,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     private int p2SolidContactFrame = Integer.MIN_VALUE;
     private PlayableEntity p2RecentlyClearedSolidContact;
     private int p2SolidContactClearedFrame = Integer.MIN_VALUE;
+    private boolean pendingBreakContactRelease;
     private MonitorContentsSlot monitorContentsSlot;
 
     // (Icon rising state is managed by AbstractMonitorObjectInstance)
@@ -224,6 +225,10 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             mappingFrame = animationState.getMappingFrame();
             return;
         }
+        if (pendingBreakContactRelease) {
+            pendingBreakContactRelease = false;
+            releaseTouchingPlayersOnBreak(player, frameCounter);
+        }
         updateIcon();
     }
 
@@ -255,6 +260,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
      */
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
+        ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (broken || player == null) {
             return;
@@ -291,7 +297,11 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     private void breakMonitor(AbstractPlayableSprite player, int frameCounter) {
         broken = true;
 
-        releaseTouchingPlayersOnBreak(player, frameCounter);
+        // Touch_Monitor selects Obj_MonitorBreak during the player slot; the
+        // contact-bit release runs later when the monitor's own SST slot is
+        // dispatched. Deferring prevents an earlier HCZ block slot from
+        // re-landing a released sidekick in the same frame.
+        pendingBreakContactRelease = true;
 
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
@@ -574,6 +584,15 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     @Override
+    public boolean zeroXSpeedStopsOnLeftSideContact() {
+        // S3K SolidObject_cont's player-left branch reaches loc_1E056 when
+        // x_vel is zero: only a negative velocity takes the skip branch
+        // (docs/skdisasm/sonic3k.asm:41473-41491). This also publishes the
+        // wall-cling status_tertiary flag used by later controller slots.
+        return true;
+    }
+
+    @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
         // S3K monitor wrappers gate roll-animation hits, then branch into the
         // shared SolidObject_cont side/top classifier (docs/skdisasm/sonic3k.asm:
@@ -725,10 +744,6 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         player.setOnObject(false);
         player.setPushing(false);
         player.setAir(true);
-        if (player.isCpuControlled() && player instanceof AbstractPlayableSprite sprite
-                && !sprite.isInWater()) {
-            sprite.suppressNextGravityStep();
-        }
     }
 
     private static final class MonitorContentsSlot extends AbstractObjectInstance implements RewindRecreatable {

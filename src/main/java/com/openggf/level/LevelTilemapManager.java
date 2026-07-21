@@ -5,9 +5,11 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
+import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlas;
 import com.openggf.graphics.TilemapGpuRenderer;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
 
 import java.util.logging.Logger;
 
@@ -40,6 +42,8 @@ public class LevelTilemapManager {
     static final int BG_LOOP_BAND_HEIGHT_PX = VDP_BG_PLANE_HEIGHT_TILES * Pattern.PATTERN_HEIGHT;
     // Tile columns spanned by one 16px chunk column (the BG window step granularity).
     static final int CHUNK_TILE_SPAN = LevelConstants.CHUNK_WIDTH / Pattern.PATTERN_WIDTH;
+    private static final int BG_RING_WIDTH_TILES = 64;
+    private static final int BG_RING_HEIGHT_TILES = 32;
 
     // --- Dependencies ---
     private LevelGeometry geometry;
@@ -52,6 +56,7 @@ public class LevelTilemapManager {
     private int backgroundTilemapHeightTiles;
     private boolean backgroundTilemapDirty = true;
     private Boolean lastRequiresFullWidthBgTilemap;
+    private Boolean lastBackgroundWrap;
     private int backgroundVdpWrapHeightTiles = 0; // 0 = disabled
     // X offset (in pixels, 512-aligned) for BG tilemap building.
     // Wide BG maps (> 512px) need tiles from the correct region, not always from position 0.
@@ -80,6 +85,20 @@ public class LevelTilemapManager {
     // Diagnostics for tests: count full BG rebuilds vs incremental column shifts.
     int bgFullRebuildCount = 0;
     int bgIncrementalShiftCount = 0;
+
+    // --- Persistent Plane B nametable state ---
+    private byte[] persistentBgRing;
+    private byte[] persistentBgUploadView;
+    private byte[] persistentBgPublishedData;
+    private int persistentBgOriginXTiles;
+    private int persistentBgOriginYTiles;
+    private int persistentBgAlignedX;
+    private int persistentBgAlignedY;
+    private boolean persistentBgBaselineValid;
+    private boolean persistentBgRestoreUploadPending;
+    private BgTilemapUpdateMode lastBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
+    int persistentBgFullPublicationCount;
+    int persistentBgIncrementalPublicationCount;
 
     // --- Foreground tilemap data ---
     private byte[] foregroundTilemapData;
@@ -151,7 +170,8 @@ public class LevelTilemapManager {
             int xQueryOffset,
             int yQueryOffset,
             int builtWidthPx,
-            int builtHeightPx) {
+            int builtHeightPx,
+            int xQueryWrapWidthPx) {
     }
 
     /**
@@ -176,6 +196,11 @@ public class LevelTilemapManager {
      * Updates the geometry reference after a seamless level transition.
      */
     public void updateGeometry(LevelGeometry geometry) {
+        if (this.geometry != geometry) {
+            persistentBgBaselineValid = false;
+            persistentBgPublishedData = null;
+            backgroundTilemapDirty = true;
+        }
         this.geometry = geometry;
     }
 
@@ -197,14 +222,61 @@ public class LevelTilemapManager {
                                             int currentZone,
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
+        ensureBackgroundTilemapData(blockLookup, zoneFeatureProvider, currentZone,
+                parallaxManager, BgTilemapUpdateMode.STATIC_WINDOW,
+                Integer.MIN_VALUE, 0, verticalWrapEnabled);
+    }
+
+    /**
+     * Ensures Plane B data using the active handler's residency mode and live
+     * background camera position.
+     */
+    public void ensureBackgroundTilemapData(BlockLookup blockLookup,
+                                            ZoneFeatureProvider zoneFeatureProvider,
+                                            int currentZone,
+                                            ParallaxManager parallaxManager,
+                                            BgTilemapUpdateMode updateMode,
+                                            int bgCameraX,
+                                            int bgCameraY,
+                                            boolean verticalWrapEnabled) {
+        BgTilemapUpdateMode resolvedMode = updateMode != null
+                ? updateMode : BgTilemapUpdateMode.STATIC_WINDOW;
+        if (resolvedMode != lastBgTilemapUpdateMode) {
+            persistentBgBaselineValid = false;
+            persistentBgPublishedData = null;
+            if (resolvedMode == BgTilemapUpdateMode.STATIC_WINDOW) {
+                persistentBgRing = null;
+                persistentBgUploadView = null;
+                persistentBgOriginXTiles = 0;
+                persistentBgOriginYTiles = 0;
+            }
+            backgroundTilemapDirty = true;
+            bgWindowShiftCandidate = false;
+            bgLastBuildValid = false;
+            lastBgTilemapUpdateMode = resolvedMode;
+        }
+        if (resolvedMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
+            reconcilePersistentBgNametable(blockLookup, zoneFeatureProvider, currentZone,
+                    bgCameraX, bgCameraY);
+            return;
+        }
+
         boolean requiresFullWidthBgTilemap = zoneRuntimeRequiresFullWidthBgTilemap();
+        boolean backgroundWrap = zoneFeatureProvider != null
+                && zoneFeatureProvider.bgWrapsHorizontally()
+                && !requiresFullWidthBgTilemap;
         if (lastRequiresFullWidthBgTilemap != null
                 && lastRequiresFullWidthBgTilemap != requiresFullWidthBgTilemap) {
             backgroundTilemapDirty = true;
             bgWindowShiftCandidate = false;
         }
+        if (lastBackgroundWrap != null && lastBackgroundWrap != backgroundWrap) {
+            backgroundTilemapDirty = true;
+            bgWindowShiftCandidate = false;
+        }
         if (!backgroundTilemapDirty && backgroundTilemapData != null) {
             lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
+            lastBackgroundWrap = backgroundWrap;
             ensurePatternLookupData();
             // Tilemap data already up to date — but still push VDP wrap height
             // to the renderer in case it was null during the initial build.
@@ -240,6 +312,7 @@ public class LevelTilemapManager {
                     parallaxManager, verticalWrapEnabled);
         }
         lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
+        lastBackgroundWrap = backgroundWrap;
         backgroundTilemapDirty = false;
 
         ensurePatternLookupData();
@@ -363,6 +436,188 @@ public class LevelTilemapManager {
     // -----------------------------------------------------------------------
     // Build methods
     // -----------------------------------------------------------------------
+
+    private void reconcilePersistentBgNametable(BlockLookup blockLookup,
+                                                ZoneFeatureProvider zoneFeatureProvider,
+                                                int currentZone,
+                                                int bgCameraX,
+                                                int bgCameraY) {
+        Level level = geometry.level();
+        if (level == null || level.getMap() == null) {
+            return;
+        }
+        int liveBgX = bgCameraX == Integer.MIN_VALUE ? 0 : bgCameraX;
+        int alignedX = Math.floorDiv(liveBgX, LevelConstants.CHUNK_WIDTH)
+                * LevelConstants.CHUNK_WIDTH;
+        int alignedY = Math.floorDiv(bgCameraY, LevelConstants.CHUNK_HEIGHT)
+                * LevelConstants.CHUNK_HEIGHT;
+        long deltaX = (long) alignedX - persistentBgAlignedX;
+        long deltaY = (long) alignedY - persistentBgAlignedY;
+        TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
+        boolean rendererBaselineLost = persistentBgBaselineValid && renderer != null
+                && (persistentBgPublishedData == null
+                || !renderer.hasBackgroundBaseline(persistentBgPublishedData,
+                BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES));
+        if (!persistentBgBaselineValid || rendererBaselineLost
+                || Math.abs(deltaX) > LevelConstants.CHUNK_WIDTH
+                || Math.abs(deltaY) > LevelConstants.CHUNK_HEIGHT) {
+            seedPersistentBgNametable(blockLookup, zoneFeatureProvider, currentZone,
+                    alignedX, alignedY, renderer);
+            return;
+        }
+        if (deltaX == 0 && deltaY == 0) {
+            ensurePatternLookupData();
+            return;
+        }
+        if ((deltaX != 0 && Math.abs(deltaX) != LevelConstants.CHUNK_WIDTH)
+                || (deltaY != 0 && Math.abs(deltaY) != LevelConstants.CHUNK_HEIGHT)) {
+            seedPersistentBgNametable(blockLookup, zoneFeatureProvider, currentZone,
+                    alignedX, alignedY, renderer);
+            return;
+        }
+
+        int shiftXTiles = (int) (deltaX / Pattern.PATTERN_WIDTH);
+        int shiftYTiles = (int) (deltaY / Pattern.PATTERN_HEIGHT);
+        persistentBgOriginXTiles = Math.floorMod(
+                persistentBgOriginXTiles + shiftXTiles, BG_RING_WIDTH_TILES);
+        persistentBgOriginYTiles = Math.floorMod(
+                persistentBgOriginYTiles + shiftYTiles, BG_RING_HEIGHT_TILES);
+        persistentBgAlignedX = alignedX;
+        persistentBgAlignedY = alignedY;
+
+        BgBuildParams params = persistentBuildParams(zoneFeatureProvider, currentZone,
+                alignedX, alignedY);
+        if (shiftXTiles != 0) {
+            int logicalChunkX = shiftXTiles > 0 ? BG_RING_WIDTH_TILES / CHUNK_TILE_SPAN - 1 : 0;
+            for (int logicalChunkY = 0;
+                 logicalChunkY < BG_RING_HEIGHT_TILES / CHUNK_TILE_SPAN;
+                 logicalChunkY++) {
+                fillPersistentChunk(blockLookup, level, params, logicalChunkX, logicalChunkY);
+            }
+        }
+        if (shiftYTiles != 0) {
+            int logicalChunkY = shiftYTiles > 0 ? BG_RING_HEIGHT_TILES / CHUNK_TILE_SPAN - 1 : 0;
+            for (int logicalChunkX = 0;
+                 logicalChunkX < BG_RING_WIDTH_TILES / CHUNK_TILE_SPAN;
+                 logicalChunkX++) {
+                fillPersistentChunk(blockLookup, level, params, logicalChunkX, logicalChunkY);
+            }
+        }
+
+        backgroundTilemapData = persistentBgRing;
+        backgroundTilemapWidthTiles = BG_RING_WIDTH_TILES;
+        backgroundTilemapHeightTiles = BG_RING_HEIGHT_TILES;
+        backgroundTilemapDirty = false;
+        bgLastBuildValid = false;
+        recomputeBgVdpWrapHeight();
+        rebuildPersistentLogicalUploadView();
+        persistentBgIncrementalPublicationCount++;
+        persistentBgPublishedData = persistentBgUploadView;
+        ensurePatternLookupData();
+        if (renderer != null) {
+            renderer.setBackgroundTilemapDataIncremental(persistentBgUploadView,
+                    BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES, shiftXTiles, shiftYTiles);
+            renderer.setBgVdpWrapHeight(backgroundVdpWrapHeightTiles);
+            renderer.setPatternLookupData(patternLookupData, patternLookupSize);
+        }
+    }
+
+    private void seedPersistentBgNametable(BlockLookup blockLookup,
+                                           ZoneFeatureProvider zoneFeatureProvider,
+                                           int currentZone,
+                                           int alignedX,
+                                           int alignedY,
+                                           TilemapGpuRenderer renderer) {
+        BgBuildParams params = persistentBuildParams(zoneFeatureProvider, currentZone,
+                alignedX, alignedY);
+        TilemapData seed = buildTilemapData((byte) 1, params, blockLookup);
+        persistentBgRing = seed.data();
+        persistentBgUploadView = null;
+        persistentBgOriginXTiles = 0;
+        persistentBgOriginYTiles = 0;
+        persistentBgAlignedX = alignedX;
+        persistentBgAlignedY = alignedY;
+        persistentBgBaselineValid = true;
+        persistentBgPublishedData = persistentBgRing;
+        backgroundTilemapData = persistentBgRing;
+        backgroundTilemapWidthTiles = BG_RING_WIDTH_TILES;
+        backgroundTilemapHeightTiles = BG_RING_HEIGHT_TILES;
+        backgroundTilemapDirty = false;
+        bgWindowShiftCandidate = false;
+        bgLastBuildValid = false;
+        persistentBgFullPublicationCount++;
+        recomputeBgVdpWrapHeight();
+        ensurePatternLookupData();
+        if (renderer != null) {
+            renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, persistentBgRing,
+                    BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES);
+            renderer.setBgVdpWrapHeight(backgroundVdpWrapHeightTiles);
+            renderer.setPatternLookupData(patternLookupData, patternLookupSize);
+        }
+    }
+
+    private BgBuildParams persistentBuildParams(ZoneFeatureProvider zoneFeatureProvider,
+                                                int currentZone,
+                                                int alignedX,
+                                                int alignedY) {
+        BgBuildParams normal = computeBuildParams((byte) 1, zoneFeatureProvider, currentZone);
+        int xQueryOffset = alignedX;
+        if (normal.bgWrap() && !normal.bgLinearRowOverflow()) {
+            int contiguousWidthPx = geometry.bgContiguousWidthPx();
+            xQueryOffset = contiguousWidthPx > 0
+                    ? Math.floorMod(alignedX, contiguousWidthPx) : 0;
+        }
+        // Draw_BG retains the row immediately above the visible window. When
+        // scrolling upward, that offscreen row is the one the ROM redraws
+        // (docs/s2disasm/s2.asm:18712-18719,18748-18756).
+        return new BgBuildParams(normal.bgWrap(), normal.bgLinearRowOverflow(),
+                xQueryOffset, alignedY - LevelConstants.CHUNK_HEIGHT,
+                BG_RING_WIDTH_TILES * Pattern.PATTERN_WIDTH,
+                BG_RING_HEIGHT_TILES * Pattern.PATTERN_HEIGHT,
+                normal.bgWrap() && !normal.bgLinearRowOverflow()
+                        ? Math.max(0, geometry.bgContiguousWidthPx()) : 0);
+    }
+
+    private void fillPersistentChunk(BlockLookup blockLookup,
+                                     Level level,
+                                     BgBuildParams params,
+                                     int logicalChunkX,
+                                     int logicalChunkY) {
+        int queryX = normalizeBgQueryX(params,
+                params.xQueryOffset() + logicalChunkX * LevelConstants.CHUNK_WIDTH);
+        int queryY = params.yQueryOffset() + logicalChunkY * LevelConstants.CHUNK_HEIGHT;
+        int targetTileX = Math.floorMod(persistentBgOriginXTiles
+                + logicalChunkX * CHUNK_TILE_SPAN, BG_RING_WIDTH_TILES);
+        int targetTileY = Math.floorMod(persistentBgOriginYTiles
+                + logicalChunkY * CHUNK_TILE_SPAN, BG_RING_HEIGHT_TILES);
+        writeChunkAt(persistentBgRing, BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES,
+                (byte) 1, targetTileX, targetTileY, queryX, queryY,
+                params, blockLookup, level, geometry.blockPixelSize());
+    }
+
+    private static int normalizeBgQueryX(BgBuildParams params, int queryX) {
+        return params.xQueryWrapWidthPx() > 0
+                ? Math.floorMod(queryX, params.xQueryWrapWidthPx()) : queryX;
+    }
+
+    private void rebuildPersistentLogicalUploadView() {
+        int byteCount = BG_RING_WIDTH_TILES * BG_RING_HEIGHT_TILES * 4;
+        if (persistentBgUploadView == null || persistentBgUploadView.length != byteCount) {
+            persistentBgUploadView = new byte[byteCount];
+        }
+        for (int logicalY = 0; logicalY < BG_RING_HEIGHT_TILES; logicalY++) {
+            int physicalY = Math.floorMod(persistentBgOriginYTiles + logicalY,
+                    BG_RING_HEIGHT_TILES);
+            for (int logicalX = 0; logicalX < BG_RING_WIDTH_TILES; logicalX++) {
+                int physicalX = Math.floorMod(persistentBgOriginXTiles + logicalX,
+                        BG_RING_WIDTH_TILES);
+                System.arraycopy(persistentBgRing,
+                        (physicalY * BG_RING_WIDTH_TILES + physicalX) * 4,
+                        persistentBgUploadView,
+                        (logicalY * BG_RING_WIDTH_TILES + logicalX) * 4, 4);
+            }
+        }
+    }
 
     private void buildBackgroundTilemapData(BlockLookup blockLookup,
                                             ZoneFeatureProvider zoneFeatureProvider,
@@ -595,7 +850,7 @@ public class LevelTilemapManager {
         int builtHeight = bgLoopBand ? BG_LOOP_BAND_HEIGHT_PX : levelHeight;
 
         return new BgBuildParams(bgWrap, bgLinearRowOverflow, bgXQueryOffset, bgYQueryOffset,
-                levelWidth, builtHeight);
+                levelWidth, builtHeight, 0);
     }
 
     private TilemapData buildTilemapData(byte layerIndex, BlockLookup blockLookup,
@@ -635,60 +890,60 @@ public class LevelTilemapManager {
         int chunkHeight = LevelConstants.CHUNK_HEIGHT;
         int chunkX = localX / chunkWidth;
         // Query the map at the offset position (wrapping handled by blockLookup)
-        int queryX = localX + params.xQueryOffset();
+        int queryX = normalizeBgQueryX(params, localX + params.xQueryOffset());
 
         for (int y = 0; y < params.builtHeightPx(); y += chunkHeight) {
             int chunkY = y / chunkHeight;
             // queryY anchors the BG loop band at its base layout Y (0 for normal builds).
             int queryY = y + params.yQueryOffset();
+            writeChunkAt(data, widthTiles, heightTiles, layerIndex,
+                    chunkX * CHUNK_TILE_SPAN, chunkY * CHUNK_TILE_SPAN,
+                    queryX, queryY, params, blockLookup, level, blockPixelSize);
+        }
+    }
 
-            Block block = params.bgLinearRowOverflow()
-                    ? lookupBackgroundBlockWithLinearRowOverflow(level, queryX, queryY, blockPixelSize)
-                    : blockLookup.lookup(layerIndex, queryX, queryY);
-            if (block == null) {
-                writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
-                continue;
-            }
+    private void writeChunkAt(byte[] data, int widthTiles, int heightTiles, byte layerIndex,
+                              int targetTileX, int targetTileY, int queryX, int queryY,
+                              BgBuildParams params, BlockLookup blockLookup,
+                              Level level, int blockPixelSize) {
+        Block block = params.bgLinearRowOverflow()
+                ? lookupBackgroundBlockWithLinearRowOverflow(level, queryX, queryY, blockPixelSize)
+                : blockLookup.lookup(layerIndex, queryX, queryY);
+        if (block == null) {
+            writeEmptyChunk(data, widthTiles, heightTiles,
+                    targetTileX / CHUNK_TILE_SPAN, targetTileY / CHUNK_TILE_SPAN);
+            return;
+        }
 
-            // xBlockBit uses the query position to select the correct chunk within the block.
-            int xBlockBit = (queryX % blockPixelSize) / chunkWidth;
-            int yBlockBit = (queryY % blockPixelSize) / chunkHeight;
-            ChunkDesc chunkDesc = block.getChunkDesc(xBlockBit, yBlockBit);
-            int chunkIndex = chunkDesc.getChunkIndex();
+        int xBlockBit = Math.floorMod(queryX, blockPixelSize) / LevelConstants.CHUNK_WIDTH;
+        int yBlockBit = Math.floorMod(queryY, blockPixelSize) / LevelConstants.CHUNK_HEIGHT;
+        ChunkDesc chunkDesc = block.getChunkDesc(xBlockBit, yBlockBit);
+        int chunkIndex = chunkDesc.getChunkIndex();
+        if (chunkIndex < 0 || chunkIndex >= level.getChunkCount()) {
+            writeEmptyChunk(data, widthTiles, heightTiles,
+                    targetTileX / CHUNK_TILE_SPAN, targetTileY / CHUNK_TILE_SPAN);
+            return;
+        }
+        Chunk chunk = level.getChunk(chunkIndex);
+        if (chunk == null) {
+            writeEmptyChunk(data, widthTiles, heightTiles,
+                    targetTileX / CHUNK_TILE_SPAN, targetTileY / CHUNK_TILE_SPAN);
+            return;
+        }
 
-            if (chunkIndex < 0 || chunkIndex >= level.getChunkCount()) {
-                writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
-                continue;
-            }
-
-            Chunk chunk = level.getChunk(chunkIndex);
-            if (chunk == null) {
-                writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
-                continue;
-            }
-
-            boolean chunkHFlip = chunkDesc.getHFlip();
-            boolean chunkVFlip = chunkDesc.getVFlip();
-
-            for (int cY = 0; cY < 2; cY++) {
-                for (int cX = 0; cX < 2; cX++) {
-                    int logicalX = chunkHFlip ? 1 - cX : cX;
-                    int logicalY = chunkVFlip ? 1 - cY : cY;
-
-                    PatternDesc patternDesc = chunk.getPatternDesc(logicalX, logicalY);
-                    int newIndex = patternDesc.get();
-                    if (chunkHFlip) {
-                        newIndex ^= 0x800;
-                    }
-                    if (chunkVFlip) {
-                        newIndex ^= 0x1000;
-                    }
-                    reusablePatternDesc.set(newIndex);
-
-                    int tileX = chunkX * 2 + cX;
-                    int tileY = chunkY * 2 + cY;
-                    writeTileDescriptor(data, widthTiles, heightTiles, tileX, tileY, reusablePatternDesc);
-                }
+        boolean chunkHFlip = chunkDesc.getHFlip();
+        boolean chunkVFlip = chunkDesc.getVFlip();
+        for (int cY = 0; cY < CHUNK_TILE_SPAN; cY++) {
+            for (int cX = 0; cX < CHUNK_TILE_SPAN; cX++) {
+                int logicalX = chunkHFlip ? 1 - cX : cX;
+                int logicalY = chunkVFlip ? 1 - cY : cY;
+                PatternDesc patternDesc = chunk.getPatternDesc(logicalX, logicalY);
+                int newIndex = patternDesc.get();
+                if (chunkHFlip) newIndex ^= 0x800;
+                if (chunkVFlip) newIndex ^= 0x1000;
+                reusablePatternDesc.set(newIndex);
+                writeTileDescriptor(data, widthTiles, heightTiles,
+                        targetTileX + cX, targetTileY + cY, reusablePatternDesc);
             }
         }
     }
@@ -830,7 +1085,7 @@ public class LevelTilemapManager {
         int widthTiles = foregroundTilemapWidthTiles;
         int heightTiles = foregroundTilemapHeightTiles;
         BgBuildParams ringParams = new BgBuildParams(false, false, xQueryOffset, 0,
-                FG_RING_WIDTH_PX, heightTiles * Pattern.PATTERN_HEIGHT);
+                FG_RING_WIDTH_PX, heightTiles * Pattern.PATTERN_HEIGHT, 0);
         fillChunkColumn(foregroundTilemapData, widthTiles, heightTiles, (byte) 0, localX,
                 ringParams, blockLookup, level, geometry.blockPixelSize());
     }
@@ -843,7 +1098,13 @@ public class LevelTilemapManager {
         int wrappedY = ((y % (layerHeightCells * blockPixelSize)) + layerHeightCells * blockPixelSize)
                 % (layerHeightCells * blockPixelSize);
         int linearCell = (wrappedY / blockPixelSize) * layerWidthCells + Math.floorDiv(x, blockPixelSize);
-        linearCell = ((linearCell % layerCellCount) + layerCellCount) % layerCellCount;
+        if (linearCell < 0) {
+            // Columns left of the layout's first row have no ROM row data behind
+            // them; wrapping would resurface the layout's tail cells. Render blank
+            // (HCZ2's wall BG camera starts left of the layout at act entry).
+            return null;
+        }
+        linearCell = linearCell % layerCellCount;
         int mapX = linearCell % layerWidthCells;
         int mapY = linearCell / layerWidthCells;
         int blockIndex = map.getValue(1, mapX, mapY) & 0xFF;
@@ -952,6 +1213,7 @@ public class LevelTilemapManager {
         // incremental tile updates in Phase 3 — correctness is the priority.
         foregroundTilemapDirty = true;
         backgroundTilemapDirty = true;
+        persistentBgBaselineValid = false;
         bgWindowShiftCandidate = false;
     }
 
@@ -980,12 +1242,9 @@ public class LevelTilemapManager {
     }
 
     /**
-     * Convenience hook for the rewind system: invalidates the BG incremental-shift
-     * window after a rewind restore. The integrator registers this as a single
-     * post-restore callback; held rewind fires it on EVERY backward step, so it
-     * must stay cheap. The BG window is a pure function of the restored camera-X
-     * plus static layout — this only invalidates; the next-frame
-     * {@code ensureBackgroundTilemapData} full-build path does the actual rebuild.
+     * Convenience hook for the rewind system. Stateless Plane B invalidates its
+     * camera-derived incremental baseline, while persistent Plane B publishes the
+     * already-restored physical ring exactly once without rebuilding it.
      * <p>
      * The foreground tilemap needs NO rewind invalidation: a flat FG tilemap is a
      * pure function of the static layout (rewound layout mutations are covered by
@@ -995,7 +1254,94 @@ public class LevelTilemapManager {
      * jumps of at least the ring width degenerate to a full re-seed).
      */
     public void resetTilemapsForRewindRestore() {
-        resetBgIncrementalShiftBaseline();
+        if (lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
+            finishPersistentRestoreUpload();
+        } else {
+            resetBgIncrementalShiftBaseline();
+        }
+    }
+
+    /** Captures the retained physical Plane B ring, or an invalid snapshot in stateless mode. */
+    public LevelTilemapSnapshot capturePersistentBgNametableSnapshot() {
+        if (lastBgTilemapUpdateMode != BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                || persistentBgRing == null || !persistentBgBaselineValid) {
+            return LevelTilemapSnapshot.invalid();
+        }
+        return new LevelTilemapSnapshot(persistentBgRing,
+                persistentBgOriginXTiles, persistentBgOriginYTiles,
+                persistentBgAlignedX, persistentBgAlignedY,
+                persistentBgBaselineValid);
+    }
+
+    /**
+     * Installs a captured physical Plane B ring without consulting the current
+     * camera or rebuilding any descriptors from the live layout.
+     */
+    public void restorePersistentBgNametableSnapshot(LevelTilemapSnapshot snapshot) {
+        if (snapshot == null) {
+            throw new NullPointerException("snapshot");
+        }
+        byte[] descriptors = snapshot.descriptors();
+        int expectedBytes = BG_RING_WIDTH_TILES * BG_RING_HEIGHT_TILES * 4;
+        if (!snapshot.baselineValid() || descriptors.length != expectedBytes) {
+            persistentBgRestoreUploadPending = false;
+            if (lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
+                lastBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
+                persistentBgRing = null;
+                persistentBgUploadView = null;
+                persistentBgPublishedData = null;
+                persistentBgOriginXTiles = 0;
+                persistentBgOriginYTiles = 0;
+                persistentBgAlignedX = 0;
+                persistentBgAlignedY = 0;
+                persistentBgBaselineValid = false;
+                backgroundTilemapData = null;
+                backgroundTilemapWidthTiles = 0;
+                backgroundTilemapHeightTiles = 0;
+                resetBgIncrementalShiftBaseline();
+            }
+            return;
+        }
+
+        lastBgTilemapUpdateMode = BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32;
+        persistentBgRing = descriptors;
+        persistentBgUploadView = null;
+        persistentBgPublishedData = null;
+        persistentBgOriginXTiles = snapshot.originXTiles();
+        persistentBgOriginYTiles = snapshot.originYTiles();
+        persistentBgAlignedX = snapshot.alignedBgX();
+        persistentBgAlignedY = snapshot.alignedBgY();
+        persistentBgBaselineValid = snapshot.baselineValid();
+        persistentBgRestoreUploadPending = true;
+
+        backgroundTilemapData = persistentBgRing;
+        backgroundTilemapWidthTiles = BG_RING_WIDTH_TILES;
+        backgroundTilemapHeightTiles = BG_RING_HEIGHT_TILES;
+        backgroundTilemapDirty = false;
+        bgWindowShiftCandidate = false;
+        bgLastBuildValid = false;
+        recomputeBgVdpWrapHeight();
+    }
+
+    /** Publishes one restored physical ring to the GPU, preserving both ring origins. */
+    public void finishPersistentRestoreUpload() {
+        if (!persistentBgRestoreUploadPending
+                || lastBgTilemapUpdateMode != BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                || persistentBgRing == null || !persistentBgBaselineValid) {
+            return;
+        }
+        persistentBgRestoreUploadPending = false;
+        ensurePatternLookupData();
+        TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
+        if (renderer != null) {
+            renderer.setBackgroundTilemapDataPhysical(persistentBgRing,
+                    BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES,
+                    persistentBgOriginXTiles, persistentBgOriginYTiles);
+            renderer.setBgVdpWrapHeight(backgroundVdpWrapHeightTiles);
+            renderer.setPatternLookupData(patternLookupData, patternLookupSize);
+            persistentBgPublishedData = persistentBgRing;
+            persistentBgFullPublicationCount++;
+        }
     }
 
     /**
@@ -1005,6 +1351,9 @@ public class LevelTilemapManager {
      */
     public void invalidateAllTilemaps() {
         backgroundTilemapDirty = true;
+        persistentBgBaselineValid = false;
+        persistentBgRestoreUploadPending = false;
+        persistentBgPublishedData = null;
         bgWindowShiftCandidate = false;
         foregroundTilemapDirty = true;
         patternLookupDirty = true;
@@ -1045,8 +1394,16 @@ public class LevelTilemapManager {
             return;
         }
         ensurePatternLookupData();
-        renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, backgroundTilemapData,
-                backgroundTilemapWidthTiles, backgroundTilemapHeightTiles);
+        if (lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                && persistentBgBaselineValid && backgroundTilemapData == persistentBgRing) {
+            renderer.setBackgroundTilemapDataPhysical(persistentBgRing,
+                    BG_RING_WIDTH_TILES, BG_RING_HEIGHT_TILES,
+                    persistentBgOriginXTiles, persistentBgOriginYTiles);
+            persistentBgPublishedData = persistentBgRing;
+        } else {
+            renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, backgroundTilemapData,
+                    backgroundTilemapWidthTiles, backgroundTilemapHeightTiles);
+        }
         renderer.setPatternLookupData(patternLookupData, patternLookupSize);
     }
 
@@ -1066,11 +1423,16 @@ public class LevelTilemapManager {
         int offset = (tileY * backgroundTilemapWidthTiles + tileX) * 4;
         boolean changed = writeTilemapDescriptor(backgroundTilemapData, offset, descriptor);
         if (changed) {
-            // The live array no longer matches a from-scratch build; a later window
-            // step must take the full rebuild path (which, as today, discards these
-            // runtime overlay writes) rather than shifting the modified bytes.
+            // The stateless live array no longer matches a from-scratch build, so
+            // it may not take the static incremental-window path. A persistent
+            // nametable instead retains the physical mutation and refreshes the
+            // logical strip-upload view below.
             bgLastBuildValid = false;
             bgWindowShiftCandidate = false;
+            if (lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                    && persistentBgBaselineValid && backgroundTilemapData == persistentBgRing) {
+                rebuildPersistentLogicalUploadView();
+            }
         }
         return changed;
     }
@@ -1325,6 +1687,7 @@ public class LevelTilemapManager {
         prebuiltBgTilemap = null;
         backgroundTilemapDirty = true;
         lastRequiresFullWidthBgTilemap = null;
+        lastBackgroundWrap = null;
         lastForegroundWrap = null;
         foregroundRingSeeded = false;
         foregroundRingCameraX = 0;
@@ -1339,6 +1702,18 @@ public class LevelTilemapManager {
         bgLastBuildLevel = null;
         bgLastBuildParams = null;
         bgLastIncrementalShiftTiles = 0;
+        persistentBgRing = null;
+        persistentBgUploadView = null;
+        persistentBgPublishedData = null;
+        persistentBgOriginXTiles = 0;
+        persistentBgOriginYTiles = 0;
+        persistentBgAlignedX = 0;
+        persistentBgAlignedY = 0;
+        persistentBgBaselineValid = false;
+        persistentBgRestoreUploadPending = false;
+        lastBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
+        persistentBgFullPublicationCount = 0;
+        persistentBgIncrementalPublicationCount = 0;
     }
 
     // -----------------------------------------------------------------------
@@ -1359,6 +1734,42 @@ public class LevelTilemapManager {
 
     public int getBackgroundVdpWrapHeightTiles() {
         return backgroundVdpWrapHeightTiles;
+    }
+
+    byte[] getPersistentBgRingCopy() {
+        return persistentBgRing == null ? null : persistentBgRing.clone();
+    }
+
+    int getPersistentBgOriginXTiles() {
+        return persistentBgOriginXTiles;
+    }
+
+    int getPersistentBgOriginYTiles() {
+        return persistentBgOriginYTiles;
+    }
+
+    int getPersistentBgAlignedX() {
+        return persistentBgAlignedX;
+    }
+
+    int getPersistentBgAlignedY() {
+        return persistentBgAlignedY;
+    }
+
+    boolean isPersistentBgBaselineValid() {
+        return persistentBgBaselineValid;
+    }
+
+    int getBackgroundTilemapSourceX() {
+        return lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                && persistentBgBaselineValid ? persistentBgAlignedX : bgTilemapBaseX;
+    }
+
+    int getBackgroundTilemapSourceY() {
+        return lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                && persistentBgBaselineValid
+                // Keep visible alignedBgY at logical row 2 after the leading row.
+                ? persistentBgAlignedY - LevelConstants.CHUNK_HEIGHT : 0;
     }
 
     public byte[] getForegroundTilemapData() {
@@ -1426,6 +1837,8 @@ public class LevelTilemapManager {
             // Generic invalidation: only requestBgWindowBaseX may mark a
             // window-only change eligible for the incremental shift path.
             this.bgWindowShiftCandidate = false;
+            this.persistentBgBaselineValid = false;
+            this.persistentBgPublishedData = null;
         }
         this.backgroundTilemapDirty = dirty;
     }

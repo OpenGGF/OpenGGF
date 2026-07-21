@@ -51,6 +51,8 @@
 -- subpixel-trajectory frontiers (SBZ2 f2224, SYZ3 f6358). metadata
 -- lua_script_version reports "3.7"; aux_schema_extras gains v_objstate_per_frame
 -- and camera_boundary_per_frame.
+-- v3.14 changes: CSV v7 records the player's animation ID and displayed
+-- mapping frame every frame using the shared Player/Sidekick layout.
 -- v3.8 changes: ADD two per-object fields to the EXISTING object_near aux event
 -- (CSV schema UNCHANGED; comparison-only context, never engine write-back). v3.7
 -- traces stay valid (the new aux_schema_extras key gates the parser; the parser
@@ -274,22 +276,47 @@ local ZONE_NAMES = {
 -- each zone) is gone. Defined here (after ZONE_NAMES / BASE_OUTPUT_DIR) so the
 -- frame loop's ensure_segment_dir() reference resolves to this local.
 local function precreate_segment_dirs()
-    -- Strip any trailing slash before quoting: a trailing "\" inside a cmd-quoted
-    -- path escapes the closing quote (`"trace_output\"` is malformed).
+    local is_windows = package.config:sub(1, 1) == "\\"
     local function quote_dir(p)
-        local win = (p:gsub("/", "\\"))      -- parens: keep only the string, drop gsub's count
-        win = (win:gsub("\\+$", ""))         -- drop trailing backslashes
-        return "\"" .. win .. "\""
+        if is_windows then
+            local win = (p:gsub("/", "\\"))
+            win = (win:gsub("\\+$", ""))
+            return "\"" .. win .. "\""
+        end
+        return "\"" .. (p:gsub("/+$", "")) .. "\""
     end
-    local quoted = { quote_dir(BASE_OUTPUT_DIR) }
+    local paths = { BASE_OUTPUT_DIR }
     for _, zname in pairs(ZONE_NAMES) do
-        for act = 1, 3 do
-            quoted[#quoted + 1] = quote_dir(BASE_OUTPUT_DIR .. zname .. tostring(act))
+        -- The complete route exposes SBZ3 through the ROM's LZ act-4 alias.
+        for act = 1, 4 do
+            paths[#paths + 1] = BASE_OUTPUT_DIR .. zname .. tostring(act) .. "/"
         end
     end
-    -- Windows mkdir takes multiple paths; 2>NUL swallows "already exists".
-    -- One brief cmd window for the whole run.
-    os.execute("mkdir " .. table.concat(quoted, " ") .. " 2>NUL")
+    -- s1-maze plan: pre-create the bare "ss" special-stage detour dir token
+    -- (start_ss_segment's first count uses the bare "ss" token, not "ss1" --
+    -- the level-zone namespace already owns ss1..ss4 via ZONE_NAMES[7]="ss").
+    -- Without this the first detour's ensure_segment_dir shells out once.
+    paths[#paths + 1] = BASE_OUTPUT_DIR .. "ss/"
+    local all_exist = true
+    for _, path in ipairs(paths) do
+        local probe_path = path .. ".oggf_dir_probe"
+        local probe = io.open(probe_path, "w")
+        if probe then
+            probe:close()
+            os.remove(probe_path)
+        else
+            all_exist = false
+            break
+        end
+    end
+    if all_exist then return end
+    local quoted = {}
+    for _, path in ipairs(paths) do
+        quoted[#quoted + 1] = quote_dir(path)
+    end
+    local mkdir = is_windows and "mkdir " or "mkdir -p "
+    local stderr = is_windows and " 2>NUL" or " 2>/dev/null"
+    os.execute(mkdir .. table.concat(quoted, " ") .. stderr)
 end
 
 -- Shell-free fallback for an UNKNOWN zone id whose dir was not pre-created
@@ -304,7 +331,11 @@ local function ensure_segment_dir(dir)
         os.remove(probe_path)
         return  -- dir exists (pre-created); no shell-out.
     end
-    os.execute("mkdir \"" .. (dir:gsub("/", "\\")) .. "\" 2>NUL")
+    if package.config:sub(1, 1) == "\\" then
+        os.execute("mkdir \"" .. (dir:gsub("/", "\\")) .. "\" 2>NUL")
+    else
+        os.execute("mkdir -p \"" .. (dir:gsub("/+$", "")) .. "\" 2>/dev/null")
+    end
 end
 
 -- Snapshot interval (frames between full state snapshots in aux file)
@@ -312,6 +343,19 @@ local SNAPSHOT_INTERVAL = 60
 
 -- Object proximity radius (pixels) for per-frame nearby object logging
 local OBJECT_PROXIMITY = 160
+
+-- s1-maze plan run/detour state (globals: 200-local budget).
+-- Mirrors s3k_complete_run_recorder.lua v6.30/v6.31.
+segments_done = {}
+transitions_done = {}
+segment_dir_counts = {}
+detour_active = nil               -- nil | "special_stage"
+current_segment_dir_token = nil
+current_ss_index = nil
+ss_min_angle_seen = nil           -- self-check accumulators
+ss_max_angle_seen = nil
+ss_last_rotate = nil
+run_id = os.getenv("OGGF_TRACE_RUN_ID") or nil
 
 -----------------
 --- State     ---
@@ -426,10 +470,17 @@ local function open_files()
     physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
     aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
 
-    -- v3 header: gameplay/VBlank execution counters plus stand_on_obj.
-    physics_file:write("frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,"
-        .. "x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,"
-        .. "vblank_counter,lag_counter\n")
+    -- v7 header: shared execution counters plus symmetric Player/Sidekick blocks.
+    physics_file:write("frame,input,camera_x,camera_y,rings,gameplay_frame_counter,"
+        .. "vblank_counter,lag_counter,player_present,player_x,player_y,player_x_speed,"
+        .. "player_y_speed,player_g_speed,player_angle,player_air,player_rolling,"
+        .. "player_ground_mode,player_x_sub,player_y_sub,player_routine,player_status_byte,"
+        .. "player_stand_on_obj,player_animation_id,player_mapping_frame,"
+        .. "sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,"
+        .. "sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,"
+        .. "sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,"
+        .. "sidekick_status_byte,sidekick_stand_on_obj,sidekick_animation_id,"
+        .. "sidekick_mapping_frame\n")
     physics_file:flush()
 end
 
@@ -445,11 +496,14 @@ local function write_metadata()
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
+    meta_file:write('  "characters": ["sonic"],\n')
+    meta_file:write('  "main_character": "sonic",\n')
+    meta_file:write('  "sidekicks": [],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.12",\n')
-    meta_file:write('  "trace_schema": 3,\n')
-    meta_file:write('  "csv_version": 4,\n')
+    meta_file:write('  "lua_script_version": "3.15",\n')
+    meta_file:write('  "trace_schema": 4,\n')
+    meta_file:write('  "csv_version": 7,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
         .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c", '
         .. '"object_near_objoff_34_36_38", "v_oscillate_per_frame", "lag_state_per_frame", '
@@ -475,6 +529,310 @@ local function close_files()
         aux_file:close()
         aux_file = nil
     end
+end
+
+-----------------------------------------------------------------------------
+-- s1-maze plan: run/detour functions (globals, port of s3k_complete_run_
+-- recorder.lua v6.30/v6.31). MUST be defined here, after close_files, so
+-- they close over the file-scope locals they reference (physics_file,
+-- trace_frame, started, bk2_frame_offset, start_zone_id, start_act,
+-- close_files, bk2_input_mask) as upvalues. A global `function` defined
+-- earlier in the chunk (e.g. near the top constants) would instead bind
+-- those bare names as globals (nil), passing the parse gate but exploding
+-- at the first live detour.
+-----------------------------------------------------------------------------
+
+-- Appends a finished LEVEL segment's entry to segments_done. `act` is
+-- 1-based and `profile` is the literal string "complete_run", matching the
+-- S3K emitter (finalize_segment) and the synthetic fixture's level segments
+-- exactly. The S1 level metadata.json itself emits no "trace_profile" today
+-- -- this manifest entry's `profile` field is where that string lives.
+-- Called from: the non-level finalize branch, the SS-entry inline finalize,
+-- and finalize_run_end's level arm -- all three gate on `started` before
+-- calling this, so double-append cannot happen.
+function append_level_segment_done(rows)
+    segments_done[#segments_done + 1] = {
+        dir = current_segment_dir_token,
+        kind = "level",
+        profile = "complete_run",
+        zone_id = start_zone_id,
+        act = start_act + 1,
+        bk2_frame_offset = bk2_frame_offset,
+        rows = rows,
+    }
+end
+
+-- ss/ metadata.json. Distinct shape from write_metadata (the level path):
+-- trace_profile is unconditionally "s1_special_stage" and carries
+-- special_stage_index + ss_csv_version, both required by
+-- TraceRunManifest.Segment.validate for kind=="special_stage".
+function write_ss_metadata()
+    local meta_file = io.open(OUTPUT_DIR .. "metadata.json", "w")
+    meta_file:write("{\n")
+    meta_file:write('  "game": "s1",\n')
+    meta_file:write('  "trace_profile": "s1_special_stage",\n')
+    meta_file:write('  "special_stage_index": ' .. current_ss_index .. ',\n')
+    meta_file:write('  "ss_csv_version": 1,\n')
+    meta_file:write('  "characters": ["sonic"],\n')
+    meta_file:write('  "main_character": "sonic",\n')
+    meta_file:write('  "sidekicks": [],\n')
+    meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
+    meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
+    meta_file:write('  "source_bk2": "s1-complete-run.bk2",\n')
+    meta_file:write('  "lua_script_version": "3.15",\n')
+    meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
+    if run_id ~= nil then
+        meta_file:write('  "run_id": "' .. run_id .. '",\n')
+    end
+    meta_file:write('  "fresh_load": false,\n')
+    meta_file:write('  "segment_index": ' .. #segments_done .. '\n')
+    meta_file:write("}\n")
+    meta_file:close()
+end
+
+-- Arm the special-stage segment. Called exactly once per SS detour, on the
+-- first frame game_mode reads $10 (GM_Special) after detour_active was not
+-- already "special_stage" (see the on_frame_end entry-vs-continuation gate).
+-- Reuses the shared started/trace_frame/bk2_frame_offset globals (mirrors
+-- s3k start_ss_segment) so the level arm gate re-arms correctly once the SS
+-- detour ends.
+--
+-- Dir token: segment_dir_counts["ss"] counted identically to the S3K "ss"/
+-- "ss_2" style. S1's level-zone namespace already owns "ss1".."ss4" (zone id
+-- 7 is named "ss" in ZONE_NAMES, giving per-act dirs "ss1".."ss4"), so the
+-- bare "ss" token (and "ss_2", "ss_3", ... for further detours in the same
+-- run) never collides with a level segment dir.
+function start_ss_segment()
+    local n = (segment_dir_counts["ss"] or 0) + 1
+    segment_dir_counts["ss"] = n
+    local dir_token = (n == 1) and "ss" or ("ss_" .. n)
+    OUTPUT_DIR = BASE_OUTPUT_DIR .. dir_token .. "/"
+    current_segment_dir_token = dir_token
+    ensure_segment_dir(OUTPUT_DIR)
+
+    started = true
+    bk2_frame_offset = emu.framecount()
+    trace_frame = 0
+    -- v_lastspecial (0xFE16), 0-5. SAMPLING-WINDOW CAVEAT: SS_Load
+    -- (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:536-556) reads
+    -- v_lastspecial, immediately increments it mod 6, and if the selected
+    -- stage's emerald is already collected it loops to the NEXT stage. This
+    -- arm-time read happens BEFORE SS_Load runs (GM_Special opens with a
+    -- multi-frame fade), so after a first emerald has been collected the
+    -- pre-SS_Load value read here can name a stage the skip loop then
+    -- rejects. finalize_ss_segment re-reads v_lastspecial and prints it as a
+    -- self-check: (index+1) % 6 == the finalize-time read is healthy;
+    -- anything else means the skip loop fired and current_ss_index (sampled
+    -- here, at arm time) is suspect -- re-derive before committing the trace.
+    current_ss_index = mainmemory.read_u8(0xFE16)
+    ss_min_angle_seen = nil
+    ss_max_angle_seen = nil
+    ss_last_rotate = nil
+
+    physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
+    aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
+    physics_file:write("frame,input,lag,x_pos,y_pos,vel_x,vel_y,inertia,status,"
+        .. "ss_angle,ss_rotate,bg_anim,rings,emeralds\n")
+    physics_file:flush()
+    write_ss_metadata()
+    print(string.format(
+        "SS segment armed at BizHawk frame %d (dir=%s, special_stage_index=%d).",
+        bk2_frame_offset, dir_token, current_ss_index))
+end
+
+-- Records one special-stage physics.csv row and advances trace_frame. Column
+-- order matches Sonic1SpecialStageTraceFrame's parser exactly: frame,input,
+-- lag,x_pos,y_pos,vel_x,vel_y,inertia,status,ss_angle,ss_rotate,bg_anim,
+-- rings,emeralds. frame is decimal; lag is 0/1 via emu.islagged(); every
+-- other column is lowercase hex.
+--
+-- S1 caveat: S1's SS results tally may run under game_mode $10 still (the
+-- results counting loop has not yet transitioned game_mode away), so tail
+-- rows recorded here can include results-tally frames. Rows are cheap and
+-- the comparator is red-allowed MVP for this segment kind -- the green
+-- campaign decides where engine comparison actually stops, not this writer.
+--
+-- bk2_input_mask indexes the preloaded BK2 input table by
+-- (bk2_frame_offset + trace_frame); start_ss_segment re-bases
+-- bk2_frame_offset to the SS-arm frame and resets trace_frame to 0, so this
+-- works unchanged for SS segments -- no adaptation needed.
+function write_ss_row()
+    local raw_input = mainmemory.read_u8(0xF604)  -- v_jpadhold1 (fallback source)
+    local input_mask = bk2_input_mask(raw_input, trace_frame)
+    local lag = emu.islagged() and 1 or 0
+    local x_pos = mainmemory.read_u32_be(PLAYER_BASE + 0x08)
+    local y_pos = mainmemory.read_u32_be(PLAYER_BASE + 0x0C)
+    local vel_x = mainmemory.read_u16_be(PLAYER_BASE + 0x10)
+    local vel_y = mainmemory.read_u16_be(PLAYER_BASE + 0x12)
+    local inertia = mainmemory.read_u16_be(PLAYER_BASE + 0x14)
+    local status = mainmemory.read_u8(PLAYER_BASE + 0x22)
+    local ss_angle = mainmemory.read_u16_be(0xF780)   -- v_ssangle
+    local ss_rotate = mainmemory.read_u16_be(0xF782)  -- v_ssrotate
+    local bg_anim = mainmemory.read_u16_be(0xF7A0)    -- v_ssbganim
+    local rings = mainmemory.read_u16_be(0xFE20)      -- v_rings
+    local emeralds = mainmemory.read_u8(0xFE57)       -- v_emeralds
+    physics_file:write(string.format(
+        "%d,%x,%d,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n",
+        trace_frame, input_mask, lag, x_pos, y_pos, vel_x, vel_y, inertia,
+        status, ss_angle, ss_rotate, bg_anim, rings, emeralds))
+    if trace_frame % 60 == 0 then physics_file:flush() end
+    if trace_frame % 300 == 0 then write_ss_metadata() end
+    -- VERIFY-ON-FIRST-CAPTURE self-check accumulators.
+    if ss_min_angle_seen == nil or ss_angle < ss_min_angle_seen then ss_min_angle_seen = ss_angle end
+    if ss_max_angle_seen == nil or ss_angle > ss_max_angle_seen then ss_max_angle_seen = ss_angle end
+    ss_last_rotate = ss_rotate
+    if trace_frame == 0 or trace_frame % 300 == 0 then
+        print(string.format(
+            "S1 SS frame %d: x=0x%08X y=0x%08X angle=0x%04X rotate=0x%04X rings=%d emeralds=%d",
+            trace_frame, x_pos, y_pos, ss_angle, ss_rotate, rings, emeralds))
+    end
+    trace_frame = trace_frame + 1
+end
+
+-- Finalize the currently-armed SS segment: flush + rewrite metadata (final
+-- trace_frame_count), print the self-check summary (angle range seen, final
+-- ss_rotate -- exit ramp targets 0x1800 -- row count, and a v_lastspecial
+-- re-read per start_ss_segment's sampling-window caveat), close files,
+-- append its segments_done entry (kind "special_stage", carrying
+-- special_stage_index so TraceRunManifest.Segment.validate is satisfied),
+-- then reset shared recording state exactly like the level finalize.
+function finalize_ss_segment()
+    if not started then
+        return
+    end
+    if physics_file then physics_file:flush() end
+    write_ss_metadata()
+    local rows = trace_frame
+    local final_lastspecial = mainmemory.read_u8(0xFE16)
+    local healthy_lastspecial = (current_ss_index + 1) % 6
+    print(string.format(
+        "Finalised SS segment %s (special_stage_index=%d): %d rows, bk2_frame_offset=%d.",
+        current_segment_dir_token, current_ss_index, rows, bk2_frame_offset))
+    print(string.format(
+        "SS self-check: angle range seen=[0x%04X, 0x%04X], final ss_rotate=0x%04X "
+            .. "(exit ramp targets 0x1800), v_lastspecial re-read=%d (healthy=%d).",
+        ss_min_angle_seen or 0, ss_max_angle_seen or 0, ss_last_rotate or 0,
+        final_lastspecial, healthy_lastspecial))
+    close_files()
+    segments_done[#segments_done + 1] = {
+        dir = current_segment_dir_token,
+        kind = "special_stage",
+        profile = "s1_special_stage",
+        special_stage_index = current_ss_index,
+        zone_id = 0,
+        act = 0,
+        bk2_frame_offset = bk2_frame_offset,
+        rows = rows,
+    }
+    started = false
+    trace_frame = 0
+    ss_min_angle_seen = nil
+    ss_max_angle_seen = nil
+    ss_last_rotate = nil
+    current_ss_index = nil
+end
+
+-- Single end-of-run finalize funnel (v6.31-style restructure). Every live
+-- termination path -- the top-of-function stop/movie-end guard, the two
+-- shadowed mid-loop FINISHED sites, and the main-loop FRAME_CAP backstop --
+-- calls this exactly once before setting finished = true. `started` is true
+-- during BOTH an armed level segment AND an armed SS segment (start_ss_
+-- segment sets it too), so this must NOT unconditionally run the level
+-- finalize: doing so mid-detour would overwrite ss/metadata.json with the
+-- previous level's zone/act (via the shared OUTPUT_DIR), append a bogus
+-- kind="level" entry, and leave finalize_ss_segment() as a silent no-op on
+-- its `not started` guard. The explicit if/else below routes correctly.
+function finalize_run_end()
+    if detour_active == "special_stage" then
+        finalize_ss_segment()
+        detour_active = nil
+    elseif started then
+        if physics_file then physics_file:flush() end
+        write_metadata()
+        append_level_segment_done(trace_frame)
+        close_files()
+        started = false
+    end
+    write_run_manifest()
+end
+
+-- v6.30-style: emits BASE_OUTPUT_DIR/run_manifest.json describing every
+-- segment and transition recorded across the run, for multi-stage trace
+-- validation. Only emitted when a detour occurred or OGGF_TRACE_RUN_ID is
+-- set, so plain single-stage complete-run regenerations remain output-
+-- identical. Field names match TraceRunManifest (Segment/Transition)
+-- exactly; the Lua-side per-segment frame-count field is `rows`, emitted
+-- under the JSON key "trace_frame_count".
+--
+-- Unlike the S3K emitter, this recorder has no SOURCE_BK2_NAME /
+-- S3K_ROM_CHECKSUM / LUA_SCRIPT_VERSION globals -- a literal port would hit
+-- string.format('%q', nil). Inline the S1-specific literals instead:
+-- "3.15" (script version), "AFE05EEE" (S1 World REV01 CRC32, per
+-- CLAUDE.md), "s1-complete-run.bk2" (source_bk2, matching write_metadata).
+function write_run_manifest()
+    if #transitions_done == 0 and run_id == nil then
+        return  -- stage-free legacy run: no manifest, output layout unchanged
+    end
+    local f = io.open(BASE_OUTPUT_DIR .. "run_manifest.json", "w")
+    if not f then
+        print("WARNING: could not open run_manifest.json for writing")
+        return
+    end
+    -- Invariant check before writing: transition counts are bounded by
+    -- boundaries, not equal to them. The checkable invariant is per-record:
+    -- every record's to_segment == from_segment + 1 and
+    -- to_segment <= #segments_done.
+    for i, t in ipairs(transitions_done) do
+        if t.to_segment ~= t.from_segment + 1 or t.to_segment > #segments_done then
+            print(string.format(
+                "WARNING: transition record %d has inconsistent segment indices "
+                    .. "(from_segment=%d, to_segment=%d, #segments_done=%d)",
+                i, t.from_segment, t.to_segment, #segments_done))
+        end
+    end
+    f:write('{\n')
+    f:write('  "run_schema": 1,\n')
+    f:write('  "game": "s1",\n')
+    if run_id then f:write(string.format('  "run_id": %q,\n', run_id)) end
+    f:write('  "source_bk2": "s1-complete-run.bk2",\n')
+    f:write('  "rom_checksum": "AFE05EEE",\n')
+    f:write('  "lua_script_version": "3.15",\n')
+    f:write('  "segments": [\n')
+    for i, s in ipairs(segments_done) do
+        local extra = ""
+        if s.kind == "special_stage" then
+            extra = string.format(', "special_stage_index": %d', s.special_stage_index)
+        end
+        f:write(string.format(
+            '    {"dir": %q, "kind": %q, "trace_profile": %q, "bk2_frame_offset": %d, "trace_frame_count": %d, "zone_id": %d, "act": %d%s}%s\n',
+            s.dir, s.kind, s.profile, s.bk2_frame_offset, s.rows, s.zone_id, s.act,
+            extra, (i < #segments_done) and "," or ""))
+    end
+    f:write('  ],\n')
+    f:write('  "transitions": [\n')
+    for i, t in ipairs(transitions_done) do
+        local parts = {
+            string.format('"from_segment": %d', t.from_segment),
+            string.format('"to_segment": %d', t.to_segment),
+            string.format('"entry_kind": %q', t.entry_kind),
+            string.format('"mode_change_bk2_frame": %d', t.mode_change_bk2_frame),
+        }
+        -- S1's giant_ring/stage_exit transitions carry only rings/emeralds
+        -- before/after -- there is no Special_bonus_entry_flag/Saved_X_pos
+        -- analog (no starpost bonus stages in S1). All fields optional
+        -- Integers in TraceRunManifest.Transition, so this reduced field set
+        -- validates as-is.
+        if t.rings_before then parts[#parts+1] = string.format('"rings_before": %d', t.rings_before) end
+        if t.rings_after then parts[#parts+1] = string.format('"rings_after": %d', t.rings_after) end
+        if t.emeralds_before then parts[#parts+1] = string.format('"emeralds_before": %d', t.emeralds_before) end
+        if t.emeralds_after then parts[#parts+1] = string.format('"emeralds_after": %d', t.emeralds_after) end
+        f:write(string.format('    {%s}%s\n', table.concat(parts, ", "),
+            (i < #transitions_done) and "," or ""))
+    end
+    f:write('  ]\n}\n')
+    f:close()
+    print(string.format("Wrote run_manifest.json (%d segments, %d transitions).",
+        #segments_done, #transitions_done))
 end
 
 -- Build a compact summary of ALL occupied dynamic slots (32-127).
@@ -818,14 +1176,71 @@ local function on_frame_end()
         or (movie.isloaded() and movie.mode() == "FINISHED")
     local stop_reached = stop_at > 0 and frame_now >= stop_at
     if stop_reached or movie_done then
-        if started then
-            if physics_file then physics_file:flush() end
-            write_metadata()
-            close_files()
-            started = false
-        end
+        finalize_run_end()
         finished = true
         return
+    end
+
+    -- ---- s1-maze stage-detour state machine (port of s3k v6.31) ----
+    -- Outer gate mirrors s3k (L5295): `started` is true both when a level
+    -- segment is armed at the $0C->$10 edge AND on every continuation frame
+    -- (start_ss_segment sets it). Gating on detour_active alone for the
+    -- entry branch prevents the re-finalize/re-open-on-every-$10-frame bug;
+    -- requiring `started` prevents a bogus from_segment=-1 transition if a
+    -- movie begins inside $10 with nothing armed (dedicated interior
+    -- captures are not this recorder's job).
+    --
+    -- SS entry ALWAYS occurs with a level segment armed: the Got-Through
+    -- card writes #id_Special directly while GM_Level runs, gated on the
+    -- flash-set f_bigring (docs/s1disasm/_incObj/3A Got Through Card.asm:201;
+    -- flash sets the flag at docs/s1disasm/_incObj/4B, 7C Giant Ring and
+    -- Flash.asm:123), so the edge is a direct $0C -> $10 with `started ==
+    -- true` -- the outer `started` gate never drops a legitimate detour (the
+    -- inner `if started then` in the entry path below is redundant with the
+    -- outer gate; kept as defensive structure, commented as such).
+    if started and game_mode == 0x10 then  -- GM_Special
+        if detour_active ~= "special_stage" then
+            -- ENTRY: finalize any armed level segment first, then push the
+            -- giant_ring transition with exact indices, then arm the SS
+            -- segment ONCE. (Redundant with the outer `started` gate --
+            -- kept for structural parity with the s3k port.)
+            if started then
+                if physics_file then physics_file:flush() end
+                write_metadata()
+                append_level_segment_done(trace_frame)
+                close_files()
+                started = false
+                trace_frame = 0
+            end
+            transitions_done[#transitions_done + 1] = {
+                from_segment = #segments_done - 1,
+                to_segment = #segments_done,
+                entry_kind = "giant_ring",
+                mode_change_bk2_frame = emu.framecount(),
+                rings_before = mainmemory.read_u16_be(0xFE20),
+                emeralds_before = mainmemory.read_u8(0xFE57),
+            }
+            start_ss_segment()
+            detour_active = "special_stage"
+            print(string.format("S1 special-stage detour at bk2 frame %d.", emu.framecount()))
+            return
+        end
+        -- CONTINUATION: still inside the SS detour. The normal level-row
+        -- path below (and the game_mode ~= GAMEMODE_LEVEL re-arm branch) is
+        -- unreachable for $10 frames -- this returns first, so L919's
+        -- non-level branch never double-finalizes the same segment.
+        write_ss_row()
+        return
+    end
+    if detour_active == "special_stage" then
+        -- First non-$10 frame after the detour (results tally trailing off
+        -- game_mode $10, or the return load-handoff): finalize the SS
+        -- segment here, BEFORE the level-family check, so it always closes
+        -- exactly once regardless of what mode follows.
+        finalize_ss_segment()
+        detour_active = nil
+        -- fall through: non-$10 frames (results/fade under $0C or otherwise)
+        -- are manifest-only until the level arm gate below re-arms.
     end
 
     if not started then
@@ -861,7 +1276,25 @@ local function on_frame_end()
             -- only fires (one shell-out) for an unexpected/unknown zone id not covered
             -- by the pre-created set.
             OUTPUT_DIR = BASE_OUTPUT_DIR .. start_zone_name .. tostring(start_act + 1) .. "/"
+            current_segment_dir_token = start_zone_name .. tostring(start_act + 1)
             ensure_segment_dir(OUTPUT_DIR)
+
+            -- s1-maze plan: the just-finalized predecessor was a special-
+            -- stage segment -- this arm is that stage's exit boundary.
+            -- Indices are exact here: the SS-entry/detour-exit finalize
+            -- above already appended the from-segment (the just-finished
+            -- stage) and this arm has not yet pushed the level segment,
+            -- matching the giant_ring entry push's from/to derivation.
+            if #segments_done > 0 and segments_done[#segments_done].kind == "special_stage" then
+                transitions_done[#transitions_done + 1] = {
+                    from_segment = #segments_done - 1,
+                    to_segment = #segments_done,
+                    entry_kind = "stage_exit",
+                    mode_change_bk2_frame = emu.framecount(),
+                    rings_after = mainmemory.read_u16_be(0xFE20),
+                    emeralds_after = mainmemory.read_u8(0xFE57),
+                }
+            end
 
             open_files()
             -- Write metadata immediately so it exists even if the process is killed
@@ -888,6 +1321,7 @@ local function on_frame_end()
             start_zone_name, start_act + 1, trace_frame))
         if physics_file then physics_file:flush() end
         write_metadata()
+        append_level_segment_done(trace_frame)
         close_files()
         started = false
         trace_frame = 0
@@ -904,6 +1338,10 @@ local function on_frame_end()
             print(string.format(
                 "Reached BK2 end at trace frame %d (bk2 offset %d, movie length %d). Finalising.",
                 trace_frame, bk2_frame_offset, movie_length))
+            -- Shadowed dead code since v3.6 (the top-of-function movie-end
+            -- guard fires strictly earlier on this predicate) -- funneled
+            -- through finalize_run_end anyway, belt-and-braces.
+            finalize_run_end()
             finished = true
             return
         end
@@ -911,6 +1349,10 @@ local function on_frame_end()
             print(string.format(
                 "Movie playback finished at trace frame %d (emu frame %d). Finalising.",
                 trace_frame, emu.framecount()))
+            -- Shadowed dead code since v3.6 (the top-of-function movie-end
+            -- guard fires strictly earlier on this predicate) -- funneled
+            -- through finalize_run_end anyway, belt-and-braces.
+            finalize_run_end()
             finished = true
             return
         end
@@ -927,6 +1369,8 @@ local function on_frame_end()
     local angle = mainmemory.read_u8(PLAYER_BASE + OFF_ANGLE)
     local status = mainmemory.read_u8(PLAYER_BASE + OFF_STATUS)
     local routine = mainmemory.read_u8(PLAYER_BASE + OFF_ROUTINE)
+    local animation_id = mainmemory.read_u8(PLAYER_BASE + OFF_ANIM_ID)
+    local mapping_frame = mainmemory.read_u8(PLAYER_BASE + OFF_ANIM_FRAME_DISP)
 
     -- Camera position (pixel words from 32-bit values)
     local camera_x = mainmemory.read_u16_be(ADDR_CAMERA_X)
@@ -964,10 +1408,18 @@ local function on_frame_end()
     local vblank_counter = mainmemory.read_u16_be(ADDR_VBLA_WORD)
     local lag_counter = 0
 
-    -- v3 CSV: execution counters plus stand_on_obj.
+    -- v7 CSV: shared counters, Player state, and an absent Sidekick block.
     physics_file:write(string.format(
-        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%04X,%04X,%04X,%02X,%04X,%02X,%04X,%04X\n",
-        trace_frame, input_mask, x, y,
+        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%04X,%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X,"
+            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X\n",
+        trace_frame, input_mask,
+        camera_x, camera_y,
+        rings,
+        gameplay_frame_counter,
+        vblank_counter,
+        lag_counter,
+        1,
+        x, y,
         uhex(x_speed), uhex(y_speed), uhex(g_speed),
         angle,
         air and 1 or 0,
@@ -975,13 +1427,11 @@ local function on_frame_end()
         ground_mode,
         x_sub, y_sub,
         routine,
-        camera_x, camera_y,
-        rings,
         status,
-        gameplay_frame_counter,
         stand_on_obj,
-        vblank_counter,
-        lag_counter))
+        animation_id,
+        mapping_frame,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
     -- Flush periodically instead of every frame to reduce I/O overhead.
     -- Also update metadata every 300 frames (~5 sec) so a killed process
     -- still has a valid (if slightly stale) metadata.json.
@@ -1052,6 +1502,12 @@ local HEADLESS_VISIBLE = false
 if HEADLESS then
     emu.limitframerate(false)
     client.speedmode(6400)
+    -- Sound off (guard-satisfying pattern from s2_trace_recorder): the
+    -- run_bizhawk_lua.bat fast-headless guard requires an executable
+    -- client.SetSoundOn(false) call before the main loop.
+    if client.SetSoundOn then
+        pcall(client.SetSoundOn, false)
+    end
     if not HEADLESS_VISIBLE then
         client.invisibleemulation(true)
     end
@@ -1087,12 +1543,11 @@ while true do
     if not finished and emu.framecount() >= FRAME_CAP then
         print(string.format(
             "Frame cap %d reached without a movie-end signal; finalising and exiting.", FRAME_CAP))
-        if started then
-            if physics_file then physics_file:flush() end
-            write_metadata()
-            close_files()
-            started = false
-        end
+        -- s1-maze plan: funnel through finalize_run_end so a backstop that
+        -- lands mid special-stage detour finalizes as a truncated
+        -- special_stage segment (not a level segment written into ss/'s
+        -- OUTPUT_DIR) and the run manifest is emitted.
+        finalize_run_end()
         finished = true
     end
 
@@ -1100,9 +1555,10 @@ while true do
     -- Code after the loop may never execute because client.exit() kills
     -- the process immediately.
     if finished then
-        -- MULTI-SEGMENT: on_frame_end already finalised the last open segment
-        -- (write_metadata + close_files) at movie-end, so do NOT re-finalise here
-        -- (start_*/trace_frame are reset and would corrupt the last segment's metadata).
+        -- MULTI-SEGMENT: on_frame_end (or the backstop above) already
+        -- finalised the last open segment and wrote the run manifest via
+        -- finalize_run_end, so do NOT re-finalise here (start_*/trace_frame
+        -- are reset and would corrupt the last segment's metadata).
         print("All segments recorded. Exiting.")
         break
     end

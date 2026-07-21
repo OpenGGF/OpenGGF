@@ -310,10 +310,12 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
             advanceAnimOnInput(state);
         }
 
-        // ROM: Jump check (A/B/C buttons) (sonic3k.asm:66411-66412)
-        // ROM uses andi.w #button_A_mask|button_B_mask|button_C_mask,d1 which tests the
-        // LOW byte of Ctrl_1_logical = newly pressed buttons only, NOT held state.
-        if (player.isJumpJustPressed()) {
+        // ROM: loc_311C4 loads Ctrl_1_logical / Ctrl_2_logical into d1, then
+        // sub_31226 tests the low-byte A/B/C press bits (sonic3k.asm:66344-66354,
+        // 66411-66412). Object execution happens after player movement in the
+        // engine, so the transient raw edge may already be consumed; retain the
+        // ROM-visible logical word published for this update instead.
+        if (player.isLogicalJumpPressActive()) {
             // ROM: loc_312C0 (sonic3k.asm:66434-66438)
             if (player.isInWater()) {
                 player.setYSpeed(JUMP_VELOCITY_UNDERWATER);

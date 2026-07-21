@@ -44,6 +44,7 @@ import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.TraceVerificationScope;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.tests.trace.s3k.S3kRequiredCheckpointGuard;
 import com.openggf.tests.trace.s3k.S3kReplayCheckpointDetector;
@@ -134,6 +135,11 @@ public abstract class AbstractTraceReplayTest {
         return false;
     }
 
+    /** Independent trace gate selected with {@code -Dtrace.verification}. */
+    protected TraceVerificationScope verificationScope() {
+        return TraceVerificationScope.fromSystemProperty();
+    }
+
     /** Override with a diagnostic predicate when only a subset of object-near events is relevant. */
     protected boolean shouldCompareObjectNearEvent(TraceEvent.ObjectNear near) {
         return true;
@@ -143,6 +149,25 @@ public abstract class AbstractTraceReplayTest {
     protected void onRewindReferenceClosureValidated(
             int traceIndex, TraceFrame frame, TraceExecutionPhase phase) {
         // test observer hook
+    }
+
+    /**
+     * Post-fixture-build hook for profile-specific entry setup (e.g. bonus
+     * stage provider registration). Default: no-op.
+     */
+    protected void afterFixtureBuild(TraceData trace) {
+    }
+
+    /**
+     * The sprite compared against the recorded trace for this frame. Default:
+     * the fixture's primary sprite (unchanged behavior for every existing
+     * trace replay). Override when the runtime under test can swap which
+     * playable object the ROM camera/comparator actually tracks (see
+     * {@code AbstractS3kBonusStageTraceReplayTest} for the slot-runtime
+     * player-swap case).
+     */
+    protected AbstractPlayableSprite comparedSprite(HeadlessTestFixture fixture) {
+        return fixture.sprite();
     }
 
     static boolean shouldValidateRewindReferenceClosure(SonicGame game) {
@@ -160,6 +185,12 @@ public abstract class AbstractTraceReplayTest {
         // 1. Load trace data (metadata is needed to resolve a shared, deduplicated BK2)
         TraceData trace = TraceData.load(traceDir);
         TraceMetadata meta = trace.metadata();
+        TraceVerificationScope verificationScope = verificationScope();
+        if (verificationScope == TraceVerificationScope.ANIMATION
+                && !meta.hasPerFrameCharacterAnimation()) {
+            fail("Animation-only verification requires CSV v7 character animation fields: "
+                    + traceDir);
+        }
         List<String> releaseBlockers = TraceReplayBootstrap.releaseBlockersForTraceReplay(trace);
         if (!releaseBlockers.isEmpty() && !allowDiagnosticOnlyTraceReplay()) {
             fail(String.join(System.lineSeparator(), releaseBlockers));
@@ -201,7 +232,27 @@ public abstract class AbstractTraceReplayTest {
                         .startPositionIsCentre();
             }
             HeadlessTestFixture fixture = fixtureBuilder.build();
+            // ROM/production ordering: GameLoop.doEnterBonusStage loads the
+            // bonus zone through the normal level path (LevelManager
+            // .loadZoneAndAct -> LevelManager.initCameraForLevel, which resets
+            // ObjectManager's dynamic-object set for S3K's two-axis cursor
+            // placement -- LevelManager.java:2564-2577) and only THEN calls
+            // ensureBonusStageBootstrapObjectPresent (GameLoop.java:2314,
+            // inside prepareBonusStageForTitleCard, itself called after
+            // loadZoneAndAct at GameLoop.java:2229/2245). Running
+            // afterFixtureBuild's bonus-entry bootstrap object injection
+            // (TraceReplaySessionBootstrap.applyBonusStageEntry ->
+            // Obj_PachinkoEnergyTrap) BEFORE applyStartPositionAndGroundSnap
+            // (which calls the same initCameraForLevel reset) silently wiped
+            // the freshly-injected trap every frame, so it never executed and
+            // Sonic's escape-through-the-top exit trigger never fired --
+            // producing a same-frame-only camera_x divergence at the exact
+            // frame ROM's Restart_level_flag check skips DeformBgLayer
+            // (sonic3k.asm:7895-7896) after Process_Sprites. Apply the ground
+            // snap/camera reset first so any bonus-entry object injection
+            // survives it, matching production's load-then-inject order.
             TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+            afterFixtureBuild(trace);
 
             if (GameServices.debugOverlay() != null) {
                 GameServices.debugOverlay().setEnabled(DebugOverlayToggle.TOUCH_RESPONSE, true);
@@ -297,7 +348,7 @@ public abstract class AbstractTraceReplayTest {
                     // ROM stores centre coordinates at $D008/$D00C. With startPositionIsCentre(),
                     // the sprite's xPixel/yPixel are set to the correct top-left position,
                     // so getCentreX()/getCentreY() now return the actual ROM centre values.
-                    var sprite = fixture.sprite();
+                    var sprite = comparedSprite(fixture);
 
                     // Capture engine-side diagnostic state for context window
                     EngineDiagnostics engineDiag = captureEngineDiagnostics(sprite, comparisonExpected);
@@ -325,8 +376,9 @@ public abstract class AbstractTraceReplayTest {
                         sprite.getAngle(),
                         sprite.getAir(), sprite.getRolling(),
                         sprite.getGroundMode().ordinal(), romDiag,
-                        EngineDiagnostics.formattedWithCamera(
-                                engineDiag.cameraX(), engineDiag.cameraY(), engineDiagText),
+                        EngineDiagnostics.formattedWithCameraAndAnimation(
+                                engineDiag.cameraX(), engineDiag.cameraY(),
+                                engineDiag.animationId(), engineDiag.mappingFrame(), engineDiagText),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
                     if (compareObjectNearEvents()) {
@@ -355,13 +407,13 @@ public abstract class AbstractTraceReplayTest {
 
             // 8. Log summary only when explicitly requested. Failing assertions
             // still carry the compact frontier summary.
-            TraceReplayConsole.printSummary(report);
+            TraceReplayConsole.printSummary(report, verificationScope);
 
             // 9. Assert no errors
-            if (report.hasErrors() && TraceReplayConsole.shouldPrintContext()) {
+            if (report.hasErrors(verificationScope) && TraceReplayConsole.shouldPrintContext()) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(
-                        firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
+                        report.firstErrorFrame(verificationScope), TraceReplayConsole.contextRadius()));
             }
             assertReportHasNoReleaseBlockingDivergences(report);
         } finally {
@@ -389,12 +441,13 @@ public abstract class AbstractTraceReplayTest {
     }
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
-        if (report.hasErrors()) {
-            fail(report.toAssertionSummary());
+        TraceVerificationScope scope = verificationScope();
+        if (report.hasErrors(scope)) {
+            fail(report.toAssertionSummary(scope));
         }
-        if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
+        if (report.hasWarnings(scope) && !allowDiagnosticOnlyWarnings()) {
             fail("Trace replay warning report is release-blocking by default: "
-                    + report.toAssertionSummary());
+                    + report.toAssertionSummary(scope));
         }
     }
 
@@ -408,7 +461,7 @@ public abstract class AbstractTraceReplayTest {
      * left null/empty (the comparator emits WARNING entries for those).
      */
     private EngineSnapshot captureEngineSnapshot(HeadlessTestFixture fixture) {
-        AbstractPlayableSprite sprite = fixture != null ? fixture.sprite() : null;
+        AbstractPlayableSprite sprite = fixture != null ? comparedSprite(fixture) : null;
         short[] xHistory = sprite != null ? sprite.copyXHistory() : null;
         short[] yHistory = sprite != null ? sprite.copyYHistory() : null;
         short[] inputHistory = sprite != null ? sprite.copyInputHistory() : null;
@@ -456,8 +509,8 @@ public abstract class AbstractTraceReplayTest {
             TraceFrame seededFrame = trace.getFrame(replayStart.seededTraceIndex());
             TraceReplayBootstrap.ReplayPrimaryState seededPrimary =
                     TraceReplayBootstrap.capturePrimaryReplayStateForComparison(
-                            trace, seededFrame, fixture.sprite());
-            EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite(), seededFrame);
+                            trace, seededFrame, comparedSprite(fixture));
+            EngineDiagnostics engineDiag = captureEngineDiagnostics(comparedSprite(fixture), seededFrame);
             String romDiag = combineDiagnostics(
                     seededFrame.hasExtendedData() ? seededFrame.formatDiagnostics() : "",
                     TraceEventFormatter.summariseFrameEvents(
@@ -547,6 +600,8 @@ public abstract class AbstractTraceReplayTest {
                     fixture::stepFrameFromRecording,
                     fixture::stepFrameFromRecordingUsingPreviousInput,
                     fixture::skipFrameFromRecording,
+                    fixture::advancePlayableAnimationsOnly,
+                    fixture::suppressFirstSidekickAnimationOnce,
                     () -> {
                         if (shouldValidateRewindReferenceClosure(game())) {
                             TraceReplayFrameClosureDriver.validateCurrentObjectManager(
@@ -586,7 +641,7 @@ public abstract class AbstractTraceReplayTest {
                     driveTraceIndex, bk2Input, driveFrame.input()));
             }
 
-            S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), fixture.sprite());
+            S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), comparedSprite(fixture));
             TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
 
             if (TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
@@ -595,9 +650,9 @@ public abstract class AbstractTraceReplayTest {
                                 trace, driveTraceIndex, previousDriveFrame, driveFrame, phase);
                 TraceReplayBootstrap.ReplayPrimaryState actualPrimary =
                         TraceReplayBootstrap.capturePrimaryReplayStateForComparison(
-                                trace, comparisonExpected, fixture.sprite());
+                                trace, comparisonExpected, comparedSprite(fixture));
                 EngineDiagnostics engineDiag =
-                        captureEngineDiagnostics(fixture.sprite(), comparisonExpected);
+                        captureEngineDiagnostics(comparedSprite(fixture), comparisonExpected);
                 String romDiag = combineDiagnostics(
                         comparisonExpected.hasExtendedData()
                                 ? comparisonExpected.formatDiagnostics() : "",
@@ -933,7 +988,7 @@ public abstract class AbstractTraceReplayTest {
 
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
                 camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
-                ridingObject, standingSnapshot);
+                ridingObject, standingSnapshot, sprite.getAnimationId(), sprite.getMappingFrame());
     }
 
     private List<TraceEvent.ObjectNear> objectNearEventsForPrimary(TraceData trace, int frame) {
@@ -1302,24 +1357,22 @@ public abstract class AbstractTraceReplayTest {
             Files.createDirectories(outDir);
 
             String prefix = meta.game() + "_" + meta.zone() + meta.act();
-            Path jsonPath = outDir.resolve(prefix + "_report.json");
+            TraceVerificationScope scope = verificationScope();
+            String scopeSuffix = scope == TraceVerificationScope.ALL
+                    ? ""
+                    : "_" + scope.name().toLowerCase();
+            Path jsonPath = outDir.resolve(prefix + scopeSuffix + "_report.json");
             Files.writeString(jsonPath, report.toJson());
 
-            if (report.hasErrors()) {
-                Path contextPath = outDir.resolve(prefix + "_context.txt");
+            if (report.hasErrors(scope)) {
+                Path contextPath = outDir.resolve(prefix + scopeSuffix + "_context.txt");
                 Files.writeString(contextPath,
                     report.getContextWindow(
-                            firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
+                            report.firstErrorFrame(scope), TraceReplayConsole.contextRadius()));
             }
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());
         }
     }
 
-    private static int firstReportErrorFrame(DivergenceReport report) {
-        if (!report.errors().isEmpty()) {
-            return report.errors().get(0).startFrame();
-        }
-        return 0;
-    }
 }

@@ -168,10 +168,15 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
             return;
         }
         initialized = true;
-        // Init routine (loc_2CFC0):
-        // Check respawn table and compare subtype against Last_star_post_hit
+        // Init routine (loc_2CFC0): a star post is already-activated when its
+        // respawn bit is set (btst #0,(a2), sonic3k.asm:61582) OR
+        // Last_star_post_hit >= subtype (:61588). The engine folds both into the
+        // persistent activation MARK (getStarPostActivationMark), which equals the
+        // checkpoint index in normal play but survives a bonus entry's zeroing of
+        // Last_star_post_hit -- so a return-from-bonus star post the player is
+        // repositioned onto stays used instead of re-triggering.
         var checkpointState = services().checkpointState();
-        if (checkpointState != null && checkpointState.getLastCheckpointIndex() >= this.checkpointIndex) {
+        if (checkpointState != null && checkpointState.getStarPostActivationMark() >= this.checkpointIndex) {
             // loc_2D008: already activated - set anim 2 (spinning)
             this.activated = true;
             this.animId = ANIM_SPINNING;
@@ -202,8 +207,9 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         }
 
         // ROM: cmp.b d2,d1 / bhs.w loc_2D0EA
-        // If last checkpoint >= this one, set to spinning if not already
-        if (checkpointState.getLastCheckpointIndex() >= this.checkpointIndex) {
+        // If already activated (persistent mark >= this subtype; see ensureInitialized),
+        // set to spinning if not already -- never re-run the touch/save.
+        if (checkpointState.getStarPostActivationMark() >= this.checkpointIndex) {
             // loc_2D0EA: tst.b anim(a0) / bne.s locret / move.b #2,anim(a0)
             if (!activated) {
                 activated = true;

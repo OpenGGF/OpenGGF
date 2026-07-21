@@ -109,6 +109,31 @@ class TestSonic3kSpringObjectInstance {
     }
 
     @Test
+    void nativeInitExecutionDoesNotRunHorizontalSpringRoutineUntilNextFrame() {
+        // Obj_Spring rewrites (a0) to Obj_Spring_Horizontal through Spring_Common
+        // and returns (sonic3k.asm:47500-47652). The horizontal routine therefore
+        // cannot execute SolidObjectFull2_1P/sub_2326C until the next object pass.
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x14B8, 0x0770, Sonic3kObjectIds.SPRING, 0x10, 1, false, 0));
+        TestableSprite tails = new TestableSprite("tails");
+        tails.setCentreX((short) 0x14B5);
+        tails.setCentreY((short) 0x0770);
+        tails.setGSpeed((short) 0x24);
+        spring.setServices(new QueryBackedServices(tails, List.of())
+                .withGameState(new GameStateManager()));
+
+        spring.update(1846, tails);
+        assertFalse(spring.isSolidFor(tails),
+                "Obj_Spring's init-only execution must not collide on its spawn frame");
+        assertEquals(0x24, tails.getGSpeed(),
+                "init must not run the horizontal proactive trigger");
+
+        spring.update(1847, tails);
+        assertTrue(spring.isSolidFor(tails),
+                "Obj_Spring_Horizontal becomes executable on the following object pass");
+    }
+
+    @Test
     void verticalSpringSolidParamsMatchRom() {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
@@ -268,6 +293,29 @@ class TestSonic3kSpringObjectInstance {
     }
 
     @Test
+    void horizontalApproachUsesRomHalfOpenCoordinateWindow() throws Exception {
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x1888, 0x0330, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        invoke(spring, "ensureInitialized");
+
+        TestableSprite player = new TestableSprite("tails_p2");
+        player.setCentreX((short) 0x18B0); // springX + $28: bhs rejects.
+        player.setCentreY((short) 0x0347);
+        player.setGSpeed((short) 0x0312);
+
+        invoke(spring, "checkHorizontalApproach", new Class<?>[]{AbstractPlayableSprite.class}, player);
+        assertEquals(0x18B0, player.getCentreX() & 0xFFFF,
+                "sub_2326C rejects the exclusive +$28 X edge");
+        assertEquals(0, player.getXSpeed());
+
+        player.setCentreX((short) 0x18AF); // springX + $27: inside.
+        invoke(spring, "checkHorizontalApproach", new Class<?>[]{AbstractPlayableSprite.class}, player);
+        assertEquals(0x18A7, player.getCentreX() & 0xFFFF);
+        assertEquals(0x1000, player.getXSpeed() & 0xFFFF);
+    }
+
+    @Test
     void underwaterAirborneHorizontalSpringApproachDoesNotUseLandingHandoff() throws Exception {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x031A, 0x0610, Sonic3kObjectIds.SPRING, 0x10, 1, true, 0));
@@ -316,7 +364,8 @@ class TestSonic3kSpringObjectInstance {
         spring.setServices(new QueryBackedServices(main, List.of(nativeP2, extraSidekick))
                 .withGameState(new GameStateManager()));
 
-        spring.update(0, main);
+        spring.update(0, main); // Obj_Spring init-only execution
+        spring.update(1, main); // Obj_Spring_Horizontal
 
         assertEquals(0x0218, nativeP2.getCentreX() & 0xFFFF,
                 "ROM Player_2 approach block should resolve native P2 through ObjectPlayerQuery");
@@ -327,7 +376,7 @@ class TestSonic3kSpringObjectInstance {
     }
 
     @Test
-    void upSpringClearsStatusOnObjAfterSettingAir() throws Exception {
+    void upSpringRestoresControlAndClearsStatusOnObjAfterSettingAir() throws Exception {
         // ROM cite: sub_22F98 (sonic3k.asm:47723-47724)
         //   bset #1,status(a1)   ; Status_InAir
         //   bclr #3,status(a1)   ; Status_OnObj
@@ -345,6 +394,7 @@ class TestSonic3kSpringObjectInstance {
         player.setOnObject(true); // mirrors SolidObjectFull2_1P landing-bset
         player.setAir(false);
         player.setJumping(true);
+        player.setHurt(true);
 
         invoke(spring, "applyUpSpring", new Class<?>[]{AbstractPlayableSprite.class}, player);
 
@@ -352,10 +402,12 @@ class TestSonic3kSpringObjectInstance {
                 "ROM sub_22F98 (sonic3k.asm:47723-47724) bclr Status_OnObj after setting Status_InAir");
         assertFalse(player.isJumping(),
                 "ROM sub_22F98 clears jumping so jump release cannot cap the spring launch");
+        assertFalse(player.isHurt(),
+                "ROM sub_22F98 writes routine=2, ending hurt routine 4 when the spring launches");
     }
 
     @Test
-    void downSpringClearsStatusOnObjAfterSettingAir() throws Exception {
+    void downSpringRestoresControlAndClearsStatusOnObjAfterSettingAir() throws Exception {
         // ROM cite: sub_233CA (sonic3k.asm:48139-48140)
         //   bset #Status_InAir,status(a1)
         //   bclr #Status_OnObj,status(a1)
@@ -368,16 +420,19 @@ class TestSonic3kSpringObjectInstance {
         player.setOnObject(true);
         player.setAir(false);
         player.setJumping(true);
+        player.setHurt(true);
 
         invoke(spring, "applyDownSpring", new Class<?>[]{AbstractPlayableSprite.class}, player);
 
         assertFalse(player.isOnObject(),
                 "ROM sub_233CA bclr Status_OnObj after setting Status_InAir for the down-spring trigger");
         assertFalse(player.isJumping(), "ROM sub_233CA clears jumping on a down-spring launch");
+        assertFalse(player.isHurt(),
+                "ROM sub_233CA writes routine=2, ending hurt routine 4 when the spring launches");
     }
 
     @Test
-    void upDiagonalSpringClearsStatusOnObjAfterSettingAir() throws Exception {
+    void upDiagonalSpringRestoresControlAndClearsStatusOnObjAfterSettingAir() throws Exception {
         // ROM cite: sub_234E6 (sonic3k.asm:48213-48214)
         //   bset #Status_InAir,status(a1)
         //   bclr #Status_OnObj,status(a1)
@@ -390,6 +445,7 @@ class TestSonic3kSpringObjectInstance {
         player.setOnObject(true);
         player.setAir(false);
         player.setJumping(true);
+        player.setHurt(true);
 
         invoke(spring, "applyDiagonalSpring",
                 new Class<?>[]{AbstractPlayableSprite.class, boolean.class}, player, true);
@@ -397,6 +453,27 @@ class TestSonic3kSpringObjectInstance {
         assertFalse(player.isOnObject(),
                 "ROM sub_234E6 bclr Status_OnObj after setting Status_InAir for diagonal-up springs");
         assertFalse(player.isJumping(), "ROM diagonal-spring triggers clear jumping");
+        assertFalse(player.isHurt(),
+                "ROM sub_234E6 writes routine=2, ending hurt routine 4 when the spring launches");
+    }
+
+    @Test
+    void downDiagonalSpringRestoresControlWhenLaunchingHurtPlayer() throws Exception {
+        // ROM cite: sub_23624 (sonic3k.asm:48306-48310) mirrors the
+        // up-diagonal tail's Status_InAir/routine=2 transition.
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x40, 0, false, 0));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        invoke(spring, "ensureInitialized");
+
+        TestableSprite player = new TestableSprite("sonic");
+        player.setHurt(true);
+
+        invoke(spring, "applyDiagonalSpring",
+                new Class<?>[]{AbstractPlayableSprite.class, boolean.class}, player, false);
+
+        assertFalse(player.isHurt(),
+                "ROM sub_23624 writes routine=2, ending hurt routine 4 on a down-diagonal launch");
     }
 
     private static Object invoke(Object target, String methodName) throws Exception {

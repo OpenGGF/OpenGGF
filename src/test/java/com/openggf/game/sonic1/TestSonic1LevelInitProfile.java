@@ -76,6 +76,12 @@ public class TestSonic1LevelInitProfile {
     }
 
     @Test
+    public void freshPlayerRunsOneNativePreludeDispatch() {
+        assertEquals(1, profile.freshMainPlayablePreludeFrames(),
+                "S1 GM_Level executes the freshly created Sonic slot once before Level_MainLoop");
+    }
+
+    @Test
     public void levelLoadStepsWithoutPostLoadHasMinimumSteps() {
         List<InitStep> steps = profile.levelLoadSteps(new com.openggf.game.LevelLoadContext());
         assertTrue(steps.size() >= 11, "Should have at least 11 level load steps without post-load");
@@ -130,5 +136,4 @@ public class TestSonic1LevelInitProfile {
                 "Preview capture should still include level events");
     }
 }
-
 

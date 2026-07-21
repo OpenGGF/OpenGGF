@@ -6,6 +6,7 @@ import com.openggf.game.save.SaveReason;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
+import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.Sonic2Rng;
@@ -80,8 +81,6 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     // ------------------------------------------------------------------------
 
     private static final SolidObjectParams TORNADO_SOLID_PARAMS = new SolidObjectParams(0x1B, 8, 9);
-    private static final int SCZ_STALE_LOGICAL_HORIZONTAL_FRAMES = 3;
-    private static final int SCZ_STALE_LOGICAL_MIN_RIDE_FRAMES = 120;
     private static final int SCZ_CAMERA_FINISH_X = 0x1400;
     private static final int SCZ_PLAYER_FINISH_X = 0x1568;
     private static final int SCZ_PLAYER_PUSH_MARGIN = 0x11;
@@ -139,7 +138,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     };
 
     // Level layout patch written when Sonic lands on the plane in WFZ end.
-    private static final int LAYOUT_WIDTH = 256;
+    private static final int LAYOUT_ROW_BYTES = 256;
+    private static final int LAYOUT_LAYER_WIDTH = 128;
     private static final int[] LAYOUT_PATCH_OFFSETS = {0x0D2, 0x1D2, 0xBD6, 0xCD6};
     private static final int[][] LAYOUT_PATCH_BYTES = {
             {0x50, 0x1F, 0x00, 0x25},
@@ -492,9 +492,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 yVel = 0x100;
             }
             case 4 -> {
-                // ObjB2_Main_WFZ_Start_shot_down
+                // ObjB2_Main_WFZ_Start_shot_down: ROM plays SndID_Scatter ($EB) every
+                // $20 frames as the Tornado is gunned down (s2.asm:78890-78895), not the
+                // ring-loss/RingSpill sound ($C6). SndID_Scatter aliases SndID_LaserFloor.
                 if ((frameCounter & WFZ_SCATTER_SFX_MASK) == 0) {
-                    services().playSfx(Sonic2Sfx.RING_SPILL.id);
+                    services().playSfx(Sonic2Sfx.LASER_FLOOR.id);
                 }
 
                 scriptTimer--;
@@ -683,7 +685,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private void wfzJumpToShip(AbstractPlayableSprite player) {
-        applyWaitingAnimation(player);
+        // ROM ObjB2_Jump_to_ship (s2.asm:79082-79085) forces NO animation in this
+        // state, so the invisible grabber's HANG (set once on catch) survives through
+        // the DEZ ascent. State $C (wfzApproachingShip) still applies WAIT; re-forcing
+        // WAIT here every frame overwrote the hang animation with the standing pose.
         wfzJumpToShipCommon();
     }
 
@@ -804,9 +809,14 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         player.setAir(false);
         player.setRolling(false);
         player.setAnimationId(Sonic2AnimationIds.HANG);
-        player.setAnimationFrameIndex(0);
-        player.setAnimationTick(0);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // ROM writes obj_control = 1 (bit 0 only, bit 7 CLEAR) here (s2.asm:79217): movement
+        // is suppressed but TouchResponse still runs, so the ship plating (ObjC1) can still
+        // grab the hanging player. nativeBit7FullControl set bit 7, which suppressed the whole
+        // touch pass and stopped the ObjC1 grab from ever firing.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        if (services().zoneFeatureProvider() instanceof Sonic2ZoneFeatureProvider sonic2) {
+            sonic2.setWfzWindTunnelHolding(true);
+        }
         player.setControlLocked(true);
         ownsPlayerControl = true;
     }
@@ -946,21 +956,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public SolidExecutionMode solidExecutionMode() {
-        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    public int getBalanceWidthPixels() {
+        return 0x60; // ObjB2_SubObjData width_pixels, s2.asm:79602-79603
     }
 
     @Override
-    public int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
-        if (routine != ROUTINE_SCZ_MAIN || rideFrames <= SCZ_STALE_LOGICAL_MIN_RIDE_FRAMES) {
-            return 0;
-        }
-        // S2 recorder v9.3-s2 documents this exact ROM/BK2 split:
-        // Read_Joypads can leave Ctrl_1_Held_Logical stale for three frames
-        // during SCZ Tornado long V-int paths. Sonic_Move consumes the logical
-        // byte (s2.asm:36255-36260), while trace validation compares against
-        // BK2-aligned input to avoid false alignment errors.
-        return SCZ_STALE_LOGICAL_HORIZONTAL_FRAMES;
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -990,6 +992,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        // The invisible WFZ grabber polls collision_property every object pass,
+        // while Touch_Special republishes it for a sustained overlap.
+        return true;
     }
 
     @Override
@@ -1259,9 +1268,14 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private void applyWaitingAnimation(AbstractPlayableSprite player) {
+        // ObjB2 writes the combined mapping/anim state before setting
+        // duration=$0100: mapping_frame=1, anim_frame=0, anim=prev_anim=Wait
+        // (docs/s2disasm/s2.asm, ObjB2 waiting-player helpers).
+        player.setMappingFrame(1);
         player.setAnimationId(Sonic2AnimationIds.WAIT);
+        player.getAnimationManager().publishPreviousAnimationId(Sonic2AnimationIds.WAIT.id());
         player.setAnimationFrameIndex(0);
-        player.setAnimationTick(0);
+        player.setAnimationTick(1);
     }
 
     private void applyScriptInput(AbstractPlayableSprite player, int forcedMask, boolean lock) {
@@ -1388,13 +1402,16 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 final int[] patchBytes = LAYOUT_PATCH_BYTES[i];
                 for (int j = 0; j < patchBytes.length; j++) {
                     final int offset = baseOffset + j;
-                    final int x = offset % LAYOUT_WIDTH;
-                    final int y = offset / LAYOUT_WIDTH;
-                    try {
-                        effects = context.surface().setBlockInMap(0, x, y, patchBytes[j] & 0xFF);
-                    } catch (IllegalArgumentException ignored) {
-                        // Some layouts may differ; keep behavior best-effort.
-                    }
+                    final int withinRow = offset % LAYOUT_ROW_BYTES;
+                    final int layer = withinRow >= LAYOUT_LAYER_WIDTH ? 1 : 0;
+                    final int x = withinRow & (LAYOUT_LAYER_WIDTH - 1);
+                    final int y = offset / LAYOUT_ROW_BYTES;
+                    // Level_LoadBlockMap stores each row as 128 foreground bytes followed by
+                    // 128 background bytes (docs/s2disasm/s2.asm:20145-20158). ObjB2 writes
+                    // raw Level_Layout offsets here (s2.asm:79035-79042), so decode the
+                    // interleaved RAM address before mutating the engine's split map layers.
+                    effects = context.surface().setBlockInMapWithoutRedraw(
+                            layer, x, y, patchBytes[j] & 0xFF);
                 }
             }
             return effects;

@@ -49,13 +49,18 @@ public class AniPlcScriptState {
         this.frameIndex = 0;
     }
 
-    public void tick(Level level, GraphicsManager graphicsManager) {
+    /**
+     * Advances this script and reports whether it copied a new animation frame.
+     * Callers use the result to refresh object-art atlases that reference the
+     * same level-pattern objects as the AniPLC destination.
+     */
+    public boolean tick(Level level, GraphicsManager graphicsManager) {
         if (frameTileIds.length == 0 || artPatterns.length == 0) {
-            return;
+            return false;
         }
         if (timer > 0) {
             timer = (timer - 1) & 0xFF;
-            return;
+            return false;
         }
 
         int currentFrame = frameIndex;
@@ -73,6 +78,7 @@ public class AniPlcScriptState {
 
         int tileId = frameTileIds[currentFrame];
         applyFrame(level, graphicsManager, tileId);
+        return true;
     }
 
     public int requiredPatternCount() {

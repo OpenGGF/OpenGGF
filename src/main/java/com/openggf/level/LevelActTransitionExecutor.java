@@ -2,7 +2,9 @@ package com.openggf.level;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.OscillationManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -27,10 +29,24 @@ final class LevelActTransitionExecutor {
 
         Camera cam = levelManager.camera;
 
-        GameServices.gameState().resetForLevel();
+        GameStateManager gameState = GameServices.gameState();
+        boolean endOfLevelActive = gameState.isEndOfLevelActive();
+        boolean endOfLevelFlag = gameState.isEndOfLevelFlag();
+        gameState.resetForLevel();
+        if (request.preserveEndOfLevelActive()) {
+            gameState.setEndOfLevelActive(endOfLevelActive);
+        }
+        if (request.preserveEndOfLevelFlag()) {
+            gameState.setEndOfLevelFlag(endOfLevelFlag);
+        }
 
         if (request.preserveMusic()) {
             levelManager.setSuppressNextMusicChange(true);
+        }
+
+        if (GameServices.zoneRuntimeRegistry().current()
+                .advancesOscillationOnSeamlessTransition()) {
+            OscillationManager.advanceForSeamlessTransition();
         }
 
         levelManager.writeCurrentZone(request.targetZone());
@@ -95,8 +111,16 @@ final class LevelActTransitionExecutor {
             levelManager.audioManager.playMusic(request.musicOverrideId());
         }
 
-        if (request.showInLevelTitleCard() && !levelManager.graphicsManager.isHeadlessMode()) {
-            levelManager.requestInLevelTitleCard(levelManager.currentZone, levelManager.currentAct);
+        if (request.showInLevelTitleCard()) {
+            levelManager.requestInLevelTitleCard(
+                    levelManager.currentZone,
+                    levelManager.currentAct,
+                    request.resetLevelGamestateAtInLevelTitleCardDisplay(),
+                    request.inLevelTitleCardResetAdditionalDispatches(),
+                    request.inLevelTitleCardResetPhaseOneDispatchOverlap(),
+                    request.lockPlayerControlForInLevelTitleCard(),
+                    request.inLevelTitleCardExitAdditionalDispatches(),
+                    request.inLevelTitleCardExitPhaseOneDispatchOverlap());
         }
     }
 

@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.GroundMode;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -14,12 +15,9 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.SolidContact;
-import com.openggf.level.objects.SolidObjectListener;
-import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -35,7 +33,7 @@ import java.util.List;
  * with the ROM's fixed launch speeds.
  */
 public class MGZPulleyObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements RewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_PULLEY;
 
@@ -142,11 +140,6 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         super.setDestroyed(destroyed);
     }
 
-    @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        // ROM capture/release is handled by the explicit proximity checks in update().
-    }
-
     private void cleanupForRemoval() {
         releaseAllGrabbedPlayers();
         if (chainChild != null) {
@@ -172,9 +165,14 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
 
     private void updateExtensionAndFrame() {
         int motionDirection = 0;
-        boolean anyGrabbed = grabbed[0] || grabbed[1];
+        // ROM tests only $38(a0), the P1 grab byte, even though the adjacent
+        // $39(a0) byte independently tracks P2.  Therefore a P2-only rider
+        // does not hold the pulley retracted: loc_34900 takes the ordinary
+        // target-extension path while sub_349A2 still carries P2 at the moving
+        // handle (sonic3k.asm:71178-71224,71242-71345).
+        boolean primaryPlayerGrabbed = grabbed[0];
 
-        if (!anyGrabbed) {
+        if (!primaryPlayerGrabbed) {
             if (currentExtension < targetExtension) {
                 currentExtension += 2;
                 motionDirection = -1;
@@ -264,14 +262,11 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        player.setCentreX((short) handleX);
-        player.setCentreY((short) handleY);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setOnObject(false);
-        player.setAir(true);
+        NativePositionOps.writeXPosPreserveSubpixel(player, handleX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, handleY);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setAnimationId(PLAYER_HANG_ANIM);
         player.setDirection(flipped ? Direction.LEFT : Direction.RIGHT);
-        clearRidingObject(player);
 
         launchRecovery = LAUNCH_RECOVERY_FRAMES;
         services().playSfx(Sonic3kSfx.PULLEY_GRAB.id);
@@ -289,17 +284,26 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        player.setCentreX((short) computeHandleX());
-        player.setCentreY((short) computeHandleY());
+        NativePositionOps.writeXPosPreserveSubpixel(player, computeHandleX());
+        NativePositionOps.writeYPosPreserveSubpixel(player, computeHandleY());
         player.setDirection(flipped ? Direction.LEFT : Direction.RIGHT);
     }
 
     private boolean isPlayerOffScreen(AbstractPlayableSprite player) {
-        return services().camera() != null && !services().camera().isOnScreen(player);
+        // ROM sub_349BA consumes the sign bit already published in the
+        // playable's render_flags byte, not a fresh point-in-camera test
+        // (sonic3k.asm:71246-71249). BuildSprites keeps a player visible across
+        // its width/height margin, which matters while a pulley carries P2
+        // just below the nominal 224px viewport.
+        if (player.hasRenderFlagOnScreenState()) {
+            return !player.isRenderFlagOnScreen();
+        }
+        return services().camera() != null
+                && !services().camera().isVisibleForRenderFlag(player);
     }
 
     private void releasePlayer(AbstractPlayableSprite player, int slot, int frameCounter, boolean launch) {
@@ -327,10 +331,10 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) (flipped ? LAUNCH_X_SPEED : -LAUNCH_X_SPEED));
         player.setYSpeed((short) -LAUNCH_Y_SPEED);
         player.setGSpeed((short) 0);
-        player.setJumping(true);
         player.setAir(true);
-        player.setRolling(true);
         player.applyRollingRadii(false);
+        player.setRollingFlagPreserveRadii(true);
+        player.setGroundMode(GroundMode.GROUND);
         player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
         player.setDirection(flipped ? Direction.LEFT : Direction.RIGHT);
     }
@@ -385,11 +389,6 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
                 default -> null;
             };
         }
-    }
-
-    @Override
-    public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH + 0x0B, HALF_HEIGHT, HALF_HEIGHT + 1);
     }
 
     @Override

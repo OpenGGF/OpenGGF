@@ -75,6 +75,8 @@ class TestSonic1SpecialStageRewindSnapshot {
         set(manager, "finished", true);
         set(manager, "emeraldCollected", true);
         set(manager, "debugMode", true);
+        set(manager, "startupHoldTicksRemaining", 17);
+        set(manager, "objInitPending", true);
         set(manager, "currentStage", 3);
         set(manager, "ringsCollected", 47);
         set(manager, "ssAngle", 0xA123);
@@ -141,6 +143,8 @@ class TestSonic1SpecialStageRewindSnapshot {
         assertEquals(true, snapshot.finished);
         assertEquals(true, snapshot.emeraldCollected);
         assertEquals(true, snapshot.debugMode);
+        assertEquals(17, snapshot.startupHoldTicksRemaining);
+        assertEquals(true, snapshot.objInitPending);
         assertEquals(3, snapshot.currentStage);
         assertEquals(47, snapshot.ringsCollected);
         assertEquals(0xA123, snapshot.ssAngle);
@@ -194,6 +198,8 @@ class TestSonic1SpecialStageRewindSnapshot {
         set(manager, "finished", false);
         set(manager, "emeraldCollected", false);
         set(manager, "debugMode", false);
+        set(manager, "startupHoldTicksRemaining", 0);
+        set(manager, "objInitPending", false);
         set(manager, "currentStage", 0);
         set(manager, "ringsCollected", 0);
         set(manager, "ssAngle", 0x1111);
@@ -256,6 +262,8 @@ class TestSonic1SpecialStageRewindSnapshot {
         assertEquals(snapshot.finished, get(manager, "finished"));
         assertEquals(snapshot.emeraldCollected, get(manager, "emeraldCollected"));
         assertEquals(snapshot.debugMode, get(manager, "debugMode"));
+        assertEquals(snapshot.startupHoldTicksRemaining, get(manager, "startupHoldTicksRemaining"));
+        assertEquals(snapshot.objInitPending, get(manager, "objInitPending"));
         assertEquals(snapshot.currentStage, get(manager, "currentStage"));
         assertEquals(snapshot.ringsCollected, get(manager, "ringsCollected"));
         assertEquals(snapshot.ssAngle, get(manager, "ssAngle"));

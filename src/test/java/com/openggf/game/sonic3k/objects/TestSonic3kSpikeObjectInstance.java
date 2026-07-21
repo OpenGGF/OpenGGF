@@ -18,6 +18,9 @@ class TestSonic3kSpikeObjectInstance {
 
         assertTrue(spikes.usesInclusiveRightEdge(),
                 "Obj_Spikes calls SolidObjectFull; SolidObject_cont rejects relX > width*2, not relX == width*2");
+        assertTrue(spikes.groundedSquashEdgeSideContactSetsPush(),
+                "Obj_Spikes lower-half edge escape returns through loc_1E06E and sets grounded push");
+        assertEquals(0x0002, spikes.romObjectCodePointerHighWord());
     }
 
     @Test

@@ -1197,8 +1197,8 @@ class TestS3kIczEndBossObject {
 
         capsule.onPieceContact(1, player, new SolidContact(true, false, false, true, false), 1);
         capsule.update(1, player);
-        assertEquals(0x0687, ((MultiPieceSolidProvider) capsule).getPieceY(1),
-                "Pressed Obj_EggCapsule button should visibly recess downward");
+        assertEquals(0x067F, ((MultiPieceSolidProvider) capsule).getPieceY(1),
+                "loc_8672A changes the button mapping without changing child_dy");
         for (int frame = 2; frame <= 0x45; frame++) {
             capsule.update(frame, player);
         }

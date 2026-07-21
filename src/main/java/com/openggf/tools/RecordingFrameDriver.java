@@ -11,6 +11,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
+import com.openggf.game.InLevelTitleCardCoordinator;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
@@ -118,6 +119,10 @@ public final class RecordingFrameDriver {
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.isOverlayActive()) {
             titleCardProvider.update();
+            if (titleCardProvider.ownsInLevelPlayerControlLock()) {
+                applyInLevelTitleCardControlLock(
+                        titleCardProvider.shouldLockPlayerControlForInLevelOverlay());
+            }
         }
     }
 
@@ -132,14 +137,17 @@ public final class RecordingFrameDriver {
     }
 
     private void startPendingInLevelTitleCardIfRequested() {
-        if (!levelManager.consumeInLevelTitleCardRequest()) {
-            return;
-        }
-        TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
-        if (titleCardProvider != null) {
-            titleCardProvider.initializeInLevel(
-                    levelManager.getInLevelTitleCardZone(),
-                    levelManager.getInLevelTitleCardAct());
+        InLevelTitleCardCoordinator.startIfRequested(
+                levelManager, GameServices.module().getTitleCardProvider(),
+                GameServices.gameState().isEndOfLevelActive(),
+                this::applyInLevelTitleCardControlLock);
+    }
+
+    private void applyInLevelTitleCardControlLock(boolean locked) {
+        for (var sprite : GameServices.sprites().getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.setControlLocked(locked);
+            }
         }
     }
 
@@ -239,12 +247,56 @@ public final class RecordingFrameDriver {
 
         previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, previousBk2Input(currentBk2Index));
         currentBk2Index++;
+        // S3K's in-level title-card wait runs Process_Sprites while the level
+        // gameplay counter is held at zero. Such rows are VBlank-only to the
+        // physics driver, but the title-card parent/children still dispatch.
+        // Keep this overlay-only work moving without ticking player physics.
+        updateHeldCounterTitleCardOverlay();
+        if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {
+            startPendingInLevelTitleCardIfRequested();
+        }
         var levelEvents = GameServices.module().getLevelEventProvider();
         if (levelEvents != null) {
             levelEvents.advanceVblankOnlyState();
         }
         levelManager.getObjectManager().advanceVblaCounter();
         return mask;
+    }
+
+    public void advancePlayableAnimationsOnly() {
+        var sprites = GameServices.sprites();
+        int animationFrame = sprites.getFrameCounter();
+        for (var candidate : sprites.getAllSprites()) {
+            if (candidate instanceof AbstractPlayableSprite playable) {
+                playable.getAnimationManager().update(animationFrame);
+            }
+        }
+    }
+
+    public void suppressFirstSidekickAnimationOnce() {
+        var sprites = GameServices.sprites();
+        if (!sprites.getSidekicks().isEmpty()) {
+            sprites.getSidekicks().getFirst().getAnimationManager().suppressNextUpdate();
+        }
+    }
+
+    private void updateHeldCounterTitleCardOverlay() {
+        TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
+        if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {
+            titleCardProvider.update();
+            if (titleCardProvider.ownsRetainedResultsHeldLevelCounter()) {
+                var levelEvents = GameServices.module().getLevelEventProvider();
+                if (levelEvents != null) {
+                    // The retained Obj_LevelResults -> Obj_TitleCard path still
+                    // runs fixed SST entries while Level_frame_counter is held.
+                    levelEvents.updateFixedInLevelObjects();
+                }
+            }
+            if (titleCardProvider.ownsInLevelPlayerControlLock()) {
+                applyInLevelTitleCardControlLock(
+                        titleCardProvider.shouldLockPlayerControlForInLevelOverlay());
+            }
+        }
     }
 
     private static int inputMask(Bk2FrameInput frameInput) {

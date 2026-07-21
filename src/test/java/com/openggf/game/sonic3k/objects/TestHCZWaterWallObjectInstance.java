@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -62,9 +63,12 @@ class TestHCZWaterWallObjectInstance {
     @Test
     void verticalGeyserWaitsForKosModuleBeforeRiseThenFallsThrough() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0200, (short) 0x01C8);
+        TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x0208, (short) 0x01C8);
+        player.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
+        sidekick.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
         HCZWaterWallObjectInstance waterWall = new HCZWaterWallObjectInstance(
                 new ObjectSpawn(0x0200, 0x0200, 0x3B, 1, 0, false, 0));
-        waterWall.setServices(new TestObjectServices());
+        waterWall.setServices(new TestObjectServices().withSidekicks(List.of(sidekick)));
         int playerInitialY = player.getY();
         int wallInitialY = waterWall.getY();
 
@@ -82,6 +86,11 @@ class TestHCZWaterWallObjectInstance {
                 "loc_302FA falls through into the first loc_30338 rise tick when the queue clears");
         assertEquals(wallInitialY - 8, waterWall.getY(),
                 "the first rise tick should happen in the same update that finishes queued-art setup");
+        assertEquals(Sonic3kAnimationIds.BLANK.id(), player.getAnimationId());
+        assertEquals(-1, player.getForcedAnimationId(),
+                "water-wall object control must supersede the prior tunnel override");
+        assertEquals(Sonic3kAnimationIds.BLANK.id(), sidekick.getAnimationId());
+        assertEquals(-1, sidekick.getForcedAnimationId());
     }
 
     private static void assertFullControl(TestablePlayableSprite player) {

@@ -79,9 +79,10 @@ class TestHCZWaterSkimHandler {
     }
 
     @Test
-    void airborneSustainSuppressesSameFrameGravityBecauseRomObjectRunsAfterPlayer() {
+    void airborneSustainPinsAndAppliesFrictionAtPostPlayerTiming() {
         AbstractPlayableSprite main = skimmingCandidate();
         when(main.getAir()).thenReturn(true);
+        when(main.getXSpeed()).thenReturn((short) 0x700);
         ObjectPlayerQuery query = new ObjectPlayerQuery(
                 () -> main,
                 List::of);
@@ -91,11 +92,12 @@ class TestHCZWaterSkimHandler {
 
         assertTrue(HCZWaterSkimHandler.isSkimActiveP1());
         verify(main).setCentreYPreserveSubpixel((short) 0x1EF);
-        verify(main).suppressNextGravityStep();
+        verify(main).setXSpeed((short) 0x6F4);
+        verify(main, never()).suppressNextGravityStep();
     }
 
     @Test
-    void airborneSpeedExitSuppressesSameFrameGravityBecauseRomObjectRunsAfterPlayer() {
+    void airborneSpeedExitDoesNotSuppressTheFollowingFrameGravity() {
         AbstractPlayableSprite main = skimmingCandidate();
         when(main.getAir()).thenReturn(true);
         when(main.getXSpeed()).thenReturn((short) 0x700, (short) 0x6FF);
@@ -108,7 +110,35 @@ class TestHCZWaterSkimHandler {
 
         assertFalse(HCZWaterSkimHandler.isSkimActiveP1());
         verify(main).setWaterSkimActive(false);
-        verify(main).suppressNextGravityStep();
+        verify(main, never()).suppressNextGravityStep();
+    }
+
+    @Test
+    void activationUsesHorizontalVelocityToPublishFacing() {
+        AbstractPlayableSprite main = skimmingCandidate();
+        when(main.getDirection()).thenReturn(Direction.LEFT);
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> main,
+                List::of);
+
+        HCZWaterSkimHandler.update(query, 0x200, 1);
+
+        verify(main).setDirection(Direction.RIGHT);
+        assertTrue(HCZWaterSkimHandler.isSkimActiveP1());
+    }
+
+    @Test
+    void jumpExitPreservesNativeCentreYWhileEnteringRoll() {
+        AbstractPlayableSprite main = skimmingCandidate();
+        ObjectPlayerQuery query = new ObjectPlayerQuery(() -> main, List::of);
+
+        HCZWaterSkimHandler.update(query, 0x200, 1);
+        when(main.isJumpPressed()).thenReturn(true);
+        HCZWaterSkimHandler.update(query, 0x200, 2);
+
+        assertFalse(HCZWaterSkimHandler.isSkimActiveP1());
+        verify(main).setRolling(true);
+        verify(main).setCentreYPreserveSubpixel((short) 0x1EF);
     }
 
     private static AbstractPlayableSprite skimmingCandidate() {

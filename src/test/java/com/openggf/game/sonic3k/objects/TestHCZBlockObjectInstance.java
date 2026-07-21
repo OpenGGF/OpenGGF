@@ -56,6 +56,15 @@ public class TestHCZBlockObjectInstance {
     }
 
     @Test
+    public void fullSolidRoutinePublishesRomPointerAndConsumesAirborneStandingBit() {
+        HCZBlockObjectInstance instance = new HCZBlockObjectInstance(
+                new ObjectSpawn(0x100, 0x200, Sonic3kObjectIds.HCZ_BLOCK, 0, 0, false, 0));
+
+        assertEquals(0x0001, instance.romObjectCodePointerHighWord());
+        assertTrue(instance.airborneStaleStandingBitReturnsNoContact(null));
+    }
+
+    @Test
     public void hczPlanIncludesLevelArtEntryForBlock() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x01, 0);
 
@@ -77,5 +86,4 @@ public class TestHCZBlockObjectInstance {
         }
     }
 }
-
 

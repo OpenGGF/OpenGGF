@@ -230,6 +230,17 @@ class TestS3kCnzCarryHeadless {
                 "Frame 107: landing probe should clear Sonic.y_speed");
         assertEquals(sonic.getXSpeed(), sonic.getGSpeed(),
                 "Frame 107: landing probe should transfer x_speed to ground speed");
+        assertEquals(0, sonic.getAnimationId(),
+                "Frame 107: Player_TouchFloor must publish anim=Walk while carry object-control remains set");
+
+        fixture.stepFrame(false, false, false, false, false);
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        assertEquals(0, sonic.getAnimationId(),
+                "Frame 108: carry release must preserve Sonic's landing Walk byte");
+        assertEquals(0x20, tails.getAnimationId(),
+                "Frame 108: carry release must restore Tails's ordinary flight animation");
+        assertEquals(0xA0, tails.getMappingFrame(),
+                "Frame 108: Tails's ordinary flight mapping must be visible on the release frame");
     }
 
     @Test

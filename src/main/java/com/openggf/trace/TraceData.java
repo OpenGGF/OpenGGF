@@ -73,6 +73,34 @@ public class TraceData {
         return new TraceData(metadata, frames, events);
     }
 
+    /**
+     * Loads only {@code metadata.json} (plus aux events, if present), skipping
+     * the {@code physics.csv} parse entirely. For chain-drive interiors that
+     * are advance-uncompared (a {@code special_stage} segment under the SS-
+     * interior policy — see {@link com.openggf.trace.replay.runs.TraceRunReplayWalker#isUncomparedInterior}),
+     * no per-frame comparator is ever built from this segment's frames,
+     * so its {@code physics.csv} schema need not match one of {@link TraceFrame}'s
+     * known column widths — per-game special-stage physics CSVs (S1's maze
+     * schema, S2's halfpipe schema, S3K's blue-spheres schema) are structurally
+     * distinct from the primary-level physics schema {@link TraceFrame} parses,
+     * and per-frame special-stage comparison is a later, separate workflow.
+     * {@link #frameCount()} on the returned instance is always {@code 0}; callers
+     * needing the segment's declared length must read
+     * {@link com.openggf.trace.TraceRunManifest.Segment#traceFrameCount()} from
+     * the manifest instead.
+     */
+    public static TraceData loadMetadataOnly(Path traceDirectory) throws IOException {
+        Path metadataPath = traceDirectory.resolve("metadata.json");
+        Path auxPath = resolveTraceFile(traceDirectory, "aux_state.jsonl");
+
+        TraceMetadata metadata = TraceMetadata.load(metadataPath);
+        Map<Integer, List<TraceEvent>> events = auxPath != null
+            ? loadAuxEvents(auxPath)
+            : Collections.emptyMap();
+
+        return new TraceData(metadata, Collections.emptyList(), events);
+    }
+
     public TraceMetadata metadata() { return metadata; }
     public int frameCount() { return frames.size(); }
 
@@ -100,6 +128,31 @@ public class TraceData {
             }
         }
         return metadata.bk2FrameOffset();
+    }
+
+    /**
+     * Returns the initial clock for ROM object routines that read
+     * {@code V_int_run_count}. S3K schema-v6 captures wrote the adjacent
+     * life-count word (for example $0800/$0A00) into the CSV counter
+     * column. A repeated value across changing gameplay rows identifies that
+     * recorder layout. BK2 advances once per hardware VBlank, so its low bit
+     * supplies the missing parity used by object routines while the recorded
+     * word retains the established higher-bit replay phase.
+     */
+    public int initialVIntRunCounterPhaseOffset() {
+        int recorded = initialVblankCounter();
+        if (!usesBk2VblankCounterFallback()) {
+            return 0;
+        }
+        return (metadata.bk2FrameOffset() - recorded) & 1;
+    }
+
+    private boolean usesBk2VblankCounterFallback() {
+        return "s3k".equals(metadata.game())
+                && frames.size() > 1
+                && frames.get(0).vblankCounter() >= 0
+                && frames.get(0).vblankCounter() == frames.get(1).vblankCounter()
+                && !frames.get(0).stateEquals(frames.get(1));
     }
 
     public TraceFrame getFrame(int traceFrame) {
@@ -762,16 +815,20 @@ public class TraceData {
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
                 if (!trimmed.isEmpty()) {
-                    frames.add(TraceFrame.parseCsvRow(trimmed, metadata.traceSchema()));
+                    Integer csvVersion = metadata.csvVersion() != null
+                            ? metadata.csvVersion()
+                            : metadata.traceSchema();
+                    frames.add(TraceFrame.parseCsvRow(trimmed, csvVersion));
                 }
             }
         }
         return frames;
     }
 
-    // Package-visible so other trace-profile loaders (e.g. SpecialStageTraceData)
-    // can reuse the aux jsonl parsing without duplicating it.
-    static Map<Integer, List<TraceEvent>> loadAuxEvents(Path auxPath)
+    // Public so other trace-profile loaders (e.g. SpecialStageTraceData,
+    // com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData) can
+    // reuse the aux jsonl parsing without duplicating it.
+    public static Map<Integer, List<TraceEvent>> loadAuxEvents(Path auxPath)
             throws IOException {
         Map<Integer, List<TraceEvent>> map = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
@@ -788,9 +845,10 @@ public class TraceData {
         return map;
     }
 
-    // Package-visible so other trace-profile loaders (e.g. SpecialStageTraceData)
-    // can reuse the gzip-or-plain file resolution without duplicating it.
-    static Path resolveTraceFile(Path traceDirectory, String fileName) {
+    // Public so other trace-profile loaders (e.g. SpecialStageTraceData,
+    // com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData) can
+    // reuse the gzip-or-plain file resolution without duplicating it.
+    public static Path resolveTraceFile(Path traceDirectory, String fileName) {
         Path plainPath = traceDirectory.resolve(fileName);
         if (Files.exists(plainPath)) {
             return plainPath;
@@ -799,9 +857,10 @@ public class TraceData {
         return Files.exists(gzipPath) ? gzipPath : null;
     }
 
-    // Package-visible so other trace-profile loaders (e.g. SpecialStageTraceData)
-    // can reuse gzip-or-plain reader opening without duplicating it.
-    static BufferedReader openTraceReader(Path path) throws IOException {
+    // Public so other trace-profile loaders (e.g. SpecialStageTraceData,
+    // com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData) can
+    // reuse gzip-or-plain reader opening without duplicating it.
+    public static BufferedReader openTraceReader(Path path) throws IOException {
         if (path.getFileName().toString().endsWith(".gz")) {
             InputStream input = Files.newInputStream(path);
             try {

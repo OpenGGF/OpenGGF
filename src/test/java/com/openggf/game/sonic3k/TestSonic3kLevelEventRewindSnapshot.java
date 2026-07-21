@@ -158,9 +158,21 @@ class TestSonic3kLevelEventRewindSnapshot {
         hcz.setWallChaseBgOverlayActiveRaw(true);
         hcz.setShakeTimer(12);
         hcz.setCutsceneActive(true);
-        hcz.setCutsceneFrame(30);
-        hcz.setCutsceneCenterX(0x80);
-        hcz.setCutsceneCurrentY(0x600);
+        hcz.setCarrierP1Active(true);
+        hcz.setCarrierP2Active(true);
+        hcz.setCarrierP1XFixed(0x15600);
+        hcz.setCarrierP1YFixed(0x6EC00);
+        hcz.setCarrierP1XVelocity(0x940);
+        hcz.setCarrierP2XFixed(0x13600);
+        hcz.setCarrierP2YFixed(0x6F000);
+        hcz.setCarrierP2XVelocity(0xD40);
+        hcz.setCarrierP1TargetSide(false);
+        hcz.setCarrierP2TargetSide(false);
+        hcz.setTransitionBubbleSpawnFrames(23);
+        hcz.setLevelSizeTransitionActive(true);
+        hcz.setLevelSizeMaxXGradient(0x14000);
+        hcz.setLevelSizeMinYGradient(0x18000);
+        hcz.setLevelSizeMaxYGradient(0x28000);
 
         LevelEventSnapshot snap = mgr.capture();
 
@@ -177,9 +189,21 @@ class TestSonic3kLevelEventRewindSnapshot {
         assertTrue(hcz2.isWallChaseBgOverlayActive());
         assertEquals(12,    hcz2.getShakeTimer());
         assertTrue(hcz2.isCutsceneActive());
-        assertEquals(30,    hcz2.getCutsceneFrame());
-        assertEquals(0x80,  hcz2.getCutsceneCenterX());
-        assertEquals(0x600, hcz2.getCutsceneCurrentY());
+        assertTrue(hcz2.isCarrierP1Active());
+        assertTrue(hcz2.isCarrierP2Active());
+        assertEquals(0x15600, hcz2.getCarrierP1XFixed());
+        assertEquals(0x6EC00, hcz2.getCarrierP1YFixed());
+        assertEquals(0x940, hcz2.getCarrierP1XVelocity());
+        assertEquals(0x13600, hcz2.getCarrierP2XFixed());
+        assertEquals(0x6F000, hcz2.getCarrierP2YFixed());
+        assertEquals(0xD40, hcz2.getCarrierP2XVelocity());
+        assertFalse(hcz2.isCarrierP1TargetSide());
+        assertFalse(hcz2.isCarrierP2TargetSide());
+        assertEquals(23, hcz2.getTransitionBubbleSpawnFrames());
+        assertTrue(hcz2.isLevelSizeTransitionActive());
+        assertEquals(0x14000, hcz2.getLevelSizeMaxXGradient());
+        assertEquals(0x18000, hcz2.getLevelSizeMinYGradient());
+        assertEquals(0x28000, hcz2.getLevelSizeMaxYGradient());
     }
 
     @Test

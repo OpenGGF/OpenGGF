@@ -1,0 +1,25 @@
+{
+  "run_schema": 1,
+  "game": "s2",
+  "run_id": "run_ehz_ss_3seg",
+  "source_bk2": "synthetic.bk2",
+  "rom_checksum": "7B905383",
+  "lua_script_version": "9.12-s2",
+  "segments": [
+    {"dir": "seg1_ehz1", "kind": "level", "trace_profile": "gameplay_unlock",
+     "bk2_frame_offset": 500, "trace_frame_count": 2, "zone_id": 0, "act": 1},
+    {"dir": "ss", "kind": "special_stage", "trace_profile": "s2_special_stage",
+     "zone_id": 0, "act": 0,
+     "bk2_frame_offset": 800, "trace_frame_count": 2, "special_stage_index": 0},
+    {"dir": "seg2_ehz1", "kind": "level", "trace_profile": "gameplay_unlock",
+     "bk2_frame_offset": 1100, "trace_frame_count": 2, "zone_id": 0, "act": 1}
+  ],
+  "transitions": [
+    {"from_segment": 0, "to_segment": 1, "entry_kind": "starpost_special",
+     "mode_change_bk2_frame": 750, "special_bonus_entry_flag": 1,
+     "saved_x_pos": 96, "saved_y_pos": 656, "last_star_post_hit": 3,
+     "rings_before": 12, "emeralds_before": 0},
+    {"from_segment": 1, "to_segment": 2, "entry_kind": "stage_exit",
+     "mode_change_bk2_frame": 1050, "rings_after": 0, "emeralds_after": 0}
+  ]
+}

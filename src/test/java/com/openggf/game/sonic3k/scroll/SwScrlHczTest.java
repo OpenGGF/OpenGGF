@@ -478,6 +478,16 @@ public class SwScrlHczTest {
         handler.update(buf, cameraX, cameraY, 0, 1);
         int normalDistinct = uniqueBgValues(buf);
         assertTrue(normalDistinct > 3, "Normal mode has multiple BG speeds, got " + normalDistinct);
+        short finalLineScroll = unpackBG(buf[VISIBLE_LINES - 1]);
+        boolean differsFromFinalLine = false;
+        for (int packedScroll : buf) {
+            if (unpackBG(packedScroll) != finalLineScroll) {
+                differsFromFinalLine = true;
+                break;
+            }
+        }
+        assertTrue(differsFromFinalLine,
+                "HCZ2 normal priority replay cannot substitute the final scanline for every band");
 
         // Wall-chase mode: single uniform BG value
         handler.setHcz2BgPhase(SwScrlHcz.Hcz2BgPhase.WALL_CHASE);
@@ -580,4 +590,3 @@ public class SwScrlHczTest {
         return data;
     }
 }
-

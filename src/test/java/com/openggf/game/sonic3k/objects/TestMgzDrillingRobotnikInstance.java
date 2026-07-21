@@ -109,7 +109,7 @@ class TestMgzDrillingRobotnikInstance {
 
         boss.onPlayerAttack(null, null);
         boss.update(1, null);
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         verify(services.drillRenderer).drawFrameIndex(eq(0), anyInt(), anyInt(), eq(false), eq(false));
         assertColorWord(services.paletteLine1, 11, 0x0EEE);
@@ -133,6 +133,25 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void hangRoutineObservesHitOnFollowingObjectPass() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        MgzDrillingRobotnikInstance boss = createBoss(services);
+        boss.update(0, null);
+
+        setPrivateInt(boss, "waitTimer", 0);
+        boss.getState().routine = staticInt("ROUTINE_HANG");
+
+        boss.onPlayerAttack(null, null);
+        boss.update(1, null);
+        assertEquals(staticInt("ROUTINE_HANG"), boss.getState().routine,
+                "MGZ2_SpecialCheckHit runs after the current movement routine");
+
+        boss.update(2, null);
+        assertEquals(staticInt("ROUTINE_CEILING_ESCAPE"), boss.getState().routine,
+                "The published hurt bit should drive the next object pass");
+    }
+
+    @Test
     void ceilingEscapeUsesEscapePodFrameAndThrusterFlame() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzDrillingRobotnikInstance boss = createBoss(services);
@@ -143,7 +162,8 @@ class TestMgzDrillingRobotnikInstance {
 
         boss.onPlayerAttack(null, null);
         boss.update(1, null);
-        boss.appendRenderCommands(new ArrayList<>());
+        boss.update(2, null);
+        renderBossGraph(boss);
 
         verify(services.shipRenderer).drawFrameIndex(eq(10), anyInt(), anyInt(), eq(false), eq(false));
         verify(services.shipRenderer).drawFrameIndex(eq(6), anyInt(), anyInt(), eq(false), eq(false), eq(0));
@@ -160,9 +180,31 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().routine = staticInt("ROUTINE_ESCAPE_WAIT");
 
         boss.update(1, null);
+        assertFalse(boss.isDestroyed(), "Obj_Wait does not fire its callback when $2E reaches zero");
+        boss.update(2, null);
+        assertTrue(boss.isDestroyed(), "Obj_Wait fires after $2E becomes negative");
 
         assertColorWord(services.paletteLine1, 0, 0x000E);
         assertColorWord(services.paletteLine1, 1, 0x024A);
+    }
+
+    @Test
+    void drillingRobotnikCameraUnlockUsesNativeQuarterPixelWorker() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        camera.setMinX((short) 0x32C0);
+        MgzDrillingRobotnikCameraUnlockController worker =
+                new MgzDrillingRobotnikCameraUnlockController(true);
+        worker.setServices(services);
+
+        worker.update(1, null);
+        worker.update(2, null);
+        worker.update(3, null);
+        assertEquals(0x32C0, camera.getMinX() & 0xFFFF,
+                "The first three $4000 updates retain only fractional residue");
+
+        worker.update(4, null);
+        assertEquals(0x32BF, camera.getMinX() & 0xFFFF,
+                "Obj_DecLevStartXGradual publishes one pixel on its fourth update");
     }
 
     @Test
@@ -174,7 +216,7 @@ class TestMgzDrillingRobotnikInstance {
         setPrivateInt(boss, "waitTimer", 0);
         boss.getState().routine = staticInt("ROUTINE_DRILL_DROP");
 
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         verify(services.drillRenderer).drawFrameIndex(eq(1), anyInt(), anyInt(), eq(false), eq(false));
         verify(services.drillRenderer).drawFrameIndex(eq(4), anyInt(), anyInt(), eq(false), eq(false));
@@ -194,16 +236,11 @@ class TestMgzDrillingRobotnikInstance {
         setPrivateInt(boss, "waitTimer", 0);
         boss.getState().routine = staticInt("ROUTINE_DRILL_DROP");
 
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
-        InOrder order = inOrder(services.drillRenderer, services.shipRenderer);
-        order.verify(services.drillRenderer).drawFrameIndex(eq(1), anyInt(), anyInt(), eq(false), eq(false));
-        order.verify(services.drillRenderer).drawFrameIndex(eq(0), anyInt(), anyInt(), eq(false), eq(false));
-        order.verify(services.drillRenderer).drawFrameIndex(eq(4), anyInt(), anyInt(), eq(false), eq(false));
-        order.verify(services.shipRenderer).drawFrameIndex(eq(9), anyInt(), anyInt(), eq(false), eq(false));
-        order.verify(services.shipRenderer).drawFrameIndex(anyInt(), anyInt(), anyInt(), eq(false), eq(false));
-        order.verify(services.drillRenderer).drawFrameIndex(eq(0x0F), anyInt(), anyInt(), eq(false), eq(false));
-        order.verify(services.drillRenderer).drawFrameIndex(eq(6), anyInt(), anyInt(), eq(false), eq(false));
+        verify(services.drillRenderer).drawFrameIndex(eq(1), anyInt(), anyInt(), eq(false), eq(false));
+        verify(services.drillRenderer).drawFrameIndex(eq(0), anyInt(), anyInt(), eq(false), eq(false));
+        verify(services.shipRenderer).drawFrameIndex(eq(9), anyInt(), anyInt(), eq(false), eq(false));
     }
 
     @Test
@@ -215,7 +252,7 @@ class TestMgzDrillingRobotnikInstance {
         setPrivateInt(boss, "waitTimer", 0);
         boss.getState().routine = staticInt("ROUTINE_DRILL_DROP");
 
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         InOrder order = inOrder(services.drillRenderer, services.shipRenderer);
         order.verify(services.drillRenderer).drawFrameIndex(eq(0), eq(0x08E0), eq(0x0690), eq(false), eq(false));
@@ -234,7 +271,7 @@ class TestMgzDrillingRobotnikInstance {
 
         setPrivateInt(boss, "waitTimer", 0);
         boss.getState().routine = staticInt("ROUTINE_DRILL_DROP");
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
 
@@ -263,7 +300,7 @@ class TestMgzDrillingRobotnikInstance {
 
         setPrivateInt(boss, "waitTimer", 0);
         boss.getState().routine = staticInt("ROUTINE_HANG");
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         boss.onPlayerAttack(null, null);
 
@@ -277,6 +314,24 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void ceilingEscapeRetainsIndependentChildHazards() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        MgzDrillingRobotnikInstance boss = createBoss(services);
+        boss.update(0, null);
+
+        setPrivateInt(boss, "waitTimer", 0);
+        boss.getState().routine = staticInt("ROUTINE_CEILING_ESCAPE");
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+
+        assertEquals(4, regions.length,
+                "routine $16 still ends in Draw_And_Touch_Sprite and its child SSTs remain live");
+        assertEquals(0x8B, regions[1].collisionFlags());
+        assertEquals(0x9A, regions[2].collisionFlags());
+        assertEquals(0x9A, regions[3].collisionFlags());
+    }
+
+    @Test
     void thrusterFlamesFlickerFromGameplayFrameNotRenderPass() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzDrillingRobotnikInstance boss = createBoss(services);
@@ -285,14 +340,29 @@ class TestMgzDrillingRobotnikInstance {
         setPrivateInt(boss, "waitTimer", 0);
         boss.getState().routine = staticInt("ROUTINE_DRILL_DROP");
 
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
         verify(services.drillRenderer, times(2))
                 .drawFrameIndex(eq(0x19), anyInt(), anyInt(), eq(false), eq(false), eq(0));
 
         boss.update(1, null);
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         verify(services.drillRenderer, times(2))
+                .drawFrameIndex(eq(0x19), anyInt(), anyInt(), eq(false), eq(false), eq(0));
+    }
+
+    @Test
+    void thrusterFlamesApplyVIntRunCounterPhaseIndependentlyOfObjectClock() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        services.objectManager.initVIntRunCounterPhaseOffset(1);
+        MgzDrillingRobotnikInstance boss = createBoss(services);
+        boss.update(0, null);
+
+        setPrivateInt(boss, "waitTimer", 0);
+        boss.getState().routine = staticInt("ROUTINE_DRILL_DROP");
+        renderBossGraph(boss);
+
+        verify(services.drillRenderer, never())
                 .drawFrameIndex(eq(0x19), anyInt(), anyInt(), eq(false), eq(false), eq(0));
     }
 
@@ -307,10 +377,13 @@ class TestMgzDrillingRobotnikInstance {
         spawnDebris.setAccessible(true);
         spawnDebris.invoke(boss);
 
-        boss.appendRenderCommands(new ArrayList<>());
-
-        verify(services.debrisRenderer, times(10))
-                .drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), eq(false));
+        List<MgzEndBossFallingDebrisChild> debris = services.objectManager.getActiveObjects().stream()
+                .filter(MgzEndBossFallingDebrisChild.class::isInstance)
+                .map(MgzEndBossFallingDebrisChild.class::cast).toList();
+        assertEquals(10, debris.size());
+        debris.forEach(child -> child.appendRenderCommands(new ArrayList<>()));
+        verify(services.debrisRenderer, times(10)).drawFrameIndex(
+                anyInt(), anyInt(), anyInt(), anyBoolean(), eq(false));
     }
 
     @Test
@@ -324,19 +397,23 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().routine = staticInt("ROUTINE_DRILL_DROP");
 
         boss.update(1, null);
-        boss.appendRenderCommands(new ArrayList<>());
-
-        verify(services.debrisRenderer, times(10))
-                .drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), eq(false));
+        assertEquals(10, services.objectManager.getActiveObjects().stream()
+                .filter(MgzEndBossFallingDebrisChild.class::isInstance).count());
     }
 
     @Test
-    void usesLowTilePrioritySoForegroundTilesCanCoverEncounter() throws Exception {
+    void usesHighTilePriorityFromExplicitEndBossSetupOverride() throws Exception {
         RecordingServices services = new RecordingServices(camera);
-        MgzDrillingRobotnikInstance boss = createBoss(services);
+        MgzDrillingRobotnikInstance boss = createEndBoss(services);
 
-        assertFalse(boss.isHighPriority(),
-                "ObjDat_MGZDrillBoss uses make_art_tile(...,1,0), so MGZ drilling Robotnik must render behind high-priority FG tiles");
+        assertTrue(boss.isHighPriority(),
+                "loc_6C354 sets art_tile bit 7 after loading ObjDat_MGZDrillBoss");
+    }
+
+    @Test
+    void drillingMiniEventRetainsObjDatLowTilePriority() throws Exception {
+        assertFalse(createBoss(new RecordingServices(camera)).isHighPriority(),
+                "loc_6BFCA does not apply the end boss's loc_6C354 art_tile override");
     }
 
     @Test
@@ -349,11 +426,58 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void defeatCallbackChangesBodyToRomBucketFour() throws Exception {
+        MgzEndBossInstance boss = createEndBoss(new RecordingServices(camera));
+        setPrivateInt(boss, "endBossDefeatPhase", 1);
+
+        assertEquals(4, boss.getPriorityBucket(),
+                "loc_6C2BE writes priority $200 after Wait_FadeToLevelMusic");
+    }
+
+    @Test
+    void compositePartsAreRealPriorityBearingBossChildren() throws Exception {
+        MgzEndBossInstance boss = createEndBoss(new RecordingServices(camera));
+        boss.update(0, null);
+        List<MgzEndBossRenderChild> parts = boss.getChildComponents().stream()
+                .filter(MgzEndBossRenderChild.class::isInstance)
+                .map(MgzEndBossRenderChild.class::cast)
+                .toList();
+
+        assertEquals(8, parts.size());
+        assertEquals(List.of(7, 6, 5, 5, 3, 7, 3, 6), parts.stream()
+                .map(MgzEndBossRenderChild::getPriorityBucket).toList());
+        assertEquals(List.of(false, false, true, false, false, false, false, false), parts.stream()
+                .map(MgzEndBossRenderChild::isHighPriority).toList());
+    }
+
+    @Test
+    void surpriseRobotnikPodInheritsTheMiniEventLowTilePriority() throws Exception {
+        MgzDrillingRobotnikInstance boss = createBoss(new RecordingServices(camera));
+        boss.update(0, null);
+
+        List<MgzEndBossRenderChild> parts = boss.getChildComponents().stream()
+                .filter(MgzEndBossRenderChild.class::isInstance)
+                .map(MgzEndBossRenderChild.class::cast)
+                .toList();
+
+        assertFalse(parts.get(MgzEndBossRenderChild.ROLE_POD).isHighPriority(),
+                "Child_SyncDraw must keep the surprise Robotnik ship behind MGZ terrain "
+                        + "when Obj_MGZ2DrillingRobotnik has not set art_tile bit 7");
+    }
+
+    @Test
+    void defeatDebrisUsesObjDat3BucketTwoAndHighTilePriority() {
+        MgzEndBossDefeatDebrisChild debris = new MgzEndBossDefeatDebrisChild(0, 0, 0, false);
+        assertEquals(2, debris.getPriorityBucket());
+        assertTrue(debris.isHighPriority());
+    }
+
+    @Test
     void endBossConsumesEightHitsBeforeDefeat() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzEndBossInstance boss = createEndBoss(services);
         setPrivateInt(boss, "waitTimer", 0);
-        boss.getState().routine = staticInt("ROUTINE_END_ACTIVE");
+        boss.getState().routine = staticInt("ROUTINE_END_AIR_APPROACH");
 
         for (int i = 7; i >= 0; i--) {
             boss.getState().invulnerable = false;
@@ -474,7 +598,7 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().defeated = true;
 
         boss.update(1, null);
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         assertFalse(boss.isDestroyed(),
                 "loc_6C2BE/loc_6C2EE keep Obj_MGZEndBoss alive as a handoff controller");
@@ -496,7 +620,7 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().defeated = true;
 
         boss.update(1, null);
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         verify(services.drillRenderer, never()).drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
         verify(services.shipRenderer).drawFrameIndex(eq(10), eq(0x3D1A), eq(0x066C), eq(false), eq(false));
@@ -507,7 +631,7 @@ class TestMgzDrillingRobotnikInstance {
         for (int frame = 2; frame <= 50; frame++) {
             boss.update(frame, null);
         }
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         verify(services.shipRenderer, atLeastOnce())
                 .drawFrameIndex(eq(10), intThat(x -> x > 0x3D1A), anyInt(), eq(true), eq(false));
@@ -546,8 +670,15 @@ class TestMgzDrillingRobotnikInstance {
         verify(gameState).setCurrentBossId(0);
         verify(levelEvents).setBossActive(false);
 
-        when(gameState.isEndOfLevelFlag()).thenReturn(true);
+        camera.setX((short) 0x3C80);
+        camera.setMinX((short) 0x3C60);
         boss.update(122, null);
+
+        assertEquals(0x3C80, camera.getMinX() & 0xFFFF,
+                "loc_6C8F4 must repin the left boundary while the MGZ results flag remains active");
+
+        when(gameState.isEndOfLevelFlag()).thenReturn(true);
+        boss.update(123, null);
 
         assertTrue(services.objectManager().getActiveObjects().stream()
                         .anyMatch(Mgz2PostBossPaletteFadeController.class::isInstance),
@@ -816,6 +947,9 @@ class TestMgzDrillingRobotnikInstance {
         tails.setCpuController(controller);
         setMgzCarryActive(tails);
         services.withSidekicks(java.util.List.of(tails));
+        camera.setX((short) 0x3C80);
+        camera.setMinX((short) 0x3C80);
+        camera.setMaxX((short) 0x3C80);
         Mgz2EndEggCapsuleInstance capsule = Mgz2EndEggCapsuleInstance.createForCamera(0x3C80, 0x0600);
         capsule.setServices(services);
         setPrivateBoolean(capsule, "opened", true);
@@ -836,6 +970,12 @@ class TestMgzDrillingRobotnikInstance {
                 "MGZ results exit must not clear the Tails-carry object_control state before loc_6D104");
         assertTrue(tails.isObjectControlled(),
                 "Tails must keep owning the carry/fly-off state while the palette fade runs");
+        assertTrue(camera.getFrozen(),
+                "loc_6C8F4 sets Scroll_lock while the MGZ post-results fly-off remains active");
+        assertEquals(0x3C80, camera.getMinX() & 0xFFFF,
+                "MGZ results exit must retain the boss arena left boundary");
+        assertEquals(0x3C80, camera.getMaxX() & 0xFFFF,
+                "MGZ results exit must retain the boss arena right boundary");
     }
 
     @Test
@@ -997,7 +1137,7 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().x = 0x3E80;
         boss.getState().y = 0x0700;
 
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         verify(services.drillRenderer).drawFrameIndex(eq(0), eq(0x3E80), eq(0x0700), anyBoolean(), eq(false));
         verify(services.drillRenderer, never()).drawFrameIndex(eq(6), eq(0x3E80), eq(0x0700), anyBoolean(), eq(false));
@@ -1012,7 +1152,7 @@ class TestMgzDrillingRobotnikInstance {
         setPrivateInt(boss, "endBossAngle", 4);
         boss.getState().routine = staticInt("ROUTINE_END_ANGLE_SETTLE");
 
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
         TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
 
         verify(services.drillRenderer).drawFrameIndex(eq(0x1E), eq(0x3D2C), eq(0x0684), eq(false), eq(false));
@@ -1021,6 +1161,69 @@ class TestMgzDrillingRobotnikInstance {
                 "loc_6C948/loc_6C9E8 derive the drill-tip child from angle-indexed ROM tables");
         assertEquals(0x06A4, regions[1].y());
         assertEquals(0x8B, regions[1].collisionFlags());
+    }
+
+    @Test
+    void movingAirAttackPublishesFoldedDrillTouchFromLaterChildSlotPosition() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        MgzEndBossInstance boss = createEndBoss(services);
+        boss.update(0, null);
+        boss.getState().routine = staticInt("ROUTINE_END_ATTACK_MOVE");
+        boss.getState().x = 0x3D4A;
+        boss.getState().y = 0x0718;
+        setPrivateInt(boss, "xSubpixel", 0);
+        setPrivateInt(boss, "ySubpixel", 0);
+        setPrivateInt(boss, "xVel", 0x0200);
+        setPrivateInt(boss, "yVel", -0x0200);
+        setPrivateInt(boss, "endBossAngle", 0x0C);
+        setPrivateInt(boss, "airAttackPatternOffset", 4);
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+
+        assertEquals(0x06E2, regions[1].y(),
+                "loc_6C9E8 refreshes after the parent MoveSprite2 slot, so the folded drill tip publishes from y-$34");
+    }
+
+    @Test
+    void horizontalAirAttackRetainsItsAlreadyPublishedChildSlotPosition() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        MgzEndBossInstance boss = createEndBoss(services);
+        boss.update(0, null);
+        boss.getState().routine = staticInt("ROUTINE_END_ATTACK_MOVE");
+        boss.getState().x = 0x3CFA;
+        boss.getState().y = 0x0710;
+        setPrivateInt(boss, "xSubpixel", 0x80);
+        setPrivateInt(boss, "ySubpixel", 0x30);
+        setPrivateInt(boss, "xVel", 0x0200);
+        setPrivateInt(boss, "yVel", 0);
+        setPrivateInt(boss, "endBossAngle", 0);
+        setPrivateInt(boss, "airAttackPatternOffset", 0);
+        setPrivateBoolean(boss, "flipX", true);
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+
+        assertEquals(0x3D2D, regions[1].x(),
+                "the horizontal sweep's retained child slot must not project a second parent MoveSprite2 step");
+    }
+
+    @Test
+    void movingAirAttackPublishesFoldedBodyFromLiveCollisionListPosition() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        MgzEndBossInstance boss = createEndBoss(services);
+        boss.update(0, null);
+        boss.getState().routine = staticInt("ROUTINE_END_ATTACK_MOVE");
+        boss.getState().x = 0x3D40;
+        boss.getState().y = 0x0710;
+        setPrivateInt(boss, "xSubpixel", 0);
+        setPrivateInt(boss, "ySubpixel", 0);
+        setPrivateInt(boss, "xVel", 0x0200);
+        setPrivateInt(boss, "yVel", 0);
+
+        TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
+
+        assertEquals(0x3D44, regions[0].x(),
+                "the native collision-list pointer is live across the remaining parent/V-int phases");
+        assertEquals(0x0710, regions[0].y());
     }
 
     @Test
@@ -1033,7 +1236,7 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().routine = staticInt("ROUTINE_END_AIR_RISE");
 
         boss.update(2, null);
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
         TouchResponseProvider.TouchRegion[] regions = boss.getMultiTouchRegions();
 
         verify(services.drillRenderer, times(2))
@@ -1045,6 +1248,23 @@ class TestMgzDrillingRobotnikInstance {
         assertEquals(0x0708, regions[2].y());
         assertEquals(0x3E6C, regions[3].x());
         assertEquals(0x0708, regions[3].y());
+    }
+
+    @Test
+    void enteringAirApproachPreservesNativeFractionalPositionWords() throws Exception {
+        MgzEndBossInstance boss = createEndBoss(new RecordingServices(camera));
+        boss.update(0, null);
+        boss.getState().routine = staticInt("ROUTINE_END_AIR_RISE");
+        setPrivateInt(boss, "waitTimer", 0);
+        setPrivateInt(boss, "xSubpixel", 0xA5);
+        setPrivateInt(boss, "ySubpixel", 0x5A);
+        setPrivateInt(boss, "yVel", 0);
+
+        boss.update(1, null);
+
+        assertEquals(0xA5, getPrivateInt(boss, "xSubpixel"));
+        assertEquals(0x5A, getPrivateInt(boss, "ySubpixel"),
+                "loc_6C598 writes x_pos/y_pos words without clearing their fractional words");
     }
 
     @Test
@@ -1079,6 +1299,8 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().routine = staticInt("ROUTINE_END_ATTACK_WAIT");
         boss.getState().x = 0x3E00;
         boss.getState().y = 0x0700;
+        setPrivateInt(boss, "xSubpixel", 0x80);
+        setPrivateInt(boss, "ySubpixel", 0x40);
 
         boss.update(1, null);
 
@@ -1088,6 +1310,12 @@ class TestMgzDrillingRobotnikInstance {
         assertEquals(0x0670, boss.getState().y);
         assertEquals(0x0200, getPrivateInt(boss, "xVel"));
         assertEquals(0, getPrivateInt(boss, "yVel"));
+        assertEquals(0x80, getPrivateInt(boss, "xSubpixel"),
+                "loc_6D710's x_pos word write preserves the native fractional position");
+        assertEquals(0x40, getPrivateInt(boss, "ySubpixel"),
+                "loc_6D710's y_pos word write preserves the native fractional position");
+        assertEquals(0x20, getPrivateInt(boss, "waitTimer"),
+                "The folded drill graph retains its later native child-publication phase after loc_6C646's $1F wait");
     }
 
     @Test
@@ -1134,7 +1362,7 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().y = 0x0700;
 
         boss.update(1, null);
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
         assertTrue(services.playedSfxIds.contains(Sonic3kSfx.BOSS_ZOOM.id),
                 "ROM loc_6C614 plays sfx_BossZoom before the $9F air-attack wait");
@@ -1142,8 +1370,12 @@ class TestMgzDrillingRobotnikInstance {
                 "ChildObjDat_6D836 creates a Map_ScaledArt sprite backed by generated tiles");
         assertTrue(services.graphics.scaledRenderCalls.isEmpty(),
                 "ArtScaled_MGZEndBoss is raw source for Perform_Art_Scaling, not plain scaled sprite art");
-        assertEquals(0x24030, services.graphics.renderCalls.get(0).patternId(),
-                "Initial $40=4 should draw Map_ScaledArt frame 4 from the generated ArtTile_MGZEndBossScaled bank");
+        assertTrue(services.graphics.renderCalls.get(0).patternId() >= 0x4E000,
+                "Initial $40=4 should draw from the cue instance's private transient atlas bank");
+        assertEquals(0x3DC0, getPrivateInt(boss, "airZoomCueX"),
+                "loc_6CFF4 anchors Map_ScaledArt directly at Camera_X+$140");
+        assertEquals(0x0650, getPrivateInt(boss, "airZoomCueY"),
+                "loc_6CFF4 anchors Map_ScaledArt directly at Camera_Y+$50");
     }
 
     @Test
@@ -1160,9 +1392,11 @@ class TestMgzDrillingRobotnikInstance {
         boss.getState().y = 0x0700;
 
         boss.update(1, null);
-        boss.appendRenderCommands(new ArrayList<>());
+        renderBossGraph(boss);
 
-        Pattern firstGeneratedTile = services.scaledSheet.getPatterns()[0];
+        Field generatedField = MgzDrillingRobotnikInstance.class.getDeclaredField("airZoomCuePatterns");
+        generatedField.setAccessible(true);
+        Pattern firstGeneratedTile = ((Pattern[]) generatedField.get(boss))[0];
         assertEquals(0x0, firstGeneratedTile.getPixel(0, 0));
         assertEquals(0x2, firstGeneratedTile.getPixel(1, 0));
         assertEquals(0x4, firstGeneratedTile.getPixel(2, 0));
@@ -1172,6 +1406,32 @@ class TestMgzDrillingRobotnikInstance {
         assertEquals(0xA, firstGeneratedTile.getPixel(5, 0));
         assertEquals(0xC, firstGeneratedTile.getPixel(6, 0));
         assertEquals(0xE, firstGeneratedTile.getPixel(7, 0));
+        assertEquals(0, services.scaledSheet.getPatterns()[0].getPixel(1, 0),
+                "runtime scaling must never mutate the provider's shared sheet");
+    }
+
+    @Test
+    void twoLiveZoomCuesUseDistinctAtlasBanksSoQueuedDrawsCannotOverwrite() throws Exception {
+        RecordingServices services = new RecordingServices(camera).withScaledCueArt(horizontalNibbleRampSource());
+        MgzEndBossInstance first = createEndBoss(services);
+        MgzEndBossInstance second = createEndBoss(services);
+        for (MgzEndBossInstance boss : List.of(first, second)) {
+            boss.update(0, null);
+            setPrivateInt(boss, "waitTimer", 0);
+            boss.getState().routine = staticInt("ROUTINE_END_AIR_SWEEP");
+            boss.getState().x = 0x3E00;
+            boss.getState().y = 0x0700;
+            boss.update(1, null);
+            renderBossGraph(boss);
+        }
+        Field rendererField = MgzDrillingRobotnikInstance.class.getDeclaredField("airZoomCueRenderer");
+        rendererField.setAccessible(true);
+        PatternSpriteRenderer firstRenderer = (PatternSpriteRenderer) rendererField.get(first);
+        PatternSpriteRenderer secondRenderer = (PatternSpriteRenderer) rendererField.get(second);
+        assertNotEquals(firstRenderer.getPatternBase(), secondRenderer.getPatternBase());
+        assertTrue(firstRenderer.getPatternBase() + 0x80 <= secondRenderer.getPatternBase()
+                        || secondRenderer.getPatternBase() + 0x80 <= firstRenderer.getPatternBase(),
+                "queued cue draws must reference non-overlapping pattern IDs");
     }
 
     private static byte[] horizontalNibbleRampSource() {
@@ -1191,6 +1451,14 @@ class TestMgzDrillingRobotnikInstance {
                 new ObjectSpawn(0x08E0, 0x0690, 0, 0, 0, false, 0), false);
         boss.setServices(services);
         return boss;
+    }
+
+    private static void renderBossGraph(MgzDrillingRobotnikInstance boss) {
+        boss.appendRenderCommands(new ArrayList<>());
+        boss.getChildComponents().stream()
+                .filter(MgzEndBossRenderChild.class::isInstance)
+                .map(MgzEndBossRenderChild.class::cast)
+                .forEach(child -> child.appendRenderCommands(new ArrayList<>()));
     }
 
     private static MgzEndBossInstance createEndBoss(RecordingServices services) {
@@ -1534,6 +1802,7 @@ class TestMgzDrillingRobotnikInstance {
 
     private static final class RecordingMgzEventBridge implements LevelEventProvider, MgzObjectEventBridge {
         private int collapseHandoffCount;
+        private int drillingRobotnikFleeCount;
 
         @Override
         public void initLevel(int zone, int act) {
@@ -1546,6 +1815,11 @@ class TestMgzDrillingRobotnikInstance {
         @Override
         public void triggerBossCollapseHandoff() {
             collapseHandoffCount++;
+        }
+
+        @Override
+        public void completeDrillingRobotnikFlee() {
+            drillingRobotnikFleeCount++;
         }
     }
 }

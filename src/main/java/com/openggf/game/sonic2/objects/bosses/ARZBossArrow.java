@@ -355,6 +355,16 @@ public class ARZBossArrow extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Obj89's arrow initializer never writes width_pixels after
+        // AllocateObject clears its SST slot (s2.asm:65565-65591). Sonic's
+        // object-edge balance probe therefore compares x_pos against the
+        // arrow's centre with a native width of zero, independently of the
+        // wider SolidObject collision dimensions above.
+        return 0;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         // ROM Obj89_Arrow_Platform only calls PlatformObject while
         // obj89_arrow_timer is zero. Once a rider starts the timer, later
@@ -411,6 +421,16 @@ public class ARZBossArrow extends AbstractObjectInstance
 
     @Override
     public boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
+        return preservesReleasedSidekickPushForCpu(player);
+    }
+
+    @Override
+    public boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
+        // TailsCPU_Normal reads the live Status_Push bit through the sidekick's
+        // interact slot before its movement/animation dispatch. Obj89's drop
+        // path leaves that bit set, so publish the same semantic predicate used
+        // by the zero-grace auto-jump bridge.
+        // docs/s2disasm/s2.asm:39297-39300,40484-40491,65689-65704
         return preservesReleasedSidekickPushForCpu(player);
     }
 

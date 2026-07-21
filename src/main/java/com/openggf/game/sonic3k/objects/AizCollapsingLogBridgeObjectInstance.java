@@ -6,6 +6,7 @@ import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -23,6 +24,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -252,8 +254,20 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         return withUpdatePlayer;
     }
 
-    private void recordStandingPlayer(PlayableEntity player, PlayerSolidContactResult result) {
-        if (player == null || result == null || !result.standingNow()) {
+    void recordStandingPlayer(PlayableEntity player, PlayerSolidContactResult result) {
+        if (player == null) {
+            return;
+        }
+        if (result == null || !result.standingNow()) {
+            // The native parent stores its current Player 1 / Player 2 standing
+            // bits directly in status(a0). SolidObjectTop clears those bits as
+            // soon as a rider leaves; a later fire-triggered collapse must not
+            // treat an old interact pointer as a current rider and run
+            // sub_2AF9C against it.
+            standingPlayers.remove(player);
+            if (state == STATE_IDLE && !isFireBridge) {
+                collapseArmedByStanding = !standingPlayers.isEmpty();
+            }
             return;
         }
         if (!standingPlayers.contains(player)) {
@@ -264,6 +278,10 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
             // SolidObjectTop call, so a new rider collapses the bridge next frame.
             collapseArmedByStanding = true;
         }
+    }
+
+    boolean isTrackingStandingPlayer(PlayableEntity player) {
+        return standingPlayers.contains(player);
     }
 
     private void startCollapse() {
@@ -338,8 +356,18 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         player.setOnObject(false);
         player.setPushing(false);
         player.setAir(true);
+        if (player instanceof AbstractPlayableSprite sprite) {
+            publishKnockOffAnimationState(sprite);
+        }
         standingPlayers.remove(player);
         ejectedPlayers.add(player);
+    }
+
+    void publishKnockOffAnimationState(AbstractPlayableSprite player) {
+        // sub_2AF9C runs after the player's Animate pass and writes only
+        // prev_anim=Run. An unchanged Walk byte therefore restarts on the next
+        // player slot (sonic3k.asm:59455-59465).
+        player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.RUN.id());
     }
 
     @Override

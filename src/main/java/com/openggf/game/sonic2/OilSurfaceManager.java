@@ -253,6 +253,7 @@ public class OilSurfaceManager {
             // Check if player should land on oil surface
             // ROM: PlatformObject_SingleCharacter does the landing check
             if (shouldLandOnOil(player, state)) {
+                boolean wasHurt = player.isHurt();
                 state.standingOnOil = true;
                 clearAirForOilSupport(player);
                 player.setOnObject(true);
@@ -287,9 +288,17 @@ public class OilSurfaceManager {
                 // so the new larger hitbox does not clip into the platform.
                 // ROM does `subq.w #5, y_pos(a0)` - a word write that leaves
                 // the sub-pixel low word untouched.
-                if (player.getRolling()) {
+                boolean wasRolling = player.getRolling();
+                if (wasRolling) {
                     player.setRolling(false);
                     player.setY((short) (player.getY() - player.getRollHeightAdjustment()));
+                }
+
+                // HurtStop owns the raw Hurt byte through this post-player Obj07
+                // landing row; its next player dispatch publishes Walk. Ordinary
+                // fresh landings still take ResetOnFloor_Part2's Walk write.
+                if (!wasHurt) {
+                    player.setAnimationId(Sonic2AnimationIds.WALK);
                 }
             }
         }

@@ -121,6 +121,16 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj32 calls the ordinary SolidObject helper. Its X gate branches out
+        // only on `bhi`, so relX == 2*d1 remains a zero-distance side contact
+        // (docs/s2disasm/s2.asm:35347-35354). HTZ1 reaches that exact right
+        // edge on the roll-landing frame; retaining the contact publishes the
+        // native Status_Push bit for the following SAnim_Push timer gate.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         // Block is not solid once broken. ROM keeps the block fully solid before it
         // breaks (Obj32_Main always invokes SolidObject); a rolling player moving

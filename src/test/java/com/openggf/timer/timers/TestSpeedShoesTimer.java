@@ -14,11 +14,9 @@ import static org.mockito.Mockito.when;
  *
  * <p>S1/S2 (decimation 1) decrement every frame. S3K (decimation 8) decrements
  * only on frames where {@code (frame + LEVEL_FRAME_PHASE_OFFSET) & 7 == 0}. The
- * offset is 7 because the engine level frame counter, read at the pre-physics
- * timer tick, leads ROM {@code Level_frame_counter} by 2 (mod 8); ROM decrements
- * on {@code Level_frame_counter & 7 == 7}, which maps to engine
- * {@code frameCounter & 7 == 1}. Validated against the S3K CNZ/AIZ/MGZ trace
- * frontiers (all held at baseline with this offset).
+ * offset is zero because {@code (Level_frame_counter+1).w} reads the low byte
+ * at the word label's second address; it does not arithmetically add one to the
+ * counter. The timer therefore decrements when {@code frameCounter & 7 == 0}.
  */
 class TestSpeedShoesTimer {
 
@@ -49,20 +47,17 @@ class TestSpeedShoesTimer {
     }
 
     @Test
-    void decimationEightAlignsToEngineFrameCounterModEightEqualsOne() {
-        // engine frameCounter & 7 == 1 are the decrement frames (ROM
-        // Level_frame_counter & 7 == 7, +2 engine seed-phase offset).
+    void decimationEightAlignsToEngineFrameCounterModEightEqualsZero() {
         for (int frame = 0; frame < 16; frame++) {
-            boolean expected = (frame & 7) == 1;
+            boolean expected = (frame & 7) == 0;
             assertEquals(expected, SpeedShoesTimer.isDecrementFrame(frame, 8),
                     "frame " + frame + " decrement gate");
         }
     }
 
     @Test
-    void constructorUsesDefaultRulesWhenGameRulesMissing() {
+    void constructorUsesS3kDecimationRules() {
         AbstractPlayableSprite sprite = mock(AbstractPlayableSprite.class);
-        when(sprite.getGameRules()).thenReturn(null);
         when(sprite.getGameRules()).thenReturn(GameRules.SONIC_3K);
 
         SpeedShoesTimer timer = new SpeedShoesTimer("speed-shoes", sprite);
@@ -70,5 +65,22 @@ class TestSpeedShoesTimer {
         assertEquals(SpeedShoesTimer.ROM_DURATION_FRAMES
                         / GameRules.SONIC_3K.powerUp().speedShoesTimerDecimation(),
                 timer.getTicks());
+    }
+
+    @Test
+    void hurtRoutineFreezesCountdownUntilNormalControlResumes() {
+        AbstractPlayableSprite sprite = mock(AbstractPlayableSprite.class);
+        when(sprite.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(sprite.isHurt()).thenReturn(true, false);
+        SpeedShoesTimer timer = new SpeedShoesTimer("speed-shoes", sprite);
+
+        int initialTicks = timer.getTicks();
+        timer.decrementTick();
+        assertEquals(initialTicks, timer.getTicks(),
+                "native hurt routine bypasses Sonic_ChkShoes");
+
+        timer.decrementTick();
+        assertEquals(initialTicks - 1, timer.getTicks(),
+                "countdown resumes with the normal control routine");
     }
 }

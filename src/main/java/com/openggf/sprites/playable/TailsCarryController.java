@@ -12,6 +12,12 @@ import java.util.Objects;
 
 /** ROM-accurate shared owner for manual and scripted Tails carry state. */
 public final class TailsCarryController {
+    private static final int CARRIED_FRAME_DELAY = 0x0B;
+    private static final int[] CARRIED_MAPPING_FRAMES = {
+            0x91, 0x91, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+            0x92, 0x92, 0x92, 0x92, 0x92, 0x92, 0x91, 0x91
+    };
+
     public enum CarryContext { NONE, MANUAL, CNZ, MGZ_BOSS }
 
     public record Snapshot(short latchX, short latchY, boolean carrying,
@@ -30,6 +36,7 @@ public final class TailsCarryController {
     }
 
     public boolean isCarryingMainCharacter() { return carrying; }
+    public CarryContext getContext() { return context; }
 
     public boolean tryGrabMainCharacter() {
         AbstractPlayableSprite main = resolveMain();
@@ -73,8 +80,23 @@ public final class TailsCarryController {
         int yOffset = isReverseGravity() ? -0x1C : 0x1C;
         NativePositionOps.writeYPosPreserveSubpixel(main, carrier.getCentreY() + yOffset);
         main.setDirection(carrier.getDirection());
-        main.setForcedAnimationId(main.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED));
-        ObjectControlState.nativeBit7FullControl().applyTo(main);
+        int carriedAnimationId = main.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED);
+        // Tails_Carry_Sonic writes the carried id to both anim and prev_anim,
+        // then clears anim_frame_timer and anim_frame in the carrier's slot.
+        // That happens after Sonic's Animate call, so publish the native fields
+        // immediately rather than waiting for the next player update.
+        main.setAnimationId(carriedAnimationId);
+        main.getAnimationManager().publishPreviousAnimationId(carriedAnimationId);
+        main.setAnimationTick(0);
+        main.setAnimationFrameIndex(0);
+        main.setForcedAnimationId(carriedAnimationId);
+        // Native object_control=$03 skips Sonic's ordinary Animate_Sonic call;
+        // both shared animation-byte ticks instead come from the CPU and
+        // post-flight Tails_Carry_Sonic passes.
+        main.setObjectMappingFrameControl(true);
+        // sub_1459E writes object_control=$03: bits 0-6 suppress normal
+        // movement but do not take the bit-7 TouchResponse bypass.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(main);
         main.setAir(true);
         main.setRollingJump(false);
         main.setSpindash(false);
@@ -107,9 +129,13 @@ public final class TailsCarryController {
             release(0x3C);
             return;
         }
-        if (carrier.isHurt() || carrier.getDead() || carrier.isObjectControlled()
+        if (carrier.isHurt()) {
+            releaseAfterCarrierHurt();
+            return;
+        }
+        if (carrier.getDead() || carrier.isObjectControlled()
                 || main.isHurt() || main.getDead()
-                || !main.isObjectControlled() || main.isObjectControlAllowsCpu()) {
+                || !main.isObjectControlled()) {
             release(0x3C);
             return;
         }
@@ -135,6 +161,7 @@ public final class TailsCarryController {
         int yOffset = isReverseGravity() ? -0x1C : 0x1C;
         NativePositionOps.writeYPosPreserveSubpixel(main, carrier.getCentreY() + yOffset);
         main.setDirection(carrier.getDirection());
+        updateCarriedMapping(main);
         main.setXSpeed(carrier.getXSpeed());
         main.setYSpeed(carrier.getYSpeed());
         CollisionSystem collision = main.currentCollisionSystemOrNull();
@@ -157,6 +184,31 @@ public final class TailsCarryController {
         latchX = main.getXSpeed();
         latchY = main.getYSpeed();
         parentagePending = false;
+    }
+
+    /**
+     * Advances {@code AniRaw_Tails_Carry}, which runs from
+     * {@code Tails_Carry_Sonic} after the main player's normal Animate pass.
+     * Both routines share the native animation timer and frame bytes.
+     */
+    private void updateCarriedMapping(AbstractPlayableSprite main) {
+        int remaining = main.getAnimationTick() - 1;
+        if (remaining >= 0) {
+            main.setAnimationTick(remaining);
+            return;
+        }
+
+        main.setAnimationTick(CARRIED_FRAME_DELAY);
+        int frameIndex = main.getAnimationFrameIndex();
+        if (frameIndex < 0 || frameIndex >= CARRIED_MAPPING_FRAMES.length) {
+            // Native reads the terminal $FF after incrementing anim_frame,
+            // then resets anim_frame to zero and displays the first entry.
+            main.setAnimationFrameIndex(0);
+            main.setMappingFrame(CARRIED_MAPPING_FRAMES[0]);
+            return;
+        }
+        main.setMappingFrame(CARRIED_MAPPING_FRAMES[frameIndex]);
+        main.setAnimationFrameIndex(frameIndex + 1);
     }
 
     private void performJumpRelease(AbstractPlayableSprite main, int input) {
@@ -189,6 +241,20 @@ public final class TailsCarryController {
         release(0x3C);
     }
 
+    /**
+     * Releases the main player when damage enters the carrier's hurt routine.
+     * <p>
+     * S3K clears Player_1 {@code object_control} and then clears the full
+     * {@code Flying_carrying_Sonic_flag} word, including its cooldown byte
+     * (sonic3k.asm:29187-29192). This must happen with the hurt transition,
+     * before the main player's next touch-response pass.
+     */
+    public void releaseAfterCarrierHurt() {
+        if (carrying) {
+            release(0);
+        }
+    }
+
     void releaseWithCooldown(int releaseCooldown) {
         release(releaseCooldown);
     }
@@ -199,6 +265,18 @@ public final class TailsCarryController {
             ObjectControlState.none().applyTo(main);
             main.setControlLocked(false);
             main.setForcedAnimationId(-1);
+            main.setObjectMappingFrameControl(false);
+            // The engine updates Player 1's animation before the later CPU
+            // Tails slot releases a grounded carry. That earlier pass can
+            // temporarily re-apply the forced carried id over the Walk byte
+            // written by Player_TouchFloor. Native object-slot order leaves
+            // the landing write intact, so restore it as the carry owner exits.
+            if (!main.getAir() && context == CarryContext.CNZ) {
+                int walkAnimationId = main.resolveAnimationId(CanonicalAnimation.WALK);
+                if (walkAnimationId >= 0) {
+                    main.setAnimationId(walkAnimationId);
+                }
+            }
         }
         carrying = false;
         parentagePending = false;

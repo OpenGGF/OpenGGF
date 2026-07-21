@@ -422,6 +422,8 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertEquals(e1.tunnelMode(), e2.tunnelMode(), "tunnelMode not restored");
         assertEquals(e1.onObject(), e2.onObject(), "onObject not restored");
         assertEquals(e1.onObjectAtFrameStart(), e2.onObjectAtFrameStart(), "onObjectAtFrameStart not restored");
+        assertEquals(e1.onObjectAtPreviousFrameStart(), e2.onObjectAtPreviousFrameStart(),
+                "onObjectAtPreviousFrameStart not restored");
         assertEquals(e1.pushingAtFrameStart(), e2.pushingAtFrameStart(), "pushingAtFrameStart not restored");
         assertEquals(e1.hurtAtFrameStart(), e2.hurtAtFrameStart(), "hurtAtFrameStart not restored");
         assertEquals(e1.hurtRecoveryCompletedThisFrame(), e2.hurtRecoveryCompletedThisFrame(),
@@ -759,7 +761,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         SpindashDustController.RewindState spindash =
                 new SpindashDustController.RewindState(2, 3, 4, true);
         PlayableSpriteController.RewindState expected = new PlayableSpriteController.RewindState(
-                movement, spindash, animation, drowning, carry);
+                movement, spindash, animation, drowning, carry, null);
         sonic.controller.restoreRewindState(expected);
 
         PerObjectRewindSnapshot snapshot = sonic.captureRewindState();

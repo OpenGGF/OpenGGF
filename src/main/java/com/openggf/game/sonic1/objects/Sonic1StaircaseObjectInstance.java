@@ -270,6 +270,13 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // The folded children move every Stair_Type01 pass, rebuilding the
+        // dynamic spawn while each native child SST retains its status bit.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();

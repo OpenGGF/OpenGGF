@@ -10,8 +10,10 @@ import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
+import com.openggf.game.sonic3k.objects.DoorObjectInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -183,6 +185,40 @@ class TestSidekickCpuDespawnParity {
         assertEquals(Direction.RIGHT, tails.getDirection());
         assertTrue(tails.isControlLocked());
         assertTrue(tails.isObjectControlled());
+    }
+
+    @Test
+    void s3kPanicOffscreenTimeoutUsesDirectMarkerFacing() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setDirection(Direction.LEFT);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+
+        controller.despawn(SidekickCpuController.DespawnCause.OFF_SCREEN_TIMEOUT);
+
+        assertEquals(Direction.RIGHT, tails.getDirection(),
+                "TailsCPU_CheckDespawn calls sub_13ECA directly and leaves status=Status_InAir");
+    }
+
+    @Test
+    void s3kPanicInteractMismatchContinuesIntoRoutineEightFacing() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.useGameRules(GameRules.SONIC_3K);
+        sonic.setCentreX((short) 0x0200);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+
+        controller.despawn(SidekickCpuController.DespawnCause.OBJECT_ID_MISMATCH);
+
+        assertEquals(Direction.LEFT, tails.getDirection(),
+                "loc_13F40 continues after sub_13EFC and faces from the post-warp sentinel");
     }
 
     @Test
@@ -364,6 +400,8 @@ class TestSidekickCpuDespawnParity {
         tails.setXSpeed((short) 0x041C);
         tails.setYSpeed((short) 0x0020);
         tails.setGSpeed((short) 0x041C);
+        tails.setAnimationId(2);
+        tails.setMappingFrame(0x96);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.setInitialState(SidekickCpuController.State.NORMAL);
@@ -380,6 +418,10 @@ class TestSidekickCpuDespawnParity {
         assertEquals((short) 0x041C, tails.getXSpeed());
         assertEquals((short) 0x0020, tails.getYSpeed());
         assertEquals((short) 0x041C, tails.getGSpeed());
+        assertEquals(2, tails.getAnimationId(),
+                "sub_13ECA does not replace the raw animation byte with Fly");
+        assertEquals(0x96, tails.getMappingFrame(),
+                "bit-7 object control retains the pre-warp displayed frame");
         assertEquals(0, tails.getDoubleJumpFlag(),
                 "S3K sub_13ECA clears double_jump_flag");
         assertTrue(tails.getAir());
@@ -755,6 +797,32 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kGenericKillAdoptsDeadRoutineAndAppliesNextFrameMarker() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0A7D);
+        tails.setCentreY((short) 0x0780);
+        tails.setAir(true);
+        tails.setYSpeed((short) -0x0700);
+        tails.setDead(true);
+        GameServices.camera().setY((short) 0x066C);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+
+        controller.update(0x2F7B);
+
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState());
+        assertEquals((short) 0x7F00, tails.getCentreX());
+        assertEquals((short) -0x0007, tails.getCentreY());
+        assertEquals((short) -0x06C8, tails.getYSpeed());
+        assertEquals(0x0002, controller.getDiagnosticRomCpuRoutine(),
+                "sub_13ECA replaces the prior CPU routine after generic Kill_Character");
+    }
+
+    @Test
     void s3kOffscreenDestroyedRideSlotDespawnsEvenWhenInteractIdIsUnchanged() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -971,6 +1039,20 @@ class TestSidekickCpuDespawnParity {
 
     @Test
     void s3kInteractWordProvidersMatchRomCodePointerHighWords() {
+        assertEquals(0x0003,
+                new DoorObjectInstance(
+                        new ObjectSpawn(0x1230, 0x0350, 0x3C, 0x80, 0, false, 0))
+                        .romObjectCodePointerHighWord(),
+                "Obj_Door variant pointers live at 0x00030xxx-0x00031xxx, so off-screen "
+                        + "Tails retains SST word 0 as 0x0003 "
+                        + "(docs/skdisasm/sonic3k.asm:66036-66167,26816-26843)");
+        assertEquals(0x0002,
+                new Sonic3kSpringObjectInstance(
+                        new ObjectSpawn(0x1888, 0x0330, 0x07, 0x12, 0, false, 0))
+                        .romObjectCodePointerHighWord(),
+                "Obj_Spring variant pointers live at 0x00022xxx-0x00023xxx, so off-screen "
+                        + "Tails compares SST word 0 as 0x0002 "
+                        + "(docs/skdisasm/sonic3k.asm:47500-47540,26816-26843)");
         assertEquals(0x0003,
                 new MhzCurledVineObjectInstance(
                         new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0))
@@ -1261,7 +1343,10 @@ class TestSidekickCpuDespawnParity {
                 objectRules.touchResponseUsesRenderFlagYGate(),
                 objectRules.touchResponseUsesPreviousCollisionResponseList(),
                 objectRules.animalObjectPreservesObjectMoveXSubpixel(),
-                objectRules.animalObjectUsesRenderFlagDeleteBounds())));
+                objectRules.animalObjectUsesRenderFlagDeleteBounds(),
+                objectRules.solidPushReleaseWritesWalkRunAnimationWord(),
+                objectRules.solidPushReleaseSkipsWalkRunWhenRolling(),
+                objectRules.solidPushReleaseSkipsWalkRunWhenSpindashing())));
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x02BC);
         tails.setCentreY((short) 0x0250);
@@ -1751,7 +1836,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void normalRoutineClearsRepeatedDelayedJumpPressHistoryAfterFirstS3kSample() {
+    void normalRoutinePreservesRepeatedDelayedJumpPressBytesForS3k() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.useGameRules(GameRules.SONIC_3K);
         sonic.setCentreX((short) 0x1200);
@@ -1777,10 +1862,10 @@ class TestSidekickCpuDespawnParity {
 
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
                 controller.getDiagnosticGeneratedHeldInput());
-        assertEquals(0,
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
                 controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP,
-                "S3K keeps the delayed held A/B/C bit visible but clears the repeated low-byte "
-                        + "jump press after the first follower-history sample.");
+                "S3K Stat_table stores the real low-byte Ctrl_1_Press_Logical value; "
+                        + "a consecutive action press must not be reconstructed from the aggregate held edge.");
     }
 
     @Test

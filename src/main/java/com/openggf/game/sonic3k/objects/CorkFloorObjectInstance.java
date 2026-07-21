@@ -165,6 +165,13 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Sonic_Move reads the object's width_pixels byte, not the default
+        // 16-pixel render width nor SolidObjectFull's +$B side extension.
+        return config.halfWidth;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return false;
     }
@@ -195,6 +202,7 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         savedPreContactRolling = false;
         rollingBreakPlayer = null;
 
+        resolveLaterSlotLeftSiblingBeforeRollingLanding(player);
         SolidCheckpointBatch batch = checkpointAll();
         for (PlayableEntity participant : participatingPlayers(player)) {
             if (broken) {
@@ -233,6 +241,38 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         }
 
         playerStanding = false;
+    }
+
+    private void resolveLaterSlotLeftSiblingBeforeRollingLanding(AbstractPlayableSprite player) {
+        if (mode == Mode.BREAK_FROM_BELOW || player == null
+                || player.getAnimationId() != 2 || player.getYSpeed() < 0) {
+            return;
+        }
+        int playerBottom = player.getCentreY() + player.getYRadius();
+        int floorTop = y - config.halfHeight;
+        if (playerBottom < floorTop || playerBottom > y
+                || Math.abs(player.getCentreX() - x) > config.halfWidth + player.getXRadius()) {
+            return;
+        }
+        ObjectManager objectManager = getObjectManager();
+        if (objectManager == null) {
+            return;
+        }
+        for (CorkFloorObjectInstance sibling :
+                objectManager.activeObjectsOfType(CorkFloorObjectInstance.class)) {
+            if (sibling == this || sibling.broken || sibling.getSlotIndex() <= getSlotIndex()) {
+                continue;
+            }
+            // Adjacent CorkFloor placements are loaded left-to-right by the
+            // native object-position cursor. A helper-created right floor can
+            // occupy an earlier engine slot, reversing the two SolidObjectFull
+            // calls. Replay only the still-unexecuted adjacent left sibling so
+            // the seam-side push occurs before this floor launches the rider.
+            if (sibling.y == y && sibling.x + (config.halfWidth * 2) == x) {
+                objectManager.processImmediateInlineSolidCheckpoint(sibling, player, List.of());
+                return;
+            }
+        }
     }
 
     private List<PlayableEntity> participatingPlayers(PlayableEntity updatePlayer) {

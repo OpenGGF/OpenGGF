@@ -206,11 +206,17 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
         int d2 = height;
         int d3 = height + 1;
 
-        // Calculate offset from spawn position to current position
-        int offsetX = currentX - baseX;
-        int offsetY = currentY - baseY;
+        // getX/getY expose the live native x_pos/y_pos, so collision is already
+        // anchored at the per-frame rectangle position. Applying the offset a
+        // second time would move the solid surface twice.
+        return new SolidObjectParams(d1, d2, d3, 0, 0);
+    }
 
-        return new SolidObjectParams(d1, d2, d3, offsetX, offsetY);
+    @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // ObjD2 stores the current x_pos in d4 immediately before SolidObject,
+        // so MvSonicOnPtfm observes zero object delta for this routine.
+        return false;
     }
 
     @Override
@@ -256,15 +262,37 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
         return frameData[3];
     }
 
+    @Override
+    public int getX() {
+        return currentX;
+    }
+
+    @Override
+    public int getY() {
+        return currentY;
+    }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        return FRAME_DATA[mappingFrame][2];
+    }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        // ObjD2 keeps the placement x in objoff_30 for MarkObjGone2 while
+        // x_pos follows the per-frame rectangle offsets.
+        return baseX;
+    }
+
     /**
-     * Override to use current computed position instead of base spawn position.
+     * Exposes the current computed position for diagnostics.
      */
     public int getCurrentX() {
         return currentX;
     }
 
     /**
-     * Override to use current computed position instead of base spawn position.
+     * Exposes the current computed position for diagnostics.
      */
     public int getCurrentY() {
         return currentY;

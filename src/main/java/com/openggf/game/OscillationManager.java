@@ -145,6 +145,16 @@ public final class OscillationManager {
         suppressedUpdates = Math.max(0, n);
     }
 
+    /** Advances the inherited table for the destination act's transition dispatch. */
+    public static void advanceForSeamlessTransition() {
+        int savedLastFrame = lastFrame;
+        int savedSuppressedUpdates = suppressedUpdates;
+        suppressedUpdates = 0;
+        update(savedLastFrame == Integer.MAX_VALUE ? Integer.MIN_VALUE : savedLastFrame + 1);
+        lastFrame = savedLastFrame;
+        suppressedUpdates = savedSuppressedUpdates;
+    }
+
     public static void update(int frameCounter) {
         if (frameCounter == lastFrame) {
             return;
