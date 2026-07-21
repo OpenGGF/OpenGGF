@@ -4,7 +4,6 @@ import com.openggf.camera.Camera;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -356,11 +355,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private int airZoomCueScaleStep;
     private int airZoomCueFrameCounter;
     private int airZoomCueGeneratedFrame;
-    @RewindTransient(reason = "Immutable ROM cache, recreated lazily after restore")
     private byte[] airZoomCueSourceRaster;
-    @RewindTransient(reason = "Derived render cache, recreated lazily after restore")
     private Pattern[] airZoomCuePatterns;
-    @RewindTransient(reason = "Derived instance renderer, recreated lazily after restore")
     private PatternSpriteRenderer airZoomCueRenderer;
     private S3kBossExplosionController endBossDefeatExplosionController;
     private boolean endBossDefeatHandoffComplete;
@@ -555,6 +551,17 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (compositeRenderChildrenSpawned) return;
         compositeRenderChildrenSpawned = true;
         spawnCompositeRenderChildren();
+    }
+
+    @Override
+    protected void recreateConstructionChildrenForRewind() {
+        // End-boss composite parts are created by the first update, not the
+        // constructor. Rebuild those candidates while ObjectManager's rewind
+        // reconstruction pool is active so each captured child adopts its exact
+        // identity before the parent's compact childComponents list resolves.
+        if (endBossMode) {
+            ensureCompositeRenderChildren();
+        }
     }
 
     private void updateEndBossRoutine(PlayableEntity playerEntity) {
@@ -1782,7 +1789,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     private int vIntRunCounter(int objectUpdateCounter) {
-        return objectUpdateCounter + services().objectManager().getVIntRunCounterPhaseOffset();
+        return services().vIntRunCounter(objectUpdateCounter);
     }
 
     /**

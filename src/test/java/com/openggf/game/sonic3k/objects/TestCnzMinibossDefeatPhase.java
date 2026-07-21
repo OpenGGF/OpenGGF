@@ -108,12 +108,18 @@ class TestCnzMinibossDefeatPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0200, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        // Defeat replaces the current object routine but deliberately preserves
+        // the live ROM $2E timer. Enter a valid live Move state with $2E=0;
+        // attacking the never-initialized placement would leave $2E=-1, a state
+        // the real collision path cannot reach and whose callback cannot expire.
+        boss.forceRoutineForTest(0x06);
 
         for (int i = 0; i < 4; i++) {
             boss.simulateHitForTest();
         }
-        // Let the defeat sequencer advance Obj_CNZMinibossEnd -> Obj_CNZMinibossEndGo.
-        for (int i = 0; i < 180; i++) boss.update(i, fixture.sprite());
+        // The inherited zero timer underflows on this update and dispatches
+        // Obj_CNZMinibossEndGo through the replacement $34 callback.
+        boss.update(0, fixture.sprite());
 
         assertFalse(cnz.isBossFlag(),
                 "Obj_CNZMinibossEndGo must clr.b Boss_flag (sonic3k.asm:144998)");

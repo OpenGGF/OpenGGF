@@ -235,7 +235,7 @@ class TestSonic3kMgz2EndBossEvents {
     void mgz2BossCollapseHandoff_ignoresStaleNonMgzRuntimeStateForPlayerMode() {
         GameServices.configuration().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         GameServices.configuration().setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
-        Sonic3kHCZEvents staleHczEvents = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents staleHczEvents = new Sonic3kHCZEvents(() -> 0);
         staleHczEvents.init(0);
         GameServices.zoneRuntimeRegistry().install(
                 new HczZoneRuntimeState(0, PlayerCharacter.KNUCKLES, staleHczEvents));

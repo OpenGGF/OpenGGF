@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestMantisBadnikInstance {
@@ -69,10 +70,15 @@ class TestMantisBadnikInstance {
         mantis.setServices(new StubObjectServices());
 
         mantis.update(0, null);
+        AbstractObjectInstance child = (AbstractObjectInstance) readField(mantis, "child");
         mantis.update(1, null);
 
         assertFalse((boolean) readField(mantis, "initialized"));
-        assertNull(readField(mantis, "child"));
+        assertNotNull(child, "the wait-offscreen Mantis keeps its visual child managed");
+        assertSame(mantis, readField(child, "parent"),
+                "the managed visual child must keep its owning Mantis reference");
+        assertSame(child, readField(mantis, "child"),
+                "repeated wait-offscreen updates must not duplicate the visual child");
         assertEquals(0x0490, mantis.getY());
         assertEquals(0, mantis.getCollisionFlags());
 
@@ -82,12 +88,14 @@ class TestMantisBadnikInstance {
 
         assertFalse((boolean) readField(mantis, "initialized"),
                 "Obj_WaitOffscreen only restores the saved Mantis operation on this pass");
-        assertNull(readField(mantis, "child"));
+        assertSame(child, readField(mantis, "child"),
+                "the visible handoff must retain the existing managed visual child");
 
         mantis.update(3, null);
 
         assertTrue((boolean) readField(mantis, "initialized"));
-        assertNotNull(readField(mantis, "child"));
+        assertSame(child, readField(mantis, "child"),
+                "activation must configure the existing child rather than spawning a second one");
         assertEquals(0x1A, mantis.getCollisionFlags());
     }
 

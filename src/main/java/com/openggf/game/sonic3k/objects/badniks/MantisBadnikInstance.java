@@ -81,6 +81,12 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
 
+        // The visual extension is a managed child for the whole live Mantis
+        // lifetime. Keep that structural graph available while Obj_WaitOffscreen
+        // owns the parent's behavioural handoff, so rewind can capture and
+        // restore the child identity independently of the first visible pass.
+        ensureVisualChild();
+
         // Obj_WaitOffscreen keeps the operation pointer at loc_85AD2 while its
         // $20-by-$20 placeholder remains outside Render_Sprites bounds. Engine
         // placement already bridges the visible restore dispatch, so initialize
@@ -140,12 +146,26 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private void initialize() {
-        child = spawnChild(() -> new MantisChild(this));
         mappingFrame = WAIT_FRAME;
         animIndex = -1;
         animTimer = 0;
         currentY = spawn.y();
         yVelocity = 0;
+    }
+
+    private void ensureVisualChild() {
+        if (child == null) {
+            child = spawnChild(() -> new MantisChild(this));
+        }
+    }
+
+    @Override
+    protected void recreateConstructionChildrenForRewind() {
+        // The child is created on Mantis's first update rather than in its Java
+        // constructor. Recreate it while ObjectManager's reconstruction pool is
+        // active so the captured child entry adopts this exact parent-owned
+        // instance instead of using the legacy geometric fallback below.
+        ensureVisualChild();
     }
 
     @Override
@@ -323,6 +343,15 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public void onUnload() {
+            detachFromParent();
+        }
+
+        @Override
+        protected void onDroppedAsUnmatchedRewindReconstructionChild() {
+            detachFromParent();
+        }
+
+        private void detachFromParent() {
             // The child has its own dynamic SST lifetime. If it is retired
             // before the parent, remove the parent's structural back-reference
             // before ObjectManager unregisters this child's rewind identity.

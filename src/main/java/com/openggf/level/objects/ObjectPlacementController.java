@@ -200,6 +200,128 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         this.windowingStrategy = strategy != null ? strategy : ObjectWindowingStrategy.LEGACY;
     }
 
+    boolean reservedSlotWaitsForNextObjectPass(int slotIndex, boolean updating,
+            int currentExecSlot, ObjectSlotLayout slotLayout) {
+        if (!updating || currentExecSlot < 0 || !slotLayout.isDynamicSlot(slotIndex)) {
+            return false;
+        }
+        int execIndex = slotLayout.toExecIndex(slotIndex);
+        return execIndex >= 0 && execIndex <= currentExecSlot;
+    }
+
+    boolean reallocateToFirstFreeDynamicSlot(AbstractObjectInstance object,
+            SlotAllocator slotAllocator, ObjectSlotLayout slotLayout,
+            ObjectInstance[] execOrder, boolean updating,
+            BitSet slotsFreedDuringObjectPass) {
+        if (object == null || !slotLayout.isDynamicSlot(object.getSlotIndex())) {
+            return false;
+        }
+        int oldSlot = object.getSlotIndex();
+        if (updating) {
+            slotsFreedDuringObjectPass.set(oldSlot);
+        }
+        slotAllocator.release(oldSlot);
+        int newSlot = slotAllocator.allocate();
+        if (newSlot < 0) {
+            slotAllocator.reserve(oldSlot);
+            return false;
+        }
+        object.setSlotIndex(newSlot);
+        int oldExecIndex = slotLayout.toExecIndex(oldSlot);
+        if (oldExecIndex >= 0 && oldExecIndex < execOrder.length
+                && execOrder[oldExecIndex] == object) {
+            execOrder[oldExecIndex] = null;
+        }
+        return true;
+    }
+
+    boolean releaseSpawnForRespawn(ObjectInstance transformedInstance, ObjectSpawn spawn,
+            Map<ObjectSpawn, ObjectInstance> activeObjects,
+            Map<ObjectInstance, ObjectSpawn> instanceToSpawn,
+            List<ObjectInstance> dynamicObjects) {
+        if (transformedInstance == null || spawn == null
+                || activeObjects.get(spawn) != transformedInstance) {
+            return false;
+        }
+        activeObjects.remove(spawn);
+        instanceToSpawn.remove(transformedInstance);
+        dynamicObjects.add(transformedInstance);
+        removeFromActiveForUnload(spawn);
+        if (twoAxisCursorPlacement) {
+            // Camera_Y re-scans entries between the live X cursors after the
+            // transformed instance clears its placement bit.
+            markDeferredVerticalLoad(spawn);
+        }
+        return true;
+    }
+
+    boolean dispatchDestroyRemoveFromActive(ObjectInstance instance, ObjectSpawn spawn,
+            boolean rememberRespawnTrackedSpawn) {
+        if (instance.isDestroyedRespawnable()) {
+            boolean retainForTwoAxisYPass = twoAxisCursorPlacement
+                    && isBetweenLoadCursors(spawn);
+            removeFromActiveForUnload(spawn);
+            if (retainForTwoAxisYPass) {
+                // ROM loc_1B982 reconsiders every clear respawn-table entry
+                // inside the live X window on the next Y-coarse crossing.
+                markDeferredVerticalLoad(spawn);
+            }
+            return false;
+        }
+        if (rememberRespawnTrackedSpawn && spawn != null && spawn.respawnTracked()) {
+            markRemembered(spawn);
+        }
+        removeFromActive(spawn);
+        return true;
+    }
+
+    boolean isSpawnVerticallyEligibleForTwoAxisYPass(ObjectSpawn spawn,
+            int previousYCoarse, int currentYCoarse, Camera camera) {
+        if (spawn == null || currentYCoarse == previousYCoarse) {
+            return false;
+        }
+        int bandTop = currentYCoarse > previousYCoarse
+                ? currentYCoarse + 0x180
+                : currentYCoarse - 0x80;
+        int bandBottom = currentYCoarse > previousYCoarse ? bandTop + 0x80 : currentYCoarse;
+        int spawnY = spawn.rawYWord() & 0x0FFF;
+        int wrapRange = camera != null && camera.isVerticalWrapEnabled()
+                ? camera.getVerticalWrapRange()
+                : 0;
+        if (wrapRange > 0 && (short) (camera != null ? camera.getMinY() : 0) < 0) {
+            int wrapMask = wrapRange - 1;
+            bandTop &= wrapMask;
+            bandBottom &= wrapMask;
+            return bandTop <= bandBottom
+                    ? spawnY >= bandTop && spawnY <= bandBottom
+                    : spawnY >= bandTop || spawnY <= bandBottom;
+        }
+        return bandTop >= 0 && spawnY >= bandTop && spawnY <= bandBottom;
+    }
+
+    static boolean isNonCounterSpawnVerticallyEligible(ObjectSpawn spawn,
+            int cameraY, int cameraMinY, int verticalWrapRange) {
+        if ((spawn.rawYWord() & 0x8000) != 0) {
+            return true;
+        }
+        int windowTop = (cameraY & 0xFF80) - 0x80;
+        int windowBottom = (cameraY & 0xFF80) + 0x200;
+        int spawnY = spawn.rawYWord() & 0x0FFF;
+        if ((short) cameraMinY < 0) {
+            int wrapRange = verticalWrapRange > 0 ? verticalWrapRange : 0x1000;
+            int wrapMask = wrapRange - 1;
+            if (windowTop < 0) {
+                return spawnY >= (windowTop & wrapMask) || spawnY <= windowBottom;
+            }
+            if (windowBottom > wrapRange) {
+                return spawnY >= windowTop || spawnY <= (windowBottom & wrapMask);
+            }
+        } else {
+            windowTop = Math.max(0, windowTop);
+        }
+        return spawnY >= windowTop && spawnY <= windowBottom;
+    }
+
     /**
      * ROM-exact S2 load/trim boundaries.
      * <p>

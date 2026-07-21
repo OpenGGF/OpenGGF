@@ -24,7 +24,9 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.objects.boss.BossStateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -46,6 +48,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -203,6 +206,28 @@ class TestMgzMinibossInstance {
     }
 
     @Test
+    void ceilingSpireDeclaresAndConsumesShieldDeflectProfile() throws Exception {
+        Class<?> spireClass = Class.forName(
+                "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild");
+        var spireCtor = spireClass.getDeclaredConstructor(int.class, int.class, int.class);
+        spireCtor.setAccessible(true);
+        TouchResponseProvider spire = (TouchResponseProvider) spireCtor.newInstance(0x100, 0x80, 0);
+
+        assertDoesNotThrow(() -> spireClass.getDeclaredMethod("getTouchResponseProfile"));
+        assertDoesNotThrow(() -> spireClass.getDeclaredMethod("getTouchResponseProfile", boolean.class));
+
+        TouchResponseProfile profile = spire.getTouchResponseProfile();
+        assertEquals(TouchShieldDeflectCapability.SHIELD_DEFLECT, profile.shieldDeflectCapability());
+        assertEquals(0x08, profile.shieldReactionFlags());
+
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x120, (short) 0x80);
+        assertTrue(spire.onShieldDeflect(player));
+        assertEquals(0, spire.getCollisionFlags(),
+                "loc_88820 clears the spire's collision response after the shield deflect");
+    }
+
+    @Test
     void upsideDownStatePersistsThroughDropAndRiseThenClearsBeforeTunnelUp() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzMinibossInstance boss = createBoss(services);
@@ -233,8 +258,28 @@ class TestMgzMinibossInstance {
 
         setPrivateInt(boss, "routineTimer", 0);
         boss.update(5, player);
-        assertEquals(6, state.routine);
-        assertFalse(getPrivateBoolean(boss, "upsideDown"), "Tunnel-up should clear the upside-down render state");
+        assertEquals(18, state.routine,
+                "StartNextCycle should retain the return-swing routine for its final Obj_Wait callback");
+        assertEquals(0x1F, getPrivateInt(boss, "routineTimer"),
+                "StartNextCycle should install the ROM's $1F release-wait counter");
+        assertFalse(getPrivateBoolean(boss, "upsideDown"),
+                "StartNextCycle should clear the vertical render flip before tunnel-up");
+
+        for (int frame = 6; frame <= 36; frame++) {
+            boss.update(frame, player);
+            assertEquals(18, state.routine,
+                    "Obj_Wait should retain routine $12 through countdown value zero");
+            assertFalse(getPrivateBoolean(boss, "upsideDown"),
+                    "The vertical render flip should stay cleared throughout the release wait");
+        }
+        assertEquals(0, getPrivateInt(boss, "routineTimer"),
+                "Thirty-one Obj_Wait dispatches should count $1F down to zero without invoking the callback");
+
+        boss.update(37, player);
+        assertEquals(6, state.routine,
+                "The thirty-second Obj_Wait dispatch should go negative and invoke RestartRumble");
+        assertFalse(getPrivateBoolean(boss, "upsideDown"),
+                "Tunnel-up should inherit the cleared vertical render state");
     }
 
     @Test
@@ -375,16 +420,61 @@ class TestMgzMinibossInstance {
                 .findFirst()
                 .orElseThrow();
 
-        camera.setX((short) 0x2DFF);
-        camera.setMinX((short) 0x2DFF);
-        camera.setMaxX((short) 0x2DFF);
+        camera.setX((short) 0x2DFE);
+        camera.setMinX((short) 0x2DFE);
+        camera.setMaxX((short) 0x2DFE);
 
         helper.update(80, player);
+
+        assertEquals(0x2DFF, camera.getX() & 0xFFFF, "Camera helper should advance one pixel per frame");
+        assertEquals(0x2DFF, camera.getMinX() & 0xFFFF, "Camera helper should carry the left lock with it");
+        assertEquals(0x2DFF, camera.getMaxX() & 0xFFFF, "Camera helper should carry the right lock with it");
+        assertFalse(helper.isDestroyed(), "Camera helper should remain active before reaching its target");
+
+        helper.update(81, player);
 
         assertEquals(0x2E00, camera.getX() & 0xFFFF, "Camera helper should stop at the ROM target X");
         assertEquals(0x2E00, camera.getMinX() & 0xFFFF, "Camera helper should advance the left lock");
         assertEquals(0x2E00, camera.getMaxX() & 0xFFFF,
                 "Camera helper should also clamp the right bound during the signpost handoff");
+        assertTrue(helper.isDestroyed(), "Camera helper should release ownership once the target is reached");
+    }
+
+    @Test
+    void defeatCameraHelperDoesNotAdvancePastTarget() {
+        RecordingServices services = new RecordingServices(camera);
+        MgzMinibossInstance.MgzBossCameraScrollHelper helper =
+                new MgzMinibossInstance.MgzBossCameraScrollHelper(0x2E00);
+        helper.setServices(services);
+        camera.setX((short) 0x2E00);
+        camera.setMinX((short) 0x2E00);
+        camera.setMaxX((short) 0x2E00);
+
+        helper.update(0, null);
+
+        assertCameraLockedAtTarget(helper);
+    }
+
+    @Test
+    void defeatCameraHelperClampsRestoredCameraAboveTarget() {
+        RecordingServices services = new RecordingServices(camera);
+        MgzMinibossInstance.MgzBossCameraScrollHelper helper =
+                new MgzMinibossInstance.MgzBossCameraScrollHelper(0x2E00);
+        helper.setServices(services);
+        camera.setX((short) 0x2E01);
+        camera.setMinX((short) 0x2E01);
+        camera.setMaxX((short) 0x2E01);
+
+        helper.update(0, null);
+
+        assertCameraLockedAtTarget(helper);
+    }
+
+    private void assertCameraLockedAtTarget(ObjectInstance helper) {
+        assertEquals(0x2E00, camera.getX() & 0xFFFF, "Camera X should clamp to the handoff target");
+        assertEquals(0x2E00, camera.getMinX() & 0xFFFF, "Left bound should clamp to the handoff target");
+        assertEquals(0x2E00, camera.getMaxX() & 0xFFFF, "Right bound should clamp to the handoff target");
+        assertTrue(helper.isDestroyed(), "Camera helper should release ownership at the target");
     }
 
     @Test
@@ -422,6 +512,12 @@ class TestMgzMinibossInstance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
+    }
+
+    private static int getPrivateInt(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
     }
 
     private static void setPrivateBoolean(Object target, String fieldName, boolean value) throws Exception {

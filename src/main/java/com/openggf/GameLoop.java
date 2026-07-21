@@ -51,7 +51,6 @@ import com.openggf.level.BigRingReturnState;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PersistentRespawnState;
 import static org.lwjgl.glfw.GLFW.*;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -141,6 +140,8 @@ public class GameLoop {
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
     private final BootScreenModeController bootScreenModeController = new BootScreenModeController();
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
+    private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator =
+            new BonusStageTransitionCoordinator();
     private final PresenceManager presenceManager;
     private final EscapeToMasterTitleController escapeToMasterTitleController;
     private MasterTitleLaunchCoordinator masterTitleLaunchCoordinator;
@@ -196,16 +197,6 @@ public class GameLoop {
     // exit so the return star post stays used even though Last_star_post_hit was
     // zeroed (sonic3k.asm:61924). -1 when no bonus entry is in flight.
     private int pendingBonusReturnStarPostMark = -1;
-    // Persistent respawn-remember state (Object_respawn_table model) captured at
-    // bonus entry and re-established on bonus return. The ROM keeps
-    // Object_respawn_table across the star-post-bonus Restart_level_flag reload
-    // via Respawn_table_keep=1 (sonic3k.asm:61930; the reload's clear routines
-    // skip it, e.g. sub_EB1A :18564-18570), so objects broken/collected before
-    // the bonus stay that way on return; the engine rebuilds a fresh
-    // ObjectPlacementController on reload, so it carries the table here instead.
-    // Not rewound: the bonus round-trip is not a rewindable window, and this is
-    // consumed on the return reload before the first rewindable level frame.
-    private PersistentRespawnState pendingBonusReturnRespawnState;
 
     // Flag to freeze level updates during the final-boss fade into ending mode.
     private boolean endingTransitionPending;
@@ -2208,104 +2199,19 @@ public class GameLoop {
             return;
         }
 
-        // Capture state snapshot
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-
-        int playerX = 0, playerY = 0;
-        byte topSolidBit = 0, lrbSolidBit = 0;
-        int savedShieldStatus = 0;
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            playerX = playable.getCentreX();
-            playerY = playable.getCentreY();
-            topSolidBit = playable.getTopSolidBit();
-            lrbSolidBit = playable.getLrbSolidBit();
-            savedShieldStatus = encodeSavedShieldStatus(playable);
-        }
-
-        // ROM: the bonus RETURN restores the player to the STAR POST's position,
-        // not the player's live centre at touch time. The star-post touch saves
-        // the star post's own x_pos/y_pos (sub_2D164: move.w x_pos(a0),(Saved_X_pos).w
-        // where a0 is the star post, sonic3k.asm:61705-61706; the Special_bonus_entry
-        // return in loc_2D2C2/loc_2D274 reloads Player_1 from those saved cells),
-        // and the player is typically a few pixels off the post when the collision
-        // fires. The engine already captured the star post's spawn x/y into the
-        // checkpoint state via Sonic3kStarPostObjectInstance.activate ->
-        // saveCheckpoint(spawn.x, spawn.y), so prefer that over the live centre to
-        // reproduce the ROM return position exactly.
-        RespawnState entryCheckpoint = levelManager.getCheckpointState();
-        if (entryCheckpoint != null && entryCheckpoint.isActive()) {
-            playerX = entryCheckpoint.getSavedX();
-            playerY = entryCheckpoint.getSavedY();
-        }
-
-        LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
-        int resizeFg = 0, resizeBg = 0;
-        if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
-            resizeFg = eventMgr.getEventRoutineFg();
-            resizeBg = eventMgr.getEventRoutineBg();
-        }
-
-        int zoneAndAct = (levelManager.getCurrentZone() << 8) | levelManager.getCurrentAct();
-        int apparentZoneAndAct = (levelManager.getCurrentZone() << 8) | levelManager.getApparentAct();
-        int ringCount = 0;
-        long savedTimerFrames = 0;
-        if (levelManager.getLevelGamestate() != null) {
-            ringCount = levelManager.getLevelGamestate().getRings();
-            savedTimerFrames = levelManager.getLevelGamestate().getTimerFrames();
-        }
-
-        // ROM: a star-post BONUS entry (the only way S3K reaches a bonus stage)
-        // zeroes Last_star_post_hit at the moment it commits the entry --
-        // Obj_StarPost routine 8 / loc_2D4CA: move.b #0,(Last_star_post_hit).w
-        // (sonic3k.asm:61924). The star post's own checkpoint save (sub_2D164:
-        // move.b subtype(a0),(Last_star_post_hit).w, :61704) is overwritten here,
-        // and the bonus-return path (Load_Starpost_Settings -> loc_2D2C2, :61795)
-        // never restores Last_star_post_hit, so after the round trip it is 0 --
-        // NOT the star post's subtype. Capture that zero so the restored
-        // checkpoint index (doExitBonusStage -> cs.restoreFromSaved) matches the
-        // ROM. isBonusStageReturn() still latches on index >= 0, so intro-skip is
-        // unaffected. (Reading getLastCheckpointIndex() here was the pre-fix bug:
-        // it saved the subtype and mis-restored a non-zero checkpoint on return.)
-        int lastStarPostHit = 0;
-        // Capture the star-post ACTIVATION high-water (the just-activated star
-        // post's subtype) so doExitBonusStage can re-establish it after the return
-        // reload zeroes it. ROM keeps the star post's respawn bit set across the
-        // reload (Respawn_table_keep=1, sonic3k.asm:61930); without this the
-        // returned star post -- which the player is repositioned onto -- would fail
-        // its activation guard (mark >= subtype) and re-trigger, re-saving its
-        // subtype as the checkpoint index and defeating the zero above.
-        pendingBonusReturnStarPostMark =
-                (entryCheckpoint != null && entryCheckpoint.isActive())
-                        ? entryCheckpoint.getStarPostActivationMark()
-                        : -1;
-
-        // ROM Respawn_table_keep model: capture the live respawn-remember table
-        // (broken/collected/remembered spawns) now so the bonus-return reload can
-        // re-establish it, mirroring the ROM keeping Object_respawn_table across
-        // the Restart_level_flag reload (sonic3k.asm:61930). Without this, objects
-        // the player destroyed before the bonus (e.g. a broken monitor) respawn
-        // intact/solid on return -- a phantom wall.
-        pendingBonusReturnRespawnState =
-                levelManager.getObjectManager() != null
-                        ? levelManager.getObjectManager().capturePersistentRespawn()
-                        : null;
-
-        BonusStageState savedState = new BonusStageState(
-                zoneAndAct,
-                apparentZoneAndAct,
-                ringCount,
-                0, // TODO: wire to GameStateManager.getExtraLifeFlags() once API exists
-                lastStarPostHit,
-                savedShieldStatus,
-                resizeFg, resizeBg,
-                playerX, playerY,
-                camera.getX(), camera.getY(),
-                topSolidBit, lrbSolidBit,
-                camera.getMaxY(),
-                savedTimerFrames,
-                captureCurrentWaterLevelForStageReturn()
-        );
+        var sprite = spriteManager.getSprite(resolveMainCharacterCode());
+        AbstractPlayableSprite playable = sprite instanceof AbstractPlayableSprite candidate
+                ? candidate
+                : null;
+        var capture = bonusStageTransitionCoordinator.captureEntry(
+                levelManager,
+                camera,
+                waterSystem,
+                playable,
+                GameServices.module().getLevelEventProvider(),
+                encodeSavedShieldStatus(playable));
+        BonusStageState savedState = capture.savedState();
+        pendingBonusReturnStarPostMark = capture.pendingStarPostActivationMark();
 
         // Fade out music
         audioManager.fadeOutMusic();
@@ -2518,9 +2424,8 @@ public class GameLoop {
         // reset it, and restore it on return below (replacing the former
         // savedRingCount + rewards.rings() reconstruction, which double-counted the
         // gumball ball as +20 and returned 79 rings where the ROM returns 69).
-        int interiorExitRingCount = levelManager.getLevelGamestate() != null
-                ? levelManager.getLevelGamestate().getRings()
-                : (savedState != null ? savedState.savedRingCount() : 0);
+        int interiorExitRingCount =
+                bonusStageTransitionCoordinator.captureInteriorExitRingCount(levelManager, savedState);
 
         // Capture rewards BEFORE onExit() in case it resets counters.
         BonusStageProvider.BonusStageRewards rewards = provider.getRewards();
@@ -2556,6 +2461,7 @@ public class GameLoop {
             levelManager.setBonusStageReturnCheckpointIndex(savedState.savedLastStarPostHit());
             // Suppress auto-music: zone music starts below during the title card
             levelManager.setSuppressNextMusicChange(true);
+            bonusStageTransitionCoordinator.prepareReturnLoad(levelManager);
             levelManager.loadZoneAndAct(zone, act);
             // Consume the auto-generated title card request — we initialize it ourselves below
             levelManager.consumeTitleCardRequest();
@@ -2565,93 +2471,29 @@ public class GameLoop {
             levelManager.clearBonusStageReturn();
         }
 
-        // Re-establish the respawn-remember table captured at bonus entry onto the
-        // freshly reloaded ObjectManager (ROM Respawn_table_keep: the live
-        // Object_respawn_table survives the Restart_level_flag reload,
-        // sonic3k.asm:61930). Objects the player destroyed/collected before the
-        // bonus stay that way on return -- e.g. a monitor broken pre-bonus reloads
-        // as its inert broken shell (Obj_MonitorInit broken branch :40471-40478)
-        // instead of a fresh solid monitor that would wall the player.
-        if (pendingBonusReturnRespawnState != null && levelManager.getObjectManager() != null) {
-            levelManager.getObjectManager().restorePersistentRespawn(pendingBonusReturnRespawnState);
-        }
-        pendingBonusReturnRespawnState = null;
-
-        // Restore checkpoint state so starposts show as activated (ROM: Saved_last_star_post_hit)
-        if (savedState.savedLastStarPostHit() >= 0) {
-            RespawnState cs = levelManager.getCheckpointState();
-            if (cs != null) {
-                cs.restoreFromSaved(
-                        savedState.playerX(), savedState.playerY(),
-                        savedState.cameraX(), savedState.cameraY(),
-                        savedState.savedLastStarPostHit());
-                // Re-establish the star-post activation high-water zeroed by the
-                // reload's clear() (ROM Respawn_table_keep). The checkpoint index
-                // above is the ROM-faithful 0; the mark keeps the return star post
-                // recognised as used so it does not re-trigger onto the player.
-                cs.restoreStarPostActivationMark(pendingBonusReturnStarPostMark);
-            }
-        }
-        pendingBonusReturnStarPostMark = -1;
-
-        // Restore event routine state (prevents camera lock replay)
-        LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
-        if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
-            eventMgr.restoreEventRoutineState(
-                    savedState.dynamicResizeRoutineFg(),
-                    savedState.dynamicResizeRoutineBg());
-        }
-
-        // Restore player position and collision path
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            playable.setCentreX((short) savedState.playerX());
-            playable.setCentreY((short) savedState.playerY());
-            playable.setTopSolidBit(savedState.topSolidBit());
-            playable.setLrbSolidBit(savedState.lrbSolidBit());
-            playable.setXSpeed((short) 0);
-            playable.setYSpeed((short) 0);
-            playable.setGSpeed((short) 0);
-
-            ShieldType shieldToRestore =
-                    resolveShieldToRestore(rewards, savedState.savedStatusSecondary());
+        var sprite = spriteManager.getSprite(resolveMainCharacterCode());
+        AbstractPlayableSprite playable = sprite instanceof AbstractPlayableSprite candidate
+                ? candidate
+                : null;
+        ShieldType shieldToRestore = playable != null
+                ? resolveShieldToRestore(rewards, savedState.savedStatusSecondary())
+                : null;
+        if (playable != null) {
             pendingBonusStageShieldRestore = shieldToRestore;
-            if (shieldToRestore != null) {
-                playable.giveShield(shieldToRestore);
-            }
-
-            // ROM: the player's art_tile priority bit was set to HIGH during bonus
-            // stage entry (line 127411). Reset it on exit — the normal level's player
-            // priority will be determined by plane switching / zone events.
-            // loadZoneAndAct() + resetState() should clear this, but be explicit.
-            playable.setHighPriority(false);
-            playable.setPriorityBucket(2); // RenderPriority.PLAYER_DEFAULT
         }
-
-        // Restore camera
-        camera.setX((short) savedState.cameraX());
-        camera.setY((short) savedState.cameraY());
-        camera.setMaxY((short) savedState.cameraMaxY());
-        camera.updatePosition(true);
-        restoreSavedWaterLevelForStageReturn(savedState.meanWaterLevel());
-
-        // Restore ring count from the interior's live HUD total at exit (ROM
-        // loc_61076 Ring_count->Saved_ring_count copy, then reload restores it).
-        if (levelManager.getLevelGamestate() != null) {
-            levelManager.getLevelGamestate().setRings(interiorExitRingCount);
-            // Restore HUD timer frames before resuming
-            levelManager.getLevelGamestate().setTimerFrames(savedState.savedTimerFrames());
-            // Resume HUD timer (ROM: Update_HUD_timer restored after bonus stage exit)
-            levelManager.getLevelGamestate().resumeTimer();
-        }
-
-        // Award lives collected during the bonus stage
-        if (rewards.lives() > 0) {
-            for (int i = 0; i < rewards.lives(); i++) {
-                gameState.addLife();
-            }
-        }
+        bonusStageTransitionCoordinator.restoreReturnState(
+                levelManager,
+                camera,
+                waterSystem,
+                playable,
+                GameServices.module().getLevelEventProvider(),
+                savedState,
+                pendingBonusReturnStarPostMark,
+                interiorExitRingCount,
+                shieldToRestore,
+                rewards,
+                gameState::addLife);
+        pendingBonusReturnStarPostMark = -1;
 
         // Initialize zone title card (ROM: Level routine always shows title card on reload)
         int apparentZone = (savedState.savedApparentZoneAndAct() >> 8) & 0xFF;
@@ -2679,31 +2521,6 @@ public class GameLoop {
             gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
         }
         LOGGER.info("Exiting bonus stage, entering zone title card for zone " + zone + " act " + act);
-    }
-
-    private int captureCurrentWaterLevelForStageReturn() {
-        if (waterSystem == null || levelManager == null) {
-            return 0;
-        }
-        int featureZone = levelManager.getFeatureZoneId();
-        int featureAct = levelManager.getFeatureActId();
-        if (!waterSystem.hasWater(featureZone, featureAct)) {
-            return 0;
-        }
-        return waterSystem.getWaterLevelY(featureZone, featureAct);
-    }
-
-    private void restoreSavedWaterLevelForStageReturn(int meanWaterLevel) {
-        if (meanWaterLevel <= 0 || waterSystem == null || levelManager == null) {
-            return;
-        }
-        int featureZone = levelManager.getFeatureZoneId();
-        int featureAct = levelManager.getFeatureActId();
-        if (!waterSystem.hasWater(featureZone, featureAct)) {
-            return;
-        }
-        waterSystem.setWaterLevelDirect(featureZone, featureAct, meanWaterLevel);
-        waterSystem.setWaterLevelTarget(featureZone, featureAct, meanWaterLevel);
     }
 
     static int encodeSavedShieldStatus(AbstractPlayableSprite playable) {
@@ -3016,15 +2833,8 @@ public class GameLoop {
                 }
             }
         }
-        applyTitleCardControlLock(true);
-
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            int freshPlayerPreludeFrames = GameServices.module()
-                    .getLevelInitProfile()
-                    .freshMainPlayablePreludeFrames();
-            spriteManager.warmUpFreshMainPlayableOnly(
-                    freshPlayerPreludeFrames, levelManager, playable);
-        }
+        InLevelTitleCardCoordinator.prepareResultsTransition(
+                sprite, this::applyTitleCardControlLock, GameServices::module, spriteManager, levelManager);
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {

@@ -611,7 +611,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         cnz.setCameraClampsActive(true);
         LevelEventSnapshot cnzSnapshot = cnzSource.capture();
 
-        Sonic3kHCZEvents hczPayloadSource = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents hczPayloadSource = new Sonic3kHCZEvents(() -> 0);
         hczPayloadSource.init(1);
         hczPayloadSource.setWallMoving(true);
         LevelEventSnapshot malformedSnapshot = snapshotWithCorruptHczLength(
@@ -647,7 +647,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         cnz.setCameraClampsActive(true);
         LevelEventSnapshot cnzSnapshot = cnzSource.capture();
 
-        Sonic3kHCZEvents hczPayloadSource = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents hczPayloadSource = new Sonic3kHCZEvents(() -> 0);
         hczPayloadSource.init(1);
         hczPayloadSource.setWallMoving(true);
         LevelEventSnapshot malformedSnapshot = snapshotWithCorruptHczLength(
@@ -1902,6 +1902,10 @@ class TestSonic3kLevelEventRewindSnapshot {
 
     private static final class HczProbeEvents extends Sonic3kHCZEvents {
         private HczProbeMode probeMode = HczProbeMode.ZERO;
+
+        private HczProbeEvents() {
+            super(() -> 0);
+        }
 
         private HczProbeMode getProbeMode() {
             return probeMode;

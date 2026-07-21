@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.bonusstage.slots;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -535,8 +536,8 @@ public final class S3kSlotPlayerRuntime {
      * captureSlotOriginFromPlayer) from the ROM's 32-bit accumulation.
      */
     private void syncPlayerToSlotOrigin(AbstractPlayableSprite player) {
-        player.setCentreXPreserveSubpixel((short) (slotOriginX >> POSITION_SHIFT));
-        player.setCentreYPreserveSubpixel((short) (slotOriginY >> POSITION_SHIFT));
+        NativePositionOps.writeXPosPreserveSubpixel(player, slotOriginX >> POSITION_SHIFT);
+        NativePositionOps.writeYPosPreserveSubpixel(player, slotOriginY >> POSITION_SHIFT);
         player.setSubpixelRaw(slotOriginX & 0xFFFF, slotOriginY & 0xFFFF);
     }
 }

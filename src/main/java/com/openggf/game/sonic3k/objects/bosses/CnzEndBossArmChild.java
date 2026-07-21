@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -9,6 +8,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -17,7 +17,8 @@ import java.util.List;
 /** One of the four {@code ChildObjDat_6EDD4 -> loc_6E95A} orbiting arms. */
 final class CnzEndBossArmChild extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
-    @RewindTransient(reason = "Structural boss graph link recreated with the parent.")
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
+            com.openggf.game.profiles.touchresponse.TouchResponseProfile.standardEnemy(true));
     private final CnzEndBossInstance boss;
     private int centreX;
     private int centreY;
@@ -238,6 +239,10 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
     @Override public int getCollisionProperty() { return 0; }
     @Override public TouchRegion[] getMultiTouchRegions() {
         return new TouchRegion[] { new TouchRegion(centreX, centreY, getCollisionFlags()) };
+    }
+    @Override public TouchResponseProfile getTouchResponseProfile() { return TOUCH_RESPONSE_PROFILE; }
+    @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
     @Override public boolean isPersistent() { return true; }
     @Override public int getPriorityBucket() { return (angle + 0x40 & 0x80) == 0 ? 4 : 5; }

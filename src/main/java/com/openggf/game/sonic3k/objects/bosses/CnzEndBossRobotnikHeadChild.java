@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -16,7 +15,6 @@ import java.util.List;
 /** ROM {@code Child1_MakeRoboHead -> Obj_RobotnikHead}. */
 public final class CnzEndBossRobotnikHeadChild extends AbstractObjectInstance
         implements RewindRecreatable {
-    @RewindTransient(reason = "Structural ship graph link recreated through CnzEndBossRewindLinks.")
     private final CnzEndBossRobotnikShipChild ship;
     private int centreX;
     private int centreY;

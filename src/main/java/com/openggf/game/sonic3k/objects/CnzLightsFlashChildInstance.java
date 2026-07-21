@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -59,7 +58,6 @@ public final class CnzLightsFlashChildInstance extends AbstractObjectInstance im
 
     private boolean restoreAfter;
 
-    @RewindTransient(reason = "Derived owner back-link; the button's captured spawnedFlash link is authoritative")
     private Cnz2CutsceneButtonInstance owner;
 
     private byte[] flashData;

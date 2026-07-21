@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.boss.AbstractBossChild;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -199,6 +201,34 @@ class TestS3kLbzEndBossChildLinksRewind {
     }
 
     @Test
+    void midDefeatExplosionControllerIsDeferredOutsideTheCapturedStructuralChildGraph() throws Exception {
+        ObjectManager objectManager = createManagerWithBoss();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        LbzEndBossInstance boss = only(objectManager, LbzEndBossInstance.class);
+        invokePrivate(boss, "startDefeat");
+
+        ObjectInstance controller = firstOfSimpleName(objectManager, "LbzEndBossExplosionControllerChild");
+        assertTrue(boss.getOwnedChildrenForTests().contains(controller),
+                "the controller remains a live boss-owned helper while defeat is active");
+        assertFalse(boss.getChildComponents().contains(controller),
+                "the deferred controller must not be treated as a compact structural child reference");
+        assertSame(boss, parentOf((AbstractBossChild) controller),
+                "the live deferred controller still keeps its normal parent back-reference");
+
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+        rewindRegistry.restore(snapshot);
+
+        LbzEndBossInstance restored = only(objectManager, LbzEndBossInstance.class);
+        assertEquals(0, liveOfSimpleName(objectManager, "LbzEndBossExplosionControllerChild"),
+                "the documented deferred controller must not be fabricated by generic reconstruction");
+        assertFalse(restored.getChildComponents().stream()
+                        .anyMatch(child -> child.getClass().getSimpleName().equals("LbzEndBossExplosionControllerChild")),
+                "the restored compact graph must not retain an unresolved deferred controller link");
+    }
+
+    @Test
     void midDefeatRewindKeepsExtenderAndCameraBoundaryCoherent() throws Exception {
         // POST_DEFEAT_CAMERA_MAX_X is $3AB8; start the boundary below it so the extender
         // keeps extending (does not immediately snap-and-expire).
@@ -283,6 +313,12 @@ class TestS3kLbzEndBossChildLinksRewind {
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static Object parentOf(AbstractBossChild child) throws Exception {
+        var parent = AbstractBossChild.class.getDeclaredField("parent");
+        parent.setAccessible(true);
+        return parent.get(child);
     }
 
     private static ObjectManager createManagerWithBoss() {

@@ -2,8 +2,9 @@ package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -45,7 +46,7 @@ public final class HczEndBossBladeImpactExplosion extends AbstractBossChild
             return;
         }
         if (boss.isDefeatSignal()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         // loc_6B77C publishes mapping frame 0 on its setup dispatch. The next
@@ -61,7 +62,7 @@ public final class HczEndBossBladeImpactExplosion extends AbstractBossChild
         frameTimer = FRAME_DELAY;
         mappingFrame++;
         if (mappingFrame >= FINAL_FRAME) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         }
     }
 

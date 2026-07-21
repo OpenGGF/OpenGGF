@@ -35,6 +35,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -80,7 +82,7 @@ class TestSonic3kHCZEvents {
         GameplayModeContext gameplayMode = SessionManager.openGameplaySession(sessionModule, saveContext);
         TestEnvironment.activeGameplayMode();
 
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
         events.init(0);
         events.setEventsFg5(true);
         GameServices.gameState().setEndOfLevelFlag(true);
@@ -102,7 +104,7 @@ class TestSonic3kHCZEvents {
         GameServices.camera().setX((short) 0x0800);
         GameServices.camera().setY((short) 0x0600);
 
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
         events.init(1);
 
         tickAct2(events, 0);
@@ -133,7 +135,7 @@ class TestSonic3kHCZEvents {
         GameServices.camera().setX((short) 0x0800);
         GameServices.camera().setY((short) 0x0600);
 
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
         events.init(1);
 
         tickAct2(events, 0);
@@ -159,7 +161,7 @@ class TestSonic3kHCZEvents {
         GameServices.camera().setX((short) 0x0800);
         GameServices.camera().setY((short) 0x0600);
 
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
         events.init(1);
         tickAct2(events, 0);
 
@@ -184,7 +186,7 @@ class TestSonic3kHCZEvents {
         secondSidekick.setInWater(true);
         GameServices.sprites().addSprite(secondSidekick, "knuckles");
 
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
         events.init(1);
         GameServices.water().setDynamicWaterLocked(Sonic3kZoneIds.ZONE_HCZ, 1, true);
 
@@ -226,15 +228,14 @@ class TestSonic3kHCZEvents {
         GameServices.camera().setFocusedSprite(player);
         GameServices.camera().setX((short) 0x0080);
         GameServices.sprites().addSprite(player, "sonic");
-        long initialSeed = 0x12345678L;
-        GameServices.rng().setSeed(initialSeed);
-        GameRng expectedRng = new GameRng(GameRng.Flavour.S3K, initialSeed);
-        int firstRandom = expectedRng.nextRaw();
-        for (int draw = 1; draw < 0x30; draw++) {
-            expectedRng.nextRaw();
-        }
+        int firstRandom = 0x0015_0081;
+        AtomicInteger randomDraws = new AtomicInteger();
+        IntSupplier randomWords = () -> {
+            randomDraws.incrementAndGet();
+            return firstRandom;
+        };
 
-        RecordingHczEvents events = new RecordingHczEvents();
+        RecordingHczEvents events = new RecordingHczEvents(randomWords);
         events.init(1);
         events.startPostTransitionCutscene();
 
@@ -255,8 +256,8 @@ class TestSonic3kHCZEvents {
         assertEquals(GameServices.water().getWaterLevelY(Sonic3kZoneIds.ZONE_HCZ, 1)
                         + 8 + ((firstRandom >>> 16) & 0x1F),
                 firstBubble.getY());
-        assertEquals(expectedRng.getSeed(), GameServices.rng().getSeed(),
-                "each child must consume exactly one shared Random_Number result");
+        assertEquals(0x30, randomDraws.get(),
+                "each child must consume exactly one injected Random_Number result");
 
         events.updateRetainedCarrierObjectPass(1);
         assertEquals(0x30, events.transitionBubbleCount());
@@ -344,6 +345,10 @@ class TestSonic3kHCZEvents {
 
     private static final class RecordingHczEvents extends Sonic3kHCZEvents {
         private final List<ObjectInstance> spawnedObjects = new ArrayList<>();
+
+        private RecordingHczEvents(IntSupplier randomWordSource) {
+            super(randomWordSource);
+        }
 
         @Override
         protected <T extends ObjectInstance> T spawnObject(Supplier<T> factory) {

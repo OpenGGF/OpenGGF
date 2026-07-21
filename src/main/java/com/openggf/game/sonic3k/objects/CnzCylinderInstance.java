@@ -414,10 +414,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     private void updateRiderSlot(RiderSlot slot, int frameCounter) {
         AbstractPlayableSprite player = slot.player;
-        if (player == null || player.getDead() || player.isHurt()) {
+        if (isInvalidRider(player)) {
             if (slot.active) {
                 beginPlayerTwoDiagnostic(slot, "release_invalid", player);
-                releaseSlot(slot, frameCounter, false);
+                releaseInvalidSlot(slot, frameCounter);
                 endPlayerTwoDiagnostic(slot, player);
             }
             slot.contactLatched = false;
@@ -527,6 +527,16 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         }
         captureSlot(slot, player, latchedContact);
         endPlayerTwoDiagnostic(slot, player);
+    }
+
+    private static boolean isInvalidRider(AbstractPlayableSprite player) {
+        // Player movement runs before Obj47. A grounded hurt landing can clear
+        // the live hurt flag during that earlier player slot, but the cylinder
+        // must still consume the invalid rider state that entered this frame.
+        return player == null
+                || player.getDead()
+                || player.isHurt()
+                || player.getHurtAtFrameStart();
     }
 
     private boolean hasStandingBit(AbstractPlayableSprite player) {
@@ -792,6 +802,14 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         slot.active = false;
     }
 
+    private void releaseInvalidSlot(RiderSlot slot, int frameCounter) {
+        AbstractPlayableSprite player = slot.player;
+        if (player != null) {
+            clearCylinderReleaseSupport(player);
+        }
+        releaseSlot(slot, frameCounter, false);
+    }
+
     private void releaseSlot(RiderSlot slot, int frameCounter, boolean jumpedOff) {
         releaseSlot(slot, frameCounter, jumpedOff, (short) 0);
     }
@@ -900,7 +918,8 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity player) {
-        return player != releasedJumpSolidSkipPlayer;
+        return player != releasedJumpSolidSkipPlayer
+                && (!(player instanceof AbstractPlayableSprite sprite) || !isInvalidRider(sprite));
     }
 
     @Override

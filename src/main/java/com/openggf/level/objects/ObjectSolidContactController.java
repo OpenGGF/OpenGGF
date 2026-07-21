@@ -62,6 +62,26 @@ final class ObjectSolidContactController {
     private final ObjectManager objectManager;
     private int frameCounter;
     private boolean checkpointPushingLastFrame;
+    private final Map<PlayableEntity, Integer> execStartPlayerCentreY =
+            new IdentityHashMap<>(2);
+
+    void captureExecStartPlayerCentreY(PlayableEntity player,
+            List<? extends PlayableEntity> sidekicks) {
+        execStartPlayerCentreY.clear();
+        if (player != null) {
+            execStartPlayerCentreY.put(player, (int) player.getCentreY());
+        }
+        for (PlayableEntity sidekick : sidekicks) {
+            if (sidekick != null) {
+                execStartPlayerCentreY.put(sidekick, (int) sidekick.getCentreY());
+            }
+        }
+    }
+
+    int getPlayerCentreYAtExecStart(PlayableEntity player) {
+        Integer y = execStartPlayerCentreY.get(player);
+        return y != null ? y : (player != null ? player.getCentreY() : 0);
+    }
 
     // Per-player riding state (ROM: each player object has its own SST interact field $3E).
     // Mutable holder reused in place via putRidingState() so the steady "standing on an
@@ -4082,7 +4102,7 @@ final class ObjectSolidContactController {
                         if (preserveSubpixels) {
                             player.move((short) (-distX * 256), (short) 0);
                         } else {
-                            writeNativePlayerCentreX(player, playerCenterX - distX);
+                            writeSnappedPlayerCentreX(player, playerCenterX - distX);
                         }
                     }
                 }
@@ -4325,6 +4345,14 @@ final class ObjectSolidContactController {
     private void writeNativePlayerCentreX(PlayableEntity player, int centreX) {
         if (player instanceof AbstractPlayableSprite sprite) {
             NativePositionOps.writeXPosPreserveSubpixel(sprite, centreX);
+        } else {
+            player.setCentreX((short) centreX);
+        }
+    }
+
+    private void writeSnappedPlayerCentreX(PlayableEntity player, int centreX) {
+        if (player instanceof AbstractPlayableSprite sprite) {
+            NativePositionOps.writeXPosResetSubpixel(sprite, centreX);
         } else {
             player.setCentreX((short) centreX);
         }

@@ -804,6 +804,18 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void objectManagerDelegatesPlacementLifecycleAndVerticalFiltering() throws IOException {
+        String manager = Files.readString(SRC_MAIN.resolve(OBJECT_MANAGER_PATH));
+
+        assertTrue(manager.contains("placement.reallocateToFirstFreeDynamicSlot("));
+        assertTrue(manager.contains("placement.releaseSpawnForRespawn("));
+        assertTrue(manager.contains("placement.dispatchDestroyRemoveFromActive("));
+        assertTrue(manager.contains("placement.isSpawnVerticallyEligibleForTwoAxisYPass("));
+        assertTrue(manager.contains("ObjectPlacementController.isNonCounterSpawnVerticallyEligible("));
+        assertTrue(manager.contains("solidContacts.captureExecStartPlayerCentreY("));
+    }
+
+    @Test
     void releaseCriticalLargeClassesDoNotGrowWithoutExtraction() throws IOException {
         List<String> violations = new ArrayList<>();
         for (Map.Entry<String, Integer> budget
@@ -818,6 +830,21 @@ class TestArchitecturalSourceGuard {
         }
 
         assertNoViolations("Release-critical large class size ratchet failed", violations);
+    }
+
+    @Test
+    void playableSpriteDelegatesFrameStateAnimationAndControlledContactBehavior() throws IOException {
+        String sprite = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/sprites/playable/AbstractPlayableSprite.java"));
+        String controller = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/sprites/playable/PlayableSpriteController.java"));
+
+        assertTrue(sprite.contains("controller.captureFrameStartState();"));
+        assertTrue(sprite.contains("controller.publishRawAnimation(CanonicalAnimation.HURT);"));
+        assertTrue(sprite.contains("controller.notifyObjectControlledSolidContact(candidate, contact);"));
+        assertTrue(controller.contains("void captureFrameStartState()"));
+        assertTrue(controller.contains("void publishRawAnimation(CanonicalAnimation animation)"));
+        assertTrue(controller.contains("void notifyObjectControlledSolidContact("));
     }
 
     @Test

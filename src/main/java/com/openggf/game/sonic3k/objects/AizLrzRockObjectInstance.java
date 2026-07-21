@@ -29,6 +29,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -513,7 +514,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         currentX--;
         // subq.w #1,x_pos(a1) changes only the ROM integer word and keeps
         // x_sub untouched (sonic3k.asm:44472-44473).
-        player.setCentreXPreserveSubpixel((short) (playerX - 1));
+        NativePositionOps.addXPosPreserveSubpixel(player, -1);
         int halfHeight = SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][1];
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, halfHeight);
         if (floor.foundSurface()) {

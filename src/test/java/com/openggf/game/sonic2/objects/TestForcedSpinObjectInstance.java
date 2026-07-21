@@ -19,6 +19,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestForcedSpinObjectInstance {
@@ -76,6 +77,24 @@ class TestForcedSpinObjectInstance {
 
         assertEquals(Sonic2AnimationIds.ROLL.id(), resolvedAnimation,
                 "Obj84's mirrored spindash byte must not make the animation resolver choose AniIDSonAni_Spindash");
+    }
+
+    @Test
+    void genuineChargingSpindashKeepsItsExplicitAnimationOwner() {
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setGameRulesForTest(GameRules.SONIC_2);
+        ScriptedVelocityAnimationProfile profile = s2AnimationProfile();
+        player.setAnimationProfile(profile);
+        player.setAnimationId(Sonic2AnimationIds.SPINDASH.id());
+        player.setSpindash(true);
+        player.setPinballMode(false);
+        player.setRolling(false);
+
+        Integer resolvedAnimation = profile.resolveAnimationId(player, 1, 32);
+
+        assertNull(resolvedAnimation,
+                "a genuine charging spindash preserves the animation byte written by CheckSpindash/UpdateSpindash");
+        assertEquals(Sonic2AnimationIds.SPINDASH.id(), player.getAnimationId());
     }
 
     @Test

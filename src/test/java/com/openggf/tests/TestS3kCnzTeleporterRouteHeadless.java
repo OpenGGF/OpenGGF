@@ -278,7 +278,7 @@ class TestS3kCnzTeleporterRouteHeadless {
                 "Capsule release should clear object control instead of leaving the player frozen");
         assertFalse(fixture.sprite().isHidden(),
                 "If the teleporter route hid the player earlier, capsule release must reveal them again");
-        assertEquals(Sonic3kAnimationIds.WAIT, fixture.sprite().getAnimationId(),
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), fixture.sprite().getAnimationId(),
                 "Restore_PlayerControl should publish Wait before returning normal control");
         assertFalse(events.isBossFlag(),
                 "Task 8 owns clearing Boss_flag so later CNZ event logic can leave boss mode");
@@ -311,12 +311,12 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertFalse(isObjectPresent(CnzEggCapsuleInstance.class));
         assertEquals(0, activeNamed("CnzEndBossDefeatDebrisChild"));
 
-        for (int frame = 0; frame < 0x3F; frame++) {
+        for (int frame = 0; frame < 0x40; frame++) {
             boss.update(frame, fixture.sprite());
         }
         assertTrue(boss.isNativeBodyRenderableForTest(),
                 "$2E reaches zero while Wait_FadeToLevelMusic still draws this dispatch");
-        boss.update(0x3F, fixture.sprite());
+        boss.update(0x40, fixture.sprite());
 
         assertFalse(boss.isNativeBodyRenderableForTest(),
                 "the signed underflow dispatch hides the body before loc_6E6C6");
@@ -329,10 +329,10 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertTrue(events.isBossFlag(), "Boss_flag remains set throughout the second wait");
 
         for (int frame = 0; frame < (2 * 60) - 1; frame++) {
-            boss.update(0x40 + frame, fixture.sprite());
+            boss.update(0x41 + frame, fixture.sprite());
         }
         assertFalse(isObjectPresent(CnzEggCapsuleInstance.class));
-        boss.update(0x40 + (2 * 60) - 1, fixture.sprite());
+        boss.update(0x41 + (2 * 60) - 1, fixture.sprite());
 
         assertTrue(isObjectPresent(CnzEggCapsuleInstance.class));
         assertFalse(events.isBossFlag());
@@ -453,7 +453,7 @@ class TestS3kCnzTeleporterRouteHeadless {
 
     private void defeatCnzEndBossWithPlayerAttacks(CnzEndBossInstance boss, AbstractPlayableSprite player) {
         defeatCnzEndBossHitsOnly(boss, player);
-        for (int defeatFrame = 0; defeatFrame < 0x40 + 2 * 60; defeatFrame++) {
+        for (int defeatFrame = 0; defeatFrame < 0x41 + 2 * 60; defeatFrame++) {
             boss.update(defeatFrame, player);
         }
     }

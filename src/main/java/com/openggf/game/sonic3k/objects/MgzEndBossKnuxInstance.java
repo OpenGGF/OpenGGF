@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -339,7 +340,7 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
         if (main != null && (main.getCentreX() & 0xFFFF) < cameraX + 0x150) return;
         completionReady = true;
         if (services().camera() != null) services().camera().setScrollLocked(false);
-        setDestroyed(true);
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     /** ROM loc_86334: locked-player RIGHT, with an A+RIGHT pulse after pushing. */

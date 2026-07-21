@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
@@ -71,7 +72,7 @@ final class MgzEndBossKnuxDrillChild extends AbstractObjectInstance implements R
         }
         lastParentRoutine = parentRoutine;
         if (parent.isDestroyed()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         }
     }
 

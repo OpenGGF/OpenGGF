@@ -147,8 +147,24 @@ class TestS3kResultsScreenObjectInstance {
             onExitReady.setAccessible(true);
             onExitReady.invoke(results);
 
-            verify(services.gameState).setEndOfLevelFlag(true);
+            verify(services.gameState, never()).setEndOfLevelFlag(true);
         }
+    }
+
+    @Test
+    void armedTransitionProviderPublishesReadyFlagWithoutZoneInference() throws Exception {
+        ActTransitionRecordingServices services =
+                new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id, true);
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                services,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        results.setServices(services);
+
+        Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+        onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
+
+        verify(services.gameState).setEndOfLevelFlag(true);
     }
 
     @Test
@@ -246,13 +262,19 @@ class TestS3kResultsScreenObjectInstance {
         private final Camera camera = new Camera();
         private final RecordingTitleCardProvider titleCard = new RecordingTitleCardProvider();
         private final LevelManager levelManager = mock(LevelManager.class);
-        private final ArmedTransitionOwner transitionOwner = new ArmedTransitionOwner();
         private final List<Integer> playedMusic = new ArrayList<>();
+        private final boolean retainedTransitionFlagOwner;
         private int apparentAct = -1;
 
         private ActTransitionRecordingServices(int zone, int act2MusicId) {
+            this(zone, act2MusicId, false);
+        }
+
+        private ActTransitionRecordingServices(int zone, int act2MusicId,
+                                               boolean retainedTransitionFlagOwner) {
             this.zone = zone;
             this.act2MusicId = act2MusicId;
+            this.retainedTransitionFlagOwner = retainedTransitionFlagOwner;
         }
 
         @Override
@@ -272,19 +294,7 @@ class TestS3kResultsScreenObjectInstance {
 
         @Override
         public LevelEventProvider levelEventProvider() {
-            return transitionOwner;
-        }
-
-        private final class ArmedTransitionOwner implements LevelEventProvider, S3kTransitionEventBridge {
-            @Override public void initLevel(int zone, int act) { }
-            @Override public void update() { }
-            @Override public void signalActTransition() { }
-            @Override public void requestHczPostTransitionCutscene() { }
-            @Override public boolean restorePendingPostResultsPlayerControl() {
-                return zone == 0x01 || zone == 0x02;
-            }
-            @Override public void requestMgzPostTransitionRelease() { }
-            @Override public void requestCnzPostTransitionRelease(int framesUntilRelease) { }
+            return new ResultsTransitionBridge(retainedTransitionFlagOwner);
         }
 
         @Override
@@ -315,6 +325,25 @@ class TestS3kResultsScreenObjectInstance {
         public TitleCardProvider titleCardProvider() {
             return titleCard;
         }
+    }
+
+    private static final class ResultsTransitionBridge
+            implements LevelEventProvider, S3kTransitionEventBridge {
+        private final boolean retainedTransitionFlagOwner;
+
+        private ResultsTransitionBridge(boolean retainedTransitionFlagOwner) {
+            this.retainedTransitionFlagOwner = retainedTransitionFlagOwner;
+        }
+
+        @Override public void initLevel(int zone, int act) {}
+        @Override public void update() {}
+        @Override public void signalActTransition() {}
+        @Override public void requestHczPostTransitionCutscene() {}
+        @Override public boolean restorePendingPostResultsPlayerControl() {
+            return retainedTransitionFlagOwner;
+        }
+        @Override public void requestMgzPostTransitionRelease() {}
+        @Override public void requestCnzPostTransitionRelease(int framesUntilRelease) {}
     }
 
     private static final class IczExitRecordingServices extends TestObjectServices {

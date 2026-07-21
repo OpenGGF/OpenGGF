@@ -91,8 +91,12 @@ class TestCnzMinibossAnimationArt {
                 "Closing must remain active through the six delay-3 frame holds");
 
         boss.update(25, null);
+        assertEquals(0x0C, boss.getCurrentRoutine(),
+                "Closing must publish the final frame before the previous-list touch pass completes");
+
+        boss.update(26, null);
         assertEquals(0x06, boss.getCurrentRoutine(),
-                "AniRaw_CNZMinibossClosing's $F4 terminator invokes CloseGo on call 26");
+                "AniRaw_CNZMinibossClosing's deferred $F4 terminator invokes CloseGo on call 27");
     }
 
     @Test

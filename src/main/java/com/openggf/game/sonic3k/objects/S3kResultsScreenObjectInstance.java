@@ -658,14 +658,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // through the transition bridge so only an armed native event consumes
         // it; no zone or trace identity is consulted here.
         boolean retainedTransitionFlagOwner =
-                S3kTransitionWriteSupport.restorePendingPostResultsPlayerControl(services());
+                S3kTransitionWriteSupport.completePostResultsHandoff(services());
 
-        if (isAct2OrSpecial || (hasSeamlessTransition && retainedTransitionFlagOwner)) {
+        if (isAct2OrSpecial || retainedTransitionFlagOwner) {
             // ROM loc_2DCF8 sets End_of_level_flag directly for Act 2/Sky
             // Sanctuary/LRZ boss results (sonic3k.asm:62693-62705).
-            // For HCZ/MGZ Act 1, the engine's BG event handlers use the same
-            // flag as their post-results gate before executeActTransition()
-            // resets gameplay state for the reloaded act.
+            // A retained native transition owner can request the same ready
+            // flag through the event bridge without this object inferring its
+            // transition policy from the current zone.
             services().gameState().setEndOfLevelFlag(true);
         }
 

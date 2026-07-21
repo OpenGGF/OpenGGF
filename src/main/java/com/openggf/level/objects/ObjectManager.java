@@ -203,12 +203,6 @@ public class ObjectManager {
     private final ObjectSolidContactController solidContacts;
     private final ObjectTouchResponseController touchResponses;
 
-    // Per-player centre Y captured at the start of the object exec pass
-    // (post-physics, before any object re-seats the player this frame). See
-    // captureExecStartPlayerCentreY / getPlayerCentreYAtExecStart.
-    private final java.util.Map<PlayableEntity, Integer> execStartPlayerCentreY =
-            new java.util.IdentityHashMap<>(2);
-
     private static final Comparator<ObjectInstance> RENDER_SLOT_DESCENDING = (a, b) -> {
         int slotA = a instanceof AbstractObjectInstance aoiA ? aoiA.getSlotIndex() : Integer.MAX_VALUE;
         int slotB = b instanceof AbstractObjectInstance aoiB ? aoiB.getSlotIndex() : Integer.MAX_VALUE;
@@ -291,7 +285,15 @@ public class ObjectManager {
         return slotLayout.toSlotIndex(execIndex);
     }
 
-    public void reset(int cameraX) {
+    public void reset(int cameraX) { reset(cameraX, null); }
+
+    /**
+     * Resets this manager and reapplies a persistent respawn table before the
+     * initial placement window is materialized. Bonus-stage returns use this
+     * atomic path so remembered layout objects cannot be created during reset
+     * and left live by a later bit-only restore.
+     */
+    public void reset(int cameraX, PersistentRespawnState persistentRespawnState) {
         clearActiveObjects();
         dynamicObjects.clear();
         auxiliaryDynamicObjects.clear();
@@ -308,6 +310,7 @@ public class ObjectManager {
         s2LatchedObjectManagerCameraX = cameraX;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
         placement.reset(cameraX);
+        placement.restorePersistentRespawn(persistentRespawnState);
         if (registry != null) {
             registry.reportCoverage(placement.getAllSpawns());
         }
@@ -595,7 +598,7 @@ public class ObjectManager {
         // than the fan, so the fan would otherwise read the already-seated Y.
         // Objects that need ROM's "player position when my slot ran, before
         // later-slot objects moved him" read this via getPlayerCentreYAtExecStart.
-        captureExecStartPlayerCentreY(player, activeSidekicks);
+        solidContacts.captureExecStartPlayerCentreY(player, activeSidekicks);
         SolidExecutionRegistry solidExecutionRegistry = objectServices.solidExecutionRegistry();
         solidExecutionRegistry.beginFrame(frameCounter, collectActivePlayers(player, activeSidekicks));
         boolean counterBased = placement.isCounterBasedRespawn();
@@ -1756,8 +1759,15 @@ public class ObjectManager {
         boolean removed = dynamicObjects.remove(object);
         if (removed) {
             auxiliaryDynamicObjects.remove(object);
+            notifyObjectManagerRemoval(object);
         }
         return removed;
+    }
+
+    private static void notifyObjectManagerRemoval(ObjectInstance object) {
+        if (object instanceof AbstractObjectInstance instance) {
+            instance.onRemovedFromObjectManager();
+        }
     }
 
     /**
@@ -1942,11 +1952,8 @@ public class ObjectManager {
      * cursor and therefore cannot execute until the next Process_Sprites pass.
      */
     public boolean reservedSlotWaitsForNextObjectPass(int slotIndex) {
-        if (!updating || currentExecSlot < 0 || !isManagedDynamicSlot(slotIndex)) {
-            return false;
-        }
-        int execIndex = execIndexForSlot(slotIndex);
-        return execIndex >= 0 && execIndex <= currentExecSlot;
+        return placement.reservedSlotWaitsForNextObjectPass(
+                slotIndex, updating, currentExecSlot, slotLayout);
     }
 
     /**
@@ -1956,24 +1963,12 @@ public class ObjectManager {
      * object must occupy the slot it would have received from the native load pass.
      */
     public void reallocateToFirstFreeDynamicSlot(AbstractObjectInstance object) {
-        if (object == null || !isManagedDynamicSlot(object.getSlotIndex())) {
-            return;
+        if (placement.reallocateToFirstFreeDynamicSlot(
+                object, slotAllocator, slotLayout, execOrder,
+                updating, slotsFreedDuringObjectPass)) {
+            bucketsDirty = true;
+            activeObjectsCacheDirty = true;
         }
-        int oldSlot = object.getSlotIndex();
-        releaseSlot(oldSlot);
-        int newSlot = slotAllocator.allocate();
-        if (newSlot < 0) {
-            slotAllocator.reserve(oldSlot);
-            return;
-        }
-        object.setSlotIndex(newSlot);
-        int oldExecIndex = execIndexForSlot(oldSlot);
-        if (oldExecIndex >= 0 && oldExecIndex < execOrder.length
-                && execOrder[oldExecIndex] == object) {
-            execOrder[oldExecIndex] = null;
-        }
-        bucketsDirty = true;
-        activeObjectsCacheDirty = true;
     }
 
     /**
@@ -2527,36 +2522,10 @@ public class ObjectManager {
      * which records an in-window destruction latch.
      */
     public void releaseSpawnForRespawn(ObjectInstance transformedInstance, ObjectSpawn spawn) {
-        if (transformedInstance == null || spawn == null) {
-            return;
-        }
-        ObjectInstance activeInstance = activeObjects.get(spawn);
-        if (activeInstance != transformedInstance) {
-            return;
-        }
-        activeObjects.remove(spawn);
-        instanceToSpawn.remove(transformedInstance);
-        dynamicObjects.add(transformedInstance);
-        placement.removeFromActiveForUnload(spawn);
-        if (slotLayout.twoAxisCursorPlacement()) {
-            // S3K's Camera_Y load pass re-scans entries already between the X
-            // cursors when a newly exposed vertical strip reaches them.
-            placement.markDeferredVerticalLoad(spawn);
-        }
-        bucketsDirty = true;
-        activeObjectsCacheDirty = true;
-    }
-
-    private void captureExecStartPlayerCentreY(PlayableEntity player,
-            List<? extends PlayableEntity> sidekicks) {
-        execStartPlayerCentreY.clear();
-        if (player != null) {
-            execStartPlayerCentreY.put(player, (int) player.getCentreY());
-        }
-        for (PlayableEntity sidekick : sidekicks) {
-            if (sidekick != null) {
-                execStartPlayerCentreY.put(sidekick, (int) sidekick.getCentreY());
-            }
+        if (placement.releaseSpawnForRespawn(transformedInstance, spawn,
+                activeObjects, instanceToSpawn, dynamicObjects)) {
+            bucketsDirty = true;
+            activeObjectsCacheDirty = true;
         }
     }
 
@@ -2571,8 +2540,7 @@ public class ObjectManager {
      * exec-start, e.g. spawned mid-pass).
      */
     public int getPlayerCentreYAtExecStart(PlayableEntity player) {
-        Integer y = execStartPlayerCentreY.get(player);
-        return y != null ? y : (player != null ? player.getCentreY() : 0);
+        return solidContacts.getPlayerCentreYAtExecStart(player);
     }
 
     /** Is this player riding any object? */
@@ -2887,6 +2855,7 @@ public class ObjectManager {
                 }
                 inst.onUnload();
                 solidContacts.evictLatchForDestroyedInstance(inst);
+                notifyObjectManagerRemoval(inst);
                 iter.remove();
                 changed = true;
             }
@@ -2989,37 +2958,9 @@ public class ObjectManager {
      * Sprite_OnScreen_Test.
      */
     private void dispatchDestroyRemoveFromActive(ObjectInstance instance, ObjectSpawn spawn) {
-        if (instance.isDestroyedRespawnable()) {
-            boolean retainForTwoAxisYPass = slotLayout.twoAxisCursorPlacement()
-                    && placement.isBetweenLoadCursors(spawn);
-            placement.removeFromActiveForUnload(spawn);
-            if (retainForTwoAxisYPass) {
-                // ROM loc_1B982's Y-camera pass rescans EVERY entry currently
-                // between Object_load_addr_back/front (the whole live X-window
-                // range) whose respawn-table bit 7 reads clear -- not just
-                // entries freshly queued by the X-pass this frame
-                // (sonic3k.asm:37728-37773, the loc_1B982/loc_1B9A4 scan loop).
-                // A Sprite_OnScreen_Test-family
-                // off-screen self-delete (e.g. the Pachinko round bumper's
-                // loc_32EF0 Y-axis check) clears that same bit 7
-                // (sonic3k.asm:68922-68926, loc_32F22's bclr #7,(a2)), so ROM's
-                // next Y-coarse crossing reconsiders it exactly like a never-yet-spawned
-                // entry. removeFromActiveForUnload() above clears this
-                // spawn's deferredVerticalLoad bit via clearCursorLoadState,
-                // so without re-marking it here the spawn is dropped from
-                // both the X-pass queue (nothing re-triggers trySpawn() for
-                // its index unless the X-cursor happens to revisit it) and
-                // the Y-pass deferred set, permanently losing its one-shot
-                // vertical respawn window (pachinko1 trace f1318: the round
-                // bumper at (0x104,0x7E0) self-deletes off-screen at ~f1006
-                // and never respawns before the player returns to bounce off
-                // it at f1318, though the ROM trace shows it respawning at
-                // f1074 well before that).
-                placement.markDeferredVerticalLoad(spawn);
-            }
-        } else {
-            if (slotLayout == ObjectSlotLayout.SONIC_2 && spawn != null && spawn.respawnTracked()) placement.markRemembered(spawn);
-            placement.removeFromActive(spawn);
+        boolean latchedDestroy = placement.dispatchDestroyRemoveFromActive(
+                instance, spawn, slotLayout == ObjectSlotLayout.SONIC_2);
+        if (latchedDestroy) {
             solidContacts.evictLatchForDestroyedSpawn(spawn);
         }
     }
@@ -3370,37 +3311,8 @@ public class ObjectManager {
 
     private boolean isSpawnVerticallyEligibleForTwoAxisYPass(ObjectSpawn spawn,
             int previousYCoarse, int currentYCoarse) {
-        if (spawn == null || currentYCoarse == previousYCoarse) {
-            return false;
-        }
-
-        int bandTop;
-        int bandBottom;
-        if (currentYCoarse > previousYCoarse) {
-            bandTop = currentYCoarse + 0x180;
-            bandBottom = bandTop + 0x80;
-        } else {
-            bandTop = currentYCoarse - 0x80;
-            bandBottom = currentYCoarse;
-        }
-
-        int spawnY = spawn.rawYWord() & 0x0FFF;
-        int wrapRange = camera != null && camera.isVerticalWrapEnabled()
-                ? camera.getVerticalWrapRange()
-                : 0;
-        if (wrapRange > 0 && (short) (camera != null ? camera.getMinY() : 0) < 0) {
-            int wrapMask = wrapRange - 1;
-            bandTop &= wrapMask;
-            bandBottom &= wrapMask;
-            return bandTop <= bandBottom
-                    ? spawnY >= bandTop && spawnY <= bandBottom
-                    : spawnY >= bandTop || spawnY <= bandBottom;
-        }
-
-        if (bandTop < 0) {
-            return false;
-        }
-        return spawnY >= bandTop && spawnY <= bandBottom;
+        return placement.isSpawnVerticallyEligibleForTwoAxisYPass(
+                spawn, previousYCoarse, currentYCoarse, camera);
     }
 
 
@@ -3418,45 +3330,19 @@ public class ObjectManager {
             // still at y=$0000, then survive until the Tornado route
             // descends into them.
             int wrapRange = camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0;
-            return isNonCounterSpawnVerticallyEligible(spawn, camera.getY(), camera.getMinY(), wrapRange);
+            return ObjectPlacementController.isNonCounterSpawnVerticallyEligible(
+                    spawn, camera.getY(), camera.getMinY(), wrapRange);
         }
 
         static boolean isNonCounterSpawnVerticallyEligible(ObjectSpawn spawn, int cameraY, int cameraMinY) {
-            return isNonCounterSpawnVerticallyEligible(spawn, cameraY, cameraMinY, 0);
+            return ObjectPlacementController.isNonCounterSpawnVerticallyEligible(
+                    spawn, cameraY, cameraMinY, 0);
         }
 
         static boolean isNonCounterSpawnVerticallyEligible(ObjectSpawn spawn, int cameraY, int cameraMinY,
                 int verticalWrapRange) {
-            if ((spawn.rawYWord() & 0x8000) != 0) {
-                return true;
-            }
-
-            int cameraChunkY = cameraY & 0xFF80;
-            int windowTop = cameraChunkY - 0x80;
-            int windowBottom = cameraChunkY + 0x200;
-            int spawnY = spawn.rawYWord() & 0x0FFF;
-
-            if ((short) cameraMinY < 0) {
-                // ROM: Load_Sprites selects loc_1BA92 (normal range) while the
-                // vertical load band is inside Screen_Y_wrap_value+1, and selects
-                // loc_1BA40 (split range) only when the band crosses the wrap
-                // boundary (sonic3k.asm:37546-37589, 37803-37843,
-                // 37846-37874). Negative Camera_min_Y_pos does not mean
-                // "load every Y"; MGZ1 F667 depends on the 0x0834 bridge staying
-                // unloaded while the camera band is 0x0580..0x0800.
-                int wrapRange = verticalWrapRange > 0 ? verticalWrapRange : 0x1000;
-                int wrapMask = wrapRange - 1;
-                if (windowTop < 0) {
-                    return spawnY >= (windowTop & wrapMask) || spawnY <= windowBottom;
-                }
-                if (windowBottom > wrapRange) {
-                    return spawnY >= windowTop || spawnY <= (windowBottom & wrapMask);
-                }
-                return spawnY >= windowTop && spawnY <= windowBottom;
-            }
-
-            windowTop = Math.max(0, windowTop);
-            return spawnY >= windowTop && spawnY <= windowBottom;
+            return ObjectPlacementController.isNonCounterSpawnVerticallyEligible(
+                    spawn, cameraY, cameraMinY, verticalWrapRange);
         }
 
     /**
@@ -3480,6 +3366,7 @@ public class ObjectManager {
         ObjectInstance removed = activeObjects.remove(spawn);
         if (removed != null) {
             instanceToSpawn.remove(removed);
+            notifyObjectManagerRemoval(removed);
             // Prune the live-map so rewindObjectIds stays lean during normal play.
             // (Not strictly required — stale entries are harmless since rewindCaptureContext
             //  only iterates activeObjects/dynamicObjects, but trimming prevents unbounded growth.)

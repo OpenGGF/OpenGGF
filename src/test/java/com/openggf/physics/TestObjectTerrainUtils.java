@@ -214,9 +214,11 @@ class TestObjectTerrainUtils {
                 ChunkDesc.class,
                 int.class,
                 int.class,
-                boolean.class);
+                boolean.class,
+                byte.class);
         method.setAccessible(true);
-        return (TerrainCheckResult) method.invoke(null, level, originalTile, originalDesc, x, y, flipAwareAngle);
+        return (TerrainCheckResult) method.invoke(
+                null, level, originalTile, originalDesc, x, y, flipAwareAngle, (byte) 0);
     }
 
     private static TerrainCheckResult invokeFloorEdge(LevelManager level,
@@ -232,9 +234,11 @@ class TestObjectTerrainUtils {
                 ChunkDesc.class,
                 int.class,
                 int.class,
-                boolean.class);
+                boolean.class,
+                byte.class);
         method.setAccessible(true);
-        return (TerrainCheckResult) method.invoke(null, level, originalTile, originalDesc, x, y, flipAwareAngle);
+        return (TerrainCheckResult) method.invoke(
+                null, level, originalTile, originalDesc, x, y, flipAwareAngle, (byte) 0);
     }
 
     private static TerrainCheckResult invokeWallEdge(LevelManager level,

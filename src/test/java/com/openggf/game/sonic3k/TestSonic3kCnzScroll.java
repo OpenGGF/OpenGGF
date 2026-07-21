@@ -109,6 +109,9 @@ public class TestSonic3kCnzScroll {
         Sonic3kCNZEvents events = levelEvents.getCnzEventsForTest();
         events.triggerScreenShake(0x14);
         events.update(ACT_1, 0);
+        assertEquals(0, events.getScreenShakeOffsetY(),
+                "the trigger frame renders the preceding Screen_shake_offset sample");
+        events.update(ACT_1, 1);
 
         SwScrlCnz handler = new SwScrlCnz();
         int shakeY = handler.getShakeOffsetY();
@@ -118,7 +121,7 @@ public class TestSonic3kCnzScroll {
         int cameraY = 0x0400;
         handler.update(buffer, 0x0400, cameraY, 0, ACT_1);
 
-        int expected = ((cameraY - shakeY) * 13 / 128) + shakeY;
+        int expected = (cameraY * 13 / 128) + shakeY;
         assertEquals((short) expected, handler.getVscrollFactorBG());
     }
 

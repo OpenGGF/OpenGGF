@@ -6,6 +6,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -88,6 +89,23 @@ public class TestPachinkoMagnetOrbObjectInstance {
         verify(main, atLeastOnce()).setJumping(false);
         verify(main).setFlipAngle(0);
         verify(main).setDoubleJumpFlag(0);
+    }
+
+    @Test
+    public void releaseKeepsNativeYWordAndFractionWhileEnteringRoll() {
+        PachinkoMagnetOrbObjectInstance orb = new PachinkoMagnetOrbObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0xEC, 0, 0, false, 0));
+        Sonic player = new Sonic("sonic", (short) 0x100, (short) 0x100);
+        player.setSubpixelRaw(0x2300, 0xA700);
+
+        orb.setServices(new TestObjectServices());
+        orb.update(0, player);
+        short centreYBeforeRelease = player.getCentreY();
+
+        orb.forceReleasePlayer(player, 1);
+
+        assertEquals(centreYBeforeRelease, player.getCentreY());
+        assertEquals(0xA700, player.getYSubpixelRaw());
     }
 
     @Test
@@ -181,5 +199,4 @@ public class TestPachinkoMagnetOrbObjectInstance {
         }
     }
 }
-
 

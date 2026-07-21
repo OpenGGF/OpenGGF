@@ -1695,6 +1695,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             return;
         }
 
+        applyEndBossPlayerPriority();
         endBossSpawned = true;
         int spawnX = isKnuckles ? AIZ_END_BOSS_KNUX_LAYOUT_X : AIZ_END_BOSS_SONIC_LAYOUT_X;
         int spawnY = isKnuckles ? AIZ_END_BOSS_KNUX_LAYOUT_Y : AIZ_END_BOSS_SONIC_LAYOUT_Y;
@@ -1702,6 +1703,20 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 spawnX, spawnY, Sonic3kObjectIds.AIZ_END_BOSS, 0, 0, false, spawnY);
         spawnObject(() -> new AizEndBossInstance(bossSpawn));
         LOG.info("AIZ2 end boss: spawned at cameraX=0x" + Integer.toHexString(camera().getX()));
+    }
+
+    private void applyEndBossPlayerPriority() {
+        ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(
+                () -> camera().getFocusedSprite() instanceof AbstractPlayableSprite player ? player : null,
+                this::eventSidekicks);
+        for (PlayableEntity participant : playerQuery.playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            // Obj_PathSwap subtype $22 at x=$3F68 sets art_tile bit 7 before
+            // the waterfall arena. Re-publish that native handoff here so a
+            // direct/rewound event entry cannot leave the player behind the
+            // high-priority waterfall tiles (sonic3k.asm:39780-39850).
+            participant.setHighPriority(true);
+        }
     }
 
     private boolean hasLiveAizEndBoss() {

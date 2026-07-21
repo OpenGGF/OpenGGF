@@ -223,6 +223,30 @@ class TestS3kSlotPlayerRuntime {
     }
 
     @Test
+    void objectControlledTickRoundTripsNativePositionWordsAndFractions() {
+        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
+                S3kSlotRenderBuffers.fromRomData(), state);
+        S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
+        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
+
+        runtime.initialize(player);
+        player.setCentreXPreserveSubpixel((short) 0x461);
+        player.setCentreYPreserveSubpixel((short) 0x431);
+        player.setSubpixelRaw(0x5A00, 0x6B00);
+        player.setObjectControlled(true);
+
+        runtime.tick(player, false, false, false, false, false, 0);
+
+        assertEquals(0x461, player.getCentreX());
+        assertEquals(0x431, player.getCentreY());
+        assertEquals(0x5A00, player.getXSubpixelRaw());
+        assertEquals(0x6B00, player.getYSubpixelRaw());
+        assertEquals((0x461 << 16) | 0x5A00, runtime.slotOriginX());
+        assertEquals((0x431 << 16) | 0x6B00, runtime.slotOriginY());
+    }
+
+    @Test
     void tickAppliesMoveSprite2StepAfterVelocityUpdate() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
@@ -410,5 +434,4 @@ class TestS3kSlotPlayerRuntime {
         assertEquals(-1, state.lastCollisionIndex());
     }
 }
-
 
