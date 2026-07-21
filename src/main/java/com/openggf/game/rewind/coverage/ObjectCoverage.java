@@ -20,16 +20,19 @@ public record ObjectCoverage(
         boolean isDynamicSpawnable,
         boolean hasRecreatePath,
         List<String> uncapturedFinalScalarFields,
-        List<String> unIdObjectRefFields) {
+        List<String> unIdObjectRefFields,
+        List<String> uncapturedHelperStateFields) {
 
     /**
      * Returns {@code true} when the object is fully covered by rewind:
-     * it has a recreate path and no uncaptured scalar or object-ref fields.
+     * it has a recreate path and no uncaptured scalar, object-ref, or
+     * helper-state fields.
      */
     public boolean isCovered() {
         return hasRecreatePath
                 && uncapturedFinalScalarFields.isEmpty()
-                && unIdObjectRefFields.isEmpty();
+                && unIdObjectRefFields.isEmpty()
+                && uncapturedHelperStateFields.isEmpty();
     }
 
     /**
@@ -42,6 +45,9 @@ public record ObjectCoverage(
      *       {@code uncapturedFinalScalarFields}</li>
      *   <li>{@code className + "#objectRef#" + field} — per entry in
      *       {@code unIdObjectRefFields}</li>
+     *   <li>{@code className + "#" + field + "#uncaptured-helper-state"} — per entry in
+     *       {@code uncapturedHelperStateFields} (a mutable plain-helper field whose
+     *       type has no {@code RewindCodecs} codec, so it is silently dropped on rewind)</li>
      * </ul>
      */
     public List<String> gapKeys() {
@@ -57,6 +63,9 @@ public record ObjectCoverage(
         }
         for (String field : unIdObjectRefFields) {
             keys.add(className + "#objectRef#" + field);
+        }
+        for (String field : uncapturedHelperStateFields) {
+            keys.add(className + "#" + field + "#uncaptured-helper-state");
         }
         return keys;
     }
