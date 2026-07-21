@@ -74,6 +74,8 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(1, platform.getPriorityBucket());
         assertTrue(platform.usesPieceScopedStandingBits());
         assertTrue(platform.airborneStaleStandingBitReturnsNoContact(mock(PlayableEntity.class)));
+        assertTrue(platform.sidekickCpuStalePushGraceKeepsFollowSteeringWhileRiding(
+                mock(PlayableEntity.class)));
         assertFalse(platform.usesCollisionHalfWidthForTopLanding(),
                 "SolidObjectFull re-reads each child slot's width_pixels after the broad overlap");
         assertTrue(platform.usesInclusiveRightEdge(),

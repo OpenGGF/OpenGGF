@@ -616,6 +616,16 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether an engine-stale push-grace window must leave ordinary sidekick
+     * follow steering active while this object remains the live support.
+     * Native CPU code sees the current cleared {@code Status_Push} bit in this
+     * case and still executes its +/-1 follow-position nudge.
+     */
+    default boolean sidekickCpuStalePushGraceKeepsFollowSteeringWhileRiding(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether the right edge of the full solid X window is inclusive.
      * <p>
      * Most engine objects keep the established exclusive bound. S3K horizontal

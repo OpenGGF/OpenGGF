@@ -322,6 +322,14 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean sidekickCpuStalePushGraceKeepsFollowSteeringWhileRiding(PlayableEntity player) {
+        // The lower child remains P2's live SolidObjectFull support after its
+        // transient side-push bit clears. TailsCPU therefore observes the
+        // cleared native Status_Push and still executes FollowLeft/Right.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return !isDestroyed() && phase != Phase.STOPPED;
     }

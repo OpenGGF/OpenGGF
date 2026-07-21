@@ -47661,3 +47661,21 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:189419-189466`).
 - All nine focused swinging-platform tests pass, including fresh-contact clamp
   and continued-contact halving cases.
+
+## 2026-07-21 - ICZ sidekick support grace advances both frontiers
+
+- Commands: focused `TestS3kIczCompleteRunTraceReplay` with the discovered S3K
+  ROM path, followed by focused `TestS3kIczSwingingPlatformObject` verification.
+- **`s3k_icz1` physics advanced from f6139 to f6972 and animation advanced
+  from f6188 to f7019.** Total errors fell from 3,785 to 3,006: physics from
+  3,249 to 2,624 and animation from 536 to 382.
+- Root: while Tails remains supported by ObjB4, the transient side-contact
+  `Status_Push` bit has already cleared at the native Tails CPU slot. ROM
+  therefore takes its ordinary `leader_on_object` path and applies the -1
+  follow nudge. The engine's multi-frame stale push-grace bridge instead took
+  `grace_push_bypass` and suppressed that nudge. Solid providers can now state
+  that live support keeps normal follow steering during stale grace; the CPU
+  phase resolves that support through its riding, latched-solid, or interact
+  ownership state, and ObjB4 opts in. The local-below-target grace branch now
+  honors the same support contract (`docs/skdisasm/sonic3k.asm:26696-26741`).
+- All nine focused swinging-platform tests pass.

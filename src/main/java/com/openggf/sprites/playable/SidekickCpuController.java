@@ -2237,7 +2237,9 @@ public class SidekickCpuController {
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
         boolean objectOrderFollowSteeringContext = isObjectOrderFollowSteeringContext(effectiveLeader);
         boolean supportGraceKeepsFollowSteering =
-                localGracePushBypass && isDoorSupportGraceFollowSteeringContext();
+                localGracePushBypass
+                        && (isDoorSupportGraceFollowSteeringContext()
+                                || stalePushGraceKeepsFollowSteeringWhileRiding(ridingObject));
         boolean ridingObjectPushGrace = !sidekick.getAir()
                 && sidekick.isOnObject()
                 && !sidekick.getRolling()
@@ -2386,6 +2388,7 @@ public class SidekickCpuController {
         // (sonic3k.asm:26702-26729).
         boolean localBelowTargetGrace =
                 localGracePushBypass
+                        && !supportGraceKeepsFollowSteering
                         && !freshBelowTargetReboundGrace
                         && localBelowTargetBridgeWindow
                         && !delayedInputIntoFollowSide
@@ -3027,6 +3030,20 @@ public class SidekickCpuController {
             return provider.preservesSidekickCpuPushGraceWhileRiding(sidekick);
         }
         return false;
+    }
+
+    private boolean stalePushGraceKeepsFollowSteeringWhileRiding(ObjectInstance ridingObject) {
+        ObjectInstance support = hasLiveRidingObject(ridingObject)
+                ? ridingObject
+                : sidekick.getLatchedSolidObjectInstance();
+        if (!hasLiveRidingObject(support) && sidekick.isOnObject()) {
+            support = currentInteractSlotObject();
+        }
+        if (!hasLiveRidingObject(support)) {
+            return false;
+        }
+        return support instanceof SolidObjectProvider provider
+                && provider.sidekickCpuStalePushGraceKeepsFollowSteeringWhileRiding(sidekick);
     }
 
     private boolean preservesSidekickCpuPushGraceFromInteractSlot() {
