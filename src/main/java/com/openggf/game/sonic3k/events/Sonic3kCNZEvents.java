@@ -201,6 +201,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      */
     private int screenShakeTimer;
     private int screenShakeOffsetY;
+    private int screenShakeAppliedOffsetY;
 
     /** Boss ownership mirror used by later slices. */
     private boolean bossFlag;
@@ -285,6 +286,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         waterButtonArmed = false;
         screenShakeTimer = 0;
         screenShakeOffsetY = 0;
+        screenShakeAppliedOffsetY = 0;
         bossFlag = false;
         bossFlagPrev = false;
         cameraStoredMaxXPos = 0;
@@ -442,6 +444,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        // LevelLoop runs ScreenEvents after Process_Sprites. CNZ2_ScreenEvent
+        // consumes the offset produced by the preceding background event;
+        // ShakeScreen_Setup then publishes the sample for the next frame.
+        screenShakeAppliedOffsetY = screenShakeOffsetY;
         tickScreenShake();
         if (act == 0) {
             updateAct1Bg(frameCounter);
@@ -1115,7 +1121,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * shake propagation move the foreground, sprites, and background in sync.
      */
     public int getScreenShakeOffsetY() {
-        return screenShakeOffsetY;
+        return screenShakeAppliedOffsetY;
     }
 
     private void tickScreenShake() {

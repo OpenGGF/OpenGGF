@@ -49,8 +49,9 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
     private static final int RUN_DELAY = 5;
     private static final int[] JUMP_FRAMES = {8, 4, 8, 5, 8, 6, 8, 7};
     private static final int JUMP_DELAY = 2;
-    private static final int[] LAUGH_STAND_FRAMES = {0x1C, 0x1C, 0x1D};
-    private static final int LAUGH_DELAY = 8;
+    // ROM byte_666B9 branches via $F8,+6 into byte_666BF.
+    private static final int[] LAND_TO_LAUGH_RAW = {7, 0x1C, 0x1C, 0x1D, 0xF8, 6};
+    private static final int[] LAUGH_LOOP_RAW = {7, 0x1E, 0x1F, 0xFC};
 
     private enum Phase { INIT, WAIT_FOR_PLAYER_JUMP, FORCE_PLAYER_RIGHT, PRE_JUMP_WAIT, JUMP, POST_JUMP_WAIT, EXIT_RIGHT, FORCE_PLAYER_LEFT }
 
@@ -62,9 +63,10 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
     private int xVel;
     private int yVel;
     private int timer;
-    private int mappingFrame;
+    private int mappingFrame = 0x16;
     private int animationTick;
     private int animationIndex;
+    private boolean landingAnimationActive;
     private boolean facingRight;
     private boolean bounced;
     private boolean visible = true;
@@ -158,7 +160,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         AizIntroArtLoader.loadAllIntroArt(services());
         AizIntroArtLoader.applyKnucklesPalette(services());
         spawnFreeChild(() -> new SongFadeTransitionInstance(
-                KNUCKLES_MUSIC_FADE_FRAMES, Sonic3kMusic.KNUCKLES.id, true));
+                KNUCKLES_MUSIC_FADE_FRAMES, Sonic3kMusic.KNUCKLES.id, true, true));
 
         if (player != null) {
             player.clearLogicalInputState();
@@ -228,7 +230,6 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
             bounced = true;
             xVel = -xVel;
             yVel = -yVel;
-            facingRight = !facingRight;
             return;
         }
 
@@ -239,6 +240,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         mappingFrame = 0x1C;
         animationTick = 0;
         animationIndex = 0;
+        landingAnimationActive = true;
         phase = Phase.POST_JUMP_WAIT;
     }
 
@@ -252,7 +254,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
     }
 
     private void routinePostJumpWait() {
-        animateLoop(LAUGH_STAND_FRAMES, LAUGH_DELAY);
+        animateLandingTaunt();
         if (timer > 0) {
             timer--;
             return;
@@ -387,6 +389,33 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
             animationTick = delay;
         }
         animationTick--;
+    }
+
+    /** Mirrors byte_666B9's relative branch into byte_666BF. */
+    private void animateLandingTaunt() {
+        animationTick = (animationTick - 1) & 0xFF;
+        if ((animationTick & 0x80) == 0) {
+            return;
+        }
+
+        int[] script = landingAnimationActive ? LAND_TO_LAUGH_RAW : LAUGH_LOOP_RAW;
+        animationIndex = (animationIndex + 1) & 0xFF;
+        int value = script[animationIndex + 1];
+        if (value < 0x80) {
+            animationTick = script[0];
+            mappingFrame = value;
+            return;
+        }
+
+        if (value == 0xF8) {
+            landingAnimationActive = false;
+            script = LAUGH_LOOP_RAW;
+        } else if (value != 0xFC) {
+            throw new IllegalStateException("Unsupported CutsceneKnux CNZ2B raw animation command: " + value);
+        }
+        animationIndex = 0;
+        animationTick = script[0];
+        mappingFrame = script[1];
     }
 
     @Override

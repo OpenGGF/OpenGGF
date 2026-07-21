@@ -31,9 +31,9 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
     private static final int INIT_Y_OFFSET = 4;
     private static final int PRIORITY = 4;
     private static final int RANGE_LEFT = -0x18;
-    private static final int RANGE_RIGHT = 0x30;
+    private static final int RANGE_RIGHT = RANGE_LEFT + 0x30;
     private static final int RANGE_TOP = -0x18;
-    private static final int RANGE_BOTTOM = 0x30;
+    private static final int RANGE_BOTTOM = RANGE_TOP + 0x30;
     private static final int CNZ2_CUTSCENE_WATER_TARGET_Y = 0x0350;
     /** ROM: {@code Mean_water_level = Camera_Y_pos + $100} in loc_65C78. */
     private static final int CNZ2_CUTSCENE_WATER_MEAN_OFFSET = 0x0100;

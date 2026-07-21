@@ -92,6 +92,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private Routine routine = Routine.WAIT_CAMERA;
     private int savedHoverY;
     private boolean magneticFieldActive;
+    private int lastGravityMachineSfxFrame = Integer.MIN_VALUE;
     private int mappingFrame;
     private boolean bodyVisibleThisFrame = true;
     private boolean startupComplete;
@@ -390,6 +391,13 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private void updateWindDown() {
         if (!waitExpired()) return;
         routine = Routine.DESCEND;
+    }
+
+    /** ROM {@code Play_SFX_Continuous}: request the sound once every 16 V-int frames. */
+    void playGravityMachineSfx(int frameCounter) {
+        if ((frameCounter & 0x0F) != 0 || lastGravityMachineSfxFrame == frameCounter) return;
+        lastGravityMachineSfxFrame = frameCounter;
+        services().playSfx(Sonic3kSfx.GRAVITY_MACHINE.id);
     }
 
     private void applyMagnetPull() {
@@ -736,7 +744,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(mappingFrame, centreX, centreY, !facingRight, false);
+        renderer.drawFrameIndex(mappingFrame, centreX, centreY, facingRight, false);
     }
 
     public String getRoutineForTest() {

@@ -1,8 +1,12 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.render.PatternSpriteRenderer;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -12,9 +16,87 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestCnzEndBossChildren {
+
+    @Test
+    void bodyShipAndHeadShareNativeRightFacingRenderBit() throws Exception {
+        CnzEndBossInstance boss = boss();
+        setBoolean(boss, "startupComplete", true);
+        setBoolean(boss, "facingRight", true);
+        setBossRoutine(boss, CnzEndBossInstance.Routine.ENTRY);
+        PatternSpriteRenderer bodyRenderer = mock(PatternSpriteRenderer.class);
+        PatternSpriteRenderer shipRenderer = mock(PatternSpriteRenderer.class);
+        when(bodyRenderer.isReady()).thenReturn(true);
+        when(shipRenderer.isReady()).thenReturn(true);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.CNZ_END_BOSS)).thenReturn(bodyRenderer);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)).thenReturn(shipRenderer);
+        StubObjectServices services = new StubObjectServices() {
+            @Override public ObjectRenderManager renderManager() { return renderManager; }
+        };
+        boss.setServices(services);
+        CnzEndBossRobotnikShipChild ship = new CnzEndBossRobotnikShipChild(boss);
+        ship.setServices(services);
+        CnzEndBossRobotnikHeadChild head = new CnzEndBossRobotnikHeadChild(ship);
+        head.setServices(services);
+
+        boss.appendRenderCommands(List.of());
+        ship.appendRenderCommands(List.of());
+        head.appendRenderCommands(List.of());
+
+        verify(bodyRenderer).drawFrameIndex(0, boss.getCentreX(), boss.getCentreY(), true, false);
+        assertEquals(boss.facingRight(), ship.isFacingRight(),
+                "Refresh_ChildPositionAdjusted copies parent render bit 0 without inversion");
+        verify(shipRenderer).drawFrameIndexForcedPriority(
+                9, ship.getCentreX(), ship.getCentreY(), true, false, 0, true);
+        verify(shipRenderer).drawFrameIndex(0, 0, 0, true, false);
+    }
+
+    @Test
+    void gravityMachineUsesSixteenFrameNativeCadenceWithoutLobeDuplication() throws Exception {
+        CnzEndBossInstance boss = boss();
+        setBoolean(boss, "magneticFieldActive", true);
+        RecordingSfxServices services = new RecordingSfxServices();
+        boss.setServices(services);
+        CnzEndBossFieldChild left = new CnzEndBossFieldChild(boss, -0x0C);
+        CnzEndBossFieldChild right = new CnzEndBossFieldChild(boss, 0x0C);
+        left.setServices(services);
+        right.setServices(services);
+
+        for (int frame : new int[] {0, 1, 15, 16}) {
+            left.update(frame, null);
+            right.update(frame, null);
+        }
+
+        assertEquals(List.of(Sonic3kSfx.GRAVITY_MACHINE.id, Sonic3kSfx.GRAVITY_MACHINE.id),
+                services.playedSfx,
+                "Play_SFX_Continuous requests $78 once when V_int_run_count's low nibble is zero");
+    }
+
+    @Test
+    void landingPlaysFloorThumpButReattachmentAddsNoPickupSound() throws Exception {
+        CnzEndBossInstance boss = boss();
+        RecordingSfxServices services = new RecordingSfxServices();
+        PlayableEntity player = playerAt(boss.getCentreX());
+        CnzEndBossMagnetChild magnet = new CnzEndBossMagnetChild(boss);
+        magnet.setServices(services.withPlayerQuery(
+                new ObjectPlayerQuery(() -> player, List::of)));
+        field(magnet, "yVelocity").setInt(magnet, 0x70);
+
+        magnet.resolveFloorContact(0);
+
+        assertEquals(List.of(Sonic3kSfx.FLOOR_THUMP.id), services.playedSfx,
+                "loc_6E8B6 plays $5D on the final low-speed landing");
+        services.playedSfx.clear();
+
+        magnet.reattachAtDescentBottom();
+
+        assertEquals(List.of(), services.playedSfx,
+                "loc_6E920 reattaches the magnet without a grab, clank, or other SFX");
+    }
 
     @Test
     void postFieldWindDownConsumesExactFfWaitBeforeDescent() throws Exception {
@@ -297,5 +379,13 @@ class TestCnzEndBossChildren {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field;
+    }
+
+    private static final class RecordingSfxServices extends StubObjectServices {
+        private final java.util.ArrayList<Integer> playedSfx = new java.util.ArrayList<>();
+
+        @Override public void playSfx(int soundId) {
+            playedSfx.add(soundId);
+        }
     }
 }

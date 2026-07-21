@@ -33,6 +33,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
     private final ScrollValueTable hScrollTable = ScrollValueTable.ofLength(5);
     private int bossBgCameraX = Integer.MIN_VALUE;
+    private short foregroundVscroll;
 
     @Override
     public void update(int[] horizScrollBuf,
@@ -45,6 +46,10 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
 
         short fgScroll = negWord(cameraX);
         int shakeY = resolveShakeOffsetY();
+        // CNZ2_ScreenEvent adds Screen_shake_offset to Camera_Y_pos_copy before
+        // Plane A is rendered. Keep Plane A on the same sample exposed to the
+        // camera/sprite path; CNZ1_Deform folds it into Plane B separately.
+        foregroundVscroll = (short) (cameraY + shakeY);
 
         if (shouldUseBossScroll()) {
             writeBossScroll(horizScrollBuf, fgScroll, cameraX, cameraY, shakeY);
@@ -107,8 +112,9 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
      * folded in.
      */
     private short cnzBgY(int cameraY, int shakeY) {
-        int adjusted = cameraY - shakeY;
-        return (short) (((long) adjusted * 13 >> 7) + shakeY);
+        // The engine passes raw Camera_Y_pos. Native Camera_Y_pos_copy already
+        // contains shake here, then CNZ1_Deform subtracts it before scaling.
+        return (short) (((long) cameraY * 13 >> 7) + shakeY);
     }
 
     /**
@@ -213,5 +219,10 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     @Override
     public int getShakeOffsetY() {
         return resolveShakeOffsetY();
+    }
+
+    @Override
+    public short getVscrollFactorFG() {
+        return foregroundVscroll;
     }
 }

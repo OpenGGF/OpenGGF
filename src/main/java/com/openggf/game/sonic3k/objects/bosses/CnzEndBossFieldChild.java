@@ -3,7 +3,6 @@ package com.openggf.game.sonic3k.objects.bosses;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -55,7 +54,7 @@ final class CnzEndBossFieldChild extends AbstractObjectInstance
         }
         centreX = boss.getCentreX() + xOffset;
         centreY = boss.getCentreY() + 0x54;
-        services().playSfx(Sonic3kSfx.GRAVITY_MACHINE.id);
+        boss.playGravityMachineSfx(frameCounter);
         if (--animTimer < 0) {
             animIndex = (animIndex + 1) & 3;
             frame = FRAMES[animIndex];

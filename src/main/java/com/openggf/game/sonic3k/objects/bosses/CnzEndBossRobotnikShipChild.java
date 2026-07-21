@@ -89,7 +89,7 @@ public final class CnzEndBossRobotnikShipChild extends AbstractObjectInstance
     private void followBoss() {
         centreX = boss.getCentreX();
         centreY = boss.getCentreY() + OFFSET_Y;
-        facingRight = !boss.facingRight();
+        facingRight = boss.facingRight();
     }
 
     private void spawnExplosionController() {

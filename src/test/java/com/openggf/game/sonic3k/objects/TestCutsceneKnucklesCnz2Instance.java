@@ -6,10 +6,12 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.CnzObjectEventBridge;
+import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
@@ -18,9 +20,11 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,9 +32,90 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCutsceneKnucklesCnz2Instance {
+    @Test
+    void secondCnzCutsceneStartsVisibleInNativePlacedStandingFrame() throws Exception {
+        CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x47A0, 0x0A2C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x10, 0, false, 0));
+
+        assertEquals(0x16, getPrivateIntField(knuckles, "mappingFrame"),
+                "ObjSlot_CutsceneKnux publishes mapping_frame=$16 before the camera reveals Knuckles");
+    }
+
+    @Test
+    void secondCnzCutsceneLandingScriptChainsIntoNativeLaughLoop() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        GameServices.camera().setX((short) 0x45C0);
+        GameServices.camera().setY((short) 0x0A00);
+        CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x47A0, 0x0A2C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x10, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+        setPrivateBooleanField(knuckles, "bounced", true);
+        invokePrivateFloorContact(knuckles, 0);
+
+        assertEquals(0x1C, getPrivateIntField(knuckles, "mappingFrame"));
+        for (int frame = 1; frame <= 8; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1C, getPrivateIntField(knuckles, "mappingFrame"));
+        }
+        for (int frame = 9; frame <= 16; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1D, getPrivateIntField(knuckles, "mappingFrame"));
+        }
+        for (int frame = 17; frame <= 24; frame++) {
+            knuckles.update(frame, null);
+            assertEquals(0x1E, getPrivateIntField(knuckles, "mappingFrame"),
+                    "byte_666B9 command $F8,+6 must enter byte_666BF's $1E/$1F laugh loop");
+        }
+        knuckles.update(25, null);
+        assertEquals(0x1F, getPrivateIntField(knuckles, "mappingFrame"));
+    }
+
+    @Test
+    void secondCnzCutsceneRendersClearNativeFacingBitDirectly() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        TestObjectServices services = new TestObjectServices();
+        CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x47A0, 0x0A2C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x10, 0, false, 0));
+        knuckles.setServices(services);
+
+        try (MockedStatic<AizIntroArtLoader> artLoader = mockStatic(AizIntroArtLoader.class)) {
+            artLoader.when(() -> AizIntroArtLoader.getKnucklesRenderer(services)).thenReturn(renderer);
+
+            knuckles.appendRenderCommands(new ArrayList<GLCommand>());
+        }
+
+        verify(renderer).drawFrameIndex(0x16, 0x47A0, 0x0A2C, false, false);
+    }
+
+    @Test
+    void secondCnzCutsceneFirstBounceReversesVelocityWithoutChangingFacing() throws Exception {
+        CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x47A0, 0x0A2C,
+                        Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x10, 0, false, 0));
+        setPrivateIntField(knuckles, "xVel", -0x0100);
+        setPrivateIntField(knuckles, "yVel", 0x0200);
+
+        invokePrivateFloorContact(knuckles, 0);
+
+        assertFalse(getPrivateBooleanField(knuckles, "facingRight"),
+                "loc_620AA negates x_vel/y_vel but does not change render_flags bit 0");
+        assertEquals(0x0100, getPrivateIntField(knuckles, "xVel"));
+        assertEquals(-0x0200, getPrivateIntField(knuckles, "yVel"));
+    }
+
     @Test
     void registryRoutesCnzAct2CutsceneSubtypesToCnzHandlers() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
@@ -474,6 +559,20 @@ class TestCutsceneKnucklesCnz2Instance {
         field.setInt(target, value);
     }
 
+    private static void setPrivateBooleanField(Object target, String fieldName, boolean value)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
+    }
+
+    private static boolean getPrivateBooleanField(Object target, String fieldName)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(target);
+    }
+
     private static int getPrivateIntField(Object target, String fieldName)
             throws ReflectiveOperationException {
         Field field = target.getClass().getDeclaredField(fieldName);
@@ -498,6 +597,14 @@ class TestCutsceneKnucklesCnz2Instance {
     private static void invokePrivateFloorContact(CutsceneKnucklesCnz2AInstance target, int distance)
             throws ReflectiveOperationException {
         Method method = CutsceneKnucklesCnz2AInstance.class
+                .getDeclaredMethod("applyFloorContact", int.class);
+        method.setAccessible(true);
+        method.invoke(target, distance);
+    }
+
+    private static void invokePrivateFloorContact(CutsceneKnucklesCnz2BInstance target, int distance)
+            throws ReflectiveOperationException {
+        Method method = CutsceneKnucklesCnz2BInstance.class
                 .getDeclaredMethod("applyFloorContact", int.class);
         method.setAccessible(true);
         method.invoke(target, distance);
