@@ -47599,3 +47599,24 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:189320-189369,41380-41444`).
 - All eight focused swinging-platform tests pass with the boundary contract
   pinned.
+
+## 2026-07-21 - S3K folded child stale-return advances physics
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczSwingingPlatformObject,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f5536 to f5545.** Animation remains at
+  f5984; total errors fell from 3,466 to 3,465, with physics falling from 3,151
+  to 3,150 and animation remaining at 315.
+- Root: ObjB4 folds the lower and upper native child SSTs into one engine
+  multi-piece provider. On the jump frame, the ridden lower child sees its own
+  standing bit plus `Status_InAir`, clears that bit, and returns. The later
+  upper child has no standing bit and still executes `SolidObjectFull`; its
+  overlapping top branch applies S3K's one-pixel loc_1E154 lift before rejecting
+  the upward player. The controller returned for the entire folded provider
+  after the lower child, skipping the upper slot. Piece-scoped providers now
+  defer stale-bit clearing/return to their per-piece loop so later siblings
+  remain executable (`docs/skdisasm/sonic3k.asm:189132-189143,41017-41035,41605-41637`).
+- The eight focused swinging-platform cases remain green, including the earlier
+  f1708 jump-off path.

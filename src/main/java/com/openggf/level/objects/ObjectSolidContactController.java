@@ -1435,7 +1435,8 @@ final class ObjectSolidContactController {
             snapshotObjectStandingBit(player, instance);
             clearObjectStandingBit(player, instance);
             if (instance instanceof SolidObjectProvider staleStandingProvider
-                    && staleStandingProvider.airborneStaleStandingBitReturnsNoContact(player)) {
+                    && staleStandingProvider.airborneStaleStandingBitReturnsNoContact(player)
+                    && !usesPieceScopedStandingBits(instance)) {
                 // ROM SolidObjectFull_1P stale-rider branch: when this
                 // object's standing bit is set and the player is already
                 // airborne, loc_1DC98 clears Status_OnObj/d6 and returns
@@ -1470,7 +1471,8 @@ final class ObjectSolidContactController {
         // d6/Status_InAir gate at the SolidObjectFull*_1P entry; a
         // broader gate on the bare standing-bit-snapshot would suppress
         // legitimate first-frame contacts with neighbouring objects.
-        if (instance != null && instance == unseatedRidingObject) {
+        if (instance != null && instance == unseatedRidingObject
+                && !usesPieceScopedStandingBits(instance)) {
             return null;
         }
 
@@ -2059,6 +2061,11 @@ final class ObjectSolidContactController {
         return multiPiece.usesPieceScopedStandingBits()
                 && multiPiece.airborneStaleStandingBitReturnsNoContact(player)
                 && hasObjectStandingBit(player, instance, ridingPieceIndex);
+    }
+
+    private boolean usesPieceScopedStandingBits(ObjectInstance instance) {
+        return instance instanceof MultiPieceSolidProvider multiPiece
+                && multiPiece.usesPieceScopedStandingBits();
     }
 
     private void preserveRidingPushStatusIfNeeded(PlayableEntity player, ObjectInstance instance,

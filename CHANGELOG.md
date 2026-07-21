@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: airborne stale-standing dispatch for folded multi-piece solids now returns per native child rather than suppressing every sibling. ObjB4’s ridden lower child can clear its bit while the later upper child still applies its legitimate S3K top-contact lift, advancing ICZ complete-run physics from frame 5536 to 5545.
 - Fix: ICZ swinging-platform child solids now include the exact right boundary used by S3K `SolidObjectFull`, restoring the native side-push bit and push-animation hold while Sonic rides between the folded child pieces. Complete-run physics advances from frame 5512 to 5536 and animation from frame 5513 to 5984.
 - Fix: ICZ swinging platforms now preserve each folded child SST's own top-landing width and stale-standing return semantics. The idle lower trigger uses its native `$20` fresh-landing window without disturbing the armed child's continued contact, advancing complete-run physics from frame 5501 to 5512 and sharply reducing downstream animation divergence.
 - Fix: Penguinator now consumes `FindFloor`'s chunk-flip-adjusted angle, preserves raw-animation phase across its hop callback, and publishes the complete slide-recovery script. This restores the ICZ Tails enemy bounce and advances complete-run physics from frame 5243 to 5501 and animation from frame 5246 to 5513.
