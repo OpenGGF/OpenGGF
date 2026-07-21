@@ -1587,6 +1587,22 @@ public class GameLoop {
             playbackDebugManager.onLevelFrameAdvanced();
         } else {
             updateNonGameplayAudio(doFrameStep);
+            // ROM parity during the bonus-exit hold/fade: after the machine catches
+            // the player (Check_PlayerInRange -> loc_61076 sets Restart_level_flag),
+            // the ROM keeps running BONUS_STAGE frames while the screen fades and the
+            // level reload is staged, and V_int (the recorder's frame source) keeps
+            // ticking across them -- so the recorded interior segment includes that
+            // ~150-frame tail before its mode_change_bk2_frame. The engine's exit
+            // fade freezes gameplay here, but must still advance the shared playback
+            // cursor (and the VBla counter) once per frozen frame, exactly as the
+            // lag-skip branch above does, or the cursor lands well short of the
+            // return segment's offset and the BONUS->LEVEL fall-through feeds the
+            // return level a stale frame-0 input. onLevelFrameAdvanced is a no-op
+            // when no playback session is active.
+            if (levelManager.getObjectManager() != null) {
+                levelManager.getObjectManager().advanceVblaCounter();
+            }
+            playbackDebugManager.onLevelFrameAdvanced();
         }
 
         // Debug: F11 cycles through bucket/priority isolation for the gumball machine
@@ -2466,6 +2482,24 @@ public class GameLoop {
     private void doExitBonusStage(BonusStageProvider provider, BonusStageState savedState) {
         bonusStageTransitionPending = false;
 
+        // ROM: on bonus-stage exit the live HUD Ring_count is copied straight into
+        // Saved_ring_count (loc_61076: move.w (Ring_count).w,(Saved_ring_count).w,
+        // sonic3k.asm:127760; the pachinko/slots exits do the same at 96683/99001),
+        // and the returning level reload then restores Ring_count from
+        // Saved_ring_count. So the count carried back is the interior's LIVE ring
+        // total at exit, NOT the entry snapshot plus a bookkeeping reward. This
+        // matters where a machine's per-item ring award differs between the HUD
+        // Ring_count and the Saved_ring_count it also bumps: the gumball ring ball
+        // adds +10 to the HUD but +20 to Saved_ring_count (loc_6114E, :127845), and
+        // that transient +20 is discarded here by the Ring_count->Saved_ring_count
+        // copy. Capture the live HUD ring total now, before onExit()/loadZoneAndAct
+        // reset it, and restore it on return below (replacing the former
+        // savedRingCount + rewards.rings() reconstruction, which double-counted the
+        // gumball ball as +20 and returned 79 rings where the ROM returns 69).
+        int interiorExitRingCount = levelManager.getLevelGamestate() != null
+                ? levelManager.getLevelGamestate().getRings()
+                : (savedState != null ? savedState.savedRingCount() : 0);
+
         // Capture rewards BEFORE onExit() in case it resets counters.
         BonusStageProvider.BonusStageRewards rewards = provider.getRewards();
 
@@ -2568,9 +2602,10 @@ public class GameLoop {
         camera.updatePosition(true);
         restoreSavedWaterLevelForStageReturn(savedState.meanWaterLevel());
 
-        // Restore ring count + add bonus stage rewards
+        // Restore ring count from the interior's live HUD total at exit (ROM
+        // loc_61076 Ring_count->Saved_ring_count copy, then reload restores it).
         if (levelManager.getLevelGamestate() != null) {
-            levelManager.getLevelGamestate().setRings(savedState.savedRingCount() + rewards.rings());
+            levelManager.getLevelGamestate().setRings(interiorExitRingCount);
             // Restore HUD timer frames before resuming
             levelManager.getLevelGamestate().setTimerFrames(savedState.savedTimerFrames());
             // Resume HUD timer (ROM: Update_HUD_timer restored after bonus stage exit)
@@ -3083,6 +3118,23 @@ public class GameLoop {
 
             // Apply deferred bonus stage setup
             applyDeferredBonusStageSetup();
+
+            // Re-arm the playback forced-input bridge now that the mode is
+            // BONUS_STAGE. This exit runs mid-step and falls through to
+            // BONUS_STAGE gameplay processing in the SAME loop.step(): that
+            // fall-through frame IS the interior's first gameplay tick. The
+            // step-top syncPlaybackInputBridge already ran while the mode was
+            // still TITLE_CARD, which PlaybackDebugManager.isDriving() does not
+            // drive (only LEVEL/BONUS_STAGE), so the player's first interior tick
+            // would otherwise run with a stale/neutral forced mask -- dropping the
+            // recorded frame-0 controller input the ROM's first bonus frame reads
+            // (e.g. the gumball's frame-0 left press that produces the single
+            // grounded ground-move before the player falls into the machine).
+            // Re-syncing here, after control is released and the mode is
+            // BONUS_STAGE, applies the current forced-input mask so the
+            // fall-through tick reads the recorded input. Bonus-entry only; LEVEL
+            // title-card exits are unaffected.
+            syncPlaybackInputBridge();
 
             LOGGER.info("Exited bonus title card, entering BONUS_STAGE mode");
         } else if (returningFromSpecialStage) {
