@@ -6,6 +6,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.RespawnState;
+import com.openggf.level.objects.PersistentRespawnState;
 
 /**
  * Owns checkpoint/respawn state and its post-load restore hooks.
@@ -13,6 +14,7 @@ import com.openggf.game.RespawnState;
 final class LevelCheckpointCoordinator {
     private final LevelManager levelManager;
     private RespawnState checkpointState;
+    private PersistentRespawnState pendingPersistentRespawn;
 
     LevelCheckpointCoordinator(LevelManager levelManager) {
         this.levelManager = levelManager;
@@ -37,6 +39,21 @@ final class LevelCheckpointCoordinator {
 
     void resetState() {
         checkpointState = null;
+        pendingPersistentRespawn = null;
+    }
+
+    void queuePersistentRespawn(PersistentRespawnState state) {
+        pendingPersistentRespawn = state;
+    }
+
+    PersistentRespawnState consumePersistentRespawn() {
+        PersistentRespawnState state = pendingPersistentRespawn;
+        pendingPersistentRespawn = null;
+        return state;
+    }
+
+    void clearPendingPersistentRespawn() {
+        pendingPersistentRespawn = null;
     }
 
     CheckpointState.RewindState captureRewindState() {

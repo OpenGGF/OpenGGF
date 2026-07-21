@@ -1392,7 +1392,7 @@ public class GameLoop {
         // offsetting oscillation-driven moving platforms (Obj18) when control
         // returns -- visible after a special-stage return where the engine runs
         // the real title card (rather than the trace bootstrap that skips it).
-        levelManager.suppressGlobalOscillationForTitleCardPass();
+        OscillationManager.suppressNextFrames(1);
         if (tcpCard.shouldRunPlayerPhysics()) {
             // S2: full title-card frame step.
             spriteManager.publishHeldInputForLevelEvents(inputHandler);

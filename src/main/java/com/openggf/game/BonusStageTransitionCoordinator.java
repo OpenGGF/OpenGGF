@@ -96,8 +96,8 @@ public final class BonusStageTransitionCoordinator {
 
     /**
      * Transfers the captured respawn table to the level-load lifecycle before
-     * the return level is loaded. The level manager consumes it during the new
-     * object manager's reset, before initial placement materialization.
+     * the return level is loaded. The checkpoint coordinator consumes it during
+     * the new object manager's reset, before initial placement materialization.
      */
     public void prepareReturnLoad(LevelManager levelManager) {
         levelManager.restorePersistentRespawnOnNextObjectReset(pendingRespawnState);

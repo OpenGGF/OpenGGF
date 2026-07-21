@@ -77,7 +77,7 @@ import java.nio.file.Path;
  * card and must reproduce the ROM phase organically. Fixed in {@code src/main} by
  * gating the global-oscillator advance during the locked title-card object pass
  * ({@code GameLoop.updateTitleCardMode} -&gt;
- * {@code LevelManager.suppressGlobalOscillationForTitleCardPass()}), which is
+ * {@code OscillationManager.suppressNextFrames(1)}), which is
  * game-general (S1 mirrors it: sonic.asm {@code OscillateNumDo} 3030 sits outside
  * {@code Level_TtlCardLoop} 2811-2839) and correct for live play — not a trace-derived
  * value or a re-bootstrap of the returning segment.

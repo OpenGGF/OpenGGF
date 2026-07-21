@@ -138,8 +138,9 @@ public final class OscillationManager {
      * replay fixtures to skip the ROM's pre-LevelLoop frames (SEGA/title/
      * level-load gamemodes 0x00/0x04/0x8C) that the headless fixture
      * collapses into zero real ticks but where the replay driver still
-     * calls {@link com.openggf.level.LevelManager#advanceGlobalOscillation}
-     * once per stepped trace frame.
+     * reaches the global oscillator once per stepped trace frame. The same
+     * one-shot gate is used for title-card object passes, where the ROM runs
+     * objects without running {@code OscillateNumDo}.
      */
     public static void suppressNextFrames(int n) {
         suppressedUpdates = Math.max(0, n);

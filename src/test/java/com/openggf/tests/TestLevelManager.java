@@ -136,10 +136,13 @@ public class TestLevelManager {
         assertThrows(IndexOutOfBoundsException.class,
                 () -> levelManager.loadZoneAndAct(-1, 0));
 
-        Field pendingState = LevelManager.class.getDeclaredField(
-                "persistentRespawnStateForNextObjectReset");
+        Field coordinatorField = LevelManager.class.getDeclaredField("checkpointCoordinator");
+        coordinatorField.setAccessible(true);
+        Object checkpointCoordinator = coordinatorField.get(levelManager);
+        Field pendingState = checkpointCoordinator.getClass().getDeclaredField(
+                "pendingPersistentRespawn");
         pendingState.setAccessible(true);
-        assertNull(pendingState.get(levelManager),
+        assertNull(pendingState.get(checkpointCoordinator),
                 "A failed return load must not apply its respawn table to a later level");
     }
 

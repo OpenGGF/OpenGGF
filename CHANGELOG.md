@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Level loading now delegates transient handoffs to their runtime owners:**
+  title-card object passes arm `OscillationManager` directly, keeping the gate
+  in its rewind snapshot, while `LevelCheckpointCoordinator` owns the queued
+  bonus-return respawn table through reset, one-shot consumption, and failed-load
+  cleanup. Global oscillator dispatch also moved into `LevelFrameRuntimeUpdater`,
+  reducing `LevelManager` below its release-critical architecture budget.
 - **S3K custom zones now resolve implemented FBZ objects from their declared pointer table:**
   20 FBZ-only factories follow the S3KL object set without requiring a fake stock zone
   id, while the shared FBZ/DEZ player launcher remains available in both S3KL and SKL.

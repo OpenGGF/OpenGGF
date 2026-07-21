@@ -1,5 +1,7 @@
 package com.openggf.level;
 
+import com.openggf.game.OscillationManager;
+
 /**
  * Advances level-owned runtime state that must tick during logic frames, even
  * when no renderer is active.
@@ -9,6 +11,17 @@ final class LevelFrameRuntimeUpdater {
 
     LevelFrameRuntimeUpdater(LevelManager levelManager) {
         this.levelManager = levelManager;
+    }
+
+    void advanceGlobalOscillation() {
+        int featureZone = levelManager.getFeatureZoneId();
+        int featureAct = levelManager.getFeatureActId();
+        if (levelManager.zoneFeatureProvider != null
+                && !levelManager.zoneFeatureProvider.shouldAdvanceGlobalOscillation(
+                        featureZone, featureAct)) {
+            return;
+        }
+        OscillationManager.update(levelManager.frameCounter);
     }
 
     void updateParallaxAndAnimatedContent() {

@@ -761,6 +761,27 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void levelManagerDelegatesTransientOscillationAndRespawnHandoffs() throws IOException {
+        String levelManager = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelManager.java")));
+        String gameLoop = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/GameLoop.java")));
+        String checkpointCoordinator = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/LevelCheckpointCoordinator.java")));
+
+        assertTrue(!levelManager.contains("suppressGlobalOscillationForTitleCardPass"),
+                "Title-card oscillator suppression belongs to OscillationManager");
+        assertTrue(gameLoop.contains("OscillationManager.suppressNextFrames(1)"),
+                "GameLoop should arm the oscillator-owned one-shot suppression directly");
+        assertTrue(!levelManager.contains("persistentRespawnStateForNextObjectReset"),
+                "Pending bonus-return respawn ownership belongs to LevelCheckpointCoordinator");
+        assertTrue(checkpointCoordinator.contains("pendingPersistentRespawn"),
+                "LevelCheckpointCoordinator should own the pending respawn handoff");
+        assertTrue(checkpointCoordinator.contains("consumePersistentRespawn()"),
+                "LevelCheckpointCoordinator should expose one-shot consumption for object reset");
+    }
+
+    @Test
     void levelManagerDelegatesActTransitionExecutionToNamedCollaborator() throws IOException {
         Path path = SRC_MAIN.resolve("com/openggf/level/LevelManager.java");
         SourceFile sourceFile = SourceFile.read(path);
