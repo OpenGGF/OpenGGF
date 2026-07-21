@@ -47713,3 +47713,25 @@ standalone CNZ remains at f0 in both scopes.
   ObjAF now declares the verified inclusive full-solid boundary
   (`docs/skdisasm/sonic3k.asm:188007-188020,41380-41444`).
 - All eleven focused crushing-column tests pass.
+
+## 2026-07-21 - ICZ move-lock follow phase advances both frontiers
+
+- Commands: focused `TestSidekickCpuFollowParity`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f7257 to f7327 and animation advanced
+  from f7274 to f7350.** The later route exposes 2,980 errors (2,627 physics
+  and 353 animation), replacing the prior 2,960-error downstream cascade
+  rather than representing a like-for-like count reduction.
+- Root: at f7257 the move-locked leader enters the frame with native
+  `ground_vel=$03C4`, then the engine's earlier movement projection publishes
+  `$0419` before Tails' CPU pass. ROM `Tails_CPU_Control` executes before that
+  projection and therefore takes the signed `<$0400` branch, subtracting the
+  `$20` lead offset from the delayed `$527B` position to target `$525B`. The
+  engine instead treated the leader as fast, targeted `$527B`, and applied a
+  +1 follow nudge to right-facing Tails. The lead-offset gate now consumes the
+  leader's pre-physics ground speed only while native `move_lock` is active;
+  ordinary movement retains the established live phase because globally
+  using the snapshot regresses earlier follow decisions
+  (`docs/skdisasm/sonic3k.asm:26683-26724`).
+- The focused 102-case sidekick follow suite passes, including the exact
+  `$03C4` to `$0419` locked-frame threshold crossing.

@@ -704,6 +704,42 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kMoveLockedLeaderUsesPrePhysicsGroundSpeedForLeadOffsetGate() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x527B);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+        sonic.setGSpeed((short) 0x03C4);
+        sonic.capturePrePhysicsSnapshot();
+        sonic.setGSpeed((short) 0x0419);
+        sonic.setMoveLockTimer(21);
+
+        tails.setCentreXPreserveSubpixel((short) 0x525D);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x02A3);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x1C59);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals(-2, diagnostics.dx(),
+                        "S3K loc_13DA6 sees the locked leader's pre-physics $03C4 ground_vel and applies the $20 lead offset"),
+                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
+                        "The resulting target is left of a right-facing sidekick, so FollowLeft must not add a right nudge"),
+                () -> assertEquals(0x525D, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
     void delayedCentreHistoryDoesNotDependOnCurrentHitboxHeight() {
         TestableSprite sonic = new TestableSprite("sonic");
 
