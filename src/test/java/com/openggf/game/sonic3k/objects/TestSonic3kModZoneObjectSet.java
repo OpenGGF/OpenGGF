@@ -10,8 +10,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -191,11 +193,32 @@ class TestSonic3kModZoneObjectSet {
     void sourceBranchesReadingRomZoneIdCannotSilentlyUseSetOnlyRegistration() throws Exception {
         Path source = Path.of("src/main/java/com/openggf/game/sonic3k/objects/"
                 + "Sonic3kObjectRegistry.java");
+        Set<Integer> sourceDependentIds = sourceDependentIds(Files.readAllLines(source));
+
+        assertEquals(new Sonic3kObjectRegistry().stockZoneBoundFactoryIds(),
+                sourceDependentIds);
+    }
+
+    @Test
+    void sourceAuditAttributesCurrentRomZoneReadToCustomCompatibleFactory() throws Exception {
+        Set<Integer> sourceDependentIds = sourceDependentIds(List.of(
+                "registerStockZoneBound(Sonic3kObjectIds.AIZ_HOLLOW_TREE,",
+                "        (spawn, registry) -> new AizHollowTreeObjectInstance(spawn));",
+                "registerZoneSetBound(Sonic3kObjectIds.FBZ_WIRE_CAGE, S3kZoneSet.S3KL,",
+                "        (spawn, registry) -> currentRomZoneId() == 4",
+                "                ? new FbzWireCageObjectInstance(spawn) : null);",
+                "factories.forEach(this::registerSetOnly);"));
+
+        assertEquals(Set.of(Sonic3kObjectIds.FBZ_WIRE_CAGE), sourceDependentIds);
+    }
+
+    private static Set<Integer> sourceDependentIds(List<String> sourceLines) throws Exception {
         Pattern registration = Pattern.compile(
-                "(?:factories\\.put|registerStockZoneBound)\\(Sonic3kObjectIds\\.([A-Z0-9_]+),");
+                "(?:factories\\.put|registerStockZoneBound|registerZoneSetBound)"
+                        + "\\(Sonic3kObjectIds\\.([A-Z0-9_]+),");
         Set<Integer> sourceDependentIds = new HashSet<>();
         String activeConstant = null;
-        for (String line : Files.readAllLines(source)) {
+        for (String line : sourceLines) {
             var matcher = registration.matcher(line);
             if (matcher.find()) {
                 activeConstant = matcher.group(1);
@@ -207,9 +230,7 @@ class TestSonic3kModZoneObjectSet {
                         .getField(activeConstant).getInt(null));
             }
         }
-
-        assertEquals(new Sonic3kObjectRegistry().stockZoneBoundFactoryIds(),
-                sourceDependentIds);
+        return sourceDependentIds;
     }
 
     private static final class InspectableRegistry extends Sonic3kObjectRegistry {
