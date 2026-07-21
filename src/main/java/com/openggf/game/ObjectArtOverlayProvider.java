@@ -80,6 +80,9 @@ public class ObjectArtOverlayProvider implements ObjectArtProvider {
 
     @Override public int getRegularPatternCount() {
         int count = base.getRegularPatternCount();
+        if (count < 0) {
+            throw new IllegalStateException("Invalid base regular object pattern count: " + count);
+        }
         for (ObjectSpriteSheet sheet : sheets.values()) {
             count = Math.addExact(count, sheet.getPatterns().length);
         }
