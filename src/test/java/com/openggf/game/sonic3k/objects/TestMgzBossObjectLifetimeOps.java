@@ -1,9 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -14,6 +17,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestMgzBossObjectLifetimeOps {
+
+    @BeforeEach
+    void setUpCameraBounds() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+    }
+
+    @AfterEach
+    void resetCameraBounds() {
+        AbstractObjectInstance.resetCameraBoundsForTests();
+    }
 
     @Test
     void fallingDebrisExpiresLatchedAfterFallingBelowTheCamera() {

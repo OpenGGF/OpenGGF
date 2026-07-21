@@ -124,11 +124,11 @@ class TestCnzMinibossSwingPhase {
             boss.update(frame++, fixture.sprite());
             assertEquals(0x0C, boss.getCurrentRoutine() & 0xFF,
                     "top-hit handoff must enter Closing through production update");
-            for (int i = 0; i < 26; i++) {
+            for (int i = 0; i < 27; i++) {
                 boss.update(frame++, fixture.sprite());
             }
             assertEquals(6, boss.getCurrentRoutine() & 0xFF,
-                    "Closing $F4 callback must return to duplicate Move routine");
+                    "Closing's deferred $F4 callback must return to duplicate Move routine");
             assertEquals(Sonic3kConstants.CNZ_MINIBOSS_SWING_X_VEL,
                     Math.abs(boss.getCurrentXVel()));
             assertTrue(top.retainsParentForTest(boss),
