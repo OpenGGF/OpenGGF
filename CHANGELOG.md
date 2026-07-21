@@ -3,7 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Fix: S3K post-player invisible hurt blocks now queue their Obj37 owner for the next level-frame object pass, preserving the hit frame's ring count until the owner executes and matching native lost-ring allocation timing.
+- Fix: S3K post-player invisible hurt blocks now materialize their Obj37 spill in the native phase while deferring `Ring_count` ownership to the first ring slot; lost-ring touch consumes the previously published collision-list position and `GiveRing` runs from Obj37 rather than the player touch callback. This advances the ICZ complete-run physics frontier from frame 3174 to frame 3856.
 - Fix: S3K collapsing bridges now seed their collapse-wave riders from the bridge's own standing/riding latch rather than global `Status_OnObj`, preventing a trigger-mode bridge from claiming and later resetting the animation of a player supported by another solid.
 - Fix: ICZ ice cubes now test each standing player's animation byte captured before `SolidObjectFull` changes landing state, matching the ROM's saved `$3A/$3B` roll check and restoring the native cube-shatter launch.
 - Fix: bonus-stage return now reapplies the captured object respawn table inside the fresh object manager's reset, after placement bookkeeping is cleared but before the initial camera window is materialized. Initially visible remembered objects therefore remain suppressed instead of surviving as live instances created by the reload.

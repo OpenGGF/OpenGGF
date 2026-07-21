@@ -139,6 +139,10 @@ public class TestLostRingTouchOrdering {
         objectManager.runTouchResponsesForPlayer(player, 1);
 
         assertTrue(ring.isCollected(), "S2 Touch_ChkValue lets Tails collect Obj37 lost rings in 1P");
+        verify(player, never()).addRings(1);
+
+        ring.update(2, player);
+
         verify(player).addRings(1);
     }
 
@@ -240,9 +244,9 @@ public class TestLostRingTouchOrdering {
     }
 
     @Test
-    public void inlineObj37TouchUsesLiveCollisionListPosition() {
+    public void inlineObj37TouchUsesPreviousPublishedPosition() {
         LostRingObjectInstance ring = LostRingObjectInstance.forTest(
-                140, 112, 20 << 8, 0, 0, 0xFF);
+                160, 112, 20 << 8, 0, 0, 0xFF);
         ring.setSlotIndex(20);
         objectManager.addDynamicObject(ring);
         ring.snapshotPreUpdatePosition();
@@ -251,7 +255,7 @@ public class TestLostRingTouchOrdering {
         objectManager.runTouchResponsesForPlayer(player, 1, true);
 
         assertTrue(ring.isCollected(),
-                "S3K Collision_response_list pointers expose Obj37's live published position");
+                "S3K player touch consumes the Obj37 position published by the previous object pass");
     }
 
     @Test

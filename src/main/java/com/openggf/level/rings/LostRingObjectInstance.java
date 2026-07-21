@@ -299,6 +299,19 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // skipping ahead to another overlapping ring.
         if (collected && !collectionRoutineStarted) {
             collectionRoutineStarted = true;
+            // ROM Touch_ChkValue only writes routine=4. GiveRing runs when this
+            // Obj37 slot next executes (loc_1A7C2), which can be later in the
+            // same object pass or on the following frame depending on slot order.
+            ObjectServices services = servicesOrNull();
+            if (services != null && services.levelGamestate() != null) {
+                services.levelGamestate().addRings(1);
+            } else if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable) {
+                playable.addRings(1);
+            }
+            if (services != null) {
+                services.playSfx(com.openggf.audio.GameSound.RING);
+            }
+            sparkleStartFrame = executedFrame;
         }
         if (collected && collectedSparkleFinished(executedFrame)) {
             setDestroyed(true);
@@ -627,11 +640,6 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     public void markCollected(int frameCounter) {
         collected = true;
-        // Touch response observes Obj37 after its object update for the frame;
-        // the collected sparkle routine takes effect when that slot next runs.
-        int collectionFrame = lastFrameCounter > 0 ? lastFrameCounter + 1 : frameCounter;
-        sparkleStartFrame = collectionFrame;
-        lastFrameCounter = collectionFrame;
     }
 
     public int getSparkleStartFrame() {

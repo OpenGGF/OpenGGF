@@ -549,8 +549,17 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                                                     int frameCounter, int x, int y,
                                                     int[] preallocatedSlots,
                                                     boolean slotsFullyReserved) {
+        spawnLostRingsWithInitialObjectStep(player, ringCount, frameCounter, x, y,
+                preallocatedSlots, slotsFullyReserved, false);
+    }
+
+    public void spawnLostRingsWithInitialObjectStep(AbstractPlayableSprite player, int ringCount,
+                                                    int frameCounter, int x, int y,
+                                                    int[] preallocatedSlots,
+                                                    boolean slotsFullyReserved,
+                                                    boolean forceDeferredOwnerRingClear) {
         lostRings.spawnLostRings(player, ringCount, frameCounter, x, y,
-                preallocatedSlots, slotsFullyReserved, true);
+                preallocatedSlots, slotsFullyReserved, true, forceDeferredOwnerRingClear);
     }
 
     /** Shared spilled-ring spin owner feeding the LostRingObjectInstance object path. */
@@ -1530,13 +1539,22 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     ? new int[] {preallocatedFirstSlot}
                     : new int[0];
             spawnLostRings(player, ringCount, frameCounter, x, y, slots,
-                    false, applyInitialObjectStep);
+                    false, applyInitialObjectStep, false);
         }
 
         private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
                                     int x, int y, int[] preallocatedSlots,
                                     boolean slotsFullyReserved,
                                     boolean applyInitialObjectStep) {
+            spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedSlots,
+                    slotsFullyReserved, applyInitialObjectStep, false);
+        }
+
+        private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
+                                    int x, int y, int[] preallocatedSlots,
+                                    boolean slotsFullyReserved,
+                                    boolean applyInitialObjectStep,
+                                    boolean forceDeferredOwnerRingClear) {
             if (player == null || renderer == null) {
                 return;
             }
@@ -1567,9 +1585,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (preallocateOwnerSlot && firstReservedSlot < 0) {
                 firstReservedSlot = objectManager.allocateDynamicSlot();
             }
-            boolean deferRingCountClear = objectManager != null
+            boolean deferRingCountClear = forceDeferredOwnerRingClear || (objectManager != null
                     && firstReservedSlot >= 0
-                    && objectManager.reservedSlotWaitsForNextObjectPass(firstReservedSlot);
+                    && objectManager.reservedSlotWaitsForNextObjectPass(firstReservedSlot));
             int previousSlot = firstReservedSlot;
             int spawned = 0;
             for (int i = 0; i < toSpawn; i++) {

@@ -426,11 +426,11 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
-    public void spawnLostRingsOnNextLevelFrame(PlayableEntity player) {
+    public void spawnLostRingsWithDeferredOwner(PlayableEntity player, int frameCounter) {
         if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite aps) {
-            lm().spawnLostRingsOnNextLevelFrame(aps);
+            lm().spawnLostRingsWithDeferredOwner(aps, frameCounter);
         } else {
-            LOG.warning("spawnLostRingsOnNextLevelFrame: player is not AbstractPlayableSprite, rings not spawned");
+            LOG.warning("spawnLostRingsWithDeferredOwner: player is not AbstractPlayableSprite, rings not spawned");
         }
     }
 

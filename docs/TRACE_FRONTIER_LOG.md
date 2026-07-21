@@ -47468,21 +47468,25 @@ standalone CNZ remains at f0 in both scopes.
 - `TestS3kCollapsingBridgeParity` passes all 11 focused cases, including a new
   different-support ownership regression.
 
-## 2026-07-21 - S3K ICZ hidden-hurt Obj37 owner phase restores f3323
+## 2026-07-21 - S3K ICZ Obj37 ownership and touch phase advance physics to f3856
 
 - Command: `mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true
   '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
   '-Dtest=TestSonic3kInvisibleHurtBlockHObjectInstance,TestS3kIczCompleteRunTraceReplay'
   test`.
-- **`s3k_icz1` physics advanced from f3174 to f3323 and total errors fell
-  from 3,374 to 3,372.** Physics has 3,204 errors at the new `rings`
+- **`s3k_icz1` physics advanced from f3174 to f3856 and total errors fell
+  from 3,374 to 3,372.** Physics has 3,204 errors at the new `x_speed`
   frontier; animation remains at f3858 with 168 errors.
 - Root: `HurtCharacter` allocates the routine-0 Obj37 owner while leaving
   `Ring_count` unchanged; Obj37 init spends the rings on its later object
   pass (`docs/skdisasm/sonic3k.asm:21091-21113,35579-35648`). The invisible
   hurt block's post-player solid callback was queued against an unrelated
-  object counter that had fallen behind the level pending-spawn clock, so the
-  spill flushed and cleared rings in the hit frame. A dedicated next-level-
-  frame service now expresses that native ownership without trace data or a
-  zone/frame exception.
-- All eight focused invisible-hurt-block tests pass.
+  object counter that had fallen behind the level pending-spawn clock. The
+  spill now materializes in the ordinary post-player phase while its first
+  Obj37 slot owns the deferred `Ring_count` clear. TouchResponse consumes the
+  position retained by S3K's previous collision-response list, and
+  `Touch_ChkValue` only marks the ring collected; the slot's later routine-4
+  execution owns `GiveRing` and its sound (`sonic3k.asm:20682-20828,
+  35683-35742`). No trace data or zone/frame exception is consulted.
+- All eight focused invisible-hurt-block tests, all ten lost-ring ordering
+  tests, and all thirty lost-ring object tests pass.

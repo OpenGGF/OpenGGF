@@ -2380,17 +2380,15 @@ public class LevelManager {
     }
 
     public void spawnLostRingsAfterCurrentFrame(AbstractPlayableSprite player, int frameCounter) {
-        queueLostRingSpawn(player, frameCounter);
+        queueLostRingSpawn(player, frameCounter, false);
     }
 
-    public void spawnLostRingsOnNextLevelFrame(AbstractPlayableSprite player) {
-        // processPendingLostRingSpawns increments frameCounter before testing
-        // the target. Using current+1 therefore leaves the owner pending for
-        // that update and materializes it on the following object pass.
-        queueLostRingSpawn(player, frameCounter + 1);
+    public void spawnLostRingsWithDeferredOwner(AbstractPlayableSprite player, int frameCounter) {
+        queueLostRingSpawn(player, frameCounter, true);
     }
 
-    private void queueLostRingSpawn(AbstractPlayableSprite player, int scheduledFrame) {
+    private void queueLostRingSpawn(
+            AbstractPlayableSprite player, int scheduledFrame, boolean deferOwnerRingClear) {
         if (player == null || ringManager == null) {
             return;
         }
@@ -2426,7 +2424,7 @@ public class LevelManager {
         }
         pendingLostRingSpawns.add(new PendingLostRingSpawn(
                 player, count, player.getCentreX(), player.getCentreY(), scheduledFrame,
-                preallocatedSlots, slotsFullyReserved));
+                preallocatedSlots, slotsFullyReserved, deferOwnerRingClear));
     }
 
     private void processPendingLostRingSpawns() {
@@ -2443,7 +2441,7 @@ public class LevelManager {
                 ringManager.spawnLostRingsWithInitialObjectStep(
                         pending.player(), pending.ringCount(), frameCounter,
                         pending.x(), pending.y(), pending.preallocatedSlots(),
-                        pending.slotsFullyReserved());
+                        pending.slotsFullyReserved(), pending.deferOwnerRingClear());
             } else if (objectManager != null) {
                 for (int slot : pending.preallocatedSlots()) {
                     objectManager.releaseDynamicSlot(slot);
@@ -2455,7 +2453,7 @@ public class LevelManager {
 
     private record PendingLostRingSpawn(
             AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter,
-            int[] preallocatedSlots, boolean slotsFullyReserved) {
+            int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear) {
     }
 
     // ── Post-load assembly methods ──────────────────────────────────────
