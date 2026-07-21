@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Playable-subclass rewind keeps its published constructor compatibility:**
+  `PlayerRewindExtra` again exposes the canonical pre-subclass-payload overload,
+  delegating to the current snapshot shape with a null `subclassExtra`, so mods
+  compiled against the earlier Mod API signature continue to link after later
+  base-player rewind fields were added.
 - **Background-plane player probes now preserve absent S3K layout rows:**
   provider-translated `FindFloor`/`FindWall` scans consult the level's ROM row-pointer
   presence before reading decoded padding, preventing MGZ2's state-eight rise transform
