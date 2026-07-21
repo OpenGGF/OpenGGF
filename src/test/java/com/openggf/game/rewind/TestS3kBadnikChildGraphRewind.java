@@ -141,10 +141,7 @@ class TestS3kBadnikChildGraphRewind {
         assertEquals(2, sourceParents.size(), "precondition: two Dragonfly parents must be captured");
         DragonflyBadnikInstance sourceParentA = sourceParents.get(0);
         DragonflyBadnikInstance sourceParentB = sourceParents.get(1);
-        sourceParentA.update(0, player);
-        sourceParentA.update(1, player);
-        sourceParentB.update(0, player);
-        sourceParentB.update(1, player);
+        activateDragonflies(objectManager, player, sourceParentA, sourceParentB);
         List<ObjectInstance> sourceSegments = liveByClassName(objectManager, DRAGONFLY_LINKED_BODY_CHILD);
         assertEquals(14, sourceSegments.size(), "precondition: Dragonfly setup must create seven body links per parent");
         List<ObjectInstance> sourceWings = liveByClassName(objectManager, DRAGONFLY_WING_CHILD);
@@ -1518,8 +1515,7 @@ class TestS3kBadnikChildGraphRewind {
                 new ObjectSpawn(0x120, 0x100, Sonic3kObjectIds.DRAGONFLY, 0, 0, false, 50)));
         ObjectManager objectManager = harness.objectManager();
         DragonflyBadnikInstance sourceParent = liveByType(objectManager, DragonflyBadnikInstance.class).getFirst();
-        sourceParent.update(0, player());
-        sourceParent.update(1, player());
+        activateDragonflies(objectManager, player(), sourceParent);
         ObjectInstance sourceSegment = segmentByParentAndIndex(
                 liveByClassName(objectManager, DRAGONFLY_LINKED_BODY_CHILD),
                 sourceParent,
@@ -1782,6 +1778,19 @@ class TestS3kBadnikChildGraphRewind {
 
     private static TestablePlayableSprite player() {
         return new TestablePlayableSprite("sonic", (short) 0x180, (short) 0x120);
+    }
+
+    private static void activateDragonflies(ObjectManager objectManager,
+                                            TestablePlayableSprite player,
+                                            DragonflyBadnikInstance... dragonflies) {
+        for (DragonflyBadnikInstance dragonfly : dragonflies) {
+            dragonfly.update(0, player);
+        }
+        objectManager.refreshPostCameraRenderState();
+        for (DragonflyBadnikInstance dragonfly : dragonflies) {
+            dragonfly.update(1, player);
+            dragonfly.update(2, player);
+        }
     }
 
     private record Harness(ObjectManager objectManager) {
