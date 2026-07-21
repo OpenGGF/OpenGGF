@@ -338,10 +338,10 @@ Expected: PASS with no blanket baseline count increase.
 - Modify: `src/main/java/com/openggf/game/sonic3k/objects/MgzMinibossInstance.java`
 - Test: `src/test/java/com/openggf/game/sonic3k/objects/TestMgzMinibossInstance.java`
 
-- [ ] Run `defeatCameraHelperLocksBothCameraBoundsWhileScrolling`; expected X/minX=`0x2E00`, maxX=`0x2DFF`.
-- [ ] Update X, minX, and maxX atomically from the persistent camera owner until the same target is reached.
-- [ ] Run the full class; expected PASS.
-- [ ] Commit as `fix: lock MGZ defeat camera bounds`, updating `CHANGELOG.md`.
+- [x] Run `defeatCameraHelperLocksBothCameraBoundsWhileScrolling`; reproduced X/minX=`0x2E00` with stale maxX=`0x2DFF`.
+- [x] Update X, minX, and maxX atomically from the persistent camera owner until the same target is reached; tightened coverage around the intermediate lock and target-time helper release.
+- [x] Run the full class plus related camera, MGZ-event, and rewind tests; all selected tests pass.
+- [x] Commit as `fix: lock MGZ defeat camera bounds`, updating `CHANGELOG.md`.
 
 ### Task D3.8: Order MGZ thruster flames around the body bucket
 

@@ -1356,6 +1356,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
             int nextX = services().camera().getX() + 1;
             services().camera().setX((short) nextX);
             services().camera().setMinX((short) nextX);
+            services().camera().setMaxX((short) nextX);
             if (nextX >= targetX) {
                 setDestroyed(true);
             }

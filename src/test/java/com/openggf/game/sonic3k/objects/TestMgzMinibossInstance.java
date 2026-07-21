@@ -420,16 +420,24 @@ class TestMgzMinibossInstance {
                 .findFirst()
                 .orElseThrow();
 
-        camera.setX((short) 0x2DFF);
-        camera.setMinX((short) 0x2DFF);
-        camera.setMaxX((short) 0x2DFF);
+        camera.setX((short) 0x2DFE);
+        camera.setMinX((short) 0x2DFE);
+        camera.setMaxX((short) 0x2DFE);
 
         helper.update(80, player);
+
+        assertEquals(0x2DFF, camera.getX() & 0xFFFF, "Camera helper should advance one pixel per frame");
+        assertEquals(0x2DFF, camera.getMinX() & 0xFFFF, "Camera helper should carry the left lock with it");
+        assertEquals(0x2DFF, camera.getMaxX() & 0xFFFF, "Camera helper should carry the right lock with it");
+        assertFalse(helper.isDestroyed(), "Camera helper should remain active before reaching its target");
+
+        helper.update(81, player);
 
         assertEquals(0x2E00, camera.getX() & 0xFFFF, "Camera helper should stop at the ROM target X");
         assertEquals(0x2E00, camera.getMinX() & 0xFFFF, "Camera helper should advance the left lock");
         assertEquals(0x2E00, camera.getMaxX() & 0xFFFF,
                 "Camera helper should also clamp the right bound during the signpost handoff");
+        assertTrue(helper.isDestroyed(), "Camera helper should release ownership once the target is reached");
     }
 
     @Test
