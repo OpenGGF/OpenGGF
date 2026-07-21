@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -434,9 +435,13 @@ class TestSonic3kMgz2QuakeEvents {
         events.requestLevelCollapse();
 
         events.update(1, 1);
+        events.update(1, 2);
+        events.update(1, 16);
         events.update(1, 17);
+        events.update(1, 18);
 
         verify(audio, times(2)).playSfx(Sonic3kSfx.BIG_RUMBLE.id);
+        verify(audio, never()).playSfx(Sonic3kSfx.RUMBLE_2.id);
     }
 
     private static final class TestableMgzEvents extends Sonic3kMGZEvents {

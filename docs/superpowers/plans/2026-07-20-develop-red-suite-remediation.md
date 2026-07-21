@@ -316,10 +316,10 @@ Expected: PASS with no blanket baseline count increase.
 - Modify: `src/main/java/com/openggf/game/sonic3k/events/Sonic3kMGZEvents.java`
 - Test: `src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2QuakeEvents.java`
 
-- [ ] Run `collapsePlaysBigRumbleEvery16Frames`; expected frame counters 1 and 17 produce one call instead of two.
-- [ ] Preserve ordinary rumble coverage and select `BIG_RUMBLE` from collapse state while using the visible gameplay counter for cadence.
-- [ ] Run the full quake class; expected PASS.
-- [ ] Commit as `fix: restore MGZ collapse rumble cadence`, updating `CHANGELOG.md`.
+- [x] Run `collapsePlaysBigRumbleEvery16Frames`; confirmed frame counters 1 and 17 produced one call instead of two because the screen-event routine lagged the persistent collapse request by one dispatch.
+- [x] Preserve ordinary rumble coverage and select `BIG_RUMBLE` from the boss-owned collapse request while retaining the visible gameplay counter's ROM 16-frame mask; added off-cadence and wrong-SFX assertions.
+- [x] Run the full 19-test quake class plus collapse, end-boss, event-rewind, and event-schema coverage; all 127 targeted tests pass.
+- [x] Commit as `fix: restore MGZ collapse rumble cadence`, updating `CHANGELOG.md`.
 
 ### Task D3.6: Restore the MGZ miniboss return-swing routine boundary
 

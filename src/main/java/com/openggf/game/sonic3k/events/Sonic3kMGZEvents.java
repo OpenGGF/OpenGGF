@@ -1039,7 +1039,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (((frameCounter - 1) & RUMBLE_SFX_INTERVAL_MASK) != 0) {
             return;
         }
-        if (screenEventRoutine == SCREEN_EVENT_COLLAPSE && !collapseFinished && screenShakeActive) {
+        // Events_fg_4/collapseRequested is the persistent owner of the
+        // collapse sequence. The screen-event routine observes that write one
+        // dispatch later, so using its routine here can drop a cadence slot
+        // between the boss request and MGZ2SE_Collapse becoming visible.
+        if (collapseRequested && !collapseFinished) {
             audioManager.playSfx(Sonic3kSfx.BIG_RUMBLE.id);
             return;
         }
