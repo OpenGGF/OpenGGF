@@ -598,7 +598,6 @@ final class DefaultObjectRewindPolicies {
             // SS-entry flash parent links are structural and can outlive a ring removed from
             // ObjectManager while the flash finishes the transition. Restore relinks by position.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance", "parentRing"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance", "playerAtCollapse"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractBadnikInstance", "destructionConfig"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractMonitorObjectInstance", "effectTarget"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractObjectInstance", "dynamicSpawn"), RewindFieldPolicy.TRANSIENT),

@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -36,9 +35,6 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
     private static final int RE_ENTRY_LOWERED_Y_OFFSET = 0x40;
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 0x20, 0x20);
 
-    @RewindTransient(reason = "Structural parent link; a dynamic persistent door can outlive its "
-            + "placed button across an act-transition boundary, so the button may be unregistered "
-            + "when the door is captured. Re-established on recreate via findNearestLiveButton.")
     private Mhz1CutsceneButtonInstance parent;
     private final SubpixelMotion.State motion = new SubpixelMotion.State(INITIAL_X, INITIAL_Y, 0, 0, 0, 0);
     private State state = State.IDLE;
