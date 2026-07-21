@@ -5,6 +5,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RgbaImage;
@@ -32,15 +33,22 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
     private static final int FBZ_ZONE = 4;
 
     private final FbzVisualCaptureMode mode;
+    private final SonicConfigurationService configuration;
     private final HeadlessGameBoot boot;
     private final Map<String, Object> effectiveConfiguration;
     private GameLoop loop;
     private boolean closed;
 
     public HiddenGlCaptureSession(FbzVisualCaptureMode mode) {
+        this(mode, EngineContext.fromLegacySingletonsForBootstrap());
+    }
+
+    HiddenGlCaptureSession(FbzVisualCaptureMode mode, EngineContext engineContext) {
         this.mode = Objects.requireNonNull(mode, "mode");
-        effectiveConfiguration = configure(mode);
-        boot = new HeadlessGameBoot(mode.framebufferWidth(), mode.framebufferHeight());
+        engineContext = Objects.requireNonNull(engineContext, "engineContext");
+        configuration = engineContext.configuration();
+        effectiveConfiguration = configure(configuration, mode);
+        boot = new HeadlessGameBoot(mode.framebufferWidth(), mode.framebufferHeight(), engineContext);
     }
 
     public void boot(Path rom, int zeroBasedAct) throws IOException {
@@ -189,8 +197,8 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
         }
     }
 
-    private static Map<String, Object> configure(FbzVisualCaptureMode mode) {
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
+    private static Map<String, Object> configure(SonicConfigurationService config,
+                                                  FbzVisualCaptureMode mode) {
         config.resetToDefaults();
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspectFor(mode.framebufferWidth()));
         config.setSessionOverride(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, false);
@@ -258,7 +266,7 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
             }
         } finally {
             boot.close();
-            SonicConfigurationService.getInstance().clearSessionOverrides();
+            configuration.clearSessionOverrides();
         }
     }
 

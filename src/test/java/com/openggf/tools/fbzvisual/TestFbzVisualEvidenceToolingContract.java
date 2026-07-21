@@ -74,6 +74,20 @@ class TestFbzVisualEvidenceToolingContract {
                 "validator must fail closed if the active-group inventory changes");
     }
 
+    @Test
+    void hiddenCaptureBootAndConfigurationShareOneExplicitEngineContext() throws Exception {
+        String source = Files.readString(Path.of(
+                "src/main/java/com/openggf/tools/fbzvisual/HiddenGlCaptureSession.java"));
+
+        assertTrue(source.contains("this(mode, EngineContext.fromLegacySingletonsForBootstrap())"));
+        assertTrue(source.contains("configuration = engineContext.configuration()"));
+        assertTrue(source.contains("configure(configuration, mode)"));
+        assertTrue(source.contains("new HeadlessGameBoot(mode.framebufferWidth(), "
+                + "mode.framebufferHeight(), engineContext)"));
+        assertTrue(source.contains("configuration.clearSessionOverrides()"));
+        assertFalse(source.contains("SonicConfigurationService.getInstance()"));
+    }
+
     private static String between(String source, String start, String end) {
         int startIndex = source.indexOf(start);
         int endIndex = source.indexOf(end, startIndex);

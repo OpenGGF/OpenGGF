@@ -79,6 +79,9 @@ public class TestProductionSingletonClosureGuard {
             "com/openggf/net/identity/PlayerIdentity.java",
             "com/openggf/net/identity/ProofOfWork.java",
             "com/openggf/net/master/MasterHttpRoutes.java",
+            "com/openggf/tools/fbzvisual/FbzVisualCadenceCapture.java",
+            "com/openggf/tools/fbzvisual/FbzVisualManifest.java",
+            "com/openggf/tools/fbzvisual/FbzVisualPrebootVerifier.java",
             "com/openggf/tools/verifier/VerifierMain.java",
             "com/openggf/tools/verifier/VerifierWorker.java"
     );
@@ -223,10 +226,11 @@ public class TestProductionSingletonClosureGuard {
             "com/openggf/Engine.java",
             "com/openggf/game/session/EngineContext.java",
             "com/openggf/game/session/EngineServices.java",
-            // Headless composition roots for the trace-capture tool: configure
-            // EngineServices from the legacy singletons exactly like Engine does.
+            // Headless capture composition roots: configure EngineServices from
+            // the legacy singletons exactly like Engine does.
             "com/openggf/tools/HeadlessGameBoot.java",
-            "com/openggf/tools/TraceCaptureTool.java"
+            "com/openggf/tools/TraceCaptureTool.java",
+            "com/openggf/tools/fbzvisual/HiddenGlCaptureSession.java"
     );
 
     @Test
