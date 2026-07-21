@@ -1088,11 +1088,10 @@ public class CollisionSystem {
         if (!sprite.getPinballMode()
                 && animationRules != null
                 && animationRules.angledLandingPublishesWalk()) {
-            // Player_TouchFloor_Check_Spindash publishes Walk before clearing
-            // the airborne state on every accepted S2/S3K terrain landing,
-            // including the angled ceiling/wall path (s2.asm:38049-38052,
-            // 38123-38127; sonic3k.asm:24258-24264,24325-24329). S1's angled
-            // path does not own that write and can retain Spring.
+            // Sonic_ResetOnFloor publishes Walk before clearing the airborne
+            // state on every accepted S2 terrain landing, including the angled
+            // ceiling/wall path (s2.asm:38049-38052,38123-38127). S1 and S3K
+            // do not own that write here and can retain Spring.
             int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
             if (walkAnimationId >= 0) {
                 sprite.setAnimationId(walkAnimationId);
