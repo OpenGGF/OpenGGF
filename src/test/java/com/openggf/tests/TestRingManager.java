@@ -662,6 +662,42 @@ public class TestRingManager {
         assertTrue(ringManager.capture().attractedRings()[0].collected());
     }
 
+    @Test
+    public void testS3kAttractedRingKeepsUnsignedDirectionAfterPositionWordWrap() {
+        RingManager ringManager = buildRingManager(List.of());
+        RingSnapshot base = ringManager.capture();
+        ringManager.restore(new RingSnapshot(
+                base.collected(),
+                base.sparkleTimers(),
+                base.placementCursorIndex(),
+                base.placementLastCameraX(),
+                base.lostRingActiveCount(),
+                base.spillAnimCounter(),
+                base.spillAnimAccum(),
+                base.spillAnimFrame(),
+                base.lostRingFrameCounter(),
+                base.lostRings(),
+                new RingSnapshot.AttractedRingEntry[] {
+                        new RingSnapshot.AttractedRingEntry(
+                                true, 0, 0x0200, 0x0001, 0, 0, 0, 0xFE00,
+                                0, -1, false, -1)
+                }));
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0x0200, (short) 0x0100);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.giveShield(ShieldType.LIGHTNING);
+
+        ringManager.update(0, player, 0);
+        RingSnapshot.AttractedRingEntry wrapped = ringManager.capture().attractedRings()[0];
+        assertEquals(0xFFFF, wrapped.y() & 0xFFFF,
+                "MoveSprite2 stores the wrapped high position as a native word");
+
+        ringManager.update(0, player, 1);
+        RingSnapshot.AttractedRingEntry continued = ringManager.capture().attractedRings()[0];
+        assertEquals(0xFE90, continued.yVel() & 0xFFFF,
+                "unsigned bhs treats wrapped $FFFF as beyond player $0100 and keeps accelerating upward");
+    }
+
     private RingManager buildRingManager(List<RingSpawn> spawns) {
         return buildRingManagerWithSpinPiece(spawns, new RingFramePiece(0, 0, 1, 1, 0, false, false, 0));
     }

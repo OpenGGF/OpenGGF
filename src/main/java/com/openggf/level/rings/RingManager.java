@@ -792,7 +792,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
             // --- X axis acceleration (AttractedRing_Move) ---
             int accelX = ATTRACT_ACCEL;
-            if (pcx >= ar.x) {
+            if (Integer.compareUnsigned(pcx & 0xFFFF, ar.x & 0xFFFF) >= 0) {
                 // Player is right of ring: accelerate right (+)
                 if (ar.xVel < 0) {
                     // Moving wrong way: 4× to reverse
@@ -809,7 +809,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
             // --- Y axis acceleration ---
             int accelY = ATTRACT_ACCEL;
-            if (pcy >= ar.y) {
+            if (Integer.compareUnsigned(pcy & 0xFFFF, ar.y & 0xFFFF) >= 0) {
                 if (ar.yVel < 0) {
                     accelY *= 4;
                 }
@@ -824,12 +824,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // --- MoveSprite2: apply velocity to position (subpixel precision) ---
             int xLong = (ar.x << 16) | (ar.xSub & 0xFFFF);
             xLong += ar.xVel << 8;
-            ar.x = xLong >> 16;
+            ar.x = (short) (xLong >> 16);
             ar.xSub = xLong & 0xFFFF;
 
             int yLong = (ar.y << 16) | (ar.ySub & 0xFFFF);
             yLong += ar.yVel << 8;
-            ar.y = yLong >> 16;
+            ar.y = (short) (yLong >> 16);
             ar.ySub = yLong & 0xFFFF;
 
             advanceAttractedRingSpin(ar);
@@ -1086,12 +1086,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             int objectSlotIndex = restoreAttractedRingObjectSlot(entry);
             ar.active = entry.active() && (entry.objectSlotIndex() < 0 || objectSlotIndex >= 0);
             ar.sourceIndex = entry.sourceIndex();
-            ar.x = entry.x();
-            ar.y = entry.y();
-            ar.xSub = entry.xSub();
-            ar.ySub = entry.ySub();
-            ar.xVel = entry.xVel();
-            ar.yVel = entry.yVel();
+            ar.x = (short) entry.x();
+            ar.y = (short) entry.y();
+            ar.xSub = entry.xSub() & 0xFFFF;
+            ar.ySub = entry.ySub() & 0xFFFF;
+            ar.xVel = (short) entry.xVel();
+            ar.yVel = (short) entry.yVel();
             ar.objectSlotIndex = objectSlotIndex;
             ar.collected = ar.active && entry.collected();
             ar.sparkleStartFrame = entry.sparkleStartFrame();

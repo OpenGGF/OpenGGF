@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K attracted-ring motion now wraps native position words and uses the 68000's unsigned target comparisons across `$0000/$FFFF`, preventing offscreen lightning-shield rings from reversing toward Sonic early. ICZ complete-run physics advances from frame 8386 to 8411.
 - Fix: CPU sidekick follow now samples sliding leader speed after player physics but before the late zone-feature write, matching the ROM phase when terrain projection crosses the `$400` lead-offset threshold. ICZ complete-run physics advances from frame 8227 to 8386 and animation from frame 8227 to 9040.
 - Fix: ICZ ice cubes now include the exact `$23` right edge accepted by S3K `SolidObjectFull`, preserving the native side-push bit and push mapping before CPU Tails reaches the adjacent bridge. Complete-run physics advances from frame 7606 to 8227 and animation from frame 7595 to 8227.
 - Fix: S3K collapsing platforms now expose their compensated final-decrement solid pass to a descending Player 1 when Player 2 still owns the saved support latch, while retaining the true `CreateFragments` fresh-contact skip. ICZ complete-run physics advances from frame 7350 to 7606 and animation from frame 7350 to 7595.

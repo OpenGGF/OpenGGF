@@ -47813,3 +47813,22 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:26683-26724,8979-9100`).
 - The focused 103-case sidekick follow suite passes, including both sides of
   the slide-owned `$400` threshold transition.
+
+## 2026-07-22 - ICZ attracted-ring word wrap advances physics frontier
+
+- Commands: focused `TestRingManager`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f8386 to f8411; animation remains at
+  f9040.** The later cascade exposes 4,456 errors (3,268 physics and 1,188
+  animation), replacing the prior 4,454-error cascade rather than representing
+  a like-for-like count increase.
+- Root: Obj_Attracted_Ring matched ROM motion until its Y word crossed zero.
+  The engine then retained an unbounded signed coordinate and used Java's
+  signed target comparison, reversing the ring toward Sonic about 100 frames
+  early. Native `MoveSprite2` wraps the position high word and
+  `AttractedRing_Move` selects direction with unsigned `bhs`. Attracted rings
+  now preserve that 16-bit position/velocity domain both live and through
+  rewind restore, so the offscreen trajectory remains native
+  (`docs/skdisasm/sonic3k.asm:35751-35875`).
+- The focused 25-case ring-manager suite passes, including a two-step
+  `$0001 -> $FFFF` wraparound regression.
