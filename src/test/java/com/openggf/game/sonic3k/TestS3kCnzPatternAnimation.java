@@ -7,6 +7,7 @@ import com.openggf.game.animation.AnimatedTileChannel;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
+import com.openggf.level.animation.AniPlcScriptState;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
@@ -19,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -70,6 +72,22 @@ class TestS3kCnzPatternAnimation {
                 "Expected CNZ custom animated-tile channel in graph but found " + channelIds);
         assertTrue(channelIds.contains("s3k.cnz.script.0"),
                 "Expected CNZ AniPLC script channel in graph but found " + channelIds);
+    }
+
+    @Test
+    void onlyHoverFanBladeAniPlcRequestsAnObjectTextureRefresh() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0x03, 0)
+                .build();
+
+        Sonic3kPatternAnimator animator = resolvePatternAnimator();
+        AniPlcScriptState hoverFanBlades = new AniPlcScriptState(
+                (byte) 3, 0x304, new int[] {0}, null, 4, new Pattern[] {new Pattern()});
+        AniPlcScriptState unrelatedCnzArt = new AniPlcScriptState(
+                (byte) 3, 0x328, new int[] {0}, null, 4, new Pattern[] {new Pattern()});
+
+        assertTrue(animator.requiresObjectRendererRefresh(hoverFanBlades));
+        assertFalse(animator.requiresObjectRendererRefresh(unrelatedCnzArt));
     }
 
     @Test

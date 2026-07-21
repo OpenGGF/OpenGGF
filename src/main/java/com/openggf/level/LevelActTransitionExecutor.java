@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.OscillationManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -41,6 +42,11 @@ final class LevelActTransitionExecutor {
 
         if (request.preserveMusic()) {
             levelManager.setSuppressNextMusicChange(true);
+        }
+
+        if (GameServices.zoneRuntimeRegistry().current()
+                .advancesOscillationOnSeamlessTransition()) {
+            OscillationManager.advanceForSeamlessTransition();
         }
 
         levelManager.writeCurrentZone(request.targetZone());

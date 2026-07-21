@@ -55,6 +55,10 @@ class TestS3kZoneRuntimeStateAdapters {
         assertTrue(state.isBossFlagActive());
         assertTrue(state.isActTransitionFlagActive());
         assertFalse(state.isPostFireHazeActive());
+        assertTrue(state.rightWallDeepProbePreservesPenetration());
+
+        AizZoneRuntimeState actTwoState = new AizZoneRuntimeState(1, PlayerCharacter.KNUCKLES, events);
+        assertFalse(actTwoState.rightWallDeepProbePreservesPenetration());
     }
 
     @Test

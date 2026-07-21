@@ -46,6 +46,868 @@ airborne anim id (0x20) one frame past the landing and settles the grounded play
 ground-snap difference exposed by the bonus-return level reload; needs a focused
 physics trace, not exit-sequence work.
 
+### 2026-07-21 -- S3K mega-run chain seg0 (aiz, Knuckles): Status_Push animation-freeze fixed; seg0 168 -> 56 errors
+
+Command (worktree `.claude/worktrees/green-s1maze`, branch
+`bugfix/ai-s3k-solidobject-push-anim`):
+
+`mvn surefire:test -Dtest=com.openggf.tests.trace.runs.TestS3kMegaRunChain "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsurefire.argLine=-Xshare:off -Xmx4g" -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+Run `s3-knux-multibonus-ss`, seg0 (`aiz`, Knuckles). Report
+`target/trace-reports/s3-knux-multibonus-ss_seg0_report.json`:
+**168 -> 56** comparator errors.
+
+Root fixed: the Knuckles animation profile
+(`Sonic3kPlayerArt.loadKnuckles`) was missing
+`setPushUsesWalkSpecialHandler(true)`, so `PlayableSpriteAnimation`'s
+`$FF` walk handler never took the Status_Push hold-branch for Knuckles.
+While Knuckles stood at rest against an AIZ rock (`AizLrzRockObjectInstance`
+slot 14, `Status_Push` set), the engine kept re-publishing the walk
+script's next frame (`mapping_frame` 7 -> 8) instead of freezing the last
+frame the way ROM `Animate_Knuckles`/`loc_17ECC` does (btst/bne at
+sonic3k.asm:33124-33125; loc_17ECC at 33203-33219; its subq/bpl freeze at
+33204-33205). The push-timer reload shift also differs (Knuckles `lsr.w #8`
+at :33216 vs Sonic `lsr.w #6` at :25193), modelled via a new
+`pushDelayShift` profile field (default 6). After the fix seg0 holds
+`mapping_frame`=7 for f638-645 then switches to 0xCF at f646, matching the
+ROM; the whole downstream cascade (including what earlier looked like a
+separate f3793 `anim_id`=4 cluster) re-syncs.
+
+Timing reconciliation (why the same missing flag showed two failure modes):
+pre-fix, the no-flag path runs the substituting `resolveAnimationId` overload
+that returns PUSH(4) whenever `getPushing()` is true at animation-resolve time
+(ScriptedVelocityAnimationProfile.java:344). At f638-652 Knuckles is at rest
+(`g_speed`=0); the pre-fix `[ROCK]`/`[ANIM]` diagnostics DIRECTLY SHOWED the
+rock's SolidObject pass asserts push AFTER the player animates, so
+animation-resolve-time `getPushing()` read false and only the mapping desynced
+(`anim` stayed 0 -- observed). At the f3789-3799 window Knuckles is moving
+(`g_speed`~0x30) and the substitution DID fire (`anim`=4 observed in the pre-fix
+report); the consistent -- but not separately instrumented -- inference is that
+the push was already set at animation-resolve time there (wall/collision push
+set earlier in the player's own step). Same missing-flag root under two
+push-set timings; the flag makes the anim byte push-independent and fixes both.
+(`status_byte` never diverged because it is sampled at frame end, after the rock
+re-asserts push.)
+
+Validation across all 12 recorded seg0 Status_Push windows (f637-652,
+f731, f892-902, f1198, f1779-1798, f2350-2371, f2389-2392, f2576-2591,
+f2953-2965): engine getPushing() matches ROM status bit5, `anim_id`
+matches the ROM byte exactly (0x00 walk / 0x02 roll / 0x08-0x09 spindash /
+0x23 glide-slide -- NEVER 4), and mapping frames match including the
+0xCF/0xD0 push-frame holds. `anim_id`==4 (push exposed as an anim byte)
+count is now 0 across the whole run -- the pre-fix over-exposure at
+f3789-3799/f4218-4235 is gone.
+
+New seg0 frontier (distinct roots, follow-ups -- NOT the animation-freeze fix):
+- f653-659 (push RELEASE lag): immediately after the f637-652 window ROM
+  clears push (`romPush`=false, walk-away frame 0x6E) but the engine holds
+  getPushing()=true for ~7 more frames (frozen push frame 0xCE). This is a
+  push-detection/release-timing divergence (rock SolidObject_TestClearPush /
+  prolonged engine-vs-ROM contact as Knuckles walks off), independent of the
+  animation-consumer fix -- getPushing() detection is byte-unchanged here.
+- f1948 (dominant, ~52 frames): engine `anim`=0x14 (HANG2, hang-from-object)
+  vs ROM `anim`=0x00 (WALK).
+- f1570: engine `anim`=0x00 vs ROM 0x20 (Knuckles glide/fly state).
+- f1766-1767: 1-frame `y_speed` landing swap.
+
+Full-suite regression: identical to the develop base (ae1605502) --
+26 pre-existing failures across 8 classes (`TestS3kAizTraceReplay` 15,
+`TestS3kHczCompleteRunTraceReplay` 1, `TestS2EhzHalfpipeRoundTripChain` 1,
+`TestS3kCnzDirectedTraversalHeadless` 1, two source guards 3+3, the chain
+seg2->seg3 boundary 2), none introduced by this change. The chain still
+RED-fails at the pre-existing seg2->seg3 boundary (another lane's frontier).
+
+### 2026-07-19 -- CNZ complete-run animation: f30486 -> green
+
+The remaining CPU-Tails boundary at f30486 is a native sample taken after the
+sidekick's movement path but before `Animate_Tails`. Replay now represents that
+execution phase explicitly and suppresses only the pending sidekick animation
+dispatch; physics, objects, counters, and the main player's animation continue
+through the full level frame. The phase is inferred from the recorded
+`tails_cpu_normal_step` transition and adjacent native animation state, without
+copying trace values into engine state or adding a CNZ/route/frame exception.
+
+The later frontiers exposed ordinary ROM animation ownership. `Tails_Roll`
+writes Duck after ground acceleration, so an `AnglePos` detach must retain that
+late write throughout the following airborne routine. Native
+`object_control=$80` suppresses touch response but does not suppress the normal
+movement/animation path used by the second rival-Knuckles cutscene. Finally,
+CNZ's retained boss calls `Restore_PlayerControl` after results, publishing Wait
+and clearing animation progress for both players before normal control resumes
+(`docs/skdisasm/sonic3k.asm:27518-27531,28458-28513,129247-129294,
+180361-180371,146037-146061`).
+
+Focused CNZ complete-run physics and animation both pass. Serial one-fork 4 GB
+full sweeps report 46/58 physics and improve animation from 44/58 to 45/58;
+the remaining 12 physics and 13 animation failures have the same previously
+documented frontiers, so no other trace frontier regressed.
+
+### 2026-07-19 -- CNZ retained results and end-cannon handoff: physics f39449 -> green
+
+The generic results exit restored player control and camera ownership before
+`Obj_CNZEndBoss` observed `_unkFAA8` clear. Native `loc_6E724` is the retained
+owner: because the results object occupies a later SST slot, the boss consumes
+that clear on the following object pass, restores both players itself, and
+starts the gradual bounds workers. The following walk-to-cannon routine does
+not pin `Camera_min_X_pos`; that write resumes only after `loc_6E778` allocates
+the watched cannon (`docs/skdisasm/sonic3k.asm:146037-146080`).
+
+The native end cannon occupies slot 4 and publishes player-state byte `$30=1`
+before the slot-17 boss reaches `loc_6E7B6` in the same SST pass. A synthetic
+cannon subtype preserves that observable ordering without a zone, route, or
+frame exception. Once the boss asserts `Ctrl_1_locked`, the cannon consumes
+only `Ctrl_1_logical`; raw movie jump remains suppressed until the boss writes
+the forced launch pulse (`docs/skdisasm/sonic3k.asm:146074-146099,
+66870-66979`). Focused cannon tests and CNZ complete-run physics pass. Animation
+remains at f30486 `tails_mapping_frame`. Sequential one-fork 4 GB full sweeps
+improve physics from 45/58 to 46/58 green and retain animation at 44/58 green;
+every non-CNZ frontier is unchanged.
+
+### 2026-07-19 -- S3K upright capsule dispatch order: physics f38728 -> f39449
+
+The shared upright capsule treated its button mapping change as an eight-pixel
+solid displacement, and its manual checkpoint let the button signal and parent
+opening run in one engine update. ROM `loc_8672A` leaves `child_dy=-$24`
+unchanged and signals an already-executed parent, so opening waits for the next
+parent SST pass. The post-open `$40` word also waits for signed underflow rather
+than firing at zero (`docs/skdisasm/sonic3k.asm:181501-181555,181713-181738,
+181900-181918`).
+
+Opening now asserts the existing signed `Ctrl_2_locked` model, preserving the
+latched left input while suppressing CPU input generation; the MGZ capsule
+subtype retains the ROM's Current-zone-2 exemption. `sub_868F8` ends Player 1
+and starts results first, while the following `Check_TailsEndPose` dispatch
+ends Player 2 one SST pass later (`docs/skdisasm/sonic3k.asm:181548-181555,
+181924-181945`). Focused CNZ/ICZ/MGZ/MHZ capsule suites pass. CNZ complete-run
+physics advances from f38728 `y` to f39449 `camera_x`; animation remains at
+f30486 `tails_mapping_frame`. Sequential one-fork 4 GB full sweeps retain the
+established 45/58 physics and 44/58 animation green counts, with all non-CNZ
+frontiers unchanged.
+
+### 2026-07-19 -- CNZ defeat wait dispatch phase: physics f38610 -> f38728
+
+The final boss hit installs `BossDefeated`'s `$3F` wait during touch response,
+after the boss object's normal dispatch has already run. The engine immediately
+decremented that newly installed timer in the same update, shifting both the
+defeat scatter and the later two-second handoff one frame early. The boundary
+worker therefore widened camera max X one frame before its native `$4000`
+accumulator reached its first whole-pixel step
+(`docs/skdisasm/sonic3k.asm:145696-145728,146007-146035`).
+
+The defeat wait now skips only the object pass that installs it; subsequent
+signed countdown semantics and ROM constants are unchanged. Focused boss,
+boundary, and defeat-scatter tests pass. CNZ complete-run physics advances from
+f38610 `camera_x` to f38728 `y`; animation remains at f30486
+`tails_mapping_frame`. Sequential one-fork 4 GB full sweeps retain the
+established 45/58 physics and 44/58 animation green counts, with the same
+non-CNZ frontiers and legacy standalone CNZ still at f0 in both scopes.
+
+### 2026-07-19 -- CNZ magnet retained fall state: physics f37926 -> f38610
+
+The second magnet drop began from the right integer coordinate but reached its
+low-speed floor latch several horizontal pixels late. ROM `loc_6E8D2` sets the
+landed routine and parent link without clearing `y_vel`; `loc_6E920` and the
+following `loc_6E87E` release also leave both the velocity and fractional Y
+word intact. The engine zeroed that state at landing, docking, and release, so
+every attack after the first restarted a different ballistic phase
+(`docs/skdisasm/sonic3k.asm:145999-146089`).
+
+The magnet now retains its low-speed landing velocity and `y_subpixel` across
+the routine-only dock/release transitions. A focused test covers both retained
+fields, and CNZ complete-run physics advances from f37926 `x` to f38610
+`camera_x`; animation remains at f30486 `tails_mapping_frame`. Sequential
+one-fork 4 GB full sweeps retain the established 45/58 physics and 44/58
+animation green counts, with the same non-CNZ frontiers and legacy standalone
+CNZ still at f0 in both scopes.
+
+### 2026-07-19 -- CNZ end-boss object-pass phase: physics f37421 -> f37926
+
+The next false boss rebound came from the second attack cycle running one
+pixel below the ROM. Native charge and wind-down are `Obj_Wait` handlers, and
+descent changes routine without storing the final incremented `y_pos`; the
+ascent boundary instead stores the saved hover Y and branches directly into
+tracking setup. The engine swung during the stationary handlers, stored the
+descent target, and spent an extra update at the end of ascent
+(`docs/skdisasm/sonic3k.asm:145941-146047`).
+
+The magnet and field also expose native within-pass ordering. `loc_6E87E`
+installs the falling routine and returns before `MoveSprite`; later, newly
+allocated field children execute their first pull in the allocation pass but
+observe the parent's cleared active bit on the expiry pass. Modeling those
+boundaries keeps the attraction count unchanged while restoring the boss's
+vertical swing phase (`docs/skdisasm/sonic3k.asm:146233-146281`). Focused boss
+tests pass and CNZ complete-run physics advances from f37421 `tails_y_speed`
+to f37926 `x`; animation remains at f30486 `tails_mapping_frame`.
+
+Sequential one-fork 4 GB full sweeps retain the established 45/58 physics and
+44/58 animation green counts, with the same non-CNZ frontiers and legacy
+standalone CNZ still at f0 in both scopes.
+
+### 2026-07-19 -- CNZ end-boss magnet exact floor contact: physics f36602 -> f37421
+
+The first dropped magnet reaches the floor with `ObjCheckFloorDist` returning
+exactly zero. ROM `ObjHitFloor_DoRoutine` branches to its callback for both
+negative distance and zero, adjusts `y_pos`, and lets `loc_6E8B6` halve and
+reverse the downward velocity. The engine required a negative distance, so it
+missed the surface, continued moving the magnet right, and left the boss in a
+long alignment phase instead of activating attraction
+(`docs/skdisasm/sonic3k.asm:145961-145998,177964-177977`).
+
+The magnet floor response now accepts exact contact and a focused test covers
+the zero-distance rebound. Boss trace diagnostics also expose its native
+routine, wait timer, field flag, centre, and magnet centre. CNZ complete-run
+physics advances from f36602 `x` to f37421 `tails_y_speed`; animation remains
+at f30486 `tails_mapping_frame`. Sequential one-fork 4 GB full sweeps retain
+the established 45/58 physics and 44/58 animation green counts, with the same
+non-CNZ frontiers and legacy standalone CNZ still at f0 in both scopes.
+
+### 2026-07-19 -- CNZ rival handoff and boss child graph: physics f34874 -> f36602
+
+The second rival-Knuckles sequence writes `object_control=$80`, whose bit 0 is
+clear: normal player movement continues while bit 7 suppresses touch response
+and `Ctrl_1_locked` supplies scripted input. Its run-offscreen routine then
+tests the render flag produced by the preceding Draw_Sprite pass with the
+`ObjSlot_CutsceneKnux` `$1C`-by-`$18` bounds. Modeling both details restores
+Sonic's fall and forced-left shaft entry
+(`docs/skdisasm/sonic3k.asm:129247-129365,134795-134801`).
+
+The newly reached end-boss sequence exposed three related child-graph issues.
+The magnet and attached arms were incorrectly eligible for generic off-screen
+culling before the boss entered the arena; their touch response also used
+engine top-left render bounds instead of the ROM `x_pos`/`y_pos` centres. In
+addition, `CreateChild3_NormalRepeated` advances its subtype register by two,
+so the four arms must receive subtypes `0,2,4,6` and phases
+`0,64,128,192`, not four adjacent eighth-turn phases. The boss body now remains
+touch-inactive until `loc_6E4F2` installs its object data, and an expiring
+magnet unlinks its captured parent reference so the rewind graph remains
+closed (`docs/skdisasm/sonic3k.asm:145801-145864,146667-146713,176999-177030`).
+
+Focused cutscene, boss-child, defeat-scatter, and boss-graph rewind tests pass.
+CNZ complete-run physics advances from f34874 `y_sub` to f36602 `x`; animation
+remains at f30486 `tails_mapping_frame`. Sequential one-fork 4 GB full sweeps
+retain the established 45/58 physics and 44/58 animation green counts, with
+the same non-CNZ frontiers and legacy standalone CNZ still at f0 in both
+scopes.
+
+### 2026-07-19 -- CNZ barber-pole packed track wrap: physics f33084 -> f34874
+
+The mirrored pole stores its rider track as the same packed 16.16 long copied
+from `x_pos`. At the upper curve, native `add.l` wraps the high word from
+`$FFFF` to `$0000`; the following `move.w`/`add.w` range calculation therefore
+keeps the rider attached for another pass. The engine held this value in an
+unbounded Java `long`, read `$10000`, and released Sonic one frame early,
+causing the f33084 position/status/camera cascade
+(`docs/skdisasm/sonic3k.asm:69665-69733`).
+
+Barber-pole track accumulation now wraps to 32 bits, and its high word is
+interpreted with native word arithmetic before the unsigned `$A0` range test.
+A focused mirrored-wrap test covers `$FFFF.5300 + $C000 -> $0000.1300` and
+verifies that the rider remains attached.
+
+This advances CNZ complete-run physics from f33084 `y` to f34874 `y_sub`;
+animation remains at f30486 `tails_mapping_frame`. The one-fork 4 GB physics
+fleet retains the same 13 non-green routes. The animation fleet retains the
+same CNZ frontier and known non-green route set; serial in-fork reruns avoid
+the intermittent shared checkpoint-detector class-loading failure. No
+non-CNZ frontier moved, and legacy standalone CNZ remains at f0 in both
+scopes.
+
+### 2026-07-19 -- CNZ cylinder off-screen release velocity: physics f31050 -> f33084
+
+An active cylinder rider can cross out of the render window after
+`loc_32594` has established `ground_vel=$0800`. Native `loc_325F2` then sets
+`Status_InAir`, restores priority, and clears `object_control`; it does not
+clear any velocity word. The engine's shared non-jump release tail instead
+zeroed X, Y, and ground velocity, shifting CPU Tails' subsequent marker and
+position history (`docs/skdisasm/sonic3k.asm:68019-68025,68045-68078`).
+
+Non-jump cylinder releases now preserve the active rider's velocity fields
+while retaining the existing air/control/priority writes. The jump path keeps
+its explicit native launch values. Focused tests cover both first-capture
+ground-speed timing and off-screen release preservation.
+
+This advances CNZ complete-run physics from f31050 `tails_g_speed` to f33084
+`y`; animation remains at f30486 `tails_mapping_frame`. Sequential one-fork
+4 GB full sweeps retain the established 45/58 physics and 44/58 animation
+frontiers, with the same 13 physics and 14 animation non-green route sets. No
+non-CNZ frontier moved, and legacy standalone CNZ remains at f0 in both
+scopes.
+
+### 2026-07-19 -- CNZ cylinder first-capture launch phase: physics f30660 -> f31050
+
+`sub_324C0`'s inactive rider path clears `ground_vel`, installs
+`object_control=$03`, and branches directly to the twist-frame publisher. The
+following `SolidObjectFull` call can refresh the standing bit, but it does not
+re-enter the active rider path at `loc_32594`. The engine's split solid-contact
+callback incorrectly applied that active-path `$0800` launch during the same
+first-capture frame (`docs/skdisasm/sonic3k.asm:67656-67672,67985-68056`).
+
+The cylinder now records which native player slot was captured in its current
+object update and suppresses only the same-update solid callback's launch-speed
+write. An already-active rider retains the existing `$480` vertical-speed gate
+on the following update. A focused regression test covers both sides of the
+phase boundary.
+
+This advances CNZ complete-run physics from f30660 `tails_g_speed` to f31050
+`tails_g_speed`; animation remains at f30486 `tails_mapping_frame`. Sequential
+one-fork 4 GB full sweeps remain 45/58 green for physics and 44/58 green for
+animation, with exactly the same 13 physics and 14 animation non-green route
+sets. No non-CNZ frontier moved, and legacy standalone CNZ remains at f0 in
+both scopes.
+
+### 2026-07-19 -- CNZ water-button placement lifetime: physics f29673 -> f30660, animation f29721 -> f30486
+
+The Act 2 water-level button survives its one-shot press, but it is still an
+ordinary placement object: `loc_65DD0` tail-calls `Sprite_OnScreen_Test` on
+every dispatch. The engine's `isPersistent()` override incorrectly exempted it
+from the standard coarse-X `$280` unload window, leaving CPU Tails seated on a
+live button after the ROM had cleared its SST slot
+(`docs/skdisasm/sonic3k.asm:37262-37278,134058-134111`).
+
+The button now uses normal placement lifetime. At f29672 its slot clears after
+the playable/CPU slots, so the following Tails CPU pass observes the stale
+interact pointer's zeroed code word and runs `sub_13ECA`, preserving velocity
+while publishing the native `$7F00,0` off-screen marker
+(`docs/skdisasm/sonic3k.asm:26800-26833`).
+
+This advances CNZ complete-run physics from f29673 `tails_g_speed` to f30660
+`tails_g_speed`, and animation from f29721 `tails_mapping_frame` to f30486
+`tails_mapping_frame`. The focused water-helper and sidekick-despawn suites
+pass. Sequential one-fork 4 GB full sweeps remain 45/58 green for physics and
+44/58 green for animation, with exactly the same 13 physics and 14 animation
+non-green route sets. No non-CNZ frontier moved, and legacy standalone CNZ
+remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ cylinder same-slot motion and wall-unroll coordinates: physics f26050 -> f29673, animation f25614 -> f29721
+
+`Obj_CNZCylinder` initializes and falls through into its motion, rider-control,
+and `SolidObjectFull` work in one SST dispatch. The engine constructor had
+already advanced motion before that first update, while later split-phase
+compensation made capture, held placement, and solid contact read the prior
+object position. Cylinder initialization now has one motion pass, all three
+consumers read the current post-motion coordinate, and the A/B/C release path
+keeps the previous mapping because `loc_325B6` skips `loc_3260A`
+(`docs/skdisasm/sonic3k.asm:67656-67672,67985-68100`).
+
+The next right-wall roll stop exposed a separate coordinate-representation
+bug: widening the engine sprite bounds shifted centre X by five pixels, even
+though `Sonic_RollSpeed` changes only radii and `y_pos`. Preserving centre X
+lets the following invisible-block side response apply the native full
+separation. Deep right-wall penetration recovery is now disabled by default
+for S3K and enabled by AIZ1's runtime predicate, matching the explicit
+`Current_zone_and_act == 0` branch without a shared zone carve-out
+(`docs/skdisasm/sonic3k.asm:18884-18941,22924-23005,41394-41495`).
+
+This advances CNZ complete-run physics from f26050 `y_speed` to f29673
+`tails_g_speed`, and animation from f25614 `player_mapping_frame` to f29721
+`tails_mapping_frame`. The focused 244-test cylinder/movement/collision/runtime
+suite passes, as does the updated exact twist-table integration check. The
+sequential one-fork 4 GB full sweeps remain 45/58 green for physics and 44/58
+green for animation, with the same 13 physics expected-red routes and the same
+eight unsupported plus six comparison-red animation routes. AIZ complete-run
+physics remains green; no non-CNZ frontier moved, and legacy standalone CNZ
+remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ balloon collision-property dispatch: physics f24936 -> f26050, animation f25028 -> f25614
+
+Native `Touch_Process` records a balloon hit in `collision_property`; the
+balloon consumes that bit later in its own `ExecuteObjects` slot. The engine
+applied the launch immediately and also allocated the four underwater Bubbler
+children during the player touch pass. That admitted three children into the
+same frame's pre-object execution order, consuming three extra RNG values at
+f24450. The shifted shared seed assigned the late subtype-`$82` balloon a bob
+phase that missed CPU Tails by one pixel at f24936.
+
+The launch remains visible in the contact frame, but the first-contact Bubbler
+allocation is now deferred to the balloon's own object routine before its bob,
+matching `sub_317AE`/`sub_3181E`. Direct unmanaged test instances also use the
+supplied dispatch counter while live SST instances continue to use the object
+manager counter (`docs/skdisasm/sonic3k.asm:66764-66856`).
+
+This advances CNZ complete-run physics from f24936 `tails_y_speed` to f26050
+`y_speed`, and animation from f25028 `tails_mapping_frame` to f25614
+`player_mapping_frame`. Focused balloon/traversal tests pass. The sequential
+4 GB full sweeps remain 45/58 green for physics and 44/58 green for animation,
+with the same 13 physics expected-red routes and the same eight unsupported
+plus six comparison-red animation routes. No non-CNZ frontier moved, and
+legacy standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ balloon pop-script continuity: physics f24892 -> f24936, animation f24993 -> f25028
+
+`sub_317AE` uses `bset #0,anim(a0)` on every overlapping balloon contact.
+The first contact changes the animation byte and selects the pop script; later
+contacts still reapply the player's launch velocity but the already-set bit
+does not restart `Animate_Sprite`. The engine now preserves that distinction,
+including the `$34` one-shot effects/SFX latch, while retaining the balloon
+SST slot as the owner of initial pop-script advancement
+(`docs/skdisasm/sonic3k.asm:66756-66829`).
+
+This advances CNZ complete-run physics from f24892 `y_speed` to f24936
+`tails_y_speed`, and animation from f24993 `player_mapping_frame` to f25028
+`tails_mapping_frame`. The sequential 4 GB full sweeps remain 45/58 green for
+physics and 44/58 green for animation, with the same 13 physics expected-red
+routes and the same eight unsupported plus six comparison-red animation
+routes. No non-CNZ frontier moved, and legacy standalone CNZ remains at f0 in
+both scopes.
+
+### 2026-07-19 -- CNZ triangle/recovery and landing animation ownership: animation f15195 -> f24993
+
+CNZ's triangle bumper runs after the playable slots and writes raw `anim=Walk`.
+It now clears the engine's forced-animation projection so that later-slot write
+survives until CPU Tails actually executes `Tails_Set_Flying_Animation`.
+Catch-up flight entry also clears the complete native tumble selector, and its
+on-screen recovery pass selects the dry flying family from live `y_vel` and
+flight fuel (`$20` fly, `$21` ascending, `$24` tired), matching
+`loc_13B50`/`Tails_Set_Flying_Animation` (`docs/skdisasm/sonic3k.asm:
+26487-26555,27646-27717,68463-68478`).
+
+Finally, `Player_TouchFloor`'s explicit Walk publication now replaces the
+engine-side LookUp/Crouch projections as well as the raw animation byte. Those
+projections are not independent native status fields; retaining one through an
+airborne interval masked Tails's landing Walk at f19845.
+
+Together these corrections advance CNZ complete-run animation from f15195
+`tails_mapping_frame` to f24993 `player_mapping_frame`. Physics remains at
+f24892 `y_speed`, so both scopes now converge on the late Act 2 balloon/triangle
+interaction. The sequential 4 GB full sweeps remain 45/58 green for physics and
+44/58 green for animation, with the same 13 physics expected-red routes and the
+same eight unsupported plus six comparison-red animation routes. No non-CNZ
+frontier moved, and legacy standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ post-object results handoff: animation f13960 -> f15195
+
+CNZ's end sign is allocated by the background screen event after the native
+object loop. The engine retains that sign across the folded Act 1 transition,
+but the missing creation-loop tail left its routine-6 ending-pose writes one
+dispatch late. The post-object allocation path now preserves that real owner
+boundary: Player 1's ending pose is published at the landed/results boundary,
+Player 2 follows on the next sign dispatch, and results allocation keeps its
+existing timing so the seamless reload does not move.
+
+The carried results owner also now publishes `Restore_PlayerControl`'s Wait
+animation before the next playable animation pass. Its retained child-retire
+count releases control one dispatch earlier while a separate handoff entry
+keeps the later title-card mutation, timer, and ring reset on their original
+frame (`docs/skdisasm/sonic3k.asm:176198-176272,180359-180419,
+181919-181988`).
+
+CNZ complete-run animation advances from f13960 `player_animation_id` to
+f15195 `tails_mapping_frame`; physics remains at f24892 `y_speed`. The
+sequential 4 GB full sweeps remain 45/58 green for physics and 44/58 green for
+animation, with the same 13 physics expected-red routes and the same eight
+unsupported plus six comparison-red animation routes. No non-CNZ frontier
+moved, and legacy standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- S3K mid-loop playable animation phase: animation f13149 -> f13960
+
+At f13149 CPU Tails's second Wait-script `$AF` mapping was one frame late.
+The trace row at f13099 carries a native `Tails_CPU_Normal` execution hook,
+proving the playable slots and their `Animate` calls ran, but the stationary
+player state, held gameplay counter, and changed VBlank byte caused replay to
+classify the sample as a complete lag frame. Advancing the entire level on
+that evidence incorrectly ran the later miniboss/event slots early; the ROM
+sample instead falls between the playable animation slice and those later
+object slots.
+
+Replay now represents that native mid-loop boundary explicitly as
+`PLAYABLE_ANIMATION_ONLY`: it consumes the movie/VBlank row and advances each
+playable's animation script without running physics, counters, or later object
+slots. This is execution scheduling from the native hook, not trace-state
+hydration. CNZ complete-run animation advances from f13149
+`tails_mapping_frame` to f13960 `player_animation_id`, while physics remains
+at f24892 `y_speed`.
+
+The sequential 4 GB full sweeps remain 45/58 green for physics and 44/58 green
+for animation, with the same 13 physics expected-red routes and the same eight
+unsupported plus six comparison-red animation routes. No non-CNZ frontier
+moved, and legacy standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ cylinder post-increment twist mapping: animation f7511 -> f13149
+
+At f7511 Sonic's held cylinder mapping crosses from `$55` to `$59`. Native
+`loc_32538` computes held position and priority from the current per-player
+twist byte, executes `addq.b #2,1(a2)`, and only then reaches `loc_32610` to
+select `PlayerTwistFrames`. The engine selected the mapping before incrementing
+the byte, delaying every mapping boundary by one cylinder pass
+(`docs/skdisasm/sonic3k.asm:68019-68100`).
+
+Both held-position variants now retain the pre-increment trigonometric sample
+while selecting the mapping and render flip from the post-increment phase. All
+30 focused cylinder tests pass, including the exact `$0A->$0C` mapping
+boundary. CNZ complete-run animation advances from f7511
+`player_mapping_frame` to f13149 `tails_mapping_frame`, while its physics
+frontier remains f24892 `y_speed`.
+
+The sequential 4 GB full sweeps remain 45/58 green for physics and 44/58 green
+for animation, with the same 13 physics expected-red routes and the same eight
+unsupported plus six comparison-red animation routes. No non-CNZ frontier
+moved, and legacy standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- S3K angled-landing Walk publication: animation f4116 -> f7511
+
+At f4116 spring-launched Sonic attaches to an angled CNZ wall. ROM
+`Player_HitCeilingAndWalls` enters `Player_TouchFloor_Check_Spindash`, which
+writes `anim=Walk` before clearing the airborne state; the following animator
+therefore selects the native `$2D` tumble mapping. The engine's shared angled
+landing implementation already had this behavior behind the typed
+`PlayerMovementRules.angledLandingPublishesWalk` gate for S2, but the S3K
+profile incorrectly disabled it and retained animation `$10` Spring with
+mapping `$8E` (`docs/skdisasm/sonic3k.asm:24258-24264,24325-24329`).
+
+Enabling that native game-wide rule for S3K advances CNZ complete-run
+animation from f4116 `player_animation_id` to f7511 `player_mapping_frame`.
+CNZ complete-run physics remains at f24892 `y_speed`. The sequential 4 GB full
+sweeps remain 45/58 green for physics and 44/58 green for animation, with the
+same 13 physics expected-red routes and the same eight unsupported plus six
+comparison-red animation routes. No non-CNZ frontier moved, and legacy
+standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ packed cage release and landing tumble reset: animation f1663 -> f4116
+
+At f1663 CPU Tails takes the cage's jump release one object pass before Sonic.
+Both native cleanup paths execute `move.w #1,anim(a1)`: because the 68000 is
+big-endian and `prev_anim` is the following byte, that word means
+`anim=$00,prev_anim=$01`. The engine had treated the word value as animation
+1, exposing Run for Tails at f1663 and Sonic at f1664. Cage release now
+publishes the two adjacent bytes separately
+(`docs/skdisasm/sonic3k.asm:69978-69994,70087-70103`).
+
+At f1809 Sonic's ordinary terrain landing clears the barber pole's retained
+flip type in ROM `Player_TouchFloor`. The engine cleared `flip_angle`,
+`flips_remaining`, and `flip_turned` but left type 2 selected, so the following
+airborne tumble used mapping `$49` rather than `$31`. Terrain, wall/ceiling,
+and object landing paths now clear the full native tumble state, including
+`flip_type` (`docs/skdisasm/sonic3k.asm:24365-24374`). Focused cage-release,
+object-landing, and CNZ replay coverage passes through both prior mismatches.
+CNZ complete-run animation advances from f1663 `tails_animation_id` to f4116
+`player_animation_id`.
+
+The sequential 4 GB comparison-only sweeps remain 45/58 green for physics and
+44/58 green for animation, with the same 13 physics expected-red routes and
+the same eight unsupported plus six comparison-red animation routes. Every
+non-CNZ frontier is unchanged; CNZ complete-run physics remains at f24892
+`y_speed`, and legacy standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ carried landing and typed barber-pole tumble: animation f108 -> f1663
+
+At f108 Sonic lands while still owned by CPU Tails's later CNZ carry slot. ROM
+`Player_TouchFloor_Check_Spindash` writes `anim=Walk`; the later Tails release
+leaves that byte visible and returns Tails to its ordinary flying animation.
+The engine's earlier Player 1 animation pass re-applied the forced carry id and
+then retained the carry mapping on both sprites. The CNZ carry context now
+publishes the landing `Walk` handoff and restores the grounded main player's
+Walk id on release, while ordinary non-MGZ ground release selects Tails's
+flying animation (`docs/skdisasm/sonic3k.asm:24325-24329,26851-27070`).
+
+The following barber-pole sequence also now preserves the native tumble type:
+`loc_33418`/`loc_334A4` install flip types 2 and 3, and the S3K animation
+profile maps those types through the `$49` frame set with their corresponding
+horizontal/vertical orientation instead of treating every nonzero type as the
+ordinary `$3D` tumble (`docs/skdisasm/sonic3k.asm:69348-69782`). Focused carry,
+barber-pole, and animator tests pass. CNZ complete-run animation advances from
+f108 `player_animation_id` to f1663 `tails_animation_id`; its new mismatch is
+the wire-cage movement retaining raw Walk while the engine exposes Run.
+
+The sequential 4 GB comparison-only sweeps remain 45/58 green for physics and
+44/58 green for animation, with exactly the same expected-red/unsupported
+routes and no non-CNZ frontier movement. CNZ complete-run physics remains at
+f24892 `y_speed`, and legacy standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- S3K water-before-touch player-slot order: f24885 -> f24892
+
+At f24885, Sonic crossed the CNZ water line while overlapping a subtype-$84
+balloon. The engine ran `TouchResponse` first, accepted the balloon's native
+`-$0380` launch, then ran water entry and quartered that launch to `-$00E0`.
+The ROM player slot orders movement, position history, `Sonic_Water`, animation,
+then `TouchResponse`; water entry therefore quarters the incoming fall before
+the balloon overwrites it with `-$0380`. The shared S2/S3K inline-player tick
+now updates water at that native point (`docs/skdisasm/sonic3k.asm:21995-22022,
+22203-22287,66764-66808`).
+
+The focused water and CNZ balloon suites pass. CNZ complete-run physics advances
+from f24885 to f24892; its next mismatch is the popped balloon reapplying
+`-$0380` one frame after native because its RNG-owned bob phase keeps the
+overlap alive. The full comparison-only sweep remains 45/58 physics green with
+the same 13 expected-red routes and unchanged green AIZ, HCZ, and MGZ complete
+runs. Animation remains 44/58 green with the same 14 expected-red or unsupported
+routes; CNZ complete-run animation still begins at f108 (1115 downstream
+errors), and legacy standalone CNZ remains at f0.
+
+### 2026-07-19 -- CNZ two-player breakable-wall cleanup: f24799 -> f24885
+
+At f24799, Sonic and rolling CPU Tails reached the same CNZ breakable wall in
+one `SolidObjectFull` call. Sonic consumed the break first. The ROM then returns
+from `sub_2165A` to `loc_215F4`, notices Player 2's already-published pushing
+bit, restores Player 2's saved pre-contact X velocity into both `x_vel` and
+`ground_vel`, and clears `Status_Push` before the wall slot becomes debris. The
+engine retired the wall immediately after Sonic's break, leaving Tails stopped
+and pushing. The manual checkpoint now performs that native Player 2 cleanup;
+the multi-sidekick extension applies the same cleanup to every matching rolling
+sidekick contact (`docs/skdisasm/sonic3k.asm:45570-45620`).
+
+The focused breakable-wall guard passes. CNZ complete-run physics advances from
+f24799 to f24885; its next mismatch is Sonic receiving `-$00E0` instead of the
+native `-$0380` vertical response beside the underwater balloon/bubble group.
+The full comparison-only sweep remains 45/58 physics green with the same 13
+expected-red routes and unchanged green AIZ, HCZ, and MGZ complete runs.
+Animation remains 44/58 green with the same 14 expected-red or unsupported
+routes; CNZ complete-run animation still begins at f108 (1116 downstream
+errors), and legacy standalone CNZ remains at f0.
+
+### 2026-07-19 -- CNZ retained-results panic cadence: f24268 -> f24799
+
+At f24268, native CPU Tails was charging a spindash in routine `$08` and
+published DOWN plus A/B/C when the ROM-visible `Level_frame_counter` low byte
+reached its `$20` pulse. The engine's PANIC path used the held gameplay counter
+directly, so the pulse arrived one player dispatch late. During CNZ's seamless
+handoff, the retained results object mutates into the in-level title owner and
+continues `Process_Sprites` while that ordinary counter is held; NORMAL and
+catch-up already recover the native phase from Sonic's `Pos_table` history.
+PANIC now uses that same retained-owner projection after resolving the counter
+source, rather than inventing a trace- or zone-specific offset
+(`docs/skdisasm/sonic3k.asm:22124-22136,26851-26896`).
+
+The focused panic-counter guards pass. CNZ complete-run physics advances from
+f24268 to f24799; its next mismatch is CPU Tails retaining zero horizontal
+speed where native has `$01FF`. The full comparison-only sweep remains 45/58
+physics green with the same 13 expected-red routes and unchanged green AIZ,
+HCZ, and MGZ complete runs. Animation remains 44/58 green with the same 14
+expected-red or unsupported routes; CNZ complete-run animation still begins at
+f108 (1104 downstream errors), and legacy standalone CNZ remains at f0.
+
+### 2026-07-19 -- CNZ Sparkle off-screen execution and cork balance width: f24136 -> f24268
+
+At f24136, native CPU Tails entered hurt from the tall `$AB` warning child of
+the Sparkle at `(1B80,0474)`. The engine parent had reached only 11 of the 16
+terminal charge loops because its state machine stopped whenever its centre
+left the camera viewport. `Obj_WaitOffscreen` instead owns only the initial
+`$20` placeholder: after Render_Sprites restores the saved `Obj_Sparkle`
+operation, the charge continues on every SST pass. Sparkle now models that
+one-time handoff and uses `Find_SonicTails`' nearest-native-player distance for
+activation, allowing the warning child to enter the prior collision-response
+list on the native frame (`docs/skdisasm/sonic3k.asm:180266-180297,
+186058-186167`).
+
+The corrected hurt exposed Sonic's balance read on the intact CNZ Cork Floor.
+The ROM initializes that floor with `width_pixels=$20`, while the engine's
+shared object default supplied `$10`; the narrower value falsely classified
+Sonic as precariously beyond the right edge and flipped his facing bit. Cork
+Floor now exposes its zone-selected native width to the shared balance routine,
+separately from `SolidObjectFull`'s `$B` collision extension
+(`docs/skdisasm/sonic3k.asm:22455-22529,58420-58521`).
+
+The focused Sparkle, object-participation, and CNZ complete-run checks pass
+through both corrected windows. CNZ complete-run physics advances from f24136
+to f24268; its next mismatch is CPU Tails' logical held input missing bit `$10`.
+The full comparison-only sweep remains 45/58 physics green with the same 13
+expected-red routes and unchanged green AIZ, HCZ, and MGZ complete runs.
+Animation remains 44/58 green with the same 14 expected-red or unsupported
+routes; CNZ complete-run animation still begins at f108 (1135 downstream
+errors), and legacy standalone CNZ remains at f0.
+
+### 2026-07-19 -- CNZ cutscene visibility, cork order, lag, and push latch: f22001 -> f24136
+
+The first CNZ2 Knuckles cutscene previously survived its final jump until a
+wide generic off-screen margin expired. `loc_623FE` instead reads the prior
+`Draw_Sprite` render flag using `ObjSlot_CutsceneKnux` extents `$1C/$18`, so
+the cutscene now deletes at the native boundary. At the late-water cork pair,
+the helper-created right floor occupied an earlier engine slot than the direct
+left placement. The rolling landing therefore ran the right floor first and
+missed the native left seam push. A right rolling-break floor now resolves only
+an adjacent, intact, later-slot left sibling before its own checkpoint,
+reconstructing the native left-to-right `SolidObjectFull` order from object
+identity, geometry, and slot state.
+
+The fragment-heavy break then exposed a ROM VBlank-only row whose recorder
+counters are byte-stale: both moving players repeat exactly and the advertised
+per-frame Tails normal-step hook disappears. Replay phase detection now treats
+that moving, non-object-held execution gap as VBlank-only while retaining full
+ticks for controller-held plateaus such as HCZ's carried players. Finally,
+underwater CPU Tails now lets a live object-owned pushing latch satisfy
+`loc_13DD0`; this suppresses the follow X nudge and preserves the native input
+acceleration against the spring seam (`docs/skdisasm/sonic3k.asm:58493-58554,
+129120,134030-134083,134795,26696-26729`).
+
+The focused cutscene, execution-model, and CNZ complete-run checks pass through
+the corrected windows. CNZ complete-run physics advances from f22001 to f24136;
+its next mismatch is CPU Tails missing a `-$200` vertical response. The full
+comparison-only sweep remains 45/58 physics green with the same 13 expected-red
+routes and unchanged green AIZ, HCZ, and MGZ complete runs. Animation remains
+44/58 green with the same 14 expected-red or unsupported routes; CNZ
+complete-run animation still begins at f108, and legacy standalone CNZ remains
+at f0.
+
+### 2026-07-19 -- CNZ Clamer projectile live touch pointer: f20903 -> f22001
+
+At f20903, native CPU Tails overlapped the Clamer auto-close projectile and
+entered hurt with velocity `(-$200,-$400)`. The engine missed because the
+projectile used a copied touch snapshot two pixels ahead of its live position.
+`loc_86D5E` runs `MoveSprite2` before `Sprite_CheckDeleteTouchXY`, whose touch
+tail publishes the SST pointer; the following player pass therefore
+dereferences live `x_pos/y_pos`, just like other S3K collision-response-list
+owners. The projectile now opts into that pointer-backed touch state
+(`docs/skdisasm/sonic3k.asm:179027-179039,182257-182266`).
+
+The focused Clamer suite passes. CNZ complete-run physics advances from f20903
+to f22001; its next mismatch is Sonic one pixel left. The full comparison-only
+sweep remains 45/58 physics green with the same 13 expected-red routes and
+unchanged green AIZ, HCZ, and MGZ complete runs. Animation remains 44/58 green
+with the same 14 expected-red or unsupported routes; CNZ complete-run animation
+still begins at f108 (its downstream error count drops from 727 to 644), and
+legacy standalone CNZ remains at f0.
+
+### 2026-07-19 -- CNZ horizontal Door render-height gate: f20805 -> f20903
+
+At f20805, CPU Tails lost terrain support as the camera rose past a horizontal
+CNZ Door. Native `SolidObjectFull` still saw the Door's prior clear
+`render_flags` bit 7 and left Tails airborne for one frame; the engine treated
+the Door as visible and immediately re-seated him. `byte_30FCE` gives this
+variant width `$20` and height `$08`, but the engine had overridden only the
+width and inherited the default `$10` render height. The Door now supplies both
+ROM extents to the shared render-flag solid gate
+(`docs/skdisasm/sonic3k.asm:36336-36370,66167-66258`).
+
+The focused Door suite passes. CNZ complete-run physics advances from f20805 to
+f20903; its next mismatch is CPU Tails missing a `-$200` horizontal response.
+The full comparison-only sweep remains 45/58 physics green with the same 13
+expected-red routes and unchanged green AIZ, HCZ, and MGZ complete runs.
+Animation remains 44/58 green with the same 14 expected-red or unsupported
+routes; CNZ complete-run animation remains at f108 and legacy standalone CNZ
+at f0.
+
+### 2026-07-19 -- CNZ moving-cylinder underside and Batbot targeting: f20502 -> f20805
+
+At f20502, subtype-$45 CNZCylinder moved down from y `$01E7` to `$01E8`
+before the split solid checkpoint, so the engine separated CPU Tails from the
+underside one pixel lower than the ROM. The existing frame-entry anchor rule
+for CPU contacts on upward vertical-oscillator steps now applies in both
+directions, matching `sub_321E2` followed by the same-pass `SolidObjectFull`
+(`docs/skdisasm/sonic3k.asm:67656-67672,67843-67874,41394-41440`).
+
+The next contact exposed Batbot's two distinct targeting owners. Its wait
+routine calls `Find_SonicTails`, so the nearer native Player 2 wakes it; once
+awake, `loc_893CC` calls `Chase_Object` with Player 1 explicitly. The engine
+previously used Player 1 for both decisions, leaving the first Batbot dormant
+and omitting its later destruction bounce. Activation now uses the nearest
+native player while chase remains fixed to Player 1
+(`docs/skdisasm/sonic3k.asm:178248-178283,186293-186319`).
+
+The focused cylinder and Batbot suites pass. CNZ complete-run physics advances
+from f20502 to f20805; its next mismatch is CPU Tails becoming grounded on a
+horizontal CNZ Door one frame before the ROM. The full comparison-only sweep
+remains 45/58 physics green with the same 13 expected-red routes and unchanged
+green AIZ, HCZ, and MGZ complete runs. Animation remains 44/58 green with the
+same 14 expected-red or unsupported routes; CNZ complete-run animation remains
+at f108 and legacy standalone CNZ at f0.
+
+### 2026-07-19 -- CNZ Sparkle cadence and door/vacuum slot order: f18680 -> f20502
+
+The f18680 contact came from Sparkle's warning child appearing before the ROM
+allocated it. `Animate_RawGetFaster` decrements the script's initial delay from
+9 through zero, then executes 16 zero-delay loops before the terminal callback;
+the former minimum-delay/loop heuristic reached that callback early. Sparkle
+now runs the raw script cadence directly, including its final callback dispatch
+(`docs/skdisasm/sonic3k.asm:177754-177807,186052-186058`).
+
+At f20234, the horizontal Door SST re-seated CPU Tails and the immediately
+following vacuum-tube SST set `Status_InAir` without clearing `Status_OnObj`.
+The engine's central solid checkpoint instead allowed that later object to
+consume the Door's standing bit, then recovered grounding before player
+movement. Horizontal Door now retains its own checkpoint and exposes the stale
+airborne ride until its next `SolidObjectFull` pass clears it, preserving the
+native SST-order handoff. The later CNZ palette-flash child also clears its
+derived owner back-link on destruction and reconstructs it after rewind, so the
+captured forward-link graph stays closed at completion.
+
+The focused Sparkle, Door, cutscene-button rewind, schema, and rewind-coverage
+suites pass. CNZ complete-run physics advances from f18680 to f20502; its next
+mismatch is CPU Tails one pixel low during the vacuum lift. The full
+comparison-only sweep remains 45/58 physics green with the same 13 expected-red
+routes and unchanged green AIZ, HCZ, and MGZ complete runs. Animation remains
+44/58 green with the same 14 expected-red or unsupported routes; CNZ
+complete-run animation remains at f108 and legacy standalone CNZ at f0.
+
+### 2026-07-19 -- S3K angled-ceiling Bubble Shield tail: f18354 -> f18680
+
+CNZ was exact through f18353, where airborne rolling Sonic entered an angled
+ceiling with an armed Bubble Shield. The engine accepted the same `$B8`
+surface but stopped after its local wall/ceiling landing reset, leaving Sonic
+grounded with the pre-bounce velocity. Native `Player_HitCeilingAndWalls`
+calls `Player_TouchFloor_Check_Spindash`; its common landing tail invokes
+`BubbleShield_Bounce`, restores airborne roll, and rewrites X/Y velocity before
+the caller copies the post-bounce Y velocity into `ground_vel`. The shared
+angled-ceiling path now preserves that ordering
+(`docs/skdisasm/sonic3k.asm:24228-24264,24325-24426`).
+
+The focused air-landing regression suite passes. CNZ complete-run physics
+advances from f18354 to f18680; its next mismatch is an engine-only hurt from a
+CNZ enemy/hazard contact (`ground_vel -$00C8` expected, zero actual). The full
+comparison-only sweep remains 45/58 physics green with the same 13 expected-red
+routes and unchanged green AIZ, HCZ, and MGZ complete runs. Animation remains
+44/58 green with the same 14 expected-red or unsupported routes; CNZ
+complete-run animation remains at f108 and legacy standalone CNZ at f0.
+
+### 2026-07-19 -- CNZ retained dispatch and native RNG chain: f15464 -> f18354
+
+The retained Act 2 object pass now preserves the native ownership that was
+previously flattened across the seamless title transition. CPU Tails projects
+the results-owned held-counter cadence into horizontal catch-up; cylinders
+retain their capture anchor and per-instance solid latch; hover fans execute in
+SST order; cannons leave the idle chamber visible through `sub_3192C`'s first
+read-before-write dispatch; and balloons synchronize only when their retained
+live slot or collision-list entry is sampled. CNZ's runtime state also declares
+the one inherited `Oscillate_Data` advance at this transition. Keeping that
+declaration on `CnzZoneRuntimeState` is essential: applying the advance to every
+seamless zone moved the already-green AIZ, HCZ, and MGZ complete-run frontiers.
+
+The remaining drift was the shared `Random_Number` chain. Native CNZ miniboss
+block impacts allocate subtype-6 explosion controllers, including a second
+controller from the fatal top SST, and each controller consumes its first
+random word in the creation tail before continuing at three-dispatch cadence.
+The CNZ screen-event signpost likewise preserves the final sparkle gate that
+lands one object dispatch after its folded engine landing pass. Those real RNG
+owners align the later balloon phases without trace hydration or a route/frame
+exception (`docs/skdisasm/sonic3k.asm:145053-145199,145707-145708,
+177558-177586`).
+
+The focused cylinder, cannon, balloon, miniboss-top, boss-explosion-controller,
+and signpost suites pass. CNZ complete-run physics advances from f15464 to
+f18354; its next mismatch is player `y` (`$05C7` expected, `$05C2` actual).
+The full comparison-only physics sweep remains 45/58 green with exactly the
+same 13 expected-red routes, including unchanged green AIZ, HCZ, and MGZ
+complete runs. The animation sweep remains 44/58 green with the same 14
+expected-red or unsupported routes; CNZ complete-run animation remains at f108
+and legacy standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ retained results/title transition chain: f13968 -> f15464
+
+CNZ's Act 1 results object appeared at f13960 and the ROM allocated its child
+SSTs plus published the second `Events_fg_5` at f13968. The engine used the
+global nine-dispatch results-art gate required by HCZ/MGZ, leaving CNZ at the
+old `$32xx/$04xx` coordinates for one extra frame. The CNZ background owner
+now advertises its native `ACT1_POST_BOSS/BG_DO_TRANSITION` state through the
+transition bridge, selecting the eight-dispatch create gate only while that
+state is actually waiting. No zone, route, or trace identity is consulted.
+
+The subsequent retained-owner chain now waits for the real
+`End_of_level_flag`, preserves the results object across the seamless reload,
+defers its mutated title-card timer/ring reset to the native title dispatch,
+and records that the held level counter came from retained results. That
+counter provenance is consumed by CPU Tails after its barber-pole interact SST
+is freed and by CNZ bumper orbit publication. Barber-pole airborne latches also
+run the native `Player_TouchFloor` cleanup and use
+`Delete_Sprite_If_Not_In_Range`'s unsigned coarse-X window
+(`docs/skdisasm/sonic3k.asm:62512-62720,69348-69782`).
+
+Focused results, transition, title-card, barber-pole, bumper, sidekick, and CNZ
+event-flow tests pass. CNZ complete-run physics advances from f13968 `x` to
+f15464 `tails_x`; its next mismatch is CPU Tails held two pixels left on a CNZ
+cylinder. A full comparison-only sweep remains 45/58 physics green with the
+same 13 expected-red routes and unchanged non-CNZ frontiers. Animation remains
+44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
 ### 2026-07-21 -- S3K mega-run chain: gumball interior CLOSED; frontier moved seg1-entry -> seg2->seg3 return
 
 Command (worktree `.claude/worktrees/green-bonus`, branch
@@ -45953,3 +46815,428 @@ property and ran each route in its own fork. Both completed green (1/1):
 The complete-run replay finished in 7.352 seconds with zero failures/errors;
 the standalone replay finished separately in 6.661 seconds with zero
 failures/errors. No comparison report or moved frontier was emitted.
+### 2026-07-18 -- CNZ miniboss retained null-parent error classified as stale post-frontier assertion
+
+On `bugfix/ai-cnz-corrections`, the focused command
+`mvn -Dnet.bytebuddy.experimental=true "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayCnzMinibossParentSecondMovePassUsesRomPhase" test`
+reproduced the retained null dereference at trace f14712. An isolated-build
+diagnostic showed this was not a stale child parent link: the whole engine route
+was still near x=$1400 (wire cage, Batbot, path swaps, spikes), so the placed
+CNZ miniboss at x=$32xx had never spawned. The assertion is far beyond the
+standalone CNZ trace's release-blocking frontier and cannot validate boss cadence
+without first solving all intervening divergences. The stale post-frontier method
+is disabled with that explicit prerequisite; no trace state is hydrated and no
+gameplay behavior is changed. The separate CNZ complete-run frontier remains
+f1846 `tails_x_speed` pending its own trace fix.
+### 2026-07-18 -- CNZ complete-run f1846 upstream-position audit
+
+Task-5 triage rechecked the recorded ROM window rather than changing horizontal
+spring timing. In `cnz_completerun/physics.csv.gz`, Tails advances from x=$1477
+to $14AF over f1828-f1836 while retaining x_speed/ground_vel=$0600, then reaches
+x=$14B5 and enters Status_Push before the spring launch. The per-frame aux data
+shows CPU NORMAL `fallthrough_sub20`, no object control, and `interact_slot=4`
+pointing at the static CNZ hover fan routine `loc_31E68`; it explicitly reports
+`tails_on_object=false` and both fan standing flags false. Thus the historical
+`stand_on_obj=04` interpretation was stale interaction identity, not solidity or
+platform carry. ROM `sub_31E96` only adjusts Y, clears Y velocity, seeds
+ground_vel=1, and flip state (sonic3k.asm:67360-67403); it does not add X.
+
+The existing aux window contains no `position_write` events despite the metadata
+advertising that optional stream, so it cannot identify which mid-frame routine
+accounts for the accumulated engine-versus-ROM X difference before f1846. A
+blanket spring defer is already disproven by the recorded AIZ/HCZ/ICZ regressions.
+No gameplay change is justified from this data. The next required diagnostic is
+a clean focused engine context over f1828-f1846 plus a BizHawk PC-execute probe
+on Tails' `SpeedToPos`/native x_pos writes in that window, as required by the
+trace workflow before classifying a sub-frame position discrepancy. Frontier
+remains f1846 `tails_x_speed`; no hydration, tolerance, zone/frame carve-out, or
+spring timing change was made.
+
+### 2026-07-18 -- CNZ complete-run spring init cadence: f1846 -> f2920
+
+A clean physics-scope replay with a 12 GiB fork heap disproved the prior
+"upstream accumulated X" premise. At f1846 the engine's pre-object diagnostic
+has Tails at exactly the ROM state, x=`$14B5.8500` with x/ground speed `$0024`.
+The engine then processes the just-loaded horizontal spring in the same frame,
+nudging Tails to `$14AD` and writing `-$1000`. ROM aux simultaneously reports
+the spring newly appearing in slot 20 with code `$23050`
+(`Obj_Spring_Horizontal`): `Obj_Spring` has executed and installed its variant,
+but that variant cannot run until the next SST pass. This follows the init tail
+through `Spring_Common` (`sonic3k.asm:47500-47652`) and requires no zone, route,
+frame, or trace-data predicate.
+
+`Sonic3kSpringObjectInstance` now consumes an init-only execution and suppresses
+its compatibility solid checkpoint on that pass. The focused spring test suite
+passes. Command:
+`JDK_JAVA_OPTIONS=-Xmx12g mvn -Dmse=off "-Dtest=TestS3kCnzCompleteRunTraceReplay" -Dtrace.verification=physics -Dtrace.frontierOnly=true -Dtrace.context.radius=2 -Dtrace.print.summary=true "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" test`.
+Result: CNZ complete-run advances from f1846 `tails_x_speed` to f2920
+`x_speed` (21 retained errors in the stopped context). S3K AIZ complete-run
+remains fully green; ICZ complete-run preserves its clean-HEAD f2472 `y_speed`
+frontier. A combined parallel run exhausted heap before HCZ completed, and a
+subsequent isolated HCZ run also exhausted a 10 GiB fork during trace loading,
+so no HCZ frontier claim is made.
+
+A targeted BizHawk PC-execute probe for `$23050`/`$23190` was built and
+successfully compiled with Lupa, but could not execute locally: the bundled
+`EmuHawkMono.sh` exits immediately with `mono: not found`, and this host has no
+Wine, PowerShell, or alternate BizHawk runtime. The committed ROM aux and clean
+engine context already identify the init/variant boundary; no recorder data was
+regenerated or hydrated.
+
+Cross-game sanity command:
+`JDK_JAVA_OPTIONS=-Xmx6g mvn -Dmse=off "-Dtest=TestS1Ghz1TraceReplay,TestS2Ehz1TraceReplay" -Dtrace.verification=physics -Dtrace.frontierOnly=true -Dtrace.context.radius=2 -Dtrace.print.summary=true "-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" test`.
+Both GHZ1 and EHZ1 remain fully green with no physics divergences.
+### 2026-07-18 -- CNZ miniboss stale post-frontier replay replaced by isolated cadence coverage
+
+The disabled `traceReplayCnzMinibossParentSecondMovePassUsesRomPhase` method was
+removed rather than retained as a permanently skipped test. Its f14712/f15004
+assertions are unreachable while the standalone CNZ route remains near x=$1400,
+well before the x=$32xx arena. Replacement coverage in
+`TestCnzMinibossSwingPhase` drives the production boss update graph through two
+Move/Closing cycles and checks routine $06 restoration, ROM x_vel magnitude and
+stored ChangeDir turn cadence, plus the top child's retained parent reference.
+This isolates the behavior under test without trace hydration or a post-frontier
+route assumption.
+
+### 2026-07-18 -- CNZ complete-run Batbot live touch coordinate: f2920 -> f3129
+
+At f2920 the engine and ROM Batbot both finish the object pass at
+`$10B7,$04A7`, but the engine's next player touch pass tested the additional
+stale snapshot `$10B8,$04A3`. The ROM stores an SST pointer in
+`Collision_response_list`; `Touch_Loop` dereferences live `x_pos/y_pos`, and
+Obj_Batbot publishes after `Chase_Object` and `MoveSprite2`
+(`docs/skdisasm/sonic3k.asm:186312-186319,20656-20710`). Batbot now opts into
+the existing post-move current-touch-state contract. No trace hydration,
+tolerance, zone/route/frame predicate, or shared cross-game behavior changed.
+
+Focused verification command:
+`JDK_JAVA_OPTIONS=-Xmx12g mvn -q test -Dnet.bytebuddy.experimental=true '-Dtest=com.openggf.game.sonic3k.objects.badniks.TestBatbotBadnikInstance,com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace' -Dtrace.verification=physics -Dtrace.frontierOnly=true -Dtrace.context.radius=2 -Dtrace.print.summary=true '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsurefire.argLine=-Xshare:off -Xmx12g -Dnet.bytebuddy.experimental=true' -Dsurefire.forkCount=1 -DfailIfNoTests=false`.
+The 10 Batbot unit tests pass and CNZ complete-run advances from f2920
+`x_speed` (21 stopped-context errors) to f3129 `rings` (1 error, expected 8,
+actual 9).
+
+Full comparison-only physics sweep command:
+`JDK_JAVA_OPTIONS=-Xmx12g mvn -q test -Dnet.bytebuddy.experimental=true '-Dtest=*TraceReplay#replayMatchesTrace' -Dtrace.verification=physics -Dtrace.frontierOnly=true -Dtrace.context.radius=1 -Dtrace.print.summary=true '-Dsonic1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsurefire.argLine=-Xshare:off -Xmx12g -Dnet.bytebuddy.experimental=true' -Dsurefire.forkCount=1 -DreuseForks=true -DfailIfNoTests=false -Dmaven.test.failure.ignore=true`.
+Result: 58 replay methods, 45 green and 13 expected-red. No non-CNZ
+frontier regressed; the known red set and first frontiers are unchanged. The
+standalone legacy CNZ route remains at f0 `y_speed`; CNZ complete-run is the
+only moved frontier.
+
+### 2026-07-19 -- CNZ Batbot SST children and dormant wrapper lifetime: f3129 -> f4100
+
+At f3129 the ROM's near Batbot occupies slot 6, with its body in slot 9 and lamp
+in slot 13; the engine had folded both visual pieces into the parent and placed
+the Batbot itself in slot 7. The earlier authored Batbot at `$1400,$0A80` had
+remained alive in engine slot 6 after never entering the viewport, whereas ROM
+`Obj_WaitOffscreen` deletes the dormant wrapper at its coarse-X range check.
+ROM `Obj_Batbot` also creates both visual pieces with
+`CreateChild1_Normal`/`AllocateObjectAfterCurrent`, and those children execute
+their initialization and independent raw animation as genuine SST objects
+(`docs/skdisasm/sonic3k.asm:180266-180300,186195-186388`).
+
+The engine now applies the dormant wrapper's native coarse-X deletion and
+represents the body and lamp as parent-owned, rewind-recreatable object slots.
+They retain the parent's high-plane art, use priority `$200`, initialize in the
+allocation pass, and preserve the body animation's multi-delay script. This
+restores the native Batbot and lost-ring slot sequence without trace hydration,
+tolerance, or a zone/route/frame predicate.
+
+Focused verification passes all 13 Batbot tests and advances CNZ complete-run
+physics from f3129 `rings` to f4100 `routine` (ROM routine 2, engine routine 4).
+The comparison-only full physics fleet reports 58 replay methods, 45 green and
+13 expected-red. Every non-CNZ frontier is unchanged: S2 CNZ2 f1166, CPZ2
+f1601, DEZ f0, MCZ2 f5445, OOZ1 f10220, SCZ f0, WFZ f0; S3K AIZ standalone
+f290, ICZ f2472, LBZ f1629, and MHZ f2920. The legacy standalone CNZ trace
+remains at f0 `y_speed`.
+
+### 2026-07-19 -- CNZ spring player-routine handoff: f4100 -> f4610
+
+At f4100 Sonic lands on the upward spring at `$0C50,$0478` while still in the
+hurt routine. The spring launch position and velocities already match, but ROM
+`sub_22F98` writes player `routine=2` after setting the airborne launch state;
+the engine retained routine 4 and therefore entered hurt physics on the next
+frame. The same unconditional player-routine write exists in the down and both
+diagonal spring tails (`docs/skdisasm/sonic3k.asm:47720-47729,48139-48143,
+48213-48217,48304-48308`).
+
+All S3K vertical and diagonal spring launches now clear the engine hurt-routine
+flag at that ROM write. The 14 focused spring tests pass, including hurt-entry
+coverage for up, down, and diagonal launches. CNZ complete-run physics advances
+from f4100 `routine` to f4610 `tails_y`; the new context is a Clamer contact
+where the engine hurts CPU Tails but ROM keeps Tails in routine 2.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and no non-CNZ frontier movement. The full animation fleet
+remains 44/58 green: the eight S1 credits traces still lack CSV-v7 animation
+fields, and the six comparison-red routes retain their previous first
+frontiers. CNZ complete-run animation remains at f108 `player_animation_id`,
+and the legacy standalone CNZ trace remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ Clamer full render-flag projectile gate: f4610 -> f6696
+
+At f4610 CPU Tails overlaps an engine Clamer projectile at `$0DCA,$03B2` and
+enters the hurt routine. ROM has the parent Clamer at `$0DE8,$03B0` in routine
+6 and its permanent spring child at `$0DE8,$03A8`, but no projectile SST. The
+parent had reached raw-animation frame 8 while below the camera: ROM
+`loc_89064` tests the retained sign bit of `render_flags`, whereas the engine
+tested only horizontal visibility and spawned the projectile despite the
+parent's `$14x$10` render box being vertically off-screen
+(`docs/skdisasm/sonic3k.asm:185930-185942,186052-186058`).
+
+The projectile spawn now uses the full Render_Sprites-style parent bounds.
+All 14 focused Clamer tests pass, including a vertically off-screen frame-8
+case. CNZ complete-run physics advances from f4610 `tails_y` to f6696
+`tails_x_speed`.
+
+The full physics fleet remains 45/58 green with the same 13 expected-red routes
+and unchanged non-CNZ frontiers. The full animation fleet remains 44/58 green
+with the same eight unsupported S1 credits traces and six comparison-red
+frontiers; CNZ complete-run animation remains at f108 and standalone CNZ at f0.
+
+### 2026-07-19 -- CNZ horizontal-spring exclusive upper X edge: f6696 -> f6706
+
+At f6696 CPU Tails is grounded at `$18B0,$0347`, exactly `$28` pixels right of
+the horizontal spring at `$1888,$0330`. ROM `sub_2326C` rejects an X coordinate
+equal to its computed upper bound with `bhs`; the engine treated that endpoint
+as inside and applied the yellow spring's `$0A00` launch plus eight-pixel nudge
+(`docs/skdisasm/sonic3k.asm:47957-48024`).
+
+The ordinary grounded proactive check now treats `springX+$28` as exclusive.
+All 15 focused S3K spring tests pass, including the exact `$28` rejection and
+`$27` acceptance. CNZ complete-run physics advances from f6696
+`tails_x_speed` to f6706 `y_speed`.
+
+The full physics fleet remains 45/58 green with 13 expected-red routes; the
+full animation fleet remains 44/58 green with the same 14 non-green methods.
+No non-CNZ frontier moved, CNZ complete-run animation remains at f108, and
+standalone CNZ remains at f0.
+
+### 2026-07-19 -- CNZ balloon live bob touch coordinate: f6706 -> f6820
+
+At f6706 Sonic's post-movement touch boundary meets the second balloon's
+native `$1920,$022E` collision box exactly. The engine's shared S3K touch pass
+found the same inclusive overlap only on the following frame because it tested
+the balloon's older pre-update `$022D` snapshot. ROM `Obj_CNZBalloon` updates
+`y_pos` from its sine bob before `Sprite_CheckDeleteTouch3` publishes the SST
+pointer; the following player-slot `Touch_Loop` dereferences that live post-bob
+coordinate (`docs/skdisasm/sonic3k.asm:66776-66795,20656-20710`).
+
+`CnzBalloonInstance` now opts into the existing current-touch-state contract.
+All 10 existing balloon tests plus the new live-coordinate contract test pass,
+and CNZ complete-run physics advances from f6706 `y_speed` to f6820 `tails_x`.
+The change contains no trace hydration, tolerance, or zone/route/frame
+predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The full animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ miniboss native P2 rebound: f12488 -> f13968
+
+At f12488 CPU Tails is rolling upward into the launched miniboss top. ROM
+`CNZMinibossTop_CheckPlayerBounce` probes Player 1 and then Player 2, reverses
+the top on the P2 contact, and its following `SolidObjectFull` pass uses the
+top's prior published coordinate. The engine checked only the primary player;
+after adding P2 naively, its folded object/solid ordering still observed the
+sidekick and top one publication late, first seating Tails against the
+descending top and then separating the underside two pixels too far
+(`docs/skdisasm/sonic3k.asm:145053-145103,145530-145578`).
+
+The top now follows the native P1-to-P2 query order, projects the later P2
+slot's pending airborne movement for the cooperative rebound, and uses the
+existing pre-update solid-position contract for the bounded post-bounce P2
+handoff. Focused top physics tests cover the P2-only rebound and publication
+release. CNZ complete-run physics advances from f12488 `tails_g_speed` to
+f13968 `x`; the new mismatch is the separate CNZ1-to-CNZ2 coordinate handoff.
+The implementation contains no trace hydration or zone/route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ miniboss closing publication: f12212 -> f12488
+
+At f12212 the ROM rebounds Sonic from the miniboss body at the exclusive edge,
+while the engine has already advanced the closing animation's `$F4` terminator
+into `Obj_CNZMinibossCloseGo` and moved the body one pixel. The raw animation
+and object movement are individually correct, but the engine made the handoff
+visible one SST pass too soon: the previous collision-response list must first
+consume the final frame-0 publication in routine `$0C`
+(`docs/skdisasm/sonic3k.asm:144960-144969,145707-145708,177558-177586`).
+
+The closing terminator now defers its `CloseGo` callback for one object update,
+preserving routine `$0C` and the final frame for the pending player touch pass.
+A focused raw-animation phase test covers the boundary, and CNZ complete-run
+physics advances from f12212 `g_speed` to f12488 `tails_g_speed`. The change
+models the ROM routine/publication phase and contains no trace hydration or
+zone/route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- CNZ miniboss live body touch: f12024 -> f12212
+
+At f12024 Sonic and the CNZ miniboss body have matching ROM/engine positions,
+but the touch controller tests the body at `$32C5` while its live SST is
+`$32C7`. The stale point turns the ROM's exclusive horizontal non-overlap into
+a false boss attack, negating Sonic's X, Y, and ground velocities. ROM
+`Obj_CNZMinibossStart` runs movement before tail-calling
+`Draw_And_Touch_Sprite`, and `Collision_response_list` stores the SST pointer
+rather than copied coordinates
+(`docs/skdisasm/sonic3k.asm:144868-144877,20656-20710`).
+
+`CnzMinibossInstance` now uses the existing current-touch-state contract already
+used by moving AIZ/MGZ minibosses and other post-movement publishers. Focused
+CNZ miniboss and boss-profile tests pass, and CNZ complete-run physics advances
+from f12024 `g_speed` to f12212 `g_speed`. The implementation contains no trace
+hydration or zone/route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- S3K entry-ring render activation: f9663 -> f12024
+
+At f9663 Sonic is inside the special-stage entry ring's eventual
+`SSEntry_Range`, and the engine has already enabled collision and frozen the
+player/camera. The ROM ring remains in routine 2 without touching Sonic because
+its grow-in mapping has not yet reached frame 8. `Obj_WaitOffscreen` initially
+replaces the ring operation with an inert placeholder using `$20`-pixel
+`width_pixels` and `height_pixels`; only a Render_Sprites on-screen flag restores
+the real routine (`docs/skdisasm/sonic3k.asm:128219-128269,180271-180303`).
+
+The entry ring now begins formation at that native render-box overlap instead
+of the generic 128-pixel placement margin. The focused formation suite covers
+the exclusive touching edge and first overlapping pixel, and CNZ complete-run
+physics advances from f9663 `camera_x` to f12024 `g_speed`. The implementation
+contains no trace hydration or zone/route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- S3K all-entry respawn persistence: f9618 -> f9663
+
+At f9618 the monitor at `$2CE8,$0670` has ROM code pointer `$1B588`, the
+`Sprite_OnScreen_Test` broken-shell routine, after Sonic previously collected
+its bubble shield. The engine reloaded the same layout entry as an intact
+routine-2 monitor because its Y-word bit 15 was clear and the shared placement
+controller rejected `markRemembered`. S3K does not use that S1/S2 gate:
+`Load_Sprites` advances `Object_respawn_table` for every record and stores the
+corresponding address in every spawned SST
+(`docs/skdisasm/sonic3k.asm:37513-37656,37741-37758`).
+
+Two-axis S3K placement now persists remembered destruction for every real
+layout entry while S1/S2 retain their explicit high-bit rule. Focused placement
+and monitor tests pass, and CNZ complete-run physics advances from f9618 `x`
+to f9663 `camera_x`. The implementation models the ROM respawn table and
+contains no trace hydration or route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- Spike lower-half escape push publication: f8388 -> f9618
+
+At f8388 Sonic overlaps the lower-right portion of the vertically moving spike
+at `$2280,$05D0`. The engine already applies the native nine-pixel side
+separation and preserves `x_vel/ground_vel`, but its grounded squash-edge
+escape only published push when the player was moving into the object. ROM
+routes the `abs(d0) < $10` escape back through `loc_1E042` and unconditionally
+sets the grounded player/object push bits at `loc_1E06E`
+(`docs/skdisasm/sonic3k.asm:41473-41495,41564-41568`).
+
+The shared spike base now opts into the existing full-solid squash-edge push
+contract. Focused spike tests pass and CNZ complete-run physics advances from
+f8388 `status_byte` to f9618 `x`. The change is object-routine-driven and
+contains no trace hydration or zone/route/frame predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- S3K persistent Tails interact pointer words: f6820 -> f7512
+
+At f6820 ROM CPU Tails changes from a previously ridden CNZ horizontal door to
+an off-screen spring. `sub_13EFC` compares word 0 of the new support's SST code
+pointer (`$0002`) against the persistent `Tails_CPU_interact` word retained
+from the door (`$0003`); the mismatch performs the native `$7F00` marker warp.
+The engine had the generic comparison but neither object exposed its native
+pointer word, so the earlier latch was never armed
+(`docs/skdisasm/sonic3k.asm:26816-26843,47500-47540,66036-66167`).
+
+S3K doors and springs now implement the shared ROM-code-pointer provider with
+their disassembly-derived high words. The focused provider, door, spring, and
+CNZ replay suite passes through the old mismatch, advancing complete-run
+physics from f6820 `tails_x` to f7512 `status_byte`. The implementation models
+object identity state only; it contains no trace hydration or route/frame
+predicate.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.
+
+### 2026-07-19 -- S3K Y-pass respawn after off-screen self-delete: f7708 -> f8388
+
+The f7708 balloon launch was caused by a bob-phase error, not touch geometry.
+ROM reloads the previously popped balloon at `$1920,$022C` on f7161 when
+`loc_1B982` scans a newly exposed Camera-Y strip; that initialization consumes
+one shared RNG word. The engine's respawnable self-delete removed the spawn
+from both the live set and the deferred two-axis scan, so it missed that reload
+and assigned every subsequent balloon the preceding RNG result. The balloon at
+`$1D10,$0098` therefore bobbed four pixels too low and created a false overlap
+at f7708 (`docs/skdisasm/sonic3k.asm:37262-37276,37723-37762,66747-66795`).
+
+Respawnable S3K self-deletes now retain their placement entry in the deferred
+Camera-Y set after their live SST is removed. Normal cursor trimming still
+clears the entry when it leaves the X range. The focused vertical-placement and
+balloon suites pass, including a new self-delete/Y-pass recreation test. CNZ
+complete-run physics advances from f7708 `y_speed` to f8388 `status_byte`.
+
+An initial unrestricted retention attempt regressed HCZ complete-run physics at
+f29095 and standalone MGZ at f9962 by reloading entries already outside the X
+cursors. Gating retention on the layout index being between the current
+front/back cursors removed both regressions. The final comparison-only physics
+fleet remains 45/58 green with the same 13 expected-red routes and unchanged
+non-CNZ frontiers. The animation fleet remains 44/58 green with the same eight
+unsupported S1 credits traces and six comparison-red routes; CNZ complete-run
+animation remains at f108 and legacy standalone CNZ remains at f0 in both
+scopes.
+
+### 2026-07-19 -- CNZ cylinder render flip/status-facing separation: f7512 -> f7708
+
+At f7512 the cylinder advances Sonic's direct mapping from `$55` to `$59` and
+sets its visual horizontal flip. ROM `loc_32610` masks and writes only bits 0-1
+of `render_flags`; `Status_Facing` remains clear. The engine used
+`setDirection(LEFT)` alongside the render flip, changing the gameplay status
+byte from the expected `$08` to `$09`
+(`docs/skdisasm/sonic3k.asm:68078-68100`).
+
+The cylinder twist path now owns only mapping-frame and render-flip state, as
+the ROM does, leaving gameplay direction untouched. All 29 focused cylinder
+tests pass, including a new assertion that frame `$59` can render flipped while
+the player remains right-facing. CNZ complete-run physics advances from f7512
+`status_byte` to f7708 `y_speed`.
+
+The full comparison-only physics fleet remains 45/58 green with the same 13
+expected-red routes and unchanged non-CNZ frontiers. The animation fleet
+remains 44/58 green with the same eight unsupported S1 credits traces and six
+comparison-red routes; CNZ complete-run animation remains at f108 and legacy
+standalone CNZ remains at f0 in both scopes.

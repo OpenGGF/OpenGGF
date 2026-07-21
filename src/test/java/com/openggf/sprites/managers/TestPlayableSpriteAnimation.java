@@ -236,6 +236,29 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void s3kBarberPoleFlipTypeSelectsNativeTumbleSet() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
+                .setTumbleFrameBase(0x31)
+                .setTumbleTypeFrameBases(0, 0x3D, 0x49, 0x49);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(7), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setFlipType(2);
+        sprite.setFlipAngle(8);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x49, sprite.getMappingFrame(),
+                "S3K byte_1286E selects the normal barber-pole tumble base");
+        assertFalse(sprite.getRenderHFlip());
+        assertFalse(sprite.getRenderVFlip());
+    }
+
+    @Test
     public void s3kRunToWalkAnimationStepKeepsGroundPush() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         sprite.setAnimationId(1);

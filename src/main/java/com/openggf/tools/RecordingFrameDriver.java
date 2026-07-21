@@ -263,10 +263,35 @@ public final class RecordingFrameDriver {
         return mask;
     }
 
+    public void advancePlayableAnimationsOnly() {
+        var sprites = GameServices.sprites();
+        int animationFrame = sprites.getFrameCounter();
+        for (var candidate : sprites.getAllSprites()) {
+            if (candidate instanceof AbstractPlayableSprite playable) {
+                playable.getAnimationManager().update(animationFrame);
+            }
+        }
+    }
+
+    public void suppressFirstSidekickAnimationOnce() {
+        var sprites = GameServices.sprites();
+        if (!sprites.getSidekicks().isEmpty()) {
+            sprites.getSidekicks().getFirst().getAnimationManager().suppressNextUpdate();
+        }
+    }
+
     private void updateHeldCounterTitleCardOverlay() {
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {
             titleCardProvider.update();
+            if (titleCardProvider.ownsRetainedResultsHeldLevelCounter()) {
+                var levelEvents = GameServices.module().getLevelEventProvider();
+                if (levelEvents != null) {
+                    // The retained Obj_LevelResults -> Obj_TitleCard path still
+                    // runs fixed SST entries while Level_frame_counter is held.
+                    levelEvents.updateFixedInLevelObjects();
+                }
+            }
             if (titleCardProvider.ownsInLevelPlayerControlLock()) {
                 applyInLevelTitleCardControlLock(
                         titleCardProvider.shouldLockPlayerControlForInLevelOverlay());

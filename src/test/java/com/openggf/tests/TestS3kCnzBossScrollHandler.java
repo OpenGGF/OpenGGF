@@ -47,6 +47,35 @@ class TestS3kCnzBossScrollHandler {
     }
 
     @Test
+    void timedCnz2ShakeOffsetsForegroundAndBackgroundScrollTogether() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(Sonic3kZoneIds.ZONE_CNZ, 1);
+        Sonic3kCNZEvents events = manager.getCnzEvents();
+        events.triggerScreenShake(0x14);
+        events.update(1, 1);
+
+        assertEquals(0, events.getScreenShakeOffsetY(),
+                "CNZ2_ScreenEvent consumes the previous sample on the button-press frame");
+        events.update(1, 2);
+
+        SwScrlCnz handler = new SwScrlCnz();
+        int[] hscroll = new int[224];
+        int cameraY = 0x0A00;
+
+        handler.update(hscroll, 0x45C0, cameraY, 1, 1);
+
+        int shakeY = -5;
+        int expectedBgY = (cameraY * 13 >> 7) + shakeY;
+        assertEquals(cameraY + shakeY, handler.getVscrollFactorFG() & 0xFFFF,
+                "CNZ2_ScreenEvent adds Screen_shake_offset to Camera_Y_pos_copy, so Plane A must shake");
+        assertEquals(expectedBgY, handler.getVscrollFactorBG() & 0xFFFF,
+                "CNZ1_Deform removes the shake before scaling and adds it back to Plane B");
+        assertEquals(shakeY, handler.getShakeOffsetY(),
+                "the same native shake sample must move sprites with both tile planes");
+    }
+
+    @Test
     void minibossBossScrollAddsPublishedVerticalTunnelOffset() {
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();

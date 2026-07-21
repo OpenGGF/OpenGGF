@@ -161,6 +161,31 @@ class TestTraceExecutionModel {
     }
 
     @Test
+    void sonic3kMissingCpuExecutionHookMarksMovingDuplicateAsLag() throws Exception {
+        TraceData trace = TraceData.load(
+                Path.of("src/test/resources/traces/s3k/cnz_completerun"));
+        TraceFrame previous = trace.getFrame(22347);
+        TraceFrame current = trace.getFrame(22348);
+
+        assertEquals(previous.xSpeed(), current.xSpeed());
+        assertEquals(previous.ySpeed(), current.ySpeed());
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+    }
+
+    @Test
+    void sonic3kObjectHeldDuplicateStillExecutesItsControllerFrame() throws Exception {
+        TraceData trace = TraceData.load(
+                Path.of("src/test/resources/traces/s3k/hcz_completerun"));
+        TraceFrame previous = trace.getFrame(17415);
+        TraceFrame current = trace.getFrame(17416);
+
+        assertEquals(0x08, current.statusByte() & 0x08);
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+    }
+
+    @Test
     void preLevelS3kIntroPrefixTicksReplayAsFullFramesBeforeGameplayStart() throws Exception {
         TraceData trace = TraceData.load(
                 Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));

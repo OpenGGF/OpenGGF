@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -26,6 +27,7 @@ public final class CnzEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIns
 
     private CompletionContinuation completionContinuation;
     private boolean resultsCompleteNotified;
+    private boolean resultsCompletionObserved;
 
     public CnzEggCapsuleInstance(ObjectSpawn spawn) {
         this(spawn, CompletionContinuation.NONE);
@@ -41,8 +43,20 @@ public final class CnzEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIns
     @Override
     protected void updateAfterResultsStarted(int frameCounter, com.openggf.game.PlayableEntity player) {
         if (services().gameState() != null && services().gameState().isEndOfLevelFlag()) {
-            notifyResultsComplete();
+            if (resultsCompletionObserved) {
+                notifyResultsComplete();
+            } else {
+                // Obj_LevelResults occupies a later native slot than the boss
+                // owner. Its _unkFAA8 clear is therefore consumable by
+                // loc_6E724 only on the following SST object pass.
+                resultsCompletionObserved = true;
+            }
         }
+    }
+
+    @Override
+    protected S3kResultsScreenObjectInstance createResultsScreen(PlayerCharacter character, int act) {
+        return new CnzResultsScreenObjectInstance(character, act);
     }
 
     public void forceResultsCompleteForTest() {

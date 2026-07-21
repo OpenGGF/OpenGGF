@@ -105,6 +105,9 @@ public final class RewindCodecs {
         if (type == Palette.Color.class) {
             return Optional.of(new PaletteColorCodec());
         }
+        if (RewindStateful.class.isAssignableFrom(type)) {
+            return Optional.of(new StatefulValueCodec());
+        }
         if (type == BitSet.class) {
             return Optional.of(new BitSetCodec());
         }
@@ -772,6 +775,61 @@ public final class RewindCodecs {
 
         @Override
         public boolean requiresIdentityTable() {
+            return true;
+        }
+    }
+
+    /** Captures a final, pre-constructed rewind-stateful helper into the compact schema. */
+    private static final class StatefulValueCodec implements RewindCodec {
+        @Override
+        public void capture(
+                Field field,
+                Object target,
+                RewindStateBuffer scalarData,
+                List<Object> opaqueValues) {
+
+            RewindStateful<?> value = (RewindStateful<?>) get(field, target);
+            scalarData.writeBoolean(value != null);
+            if (value != null) {
+                writeStatefulCollectionValue(value, opaqueValues);
+            }
+        }
+
+        @Override
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        public void restore(
+                Field field,
+                Object target,
+                RewindStateBuffer.Reader scalarData,
+                Object[] opaqueValues,
+                OpaqueIndex opaqueIndex) {
+
+            if (!scalarData.readBoolean()) {
+                if (!Modifier.isFinal(field.getModifiers())) {
+                    set(field, target, null);
+                }
+                return;
+            }
+            RewindStateful value = (RewindStateful) get(field, target);
+            if (value == null) {
+                throw new IllegalStateException("Rewind-stateful field requires an existing value: "
+                        + field.getDeclaringClass().getName() + "." + field.getName());
+            }
+            StatefulCollectionValueSnapshot snapshot =
+                    (StatefulCollectionValueSnapshot) opaqueIndex.next(opaqueValues);
+            Object state = snapshot.state() == null
+                    ? null
+                    : GenericFieldCapturer.deepCopySnapshotValue(snapshot.state());
+            value.restoreRewindStateValue(state);
+        }
+
+        @Override
+        public boolean capturesFinalFields() {
+            return true;
+        }
+
+        @Override
+        public boolean requiresExistingTargetValue() {
             return true;
         }
     }

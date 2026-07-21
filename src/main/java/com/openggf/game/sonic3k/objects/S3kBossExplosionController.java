@@ -96,6 +96,23 @@ public class S3kBossExplosionController {
         return timer < 0;
     }
 
+    /**
+     * Runs the callback reached by Obj_CreateBossExplosion's creation-time
+     * tail jump through Obj_Wait while its zeroed $2E is already expired.
+     */
+    public void dispatchCreation() {
+        if (timer <= 0 || isFinished()) {
+            return;
+        }
+        timer--;
+        if (timer <= 0) {
+            timer = -1;
+            return;
+        }
+        spawnExplosionChild();
+        intervalCounter = SPAWN_INTERVAL - 1;
+    }
+
     private void spawnExplosionChild() {
         // ROM: sub_52850 random offset calculation (sonic3k.asm:176746-176751).
         int random = rng.nextRaw();

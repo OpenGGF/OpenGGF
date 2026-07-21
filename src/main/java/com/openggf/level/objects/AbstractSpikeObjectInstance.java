@@ -65,6 +65,16 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean groundedSquashEdgeSideContactSetsPush() {
+        // Obj36 / Obj_Spikes call SolidObjectFull. A grounded lower-half
+        // overlap within $10 pixels of the padded side edge escapes the squash
+        // path through SolidObject_LeftRight / loc_1E042, then sets push in
+        // SolidObject_AtEdge / loc_1E06E even when the player is moving away
+        // (s2.asm:35336-35402; sonic3k.asm:41564-41568,41473-41495).
+        return true;
+    }
+
+    @Override
     public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
         // S2 Obj36 and S3K Obj_Spikes call SolidObjectFull. If this object's
         // standing bit is still set while the player is already airborne, the

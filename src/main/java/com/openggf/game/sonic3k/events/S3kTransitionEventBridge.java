@@ -1,6 +1,10 @@
 package com.openggf.game.sonic3k.events;
 
 public interface S3kTransitionEventBridge {
+    default int resultsCreateGateDispatches() {
+        return 9;
+    }
+
     void signalActTransition();
 
     void requestHczPostTransitionCutscene();

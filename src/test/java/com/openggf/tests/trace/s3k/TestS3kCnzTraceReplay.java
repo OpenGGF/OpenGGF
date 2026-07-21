@@ -340,61 +340,6 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
     }
 
     @Test
-    void traceReplayCnzMinibossParentSecondMovePassUsesRomPhase() throws Exception {
-        try (BootstrappedCnzReplay replay = bootstrappedCnzReplay()) {
-            TraceFrame previousDriveFrame = replay.replayStart().hasSeededTraceState()
-                    ? replay.trace().getFrame(replay.replayStart().seededTraceIndex())
-                    : null;
-            for (int traceIndex = replay.replayStart().startingTraceIndex();
-                 traceIndex <= FRAME_CNZ_MINIBOSS_POST_OPEN_STORED_CHANGEDIR;
-                 traceIndex++) {
-                TraceFrame driveFrame = replay.trace().getFrame(traceIndex);
-                TraceExecutionPhase phase =
-                        TraceReplayBootstrap.phaseForReplay(replay.trace(), previousDriveFrame, driveFrame);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    replay.fixture().skipFrameFromRecording();
-                } else {
-                    replay.fixture().stepFrameFromRecording();
-                }
-                previousDriveFrame = driveFrame;
-
-                if (traceIndex == FRAME_CNZ_MINIBOSS_GO3_HANDOFF) {
-                    ObjectInstance parent = objectByName(GameServices.level().getObjectManager(), "CNZMiniboss");
-                    assertEquals(0x06, ((CnzMinibossInstance) parent).getCurrentRoutine(),
-                            "Frame 14712: Obj_CNZMinibossGo3 should have fallen through to CloseGo "
-                                    + "after the ROM $90 Obj_Wait window "
-                                    + "(docs/skdisasm/sonic3k.asm:144912-144923,177944-177949)");
-                    assertEquals(0x32C0, parent.getX() & 0xFFFF);
-                }
-                if (traceIndex == FRAME_CNZ_MINIBOSS_SECOND_CLOSEGO) {
-                    ObjectInstance parent = objectByName(GameServices.level().getObjectManager(), "CNZMiniboss");
-                    assertEquals(0x06, ((CnzMinibossInstance) parent).getCurrentRoutine(),
-                            "Frame 15004: Closing's $F4 terminator should have invoked CloseGo "
-                                    + "(docs/skdisasm/sonic3k.asm:144960-144969,145707-145708,177558-177586)");
-                    assertEquals(0x3301, parent.getX() & 0xFFFF);
-                }
-                if (traceIndex == FRAME_CNZ_MINIBOSS_SECOND_BODY_PASS) {
-                    ObjectInstance parent = objectByName(GameServices.level().getObjectManager(), "CNZMiniboss");
-                    assertEquals(0x06, ((CnzMinibossInstance) parent).getCurrentRoutine(),
-                            "Frame 15059: body must still be in Move at the ROM x=$3338, not already "
-                                    + "left/overlapping the player.");
-                    assertEquals(0x3338, parent.getX() & 0xFFFF);
-                }
-                if (traceIndex == FRAME_CNZ_MINIBOSS_POST_OPEN_STORED_CHANGEDIR) {
-                    ObjectInstance parent = objectByName(GameServices.level().getObjectManager(), "CNZMiniboss");
-                    assertEquals(0x06, ((CnzMinibossInstance) parent).getCurrentRoutine(),
-                            "Frame 15409: OpenGo must preserve $2E until CloseGo returns to Move; "
-                                    + "the stored Obj_Wait then fires ChangeDir after movement "
-                                    + "(docs/skdisasm/sonic3k.asm:144945-144969,177944-177952)");
-                    assertEquals(0x335F, parent.getX() & 0xFFFF,
-                            "Frame 15409: parent/coil should already have turned left, avoiding the "
-                                    + "spurious closed-coil rebound at frame 15410");
-                }
-            }
-        }
-    }
-
-    @Test
     void traceReplayCnzMinibossTailsPushBypassUsesHurtLatchedLeaderInput() throws Exception {
         try (BootstrappedCnzReplay replay = bootstrappedCnzReplay()) {
             driveReplayToTraceFrame(

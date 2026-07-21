@@ -36,6 +36,7 @@ public final class TailsCarryController {
     }
 
     public boolean isCarryingMainCharacter() { return carrying; }
+    public CarryContext getContext() { return context; }
 
     public boolean tryGrabMainCharacter() {
         AbstractPlayableSprite main = resolveMain();
@@ -265,6 +266,17 @@ public final class TailsCarryController {
             main.setControlLocked(false);
             main.setForcedAnimationId(-1);
             main.setObjectMappingFrameControl(false);
+            // The engine updates Player 1's animation before the later CPU
+            // Tails slot releases a grounded carry. That earlier pass can
+            // temporarily re-apply the forced carried id over the Walk byte
+            // written by Player_TouchFloor. Native object-slot order leaves
+            // the landing write intact, so restore it as the carry owner exits.
+            if (!main.getAir() && context == CarryContext.CNZ) {
+                int walkAnimationId = main.resolveAnimationId(CanonicalAnimation.WALK);
+                if (walkAnimationId >= 0) {
+                    main.setAnimationId(walkAnimationId);
+                }
+            }
         }
         carrying = false;
         parentagePending = false;

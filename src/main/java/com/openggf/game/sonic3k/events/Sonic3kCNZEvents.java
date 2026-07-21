@@ -201,6 +201,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      */
     private int screenShakeTimer;
     private int screenShakeOffsetY;
+    private int screenShakeAppliedOffsetY;
 
     /** Boss ownership mirror used by later slices. */
     private boolean bossFlag;
@@ -285,6 +286,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         waterButtonArmed = false;
         screenShakeTimer = 0;
         screenShakeOffsetY = 0;
+        screenShakeAppliedOffsetY = 0;
         bossFlag = false;
         bossFlagPrev = false;
         cameraStoredMaxXPos = 0;
@@ -442,6 +444,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        // LevelLoop runs ScreenEvents after Process_Sprites. CNZ2_ScreenEvent
+        // consumes the offset produced by the preceding background event;
+        // ShakeScreen_Setup then publishes the sample for the next frame.
+        screenShakeAppliedOffsetY = screenShakeOffsetY;
         tickScreenShake();
         if (act == 0) {
             updateAct1Bg(frameCounter);
@@ -711,6 +717,15 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         enterPostBossForegroundRefresh();
     }
 
+    /**
+     * The CNZ post-boss background owner has completed both foreground refresh
+     * passes and is polling the results object's second {@code Events_fg_5}.
+     */
+    public boolean isAwaitingSeamlessReloadSignal() {
+        return bossBackgroundMode == BossBackgroundMode.ACT1_POST_BOSS
+                && bgRoutine == BG_DO_TRANSITION;
+    }
+
     private void enterPostBossForegroundRefresh() {
         eventsFg5 = false;
         bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
@@ -756,7 +771,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         // ROM CNZ1BGE_FGRefresh2 allocates Obj_EndSign and writes x_pos=$32C0
         // immediately before advancing to CNZ1BGE_DoTransition
         // (docs/skdisasm/sonic3k.asm:107590-107601).
-        spawnObject(() -> new S3kSignpostInstance(POST_BOSS_END_SIGN_X, 0));
+        spawnObject(() -> new S3kSignpostInstance(POST_BOSS_END_SIGN_X, 0, true));
         bgRoutine = BG_DO_TRANSITION;
     }
 
@@ -1106,7 +1121,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * shake propagation move the foreground, sprites, and background in sync.
      */
     public int getScreenShakeOffsetY() {
-        return screenShakeOffsetY;
+        return screenShakeAppliedOffsetY;
     }
 
     private void tickScreenShake() {

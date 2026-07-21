@@ -72,6 +72,16 @@ public interface TitleCardProvider {
         return false;
     }
 
+    /** Whether an in-level title owner still owns the native held-counter phase. */
+    default boolean ownsHeldLevelCounter() {
+        return false;
+    }
+
+    /** Whether that held-counter phase came from a retained results owner mutating into a title card. */
+    default boolean ownsRetainedResultsHeldLevelCounter() {
+        return false;
+    }
+
     /**
      * Initializes the title card for a bonus stage entry.
      * S3K shows "BONUS STAGE" text; S1/S2 have no bonus stages so this is a no-op.

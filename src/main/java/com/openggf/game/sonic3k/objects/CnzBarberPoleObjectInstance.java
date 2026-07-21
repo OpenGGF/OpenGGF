@@ -10,6 +10,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
+import com.openggf.game.CanonicalAnimation;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -90,6 +92,22 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // The visible CNZ pole is level art; this object owns only the ride logic.
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // Delete_Sprite_If_Not_In_Range uses the native unsigned coarse-X
+        // window, not the viewport-scaled placement window. A pole just behind
+        // Camera_X_pos_coarse_back therefore underflows and deletes immediately
+        // (sonic3k.asm:37301-37317,69348-69357).
+        int coarseBack = (cameraX - 0x80) & 0xFF80;
+        int distance = ((spawn.x() & 0xFF80) - coarseBack) & 0xFFFF;
+        return distance > 0x280;
     }
 
     @Override
@@ -229,11 +247,37 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
         if (player.getAir()) {
             player.setYSpeed((short) 0);
             player.setGSpeed(player.getXSpeed());
+            applyNativeTouchFloor(player);
         }
         player.setOnObject(true);
         player.setAir(false);
         player.setLatchedSolidObject(Sonic3kObjectIds.CNZ_BARBER_POLE, this);
         player.setAngle((byte) angle);
+        // loc_33418/loc_334A4 select tumble set 2 for the normal pole;
+        // loc_33648/loc_336D2 select set 3 for the mirrored orientation.
+        player.setFlipType(mirrored ? 3 : 2);
+    }
+
+    /** Mirrors the Player_TouchFloor/Tails_TouchFloor call in sub_337D8. */
+    private void applyNativeTouchFloor(AbstractPlayableSprite player) {
+        int oldYRadius = player.getYRadius();
+        int centreY = player.getCentreY();
+        boolean wasRolling = player.getRolling();
+        player.setRolling(false);
+        if (wasRolling) {
+            NativePositionOps.writeYPosPreserveSubpixel(
+                    player, centreY + oldYRadius - player.getStandYRadius());
+        }
+        player.setRollingJump(false);
+        player.setJumping(false);
+        player.setPushing(false);
+        player.setFlipAngle(0);
+        player.setFlipTurned(false);
+        player.setFlipsRemaining(0);
+        int walkAnimation = player.resolveAnimationId(CanonicalAnimation.WALK);
+        if (walkAnimation >= 0) {
+            player.setAnimationId(walkAnimation);
+        }
     }
 
     private void continueRide(AbstractPlayableSprite player, RiderState state) {
@@ -280,13 +324,20 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        state.trackFixed += (long) player.getXSpeed() * 0xC0L;
+        // ROM loc_334D2/loc_33700 adds the 8.8 x_vel contribution to the
+        // packed 16.16 track coordinate with add.l. Preserve that 32-bit
+        // overflow: mirrored curves legitimately cross from $FFFF.xxxx to
+        // $0000.xxxx. An unbounded Java long turns the next word range check
+        // into $10000 and releases the rider one object pass early.
+        state.trackFixed = (state.trackFixed + (long) player.getXSpeed() * 0xC0L)
+                & 0xFFFF_FFFFL;
 
-        int trackPosition = (int) (state.trackFixed >> 16);
+        int trackPosition = (short) (state.trackFixed >> 16);
         state.lastTrackPosition = trackPosition;
         int d0 = mirrored
                 ? player.getXRadius() + trackPosition
                 : -player.getXRadius() + trackPosition;
+        d0 &= 0xFFFF;
         if (d0 < 0 || d0 >= TRACK_LIMIT) {
             player.setAngle((byte) rideAngle());
             release(player, state);

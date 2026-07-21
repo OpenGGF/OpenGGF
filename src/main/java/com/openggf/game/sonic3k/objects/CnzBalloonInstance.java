@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
@@ -43,6 +44,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     private static final int COLLISION_FLAGS = 0xC0 | 0x17;
+    private static final int PRIORITY_BUCKET = 5; // Obj_CNZBalloon: priority $280.
     private static final int WIDTH_HALF = 0x10;
     private static final int HEIGHT_HALF = 0x20;
     private static final int ROM_BOUNCE_Y_SPEED = 0x700;
@@ -66,11 +68,19 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     private int popAnimationIndex;
     private int frameOffset;
     private int lastLaunchFrame = Integer.MIN_VALUE;
+    private int lastObjectDispatchCounter = Integer.MIN_VALUE;
+    private boolean pendingUnderwaterBubblerSpawn;
 
     public CnzBalloonInstance(ObjectSpawn spawn) {
         super(spawn, "CNZBalloon");
         this.subtype = spawn.subtype();
         this.baseY = spawn.y();
+    }
+
+
+    @Override
+    public int getPriorityBucket() {
+        return RenderPriority.clamp(PRIORITY_BUCKET);
     }
 
     @Override
@@ -107,13 +117,16 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
             return;
         }
 
-        if (!initialized) {
-            initializeFromRomRoutine();
+        var objectServices = tryServices();
+        int dispatchCounter = getSlotIndex() >= 0
+                && objectServices != null && objectServices.objectManager() != null
+                ? objectServices.objectManager().getFrameCounter()
+                : frameCounter;
+        if (pendingUnderwaterBubblerSpawn) {
+            pendingUnderwaterBubblerSpawn = false;
+            spawnUnderwaterBubblerChildren();
         }
-        advanceAnimation();
-        int bobbedY = baseY + bobOffset(angle);
-        updateDynamicSpawn(movedOffscreen ? OFFSCREEN_X : spawn.x(), bobbedY);
-        angle = (angle + 1) & 0xFF;
+        synchronizeRoutineState(dispatchCounter, true);
 
         // ROM Obj_CNZBalloon reacts only when Touch_Process sets
         // collision_property; the shared touch-response pass invokes
@@ -121,7 +134,27 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void snapshotTouchResponseState() {
+        var objectServices = tryServices();
+        if (initialized && objectServices != null && objectServices.objectManager() != null) {
+            // A retained balloon can remain in the live touch list after the
+            // seamless transition rebuilds execution slots. Catch its local
+            // routine up to the manager's Process_Sprites count before Touch_Loop.
+            synchronizeRoutineState(objectServices.objectManager().getFrameCounter(), false);
+        }
+        super.snapshotTouchResponseState();
+    }
+
+    @Override
     public int getCollisionFlags() {
+        var objectServices = tryServices();
+        if (initialized && objectServices != null && objectServices.objectManager() != null) {
+            // S3K preserves the previous Collision_response_list rather than
+            // calling snapshotTouchResponseState() for every object. Its live
+            // SST pointer still dereferences the current balloon, so catch the
+            // retained counter epoch up at the first touch-state read as well.
+            synchronizeRoutineState(objectServices.objectManager().getFrameCounter(), false);
+        }
         if (movedOffscreen) {
             return 0;
         }
@@ -161,6 +194,16 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Obj_CNZBalloon updates y_pos through its sine bob before tail-calling
+        // Sprite_CheckDeleteTouch3. S3K's Collision_response_list stores the
+        // balloon's SST pointer, so the next player-slot Touch_Loop dereferences
+        // that live post-bob y_pos rather than the older pre-update coordinate
+        // (docs/skdisasm/sonic3k.asm:66776-66795,20656-20710).
+        return true;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_BALLOON);
         if (renderer == null) {
@@ -187,10 +230,17 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         lastLaunchFrame = frameCounter;
 
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        boolean firstPop = !popped;
         if ((subtype & 0x80) != 0) {
             player.setYSpeed((short) -0x380);
-            if (!popped && levelHasWater()) {
-                spawnUnderwaterBubblerChildren();
+            if (firstPop && levelHasWater()) {
+                // Touch_Process only sets collision_property in the player slot.
+                // Obj_CNZBalloon consumes it later in its own ExecuteObjects slot,
+                // where sub_3181E allocates the four Bubbler children. Deferring
+                // allocation until update() keeps those children out of an
+                // already-built pre-object execution order and preserves native
+                // first-update/RNG timing.
+                pendingUnderwaterBubblerSpawn = true;
             }
         } else {
             player.setYSpeed((short) -ROM_BOUNCE_Y_SPEED);
@@ -210,15 +260,20 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         // before the x_pos/y_pos writes. In normal play the player keeps their
         // position while only y_vel/status/control are changed (sonic3k.asm:
         // 66797-66808, 66842-66856).
-        popped = true;
-        animationTimer = 0;
-        popAnimationIndex = 0;
-        frameOffset = POP_FRAME_SEQUENCE[0];
+        if (firstPop) {
+            popped = true;
+            // The later balloon SST slot owns Animate_Sprite initialization.
+            // Leave its timer/index pending here; unlike the first bset, later
+            // contacts see anim already odd and must not restart this progress.
+            animationTimer = 0;
+            popAnimationIndex = 0;
+            frameOffset = POP_FRAME_SEQUENCE[0];
 
-        try {
-            services().playSfx(Sonic3kSfx.BALLOON.id);
-        } catch (Exception ignored) {
-            // Headless tests can omit the audio backend; launch state is still valid.
+            try {
+                services().playSfx(Sonic3kSfx.BALLOON.id);
+            } catch (Exception ignored) {
+                // Headless tests can omit the audio backend; launch state is still valid.
+            }
         }
     }
 
@@ -308,6 +363,36 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         initialized = true;
         baseY = spawn.y();
         angle = services().rng().nextByte();
+    }
+
+    private void synchronizeRoutineState(int dispatchCounter, boolean initializeIfNeeded) {
+        if (!initialized) {
+            if (!initializeIfNeeded) {
+                return;
+            }
+            initializeFromRomRoutine();
+            lastObjectDispatchCounter = dispatchCounter - 1;
+        }
+
+        if (lastObjectDispatchCounter == Integer.MIN_VALUE) {
+            lastObjectDispatchCounter = dispatchCounter - 1;
+        }
+        if (dispatchCounter < lastObjectDispatchCounter) {
+            // Seamless act setup can re-base manager counters while the
+            // ROM-retained SST balloon survives. Resume from the new epoch.
+            lastObjectDispatchCounter = dispatchCounter - 1;
+        }
+        int dispatches = dispatchCounter - lastObjectDispatchCounter;
+        if (dispatches <= 0) {
+            return;
+        }
+        for (int i = 0; i < dispatches && !isDestroyed(); i++) {
+            advanceAnimation();
+            int bobbedY = baseY + bobOffset(angle);
+            updateDynamicSpawn(movedOffscreen ? OFFSCREEN_X : spawn.x(), bobbedY);
+            angle = (angle + 1) & 0xFF;
+        }
+        lastObjectDispatchCounter = dispatchCounter;
     }
 
     private static int bobOffset(int angle) {

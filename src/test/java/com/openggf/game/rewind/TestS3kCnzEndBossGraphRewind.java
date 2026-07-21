@@ -85,10 +85,10 @@ class TestS3kCnzEndBossGraphRewind {
                 "boss endCannon must resolve to the restored cannon");
         assertNotSame(sourceCannon, readObjectField(restoredBoss, "endCannon"),
                 "boss must not retain the stale pre-restore cannon");
-        assertEquals(BOSS_SPAWN.x(), restoredBoss.getX(),
-                "spawn-derived final x coordinate must be rebuilt by recreate");
-        assertEquals(BOSS_SPAWN.y(), restoredBoss.getY(),
-                "spawn-derived final y coordinate must be rebuilt by recreate");
+        assertEquals(BOSS_SPAWN.x(), restoredBoss.getCentreX(),
+                "spawn-derived ROM x_pos must rebuild as the centre coordinate");
+        assertEquals(BOSS_SPAWN.y(), restoredBoss.getCentreY(),
+                "spawn-derived ROM y_pos must rebuild as the centre coordinate");
         assertTrue(readBooleanField(restoredBoss, "cannonSpawned"),
                 "cannonSpawned flag must restore from compact state");
         assertTrue(readBooleanField(restoredBoss, "cannonArmed"),

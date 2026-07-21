@@ -65,6 +65,7 @@ public final class S3kPaletteOwners {
      * can observe the explicit owner.
      */
     public static final String CNZ_MINIBOSS = "s3k.cnz.miniboss";
+    public static final String CNZ_END_BOSS = "s3k.cnz.endBoss";
     public static final String CNZ2_CUTSCENE_RESTORE = "s3k.cnz2.cutsceneRestore";
     public static final String ICZ_MINIBOSS = "s3k.icz.miniboss";
     public static final String ICZ_END_BOSS = "s3k.icz.endBoss";

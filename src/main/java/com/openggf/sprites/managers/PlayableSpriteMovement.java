@@ -2770,7 +2770,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					sprite.markObjectPreservedRollBoostFollowup();
 				}
 			} else {
+				// ROM roll-stop writes y_radius/x_radius and y_pos only; x_pos is
+				// unchanged (sonic3k.asm:22978-22986). On wall modes the engine
+				// represents the radius change by widening the top-left sprite box,
+				// so preserve the native centre X across that representation change.
+				short preRollStopCentreX = sprite.getCentreX();
 				sprite.setRolling(false);
+				sprite.setCentreXPreserveSubpixel(preRollStopCentreX);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
 				applyRollStopAnimationChange();
 			}
@@ -3452,6 +3458,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setJumping(false);
 		// ROM: s2.asm:37769-37771 - reset flip/tumble state on landing
 		sprite.setFlipAngle(0);
+		sprite.setFlipType(0);
 		sprite.setFlipTurned(false);
 		sprite.setFlipsRemaining(0);
 		// ROM: s2.asm:37772 - reset look delay counter on landing
@@ -3473,6 +3480,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
 		if (walkAnimationId >= 0) {
+			// Looking/crouching are engine-side projections of native anim writes,
+			// not independent ROM status bits. Player_TouchFloor's explicit Walk
+			// store replaces either projection on the landing frame; otherwise a
+			// stale pre-air LookUp flag can mask the new byte (CNZ2 Tails f19845).
+			sprite.setLookingUp(false);
+			sprite.setCrouching(false);
 			sprite.setAnimationId(walkAnimationId);
 		}
 	}

@@ -992,6 +992,31 @@ abstract class AbstractRunChainTest {
         }
 
         @Override
+        public void advancePlayableAnimationsOnly() {
+            // Live action, honored identically to the canonical fixtures:
+            // advance every playable sprite's animation manager one step at the
+            // current animation frame counter, without a gameplay tick.
+            var sprites = GameServices.sprites();
+            int animationFrame = sprites.getFrameCounter();
+            for (var candidate : sprites.getAllSprites()) {
+                if (candidate instanceof AbstractPlayableSprite playable) {
+                    playable.getAnimationManager().update(animationFrame);
+                }
+            }
+        }
+
+        @Override
+        public void suppressFirstSidekickAnimationOnce() {
+            // Live action, honored identically to the canonical fixtures: hold the
+            // first CPU sidekick's next Animate dispatch. No-op for solo runs
+            // (e.g. the Knuckles mega-run) whose sidekick list is empty.
+            var sprites = GameServices.sprites();
+            if (!sprites.getSidekicks().isEmpty()) {
+                sprites.getSidekicks().getFirst().getAnimationManager().suppressNextUpdate();
+            }
+        }
+
+        @Override
         public int stepFrameFromRecording() {
             throw new UnsupportedOperationException(
                     "Chain test drives via loop.step(); fixture-driven stepping is unused");
