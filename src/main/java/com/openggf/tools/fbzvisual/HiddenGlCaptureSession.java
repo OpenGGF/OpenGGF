@@ -44,11 +44,27 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
     }
 
     HiddenGlCaptureSession(FbzVisualCaptureMode mode, EngineContext engineContext) {
+        this(mode, engineContext, HeadlessGameBoot::new);
+    }
+
+    HiddenGlCaptureSession(FbzVisualCaptureMode mode, EngineContext engineContext,
+                           HeadlessBootFactory bootFactory) {
         this.mode = Objects.requireNonNull(mode, "mode");
         engineContext = Objects.requireNonNull(engineContext, "engineContext");
+        bootFactory = Objects.requireNonNull(bootFactory, "bootFactory");
         configuration = engineContext.configuration();
-        effectiveConfiguration = configure(configuration, mode);
-        boot = new HeadlessGameBoot(mode.framebufferWidth(), mode.framebufferHeight(), engineContext);
+        Map<String, Object> configured;
+        HeadlessGameBoot createdBoot;
+        try {
+            configured = configure(configuration, mode);
+            createdBoot = Objects.requireNonNull(bootFactory.create(
+                    mode.framebufferWidth(), mode.framebufferHeight(), engineContext), "boot");
+        } catch (RuntimeException | Error initializationFailure) {
+            configuration.clearSessionOverrides();
+            throw initializationFailure;
+        }
+        effectiveConfiguration = configured;
+        boot = createdBoot;
     }
 
     public void boot(Path rom, int zeroBasedAct) throws IOException {
@@ -62,7 +78,15 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
         if (zeroBasedAct < 0 || zeroBasedAct > 1) {
             throw new IllegalArgumentException("FBZ act index must be 0 or 1: " + zeroBasedAct);
         }
-        loop = boot.boot(Objects.requireNonNull(rom, "rom"), FBZ_ZONE, zeroBasedAct, rngSeed);
+        var worldBeforeBoot = SessionManager.getCurrentWorldSession();
+        try {
+            loop = boot.boot(Objects.requireNonNull(rom, "rom"), FBZ_ZONE, zeroBasedAct, rngSeed);
+        } catch (IOException | RuntimeException | Error bootFailure) {
+            if (SessionManager.getCurrentWorldSession() != worldBeforeBoot) {
+                SessionManager.closeGameplaySession();
+            }
+            throw bootFailure;
+        }
         // Visual recipes begin at the first gameplay VBlank after native level
         // setup. The live load path leaves a title-card request queued; consuming
         // it here is the headless equivalent of waiting for that card to finish,
@@ -275,5 +299,10 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
             Objects.requireNonNull(full, "full");
             Objects.requireNonNull(nativeCrop, "nativeCrop");
         }
+    }
+
+    @FunctionalInterface
+    interface HeadlessBootFactory {
+        HeadlessGameBoot create(int width, int height, EngineContext engineContext);
     }
 }

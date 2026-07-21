@@ -79,9 +79,6 @@ public class TestProductionSingletonClosureGuard {
             "com/openggf/net/identity/PlayerIdentity.java",
             "com/openggf/net/identity/ProofOfWork.java",
             "com/openggf/net/master/MasterHttpRoutes.java",
-            "com/openggf/tools/fbzvisual/FbzVisualCadenceCapture.java",
-            "com/openggf/tools/fbzvisual/FbzVisualManifest.java",
-            "com/openggf/tools/fbzvisual/FbzVisualPrebootVerifier.java",
             "com/openggf/tools/verifier/VerifierMain.java",
             "com/openggf/tools/verifier/VerifierWorker.java"
     );
@@ -279,19 +276,31 @@ public class TestProductionSingletonClosureGuard {
         }
 
         List<String> violations = new ArrayList<>();
-        Pattern rawGetInstancePattern = Pattern.compile("\\.getInstance\\(");
         Files.walk(srcMain)
                 .filter(path -> path.toString().endsWith(".java"))
                 .filter(path -> !ENGINE_SERVICES_BOOTSTRAP_EXCEPTION.equals(
                         srcMain.relativize(path).toString().replace('\\', '/')))
                 .filter(path -> !RAW_GET_INSTANCE_JDK_CRYPTO_ALLOWLIST.contains(
                         srcMain.relativize(path).toString().replace('\\', '/')))
-                .forEach(path -> scanRawPattern(srcMain, path, violations, rawGetInstancePattern, ".getInstance("));
+                .forEach(path -> scanRawGetInstanceFile(srcMain, path, violations));
 
         if (!violations.isEmpty()) {
             fail("Found raw .getInstance() usage outside EngineContext bootstrap bridge:\n  "
                     + String.join("\n  ", violations));
         }
+    }
+
+    @Test
+    public void rawGetInstanceScannerExemptsOnlyMessageDigestReceiverCalls() {
+        List<String> violations = scanRawGetInstanceSource("sample/Crypto.java", """
+                MessageDigest.getInstance("SHA-256");
+                OtherOwner.getInstance();
+                FakeMessageDigest.getInstance("SHA-256");
+                """);
+
+        assertEquals(List.of(
+                "sample/Crypto.java:2 - .getInstance(",
+                "sample/Crypto.java:3 - .getInstance("), violations);
     }
 
     @Test
@@ -1031,17 +1040,30 @@ public class TestProductionSingletonClosureGuard {
         }
     }
 
-    private static void scanRawPattern(Path srcMain, Path file, List<String> violations,
-                                       Pattern pattern, String label) {
+    private static void scanRawGetInstanceFile(Path srcMain, Path file, List<String> violations) {
         try {
             String relative = srcMain.relativize(file).toString().replace('\\', '/');
             String source = Files.readString(file);
-            Matcher matcher = pattern.matcher(source);
-            while (matcher.find()) {
-                violations.add(relative + ":" + lineNumberForOffset(source, matcher.start()) + " - " + label);
-            }
+            violations.addAll(scanRawGetInstanceSource(relative, source));
         } catch (IOException ignored) {
         }
+    }
+
+    static List<String> scanRawGetInstanceSource(String relative, String source) {
+        String stripped = stripComments(source);
+        Matcher matcher = Pattern.compile("\\.getInstance\\(").matcher(stripped);
+        Pattern messageDigestReceiver = Pattern.compile(
+                "(?<![\\w$.])(?:java\\.security\\.)?MessageDigest\\s*$");
+        List<String> violations = new ArrayList<>();
+        while (matcher.find()) {
+            String receiverPrefix = stripped.substring(0, matcher.start());
+            if (messageDigestReceiver.matcher(receiverPrefix).find()) {
+                continue;
+            }
+            violations.add(relative + ":" + lineNumberForOffset(stripped, matcher.start())
+                    + " - .getInstance(");
+        }
+        return violations;
     }
 
     static List<String> scanSourceText(String relative, String source, List<String> forbiddenSingletons) {

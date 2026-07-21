@@ -5,8 +5,10 @@ All notable changes to the OpenGGF project are documented in this file.
 ## Unreleased
 - **FBZ visual capture tooling now shares one explicit engine-service owner:**
   hidden-GL configuration setup, headless boot, and session-override cleanup use
-  the same bootstrap `EngineContext`, while the singleton closure guard retains
-  exact-file exceptions only for the tooling's JDK `MessageDigest` factories.
+  the same bootstrap `EngineContext`; failed GL initialization clears overrides,
+  and failed gameplay boot closes any session it opened. The singleton closure
+  guard exempts only exact JDK `MessageDigest.getInstance` receiver calls while
+  continuing to scan the rest of each tooling source file.
 - **Special-stage trace sessions now use the canonical replay configuration bootstrap:**
   recorded teams, disabled cross-game donation, and the resolved native 4:3 viewport
   are applied consistently before launch, while the launcher retains only the

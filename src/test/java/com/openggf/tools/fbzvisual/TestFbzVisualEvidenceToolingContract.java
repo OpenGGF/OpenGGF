@@ -80,10 +80,11 @@ class TestFbzVisualEvidenceToolingContract {
                 "src/main/java/com/openggf/tools/fbzvisual/HiddenGlCaptureSession.java"));
 
         assertTrue(source.contains("this(mode, EngineContext.fromLegacySingletonsForBootstrap())"));
+        assertTrue(source.contains("this(mode, engineContext, HeadlessGameBoot::new)"));
         assertTrue(source.contains("configuration = engineContext.configuration()"));
         assertTrue(source.contains("configure(configuration, mode)"));
-        assertTrue(source.contains("new HeadlessGameBoot(mode.framebufferWidth(), "
-                + "mode.framebufferHeight(), engineContext)"));
+        assertTrue(source.contains("bootFactory.create("));
+        assertTrue(source.contains("mode.framebufferHeight(), engineContext)"));
         assertTrue(source.contains("configuration.clearSessionOverrides()"));
         assertFalse(source.contains("SonicConfigurationService.getInstance()"));
     }
