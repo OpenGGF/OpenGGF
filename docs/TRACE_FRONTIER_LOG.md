@@ -1,5 +1,59 @@
 # Trace Frontier Log
 
+### 2026-07-21 -- S3K mega-run chain seg0 (aiz, Knuckles): Status_Push animation-freeze fixed; seg0 168 -> 56 errors
+
+Command (worktree `.claude/worktrees/green-s1maze`, branch
+`bugfix/ai-s3k-solidobject-push-anim`):
+
+`mvn surefire:test -Dtest=com.openggf.tests.trace.runs.TestS3kMegaRunChain "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsurefire.argLine=-Xshare:off -Xmx4g" -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+Run `s3-knux-multibonus-ss`, seg0 (`aiz`, Knuckles). Report
+`target/trace-reports/s3-knux-multibonus-ss_seg0_report.json`:
+**168 -> 56** comparator errors.
+
+Root fixed: the Knuckles animation profile
+(`Sonic3kPlayerArt.loadKnuckles`) was missing
+`setPushUsesWalkSpecialHandler(true)`, so `PlayableSpriteAnimation`'s
+`$FF` walk handler never took the Status_Push hold-branch for Knuckles.
+While Knuckles stood at rest against an AIZ rock (`AizLrzRockObjectInstance`
+slot 14, `Status_Push` set), the engine kept re-publishing the walk
+script's next frame (`mapping_frame` 7 -> 8) instead of freezing the last
+frame the way ROM `Animate_Knuckles`/`loc_17ECC` does
+(sonic3k.asm:33124-33125, 33095-33158). The push-timer reload shift also
+differs (Knuckles `lsr.w #8` at :33161 vs Sonic `lsr.w #6` at :25193),
+modelled via a new `pushDelayShift` profile field (default 6). After the
+fix seg0 holds `mapping_frame`=7 for f638-645 then switches to 0xCF at
+f646, matching the ROM; the whole downstream cascade (including what
+earlier looked like a separate f3793 `anim_id`=4 cluster) re-syncs.
+
+Validation across all 12 recorded seg0 Status_Push windows (f637-652,
+f731, f892-902, f1198, f1779-1798, f2350-2371, f2389-2392, f2576-2591,
+f2953-2965): engine getPushing() matches ROM status bit5, `anim_id`
+matches the ROM byte exactly (0x00 walk / 0x02 roll / 0x08-0x09 spindash /
+0x23 glide-slide -- NEVER 4), and mapping frames match including the
+0xCF/0xD0 push-frame holds. `anim_id`==4 (push exposed as an anim byte)
+count is now 0 across the whole run -- the pre-fix over-exposure at
+f3789-3799/f4218-4235 is gone.
+
+New seg0 frontier (distinct roots, follow-ups -- NOT the animation-freeze fix):
+- f653-659 (push RELEASE lag): immediately after the f637-652 window ROM
+  clears push (`romPush`=false, walk-away frame 0x6E) but the engine holds
+  getPushing()=true for ~7 more frames (frozen push frame 0xCE). This is a
+  push-detection/release-timing divergence (rock SolidObject_TestClearPush /
+  prolonged engine-vs-ROM contact as Knuckles walks off), independent of the
+  animation-consumer fix -- getPushing() detection is byte-unchanged here.
+- f1948 (dominant, ~52 frames): engine `anim`=0x14 (HANG2, hang-from-object)
+  vs ROM `anim`=0x00 (WALK).
+- f1570: engine `anim`=0x00 vs ROM 0x20 (Knuckles glide/fly state).
+- f1766-1767: 1-frame `y_speed` landing swap.
+
+Full-suite regression: identical to the develop base (ae1605502) --
+26 pre-existing failures across 8 classes (`TestS3kAizTraceReplay` 15,
+`TestS3kHczCompleteRunTraceReplay` 1, `TestS2EhzHalfpipeRoundTripChain` 1,
+`TestS3kCnzDirectedTraversalHeadless` 1, two source guards 3+3, the chain
+seg2->seg3 boundary 2), none introduced by this change. The chain still
+RED-fails at the pre-existing seg2->seg3 boundary (another lane's frontier).
+
 ### 2026-07-21 -- S3K mega-run chain: gumball interior CLOSED; frontier moved seg1-entry -> seg2->seg3 return
 
 Command (worktree `.claude/worktrees/green-bonus`, branch
