@@ -47513,3 +47513,24 @@ standalone CNZ remains at f0 in both scopes.
   matching the single standing/pushing status byte owned by its live SST.
 - All eleven focused ICZ crushing-column tests pass on Java 26 with Byte Buddy's
   experimental compatibility flag.
+
+## 2026-07-21 - S3K ICZ Penguinator activation advances both frontiers
+
+- Command: `mvn -Dmse=off -Dnet.bytebuddy.experimental=true
+  '-Dtest=TestS3kPenguinatorBadnik' test`, followed by
+  `mvn -Dmse=off -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczCompleteRunTraceReplay' test`.
+- **`s3k_icz1` physics advanced from f4895 to f5243 and animation advanced
+  from f4900 to f5246.** Total errors fell from 6,148 to 5,824: physics from
+  4,783 to 4,463 and animation from 1,365 to 1,361.
+- Root: `Obj_Penguinator` begins behind `Obj_WaitOffscreen`, whose temporary
+  sprite has `$20` half extents. The engine waited until Penguinator's centre
+  entered the viewport, activating it 13 frames late. Its accelerating patrol
+  was consequently seven pixels too far right at f4894 and produced a false
+  enemy bounce that the ROM's still-leftward Penguinator could not touch.
+  Activation now consumes the shared Render_Sprites-style bounds with the
+  native placeholder extent; later movement remains owned by the installed
+  active routine (`docs/skdisasm/sonic3k.asm:190431-190482`).
+- All six focused Penguinator tests pass, including a new placeholder-boundary
+  activation regression.

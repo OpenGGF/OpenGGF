@@ -80,6 +80,20 @@ class TestS3kPenguinatorBadnik {
     }
 
     @Test
+    void waitOffscreenStartsWhenPlaceholderRenderBoundsOverlapViewport() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 447, 223, 0);
+        PenguinatorBadnikInstance penguinator = new PenguinatorBadnikInstance(
+                new ObjectSpawn(478, 100, Sonic3kObjectIds.PENGUINATOR, 0, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+
+        penguinator.update(0, player);
+
+        assertEquals("PATROL", readEnumName(penguinator, "state"),
+                "Obj_WaitOffscreen uses the $20 placeholder half extents, not a centre-point X gate");
+        assertEquals(478, penguinator.getX(), "activation frame initializes without moving");
+    }
+
+    @Test
     void slideWaitExpiresIntoSlideRecoveryInsteadOfRestartingPatrol() throws Exception {
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
         PenguinatorBadnikInstance penguinator = create(0);

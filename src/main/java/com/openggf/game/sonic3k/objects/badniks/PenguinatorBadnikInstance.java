@@ -25,6 +25,7 @@ import java.util.List;
 public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x1A; // ObjSlot_Penguinator collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjSlot_Penguinator priority $280.
+    private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
 
     private static final int INITIAL_Y_RADIUS = 0x0F;
     private static final int SLIDE_Y_RADIUS = 0x0B;
@@ -82,7 +83,15 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity player) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+        // Obj_WaitOffscreen publishes a temporary $20-by-$20 sprite and starts
+        // the real routine when Render_Sprites marks that placeholder visible.
+        // Its width_pixels/height_pixels values are half extents, so activation
+        // begins before the object's centre enters the viewport.
+        if (state == State.INIT
+                && !isWithinRenderSpriteBounds(WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE)) {
             return;
         }
 
