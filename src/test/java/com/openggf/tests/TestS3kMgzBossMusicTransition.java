@@ -52,13 +52,30 @@ class TestS3kMgzBossMusicTransition {
                 "MGZ2 drilling Robotnik should issue the ROM init-time music fade-out");
         assertTrue(services.playedMusic.isEmpty(),
                 "Boss music should wait for the ROM 2-second Obj_Wait delay");
+        assertEquals(List.of("fade"), services.musicEvents,
+                "The init SST pass must fade zone music without starting boss music");
 
-        for (int frame = 1; frame < 120; frame++) {
+        for (int frame = 1; frame <= 120; frame++) {
             robotnik.update(frame, null);
         }
 
+        assertEquals(1, services.fadeOutCount,
+                "Obj_Wait must not restart the init-time fade while its timer counts down");
+        assertTrue(services.playedMusic.isEmpty(),
+                "All 120 timer decrements must complete before Obj_Wait's signed-underflow callback");
+
+        robotnik.update(121, null);
+
         assertEquals(List.of(Sonic3kMusic.BOSS.id), services.playedMusic,
-                "Boss music should start after the ROM 120-frame wait");
+                "Boss music should start when Obj_Wait underflows after the ROM 120-frame delay");
+        assertEquals(List.of("fade", "music:" + Sonic3kMusic.BOSS.id), services.musicEvents,
+                "The boss theme must follow the one-time zone-music fade");
+
+        robotnik.update(122, null);
+
+        assertEquals(1, services.fadeOutCount, "The init-time fade must be issued exactly once");
+        assertEquals(List.of(Sonic3kMusic.BOSS.id), services.playedMusic,
+                "The Obj_Wait callback must start boss music exactly once");
     }
 
     @Test
@@ -255,6 +272,7 @@ class TestS3kMgzBossMusicTransition {
         private final ObjectManager objectManager;
         private int fadeOutCount;
         private final List<Integer> playedMusic = new ArrayList<>();
+        private final List<String> musicEvents = new ArrayList<>();
 
         private RecordingServices() {
             this(null);
@@ -284,11 +302,13 @@ class TestS3kMgzBossMusicTransition {
         @Override
         public void fadeOutMusic() {
             fadeOutCount++;
+            musicEvents.add("fade");
         }
 
         @Override
         public void playMusic(int musicId) {
             playedMusic.add(musicId);
+            musicEvents.add("music:" + musicId);
         }
     }
 }

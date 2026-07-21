@@ -366,16 +366,16 @@ Expected: PASS with no blanket baseline count increase.
 - [x] Run the exact method and related render-child, handoff, Knuckles-graph, rewind-codec, and art-provider/PLC tests; all selected D3.9 checks pass. The full music class still exposes only the separately catalogued D3.10-D3.12 failures.
 - [x] Commit as `test: assert managed MGZ drill child`; no production change was required.
 
-### Task D3.10: Start MGZ boss music after exactly 120 updates
+### Task D3.10: Start MGZ boss music after the 120-decrement Obj_Wait delay
 
 **Files:**
-- Modify: `src/main/java/com/openggf/game/sonic3k/objects/MgzDrillingRobotnikInstance.java`
 - Test: `src/test/java/com/openggf/tests/TestS3kMgzBossMusicTransition.java`
 
-- [ ] Run `drillingRobotnikFadesZoneMusicBeforeDelayedBossMusic`; expected boss music absent after update 120.
-- [ ] Preserve fade-at-init assertion and correct native countdown/callback ordering.
-- [ ] Run the full class; expected PASS.
-- [ ] Commit as `fix: restore MGZ boss music timing`, updating `CHANGELOG.md`.
+- [x] Run `drillingRobotnikFadesZoneMusicBeforeDelayedBossMusic`; reproduced its stale expectation that boss music would start on frame 119.
+- [x] Preserve the trace-accurate production cadence: the placement init pass writes `$2E=120`, frames 1 through 120 perform the 120 `Obj_Wait` decrements, and the signed-underflow callback starts End Boss music on frame 121.
+- [x] Strengthen coverage for one fade, no early play, fade-before-theme order, and one boss-music command. The exact method passes.
+- [x] Run the full class; the five completed D3.9/D3.10 checks pass and only the separately planned D3.11/D3.12 gameplay-clock/profile errors remain.
+- [x] Commit as `test: preserve MGZ boss music callback timing`, updating `CHANGELOG.md`; no production change was required because the July trace-cadence fix already matches the ROM.
 
 ### Task D3.11: Drive thruster touch from the gameplay clock
 
