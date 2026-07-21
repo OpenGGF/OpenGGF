@@ -9,6 +9,7 @@ import com.openggf.game.solid.PostContactState;
 import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
@@ -23,6 +24,22 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kObjectPlayerQueryParticipation {
+
+    @Test
+    void cnzCorkFloorExposesNativeWidthForObjectEdgeBalance() {
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public int romZoneId() {
+                return com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_CNZ;
+            }
+        };
+        CorkFloorObjectInstance floor = ObjectConstructionContext.construct(services,
+                () -> new CorkFloorObjectInstance(new ObjectSpawn(
+                        0x0100, 0x0200, 0x2A, 1, 0, false, 0)));
+
+        assertEquals(0x20, floor.getBalanceWidthPixels(),
+                "CNZ Obj_CorkFloor sets width_pixels=$20; balance must not use the shared $10 default");
+    }
 
     @Test
     void aizCollapsingLogBridgeUsesPlayerQueryParticipantsForSidekickStanding() throws Exception {

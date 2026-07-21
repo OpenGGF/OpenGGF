@@ -118,6 +118,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean resetLevelGamestateOnInLevelDisplay;
     private int resetLevelGamestateCountdown;
     private boolean heldLevelCounterDispatchOwned;
+    private boolean retainedResultsHeldLevelCounterOwned;
     private boolean inLevelPlayerControlLockOwned;
     private int inLevelExitDelayFrames;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
@@ -210,6 +211,21 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         }
     }
 
+    /**
+     * Arms the native in-level {@code Obj_TitleCardWait} state reset after a
+     * known number of title-owner dispatches. This is used when a retained
+     * results SST mutates directly into {@code Obj_TitleCard}; unlike a fresh
+     * level title, its queue/create phase is already the only remaining gate.
+     */
+    public void requestLevelGamestateResetAfterCreateDispatches(int dispatches) {
+        if (inLevelMode) {
+            resetLevelGamestateOnInLevelDisplay = true;
+            heldLevelCounterDispatchOwned = true;
+            retainedResultsHeldLevelCounterOwned = true;
+            resetLevelGamestateCountdown = Math.max(1, dispatches);
+        }
+    }
+
     @Override
     public void requestInLevelPlayerControlLock() {
         if (inLevelMode) {
@@ -220,6 +236,16 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     @Override
     public boolean advancesOnHeldLevelCounter() {
         return inLevelMode && heldLevelCounterDispatchOwned && isOverlayActive();
+    }
+
+    @Override
+    public boolean ownsHeldLevelCounter() {
+        return inLevelMode && heldLevelCounterDispatchOwned;
+    }
+
+    @Override
+    public boolean ownsRetainedResultsHeldLevelCounter() {
+        return inLevelMode && retainedResultsHeldLevelCounterOwned;
     }
 
     @Override
@@ -299,6 +325,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.resetLevelGamestateOnInLevelDisplay = false;
         this.resetLevelGamestateCountdown = 0;
         this.heldLevelCounterDispatchOwned = false;
+        this.retainedResultsHeldLevelCounterOwned = false;
         this.inLevelPlayerControlLockOwned = false;
         this.inLevelExitDelayFrames = 0;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
@@ -484,6 +511,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         resetLevelGamestateOnInLevelDisplay = false;
         resetLevelGamestateCountdown = 0;
         heldLevelCounterDispatchOwned = false;
+        retainedResultsHeldLevelCounterOwned = false;
         inLevelExitDelayFrames = 0;
         inLevelPlayerControlLockOwned = false;
         bonusMode = false;

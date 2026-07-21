@@ -201,6 +201,13 @@ class TestRewindPolicyRegistry {
     }
 
     @Test
+    void defaultObjectPolicyCapturesCnzEndBossMagnetReference() throws NoSuchFieldException {
+        Field magnet = CnzEndBossInstance.class.getDeclaredField("magnetChild");
+
+        assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(magnet).orElse(null));
+    }
+
+    @Test
     void defaultObjectPolicyCapturesIczEndBossSnowdustEmitterReference() throws NoSuchFieldException {
         Field snowdustEmitter = IczEndBossInstance.class.getDeclaredField("bossSnowdustEmitter");
 

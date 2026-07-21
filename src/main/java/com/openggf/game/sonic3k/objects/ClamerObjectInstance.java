@@ -458,9 +458,24 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         autoCloseAnimTimer = AUTO_CLOSE_ANIM_DELAYS[autoCloseAnimIndex];
         autoCloseAnimIndex++;
 
-        if (newFrame == AUTO_CLOSE_PROJECTILE_FRAME && isOnScreenX()) {
+        if (newFrame == AUTO_CLOSE_PROJECTILE_FRAME
+                && isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight())) {
+            // loc_89064 tests the retained render_flags sign bit, which is set
+            // only when the full $14x$10 Clamer render box overlaps the screen.
+            // An X-only gate incorrectly fires projectiles from vertically
+            // off-screen Clamers (sonic3k.asm:185930-185942,186052-186058).
             spawnAutoCloseProjectile();
         }
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return 0x14; // ObjSlot_Clamer width_pixels.
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 0x10; // ObjSlot_Clamer height_pixels.
     }
 
     private void spawnAutoCloseProjectile() {
@@ -662,6 +677,12 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isHighPriority() {
+        // ObjSlot_Clamer uses make_art_tile(ArtTile_Clamer,1,1).
+        return true;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (destroyed || waitingForOnscreen) {
             return;
@@ -764,6 +785,12 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         }
 
         @Override
+        public boolean isHighPriority() {
+            // ObjDat3_8913C uses make_art_tile(ArtTile_Clamer+$70,1,1).
+            return true;
+        }
+
+        @Override
         public void update(int frameCounter, PlayableEntity player) {
             if (deleteNextFrame) {
                 setDestroyed(true);
@@ -819,6 +846,15 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         @Override
         public int getCollisionFlags() {
             return collisionEnabled && !deleteNextFrame ? PROJECTILE_COLLISION_FLAGS : 0;
+        }
+
+        @Override
+        public boolean usesCurrentTouchResponseState() {
+            // loc_86D5E runs MoveSprite2 and then Sprite_CheckDeleteTouchXY,
+            // whose DrawTouch tail publishes the SST pointer. The following
+            // player pass dereferences that live x_pos; a copied snapshot is
+            // one projectile step ahead of the ROM-visible contact phase.
+            return true;
         }
 
         @Override

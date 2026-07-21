@@ -193,8 +193,12 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
         if (levelManager != null) {
             // The object pass runs with LevelManager.frameCounter + 1. Obj_Bumper
             // then reads the low byte at Level_frame_counter+1 during its object
-            // routine.
-            return levelManager.getFrameCounter() + 2;
+            // routine. A retained results owner that has mutated into the Act 2
+            // title card holds the native counter while engine dispatch continues;
+            // its provenance exposes the additional visible owner dispatch.
+            int retainedResultsDispatch = svc.titleCardProvider() != null
+                    && svc.titleCardProvider().ownsRetainedResultsHeldLevelCounter() ? 1 : 0;
+            return levelManager.getFrameCounter() + 2 + retainedResultsDispatch;
         }
         return objectFrameCounter + 1;
     }

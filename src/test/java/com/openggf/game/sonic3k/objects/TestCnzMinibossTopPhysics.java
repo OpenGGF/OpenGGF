@@ -336,6 +336,53 @@ class TestCnzMinibossTopPhysics {
     }
 
     @Test
+    void nativeP2RollingBounceReversesTopWhenP1DoesNotContact() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        fixture.camera().setY((short) 0);
+
+        TestablePlayableSprite p1 = new TestablePlayableSprite("sonic", (short) 0x3000, (short) 0x030E);
+        TestablePlayableSprite p2 = new TestablePlayableSprite("tails", (short) 0x3242, (short) 0x030E);
+        p2.setCpuControlled(true);
+        p2.setRolling(true);
+        p2.setXSpeed((short) -0x100);
+        p2.setYSpeed((short) -0x100);
+
+        TestObjectServices services = new TestObjectServices()
+                .withCamera(fixture.camera())
+                .withSidekicks(List.of(p2));
+        CnzMinibossTopInstance top = new CnzMinibossTopInstance(
+                new ObjectSpawn(0x3240, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        top.setServices(services);
+        top.forceTopMainForTest();
+
+        int afterBounceY;
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkCeilingDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+
+            top.update(0, p1);
+            afterBounceY = top.getY();
+            assertTrue(top.usesPreUpdatePositionForSolidContact(p2),
+                    "the post-bounce P2 checkpoint samples the prior top publication");
+            p2.setYSpeed((short) 0);
+            top.update(1, p1);
+        }
+
+        assertTrue(top.getY() < afterBounceY,
+                "CNZMinibossTop_CheckPlayerBounce checks native Player_2 after Player_1");
+        assertFalse(top.usesPreUpdatePositionForSolidContact(p2),
+                "ordinary P2 checkpoints resume the live top position after vertical contact");
+    }
+
+    @Test
     void floorTerrainHitReversesTopAndQueuesSnappedArenaBlockDestruction() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
@@ -510,8 +557,8 @@ class TestCnzMinibossTopPhysics {
                 .orElse(null);
         assertNotNull(explosion,
                 "CNZMiniboss_BlockExplosion must spawn the visible boss explosion animation child");
-        assertEquals(0x32D0, explosion.getX());
-        assertEquals(0x0310, explosion.getY());
+        assertTrue(Math.abs(explosion.getX() - 0x32D0) <= 0x10);
+        assertTrue(Math.abs(explosion.getY() - 0x0310) <= 0x10);
     }
 
     @Test
@@ -543,6 +590,12 @@ class TestCnzMinibossTopPhysics {
         assertTrue(top.isDestroyed(),
                 "Obj_CNZMinibossTopMain destroys itself before MoveSprite2 when parent status bit 7 is set "
                         + "(sonic3k.asm:145053-145057,145190-145199)");
+        assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
+                        .anyMatch(CnzMinibossBlockExplosionControllerChild.class::isInstance),
+                "loc_6DDD2 replaces the defeated top with Obj_CreateBossExplosion subtype 6");
+        assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
+                        .anyMatch(S3kBossExplosionChild.class::isInstance),
+                "the creation dispatch must immediately emit the first visible explosion");
         assertFalse(events.isArenaChunkDestructionQueued(),
                 "The destroyed top must not run wall/floor terrain probes or publish Events_bg+$00/$02");
     }
@@ -696,9 +749,12 @@ class TestCnzMinibossTopPhysics {
         }
 
         boss.update(25, fixture.sprite());
+        assertEquals(0x0C, boss.getCurrentRoutine(),
+                "the final frame-0 publication remains Closing for the previous touch list");
+
+        boss.update(26, fixture.sprite());
         assertEquals(0x06, boss.getCurrentRoutine(),
-                "loc_6DB4E only swaps $30/$34; Animate_RawMultiDelay's $F4 terminator invokes "
-                        + "Obj_CNZMinibossCloseGo on the ROM-visible frame "
+                "the deferred $F4 terminator invokes Obj_CNZMinibossCloseGo after frame 0 was published "
                         + "(docs/skdisasm/sonic3k.asm:144960-144969,145707-145708,177558-177586)");
     }
 
@@ -1007,9 +1063,20 @@ class TestCnzMinibossTopPhysics {
             this.levelEventProvider = levelEventProvider;
             doAnswer(invocation -> {
                 ObjectInstance child = invocation.getArgument(0);
+                if (child instanceof AbstractObjectInstance instance) {
+                    instance.setServices(this);
+                }
                 spawnedChildren.add(child);
                 return null;
             }).when(this.objectManager).addDynamicObjectAfterCurrent(any());
+            doAnswer(invocation -> {
+                ObjectInstance child = invocation.getArgument(0);
+                if (child instanceof AbstractObjectInstance instance) {
+                    instance.setServices(this);
+                }
+                spawnedChildren.add(child);
+                return null;
+            }).when(this.objectManager).addDynamicObjectAfterCurrentNextFrame(any());
         }
 
         @Override

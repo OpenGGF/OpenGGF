@@ -1,15 +1,24 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.rewind.RewindStateful;
 
 /**
  * Shared S3K boss-camera gate used by bosses that call
  * {@code Check_CameraInRange}, {@code sub_85D6A}, and {@code loc_85CA4}.
  */
-final class S3kSharedBossCameraGate {
+public final class S3kSharedBossCameraGate
+        implements RewindStateful<S3kSharedBossCameraGate.RewindState> {
     private static final int APPROACH_FROM_BELOW_Y_TOLERANCE = 0x60;
 
-    record LockBounds(int minY, int maxY, int minX, int maxX) {
+    public record LockBounds(int minY, int maxY, int minX, int maxX) {
+    }
+
+    public record RewindState(int minY, int maxY, int minX, int maxX,
+                              boolean hasBounds, boolean approachFromBelow,
+                              boolean approachFromRight, boolean yLocked,
+                              boolean xLocked, boolean musicStarted,
+                              boolean complete, int musicWaitTimer) {
     }
 
     private LockBounds lockBounds;
@@ -21,7 +30,7 @@ final class S3kSharedBossCameraGate {
     private boolean complete;
     private int musicWaitTimer;
 
-    void reset() {
+    public void reset() {
         lockBounds = null;
         approachFromBelow = false;
         approachFromRight = false;
@@ -32,7 +41,7 @@ final class S3kSharedBossCameraGate {
         musicWaitTimer = -1;
     }
 
-    void begin(Camera camera, LockBounds lockBounds, int musicWaitFrames) {
+    public void begin(Camera camera, LockBounds lockBounds, int musicWaitFrames) {
         this.lockBounds = lockBounds;
         approachFromBelow = camera != null && unsigned(camera.getY()) > lockBounds.minY();
         approachFromRight = camera != null && unsigned(camera.getX()) > lockBounds.minX();
@@ -43,7 +52,7 @@ final class S3kSharedBossCameraGate {
         musicWaitTimer = musicWaitFrames;
     }
 
-    boolean update(Camera camera, Runnable onMusicStart) {
+    public boolean update(Camera camera, Runnable onMusicStart) {
         if (complete) {
             return true;
         }
@@ -65,7 +74,20 @@ final class S3kSharedBossCameraGate {
         return complete;
     }
 
-    boolean isComplete() {
+    /** Refreshes the native {@code Check_CameraInRange} approach bits before dispatch. */
+    public void refreshApproachFlags(Camera camera) {
+        if (lockBounds == null || camera == null) {
+            return;
+        }
+        if (!yLocked) {
+            approachFromBelow = unsigned(camera.getY()) > lockBounds.minY();
+        }
+        if (!xLocked) {
+            approachFromRight = unsigned(camera.getX()) > lockBounds.minX();
+        }
+    }
+
+    public boolean isComplete() {
         return complete;
     }
 
@@ -123,5 +145,32 @@ final class S3kSharedBossCameraGate {
 
     private static int unsigned(short value) {
         return value & 0xFFFF;
+    }
+
+    @Override
+    public RewindState captureRewindStateValue() {
+        LockBounds bounds = lockBounds;
+        return new RewindState(
+                bounds != null ? bounds.minY() : 0,
+                bounds != null ? bounds.maxY() : 0,
+                bounds != null ? bounds.minX() : 0,
+                bounds != null ? bounds.maxX() : 0,
+                bounds != null,
+                approachFromBelow, approachFromRight, yLocked, xLocked,
+                musicStarted, complete, musicWaitTimer);
+    }
+
+    @Override
+    public void restoreRewindStateValue(RewindState state) {
+        lockBounds = state.hasBounds()
+                ? new LockBounds(state.minY(), state.maxY(), state.minX(), state.maxX())
+                : null;
+        approachFromBelow = state.approachFromBelow();
+        approachFromRight = state.approachFromRight();
+        yLocked = state.yLocked();
+        xLocked = state.xLocked();
+        musicStarted = state.musicStarted();
+        complete = state.complete();
+        musicWaitTimer = state.musicWaitTimer();
     }
 }

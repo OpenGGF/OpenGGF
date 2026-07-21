@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -38,7 +39,10 @@ import java.util.List;
  * ROM reference: Obj_Door (sonic3k.asm:66036), loc_30FD2 (horizontal variant).
  */
 public class DoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable,
+        RomObjectCodePointerProvider {
+
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0003;
 
     private static final int VERTICAL_HEIGHT = 0x20;
     private static final int VERTICAL_PRIORITY = 3;
@@ -115,6 +119,15 @@ public class DoorObjectInstance extends AbstractObjectInstance
         return new DoorObjectInstance(ctx.spawn());
     }
 
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Both Obj_Door variants install routines in the $00030xxx-$00031xxx
+        // range, so word 0 of their SST code pointer is $0003. S3K sub_13EFC
+        // retains and later compares this word through Tails_CPU_interact
+        // (docs/skdisasm/sonic3k.asm:66036-66167,26816-26843).
+        return ROM_CODE_POINTER_HIGH_WORD;
+    }
+
     private VerticalDoorVariant resolveVerticalVariant(int subtype) {
         return switch (subtype) {
             case 1 -> new VerticalDoorVariant(Sonic3kObjectArtKeys.DOOR_VERTICAL_CNZ, 8);
@@ -139,6 +152,15 @@ public class DoorObjectInstance extends AbstractObjectInstance
         // variants share the same field; using halfWidth here keeps the
         // engine in sync regardless of variant.
         return halfWidth;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // Render_Sprites uses height_pixels for the same render_flags bit-7
+        // gate consumed by SolidObjectFull. The horizontal CNZ door's
+        // byte_30FCE height is only $08; the default $10 extent makes its
+        // solid path visible one frame before the ROM as the camera rises.
+        return halfHeight;
     }
 
     @Override
@@ -167,6 +189,26 @@ public class DoorObjectInstance extends AbstractObjectInstance
         // 66249-66258). SolidObjectFull_1P consumes a stale standing bit with
         // Status_InAir by clearing support and returning d4=0 before
         // SolidObject_cont can reland the player (sonic3k.asm:41017-41035).
+        return true;
+    }
+
+    @Override
+    public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity playerEntity) {
+        // SolidObjectFull consumes only this door's own a0.d6 standing bit.
+        // A later object's checkpoint cannot clear the door ride on its behalf.
+        // This matters when a later controller (the CNZ vacuum tube is the
+        // native example) sets Status_InAir after the door has re-seated P2;
+        // the final frame legitimately contains both OnObj and InAir, and the
+        // door clears its stale standing bit when its own slot runs next frame.
+        return true;
+    }
+
+    @Override
+    public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity playerEntity) {
+        // Player movement runs before Obj_Door's SolidObjectFull checkpoint.
+        // If a later controller set InAir while leaving this door's standing
+        // bit intact, movement must consume the airborne routine first; the
+        // door then clears its own stale support in object-slot order.
         return true;
     }
 

@@ -75,6 +75,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     private boolean doubleWalkRunAnimationSpeedWhenSliding;
     // Tumble/rotation frame base: S2 = 0x5F (s2.asm:38216), S3K = 0x31 (sonic3k.asm:24955).
     private int tumbleFrameBase = 0x5F;
+    // Optional native flip_type-indexed tumble bases. S3K uses
+    // byte_1286E={0,$3D,$49,$49} for types 0-3.
+    private int[] tumbleTypeFrameBases = new int[0];
 
     public ScriptedVelocityAnimationProfile() {
     }
@@ -140,6 +143,10 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setHighSpeedSlopeFrameStride(int value) { this.highSpeedSlopeFrameStride = value; return this; }
     public ScriptedVelocityAnimationProfile setDoubleWalkRunAnimationSpeedWhenSliding(boolean value) { this.doubleWalkRunAnimationSpeedWhenSliding = value; return this; }
     public ScriptedVelocityAnimationProfile setTumbleFrameBase(int tumbleFrameBase) { this.tumbleFrameBase = tumbleFrameBase; return this; }
+    public ScriptedVelocityAnimationProfile setTumbleTypeFrameBases(int... values) {
+        this.tumbleTypeFrameBases = values != null ? values.clone() : new int[0];
+        return this;
+    }
 
     @Override
     public Integer resolveAnimationId(AbstractPlayableSprite sprite, int frameCounter, int scriptCount) {
@@ -155,9 +162,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
      */
     public Integer resolveAnimationId(AbstractPlayableSprite sprite, int frameCounter, int scriptCount,
                                       boolean applyPushRenderSubstitution) {
-        // ROM: when f_playerctrl is set, Sonic_Move and normal movement routines don't run,
-        // so they never overwrite obAnim. Let the controlling object's animation stick.
-        if (sprite.isObjectControlled()) {
+        // ROM object_control bit 0 suppresses Sonic_Move and the normal
+        // movement routines, so they cannot overwrite anim. Bit 7 alone only
+        // suppresses touch response: scripted input may still drive ordinary
+        // movement and publish animations (CNZ2's rival-Knuckles walk uses
+        // object_control=$80 with Ctrl_1_locked; sonic3k.asm:129247-129294).
+        if (sprite.isObjectControlSuppressesMovement()) {
             return null;
         }
         // ROM: when move_lock > 0, Sonic_Move doesn't run and doesn't overwrite obAnim.
@@ -310,6 +320,15 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // canonical case: Sonic_Move writes Wait, then AnglePos sets air.
             PlayableSpriteAnimation animation = sprite.getAnimationManager();
             if (animation != null && animation.hasGroundMovementAnimSpeed()) {
+                // A later grounded subroutine can replace Move's selection
+                // before AnglePos detaches the player. In S3K, Tails_Roll
+                // publishes Duck after Tails_InputAcceleration_Path; neither
+                // the detach nor the following airborne routine overwrites it
+                // (sonic3k.asm:27518-27531,28458-28513). Keep that later write
+                // instead of reconstructing the earlier Walk value.
+                if (duckAnimId >= 0 && sprite.getAnimationId() == duckAnimId) {
+                    return null;
+                }
                 return resolveGroundMovementAnimId(sprite);
             }
             if (!sprite.isJumping() && !sprite.getRollingJump() && !sprite.isSliding()) {
@@ -632,6 +651,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         return tumbleFrameBase;
     }
 
+    public int getTumbleTypeFrameBase(int flipType) {
+        return flipType >= 0 && flipType < tumbleTypeFrameBases.length
+                ? tumbleTypeFrameBases[flipType]
+                : -1;
+    }
+
     public ScriptedVelocityAnimationProfile withRunSpeedThreshold(int newThreshold) {
         ScriptedVelocityAnimationProfile copy = new ScriptedVelocityAnimationProfile();
         copy.idleAnimId = this.idleAnimId;
@@ -671,6 +696,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         copy.highSpeedSlopeFrameStride = this.highSpeedSlopeFrameStride;
         copy.doubleWalkRunAnimationSpeedWhenSliding = this.doubleWalkRunAnimationSpeedWhenSliding;
         copy.tumbleFrameBase = this.tumbleFrameBase;
+        copy.tumbleTypeFrameBases = this.tumbleTypeFrameBases.clone();
         return copy;
     }
 }

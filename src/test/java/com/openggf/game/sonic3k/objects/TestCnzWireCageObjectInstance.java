@@ -324,6 +324,10 @@ class TestCnzWireCageObjectInstance {
         assertEquals(9, player.getXRadius());
         assertEquals((short) JUMP_RELEASE_Y_SPEED_FOR_TEST, player.getYSpeed());
         assertFalse(player.getRolling());
+        assertEquals(0, player.getAnimationId(),
+                "move.w #1,anim publishes the big-endian high byte as raw Walk");
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "move.w #1,anim publishes the low byte into adjacent prev_anim");
     }
 
     @Test

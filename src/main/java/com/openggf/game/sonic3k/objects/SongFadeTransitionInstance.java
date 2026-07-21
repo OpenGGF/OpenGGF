@@ -37,16 +37,34 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
     /** Whether the initial fade-out has been issued. */
     private boolean fadeStarted;
 
+    /** Whether the ROM delay countdown starts on the update after fade initialization. */
+    private boolean deferCountdownOnFadeStart;
+
+    /** Whether initialization must wait until the object pass after allocation. */
+    private boolean deferSameFrameUpdateAfterSpawn;
+
     /**
      * @param delayFrames frames to wait after fade-out before playing new music
      * @param musicId     music ID to play when the delay expires
      */
     public SongFadeTransitionInstance(int delayFrames, int musicId) {
+        this(delayFrames, musicId, false);
+    }
+
+    SongFadeTransitionInstance(int delayFrames, int musicId, boolean deferCountdownOnFadeStart) {
+        this(delayFrames, musicId, deferCountdownOnFadeStart, false);
+    }
+
+    SongFadeTransitionInstance(int delayFrames, int musicId,
+                               boolean deferCountdownOnFadeStart,
+                               boolean deferSameFrameUpdateAfterSpawn) {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "SongFadeTransition");
         this.delayFrames = delayFrames;
         this.musicId = musicId;
         this.timer = 0;
         this.fadeStarted = false;
+        this.deferCountdownOnFadeStart = deferCountdownOnFadeStart;
+        this.deferSameFrameUpdateAfterSpawn = deferSameFrameUpdateAfterSpawn;
     }
 
     SongFadeTransitionInstance(ObjectSpawn spawn) {
@@ -73,11 +91,19 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
     }
 
     @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        return deferSameFrameUpdateAfterSpawn;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!fadeStarted) {
             services().audioManager().fadeOutMusic(0x28, 6);
             fadeStarted = true;
+            if (deferCountdownOnFadeStart) {
+                return;
+            }
         }
         timer++;
         if (timer >= delayFrames) {

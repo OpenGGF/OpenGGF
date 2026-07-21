@@ -93,4 +93,58 @@ class TestCnzMinibossSwingPhase {
                 Math.abs(boss.getCurrentXVel()),
                 "Go3 sets x_vel magnitude = 0x100 (sign depends on swing direction)");
     }
+
+    @Test
+    void twoClosingCyclesPreserveMoveTurnCadenceAndTopParent() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        DefaultObjectServices services = TestEnvironment.objectServices();
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        boss.setServices(services);
+
+        boss.update(0, fixture.sprite());
+        CnzMinibossTopInstance top = services.objectManager().getActiveObjects().stream()
+                .filter(CnzMinibossTopInstance.class::isInstance)
+                .map(CnzMinibossTopInstance.class::cast)
+                .findFirst().orElseThrow();
+
+        int frame = 1;
+        int initialWait = Sonic3kConstants.CNZ_MINIBOSS_INIT_WAIT
+                + Sonic3kConstants.CNZ_MINIBOSS_GO2_WAIT + 12;
+        while (frame < initialWait) {
+            boss.update(frame++, fixture.sprite());
+        }
+        assertEquals(6, boss.getCurrentRoutine() & 0xFF);
+
+        for (int cycle = 0; cycle < 2; cycle++) {
+            boss.forceOpenForTest();
+            boss.simulateHitForTest();
+            boss.update(frame++, fixture.sprite());
+            assertEquals(0x0C, boss.getCurrentRoutine() & 0xFF,
+                    "top-hit handoff must enter Closing through production update");
+            for (int i = 0; i < 26; i++) {
+                boss.update(frame++, fixture.sprite());
+            }
+            assertEquals(6, boss.getCurrentRoutine() & 0xFF,
+                    "Closing $F4 callback must return to duplicate Move routine");
+            assertEquals(Sonic3kConstants.CNZ_MINIBOSS_SWING_X_VEL,
+                    Math.abs(boss.getCurrentXVel()));
+            assertTrue(top.retainsParentForTest(boss),
+                    "top must retain the production parent across repeated Closing cycles");
+
+            short beforeTurn = boss.getCurrentXVel();
+            boss.forceRoutineForTest(6);
+            boss.update(frame++, fixture.sprite());
+            assertEquals(-beforeTurn, boss.getCurrentXVel(),
+                    "Move callback must negate x_vel through production update");
+            short afterTurn = boss.getCurrentXVel();
+            for (int i = 0; i <= Sonic3kConstants.CNZ_MINIBOSS_CHANGEDIR_WAIT; i++) {
+                boss.update(frame++, fixture.sprite());
+            }
+            assertEquals(-afterTurn, boss.getCurrentXVel(),
+                    "ChangeDir must re-arm the exact ROM $13F turn cadence");
+        }
+    }
 }

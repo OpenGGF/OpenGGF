@@ -2,6 +2,7 @@ package com.openggf.sprites.playable;
 
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.session.SessionManager;
 import com.openggf.physics.Direction;
 import org.junit.jupiter.api.AfterEach;
@@ -134,11 +135,14 @@ class TestSidekickCpuControllerFlightAutoRecovery {
 
     @Test
     void onScreenFlightAutoRecoveryReassertsAirBit() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         TestableSprite sonic = sonicAt(0x1000, 0x0400);
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1100);
         tails.setCentreY((short) 0x0300);
+        tails.setYSpeed((short) -0x0800);
+        tails.setDoubleJumpProperty((byte) 0xF0);
         tails.setAir(false);
         tails.setRenderFlagOnScreen(true);
 
@@ -149,6 +153,9 @@ class TestSidekickCpuControllerFlightAutoRecovery {
 
         assertTrue(tails.getAir(),
                 "ROM Tails_FlySwim_Unknown loc_13C3A ORs Status_InAir every on-screen frame");
+        assertEquals(0x21, tails.getAnimationId(),
+                "Tails_Set_Flying_Animation selects the ascending flight byte from negative y_vel");
+        assertEquals(0x21, tails.getForcedAnimationId());
     }
 
     @Test

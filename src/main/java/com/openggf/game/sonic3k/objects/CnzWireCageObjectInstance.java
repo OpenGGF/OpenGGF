@@ -38,7 +38,8 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
     private static final int P2_STANDING_BIT = 4;
     private static final int DIRTY_P2_STANDING_BIT = 1;
     private static final int CAPTURE_ANIMATION = 0;
-    private static final int RELEASE_ANIMATION = 1;
+    private static final int RELEASE_ANIMATION = 0;
+    private static final int RELEASE_PREVIOUS_ANIMATION = 1;
     private static final int[] CAPTURE_FRAMES = {
             0x76, 0x76, 0x77, 0x77, 0x6C, 0x6C, 0x6D, 0x6D, 0x6E, 0x6E, 0x6F, 0x6F,
             0x70, 0x70, 0x71, 0x71, 0x72, 0x72, 0x73, 0x73, 0x74, 0x74, 0x75, 0x75
@@ -608,7 +609,11 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         player.applyCustomRadii(9, 19);
         player.setCentreXPreserveSubpixel(centreX);
         player.setCentreYPreserveSubpixel(centreY);
+        // Both native release paths use move.w #1,anim(a1). On 68000's
+        // big-endian layout that publishes anim=$00 and the adjacent
+        // prev_anim=$01; it does not select animation 1.
         player.setAnimationId(RELEASE_ANIMATION);
+        player.getAnimationManager().publishPreviousAnimationId(RELEASE_PREVIOUS_ANIMATION);
         player.setObjectMappingFrameControl(false);
         player.setSuppressGroundWallCollision(false);
         player.setOnObject(false);

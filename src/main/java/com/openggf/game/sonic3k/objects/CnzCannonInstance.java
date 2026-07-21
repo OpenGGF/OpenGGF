@@ -52,6 +52,9 @@ import java.util.List;
 public final class CnzCannonInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
+    /** Synthetic subtype used by Obj_CNZEndBoss for its watched cannon slot. */
+    public static final int END_SEQUENCE_SUBTYPE = 0x80;
+
     private static final int PRIORITY = 0x280;
     private static final int FRAME_CHAMBER_IDLE = 4;
     private static final int FRAME_SPIN_MIN = 0;
@@ -78,6 +81,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     private int spinAngle;
     private int launchPuffAngle;
     private int chamberFrame = FRAME_CHAMBER_IDLE;
+    private boolean spinArmed;
     private AbstractPlayableSprite capturedPlayer;
     private AbstractPlayableSprite releasedPlayer;
     private int releasedPlayerPriorityTimer;
@@ -161,7 +165,16 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     }
 
     private void updateReadyToLaunch(int frameCounter, AbstractPlayableSprite player) {
-        advanceSpin(frameCounter);
+        // ROM sub_3192C runs before sub_319F4. On the first ready dispatch,
+        // $34(a0) is still zero while sub_3192C checks it, then sub_319F4 sees
+        // player state word $0200/$0202 and arms $34 for the following frame.
+        // Keep that read-before-write ordering so ordinary cannons retain their
+        // idle chamber frame for the first ready dispatch.
+        if (spinArmed) {
+            advanceSpin(frameCounter);
+        } else {
+            spinArmed = true;
+        }
 
         AbstractPlayableSprite activePlayer = capturedPlayer != null ? capturedPlayer : player;
         if (activePlayer == null || !activePlayer.isObjectControlled()) {
@@ -176,7 +189,11 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         activePlayer.setOnObject(false);
         activePlayer.setAir(true);
 
-        if (activePlayer.isJumpPressed()) {
+        boolean endSequence = (spawn.subtype() & END_SEQUENCE_SUBTYPE) != 0;
+        boolean jumpPressed = endSequence
+                ? (activePlayer.getForcedInputMask() & AbstractPlayableSprite.INPUT_JUMP) != 0
+                : activePlayer.isJumpPressed();
+        if (jumpPressed) {
             launchPlayer(activePlayer, frameCounter);
         }
     }
@@ -200,8 +217,11 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     }
 
     private void advanceSpin(int frameCounter) {
+        int displayAngle = spinAngle;
         spinAngle = (spinAngle + 2) & 0xFF;
-        int frame = (TrigLookupTable.sinHex(spinAngle) + 0x120) >> 6;
+        // sub_3192C derives the chamber frame from the old angle, then stores angle + 2
+        // before the jump-button path can launch the player.
+        int frame = (TrigLookupTable.sinHex(displayAngle) + 0x120) >> 6;
         chamberFrame = Math.max(FRAME_SPIN_MIN, Math.min(FRAME_SPIN_MAX, frame));
 
         if (frameCounter >= 0 && (frameCounter & 0x1F) == 0) {
@@ -217,11 +237,11 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         capturedPlayer = player;
         short captureY = player.getCentreY();
         spinAngle = 0;
+        spinArmed = false;
         chamberFrame = FRAME_CHAMBER_IDLE;
 
         // ROM: move.w #$81,object_control(a1) / bset #Status_Roll,status(a1)
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         player.setRolling(true);
         player.applyCustomRadii(ROLL_X_RADIUS, ROLL_Y_RADIUS);
         player.setAnimationId(2);
@@ -245,6 +265,13 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         if (objectManager != null) {
             objectManager.clearRidingObject(player);
         }
+        if ((spawn.subtype() & END_SEQUENCE_SUBTYPE) != 0 && services().camera() != null) {
+            // The native end cannon occupies slot 4 while Obj_CNZEndBoss is in
+            // slot 17, so its $30=1 capture write is visible to loc_6E7B6 later
+            // in the same SST pass. Publish the watched-slot consequence here;
+            // the boss owner still owns the timer and control-lock transition.
+            services().camera().setMaxYTarget((short) 0x0200);
+        }
     }
 
     private void launchPlayer(AbstractPlayableSprite player, int frameCounter) {
@@ -263,7 +290,6 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         player.setYSpeed(ySpeed);
         player.setGSpeed(xSpeed);
         player.setAir(true);
-        player.setControlLocked(false);
         player.releaseFromObjectControl(frameCounter);
         player.setOnObject(false);
         player.setJumping(false);
@@ -328,8 +354,33 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         return RenderPriority.clamp(PRIORITY);
     }
 
+    @Override
+    public String traceDebugDetails() {
+        return "state=" + state + " timer=" + stateTimer
+                + " angle=" + String.format("%02X", spinAngle & 0xFF)
+                + " armed=" + spinArmed;
+    }
+
     int getRenderFrameForTest() {
         return chamberFrame;
+    }
+
+    /**
+     * Returns whether the cannon owns a captured player in either pull-down or
+     * launch-ready state.
+     *
+     * <p>This is the engine contract for the ROM's per-player cannon state byte
+     * becoming {@code 1}: callers may arm the post-boss sequence immediately
+     * when pull-down starts, without waiting for the player to reach the chamber.
+     */
+    public boolean hasCapturedPlayerForEndSequence() {
+        return capturedPlayer != null
+                && (state == STATE_PULLING_PLAYER || state == STATE_READY_TO_LAUNCH);
+    }
+
+    /** Returns the cannon's raw unsigned spin-angle byte used by the ROM launch gate. */
+    public int getSpinAngle() {
+        return spinAngle & 0xFF;
     }
 
     public boolean isEndSequenceLaunchReady() {

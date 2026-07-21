@@ -75,6 +75,20 @@ public class TestS3kBossExplosionController {
     }
 
     @Test
+    public void creationDispatchTailJumpEmitsImmediatelyThenKeepsThreeFrameCadence() {
+        var controller = new S3kBossExplosionController(160, 112, 0);
+
+        controller.dispatchCreation();
+        assertEquals(1, controller.drainPendingExplosions().size(),
+                "Obj_CreateBossExplosion tail-jumps through zeroed Obj_Wait into its callback");
+        controller.tick();
+        controller.tick();
+        assertTrue(controller.drainPendingExplosions().isEmpty());
+        controller.tick();
+        assertEquals(1, controller.drainPendingExplosions().size());
+    }
+
+    @Test
     public void threeFrameSpacingBetweenExplosions() {
         var controller = new S3kBossExplosionController(160, 112, 2);
         // First explosion after initial wait

@@ -2971,8 +2971,10 @@ public class ObjectManager {
      */
     private void dispatchDestroyRemoveFromActive(ObjectInstance instance, ObjectSpawn spawn) {
         if (instance.isDestroyedRespawnable()) {
+            boolean retainForTwoAxisYPass = slotLayout.twoAxisCursorPlacement()
+                    && placement.isBetweenLoadCursors(spawn);
             placement.removeFromActiveForUnload(spawn);
-            if (slotLayout.twoAxisCursorPlacement()) {
+            if (retainForTwoAxisYPass) {
                 // ROM loc_1B982's Y-camera pass rescans EVERY entry currently
                 // between Object_load_addr_back/front (the whole live X-window
                 // range) whose respawn-table bit 7 reads clear -- not just

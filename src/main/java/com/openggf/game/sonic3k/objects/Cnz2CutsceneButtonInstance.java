@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.mutation.LayoutMutationContext;
+import com.openggf.game.mutation.LevelMutationSurface;
+import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -8,6 +11,7 @@ import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -27,9 +31,9 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
     private static final int INIT_Y_OFFSET = 4;
     private static final int PRIORITY = 4;
     private static final int RANGE_LEFT = -0x18;
-    private static final int RANGE_RIGHT = 0x30;
+    private static final int RANGE_RIGHT = RANGE_LEFT + 0x30;
     private static final int RANGE_TOP = -0x18;
-    private static final int RANGE_BOTTOM = 0x30;
+    private static final int RANGE_BOTTOM = RANGE_TOP + 0x30;
     private static final int CNZ2_CUTSCENE_WATER_TARGET_Y = 0x0350;
     /** ROM: {@code Mean_water_level = Camera_Y_pos + $100} in loc_65C78. */
     private static final int CNZ2_CUTSCENE_WATER_MEAN_OFFSET = 0x0100;
@@ -37,6 +41,10 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
     private static final int CNZ2_SCREEN_SHAKE_FRAMES = 0x14;
     private static final int WATER_FLASH_SUBTYPE = 4;
     private static final int VACUUM_TUBE_SUBTYPE = 6;
+    private static final int VACUUM_LAYOUT_LAYER = 0;
+    private static final int VACUUM_LAYOUT_X = 0x8E;
+    private static final int VACUUM_LAYOUT_START_Y = 14;
+    private static final int[] VACUUM_LAYOUT_VALUES = {0x14, 0x0F, 0x0F, 0x88};
 
     private int x;
     private int y;
@@ -63,7 +71,24 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
 
     @Override
     public boolean isPersistent() {
-        return true;
+        return !pressed;
+    }
+
+    @Override
+    public boolean shouldStayActiveWhenRemembered() {
+        return pressed;
+    }
+
+    @Override
+    public boolean clearsRespawnStateOnCounterBasedOutOfRange() {
+        return false;
+    }
+
+    @Override
+    public void onUnload() {
+        if (pressed) {
+            ObjectLifetimeOps.removeSpawnFromActive(services().objectManager(), getSpawn());
+        }
     }
 
     @Override
@@ -86,10 +111,6 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
         if (knuckles == null) {
             return;
         }
-        if (!canPressForCurrentCutsceneStep(knuckles)) {
-            return;
-        }
-
         int dx = knuckles.getX() - x;
         int dy = knuckles.getY() - y;
         if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
@@ -99,16 +120,12 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
 
     private AbstractObjectInstance activeKnucklesForSubtype() {
         return switch (subtype) {
-            case WATER_FLASH_SUBTYPE -> CutsceneKnucklesCnz2AInstance.getActiveInstance();
-            case VACUUM_TUBE_SUBTYPE -> CutsceneKnucklesCnz2BInstance.getActiveInstance();
+            case WATER_FLASH_SUBTYPE ->
+                    CutsceneKnucklesCnz2AInstance.activeInstance(services().objectManager());
+            case VACUUM_TUBE_SUBTYPE ->
+                    CutsceneKnucklesCnz2BInstance.activeInstance(services().objectManager());
             default -> null;
         };
-    }
-
-    private boolean canPressForCurrentCutsceneStep(AbstractObjectInstance knuckles) {
-        return subtype != WATER_FLASH_SUBTYPE
-                || (knuckles instanceof CutsceneKnucklesCnz2AInstance cnz2a
-                && cnz2a.hasReachedButtonImpact());
     }
 
     /**
@@ -121,6 +138,7 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
      */
     private void press() {
         pressed = true;
+        ObjectLifetimeOps.markSpawnRemembered(services().objectManager(), getSpawn());
         if (subtype == VACUUM_TUBE_SUBTYPE) {
             pressVacuumTubeButton();
             return;
@@ -135,7 +153,7 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
         S3kCnzEventWriteSupport.setWaterTargetY(services(), CNZ2_CUTSCENE_WATER_TARGET_Y);
         services().playSfx(Sonic3kSfx.GEYSER.id);
         // ROM spawns the flash child with subtype 0 (no restore -> lights stay off).
-        spawnedFlash = spawnChild(() -> new CnzLightsFlashChildInstance(buildSpawnAt(x, y), false));
+        spawnedFlash = spawnChild(() -> new CnzLightsFlashChildInstance(buildSpawnAt(x, y), false, this));
     }
 
     /**
@@ -145,15 +163,58 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
      */
     private void pressVacuumTubeButton() {
         S3kCnzEventWriteSupport.triggerScreenShake(services(), CNZ2_SCREEN_SHAKE_FRAMES);
+        mutateVacuumTubeLayout();
         spawnChild(() -> new CnzVacuumTubeInstance(new ObjectSpawn(
                 0x4740, 0x0828, Sonic3kObjectIds.CNZ_VACUUM_TUBE, 0x4C, 0, false, 0)));
         spawnChild(() -> new CnzVacuumTubeInstance(new ObjectSpawn(
                 0x4740, 0x0A28, Sonic3kObjectIds.CNZ_VACUUM_TUBE, 0x20, 0, false, 0)));
     }
 
+    /**
+     * ROM {@code loc_65CAC}: writes four bytes down layout column {@code $8E}.
+     * Gameplay layout changes must pass through the runtime mutation pipeline so
+     * copy-on-write snapshots, dirty regions, and rewind observe one coherent edit.
+     */
+    private void mutateVacuumTubeLayout() {
+        if (services().currentLevel() == null || services().zoneLayoutMutationPipeline() == null) {
+            return;
+        }
+        LevelMutationSurface surface = LevelMutationSurface.forLevel(services().currentLevel());
+        LayoutMutationContext context = new LayoutMutationContext(surface, effects -> {
+            if (services().levelManager() != null) {
+                services().levelManager().applyMutationEffects(effects);
+            }
+        });
+        services().zoneLayoutMutationPipeline().applyImmediately(mutationContext -> {
+            for (int row = 0; row < VACUUM_LAYOUT_VALUES.length; row++) {
+                mutationContext.surface().setBlockInMap(
+                        VACUUM_LAYOUT_LAYER,
+                        VACUUM_LAYOUT_X,
+                        VACUUM_LAYOUT_START_Y + row,
+                        VACUUM_LAYOUT_VALUES[row]);
+            }
+            return MutationEffects.foregroundRedraw();
+        }, context);
+    }
+
     /** Test seam: the lights-off flash child spawned on press, or null. */
     CnzLightsFlashChildInstance getSpawnedFlashForTest() {
         return spawnedFlash;
+    }
+
+    boolean ownsFlash(CnzLightsFlashChildInstance flash) {
+        return spawnedFlash == flash;
+    }
+
+    void clearCompletedFlash(CnzLightsFlashChildInstance flash) {
+        if (spawnedFlash == flash) {
+            spawnedFlash = null;
+        }
+    }
+
+    /** Test seam for native respawn-entry persistence assertions. */
+    boolean isPressedForTest() {
+        return pressed;
     }
 
     @Override
