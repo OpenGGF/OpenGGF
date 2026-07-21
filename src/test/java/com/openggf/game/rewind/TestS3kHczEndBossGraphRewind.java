@@ -19,6 +19,7 @@ import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
@@ -154,10 +155,12 @@ class TestS3kHczEndBossGraphRewind {
         static Harness createWithBoss() {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCameraAtOrigin();
+            ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(() -> null, List::of);
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+                @Override public ObjectPlayerQuery playerQuery() { return playerQuery; }
             };
             ObjectManager objectManager = new ObjectManager(
                     List.of(BOSS_SPAWN),
