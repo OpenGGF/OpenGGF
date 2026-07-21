@@ -47794,3 +47794,22 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:189703-189741,41380-41444`).
 - The focused eight-case ICZ ice-cube suite passes with the boundary contract
   pinned alongside its existing shatter and debris behavior.
+
+## 2026-07-22 - ICZ sliding follow threshold advances both frontiers
+
+- Commands: focused `TestSidekickCpuFollowParity`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f8227 to f8386 and animation advanced
+  from f8227 to f9040.** Total errors fell from 4,680 to 4,454: physics from
+  3,487 to 3,266 and animation from 1,193 to 1,188.
+- Root: ICZ slide terrain is a late zone-feature write. The earlier correction
+  sampled frame-start `ground_vel`, which was sufficient at f7257 but was too
+  early at f8227: native player physics had already projected `$03EE` across
+  the signed `$400` follow threshold before the slide handler added its next
+  `$40`. The runtime now captures a rewind-covered post-player-physics,
+  pre-zone-feature speed phase. Tails consumes that phase only while the
+  leader's native sliding bit owns inertia, suppressing the erroneous `$20`
+  lead offset without changing ordinary follow behavior
+  (`docs/skdisasm/sonic3k.asm:26683-26724,8979-9100`).
+- The focused 103-case sidekick follow suite passes, including both sides of
+  the slide-owned `$400` threshold transition.

@@ -718,6 +718,7 @@ class TestSidekickCpuFollowParity {
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
         sonic.setGSpeed((short) 0x03C4);
         sonic.capturePrePhysicsSnapshot();
+        sonic.capturePreZoneFeatureSnapshot();
         sonic.setGSpeed((short) 0x0419);
         sonic.setSliding(true);
         sonic.setMoveLockTimer(21);
@@ -738,6 +739,44 @@ class TestSidekickCpuFollowParity {
                 () -> assertEquals(0, diagnostics.appliedFollowNudge(),
                         "The resulting target is left of a right-facing sidekick, so FollowLeft must not add a right nudge"),
                 () -> assertEquals(0x525D, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kSlidingLeaderUsesPostPhysicsSpeedWhenProjectionCrossesLeadOffsetGate() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
+        tails.setDirection(Direction.RIGHT);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x5910);
+        Arrays.fill(yHistory, (short) 0x00F3);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+
+        sonic.setGSpeed((short) 0x03EE);
+        sonic.capturePrePhysicsSnapshot();
+        sonic.setGSpeed((short) 0x0403);
+        sonic.capturePreZoneFeatureSnapshot();
+        sonic.setGSpeed((short) 0x0443);
+        sonic.setSliding(true);
+
+        tails.setCentreXPreserveSubpixel((short) 0x58E0);
+        tails.setCentreYPreserveSubpixel((short) 0x00F2);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        controller.update(0x2023);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals(0x30, diagnostics.dx(),
+                        "S3K loc_13DA6 sees the post-physics $0403 value and suppresses the $20 lead offset"),
+                () -> assertTrue(controller.getInputRight(),
+                        "the unbiased delayed target reaches the leader-fast follow branch"));
     }
 
     @Test

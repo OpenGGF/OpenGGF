@@ -246,6 +246,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean prePhysicsAir = false;
         protected byte prePhysicsAngle = 0;
         protected short prePhysicsGSpeed = 0;
+        /** Ground velocity after player physics but before late zone-feature updates. */
+        protected short preZoneFeatureGSpeed = 0;
         protected short prePhysicsXSpeed = 0;
         protected short prePhysicsYSpeed = 0;
         protected short prePhysicsCentreX = 0;
@@ -919,6 +921,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         topSolidBit, lrbSolidBit,
                         prePhysicsAir, prePhysicsAngle,
                         prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
+                        preZoneFeatureGSpeed,
                         prePhysicsCentreX, prePhysicsCentreY,
                         air, rolling, jumping, rollingJump,
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
@@ -1036,6 +1039,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.prePhysicsGSpeed = extra.prePhysicsGSpeed();
                 this.prePhysicsXSpeed = extra.prePhysicsXSpeed();
                 this.prePhysicsYSpeed = extra.prePhysicsYSpeed();
+                this.preZoneFeatureGSpeed = extra.preZoneFeatureGSpeed();
                 this.prePhysicsCentreX = extra.prePhysicsCentreX();
                 this.prePhysicsCentreY = extra.prePhysicsCentreY();
                 this.air = extra.air();
@@ -2077,6 +2081,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /** Pre-physics ground velocity from {@link #capturePrePhysicsSnapshot()}. */
         public short getPrePhysicsGSpeed() {
                 return prePhysicsGSpeed;
+        }
+
+        /** Captures the phase immediately before late zone-feature velocity writes. */
+        public void capturePreZoneFeatureSnapshot() {
+                this.preZoneFeatureGSpeed = this.gSpeed;
+        }
+
+        /** Ground velocity after player physics and before late zone-feature updates. */
+        public short getPreZoneFeatureGSpeed() {
+                return preZoneFeatureGSpeed;
         }
 
         /** Pre-physics X velocity from {@link #capturePrePhysicsSnapshot()}. */

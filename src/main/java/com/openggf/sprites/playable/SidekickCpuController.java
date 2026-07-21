@@ -2112,11 +2112,13 @@ public class SidekickCpuController {
         // has already published that pass's next ground velocity when Tails'
         // CPU slot runs, while ROM loc_13DA6 still sees the value from before
         // the event update (sonic3k.asm:26690-26694, 28918-28958). Use the
-        // pre-physics sample while status_secondary's slide bit owns inertia.
+        // post-player-physics/pre-zone-feature sample while status_secondary's
+        // slide bit owns inertia. A frame-start sample is too early when terrain
+        // projection itself crosses the signed $400 gate.
         // Ordinary movement, including the move_lock countdown after leaving
         // the slide, uses the established live value seen after player physics.
         short leaderFollowGateGSpeed = effectiveLeader.isSliding()
-                ? effectiveLeader.getPrePhysicsGSpeed()
+                ? effectiveLeader.getPreZoneFeatureGSpeed()
                 : effectiveLeader.getGSpeed();
         if (leadOffset > 0
                 && !leaderStatusOnObject

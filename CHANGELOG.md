@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: CPU sidekick follow now samples sliding leader speed after player physics but before the late zone-feature write, matching the ROM phase when terrain projection crosses the `$400` lead-offset threshold. ICZ complete-run physics advances from frame 8227 to 8386 and animation from frame 8227 to 9040.
 - Fix: ICZ ice cubes now include the exact `$23` right edge accepted by S3K `SolidObjectFull`, preserving the native side-push bit and push mapping before CPU Tails reaches the adjacent bridge. Complete-run physics advances from frame 7606 to 8227 and animation from frame 7595 to 8227.
 - Fix: S3K collapsing platforms now expose their compensated final-decrement solid pass to a descending Player 1 when Player 2 still owns the saved support latch, while retaining the true `CreateFragments` fresh-contact skip. ICZ complete-run physics advances from frame 7350 to 7606 and animation from frame 7350 to 7595.
 - Fix: S3K CPU Tails now evaluates the follow lead-offset threshold from the leader's pre-event ground speed while slide terrain owns inertia, then returns to the live post-physics value after slide exit. ICZ complete-run physics advances from frame 7257 to 7350 and animation from frame 7274 to 7350.

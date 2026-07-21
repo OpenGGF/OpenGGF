@@ -1080,6 +1080,7 @@ public class LevelManager {
 
     public void updateZoneFeaturesAfterPlayablePhysics(AbstractPlayableSprite playable) {
         if (zoneFeatureProvider != null && level != null && playable != null) {
+            playable.capturePreZoneFeatureSnapshot();
             zoneFeatureProvider.updateAfterPlayablePhysics(playable, camera.getX(), getFeatureZoneId());
         }
     }
