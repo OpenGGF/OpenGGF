@@ -327,7 +327,8 @@ public class PlayableSpriteAnimation {
             }
             SpriteAnimationScript pushScript = resolveScript(
                     profile != null ? profile.getPushAnimId() : -1, baseScript);
-            int pushDelay = computeSpeedDelay(speed, 0x800, 6);
+            int pushDelay = computeSpeedDelay(speed, 0x800,
+                    profile != null ? profile.getPushDelayShift() : 6);
             updateScriptWithDelay(pushScript, pushDelay, 0);
             return;
         }
@@ -464,7 +465,8 @@ public class PlayableSpriteAnimation {
             active = baseScript;
         }
 
-        int delay = computeSpeedDelay(speed, 0x800, 6);
+        int delay = computeSpeedDelay(speed, 0x800,
+                profile != null ? profile.getPushDelayShift() : 6);
         updateScriptWithDelay(active, delay, 0);
     }
 
