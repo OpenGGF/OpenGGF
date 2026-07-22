@@ -74,6 +74,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private static final int SWING_WAIT_TIME = 0x3F;
     private static final int HORIZONTAL_TRAVEL_TIME = 0x17F;
     private static final int DEFEAT_RISE_TIME = 0x7F;
+    private static final int DEFEAT_SHELL_RELEASE_WAIT = 0x3F;
+    private static final int DEFEAT_CAPSULE_HANDOFF_WAIT = (2 * 60) - 1;
     private static final int DAMAGED_PHASE_HIT_COUNT = 2;
     private static final int DAMAGED_RISE_TIME = 0x7F;
     private static final int DAMAGED_TOP_FRAME = 4;
@@ -182,6 +184,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private boolean damagedTopSteamTimerJustArmed;
     private boolean damagedFinalPhase;
     private boolean defeatStarted;
+    private boolean defeatShellReleased;
     private boolean defeatHandoffComplete;
     private boolean lastSideToggle;
     private int bottomChildWholePixelDelta;
@@ -280,6 +283,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         damagedTopSteamTimerJustArmed = false;
         damagedFinalPhase = false;
         defeatStarted = false;
+        defeatShellReleased = false;
         defeatHandoffComplete = false;
         lastSideToggle = false;
         bottomChildWholePixelDelta = 0;
@@ -1010,7 +1014,11 @@ public final class IczEndBossInstance extends AbstractBossInstance
         state.xVel = 0;
         state.yVel = 0;
         parentFlags |= PARENT_FLAG_DEFEATED;
-        defeatTimer = DEFEAT_RISE_TIME;
+        // loc_722C6 installs Wait_FadeToLevelMusic while retaining the boss's
+        // live $2E=$3F wait. When that expires, loc_71D80 creates the shell
+        // fragments and continues through Obj_Wait with the freshly seeded
+        // (2*60)-1 timer before loc_71D9E performs the capsule handoff.
+        defeatTimer = DEFEAT_SHELL_RELEASE_WAIT;
         stopBossSnowdustEmitter();
         startRobotnikDefeatExplosions();
         if (services().gameState() != null) {
@@ -1106,6 +1114,12 @@ public final class IczEndBossInstance extends AbstractBossInstance
             updateRobotnikShip();
             return;
         }
+        if (!defeatShellReleased) {
+            defeatShellReleased = true;
+            spawnDefeatDebrisChildren();
+            defeatTimer = DEFEAT_CAPSULE_HANDOFF_WAIT;
+            return;
+        }
         completeDefeatHandoff();
     }
 
@@ -1116,11 +1130,15 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
         if (services().camera() != null) {
             services().camera().setMinX((short) (services().camera().getX() & 0xFFFF));
-            services().camera().setMaxX((short) CAPSULE_CAMERA_MAX_X);
             services().camera().setMaxYTarget(services().camera().getMaxY());
         }
-        spawnDefeatDebrisChildren();
-        spawnChild(() -> new IczEndBossEggCapsuleInstance(0x4560, 0x06A3));
+        spawnFreeChild(() -> new IczEndBossEggCapsuleInstance(0x4560, 0x06A3));
+        // loc_71D9E writes Camera_stored_max_X_pos, then makes a fallible
+        // AllocateObject attempt for Obj_IncLevEndXGradual. Live max X stays
+        // locked if the SST pool is full; otherwise the helper advances it
+        // with the shared $4000 accumulator.
+        spawnFreeChild(() -> new HczEndBossGradualMaxXExtender(
+                state.x, state.y, CAPSULE_CAMERA_MAX_X));
         int escapeShipX = robotnikShipX;
         int escapeShipY = robotnikShipY;
         spawnChild(() -> new IczEndBossRobotnikEscapeShip(escapeShipX, escapeShipY));

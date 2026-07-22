@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossGradualMaxXExtender;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.Level;
@@ -60,6 +61,7 @@ import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kIczEndBossObject {
+    private static final int FINAL_DEFEAT_HANDOFF_FRAMES = 0xBA;
     private static final int ICZ_END_BOSS_ID = 0xBD;
 
     // Clear any gameplay session leaked by a prior test in this fork so the registry
@@ -1126,14 +1128,17 @@ class TestS3kIczEndBossObject {
 
         assertTrue((Boolean) instance.getClass().getMethod("isDefeatStartedForTesting").invoke(instance));
 
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         assertEquals(0, services.gameState.getCurrentBossId());
         assertEquals(0x4390, services.camera.getMinX() & 0xFFFF);
-        assertEquals(0x44C0, services.camera.getMaxX() & 0xFFFF,
-                "Obj_ICZEndBoss sets Camera_stored_max_X_pos=_unkFAB4+$130 so the capsule stays screen-locked until it is pressed");
+        assertEquals(0x4390, services.camera.getMaxX() & 0xFFFF,
+                "loc_71D9E stores _unkFAB4+$130 separately and leaves live Camera_max_X_pos locked");
         assertTrue(services.spawnedChildren.stream().anyMatch(child ->
                 child.getClass().getSimpleName().contains("EggCapsule")));
+        assertTrue(services.spawnedChildren.stream().anyMatch(
+                        HczEndBossGradualMaxXExtender.class::isInstance),
+                "loc_71D9E attempts a first-free Obj_IncLevEndXGradual allocation after the capsule");
     }
 
     @Test
@@ -1175,7 +1180,7 @@ class TestS3kIczEndBossObject {
         assertEquals(shipX, invokeInt(instance, "getRobotnikShipXForTesting"),
                 "Obj_RobotnikShip4 waits on parent $38 bit 4 before escaping right");
 
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         AbstractObjectInstance escapeShip = findRobotnikEscapeShip(services);
         int escapeStartX = escapeShip.getX();
@@ -1219,6 +1224,12 @@ class TestS3kIczEndBossObject {
         assertEquals(defeatX, object.getX());
         assertEquals(defeatY, object.getY(),
                 "loc_722C6 switches to Wait_FadeToLevelMusic; the final defeat wait should not reuse loc_71D64's sinking movement");
+        assertTrue(services.spawnedChildren.stream().anyMatch(child ->
+                        child.getClass().getSimpleName().equals("IczEndBossDefeatDebrisChild")),
+                "loc_71D80 releases the shell fragments after the retained $3F wait");
+        assertFalse(services.spawnedChildren.stream().anyMatch(child ->
+                        child.getClass().getSimpleName().contains("EggCapsule")),
+                "loc_71D80 retains the newly seeded 119-count wait before loc_71D9E");
     }
 
     @Test
@@ -1242,7 +1253,7 @@ class TestS3kIczEndBossObject {
             instance.getClass().getMethod("forceHitForTesting").invoke(instance);
             instance.update(300 + i, mock(PlayableEntity.class));
         }
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         AbstractObjectInstance escapeShip = findRobotnikEscapeShip(services);
         escapeShip.appendRenderCommands(new ArrayList<>());
@@ -1271,7 +1282,7 @@ class TestS3kIczEndBossObject {
             instance.getClass().getMethod("forceHitForTesting").invoke(instance);
             instance.update(300 + i, mock(PlayableEntity.class));
         }
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         AbstractObjectInstance ship = services.spawnedChildren.stream()
                 .filter(AbstractObjectInstance.class::isInstance)
@@ -1312,7 +1323,7 @@ class TestS3kIczEndBossObject {
             instance.getClass().getMethod("forceHitForTesting").invoke(instance);
             instance.update(300 + i, mock(PlayableEntity.class));
         }
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         AbstractObjectInstance ship = findRobotnikEscapeShip(services);
         int startX = ship.getX();
@@ -1338,7 +1349,7 @@ class TestS3kIczEndBossObject {
             instance.getClass().getMethod("forceHitForTesting").invoke(instance);
             instance.update(300 + i, mock(PlayableEntity.class));
         }
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         List<AbstractObjectInstance> debris = services.spawnedChildren.stream()
                 .filter(AbstractObjectInstance.class::isInstance)

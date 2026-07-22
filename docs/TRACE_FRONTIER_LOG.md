@@ -48756,3 +48756,21 @@ standalone CNZ remains at f0 in both scopes.
   its current later-slot pass. The replay also revalidates the earlier f23327
   and f23711 first-active-frame deferrals; both groups next diverge at f24374
   on the post-boss camera X position.
+
+## 2026-07-22 - ICZ two-stage final defeat handoff
+
+- **`s3k_icz1` physics and animation advanced from f24374 to f24407.** Total
+  errors remain 60; the focused ICZ end-boss suite remains green.
+- Root: the ROM's final-hit path installs `Wait_FadeToLevelMusic` with the
+  retained `$2E=$3F` wait. Its callback releases the three shell fragments at
+  `loc_71D80`, seeds `$2E=(2*60)-1`, and waits another 120 object passes before
+  `loc_71D9E` allocates the capsule and gradual max-X helper. The engine had
+  collapsed both phases into one 128-frame delay, opening the arena 56 frames
+  early.
+- Fix: the defeated boss now owns separate shell-release and capsule-handoff
+  countdowns. The fragments allocate at the first callback, while the capsule
+  and fallible first-free max-X helper allocate only after the second wait.
+- Validation: focused coverage verifies fragments are live while the capsule
+  is still absent after the retained `$3F` phase. The replay reaches the native
+  handoff and next diverges at f24407 because the gradual max-X update is one
+  pass behind native.
