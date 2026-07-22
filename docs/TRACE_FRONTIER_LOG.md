@@ -48717,3 +48717,22 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: focused coverage verifies the one-pass wait, and the replay now
   collects the first matching spilled ring at f24119. Both groups next diverge
   at f24120 on the second ring pickup.
+
+## 2026-07-22 - S3K logical Obj37 spill continuation
+
+- **`s3k_icz1` physics and animation advanced from f24120 to f24184.** Total
+  errors fell from 141 to 140; focused lost-ring coverage remains green.
+- Root: the engine's consolidated Java object representation exhausted its
+  managed dynamic-slot projection after materializing 23 of the 32 native
+  Obj37 entries. Native still had SST entries for the tail of the
+  `AllocateObjectAfterCurrent` chain, including the ring collected at f24120.
+- Fix: S3K after-current spills keep their remaining logical Obj37 entries in
+  the existing slotless object-execution path. Their logical slot numbers
+  continue beyond the last physical allocation solely to preserve the live
+  `Process_Sprites` countdown used for floor cadence and animation; they do not
+  consume or release fictitious physical slots. S1/S2 retain stop-on-allocation-
+  failure behavior.
+- Validation: focused coverage exhausts the S3K managed slot projection and
+  verifies the full 32-ring cap plus distinct continued countdown phases. The
+  replay restores the second post-boss pickup; both groups next diverge at
+  f24184 on CPU Tails' boss interaction.

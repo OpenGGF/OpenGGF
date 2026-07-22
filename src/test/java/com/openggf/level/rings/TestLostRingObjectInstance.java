@@ -906,6 +906,34 @@ class TestLostRingObjectInstance {
         return ring;
     }
 
+    @Test
+    void s3kAfterCurrentSpillContinuesLogicallyPastManagedSlotExhaustion() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        objectManager.reserveAllButNFreeSlots(3);
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+        ringManager.spawnLostRings(player, 32, 0);
+
+        List<LostRingObjectInstance> rings =
+                objectManager.activeObjectsOfType(LostRingObjectInstance.class);
+        assertEquals(32, rings.size(), "S3K's logical after-current chain keeps the full ROM spill cap");
+        assertEquals(3, rings.stream().filter(ring -> ring.getSlotIndex() >= 0).count());
+        List<LostRingObjectInstance> logical = rings.stream()
+                .filter(ring -> ring.getSlotIndex() < 0)
+                .toList();
+        assertEquals(29, logical.size());
+        assertEquals(16, logical.get(0).getPhaseOffset(),
+                "the first virtual entry continues after physical slot 92 in the 110-slot process loop");
+        assertEquals(15, logical.get(1).getPhaseOffset(),
+                "successive virtual entries retain distinct Process_Sprites countdown phases");
+    }
+
     private void reserveS2Arz2LateFreedLostRingLayout(ObjectManager objectManager) {
         for (int slot = 16; slot <= 57; slot++) {
             if (slot == 48 || slot == 49 || slot == 54 || slot == 55 || slot == 57) {

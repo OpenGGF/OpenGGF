@@ -2059,6 +2059,25 @@ public class ObjectManager {
     }
 
     /**
+     * Registers an Obj37 continuation that has no distinct Java allocator slot.
+     * S3K's after-current spill ordering can outlive the engine's managed-slot
+     * projection when other native SST occupants are represented by consolidated
+     * Java objects. The ring remains ordered logically by the caller, executes in
+     * the slotless fallback, and neither consumes nor releases a physical slot.
+     */
+    public void spawnLogicalLostRingOverflow(AbstractObjectInstance ring) {
+        if (ring == null) {
+            return;
+        }
+        ring.setServices(objectServices);
+        ring.setSlotIndex(-1);
+        assignRewindObjectId(ring, ring.getSpawn());
+        dynamicObjects.add(ring);
+        bucketsDirty = true;
+        activeObjectsCacheDirty = true;
+    }
+
+    /**
      * Returns all live objects of the given concrete type, in ascending slot order.
      */
     public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {

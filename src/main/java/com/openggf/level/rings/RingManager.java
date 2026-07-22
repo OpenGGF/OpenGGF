@@ -1640,7 +1640,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                             ? objectManager.allocateSlotAfter(previousSlot)
                             : objectManager.allocateDynamicSlot();
                 }
-                if (slotIndex < 0) {
+                // S3K's Obj37 chain uses AllocateObjectAfterCurrent. Preserve the
+                // remaining logical entries when the engine's consolidated object
+                // model exhausts its physical slot projection; S1/S2 retain native
+                // stop-on-allocation-failure behavior.
+                boolean logicalOverflow = slotIndex < 0 && allocateRemainderAfterOwner;
+                if (slotIndex < 0 && !logicalOverflow) {
                     // ROM: no free slot → stop spilling (truncate the remainder).
                     int truncated = toSpawn - spawned;
                     LOG.log(System.Logger.Level.DEBUG, () -> "spawnLostRings: dynamic slot pool "
@@ -1648,7 +1653,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     break;
                 }
 
-                int phase = phaseOffsetForSlot(objectManager, slotIndex);
+                // Process_Sprites' d7 countdown supplies both animation phase and
+                // floor-probe cadence. Continue that countdown across virtual entries;
+                // using -1 would collapse every overflow ring onto the same phase.
+                int phaseSlotIndex = logicalOverflow ? previousSlot + 1 : slotIndex;
+                int phase = phaseOffsetForSlot(objectManager, phaseSlotIndex);
                 LostRing ring = ringPool[activeRingCount];
                 ring.reset(phase, x, y,
                         xVel, yVel, LIFETIME_FRAMES);
@@ -1676,8 +1685,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                         // receive an extra movement step in the allocation pass.
                         ringObject.deferFirstUpdateUntilOwnerPass();
                     }
-                    objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
-                    if (applyInitialObjectStep && appliesInitialObj37Step(slotIndex, firstReservedSlot)) {
+                    if (logicalOverflow) {
+                        objectManager.spawnLogicalLostRingOverflow(ringObject);
+                    } else {
+                        objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
+                    }
+                    if (applyInitialObjectStep
+                            && (logicalOverflow || appliesInitialObj37Step(slotIndex, firstReservedSlot))) {
                         ringObject.updateMovement();
                     }
                     if (objectManager.hasInheritedRingCounterPhase()) {
@@ -1685,7 +1699,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     }
                 }
                 activeRingCount++;
-                previousSlot = slotIndex;
+                previousSlot = phaseSlotIndex;
                 spawned++;
                 xVel = -xVel;
                 angle = -angle;
