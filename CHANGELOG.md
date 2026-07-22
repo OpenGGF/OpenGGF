@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Mod API 2.4 MGZ carry aliases retain their runtime semantics under 2.5.**
+  Protected owner and spring-handoff fields are again authoritative for legacy
+  subclasses and stay synchronized with the extracted playable controller.
+  Owner clear, reset, release, debug, and deferred-cleanup paths now clear both
+  representations, preventing a stale pending handoff after the carry ends.
 - **Mod API 2.5.0 publishes the accumulated runtime surface without breaking 2.4
   creator binaries.** All frozen 2.4 constructors, record components, protected
   members, and return descriptors are restored; accidental frame-handoff,

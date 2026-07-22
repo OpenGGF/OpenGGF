@@ -872,7 +872,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectControlSuppressesMovement = false;
                 this.objectControlGeneration = 0;
                 this.suppressedObjectMoveAndFallAxes = 0;
-                controller.clearObjectControlledSolidContactOwner();
+                clearMgzTopPlatformCarryCompatibilityState();
                 this.hidden = false;
                 this.objectControlReleasedFrame = Integer.MIN_VALUE;
                 this.jumpInputPressed = false;
@@ -928,6 +928,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public PerObjectRewindSnapshot captureRewindState(boolean includeFollowHistory) {
+                syncControllerFromLegacyMgzAliases();
                 SidekickCpuRewindExtra sidekickCpuExtra =
                         cpuController != null ? cpuController.captureRewindState() : null;
                 PlayableSpriteController.RewindState controllerState = controller.captureRewindState();
@@ -982,9 +983,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         hidden,
                         renderFlagOnScreen, renderFlagOnScreenValid,
                         renderHFlip, renderVFlip,
-                        controller.isSpringHandoffPending(),
-                        controller.getSpringHandoffXVelocity(),
-                        controller.getSpringHandoffYVelocity(),
+                        mgzTopPlatformSpringHandoffPending,
+                        mgzTopPlatformSpringHandoffXVel,
+                        mgzTopPlatformSpringHandoffYVel,
                         jumpInputPressed, jumpInputJustPressed, jumpInputPressedPreviousFrame,
                         upInputPressed, downInputPressed,
                         leftInputPressed, rightInputPressed,
@@ -3137,8 +3138,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         this.deferredObjectControlRelease = false;
                         this.objectControlSuppressesMovement = true;
                 } else {
-                        controller.setObjectControlledSolidContactOwner(null);
-                        clearMgzTopPlatformSpringHandoff();
+                        clearMgzTopPlatformCarryCompatibilityState();
                         this.objectControlAllowsCpu = false;
                         this.objectControlSuppressesMovement = false;
                 }
@@ -3209,28 +3209,37 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * generic wall-cling rule.
          */
         public boolean allowsSolidContactsWhileObjectControlled(ObjectInstance candidate) {
+                syncControllerFromLegacyMgzAliases();
                 return controller.allowsObjectControlledSolidContact(candidate);
         }
 
         public void notifyObjectControlledSolidContact(ObjectInstance candidate, SolidContact contact) {
+                syncControllerFromLegacyMgzAliases();
                 controller.notifyObjectControlledSolidContact(candidate, contact);
         }
 
         Short getObjectControlledSolidContactProjectedXSpeed(ObjectInstance candidate) {
+                syncControllerFromLegacyMgzAliases();
                 return controller.projectedObjectControlledSolidContactXSpeed(candidate);
         }
 
         public void notifyObjectControlledSolidContactInvalidated(ObjectInstance candidate) {
+                syncControllerFromLegacyMgzAliases();
                 controller.notifyObjectControlledSolidContactInvalidated(candidate);
         }
 
         public void setMgzTopPlatformCarrySolidContactObject(ObjectInstance instance) {
+                if (instance == null) {
+                        clearMgzTopPlatformCarryCompatibilityState();
+                        return;
+                }
                 mgzTopPlatformCarrySolidContactObject = instance;
-                controller.setObjectControlledSolidContactOwner(instance);
+                syncControllerFromLegacyMgzAliases();
         }
 
         public boolean isMgzTopPlatformCarryOwnedBy(ObjectInstance instance) {
-                return controller.isObjectControlledSolidContactOwnedBy(instance);
+                syncControllerFromLegacyMgzAliases();
+                return mgzTopPlatformCarrySolidContactObject == instance;
         }
 
         public void recordMgzTopPlatformSpringHandoff(int xVel, int yVel) {
@@ -3239,23 +3248,22 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         mgzTopPlatformSpringHandoffXVel = xVel;
                         mgzTopPlatformSpringHandoffYVel = yVel;
                 }
-                controller.recordSpringHandoff(xVel, yVel);
+                syncControllerFromLegacyMgzAliases();
         }
 
         public boolean hasMgzTopPlatformSpringHandoffPending() {
-                return mgzTopPlatformSpringHandoffPending || controller.isSpringHandoffPending();
+                syncControllerFromLegacyMgzAliases();
+                return mgzTopPlatformSpringHandoffPending;
         }
 
         public int getMgzTopPlatformSpringHandoffXVel() {
-                return mgzTopPlatformSpringHandoffPending
-                                ? mgzTopPlatformSpringHandoffXVel
-                                : controller.getSpringHandoffXVelocity();
+                syncControllerFromLegacyMgzAliases();
+                return mgzTopPlatformSpringHandoffXVel;
         }
 
         public int getMgzTopPlatformSpringHandoffYVel() {
-                return mgzTopPlatformSpringHandoffPending
-                                ? mgzTopPlatformSpringHandoffYVel
-                                : controller.getSpringHandoffYVelocity();
+                syncControllerFromLegacyMgzAliases();
+                return mgzTopPlatformSpringHandoffYVel;
         }
 
         public void clearMgzTopPlatformSpringHandoff() {
@@ -3265,6 +3273,23 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 controller.clearSpringHandoff();
         }
 
+        private void syncControllerFromLegacyMgzAliases() {
+                controller.setObjectControlledSolidContactOwner(mgzTopPlatformCarrySolidContactObject);
+                if (mgzTopPlatformCarrySolidContactObject != null) {
+                        controller.restoreSpringHandoff(mgzTopPlatformSpringHandoffPending,
+                                        mgzTopPlatformSpringHandoffXVel,
+                                        mgzTopPlatformSpringHandoffYVel);
+                }
+        }
+
+        private void clearMgzTopPlatformCarryCompatibilityState() {
+                mgzTopPlatformCarrySolidContactObject = null;
+                mgzTopPlatformSpringHandoffPending = false;
+                mgzTopPlatformSpringHandoffXVel = 0;
+                mgzTopPlatformSpringHandoffYVel = 0;
+                controller.setObjectControlledSolidContactOwner(null);
+        }
+
         /**
          * Returns whether the current hurt path should suppress generic lost-ring
          * spawning for the active MGZ top-platform carry state. This stays tied to
@@ -3272,7 +3297,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * future status_tertiary users do not inherit the exception accidentally.
          */
         public boolean suppressesLostRingSpawnOnHurt() {
-                return isWallCling() && controller.hasObjectControlledSolidContactOwner();
+                syncControllerFromLegacyMgzAliases();
+                return isWallCling() && mgzTopPlatformCarrySolidContactObject != null;
         }
 
         public boolean isSuppressAirCollision() {
@@ -3353,7 +3379,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectControlled = false;
                 this.objectControlAllowsCpu = false;
                 this.objectControlSuppressesMovement = false;
-                controller.clearObjectControlledSolidContactOwner();
+                clearMgzTopPlatformCarryCompatibilityState();
                 this.objectControlReleasedFrame = frameCounter;
         }
 
@@ -4006,7 +4032,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 objectControlled = false;
                 objectControlAllowsCpu = false;
                 objectControlSuppressesMovement = false;
-                controller.clearObjectControlledSolidContactOwner();
+                clearMgzTopPlatformCarryCompatibilityState();
                 onObject = false;           // Clear "standing on object" flag
                 latchedSolidObjectId = 0;
                 stickToConvex = false;      // Clear slope adhesion flag (set by slope-mode launches)
@@ -4959,7 +4985,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         objectControlled = false;
                         objectControlAllowsCpu = false;
                         objectControlSuppressesMovement = false;
-                        controller.clearObjectControlledSolidContactOwner();
+                        clearMgzTopPlatformCarryCompatibilityState();
                         deferredObjectControlRelease = false;
                 }
                 suppressNextGravityStep = false;
