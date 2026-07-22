@@ -330,6 +330,30 @@ class TestLbzRollingDrumInstance {
     }
 
     @Test
+    void nativeP2AirBitReleasesBeforeSinePathPositioning() {
+        LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
+        TestablePlayableSprite p1 = groundedPlayer(0x1000, 0x0500);
+        TestablePlayableSprite p2 = groundedPlayer(0x1800, 0x05C0);
+        drum.setServices(new TestObjectServices() {
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> p1, () -> List.of(p2));
+            }
+        });
+        drum.update(0, p1);
+        assertTrue(drum.isNativeRidingForTest(1));
+        p2.setCentreY((short) 0x05D0);
+        p2.setAir(true);
+
+        drum.update(1, p1);
+
+        assertFalse(drum.isNativeRidingForTest(1));
+        assertTrue(p2.getAir());
+        assertEquals(0x05D0, p2.getCentreY() & 0xFFFF,
+                "loc_2C46E branches to release on native P2 Status_InAir before loc_2C4BA writes y_pos");
+    }
+
+    @Test
     void rightMovingRiderWithLostPlayerLatchIsReattachedInsideHorizontalWindow() {
         LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
         TestablePlayableSprite player = groundedPlayer(0x1800, 0x05C0);

@@ -174,7 +174,10 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         int dx = signedWordDelta(player.getCentreX(), spawn.x());
         boolean insideHorizontalWindow = dx >= leftBound && dx < rightBound;
         if (player.getAir()) {
-            if (insideHorizontalWindow && !player.isJumping() && !player.isHurt()) {
+            if (nativePlayerIndex == 0
+                    && insideHorizontalWindow
+                    && !player.isJumping()
+                    && !player.isHurt()) {
                 player.setAir(false);
                 refreshRideLatch(player);
             } else {

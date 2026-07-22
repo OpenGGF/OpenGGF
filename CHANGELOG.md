@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ rolling drums now reserve the engine's stale-air latch repair for native P1 while native P2 follows `loc_2C46E` and releases immediately when its player slot publishes `Status_InAir`. This advances the combined LBZ frontier from frame 9953 to frame 10272 without regressing another trace frontier.
 - Fix: adjacent LBZ rolling drums now preserve the live ride latch during a valid rightward overlap handoff, matching the native case where the receiving drum's earlier SST slot captures before the outgoing controller can release. This advances the combined LBZ frontier from frame 9916 to frame 9953 without regressing another trace frontier.
 - Fix: grounded braking now honors S3K's signed `flip_type` skid suppression before writing Stop animation or changing facing. This preserves rolling-drum tumble ownership and advances the combined LBZ frontier from frame 9906 to frame 9916 without regressing another trace frontier.
 - Fix: LBZ rolling-drum transfers now decide `Player_TouchFloor` from the live airborne bit after the outgoing controller has run, matching `RideObject_SetRide` rather than retaining the player's frame-start ride state. This clears the transfer's stale tumble angle and advances the combined LBZ frontier from frame 9869 to frame 9906 without regressing another trace frontier.

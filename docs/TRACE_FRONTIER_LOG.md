@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ native-P2 airborne drum release
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 9953 to
+  frame 10272.** Total release-blocking errors fell from 6057 to 5283; the next
+  divergence is CPU Tails' mapping frame (`$07` expected versus `$08` actual).
+- Root: when Player 2's slot published `Status_InAir` while Tails remained
+  marked on a rolling drum, native `loc_2C46E` branched immediately to the
+  release path before `loc_2C4BA` could write the sine-derived Y position. The
+  engine applied its earlier P1 stale-air latch repair to both players and
+  incorrectly re-seated Tails three pixels lower.
+- Fix: the stale-air compatibility repair is now limited to native P1. Native
+  P2 follows the ROM's unconditional airborne release before any ride-position
+  write. A focused two-player test verifies the standing bit is cleared and
+  P2's incoming Y remains untouched.
+- Validation: all 21 focused rolling-drum tests pass and the LBZ replay reaches
+  frame 10272. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - LBZ rightward drum handoff ordering
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 9916 to
