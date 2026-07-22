@@ -609,8 +609,15 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
         private List<PlayableEntity> nativePlayers(PlayableEntity updatePlayer) {
             ObjectServices services = tryServices();
-            if (services != null && services.playerQuery() != null) {
-                return services.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+            if (services != null) {
+                try {
+                    ObjectPlayerQuery query = services.playerQuery();
+                    if (query != null) {
+                        return query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+                    }
+                } catch (RuntimeException ignored) {
+                    // Lightweight object tests may not install a participation query.
+                }
             }
             return updatePlayer == null ? List.of() : List.of(updatePlayer);
         }

@@ -880,7 +880,6 @@ class TestS3kIczEndBossObject {
 
         bindPlayerToFrostPuff(instance, player, activeTopSteam);
 
-        instance.update(nextFrame++, player);
         instance.update(nextFrame, player);
         publishBossSolidContact(instance, player, nextFrame);
 

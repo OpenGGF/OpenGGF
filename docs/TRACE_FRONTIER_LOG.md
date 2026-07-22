@@ -48682,3 +48682,21 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: focused coverage verifies attacker bounce and damage-free captive
   release. Both replay groups pass the f23822 contact and next diverge at
   f23895 on Sonic's horizontal velocity.
+
+## 2026-07-22 - ICZ damaged top-steam capture checkpoint
+
+- **`s3k_icz1` physics and animation advanced from f23895 to f24119.** Total
+  errors fell from 394 to 141; the focused boss and freezer suites remain
+  green.
+- Root: native adjusted-position top steam in `loc_72092`, occupying slot 28,
+  freezes Sonic during its f23895 execution. The folded engine child found the
+  same overlap on that frame but put every at/after-bottom frost routine through
+  the ordinary smoke's next-parent-pass promotion, allowing one extra player
+  movement before capture.
+- Fix: capture publication now preserves the source routine as well as SST
+  order. Adjusted-position top steam at or after the bottom checkpoint becomes
+  ready for the current solid callback; ordinary `loc_7205E` smoke and
+  before-bottom sources retain their established deferred phases.
+- Validation: focused top-steam coverage requires capture from the current
+  checkpoint. The full replay also revalidates the earlier f23327 normal-smoke
+  deferral and both groups next diverge at f24119 on ring state.

@@ -738,8 +738,15 @@ public final class IczEndBossInstance extends AbstractBossInstance
         for (int index = 0; index < participants.size() && index < 2; index++) {
             PlayableEntity candidate = participants.get(index);
             if (candidate instanceof AbstractPlayableSprite sprite && canFrostCapture(sprite, child)) {
+                boolean beforeBottomSolid = child.nativeSlot >= 0
+                        && child.nativeSlot < bottomStructuralChildSlot();
+                // loc_72092 is the adjusted-position top-steam routine. Once
+                // its slot is at/after the bottom-child checkpoint, its
+                // sub_8A9C6 capture belongs to this pass. The ordinary
+                // loc_7205E folded smoke animation remains one parent pass
+                // ahead and retains the existing pending promotion.
                 queueFrostCapture(index, child.x, child.nativeSlot,
-                        child.nativeSlot >= 0 && child.nativeSlot < bottomStructuralChildSlot());
+                        beforeBottomSolid, child.adjustedPosition && !beforeBottomSolid);
             }
         }
     }
@@ -749,7 +756,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     private void queueFrostCapture(int participantIndex, int sourceX, int sourceSlot,
-            boolean beforeBottomSolid) {
+            boolean beforeBottomSolid, boolean currentSolidCheckpoint) {
         int bit = 1 << participantIndex;
         int allCaptureMasks = pendingFrostCaptureMask | readyFrostCaptureMask
                 | pendingBeforeSolidFrostCaptureMask | readyBeforeSolidFrostCaptureMask;
@@ -764,6 +771,17 @@ public final class IczEndBossInstance extends AbstractBossInstance
             } else {
                 pendingBeforeSolidFrostCaptureP2SourceX = sourceX;
                 pendingBeforeSolidFrostCaptureP2SourceSlot = sourceSlot;
+            }
+            return;
+        }
+        if (currentSolidCheckpoint) {
+            readyFrostCaptureMask |= bit;
+            if (participantIndex == 0) {
+                readyFrostCaptureP1SourceX = sourceX;
+                readyFrostCaptureP1SourceSlot = sourceSlot;
+            } else {
+                readyFrostCaptureP2SourceX = sourceX;
+                readyFrostCaptureP2SourceSlot = sourceSlot;
             }
             return;
         }
