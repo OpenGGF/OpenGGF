@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ Cork Floors now use `sub_1DDC6`'s native sloped full-solid height table and its single `$24` vertical catch range instead of a flat `SolidObjectFull` surface. This aligns the complete-run landing at frame 19399, advances physics to frame 19427, and leaves animation as the leading frontier at frame 19404.
 - Fix: ICZ miniboss defeat now runs its explosion controller in a real child SST and stops the active snow emitter from the native post-explosion callback. This preserves RNG/object-slot order, restores the missed lightning-shield ring, and advances both ICZ complete-run trace groups to frame 19398.
 - Fix: ICZ tension platforms now reject the exact zero-penetration `SolidObjectTop` boundary selected by the helper's unsigned `cmpi #-$10 / blo` branch. This advances both ICZ complete-run trace groups to frame 17530.
 - Fix: ICZ tension platforms now use the native `SolidObjectTop` `d3` surface height for fresh-contact detection, preventing rolling Sonic from landing one frame early. This advances both ICZ complete-run trace groups to frame 16975.

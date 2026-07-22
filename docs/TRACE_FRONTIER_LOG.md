@@ -48325,3 +48325,21 @@ standalone CNZ remains at f0 in both scopes.
   object-owned snow emitter before starting the signpost flow.
 - Validation: `TestS3kIczCompleteRunTraceReplay` now reaches f19398, where the
   next divergence is Sonic's vertical speed. Trace data remains comparison-only.
+
+## 2026-07-22 - ICZ Cork Floor sloped-solid landing
+
+- **`s3k_icz1` physics advanced from f19398 to f19427; the combined frontier
+  is now animation at f19404.** The native landing at f19399 now matches its
+  position, subpixel word, velocity reset, ride slot, and camera cadence.
+- Root: ICZ subtype bit 4 clear installs `loc_2A6D4`, which calls
+  `sub_1DDC6` with `byte_2A894`. The engine treated the Cork Floor as a flat
+  `SolidObjectFull` box at `y-$24`, grounding Sonic one frame early and five
+  pixels too high. The sloped helper also receives only `d2=$24`; it does not
+  use the ordinary grounded `d3=d2+1` extent.
+- Fix: ICZ plane-switch Cork Floors now publish the ROM's 28-byte sampled
+  surface, first-byte baseline, catch-range overlap, and single `$24` vertical
+  extent through the shared sloped-solid profile. Other zone/subtype variants
+  remain on their existing flat `SolidObjectFull` path.
+- Validation: `TestS3kIczCompleteRunTraceReplay` now first diverges on Sonic's
+  animation at f19404; physics first diverges at f19427. Trace data remains
+  comparison-only.
