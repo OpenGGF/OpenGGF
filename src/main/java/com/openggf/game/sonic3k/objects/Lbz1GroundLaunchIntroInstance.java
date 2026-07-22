@@ -119,6 +119,12 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
                 sprite.setControlLocked(true);
                 sprite.clearForcedInputMask();
                 ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+                primeHeldCpuMappingFromCurrentAnimation(sprite);
+                // Obj_LevelIntro_PlayerLaunchFromGround writes object_control=$03.
+                // Bit 1 skips Animate_Sonic/Animate_Tails, so the mapping frame
+                // remains object-owned throughout the buried 30-frame hold.
+                // sonic3k.asm:77245-77249, 22067-22076, 26257-26272.
+                sprite.setObjectMappingFrameControl(true);
             }
         }
     }
@@ -130,6 +136,10 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
             if (player instanceof AbstractPlayableSprite sprite) {
                 sprite.setJumping(false);
                 applySpringLaunchAnimation(sprite);
+                // sub_39AB4 replaces $03 with object_control=$01: movement stays
+                // object-owned, but the ordinary animator resumes on the next
+                // player-slot dispatch. sonic3k.asm:77275-77281.
+                sprite.setObjectMappingFrameControl(false);
                 sprite.setControlLocked(true);
                 sprite.clearForcedInputMask();
                 ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
@@ -142,16 +152,27 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
         sprite.forceAnimationRestart();
         sprite.setAnimationFrameIndex(0);
         sprite.setAnimationTick(0);
+    }
 
+    private void primeHeldCpuMappingFromCurrentAnimation(AbstractPlayableSprite sprite) {
+        // A CPU follower can enter LBZ through the seamless ICZ handoff with a
+        // live raw animation byte but no engine-side predecessor tick to publish
+        // its carried mapping. Reconstruct that native pre-existing mapping from
+        // the live animation script before object_control bit 1 freezes Animate.
+        // This consumes no trace state and leaves fresh players (anim 0) alone.
+        if (!sprite.isCpuControlled() || sprite.getAnimationId() == 0
+                || sprite.getMappingFrame() != 0) {
+            return;
+        }
         var animationSet = sprite.getAnimationSet();
         if (animationSet == null) {
             return;
         }
-        var springScript = animationSet.getScript(Sonic3kAnimationIds.SPRING.id());
-        if (springScript == null || springScript.frames().isEmpty()) {
+        var currentScript = animationSet.getScript(sprite.getAnimationId());
+        if (currentScript == null || currentScript.frames().isEmpty()) {
             return;
         }
-        sprite.setMappingFrame(springScript.frames().getFirst());
+        sprite.setMappingFrame(currentScript.frames().getFirst());
     }
 
     private void holdInputLocked() {
@@ -204,6 +225,7 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
     private void releasePlayer(AbstractPlayableSprite player) {
         player.setControlLocked(false);
         ObjectControlState.none().applyTo(player);
+        player.setObjectMappingFrameControl(false);
         player.clearForcedInputMask();
     }
 

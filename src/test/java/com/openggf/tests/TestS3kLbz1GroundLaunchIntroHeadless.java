@@ -65,9 +65,13 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 "LBZ1 should begin near the buried ROM start Y before the launch.");
         assertEquals(startY, sonic.getCentreY() & 0xFFFF,
                 "Arming the launch controller should not move Sonic before the launch timer expires.");
+        assertEquals(0, sonic.getMappingFrame(),
+                "ROM object_control bit 1 should preserve the initialized null mapping during the hold.");
 
         for (int frame = 0; frame < 29; frame++) {
             fixture.stepFrame(false, false, false, false, false);
+            assertEquals(0, sonic.getMappingFrame(),
+                    "The ordinary player animator must remain suppressed throughout the pre-launch hold.");
         }
         assertEquals(0, sonic.getYSpeed(), "The ROM waits 30 frames before applying launch velocity.");
         assertTrue(sonic.isControlLocked(), "Input remains locked during the pre-launch delay.");
@@ -78,8 +82,12 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
         assertTrue(sonic.getAir(), "The launch marks Sonic airborne.");
         assertEquals(Sonic3kAnimationIds.SPRING.id(), sonic.getAnimationId(),
                 "The launch uses the ROM spring animation.");
+        assertEquals(0, sonic.getMappingFrame(),
+                "The post-player object writes spring anim without retroactively running Animate_Sonic.");
+
+        fixture.stepFrame(false, false, false, false, false);
         assertEquals(firstFrameOfAnimation(sonic, Sonic3kAnimationIds.SPRING.id()), sonic.getMappingFrame(),
-                "The visible mapping frame should switch to the spring animation on the launch frame.");
+                "The next player-slot dispatch should publish the spring mapping frame.");
 
         for (int frame = 0; frame < 90 && sonic.isControlLocked(); frame++) {
             fixture.stepFrame(false, false, false, false, false);
@@ -179,6 +187,27 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 "Release should not immediately fall back to the running/walking animation.");
         assertEquals(springFrame, sonic.getMappingFrame(),
                 "Release should leave the visible spring pose in place.");
+    }
+
+    @Test
+    void lbz1GroundLaunchPreservesEstablishedSidekickAnimationMapping() {
+        SonicConfigurationService.getInstance().setConfigValue(
+                SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
+                .build();
+        AbstractPlayableSprite tails = GameServices.sprites().getRegisteredSidekicks().getFirst();
+        tails.setAnimationId(5);
+        tails.setMappingFrame(0);
+
+        applyTitleCardHandoff();
+
+        assertEquals(firstFrameOfAnimation(tails, 5), tails.getMappingFrame(),
+                "The hold should reconstruct and retain the established follower's live animation mapping.");
+        fixture.stepIdleFrames(5);
+        assertEquals(firstFrameOfAnimation(tails, 5), tails.getMappingFrame(),
+                "ROM object_control bit 1 keeps the sidekick animator from replacing the held mapping.");
     }
 
     @Test

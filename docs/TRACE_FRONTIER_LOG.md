@@ -48862,3 +48862,31 @@ standalone CNZ remains at f0 in both scopes.
   zone/route/frame exception.
 - Validation: the focused complete-run replay reports zero physics or animation
   divergences through frame 25254 and the frozen transition tail.
+
+## 2026-07-22 - LBZ ground-launch animation ownership
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 0 to frame
+  1659.** Total release-blocking errors fell from 9312 to 9310; the first
+  remaining divergence is Sonic's mapping frame while running at frame 1659.
+- Root: `Obj_LevelIntro_PlayerLaunchFromGround` writes `object_control=$03`
+  during its 30-frame buried hold. Bit 1 bypasses `Animate_Sonic` and
+  `Animate_Tails`, so the engine must preserve the existing mapping even while
+  the raw animation byte changes. At launch, `sub_39AB4` writes Spring and
+  changes control to `$01`; the spring mapping is therefore published by the
+  next player-slot dispatch rather than eagerly by the later object slot.
+- Fix: the launch controller now owns mapping frames only while native control
+  bit 1 is set, releases that ownership at the `$03` to `$01` transition, and
+  initializes CPU Tails' carried mapping from its live animation script when a
+  seamless ICZ handoff has no predecessor engine tick to publish it. Focused
+  headless coverage checks the complete hold, launch-frame deferral, following
+  player dispatch, and established sidekick mapping.
+- Validation: `TestS3kLbz1GroundLaunchIntroHeadless` passes all six cases and
+  `TestS3kLbzCompleteRunTraceReplay` reaches frame 1659 in both-group mode. The
+  complete `*TraceReplay#replayMatchesTrace` sweep used the discovered S1, S2,
+  and locked-on S3K ROMs: 48 routes passed, 16 retained their documented red
+  frontiers, and two unsupported entries skipped. The known red routes include
+  S2 CNZ2 f1166, CPZ2 f1601, DEZ f0, MCZ2 f5445, OOZ1 f10220, SCZ f0, and WFZ
+  f0; S3K's existing AIZ input-alignment failure plus AIZ complete-run f9376,
+  CNZ standalone f0, CNZ complete-run f3035, MGZ standalone f5164, MGZ
+  complete-run f5550, MHZ combined-animation f218, and HCZ f29037. No
+  non-LBZ frontier moved.
