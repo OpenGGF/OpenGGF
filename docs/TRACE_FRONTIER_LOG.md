@@ -48646,3 +48646,22 @@ standalone CNZ remains at f0 in both scopes.
   shared solid-contact tests cover the default current-X behavior. The replay
   passes Tails' fall and next-frame landing, with both verification groups next
   diverging at f23622.
+
+## 2026-07-22 - ICZ boss child-entry contact Y
+
+- **`s3k_icz1` physics and animation advanced from f23622 to f23822.** Total
+  errors fell from 559 to 544; focused boss and solid-contact tests remain
+  green.
+- Root: the folded boss parent had already published its next +1 Y swing step
+  when the shared fresh-contact pass ran. Native bottom-child slot 28 still
+  resolves that frame against the parent Y visible at its own entry, while
+  retaining the child's current local `$43` shift offset. The engine therefore
+  missed Sonic's f23622 landing and established the ride one frame late.
+- Fix: the multi-piece fresh-contact seam now supplies both coordinates. The
+  ICZ bottom child combines the parent's saved entry Y with its live local
+  offset, leaving current piece coordinates authoritative for riding, touch,
+  and rendering.
+- Validation: focused coverage verifies the folded child's saved parent Y plus
+  local offset, and the replay passes all intervening boss landings. Both
+  verification groups next diverge at f23822 on the sign of Sonic's vertical
+  boss-contact rebound.

@@ -42,6 +42,11 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
         return getPieceX(pieceIndex);
     }
 
+    /** Fresh-contact Y counterpart to {@link #getPieceFreshContactX(int, PlayableEntity)}. */
+    default int getPieceFreshContactY(int pieceIndex, PlayableEntity player) {
+        return getPieceY(pieceIndex);
+    }
+
     /**
      * Returns collision parameters for the specified piece.
      * Default implementation returns the same params for all pieces.

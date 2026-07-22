@@ -1198,6 +1198,12 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     @Override
+    public int getPieceFreshContactY(int pieceIndex, PlayableEntity player) {
+        StructuralChild bottom = structuralChildren[BOTTOM_CHILD_INDEX];
+        return getPreUpdateY() + bottom.baseDy + bottom.localYOffset;
+    }
+
+    @Override
     public int getTopLandingSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
         // The engine folds loc_71F30's solid child into the parent. On a fresh
         // contact the shared pre-object pass therefore sees the child's $43

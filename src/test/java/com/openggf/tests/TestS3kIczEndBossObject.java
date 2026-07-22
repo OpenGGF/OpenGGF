@@ -526,6 +526,10 @@ class TestS3kIczEndBossObject {
             if (instance.getX() != entryX) {
                 assertEquals(entryX, boss.getPieceFreshContactX(0, player),
                         "loc_71F30 saves x_pos before folded parent motion is published");
+                assertEquals(instance.getPreUpdateY()
+                                + invokeInt(instance, "getBottomChildLocalYOffsetForTesting") + 0x2D,
+                        boss.getPieceFreshContactY(0, player),
+                        "fresh contact keeps the child-local offset on its saved parent Y");
                 return;
             }
         }

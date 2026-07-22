@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: folded multi-piece solids can also expose a native fresh-contact Y independently from their live piece position; the ICZ boss combines its saved parent Y with the current child-local offset so descending-platform landings occur on the native child SST pass. This advances both complete-run groups from frame 23622 to 23822.
 - Fix: folded multi-piece solids can now expose a native fresh-contact X independently from their current riding/render position; the ICZ end boss uses its saved child-entry X, preventing a boundary landing one frame early. The boss also clears its stopped snow-emitter reference when ownership ends. This advances both complete-run groups from frame 23578 to 23622.
 - Fix: ICZ end-boss fresh-landing correction now follows the bottom child's active `$43` shift routine and retires with its terminal `Obj_Wait`, removing one-pixel landing transients after the child returns to routine 2. This advances both complete-run physics and animation to frame 23578.
 - Fix: ICZ end-boss folded structural and frost children now reserve SST slots at the ROM's post-camera-gate initialization point, allowing captures before or after the bottom solid child to publish in native slot order and allocating each frozen block after its capturing puff. This advances complete-run physics from frame 23337 to 23558.
