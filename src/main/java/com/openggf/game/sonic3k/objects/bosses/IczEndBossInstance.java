@@ -1108,7 +1108,15 @@ public final class IczEndBossInstance extends AbstractBossInstance
             }
             return;
         }
-        if (defeatTimer-- >= 0) {
+        // Wait_FadeToLevelMusic first decrements the retained $3F word on the
+        // pass after defeat. loc_71D80 then tail-enters child creation/Obj_Wait,
+        // which consumes the freshly seeded 119 word during that same dispatch;
+        // the folded engine phase returns after creating the debris, so its
+        // second counter must preserve that already-consumed native entry.
+        boolean waiting = defeatShellReleased
+                ? defeatTimer-- >= 0
+                : --defeatTimer >= 0;
+        if (waiting) {
             updateStructuralChildren();
             updateEffectChildren(null);
             updateRobotnikShip();

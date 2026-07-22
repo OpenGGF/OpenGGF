@@ -48774,3 +48774,19 @@ standalone CNZ remains at f0 in both scopes.
   is still absent after the retained `$3F` phase. The replay reaches the native
   handoff and next diverges at f24407 because the gradual max-X update is one
   pass behind native.
+
+## 2026-07-22 - ICZ defeat callback dispatch cadence
+
+- **`s3k_icz1` physics and animation advanced from f24407 to f24576.** Total
+  errors fell from 60 to 59; the focused ICZ end-boss suite remains green.
+- Root: `Wait_FadeToLevelMusic` decrements the retained `$3F` word on its next
+  object pass. Its `loc_71D80` callback then tail-enters child creation and
+  `Obj_Wait`, consuming the freshly seeded 119 word during the callback
+  dispatch. The folded engine state returned after fragment creation, leaving
+  the capsule and gradual max-X helper one pass late.
+- Fix: the first phase uses the ROM's pre-decrement wait, while the folded
+  second phase preserves the callback-entry decrement before resuming its
+  countdown. The helper's `$4000` accumulator now changes live max-X on the
+  same pass as native.
+- Validation: the replay matches the complete post-boss camera expansion and
+  next diverges at f24576 on Sonic's grounded/airborne state at the capsule.
