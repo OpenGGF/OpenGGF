@@ -2787,8 +2787,8 @@ public class SidekickCpuController {
         // The default rule copies the delayed Ctrl_1_logical low-byte press bits
         // directly into Ctrl_2_logical; consecutive recorded press bytes remain
         // presses (s2.asm:38939-38946,39025-39027;
-        // sonic3k.asm:26683-26689,26775-26782). The published 2.4 compatibility
-        // rule instead reconstructs the delayed press as a history edge.
+        // sonic3k.asm:26683-26689,26775-26782). Enabling the history-edge rule
+        // instead reconstructs the delayed press from consecutive samples.
         if ((recordedInput & AbstractPlayableSprite.INPUT_JUMP) == 0
                 || !effectiveLeader.getJumpPressHistory(delayFrames)) {
             return false;

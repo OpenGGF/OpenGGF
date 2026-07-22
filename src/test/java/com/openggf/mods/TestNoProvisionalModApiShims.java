@@ -48,7 +48,8 @@ class TestNoProvisionalModApiShims {
             "Binary-compatible constructor for Mod API 2.4",
             "Compatibility overload for API 1.1",
             "Historical Mod API 2.4 view",
-            "post-2.");
+            "post-2.",
+            "published 2.4 compatibility");
     private static final Comparator<MarkerOccurrence> MARKER_ORDER = Comparator
             .comparing((MarkerOccurrence occurrence) -> portablePath(occurrence.relativePath()))
             .thenComparing(MarkerOccurrence::marker);
