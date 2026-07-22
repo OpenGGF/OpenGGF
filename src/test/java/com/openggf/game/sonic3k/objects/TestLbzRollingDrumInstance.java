@@ -66,6 +66,7 @@ class TestLbzRollingDrumInstance {
         LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
         TestablePlayableSprite player = groundedPlayer(0x1800, 0x05AD);
         player.setGSpeed((short) 0);
+        player.setMappingFrame(0x96);
 
         drum.update(0, player);
 
@@ -78,6 +79,10 @@ class TestLbzRollingDrumInstance {
                 "loc_2C44E writes move.w #1,anim(a1), which means anim=0 and prev_anim=1");
         assertTrue(((UnitPlayableSprite) player).wasAnimationRestartForced(),
                 "move.w #1,anim(a1) forces anim != prev_anim, so the walk/tumble script must restart");
+        assertEquals(0x96, player.getMappingFrame(),
+                "The post-player capture must retain the mapping published before Obj31 executes");
+        assertFalse(player.isObjectMappingFrameControl(),
+                "Anim_Tumble resumes from the following player-slot dispatch");
         assertEquals((short) 1, player.getGSpeed(),
                 "loc_2C44E seeds ground_vel=1 when it was zero");
         assertEquals(0x81, drum.getRideAngleForTest(player),
@@ -224,22 +229,19 @@ class TestLbzRollingDrumInstance {
     }
 
     @Test
-    void activeRideRestoresObjectOwnedTumbleMappingAfterNormalAnimationOverwrite() {
+    void activeRideLeavesTumbleMappingOwnedByPlayerAnimator() {
         LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
         TestablePlayableSprite player = groundedPlayer(0x1800, 0x05AD);
 
         drum.update(0, player);
-        player.setAnimationId(Sonic3kAnimationIds.WAIT.id());
         player.setObjectMappingFrameControl(false);
-        player.setMappingFrame(0);
+        player.setMappingFrame(0x37);
         drum.update(1, player);
 
-        assertEquals(Sonic3kAnimationIds.WALK.id(), player.getAnimationId(),
-                "Obj31 keeps anim=0 active while flip_type/flip_angle select Anim_Tumble");
-        assertTrue(player.isObjectMappingFrameControl(),
-                "The drum must own the visible tumble mapping so idle animation cannot overwrite it between object frames");
-        assertEquals(rollingDrumTumbleFrame(0x01, 0x80), player.getMappingFrame(),
-                "Anim_Tumble uses flip_angle/flip_type to choose the rolling-drum pose");
+        assertFalse(player.isObjectMappingFrameControl(),
+                "Obj31 updates flip_angle after Animate and must not seize mapping ownership");
+        assertEquals(0x37, player.getMappingFrame(),
+                "The object pass must retain the Anim_Tumble mapping published by the earlier player slot");
     }
 
     @Test
@@ -251,10 +253,9 @@ class TestLbzRollingDrumInstance {
         drum.update(0, player);
         drum.update(1, player);
 
-        assertFalse(player.getRenderHFlip(),
-                "Anim_Tumble right-facing flip_type=$80 clears render_flags bit 0");
-        assertTrue(player.getRenderVFlip(),
-                "Anim_Tumble right-facing flip_type=$80 sets render_flags bit 1");
+        assertFalse(player.getRenderHFlip());
+        assertFalse(player.getRenderVFlip(),
+                "Obj31 must leave render flags at the values published by the earlier Anim_Tumble pass");
     }
 
     @Test
@@ -266,10 +267,9 @@ class TestLbzRollingDrumInstance {
         drum.update(0, player);
         drum.update(1, player);
 
-        assertTrue(player.getRenderHFlip(),
-                "Anim_Tumble left-facing flip_type=$80 sets render_flags bit 0");
-        assertTrue(player.getRenderVFlip(),
-                "Anim_Tumble left-facing flip_type=$80 sets render_flags bit 1 in LBZ");
+        assertFalse(player.getRenderHFlip());
+        assertFalse(player.getRenderVFlip(),
+                "Obj31 updates flip_angle after Animate without retroactively changing render flags");
     }
 
     @Test
@@ -323,7 +323,7 @@ class TestLbzRollingDrumInstance {
 
         drum.update(0, player);
         drum.update(1, player);
-        assertTrue(player.isObjectMappingFrameControl());
+        assertFalse(player.isObjectMappingFrameControl());
         player.setCentreXPreserveSubpixel((short) 0x1840);
         player.setAir(false);
         player.setFlipsRemaining(0x22);
@@ -422,14 +422,6 @@ class TestLbzRollingDrumInstance {
         int cos = TrigLookupTable.cosHex(angle);
         int radius = (yRadius << 8) + 0x4000;
         return drumY + ((cos * radius) >> 16);
-    }
-
-    private static int rollingDrumTumbleFrame(int flipAngle, int flipType) {
-        int type = flipType & 0x7F;
-        if (type == 1) {
-            return (((flipAngle & 0xFF) - 8) & 0xFF) / 0x16 + 0x3D;
-        }
-        return ((0x8F - (flipAngle & 0xFF)) & 0xFF) / 0x16 + 0x31;
     }
 
     private static ZoneRuntimeRegistry lbzRuntimeRegistry() {

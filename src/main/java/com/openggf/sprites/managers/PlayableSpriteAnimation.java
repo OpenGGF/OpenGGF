@@ -285,7 +285,12 @@ public class PlayableSpriteAnimation {
 
     private void updateWalkRun(SpriteAnimationScript baseScript, int remaining) {
         int flipAngle = sprite.getFlipAngle();
-        if (flipAngle != 0) {
+        // S3K tests signed flip_type before flip_angle. Obj31 deliberately
+        // captures a rider with flip_type=$80 and flip_angle=0 after the
+        // player's animation slot; the following Animate dispatch must enter
+        // Anim_Tumble even before the drum publishes its first non-zero angle.
+        // sonic3k.asm:24804-24812,60657-60670.
+        if ((sprite.getFlipType() & 0x80) != 0 || flipAngle != 0) {
             updateTumble(flipAngle);
             return;
         }
@@ -414,6 +419,7 @@ public class PlayableSpriteAnimation {
         int d0 = flipAngle & 0xFF;
         boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
         int flipType = sprite.getFlipType() & 0x7F;
+        boolean negativeFlipType = (sprite.getFlipType() & 0x80) != 0;
         int typedBase = profile != null ? profile.getTumbleTypeFrameBase(flipType) : -1;
         if (typedBase >= 0 && flipType >= 1 && flipType <= 3) {
             boolean hFlip = facingLeft;
@@ -434,8 +440,11 @@ public class PlayableSpriteAnimation {
             return;
         }
         if (!facingLeft) {
-            sprite.setRenderFlips(false, false);
-            int frame = ((d0 + 0x0B) & 0xFF) / 0x16;
+            sprite.setRenderFlips(false, negativeFlipType);
+            int adjusted = negativeFlipType
+                    ? ((-d0 + 0x8F) & 0xFF)
+                    : ((d0 + 0x0B) & 0xFF);
+            int frame = adjusted / 0x16;
             sprite.setMappingFrame(frame + base);
             sprite.setAnimationTick(0);
             return;

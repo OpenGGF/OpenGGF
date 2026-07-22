@@ -12,7 +12,6 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -41,9 +40,6 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     private static final int FLIP_TYPE_ACTIVE_FROM_REST = 0x81;
     private static final int FLIP_SPEED_RELEASE = 4;
     private static final int RIDE_ANGLE_STEP = 2;
-    private static final int TUMBLE_DIVISOR = 0x16;
-    private static final int TUMBLE_BASE = 0x31;
-    private static final int TUMBLE_FROM_REST_BASE = 0x3D;
     private static final int ANIMATION_ROLLING_DRUM = Sonic3kAnimationIds.WALK.id();
     // Obj_LBZRollingDrum installs loc_2C3CA in word 0 (sonic3k.asm:60585-60594).
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
@@ -166,7 +162,12 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);
         }
-        applyRideAnimationState(player);
+        // Obj31 executes after the player slot. loc_2C44E writes anim/prev_anim
+        // and flip_type, but Animate_Sonic/Tails has already run, so the prior
+        // rolling mapping remains visible on the capture row. The following
+        // player dispatch enters Anim_Tumble; active ride updates may then
+        // republish the object-phase pose. sonic3k.asm:60657-60670.
+        player.setObjectMappingFrameControl(false);
     }
 
     private void updateActiveRide(AbstractPlayableSprite player, int nativePlayerIndex) {
@@ -211,7 +212,6 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             player.setFlipType(FLIP_TYPE_ACTIVE_FROM_REST);
         }
         player.setHighPriority(((byte) player.getFlipAngle()) >= 0);
-        applyRideAnimationState(player);
         refreshRideLatch(player);
     }
 
@@ -290,36 +290,6 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
                 && previousDrum != this) {
             previousDrum.setRiding(nativePlayerIndex, false);
         }
-    }
-
-    private void applyRideAnimationState(AbstractPlayableSprite player) {
-        player.setAnimationId(ANIMATION_ROLLING_DRUM);
-        player.setForcedAnimationId(-1);
-        player.setObjectMappingFrameControl(true);
-        applyRideRenderFlags(player);
-        player.setMappingFrame(rollingDrumTumbleFrame(player.getFlipAngle(), player.getFlipType()));
-        player.setAnimationTick(0);
-    }
-
-    private void applyRideRenderFlags(AbstractPlayableSprite player) {
-        boolean facingLeft = Direction.LEFT.equals(player.getDirection());
-        int type = player.getFlipType() & 0x7F;
-        if (type == 1) {
-            // ROM loc_12872/loc_128A8: flip_type=$81 uses only Status_Facing.
-            player.setRenderFlips(facingLeft, false);
-            return;
-        }
-        // ROM Anim_Tumble negative flip_type path in LBZ:
-        // right-facing ORs render_flags bit 1; left-facing ORs bits 0 and 1.
-        player.setRenderFlips(facingLeft, true);
-    }
-
-    private static int rollingDrumTumbleFrame(int flipAngle, int flipType) {
-        int type = flipType & 0x7F;
-        if (type == 1) {
-            return (((flipAngle & 0xFF) - 8) & 0xFF) / TUMBLE_DIVISOR + TUMBLE_FROM_REST_BASE;
-        }
-        return ((0x8F - (flipAngle & 0xFF)) & 0xFF) / TUMBLE_DIVISOR + TUMBLE_BASE;
     }
 
     private static int signedWordDelta(int value, int origin) {

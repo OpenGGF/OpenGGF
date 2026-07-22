@@ -48890,3 +48890,27 @@ standalone CNZ remains at f0 in both scopes.
   CNZ standalone f0, CNZ complete-run f3035, MGZ standalone f5164, MGZ
   complete-run f5550, MHZ combined-animation f218, and HCZ f29037. No
   non-LBZ frontier moved.
+
+## 2026-07-22 - LBZ rolling-drum player-slot animation phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 1659 to
+  frame 2270.** Total release-blocking errors fell from 9310 to 9292; all
+  opening rolling-drum animation differences are gone and the next divergence
+  is CPU Tails' X position.
+- Root: Obj31 captures Sonic after his animation slot. Its `move.w #1,anim`
+  and negative `flip_type` prepare the following `Anim_Tumble` dispatch but do
+  not retroactively replace the capture row's rolling mapping. During an active
+  ride, Obj31 advances `flip_angle` after Animate and likewise does not publish
+  a mapping from that newer angle. The engine did both object-phase writes, and
+  its shared walk/run dispatcher also required non-zero `flip_angle` even
+  though native first tests signed `flip_type`.
+- Fix: rolling drums retain the earlier player-slot mapping and render flags on
+  capture and active-ride passes. The shared animator now enters tumble for
+  negative `flip_type` at angle zero and applies the native reverse tumble
+  transform for right-facing players. This is driven by the live flip state,
+  with no route, zone, or frame exception.
+- Validation: 19 rolling-drum tests and 37 shared playable-animation tests pass.
+  The complete `*TraceReplay#replayMatchesTrace` sweep again reports 48 passed,
+  the same 16 documented red routes, and two skips. Every non-LBZ frontier and
+  error total is unchanged, including S3K MHZ's early animation frontier, so
+  the shared animator correction introduces no S3K, S1, or S2 regression.

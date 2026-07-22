@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K's signed `flip_type` now enters and reverses `Anim_Tumble` even while `flip_angle` is zero, and LBZ rolling drums leave mapping/render publication to the earlier player animation slot instead of eagerly applying the object-updated angle. This clears LBZ's opening drum animation divergences and advances the combined frontier from frame 1659 to frame 2270.
 - Fix: LBZ1's ground-launch controller now preserves object-owned player mapping frames while native `object_control` bit 1 suppresses animation, resumes animation only after the launch object's `$03` to `$01` control transition, and reconstructs the carried CPU Tails mapping at the seamless ICZ handoff. This advances the combined LBZ complete-run frontier from frame 0 to frame 1659.
 - Fix: ICZ Act 1 miniboss rendering now skips orb child slots until the camera gate creates their state, preventing a null dereference while approaching the arena with boss art ready.
 - Fix: `LevelFrameStep` now observes a `StartNewLevel`-style inactive transition immediately after the object pass and skips the same frame's camera scroll/boundary work, matching the ROM's post-`Process_Sprites` `Restart_level_flag` branch. This clears the final ICZ complete-run camera mismatch and makes both physics and animation groups green through the LBZ handoff.
