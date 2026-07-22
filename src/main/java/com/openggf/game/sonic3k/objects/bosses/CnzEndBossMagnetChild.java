@@ -130,7 +130,11 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
             yVelocity += 0x38;
             var levelManager = services().levelManager();
             var floor = levelManager != null
-                    ? ObjectTerrainUtils.checkFloorDist(levelManager, centreX, centreY + 0x10)
+                    ? ObjectTerrainUtils.checkFloorDist(
+                            levelManager,
+                            services().backgroundPlaneCollisionProvider(),
+                            services().useSecondaryTerrainCollisionPath(),
+                            centreX, centreY + 0x10)
                     : TerrainCheckResult.noCollision();
             resolveFloorContact(floor.distance());
         }
