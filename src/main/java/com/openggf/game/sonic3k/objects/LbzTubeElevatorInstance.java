@@ -385,9 +385,13 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
                 player.setObjectMappingFrameControl(false);
                 player.setLatchedSolidObjectId(0);
                 tubeState.phase = 4;
+                // loc_2A1EC follows the WaitExit release branch: native still
+                // publishes this slot's final tube mapping/DPLC after clearing
+                // object_control, but ordinary animation resumes next frame.
+                applyCapturedPlayerFrame(player, false);
                 return;
             }
-            applyCapturedPlayerFrame(player);
+            applyCapturedPlayerFrame(player, true);
         }
     }
 
@@ -447,10 +451,10 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         player.setLatchedSolidObject(spawn.objectId(), this);
     }
 
-    private void applyCapturedPlayerFrame(AbstractPlayableSprite player) {
+    private void applyCapturedPlayerFrame(AbstractPlayableSprite player, boolean retainMappingControl) {
         int index = Math.floorMod(angle, PLAYER_FRAMES.length);
         player.setMappingFrame(PLAYER_FRAMES[index]);
-        player.setObjectMappingFrameControl(true);
+        player.setObjectMappingFrameControl(retainMappingControl);
         player.setRenderFlips(PLAYER_H_FLIP[index], player.getRenderVFlip());
     }
 

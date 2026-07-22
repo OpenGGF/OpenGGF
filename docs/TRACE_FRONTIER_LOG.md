@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ tube-elevator release mapping fallthrough
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 15599 to
+  frame 16585.** The next divergence is Sonic's vertical speed (`$0568`
+  expected versus `-$0568` actual).
+- Root: `LBZTubeElevator_CheckPlayer` clears `object_control` when the tube
+  reaches `WaitExit`, but then falls through `loc_2A1EC` and publishes the
+  current tube mapping and DPLC once more. The engine returned at release and
+  retained the previous tube frame for that dispatch.
+- Fix: tube release now publishes the current angle-derived player frame and
+  render flip after clearing object control, without re-arming object mapping
+  ownership; normal player animation resumes on the next frame. Focused
+  coverage verifies both the final `$57` mapping and released control state.
+- Validation: all 16 focused tube-elevator tests pass and the LBZ replay
+  reaches frame 16585. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. No S3K,
+  S1, or S2 frontier regressed.
+
 ## 2026-07-22 - LBZ tube-elevator same-slot landing capture
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 15188 to

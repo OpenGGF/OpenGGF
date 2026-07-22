@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ tube elevators now retain `CheckPlayer`'s final mapping/DPLC fallthrough after `WaitExit` clears object control, while allowing normal player animation to resume on the next frame. This advances the combined LBZ frontier from frame 15599 to frame 16585 without regressing another trace frontier.
 - Fix: LBZ tube elevators now consume `SolidObjectFull_Offset`'s fresh standing contact before the native same-slot player check, snapping and stopping a newly landed player immediately. This advances the combined LBZ frontier from frame 15188 to frame 15599 without regressing another trace frontier.
 - Fix: LBZ rolling-drum capture now retires the engine's synthetic forced CPU-flight animation when the native post-player object slot writes `anim/prev_anim`. Sustained P2 rides retain the drum's walk/tumble animation, advancing the combined LBZ frontier from frame 14174 to frame 15188 without regressing another trace frontier.
 - Fix: adjacent LBZ rolling drums now distinguish reverse-load receivers that already have native SST precedence from ordinary forward-load receivers. Reverse handoffs retain the live tumble phase, while later forward receivers observe the outgoing release and run `Player_TouchFloor`, advancing the combined LBZ frontier from frame 14074 to frame 14174 without regressing another trace frontier.

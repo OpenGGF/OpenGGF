@@ -214,6 +214,7 @@ class TestLbzTubeElevatorInstance {
         TestablePlayableSprite player = playerAt(0x1200, 0x0600);
 
         setField(elevator, "state", 8);
+        setField(elevator, "angle", 8);
         Object p1State = field(elevator, "p1").get(elevator);
         setField(p1State, "phase", 2);
         player.setObjectMappingFrameControl(true);
@@ -223,6 +224,8 @@ class TestLbzTubeElevatorInstance {
         assertFalse(player.isObjectMappingFrameControl(),
                 "LBZTubeElevator_CheckPlayer clears object_control at WaitExit; "
                         + "the engine must also release object-owned player mapping frames");
+        assertEquals(0x57, player.getMappingFrame(),
+                "loc_2A1EC still publishes the current tube frame after releasing object_control");
     }
 
     @Test
