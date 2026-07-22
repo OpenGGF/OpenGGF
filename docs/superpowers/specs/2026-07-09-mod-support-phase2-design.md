@@ -122,10 +122,14 @@ follow-ons tracked by Phase 4 rather than being implied complete here.
   mod is manifest + baked sheets, zero code — it synthesizes an implicit
   data-only patch (no entrypoint needed), keeping Phase 1's no-code story
   for pure reskins.
-- **Pattern-ID budget (closes the parent's open question):** each enabled
-  mod is allocated one `0x8000`-pattern window starting at `0x108000`
-  (first free space above `SEGA_BOOT_LOGOS`, which ends there), in
-  enabled-order, registered via `PatternAtlas.registerRange(base, size,
+- **Pattern-ID budget (closes the parent's open question; amended 2026-07-22):**
+  each enabled mod is allocated one `0x8000`-pattern window, in enabled
+  order, starting at the first window-aligned address at or above the highest
+  permanent `PatternAtlasRange.endExclusive()`. The current highest permanent
+  range is `MGZ_ZOOM_CUES`, ending at `0x188000`, so the first dynamic mod
+  window starts at `0x188000`. (The original draft's `0x108000` start predated
+  that permanent range.) Windows are registered via
+  `PatternAtlas.registerRange(base, size,
   "mod:" + id)`. **Engine change required (recon):**
   `validatePatternIdGovernance` accepts only ids inside
   `PatternAtlasRange.forPatternId(...)` — the *enum* constants — so

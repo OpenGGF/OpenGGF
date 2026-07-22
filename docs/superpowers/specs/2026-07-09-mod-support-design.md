@@ -321,11 +321,13 @@ Creator loop: paint in-engine with real physics → playtest instantly → expor
   namespaced object key, not an allocated byte id; stock spawns retain their original
   8-bit id. Object creation consults the key registry only when a key is present, so a
   mod can never hijack a stock placeholder id.
-- **Virtual pattern IDs:** each enabled mod is allocated a block from a reserved mod
-  range above the maximum registered `PatternAtlasRange.endExclusive()` (currently
-  `SEGA_BOOT_LOGOS` ends at `0x108000`); the sparse-map tier makes large ranges cheap.
+- **Virtual pattern IDs (amended 2026-07-22):** each enabled mod is allocated a
+  block starting at the first block-aligned address at or above the highest permanent
+  `PatternAtlasRange.endExclusive()`. The current highest permanent range is
+  `MGZ_ZOOM_CUES`, whose end-exclusive address is `0x188000`, so the first dynamic
+  mod window starts at `0x188000`; the sparse-map tier makes large ranges cheap.
   Assignments are session state and are re-registered after level art clears dynamic
-  ranges.
+  ranges. The original `0x108000` proposal predated the permanent MGZ zoom-cue range.
 - **Conflicts:** load order resolves override conflicts (later wins); the mod manager
   surfaces any two mods overriding the same base key.
 - **Trace/test hygiene:** modes known at process boot (test/headless/trace tooling)
