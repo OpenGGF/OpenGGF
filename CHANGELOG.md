@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ tension platforms now reject the exact zero-penetration `SolidObjectTop` boundary selected by the helper's unsigned `cmpi #-$10 / blo` branch. This advances both ICZ complete-run trace groups to frame 17530.
 - Fix: ICZ tension platforms now use the native `SolidObjectTop` `d3` surface height for fresh-contact detection, preventing rolling Sonic from landing one frame early. This advances both ICZ complete-run trace groups to frame 16975.
 - Fix: S3K Star Pointer orbiting children now preserve their native initialization-only first SST execution before beginning circular movement and publishing to the collision-response list. This advances both ICZ complete-run trace groups to frame 16710.
 - Fix: shattering ICZ ice cubes now clear the engine's parallel riding reference when the ROM clears `Status_OnObj`, preventing a freed cube SST from re-seating its former rider after snowdust reuses the slot. This advances both ICZ complete-run trace groups to frame 15940.

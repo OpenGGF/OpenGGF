@@ -48294,3 +48294,16 @@ standalone CNZ remains at f0 in both scopes.
 - Fix: the platform now selects the shared top-solid profile's explicit
   ground-half-height contact surface. The next replay divergence is Sonic's
   downward velocity at f16975; trace data remains comparison-only.
+
+## 2026-07-22 - ICZ tension-platform zero-gap boundary
+
+- **`s3k_icz1` physics and animation advanced from f16975 to f17530.** Total
+  errors fell from 2,085 to 1,733; the focused tension-platform suite remains
+  green.
+- Root: on the exact zero-gap boundary, `SolidObjectTop` first falls through
+  its positive-distance `bhi`, then rejects the contact through the unsigned
+  `cmpi.w #-$10,d0 / blo` at `loc_1E45A`. The engine's default top-solid
+  boundary accepted that frame and grounded Sonic one pass early.
+- Fix: the tension platform explicitly rejects zero-distance fresh landings.
+  The next replay divergence is a missed ring at f17530; trace data remains
+  comparison-only.

@@ -260,6 +260,13 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // At d0 == 0, the preceding bhi does not branch, but the unsigned
+        // cmpi.w #-$10,d0 / blo still rejects the contact at loc_1E45A.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return !isDestroyed();
     }
