@@ -3080,7 +3080,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
-        objectManager.initRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
+        objectManager.inheritRingFloorCheckCounterPhase(ringFloorCheckCounterPhase - 1);
         GameRules gameRules = gameModule.getRules();
         if (gameRules != null
                 && gameRules.collision() != null

@@ -1668,6 +1668,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     if (applyInitialObjectStep && appliesInitialObj37Step(slotIndex, firstReservedSlot)) {
                         ringObject.updateMovement();
                     }
+                    if (objectManager.hasInheritedRingCounterPhase()) {
+                        ringObject.markTouchStateAlreadyPostMovement();
+                    }
                 }
                 activeRingCount++;
                 previousSlot = slotIndex;

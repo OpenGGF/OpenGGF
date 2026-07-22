@@ -74,6 +74,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int lastFrameCounter;
     private boolean romRenderFlagForFloorProbe = true;
     private boolean clearMainPlayerRingsOnFirstUpdate;
+    private boolean touchStateAlreadyPostMovement;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -640,6 +641,20 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     public void markCollected(int frameCounter) {
         collected = true;
+    }
+
+    public void markTouchStateAlreadyPostMovement() {
+        touchStateAlreadyPostMovement = true;
+    }
+
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Obj37_Main calls MoveSprite2 before Add_SpriteToCollisionResponseList.
+        // A manager rebuilt across a seamless act handoff inherits the global
+        // V-int phase while its local execution counter restarts. Its Obj37
+        // snapshot is already the list-published post-movement position;
+        // ordinary uninterrupted managers retain the pre-update path.
+        return touchStateAlreadyPostMovement;
     }
 
     public int getSparkleStartFrame() {

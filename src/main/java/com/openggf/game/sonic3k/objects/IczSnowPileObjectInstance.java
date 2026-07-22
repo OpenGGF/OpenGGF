@@ -95,6 +95,9 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
     private int snowdustTimer;
     private int activeSnowdustCount;
     private boolean snowdustStopped;
+    private boolean waitingForOnScreen;
+    private boolean retainedOnScreen;
+    private boolean nativeInitialized;
 
     public IczSnowPileObjectInstance(ObjectSpawn spawn) {
         super(spawn, "ICZSnowPile");
@@ -103,6 +106,8 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         this.variant = (spawn.subtype() & 0x7F);
         this.startsNextLevel = (spawn.subtype() & 0x80) != 0;
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+        this.waitingForOnScreen = spawn.layoutIndex() >= 0;
+        this.nativeInitialized = !waitingForOnScreen;
     }
 
     @Override
@@ -113,6 +118,22 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         if (isDestroyed()) {
+            return;
+        }
+        if (waitingForOnScreen) {
+            if (retainedOnScreen || isWithinSolidContactBounds()) {
+                // loc_85AD2 restores Obj_ICZSnowPile and returns. The restored
+                // operation does not dispatch until the following SST pass.
+                waitingForOnScreen = false;
+            }
+            return;
+        }
+        if (!nativeInitialized) {
+            // Obj_ICZSnowPile installs the subtype operation, then jumps to
+            // SetUp_ObjAttributes. The newly installed operation does not run
+            // until this SST's following Process_Sprites pass.
+            nativeInitialized = true;
+            snowdustTimer = 0;
             return;
         }
 
@@ -297,7 +318,59 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
 
     @Override
     public boolean isPersistent() {
+        return false;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
         return variant == 0x18;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // loc_8B660 is camera-relative and owns deletion through $38 bit 5;
+        // it does not run Sprite_CheckDelete. This keeps the live emitter out
+        // of normal placement culling without carrying its SST across a level
+        // reload, where Dynamic_object_RAM is cleared and ObjPosLoad creates a
+        // fresh act-local emitter.
+        return false;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        // Obj_WaitOffscreen installs Map_Offscreen with width_pixels=$20.
+        // SetUp_ObjAttributes later replaces it with the selected ObjDat3
+        // width; the snowdust emitter and its flakes use $04.
+        if (waitingForOnScreen) {
+            return 0x20;
+        }
+        return switch (variant) {
+            case 0x00 -> 0x18;
+            case 0x08 -> 0x08;
+            case 0x10 -> 0x10;
+            case 0x18 -> 0x04;
+            default -> super.getOnScreenHalfWidth();
+        };
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        if (waitingForOnScreen) {
+            return 0x20;
+        }
+        return switch (variant) {
+            case 0x00 -> 0x08;
+            case 0x08, 0x10 -> 0x10;
+            case 0x18 -> 0x04;
+            default -> super.getOnScreenHalfHeight();
+        };
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnScreen) {
+            retainedOnScreen = isWithinSolidContactBounds();
+        }
     }
 
     @Override
@@ -409,6 +482,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         private int priorityBucket;
         private boolean initialized;
         private boolean enteredScreen;
+        private boolean retainedOnScreen;
         private boolean flickerBit;
         private boolean drawThisFrame;
 
@@ -469,9 +543,10 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
                 initialized = true;
                 return;
             }
-            // loc_8B720/loc_8B73A read render_flags bit 7 from the preceding
-            // Render_Sprites pass before this frame's MoveSprite2 changes x/y.
-            boolean wasOnScreen = isWithinSolidContactBounds();
+            // loc_8B720/loc_8B73A consume bit 7 left by the most recent
+            // Render_Sprites pass which actually processed this object. Calls
+            // that skip Draw_Sprite retain the old bit unchanged.
+            boolean wasOnScreen = retainedOnScreen;
             SubpixelMotion.moveSprite2(motion);
             if (!enteredScreen) {
                 if (wasOnScreen) {
@@ -497,6 +572,19 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         }
 
         @Override
+        public boolean usesCustomOutOfRangeCheck() {
+            return true;
+        }
+
+        @Override
+        public boolean isCustomOutOfRange(int cameraX) {
+            // loc_8B720/loc_8B73A do not call MarkObjGone or an X-range delete.
+            // A flake remains in its SST until it has entered the render window
+            // and its retained render_flags bit later reports that it left.
+            return false;
+        }
+
+        @Override
         public int getX() {
             return motion.x;
         }
@@ -519,6 +607,13 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         @Override
         public int getOnScreenHalfHeight() {
             return 4;
+        }
+
+        @Override
+        public void refreshPostCameraRenderState() {
+            if (initialized && drawThisFrame) {
+                retainedOnScreen = isWithinSolidContactBounds();
+            }
         }
 
         @Override

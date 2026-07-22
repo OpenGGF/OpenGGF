@@ -231,7 +231,6 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         shards = new ShardState[6];
         orbs = new OrbState[8];
         initShards();
-        initOrbs(false);
     }
 
     @Override
@@ -244,7 +243,6 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                 return;
             }
             updateShards();
-            updateOrbs();
             return;
         }
 
@@ -253,6 +251,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                 // loc_711EC creates the eight orb and six shard SSTs only
                 // after loc_85CA4 has completed the camera gate.
                 reserveNativeChildSlots();
+                initOrbs(false);
                 state.routine = ROUTINE_DESCEND;
             }
             case ROUTINE_DESCEND -> {
@@ -363,7 +362,6 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         int subtype = spawn.subtype() & 0xFF;
         arenaAnchorY = subtype == 0 ? UPPER_ROUTE_ANCHOR_Y : LOWER_ROUTE_ANCHOR_Y;
         arenaAnchorX = ARENA_ANCHOR_X;
-        initOrbs(false);
 
         if (services.gameState() != null) {
             services.gameState().setCurrentBossId(Sonic3kObjectIds.ICZ_MINIBOSS);

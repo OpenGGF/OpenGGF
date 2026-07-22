@@ -48150,3 +48150,23 @@ standalone CNZ remains at f0 in both scopes.
   exactly. The 20-case Freezer and 48-case ICZ end-boss suites are green.
 - The remaining f13517 missed pickup is an Obj37/SST-slot cadence mismatch;
   trace data remains read-only.
+
+## 2026-07-22 - ICZ Act 2 snow/ring SST alignment
+
+- **`s3k_icz1` physics advanced from f13517 to f14236 and animation advanced
+  from f13900 to f14236.** Total errors fell from 1,780 to 1,463: physics to
+  1,347 and animation to 116.
+- Root: snowdust routines read the retained `render_flags.on_screen` bit from
+  the most recent `Draw_Sprite` pass, including across alternating flicker
+  frames. Recomputing visibility on every object update freed low SST slots too
+  early. Lightning-shield sparks also allocated during player ability handling
+  instead of the later fixed shield-object turn. Together those differences
+  changed the 32 spilled rings' slot-derived phases and pickup paths.
+- Fix: snowdust now refreshes its retained visibility only on frames that call
+  `Draw_Sprite`; lightning sparks queue at the post-dynamic-object allocation
+  point; and lost rings created after a seamless manager rebuild consume the
+  inherited post-movement collision-list state. The native spill slots
+  (`47,55,56,58..86`) and all pickups through the miniboss approach now align.
+- Validation: the focused complete-run replay reaches f14236 in both groups;
+  the remaining divergence is the first miniboss contact response. Trace data
+  remains comparison-only.

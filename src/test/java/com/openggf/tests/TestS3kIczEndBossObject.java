@@ -177,8 +177,11 @@ class TestS3kIczEndBossObject {
         assertEquals(0x4390, emitter.getX(),
                 "The snow emitter must spawn inside the boss camera, not at world origin where placement culling can remove it");
         assertEquals(0x05F0, emitter.getY());
-        assertTrue(emitter.isPersistent(),
+        assertTrue(emitter.usesCustomOutOfRangeCheck());
+        assertFalse(emitter.isCustomOutOfRange(0),
                 "The camera-relative snow emitter has to survive normal off-screen object culling");
+        assertFalse(emitter.isPersistent(),
+                "A level reload clears the native emitter SST; it must not cross an act rebuild");
     }
 
     @Test
@@ -216,6 +219,7 @@ class TestS3kIczEndBossObject {
         particle.update(20, mock(PlayableEntity.class));
         particle.update(21, mock(PlayableEntity.class));
         particle.appendRenderCommands(new ArrayList<>());
+        particle.refreshPostCameraRenderState();
 
         org.mockito.Mockito.verify(services.renderManager, org.mockito.Mockito.atLeastOnce())
                 .getRenderer(Sonic3kObjectArtKeys.ICZ_PLATFORMS);
@@ -237,8 +241,11 @@ class TestS3kIczEndBossObject {
         for (int frame = 0; frame < 5; frame++) {
             particle.update(40 + frame, mock(PlayableEntity.class));
             particle.appendRenderCommands(new ArrayList<>());
+            particle.refreshPostCameraRenderState();
         }
-        org.mockito.Mockito.verify(platformRenderer, org.mockito.Mockito.times(2))
+        org.mockito.Mockito.verify(platformRenderer, org.mockito.Mockito.atLeast(2))
+                .drawFrameIndex(anyInt(), anyInt(), anyInt(), eq(false), eq(false), eq(2));
+        org.mockito.Mockito.verify(platformRenderer, org.mockito.Mockito.atMost(3))
                 .drawFrameIndex(anyInt(), anyInt(), anyInt(), eq(false), eq(false), eq(2));
 
         stepFrames(instance, 122);

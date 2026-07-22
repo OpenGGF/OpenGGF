@@ -130,6 +130,7 @@ public class ObjectManager {
     private boolean activeObjectsCacheDirty = true;
     private final Set<ObjectInstance> deferredDynamicExecThisFrame =
             Collections.newSetFromMap(new IdentityHashMap<>());
+    private final List<ObjectInstance> postExecDynamicSpawns = new ArrayList<>();
 
     // ROM parity: dynamic object slot tracking for the current game's allocatable
     // SST window. S1 uses 32..127, S2 uses 16..127, and S3K uses 4..92.
@@ -139,6 +140,7 @@ public class ObjectManager {
     private int s2LatchedObjectManagerCameraX = Integer.MIN_VALUE;
     private int twoAxisCameraYCoarse = Integer.MIN_VALUE;
     private int ringFloorCheckCounterPhase;
+    private boolean inheritedRingCounterPhase;
     private int vIntRunCounterPhaseOffset;
 
     // ROM parity: Tracks child slots reserved by objects with getReservedChildSlotCount() > 0.
@@ -298,6 +300,7 @@ public class ObjectManager {
         dynamicObjects.clear();
         auxiliaryDynamicObjects.clear();
         deferredDynamicExecThisFrame.clear();
+        postExecDynamicSpawns.clear();
         reservedChildSlots.clear();
         slotAllocator.clear();
         Arrays.fill(execOrder, null);
@@ -638,6 +641,7 @@ public class ObjectManager {
                 syncActiveSpawnsLoad(true);
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
             }
+            flushPostExecDynamicSpawns();
         } finally {
             if (inlineSolidResolution) {
                 solidContacts.finishInlineFrame(player, activeSidekicks);
@@ -1783,6 +1787,28 @@ public class ObjectManager {
     }
 
     /**
+     * Queues an allocation for the tail of the current Process_Sprites pass.
+     * S3K fixed player-effect SSTs execute after Dynamic_object_RAM, so children
+     * they create reserve slots only after every ordinary dynamic object has run.
+     */
+    public void queueDynamicObjectAfterExec(ObjectInstance object) {
+        if (object != null) {
+            postExecDynamicSpawns.add(object);
+        }
+    }
+
+    private void flushPostExecDynamicSpawns() {
+        if (postExecDynamicSpawns.isEmpty()) {
+            return;
+        }
+        List<ObjectInstance> queued = List.copyOf(postExecDynamicSpawns);
+        postExecDynamicSpawns.clear();
+        for (ObjectInstance object : queued) {
+            addDynamicObjectNextFrame(object);
+        }
+    }
+
+    /**
      * Adds a dynamic object using AllocateObjectAfterCurrent semantics anchored
      * to an explicit parent slot. Use when ROM code calls
      * AllocateObjectAfterCurrent from a touch/collision callback rather than
@@ -2421,10 +2447,20 @@ public class ObjectManager {
      */
     public void initRingFloorCheckCounterPhase(int phase) {
         ringFloorCheckCounterPhase = phase;
+        inheritedRingCounterPhase = false;
+    }
+
+    public void inheritRingFloorCheckCounterPhase(int phase) {
+        ringFloorCheckCounterPhase = phase;
+        inheritedRingCounterPhase = true;
     }
 
     public int getRingFloorCheckCounterPhase() {
         return ringFloorCheckCounterPhase;
+    }
+
+    public boolean hasInheritedRingCounterPhase() {
+        return inheritedRingCounterPhase;
     }
 
     /**

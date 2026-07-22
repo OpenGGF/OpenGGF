@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ snowdust now retains the last `Render_Sprites` on-screen bit across flicker frames, fixed lightning-shield sparks allocate at their native post-dynamic-object point, and seamless-act lost rings consume the inherited post-movement collision-list state. This restores the Act 2 snow/ring SST landscape and advances both complete-run frontiers to frame 14236.
 - Fix: ICZ snowboard dust now performs the native two/eight grounded allocations, Freezer frost puffs complete their own displacement scripts, Freezer shatter debris consumes its native random animation seed, and Freezer proximity samples post-movement player X. This aligns the shared RNG stream at the Act 2 snow emitter while preserving the current frame-13517 physics frontier.
 - Fix: ICZ snow emitters now derive random X, frame, priority, and velocity from the low/high words of one `Random_Number` result and release rejected-particle count ownership. This restores native RNG consumption and reduces downstream ICZ complete-run divergence without moving the current frame-13517 frontier.
 - Fix: ICZ miniboss arc passes now enter the ROM's `$3F`-frame routine `$0C` wait before deciding whether to reverse for another sweep. This removes an immediate return-pass shortcut and advances complete-run physics from frame 13410 to 13517 and animation from frame 13410 to 13900.
