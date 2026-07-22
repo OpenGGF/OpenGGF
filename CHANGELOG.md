@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ cup-elevator twist frames now update only the player's visual render flips, preserving the independent native gameplay-facing status bit. This advances the combined LBZ frontier from frame 3804 to frame 3969 without moving any other trace frontier.
 - Fix: delayed S3K Obj37 spills now preserve the ROM's distinct collision-list position phase for ordinary post-player materialization versus a forced behind-cursor owner, with LBZ's recorded V-int phase restored explicitly. This advances the combined LBZ frontier from frame 3647 to frame 3804, advances CNZ's complete-run frontier to frame 14658, and preserves the green ICZ complete run.
 - Fix: LBZ tube elevators now distinguish native `object_control` from the separate control-lock byte, retain their saved bob anchor when path setup temporarily writes the first waypoint, preserve subpixel words across path and bob word writes, and suppress player animation immediately on capture. This advances the combined LBZ frontier from frame 3039 to frame 3647 without moving any other trace frontier.
 - Fix: LBZ tube elevators now retain `SolidObjectFull_Offset`'s full-solid routine and distinct surface/anchor offsets, require the native standing bit for partner fast-capture, preserve object-managed support during tube control, and follow the ROM's stored bob-phase cadence. This advances the combined LBZ frontier from frame 2997 to frame 3039 without moving any other trace frontier.

@@ -599,7 +599,9 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         player.setObjectMappingFrameControl(true);
         player.setMappingFrame(PLAYER_TWIST_FRAMES[index]);
         boolean hFlip = PLAYER_TWIST_H_FLIPS[index];
-        player.setDirection(hFlip ? Direction.LEFT : Direction.RIGHT);
+        // loc_32610 masks and replaces only render_flags bits 0-1. It does not
+        // mutate Status_Facing, so the visual twist must remain independent of
+        // the player's gameplay-facing direction while the cup owns the frame.
         player.setRenderFlips(hFlip, false);
     }
 

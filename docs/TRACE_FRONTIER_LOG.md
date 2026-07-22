@@ -49030,3 +49030,20 @@ standalone CNZ remains at f0 in both scopes.
   no newly red route or earlier frontier across S1, S2, or S3K. CNZ's complete
   run also advances from frame 3035 to frame 14658 through the shared Obj37
   correction; all other non-LBZ frontier/error pairs remain unchanged.
+
+## 2026-07-22 - LBZ cup-elevator visual twist facing
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 3804 to
+  frame 3969.** Total release-blocking errors fell from 6661 to 6652; the next
+  divergence is Sonic X (`$11F5` expected versus `$11F9` actual).
+- Root: the shared `loc_32610` twist-frame routine masks and replaces only
+  `render_flags` bits 0-1. The LBZ cup elevator additionally copied that visual
+  flip into the player's independent `Status_Facing` bit, losing the direction
+  Sonic held when Obj18 captured him.
+- Fix: cup-owned twist mappings now update render flips without mutating
+  gameplay direction, matching the same native state separation already used
+  by the CNZ cylinder implementation.
+- Validation: all 13 focused cup-elevator tests pass and the LBZ replay reaches
+  frame 3969. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.

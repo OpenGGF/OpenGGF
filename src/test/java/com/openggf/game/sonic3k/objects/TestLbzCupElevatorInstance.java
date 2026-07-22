@@ -232,6 +232,22 @@ class TestLbzCupElevatorInstance {
     }
 
     @Test
+    void heldPlayerTwistFlipDoesNotOverwriteGameplayFacing() throws Exception {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
+        setPrivateInt(elevator, "angleWord", 0x1600);
+        Sonic player = new Sonic("sonic", (short) 0x1800, (short) 0x0600);
+        player.setDirection(com.openggf.physics.Direction.LEFT);
+
+        invokeHoldPlayer(elevator, player);
+
+        assertTrue(player.getRenderHFlip(),
+                "angle $16 selects PlayerTwistFlip index 1 for the visual frame");
+        assertEquals(com.openggf.physics.Direction.LEFT, player.getDirection(),
+                "loc_32610 writes render_flags but must preserve Status_Facing");
+    }
+
+    @Test
     void knucklesCutsceneGateBlocksCupJumpReleaseUntilExitClearsIt() throws Exception {
         LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
                 0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
