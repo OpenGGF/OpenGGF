@@ -8,6 +8,7 @@ import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -21,9 +22,11 @@ import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -35,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -118,6 +122,24 @@ class TestS3kIczMinibossObject {
                 "Obj_ICZMiniboss does not run SetUp_ObjAttributes/collision_flags until after loc_85CA4");
         assertEquals(null, ((TouchResponseProvider) instance).getMultiTouchRegions(),
                 "The invisible pre-gate miniboss must not expose body or orb touch regions");
+    }
+
+    @Test
+    void renderDuringCameraGateSkipsOrbsThatHaveNotBeenCreatedYet() {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x07F0, 0x0280, ICZ_MINIBOSS_ID, 0x00, 0, false, 0x0280));
+        AbstractObjectInstance object = (AbstractObjectInstance) instance;
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        RecordingServices services = new RecordingServices(renderer);
+        services.camera.setX((short) 0x06F0);
+        services.camera.setY((short) 0x02B8);
+        object.setServices(services);
+
+        instance.update(1, mock(PlayableEntity.class));
+
+        assertDoesNotThrow(() -> instance.appendRenderCommands(new ArrayList<>()),
+                "The camera gate renders before loc_711EC creates the eight orb children");
     }
 
     @Test
@@ -669,6 +691,7 @@ class TestS3kIczMinibossObject {
         private final PaletteOwnershipRegistry paletteOwnershipRegistry = new PaletteOwnershipRegistry();
         private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
         private final ObjectManager objectManager;
+        private ObjectRenderManager renderManager;
         private Level currentLevel;
         private Rom rom;
         private int fadeOutCalls;
@@ -688,6 +711,16 @@ class TestS3kIczMinibossObject {
             }).when(objectManager).addDynamicObjectAfterCurrent(any());
         }
 
+        private RecordingServices(PatternSpriteRenderer renderer) {
+            this();
+            renderManager = new ObjectRenderManager(null) {
+                @Override
+                public PatternSpriteRenderer getRenderer(String key) {
+                    return Sonic3kObjectArtKeys.ICZ_MINIBOSS.equals(key) ? renderer : null;
+                }
+            };
+        }
+
         @Override
         public Camera camera() {
             return camera;
@@ -701,6 +734,11 @@ class TestS3kIczMinibossObject {
         @Override
         public ObjectManager objectManager() {
             return objectManager;
+        }
+
+        @Override
+        public ObjectRenderManager renderManager() {
+            return renderManager;
         }
 
         @Override

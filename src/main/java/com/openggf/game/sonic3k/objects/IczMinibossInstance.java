@@ -1069,7 +1069,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         }
 
         for (OrbState orb : orbs) {
-            if (!orb.front && orb.isVisible()) {
+            if (orb != null && !orb.front && orb.isVisible()) {
                 renderer.drawFrameIndex(orb.frame, orb.x, orb.y, false, false, ORB_PALETTE_LINE);
             }
         }
@@ -1080,7 +1080,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
             }
         }
         for (OrbState orb : orbs) {
-            if (orb.front && orb.isVisible()) {
+            if (orb != null && orb.front && orb.isVisible()) {
                 renderer.drawFrameIndex(orb.frame, orb.x, orb.y, false, false, ORB_PALETTE_LINE);
             }
         }
