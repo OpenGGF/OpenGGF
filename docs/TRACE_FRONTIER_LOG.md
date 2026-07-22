@@ -49084,3 +49084,25 @@ standalone CNZ remains at f0 in both scopes.
   frame 4157. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
   tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
   S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - LBZ cup jump-release contact cooldown
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 4157 to
+  frame 4431.** Total release-blocking errors fell from 6594 to 6289; the next
+  divergence is Sonic's horizontal speed (`-$0114` expected versus `$0114`
+  actual).
+- Root: Obj18's jump release changes the player's radii and rolling status
+  without changing centre-based native `y_pos`, then seeds a per-player `$12`
+  cooldown whose nonzero path returns before `SolidObjectFull`. The engine's
+  bounds-based rolling transition shifted the centre five pixels upward and
+  immediately treated the released player as a fresh cup contact on the next
+  frame.
+- Fix: cup release restores the unchanged native centre word after applying
+  rolling radii, preserving the existing subpixel fraction, and cup solidity
+  now observes the matching per-player cooldown before accepting a new
+  contact. Both decisions follow Obj18's player-local state without a zone,
+  route, or frame exception.
+- Validation: all 13 focused cup-elevator tests pass and the LBZ replay reaches
+  frame 4431. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.

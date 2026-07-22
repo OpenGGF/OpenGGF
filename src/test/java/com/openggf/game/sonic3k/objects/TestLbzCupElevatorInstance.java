@@ -271,6 +271,7 @@ class TestLbzCupElevatorInstance {
                 "The cup must keep owning the player during the Knuckles cutscene gate.");
         assertTrue(player.isObjectMappingFrameControl(),
                 "Pressed jump must not leak through as a normal jump animation while the cup owns mapping frames.");
+        int heldY = player.getCentreY();
 
         runtimeState.setLbz1KnucklesCutsceneControlLocked(false);
         player.setJumpInputPressed(true, true);
@@ -280,6 +281,10 @@ class TestLbzCupElevatorInstance {
         assertFalse((boolean) getPrivateField(p1State, "inside"),
                 "After Knuckles clears _unkFAA9, the same jump press should release the player from the cup.");
         assertFalse(player.isObjectControlled());
+        assertEquals(heldY, player.getCentreY(),
+                "Obj18 changes rolling radii/status on release without changing the native y_pos word");
+        assertFalse(elevator.isSolidFor(player),
+                "the per-player $12 release cooldown returns before SolidObjectFull can recollide with the rider");
         assertEquals(2, player.getAnimationId(),
                 "Allowed cup release uses the ROM jump animation, not the held twist frame.");
     }

@@ -204,6 +204,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     public boolean isSolidFor(PlayableEntity playerEntity) {
         return !isDestroyed()
                 && !isCapturedByThis(playerEntity)
+                && playerStateFor(playerEntity).cooldown == 0
                 && isSolidAngle();
     }
 
@@ -531,7 +532,12 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         player.setJumping(false);
         player.applyCustomRadii(7, 0x0E);
         player.setAnimationId(2);
+        short releaseY = player.getCentreY();
         player.setRolling(true);
+        // ROM changes y_radius/status without changing centre-based y_pos.
+        // setRolling changes the engine's visual bounds, so restore the same
+        // native centre word while preserving its subpixel fraction.
+        player.setCentreYPreserveSubpixel(releaseY);
         player.setRollingJump(false);
         if (player.isLeftPressed()) {
             player.setXSpeed((short) -0x200);
@@ -624,6 +630,14 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         return playerEntity instanceof AbstractPlayableSprite player
                 && player.isObjectControlled()
                 && player.getLatchedSolidObjectInstance() == this;
+    }
+
+    private PlayerState playerStateFor(PlayableEntity playerEntity) {
+        if (playerEntity instanceof AbstractPlayableSprite player
+                && player == nativeP2OrNull()) {
+            return p2;
+        }
+        return p1;
     }
 
     private boolean isSolidAngle() {
