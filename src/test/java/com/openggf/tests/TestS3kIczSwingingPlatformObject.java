@@ -159,6 +159,25 @@ class TestS3kIczSwingingPlatformObject {
     }
 
     @Test
+    void releasedPlatformPreservesCircularFixedPointFraction() {
+        IczSwingingPlatformObjectInstance platform = new IczSwingingPlatformObjectInstance(
+                new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM, 1, 0, false, 0));
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getXSpeed()).thenReturn((short) 0x0800);
+
+        platform.onPieceContact(0, player, standingContact(), 0);
+        for (int frame = 1; frame <= 100 && platform.getX() <= 0x1280; frame++) {
+            platform.update(frame, player);
+        }
+
+        assertEquals(0x1283, platform.getX());
+        assertEquals(0x066A, platform.getY());
+        assertEquals(0, platform.getXSubpixelForTesting());
+        assertEquals(0x8000, platform.getYSubpixelForTesting(),
+                "MoveSprite must retain the half-pixel produced by MoveSprite_CircularSimple");
+    }
+
+    @Test
     void renderUsesRomPaletteLinesForParentAndChainChildren() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         TestableIczSwingingPlatform platform = new TestableIczSwingingPlatform(

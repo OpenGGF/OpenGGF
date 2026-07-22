@@ -173,8 +173,12 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
 
     private void moveCircular() {
         int angle = (angleAccumulator >> 8) & 0xFF;
-        x = anchorX + (TrigLookupTable.sinHex(angle) >> 1);
-        y = anchorY + (TrigLookupTable.cosHex(angle) >> 1);
+        int xFixed = (anchorX << 16) + (TrigLookupTable.sinHex(angle) << 15);
+        int yFixed = (anchorY << 16) + (TrigLookupTable.cosHex(angle) << 15);
+        x = xFixed >> 16;
+        y = yFixed >> 16;
+        xSub = xFixed & 0xFFFF;
+        ySub = yFixed & 0xFFFF;
     }
 
     private void resetSwing() {
@@ -191,13 +195,11 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
         phase = Phase.FALLING;
         xVel = xFlip ? -RELEASE_X_VELOCITY : RELEASE_X_VELOCITY;
         yVel = RELEASE_Y_VELOCITY;
-        xSub = 0;
-        ySub = 0;
     }
 
     private void updateFalling() {
         SubpixelMotion.State motion = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
-        SubpixelMotion.moveSprite(motion, SubpixelMotion.S3K_GRAVITY);
+        SubpixelMotion.objectFallXY(motion, SubpixelMotion.S3K_GRAVITY);
         x = motion.x;
         y = motion.y;
         xSub = motion.xSub;
@@ -235,7 +237,7 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
 
         xVel = nextVel;
         SubpixelMotion.State motion = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
-        SubpixelMotion.moveSprite2(motion);
+        SubpixelMotion.speedToPos(motion);
         x = motion.x;
         y = motion.y;
         xSub = motion.xSub;
@@ -416,6 +418,14 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public int getY() {
         return y;
+    }
+
+    public int getXSubpixelForTesting() {
+        return xSub;
+    }
+
+    public int getYSubpixelForTesting() {
+        return ySub;
     }
 
     @Override

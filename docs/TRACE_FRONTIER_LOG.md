@@ -47998,3 +47998,20 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:187631-187644`).
 - The focused platform suites pass with a nonzero-subpixel wall-stop regression
   that verifies position correction and velocity clear without fraction loss.
+## 2026-07-21 - ICZ swinging-platform release fraction advances physics frontier
+
+- Commands: focused `TestS3kIczSwingingPlatformObject`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f12107 to f12168; animation remains at
+  f12206.** Total errors fell from 4,195 to 4,151: physics from 2,985 to 2,941
+  and animation remains at 1,210.
+- Root: `MoveSprite_CircularSimple` converts both trig words into signed 16.16
+  offsets before adding the parent position. ObjB4 releases without clearing
+  that fraction, and its falling/sliding routines continue adding velocity to
+  the same long position. The engine reduced the circular result to integer
+  pixels, cleared the fraction on release, and then used the 16:8 helper, making
+  the released platform and rider one pixel high. Circular, falling, and sliding
+  motion now preserve the native 16.16 position
+  (`docs/skdisasm/sonic3k.asm:178500-178517,188988-189035,189053-189101`).
+- The focused swinging-platform suite passes with a regression that pins the
+  half-pixel release fraction through the first falling step.
