@@ -25,6 +25,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -845,6 +846,7 @@ class TestS3kIczEndBossObject {
 
         instance.update(nextFrame++, player);
         instance.update(nextFrame, player);
+        publishBossSolidContact(instance, player, nextFrame);
 
         org.mockito.Mockito.verify(player, org.mockito.Mockito.atLeastOnce()).setAnimationId(0x1A);
         assertTrue(services.spawnedChildren.stream().anyMatch(child ->
@@ -883,6 +885,7 @@ class TestS3kIczEndBossObject {
         bindPlayerToFrostPuff(instance, player, normalPuff);
         instance.update(nextFrame++, player);
         instance.update(nextFrame++, player);
+        publishBossSolidContact(instance, player, nextFrame - 1);
         long capturesBeforeDamagedTopSteam = frozenPlayerBlockCount(services);
         assertTrue(capturesBeforeDamagedTopSteam > 0);
 
@@ -911,6 +914,7 @@ class TestS3kIczEndBossObject {
         bindPlayerToFrostPuff(instance, player, activeTopSteam);
         instance.update(nextFrame++, player);
         instance.update(nextFrame, player);
+        publishBossSolidContact(instance, player, nextFrame);
 
         assertTrue(frozenPlayerBlockCount(services) > capturesBeforeDamagedTopSteam,
                 "sub_8A9E0 gates on current object_control/invulnerability only; prior boss smoke captures do not immunize Sonic");
@@ -947,6 +951,7 @@ class TestS3kIczEndBossObject {
 
         instance.update(nextFrame++, player);
         instance.update(nextFrame, player);
+        publishBossSolidContact(instance, player, nextFrame);
 
         org.mockito.Mockito.verify(player, org.mockito.Mockito.atLeastOnce()).setAnimationId(0x1A);
         assertTrue(services.spawnedChildren.stream().anyMatch(child ->
@@ -992,6 +997,7 @@ class TestS3kIczEndBossObject {
         bindPlayerToFrostPuff(instance, player, puffIndex);
         instance.update(nextFrame++, player);
         instance.update(nextFrame, player);
+        publishBossSolidContact(instance, player, nextFrame);
         assertTrue(frozenPlayerBlockCount(services) > 0);
     }
 
@@ -1532,6 +1538,10 @@ class TestS3kIczEndBossObject {
                 frostPuffCoordinate(instance, "getFrostPuffXForTesting", puffIndex));
         org.mockito.Mockito.when(player.getCentreY()).thenAnswer(invocation ->
                 frostPuffCoordinate(instance, "getFrostPuffYForTesting", puffIndex));
+    }
+
+    private static void publishBossSolidContact(ObjectInstance instance, PlayableEntity player, int frameCounter) {
+        ((SolidObjectListener) instance).onSolidContactCleared(player, frameCounter);
     }
 
     private static short frostPuffCoordinate(ObjectInstance instance, String method, int puffIndex) {

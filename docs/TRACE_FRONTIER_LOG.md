@@ -48549,3 +48549,23 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczEndBossObject` verifies the excluded +$18 boundary and
   delayed capture ownership. The complete-run replay reaches Sonic's frozen Y
   placement at f23328; animation next diverges on Tails at f23329.
+
+## 2026-07-22 - ICZ end-boss post-solid frost capture
+
+- **`s3k_icz1` physics advanced from f23328 to f23329 and animation advanced
+  from f23329 to f23457.** Total errors changed from 682 to 706; the focused
+  end-boss suite remains green.
+- Root: promoting a folded frost overlap at the start of the next parent pass
+  set `object_control` before the bottom solid child's checkpoint. Native
+  `loc_71F30` has already carried the rider when later puff slot
+  `loc_7205E` calls `sub_8A9E0`, so the capture frame retains both
+  `Status_OnObj` and the newly set `Status_InAir` and includes the last child
+  displacement.
+- Fix: queued player-index capture bits now publish from the boss's compatibility
+  solid callback, after each player's checkpoint. Both contact and cleared
+  callbacks consume the same later-slot capture state without holding player
+  references or reading trace data.
+- Validation: `TestS3kIczEndBossObject` drives the same post-checkpoint callback
+  in focused capture tests. The complete-run replay passes the f23328 carry and
+  capture-status frame; the next physics mismatch is frozen Sonic X at f23329,
+  while animation reaches f23457.

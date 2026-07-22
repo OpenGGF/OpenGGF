@@ -21,6 +21,8 @@ import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidObjectListener;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -45,7 +47,7 @@ import java.util.List;
  * egg-capsule handoff after defeat.
  */
 public final class IczEndBossInstance extends AbstractBossInstance
-        implements MultiPieceSolidProvider, SpawnRewindRecreatable {
+        implements MultiPieceSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_DESCEND = 0x02;
     private static final int ROUTINE_SWING = 0x04;
@@ -182,10 +184,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private boolean lastSideToggle;
     private int bottomChildWholePixelDelta;
     private int pendingFrostCaptureMask;
-    private int pendingFrostCaptureP1X;
-    private int pendingFrostCaptureP1Y;
-    private int pendingFrostCaptureP2X;
-    private int pendingFrostCaptureP2Y;
+    private int readyFrostCaptureMask;
     private int robotnikShipX;
     private int robotnikShipXFixed;
     private int robotnikShipY;
@@ -264,10 +263,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         lastSideToggle = false;
         bottomChildWholePixelDelta = 0;
         pendingFrostCaptureMask = 0;
-        pendingFrostCaptureP1X = 0;
-        pendingFrostCaptureP1Y = 0;
-        pendingFrostCaptureP2X = 0;
-        pendingFrostCaptureP2Y = 0;
+        readyFrostCaptureMask = 0;
         robotnikShipX = state.x;
         robotnikShipXFixed = state.x << 8;
         robotnikShipY = state.y;
@@ -287,9 +283,11 @@ public final class IczEndBossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity player) {
-        // Native smoke children execute in later SST slots than their parent;
-        // the folded child overlap becomes parent-visible on this next pass.
-        applyPendingFrostCaptures(player);
+        // Native smoke children execute after the bottom solid child. Promote
+        // last pass's folded overlap so this pass's solid checkpoint can carry
+        // the rider before the later-slot capture publishes object_control.
+        readyFrostCaptureMask |= pendingFrostCaptureMask;
+        pendingFrostCaptureMask = 0;
         updateHitFlash();
         if (!arenaGateComplete) {
             updateArenaGate();
@@ -652,44 +650,44 @@ public final class IczEndBossInstance extends AbstractBossInstance
         for (int index = 0; index < participants.size() && index < 2; index++) {
             PlayableEntity candidate = participants.get(index);
             if (candidate instanceof AbstractPlayableSprite sprite && canFrostCapture(sprite, child)) {
-                queueFrostCapture(index, sprite);
+                queueFrostCapture(index);
             }
         }
     }
 
-    private void queueFrostCapture(int participantIndex, AbstractPlayableSprite player) {
+    private void queueFrostCapture(int participantIndex) {
         int bit = 1 << participantIndex;
         if ((pendingFrostCaptureMask & bit) != 0) {
             return;
         }
         pendingFrostCaptureMask |= bit;
-        if (participantIndex == 0) {
-            pendingFrostCaptureP1X = player.getCentreX();
-            pendingFrostCaptureP1Y = player.getCentreY();
-        } else {
-            pendingFrostCaptureP2X = player.getCentreX();
-            pendingFrostCaptureP2Y = player.getCentreY();
+    }
+
+    private void applyReadyFrostCapture(PlayableEntity player) {
+        if (!(player instanceof AbstractPlayableSprite sprite)) {
+            return;
+        }
+        List<PlayableEntity> participants = frostCaptureParticipants(player);
+        for (int index = 0; index < participants.size() && index < 2; index++) {
+            if (participants.get(index) == player) {
+                int bit = 1 << index;
+                if ((readyFrostCaptureMask & bit) != 0) {
+                    readyFrostCaptureMask &= ~bit;
+                    frostCapture(sprite, sprite.getCentreX(), sprite.getCentreY());
+                }
+                return;
+            }
         }
     }
 
-    private void applyPendingFrostCaptures(PlayableEntity fallbackPlayer) {
-        int captureMask = pendingFrostCaptureMask;
-        if (captureMask == 0) {
-            return;
-        }
-        pendingFrostCaptureMask = 0;
-        List<PlayableEntity> participants = frostCaptureParticipants(fallbackPlayer);
-        for (int index = 0; index < participants.size() && index < 2; index++) {
-            if ((captureMask & (1 << index)) == 0) {
-                continue;
-            }
-            PlayableEntity candidate = participants.get(index);
-            if (candidate instanceof AbstractPlayableSprite sprite) {
-                int capturedX = index == 0 ? pendingFrostCaptureP1X : pendingFrostCaptureP2X;
-                int capturedY = index == 0 ? pendingFrostCaptureP1Y : pendingFrostCaptureP2Y;
-                frostCapture(sprite, capturedX, capturedY);
-            }
-        }
+    @Override
+    public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
+        applyReadyFrostCapture(player);
+    }
+
+    @Override
+    public void onSolidContactCleared(PlayableEntity player, int frameCounter) {
+        applyReadyFrostCapture(player);
     }
 
     private List<PlayableEntity> frostCaptureParticipants(PlayableEntity fallbackPlayer) {
