@@ -48379,3 +48379,20 @@ standalone CNZ remains at f0 in both scopes.
   `TestS3kIcz2CorkFloorRegression`, and the complete-run replay pass through the
   former f19523 divergence. The next mismatch is Sonic's Y position at f20133;
   trace data remains comparison-only.
+
+## 2026-07-22 - ICZ tension-rope current-segment bend
+
+- **`s3k_icz1` physics and animation advanced from f20133 to f21673.** Total
+  errors fell from 1,151 to 1,121; the focused tension-bridge suites remain
+  green.
+- Root: the ordinary bridge runs `sub_38CC2` before `sub_38A88` publishes the
+  rider's new segment, but ICZ's negative-subtype rope takes a different path.
+  `loc_38966` calls `sub_38BD8` first and then calculates `sub_38D74`. The
+  engine reused the ordinary prior-segment cadence, leaving the sampled rope
+  surface one pixel too high when Sonic crossed a segment boundary at f20133.
+- Fix: the rope variant now publishes both live riders' current segments before
+  its Player-2 anchor adjustment and bend calculation. Normal HCZ/LRZ and
+  positive-subtype ICZ bridges retain their prior-segment behavior.
+- Validation: `TestTensionBridgeBendTiming`, `TestS3kTensionBridgeObject`, and
+  the complete-run replay pass through f20133. The next mismatch is Sonic's
+  animation ID at f21673; trace data remains comparison-only.
