@@ -48343,3 +48343,22 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczCompleteRunTraceReplay` now first diverges on Sonic's
   animation at f19404; physics first diverges at f19427. Trace data remains
   comparison-only.
+
+## 2026-07-22 - S3K move-lock object-support crouch gate
+
+- **`s3k_icz1` combined frontier advanced from animation f19404 to physics
+  f19523.** Physics advanced from f19427 to f19523 and animation from f19404
+  to f19531.
+- Root: while `move_lock` is nonzero, native `Sonic_Move` branches past every
+  animation write. The later `SonicKnux_Roll` low-speed Down path reads the
+  still-retained player `Status_OnObj` bit and returns without writing Duck.
+  The engine temporarily cleared live support for same-frame solid
+  revalidation, so its late crouch pass wrote Duck, and the following jump
+  press incorrectly entered spindash instead of the native Cork Floor break.
+- Fix: when the movement animation dispatch was suppressed by `move_lock`, the
+  S3K low-speed crouch decision now reads the player-slot entry object-support
+  snapshot. Ordinary unlocked Down behavior and terrain crouching are unchanged.
+- Validation: the focused movement regression and
+  `TestScriptedVelocityAnimationProfile` are green. The complete-run replay now
+  first diverges on Sonic's air state at f19523; trace data remains
+  comparison-only.

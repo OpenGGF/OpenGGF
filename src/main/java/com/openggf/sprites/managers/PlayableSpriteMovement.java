@@ -3998,10 +3998,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// + not left/right + not on object → enter duck animation.
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		short movingThreshold = (movementRules != null) ? movementRules.movingCrouchThreshold() : 0;
+		boolean nativePlayerSlotOnObject = sprite.isOnObject() || sprite.getOnObjectAtFrameStart();
 		if (movingThreshold > 0 && inputDown && !inputLeft && !inputRight
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash()
-				&& Math.abs(sprite.getGSpeed()) < movingThreshold
-				&& !sprite.isOnObject()) {
+				&& Math.abs(sprite.getGSpeed()) < movingThreshold) {
+			// Sonic_Move branches past every animation write while move_lock is
+			// active. SonicKnux_Roll then tests the still-live Status_OnObj bit
+			// before writing Duck (sonic3k.asm:22459,23263-23265). The engine
+			// temporarily clears live object support for same-frame revalidation,
+			// so use the player-slot entry snapshot for that native read.
+			if (nativePlayerSlotOnObject
+					&& sprite.getAnimationManager().isGroundMovementAnimationSuppressed()) {
+				sprite.setCrouching(false);
+				sprite.setBalanceState(0);
+				return;
+			}
+			if (nativePlayerSlotOnObject) {
+				// Without move_lock, Sonic_Move already owns the ordinary Duck
+				// write even while the player stands on an object's interior.
+				// Continue into the shared standing-still decision below.
+			} else {
 			// SonicKnux_Roll/Tails_Roll run after the ground-input routine and
 			// unconditionally write Duck at low speed while Down is held. That
 			// later write supersedes the Balance animation selected by
@@ -4013,6 +4029,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setCrouching(true);
 			sprite.setBalanceState(0);
 			return;
+			}
 		}
 
 		// ROM s2.asm:36237-36245: Balance/crouch/lookup checks happen when standing still
