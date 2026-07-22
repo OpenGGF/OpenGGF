@@ -1703,6 +1703,16 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                             ringObject.markTouchStateAlreadyPostMovement();
                         }
                     }
+                    // S3K's Obj37 chain is published through live SST pointers.
+                    // That remains true when an after-current owner lands behind
+                    // the Process_Sprites cursor and therefore skips the explicit
+                    // same-pass movement step above: the following player pass
+                    // must still read the ring's live x_pos/y_pos, not the
+                    // engine's older pre-update cache. The forced deferred-owner
+                    // path deliberately retains its previously published state.
+                    if (allocateRemainderAfterOwner && !forceDeferredOwnerRingClear) {
+                        ringObject.markTouchStateAlreadyPostMovement();
+                    }
                     if (objectManager.hasInheritedRingCounterPhase()) {
                         ringObject.markTouchStateAlreadyPostMovement();
                     }

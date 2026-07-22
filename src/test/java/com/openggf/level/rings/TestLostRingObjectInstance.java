@@ -581,6 +581,8 @@ class TestLostRingObjectInstance {
         assertEquals(3, rings.size());
         assertEquals(23, rings.get(0).getSlotIndex(),
                 "S2 HurtCharacter preallocates the first Obj37 owner slot before Obj37_Init");
+        assertFalse(rings.get(0).usesCurrentTouchResponseState(),
+                "S2's plain object scan keeps the ordinary pre-update touch snapshot");
         assertTrue(rings.get(1).getSlotIndex() > rings.get(0).getSlotIndex(),
                 "with no lower holes, subsequent S2 lost rings occupy later slots");
     }
@@ -635,6 +637,8 @@ class TestLostRingObjectInstance {
         assertEquals(3, rings.size());
         assertEquals(9, rings.get(0).getSlotIndex(),
                 "S3K HurtCharacter preallocates the first Obj37 owner slot before Obj37_Init");
+        assertTrue(rings.stream().allMatch(LostRingObjectInstance::usesCurrentTouchResponseState),
+                "S3K's Collision_response_list retains live pointers for the whole after-current chain");
         assertTrue(rings.get(1).getSlotIndex() > rings.get(0).getSlotIndex(),
                 "subsequent S3K lost rings allocate after the owner slot");
     }

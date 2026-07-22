@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K's complete `AllocateObjectAfterCurrent` lost-ring chain now exposes live SST coordinates through `Collision_response_list`, including owners that land behind the current object cursor and skip their same-pass movement step. This restores LBZ's frame-5314 ring pickup and advances the combined frontier to frame 5896 without moving any other trace frontier.
 - Fix: LBZ moving platforms now gate their caller-owned `SolidObjectTop` pass on the prior `Render_Sprites` visibility bit using the ROM's `$20` by `$08` render bounds. This removes a false off-screen Tails landing and advances the combined LBZ frontier from frame 4805 to frame 5314 without moving any other trace frontier.
 - Fix: LBZ moving platforms now expose their native `SolidObjectTop` contact profile: `d3=9`, zero-distance rejection, and `SolidObject_Landed`'s relative Y correction instead of a `PlatformObject` absolute snap. This advances the combined LBZ frontier from frame 4723 to frame 4805 without moving any other trace frontier.
 - Fix: S3K Snale Blasters now retain their `Obj_WaitOffscreen` placeholder dispatch and the complete `byte_8C2B6` raw opening pre-animation before vertical shell motion begins. This restores LBZ's protected-enemy velocity rebound and advances the combined frontier from frame 4431 to frame 4723 without moving any other trace frontier.

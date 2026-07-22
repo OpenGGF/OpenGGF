@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+## 2026-07-22 - S3K after-current lost-ring live-pointer publication
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 5314 to
+  frame 5896.** Total release-blocking errors fell from 6995 to 6994; the next
+  divergence is Sonic's vertical speed (`-$01C8` expected versus `-$02C8`
+  actual).
+- Root: S3K's `Collision_response_list` stores live SST pointers for Obj37.
+  LBZ's frame-5219 ring owner was allocated behind the current
+  `Process_Sprites` cursor, so it correctly skipped the explicit same-pass
+  movement bridge. The engine also left its live-coordinate touch marker
+  unset, however, and the frame-5314 player pass tested the older cached Y
+  (`$0393`) instead of the live native Y (`$0398`), missing the pickup.
+- Fix: every S3K `AllocateObjectAfterCurrent` lost-ring entry now publishes
+  live touch coordinates, independently of whether that particular slot took
+  an initial movement step. The existing forced-deferred-owner path retains
+  its distinct previous-publication behavior. The gate is driven by the
+  allocator contract, so S1/S2 behavior is unchanged.
+- Validation: all 33 focused lost-ring tests pass and the LBZ replay reaches
+  frame 5896. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
 ### 2026-07-22 -- ICZ complete-run f11976 attracted-ring target phase FIXED; physics frontier f12107
 
 The ROM's slot-13 `Obj_Attracted_Ring` reaches `(0x6710,0x02C6)` and enters
