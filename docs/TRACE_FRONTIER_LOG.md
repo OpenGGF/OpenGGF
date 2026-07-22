@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ live-state drum transfer landing
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 9869 to
+  frame 9906.** Total release-blocking errors fell from 6060 to 6059; the next
+  divergence is Sonic's animation (`Walk` expected versus `Run` actual).
+- Root: the earlier rolling drum released Sonic and set the live
+  `Status_InAir` bit before the incoming drum called `RideObject_SetRide` in
+  the same object pass. Native clears and tests that live bit, then calls
+  `Player_TouchFloor`; the engine instead trusted the frame-start ride latch
+  and retained the outgoing drum's tumble angle, producing mapping `$35`
+  instead of `$37` on the following player slot.
+- Fix: drum capture now calls the landing reset whenever the live airborne bit
+  was set at capture time. A focused transfer test covers the outgoing-release
+  ordering and verifies the roll/tumble reset.
+- Validation: all 19 focused rolling-drum tests pass and the LBZ replay reaches
+  frame 9906. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - LBZ Ribot post-move touch publication
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 9706 to

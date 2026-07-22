@@ -185,7 +185,7 @@ class TestLbzRollingDrumInstance {
     }
 
     @Test
-    void sameFrameDrumTransferPreservesRollingStatusFromFrameStartRide() {
+    void sameFrameDrumTransferUsesLiveAirStatusForTouchFloorReset() {
         LbzRollingDrumInstance outgoing = drum(0x0600, 0x0640, 0x80);
         LbzRollingDrumInstance incoming = drum(0x0700, 0x0640, 0x80);
         TestablePlayableSprite player = groundedPlayer(0x0600, 0x0640);
@@ -203,10 +203,10 @@ class TestLbzRollingDrumInstance {
 
         assertTrue(player.isOnObject());
         assertFalse(player.getAir());
-        assertTrue(player.getRolling(),
-                "ROM RideObject_SetRide skips Player_TouchFloor when Status_OnObj was already set before capture");
-        assertEquals(0x0645, player.getCentreY() & 0xFFFF,
-                "Same-frame drum transfer must not apply the rolling height adjustment from Player_TouchFloor");
+        assertFalse(player.getRolling(),
+                "RideObject_SetRide calls Player_TouchFloor when the outgoing drum set the live InAir bit");
+        assertEquals(0, player.getFlipAngle(),
+                "Player_TouchFloor clears the outgoing drum's tumble angle before the incoming capture");
     }
 
     @Test

@@ -228,10 +228,12 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
 
     private void applyRideObjectSetRide(AbstractPlayableSprite player, int nativePlayerIndex) {
         int savedDoubleJumpFlag = player.getDoubleJumpFlag();
-        boolean sameFrameRideTransfer = player.getOnObjectAtFrameStart()
-                && !player.isJumping()
-                && !player.isHurt();
-        boolean shouldTouchFloor = player.getAir() && !sameFrameRideTransfer;
+        // RideObject_SetRide tests and clears the live Status_InAir bit after
+        // installing the new ride, then calls Player_TouchFloor only when that
+        // bit was set (sonic3k.asm:42052-42070). An earlier drum can release the
+        // player in this same object pass, so the frame-start ride latch is not
+        // authoritative here.
+        boolean shouldTouchFloor = player.getAir();
         // ROM RideObject_SetRide (sonic3k.asm:42027): if the player is already
         // Status_OnObj, clear the PREVIOUS interact object's standing bit
         // (bclr d6,status(a3)) before re-latching. For a drum-to-drum handoff
