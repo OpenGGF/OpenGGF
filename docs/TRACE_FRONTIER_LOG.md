@@ -48264,3 +48264,20 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestIczIceCubeObjectInstance` is green; the complete-run replay's
   next divergence is CPU Tails' horizontal speed at f15940. Trace data remains
   comparison-only.
+
+## 2026-07-22 - ICZ Star Pointer child initialization
+
+- **`s3k_icz1` physics and animation advanced from f15940 to f16710.** Total
+  errors fell from 2,234 to 1,950.
+- Root: native Star Pointer children execute `loc_8BEB0` once after allocation,
+  installing attributes and their phase angle before returning without circular
+  movement or `Collision_response_list` publication. The engine constructor
+  installed those fields and then let the higher child SST run `loc_8BEE6` in
+  the same object pass, advancing both its orbit and touch eligibility by one
+  frame. That made an orbiting point hurt CPU Tails at f15940 instead of f15941.
+- Fix: the child now retains the parent's copied position through an explicit
+  initialization-only execution and publishes its touch entry only from its
+  subsequent active routine executions.
+- Validation: `TestStarPointerBadnikInstance` is green; the complete-run replay's
+  next divergence is Sonic's vertical speed at f16710. Trace data remains
+  comparison-only.

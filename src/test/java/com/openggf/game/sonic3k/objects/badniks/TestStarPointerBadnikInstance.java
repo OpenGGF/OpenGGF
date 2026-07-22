@@ -178,6 +178,7 @@ class TestStarPointerBadnikInstance {
 
         StarPointerBadnikInstance.OrbitingPointInstance point =
                 new StarPointerBadnikInstance.OrbitingPointInstance(starPointer.getSpawn(), starPointer, 0);
+        point.update(1, player); // loc_8BEB0 initialization-only execution
         setIntField(point, "angle", 0xFF);
         setIntField(point, "currentX", 0);
         setIntField(point, "currentY", 0);
@@ -188,6 +189,33 @@ class TestStarPointerBadnikInstance {
                 "loc_8BEE6 falls through into MoveSprite_CircularSimple on the launch frame");
         assertEquals(starPointer.getY() + 16, point.getY(),
                 "angle 0 refreshes to the parent's lower orbit position before launch movement starts");
+    }
+
+    @Test
+    void firstChildExecutionOnlyInitializesAndDoesNotPublishTouchEntry() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 100);
+        when(player.getCentreY()).thenReturn((short) 100);
+        when(player.getDead()).thenReturn(false);
+        starPointer.update(0, player);
+
+        StarPointerBadnikInstance.OrbitingPointInstance point =
+                new StarPointerBadnikInstance.OrbitingPointInstance(starPointer.getSpawn(), starPointer, 0);
+
+        assertEquals(starPointer.getX(), point.getX());
+        assertEquals(starPointer.getY(), point.getY());
+        point.update(0, player);
+        assertEquals(starPointer.getX(), point.getX(), "loc_8BEB0 does not run circular movement");
+        assertEquals(starPointer.getY(), point.getY(), "loc_8BEB0 preserves the copied parent position");
+        assertFalse(point.publishesTouchResponseListEntryThisFrame(),
+                "loc_8BEB0 returns before Child_DrawTouch_Sprite");
+
+        point.update(2, player);
+        assertTrue(point.publishesTouchResponseListEntryThisFrame(),
+                "loc_8BEE6 publishes the point after its first active update");
     }
 
     @Test
@@ -206,6 +234,7 @@ class TestStarPointerBadnikInstance {
                 new StarPointerBadnikInstance.OrbitingPointInstance(starPointer.getSpawn(), starPointer, 0);
         setIntField(point, "angle", 1);
 
+        point.update(0, player);
         point.update(1, player);
 
         assertEquals(starPointer.getX() + 1, point.getX(),

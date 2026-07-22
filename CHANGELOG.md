@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K Star Pointer orbiting children now preserve their native initialization-only first SST execution before beginning circular movement and publishing to the collision-response list. This advances both ICZ complete-run trace groups to frame 16710.
 - Fix: shattering ICZ ice cubes now clear the engine's parallel riding reference when the ROM clears `Status_OnObj`, preventing a freed cube SST from re-seating its former rider after snowdust reuses the slot. This advances both ICZ complete-run trace groups to frame 15940.
 - Fix: preloaded-act S3K title cards now preserve the retained ROM `Scroll_lock` through the first `Change_Act2Sizes` worker pass, then release it without clearing horizontal scroll history. ICZ's three fixed-point boundary workers now reproduce the post-miniboss camera expansion and advance both complete-run trace groups to frame 15522.
 - Fix: S3K results produced after next-act state is already loaded now leave camera lock and bounds with the in-level title-card owner; ICZ’s folded results owner also retains its final wait entry. This advances complete-run physics to frame 15401 and animation to frame 15435.
