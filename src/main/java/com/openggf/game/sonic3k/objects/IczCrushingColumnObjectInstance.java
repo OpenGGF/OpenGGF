@@ -209,8 +209,10 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     }
 
     private void impact(int terrainDistance) {
+        // loc_8A540 adds the signed terrain correction to the integer y_pos
+        // word only. The low subpixel word survives the impact and therefore
+        // sets the phase of every later return/crush cycle.
         y += terrainDistance;
-        ySub = 0;
         routine = ROUTINE_WAIT_AFTER_IMPACT;
         timer = INITIAL_TIMER;
         playSfx(Sonic3kSfx.MECHA_LAND.id);
@@ -292,7 +294,9 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     }
 
     protected TerrainCheckResult checkCeilingDistance() {
-        return ObjectTerrainUtils.checkCeilingDist(x, y, TERRAIN_Y_RADIUS);
+        // ObjCheckCeilingDist enters S3K FindFloor with the upward EOR-$F
+        // coordinate transform and the X-indexed height map.
+        return ObjectTerrainUtils.checkNativeUpwardCeilingDist(x, y, TERRAIN_Y_RADIUS);
     }
 
     protected TerrainCheckResult checkFloorDistance() {
@@ -403,6 +407,10 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
 
     public int getYVelocityForTesting() {
         return yVel;
+    }
+
+    public int getYSubpixelForTesting() {
+        return ySub;
     }
 
     public int getMappingFrameForTesting() {

@@ -94,6 +94,8 @@ class TestS3kIczCrushingColumnObject {
 
         assertEquals(0x12, column.getRoutineByteForTesting());
         assertEquals(0x0700 - 3 - 1, column.getY());
+        assertEquals(0xA000, column.getYSubpixelForTesting(),
+                "loc_8A540 corrects the integer y_pos word without clearing its subpixel word");
 
         for (int frame = 3; frame <= 35; frame++) {
             column.update(frame, player);
@@ -176,9 +178,14 @@ class TestS3kIczCrushingColumnObject {
         column.update(300, player);
 
         column.update(301, player);
-        assertEquals(0x12, column.getRoutineByteForTesting());
+        assertEquals(0x0C, column.getRoutineByteForTesting());
         assertEquals(-0x60, column.getYVelocityForTesting(),
-                "the native spawnY-1 endpoint reaches the second ceiling impact on its first movement tick");
+                "the preserved impact fraction keeps the first second-cycle tick within y_pos $06FF");
+
+        column.update(302, player);
+        assertEquals(0x12, column.getRoutineByteForTesting());
+        assertEquals(-0x80, column.getYVelocityForTesting(),
+                "the second tick carries the preserved fraction across the $06FE ceiling threshold");
     }
 
     @Test

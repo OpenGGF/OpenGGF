@@ -48413,3 +48413,19 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczTensionPlatformObject` and the complete-run replay pass
   through the former animation mismatch. The next divergence is CPU Tails' Y
   position at f22465; trace data remains comparison-only.
+
+## 2026-07-22 - ICZ crushing-column impact fraction and ceiling probe
+
+- **`s3k_icz1` physics advanced from f22465 to f23182 and animation advanced
+  from f22465 to f23321.** Total errors fell from 1,118 to 833; the focused
+  crushing-column suite remains green.
+- Root: `loc_8A540` corrects an impact with `add.w d1,y_pos(a0)`, preserving
+  the low subpixel word that phases every later fixed-point crush cycle. The
+  engine cleared that word. It also sent `ObjCheckCeilingDist` through the
+  legacy rotated ceiling metric instead of S3K's upward `FindFloor` entry,
+  whose EOR-`$F` coordinate transform still samples the X-indexed height map.
+- Fix: impact correction now changes only integer Y, and the column uses the
+  shared native upward-ceiling probe. No trace state is read or applied.
+- Validation: `TestS3kIczCrushingColumnObject` is green and the complete-run
+  replay passes the former CPU-Tails landing cascade. The next physics mismatch
+  is Sonic Y at f23182; animation first diverges at f23321.
