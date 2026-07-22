@@ -156,6 +156,16 @@ public final class LbzMovingPlatformObjectInstance extends AbstractObjectInstanc
     }
 
     @Override
+    public int getOnScreenHalfWidth() {
+        return halfWidth;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return halfHeight;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         applyMovement();
         standingThisFrame = false;
@@ -182,7 +192,8 @@ public final class LbzMovingPlatformObjectInstance extends AbstractObjectInstanc
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        return !intangible && !isDestroyed();
+        // loc_24F02 tests render_flags bit 7 before calling SolidObjectTop.
+        return !intangible && !isDestroyed() && isWithinSolidContactBounds();
     }
 
     @Override

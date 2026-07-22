@@ -49151,3 +49151,23 @@ standalone CNZ remains at f0 in both scopes.
   reaches frame 4805. The complete `*TraceReplay#replayMatchesTrace` sweep
   reports 61 tests, 45 green and the same 16 documented red routes. Every
   non-LBZ S3K, S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - LBZ moving-platform caller render gate
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 4805 to
+  frame 5314.** Total release-blocking errors fell from 7238 to 6995; the next
+  divergence is the ring count (`1` expected versus `0` actual).
+- Root: Obj_LBZMovingPlatform tests its own `render_flags` sign bit before it
+  calls `SolidObjectTop`. At frame 4805 the lower platform's `$20` by `$08`
+  render box is wholly below the viewport, so native execution skips contact
+  and CPU Tails continues falling. The engine correctly knew that top-only
+  helpers have no internal off-screen gate, but failed to retain this separate
+  caller-owned test and falsely landed Tails.
+- Fix: the concrete LBZ moving platform now exposes its native render half-size
+  and requires the retained post-render on-screen state in `isSolidFor` before
+  entering the shared top-solid resolver. This models object/render state rather
+  than the route or trace frame.
+- Validation: all six focused moving-platform tests pass and the LBZ replay
+  reaches frame 5314. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. Every
+  non-LBZ S3K, S1, and S2 frontier and error total remains unchanged.
