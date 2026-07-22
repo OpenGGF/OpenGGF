@@ -37,8 +37,11 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Orbinaut priority $280.
     private static final int X_SPEED = 0x80;              // loc_8C662: move.w #-$80,d1.
     private static final int CHILD_COUNT = 4;
+    private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
 
     private boolean initialized;
+    private boolean movementEnabled;
+    private int movementEnableDelay = -1;
 
     public OrbinautBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Orbinaut",
@@ -48,19 +51,38 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed() || (!initialized && !isOnScreenX())) {
             return;
         }
 
         if (!initialized) {
+            // Reserve the native child graph as soon as the coarse placement
+            // window admits the parent. Obj_WaitOffscreen's saved continuation
+            // still keeps motion and orbit cadence dormant until its $20
+            // placeholder has actually reached Render_Sprites.
             spawnOrbitingOrbs();
             initialized = true;
+            movementEnabled = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE);
             return;
         }
 
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite
                 ? sprite : null;
         updateFacingAndVelocity(player);
+        if (!movementEnabled) {
+            if (movementEnableDelay < 0) {
+                if (!isWithinRenderSpriteBounds(WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE)) {
+                    return;
+                }
+                movementEnableDelay = 2;
+            }
+            if (movementEnableDelay > 0) {
+                movementEnableDelay--;
+                return;
+            }
+            movementEnabled = true;
+        }
         if (canMoveThisFrame(player)) {
             moveWithVelocity();
         }
@@ -92,11 +114,19 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     boolean shouldRotateOrbs(AbstractPlayableSprite player) {
-        return canMoveThisFrame(player);
+        return movementEnabled && canMoveThisFrame(player);
     }
 
     boolean isFacingRight() {
         return !facingLeft;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("init=%s move=%s delay=%d render=%s sub=%02X",
+                initialized, movementEnabled, movementEnableDelay,
+                isWithinRenderSpriteBounds(WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE),
+                xSubpixel & 0xFF);
     }
 
     static final class OrbinautOrbInstance extends AbstractObjectInstance

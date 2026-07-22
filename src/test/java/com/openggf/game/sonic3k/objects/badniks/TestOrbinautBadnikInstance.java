@@ -129,6 +129,44 @@ class TestOrbinautBadnikInstance {
         assertFalse(readBoolean(orbinaut, "facingLeft"));
     }
 
+    @Test
+    void initializedBodyKeepsRunningWhenItBrieflyLeavesViewport() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        AbstractObjectInstance orbinaut = createInitializedOrbinaut();
+        AbstractObjectInstance.updateCameraBounds(0x1000, 0, 1024, 1024, 0);
+        AbstractPlayableSprite player = playerAt(0x0180, 0x0100, false, -0x100, 0);
+
+        orbinaut.update(1, player);
+        orbinaut.update(2, player);
+
+        assertEquals(0x01FF, orbinaut.getX(),
+                "Sprite_CheckDeleteTouch runs after the restored routine; Obj_WaitOffscreen is not re-entered");
+    }
+
+    @Test
+    void placeholderVisibilityCompletesRestoreBeforeMovementBegins() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 224, 0);
+        AbstractObjectInstance orbinaut = (AbstractObjectInstance) new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x0200, 0x0300, Sonic3kObjectIds.ORBINAUT, 0, 0, false, 0));
+        ObjectServices services = mock(ObjectServices.class);
+        when(services.objectManager()).thenReturn(mock(ObjectManager.class));
+        orbinaut.setServices(services);
+        AbstractPlayableSprite player = playerAt(0x0180, 0x0300, false, -0x100, 0);
+
+        orbinaut.update(0, player);
+        orbinaut.update(1, player);
+        assertEquals(0x0200, orbinaut.getX(), "X visibility creates the placeholder without moving the body");
+
+        AbstractObjectInstance.updateCameraBounds(0, 0x0200, 1024, 0x0400, 0);
+        orbinaut.update(2, player);
+        orbinaut.update(3, player);
+        assertEquals(0x0200, orbinaut.getX(), "the restored operation consumes two non-moving passes");
+
+        orbinaut.update(4, player);
+        orbinaut.update(5, player);
+        assertEquals(0x01FF, orbinaut.getX(), "the resumed routine keeps running after restoration");
+    }
+
     private static AbstractObjectInstance createOrbinaut() {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ORBINAUT, 0, 0, false, 0));

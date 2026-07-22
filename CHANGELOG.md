@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K Orbinauts now reserve their child graph in the coarse placement window, resume body/orbit motion only after `Obj_WaitOffscreen`'s rendered placeholder restore, and keep the restored routine running through later viewport exits. This restores LBZ's recorded Orbinaut hit and advances the combined frontier from frame 11126 to frame 11697 without regressing another trace frontier.
 - Fix: trace routine projection now retains an object-solid hurt landing as routine `$04` only for games whose typed movement rules use the S2 capture latch. S3K publishes the normal routine on its recorded landing closure, advancing the combined LBZ frontier from frame 10565 to frame 11126 without regressing another trace frontier.
 - Fix: LBZ flame throwers now include the exact right-hand contact boundary accepted by `SolidObjectFull`'s unsigned `bhi` gate. This restores CPU Tails' recorded push contact and advances the combined LBZ frontier from frame 10272 to frame 10565 without regressing another trace frontier.
 - Fix: LBZ rolling drums now reserve the engine's stale-air latch repair for native P1 while native P2 follows `loc_2C46E` and releases immediately when its player slot publishes `Status_InAir`. This advances the combined LBZ frontier from frame 9953 to frame 10272 without regressing another trace frontier.

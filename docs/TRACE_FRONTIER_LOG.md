@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ Orbinaut wait-offscreen continuation
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 11126 to
+  frame 11697.** The next divergence is Sonic's Y position (`$0479` expected
+  versus `$047E` actual).
+- Root: Orbinaut used a horizontal viewport check on every object pass. Native
+  `Obj_WaitOffscreen` reserves its child SST graph in the coarse placement
+  window, resumes the saved routine only after the `$20` placeholder has been
+  rendered, and does not re-enter the wait helper when the restored routine
+  later leaves the viewport. The engine therefore left the later LBZ body and
+  orbit cadence at their cardinal startup phase and hurt Sonic one frame early.
+- Fix: the parent now separates coarse child-graph reservation from the
+  rendered-placeholder restore countdown. Body translation and child orbit
+  cadence share that restored-operation latch, which remains active through
+  subsequent viewport exits. Focused tests cover both the two non-moving
+  restore passes and continued initialized execution outside the viewport.
+- Validation: all 8 focused Orbinaut tests pass and the LBZ replay reaches
+  frame 11697. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - S3K object-landing hurt routine projection
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 10565 to
