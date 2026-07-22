@@ -85,9 +85,9 @@ class TestModGameStartResolver {
     }
 
     @Test
-    void fourArgumentContributionRemainsNonGameStartAndS2DefaultRetainsMarker() {
+    void nonGameStartContributionAndS2DefaultRetainMarker() {
         ModZoneContribution compatible = new ModZoneContribution(
-                "sky", new BakedLevelRef("sky/level.json"), null, null);
+                "sky", new BakedLevelRef("sky/level.json"), null, null, false);
         ModZoneContribution start = new ModZoneContribution(
                 "sky", new BakedLevelRef("sky/level.json"), null, null, true);
 

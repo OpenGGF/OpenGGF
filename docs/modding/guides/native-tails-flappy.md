@@ -1,6 +1,6 @@
 # Build-along: native Tails Flappy in Sonic 3 & Knuckles
 
-This guide tours the maintained `sample-flappy` source: a Mod API 2.4 Sonic 3 &
+This guide tours the maintained `sample-flappy` source: a Mod API 0.7 Sonic 3 &
 Knuckles patch that starts a fresh game in a short custom sky level, launches native
 Tails, and turns his normal flight into a fixed-position obstacle game. The mod does
 not hide or replace the player, borrow ROM art into an object, force-scroll a camera,
@@ -32,8 +32,8 @@ $out = Join-Path $env:TEMP ("sample-flappy-" + [guid]::NewGuid())
 
 The result is `<output>/target/sample-flappy-mod.jar`. Copy that jar—not the SDK—
 to the engine's `mods/` directory. The manifest declares `type: patch`,
-`baseGame: s3k`, and `engineApiRange: ">=2.4.0 <3.0.0"`; 2.4 is required for the
-fresh-game destination, launch-team, input-filter, and HUD-policy contributions.
+`baseGame: s3k`, and `engineApiRange: ">=0.7.0 <0.8.0"`; the 0.7 contract includes
+the fresh-game destination, launch-team, input-filter, and HUD-policy contributions.
 
 ## 2. Anchorless game-start and scoped policies
 

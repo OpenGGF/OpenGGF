@@ -15,13 +15,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.RecordComponent;
-import java.util.Arrays;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Focused unit test for the playable-subclass rewind capture hooks
@@ -68,6 +65,31 @@ class TestPlayableSubclassRewind {
         }
     }
 
+    /** Test-local subclass that records the end-to-end null-payload restore contract. */
+    private static final class NullExtraSprite extends TestablePlayableSprite {
+        int subclassCounter;
+        boolean restoreHookInvoked;
+        PlayableSubclassRewindExtra restoredExtra = new ComboExtra(-1);
+
+        NullExtraSprite() {
+            super("null-extra", (short) 0, (short) 0);
+        }
+
+        @Override
+        protected PlayableSubclassRewindExtra captureSubclassRewindState() {
+            return null;
+        }
+
+        @Override
+        protected void restoreSubclassRewindState(PlayableSubclassRewindExtra extra) {
+            restoreHookInvoked = true;
+            restoredExtra = extra;
+            if (extra == null) {
+                subclassCounter = 0;
+            }
+        }
+    }
+
     // (a) A subclass overriding the hooks round-trips its payload through
     // captureRewindState()/restoreRewindState(), both via the snapshot record
     // and via the live field after restore.
@@ -102,55 +124,37 @@ class TestPlayableSubclassRewind {
     }
 
     // (c) The restore hook is always invoked, and receives null when the
-    // snapshot carries no subclass payload -- exercised directly here, and
-    // indirectly by the pre-Task-3-constructor test below.
+    // snapshot carries no subclass payload.
     @Test
     void restoreHookReceivesNullWhenSnapshotCarriesNone() {
-        ComboSprite sprite = new ComboSprite("combo", (short) 0, (short) 0);
-        sprite.comboCounter = 42;
+        NullExtraSprite sprite = new NullExtraSprite();
+        sprite.subclassCounter = 42;
 
-        sprite.restoreSubclassRewindState(null);
+        PerObjectRewindSnapshot snapshot = sprite.captureRewindState();
+        assertNull(snapshot.playerExtra().subclassExtra(),
+                "capture must preserve the subclass's intentional null payload");
 
-        assertEquals(0, sprite.comboCounter,
-                "subclass must reset its state when the restore hook receives null");
+        sprite.subclassCounter = 99;
+        sprite.restoreRewindState(snapshot);
+
+        assertTrue(sprite.restoreHookInvoked,
+                "public snapshot restore must invoke the subclass restore hook");
+        assertNull(sprite.restoredExtra,
+                "public snapshot restore must forward the captured null payload");
+        assertEquals(0, sprite.subclassCounter,
+                "the null payload must reset stale subclass state during public restore");
     }
 
-    // (d) The previous canonical PlayerRewindExtra constructor (pre-Task-3,
-    // with no subclassExtra parameter) still compiles/links and always yields
-    // subclassExtra() == null.
+    // (d) The first published 0.7 surface exposes only the record's canonical
+    // constructor; provisional compatibility constructors must not return.
     @Test
-    void preservedOldCanonicalConstructorCompilesAndYieldsNullSubclassExtra() throws Exception {
-        ComboSprite sprite = new ComboSprite("combo", (short) 0, (short) 0);
-        sprite.comboCounter = 5;
-        PlayerRewindExtra current = sprite.captureRewindState().playerExtra();
-        assertEquals(new ComboExtra(5), current.subclassExtra());
+    void playerRewindExtraExposesOnlyCanonicalZeroSevenConstructor() {
+        var constructors = PlayerRewindExtra.class.getConstructors();
 
-        RecordComponent[] components = PlayerRewindExtra.class.getRecordComponents();
-        Object[] oldShapeArgs = Arrays.stream(components)
-                .filter(component -> !component.getName().equals("subclassExtra"))
-                .map(component -> {
-                    try {
-                        return component.getAccessor().invoke(current);
-                    } catch (ReflectiveOperationException ex) {
-                        throw new IllegalStateException(ex);
-                    }
-                })
-                .toArray();
-
-        Constructor<?> oldCanonical = Arrays.stream(PlayerRewindExtra.class.getConstructors())
-                .filter(ctor -> ctor.getParameterCount() == oldShapeArgs.length)
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "expected the preserved pre-Task-3 canonical PlayerRewindExtra constructor"));
-
-        PlayerRewindExtra legacyShapeExtra = (PlayerRewindExtra) oldCanonical.newInstance(oldShapeArgs);
-        assertNull(legacyShapeExtra.subclassExtra(),
-                "pre-Task-3 constructor shape has no subclassExtra parameter and must yield null");
-
-        // And the restore hook must receive that null, resetting subclass state.
-        PerObjectRewindSnapshot legacySnapshot = sprite.captureRewindState().withPlayerExtra(legacyShapeExtra);
-        sprite.restoreRewindState(legacySnapshot);
-        assertEquals(0, sprite.comboCounter,
-                "restoring a pre-Task-3-shaped snapshot must null out (reset) subclass state");
+        assertEquals(1, constructors.length,
+                "Mod API 0.7 must not retain provisional PlayerRewindExtra constructor shapes");
+        assertEquals(PlayerRewindExtra.class.getRecordComponents().length,
+                constructors[0].getParameterCount(),
+                "the sole public constructor must be the record's canonical constructor");
     }
 }

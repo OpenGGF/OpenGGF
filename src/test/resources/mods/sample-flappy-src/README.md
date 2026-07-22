@@ -1,7 +1,7 @@
 # Sample Flappy mod source
 
 `project/` is the checked-in output of `ggfmod init --id sample-flappy --package
-example.flappysample`, adapted into a Mod API 2.4 Sonic 3 & Knuckles patch. It
+example.flappysample`, adapted into a Mod API 0.7 Sonic 3 & Knuckles patch. It
 inserts an anchorless game-start level, launches native Tails alone, pins the
 camera, suppresses horizontal input, and keeps Tails' ROM-faithful flight active
 without replacing or hiding the playable sprite. The level contains only a short
@@ -45,6 +45,6 @@ The ROM-gated integration test launches the contribution through a real S3K modu
 and owner class loader. It verifies that native Tails starts visibly at the fixed
 screen position with flight active, horizontal velocity suppressed, flight energy
 refilled to `0xF0`, and both camera axes pinned. The registration, source-format,
-and package tests separately enforce the S3K/API-2.4 manifest, anchorless game-start
+and package tests separately enforce the S3K/Mod API 0.7 manifest, anchorless game-start
 contribution, Tails-only launch team, input/HUD policies, strict v2 level shape, and
 zero validator findings. No built jar is checked in.

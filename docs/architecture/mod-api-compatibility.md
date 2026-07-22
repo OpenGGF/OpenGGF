@@ -1,370 +1,139 @@
 # Mod API compatibility surface
 
-OpenGGF's compiled-mod contract is marked by the runtime-visible, type-only
-`com.openggf.game.ModApi` annotation. The supported inventory is not limited to
-the initially curated roots: every engine type reachable through their public or
-protected constructors, methods, fields, generic bounds, annotations, nested
-types, supertypes, interfaces, record components, and sealed permits clauses is
-part of the same contract and must also be annotated.
+OpenGGF Mod API 0.7 (`0.7.0`) is the first published compiled-mod contract. The
+runtime-visible, type-only `com.openggf.game.ModApi` annotation marks its roots.
+Every engine type reachable through those roots' public or protected
+constructors, methods, fields, generic bounds, annotations, nested types,
+supertypes, interfaces, record components, and sealed permits clauses belongs to
+the same recursive contract and must also be annotated.
 
-The published version is Mod API 2.5.0. Its recursive surface spans **921 engine
-types** and **18,171 canonical signature entries**, pinned exactly by
-`mod-api-signatures-2.5.txt` (the
-`TestModApiSignatureSurface` guard is the authoritative count). The surface has a
-single reconciled lineage, 1.1.0 -> 1.2.0 -> 2.0.0 -> 2.1.0 -> 2.2.0 -> 2.3.0
--> 2.4.0 -> 2.5.0:
-1.1.0 is the
-original closed baseline; 1.2.0 was an additive minor bump (its frozen historical
-baseline `mod-api-signatures-1.2.txt` contains **875 engine types** and **17,178
-canonical signature entries**, a strict superset of 1.1.0); 2.0.0 was a deliberate
-breaking bump published on top of 1.2.0 (now itself a closed historical baseline,
-`mod-api-signatures-2.0.txt`, **873 engine types** and **17,165 canonical signature
-entries**); 2.1.0 was an additive minor bump published on top of 2.0.0 (now itself
-a closed historical baseline, `mod-api-signatures-2.1.txt`, **875 engine types**
-and **17,196 canonical signature entries**); 2.2.0 was an additive minor bump on
-top of 2.1.0 (now a closed historical baseline, **876 engine types** and **17,205
-canonical signature entries**); 2.3.0 was an additive minor bump on top of 2.2.0
-(now a closed historical baseline, **885 engine types** and **17,323 canonical
-signature entries**); 2.4.0 was an additive minor bump on top of 2.3.0
-(**896 engine types** and **17,453 canonical signature entries**); and 2.5.0 is
-the current additive minor bump (**921 engine types** and **18,171 canonical
-signature entries**).
-The breadth is intentional. In particular, the legacy-wide
-signatures of `GameModule`, `ObjectServices`, and the object base classes expose
-substantial runtime infrastructure; silently treating those transitive types as
-unsupported would make creator binaries depend on an undocumented, unstable ABI.
+The exact current inventory is
+`src/test/resources/mods/mod-api-signatures-0.7.txt`. `TestModApiSignatureSurface`
+requires that file to be unique, sorted canonical UTF-8 text and exactly equal to
+the dependency-complete runtime surface. This is the only published signature
+pin. Earlier 1.x and 2.x labels were provisional development markers and carry
+no compatibility promise.
 
-The Phase 2 zone seam replaces the fixed `LevelData` enum in creator-facing
-signatures with `LevelDescriptor`. `LevelData` remains the stock implementation
-and every enum constant delegates its unchanged index and start coordinates
-through that interface; the enum itself is no longer part of the creator ABI.
-This replacement was made while 1.1 remained unpublished, before the final
-Phase 2 baseline freeze.
+Creator manifests should declare the maintained engine range:
 
-The 1.1 surface also includes the additive loader-aware rewind contract:
-`DynamicObjectEntry.ownerModId` identifies the compiled-mod loader that owns a
-captured dynamic class, while `RewindClassResolver` lets the engine preserve
-that ownership across recreation. Legacy `DynamicObjectEntry` constructors are
-retained and produce ownerless engine entries, so existing 1.1 binaries remain
-source- and binary-compatible.
+```yaml
+engineApiRange: ">=0.7.0 <0.8.0"
+```
 
-The published baseline is
-`src/test/resources/mods/mod-api-signatures-2.5.txt`, pinned exactly to the
-current canonical surface by `TestModApiSignatureSurface`. The prior
-`mod-api-signatures-1.1.txt` (831 engine types, 16,483 canonical entries),
-`mod-api-signatures-1.2.txt` (875 engine types, 17,178 canonical entries),
-`mod-api-signatures-2.0.txt` (873 engine types, 17,165 canonical entries),
-`mod-api-signatures-2.1.txt` (875 engine types, 17,196 canonical entries),
-`mod-api-signatures-2.2.txt` (876 engine types, 17,205 canonical entries), and
-`mod-api-signatures-2.3.txt` (885 engine types, 17,323 canonical entries), and
-`mod-api-signatures-2.4.txt` (896 engine types, 17,453 canonical entries) are
-retained as closed historical records: 1.1 is the original contract, 1.2 is its
-additive successor, 2.0 is the deliberate breaking bump, and 2.1/2.2/2.3 are additive
-steps that 2.5 extends. `TestModApiSignatureSurface` verifies the full lineage —
-1.1 -> 1.2 is asserted additive (1.2 is a strict superset of 1.1), 1.2 -> 2.0 is
-asserted to be a declared breaking transition (see the 2.0.0 breaking-transition
-section below), 2.0 -> 2.1 is asserted additive (2.1 is a strict superset of 2.0;
-see the 2.1.0 additive-bump section below), and 2.1 -> 2.2 is asserted additive
-(2.2 is a strict superset of 2.1; see the 2.2.0 additive-bump section below), and
-2.2 -> 2.3 is asserted additive (2.3 is a strict superset of 2.2; see the 2.3.0
-additive-bump section below), and 2.3 -> 2.4 is asserted additive (2.4 is a strict
-superset of 2.3; see the 2.4.0 additive-bump section below), and 2.4 -> 2.5 is
-asserted additive (2.5 is a strict superset of 2.4; see the 2.5.0 additive-bump
-section below) — so
-each step's changes are never silently absorbed into an undocumented jump. The
-guard requires the published baseline to remain a subset of the current canonical
-surface, so removals and changes fail while reviewed compatible additions can be
-published with an appropriate semantic API version increase. Before updating the
-published baseline:
+Manifest `formatVersion: 1` is a separate wire-format version. It does not mean
+Mod API 1.x and must not be used to infer compiled-code compatibility.
 
-1. run `TestModApiSignatureSurface` and inspect every added line;
-2. annotate every newly reachable engine type;
-3. narrow any third-party signature to a JDK or engine-owned contract instead of
-   allowlisting the dependency;
-4. add a JDK type only to the explicit platform allowlist after compatibility
-   review; package-prefix exemptions are forbidden;
-5. regenerate the sorted LF baseline with the dependency-complete snapshot command
-   below and re-run the Javadoc/SDK packaging tests.
+## What the 0.7 contract includes
 
-On PowerShell, `ModApiSignatureSurface --snapshot` requires both the compiled engine
-classes and its ASM dependency. Use this exact reproducible sequence (the shorter
-`java -cp target/classes ...` form is insufficient and fails with
-`NoClassDefFoundError`):
+The first baseline publishes the accumulated creator capabilities together:
+
+- restart-loaded music packs and trusted, code-backed patches;
+- namespaced object factories, bounded baked object art, Sonic 2 ROM-derived art,
+  complete Sonic 2 zones, and host-adapted Sonic 3&K custom zones;
+- owner-tagged playable characters, playable-subclass rewind payload hooks, and
+  no-ROM standalone modules over durable bounded assets;
+- exclusive custom game-start destinations, destination-scoped launch teams,
+  deterministic input filters, and row-only HUD profiles;
+- tagged saves, game-agnostic baked levels, deterministic TMX conversion, and
+  the two-artifact `ggfmod` workflow.
+
+The zone seam uses `LevelDescriptor` in creator-facing signatures; stock
+`LevelData` values implement that interface without becoming creator ABI. Dynamic
+object rewind entries retain their owning compiled-mod loader through
+`DynamicObjectEntry.ownerModId` and `RewindClassResolver`. Creator callbacks stay
+transactional, owner-fault-bounded, and engine-authoritative.
+
+## Publishing and reviewing the recursive surface
+
+Before changing the published baseline:
+
+1. Run `TestModApiSignatureSurface` and inspect every added or changed line.
+2. Annotate every newly reachable engine type.
+3. Narrow third-party signatures to JDK or engine-owned contracts instead of
+   allowlisting dependencies.
+4. Add a JDK type only to the explicit platform allowlist after compatibility
+   review. Package-prefix exemptions are forbidden.
+5. Regenerate the sorted LF snapshot and rerun the Javadoc, SDK packaging, and
+   maintained sample tests.
+
+On PowerShell, the snapshot tool needs both compiled engine classes and ASM. Use:
 
 ```powershell
 mvn "-DskipTests" compile
 mvn dependency:build-classpath "-Dmdep.outputFile=target/mod-api-snapshot-classpath.txt"
 $cp = "target/classes;$((Get-Content target/mod-api-snapshot-classpath.txt -Raw).Trim())"
 java -cp $cp com.openggf.mods.code.ModApiSignatureSurface --snapshot |
-    Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-2.5.txt
+    Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-0.7.txt
 ```
 
-The 1.2 roots add the character and standalone creator path: owner-tagged
-`CharacterKey`/`CharacterDefinition` registration and playable construction, plus
-`GameDataSource`, `AbstractStandaloneGameModule`, `ModGame`, and
-`StandaloneLevelLoader`. It also publishes `DelegatingGameModule`, the forwarding
-decorator used by creator patches that wrap a stock module, plus `GroundSensor` and
-`AbstractLevelInitProfile` for the prescribed standalone character and level-lifecycle
-implementation. These are additive to the 1.1 object/zone surface; the old baseline is
-not overwritten or renamed.
-
 Release packaging generates exact-inventory Javadoc and attaches
-`openggf-mod-sdk` and `openggf-mod-sdk-javadoc` classifier jars beside the
-engine artifact. Architecture guards ignore only the `@ModApi` marker edge and
-the release tool's exact inventory lookup; the annotation does not establish a
-runtime ownership dependency.
+`openggf-mod-sdk` and `openggf-mod-sdk-javadoc` classifier jars beside the engine
+artifact. Architecture guards ignore only the `@ModApi` marker edge and the
+release tool's exact inventory lookup; the annotation does not establish runtime
+ownership.
 
-New creator APIs should use narrow engine-owned facades and value types so this
-closure decays rather than expands. Existing supported signatures cannot be
-removed, narrowed, or unannotated merely to reduce the inventory; that requires
-a deliberate breaking-version transition and migration guidance.
+New creator APIs should prefer narrow engine-owned facades and immutable value
+types. A public or protected signature may not leak an unannotated engine type or
+an unreviewed third-party type. Once 0.7 is published, removals, narrowing changes,
+record-shape changes, and unannotation require an intentional compatibility
+decision rather than a silent snapshot rewrite.
 
-## Mod API 2.0.0 breaking transition
+## 0.7 reset inventory
 
-At publication, `ModApiVersion.CURRENT` became `2.0.0`. This is a deliberate major-version break from
-`1.2.0` (the additive successor of `1.1.0`): the rewind-reference-closure and
-per-game rules work removed and changed signatures that were frozen in the 1.2
-surface — and, because 1.2 is a strict superset of 1.1, in the 1.1 surface as
-well. Per semver, removed/changed public signatures are a major-version break, so
-the published API moved to a new major rather than silently re-baselining. The
-1.1 and 1.2 baselines are preserved as historical records;
-`TestModApiSignatureSurface` asserts that 1.1 -> 1.2 is additive and that
-1.2 -> 2.0 is a declared breaking transition (the frozen 1.2 lines are no longer a
-subset of the current surface) and pins the current surface to
-`mod-api-signatures-2.0.txt`.
+The reset removed provisional compatibility shims before establishing the first
+baseline. `TestNoProvisionalModApiShims` is the executable evidence that these
+members remain absent.
 
-Because 2.0 breaks compatibility, mods that declared an engine range under
-`<2.0.0` no longer load on this engine (`ModJarValidator` /
-`EffectiveCatalogBuilder` reject them as `ENGINE_API_INCOMPATIBLE`). A mod
-targeting this engine must declare a `2.x` range, e.g. `>=2.0.0 <3.0.0`; the SDK
-template and sample mods now do so.
+| Removed member or family | Evidence marker |
+| --- | --- |
+| Legacy `CheckpointState.RewindState` constructor | canonical-record constructor assertion |
+| Legacy `CameraSnapshot` constructor | canonical-record constructor assertion |
+| Legacy `GameStateSnapshot` constructor | canonical-record constructor assertion |
+| Legacy `WaterSystemSnapshot.DynamicWaterEntry` constructor | canonical-record constructor assertion |
+| Legacy `CollisionRules` constructor families | exact canonical-plus-`AirCollisionRules` constructor set |
+| Legacy `ObjectInteractionRules` constructor | canonical-record constructor assertion |
+| Legacy `PlayerAnimationRules` constructor | canonical-record constructor assertion |
+| Legacy `PlayerCapabilityRules` constructor | canonical-record constructor assertion |
+| Legacy `RingRules` constructor families | canonical-record constructor assertion |
+| Legacy `SidekickCpuRules` constructor | canonical-record constructor assertion |
+| Legacy `PerObjectRewindSnapshot.SidekickCpuRewindExtra` constructor | canonical-record constructor assertion |
+| Legacy `PerObjectRewindSnapshot.PlayerRewindExtra` constructor | canonical-record constructor assertion |
+| Legacy `ModZoneContribution` constructor | canonical-record constructor assertion |
+| Legacy `PlayableSpriteMovement.RewindState` constructor | canonical-record constructor assertion |
+| Legacy `PlayableSpriteController.RewindState` constructor | canonical-record constructor assertion |
+| Legacy `TraceMetadata` constructor | canonical-record constructor assertion |
+| `SpriteManager.drawUnifiedBucketWithPriority(int, GraphicsManager, Runnable, Runnable)` | reflected method-absence assertion |
+| `ObjectManager.snapshotPersistentDynamicObjectsForTransition()` | reflected method-absence assertion |
+| `AbstractPlayableSprite.mgzTopPlatformCarrySolidContactObject` | reflected field-absence assertion |
+| `AbstractPlayableSprite.mgzTopPlatformSpringHandoffPending` | reflected field-absence assertion |
+| `AbstractPlayableSprite.mgzTopPlatformSpringHandoffXVel` | reflected field-absence assertion |
+| `AbstractPlayableSprite.mgzTopPlatformSpringHandoffYVel` | reflected field-absence assertion |
+| Provisional compatibility comments and marker phrases in production Java | exact empty marker allowlist |
 
-Signatures removed or changed between 1.1 and 2.0 (the reason for the major bump):
+The underlying current behaviors remain available through their canonical 0.7
+owners; this inventory records deleted shims, not removed product capabilities.
 
-- **Rewind-state closure consolidation.** `PerObjectRewindSnapshot$PlayerRewindExtra`
-  no longer nests the four `*$RewindState` sub-records
-  (`PlayableSpriteMovement$RewindState`, `SpindashDustController$RewindState`,
-  `PlayableSpriteAnimation$RewindState`, `DrowningController$RewindState`) as
-  components/accessors, and its canonical constructor changed accordingly.
-  `PerObjectRewindSnapshot$SidekickCpuRewindExtra` dropped the
-  `carryParentagePending`, `flyingCarryingFlag`, `releaseCooldown`, `carryLatchX`,
-  and `carryLatchY` components. These are engine rewind-serialization internals
-  reachable only transitively through `AbstractObjectInstance.captureRewindState()`
-  / `restoreRewindState()`; mods override those hooks but should treat the
-  snapshot as an opaque engine token rather than destructuring its extras.
-- **Per-game rules records.** The canonical constructors of `CollisionRules`,
-  `PlayerCapabilityRules`, `RingRules`, `SidekickCpuRules`, and
-  `WaterSystemSnapshot$DynamicWaterEntry` changed as components were added.
-  Records in the audited surface are constructor-frozen, so any added component
-  is a breaking constructor-signature change.
-- **`SpriteManager.drawUnifiedBucketWithPriority`.** The
-  `(int, GraphicsManager, Runnable, Runnable)` overload was removed in favor of
-  the `(int, GraphicsManager)` form.
+## Historical development corpus
 
-## Mod API 2.1.0 additive bump
+The following dated documents preserve development history and scope provenance.
+They are not current version authority:
 
-At publication, `ModApiVersion.CURRENT` became `2.1.0`. This is a same-major additive minor bump
-above `2.0.0`: it publishes the ROM-art intake surface that lets Sonic 2 patch
-mods stage object art materialized from the user's ROM at gameplay launch
-instead of shipping baked art assets.
+- `docs/superpowers/specs/2026-07-10-mod-support-format-security-contracts.md`
+- `docs/superpowers/specs/2026-07-13-example-mods-design.md`
+- `docs/superpowers/specs/2026-07-14-flappy-native-tails-design.md`
+- `docs/superpowers/specs/2026-07-14-mod-gap-fixes-design.md`
+- `docs/superpowers/specs/2026-07-14-rom-art-remix-sample-design.md`
+- `docs/superpowers/specs/2026-07-14-s3k-mod-zone-adapter-design.md`
+- `docs/superpowers/specs/2026-07-22-mod-api-0-7-reset-design.md`
+- `docs/superpowers/plans/2026-07-13-mod-rom-art-intake.md`
+- `docs/superpowers/plans/2026-07-13-sample-flappy-mod.md`
+- `docs/superpowers/plans/2026-07-13-sample-platformer-mod.md`
+- `docs/superpowers/plans/2026-07-14-mod-gap-fixes.md`
+- `docs/superpowers/plans/2026-07-14-mod-gameplay-policies.md`
+- `docs/superpowers/plans/2026-07-14-native-tails-flappy.md`
+- `docs/superpowers/plans/2026-07-14-rom-art-remix-sample.md`
+- `docs/superpowers/plans/2026-07-14-s3k-mod-zone-adapter.md`
 
-Added signatures:
-
-- **`ModContext.registerRomObjectArt(String, RomArtRequest)`.** Stages a ROM-art
-  request under an owner-namespaced key, served through the same overlay as
-  `registerObjectArt`. Only available to Sonic 2 patch mods (`baseGame` `"s2"`);
-  standalone modules and other base games are rejected at registration time.
-- **`RomArtRequest`** (record) — the staged request: ROM art/mapping/DPLC
-  addresses, `RomArtCompression`, palette line, and bank size. Registration
-  validates static address bounds with no ROM open; the real ROM is read only
-  during gameplay-launch materialization, and ROM-derived bytes are never
-  persisted to disk.
-- **`RomArtCompression`** (enum) — `NEMESIS`, `KOSINSKI`, `UNCOMPRESSED`.
-
-`ModRegistrationPlan` gained a `romObjectArt` component and a new 12-component
-canonical constructor to carry staged ROM-art requests through the freeze/apply
-pipeline; the pre-existing 11-component constructor is preserved as a
-compatibility overload, matching the pattern used by the earlier standalone and
-Phase-2 canonical-shape additions. `ModRegistrationPlan` is not itself part of
-the published `@ModApi` surface (it is returned only from the package-private
-`ModContext.freeze()`), so this constructor addition does not appear in the
-signature diff between 2.0 and 2.1; the diff is limited to the three items
-above. The engine-internal `RomArtMaterializer` (real ROM decompression/parsing)
-and `ModBackedGamePatch.RomArtSheetSource` remain package-private and are not
-part of the creator ABI.
-
-No existing 2.0 signature was removed, narrowed, or changed. `mod-api-signatures-2.0.txt`
-is retained as a closed historical baseline; `mod-api-signatures-2.1.txt` is now
-also a closed historical baseline, extended by 2.2.
-
-## Mod API 2.2.0 additive bump
-
-At publication, `ModApiVersion.CURRENT` became `2.2.0`. This is a same-major additive minor bump
-above `2.1.0`: it publishes the playable-subclass rewind hooks that let a
-compiled-mod playable character (Phase 3 owner-tagged character) capture and
-restore its own rewind-relevant state alongside the base `PlayerRewindExtra`
-surface, so rewind seek/scrub stays coherent for mod-defined characters instead
-of silently dropping their subclass-local fields.
-
-Added signatures:
-
-- **`PerObjectRewindSnapshot$PlayerRewindExtra.PlayableSubclassRewindExtra`**
-  (nested marker interface) — an empty, `@ModApi`-annotated marker that a mod's
-  immutable subclass-rewind payload (typically a `record`) implements. The
-  payload is stored as-is in the snapshot's in-memory object graph with no
-  serialization step and no defensive copy, so implementations must be
-  immutable and must never alias mutable live sprite/controller state.
-- **`PerObjectRewindSnapshot$PlayerRewindExtra.subclassExtra()`** — the new
-  trailing record component/accessor carrying the captured
-  `PlayableSubclassRewindExtra` payload, or `null` when the owning snapshot
-  carries no subclass state.
-- **`AbstractPlayableSprite.captureSubclassRewindState()`** (protected hook) —
-  called on every keyframe capture; the default implementation returns `null`
-  ("no subclass state to capture"), which is correct for the base playable
-  sprites and any subclass that has not overridden the hook.
-- **`AbstractPlayableSprite.restoreSubclassRewindState(PlayableSubclassRewindExtra)`**
-  (protected hook) — called on every rewind restore, always invoked (never
-  skipped), and tolerant of a `null` argument (the common case for base sprites,
-  non-overriding subclasses, and snapshots produced by a pre-2.2 canonical
-  constructor). It runs after all base `PlayerRewindExtra` fields,
-  controller-owned state, and sensor offsets have already been restored, so
-  overrides may safely read already-restored base sprite/controller state.
-
-`PerObjectRewindSnapshot$PlayerRewindExtra` gained a new 154-component canonical
-constructor appending `subclassExtra` as the trailing parameter. The prior
-153-component canonical constructor (the 2.1 published shape) is preserved
-verbatim as a compatibility overload and always yields a `null` `subclassExtra`,
-matching the pattern used by the earlier standalone, Phase-2, and ROM-art
-canonical-shape additions.
-
-No existing 2.1 signature was removed, narrowed, or changed. Both
-`mod-api-signatures-2.1.txt` and `mod-api-signatures-2.2.txt` are retained as closed
-historical baselines; 2.2 is a strict superset of 2.1.
-
-## Mod API 2.3.0 additive bump
-
-At publication, `ModApiVersion.CURRENT` became `2.3.0`. This same-major additive
-minor bump above 2.2.0
-publishes the host-adapted additive-zone seam used by strict Sonic 3&K level format
-v2 while preserving the Sonic 2/standalone format-v1 route unchanged.
-
-Added signatures:
-
-- **`GameModule.getModZoneAdapter()`** and the forwarding
-  **`DelegatingGameModule.getModZoneAdapter()`**, with
-  **`GameModule.EMPTY_MOD_ZONE_ADAPTER`**, let registration validate and load a
-  complete level through the selected host instead of branching on a game name in
-  shared mod runtime code.
-- **`ModZoneAdapter`** publishes exactly the narrow `validate`, `load`, and
-  `runtimeProfile` contract over immutable, game-owned `ModZoneLevelData`. Data-select
-  decoration stays on the unannotated internal `ModZoneDataSelectDecorator`; it is
-  deliberately absent from the creator ABI. An unsupported host
-  rejects the contribution before publication. `ModZoneRuntimeContribution` and
-  `ZoneRegistry.modZoneRuntimeContribution(...)` carry that resolved payload to
-  gameplay without introducing a `game -> mods` or `level -> mods` dependency.
-- **`ModZoneHostMetadata`** and **`ModObjectZoneSet`** (`S3KL`/`SKL`) carry typed
-  object-factory identity, while `ModLevelDefinition.hostMetadata()` exposes it
-  without converting the tagged set into a runtime index.
-- **`ModPaletteClaim`** and `ModLevelDefinition.paletteClaims()` publish sparse
-  per-cell Genesis palette ownership. S3K retains host line 0 and the exact
-  lives-HUD cells used by its mixed-palette mapping (line 0 icon/digits and the
-  line 1 second icon piece); level art must claim every other reachable indexed
-  color. A ROM-independent fixed mask enforces those reservations before creator
-  publication, while runtime art-derived masks route each cell to its piece's
-  actual palette line. The line-0 lives override is never reused as a line-1
-  palette: line 1 receives the canonical host words derived from `Pal_AIZ`, which
-  are verified against the stock ROM but stored internally for ROM-independent
-  creator validation and composition.
-- **`ModZoneRuntimeProfile`** and its `FLAT` scroll policy describe the intentionally
-  empty initial runtime: no stock animation, PLC, special-render, or advanced-render
-  features.
-- **`GameModule.createCustomZonePaletteBridge(...)`** and
-  **`CustomZonePaletteBridge`** keep host palette composition behind a game-owned
-  interface; shared `LevelManager` never names the S3K implementation.
-
-The engine implementation also preserves S3K mod zones in saves as tagged
-owner/local identities and falls back to AIZ1 when an owner is disabled, without
-trusting a synthetic runtime index. Those save/profile adapters are host internals,
-not additional recursive creator types.
-
-No existing 2.2 signature was removed, narrowed, or changed.
-`mod-api-signatures-2.2.txt` remains immutable; `mod-api-signatures-2.3.txt` is its
-strict additive superset and is now a closed historical baseline.
-
-## Mod API 2.4.0 additive bump
-
-`ModApiVersion.CURRENT` was `2.4.0` when this release was published. This
-same-major additive minor bump above 2.3.0
-publishes exclusive game-start selection and destination-scoped launch-team, input,
-and row-only HUD policies. The exact reviewed diff adds 11 recursive types and 130
-canonical lines without removing or changing any 2.3 signature.
-
-Added contracts and semantics:
-
-- **Game start.** `ModZoneContribution(..., boolean gameStart)` marks a zone as a
-  fresh-game destination without inserting it into stock results progression. The
-  four-argument constructor remains and supplies `false`. Resolution follows enabled
-  patch order: the last effective declaration wins exclusively, shadowed owners get
-  `MOD_GAME_START_SHADOWED`, and disabling the winner reveals the preceding declaration
-  or the host's `DataSelectHostProfile.newGameDestination()` stock default. Both fresh
-  data-select branches use that destination.
-- **Launch team.** `ModContext.registerLaunchTeam(ModLaunchTeamContribution)` publishes
-  tagged main/sidekick identities for one owned destination. This replaces only the
-  copied gameplay launch context after the resolved character registry validates the
-  complete required team. It never rewrites configuration, the selected data-select
-  team, or the durable team later projected into an active save slot.
-- **Deterministic input.** `GameplayInputFilter` and
-  `ModContext.registerInputFilter(ModInputFilterContribution)` transform P1's logical
-  `PlayerInputState` after the raw snapshot has been recorded. Playback and rewind
-  re-simulation replay the recorded raw snapshot and deterministically apply the same
-  filter downstream. Constructing `PlayerInputState` re-derives legacy jump bits from
-  `actionHeldMask`/`actionPressedMask`, so a filter suppressing directions must preserve
-  the intended action masks. Filter execution is owner fault-bounded.
-- **HUD presentation.** `ModContext.registerHudProfile(ModHudProfileContribution)`
-  publishes immutable `HudProfile`/`HudRow` mappings over existing SCORE, TIME, RINGS,
-  and LIVES label art and counters. Rows select screen coordinates, visibility, metric,
-  and `NONE`, `TIMER_FLASH`, or `ZERO_FLASH` warnings. Numeric widths are 1-9 digits and
-  saturate non-negative values to that width; TIME is the fixed four-character layout.
-  This is presentation only and does not replace gameplay counters.
-- **Required, owner-bound policy set.** Launch-team, input-filter, and HUD provider
-  callbacks for a matching mod destination run through `ModFaultBoundary`; failure
-  records `MOD_CALLBACK_FAILED`, pending-disables the owner and dependents, persists the
-  disable set, and aborts instead of launching with a partial policy set. Session
-  teardown restores `GameplayInputFilter.IDENTITY` and `HudProfile.stock()`. A stock
-  destination with no contribution retains its selected team, identity input, and stock
-  HUD.
-
-This release deliberately adds no fixed-forward-movement policy, camera/scroll policy,
-world wrapping/rebasing support, or flight-fatigue rule. A fixed-camera minigame can
-hold its player in place, move/recycle dynamic obstacles, suppress horizontal input,
-and refill an already-published ability counter from its controller without expanding
-those engine surfaces.
-
-The host-only request/team conversion, launch-only save-context copy access, input/HUD
-installation bridges, and owner-aware runtime wrapper remain outside the recursive
-creator ABI. `mod-api-signatures-2.3.txt` remains byte-for-byte immutable;
-`mod-api-signatures-2.4.txt` is its strict additive superset and frozen historical pin.
-
-When the current surface next drifts, add a new baseline for an additive same-major
-minor bump; never rewrite 2.4. For removals or changes, repeat a deliberate breaking
-transition like 2.0.0.
-
-## Mod API 2.5.0 additive bump
-
-`ModApiVersion.CURRENT` is `2.5.0`. This compatibility publication restores every
-constructor, record component, protected member, and return descriptor frozen in
-2.4, then publishes the reviewed runtime additions as a same-major additive bump.
-The exact diff adds 25 recursive engine types and 718 canonical signature entries;
-it removes or changes none of the 896 types and 17,453 entries in 2.4.
-
-The newly published contracts include the persistent dynamic-object transition
-state and the super-state rewind record already carried by public runtime snapshots.
-Post-2.4 frame-contact, animation handoff, runtime-art pumping, trace-reader, event,
-and GPU upload helpers remain engine internals behind unannotated access bridges or
-package-private seams. Third-party implementation types such as Jackson annotations
-and `ByteBuffer` do not leak through the recursive creator surface.
-
-`mod-api-signatures-2.4.txt` remains byte-for-byte immutable;
-`mod-api-signatures-2.5.txt` is its strict additive superset and the live exact pin.
-When the current surface next drifts, add another baseline for an additive same-major
-minor bump; never rewrite 2.4 or 2.5.
+This document is the sole current Mod API version authority. The maintained
+creator workflow and format documentation begins at
+[`docs/modding/index.md`](../modding/index.md).

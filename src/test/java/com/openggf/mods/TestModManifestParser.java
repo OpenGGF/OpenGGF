@@ -153,7 +153,7 @@ class TestModManifestParser {
     void invalidVersionsDependenciesAndOverrideKeysAreRejected() {
         rejects(canonicalPatch().replace("version: 1.0.0", "version: 01.0.0"));
         rejects(canonicalPatch().replace("version: 1.0.0", "version: 1.0.0-beta"));
-        rejects(canonicalPatch().replace("engineApiRange: \">=1.0.0 <3.0.0\"",
+        rejects(canonicalPatch().replace("engineApiRange: \">=0.7.0 <0.8.0\"",
                 "engineApiRange: \">=2.0.0 <1.0.0\""));
         rejects(canonicalPatch().replace("id: shared-library", "id: Shared"));
         rejects(canonicalPatch().replace("versionRange: \">=1.2.0 <2.0.0\"", "versionRange: ^1.2.0"));
@@ -258,7 +258,7 @@ class TestModManifestParser {
                   - Example Author
                   - Second Author
                 description: Replaces one stock track.
-                engineApiRange: ">=1.0.0 <3.0.0"
+                engineApiRange: ">=0.7.0 <0.8.0"
                 type: patch
                 baseGame: s2
                 dependencies:

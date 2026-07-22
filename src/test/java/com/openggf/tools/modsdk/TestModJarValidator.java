@@ -50,7 +50,7 @@ class TestModJarValidator {
     void reportsManifestApiRangeAndPerJarPatternBudgetRules() throws Exception {
         assertCode(validateWithManifest(validManifest().replace("formatVersion: 1", "formatVersion: 2")),
                 "MANIFEST_INVALID");
-        assertCode(validateWithManifest(validManifest().replace(">=1.0.0 <3.0.0", ">=9.0.0")),
+        assertCode(validateWithManifest(validManifest().replace(">=0.7.0 <0.8.0", ">=9.0.0")),
                 "ENGINE_API_INCOMPATIBLE");
         assertCode(validateWithManifest(validManifest().replace("patternWindows: 1", "patternWindows: 17")),
                 "MANIFEST_INVALID");
@@ -318,7 +318,7 @@ class TestModJarValidator {
                 version: 1.0.0
                 authors: [Author]
                 description: Fixture
-                engineApiRange: ">=1.0.0 <3.0.0"
+                engineApiRange: ">=0.7.0 <0.8.0"
                 type: patch
                 baseGame: s2
                 entrypoint: example.Entry

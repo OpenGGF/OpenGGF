@@ -16,7 +16,7 @@ class TestNativeUnsupportedMods {
     private static ModDescriptor descriptor(String id, boolean code) {
         ModManifest manifest = new ModManifest(1, id, id + "-name",
                 new SemanticVersion(1, 0, 0), List.of("a"), "d",
-                VersionRange.parse(">=2.0.0 <3.0.0"),
+                VersionRange.parse(">=0.7.0 <0.8.0"),
                 ModType.PATCH, "s2", code ? "example." + id + ".Entry" : null,
                 List.of(), Map.of(), Map.of(), null, OptionalInt.empty());
         return new ModDescriptor(Path.of("mods", id + ".jar"), manifest,

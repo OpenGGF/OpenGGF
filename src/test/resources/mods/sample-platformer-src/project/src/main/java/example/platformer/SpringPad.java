@@ -13,7 +13,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * Spring gimmick, registered with {@code art/springpad.ggfs}. Mod API 2.1 does not publish
+ * Spring gimmick, registered with {@code art/springpad.ggfs}. Mod API 0.7 does not publish
  * any solid-object marker interface ({@code SolidObjectProvider} and friends are engine-internal),
  * so this cannot ride the stock {@code SolidObject}/checkpoint-contact pipeline the way
  * {@code com.openggf.game.sonic2.objects.SpringObjectInstance} does. Instead it does simple

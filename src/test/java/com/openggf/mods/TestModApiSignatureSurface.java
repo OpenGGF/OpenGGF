@@ -1,7 +1,7 @@
 package com.openggf.mods;
 
-import com.openggf.game.ModApi;
 import com.openggf.game.AbstractLevelInitProfile;
+import com.openggf.game.ModApi;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.mods.code.ModApiSignatureSurface;
 import com.openggf.mods.code.ModApiSurfaceInventory;
@@ -10,8 +10,8 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -25,32 +25,12 @@ import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModApiSignatureSurface {
-    // Reconciled surface lineage: 1.1.0 -> 1.2.0 (additive) -> 2.0.0 (breaking)
-    // -> 2.1.0 (additive) -> 2.2.0 (additive) -> 2.3.0 (additive)
-    // -> 2.4.0 (additive) -> 2.5.0 (additive). 1.1 through 2.3 are closed
-    // historical baselines;
-    // 2.4 is a closed historical baseline; 2.5 is the published surface.
-    private static final String BASELINE_11 = "mods/mod-api-signatures-1.1.txt";
-    private static final String BASELINE_12 = "mods/mod-api-signatures-1.2.txt";
-    private static final String BASELINE_20 = "mods/mod-api-signatures-2.0.txt";
-    private static final String BASELINE_21 = "mods/mod-api-signatures-2.1.txt";
-    private static final String BASELINE_22 = "mods/mod-api-signatures-2.2.txt";
-    private static final String BASELINE_23 = "mods/mod-api-signatures-2.3.txt";
-    private static final String BASELINE_24 = "mods/mod-api-signatures-2.4.txt";
-    private static final String PUBLISHED_BASELINE = "mods/mod-api-signatures-2.5.txt";
+    private static final String PUBLISHED_BASELINE = "mods/mod-api-signatures-0.7.txt";
     private static final String PLATFORM_ALLOWLIST = "mods/mod-api-platform-allowlist.txt";
-    private static final SemanticVersion VERSION_11 = new SemanticVersion(1, 1, 0);
-    private static final SemanticVersion VERSION_12 = new SemanticVersion(1, 2, 0);
-    private static final SemanticVersion VERSION_20 = new SemanticVersion(2, 0, 0);
-    private static final SemanticVersion VERSION_21 = new SemanticVersion(2, 1, 0);
-    private static final SemanticVersion VERSION_22 = new SemanticVersion(2, 2, 0);
-    private static final SemanticVersion VERSION_23 = new SemanticVersion(2, 3, 0);
-    private static final SemanticVersion VERSION_24 = new SemanticVersion(2, 4, 0);
-    private static final SemanticVersion PUBLISHED_VERSION = new SemanticVersion(2, 5, 0);
+    private static final SemanticVersion PUBLISHED_VERSION = new SemanticVersion(0, 7, 0);
 
     @Retention(RetentionPolicy.CLASS)
     @Target(ElementType.TYPE_USE)
@@ -113,42 +93,18 @@ class TestModApiSignatureSurface {
     }
 
     @Test
-    void publishedTwoFourSurfaceRemainsFrozen() throws Exception {
-        List<String> published = readBaseline(BASELINE_24);
-        assertNotNull(published, "Missing published 2.4 API snapshot");
-        assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
-                "Published API baseline must be unique, sorted canonical UTF-8 text");
-        assertEquals(896, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
-                "Published API 2.4 baseline engine-type count is frozen");
-        assertEquals(17_453, published.size(), "Published API 2.4 baseline is frozen");
-    }
-
-    @Test
-    void publishedTwoFiveSurfaceIsPinnedAndAdditive() throws Exception {
-        List<String> historical = readBaseline(BASELINE_24);
+    void publishedZeroSevenSurfaceIsPinnedToTheCurrentSurface() throws Exception {
         List<String> published = readBaseline(PUBLISHED_BASELINE);
-        Set<String> historicalSet = Set.copyOf(historical);
         assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
-                "Published API 2.5 baseline must be unique, sorted canonical UTF-8 text");
+                "Published API 0.7 baseline must be unique, sorted canonical UTF-8 text");
         assertEquals(new ArrayList<>(ModApiSignatureSurface.snapshotLines()), published,
-                "Review current additions and publish them under mod-api-signatures-2.5.txt");
+                "Review current changes and regenerate mod-api-signatures-0.7.txt");
         assertEquals(PUBLISHED_VERSION, ModApiVersion.CURRENT,
-                "The published Mod API version must match the 2.5 baseline");
-        assertEquals(921, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
-                "Published API 2.5 engine-type count is pinned");
-        assertEquals(18_172, published.size(), "Published API 2.5 signature count is pinned");
-        assertEquals(719, published.stream().filter(line -> !historicalSet.contains(line)).count(),
-                "Published API 2.5 additive signature count is pinned");
-        assertTrue(ModApiSignatureSurface.baselineViolations(
-                        VERSION_24, historicalSet, PUBLISHED_VERSION,
-                        Set.copyOf(published)).isEmpty(),
-                "2.4 -> 2.5 must be additive with no removals");
-        assertTrue(Set.copyOf(published).containsAll(historical),
-                "The 2.5 surface must retain every frozen 2.4 signature");
+                "The current Mod API version must match the 0.7 baseline");
     }
 
     @Test
-    void postTwoFourRuntimeHelpersDoNotLeakIntoTheCreatorSurface() {
+    void engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface() {
         Set<String> current = ModApiSignatureSurface.snapshotLines();
         assertFalse(current.stream().anyMatch(line -> line.startsWith(
                         "METHOD com.openggf.sprites.playable.PlayableSpriteController ")
@@ -163,220 +119,24 @@ class TestModApiSignatureSurface {
         assertFalse(current.contains(
                         "METHOD com.openggf.game.ObjectArtProvider public  void processRuntimeArtQueue()"),
                 "Runtime decompression pumping is an engine capability, not creator API");
-    }
-
-    @Test
-    void oneOneToOneTwoIsAnAdditiveHistoricalStep() throws IOException {
-        List<String> baselineEleven = readBaseline(BASELINE_11);
-        assertEquals(new ArrayList<>(new TreeSet<>(baselineEleven)), baselineEleven,
-                "Historical 1.1 baseline must remain unique, sorted canonical UTF-8 text");
-        assertEquals(16_483, baselineEleven.size(), "Published API 1.1 baseline is immutable");
-
-        List<String> baselineTwelve = readBaseline(BASELINE_12);
-        assertEquals(new ArrayList<>(new TreeSet<>(baselineTwelve)), baselineTwelve,
-                "Historical 1.2 baseline must remain unique, sorted canonical UTF-8 text");
-        assertEquals(17_178, baselineTwelve.size(), "Historical API 1.2 baseline is immutable");
-
-        // 1.1 -> 1.2 is a clean additive minor bump: the 1.2 surface is a strict
-        // superset of 1.1 (the mod-support publish added standalone-game support,
-        // character definitions, and additive published roots), with no removals.
-        List<String> additiveViolations = ModApiSignatureSurface.baselineViolations(
-                VERSION_11, Set.copyOf(baselineEleven), VERSION_12, Set.copyOf(baselineTwelve));
-        assertTrue(additiveViolations.isEmpty(),
-                () -> "1.1 -> 1.2 must be a clean additive minor bump:\n"
-                        + String.join("\n", additiveViolations));
-        assertTrue(Set.copyOf(baselineTwelve).containsAll(baselineEleven),
-                "The 1.2 surface must contain every 1.1 signature");
-    }
-
-    @Test
-    void oneTwoToTwoZeroIsADeclaredBreakingTransition() throws IOException {
-        List<String> historical = readBaseline(BASELINE_12);
-        assertEquals(new ArrayList<>(new TreeSet<>(historical)), historical,
-                "Historical 1.2 baseline must remain unique, sorted canonical UTF-8 text");
-        List<String> historicalTwoZero = readBaseline(BASELINE_20);
-        assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoZero)), historicalTwoZero,
-                "Historical 2.0 baseline must remain unique, sorted canonical UTF-8 text");
-        assertEquals(873, historicalTwoZero.stream().filter(line -> line.startsWith("TYPE ")).count(),
-                "Historical 2.0 API baseline engine-type count is immutable");
-        assertEquals(17_165, historicalTwoZero.size(), "Historical API 2.0 baseline is immutable");
-
-        // 1.2 -> 2.0 is a genuine break: the frozen 1.2 surface has removed/changed
-        // signatures (rewind-state closure consolidation, per-game rules records,
-        // SpriteManager.drawUnifiedBucketWithPriority), so 1.2 is a closed historical
-        // baseline, not an additive subset of the 2.0 surface. Even at the new major
-        // version these removals are reported, which is why the transition is major. The
-        // step is verified from 1.2 (not directly from 1.1) so 1.2's additions are never
-        // silently absorbed into an undocumented 1.1 -> 2.0 jump. Both sides are now
-        // closed historical baselines, so this check no longer depends on the live surface.
-        List<String> historicalViolations = ModApiSignatureSurface.baselineViolations(
-                VERSION_12, Set.copyOf(historical), VERSION_20, Set.copyOf(historicalTwoZero));
-        assertFalse(historicalViolations.isEmpty(),
-                "1.2 -> 2.0 must be a declared breaking transition with removed/changed signatures");
-        assertTrue(historicalViolations.stream().anyMatch(v -> v.startsWith("Breaking Mod API signature removals")),
-                () -> "Expected breaking removals in the 1.2 -> 2.0 transition:\n" + String.join("\n", historicalViolations));
-    }
-
-    @Test
-    void twoZeroToTwoOneIsAnAdditiveMinorBump() throws IOException {
-        List<String> historicalTwoZero = readBaseline(BASELINE_20);
-        assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoZero)), historicalTwoZero,
-                "Historical 2.0 baseline must remain unique, sorted canonical UTF-8 text");
-        List<String> historicalTwoOne = readBaseline(BASELINE_21);
-        assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoOne)), historicalTwoOne,
-                "Historical 2.1 baseline must remain unique, sorted canonical UTF-8 text");
-        assertEquals(875, historicalTwoOne.stream().filter(line -> line.startsWith("TYPE ")).count(),
-                "Historical 2.1 API baseline engine-type count is immutable");
-        assertEquals(17_196, historicalTwoOne.size(), "Historical API 2.1 baseline is immutable");
-
-        // 2.0 -> 2.1 is a clean additive minor bump: the 2.1 surface is a strict superset
-        // of 2.0 (the ROM-art intake publish added RomArtRequest, RomArtCompression, and
-        // ModContext.registerRomObjectArt), with no removals. Both sides are now closed
-        // historical baselines, so this check no longer depends on the live surface.
-        List<String> additiveViolations = ModApiSignatureSurface.baselineViolations(
-                VERSION_20, Set.copyOf(historicalTwoZero), VERSION_21, Set.copyOf(historicalTwoOne));
-        assertTrue(additiveViolations.isEmpty(),
-                () -> "2.0 -> 2.1 must be a clean additive minor bump:\n"
-                        + String.join("\n", additiveViolations));
-        assertTrue(Set.copyOf(historicalTwoOne).containsAll(historicalTwoZero),
-                "The 2.1 surface must contain every 2.0 signature");
-    }
-
-    @Test
-    void twoOneToTwoTwoIsAnAdditiveMinorBump() throws IOException {
-        List<String> historicalTwoOne = readBaseline(BASELINE_21);
-        assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoOne)), historicalTwoOne,
-                "Historical 2.1 baseline must remain unique, sorted canonical UTF-8 text");
-        List<String> historicalTwoTwo = readBaseline(BASELINE_22);
-        assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoTwo)), historicalTwoTwo,
-                "Historical 2.2 baseline must be unique, sorted canonical UTF-8 text");
-        assertEquals(876, historicalTwoTwo.stream().filter(line -> line.startsWith("TYPE ")).count(),
-                "Historical API 2.2 baseline engine-type count is immutable");
-        assertEquals(17_205, historicalTwoTwo.size(), "Historical API 2.2 baseline is immutable");
-
-        // 2.1 -> 2.2 is a clean additive minor bump: the 2.2 surface is a strict superset
-        // of 2.1 (the playable-subclass rewind publish added
-        // PlayerRewindExtra.PlayableSubclassRewindExtra, the subclassExtra record
-        // component/accessor, the new canonical PlayerRewindExtra constructor, and the
-        // AbstractPlayableSprite capture/restore hooks), with no removals.
-        List<String> additiveViolations = ModApiSignatureSurface.baselineViolations(
-                VERSION_21, Set.copyOf(historicalTwoOne), VERSION_22, Set.copyOf(historicalTwoTwo));
-        assertTrue(additiveViolations.isEmpty(),
-                () -> "2.1 -> 2.2 must be a clean additive minor bump:\n"
-                        + String.join("\n", additiveViolations));
-        assertTrue(Set.copyOf(historicalTwoTwo).containsAll(historicalTwoOne),
-                "The 2.2 surface must contain every 2.1 signature");
-    }
-
-    @Test
-    void twoTwoToTwoThreeIsAnAdditiveMinorBump() throws IOException {
-        List<String> historicalTwoTwo = readBaseline(BASELINE_22);
-        assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoTwo)), historicalTwoTwo,
-                "Historical 2.2 baseline must remain unique, sorted canonical UTF-8 text");
-        List<String> historicalTwoThree = readBaseline(BASELINE_23);
-        assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoThree)), historicalTwoThree,
-                "Historical 2.3 baseline must be unique, sorted canonical UTF-8 text");
-        assertEquals(885, historicalTwoThree.stream().filter(line -> line.startsWith("TYPE ")).count(),
-                "Historical API 2.3 baseline engine-type count is immutable");
-        assertEquals(17_323, historicalTwoThree.size(), "Historical API 2.3 baseline is immutable");
-
-        // 2.2 -> 2.3 publishes the host-adapted additive-zone surface without
-        // removing or changing any previously supported signature.
-        List<String> additiveViolations = ModApiSignatureSurface.baselineViolations(
-                VERSION_22, Set.copyOf(historicalTwoTwo), VERSION_23,
-                Set.copyOf(historicalTwoThree));
-        assertTrue(additiveViolations.isEmpty(),
-                () -> "2.2 -> 2.3 must be a clean additive minor bump:\n"
-                        + String.join("\n", additiveViolations));
-        assertTrue(Set.copyOf(historicalTwoThree).containsAll(historicalTwoTwo),
-                "The 2.3 surface must contain every 2.2 signature");
-    }
-
-    @Test
-    void twoThreeToTwoFourIsAnAdditiveMinorBump() throws IOException {
-        List<String> historicalTwoThree = readBaseline(BASELINE_23);
-        assertEquals(new ArrayList<>(new TreeSet<>(historicalTwoThree)), historicalTwoThree,
-                "Historical 2.3 baseline must remain unique, sorted canonical UTF-8 text");
-        assertEquals(885, historicalTwoThree.stream().filter(line -> line.startsWith("TYPE ")).count(),
-                "Historical API 2.3 baseline engine-type count is immutable");
-        assertEquals(17_323, historicalTwoThree.size(), "Historical API 2.3 baseline is immutable");
-
-        List<String> published = readBaseline(BASELINE_24);
-        assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
-                "Published 2.4 baseline must be unique, sorted canonical UTF-8 text");
-        assertEquals(896, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
-                "Published API 2.4 baseline engine-type count is frozen");
-        assertEquals(17_453, published.size(), "Published API 2.4 baseline is frozen");
-
-        List<String> additiveViolations = ModApiSignatureSurface.baselineViolations(
-                VERSION_23, Set.copyOf(historicalTwoThree), VERSION_24,
-                Set.copyOf(published));
-        assertTrue(additiveViolations.isEmpty(),
-                () -> "2.3 -> 2.4 must be a clean additive minor bump:\n"
-                        + String.join("\n", additiveViolations));
-        assertTrue(Set.copyOf(published).containsAll(historicalTwoThree),
-                "The 2.4 surface must contain every 2.3 signature");
-
-        TreeSet<String> additions = new TreeSet<>(published);
-        additions.removeAll(historicalTwoThree);
-        assertEquals(130, additions.size(), "The reviewed 2.4 additive diff is frozen");
-        assertEquals(Set.of(
-                "TYPE enum public,final com.openggf.level.objects.HudLabel SUPER java.lang.Enum<com.openggf.level.objects.HudLabel>",
-                "TYPE enum public,final com.openggf.level.objects.HudMetric SUPER java.lang.Enum<com.openggf.level.objects.HudMetric>",
-                "TYPE enum public,final com.openggf.level.objects.HudWarningPolicy SUPER java.lang.Enum<com.openggf.level.objects.HudWarningPolicy>",
-                "TYPE interface public,abstract com.openggf.game.GameplayInputFilter SUPER <none>",
-                "TYPE interface public,abstract com.openggf.game.GameplayPolicyProvider SUPER <none>",
-                "TYPE record public,final com.openggf.game.GameplayLaunchTeam SUPER java.lang.Record",
-                "TYPE record public,final com.openggf.level.objects.HudProfile SUPER java.lang.Record",
-                "TYPE record public,final com.openggf.level.objects.HudRow SUPER java.lang.Record",
-                "TYPE record public,final com.openggf.mods.code.ModHudProfileContribution SUPER java.lang.Record",
-                "TYPE record public,final com.openggf.mods.code.ModInputFilterContribution SUPER java.lang.Record",
-                "TYPE record public,final com.openggf.mods.code.ModLaunchTeamContribution SUPER java.lang.Record"),
-                additions.stream().filter(line -> line.startsWith("TYPE ")).collect(
-                        java.util.stream.Collectors.toSet()),
-                "2.4 must publish exactly the reviewed gameplay-policy vocabulary");
-        assertTrue(additions.containsAll(Set.of(
-                "METHOD com.openggf.game.dataselect.DataSelectHostProfile public  com.openggf.game.dataselect.DataSelectDestination newGameDestination()",
-                "METHOD com.openggf.game.GameplayInputFilter public,abstract  com.openggf.control.PlayerInputState filter(com.openggf.control.PlayerInputState)",
-                "METHOD com.openggf.mods.code.ModContext public  void registerLaunchTeam(com.openggf.mods.code.ModLaunchTeamContribution)",
-                "METHOD com.openggf.mods.code.ModContext public  void registerInputFilter(com.openggf.mods.code.ModInputFilterContribution)",
-                "METHOD com.openggf.mods.code.ModContext public  void registerHudProfile(com.openggf.mods.code.ModHudProfileContribution)",
-                "CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory,boolean)",
-                "METHOD com.openggf.mods.code.ModZoneContribution public  boolean gameStart()",
-                "RECORD-COMPONENT com.openggf.mods.code.ModZoneContribution gameStart boolean")),
-                "2.4 must contain the reviewed destination and registration additions");
-        assertTrue(published.contains(
-                "CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory)"),
-                "The pre-2.4 ModZoneContribution constructor must remain binary compatible");
-        assertFalse(published.stream().anyMatch(line ->
-                        line.contains("GameplayInputFilterAccess")
-                                || line.contains("HudProfileAccess")
-                                || line.contains("OwnerAwareGameplayInputFilter")
-                                || line.contains("installGameplayInputFilter")
-                                || line.contains("currentGameplayInputFilter")
-                                || line.contains("setGameplayInputFilter")
-                                || line.contains("getGameplayInputFilter")
-                                || line.contains("installProfile")),
-                "Engine-only policy installation bridges and runtime mutators must stay out of Mod API 2.4");
-        assertFalse(published.contains(
+        assertFalse(current.stream().anyMatch(line -> line.contains("GameplayInputFilterAccess")
+                        || line.contains("HudProfileAccess")
+                        || line.contains("OwnerAwareGameplayInputFilter")
+                        || line.contains("installGameplayInputFilter")
+                        || line.contains("currentGameplayInputFilter")
+                        || line.contains("setGameplayInputFilter")
+                        || line.contains("getGameplayInputFilter")
+                        || line.contains("installProfile")),
+                "Engine-only policy installation bridges and runtime mutators must stay internal");
+        assertFalse(current.contains(
                         "METHOD com.openggf.game.patch.GameplayLaunchRequest public,static  com.openggf.game.patch.GameplayLaunchRequest fromSelectedTeam(java.lang.String,com.openggf.game.save.SelectedTeam)"),
                 "SelectedTeam-to-request conversion is an engine launch helper, not creator API");
-        assertFalse(published.contains(
+        assertFalse(current.contains(
                         "METHOD com.openggf.game.patch.GameplayLaunchRequest public  com.openggf.game.GameplayLaunchTeam team()"),
                 "Request-to-policy conversion is an engine launch helper, not creator API");
-        assertFalse(published.contains(
+        assertFalse(current.contains(
                         "METHOD com.openggf.game.save.SaveSessionContext public  com.openggf.game.save.SaveSessionContext withLaunchTeam(com.openggf.game.GameplayLaunchTeam)"),
                 "Launch-only save-context substitution must remain behind an engine access bridge");
-
-    }
-
-    private List<String> readBaseline(String resource) throws IOException {
-        try (var input = getClass().getClassLoader().getResourceAsStream(resource)) {
-            if (input == null) throw new IOException("Missing " + resource);
-            try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
-                return reader.lines().toList();
-            }
-        }
     }
 
     @Test
@@ -396,13 +156,23 @@ class TestModApiSignatureSurface {
     void additiveSignaturesRequireAMinorVersionBumpAndRemovalsAlwaysFail() {
         Set<String> baseline = Set.of("TYPE A");
         Set<String> additive = Set.of("TYPE A", "METHOD A added()");
+        SemanticVersion baselineVersion = new SemanticVersion(0, 7, 0);
         assertFalse(ModApiSignatureSurface.baselineViolations(
-                VERSION_11, baseline, VERSION_11, additive).isEmpty());
+                baselineVersion, baseline, baselineVersion, additive).isEmpty());
         assertTrue(ModApiSignatureSurface.baselineViolations(
-                VERSION_11, baseline, new SemanticVersion(1, 2, 0), additive).isEmpty());
+                baselineVersion, baseline, new SemanticVersion(0, 8, 0), additive).isEmpty());
         assertFalse(ModApiSignatureSurface.baselineViolations(
-                VERSION_11, baseline, new SemanticVersion(2, 0, 0), additive).isEmpty());
+                baselineVersion, baseline, new SemanticVersion(1, 0, 0), additive).isEmpty());
         assertFalse(ModApiSignatureSurface.baselineViolations(
-                VERSION_11, baseline, new SemanticVersion(1, 2, 0), Set.of()).isEmpty());
+                baselineVersion, baseline, new SemanticVersion(0, 8, 0), Set.of()).isEmpty());
+    }
+
+    private List<String> readBaseline(String resource) throws IOException {
+        try (var input = getClass().getClassLoader().getResourceAsStream(resource)) {
+            if (input == null) throw new IOException("Missing " + resource);
+            try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+                return reader.lines().toList();
+            }
+        }
     }
 }

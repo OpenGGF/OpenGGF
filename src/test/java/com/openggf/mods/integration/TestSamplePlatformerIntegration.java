@@ -389,7 +389,7 @@ class TestSamplePlatformerIntegration {
      * {@code GameplayModeContext} that this construction-only slice of the test does not set up.
      *
      * <p>The rewind assertion now drives the real production round-trip -- {@code BoltCharacter}
-     * has migrated onto Mod API 2.2.0's {@code captureSubclassRewindState()} /
+     * uses Mod API 0.7's {@code captureSubclassRewindState()} /
      * {@code restoreSubclassRewindState(...)} hooks (see {@code BoltCharacter}), so
      * {@link AbstractPlayableSprite#captureRewindState()} now packs the armed latch into a
      * mod-declared {@link PerObjectRewindSnapshot.PlayableSubclassRewindExtra} payload, and

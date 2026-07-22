@@ -182,7 +182,6 @@ class TestPhase2SampleModIntegration {
         Path regenerated=temp.resolve("regenerated-scaffold");
         assertEquals(0,GgfModCli.run(new String[]{"init",regenerated.toString(),"--id",sample.getProperty("id"),
                 "--package",sample.getProperty("package")},new PrintStream(new ByteArrayOutputStream())));
-        pinPhase2Compatibility(regenerated);
         Path checkedFixture = materializeCheckedFixture();
         assertTreesEqual(checkedFixture, regenerated);
         Path engine=temp.resolve("engine-local.jar"),sdk=temp.resolve("openggf-mod-sdk-local.jar");
@@ -224,19 +223,6 @@ class TestPhase2SampleModIntegration {
         assertEquals(expectedFiles,actualFiles,"Checked sample must match real ggfmod init inventory");
         for(Path relative:expectedFiles)assertEquals(-1,Files.mismatch(expected.resolve(relative),actual.resolve(relative)),
                 ()->"Checked sample differs from real ggfmod init at "+relative);
-    }
-
-    private static void pinPhase2Compatibility(Path generated) throws Exception {
-        Path manifest = generated.resolve("src/main/resources/META-INF/openggf-mod.yaml");
-        Files.writeString(manifest, Files.readString(manifest)
-                .replace("engineApiRange: \">=1.2.0 <2.0.0\"",
-                        "engineApiRange: \">=1.1.0 <2.0.0\""));
-        Path readme = generated.resolve("README.md");
-        Files.writeString(readme, Files.readString(readme)
-                .replace("The generated patch targets Mod API 1.2 and includes a sample object, a Sonic 2\n"
-                                + "level export, and a Phase 3 character stub.",
-                        "This checked Phase 2 compatibility sample targets Mod API 1.1 and includes a sample object,\n"
-                                + "a Sonic 2 level export, and a Phase 3 character stub."));
     }
 
     private Path materializeCheckedFixture() throws Exception {

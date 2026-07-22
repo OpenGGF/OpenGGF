@@ -323,16 +323,5 @@ public class PlayableSpriteController {
             DrowningController.RewindState drowningState,
             TailsCarryController.Snapshot tailsCarryState,
             SuperStateController.RewindState superStateState
-    ) {
-        /** Binary-compatible constructor for Mod API 2.4 rewind snapshots. */
-        public RewindState(
-                PlayableSpriteMovement.RewindState movementState,
-                SpindashDustController.RewindState spindashDustState,
-                PlayableSpriteAnimation.RewindState animationState,
-                DrowningController.RewindState drowningState,
-                TailsCarryController.Snapshot tailsCarryState) {
-            this(movementState, spindashDustState, animationState, drowningState,
-                    tailsCarryState, null);
-        }
-    }
+    ) {}
 }

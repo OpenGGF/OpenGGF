@@ -306,22 +306,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			Direction preMoveBalanceDirection,
 			int latchedNextTilt,
 			int latchedTilt
-	) {
-		/** Compatibility constructor for API 1.1. */
-		public RewindState(boolean jumpPressed, boolean jumpPrevious, boolean jumpReleasedSinceJump,
-				boolean testKeyPressed, boolean inputUp, boolean inputDown, boolean inputLeft,
-				boolean inputRight, boolean inputJump, boolean inputJumpPress, boolean inputRawLeft,
-				boolean inputRawRight, boolean facingFlipForcesPushClearAfterGroundWall,
-				boolean wasCrouching, int staleHorizontalInputRideSlotIndex,
-				int staleHorizontalInputSuppressFrames, int staleHorizontalInputRideFrames,
-				boolean staleHorizontalInputPreviousHorizontal) {
-			this(jumpPressed, jumpPrevious, jumpReleasedSinceJump, testKeyPressed, inputUp, inputDown,
-					inputLeft, inputRight, inputJump, inputJumpPress, inputRawLeft, inputRawRight,
-					facingFlipForcesPushClearAfterGroundWall, wasCrouching, staleHorizontalInputRideSlotIndex,
-					staleHorizontalInputSuppressFrames, staleHorizontalInputRideFrames,
-					staleHorizontalInputPreviousHorizontal, false, 0, null, 0, 0);
-		}
-	}
+	) {}
 
 	public void clearJumpHeightLatch() {
 		jumpPressed = false;

@@ -18,16 +18,6 @@ public record PlayerCapabilityRules(
         superSpindashSpeedTable = copy(superSpindashSpeedTable);
     }
 
-    /** Compatibility constructor for API 1.1, before custom Tails flight was exposed. */
-    public PlayerCapabilityRules(boolean spindashEnabled, short[] spindashSpeedTable,
-                                 boolean elementalShieldsEnabled, boolean instaShieldEnabled,
-                                 boolean jumpRepressClearsRollJumpBeforeAbility,
-                                 boolean lightningShieldEnabled, short[] superSpindashSpeedTable) {
-        this(spindashEnabled, spindashSpeedTable, elementalShieldsEnabled, instaShieldEnabled,
-                false, jumpRepressClearsRollJumpBeforeAbility, lightningShieldEnabled,
-                superSpindashSpeedTable);
-    }
-
     @Override
     public short[] spindashSpeedTable() {
         return copy(spindashSpeedTable);

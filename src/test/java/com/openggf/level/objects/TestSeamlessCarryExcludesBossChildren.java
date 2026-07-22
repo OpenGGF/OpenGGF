@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
  * Regression: boss component children must not be carried across a seamless act
  * reload.
  *
- * <p>The seamless carry snapshot ({@link ObjectManager#snapshotPersistentDynamicObjectsForTransition()})
+ * <p>The seamless carry snapshot ({@link ObjectManager#snapshotPersistentTransitionOccupants()})
  * preserves persistent <em>dynamic</em> objects so they survive the manager rebuild
  * and are re-offset into the new act (ROM {@code Offset_ObjectsDuringTransition}),
  * matching the end signpost. Boss component children are also persistent — but only

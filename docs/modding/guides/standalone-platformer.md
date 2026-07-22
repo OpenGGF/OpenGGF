@@ -66,7 +66,7 @@ version: 1.0.0
 authors:
   - OpenGGF Sample Authors
 description: No-ROM standalone platformer sample with a TMX-authored act, an original character, a badnik, and a spring gimmick.
-engineApiRange: ">=2.2.0 <3.0.0"
+engineApiRange: ">=0.7.0 <0.8.0"
 type: standalone
 entrypoint: example.platformer.PlatformerMod
 dependencies: []
@@ -74,13 +74,10 @@ audioOverrides: {}
 artOverrides: {}
 ```
 
-Declare the floor of the newest API surface your code actually calls. This sample
-needs `2.2.0`: Bolt overrides the playable-subclass rewind hooks
-(`captureSubclassRewindState`/`restoreSubclassRewindState`, added in Mod API
-2.2.0 — see [Characters](../characters.md)). It never calls
-`ModContext.registerRomObjectArt` (there's no ROM to borrow art from), so the
-flappy sample's `2.1.0` reasoning doesn't apply here — the rewind hooks set the
-floor instead. `type:
+Use the maintained Mod API 0.7 range. Bolt overrides the playable-subclass rewind
+hooks (`captureSubclassRewindState`/`restoreSubclassRewindState`; see
+[Characters](../characters.md)). It never calls `ModContext.registerRomObjectArt`
+because there is no ROM to borrow art from. `type:
 standalone` and the absent `baseGame` are what route this manifest through
 [Standalone games](../standalone-games.md)'s registration contract instead of the
 additive-patch one.
@@ -377,8 +374,8 @@ coverage validator would want (`FINAL_SCALAR_REWIND_GAP` rejects uncaptured *fin
 scalar state; a mutable field like this one is exactly what it expects). But
 `BoltCharacter` is a **player-character sprite**, not a `RewindRecreatable` mod
 object, so it is governed by a different, closed pipeline —
-`AbstractPlayableSprite.captureRewindState()` / `PlayerRewindExtra` — and, since Mod
-API 2.2.0, that pipeline publishes an overridable subclass extension point exactly
+`AbstractPlayableSprite.captureRewindState()` / `PlayerRewindExtra` — and that
+Mod API 0.7 pipeline publishes an overridable subclass extension point exactly
 for fields like this one. `BoltCharacter` implements both hook halves, copied
 verbatim from
 [`BoltCharacter.java`](../../../src/test/resources/mods/sample-platformer-src/project/src/main/java/example/platformer/BoltCharacter.java):
@@ -394,8 +391,8 @@ private record BoltRewindExtra(boolean doubleJumpUsed)
 }
 
 /**
- * Tolerates {@code null} (no subclass payload in the snapshot -- e.g. a pre-2.2.0
- * snapshot shape) by resetting the latch to its fresh default of {@code false} rather
+ * Tolerates {@code null} (no subclass payload in the snapshot) by resetting the
+ * latch to its fresh default of {@code false} rather
  * than assuming a payload is always present, per the hook's null contract.
  */
 @Override
@@ -459,7 +456,7 @@ destroyed) before delegating to the base class's standard explosion/score/slot
 sequence — and `recreateForRewind` simply rebuilds itself from the spawn, the same
 minimal pattern every rewind-safe object in this gallery uses.
 
-**`SpringPad`** cannot use the stock spring pipeline at all. Mod API 2.1 does not
+**`SpringPad`** cannot use the stock spring pipeline at all. Mod API 0.7 does not
 publish a solid-object marker interface (`SolidObjectProvider` and friends are
 engine-internal), so `SpringPad` does simple proximity + velocity detection every
 frame instead of riding `SolidObject`/checkpoint contact:

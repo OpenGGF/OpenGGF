@@ -53,7 +53,7 @@ the remaining rows can be produced while validating one packed jar.
 | `AUDIO_LOOP_INVALID` | Express loop points in decoded source frames and keep start/end within the asset. |
 | `AUDIO_OVERRIDE_ID_INVALID` / `AUDIO_OVERRIDE_TRACK_MISSING` | Use a valid stock music id and an existing owned track. |
 | `AUDIO_OVERRIDE_CONFLICT` | Resolve the intentional later-wins conflict or accept the reported effective owner. |
-| `SFX_UNSUPPORTED_PHASE1` | Remove SFX from a Phase 1 data-only/base-game path; standalone SFX uses API 1.2. |
+| `SFX_UNSUPPORTED_PHASE1` | Remove SFX from a data-only/base-game path; standalone Mod API 0.7 content may declare namespaced SFX. |
 | `STANDALONE_AUDIO_OVERRIDE` | Remove base-game numeric music overrides from a standalone manifest. |
 
 ## Compiled-code and rewind findings

@@ -5,7 +5,7 @@ version: 1.0.0
 authors:
   - Mod Author
 description: Generated OpenGGF sample mod.
-engineApiRange: ">=2.4.0 <3.0.0"
+engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s3k
 entrypoint: example.flappysample.FlappySampleMod

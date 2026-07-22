@@ -50,14 +50,14 @@ class TestSampleModsPackage {
             "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer",
             "sample-rom-art-remix");
     private static final Map<String, String> EXPECTED_API_RANGES = Map.of(
-            "openggf-gallery-music-sample", ">=2.0.0 <3.0.0",
-            "phase2-reskin", ">=2.0.0 <3.0.0",
-            "phase2-sample", ">=2.0.0 <3.0.0",
-            "phase3-character", ">=2.0.0 <3.0.0",
-            "phase3-standalone", ">=2.0.0 <3.0.0",
-            "sample-flappy", ">=2.4.0 <3.0.0",
-            "sample-platformer", ">=2.2.0 <3.0.0",
-            "sample-rom-art-remix", ">=2.1.0 <3.0.0");
+            "openggf-gallery-music-sample", ">=0.7.0 <0.8.0",
+            "phase2-reskin", ">=0.7.0 <0.8.0",
+            "phase2-sample", ">=0.7.0 <0.8.0",
+            "phase3-character", ">=0.7.0 <0.8.0",
+            "phase3-standalone", ">=0.7.0 <0.8.0",
+            "sample-flappy", ">=0.7.0 <0.8.0",
+            "sample-platformer", ">=0.7.0 <0.8.0",
+            "sample-rom-art-remix", ">=0.7.0 <0.8.0");
     private static final Map<String, String> EXPECTED_PATCH_BASE_GAMES = Map.of(
             "openggf-gallery-music-sample", "s2",
             "phase2-reskin", "s2",

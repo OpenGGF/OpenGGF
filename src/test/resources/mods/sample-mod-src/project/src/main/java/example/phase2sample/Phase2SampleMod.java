@@ -14,6 +14,6 @@ public final class Phase2SampleMod implements GgfMod {
         context.registerCharacter("sample-character",
                 SampleCharacter.definition(context.ownerModId()));
         context.registerZone(new ModZoneContribution("sample-zone",
-                new BakedLevelRef("levels/sample/level.json"), "mtz3", null));
+                new BakedLevelRef("levels/sample/level.json"), "mtz3", null, false));
     }
 }

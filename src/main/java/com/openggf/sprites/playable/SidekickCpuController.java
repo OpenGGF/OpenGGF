@@ -2594,9 +2594,9 @@ public class SidekickCpuController {
                     | AbstractPlayableSprite.INPUT_DOWN
                     | AbstractPlayableSprite.INPUT_LEFT
                     | AbstractPlayableSprite.INPUT_RIGHT)) == 0;
-            // The published 2.4 rule preserves the older S3K-style edge
+            // Enabling the history-edge rule preserves the older S3K-style edge
             // reconstruction: repeated history press bytes are suppressed.
-            // The post-2.4/default rule preserves the recorded low byte.
+            // The default disabled rule preserves the recorded low byte.
             boolean preservesRecordedJumpPress = recordedJumpPress
                     && (sidekickRules == null
                             || !sidekickRules.sidekickDelayedJumpPressUsesHistoryEdge());
@@ -2787,8 +2787,8 @@ public class SidekickCpuController {
         // The default rule copies the delayed Ctrl_1_logical low-byte press bits
         // directly into Ctrl_2_logical; consecutive recorded press bytes remain
         // presses (s2.asm:38939-38946,39025-39027;
-        // sonic3k.asm:26683-26689,26775-26782). The published 2.4 compatibility
-        // rule instead reconstructs the delayed press as a history edge.
+        // sonic3k.asm:26683-26689,26775-26782). Enabling the history-edge rule
+        // instead reconstructs the delayed press from consecutive samples.
         if ((recordedInput & AbstractPlayableSprite.INPUT_JUMP) == 0
                 || !effectiveLeader.getJumpPressHistory(delayFrames)) {
             return false;

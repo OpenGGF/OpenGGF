@@ -111,7 +111,7 @@ class TestJarPackager {
                 version: 1.0.0
                 authors: [Test]
                 description: Deterministic package fixture
-                engineApiRange: ">=1.0.0 <3.0.0"
+                engineApiRange: ">=0.7.0 <0.8.0"
                 type: patch
                 baseGame: s2
                 dependencies: []

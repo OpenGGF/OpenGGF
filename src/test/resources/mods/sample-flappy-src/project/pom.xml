@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>example.flappysample</groupId><artifactId>sample-flappy</artifactId><version>1.0.0</version>
   <name>Native Tails Flappy sample</name>
-  <description>Mod API 2.4 Sonic 3&amp; Knuckles fixed-camera game-start sample.</description>
+  <description>Mod API 0.7 Sonic 3&amp; Knuckles fixed-camera game-start sample.</description>
   <properties><maven.compiler.release>21</maven.compiler.release></properties>
   <profiles>
     <profile><id>published-openggf</id><activation><activeByDefault>true</activeByDefault></activation><dependencies>

@@ -11,17 +11,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSemanticVersionAndRange {
     @Test
-    void strictVersionsParseCompareAndPublishPinnedApiVersion() {
+    void strictVersionsParseAndCompare() {
         assertEquals(new SemanticVersion(1, 2, 3), SemanticVersion.parse("1.2.3"));
         assertTrue(SemanticVersion.parse("1.2.4").compareTo(SemanticVersion.parse("1.2.3")) > 0);
         assertTrue(SemanticVersion.parse("2.0.0").compareTo(SemanticVersion.parse("1.999.999")) > 0);
         assertEquals("1.2.3", SemanticVersion.parse("1.2.3").toString());
-        assertEquals(new SemanticVersion(2, 5, 0), ModApiVersion.CURRENT);
-        VersionRange phaseOneCompatibility = VersionRange.parse(">=1.0.0 <2.0.0");
-        assertTrue(phaseOneCompatibility.contains(SemanticVersion.parse("1.1.0")));
-        // The published API is now a new major, deliberately outside the 1.x compatibility band.
-        assertFalse(phaseOneCompatibility.contains(ModApiVersion.CURRENT));
-        assertTrue(VersionRange.parse(">=2.0.0 <3.0.0").contains(ModApiVersion.CURRENT));
+    }
+
+    @Test
+    void currentApiVersionIsZeroSeven() {
+        assertEquals(new SemanticVersion(0, 7, 0), ModApiVersion.CURRENT);
+        assertTrue(VersionRange.parse(">=0.7.0 <0.8.0").contains(ModApiVersion.CURRENT));
+        assertFalse(VersionRange.parse(">=0.6.0 <0.7.0").contains(ModApiVersion.CURRENT));
     }
 
     @Test

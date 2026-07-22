@@ -156,7 +156,7 @@ class TestS3kModZoneLifecycle {
 
     private static GameModule decoratedModule(Sonic3kGameModule root) {
         ModZoneContribution declared = new ModZoneContribution(
-                MOD_ZONE.localName(), new BakedLevelRef("sky/level.json"), null, null);
+                MOD_ZONE.localName(), new BakedLevelRef("sky/level.json"), null, null, false);
         PreparedModZone prepared = PreparedModZone.prepared(
                 MOD_ZONE.ownerModId(), declared,
                 TestS3kModZoneAdapter.definition(2, null,

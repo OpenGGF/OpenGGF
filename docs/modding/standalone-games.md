@@ -1,6 +1,6 @@
 # Standalone games
 
-Mod API 1.2 lets a trusted mod jar provide a complete no-ROM game. A standalone mod
+Mod API 0.7 lets a trusted mod jar provide a complete no-ROM game. A standalone mod
 registers one `GameModule`, opens all authored assets from its immutable mod asset
 root, appears beside the three stock games on the master title, and uses a save
 namespace equal to its manifest id.
@@ -14,7 +14,7 @@ the terminal act, saves slot 1, returns to title, and continues the saved team.
 
 ## Manifest and registration
 
-A standalone manifest has no `baseGame` and requires API 1.2:
+A standalone manifest has no `baseGame` and uses the maintained 0.7 range:
 
 ```yaml
 formatVersion: 1
@@ -23,7 +23,7 @@ name: My Standalone Game
 version: 1.0.0
 authors: [Mod Author]
 description: A one-zone original game built on OpenGGF.
-engineApiRange: ">=1.2.0 <2.0.0"
+engineApiRange: ">=0.7.0 <0.8.0"
 type: standalone
 entrypoint: example.standalone.MyStandaloneMod
 dependencies: []
@@ -173,9 +173,9 @@ catalog or topology change cannot slip through between title rendering and boot.
 Completing the terminal credits flow saves and returns to the title; selecting
 Continue restores the namespaced main and sidekick identities.
 
-## Phase 3 boundaries
+## Current boundaries
 
-The following are deliberately not part of standalone API 1.2:
+The following are deliberately not part of standalone Mod API 0.7:
 
 - patch stacking onto standalone games;
 - a roster or launch-options UI for standalone entries;
@@ -183,7 +183,7 @@ The following are deliberately not part of standalone API 1.2:
 - cross-game feature donation to or from a standalone game;
 - standalone trace recording;
 - a full data-select presentation; and
-- Phase 4 work such as TMX import, a docs site/gallery, or a GUI studio.
+- a GUI studio.
 
 A standalone module may use the minimal slot-1 flow without implementing a stock
 data-select presentation.

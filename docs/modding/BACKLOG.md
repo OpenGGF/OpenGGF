@@ -1,7 +1,9 @@
 # Mod-support deferred backlog
 
 This is the Phase 4 disposition of deferred mod-support work. It is a triage record,
-not an implementation promise. The sweep covered the root mod-support design, every
+not an implementation promise. Its linked dated design/plan corpus is historical
+scope provenance, not current API authority. The sole current version authority is
+the [Mod API compatibility guide](../architecture/mod-api-compatibility.md). The sweep covered the root mod-support design, every
 Phase 0–4 design and implementation plan, and the shared format/security contract,
 case-insensitively for `defer`, `out-of-scope`, `parked`, `follow-on`, `future`,
 `revisit`, `when-demanded`, `later`, `optional`, `narrowing`, `non-goal`,
@@ -92,7 +94,7 @@ reclassified as optional.
 | Live apply without reload | Phase 1 Non-goals; Phase 2 §A | Session ownership/mod registration | No maintained sample needs mutation of a running mod registration graph. Applying code/data in place must reconcile active audio, saves, objects, providers, and gameplay references atomically. | **Keep parked** until a concrete sample defines which state may survive apply. |
 | Standalone-game patch stacking and launch-request choke-point amendment | Phase 3 §B3; Phase 4 §C | Module resolution/manifest | One global `GameId.STANDALONE` cannot safely match patches; the sample needs no stacking. Requires code-string identity plus new manifest vocabulary. | **Keep parked** pending two real standalone mods that need composition. |
 | Deterministic streamed-PCM capture/replay | Root design §4; Phase 1 non-goals | Audio recording/replay | Current policy deliberately keeps streams out of the SMPS command timeline and suppresses one-shots during rewind. No sample requests deterministic audio capture. | **Keep parked**; any proposal must preserve comparison-only traces. |
-| A future breaking Mod API major | Root design §2 | Mod API governance | API 1.0→1.2 is additive and all five samples remain below major 2. A major requires migration and a deprecation window. | **Keep parked** until an identified incompatibility cannot be added safely. |
+| A future breaking Mod API transition | Root design §2 | Mod API governance | Mod API 0.7 is the first published contract. An incompatible successor requires migration guidance and an explicit compatibility decision. | **Keep parked** until an identified incompatibility cannot be added safely. |
 
 ## Character and presentation polish
 
@@ -106,7 +108,7 @@ reclassified as optional.
 | Standalone roster-selection UI | Phase 3 §B3 | Master title/launch config | The standalone sample registers a team but launches the module default. A selector needs persistence and accessible input/layout design. | **Keep parked** pending a game with multiple player-selectable rosters. |
 | Pattern-window manager UI beyond the count | Phase 4 §C (Phase 2 pattern-budget polish) | Mod manager/graphics | Samples fit within declared windows and CI catches budget errors. Visualizing assignments is diagnostic polish, not a current blocker. | **Keep parked** until budget failures appear in creator reports. |
 | Tails-style secondary/appendage sprites for mod characters | Phase 3 §A6 non-goals | Playable art/sprite lifecycle | The character sample uses no appendage. Although GGFP has an optional appendage section, stock creation remains character-specific and needs an owner-safe lifecycle contract. | **Keep parked** pending a character sample that needs an independently animated attachment. |
-| Rewind capture for mod-character subclass fields | sample-platformer Task 4 review (2026-07-13) | Player rewind/mod API | `AbstractPlayableSprite.captureRewindState()`/`PlayerRewindExtra` was a closed hand-enumerated record with no subclass extension point, so mod-character ability fields (e.g. a double-jump latch) went stale on keyframe-exact seeks and cached-segment scrubs; only re-simulated seeks re-derived them. Fixed by an overridable `captureSubclassRewindState()`/`restoreSubclassRewindState(...)` pair carried as an opaque `PlayerRewindExtra.subclassExtra()` payload (mirroring `sidekickCpuExtra`) — Mod API 2.2.0, documented in `characters.md`. The Bolt sample (`BoltCharacter`) migrated its double-jump latch to the production round trip. | **Delivered** (2026-07-14, mod-gap-fixes) — see `TestPlayableSubclassRewind` and `TestSamplePlatformerIntegration#exerciseDoubleJumpAndRewindLatch`. |
+| Rewind capture for mod-character subclass fields | sample-platformer Task 4 review (2026-07-13) | Player rewind/mod API | `AbstractPlayableSprite.captureRewindState()`/`PlayerRewindExtra` was a closed hand-enumerated record with no subclass extension point, so mod-character ability fields (e.g. a double-jump latch) went stale on keyframe-exact seeks and cached-segment scrubs; only re-simulated seeks re-derived them. Fixed by an overridable `captureSubclassRewindState()`/`restoreSubclassRewindState(...)` pair carried as an opaque `PlayerRewindExtra.subclassExtra()` payload (mirroring `sidekickCpuExtra`), now part of Mod API 0.7 and documented in `characters.md`. The Bolt sample (`BoltCharacter`) migrated its double-jump latch to the production round trip. | **Delivered** (2026-07-14, mod-gap-fixes) — see `TestPlayableSubclassRewind` and `TestSamplePlatformerIntegration#exerciseDoubleJumpAndRewindLatch`. |
 | Mod-zone title-card letter art | Phase 2 resolved-contract polish | Title cards/mod art | Sonic 2 mod zones currently use the explicit skip/fallback because ROM letter art may not cover names. New art needs glyph/container, layout, and VRAM ownership rules. | **Keep parked** pending creator demand distinct from standalone master-title art. |
 
 ## Standalone-game expansion

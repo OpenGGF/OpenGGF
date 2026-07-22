@@ -4,19 +4,16 @@ This page is the detailed additive-content reference. New creators should start 
 the [handbook index](index.md), which orders the six quickstarts by effort and links
 the format, trust, identity, troubleshooting, and sample references.
 
-OpenGGF Mod API 2.5 supports restart-loaded music packs, code-backed objects,
+OpenGGF Mod API 0.7 supports restart-loaded music packs, code-backed objects,
 baked art, complete Sonic 2 and Sonic 3&K zones, playable characters, and no-ROM
 standalone games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The public mod API is version `2.5.0` (a deliberate breaking bump from `1.1.0` via
-the additive `1.2.0` step, followed by the additive `2.1.0` ROM-art intake step and
-the additive `2.2.0` playable-subclass rewind capture hooks, the additive `2.3.0`
-host-adapted S3K zone surface, the additive `2.4.0` gameplay-policy surface, and the
-additive `2.5.0` compatibility publication; see
-`docs/architecture/mod-api-compatibility.md`). Mods must declare a `2.x` engine range
-such as `>=2.0.0 <3.0.0`. Start with the guide for the contribution you are building:
+The public Mod API is `0.7.0`, the first published creator contract. Mods should
+declare `engineApiRange: ">=0.7.0 <0.8.0"`; see the
+[compatibility guide](../architecture/mod-api-compatibility.md). Start with the
+guide for the contribution you are building:
 
 - [Music packs](music-packs.md) — data-only WAV/Ogg replacements for stock music.
 - This guide — Phase 2 objects, art reskins, and complete Sonic 2 zones.
@@ -27,7 +24,7 @@ such as `>=2.0.0 <3.0.0`. Start with the guide for the contribution you are buil
 - [The `ggfmod` CLI](ggfmod.md) — launcher syntax, project scaffolding, and all
   converters.
 - [Native-Tails Flappy](guides/native-tails-flappy.md) — a maintained S3K patch
-  combining the 2.4 fresh-game, team, input, and HUD policies with a fixed-camera
+  combining the 0.7 fresh-game, team, input, and HUD policies with a fixed-camera
   dynamic-object minigame.
 
 A creator build needs both release artifacts:
@@ -47,7 +44,7 @@ ggfmod init my-mod --id my-mod --package example.mymod
 ```
 
 The generated Maven project is a working reference mod, not pseudocode. It contains
-a strict API 1.2 manifest, a namespaced patrol badnik, a Phase 3 character stub, an
+a strict Mod API 0.7 manifest, a namespaced patrol badnik, a character stub, an
 8-by-8 Genesis sheet source, and a minimal full-level editor export. The character
 stub deliberately has no playable art or terrain sensors; use the
 [character guide](characters.md) and checked-in acceptance sample before enabling it
@@ -227,7 +224,7 @@ shipping a lightly edited stock level may distribute copyrighted level data.
 
 ## Add a Sonic 3&K zone
 
-Mod API 2.3 adds an S3K host adapter for additive zones. Use level format v2 and
+Mod API 0.7 includes an S3K host adapter for additive zones. Use level format v2 and
 declare `baseGame: s3k`; the v1 Sonic 2 and standalone paths above are unchanged.
 Format v2 keeps the bounded pattern, chunk, block, map, solid, and collision files,
 but removes `palettes.bin`. Its `hostMetadata.s3k.objectZoneSet` value is `S3KL` or
@@ -258,11 +255,10 @@ The maintained [Native-Tails Flappy guide](guides/native-tails-flappy.md) exerci
 this complete policy set against a real S3K launch and shows how the policies stay
 destination-scoped while the gameplay controller remains ordinary mod object code.
 
-Mod API 2.4 lets a complete-zone patch mark one owned zone as a fresh-game start and
+Mod API 0.7 lets a complete-zone patch mark one owned zone as a fresh-game start and
 attach launch-only policies to that tagged destination. Set the trailing
-`ModZoneContribution` component to `true`; the four-argument constructor remains
-compatible and means `gameStart=false`. A mod using these contracts must declare an
-engine range that includes 2.4, such as `>=2.4.0 <3.0.0`:
+`ModZoneContribution` component to `true`; pass `false` for an ordinary contributed
+zone. A mod using these contracts should declare `>=0.7.0 <0.8.0`:
 
 ```java
 var destination = ZoneKey.mod("my-mod", "flappy");
@@ -319,7 +315,7 @@ a partial launch. With no matching contribution—or after session teardown—th
 defaults are the selected team, `GameplayInputFilter.IDENTITY`, and
 `HudProfile.stock()`.
 
-Mod API 2.4 intentionally adds no fixed-forward-movement controller, forced-camera or
+Mod API 0.7 intentionally publishes no fixed-forward-movement controller, forced-camera or
 scroll policy, world wrapping/rebasing runtime, or flight-fatigue rule. Fixed-camera
 minigames should keep the player stationary, move and recycle their own obstacles,
 filter unwanted directions, and use already-published character ability state.

@@ -25,26 +25,6 @@ public record TraceMetadata(
     Boolean freshLoad, Integer vIntRunCount
 ) {
 
-    /** Binary-compatible constructor for the Mod API 2.4 metadata shape. */
-    public TraceMetadata(String game, String zone, Integer zoneId, int act,
-            int bk2FrameOffset, int traceFrameCount, String startXHex, String startYHex,
-            String recordingDate, String luaScriptVersion, Integer traceSchema,
-            Integer csvVersion, String traceProfile, String bizhawkVersion,
-            String genesisCore, List<String> auxSchemaExtras, Integer romZoneId,
-            String route, String sourceBk2, String romChecksum, String notes,
-            List<String> characters, String mainCharacter, List<String> sidekicks,
-            Integer preTraceOscFrames, String rngSeedHex, String traceType,
-            String inputSource, Integer creditsDemoIndex, String creditsDemoSlug,
-            Integer specialStageIndex) {
-        this(game, zone, zoneId, act, bk2FrameOffset, null, traceFrameCount,
-                startXHex, startYHex, recordingDate, luaScriptVersion, traceSchema,
-                csvVersion, traceProfile, bizhawkVersion, genesisCore, auxSchemaExtras,
-                romZoneId, route, sourceBk2, romChecksum, notes, characters, mainCharacter,
-                sidekicks, preTraceOscFrames, rngSeedHex, traceType, inputSource,
-                creditsDemoIndex, creditsDemoSlug, specialStageIndex, null, null,
-                null, null, null);
-    }
-
     /**
      * Recorder version at which the engine title-card phase began executing
      * objects natively (matching ROM `TitleCard_Main`). Traces recorded at or

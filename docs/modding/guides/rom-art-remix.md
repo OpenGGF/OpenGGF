@@ -17,7 +17,7 @@ src/test/resources/mods/sample-rom-art-remix-src/build.ps1 `
   target/sample-rom-art-remix-build
 ```
 
-The project targets Mod API `>=2.1.0 <3.0.0`, the first additive API range with
+The project targets Mod API `>=0.7.0 <0.8.0`, whose first release contract includes
 ROM-art intake. Start from the checked-in source rather than copying a built jar;
 its registration, object, level source, build scripts, and package checks are all
 part of the maintained example.

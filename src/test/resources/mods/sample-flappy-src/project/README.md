@@ -3,7 +3,7 @@
 This project uses both OpenGGF artifacts: the engine jar supplies the public mod
 API, and the `openggf-mod-sdk` classifier supplies `ggfmod` and its templates.
 
-The sample targets Mod API 2.4 as a Sonic 3 & Knuckles patch. It demonstrates an
+The sample targets Mod API 0.7 as a Sonic 3 & Knuckles patch. It demonstrates an
 anchorless game-start contribution with a Tails-only launch team, deterministic
 input filtering, a custom HUD profile, an exact v2 S3K level source, and a native
 Tails controller. The controller fixes Tails' horizontal position while preserving
