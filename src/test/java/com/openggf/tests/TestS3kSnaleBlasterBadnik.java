@@ -56,8 +56,16 @@ class TestS3kSnaleBlasterBadnik {
     @Test
     void firstUpdateSeedsClosedWaitAndCollisionFromRomSetup() throws Exception {
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        AbstractPlayableSprite player = playerAt(0x0300, 0x0100, 0);
 
-        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+        snaleBlaster.update(0, player);
+        assertEquals("INIT", readEnumName(snaleBlaster, "state"),
+                "Obj_WaitOffscreen must not initialize before Render_Sprites marks its placeholder");
+        snaleBlaster.refreshPostCameraRenderState();
+        snaleBlaster.update(1, player);
+        assertEquals("INIT", readEnumName(snaleBlaster, "state"),
+                "the helper restores the saved operation and returns on its visible dispatch");
+        snaleBlaster.update(2, player);
 
         TouchResponseProvider touch = (TouchResponseProvider) snaleBlaster;
         assertEquals(0x1A, touch.getCollisionFlags());
@@ -68,9 +76,37 @@ class TestS3kSnaleBlasterBadnik {
     }
 
     @Test
+    void closedWaitRunsRawOpeningPrepBeforeVerticalMotion() throws Exception {
+        AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
+        setInt(snaleBlaster, "waitTimer", 0);
+        int initialY = snaleBlaster.getY();
+
+        snaleBlaster.update(1, playerAt(0x0300, 0x0100, 0));
+        assertEquals("OPENING_PREP", readEnumName(snaleBlaster, "state"));
+
+        for (int frame = 2; frame <= 43; frame++) {
+            snaleBlaster.update(frame, playerAt(0x0300, 0x0100, 0));
+            assertEquals(initialY, snaleBlaster.getY(),
+                    "byte_8C2B6 changes mappings without moving native y_pos");
+        }
+        assertEquals("OPENING_PREP", readEnumName(snaleBlaster, "state"));
+
+        snaleBlaster.update(44, playerAt(0x0300, 0x0100, 0));
+        assertEquals("OPENING", readEnumName(snaleBlaster, "state"));
+        assertEquals(initialY, snaleBlaster.getY(),
+                "the raw-animation callback changes routine without running it in the same dispatch");
+
+        snaleBlaster.update(45, playerAt(0x0300, 0x0100, 0));
+        assertEquals(initialY - 2, snaleBlaster.getY(),
+                "the first vertical step runs on the dispatch after the raw callback");
+    }
+
+    @Test
     void rollingPlayerWithinFortyEightPixelsForcesEarlyClose() throws Exception {
         RecordingServices services = new RecordingServices();
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(services);
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
         setEnum(snaleBlaster, "state", "OPENING");
         setInt(snaleBlaster, "verticalStep", -2);
         setInt(snaleBlaster, "openCyclesRemaining", 2);
@@ -86,7 +122,7 @@ class TestS3kSnaleBlasterBadnik {
     void shooterChildFiresSingleProjectileAtRomFrameFour() throws Exception {
         RecordingServices services = new RecordingServices();
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(services);
-        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
         Object shooter = readList(snaleBlaster, "shooters").get(0);
         services.spawnedObjects.clear();
 
@@ -134,7 +170,7 @@ class TestS3kSnaleBlasterBadnik {
     @Test
     void coverAnimationCompletionRestoresProtectionDuringRemainingOpenWait() throws Exception {
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
-        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
         Object cover = readField(snaleBlaster, "cover");
 
         setEnum(snaleBlaster, "state", "OPEN_WAIT");
@@ -165,6 +201,13 @@ class TestS3kSnaleBlasterBadnik {
         } finally {
             clearConstructionContext();
         }
+    }
+
+    private static void activateSnaleBlaster(AbstractObjectInstance snaleBlaster,
+            AbstractPlayableSprite player) {
+        snaleBlaster.refreshPostCameraRenderState();
+        snaleBlaster.update(-2, player);
+        snaleBlaster.update(-1, player);
     }
 
     private static AbstractPlayableSprite playerAt(int x, int y, int animationId) {

@@ -49106,3 +49106,27 @@ standalone CNZ remains at f0 in both scopes.
   frame 4431. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
   tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
   S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - LBZ Snale Blaster activation and opening cadence
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 4431 to
+  frame 4723.** The later divergent path now reports 7267 release-blocking
+  errors; the next divergence is CPU Tails' Y (`$0469` expected versus `$0468`
+  actual).
+- Root: Obj_SnaleBlaster begins behind `Obj_WaitOffscreen`, whose `$20` square
+  placeholder is marked visible by `Render_Sprites`; the helper observes that
+  bit on the following object dispatch, restores the badnik operation, and
+  returns. After its closed wait, routine 4 runs all 43 frames of raw script
+  `byte_8C2B6` at a fixed `y_pos` before routine 6 starts the shell's two-pixel
+  steps. The engine activated from an early horizontal-only point test and
+  skipped the raw opening phase, placing the protected shell six pixels above
+  its native collision position.
+- Fix: Snale Blaster now retains post-camera placeholder visibility across the
+  native one-dispatch activation handoff, then runs the complete fixed-delay
+  opening mapping sequence before vertical motion. The restored contact reaches
+  the shared nonzero-`collision_property` S3K rebound, negating X, Y, and ground
+  velocity exactly as the ROM does.
+- Validation: all eight focused Snale Blaster tests pass and the LBZ replay
+  reaches frame 4723. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. Every
+  non-LBZ S3K, S1, and S2 frontier and error total remains unchanged.

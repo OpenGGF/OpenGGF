@@ -51,10 +51,14 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
     private static final int PLAYER_ROLL_ANIM = 2;         // sub_8C23C: cmpi.b #2,anim(a1).
     private static final int EARLY_REOPEN_WAIT = 60 - 1;   // loc_8C0B8.
     private static final int EARLY_REOPEN_STEP_WAIT = 0x0F; // loc_8C0DE.
+    private static final int OPENING_PREP_DELAY = 5;       // byte_8C2B6.
+    private static final int[] OPENING_PREP_FRAMES = {0, 1, 2, 3, 4, 4, 4, 4};
+    private static final int WAIT_OFFSCREEN_MARGIN = 0x20; // Map_Offscreen width/height.
 
     enum State {
         INIT,
         CLOSED_WAIT,
+        OPENING_PREP,
         OPENING,
         OPEN_WAIT,
         CLOSING,
@@ -68,8 +72,12 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
     private int verticalStep;
     private int openCyclesRemaining;
     private int verticalAnimTimer;
+    private int openingPrepIndex;
+    private int openingPrepTimer;
     private int collisionProperty;
     private boolean firingWindow;
+    private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
     private transient SnaleBlasterCoverChild cover;
     private final transient List<SnaleBlasterShooterChild> shooters = new ArrayList<>(2);
 
@@ -82,7 +90,19 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        // Obj_WaitOffscreen installs a $20-by-$20 placeholder. Render_Sprites
+        // publishes its on-screen bit after the object pass; the helper sees
+        // that bit on the next dispatch, restores Obj_SnaleBlaster, and returns.
+        if (waitingForOnscreen) {
+            if (!placeholderRenderedOnscreen) {
+                return;
+            }
+            waitingForOnscreen = false;
+            placeholderRenderedOnscreen = false;
             return;
         }
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite
@@ -91,12 +111,21 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         switch (state) {
             case INIT -> initialize();
             case CLOSED_WAIT -> updateClosedWait();
+            case OPENING_PREP -> updateOpeningPrep();
             case OPENING -> updateVerticalMotion(player, State.OPEN_WAIT, OPEN_WAIT_FRAMES, true);
             case OPEN_WAIT -> updateOpenWait();
             case CLOSING -> updateVerticalMotion(player, State.CLOSED_WAIT, CLOSED_WAIT_FRAMES, false);
             case CLOSING_FROM_PLAYER -> updateEarlyClose();
             case EARLY_REOPEN_WAIT -> updateEarlyReopenWait();
             case EARLY_REOPENING -> updateEarlyReopen();
+        }
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN);
         }
     }
 
@@ -148,6 +177,28 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
 
     private void beginOpening() {
         firingWindow = false;
+        state = State.OPENING_PREP;
+        mappingFrame = OPENING_PREP_FRAMES[0];
+        openingPrepIndex = 0;
+        openingPrepTimer = 0;
+    }
+
+    private void updateOpeningPrep() {
+        openingPrepTimer--;
+        if (openingPrepTimer >= 0) {
+            return;
+        }
+        openingPrepIndex++;
+        if (openingPrepIndex >= OPENING_PREP_FRAMES.length) {
+            verticalStep = VERTICAL_STEP_OPEN;
+            beginVerticalMotion(State.OPENING);
+            return;
+        }
+        mappingFrame = OPENING_PREP_FRAMES[openingPrepIndex];
+        openingPrepTimer = OPENING_PREP_DELAY;
+    }
+
+    private void beginOpeningVerticalMotion() {
         verticalStep = VERTICAL_STEP_OPEN;
         beginVerticalMotion(State.OPENING);
     }
@@ -239,8 +290,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         waitTimer = 2;
         mappingFrame++;
         if (mappingFrame >= 3) {
-            verticalStep = VERTICAL_STEP_OPEN;
-            beginVerticalMotion(State.OPENING);
+            beginOpeningVerticalMotion();
         }
     }
 
