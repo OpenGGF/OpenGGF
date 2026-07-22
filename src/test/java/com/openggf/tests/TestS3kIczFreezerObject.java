@@ -264,6 +264,8 @@ class TestS3kIczFreezerObject {
         assertNull(cloud.frozenBlockForTesting(), "precondition: active-phase capture delay has not elapsed");
 
         freezer.onUnload();
+        assertNull(freezer.lastCaptureCloudForTesting(),
+                "Unloading the parent slot must drop its reference to the independently surviving child SST");
         cloud.update(66, player);
         assertNull(cloud.frozenBlockForTesting(),
                 "ROM off-phase init runs first after the parent slot is cleared");

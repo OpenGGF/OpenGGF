@@ -284,6 +284,10 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
     public void onUnload() {
         frostCycleActive = false;
         freezeJetActive = false;
+        // The independently allocated capture child survives its parent slot
+        // and enters the ROM off-phase scanner. The parent must not retain that
+        // now-detached SST identity if placement later rematerializes it.
+        lastCaptureCloud = null;
     }
 
     public boolean isFrostCycleActiveForTesting() {

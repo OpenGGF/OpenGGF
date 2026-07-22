@@ -326,7 +326,10 @@ final class DefaultObjectRewindPolicies {
             // it stays compact-eligible while silently dropping the whole rider array without
             // this explicit CAPTURED policy.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HCZSpinningColumnObjectInstance", "riders"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance", "lastCaptureCloud"), RewindFieldPolicy.CAPTURED),
+            // Test/diagnostic handle only. Capture-cloud behavior is owned by its
+            // independent SST; the parent never reads this link during gameplay,
+            // and it may outlive the child's registered rewind identity.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance", "lastCaptureCloud"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$CaptureCloud", "frozenBlock"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance$BottomDecoration", "parent"), RewindFieldPolicy.CAPTURED),
