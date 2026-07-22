@@ -22,6 +22,7 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.tests.FullReset;
@@ -1018,6 +1019,24 @@ public class TestPlayableSpriteMovement {
                                 "HurtCharacter Player_TouchFloor must restore default_y_radius");
                 assertEquals(-9, tails.getGroundSensors()[0].getX());
                 assertEquals(15, tails.getGroundSensors()[0].getY());
+        }
+
+        @Test
+        public void s3kHurtUsesLiveRadiusDeltaWhenRollBitOutlivesRollingRadii() {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                Sonic sonic = new Sonic("sonic", (short) 0x200, (short) 0x300);
+                sonic.setRolling(true);
+                sonic.applyStandingRadii(false);
+                sonic.setCentreYPreserveSubpixel((short) 0x340);
+                int centreYBeforeHurt = sonic.getCentreY();
+
+                assertTrue(sonic.getRolling());
+                assertEquals(sonic.getStandYRadius(), sonic.getYRadius());
+                assertTrue(sonic.applyHurt(sonic.getCentreX() - 16));
+
+                assertEquals(centreYBeforeHurt, sonic.getCentreY(),
+                                "Player_TouchFloor adds the live y_radius-default_y_radius delta");
+                assertFalse(sonic.getRolling());
         }
 
         @Test

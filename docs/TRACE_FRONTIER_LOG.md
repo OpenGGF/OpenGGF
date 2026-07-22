@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - S3K hurt live-radius floor reset
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 7296 to
+  frame 7305.** Total release-blocking errors fell from 6571 to 6569; the next
+  divergence is CPU Tails' Y position (`$01F9` expected versus `$01FA` actual).
+- Root: LBZ Obj18 had restored Sonic's standing collision radii while retaining
+  `Status_Roll`. When a Ribot subsequently ran `HurtCharacter`, native
+  `Player_TouchFloor` computed its `y_pos` correction from the live
+  `y_radius-default_y_radius` bytes, producing zero. The engine inferred a
+  five-pixel centre correction from the stale roll bit instead.
+- Fix: S3K hurt reset now captures the live radius and native centre before
+  clearing roll, then applies exactly that radius delta through
+  `NativePositionOps`. The existing S1/S2 top-left compatibility path remains
+  unchanged. A focused regression test covers the split roll-bit/radius state.
+- Validation: all 147 focused playable-movement tests pass and the LBZ replay
+  reaches frame 7305. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. No S3K,
+  S1, or S2 frontier regressed.
+
 ## 2026-07-22 - LBZ cup native fling routine
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 6939 to

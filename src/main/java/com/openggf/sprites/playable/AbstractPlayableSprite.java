@@ -48,6 +48,7 @@ import com.openggf.sprites.managers.SpriteMovementManager;
 import com.openggf.sprites.managers.TailsTailsController;
 import com.openggf.sprites.managers.TailsFlightController;
 import com.openggf.sprites.AbstractSprite;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.SensorConfiguration;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.managers.SpriteManager;
@@ -2635,18 +2636,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 setSpringing(0);
                 setSpindash(false);
 
-                // ROM: Sonic_ResetOnFloor adjusts Y when transitioning from rolling to standing.
-                // s1.asm: "subq.w #5,obY(a0)" — subtracts radius diff from y_pos word only,
-                // preserving the subpixel fraction. This keeps feet at the same position when
-                // yRadius changes from 14 (rolling) to 19 (standing).
-                //
-                // Use setY() (not setCentreY) to modify only yPixel and preserve ySubpixel,
-                // matching the ROM's word-only modification. getRollHeightAdjustment() returns
-                // the full height difference (e.g. 10 for Sonic), which when subtracted from
-                // yPixel produces the same centreY shift as the ROM's radius-based subtraction.
                 boolean wasRolling = getRolling();
-                setRolling(false);
+                int oldYRadius = getYRadius();
+                int oldCentreY = getCentreY();
                 GameRules currentRules = getGameRules();
+                setRolling(false);
                 boolean restoresSplitSidekickRadii = !(this instanceof Tails)
                                 || currentRules == null || currentRules.sidekickCpu() == null
                                 || currentRules.sidekickCpu().sidekickHurtRestoresRadiiWithoutRoll();
@@ -2659,7 +2653,23 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         applyStandingRadii(false);
                 }
                 if (wasRolling) {
-                        setY((short) (getY() - getRollHeightAdjustment()));
+                        PlayerMovementRules movementRules = currentRules != null
+                                        ? currentRules.playerMovement() : null;
+                        if (movementRules != null
+                                        && movementRules.landingRollClearUsesCurrentYRadiusDelta()) {
+                                // S3K Player_TouchFloor derives its y_pos adjustment from the
+                                // live y_radius byte, not from Status_Roll or the visual bounds.
+                                // Object routines can therefore leave the roll bit set while
+                                // restoring standing radii (LBZ Obj18 does this before a Ribot
+                                // hit). Preserve the native centre word and apply exactly the
+                                // captured radius delta.
+                                NativePositionOps.writeYPosPreserveSubpixel(
+                                                this, oldCentreY + oldYRadius - getStandYRadius());
+                        } else {
+                                // S1/S2 compatibility: their existing reset path is expressed
+                                // through the engine's top-left bounds adjustment.
+                                setY((short) (getY() - getRollHeightAdjustment()));
+                        }
                 }
 
                 setCrouching(false);

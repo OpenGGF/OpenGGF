@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K `Player_TouchFloor` hurt transitions now derive their centre-position correction from the live collision-radius bytes, matching cases where object control leaves the roll bit set after restoring standing radii. This advances the combined LBZ frontier from frame 7296 to frame 7305 without regressing another trace frontier.
 - Fix: LBZ cup elevators now enter the native Hit player routine before applying their bespoke fling velocities, without invoking the ordinary ring-loss damage path. This advances the combined LBZ frontier from frame 6939 to frame 7296 without moving any other trace frontier.
 - Fix: flung LBZ cup elevators now leave through the shared off-screen respawnable lifecycle, matching `Sprite_OnScreen_Test` clearing their placement bit. Returning routes can recreate the cup and land on it, advancing the combined LBZ frontier from frame 6643 to frame 6939 without moving any other trace frontier.
 - Fix: LBZ cup elevators now preserve the native `prev_anim` byte and script cursor while object-control bit 1 suppresses player animation. Roll animation therefore resumes with the ROM's retained mapping phase after cup release, advancing the combined LBZ frontier from frame 6535 to frame 6643 without moving any other trace frontier.
