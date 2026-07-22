@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ Ribot post-move touch publication
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 9706 to
+  frame 9869.** Total release-blocking errors fell from 8495 to 6060; the next
+  divergence is Sonic's mapping frame (`$37` expected versus `$35` actual).
+- Root: the active Ribot sphere runs its selected motion routine before
+  `Child_DrawTouch_Sprite` publishes the SST pointer to
+  `Collision_response_list`. The engine's ordinary player-slot touch phase
+  read the sphere's pre-update coordinate snapshot, delaying the recorded
+  harmful contact even though its post-move position overlapped Sonic.
+- Fix: Ribot's harmful active child now opts into the existing post-movement
+  touch-response coordinate phase. This is owned by the child routine's native
+  move-before-publish order rather than by a zone or frame exception. A focused
+  assertion covers the active child's touch-state phase.
+- Validation: all 64 focused Ribot/touch-response tests pass and the LBZ replay
+  reaches frame 9869. The complete `*TraceReplay#replayMatchesTrace` sweep with
+  all three discovered ROMs reports 61 tests, 45 green and the same 16
+  documented red routes. No S3K, S1, or S2 frontier regressed.
+
 ## 2026-07-22 - LBZ launcher coarse lifetime window
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 8071 to

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ Ribot hurt spheres now publish their post-movement coordinates to the next player-slot touch pass, matching the native child routine's move-before-`Child_DrawTouch_Sprite` order. This restores the recorded frame-9706 hit and advances the combined LBZ frontier to frame 9869 without regressing another trace frontier.
 - Fix: LBZ player launchers now retain themselves through the native coarse-horizontal `Sprite_OnScreen_Test` window instead of applying an engine-only vertical viewport gate. This restores the recorded launcher boost and advances the combined LBZ frontier from frame 8071 to frame 9706 without regressing another trace frontier.
 - Fix: LBZ Ribots now honor the native `Obj_WaitOffscreen` placeholder handoff and run harmful appendages through `MoveSprite` gravity, terrain callbacks, and word-only return positioning. This restores both recorded Ribot hits and advances the combined LBZ frontier from frame 7305 to frame 8071 without regressing another trace frontier.
 - Fix: S3K `Player_TouchFloor` hurt transitions now derive their centre-position correction from the live collision-radius bytes, matching cases where object control leaves the roll bit set after restoring standing radii. This advances the combined LBZ frontier from frame 7296 to frame 7305 without regressing another trace frontier.

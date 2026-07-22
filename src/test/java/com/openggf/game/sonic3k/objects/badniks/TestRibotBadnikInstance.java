@@ -131,6 +131,8 @@ class TestRibotBadnikInstance {
         ribot.update(0, playerAt(0, 0));
         ObjectInstance rightSphere = capturedChildren(objectManager, 2).get(1);
         assertTrue(rightSphere instanceof AbstractObjectInstance);
+        assertTrue(rightSphere.usesCurrentTouchResponseState(),
+                "Ribot publishes its hurt sphere after movement, so touch uses the post-move coordinates");
         installObjectManager((AbstractObjectInstance) rightSphere);
 
         ribot.update(1, playerAt(0, 0));

@@ -430,6 +430,14 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
         }
 
         @Override
+        public boolean usesCurrentTouchResponseState() {
+            // Obj_Ribot's active sphere runs its movement routine before
+            // Child_DrawTouch_Sprite publishes it (sonic3k.asm:191391-191399). The next
+            // player-slot TouchResponse must therefore consume that post-move x/y.
+            return true;
+        }
+
+        @Override
         public ObjectSpawn getSpawn() {
             return buildSpawnAt(currentX, currentY);
         }
