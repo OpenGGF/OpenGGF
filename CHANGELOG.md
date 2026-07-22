@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ tension platforms now expose ObjDat's native `width_pixels=$18` to Sonic's object-edge balance check while retaining `d1=$23` for `SolidObjectTop`. This restores the precarious left-edge facing and balance animation and advances both complete-run trace groups to frame 22465.
 - Fix: ICZ negative-subtype tension bridges now publish each rider's current segment through `sub_38BD8` before calculating the rope bend, instead of inheriting the ordinary bridge's prior-segment cadence. This removes the one-pixel rope surface drift and advances both complete-run trace groups to frame 21673.
 - Fix: ICZ's sloped Cork Floor now preserves grounded state when `sub_1DDC6` releases a rider, matching the helper's clear-`Status_OnObj`-without-set-`Status_InAir` exit and handing Sonic directly to terrain. This advances both complete-run trace groups from frame 19523 to frame 20133.
 - Fix: S3K's post-`Sonic_Move` low-speed crouch check now reads the player-slot entry `Status_OnObj` snapshot when `move_lock` suppressed the movement animation write. This prevents a retained Cork Floor ride from becoming a false Duck/spindash and advances ICZ complete-run physics to frame 19523 and animation to frame 19531.

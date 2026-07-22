@@ -243,6 +243,14 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // SetUp_ObjAttributes copies ObjDat_ICZTensionPlatform's
+        // width_pixels=$18 into the parent SST. Sonic_Move reads that byte for
+        // object-edge balance, not sub_8BA1C's extended d1=$23 solid width.
+        return 0x18;
+    }
+
+    @Override
     public SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }

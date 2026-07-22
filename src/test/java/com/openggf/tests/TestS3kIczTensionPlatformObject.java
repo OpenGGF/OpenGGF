@@ -69,6 +69,8 @@ class TestS3kIczTensionPlatformObject {
         assertEquals(0x23, params.halfWidth());
         assertEquals(0x14, params.airHalfHeight());
         assertEquals(0x0B, params.groundHalfHeight());
+        assertEquals(0x18, ((AbstractObjectInstance) instance).getBalanceWidthPixels(),
+                "Sonic_Move must read ObjDat width_pixels, not SolidObjectTop's extended d1");
     }
 
     @Test

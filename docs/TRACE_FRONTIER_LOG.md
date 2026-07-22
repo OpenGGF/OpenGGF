@@ -48396,3 +48396,20 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestTensionBridgeBendTiming`, `TestS3kTensionBridgeObject`, and
   the complete-run replay pass through f20133. The next mismatch is Sonic's
   animation ID at f21673; trace data remains comparison-only.
+
+## 2026-07-22 - ICZ tension-platform balance width
+
+- **`s3k_icz1` physics and animation advanced from f21673 to f22465.** Total
+  errors fell from 1,121 to 1,118; the focused tension-platform suite remains
+  green.
+- Root: `SetUp_ObjAttributes` copies `width_pixels=$18` from
+  `ObjDat_ICZTensionPlatform`, while `sub_8BA1C` separately passes the extended
+  `d1=$23` to `SolidObjectTop`. The engine reused `$23` for Sonic's
+  `Sonic_Move` object-edge balance read, classifying his stationary left-edge
+  position as safely supported instead of precarious.
+- Fix: the platform now exposes `$18` as its balance width while retaining the
+  existing `$23` collision half-width. Sonic consequently selects the native
+  left-facing balance state and animation `$0C` at f21673.
+- Validation: `TestS3kIczTensionPlatformObject` and the complete-run replay pass
+  through the former animation mismatch. The next divergence is CPU Tails' Y
+  position at f22465; trace data remains comparison-only.
