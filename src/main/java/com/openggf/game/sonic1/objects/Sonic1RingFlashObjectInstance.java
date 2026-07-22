@@ -2,6 +2,7 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -138,7 +139,8 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
             // ROM: clr.b (v_shield).w - remove shield
             if (player != null) {
                 player.setHidden(true);
-                ObjectControlState.nativeBit7FullControl().applyTo(player);
+                player.setAnimationId(Sonic1AnimationIds.NULL.id());
+                player.setForcedAnimationId(Sonic1AnimationIds.NULL.id());
                 player.clearPowerUps();
             }
 
@@ -156,6 +158,14 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
      */
     private void triggerLevelEnd(AbstractPlayableSprite player) {
 
+        // ROM Flash_Collect deletes the player SST entry here with
+        // `move.w #0,(v_player).w`. The engine retains its structural player
+        // instance across the results transition, so represent the absent SST
+        // slot by suppressing movement and touch processing from this point.
+        if (player != null) {
+            ObjectControlState.nativeBit7FullControl().applyTo(player);
+        }
+
         // Play "Got Through" music
         try {
             services().playMusic(GameMusic.ACT_CLEAR);
@@ -169,8 +179,15 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
         final int ringCount = player != null ? player.getRingCount() : 0;
         final int actNumber = services().currentAct() + 1;
 
-        // Spawn results screen with special stage transition
-        if (services().objectManager() != null) {
+        // v_endcard is a fixed singleton slot in the ROM. A glitched/fast route
+        // can cross the signpost walk-off threshold and start the card before
+        // entering the giant ring; Got_NextLevel reads f_bigring dynamically
+        // when that existing card exits. Reuse it instead of restarting the
+        // sequence with a second card.
+        Sonic1ResultsScreenObjectInstance existingResults = findExistingResultsScreen();
+        if (existingResults != null) {
+            existingResults.setSpecialStageAfter(true);
+        } else if (services().objectManager() != null) {
             spawnFreeChild(() -> {
                 Sonic1ResultsScreenObjectInstance resultsScreen = new Sonic1ResultsScreenObjectInstance(
                         elapsedSeconds, ringCount, actNumber);
@@ -178,6 +195,19 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
                 return resultsScreen;
             });
         }
+    }
+
+    private Sonic1ResultsScreenObjectInstance findExistingResultsScreen() {
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager == null) {
+            return null;
+        }
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (instance instanceof Sonic1ResultsScreenObjectInstance results && !results.isDestroyed()) {
+                return results;
+            }
+        }
+        return null;
     }
 
     @Override

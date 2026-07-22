@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -423,17 +424,19 @@ class TestRewindSchemaRegistry {
     }
 
     @Test
-    void exactDefaultObjectPolicyCapturesIczFreezerGraphLinks() {
+    void exactDefaultObjectPolicyClassifiesIczFreezerGraphLinks() {
         RewindClassSchema freezerSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(IczFreezerObjectInstance.class);
         RewindClassSchema cloudSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(
                         IczFreezerObjectInstance.CaptureCloud.class);
 
-        assertPolicy(freezerSchema, "lastCaptureCloud", RewindFieldPolicy.CAPTURED);
+        assertFalse(freezerSchema.fields().stream()
+                        .anyMatch(field -> field.key().fieldName().equals("lastCaptureCloud")),
+                "transient freezer diagnostic handle must be omitted from the compact schema");
         assertPolicy(cloudSchema, "frozenBlock", RewindFieldPolicy.CAPTURED);
         assertTrue(freezerSchema.unsupportedFields().isEmpty(),
-                "ICZ freezer compact schema must capture the last cloud link without fallback: "
+                "ICZ freezer compact schema must classify the diagnostic cloud handle without fallback: "
                         + freezerSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
         assertTrue(cloudSchema.unsupportedFields().isEmpty(),
                 "ICZ capture cloud compact schema must capture the frozen block link without fallback: "

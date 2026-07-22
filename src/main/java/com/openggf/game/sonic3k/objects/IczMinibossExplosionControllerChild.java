@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -20,7 +19,6 @@ final class IczMinibossExplosionControllerChild extends AbstractObjectInstance
     private static final int DISPATCH_INTERVAL = 3;
     private static final int INITIAL_TIMER = 0x20;
 
-    @RewindTransient(reason = "structural parent link restored from the nearest live ICZ miniboss")
     private final IczMinibossInstance parent;
     private int remaining = INITIAL_TIMER;
     // Obj_CreateBossExplosion tail-jumps through zeroed Obj_Wait, so the

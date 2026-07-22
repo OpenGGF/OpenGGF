@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -81,6 +82,7 @@ public record TraceRunManifest(
             throw new IllegalStateException("Manifest has no segments");
         }
         int previousOffset = -1;
+        Set<String> segmentDirs = new HashSet<>();
         for (int i = 0; i < segments.size(); i++) {
             Segment seg = segments.get(i);
             if (!SEGMENT_KINDS.contains(seg.kind())) {
@@ -100,6 +102,10 @@ public record TraceRunManifest(
             if ("special_stage".equals(seg.kind()) && seg.specialStageIndex() == null) {
                 throw new IllegalStateException(
                     "Segment " + i + " is special_stage but has no special_stage_index");
+            }
+            if (!segmentDirs.add(seg.dir())) {
+                throw new IllegalStateException(
+                    "Segment " + i + " has duplicate segment directory '" + seg.dir() + "'");
             }
             Path segDir = runDir.resolve(seg.dir());
             if (!Files.isDirectory(segDir) || !Files.exists(segDir.resolve("metadata.json"))) {

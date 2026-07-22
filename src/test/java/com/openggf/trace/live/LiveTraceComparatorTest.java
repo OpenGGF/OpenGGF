@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -52,6 +53,32 @@ class LiveTraceComparatorTest {
     }
 
     @Test
+    void skippedTickAdvancesVblankOnlyWhenRecordedCounterAdvanced() {
+        Bk2FrameInput empty = new Bk2FrameInput(0, 0, 0, false, "0");
+        LiveTraceComparator repeated = new LiveTraceComparator(
+                stubTrace(List.of(
+                        TraceFrame.executionTestFrame(0, 10, 0x100, 0),
+                        TraceFrame.executionTestFrame(1, 10, 0x100, 1))),
+                ToleranceConfig.DEFAULT, 1, () -> null);
+        LiveTraceComparator advanced = new LiveTraceComparator(
+                stubTrace(List.of(
+                        TraceFrame.executionTestFrame(0, 10, 0x100, 0),
+                        TraceFrame.executionTestFrame(1, 11, 0x100, 1))),
+                ToleranceConfig.DEFAULT, 1, () -> null);
+        LiveTraceComparator doubleAdvanced = new LiveTraceComparator(
+                stubTrace(List.of(
+                        TraceFrame.executionTestFrame(0, 10, 0x100, 0),
+                        TraceFrame.executionTestFrame(1, 12, 0x100, 1))),
+                ToleranceConfig.DEFAULT, 1, () -> null);
+
+        assertFalse(repeated.shouldAdvanceVblankOnSkippedTick(empty));
+        assertTrue(advanced.shouldAdvanceVblankOnSkippedTick(empty));
+        assertEquals(0, repeated.vblankAdvanceCountOnSkippedTick(empty));
+        assertEquals(1, advanced.vblankAdvanceCountOnSkippedTick(empty));
+        assertEquals(2, doubleAdvanced.vblankAdvanceCountOnSkippedTick(empty));
+    }
+
+    @Test
     void s3kTraceWithoutGameplayStartCheckpointStillComparesFullLevelFrames() {
         AbstractPlayableSprite sprite = mock(AbstractPlayableSprite.class);
         when(sprite.getCentreX()).thenReturn((short) 11);
@@ -78,6 +105,8 @@ class LiveTraceComparatorTest {
         c.afterFrameAdvanced(new Bk2FrameInput(0, 0, 0, false, "0"), false);
 
         assertEquals(1, c.errorCount());
+        assertEquals("x", c.firstNonCameraPhysicsMismatch().field());
+        assertEquals(0, c.firstNonCameraPhysicsMismatch().frame());
     }
 
     @Test
@@ -108,6 +137,31 @@ class LiveTraceComparatorTest {
 
         assertTrue(c.hasRecordingDesync());
         verify(onFirstError, times(1)).run();
+    }
+
+    @Test
+    void comparesRecordedSubpixelsDuringLivePlayback() {
+        AbstractPlayableSprite sprite = mock(AbstractPlayableSprite.class);
+        when(sprite.getCentreX()).thenReturn((short) 0);
+        when(sprite.getCentreY()).thenReturn((short) 0);
+        when(sprite.getXSpeed()).thenReturn((short) 0);
+        when(sprite.getYSpeed()).thenReturn((short) 0);
+        when(sprite.getGSpeed()).thenReturn((short) 0);
+        when(sprite.getAngle()).thenReturn((byte) 0);
+        when(sprite.getAir()).thenReturn(false);
+        when(sprite.getRolling()).thenReturn(false);
+        when(sprite.getGroundMode()).thenReturn(GroundMode.GROUND);
+        when(sprite.getXSubpixelRaw()).thenReturn(1);
+        when(sprite.getYSubpixelRaw()).thenReturn(0);
+        TraceFrame frame = TraceFrame.parseCsvRow(
+                "0000,0000,0000,0000,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0,00,0000,FF,0000,0000");
+        LiveTraceComparator c = new LiveTraceComparator(
+                stubTrace(List.of(frame)), ToleranceConfig.DEFAULT, 0, () -> sprite);
+
+        c.afterFrameAdvanced(new Bk2FrameInput(0, 0, 0, false, "0"), false);
+
+        assertEquals(1, c.errorCount(),
+                "live whole-movie replay must surface subpixel drift before it carries into x/y");
     }
 
     @Test

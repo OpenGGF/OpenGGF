@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Chained-driver core for multi-stage trace runs (spec: docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md).
@@ -28,6 +29,7 @@ public final class TraceRunReplayWalker {
      * recorded edge is never within the window.
      */
     public static final int BOUNDARY_WINDOW_FRAMES = 600;
+    public static final int LATE_BOUNDARY_GRACE_FRAMES = 120;
 
     private TraceRunReplayWalker() {
     }
@@ -147,6 +149,30 @@ public final class TraceRunReplayWalker {
     }
 
     /**
+     * Whether the engine has already reached a manifest level segment. Manifest
+     * acts are ROM-facing/1-based; engine acts are 0-based. This lets a chain
+     * rebind after a level load that completed during the preceding segment's
+     * compared tail, even when the engine performs that load without exposing
+     * an intermediate non-LEVEL mode to the test driver.
+     */
+    public static boolean isActiveLevelSegment(
+            TraceRunManifest.Segment segment, int engineRomZone, int engineAct) {
+        return "level".equals(segment.kind())
+                && segment.zoneId() != null
+                && segment.act() != null
+                && segment.zoneId() == engineRomZone
+                && segment.act() - 1 == engineAct;
+    }
+
+    /** True when a distinct level load has produced the expected segment. */
+    public static boolean isNewActiveLevelSegment(
+            TraceRunManifest.Segment segment, int engineRomZone, int engineAct,
+            Object levelAtSegmentStart, Object currentLevel) {
+        return currentLevel != levelAtSegmentStart
+                && isActiveLevelSegment(segment, engineRomZone, engineAct);
+    }
+
+    /**
      * SS-INTERIOR POLICY v1 = ADVANCE-UNCOMPARED. True iff the segment is a
      * {@code special_stage}: it is phased through WITHOUT per-frame comparison
      * (the boundary probe's delegate stays detached across the phase).
@@ -158,6 +184,102 @@ public final class TraceRunReplayWalker {
      */
     public static boolean isUncomparedInterior(TraceRunManifest.Segment segment) {
         return "special_stage".equals(segment.kind());
+    }
+
+    /**
+     * True when a completed level segment is a VBlank-only bridge into another
+     * capture of the same logical zone/act. Sonic 1's ROM can briefly expose
+     * {@code Game_Mode == Level} after a special-stage exit, emit only lag rows,
+     * leave that coarse mode again, and then begin the real next-act gameplay
+     * capture. The engine's finer mode model has already settled at the latter
+     * point when the stage-exit boundary becomes observable, so replay must
+     * rebind the input/comparator directly instead of waiting for a second mode
+     * cycle that does not exist.
+     *
+     * <p>The one-row allowance covers the title-card-exit fall-through frame
+     * consumed before a returned-level comparator attaches. The decision is
+     * driven only by manifest identity plus measured replay phase counts.
+     */
+    public static boolean isLagOnlySameLevelContinuation(
+            TraceRunManifest.Segment current, TraceRunManifest.Segment next,
+            int totalFrames, int laggedFrames) {
+        return "level".equals(current.kind())
+                && "level".equals(next.kind())
+                && Objects.equals(current.zoneId(), next.zoneId())
+                && Objects.equals(current.act(), next.act())
+                && totalFrames > 0
+                && laggedFrames >= totalFrames - 1;
+    }
+
+    /**
+     * Returns the number of rows a segment driver still needs to step after
+     * transition machinery has already consumed leading rows (most commonly
+     * the title-card-exit fallthrough frame).
+     */
+    public static int remainingSegmentFrames(int totalFrames, int consumedFrames) {
+        if (totalFrames < 0 || consumedFrames < 0) {
+            throw new IllegalArgumentException("frame counts must be non-negative");
+        }
+        return Math.max(0, totalFrames - consumedFrames);
+    }
+
+    /**
+     * Calculates the ROM VBlank ticks represented by the movie gap between two
+     * level captures. {@code nextFramesConsumed} includes leading destination
+     * gameplay rows already executed by transition fall-through. The profiled
+     * non-advancing rows represent real movie rows on which the game's VBlank
+     * counter remained unchanged.
+     */
+    public static int interLevelVblankBudget(
+            TraceRunManifest.Segment current,
+            TraceRunManifest.Segment next,
+            int nextFramesConsumed,
+            int nonAdvancingMovieRows) {
+        if (nextFramesConsumed < 0 || nonAdvancingMovieRows < 0) {
+            throw new IllegalArgumentException("frame counts must be non-negative");
+        }
+        int currentEnd = current.bk2FrameOffset() + current.traceFrameCount();
+        int targetRow = next.bk2FrameOffset() + nextFramesConsumed;
+        int movieRows = targetRow - currentEnd;
+        if (movieRows < 0) {
+            throw new IllegalArgumentException("level segment movie ranges overlap");
+        }
+        return Math.max(0, movieRows - nonAdvancingMovieRows);
+    }
+
+    /**
+     * Calculates the VBlank ticks represented by an uncompared interior and its
+     * return choreography. The anchor is the final recorded row of the source
+     * level; Sonic 1's special-stage path advances its global counter once for
+     * every subsequent BK2 row through the destination level's first row.
+     */
+    public static int uncomparedInteriorReturnVblankBudget(
+            TraceRunManifest.Segment sourceLevel,
+            TraceRunManifest.Segment returnLevel) {
+        if (sourceLevel.traceFrameCount() <= 0) {
+            throw new IllegalArgumentException("source level must contain recorded frames");
+        }
+        int sourceFinalRow = sourceLevel.bk2FrameOffset()
+                + sourceLevel.traceFrameCount() - 1;
+        int movieRows = returnLevel.bk2FrameOffset() - sourceFinalRow;
+        if (movieRows < 0) {
+            throw new IllegalArgumentException("interior return precedes source level tail");
+        }
+        return movieRows;
+    }
+
+    /** Projects a source-tail VBlank from the observed playback cursor. */
+    public static int sourceTailVblankAtBoundary(
+            TraceRunManifest.Segment sourceLevel,
+            int observedBk2Cursor,
+            int observedVblank) {
+        if (sourceLevel.traceFrameCount() <= 0 || observedBk2Cursor <= 0) {
+            throw new IllegalArgumentException("source and observed cursor must be non-empty");
+        }
+        int sourceFinalRow = sourceLevel.bk2FrameOffset()
+                + sourceLevel.traceFrameCount() - 1;
+        int observedAppliedRow = observedBk2Cursor - 1;
+        return observedVblank + sourceFinalRow - observedAppliedRow;
     }
 
     /**
@@ -285,11 +407,14 @@ public final class TraceRunReplayWalker {
     }
 
     /**
-     * True when {@code observedBk2Frame} falls within {@link #BOUNDARY_WINDOW_FRAMES}
-     * frames before (inclusive of) {@code recordedEdge}, and never after it.
+     * True when {@code observedBk2Frame} falls inside the bounded observation
+     * window around {@code recordedEdge}. The longer leading window accommodates
+     * fade/card setup that begins before the recorder sees a mode change; the
+     * shorter trailing grace accommodates equivalent engine transitions whose
+     * request becomes visible shortly after that edge.
      */
     public static boolean withinBoundaryWindow(int observedBk2Frame, int recordedEdge) {
-        return observedBk2Frame <= recordedEdge
+        return observedBk2Frame <= recordedEdge + LATE_BOUNDARY_GRACE_FRAMES
             && observedBk2Frame >= recordedEdge - BOUNDARY_WINDOW_FRAMES;
     }
 
@@ -329,6 +454,7 @@ public final class TraceRunReplayWalker {
         private PlaybackDebugManager.PlaybackFrameObserver delegate;
         private TraceRunManifest.Transition armed;
         private BoundaryObservation latchedObservation;
+        private int pendingSpecialStageRequestFrame = -1;
 
         public BoundaryProbe(EngineHooks hooks) {
             this.hooks = hooks;
@@ -343,6 +469,7 @@ public final class TraceRunReplayWalker {
         public void arm(TraceRunManifest.Transition boundary) {
             this.armed = boundary;
             this.latchedObservation = null;
+            this.pendingSpecialStageRequestFrame = -1;
         }
 
         /**
@@ -352,10 +479,20 @@ public final class TraceRunReplayWalker {
          * at which it was first noticed so repeated queries stay stable.
          */
         public boolean latched() {
-            if (latchedObservation == null && armed != null
-                && boundaryEntryMode(armed.entryKind()) == BoundaryEntryMode.LEVEL_MODE
-                && hooks.currentMode() == GameMode.LEVEL) {
-                latchedObservation = new BoundaryObservation(true, hooks.currentBk2Frame());
+            if (latchedObservation == null && armed != null) {
+                BoundaryEntryMode entryMode = boundaryEntryMode(armed.entryKind());
+                boolean persistentHit = entryMode == BoundaryEntryMode.LEVEL_MODE
+                    && hooks.currentMode() == GameMode.LEVEL;
+                boolean deferredSpecialStageHit = entryMode == BoundaryEntryMode.SPECIAL_STAGE_REQUEST
+                    && pendingSpecialStageRequestFrame >= 0;
+                if (persistentHit || deferredSpecialStageHit) {
+                    int observedFrame = deferredSpecialStageHit
+                        ? pendingSpecialStageRequestFrame
+                        : hooks.currentBk2Frame();
+                    if (withinBoundaryWindow(observedFrame, armed.modeChangeBk2Frame())) {
+                        latchedObservation = new BoundaryObservation(true, observedFrame);
+                    }
+                }
             }
             return latchedObservation != null;
         }
@@ -373,6 +510,16 @@ public final class TraceRunReplayWalker {
         @Override
         public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
             return delegate != null && delegate.shouldSkipGameplayTick(frame);
+        }
+
+        @Override
+        public boolean shouldAdvanceVblankOnSkippedTick(Bk2FrameInput frame) {
+            return delegate == null || delegate.shouldAdvanceVblankOnSkippedTick(frame);
+        }
+
+        @Override
+        public int vblankAdvanceCountOnSkippedTick(Bk2FrameInput frame) {
+            return delegate == null ? 1 : delegate.vblankAdvanceCountOnSkippedTick(frame);
         }
 
         @Override
@@ -394,6 +541,23 @@ public final class TraceRunReplayWalker {
                     latchedObservation = new BoundaryObservation(true, observedFrame);
                 }
             }
+        }
+
+        @Override
+        public void onSpecialStageRequestRaised() {
+            if (delegate != null) {
+                delegate.onSpecialStageRequestRaised();
+            }
+            if (armed == null || latchedObservation != null
+                || boundaryEntryMode(armed.entryKind()) != BoundaryEntryMode.SPECIAL_STAGE_REQUEST) {
+                return;
+            }
+            // Do not latch here: when the ordinary afterFrameAdvanced callback
+            // still follows this request in the same step, its post-advance
+            // frame is the established clock anchor. Retain only a fallback for
+            // requests raised after that callback and consumed during a context
+            // swap before the next frame observer can run.
+            pendingSpecialStageRequestFrame = hooks.currentBk2Frame();
         }
     }
 
@@ -427,7 +591,8 @@ public final class TraceRunReplayWalker {
             if (probe.latched()) {
                 return probe.observation();
             }
-            if (probe.currentBk2Frame() > boundary.modeChangeBk2Frame()) {
+            if (probe.currentBk2Frame()
+                    > boundary.modeChangeBk2Frame() + LATE_BOUNDARY_GRACE_FRAMES) {
                 return BoundaryObservation.NOT_OBSERVED;
             }
             if (steps >= maxSteps) {

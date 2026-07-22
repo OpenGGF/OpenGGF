@@ -130,7 +130,7 @@ public class ObjectManager {
     private boolean activeObjectsCacheDirty = true;
     private final Set<ObjectInstance> deferredDynamicExecThisFrame =
             Collections.newSetFromMap(new IdentityHashMap<>());
-    private final List<ObjectInstance> postExecDynamicSpawns = new ArrayList<>();
+    private final ObjectManagerRuntimeState runtimeState = new ObjectManagerRuntimeState();
 
     // ROM parity: dynamic object slot tracking for the current game's allocatable
     // SST window. S1 uses 32..127, S2 uses 16..127, and S3K uses 4..92.
@@ -139,8 +139,6 @@ public class ObjectManager {
     private final SlotAllocator slotAllocator;
     private int s2LatchedObjectManagerCameraX = Integer.MIN_VALUE;
     private int twoAxisCameraYCoarse = Integer.MIN_VALUE;
-    private int ringFloorCheckCounterPhase;
-    private boolean inheritedRingCounterPhase;
     private int vIntRunCounterPhaseOffset;
 
     // ROM parity: Tracks child slots reserved by objects with getReservedChildSlotCount() > 0.
@@ -300,7 +298,7 @@ public class ObjectManager {
         dynamicObjects.clear();
         auxiliaryDynamicObjects.clear();
         deferredDynamicExecThisFrame.clear();
-        postExecDynamicSpawns.clear();
+        runtimeState.clearPostExecDynamicSpawns();
         reservedChildSlots.clear();
         slotAllocator.clear();
         Arrays.fill(execOrder, null);
@@ -537,6 +535,7 @@ public class ObjectManager {
     public void snapshotTouchResponseState() { snapshotTouchResponseState(false); }
 
     public void snapshotTouchResponseState(boolean preservePreviousCollisionResponseList) {
+        solidContacts.clearSameFrameMonitorBreakBounces();
         updateCameraBounds();
         collisionResponseList.setUsePrevious(preservePreviousCollisionResponseList);
         for (ObjectInstance inst : activeObjects.values()) {
@@ -1791,21 +1790,10 @@ public class ObjectManager {
      * S3K fixed player-effect SSTs execute after Dynamic_object_RAM, so children
      * they create reserve slots only after every ordinary dynamic object has run.
      */
-    public void queueDynamicObjectAfterExec(ObjectInstance object) {
-        if (object != null) {
-            postExecDynamicSpawns.add(object);
-        }
-    }
+    public void queueDynamicObjectAfterExec(ObjectInstance object) { runtimeState.queueDynamicObjectAfterExec(object); }
 
     private void flushPostExecDynamicSpawns() {
-        if (postExecDynamicSpawns.isEmpty()) {
-            return;
-        }
-        List<ObjectInstance> queued = List.copyOf(postExecDynamicSpawns);
-        postExecDynamicSpawns.clear();
-        for (ObjectInstance object : queued) {
-            addDynamicObjectNextFrame(object);
-        }
+        runtimeState.drainPostExecDynamicSpawns().forEach(this::addDynamicObjectNextFrame);
     }
 
     /**
@@ -2081,24 +2069,7 @@ public class ObjectManager {
      * Returns all live objects of the given concrete type, in ascending slot order.
      */
     public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {
-        List<T> matches = new ArrayList<>();
-        Set<ObjectInstance> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-        for (ObjectInstance instance : activeObjects.values()) {
-            if (type.isInstance(instance) && seen.add(instance)) {
-                matches.add(type.cast(instance));
-            }
-        }
-        for (ObjectInstance instance : dynamicObjects) {
-            if (type.isInstance(instance) && seen.add(instance)) {
-                matches.add(type.cast(instance));
-            }
-        }
-        matches.sort((a, b) -> {
-            int slotA = a instanceof AbstractObjectInstance aoiA ? aoiA.getSlotIndex() : Integer.MAX_VALUE;
-            int slotB = b instanceof AbstractObjectInstance aoiB ? aoiB.getSlotIndex() : Integer.MAX_VALUE;
-            return Integer.compare(slotA, slotB);
-        });
-        return matches;
+        return ObjectInstanceQueries.activeObjectsOfType(activeObjects, dynamicObjects, type);
     }
 
     /**
@@ -2464,23 +2435,13 @@ public class ObjectManager {
      * Trace recorders capture this independently because legacy S3K CSV fixtures
      * stored the adjacent V-int word rather than {@code V_int_run_count+2}.
      */
-    public void initRingFloorCheckCounterPhase(int phase) {
-        ringFloorCheckCounterPhase = phase;
-        inheritedRingCounterPhase = false;
-    }
+    public void initRingFloorCheckCounterPhase(int phase) { runtimeState.initRingFloorCheckCounterPhase(phase); }
 
-    public void inheritRingFloorCheckCounterPhase(int phase) {
-        ringFloorCheckCounterPhase = phase;
-        inheritedRingCounterPhase = true;
-    }
+    public void inheritRingFloorCheckCounterPhase(int phase) { runtimeState.inheritRingFloorCheckCounterPhase(phase); }
 
-    public int getRingFloorCheckCounterPhase() {
-        return ringFloorCheckCounterPhase;
-    }
+    public int getRingFloorCheckCounterPhase() { return runtimeState.ringFloorCheckCounterPhase(); }
 
-    public boolean hasInheritedRingCounterPhase() {
-        return inheritedRingCounterPhase;
-    }
+    public boolean hasInheritedRingCounterPhase() { return runtimeState.hasInheritedRingCounterPhase(); }
 
     /**
      * Sets the phase difference between the general object-update clock and
@@ -2686,9 +2647,9 @@ public class ObjectManager {
         solidContacts.forceAirOnStaleObjectSupportLoss(player);
     }
 
-    public boolean hasPendingStaleObjectSupportLoss(PlayableEntity player) {
-        return solidContacts.hasPendingStaleObjectSupportLoss(player);
-    }
+    public boolean hasPendingStaleObjectSupportLoss(PlayableEntity player) { return solidContacts.hasPendingStaleObjectSupportLoss(player); }
+
+    public ObjectSolidContactController solidContacts() { return solidContacts; }
 
     /**
      * Preserves a non-solid object's ownership of the player's on-object state for the

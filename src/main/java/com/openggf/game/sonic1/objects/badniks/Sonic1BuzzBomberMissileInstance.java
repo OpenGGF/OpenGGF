@@ -157,7 +157,6 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
             if (animFrame >= FLARE_FRAME_COUNT) {
                 // afRoutine: advance to active phase
                 phase = Phase.ACTIVE;
-                collisionEnabled = true;
                 animFrame = 0;
                 renderedFrame = 2; // Active missile frame 0 (Ball1)
                 return;
@@ -171,6 +170,11 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
      * Deletes when below level bottom boundary + $E0.
      */
     private void updateActive() {
+        // Msl_FromBuzz writes obColType at the start of routine 4. AnimateSprite's
+        // afRoutine only advances obRoutine on the preceding pass, so collision
+        // must remain clear until this first ACTIVE execution.
+        collisionEnabled = true;
+
         // Apply velocity (SpeedToPos: 16.8 fixed-point)
         motionState.x = currentX;
         motionState.y = currentY;

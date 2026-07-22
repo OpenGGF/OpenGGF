@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,29 @@ class TestSonic1LavaWallGraphRewind {
     @AfterEach
     void tearDown() {
         GraphicsManager.getInstance().resetState();
+    }
+
+    @Test
+    void movingLavaWallResolvesSolidContactAtItsPreMovementPosition() {
+        Sonic1LavaWallObjectInstance wall = new Sonic1LavaWallObjectInstance(CAPTURED_MAIN_SPAWN);
+
+        assertTrue(wall.usesPreUpdatePositionForSolidContact(null),
+                "Obj4E calls SolidObject before SpeedToPos, so contact must use the wall's pre-update x_pos");
+    }
+
+    @Test
+    void movingLavaWallPausesSpeedToPosWhilePlayerIsHurt() throws Exception {
+        Sonic1LavaWallObjectInstance wall = new Sonic1LavaWallObjectInstance(CAPTURED_MAIN_SPAWN);
+        writeInt(wall, "routine", 2);
+        writeInt(wall, "velX", 0x180);
+        writeBoolean(wall, "moveFlag", true);
+        Sonic sonic = new Sonic("sonic", (short) 0x0600, (short) 0x0180);
+        sonic.setHurt(true);
+
+        wall.update(0, sonic);
+
+        assertEquals(CAPTURED_MAIN_SPAWN.x(), wall.getX(),
+                "Obj4E's cmpi.b #4,obRoutine gate pauses SpeedToPos for hurt routine 4");
     }
 
     @Test

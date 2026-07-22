@@ -141,6 +141,39 @@ class TestSonic1MonitorObjectInstance {
     }
 
     @Test
+    void adjacentMonitorLandsJumpLatchedPlayerAfterSameFrameMonitorBreakBounce() {
+        ObjectServices services = new StubObjectServices();
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x07B8);
+        when(camera.getY()).thenReturn((short) 0x0220);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, camera, services);
+        Sonic1MonitorObjectInstance adjacentMonitor = new Sonic1MonitorObjectInstance(
+                new ObjectSpawn(0x0850, 0x02D1, 0x26, 6, 0, false, 0));
+        objectManager.addDynamicObjectAtSlot(adjacentMonitor, 0x26);
+        adjacentMonitor.snapshotPreUpdatePosition();
+
+        DummyPlayer player = new DummyPlayer();
+        player.setRolling(true);
+        player.setJumping(true);
+        player.setAnimationId(Sonic1AnimationIds.ROLL);
+        player.setCentreX((short) 0x0848);
+        player.setCentreY((short) 0x02B6);
+        player.setAir(true);
+        player.setYSpeed((short) -0x0418);
+        objectManager.solidContacts().markSameFrameMonitorBreakBounce(player);
+
+        objectManager.updateSolidContacts(player);
+
+        assertFalse(player.getAir(),
+                "A break-bounce must not masquerade as a new upward jump at the adjacent monitor");
+        assertTrue(player.isOnObject());
+        assertEquals(0, player.getYSpeed());
+    }
+
+    @Test
     void staticMonitorPowerUpRendersStaticIcon() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);

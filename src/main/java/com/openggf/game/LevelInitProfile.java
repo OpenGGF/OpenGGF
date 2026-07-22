@@ -42,7 +42,6 @@ public interface LevelInitProfile {
         return 0;
     }
 
-
     /**
      * Ordered steps for entering a level (title card through control unlock).
      * <p>

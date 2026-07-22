@@ -675,7 +675,8 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
                     // installs Change_Act2Sizes workers while Scroll_lock is
                     // still held for this frame.
                     preloadedActCompletionPrepared = true;
-                    S3kTransitionWriteSupport.preparePreloadedActTitleCardCompletion();
+                    S3kTransitionWriteSupport.preparePreloadedActTitleCardCompletion(
+                            GameServices.module().getLevelEventProvider());
                 }
                 return;
             }

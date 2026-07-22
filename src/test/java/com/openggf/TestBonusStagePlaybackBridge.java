@@ -83,6 +83,37 @@ class TestBonusStagePlaybackBridge {
             assertFalse(manager.isDriving(GameMode.BONUS_STAGE),
                     "Ending the session must stop driving BONUS_STAGE mode");
         }
+
+        @Test
+        void scheduledLevelLoadRebindDoesNotMoveCursorUntilActivated() throws Exception {
+            Bk2Movie movie = new Bk2MovieLoader().load(MOVIE_PATH);
+            manager.startSession(movie, 3);
+
+            manager.scheduleSessionAtNextLevelLoad(movie, 17);
+
+            assertEquals(3, manager.getCursorFrame(),
+                    "Scheduling must not disturb input during the preceding fade");
+            assertTrue(manager.activateScheduledLevelLoadSession());
+            assertEquals(17, manager.getCursorFrame(),
+                    "The synchronous level-load hook must activate the destination cursor");
+            assertFalse(manager.activateScheduledLevelLoadSession(),
+                    "A scheduled level-load rebind must be one-shot");
+        }
+
+        @Test
+        void scheduledLevelLoadHoldsClockOnlyAfterDestinationRow() throws Exception {
+            Bk2Movie movie = new Bk2MovieLoader().load(MOVIE_PATH);
+            manager.startSession(movie, 3);
+            manager.scheduleSessionAtNextLevelLoad(movie, 5);
+
+            assertFalse(manager.shouldHoldVblankForPendingLevelLoad());
+            manager.advanceCurrentFrameWithoutGameplay();
+            assertFalse(manager.shouldHoldVblankForPendingLevelLoad());
+            manager.advanceCurrentFrameWithoutGameplay();
+            assertTrue(manager.shouldHoldVblankForPendingLevelLoad());
+            manager.activateScheduledLevelLoadSession();
+            assertFalse(manager.shouldHoldVblankForPendingLevelLoad());
+        }
     }
 
     /**

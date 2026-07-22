@@ -3,6 +3,7 @@ package com.openggf.game.sonic1;
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
+import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.events.Sonic1LevelEventManager;
 import com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance;
 
@@ -53,6 +54,19 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
+        // GM_Level clears v_misc_variables before resource setup
+        // (sonic.asm:2737-2740). v_random lives inside that block
+        // (_Variables.asm:143), so deaths, restarts, and normal act loads all
+        // begin with a zero RNG seed. Keep this S1-owned: S2/S3K have their
+        // own RAM-clear and RNG lifetime rules.
+        steps.add(1, new InitStep("ResetRng",
+                "S1: clear v_random with v_misc_variables",
+                () -> {
+                    var rng = GameServices.rngOrNull();
+                    if (rng != null) {
+                        rng.setSeed(0L);
+                    }
+                }));
         // Post-load assembly: 6 steps (no SpawnSidekick — S1 has no Tails)
         if (ctx.isIncludePostLoadAssembly()) {
             steps.add(restoreCheckpointStep(ctx));

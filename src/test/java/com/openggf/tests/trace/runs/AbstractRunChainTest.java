@@ -12,6 +12,7 @@ import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -113,7 +114,15 @@ abstract class AbstractRunChainTest {
         // standalone lane's AbstractTraceReplayTest#act() override returns 0 for
         // Act 1). Convert once here so the boot call sites below never see the
         // raw manifest value.
-        Integer bootAct = engineAct(manifestBootAct);
+        // No game module exists until the ROM bootstrap below, so resolve the
+        // first segment through the manifest game id. Subsequent seams use the
+        // active module's profile.
+        var bootProfile = "s1".equals(run.game())
+                ? com.openggf.game.profiles.trace.TracePlaybackProfile.SONIC_1
+                : com.openggf.game.profiles.trace.TracePlaybackProfile.DISABLED;
+        var bootIdentity = bootProfile.resolveRecordedLevel(bootZone, manifestBootAct);
+        Integer bootAct = bootIdentity.act();
+        bootZone = bootIdentity.zone();
         // --- Step 2: boot segment 0 ---------------------------------------------
         TraceData trace0 = first.trace();
         Path bk2Path = resolveRunBk2(runDir, run.sourceBk2());
@@ -146,6 +155,7 @@ abstract class AbstractRunChainTest {
                 trace0, movie, fixture, loop, fixture::sprite, () -> { });
         driver.start(bootZone, bootAct);
 
+
         PlaybackDebugManager playback = GameServices.playbackDebug();
         RealEngineHooks hooks = new RealEngineHooks(loop);
         BoundaryProbe probe = new BoundaryProbe(hooks);
@@ -157,24 +167,45 @@ abstract class AbstractRunChainTest {
 
         // --- Step 3: walk every segment -----------------------------------------
         LiveTraceComparator activeComparator = driver.comparator();
+        SegmentPlan uncomparedInteriorSourceLevel = null;
+        int uncomparedInteriorSourceVblank = 0;
         int i = 0;
         while (i < plans.size()) {
             SegmentPlan seg = plans.get(i);
+            Object levelAtSegmentStart = GameServices.level().getCurrentLevel();
             TraceRunManifest.Transition exit = seg.exitBoundary();
             boolean last = (i == plans.size() - 1);
 
             if (exit == null) {
                 // Last segment, OR a plain level->level boundary (no transition
                 // record). Compare through this segment's recorded frames.
-                stepFrames(loop, seg.trace().frameCount());
+                int remainingFrames = TraceRunReplayWalker.remainingSegmentFrames(
+                        seg.trace().frameCount(), activeComparator.cursor());
+                stepFrames(loop, remainingFrames);
                 maybeWriteReport(run.runId(), i, activeComparator);
                 if (last) {
+                    replayTerminalMovieTail(loop, inputHandler, movie, seg);
                     break;
+                }
+                SegmentPlan next = plans.get(i + 1);
+                if (TraceRunReplayWalker.isLagOnlySameLevelContinuation(
+                        seg.segment(), next.segment(), seg.trace().frameCount(),
+                        activeComparator.laggedFrames())) {
+                    int sourceTailVblank = TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                            seg.segment(), playback.getCursorFrame(),
+                            GameServices.level().getObjectManager().getVblaCounter());
+                    completeInterLevelVblankBudget(seg, next, 0, sourceTailVblank);
+                    OscillationManager.suppressNextFrames(1);
+                    activeComparator = attachLevelSegment(
+                            playback, probe, movie, next, fixture);
+                    i++;
+                    continue;
                 }
                 // Plain level->level: cross the act/zone title-card cycle and
                 // rebind onto the next level segment.
                 activeComparator = handoffAcrossLevelBoundary(
-                        loop, playback, probe, movie, plans.get(i + 1), stepCap, fixture);
+                        loop, playback, probe, movie, seg, next, stepCap, fixture,
+                        levelAtSegmentStart);
                 i++;
                 continue;
             }
@@ -263,6 +294,17 @@ abstract class AbstractRunChainTest {
                 assertReturnBoundary(plans, i, runDir);
                 // Attach the return comparator, keying on interior kind.
                 if (uncomparedInterior) {
+                    if (GameServices.module().getTracePlaybackProfile()
+                            .alignUncomparedInteriorReturnVblank()) {
+                        if (uncomparedInteriorSourceLevel == null) {
+                            throw new AssertionError(
+                                    "Uncompared interior return has no source-level clock anchor");
+                        }
+                        alignUncomparedInteriorReturnVblank(
+                                uncomparedInteriorSourceLevel, plans.get(i + 1),
+                                uncomparedInteriorSourceVblank);
+                        uncomparedInteriorSourceLevel = null;
+                    }
                     // Pre-seeked SS interior: its single title-card-exit fall-through
                     // frame consumed the return segment's frame 0 (framesConsumed == 1)
                     // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
@@ -288,17 +330,31 @@ abstract class AbstractRunChainTest {
                 // This segment is a LEVEL; its exit is an ENTRY boundary into the
                 // interior at i+1. Await the transient entry request, then hand
                 // off into the interior mode.
+                SegmentPlan interior = plans.get(i + 1);
+                boolean anchorUncomparedInterior =
+                        TraceRunReplayWalker.isUncomparedInterior(interior.segment())
+                                && GameServices.module().getTracePlaybackProfile()
+                                        .alignUncomparedInteriorReturnVblank();
                 BoundaryObservation obs =
-                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, () -> stepEngineFrame(loop));
+                        TraceRunReplayWalker.awaitBoundary(
+                                probe, exit, stepCap, () -> stepEngineFrame(loop));
                 // Report BEFORE asserting -- see the stage_exit branch above for
                 // why: a level segment's own interior divergence is the usual
                 // cause of a missed entry boundary, and this is the only report
                 // this segment's comparator will ever get if the assert throws.
                 maybeWriteReport(run.runId(), i, activeComparator);
-                assertTrue(obs.observed(), "Segment exit boundary (" + exit.entryKind()
+                assertTrue(obs.observed(), "Segment " + i + " (" + seg.segment().dir()
+                        + ") exit boundary (" + exit.entryKind()
                         + ") was never observed within the boundary window for " + runDir);
+                if (anchorUncomparedInterior) {
+                    uncomparedInteriorSourceLevel = seg;
+                    uncomparedInteriorSourceVblank =
+                            TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                                    seg.segment(), obs.observedBk2Frame(),
+                                    GameServices.level().getObjectManager().getVblaCounter());
+                }
                 activeComparator = handoffIntoInterior(
-                        loop, playback, probe, movie, plans.get(i + 1), stepCap, fixture);
+                        loop, playback, probe, movie, interior, stepCap, fixture);
                 i++;
             }
         }
@@ -495,18 +551,109 @@ abstract class AbstractRunChainTest {
     /**
      * Crosses a plain level->level boundary that carries NO transition record
      * (e.g. S3K AIZ->HCZ seg 8->9, HCZ->MGZ seg 18->19). The engine runs an
-     * act/zone title-card cycle: wait out of LEVEL (into the title card), back
-     * into LEVEL, then rebind onto the next level segment. This is the documented
-     * refinement seam for the S3K lane; the S1/S2 runs never take this path.
+     * act/zone title-card cycle. If that cycle completed inside the preceding
+     * segment's recorded tail, the target level is already active and we rebind
+     * immediately. Otherwise wait out of LEVEL and back, then rebind.
      */
     private LiveTraceComparator handoffAcrossLevelBoundary(
             GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
-            Bk2Movie movie, SegmentPlan nextLevel, int stepCap, LiveEngineFixture fixture) {
+            Bk2Movie movie, SegmentPlan currentLevel, SegmentPlan nextLevel,
+            int stepCap, LiveEngineFixture fixture,
+        Object levelAtSegmentStart) {
+        int sourceTailVblank = TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                currentLevel.segment(), playback.getCursorFrame(),
+                GameServices.level().getObjectManager().getVblaCounter());
         probe.setDelegate(null);
-        waitForModeToLeave(loop, GameMode.LEVEL, stepCap);
-        waitForMode(loop, GameMode.LEVEL, stepCap);
+        if (!isNewActiveLevelSegment(nextLevel, levelAtSegmentStart)) {
+            int offset = nextLevel.segment().bk2FrameOffset();
+            playback.scheduleSessionAtNextLevelLoad(movie, offset);
+            waitForModeToLeaveOrLevelActivate(
+                    loop, GameMode.LEVEL, nextLevel, levelAtSegmentStart, stepCap);
+            int firstGameplayFrame = playback.getCursorFrame() - offset;
+            if (firstGameplayFrame < 0 || firstGameplayFrame > 1) {
+                throw new AssertionError("Destination playback cursor advanced "
+                        + firstGameplayFrame + " frames during level-load handoff");
+            }
+            completeInterLevelVblankBudget(
+                    currentLevel, nextLevel, firstGameplayFrame, sourceTailVblank);
+            LiveTraceComparator comparator = new LiveTraceComparator(
+                    nextLevel.trace(), ToleranceConfig.DEFAULT,
+                    firstGameplayFrame, fixture::sprite);
+            probe.setDelegate(comparator);
+            if (loop.getCurrentGameMode() == GameMode.TITLE_CARD
+                    || GameServices.level().isTitleCardRequested()) {
+                if (loop.getCurrentGameMode() == GameMode.LEVEL) {
+                    waitForModeToLeave(loop, GameMode.LEVEL, stepCap);
+                }
+                waitForMode(loop, GameMode.LEVEL, stepCap);
+            }
+            int settledFramesConsumed = playback.getCursorFrame() - offset;
+            if (settledFramesConsumed < firstGameplayFrame || settledFramesConsumed > 1) {
+                throw new AssertionError("Destination playback cursor advanced "
+                        + settledFramesConsumed + " frames after title-card handoff");
+            }
+            // The level can become active while its title card still owns the
+            // loop. Reconcile once more after that choreography settles so any
+            // same-step LEVEL fall-through is included in the manifest-derived
+            // budget and cannot leave the destination clock one tick adrift.
+            completeInterLevelVblankBudget(
+                    currentLevel, nextLevel, settledFramesConsumed, sourceTailVblank);
+            return comparator;
+        }
+		var profile = GameServices.module().getTracePlaybackProfile();
+		if (profile.reinitializeOscillationAtLoadedLevelAttach()) {
+			// The destination Level has already loaded inside the source segment's
+			// death/exit tail. Re-establish the ROM's OscillateNumInit boundary at
+			// the point where the destination movie segment attaches; otherwise
+			// engine-only choreography frames advance v_oscillate before recorded
+			// gameplay frame 0. This is movie-clock lifecycle pacing only: no trace
+			// field is read into engine state.
+			OscillationManager.resetForSonic1();
+		}
+        completeInterLevelVblankBudget(currentLevel, nextLevel, 0, sourceTailVblank);
         return attachLevelSegment(playback, probe, movie, nextLevel, fixture);
     }
+
+    private void completeInterLevelVblankBudget(
+            SegmentPlan currentLevel,
+            SegmentPlan nextLevel,
+            int nextFramesConsumed,
+            int sourceTailVblank) {
+        var profile = GameServices.module().getTracePlaybackProfile();
+        if (!profile.alignsInterLevelVblank()) {
+            return;
+        }
+        int requiredTicks = TraceRunReplayWalker.interLevelVblankBudget(
+                currentLevel.segment(), nextLevel.segment(), nextFramesConsumed,
+                profile.interLevelNonAdvancingMovieRows());
+        var objectManager = GameServices.level().getObjectManager();
+        int actualTicks = objectManager.getVblaCounter() - sourceTailVblank;
+        if (actualTicks != requiredTicks) {
+            // This is movie-clock pacing, not trace-field hydration: the target
+            // comes only from BK2/manifest row counts plus the game profile's
+            // measured non-advancing rows. It both fills shortened engine
+            // transitions and removes synthetic host ticks that the ROM did not
+            // count (notably S1's six-row death/act seam).
+            objectManager.initVblaCounter(sourceTailVblank + requiredTicks);
+        }
+    }
+
+    private void alignUncomparedInteriorReturnVblank(
+            SegmentPlan sourceLevel,
+            SegmentPlan returnLevel,
+            int sourceVblank) {
+        var profile = GameServices.module().getTracePlaybackProfile();
+        if (!profile.alignUncomparedInteriorReturnVblank()) {
+            return;
+        }
+        int requiredTicks = TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                sourceLevel.segment(), returnLevel.segment());
+        // Movie-clock pacing only: the target derives from the source engine
+        // counter and manifest/BK2 row distance. No trace field is read back
+        // into engine state.
+        GameServices.level().getObjectManager().initVblaCounter(sourceVblank + requiredTicks);
+    }
+
 
     /**
      * SS-INTERIOR SEAM (policy v1 = ADVANCE-UNCOMPARED). Per-frame special-stage
@@ -722,7 +869,9 @@ abstract class AbstractRunChainTest {
         }
         Integer returnZone = returnLevel.segment().zoneId();
         if (returnZone != null) {
-            assertEquals(returnZone.intValue(), GameServices.level().getRomZoneId(),
+            int expectedZone = GameServices.module().getTracePlaybackProfile()
+                    .resolveRecordedLevel(returnZone, returnLevel.segment().act()).zone();
+            assertEquals(expectedZone, GameServices.level().getCurrentZone(),
                     "Next-act advance (zone) after special-stage return for " + runDir);
         }
     }
@@ -786,7 +935,50 @@ abstract class AbstractRunChainTest {
      */
     protected Runnable uncomparedInteriorStep(
             GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
-        return specialStageDrivenStep(loop, inputHandler, movie, interior.segment().bk2FrameOffset());
+        return specialStageDrivenStep(loop, inputHandler, movie,
+                interior.segment().bk2FrameOffset(), interior.segment().traceFrameCount());
+    }
+
+    /**
+     * Replays movie rows that occur after the final manifest trace segment.
+     * Sonic 1's recorder intentionally emits comparison segments only while
+     * native level gameplay is active; a complete-game movie can continue
+     * through the ending cutscene, credits demos/text, post-credits screen,
+     * and back to the title screen. The per-game trace profile opts into that
+     * terminal lifecycle assertion without changing other games' chain lanes.
+     */
+    private static void replayTerminalMovieTail(
+            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan lastSegment) {
+        var profile = GameServices.module().getTracePlaybackProfile();
+        if (!profile.replayTerminalMovieTailToTitleScreen()) {
+            return;
+        }
+        int tailStart = lastSegment.segment().bk2FrameOffset()
+                + lastSegment.segment().traceFrameCount();
+        if (tailStart >= movie.getFrameCount()) {
+            return;
+        }
+
+        // Level-segment comparison is finished. Stop its cursor/observer input
+        // bridge so each remaining physical movie row is fed exactly once by
+        // the local terminal-tail driver, including non-LEVEL modes where the
+        // ordinary playback cursor intentionally remains frozen.
+        GameServices.playbackDebug().endSession();
+        for (int absoluteRow = tailStart; absoluteRow < movie.getFrameCount(); absoluteRow++) {
+            Bk2FrameInput current = movie.getFrame(absoluteRow);
+            Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
+            inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
+            try {
+                stepEngineFrame(loop);
+            } finally {
+                inputHandler.clearLogicalOverride();
+            }
+        }
+
+        System.out.printf("[TRACE-RUN-TAIL] rows=%d finalMode=%s%n",
+                movie.getFrameCount() - tailStart, loop.getCurrentGameMode());
+        assertEquals(GameMode.TITLE_SCREEN, loop.getCurrentGameMode(),
+                "Complete Sonic 1 movie must finish back at the title screen");
     }
 
     /**
@@ -810,9 +1002,12 @@ abstract class AbstractRunChainTest {
      * plumbing.
      */
     static Runnable specialStageDrivenStep(
-            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, int bk2FrameOffset) {
+            GameLoop loop, InputHandler inputHandler, Bk2Movie movie,
+            int bk2FrameOffset, int recordedFrameCount) {
         int[] localRow = {0};
         return () -> {
+            var beforeManager = GameServices.level().getObjectManager();
+            int beforeVblank = beforeManager.getVblaCounter();
             int absoluteRow = bk2FrameOffset + localRow[0];
             Bk2FrameInput current = movie.getFrame(absoluteRow);
             Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
@@ -821,6 +1016,17 @@ abstract class AbstractRunChainTest {
                 stepEngineFrame(loop);
             } finally {
                 inputHandler.clearLogicalOverride();
+            }
+            // Special-stage policy v1 deliberately advances without a field
+            // comparator. Account for at most the recorded number of interior
+            // VBlank rows. If the simplified engine choreography takes extra
+            // host steps to reach LEVEL, those steps are not extra BK2 VBlanks;
+            // if a step already advanced the preserved ObjectManager clock (for
+            // example the title-card-exit LEVEL fall-through), do not double-tick.
+            var afterManager = GameServices.level().getObjectManager();
+            if (localRow[0] < recordedFrameCount
+                    && afterManager.getVblaCounter() == beforeVblank) {
+                afterManager.advanceVblaCounter();
             }
             localRow[0]++;
         };
@@ -864,14 +1070,47 @@ abstract class AbstractRunChainTest {
         return steps;
     }
 
+    private static void waitForModeToLeaveOrLevelActivate(
+            GameLoop loop, GameMode from, SegmentPlan targetLevel,
+            Object levelAtSegmentStart, int maxSteps) {
+        int steps = 0;
+        while (loop.getCurrentGameMode() == from
+                && !isNewActiveLevelSegment(targetLevel, levelAtSegmentStart)) {
+            stepEngineFrame(loop);
+            steps++;
+            if (steps >= maxSteps) {
+				var segment = targetLevel.segment();
+				var identity = GameServices.module().getTracePlaybackProfile()
+						.resolveRecordedLevel(segment.zoneId(), segment.act());
+                throw new AssertionError("Mode never left " + from + " within "
+                        + maxSteps + " frames and target level never activated"
+						+ " (target=" + segment.dir() + " " + identity.zone() + ":" + identity.act()
+						+ ", actual=" + GameServices.level().getCurrentZone() + ":"
+						+ GameServices.level().getCurrentAct() + ")");
+            }
+        }
+    }
+
+    private static boolean isNewActiveLevelSegment(
+            SegmentPlan targetLevel, Object levelAtSegmentStart) {
+        var segment = targetLevel.segment();
+        if (!"level".equals(segment.kind()) || segment.zoneId() == null || segment.act() == null) {
+            return false;
+        }
+        var identity = GameServices.module().getTracePlaybackProfile()
+                .resolveRecordedLevel(segment.zoneId(), segment.act());
+        return GameServices.level().getCurrentLevel() != levelAtSegmentStart
+                && GameServices.level().getCurrentZone() == identity.zone()
+                && GameServices.level().getCurrentAct() == identity.act();
+    }
+
     private static void waitForModeToLeave(GameLoop loop, GameMode from, int maxSteps) {
         int steps = 0;
         while (loop.getCurrentGameMode() == from) {
             stepEngineFrame(loop);
-            steps++;
-            if (steps >= maxSteps) {
+            if (++steps >= maxSteps) {
                 throw new AssertionError("Mode never left " + from + " within "
-                        + maxSteps + " frames (expected an act/zone title-card cycle)");
+                        + maxSteps + " frames (expected title-card entry)");
             }
         }
     }
@@ -934,6 +1173,17 @@ abstract class AbstractRunChainTest {
         summary.put("warningCount", comparator.warningCount());
         summary.put("laggedFrames", comparator.laggedFrames());
         summary.put("complete", comparator.isComplete());
+        MismatchEntry firstPhysics = comparator.firstNonCameraPhysicsMismatch();
+        if (firstPhysics != null) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("frame", firstPhysics.frame());
+            row.put("field", firstPhysics.field());
+            row.put("romValue", firstPhysics.romValue());
+            row.put("engineValue", firstPhysics.engineValue());
+            row.put("delta", firstPhysics.delta());
+            row.put("severity", firstPhysics.severity().name());
+            summary.put("firstNonCameraPhysicsMismatch", row);
+        }
         List<Map<String, Object>> mismatches = new ArrayList<>();
         for (MismatchEntry entry : comparator.recentMismatches()) {
             Map<String, Object> row = new LinkedHashMap<>();

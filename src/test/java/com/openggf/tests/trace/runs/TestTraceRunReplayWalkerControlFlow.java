@@ -125,6 +125,39 @@ class TestTraceRunReplayWalkerControlFlow {
     }
 
     @Test
+    void activeLevelSegmentConvertsManifestActAndRejectsOtherPhases() {
+        var level = segmentAt("mz1", "level", 27467);
+        assertTrue(TraceRunReplayWalker.isActiveLevelSegment(level, 0, 0));
+        assertFalse(TraceRunReplayWalker.isActiveLevelSegment(level, 0, 1));
+        assertFalse(TraceRunReplayWalker.isActiveLevelSegment(
+                segmentAt("ss", "special_stage", 0), 0, 0));
+    }
+
+    @Test
+    void newActiveLevelRequiresLifecycleChangeEvenForSameZoneAndAct() {
+        var level = segmentAt("mz1_restart", "level", 31086);
+        Object beforeDeath = new Object();
+        assertFalse(TraceRunReplayWalker.isNewActiveLevelSegment(
+                level, 0, 0, beforeDeath, beforeDeath));
+        assertTrue(TraceRunReplayWalker.isNewActiveLevelSegment(
+                level, 0, 0, beforeDeath, new Object()));
+    }
+
+    @Test
+    void allLagSameLevelContinuationRebindsWithoutAnotherModeCycle() {
+        var first = segmentAt("ghz2", "level", 8705);
+        var continuation = segmentAt("ghz2_2", "level", 9741);
+        assertTrue(TraceRunReplayWalker.isLagOnlySameLevelContinuation(
+                first, continuation, 800, 799));
+        assertFalse(TraceRunReplayWalker.isLagOnlySameLevelContinuation(
+                first, continuation, 800, 798));
+        var otherAct = new TraceRunManifest.Segment(
+                "ghz3", "level", "profile", 18719, 10, 0, 2, null, null);
+        assertFalse(TraceRunReplayWalker.isLagOnlySameLevelContinuation(
+                first, otherAct, 800, 799));
+    }
+
+    @Test
     void interSegmentStepCapIsMaxGapPlusWindow() {
         TraceRunManifest run = new TraceRunManifest(
             1, "s3k", "syn", "syn.bk2", "cs", "lua",
@@ -141,7 +174,10 @@ class TestTraceRunReplayWalkerControlFlow {
     void boundaryWindowSemantics() {
         assertTrue(TraceRunReplayWalker.withinBoundaryWindow(1500, 1750));
         assertTrue(TraceRunReplayWalker.withinBoundaryWindow(1750, 1750));
-        assertFalse(TraceRunReplayWalker.withinBoundaryWindow(1751, 1750));  // past the edge
+        assertTrue(TraceRunReplayWalker.withinBoundaryWindow(
+            1750 + TraceRunReplayWalker.LATE_BOUNDARY_GRACE_FRAMES, 1750));
+        assertFalse(TraceRunReplayWalker.withinBoundaryWindow(
+            1750 + TraceRunReplayWalker.LATE_BOUNDARY_GRACE_FRAMES + 1, 1750));
         assertFalse(TraceRunReplayWalker.withinBoundaryWindow(
             1750 - TraceRunReplayWalker.BOUNDARY_WINDOW_FRAMES - 1, 1750)); // before the window
     }
@@ -159,6 +195,44 @@ class TestTraceRunReplayWalkerControlFlow {
         assertEquals(1700, obs.observedBk2Frame());
         // Post-step polling would have missed it — assert the stub really is transient:
         assertNull(hooks.peekBonusRequest());
+    }
+
+    @Test
+    void awaitBoundaryObservesSpecialStageRequestRaisedAfterFrameCallback() {
+        var hooks = new StubHooks();
+        hooks.specialRequestAfterCallbackFrame = 1700;
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        hooks.installedProbe = probe;
+
+        var obs = TraceRunReplayWalker.awaitBoundary(
+            probe, boundaryOfKind("giant_ring", 1750), NO_CAP, hooks::step);
+
+        assertTrue(obs.observed());
+        assertEquals(1700, obs.observedBk2Frame());
+        assertFalse(hooks.isSpecialStageRequested(),
+            "the durable event marker must work after the live request was consumed");
+    }
+
+    @Test
+    void normalSpecialStagePeekKeepsPostAdvanceClockAnchor() {
+        var hooks = new StubHooks();
+        hooks.frame = 1699;
+        hooks.specialRequestDuringFrame = 1700;
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        probe.arm(boundaryOfKind("giant_ring", 1750));
+
+        probe.onSpecialStageRequestRaised();
+        hooks.frame = 1700;
+        hooks.inCallback = true;
+        try {
+            probe.afterFrameAdvanced(null, false);
+        } finally {
+            hooks.inCallback = false;
+        }
+
+        assertTrue(probe.latched());
+        assertEquals(1700, probe.observation().observedBk2Frame(),
+            "the ordinary frame callback must supersede the pre-advance fallback marker");
     }
 
     @Test
@@ -216,6 +290,70 @@ class TestTraceRunReplayWalkerControlFlow {
             "attached delegate's lag gating must flow through the probe");
     }
 
+    @Test
+    void remainingSegmentFramesSubtractsAlreadyConsumedFallthroughRows() {
+        assertEquals(799, TraceRunReplayWalker.remainingSegmentFrames(800, 1));
+        assertEquals(800, TraceRunReplayWalker.remainingSegmentFrames(800, 0));
+        assertEquals(0, TraceRunReplayWalker.remainingSegmentFrames(800, 800));
+    }
+
+    @Test
+    void interLevelVblankBudgetUsesMovieGapAndProfiledNonAdvancingRows() {
+        var ghz2 = new TraceRunManifest.Segment(
+                "ghz2", "level", "profile", 8705, 800, 0, 1, null, null);
+        var continuation = new TraceRunManifest.Segment(
+                "ghz2_2", "level", "profile", 9741, 7440, 0, 1, null, null);
+        assertEquals(230, TraceRunReplayWalker.interLevelVblankBudget(
+                ghz2, continuation, 0, 6));
+
+        var ghz3Tail = new TraceRunManifest.Segment(
+                "ghz3_2", "level", "profile", 18719, 8520, 0, 2, null, null);
+        var mz1 = new TraceRunManifest.Segment(
+                "mz1", "level", "profile", 27467, 3391, 2, 0, null, null);
+        assertEquals(223, TraceRunReplayWalker.interLevelVblankBudget(
+                ghz3Tail, mz1, 1, 6));
+
+        var mz2Death = new TraceRunManifest.Segment(
+                "mz2", "level", "profile", 42308, 542, 2, 1, null, null);
+        var mz2Restart = new TraceRunManifest.Segment(
+                "mz2_2", "level", "profile", 43078, 3728, 2, 1, null, null);
+        assertEquals(222, TraceRunReplayWalker.interLevelVblankBudget(
+                mz2Death, mz2Restart, 0, 6));
+    }
+
+    @Test
+    void interLevelVblankBudgetRejectsOverlappingMovieRanges() {
+        var current = new TraceRunManifest.Segment(
+                "a", "level", "profile", 100, 50, 0, 0, null, null);
+        var next = new TraceRunManifest.Segment(
+                "b", "level", "profile", 140, 50, 0, 1, null, null);
+        assertThrows(IllegalArgumentException.class,
+                () -> TraceRunReplayWalker.interLevelVblankBudget(current, next, 0, 0));
+    }
+
+    @Test
+    void uncomparedInteriorReturnVblankBudgetCountsEveryMovieRowSinceLevelTail() {
+        var mz1Tail = new TraceRunManifest.Segment(
+                "mz1_2", "level", "profile", 31086, 8684, 2, 0, null, null);
+        var mz2 = new TraceRunManifest.Segment(
+                "mz2", "level", "profile", 42308, 542, 2, 1, null, null);
+
+        assertEquals(2539, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2));
+    }
+
+    @Test
+    void sourceTailVblankIsProjectedFromObservedMovieCursor() {
+        var source = new TraceRunManifest.Segment(
+                "mz1_2", "level", "profile", 31086, 8684, 2, 0, null, null);
+
+        assertEquals(0x99F9, TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                source, 39773, 0x99FC));
+        assertEquals(0x99F9, TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                source, 39769, 0x99F8));
+    }
+
+
     // -------------------------------------------------------------------------
     // Fixtures
     // -------------------------------------------------------------------------
@@ -251,6 +389,8 @@ class TestTraceRunReplayWalkerControlFlow {
     private static final class StubHooks implements TraceRunReplayWalker.EngineHooks {
         int frame;
         int bonusRequestDuringFrame = -1;
+        int specialRequestDuringFrame = -1;
+        int specialRequestAfterCallbackFrame = -1;
         int modeBecomesLevelAtFrame = -1;
         boolean freezeCursor;
         boolean inCallback;
@@ -266,6 +406,9 @@ class TestTraceRunReplayWalkerControlFlow {
             } finally {
                 inCallback = false;
             }
+            if (frame == specialRequestAfterCallbackFrame) {
+                installedProbe.onSpecialStageRequestRaised();
+            }
         }
 
         @Override
@@ -280,7 +423,7 @@ class TestTraceRunReplayWalkerControlFlow {
 
         @Override
         public boolean isSpecialStageRequested() {
-            return false;
+            return inCallback && frame == specialRequestDuringFrame;
         }
 
         @Override

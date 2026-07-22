@@ -6,7 +6,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -193,9 +192,8 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
         // with FindFreeObj, using the copied objoff_3E score-chain value
         // (docs/s1disasm/_incObj/28 Animals.asm:163-168).
         ObjectServices svc = tryServices();
-        ObjectManager objectManager = svc != null ? svc.objectManager() : null;
-        if (objectManager != null && svc.renderManager() != null) {
-            objectManager.addDynamicObject(new Sonic1PointsObjectInstance(
+        if (svc != null && svc.objectManager() != null && svc.renderManager() != null) {
+            spawnFreeChild(() -> new Sonic1PointsObjectInstance(
                     new ObjectSpawn(currentX, currentY, 0x29, 0, 0, false, 0),
                     svc, pointsValue));
         }

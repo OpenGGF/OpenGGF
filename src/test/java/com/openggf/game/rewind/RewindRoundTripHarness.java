@@ -1722,6 +1722,8 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance");
         m.put("com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance$SnowdustParticle",
                 "com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance");
+        m.put("com.openggf.game.sonic3k.objects.IczMinibossExplosionControllerChild",
+                "com.openggf.game.sonic3k.objects.IczMinibossInstance");
         // S1 spiked-ball chain child — parent is placed Obj57 and spawns children lazily.
         m.put("com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance$ChainChild",
                 "com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance");
@@ -1807,6 +1809,8 @@ public final class RewindRoundTripHarness {
             Map.entry("com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance", 0xBA),
             // IczSnowPileObjectInstance: Sonic3kObjectIds.ICZ_SNOW_PILE = 0xB9
             Map.entry("com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance", 0xB9),
+            // IczMinibossInstance: Sonic3kObjectIds.ICZ_MINIBOSS = 0xBC
+            Map.entry("com.openggf.game.sonic3k.objects.IczMinibossInstance", 0xBC),
             // Sonic3kSSEntryRingObjectInstance: Sonic3kObjectIds.SS_ENTRY_RING = 0x85
             Map.entry("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", 0x85),
             // Sonic1SpikedBallChainObjectInstance: Sonic1ObjectIds.SPIKED_BALL_CHAIN = 0x57

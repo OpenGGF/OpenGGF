@@ -3,6 +3,7 @@ import com.openggf.game.PlayableEntity;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.Sonic1SwitchManager;
+import com.openggf.game.sonic1.Sonic1FloatingBlockState;
 import com.openggf.game.sonic1.Sonic1ZoneFeatureProvider;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.OscillationManager;
@@ -173,12 +174,17 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     // Zone index
     private int zoneIndex;
 
+    private final boolean syz3TunnelRealBlock;
+    private final boolean syz3TunnelProxyBlock;
+
     public Sonic1FloatingBlockObjectInstance(ObjectSpawn spawn, int zoneIndex) {
         super(spawn, "FloatingBlock");
         this.zoneIndex = zoneIndex;
         this.isLZ = (zoneIndex == Sonic1Constants.ZONE_LZ);
 
         int fullSubtype = spawn.subtype() & 0xFF;
+        this.syz3TunnelRealBlock = fullSubtype == 0x37 && spawn.x() == 0x1BB8;
+        this.syz3TunnelProxyBlock = fullSubtype == 0x37 && spawn.x() == 0x1F38;
 
         // FBlock_Var lookup: lsr.w #3,d0 / andi.w #$E,d0 -> index = (subtype >> 4) & 7
         int varIndex = (fullSubtype >> 4) & 0x07;
@@ -253,6 +259,19 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     }
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        Sonic1FloatingBlockState blockState = services().gameService(Sonic1FloatingBlockState.class);
+        if (syz3TunnelRealBlock && blockState != null && blockState.isTunnelBlockAtDestination()) {
+            setDestroyed(true);
+            return;
+        }
+        if (syz3TunnelProxyBlock) {
+            if (blockState == null || !blockState.isTunnelBlockAtDestination()) {
+                setDestroyed(true);
+                return;
+            }
+            // REV01 clears obSubtype so the destination proxy is stationary.
+            moveType = 0;
+        }
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         applyMovement();
         updateDynamicSpawn(x, y);
@@ -505,6 +524,10 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
         fbHeight++;
         // cmpi.w #$380,fb_height(a0)
         if (fbHeight >= TYPE07_MAX_DISTANCE) {
+            Sonic1FloatingBlockState blockState = services().gameService(Sonic1FloatingBlockState.class);
+            if (syz3TunnelRealBlock && blockState != null) {
+                blockState.markTunnelBlockAtDestination();
+            }
             // clr.b obSubtype(a0) -> stationary
             moveType = 0x00;
             activated = false;

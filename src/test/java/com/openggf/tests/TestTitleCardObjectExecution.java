@@ -13,6 +13,7 @@ import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
@@ -25,13 +26,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that the engine continues to execute objects and advance the
- * canonical level frame step while the title card is on screen.
+ * Verifies each game's level-object execution policy while the title card is
+ * on screen.
  *
  * <p>ROM parity:
  * <ul>
- *   <li>S1 {@code Level_TtlCardLoop} (sonic.asm:2766-2794) calls
- *       {@code ExecuteObjects} every iteration of the title-card wait loop.</li>
+ *   <li>S1 {@code Level_TtlCardLoop} (sonic.asm:2811-2839) calls
+ *       {@code ExecuteObjects} while object RAM still contains the title-card
+ *       objects. Level objects are populated later by {@code ObjPosLoad}, then
+ *       receive one {@code ExecuteObjects} pass immediately before
+ *       {@code Level_MainLoop}.</li>
  *   <li>S2 {@code Level_TtlCard} (s2.asm:4914-4924) calls
  *       {@code RunObjects} every iteration of the title-card wait loop.</li>
  *   <li>S3K title-card wait loop at {@code loc_62CC} (sonic3k.asm:7737-7748)
@@ -79,13 +83,14 @@ class TestTitleCardObjectExecution {
 
     @Test
     void titleCardLegacyPath_s1Ghz1() {
-        // S1: TitleCardProvider.shouldRunPlayerPhysics() == false → engine
-        // uses the legacy minimal title-card path; frame counters do NOT
-        // advance during the locked phase. Diverges from ROM (which calls
-        // ExecuteObjects each frame); tracked as a follow-up.
+        // S1's locked loop executes title-card objects, not the already-loaded
+        // level objects represented by ObjectManager. Those level objects must
+        // remain fresh until the gameplay handoff pass.
         File romFile = RomTestUtils.ensureSonic1RomAvailable();
         Assumptions.assumeTrue(romFile != null, "Sonic 1 ROM not available — skipping test");
-        runTitleCardAdvancementCheck(SonicGame.SONIC_1, romFile, 0, 0, false, /* expectAdvance */ false);
+        runTitleCardAdvancementCheck(SonicGame.SONIC_1, romFile, 0, 0, false,
+                /* expectObjectAdvance */ false, /* expectLevelAdvance */ false,
+                /* expectedObjectDeltaAtRelease */ 2);
     }
 
     @Test
@@ -95,7 +100,8 @@ class TestTitleCardObjectExecution {
         // Both ObjectManager and LevelManager frame counters advance.
         File romFile = RomTestUtils.ensureSonic2RomAvailable();
         Assumptions.assumeTrue(romFile != null, "Sonic 2 ROM not available — skipping test");
-        runTitleCardAdvancementCheck(SonicGame.SONIC_2, romFile, 0, 0, false, /* expectAdvance */ true);
+        runTitleCardAdvancementCheck(SonicGame.SONIC_2, romFile, 0, 0, false,
+                /* expectObjectAdvance */ true, /* expectLevelAdvance */ true, null);
     }
 
     @Test
@@ -107,7 +113,8 @@ class TestTitleCardObjectExecution {
         // a follow-up.
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         Assumptions.assumeTrue(romFile != null, "Sonic 3&K ROM not available — skipping test");
-        runTitleCardAdvancementCheck(SonicGame.SONIC_3K, romFile, 0, 0, true, /* expectAdvance */ false);
+        runTitleCardAdvancementCheck(SonicGame.SONIC_3K, romFile, 0, 0, true,
+                /* expectObjectAdvance */ true, /* expectLevelAdvance */ false, null);
     }
 
     /**
@@ -119,7 +126,9 @@ class TestTitleCardObjectExecution {
     private void runTitleCardAdvancementCheck(SonicGame game, File romFile,
                                               int zone, int act,
                                               boolean skipIntros,
-                                              boolean expectFrameCountersToAdvance) {
+                                              boolean expectObjectsToAdvance,
+                                              boolean expectLevelFrameCounterToAdvance,
+                                              Integer expectedObjectDeltaAtRelease) {
         // 1. Load the requested ROM and configure the matching game module.
         Rom rom = new Rom();
         assertTrue(rom.open(romFile.getAbsolutePath()),
@@ -159,6 +168,7 @@ class TestTitleCardObjectExecution {
         // 4. Snapshot both counters before stepping any frames.
         int objectFramesBefore = objectManager.getFrameCounter();
         int levelFramesBefore = levelManager.getFrameCounter();
+        int spriteFramesBefore = GameServices.sprites().getFrameCounter();
 
         // 5. Step exactly FRAMES_TO_STEP frames while in TITLE_CARD mode.
         //    The provider's reset()/initialize() above guarantees the
@@ -184,17 +194,10 @@ class TestTitleCardObjectExecution {
         int objectDelta = objectFramesAfter - objectFramesBefore;
         int levelDelta = levelFramesAfter - levelFramesBefore;
 
-        // Objects tick on every title-card path (S1 / S2 / S3K) — both the
-        // canonical LevelFrameStep call (S2) and the legacy minimal path
-        // (S1 / S3K, via levelManager.updateObjectPositions()) advance the
-        // ObjectManager frame counter. This matches ROM behaviour where
-        // ExecuteObjects / Process_Sprites runs during the title-card wait.
-        assertEquals(FRAMES_TO_STEP, objectDelta,
-                "ObjectManager.frameCounter must advance by " + FRAMES_TO_STEP
-                        + " during the title card (ROM " + game
-                        + " calls ExecuteObjects each frame)");
+        assertEquals(expectObjectsToAdvance ? FRAMES_TO_STEP : 0, objectDelta,
+                "Unexpected ObjectManager.frameCounter delta during the title card for " + game);
 
-        if (expectFrameCountersToAdvance) {
+        if (expectLevelFrameCounterToAdvance) {
             // S2 only: full LevelFrameStep also advances level frame state
             // so parallax, water dynamics, and zone features stay in sync.
             assertTrue(levelDelta >= FRAMES_TO_STEP,
@@ -210,6 +213,31 @@ class TestTitleCardObjectExecution {
             assertEquals(0, levelDelta,
                     "LevelManager.frameCounter must NOT advance during the title card "
                             + "on the legacy minimal path (game=" + game + ")");
+        }
+
+        if (expectedObjectDeltaAtRelease != null) {
+            AbstractPlayableSprite player = fixture.sprite();
+            player.setGSpeed((short) 0);
+            player.setXSpeed((short) 0);
+            player.setYSpeed((short) 0);
+            player.setAngle((byte) 0);
+            player.setSubpixelRaw(0, 0);
+            player.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+            int guard = 600;
+            while (loop.getCurrentGameMode() == GameMode.TITLE_CARD && guard-- > 0) {
+                loop.step();
+            }
+            assertEquals(GameMode.LEVEL, loop.getCurrentGameMode(),
+                    "title card should release within the test guard");
+            assertEquals(expectedObjectDeltaAtRelease.intValue(),
+                    objectManager.getFrameCounter() - objectFramesBefore,
+                    "S1 release must run the native level-object prelude and the first Level_MainLoop pass");
+            assertEquals(2, GameServices.sprites().getFrameCounter() - spriteFramesBefore,
+                    "S1 release prelude must dispatch the player slot once before the first Level_MainLoop pass");
+            assertEquals(0x0C, player.getGSpeed(),
+                    "the locked release prelude must ignore a stale forced-input mask");
+            assertEquals(0x0B00, player.getXSubpixelRaw(),
+                    "only the first unlocked Level_MainLoop pass may consume held Right, with slope projection");
         }
     }
 }

@@ -224,6 +224,9 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
         ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         // Bounce player: neg.w obVelY(a0) — ROM ReactToItem.
+        if (objectManager != null) {
+            objectManager.solidContacts().markSameFrameMonitorBreakBounce(player);
+        }
         player.setYSpeed((short) -player.getYSpeed());
 
         mappingFrame = BROKEN_FRAME;

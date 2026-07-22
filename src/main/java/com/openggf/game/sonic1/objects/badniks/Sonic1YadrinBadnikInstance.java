@@ -14,6 +14,12 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -56,6 +62,23 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
     // From disassembly: obColType = $CC
     // Upper 2 bits ($C0) = collision category, lower 6 bits ($0C) = size index
     private static final int COLLISION_SIZE_INDEX = 0x0C;
+
+    /**
+     * Yadrin's ROM {@code $CC} route enters {@code React_Special}, then
+     * {@code React_Yadrin}, on every frame of overlap. The engine exposes that
+     * object-specific branch through its listener-handled SPECIAL category, so
+     * it must opt out of the generic SPECIAL edge latch.
+     */
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            true,
+            true,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     /**
      * Vertical penetration threshold for spiky-top hurt: Sonic's react-hitbox
@@ -319,6 +342,16 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
         // obColType = $CC: SPECIAL category ($40) + size index $0C.
         // React_Special decides between spiky-top hurt and normal enemy defeat.
         return 0x40 | (getCollisionSizeIndex() & 0x3F);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

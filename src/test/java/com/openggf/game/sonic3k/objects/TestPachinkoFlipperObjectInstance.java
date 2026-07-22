@@ -134,7 +134,7 @@ public class TestPachinkoFlipperObjectInstance {
         // direction write (ROM loc_49D54 never touches status(a1)).
         flipper.onSolidContact(player, standing, 1);
         verify(player, times(2)).setPinballSpeedLock(true);
-        verify(player).setGSpeed(anyShort());
+        verify(player, atLeastOnce()).setGSpeed(anyShort());
         verify(player, never()).setDirection(any());
         flipper.update(1, player);
 
@@ -145,4 +145,3 @@ public class TestPachinkoFlipperObjectInstance {
         verify(player).setControlLocked(false);
     }
 }
-

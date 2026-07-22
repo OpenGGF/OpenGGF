@@ -2644,23 +2644,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // matching the ROM's word-only modification. getRollHeightAdjustment() returns
                 // the full height difference (e.g. 10 for Sonic), which when subtracted from
                 // yPixel produces the same centreY shift as the ROM's radius-based subtraction.
-                boolean wasRolling = getRolling();
-                setRolling(false);
-                GameRules currentRules = getGameRules();
-                boolean restoresSplitSidekickRadii = !(this instanceof Tails)
-                                || currentRules == null || currentRules.sidekickCpu() == null
-                                || currentRules.sidekickCpu().sidekickHurtRestoresRadiiWithoutRoll();
                 // S3K HurtCharacter calls Player_TouchFloor, whose Tails branch
                 // restores default radii before testing Status_Roll. S2's 1P sidekick
                 // hurt path instead branches to Hurt_Sidekick and preserves a split
                 // status/radius state (observed by the HTZ2 trace). Keep that ROM
                 // distinction in the movement profile rather than a game-name branch.
-                if (restoresSplitSidekickRadii) {
-                        applyStandingRadii(false);
-                }
-                if (wasRolling) {
-                        setY((short) (getY() - getRollHeightAdjustment()));
-                }
+                PlayableHurtRadiusTransition.apply(this);
 
                 setCrouching(false);
                 // HurtCharacter calls the reset-on-floor tail before setting InAir;
