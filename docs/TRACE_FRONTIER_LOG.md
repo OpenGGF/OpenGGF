@@ -48591,3 +48591,22 @@ standalone CNZ remains at f0 in both scopes.
   rightward camera-edge case, while the freezer and replay suites cover the
   shared block path. The next physics mismatch is Tails Y at f23337; animation
   reaches f23578.
+
+## 2026-07-22 - ICZ boss folded-child SST ordering
+
+- **`s3k_icz1` physics advanced from f23337 to f23558.** Total errors fell from
+  692 to 688; the focused end-boss/freezer tests remain green.
+- Root: the boss parent folds three structural children and its frost puffs into
+  one engine object, but those routines occupy independent native SST slots.
+  The f23328 Sonic capture runs from puff slot 41 after bottom-solid slot 28,
+  while the f23337 Tails capture runs from puff slot 21 before it. Publishing
+  every folded capture after the solid retained Tails' ride and left him one
+  pixel too low.
+- Fix: reserve phantom SST slots for the folded structural children when
+  `loc_71C36` runs after the shared camera/fade gate, and reserve/release a slot
+  for every folded frost child. Capture publication now follows the source
+  puff's slot relative to the bottom child, and the frozen block uses
+  `AllocateObjectAfterCurrent` semantics from that puff slot.
+- Validation: the complete-run replay passes both differently ordered capture
+  paths and the full Tails frozen-block flight. The next physics mismatch is
+  Sonic Y at f23558; animation remains at f23578.

@@ -173,6 +173,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private S3kSharedBossCameraGate arenaCameraGate;
     private WaitCallback waitCallback;
     private StructuralChild[] structuralChildren;
+    private int structuralBottomChildSlot;
     private List<EffectChild> effectChildren;
     private int defeatTimer;
     private int damagedRiseTimer;
@@ -186,10 +187,24 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private int bottomChildWholePixelDelta;
     private int pendingFrostCaptureMask;
     private int readyFrostCaptureMask;
+    private int pendingBeforeSolidFrostCaptureMask;
+    private int readyBeforeSolidFrostCaptureMask;
     private int pendingFrostCaptureP1SourceX;
     private int pendingFrostCaptureP2SourceX;
     private int readyFrostCaptureP1SourceX;
     private int readyFrostCaptureP2SourceX;
+    private int pendingFrostCaptureP1SourceSlot;
+    private int pendingFrostCaptureP2SourceSlot;
+    private int readyFrostCaptureP1SourceSlot;
+    private int readyFrostCaptureP2SourceSlot;
+    private int pendingBeforeSolidFrostCaptureP1SourceX;
+    private int pendingBeforeSolidFrostCaptureP2SourceX;
+    private int readyBeforeSolidFrostCaptureP1SourceX;
+    private int readyBeforeSolidFrostCaptureP2SourceX;
+    private int pendingBeforeSolidFrostCaptureP1SourceSlot;
+    private int pendingBeforeSolidFrostCaptureP2SourceSlot;
+    private int readyBeforeSolidFrostCaptureP1SourceSlot;
+    private int readyBeforeSolidFrostCaptureP2SourceSlot;
     private int robotnikShipX;
     private int robotnikShipXFixed;
     private int robotnikShipY;
@@ -256,6 +271,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
         waitCallback = WaitCallback.NONE;
         structuralChildren = createStructuralChildren();
+        structuralBottomChildSlot = -1;
         effectChildren = new ArrayList<>();
         defeatTimer = 0;
         damagedRiseTimer = 0;
@@ -269,10 +285,24 @@ public final class IczEndBossInstance extends AbstractBossInstance
         bottomChildWholePixelDelta = 0;
         pendingFrostCaptureMask = 0;
         readyFrostCaptureMask = 0;
+        pendingBeforeSolidFrostCaptureMask = 0;
+        readyBeforeSolidFrostCaptureMask = 0;
         pendingFrostCaptureP1SourceX = 0;
         pendingFrostCaptureP2SourceX = 0;
         readyFrostCaptureP1SourceX = 0;
         readyFrostCaptureP2SourceX = 0;
+        pendingFrostCaptureP1SourceSlot = -1;
+        pendingFrostCaptureP2SourceSlot = -1;
+        readyFrostCaptureP1SourceSlot = -1;
+        readyFrostCaptureP2SourceSlot = -1;
+        pendingBeforeSolidFrostCaptureP1SourceX = 0;
+        pendingBeforeSolidFrostCaptureP2SourceX = 0;
+        readyBeforeSolidFrostCaptureP1SourceX = 0;
+        readyBeforeSolidFrostCaptureP2SourceX = 0;
+        pendingBeforeSolidFrostCaptureP1SourceSlot = -1;
+        pendingBeforeSolidFrostCaptureP2SourceSlot = -1;
+        readyBeforeSolidFrostCaptureP1SourceSlot = -1;
+        readyBeforeSolidFrostCaptureP2SourceSlot = -1;
         robotnikShipX = state.x;
         robotnikShipXFixed = state.x << 8;
         robotnikShipY = state.y;
@@ -299,11 +329,25 @@ public final class IczEndBossInstance extends AbstractBossInstance
         readyFrostCaptureMask |= promotedCaptureMask;
         if ((promotedCaptureMask & 1) != 0) {
             readyFrostCaptureP1SourceX = pendingFrostCaptureP1SourceX;
+            readyFrostCaptureP1SourceSlot = pendingFrostCaptureP1SourceSlot;
         }
         if ((promotedCaptureMask & 2) != 0) {
             readyFrostCaptureP2SourceX = pendingFrostCaptureP2SourceX;
+            readyFrostCaptureP2SourceSlot = pendingFrostCaptureP2SourceSlot;
         }
         pendingFrostCaptureMask = 0;
+        int promotedBeforeSolidMask = pendingBeforeSolidFrostCaptureMask;
+        readyBeforeSolidFrostCaptureMask |= promotedBeforeSolidMask;
+        if ((promotedBeforeSolidMask & 1) != 0) {
+            readyBeforeSolidFrostCaptureP1SourceX = pendingBeforeSolidFrostCaptureP1SourceX;
+            readyBeforeSolidFrostCaptureP1SourceSlot = pendingBeforeSolidFrostCaptureP1SourceSlot;
+        }
+        if ((promotedBeforeSolidMask & 2) != 0) {
+            readyBeforeSolidFrostCaptureP2SourceX = pendingBeforeSolidFrostCaptureP2SourceX;
+            readyBeforeSolidFrostCaptureP2SourceSlot = pendingBeforeSolidFrostCaptureP2SourceSlot;
+        }
+        pendingBeforeSolidFrostCaptureMask = 0;
+        applyReadyBeforeSolidFrostCaptures(player);
         updateHitFlash();
         if (!arenaGateComplete) {
             updateArenaGate();
@@ -317,7 +361,14 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
 
         switch (state.routine) {
-            case ROUTINE_INIT -> enterDescend();
+            case ROUTINE_INIT -> {
+                // Obj_ICZEndBoss creates ChildObjDat_72336/7233E only after
+                // the shared camera/fade gate hands control to loc_71C36.
+                // Reserving earlier misses the arena's already-live snow slots
+                // and gives the folded children the wrong SST execution phase.
+                ensureStructuralChildSlots();
+                enterDescend();
+            }
             case ROUTINE_DESCEND -> {
                 moveWithVelocity();
                 tickWait();
@@ -523,6 +574,18 @@ public final class IczEndBossInstance extends AbstractBossInstance
         return children;
     }
 
+    private void ensureStructuralChildSlots() {
+        if (bottomStructuralChildSlot() >= 0 || tryServices() == null
+                || tryServices().objectManager() == null || getSlotIndex() < 0) {
+            return;
+        }
+        int[] childSlots = tryServices().objectManager().allocateChildSlotsAfter(
+                spawn, STRUCTURAL_CHILD_SPECS.length, getSlotIndex());
+        structuralBottomChildSlot = childSlots.length > BOTTOM_CHILD_INDEX
+                ? childSlots[BOTTOM_CHILD_INDEX]
+                : -1;
+    }
+
     private EffectAnchor anchorForFrostSelector(int selector) {
         return switch (selector) {
             case 0, 4 -> EffectAnchor.BOTTOM_CHILD;
@@ -536,10 +599,17 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if (offsets.length == 0) {
             return;
         }
+        int predecessorSlot = getSlotIndex();
         for (int i = 0; i < offsets.length; i++) {
             int[][] script = frostScriptForSubtype(selector, i);
+            int nativeSlot = services().objectManager() == null || predecessorSlot < 0
+                    ? -1
+                    : services().objectManager().allocateSlotAfter(predecessorSlot);
+            if (nativeSlot >= 0) {
+                predecessorSlot = nativeSlot;
+            }
             effectChildren.add(new EffectChild(offsets[i][0], offsets[i][1], script, anchor,
-                    frostInitialTimerForSubtype(selector, i)));
+                    frostInitialTimerForSubtype(selector, i), nativeSlot));
         }
     }
 
@@ -635,6 +705,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
             child.update(anchor);
             capturePlayersInFrostPuff(child, player);
             if (child.isFinished()) {
+                releaseEffectSlot(child);
                 effectChildren.remove(i);
             }
         }
@@ -666,21 +737,65 @@ public final class IczEndBossInstance extends AbstractBossInstance
         for (int index = 0; index < participants.size() && index < 2; index++) {
             PlayableEntity candidate = participants.get(index);
             if (candidate instanceof AbstractPlayableSprite sprite && canFrostCapture(sprite, child)) {
-                queueFrostCapture(index, child.x);
+                queueFrostCapture(index, child.x, child.nativeSlot,
+                        child.nativeSlot >= 0 && child.nativeSlot < bottomStructuralChildSlot());
             }
         }
     }
 
-    private void queueFrostCapture(int participantIndex, int sourceX) {
+    private int bottomStructuralChildSlot() {
+        return structuralBottomChildSlot;
+    }
+
+    private void queueFrostCapture(int participantIndex, int sourceX, int sourceSlot,
+            boolean beforeBottomSolid) {
         int bit = 1 << participantIndex;
-        if (((pendingFrostCaptureMask | readyFrostCaptureMask) & bit) != 0) {
+        int allCaptureMasks = pendingFrostCaptureMask | readyFrostCaptureMask
+                | pendingBeforeSolidFrostCaptureMask | readyBeforeSolidFrostCaptureMask;
+        if ((allCaptureMasks & bit) != 0) {
+            return;
+        }
+        if (beforeBottomSolid) {
+            pendingBeforeSolidFrostCaptureMask |= bit;
+            if (participantIndex == 0) {
+                pendingBeforeSolidFrostCaptureP1SourceX = sourceX;
+                pendingBeforeSolidFrostCaptureP1SourceSlot = sourceSlot;
+            } else {
+                pendingBeforeSolidFrostCaptureP2SourceX = sourceX;
+                pendingBeforeSolidFrostCaptureP2SourceSlot = sourceSlot;
+            }
             return;
         }
         pendingFrostCaptureMask |= bit;
         if (participantIndex == 0) {
             pendingFrostCaptureP1SourceX = sourceX;
+            pendingFrostCaptureP1SourceSlot = sourceSlot;
         } else {
             pendingFrostCaptureP2SourceX = sourceX;
+            pendingFrostCaptureP2SourceSlot = sourceSlot;
+        }
+    }
+
+    private void applyReadyBeforeSolidFrostCaptures(PlayableEntity fallbackPlayer) {
+        if (readyBeforeSolidFrostCaptureMask == 0) {
+            return;
+        }
+        List<PlayableEntity> participants = frostCaptureParticipants(fallbackPlayer);
+        for (int index = 0; index < participants.size() && index < 2; index++) {
+            PlayableEntity candidate = participants.get(index);
+            int bit = 1 << index;
+            if ((readyBeforeSolidFrostCaptureMask & bit) == 0
+                    || !(candidate instanceof AbstractPlayableSprite sprite)) {
+                continue;
+            }
+            readyBeforeSolidFrostCaptureMask &= ~bit;
+            int sourceX = index == 0
+                    ? readyBeforeSolidFrostCaptureP1SourceX
+                    : readyBeforeSolidFrostCaptureP2SourceX;
+            int sourceSlot = index == 0
+                    ? readyBeforeSolidFrostCaptureP1SourceSlot
+                    : readyBeforeSolidFrostCaptureP2SourceSlot;
+            frostCapture(sprite, sprite.getCentreX(), sprite.getCentreY(), sourceX, sourceSlot);
         }
     }
 
@@ -697,7 +812,10 @@ public final class IczEndBossInstance extends AbstractBossInstance
                     int sourceX = index == 0
                             ? readyFrostCaptureP1SourceX
                             : readyFrostCaptureP2SourceX;
-                    frostCapture(sprite, sprite.getCentreX(), sprite.getCentreY(), sourceX);
+                    int sourceSlot = index == 0
+                            ? readyFrostCaptureP1SourceSlot
+                            : readyFrostCaptureP2SourceSlot;
+                    frostCapture(sprite, sprite.getCentreX(), sprite.getCentreY(), sourceX, sourceSlot);
                 }
                 return;
             }
@@ -736,7 +854,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
                 && dy >= child.captureMinY && dy < child.captureMaxY;
     }
 
-    private void frostCapture(AbstractPlayableSprite player, int capturedX, int capturedY, int sourceX) {
+    private void frostCapture(AbstractPlayableSprite player, int capturedX, int capturedY,
+            int sourceX, int sourceSlot) {
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setAir(true);
         player.setXSpeed((short) 0);
@@ -744,8 +863,21 @@ public final class IczEndBossInstance extends AbstractBossInstance
         player.setGSpeed((short) 0);
         player.setAnimationId(0x1A);
         boolean flipped = player.getDirection() == Direction.LEFT;
-        spawnChild(() -> new IczFreezerObjectInstance.FrozenPlayerBlock(player, capturedX, capturedY,
-                sourceX, flipped, true));
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(player, capturedX, capturedY,
+                        sourceX, flipped, true);
+        if (services().objectManager() != null && sourceSlot >= 0) {
+            services().objectManager().addDynamicObjectAfterSlot(block, sourceSlot);
+        } else {
+            spawnDynamicObject(block);
+        }
+    }
+
+    private void releaseEffectSlot(EffectChild child) {
+        if (child.nativeSlot >= 0 && services().objectManager() != null) {
+            services().objectManager().releaseDynamicSlot(child.nativeSlot);
+            child.nativeSlot = -1;
+        }
     }
 
     private void updateRobotnikShip() {
@@ -979,6 +1111,9 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     private void spawnDefeatDebrisChildren() {
+        for (EffectChild child : effectChildren) {
+            releaseEffectSlot(child);
+        }
         effectChildren.clear();
         boolean flipped = (state.renderFlags & 1) != 0;
         for (int i = 0; i < DEFEAT_DEBRIS_OFFSETS.length; i++) {
@@ -1594,6 +1729,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         private boolean flipX;
         private boolean flipY;
         private boolean finished;
+        private int nativeSlot;
 
         private EffectChild(int baseDx, int baseDy, int[][] script, EffectAnchor anchor) {
             this.baseDx = baseDx;
@@ -1614,9 +1750,11 @@ public final class IczEndBossInstance extends AbstractBossInstance
             this.waitingToStart = false;
             this.waitJustCreated = false;
             this.visible = true;
+            this.nativeSlot = -1;
         }
 
-        private EffectChild(int baseDx, int baseDy, int[][] script, EffectAnchor anchor, int initialFrameTimer) {
+        private EffectChild(int baseDx, int baseDy, int[][] script, EffectAnchor anchor,
+                int initialFrameTimer, int nativeSlot) {
             this.baseDx = baseDx;
             this.baseDy = baseDy;
             this.script = script;
@@ -1635,6 +1773,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
             this.waitingToStart = true;
             this.waitJustCreated = true;
             this.visible = false;
+            this.nativeSlot = nativeSlot;
         }
 
         private void update(AnchorPoint anchor) {
