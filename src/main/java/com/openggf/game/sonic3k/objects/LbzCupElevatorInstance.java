@@ -180,7 +180,11 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
             // and parks itself far away once it leaves the screen (move.w #$7FFF,x_pos).
             flickerHidden = (frameCounter & 1) != 0;
             if (!isOnScreen(WIDTH_PIXELS)) {
-                setDestroyed(true);
+                // Obj_LBZElevatorCupFlicker exits through Sprite_OnScreen_Test,
+                // which clears this layout entry's respawn bit before deleting
+                // the SST slot. The cup must therefore be eligible for a fresh
+                // placement load when the camera later returns.
+                setDestroyedByOffscreen();
                 return;
             }
             updateDynamicSpawn(x, y);

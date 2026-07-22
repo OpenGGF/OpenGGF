@@ -1,5 +1,25 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ flung-cup placement respawn
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 6643 to
+  frame 6939.** Total release-blocking errors fell from 6836 to 5912; the next
+  divergence is Sonic's routine (`$04` expected versus `$02` actual).
+- Root: subtype-`$83` Obj18 is used and flung earlier in the route, then its
+  `Obj_LBZElevatorCupFlicker` routine exits through `Sprite_OnScreen_Test`.
+  Native clears the layout entry's respawn bit before deleting the SST slot,
+  so the cup is freshly placed when the camera returns and catches Sonic's
+  landing at frame 6643. The engine marked the flicker exit as a permanent
+  gameplay destruction, leaving only the pole and letting Sonic fall through.
+- Fix: the flicker routine now uses the shared off-screen respawnable destroy
+  path, preserving normal placement-cursor recreation without changing the
+  cup's player-kill or fling behavior. A focused lifecycle test verifies the
+  native respawn-bit outcome.
+- Validation: all 16 focused cup-elevator tests pass and the LBZ replay reaches
+  frame 6939. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
 ## 2026-07-22 - LBZ cup retained player animation state
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 6535 to

@@ -231,6 +231,28 @@ class TestLbzCupElevatorInstance {
     }
 
     @Test
+    void flungCupOffscreenExitRemainsPlacementRespawnable() throws Exception {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0x83, 1, false, 0));
+        setPrivateInt(elevator, "x", 0x1800);
+        setPrivateInt(elevator, "y", 0x0600);
+        Field flicker = LbzCupElevatorInstance.class.getDeclaredField("flickerMode");
+        flicker.setAccessible(true);
+        flicker.setBoolean(elevator, true);
+
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        try {
+            elevator.update(1, null);
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+
+        assertTrue(elevator.isDestroyed());
+        assertTrue(elevator.isDestroyedRespawnable(),
+                "Obj_LBZElevatorCupFlicker exits through Sprite_OnScreen_Test, which clears the respawn bit");
+    }
+
+    @Test
     void attachChildUsesRomFrameAndPositionFormula() {
         int anchorX = 0x1800;
 
