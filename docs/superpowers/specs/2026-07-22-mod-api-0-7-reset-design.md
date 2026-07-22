@@ -31,8 +31,9 @@ the release "Mod API 0.7".
   as compatibility shims for provisional baselines.
 - Change `.ggfmod`, level, sheet, or manifest format versions.
 - Rewrite dated design and implementation records that are retained only as
-  historical evidence. Active documents must not depend on their obsolete version
-  claims.
+  historical evidence. A dated record is historical only when active guidance no
+  longer cites it as current authority; otherwise its version-sensitive material or
+  the active citation must be updated as part of this reset.
 - Promise compatibility with any provisional 1.x or 2.x mod binary.
 
 ## Version Contract
@@ -76,8 +77,10 @@ Active sources of truth will describe one 0.7 surface and no published predecess
 
 Prior changelog entries whose only purpose is narrating provisional API bumps will be
 consolidated into one Mod API 0.7 entry describing the accumulated creator surface.
-Dated plans and specs may retain their original development narrative, but active
-guidance must not point to those documents as current version policy.
+Dated plans and specs may retain their original development narrative only when they
+are not cited as current authority. If active guidance still depends on one, update
+its version-sensitive requirements or qualify/remove the active link so readers
+cannot mistake provisional version policy for the 0.7 contract.
 
 ## Validation
 
@@ -89,10 +92,15 @@ Implementation is complete when:
 4. Focused semantic-version, manifest-range, signature-surface, SDK packaging,
    validator, and maintained sample integration tests pass.
 5. A repository scan finds no active 1.x/2.x Mod API claims, version-gated samples,
-   compatibility comments, diagnostics, or test names. Dated historical plans/specs
-   are excluded from this active-source scan.
+   compatibility comments, diagnostics, or test names. The implementation plan must
+   define the scan command and a narrow allowlist for genuinely historical files,
+   demonstrate that no allowlisted file is cited as current version authority, and
+   record the final scan result as verification evidence.
 6. The broader relevant Maven suite passes, or any pre-existing unrelated failures
    are reported with evidence.
+7. Every removed compatibility member is inventoried with direct evidence that it
+   exists solely for a provisional Mod API 1.x/2.x contract; unrelated internal or
+   runtime compatibility helpers are left untouched.
 
 ## Delivery
 
