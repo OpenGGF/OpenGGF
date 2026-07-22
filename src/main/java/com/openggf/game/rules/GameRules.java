@@ -346,7 +346,7 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    false
+                    true
             ),
             new CameraRules(
                     (short) 120,

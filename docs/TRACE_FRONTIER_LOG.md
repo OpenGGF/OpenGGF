@@ -48934,3 +48934,28 @@ standalone CNZ remains at f0 in both scopes.
   16 documented red non-LBZ routes, and two skips. Both MGZ frontiers and error
   totals remain exactly f5164/8072 and f5550/7898; every other S3K, S1, and S2
   frontier is also unchanged.
+
+## 2026-07-22 - LBZ automatic-tunnel native exit and landing
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 2816 to
+  frame 2997.** The corrected route reshapes the remaining cascade from 9033
+  to 9748 errors; the next divergence is Sonic ground speed `$0116` versus
+  `$000C` as he leaves a sloped surface.
+- Root: Obj24 writes only the 16-bit `x_pos`/`y_pos` words on capture and at
+  each waypoint, and `move.b #2,anim` does not set `Status_Roll`. At the final
+  waypoint, `loc_2970A` falls through to `loc_29768`, applying the retained
+  subtype-bit-6 exit velocity on the same dispatch. The engine cleared both
+  subpixel words, synthesized rolling status, and returned before that final
+  movement. Later, S3K's angled-ceiling landing reached
+  `Player_TouchFloor_Check_Spindash`, whose explicit Walk write was incorrectly
+  disabled by the S3K animation rules.
+- Fix: automatic-tunnel native word writes now use `NativePositionOps`, capture
+  leaves rolling status untouched, and the final-waypoint transition performs
+  its fall-through movement. S3K's game-wide angled-landing animation rule now
+  publishes Walk, matching the live landing state rather than any LBZ-specific
+  condition.
+- Validation: focused automatic-tunnel, collision, and game-rule tests pass,
+  and the LBZ replay reaches frame 2997. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 48 passed, the same 16
+  documented red routes, and two skips. All non-LBZ S3K, S1, and S2 frontiers
+  and error totals remain unchanged.

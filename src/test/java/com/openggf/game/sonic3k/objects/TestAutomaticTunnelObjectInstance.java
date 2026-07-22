@@ -80,6 +80,49 @@ class TestAutomaticTunnelObjectInstance {
     }
 
     @Test
+    void captureWritesNativePositionWordsWithoutForcingRollingStatus() {
+        AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
+                new ObjectSpawn(0x0D40, 0x0770, 0x24, 1, 0, false, 0));
+        tunnel.setServices(new TestObjectServices());
+
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x0D40);
+        player.setCentreY((short) 0x0770);
+        player.setSubpixelRaw(0x5100, 0x8500);
+        player.setRolling(false);
+
+        tunnel.update(0, player);
+
+        assertEquals(0x5100, player.getXSubpixelRaw());
+        assertEquals(0x8500, player.getYSubpixelRaw());
+        assertFalse(player.getRolling(), "move.b #2,anim does not set Status_Roll");
+        assertEquals(2, player.getAnimationId());
+        assertTrue(player.getAir());
+    }
+
+    @Test
+    void maintainedExitVelocityMovesPlayerOnFinalWaypointFrame() {
+        AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
+                new ObjectSpawn(0x0D40, 0x0770, 0x24, 0x42, 0, false, 0));
+        tunnel.setServices(new TestObjectServices());
+
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x0D40);
+        player.setCentreY((short) 0x0770);
+        player.setSubpixelRaw(0x5100, 0x8500);
+
+        for (int frame = 0; frame <= 40; frame++) {
+            tunnel.update(frame, player);
+        }
+
+        assertEquals(0x0D70, player.getCentreX());
+        assertEquals(0x0678, player.getCentreY(),
+                "loc_2970A falls through to loc_29768 after snapping to y_pos $688");
+        assertEquals(0x5100, player.getXSubpixelRaw());
+        assertEquals(0x8500, player.getYSubpixelRaw());
+    }
+
+    @Test
     void lbz2ModeSpawnsTunnelExhaustAtPlayerExitWithCurrentVelocity() {
         RecordingServices services = new RecordingServices();
         AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(

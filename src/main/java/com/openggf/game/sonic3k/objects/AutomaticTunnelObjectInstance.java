@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -325,7 +326,6 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         player.setControlLocked(true);
 
         // ROM: move.b #2,anim(a1)
-        player.setRolling(true);
         player.setAnimationId(2);
 
         // ROM: clr.b jumping(a1)
@@ -343,8 +343,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         player.setAir(true);
 
         // ROM: move.w x_pos(a0),x_pos(a1); move.w y_pos(a0),y_pos(a1)
-        player.setCentreX((short) spawn.x());
-        player.setCentreY((short) spawn.y());
+        NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x());
+        NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y());
 
         // Setup path and calculate initial velocity
         setupPath(player, state);
@@ -406,8 +406,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         state.pathRemaining = (waypointCount - 1) * 4;
 
         // ROM: move.w (a2)+,d4; move.w d4,x_pos(a1); move.w (a2)+,d5; move.w d5,y_pos(a1)
-        player.setCentreX((short) state.path[0]);
-        player.setCentreY((short) state.path[1]);
+        NativePositionOps.writeXPosPreserveSubpixel(player, state.path[0]);
+        NativePositionOps.writeYPosPreserveSubpixel(player, state.path[1]);
         state.pathIndex = 2;
 
         // Calculate velocity to next waypoint
@@ -430,8 +430,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
         // ROM: lea (a2,d0.w),a2 — jump to end of path data
         int lastIdx = state.path.length - 2;
-        player.setCentreX((short) state.path[lastIdx]);
-        player.setCentreY((short) state.path[lastIdx + 1]);
+        NativePositionOps.writeXPosPreserveSubpixel(player, state.path[lastIdx]);
+        NativePositionOps.writeYPosPreserveSubpixel(player, state.path[lastIdx + 1]);
 
         // ROM: subq.w #8,a2 — back up one waypoint
         state.pathIndex = lastIdx - 2;
@@ -456,8 +456,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         // ROM: movea.l 6(a4),a2; move.w (a2)+,d4; move.w d4,x_pos(a1); ...
         int waypointX = state.path[state.pathIndex];
         int waypointY = state.path[state.pathIndex + 1];
-        player.setCentreX((short) waypointX);
-        player.setCentreY((short) waypointY);
+        NativePositionOps.writeXPosPreserveSubpixel(player, waypointX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, waypointY);
 
         // Advance path pointer
         // ROM: tst.b subtype(a0); bpl.s +; subq.w #8,a2
@@ -472,6 +472,9 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         if (state.pathRemaining <= 0) {
             // Path exhausted — transition to LAST_MOVE
             beginExit(player, state);
+            // ROM: loc_2970A falls through to loc_29768, so the retained exit
+            // velocity is applied immediately after the final waypoint snap.
+            moveCharacter(player);
             return;
         }
 
@@ -500,7 +503,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
         // ROM: andi.w #$FFF,y_pos(a1)
         int y = player.getCentreY() & 0xFFF;
-        player.setCentreY((short) y);
+        NativePositionOps.writeYPosPreserveSubpixel(player, y);
 
         // ROM: btst #6,subtype(a0); bne.s loc_2972C
         if (!maintainVelocity) {
