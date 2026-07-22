@@ -181,6 +181,16 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean groundedSquashEdgeSideContactSetsPush() {
+        // A shallow underside overlap with zero y_vel enters loc_1E126. When
+        // abs(d0) < $10 it rejoins loc_1E042, whose grounded tail sets
+        // Status_Push even when x_vel points away from the pillar. This is the
+        // ordinary SolidObjectFull squash-edge result, driven by the live
+        // contact geometry. sonic3k.asm:41594-41616,41473-41505.
+        return true;
+    }
+
+    @Override
     public boolean usesInstanceSolidStateLatchKey() {
         // updateDynamicSpawn follows the moving y_pos, but ROM keeps the
         // standing/pushing bits in this object's fixed SST slot. Key the

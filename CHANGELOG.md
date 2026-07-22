@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the shared MGZ/LBZ smashing pillar now preserves `SolidObjectFull`'s grounded squash-edge push result when a shallow underside overlap rejoins the side-contact tail. This keeps CPU Tails' follow input aligned and advances the combined LBZ frontier from frame 2270 to frame 2816 without moving either MGZ frontier.
 - Fix: S3K's signed `flip_type` now enters and reverses `Anim_Tumble` even while `flip_angle` is zero, and LBZ rolling drums leave mapping/render publication to the earlier player animation slot instead of eagerly applying the object-updated angle. This clears LBZ's opening drum animation divergences and advances the combined frontier from frame 1659 to frame 2270.
 - Fix: LBZ1's ground-launch controller now preserves object-owned player mapping frames while native `object_control` bit 1 suppresses animation, resumes animation only after the launch object's `$03` to `$01` control transition, and reconstructs the carried CPU Tails mapping at the seamless ICZ handoff. This advances the combined LBZ complete-run frontier from frame 0 to frame 1659.
 - Fix: ICZ Act 1 miniboss rendering now skips orb child slots until the camera gate creates their state, preventing a null dereference while approaching the arena with boss art ready.

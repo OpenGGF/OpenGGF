@@ -48914,3 +48914,23 @@ standalone CNZ remains at f0 in both scopes.
   the same 16 documented red routes, and two skips. Every non-LBZ frontier and
   error total is unchanged, including S3K MHZ's early animation frontier, so
   the shared animator correction introduces no S3K, S1, or S2 regression.
+
+## 2026-07-22 - LBZ smashing-pillar squash-edge push
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 2270 to
+  frame 2816.** Total release-blocking errors fell from 9292 to 9033; the next
+  divergence is Sonic's Y subpixel word.
+- Root: the descending Obj20 pillar overlapped grounded CPU Tails from below
+  with zero vertical velocity. Native `SolidObjectFull` routes the shallow
+  underside through `loc_1E126`; because `abs(d0)<$10`, it rejoins the ordinary
+  `loc_1E042` side tail and sets `Status_Push` even though Tails' X velocity
+  points away. The engine classified the contact but left Push clear, making
+  the following CPU slot reverse input and lose one pixel.
+- Fix: the shared MGZ/LBZ pillar opts into the existing grounded squash-edge
+  push result based on its live contact geometry. No trace state, route name,
+  zone id, or frame number participates in the behavior.
+- Validation: focused pillar coverage passes and LBZ reaches frame 2816. The
+  complete `*TraceReplay#replayMatchesTrace` sweep reports 48 passed, the same
+  16 documented red non-LBZ routes, and two skips. Both MGZ frontiers and error
+  totals remain exactly f5164/8072 and f5550/7898; every other S3K, S1, and S2
+  frontier is also unchanged.
