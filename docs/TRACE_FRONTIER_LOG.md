@@ -48844,3 +48844,21 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: both ending poses release on the native frame and the helper's
   no-motion accumulator entries plus early expansion match. The sole remaining
   divergence is camera X at f25254.
+
+## 2026-07-22 - ICZ complete-run physics and animation green
+
+- **`s3k_icz1` physics and animation advanced from f25254 through the complete
+  trace.** The final error fell from 1 to 0; both release-blocking groups are
+  green through the ICZ-to-LBZ transition boundary.
+- Root: the subtype `$90` ICZ snow pile calls `StartNewLevel #$0600` from its
+  object pass. Native `LevelLoop` tests `Restart_level_flag` immediately after
+  `Process_Sprites` and branches back to `Level`, so the boundary row exposes
+  Sonic/Tails' final movement while retaining the prior camera X. The shared
+  engine frame step did not test its equivalent inactive-transition state
+  until after camera scroll and boundary easing, advancing camera X by eight.
+- Fix: `LevelFrameStep` now samples the generic inactive-transition request
+  after object execution and suppresses the later camera phases on that same
+  frame. The gate is driven by the live `StartNewLevel` request, with no
+  zone/route/frame exception.
+- Validation: the focused complete-run replay reports zero physics or animation
+  divergences through frame 25254 and the frozen transition tail.
