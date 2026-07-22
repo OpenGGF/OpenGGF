@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ P2 drum animation ownership
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 14174 to
+  frame 15188.** The next divergence is Sonic's X position (`$3760` expected
+  versus `$3765` actual).
+- Root: CPU Tails entered the drum with an engine-only forced flight animation
+  still armed. Native `loc_2C44E` executes after the Tails player/CPU slot and
+  writes the ordinary `anim/prev_anim` word, so the drum's walk/tumble
+  animation remains authoritative. The engine's separate forced-animation
+  field reasserted flight on the next continuously held frame; the earlier
+  alternating capture/release frames concealed that delayed overwrite.
+- Fix: rolling-drum capture now clears the synthetic forced-animation override
+  when it performs the native post-player animation write. Focused coverage
+  starts a rider with forced flight active and verifies that capture retires it.
+- Validation: all 22 focused rolling-drum tests pass and the LBZ replay reaches
+  frame 15188. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - LBZ rolling-drum activation precedence
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 14074 to

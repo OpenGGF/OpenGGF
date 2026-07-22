@@ -160,6 +160,10 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         applyRideObjectSetRide(player, nativePlayerIndex);
         player.setFlipType(FLIP_TYPE_ACTIVE);
         player.setAnimationId(ANIMATION_ROLLING_DRUM);
+        // loc_2C44E writes anim/prev_anim after the native player/CPU slot.
+        // Discard any engine-only forced CPU-flight animation so it cannot
+        // overwrite that object-owned write on the following held frame.
+        player.setForcedAnimationId(-1);
         player.forceAnimationRestart();
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);

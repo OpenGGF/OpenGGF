@@ -70,6 +70,7 @@ class TestLbzRollingDrumInstance {
         TestablePlayableSprite player = groundedPlayer(0x1800, 0x05AD);
         player.setGSpeed((short) 0);
         player.setMappingFrame(0x96);
+        player.setForcedAnimationId(Sonic3kAnimationIds.FLY.id());
 
         drum.update(0, player);
 
@@ -80,6 +81,8 @@ class TestLbzRollingDrumInstance {
                 "loc_2C44E writes flip_type=$80 on the capture frame");
         assertEquals(Sonic3kAnimationIds.WALK.id(), player.getAnimationId(),
                 "loc_2C44E writes move.w #1,anim(a1), which means anim=0 and prev_anim=1");
+        assertEquals(-1, player.getForcedAnimationId(),
+                "the post-CPU anim write must retire an engine-only forced flight animation");
         assertTrue(((UnitPlayableSprite) player).wasAnimationRestartForced(),
                 "move.w #1,anim(a1) forces anim != prev_anim, so the walk/tumble script must restart");
         assertEquals(0x96, player.getMappingFrame(),
