@@ -48,6 +48,8 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private static final int ICZ1_BG_NORMAL = 16;
     private static final int ICZ1_BG_TRANSITION = 20;
     private static final int ICZ1_TRANSITION_CAMERA_X = 0x6900;
+    /** ROM Kos/KosM queue workload published by ICZ1BGE_Normal before the reload can run. */
+    private static final int ICZ2_SECONDARY_KOS_DRAIN_FRAMES = 41;
     private static final int ICZ1_TO_ICZ2_OFFSET_X = -0x6880;
     private static final int ICZ1_TO_ICZ2_OFFSET_Y = 0x0100;
     private static final int ICZ2_CAMERA_MIN_X = 0x0000;
@@ -105,6 +107,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private int bigSnowVelocity;
     private boolean bigSnowPileSpawned;
     private boolean act2TransitionRequested;
+    private int act2TransitionKosDrainFrames;
     private int activeAct;
     @RewindTransient(
             reason = "live snowboard intro object reference; object lifetime/state is captured by ObjectManager rewind")
@@ -123,6 +126,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         bigSnowVelocity = 0;
         bigSnowPileSpawned = false;
         act2TransitionRequested = false;
+        act2TransitionKosDrainFrames = 0;
         indoorPaletteCyclingActive = initialIndoorPaletteCycleState(act);
         applyInitialBackgroundPalette(act);
         if (act == 0 && hasSonicSnowboardIntroPlayerMode()) {
@@ -361,7 +365,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             case ICZ1_BG_REFRESH -> updateAct1BackgroundRefresh();
             case ICZ1_BG_REFRESH_2 -> updateAct1BackgroundRefresh2();
             case ICZ1_BG_NORMAL -> updateAct1BackgroundNormal();
-            case ICZ1_BG_TRANSITION -> requestIcz2Transition();
+            case ICZ1_BG_TRANSITION -> updateIcz2TransitionQueue();
             default -> {
                 // ICZ1 unknown background stages are terminal until ported.
             }
@@ -414,7 +418,14 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             return;
         }
         backgroundRoutine = ICZ1_BG_TRANSITION;
-        requestIcz2Transition();
+        act2TransitionKosDrainFrames = 0;
+    }
+
+    private void updateIcz2TransitionQueue() {
+        act2TransitionKosDrainFrames++;
+        if (act2TransitionKosDrainFrames >= ICZ2_SECONDARY_KOS_DRAIN_FRAMES) {
+            requestIcz2Transition();
+        }
     }
 
     private void requestIcz2Transition() {

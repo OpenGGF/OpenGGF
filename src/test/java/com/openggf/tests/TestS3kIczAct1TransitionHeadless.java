@@ -40,8 +40,17 @@ class TestS3kIczAct1TransitionHeadless {
 
         manager.update();
 
+        assertEquals(0, GameServices.level().getCurrentAct(),
+                "ICZ1BGE_Normal queues the Act 2 archives before changing levels");
+        for (int frame = 0; frame < 40; frame++) {
+            manager.update();
+            assertEquals(0, GameServices.level().getCurrentAct(),
+                    "ICZ1BGE_Transition must wait while the native Kos queue is busy");
+        }
+        manager.update();
+
         assertTrue(events.isAct2TransitionRequested(),
-                "ICZ1BGE_Transition must request the ICZ2 reload at camera X=$6900 "
+                "ICZ1BGE_Transition must request the ICZ2 reload after the queued art drains "
                         + "(docs/skdisasm/sonic3k.asm:110280-110323)");
         assertEquals(1, GameServices.level().getCurrentAct(),
                 "ROM writes Current_zone_and_act=$0501 before Load_Level");

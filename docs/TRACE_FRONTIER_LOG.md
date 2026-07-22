@@ -48031,3 +48031,21 @@ standalone CNZ remains at f0 in both scopes.
   live-X reference used by the native macro
   (`docs/skdisasm/sonic3k.asm:188966-189101,37245-37280`).
 - The focused suite pins the moving out-of-range reference after chain release.
+
+## 2026-07-21 - ICZ Act 2 queue gate advances both frontiers
+
+- Commands: combined focused `TestS3kIczAct1TransitionHeadless` and
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f12279 to f12699 and animation advanced
+  from f12369 to f12699.** The now-correct Act 2 comparison has 2,419 total
+  errors: 2,015 physics and 404 animation, versus 2,353 downstream errors from
+  the premature reload.
+- Root: `ICZ1BGE_Normal` starts three secondary terrain/art streams and advances
+  the background routine, while `ICZ1BGE_Transition` keeps running Act 1 until
+  `Kos_decomp_queue_count` reaches zero. The engine combined those two routines
+  and reloaded Act 2 immediately at camera X `$6900`, offsetting both players
+  and the camera 41 native queue-dispatches early. ICZ now models the queued
+  workload before requesting the existing data-driven seamless transition
+  (`docs/skdisasm/sonic3k.asm:110280-110368`).
+- The focused transition test verifies that Act 1 remains active through every
+  busy queue pass and reloads only after the workload drains.
