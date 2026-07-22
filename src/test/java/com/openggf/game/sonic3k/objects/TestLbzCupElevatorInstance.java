@@ -223,6 +223,8 @@ class TestLbzCupElevatorInstance {
                 "loc_32610 uses PlayerTwistFlip index 3 = no horizontal flip");
         assertTrue(player.isObjectMappingFrameControl(),
                 "object_control=3 suppresses normal player animation while the cup writes raw mapping frames");
+        assertFalse(player.isControlLocked(),
+                "Obj18 writes object_control=$03 but never writes the separate Ctrl_1_locked byte");
 
         Object p1State = getPrivateField(elevator, "p1");
         invokeReleasePlayer(elevator, player, p1State);

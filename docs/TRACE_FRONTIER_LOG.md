@@ -49065,3 +49065,22 @@ standalone CNZ remains at f0 in both scopes.
   frame 4057. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
   tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
   S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - LBZ cup logical-input history
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 4057 to
+  frame 4157.** Total release-blocking errors fell from 6649 to 6594; the next
+  divergence is Sonic Y (`$0518` expected versus `$0513` actual).
+- Root: Obj18 writes `object_control=$03` while it owns the player but never
+  writes the independent `Ctrl_1_locked` byte. The engine conflated those two
+  controls, latching a zero `Ctrl_1_logical` word and recording that stale word
+  into `Stat_table`; CPU Tails consequently missed Sonic's delayed RIGHT input
+  sixteen frames later.
+- Fix: cup capture, hold, release, and fling paths no longer set or clear the
+  independent control-lock state. Object control still suppresses player
+  movement and animation exactly as before, while logical pad history remains
+  live for the follower CPU.
+- Validation: all 13 focused cup-elevator tests pass and the LBZ replay reaches
+  frame 4157. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.

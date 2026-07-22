@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ cup elevators now leave the independent `Ctrl_1_locked` byte untouched while `object_control=$03` owns movement and animation, preserving live logical pad input for Sonic's follower-history table. This advances the combined LBZ frontier from frame 4057 to frame 4157 without moving any other trace frontier.
 - Fix: S3K spikes now run `SolidObjectFull` contacts for positive object-control states while retaining the native signed/bit-7 rejection, allowing later-slot spike sides to separate a cup-controlled rider. This advances the combined LBZ frontier from frame 3969 to frame 4057 without moving any other trace frontier.
 - Fix: LBZ cup-elevator twist frames now update only the player's visual render flips, preserving the independent native gameplay-facing status bit. This advances the combined LBZ frontier from frame 3804 to frame 3969 without moving any other trace frontier.
 - Fix: delayed S3K Obj37 spills now preserve the ROM's distinct collision-list position phase for ordinary post-player materialization versus a forced behind-cursor owner, with LBZ's recorded V-int phase restored explicitly. This advances the combined LBZ frontier from frame 3647 to frame 3804, advances CNZ's complete-run frontier to frame 14658, and preserves the green ICZ complete run.

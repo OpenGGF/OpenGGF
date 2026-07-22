@@ -508,7 +508,6 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     private void capturePlayer(AbstractPlayableSprite player, PlayerState state) {
         state.inside = true;
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
-        player.setControlLocked(true);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -519,7 +518,6 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     private void holdPlayer(AbstractPlayableSprite player) {
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
-        player.setControlLocked(true);
         NativePositionOps.writeXPosPreserveSubpixel(player, x);
         NativePositionOps.writeYPosPreserveSubpixel(player, y + PLAYER_Y_OFFSET);
         player.setPriorityBucket(isPlayerBehindCup() ? PLAYER_PRIORITY : PLAYER_CUP_PRIORITY);
@@ -549,7 +547,6 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         state.cooldown = cooldown;
         player.setPriorityBucket(PLAYER_PRIORITY);
         ObjectControlState.none().applyTo(player);
-        player.setControlLocked(false);
         player.setObjectMappingFrameControl(false);
         player.setLatchedSolidObjectId(0);
         player.setOnObject(false);
@@ -566,7 +563,6 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         state.inside = false;
         state.cooldown = RELEASE_COOLDOWN;
         ObjectControlState.none().applyTo(player);
-        player.setControlLocked(false);
         player.setObjectMappingFrameControl(false);
         player.setLatchedSolidObjectId(0);
         player.setOnObject(false);
