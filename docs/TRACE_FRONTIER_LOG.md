@@ -48982,3 +48982,27 @@ standalone CNZ remains at f0 in both scopes.
   frame 3039. The complete `*TraceReplay#replayMatchesTrace` sweep reports 48
   passed routes, the same 16 documented red routes, and two skips. All non-LBZ
   S3K, S1, and S2 frontiers and error totals remain unchanged.
+
+## 2026-07-22 - LBZ tube-elevator traversal and release
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 3039 to
+  frame 3647.** Total release-blocking errors fell from 6994 to 6664; the next
+  divergence is a missed ring (`1` expected versus `0` actual).
+- Root: Obj29's `object_control=$83` does not also write the separate
+  `Ctrl_1_locked` byte. `AutoTunnel_GetPath` temporarily publishes its first
+  waypoint before the transition tail restores `y_pos` from the saved bob
+  anchor, and its subsequent `move.w` position writes retain both subpixel
+  words. Finally, object-control bit 1 suppresses the next player animation
+  dispatch immediately after capture even though Obj29 publishes its first
+  tube mapping only on the following object pass. The engine conflated the
+  two control bytes, replaced the saved bob anchor, cleared subpixels on word
+  writes, and allowed an extra animation advance before tube mapping began.
+- Fix: the tube elevator now leaves the independent control-lock byte alone,
+  keeps its saved bob anchor through path setup, preserves native subpixel
+  words for path and bob writes, and enables object-owned mapping control at
+  capture while retaining the native previous-animation state and script
+  timer. The behavior is driven entirely by native object/player state.
+- Validation: the focused capture, transition, and subpixel cases pass. The
+  complete `*TraceReplay#replayMatchesTrace` sweep reports 48 passed routes,
+  the same 16 documented red routes, and two skips. Every non-LBZ S3K, S1,
+  and S2 frontier and error total remains unchanged.

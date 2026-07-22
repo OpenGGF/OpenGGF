@@ -9,6 +9,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -48,6 +49,8 @@ class TestLbzTubeElevatorInstance {
                 "object_control=$83 is ROM bit-7 full control, not CPU-assisted object control");
         assertTrue(player.isObjectControlSuppressesMovement());
         assertTrue(player.isTouchResponseSuppressedByObjectControl());
+        assertFalse(player.isControlLocked(),
+                "object_control=$83 does not write the separate Ctrl_1_locked byte");
         assertEquals(0x1200, player.getCentreX() & 0xFFFF);
         assertEquals(expectedY, player.getCentreY() & 0xFFFF,
                 "capture snaps y_pos to elevator y_pos+$18-y_radius");
@@ -56,6 +59,25 @@ class TestLbzTubeElevatorInstance {
         assertEquals(0, player.getGSpeed());
         assertFalse(player.getAir(), "capture clears Status_InAir");
         assertFalse(player.isJumping(), "capture clears jumping");
+    }
+
+    @Test
+    void capturePreservesNativePreviousAnimationAndTimer() {
+        ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
+        TestablePlayableSprite player = playerAt(0x1200, 0x0600);
+        player.setAnimationId(0);
+        player.setAnimationFrameIndex(3);
+        player.setAnimationTick(5);
+        player.getAnimationManager().restoreRewindState(new PlayableSpriteAnimation.RewindState(0, 0));
+
+        elevator.update(0, player);
+
+        assertEquals(0, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "move.b #0,anim does not alter prev_anim when it was already Walk");
+        assertTrue(player.isObjectMappingFrameControl(),
+                "object_control bit 1 suppresses the next Animate dispatch immediately after capture");
+        assertEquals(3, player.getAnimationFrameIndex());
+        assertEquals(5, player.getAnimationTick());
     }
 
     @Test
@@ -110,6 +132,29 @@ class TestLbzTubeElevatorInstance {
         assertEquals(0x16, field(elevator, "bobAngle").getInt(elevator));
         assertEquals(0x05FF, elevator.getY() & 0xFFFF,
                 "loc_29EE2 uses sine($14) before storing the next $16 phase");
+    }
+
+    @Test
+    void pathSetupRetainsOriginalBobAnchorForTransitionDispatch() throws Exception {
+        ObjectInstance elevator = elevator(0x0F60, 0x0578, 0x10);
+        setField(elevator, "state", 2);
+        setField(elevator, "spinSpeed", 0x180);
+
+        elevator.update(0, playerAt(0x1000, 0x0578));
+
+        assertEquals(0x0578, elevator.getY() & 0xFFFF,
+                "AutoTunnel_GetPath's temporary first waypoint is overwritten by loc_29EE2 using saved $46");
+    }
+
+    @Test
+    void bobWordWritePreservesObjectSubpixel() throws Exception {
+        ObjectInstance elevator = elevator(0x0F60, 0x0578, 0);
+        setField(elevator, "fixedY", ((long) 0x0578 << 16) | 0xABCDL);
+
+        elevator.update(0, playerAt(0x1000, 0x0578));
+
+        assertEquals(0xABCDL, field(elevator, "fixedY").getLong(elevator) & 0xFFFFL,
+                "move.w y_pos updates from the bob and path routines must retain the low subpixel word");
     }
 
     @Test

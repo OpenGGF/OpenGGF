@@ -243,10 +243,8 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             return;
         }
 
-        x = path[pathIndex];
-        y = path[pathIndex + 1];
-        fixedX = (long) x << 16;
-        fixedY = (long) y << 16;
+        writeXWordPreserveSubpixel(path[pathIndex]);
+        writeYWordPreserveSubpixel(path[pathIndex + 1]);
         pathIndex += reversePath ? -2 : 2;
         pathRemaining -= 4;
         if (pathRemaining <= 0 || pathIndex < 0 || pathIndex + 1 >= path.length) {
@@ -368,7 +366,6 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             if (state == STATE_WAIT_EXIT) {
                 player.setDirection(Direction.LEFT);
                 ObjectControlState.none().applyTo(player);
-                player.setControlLocked(false);
                 player.setObjectMappingFrameControl(false);
                 player.setLatchedSolidObjectId(0);
                 tubeState.phase = 4;
@@ -408,9 +405,11 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
     private void capturePlayer(AbstractPlayableSprite player, PlayerTubeState tubeState) {
         tubeState.phase = 2;
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         player.setAnimationId(0);
-        player.forceAnimationRestart();
+        // Capture runs after this frame's player slot. Native object_control
+        // bit 1 suppresses the next Animate dispatch immediately, although the
+        // elevator publishes its first mapping only on its next object pass.
+        player.setObjectMappingFrameControl(true);
         player.setJumping(false);
         player.setGSpeed((short) 0);
         player.setXSpeed((short) 0);
@@ -472,8 +471,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         int sampleAngle = bobAngle;
         bobAngle = (bobAngle + 2) & 0xFF;
         int offset = TrigLookupTable.sinHex(sampleAngle) >> 6;
-        y = baseY - offset;
-        fixedY = (long) y << 16;
+        writeYWordPreserveSubpixel(baseY - offset);
     }
 
     private void applyBob() {
@@ -490,8 +488,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             offset--;
         }
         offset >>= 6;
-        y = baseY - offset;
-        fixedY = (long) y << 16;
+        writeYWordPreserveSubpixel(baseY - offset);
     }
 
     private void spinShell() {
@@ -513,20 +510,27 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         pathRemaining = (waypointCount - 1) * 4;
         if (reversePath) {
             pathIndex = path.length - 2;
-            x = path[pathIndex];
-            y = path[pathIndex + 1];
+            writeXWordPreserveSubpixel(path[pathIndex]);
+            writeYWordPreserveSubpixel(path[pathIndex + 1]);
             pathIndex -= 2;
         } else {
-            x = path[0];
-            y = path[1];
+            writeXWordPreserveSubpixel(path[0]);
+            writeYWordPreserveSubpixel(path[1]);
             pathIndex = 2;
         }
-        fixedX = (long) x << 16;
-        fixedY = (long) y << 16;
-        baseY = y;
         if (pathIndex >= 0 && pathIndex + 1 < path.length) {
             calculateVelocity(path[pathIndex], path[pathIndex + 1]);
         }
+    }
+
+    private void writeXWordPreserveSubpixel(int value) {
+        x = value & 0xFFFF;
+        fixedX = ((long) x << 16) | (fixedX & 0xFFFFL);
+    }
+
+    private void writeYWordPreserveSubpixel(int value) {
+        y = value & 0xFFFF;
+        fixedY = ((long) y << 16) | (fixedY & 0xFFFFL);
     }
 
     private void calculateVelocity(int targetX, int targetY) {
