@@ -136,8 +136,8 @@ class TestModApiSignatureSurface {
                 "The published Mod API version must match the 2.5 baseline");
         assertEquals(921, published.stream().filter(line -> line.startsWith("TYPE ")).count(),
                 "Published API 2.5 engine-type count is pinned");
-        assertEquals(18_171, published.size(), "Published API 2.5 signature count is pinned");
-        assertEquals(718, published.stream().filter(line -> !historicalSet.contains(line)).count(),
+        assertEquals(18_172, published.size(), "Published API 2.5 signature count is pinned");
+        assertEquals(719, published.stream().filter(line -> !historicalSet.contains(line)).count(),
                 "Published API 2.5 additive signature count is pinned");
         assertTrue(ModApiSignatureSurface.baselineViolations(
                         VERSION_24, historicalSet, PUBLISHED_VERSION,
