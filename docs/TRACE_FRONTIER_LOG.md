@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ Ribot activation and appendage physics
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 7305 to
+  frame 8071.** Total release-blocking errors fell from 6569 to 6001; the next
+  divergence is Sonic's X speed (`-$1000` expected versus `-$03AE` actual).
+- Root: Ribot initialized from a point-in-viewport test instead of the native
+  `$20` `Obj_WaitOffscreen` placeholder/render-bit handoff. Its harmful child
+  spheres also started with a fabricated `$400` Y velocity, omitted
+  `MoveSprite`'s `$38` gravity and `ObjHitFloor_DoRoutine` callback, and cleared
+  subpixel state when word-only native writes returned them to their origins.
+  The resulting sphere phase missed both recorded player contacts.
+- Fix: Ribot now waits for the post-camera placeholder render bit and retains
+  the restore-only dispatch before initialization. Downward appendages start
+  from zero velocity, use native gravity and single-point floor collision,
+  bounce or wait through the `$34` callback rules, and preserve subpixels on
+  origin-word restoration. A focused motion test covers the gravity cadence.
+- Validation: all 7 focused Ribot tests pass and the LBZ replay reaches frame
+  8071. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61 tests,
+  45 green and the same 16 documented red routes. No S3K, S1, or S2 frontier
+  regressed.
+
 ## 2026-07-22 - S3K hurt live-radius floor reset
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 7296 to

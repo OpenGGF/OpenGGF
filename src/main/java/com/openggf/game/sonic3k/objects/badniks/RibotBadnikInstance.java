@@ -20,6 +20,8 @@ import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 
 import java.util.List;
 
@@ -32,6 +34,7 @@ import java.util.List;
  * ({@code >= 4}). Children use the ROM hurt collision byte {@code $97}.
  */
 public final class RibotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+    private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_Ribot collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Ribot priority $280.
     private static final int ANIM_DELAY = 7;              // byte_8C626 / byte_8C62C.
@@ -46,6 +49,8 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
     boolean childGateB;
     private int animIndex;
     private int animTimer;
+    private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
 
     public RibotBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Ribot", Sonic3kObjectArtKeys.RIBOT, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
@@ -53,7 +58,19 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        // Obj_WaitOffscreen installs a $20-by-$20 placeholder. Render_Sprites
+        // publishes its on-screen bit after the object pass; the next dispatch
+        // restores Obj_Ribot and returns before initialization resumes.
+        if (waitingForOnscreen) {
+            if (!placeholderRenderedOnscreen) {
+                return;
+            }
+            waitingForOnscreen = false;
+            placeholderRenderedOnscreen = false;
             return;
         }
 
@@ -72,6 +89,14 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
             } else {
                 childGateB = true;
             }
+        }
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE);
         }
     }
 
@@ -149,7 +174,7 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
         private static final int BODY_FRAME = 7;
         private static final int Y_RETURN_STEP = 2;      // loc_8C4C8: subq.w #2,y_pos.
         private static final int SIDE_X_SPEED = 0x400;   // loc_8C3EC.
-        private static final int LOWER_Y_SPEED = 0x400;
+        private static final int FALL_GRAVITY = 0x38;    // MoveSprite.
         private static final int WAIT_FRAMES = 0x10;     // loc_8C46A.
         private static final int RETURN_WAIT = 0x0F;     // loc_8C4A0.
         private static final int CIRCLE_RADIUS = 64;      // loc_8C41E: MoveSprite_CircularSimpleOffset with d2=2.
@@ -274,8 +299,6 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
             if (subtype == 2) {
                 xVelocity = childIndex == 0 ? -SIDE_X_SPEED : SIDE_X_SPEED;
                 waitTimer = RETURN_WAIT;
-            } else {
-                yVelocity = LOWER_Y_SPEED;
             }
         }
 
@@ -289,10 +312,13 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
                 return;
             }
 
-            moveWithVelocity();
-            if (currentY - originY >= 0x80) {
+            if (((currentY - originY) & 0xFFFF) >= 0x80) {
                 enterWait();
                 return;
+            }
+            moveWithGravity();
+            if (yVelocity >= 0) {
+                resolveFloorContact();
             }
         }
 
@@ -319,13 +345,14 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
                     return;
                 }
             } else if (currentY > originY) {
-                currentY = Math.max(originY, currentY - Y_RETURN_STEP);
-                return;
+                int nextY = currentY - Y_RETURN_STEP;
+                if (nextY > originY) {
+                    currentY = nextY;
+                    return;
+                }
             }
             currentX = originX;
             currentY = originY;
-            xSubpixel = 0;
-            ySubpixel = 0;
             state = State.WAIT_GATE;
             parent.armNextChildPhase();
         }
@@ -339,6 +366,25 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
             currentY = yPos24 >> 8;
             xSubpixel = xPos24 & 0xFF;
             ySubpixel = yPos24 & 0xFF;
+        }
+
+        private void moveWithGravity() {
+            moveWithVelocity();
+            yVelocity = (short) (yVelocity + FALL_GRAVITY);
+        }
+
+        private void resolveFloorContact() {
+            TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(
+                    currentX, currentY, 8);
+            if (!floor.hasCollision()) {
+                return;
+            }
+            currentY += floor.distance();
+            if (yVelocity >= 0x100) {
+                yVelocity = -(yVelocity >> 2);
+            } else {
+                enterWait();
+            }
         }
 
         private void spawnVisualChildren() {

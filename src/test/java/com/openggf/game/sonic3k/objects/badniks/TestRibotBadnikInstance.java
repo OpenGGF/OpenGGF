@@ -137,9 +137,11 @@ class TestRibotBadnikInstance {
         rightSphere.update(1, playerAt(0, 0));
         rightSphere.update(2, playerAt(0, 0));
         rightSphere.update(3, playerAt(0, 0));
+        rightSphere.update(4, playerAt(0, 0));
+        rightSphere.update(5, playerAt(0, 0));
 
-        assertTrue(rightSphere.getY() > 0x010C,
-                "loc_8C436 keeps the active hurt sphere extending before it returns");
+        assertEquals(0x010D, rightSphere.getY(),
+                "loc_8C436 uses MoveSprite's $38 gravity while the hurt sphere extends");
     }
 
     private static AbstractObjectInstance createRibot(int subtype) {
@@ -162,6 +164,10 @@ class TestRibotBadnikInstance {
         ObjectManager objectManager = mock(ObjectManager.class);
         when(services.objectManager()).thenReturn(objectManager);
         object.setServices(services);
+        if (object instanceof RibotBadnikInstance) {
+            object.refreshPostCameraRenderState();
+            object.update(-1, playerAt(0, 0));
+        }
         return objectManager;
     }
 
