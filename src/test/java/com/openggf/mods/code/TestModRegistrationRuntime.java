@@ -223,7 +223,7 @@ class TestModRegistrationRuntime {
     public static final class ZoneEntrypoint implements GgfMod {
         @Override public void register(ModContext context) {
             context.registerZone(new ModZoneContribution(
-                    "zone", new BakedLevelRef("level.json"), null, null));
+                    "zone", new BakedLevelRef("level.json"), null, null, false));
         }
     }
 

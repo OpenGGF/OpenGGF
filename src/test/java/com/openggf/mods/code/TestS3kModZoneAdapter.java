@@ -30,7 +30,7 @@ class TestS3kModZoneAdapter {
                 com.openggf.io.ModAssetRoot.forTests("s3k-zone"), null);
 
         assertDoesNotThrow(() -> context.registerZone(new ModZoneContribution(
-                "sky", new BakedLevelRef("level.json"), null, null)));
+                "sky", new BakedLevelRef("level.json"), null, null, false)));
     }
 
     @Test
@@ -40,7 +40,7 @@ class TestS3kModZoneAdapter {
 
         assertThrows(ModRegistrationException.class, () -> context.registerZone(
                 new ModZoneContribution("sky", new BakedLevelRef("level.json"),
-                        "aiz1", null)));
+                        "aiz1", null, false)));
     }
 
     @Test

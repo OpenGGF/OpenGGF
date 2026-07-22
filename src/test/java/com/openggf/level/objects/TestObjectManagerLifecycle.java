@@ -3,6 +3,7 @@ package com.openggf.level.objects;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
+import com.openggf.level.TransitionSstOccupant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -148,7 +149,7 @@ public class TestObjectManagerLifecycle {
     }
 
     @Test
-    public void legacyTransitionSnapshotIsFreshMutableAndDetachedFromManagerStorage() {
+    public void transitionOccupantSnapshotIsFreshMutableAndDetachedFromManagerStorage() {
         ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
         List<ObjectInstance> unloaded = new ArrayList<>();
         ObjectInstance first = new TestInstance(new ObjectSpawn(1, 0, 1, 0, 0, false, 0), true, unloaded);
@@ -157,16 +158,19 @@ public class TestObjectManagerLifecycle {
         manager.addDynamicObject(first);
         manager.addDynamicObject(second);
 
-        List<ObjectInstance> snapshot = manager.snapshotPersistentDynamicObjectsForTransition();
+        List<TransitionSstOccupant> snapshot = manager.snapshotPersistentTransitionOccupants();
         snapshot.sort((left, right) -> Integer.compare(
-                right.getSpawn().objectId(), left.getSpawn().objectId()));
-        snapshot.remove(first);
-        snapshot.add(appended);
+                right.identity().getSpawn().objectId(), left.identity().getSpawn().objectId()));
+        snapshot.removeIf(occupant -> occupant.identity() == first);
+        snapshot.add(new TransitionSstOccupant(appended, -1));
 
-        List<ObjectInstance> freshSnapshot = manager.snapshotPersistentDynamicObjectsForTransition();
-        assertEquals(List.of(first, second), freshSnapshot,
-                "Mutating a compatibility snapshot must not alter ObjectManager storage");
-        assertFalse(freshSnapshot.contains(appended));
+        List<TransitionSstOccupant> freshSnapshot = manager.snapshotPersistentTransitionOccupants();
+        assertEquals(List.of(first, second), freshSnapshot.stream()
+                        .map(TransitionSstOccupant::identity).toList(),
+                "Mutating a transition snapshot must not alter ObjectManager storage");
+        assertEquals(((AbstractObjectInstance) first).getSlotIndex(), freshSnapshot.get(0).originalSlot());
+        assertEquals(((AbstractObjectInstance) second).getSlotIndex(), freshSnapshot.get(1).originalSlot());
+        assertFalse(freshSnapshot.stream().anyMatch(occupant -> occupant.identity() == appended));
     }
 
     @Test
@@ -246,12 +250,13 @@ public class TestObjectManagerLifecycle {
         }
     }
 
-    private static final class TestInstance implements ObjectInstance {
+    private static final class TestInstance extends AbstractObjectInstance {
         private final ObjectSpawn spawn;
         private final boolean persistent;
         private final List<ObjectInstance> unloadedInstances;
 
         private TestInstance(ObjectSpawn spawn, boolean persistent, List<ObjectInstance> unloadedInstances) {
+            super(spawn, "TestInstance");
             this.spawn = spawn;
             this.persistent = persistent;
             this.unloadedInstances = unloadedInstances;

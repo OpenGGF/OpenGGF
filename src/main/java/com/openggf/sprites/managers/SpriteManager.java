@@ -1166,16 +1166,6 @@ public class SpriteManager {
 		drawPreparedUnifiedBucketWithPriority(bucket, gfx, null);
 	}
 
-	/** Compatibility overload for API 1.1 render hooks. */
-	public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx,
-			Runnable beforeLowPriority, Runnable beforeHighPriority) {
-		prepareRenderBucketsForPass();
-		drawPreparedUnifiedBucketWithPriority(bucket, gfx, (ignoredBucket, highPriority) -> {
-			Runnable callback = highPriority ? beforeHighPriority : beforeLowPriority;
-			if (callback != null) callback.run();
-		});
-	}
-
 	/**
 	 * Draws one bucket from the most recent {@link #prepareRenderBucketsForPass()} snapshot.
 	 * Callers must prepare once immediately before their bucket loop and must not mutate

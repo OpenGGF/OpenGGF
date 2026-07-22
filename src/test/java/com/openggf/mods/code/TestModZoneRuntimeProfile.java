@@ -274,7 +274,7 @@ class TestModZoneRuntimeProfile {
         ModLevelDefinition definition = TestS3kModZoneAdapter.definition(
                 2, null, List.of(new ModPaletteClaim(2, 0, 0)));
         ModZoneContribution declared = new ModZoneContribution(
-                "sky", new BakedLevelRef("level.json"), null, eventFactory);
+                "sky", new BakedLevelRef("level.json"), null, eventFactory, false);
         int ordinal = "outer".equals(owner) ? 1 : 0;
         PreparedModZone prepared = new PreparedModZone(
                 owner, "sky", null, definition, eventFactory,

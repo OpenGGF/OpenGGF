@@ -256,7 +256,7 @@ class TestModuleResolutionService {
         PatchOwner.Mod owner = new PatchOwner.Mod("zone-owner");
         PatchOwner dependent = new PatchOwner.Mod("dependent");
         ModZoneContribution declaration = new ModZoneContribution(
-                "sky", new BakedLevelRef("sky/level.json"), null, null);
+                "sky", new BakedLevelRef("sky/level.json"), null, null, false);
         PreparedModZone prepared = new PreparedModZone(
                 "zone-owner", "sky", null, null, null,
                 "SKY", 0x400, 0x40, 0, 0);

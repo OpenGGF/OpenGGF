@@ -17,11 +17,6 @@ public record ModZoneContribution(String localKey, BakedLevelRef level,
         if (insertAfter != null) insertAfter = requireAnchor(insertAfter);
     }
 
-    public ModZoneContribution(String localKey, BakedLevelRef level,
-                               String insertAfter, ZoneEventFactory eventFactory) {
-        this(localKey, level, insertAfter, eventFactory, false);
-    }
-
     public Optional<ZoneEventFactory> optionalEventFactory() {
         return Optional.ofNullable(eventFactory);
     }

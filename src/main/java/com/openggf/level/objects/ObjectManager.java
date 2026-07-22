@@ -1494,21 +1494,9 @@ public class ObjectManager {
     }
 
     /**
-     * Historical Mod API 2.4 view of persistent transition objects.
-     * Slot-aware engine transitions use {@link #snapshotPersistentTransitionOccupants()}.
-     */
-    public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
-        List<ObjectInstance> snapshot = new ArrayList<>();
-        for (TransitionSstOccupant occupant : snapshotPersistentTransitionOccupants()) {
-            snapshot.add(occupant.identity());
-        }
-        return snapshot;
-    }
-
-    /**
      * Captures every live SST-backed occupant for ROM reloads that leave
-     * Object_RAM intact. This is deliberately separate from the legacy
-     * persistent-only carry policy and from the later coordinate-offset scan.
+     * Object_RAM intact. This is deliberately separate from the persistent-only
+     * carry policy and from the later coordinate-offset scan.
      */
     public List<TransitionSstOccupant> snapshotAllLiveSstObjectsForTransition() {
         List<TransitionSstOccupant> snapshot = new ArrayList<>();

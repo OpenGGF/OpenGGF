@@ -799,7 +799,7 @@ class TestArchitecturalSourceGuard {
                 sourceFile.lines().subList(method.startLine() - 1, method.endLine())));
         List<String> forbiddenSignals = List.of(
                 "reloadStandaloneArtForActTransition(",
-                "snapshotPersistentDynamicObjectsForTransition(",
+                "snapshotPersistentTransitionOccupants(",
                 "preserveLevelGamestate()",
                 "showInLevelTitleCard()");
         List<String> violations = forbiddenSignals.stream()
