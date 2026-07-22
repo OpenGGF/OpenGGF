@@ -33,10 +33,12 @@ public class TestSonic1PushBlockObjectInstance {
     }
 
     @Test
-    public void nativeStandingStateReturnsWithoutNewCollisionAfterPlayerBitClears() throws Exception {
+    public void nativeStandingStateUsesGlobalOnObjectBitBeforeReturningToCollision() throws Exception {
         ProbePushBlock block = new ProbePushBlock();
         block.setServices(new StubObjectServices());
         TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x100);
+        player.setCentreY((short) 0x100);
         player.setOnObject(true);
 
         block.nextCheckpointStanding = true;
@@ -47,10 +49,19 @@ public class TestSonic1PushBlockObjectInstance {
                 "Solid_Landed must promote Obj33's native obSolid state to 2");
         assertEquals(1, block.checkpointCalls);
 
-        player.setOnObject(false);
         block.ridingThisBlock = false;
         block.nextCheckpointStanding = false;
         block.update(1, player);
+
+        assertEquals(2, solidState(block),
+                "Obj33 must retain obSolid=2 while another object owns Sonic's global Status_OnObj");
+        assertEquals(1, block.checkpointCalls,
+                "State 2 must use ExitPlatform/MvSonicOnPtfm without a new Solid_ChkCollision");
+
+        player.setOnObject(false);
+        block.ridingThisBlock = false;
+        block.nextCheckpointStanding = false;
+        block.update(2, player);
 
         assertEquals(0, solidState(block),
                 "State 2 must consume the cleared Status_OnObj and return to state 0");
@@ -59,7 +70,7 @@ public class TestSonic1PushBlockObjectInstance {
         assertTrue(block.preservesNativePushLatchAcrossSkippedSolidCheckpoints(),
                 "The skipped state-2 slot must retain Obj33's push-release owner");
 
-        block.update(2, player);
+        block.update(3, player);
 
         assertEquals(2, block.checkpointCalls);
         assertFalse(block.preservesNativePushLatchAcrossSkippedSolidCheckpoints(),

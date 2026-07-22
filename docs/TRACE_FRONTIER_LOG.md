@@ -1,5 +1,74 @@
 # Trace Frontier Log
 
+### 2026-07-22 -- Sonic 1 100% movie chain reaches post-credits title screen
+
+The 225,104-input-frame `sonic1-complete-withemeralds.bk2` efficacy run now
+plays through all ordinary acts, six emerald stages, repeated level arms,
+deaths, the glitch-heavy MZ/SLZ route, Final Zone, the credits, and the return
+to the title screen. `TestS1GhzMazeRoundTripChain` passes with
+`[TRACE-RUN-TAIL] rows=10943 finalMode=TITLE_SCREEN`; the retained tail closes
+the whole-movie gap recorded below rather than stopping at the final gameplay
+segment.
+
+The last Final Zone control-flow blockers were ROM-state mismatches rather
+than trace hydration or route/frame exceptions. Cylinder retraction now keeps
+an exact zero-height top cylinder active until the following subtract borrows,
+matching `subi.l #$20000` plus `bcc`. Plasma balls allocate after the launcher
+slot, matching `FindNextFreeObj` from the launcher's SST cursor instead of the
+boss-parent cursor. The boss's false pushed-roll suppression is restricted to
+the native left-side contact state, preserving the genuine right-side
+frame-3737 roll/bounce. These corrections moved the remaining non-camera FZ
+frontier through frames 1652, 1796, 2197, and 3737 to frame 4735 while allowing
+the chain to complete.
+
+Focused cylinder, boss-contact, boss-graph rewind, plasma-animation, damage,
+escape-cue, FZ event-rewind, and PLC-timing tests pass. The full chain itself
+is also the cross-segment regression check: all earlier level, special-stage,
+death/restart, and transition seams remain traversable before the terminal
+title assertion. Comparator mismatches are still reported diagnostically and
+remain parity work; this result validates end-to-end playback/control-flow,
+not pixel-perfect completion of every segment.
+
+### 2026-07-21 -- Sonic 1 100% movie chain efficacy: recorder fixed; chain reaches second giant-ring frontier
+
+Local uncommitted investigation on `develop` at `6a4c39488`, using
+`docs/BizHawk-2.11-win-x64/Movies/sonic1-complete-withemeralds.bk2` (225,104
+BK2 input frames, six emerald stages, deaths, glitch-heavy MZ/SLZ routing, and
+post-credits return to title). The verified S1 REV01 ROM was supplied through
+`s1.gen` (SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`).
+
+The first v3.15 capture completed but exposed duplicate manifest directory
+tokens for repeated level arms (`ghz2`, `mz1`, `mz2`, etc.), so later arms had
+overwritten earlier trace files. The recorder now shares one counted directory
+token allocator across level and special-stage arms (v3.16), and
+`TraceRunManifest.validate` rejects duplicate directories. A fresh capture
+produced 34 segments, 12 transitions, 34 unique directories, and zero
+metadata/CSV offset or row-count inconsistencies.
+
+The final gameplay segment (`sbz3`) ends at BK2 frame 214,158, while the movie
+contains 225,104 input frames. The remaining 10,946-frame credits/title-screen
+tail is retained in the BK2 but is not represented by the current
+level/special-stage segment model. Supporting that tail is therefore still an
+open part of literal whole-movie playback.
+
+The first chain replay then stopped after the first maze return because S1's ROM
+emits an 800-row, all-lag `Game_Mode == Level` bridge before the stable GHZ2
+gameplay segment. The engine's finer mode model has already settled at the
+stable return by the time `LEVEL` is observable. The generic walker now detects
+same-zone/act continuations whose compared rows are entirely VBlank-only and
+rebinds directly, without waiting for a nonexistent second mode cycle.
+
+Command:
+`mvn "-Dtest=TestS1GhzMazeRoundTripChain" "-Ds1.rom.path=s1.gen" "-Dopenggf.trace.s1.run.dir=tools/bizhawk/trace_output" test`.
+After the bridge fix the chain completed GHZ2 comparison and stopped honestly
+at the second `giant_ring` boundary: the engine did not reproduce the request.
+Segment reports: seg0 GHZ1 = 3,725 errors / 11 lag rows; seg2 bridge = 0 errors /
+799 lag rows / complete; seg3 stable GHZ2 = 23,632 errors / 11 lag rows /
+complete. This is now an engine-parity frontier rather than a recorder/chain
+control-flow failure. The lightweight chain report retains only recent
+mismatches, so a standalone comparator or a future first-mismatch field is
+still needed to identify GHZ2's earliest divergence efficiently.
+
 ### 2026-07-21 -- S3K mega-run chain seg2 (aiz_2) f231 FIXED: broken-monitor respawn state now survives the bonus round-trip
 
 The f231 "phantom wall" root is closed. TRIPLE-PROVEN root (superseding the

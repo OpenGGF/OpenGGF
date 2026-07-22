@@ -130,7 +130,6 @@ public class ObjectManager {
     private boolean activeObjectsCacheDirty = true;
     private final Set<ObjectInstance> deferredDynamicExecThisFrame =
             Collections.newSetFromMap(new IdentityHashMap<>());
-
     // ROM parity: dynamic object slot tracking for the current game's allocatable
     // SST window. S1 uses 32..127, S2 uses 16..127, and S3K uses 4..92.
     // Occupancy/allocation authority; ObjectManager retains execOrder + objectIdInSlot
@@ -534,6 +533,7 @@ public class ObjectManager {
     public void snapshotTouchResponseState() { snapshotTouchResponseState(false); }
 
     public void snapshotTouchResponseState(boolean preservePreviousCollisionResponseList) {
+        solidContacts.clearSameFrameMonitorBreakBounces();
         updateCameraBounds();
         collisionResponseList.setUsePrevious(preservePreviousCollisionResponseList);
         for (ObjectInstance inst : activeObjects.values()) {
@@ -2631,9 +2631,9 @@ public class ObjectManager {
         solidContacts.forceAirOnStaleObjectSupportLoss(player);
     }
 
-    public boolean hasPendingStaleObjectSupportLoss(PlayableEntity player) {
-        return solidContacts.hasPendingStaleObjectSupportLoss(player);
-    }
+    public boolean hasPendingStaleObjectSupportLoss(PlayableEntity player) { return solidContacts.hasPendingStaleObjectSupportLoss(player); }
+
+    public ObjectSolidContactController solidContacts() { return solidContacts; }
 
     /**
      * Preserves a non-solid object's ownership of the player's on-object state for the

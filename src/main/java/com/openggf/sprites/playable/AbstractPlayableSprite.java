@@ -2631,7 +2631,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // the full height difference (e.g. 10 for Sonic), which when subtracted from
                 // yPixel produces the same centreY shift as the ROM's radius-based subtraction.
                 boolean wasRolling = getRolling();
+                int nativeXBeforeRadiusChange = getCentreX();
                 setRolling(false);
+                // A wall-mode box resize must not shift the ROM x_pos word.
+                if (wasRolling) setCentreXPreserveSubpixel((short) nativeXBeforeRadiusChange);
                 GameRules currentRules = getGameRules();
                 boolean restoresSplitSidekickRadii = !(this instanceof Tails)
                                 || currentRules == null || currentRules.sidekickCpu() == null

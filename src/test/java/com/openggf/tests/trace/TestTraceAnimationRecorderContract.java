@@ -64,6 +64,40 @@ class TestTraceAnimationRecorderContract {
     }
 
     @Test
+    void s1CompleteRunRecorderDisambiguatesEveryRepeatedSegmentDirectory() throws IOException {
+        String script = Files.readString(TOOLS.resolve("s1_complete_run_recorder.lua"));
+        assertTrue(script.contains("function next_segment_dir_token(base_token)"));
+        assertTrue(script.contains("local dir_token = next_segment_dir_token(\"ss\")"));
+        assertTrue(script.contains(
+                "local dir_token = next_segment_dir_token(start_zone_name .. tostring(start_act + 1))"));
+        assertTrue(script.contains("\"lua_script_version\": \"3.17\""));
+    }
+
+    @Test
+    void s1CompleteRunRecorderCanCaptureFocusedFinalZoneRngCalls() throws IOException {
+        String script = Files.readString(TOOLS.resolve("s1_complete_run_recorder.lua"));
+
+        assertTrue(script.contains("OGGF_S1_RNG_CALL_RANGE"));
+        assertTrue(script.contains("ADDR_RANDOM_NUMBER = 0x0029AC"));
+        assertTrue(script.contains("event.onmemoryexecute(S1_RNG_CALLS.record_hit, ADDR_RANDOM_NUMBER)"));
+        assertTrue(script.contains("S1_RNG_CALLS.flush()"));
+        assertTrue(script.contains("rng_call_per_frame"));
+        assertTrue(script.contains("OGGF_TRACE_SOURCE_BK2"));
+        assertTrue(script.contains("\"lua_script_version\": \"3.17\""));
+    }
+
+    @Test
+    void fastBizHawkWrapperDelegatesOneShotInitializationToRecorder() throws IOException {
+        String generator = Files.readString(TOOLS.resolve("prepare_bizhawk_fast_lua.ps1"));
+
+        assertTrue(generator.contains("dofile(target)"));
+        assertTrue(!generator.contains("pcall(client.invisibleemulation, true)"),
+                "The validated recorder owns the single run-level invisible-emulation call");
+        assertTrue(!generator.contains("event.onframestart(apply_openggf_fast_headless"),
+                "Repeated invisibleemulation calls can stall explicit frameadvance recorders");
+    }
+
+    @Test
     void allCommittedGameplayFixturesCarryV7AnimationCsv() throws IOException {
         Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 10);
         for (Map.Entry<String, Integer> entry : expectedCounts.entrySet()) {

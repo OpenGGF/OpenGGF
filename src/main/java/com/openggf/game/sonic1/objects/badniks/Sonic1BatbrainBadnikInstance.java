@@ -332,7 +332,13 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
         // ObjHitCeiling: check ceiling collision
         // ROM ObjHitCeiling probes at (x, y - obHeight) upward.
         // Returns d1 = distance to ceiling (negative = hit).
-        TerrainCheckResult result = ObjectTerrainUtils.checkCeilingDist(currentX, currentY, Y_RADIUS);
+        // ObjHitCeiling enters FindFloor after EOR #$F on the probe Y. Use the
+        // native upward path so its distance is not shifted by the legacy
+        // surfaceY = tileTop + metric - 1 convention. That one-pixel shift
+        // leaves a rehung Batbrain one pixel too high and can delay its next
+        // fall-to-flight transition by a frame.
+        TerrainCheckResult result = ObjectTerrainUtils.checkNativeUpwardCeilingDist(
+                currentX, currentY, Y_RADIUS);
         if (result.foundSurface() && result.distance() < 0) {
             // Hit ceiling: snap position and reset
             // ROM: sub.w d1,obY(a0) -> obY -= d1 (d1 is negative, so pushes down)
@@ -341,8 +347,6 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
             currentX = currentX & 0xFFF8;
             xVelocity = 0;
             yVelocity = 0;
-            motionState.xSub = 0;
-            motionState.ySub = 0;
             setAnimation(ANIM_STILL);
             state = STATE_DROP_CHECK;
         }
@@ -368,14 +372,15 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
 
     /**
      * SpeedToPos: Apply X and Y velocity to position with subpixel precision.
-     * ROM SpeedToPos adds 16-bit velocity (subpixels) to 16.8 position.
+     * ROM SpeedToPos sign-extends the 16-bit velocity, shifts it by 8, and
+     * adds it to the object's 16.16 position longword.
      */
     private void applyVelocity() {
         motionState.x = currentX;
         motionState.y = currentY;
         motionState.xVel = xVelocity;
         motionState.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motionState);
+        SubpixelMotion.speedToPos(motionState);
         currentX = motionState.x;
         currentY = motionState.y;
     }

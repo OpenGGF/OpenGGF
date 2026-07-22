@@ -1119,7 +1119,12 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                 } else if (child.skipsSameFrameUpdateAfterSpawn()) {
                     om.addDynamicObjectAfterCurrentNextFrame(child);
                 } else {
-                    om.addDynamicObjectAfterCurrent(child);
+                    if (getSlotIndex() >= 0) {
+                        om.addDynamicObjectAfterSlot(child, getSlotIndex());
+                    } else {
+                        // Isolated tests and unmanaged helpers have no SST identity.
+                        om.addDynamicObjectAfterCurrent(child);
+                    }
                 }
             }
             return child;

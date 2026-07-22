@@ -663,12 +663,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int elapsed = frameCounter - sparkleStart;
         // ROM parity: Ani_Ring sparkle uses its own delay byte (5 in S1 = 6 VBlanks/frame
         // via AnimateSprite), distinct from SynchroAnimate's spin rate (8 VBlanks/frame).
-        // After sparkleFrameCount frames × sparkleDelay VBlanks, the afRoutine command
-        // fires but the ring still displays for one more frame (DisplaySprite runs).
-        // Ring_Delete runs on the NEXT frame, calling DeleteObject to free the SST slot.
-        // Total duration: sparkleFrameCount * sparkleDelay + 1.
+        // sparkleStart is the first Ring_Sparkle execution, rather than the
+        // ReactToItem collection frame. At frameCount × delay executions the
+        // next Ring_Delete dispatch frees the SST slot on this update.
         int sparkleDelay = renderer.getSparkleFrameDelay();
-        int totalDuration = renderer.getSparkleFrameCount() * sparkleDelay + 1;
+        int totalDuration = renderer.getSparkleFrameCount() * sparkleDelay;
         return elapsed >= totalDuration;
     }
 

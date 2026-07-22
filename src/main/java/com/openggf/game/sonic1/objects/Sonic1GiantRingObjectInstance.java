@@ -64,6 +64,7 @@ public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
     private enum State {
         INIT,       // Routine 0: checking prerequisites
         ACTIVE,     // Routine 2: animating with collision
+        COLLECT_PENDING, // ReactToItem advanced obRoutine; own slot has not run yet
         COLLECTED,  // Routine 4→2: flash spawned, collision cleared
         DELETED     // Routine 6: pending removal
     }
@@ -84,6 +85,10 @@ public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case INIT -> updateInit(player);
+            case COLLECT_PENDING -> {
+                collect(player);
+                updateAnimate();
+            }
             case ACTIVE, COLLECTED -> updateAnimate();
             case DELETED -> setDestroyed(true);
         }
@@ -170,7 +175,11 @@ public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        collect(player);
+        // ReactToItem only adds 2 to obRoutine. GRing_Collect executes later,
+        // when ExecuteObjects reaches the giant ring's own SST slot. Deferring
+        // the body preserves FindFreeObj ordering: a flash allocated into an
+        // already-visited lower slot begins on the following frame.
+        state = State.COLLECT_PENDING;
     }
 
     /**

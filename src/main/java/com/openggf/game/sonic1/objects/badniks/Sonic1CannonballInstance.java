@@ -177,7 +177,10 @@ public class Sonic1CannonballInstance extends AbstractObjectInstance
         // tst.w obVelY(a0) / bmi.s Cbal_ChkExplode (tests POST-gravity velocity)
         if (yVelocity >= 0) {
             // Only check floor when moving downward
-            TerrainCheckResult floorResult = ObjectTerrainUtils.checkFloorDist(currentX, currentY, 7);
+            // ObjFloorDist returns the angle after FindFloor applies the chunk's H/V flips.
+            // Cannonball consumes the sign of d3 to choose its horizontal bounce direction.
+            TerrainCheckResult floorResult = ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(
+                    currentX, currentY, 7);
 
             // tst.w d1 / bpl.s Cbal_ChkExplode
             if (floorResult.foundSurface() && floorResult.distance() < 0) {

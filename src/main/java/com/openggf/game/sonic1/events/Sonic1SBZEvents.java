@@ -5,7 +5,6 @@ import com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
-import com.openggf.game.GameServices;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectSpawn;
 
@@ -39,6 +38,8 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
 
     // Guard against re-triggering the SBZ3->FZ transition during fade
     private boolean fzTransitionRequested;
+    private final Sonic1FzPlcTimingQueue fzPlcTiming = new Sonic1FzPlcTimingQueue();
+    private boolean fzPlcTimingInitialized;
 
     Sonic1SBZEvents() {
     }
@@ -47,10 +48,16 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
     void init() {
         super.init();
         fzTransitionRequested = false;
+        fzPlcTiming.clear();
+        fzPlcTimingInitialized = false;
     }
 
     boolean isFzTransitionRequested() { return fzTransitionRequested; }
     void setFzTransitionRequested(boolean v) { fzTransitionRequested = v; }
+    int getFzPlcFramesRemaining() { return fzPlcTiming.framesRemaining(); }
+    void setFzPlcFramesRemaining(int frames) { fzPlcTiming.restoreFramesRemaining(frames); }
+    boolean isFzPlcTimingInitialized() { return fzPlcTimingInitialized; }
+    void setFzPlcTimingInitialized(boolean initialized) { fzPlcTimingInitialized = initialized; }
 
     @Override
     void update(int act) {
@@ -67,6 +74,13 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
      * which is safe because init() resets it on each level load.
      */
     void updateFZ() {
+        if (!fzPlcTimingInitialized) {
+            fzPlcTiming.resetForFinalZoneGameplay();
+            fzPlcTimingInitialized = true;
+        }
+        // RunPLC/ProcessPLC completes during the preceding VBlank; expose that
+        // result before this frame's DynamicLevelEvents and ExecuteObjects reads.
+        fzPlcTiming.tickVBlank();
         updateFinalZone();
     }
 
@@ -277,10 +291,7 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
         if (camX >= (BOSS_FZ_X - 0x308)) {
             // addq.b #2,(v_dle_routine).w
             eventRoutine += 2;
-
-            // TODO: preload FZ boss pattern PLC here. The boss instance still
-            // loads its runtime art, but the ROM requests the patterns at this
-            // dynamic-level-event boundary.
+            fzPlcTiming.enqueueFzBossCue();
         }
 
         // loc_72F4: bra.s loc_72C2 - lock left boundary
@@ -303,7 +314,7 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
                     BOSS_FZ_X + 0x160, BOSS_FZ_Y + 0x80,
                     Sonic1ObjectIds.FZ_BOSS, 0, 0, false, 0);
             lm.getObjectManager().addDynamicObject(
-                    new Sonic1FZBossInstance(bossSpawn));
+                    new Sonic1FZBossInstance(bossSpawn, fzPlcTiming.framesRemaining()));
             gameState().setCurrentBossId(Sonic1ObjectIds.FZ_BOSS);
 
             // addq.b #2,(v_dle_routine).w

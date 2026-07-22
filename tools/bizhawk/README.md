@@ -572,6 +572,18 @@ Any surprise in these prints means re-verify the RAM table before committing the
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.
 
+## Recorder capability parity follow-up
+
+Treat `s1_complete_run_recorder.lua` as the current reference bar for recorder
+ergonomics and resilience: repeated-segment naming, multi-mode run manifests,
+direct BK2 input alignment, periodic metadata rewrites, lag and object-state
+diagnostics, self-check summaries, movie-end finalization, and fast-headless
+operation through the shared launcher. Audit the S1/S2/S3K single-segment and
+complete-run recorders against that capability list before the next recorder
+schema uplift. Game-specific RAM fields may differ; lifecycle safety,
+reporting quality, truthful source-movie metadata, and launch behavior should
+not.
+
 For trace recording, use the `record_*_trace.bat` wrappers. They route through
 `run_bizhawk_lua.bat`, which means recorder regeneration gets the same generated
 no-audio config, fast Lua wrapper, and invisible-emulation mode as one-off

@@ -146,6 +146,47 @@ public interface TitleCardProvider {
     }
 
     /**
+     * Returns whether the engine's already-loaded level objects should execute
+     * during the locked title-card phase.
+     *
+     * <p>This is distinct from whether the native game calls its generic object
+     * dispatcher while the card is visible. Sonic 1's
+     * {@code Level_TtlCardLoop} does call {@code ExecuteObjects}, but object RAM
+     * still contains the title-card objects at that point. {@code ObjPosLoad}
+     * populates the level objects only after the wait loop, immediately before
+     * the one pre-gameplay {@code ExecuteObjects} pass. The engine renders title
+     * cards through this provider instead of putting them in level object RAM,
+     * so advancing {@code ObjectManager} during that wait would incorrectly age
+     * the level objects.
+     */
+    default boolean shouldRunLevelObjectsDuringLockedPhase() {
+        return true;
+    }
+
+    /**
+     * Number of object-only passes to run immediately before the title card
+     * releases into the first normal level frame.
+     *
+     * <p>Sonic 1 performs {@code ObjPosLoad} and one {@code ExecuteObjects}
+     * pass after the title-card wait and before {@code Level_MainLoop}. The
+     * engine's title-card renderer does not occupy native object RAM, so this
+     * explicit handoff pass reproduces that otherwise-missing lifecycle step.
+     */
+    default int levelObjectPreludePassesAtRelease() {
+        return 0;
+    }
+
+    /**
+     * Whether each release prelude pass also dispatches the playable slots.
+     * Sonic 1's native {@code ExecuteObjects} includes Sonic in slot 0 before
+     * the first {@code Level_MainLoop}; engines that split players from level
+     * objects must opt that half of the dispatch back in explicitly.
+     */
+    default boolean shouldRunPlayerPreludeAtRelease() {
+        return false;
+    }
+
+    /**
      * Resets the manager state.
      */
     void reset();

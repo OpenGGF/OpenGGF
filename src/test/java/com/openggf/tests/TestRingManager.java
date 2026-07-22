@@ -67,10 +67,10 @@ public class TestRingManager {
         assertEquals(0, ringManager.getSparkleStartFrame(spawn));
         assertTrue(ringManager.isRenderable(spawn, 1));
 
-        assertFalse(ringManager.isRenderable(spawn, 2));
-        assertFalse(ringManager.isCollectedAndSparkleDone(spawn, 2),
+        assertFalse(ringManager.isCollectedAndSparkleDone(spawn, 1),
                 "Ani_Ring's afRoutine has not reached Ring_Delete until the next object update");
-        assertTrue(ringManager.isCollectedAndSparkleDone(spawn, 3));
+        assertTrue(ringManager.isCollectedAndSparkleDone(spawn, 2));
+        assertFalse(ringManager.isRenderable(spawn, 2));
     }
 
     @Test
@@ -333,9 +333,9 @@ public class TestRingManager {
         assertEquals(1, player.getRingCount());
         assertEquals(2, ringManager.getSparkleStartFrame(spawn),
                 "S1 Obj25 Ring_Sparkle starts on the next object execution after ReactToItem collection");
-        assertFalse(ringManager.isCollectedAndSparkleDone(spawn, 4),
+        assertFalse(ringManager.isCollectedAndSparkleDone(spawn, 3),
                 "Ring_Delete has not run while the deferred Obj25 sparkle cadence is still one frame short");
-        assertTrue(ringManager.isCollectedAndSparkleDone(spawn, 5),
+        assertTrue(ringManager.isCollectedAndSparkleDone(spawn, 4),
                 "Ring_Delete frees the Obj25 slot after Ani_Ring's afRoutine frame has displayed");
     }
 

@@ -86,6 +86,17 @@ class TestTraceRunManifest {
     }
 
     @Test
+    void rejectsDuplicateSegmentDirectories(@TempDir Path dir) throws IOException {
+        String bad = VALID_MANIFEST.replace("\"dir\": \"seg02_aiz\"", "\"dir\": \"seg00_aiz\"");
+        Path manifest = writeRun(dir, bad, "seg00_aiz", "seg01_gumball");
+        TraceRunManifest run = TraceRunManifest.load(manifest);
+        IllegalStateException ex =
+            assertThrows(IllegalStateException.class, () -> run.validate(dir));
+        assertTrue(ex.getMessage().contains("duplicate segment directory"), ex.getMessage());
+        assertTrue(ex.getMessage().contains("seg00_aiz"), ex.getMessage());
+    }
+
+    @Test
     void rejectsMissingSegmentDir(@TempDir Path dir) throws IOException {
         Path manifest = writeRun(dir, VALID_MANIFEST, "seg00_aiz", "seg02_aiz"); // seg01 missing
         TraceRunManifest run = TraceRunManifest.load(manifest);

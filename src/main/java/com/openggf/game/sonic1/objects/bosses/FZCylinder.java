@@ -280,7 +280,10 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
             extensionFixed -= 0x20000;
 
             // ROM: bcc.s locret — check for underflow past zero
-            if (extensionFixed <= 0) {
+            // ROM uses SUBI.L followed by BCC. Reaching exactly zero from a
+            // positive accumulator has no borrow and stays in routine 4; only
+            // the following subtraction across zero completes the retraction.
+            if (extensionFixed < 0) {
                 extensionFixed = 0;
                 active = false;
                 drivesBossPosition = false;
