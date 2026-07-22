@@ -994,6 +994,44 @@ class TestS3kIczEndBossObject {
     }
 
     @Test
+    void matureFrostPuffPublishesCaptureAtCurrentSolidCheckpoint() throws Exception {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));
+        AbstractObjectInstance object = (AbstractObjectInstance) instance;
+        RecordingServices services = new RecordingServices();
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
+        services.camera.setX((short) 0x4390);
+        services.camera.setY((short) 0x05F8);
+        object.setServices(services);
+
+        int activePuff = -1;
+        int nextFrame = 1;
+        for (; nextFrame <= 720 && activePuff < 0; nextFrame++) {
+            instance.update(nextFrame, player);
+            int puffCount = invokeInt(instance, "getFrostPuffCountForTesting");
+            for (int i = 0; i < puffCount; i++) {
+                int puffFrame = invokeInt(instance, "getFrostPuffFrameForTesting", i);
+                boolean active = (Boolean) instance.getClass()
+                        .getMethod("isFrostPuffCaptureActiveForTesting", int.class)
+                        .invoke(instance, i);
+                if (active && puffFrame < 0x10) {
+                    activePuff = i;
+                    break;
+                }
+            }
+        }
+        assertTrue(activePuff >= 0);
+
+        bindPlayerToFrostPuff(instance, player, activePuff);
+        instance.update(nextFrame, player);
+        publishBossSolidContact(instance, player, nextFrame);
+
+        assertTrue(frozenPlayerBlockCount(services) > 0,
+                "A loc_7205E child already inside raw anim_frame 4..8 runs sub_8A9C6 in its current later-slot pass");
+    }
+
+    @Test
     void frostPuffRangeTableUsesStartOffsetPlusExtent() throws Exception {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));

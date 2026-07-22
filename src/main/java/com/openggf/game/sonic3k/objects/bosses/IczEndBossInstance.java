@@ -740,13 +740,14 @@ public final class IczEndBossInstance extends AbstractBossInstance
             if (candidate instanceof AbstractPlayableSprite sprite && canFrostCapture(sprite, child)) {
                 boolean beforeBottomSolid = child.nativeSlot >= 0
                         && child.nativeSlot < bottomStructuralChildSlot();
-                // loc_72092 is the adjusted-position top-steam routine. Once
-                // its slot is at/after the bottom-child checkpoint, its
-                // sub_8A9C6 capture belongs to this pass. The ordinary
-                // loc_7205E folded smoke animation remains one parent pass
-                // ahead and retains the existing pending promotion.
+                // Native children at/after the bottom structural child run
+                // after its SolidObjectFull call, so their sub_8A9C6 capture
+                // belongs to this pass when the native-visible animation was
+                // already in its active range before the folded child update.
+                // A transition into that range is one folded parent pass ahead
+                // of the native child and retains the pending promotion.
                 queueFrostCapture(index, child.x, child.nativeSlot,
-                        beforeBottomSolid, child.adjustedPosition && !beforeBottomSolid);
+                        beforeBottomSolid, child.captureWasActiveBeforeUpdate && !beforeBottomSolid);
             }
         }
     }
@@ -1768,6 +1769,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         private boolean flipX;
         private boolean flipY;
         private boolean finished;
+        private boolean captureWasActiveBeforeUpdate;
         private int nativeSlot;
 
         private EffectChild(int baseDx, int baseDy, int[][] script, EffectAnchor anchor) {
@@ -1816,6 +1818,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
 
         private void update(AnchorPoint anchor) {
+            captureWasActiveBeforeUpdate = isCaptureActive();
             int dx = adjustedPosition && anchor.flipX() ? -baseDx : baseDx;
             int dy = adjustedPosition && anchor.flipY() ? -baseDy : baseDy;
             x = anchor.x() + dx;

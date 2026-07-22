@@ -48736,3 +48736,23 @@ standalone CNZ remains at f0 in both scopes.
   verifies the full 32-ring cap plus distinct continued countdown phases. The
   replay restores the second post-boss pickup; both groups next diverge at
   f24184 on CPU Tails' boss interaction.
+
+## 2026-07-22 - ICZ folded frost animation entry phase
+
+- **`s3k_icz1` physics and animation advanced from f24184 to f24374.** Total
+  errors fell from 140 to 60; the focused ICZ end-boss suite remains green.
+- Root: the folded parent updated each frost child's raw animation before
+  testing its overlap. Most earlier captures first entered native
+  `anim_frame` 4 on that update and correctly needed the existing one-pass
+  promotion, but the ordinary puff overlapping Tails at f24184 had entered the
+  capture range on its prior pass. Deferring that already-mature later-slot
+  child let Tails move for one extra frame.
+- Fix: each folded frost child now preserves whether it was capture-active at
+  object-entry. A mature child whose projected SST slot follows the bottom
+  solid child publishes `sub_8A9C6` through the current solid checkpoint; a
+  child that only becomes active during the folded update retains the pending
+  promotion that matches its native animation entry.
+- Validation: focused coverage requires a mature ordinary puff to freeze from
+  its current later-slot pass. The replay also revalidates the earlier f23327
+  and f23711 first-active-frame deferrals; both groups next diverge at f24374
+  on the post-boss camera X position.
