@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ ride-grapple capture and zero-length sway
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 13473 to
+  frame 14074.** The next divergence is Sonic's mapping frame (`$37` expected
+  versus `$3B` actual).
+- Root: the capture branch at `loc_267B2` writes the parent grapple's
+  `x_pos/y_pos`, while only the already-held branch follows the child handle.
+  The engine followed the handle immediately. In addition, native
+  `loc_2684C` clears angle, sway velocity, and X velocity on every zero-length
+  chain dispatch before applying the current sway step; the engine only reset
+  when a retracting chain first reached zero, accumulating an invisible stale
+  angle before the next capture.
+- Fix: capture now snaps to the parent SST for its first dispatch, and every
+  empty zero-length pass resets the sway/movement state before coordinate
+  accumulation. Focused tests cover the distinct capture coordinate and the
+  repeated zero-length reset.
+- Validation: all 10 focused ride-grapple tests pass and the LBZ replay reaches
+  frame 14074. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - LBZ Snale Blaster lower-child subtype
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 13023 to

@@ -183,9 +183,13 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
             if (chainExtension != CHAIN_EXTENSION_MAX) {
                 chainExtension++;
             }
-        } else if (chainExtension != 0) {
-            chainExtension--;
+        } else {
+            if (chainExtension != 0) {
+                chainExtension--;
+            }
             if (chainExtension == 0) {
+                // loc_2684C runs on every zero-length dispatch, not only the
+                // frame where a retracting chain reaches zero.
                 angle = 0;
                 swayReturning = false;
                 swayVelocity = 0;
@@ -308,7 +312,10 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        snapHeldPlayer(player);
+        // loc_267B2 captures at the parent SST's x_pos/y_pos. Only the already
+        // grabbed path at loc_2673E follows the child multisprite handle.
+        NativePositionOps.writeXPosPreserveSubpixel(player, motion.x);
+        NativePositionOps.writeYPosPreserveSubpixel(player, motion.y + PLAYER_HANG_Y_OFFSET);
         player.setAnimationId(Sonic3kAnimationIds.HANG2);
         player.setSpindash(false);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);

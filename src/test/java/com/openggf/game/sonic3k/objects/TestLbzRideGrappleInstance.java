@@ -50,7 +50,7 @@ class TestLbzRideGrappleInstance {
                 "object_control=3 suppresses normal movement while the grapple owns positioning");
         assertEquals(0x1800, player.getCentreX() & 0xFFFF);
         assertEquals(0x0624, player.getCentreY() & 0xFFFF,
-                "loc_2673E snaps player y_pos to handle y_pos+$24");
+                "loc_267B2 snaps the capture frame to the parent y_pos+$24");
         assertEquals(Sonic3kAnimationIds.HANG2.id(), player.getAnimationId(),
                 "loc_267F8 writes anim=$14 on capture");
         assertEquals(0x91, player.getMappingFrame(),
@@ -60,6 +60,39 @@ class TestLbzRideGrappleInstance {
         assertEquals(0, player.getXSpeed());
         assertEquals(0, player.getYSpeed());
         assertEquals(0, player.getGSpeed());
+    }
+
+    @Test
+    void captureFrameUsesParentPositionBeforeFollowingHandle() throws ReflectiveOperationException {
+        LbzRideGrappleInstance grapple = (LbzRideGrappleInstance) grapple(0x1800, 0x0600, 0x80);
+        writeInt(grapple, "chainExtension", 0x28);
+        writeInt(grapple, "angle", 0x1000);
+        invokeUpdateChainCoordinates(grapple);
+        assertTrue(readInt(grapple, "handleX") != 0x1800,
+                "test setup must place the swaying handle away from the parent");
+        TestablePlayableSprite player = playerAt(0x1800, 0x0620);
+
+        grapple.update(0, player);
+
+        assertEquals(0x1800, player.getCentreX() & 0xFFFF,
+                "loc_267B2 writes parent x_pos on the capture dispatch");
+        assertEquals(0x0624, player.getCentreY() & 0xFFFF,
+                "loc_267B2 writes parent y_pos+$24 before loc_2673E follows the handle next frame");
+    }
+
+    @Test
+    void emptyZeroLengthChainClearsIdleSwayEveryDispatch() throws ReflectiveOperationException {
+        LbzRideGrappleInstance grapple = (LbzRideGrappleInstance) grapple(0x1800, 0x0600, 0);
+        writeInt(grapple, "angle", 0x1000);
+        writeInt(grapple, "swayVelocity", 0x0200);
+        ((SubpixelMotion.State) readField(grapple, "motion")).xVel = 0x0100;
+
+        grapple.update(0, null);
+
+        assertEquals(0x40, readInt(grapple, "angle"),
+                "loc_2684C clears stale angle before the current dispatch applies its first sway step");
+        assertEquals(0x40, readInt(grapple, "swayVelocity"));
+        assertEquals(0, ((SubpixelMotion.State) readField(grapple, "motion")).xVel);
     }
 
     @Test

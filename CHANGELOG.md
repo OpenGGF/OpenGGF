@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ ride grapples now capture players at the parent SST position before following the handle child, and reset stale sway state on every zero-length chain dispatch. This restores the native first-link position and advances the combined LBZ frontier from frame 13473 to frame 14074 without regressing another trace frontier.
 - Fix: LBZ Snale Blasters now derive the lower shooter's alternate firing script and vertical projectile direction from its native child subtype rather than the placed parent subtype. This removes a duplicate short-cadence projectile, restores Sonic's recorded badnik defeat, and advances the combined LBZ frontier from frame 13023 to frame 13473 without regressing another trace frontier.
 - Fix: LBZ ride grapples now seed their chain and handle accumulation from the complete 16.16 parent position, preserving `MoveSprite2` subpixel carry through the native circular-coordinate routine. This advances the combined LBZ frontier from frame 12111 to frame 13023 without regressing another trace frontier.
 - Fix: S3K Orbinauts now preserve the hidden `Obj_WaitOffscreen` continuation while child-slot materialization is deferred, including the parent's subpixel movement, the child graph's circular phase, and each child's setup-to-movement callback handoff. This restores both recorded LBZ Orbinaut contacts and advances the combined frontier from frame 11697 to frame 12111 without regressing another trace frontier.
