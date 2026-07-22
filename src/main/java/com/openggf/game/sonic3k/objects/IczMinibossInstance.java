@@ -346,6 +346,9 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                 new S3kSharedBossCameraGate.LockBounds(
                         arenaAnchorY, arenaAnchorY, arenaAnchorX, arenaAnchorX),
                 BOSS_GATE_FADE_TIME);
+        if (services.camera() != null) {
+            services.camera().setMaxYTarget((short) arenaAnchorY);
+        }
     }
 
     private boolean isCameraInRouteRange(ObjectServices services) {

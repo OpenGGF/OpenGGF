@@ -48066,3 +48066,20 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczMinibossObject` is green (20 tests). The complete-run
   replay remains red at f12700 on Tails' pit-boundary transition; the committed
   comparison data remains read-only.
+
+## 2026-07-21 - ICZ miniboss vertical gate advances both frontiers
+
+- **`s3k_icz1` physics and animation advanced from f12700 to f13205.** Total
+  errors fell from 2,317 to 2,239: 1,930 physics and 309 animation.
+- Root: ICZ's boss gate lowers `Camera_target_max_Y_pos` while the live maximum
+  remains the word read by `Tails_Check_Screen_Boundaries`. The engine's camera
+  easing is a separated phase, so the vertical target must be staged during the
+  initialization pass for the next playable dispatch to observe the same live
+  death plane. S3K's sidekick-bound mirror also incorrectly widened that plane
+  with `max(current,target)` instead of retaining `Camera_max_Y_pos` itself.
+- Fix: the miniboss initialization stages only its vertical resize target; its
+  X-following `loc_85CA4` write remains deferred to the next dispatch. The S3K
+  level-event mirror now publishes the live maximum-Y word to CPU sidekicks
+  (`docs/skdisasm/sonic3k.asm:149699-149734,180548-180575,28409-28445`).
+- Validation: the 20-case miniboss suite and two-case S3K sidekick-bound suite
+  pass. The complete-run replay remains red at f13205 on miniboss/player motion.

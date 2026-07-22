@@ -413,7 +413,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         int minX = camera.getMinX();
         int maxX = camera.getMaxX();
-        int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget());
+        // Tails_Check_Screen_Boundaries reads Camera_max_Y_pos directly;
+        // Camera_target_max_Y_pos is only the resize destination and must not
+        // loosen the current-frame sidekick death plane.
+        int maxY = camera.getMaxY();
         for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (sidekick.getCpuController() != null) {
                 sidekick.getCpuController().setLevelBounds(minX, maxX, maxY);
