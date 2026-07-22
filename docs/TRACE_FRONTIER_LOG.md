@@ -48498,3 +48498,20 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczEndBossObject` verifies the 67-step `$43` result and
   the complete-run replay passes f23192. The next physics mismatch is Sonic Y
   at f23193; animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss routine-2 ride phase
+
+- **`s3k_icz1` physics advanced from f23193 to f23232; animation remains at
+  f23321.** Total errors fell from 772 to 664; the focused end-boss suite
+  remains green.
+- Root: after `loc_71F1E` returns the bottom child to routine 2, the folded
+  engine object still publishes parent-driven whole-pixel child movement before
+  the shared continued-rider pass. Restricting the correction to active `$43`
+  shifts left routine-2 parent movement one pixel ahead on crossing frames.
+- Fix: continued riding now uses the bottom child's actual signed published
+  displacement in both routine 4 and routine 2. The terminal shift is retained,
+  so the engine child also reaches the native final `$43=$43` surface. No trace
+  state is read or applied.
+- Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
+  former f23193 steady-state mismatch. The next physics mismatch is CPU Tails Y
+  at f23232; animation first diverges at f23321.

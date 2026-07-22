@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ end-boss routine-2 riding now continues to compensate from every published bottom-child whole-pixel displacement after the terminal `$43` step, keeping parent-only fixed-point motion on the child SST phase. This advances complete-run physics from frame 23193 to frame 23232 while animation remains at frame 23321.
 - Fix: ICZ end-boss structural-child shifts now execute the terminal routine-4 displacement before `$42` underflows to −1, and the same-pass ride correction observes that terminal move. This advances complete-run physics from frame 23192 to frame 23193 while animation remains at frame 23321.
 - Fix: ICZ end-boss continued riding now corrects folded-child placement from the bottom child's actual signed whole-pixel displacement instead of inferring it from the parent alone. This advances complete-run physics from frame 23191 to frame 23192 while animation remains at frame 23321.
 - Fix: ICZ end-boss rider carry now uses the parent slot's saved pre-update X and composes the bottom child's `$43` step with the parent's signed whole-pixel Y transition. This advances complete-run physics from frame 23189 to frame 23191 while animation remains at frame 23321.
