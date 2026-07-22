@@ -1,6 +1,9 @@
-# Exactly 73 post-develop-merge reds are deferred; every non-comment line is one normalized classname#testcase.name identity.
+# Operational exclusion ledger: exactly 72 reds remain deferred; every non-comment line is one normalized classname#testcase.name identity.
+# The immutable post-develop-merge baseline contained 73 deferred reds. One former entry,
+# com.openggf.game.sonic3k.objects.TestFbzObjectRewind#pendingActTransitionRoundTripsAcrossLevelEventAndZoneRuntimeOwners,
+# is now green and is intentionally absent from this current exact ledger.
 # MHZ owner: 51 reds across unfinished events, cutscene graph, traversal objects, and boss support.
-# FBZ owner: 22 reds across unfinished route, transition, compatibility, rewind, and evidence-tooling coverage.
+# FBZ owner: 21 remaining reds across unfinished route, transition, compatibility, and evidence-tooling coverage.
 # Cross-cutting guards remain in scope even when their diagnostics mention MHZ or FBZ.
 com.openggf.game.rewind.TestS3kMhzSwingBarLiveRewind#horizontalSwingBarHangStateSurvivesRewindRestore
 com.openggf.game.sonic3k.events.TestSonic3kMHZEvents#act1MinibossRepeatSkipsObjectsWithoutExplicitRepeatParticipation
@@ -13,7 +16,6 @@ com.openggf.game.sonic3k.events.TestSonic3kMHZEvents#act2EndBossSpecialEventClea
 com.openggf.game.sonic3k.events.TestSonic3kMHZEvents#act2EndBossSpecialEventOpensEscapeAfterBossRestoreSignal
 com.openggf.game.sonic3k.events.TestSonic3kMHZEvents#act2EndBossSpecialEventWrapsRepeatingArenaAtRomThreshold
 com.openggf.game.sonic3k.objects.TestFbzAct1RouteHeadless#placedBossAutomaticallyReachesSignLandingResultsCompletionAndEventsFg5
-com.openggf.game.sonic3k.objects.TestFbzObjectRewind#pendingActTransitionRoundTripsAcrossLevelEventAndZoneRuntimeOwners
 com.openggf.game.sonic3k.objects.TestMhz1CutsceneObjects#mhz2CutsceneLiftRequestsRomFastVerticalScrollWhileCarryingPlayer
 com.openggf.game.sonic3k.objects.TestMhzBossObjects#mhzMinibossTreeChipRunsRomRawAnimationScript
 com.openggf.game.sonic3k.objects.TestMhzBossObjects#mhzMinibossTreeChipUsesKnucklesRandomSlowBounceVelocity
