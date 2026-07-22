@@ -26,6 +26,17 @@ class TestSemanticVersionAndRange {
     }
 
     @Test
+    void supportedContractMatchingHandlesRetainedBaselinesDeterministically() {
+        List<SemanticVersion> contracts = List.of(
+                SemanticVersion.parse("0.8.0"), SemanticVersion.parse("0.7.0"));
+
+        assertTrue(ModApiVersion.supports(VersionRange.parse(">=0.7.0 <0.8.0"), contracts));
+        assertTrue(ModApiVersion.supports(VersionRange.parse("*"), contracts));
+        assertFalse(ModApiVersion.supports(VersionRange.parse(">=0.9.0"), contracts));
+        assertEquals("[0.7.0, 0.8.0]", ModApiVersion.supportedContractsDiagnostic(contracts));
+    }
+
+    @Test
     void strictVersionsRejectNonCanonicalAndOverflowForms() {
         for (String invalid : List.of(
                 "1.2", "1.2.3.4", "01.2.3", "1.02.3", "1.2.03",

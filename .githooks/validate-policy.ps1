@@ -77,11 +77,118 @@ function Test-MergeFromMaster() {
 }
 
 function Get-StagedFiles() {
-    return Invoke-GitLines @("diff", "--cached", "--name-only", "--diff-filter=ACMR")
+    return Invoke-GitLines @("diff", "--cached", "--name-only", "--diff-filter=ACMRD")
 }
 
 function Get-CommitFiles([string]$Commit) {
-    return Invoke-GitLines @("diff-tree", "--root", "--no-commit-id", "--name-only", "--diff-filter=ACMR", "-r", $Commit)
+    return Invoke-GitLines @("diff-tree", "--root", "--no-commit-id", "--name-only", "--diff-filter=ACMRD", "-r", $Commit)
+}
+
+$script:ModApiDescriptor = "mod-api-release-policy.properties"
+$script:ModApiVersion = "src/main/java/com/openggf/mods/ModApiVersion.java"
+$script:ModApiPinPrefix = "src/test/resources/mods/mod-api-signatures-"
+
+function Get-BlobText([string]$Ref, [string]$Path) {
+    if ($Ref -eq "EMPTY") { return "" }
+    $spec = if ($Ref -eq "INDEX") { ":$Path" } else { "${Ref}:$Path" }
+    return Invoke-GitText @("show", $spec) -AllowFailure
+}
+
+function Get-DescriptorPins([string]$Ref) {
+    $values = @{}
+    foreach ($line in ((Get-BlobText $Ref $script:ModApiDescriptor) -split "`r?`n")) {
+        if ($line -match '^([^=]+)=(.*)$') { $values[$Matches[1]] = $Matches[2] }
+    }
+    $pins = New-Object System.Collections.Generic.List[string]
+    foreach ($version in (($values["publishedBaselines"] -split ',') | Where-Object { $_ })) {
+        $pins.Add("$($script:ModApiPinPrefix)$version.txt") | Out-Null
+    }
+    if ($values["currentStatus"] -eq "candidate" -and $values["currentApi"] -match '^(\d+\.\d+)\.') {
+        $pins.Add("$($script:ModApiPinPrefix)$($Matches[1]).txt") | Out-Null
+    }
+    return @($pins | Sort-Object)
+}
+
+function Get-ActualPins([string]$Ref) {
+    if ($Ref -eq "INDEX") {
+        return @(Invoke-GitLines @("ls-files", "--cached") |
+                Where-Object { $_.StartsWith($script:ModApiPinPrefix, [StringComparison]::Ordinal) -and $_.EndsWith(".txt") } | Sort-Object)
+    }
+    if ($Ref -eq "EMPTY") { return @() }
+    return @(Invoke-GitLines @("ls-tree", "-r", "--name-only", $Ref) |
+            Where-Object { $_.StartsWith($script:ModApiPinPrefix, [StringComparison]::Ordinal) -and $_.EndsWith(".txt") } | Sort-Object)
+}
+
+function Get-CurrentApiValue([string]$Ref) {
+    $text = Get-BlobText $Ref $script:ModApiVersion
+    if ($text -match '(?m)^\s*(?:public\s+)?static\s+final[^\r\n]*\bCURRENT\s*=.*?"([0-9]+(?:\.[0-9]+)+)"') { return $Matches[1] }
+    return ""
+}
+
+function Test-ContainsModApiAnnotation([string]$Text) {
+    return $Text -match '(?m)^\s*@ModApi(?:[.(\s]|$)'
+}
+
+function Validate-ModApiCoupling([string]$OldRef, [string]$NewRef, [string[]]$DiffArguments) {
+    $args = if ($NewRef -eq "INDEX") { @("diff", "--cached", "--name-status", "-M") } else { @("diff", "--name-status", "-M") + $DiffArguments }
+    $candidate = (Get-DescriptorPins $NewRef | Where-Object { $_ -match 'mod-api-signatures-\d+\.\d+\.txt$' } | Select-Object -First 1)
+    $descriptorChanged = $false; $currentChanged = $false; $apiDelta = $false
+    $candidateContent = $false; $publishedContent = $false; $pinStructural = $false; $candidateStructural = $false
+    foreach ($record in (Invoke-GitLines $args)) {
+        $fields = $record -split "`t"
+        $status = $fields[0]
+        $paths = @($fields[1..($fields.Count - 1)])
+        if ($paths -contains $script:ModApiDescriptor) { $descriptorChanged = $true }
+        if ($paths -contains $script:ModApiVersion) {
+            $currentChanged = (Get-CurrentApiValue $OldRef) -ne (Get-CurrentApiValue $NewRef)
+        }
+        if ($paths | Where-Object { $_.StartsWith($script:ModApiPinPrefix, [StringComparison]::Ordinal) }) {
+            if ($status.StartsWith("M")) {
+                if ($fields[1] -eq $candidate) { $candidateContent = $true } else { $publishedContent = $true }
+            } else {
+                $pinStructural = $true
+                if ($candidate -and $paths -contains $candidate) { $candidateStructural = $true }
+            }
+        }
+        $before = if ($status.StartsWith("A")) { "EMPTY" } else { $OldRef }
+        $after = if ($status.StartsWith("D")) { "EMPTY" } else { $NewRef }
+        foreach ($path in $paths) {
+            if (-not $path.EndsWith(".java", [StringComparison]::Ordinal)) { continue }
+            $oldText = Get-BlobText $before $path
+            $newText = Get-BlobText $after $path
+            if (((Test-ContainsModApiAnnotation $oldText) -or (Test-ContainsModApiAnnotation $newText)) -and $oldText -ne $newText) { $apiDelta = $true }
+        }
+    }
+    if ($currentChanged -and (-not $descriptorChanged -or (-not $candidateContent -and -not $candidateStructural))) {
+        Add-ValidationError "ModApiVersion.CURRENT changes require the release descriptor and its normalized signature-pin operation."
+    }
+    if ($publishedContent) {
+        Add-ValidationError "published full-version signature pins are immutable and may never be edited in place."
+    }
+    if ($apiDelta -and (-not $candidate -or (-not $candidateContent -and -not $candidateStructural))) {
+        Add-ValidationError "detectable @ModApi surface changes require updating the current candidate signature pin."
+    }
+    if ($candidateContent -and -not $apiDelta) {
+        Add-ValidationError "candidate signature-pin content changes require a detectable @ModApi surface change; descriptor edits are not a substitute."
+    }
+    if ($candidateContent -and $descriptorChanged -and -not $pinStructural) {
+        Add-ValidationError "ordinary candidate signature regeneration must not edit the release descriptor."
+    }
+    if ($pinStructural -and -not $descriptorChanged) {
+        Add-ValidationError "signature-pin additions, deletions, and renames require a descriptor publication or promotion edit."
+    }
+    $oldPins = (Get-DescriptorPins $OldRef) -join "`n"
+    $newPins = (Get-DescriptorPins $NewRef) -join "`n"
+    $actualOldPins = (Get-ActualPins $OldRef) -join "`n"
+    $actualNewPins = (Get-ActualPins $NewRef) -join "`n"
+    $bootstrapNormalized = [string]::IsNullOrEmpty((Get-BlobText $OldRef $script:ModApiDescriptor)) -and
+            $actualOldPins -eq $newPins -and $actualNewPins -eq $newPins
+    if ($descriptorChanged -and $oldPins -ne $newPins -and -not $pinStructural -and -not $bootstrapNormalized) {
+        Add-ValidationError "descriptor topology/status changes must include the normalized signature-pin add, delete, or rename implied by the new state."
+    }
+    if (($descriptorChanged -or $pinStructural) -and $actualNewPins -ne $newPins) {
+        Add-ValidationError "the resulting signature-pin inventory does not match the descriptor's normalized pin map."
+    }
 }
 
 function Get-StagedBlobSize([string]$Path) {
@@ -360,6 +467,7 @@ function Validate-NonMasterCommitMessage([string]$Message, [string[]]$Files) {
     Validate-AgentDocsTrailer $Message $Files
     Validate-ExactTrailer $Message $Files "Configuration-Docs" "CONFIGURATION.md" "CONFIGURATION.md"
     Validate-SkillsTrailer $Message $Files
+    Validate-ModApiCoupling "HEAD" "INDEX" @()
 
     if ($script:Errors.Count -gt 0) {
         Note "non-master branch commits must declare the documentation/discrepancy policy explicitly."
@@ -441,12 +549,12 @@ function Validate-CommitMsgHook([string]$MessageFile) {
 }
 
 function Validate-CiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [string]$HeadRef) {
-    if ($BaseRef -ne "develop" -and $BaseRef -ne "master") {
+    if ($BaseRef -ne "next" -and $BaseRef -ne "develop" -and $BaseRef -ne "master") {
         return
     }
 
     $effectiveBaseSha = Get-EffectiveBaseForCiPr $BaseSha $HeadSha $BaseRef $HeadRef
-    $rangeFiles = Invoke-GitLines @("diff", "--name-only", "--diff-filter=ACMR", "$effectiveBaseSha...$HeadSha")
+    $rangeFiles = Invoke-GitLines @("diff", "--name-only", "--diff-filter=ACMRD", "$effectiveBaseSha...$HeadSha")
 
     if ($BaseRef -eq "develop") {
         if ($HeadRef -ne "master" -and -not (Test-HasExact $rangeFiles "README.md")) {
@@ -476,6 +584,8 @@ function Validate-CiCommitRange([string]$EffectiveBaseSha, [string]$HeadSha) {
         Validate-AgentDocsTrailer $message $files
         Validate-ExactTrailer $message $files "Configuration-Docs" "CONFIGURATION.md" "CONFIGURATION.md"
         Validate-SkillsTrailer $message $files
+        $parent = Invoke-GitText @("rev-parse", "$commit^")
+        Validate-ModApiCoupling $parent $commit @($parent, $commit)
         if ($script:Errors.Count -gt 0) {
             Note "commit $commit violates the non-master branch documentation/artifact policy."
             foreach ($entry in $script:Errors) {

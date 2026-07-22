@@ -28,9 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModApiSignatureSurface {
-    private static final String PUBLISHED_BASELINE = "mods/mod-api-signatures-0.7.txt";
+    private static final String CANDIDATE_BASELINE = "mods/mod-api-signatures-0.7.txt";
     private static final String PLATFORM_ALLOWLIST = "mods/mod-api-platform-allowlist.txt";
-    private static final SemanticVersion PUBLISHED_VERSION = new SemanticVersion(0, 7, 0);
+    private static final SemanticVersion CANDIDATE_VERSION = new SemanticVersion(0, 7, 0);
 
     @Retention(RetentionPolicy.CLASS)
     @Target(ElementType.TYPE_USE)
@@ -82,24 +82,24 @@ class TestModApiSignatureSurface {
     }
 
     @Test
-    void delegatingGameModuleIsAnExplicitPublishedRoot() {
+    void delegatingGameModuleIsAnExplicitCandidateRoot() {
         assertTrue(ModApiSurfaceInventory.rootTypes().contains(DelegatingGameModule.class));
     }
 
     @Test
-    void prescribedStandaloneSupportTypesAreExplicitPublishedRoots() {
+    void prescribedStandaloneSupportTypesAreExplicitCandidateRoots() {
         assertTrue(ModApiSurfaceInventory.rootTypes().contains(GroundSensor.class));
         assertTrue(ModApiSurfaceInventory.rootTypes().contains(AbstractLevelInitProfile.class));
     }
 
     @Test
-    void publishedZeroSevenSurfaceIsPinnedToTheCurrentSurface() throws Exception {
-        List<String> published = readBaseline(PUBLISHED_BASELINE);
-        assertEquals(new ArrayList<>(new TreeSet<>(published)), published,
-                "Published API 0.7 baseline must be unique, sorted canonical UTF-8 text");
-        assertEquals(new ArrayList<>(ModApiSignatureSurface.snapshotLines()), published,
+    void candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface() throws Exception {
+        List<String> candidate = readBaseline(CANDIDATE_BASELINE);
+        assertEquals(new ArrayList<>(new TreeSet<>(candidate)), candidate,
+                "Candidate API 0.7 baseline must be unique, sorted canonical UTF-8 text");
+        assertEquals(new ArrayList<>(ModApiSignatureSurface.snapshotLines()), candidate,
                 "Review current changes and regenerate mod-api-signatures-0.7.txt");
-        assertEquals(PUBLISHED_VERSION, ModApiVersion.CURRENT,
+        assertEquals(CANDIDATE_VERSION, ModApiVersion.CURRENT,
                 "The current Mod API version must match the 0.7 baseline");
     }
 
@@ -153,18 +153,15 @@ class TestModApiSignatureSurface {
     }
 
     @Test
-    void additiveSignaturesRequireAMinorVersionBumpAndRemovalsAlwaysFail() {
+    void comparisonPolicyDistinguishesExactFromLaterReleaseLineCompatibility() {
         Set<String> baseline = Set.of("TYPE A");
         Set<String> additive = Set.of("TYPE A", "METHOD A added()");
-        SemanticVersion baselineVersion = new SemanticVersion(0, 7, 0);
-        assertFalse(ModApiSignatureSurface.baselineViolations(
-                baselineVersion, baseline, baselineVersion, additive).isEmpty());
-        assertTrue(ModApiSignatureSurface.baselineViolations(
-                baselineVersion, baseline, new SemanticVersion(0, 8, 0), additive).isEmpty());
-        assertFalse(ModApiSignatureSurface.baselineViolations(
-                baselineVersion, baseline, new SemanticVersion(1, 0, 0), additive).isEmpty());
-        assertFalse(ModApiSignatureSurface.baselineViolations(
-                baselineVersion, baseline, new SemanticVersion(0, 8, 0), Set.of()).isEmpty());
+        assertFalse(ModApiSignatureSurface.signatureViolations(baseline, additive,
+                ModApiSignatureSurface.Comparison.EXACT).isEmpty());
+        assertTrue(ModApiSignatureSurface.signatureViolations(baseline, additive,
+                ModApiSignatureSurface.Comparison.FORWARD_LATER_RELEASE_LINE).isEmpty());
+        assertFalse(ModApiSignatureSurface.signatureViolations(baseline, Set.of(),
+                ModApiSignatureSurface.Comparison.FORWARD_LATER_RELEASE_LINE).isEmpty());
     }
 
     private List<String> readBaseline(String resource) throws IOException {

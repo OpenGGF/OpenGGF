@@ -10,7 +10,8 @@ standalone games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The public Mod API is `0.7.0`, the first published creator contract. Mods should
+The current Mod API is the unpublished, mutable `0.7.0` candidate on `next`; no
+creator contract has been published yet. Maintained samples should
 declare `engineApiRange: ">=0.7.0 <0.8.0"`; see the
 [compatibility guide](../architecture/mod-api-compatibility.md). Start with the
 guide for the contribution you are building:

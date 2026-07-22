@@ -175,17 +175,23 @@ public final class ModApiSignatureSurface {
                 ModApiClassfileAnnotationSurface.referencedTypeNames(type));
     }
 
+    /** Policy supplied by release tooling when comparing two signature surfaces. */
+    public enum Comparison {
+        /** Candidate pins and same-release-line maintenance pins must be identical. */
+        EXACT,
+        /** A later configured release line may add signatures but may not remove or change them. */
+        FORWARD_LATER_RELEASE_LINE
+    }
+
     /**
-     * Validates a checked-in semantic baseline. Removals always fail; additions
-     * require a same-major minor-version increase above the baseline version.
+     * Compares a checked-in baseline with the current surface. Release topology is
+     * deliberately supplied by the caller rather than inferred from version numbers.
      */
-    public static List<String> baselineViolations(
-            com.openggf.mods.SemanticVersion baselineVersion, Set<String> baseline,
-            com.openggf.mods.SemanticVersion currentVersion, Set<String> current) {
-        Objects.requireNonNull(baselineVersion, "baselineVersion");
+    public static List<String> signatureViolations(
+            Set<String> baseline, Set<String> current, Comparison comparison) {
         Objects.requireNonNull(baseline, "baseline");
-        Objects.requireNonNull(currentVersion, "currentVersion");
         Objects.requireNonNull(current, "current");
+        Objects.requireNonNull(comparison, "comparison");
         List<String> violations = new ArrayList<>();
         List<String> missing = baseline.stream().filter(line -> !current.contains(line)).sorted().toList();
         if (!missing.isEmpty()) {
@@ -193,11 +199,8 @@ public final class ModApiSignatureSurface {
                     + String.join("\n", missing.stream().limit(100).toList()));
         }
         List<String> additions = current.stream().filter(line -> !baseline.contains(line)).sorted().toList();
-        boolean compatibleMinorBump = currentVersion.major() == baselineVersion.major()
-                && currentVersion.minor() > baselineVersion.minor();
-        if (!additions.isEmpty() && !compatibleMinorBump) {
-            violations.add("Additive Mod API signatures require a same-major minor bump above "
-                    + baselineVersion + " (current " + currentVersion + "):\n"
+        if (!additions.isEmpty() && comparison == Comparison.EXACT) {
+            violations.add("Exact Mod API signature comparison rejects additions:\n"
                     + String.join("\n", additions.stream().limit(100).toList()));
         }
         return List.copyOf(violations);

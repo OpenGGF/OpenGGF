@@ -1,5 +1,7 @@
 package com.openggf.tools.modsdk;
 
+import com.openggf.mods.SemanticVersion;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Isolated;
@@ -15,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
@@ -54,6 +57,28 @@ class TestModJarValidator {
                 "ENGINE_API_INCOMPATIBLE");
         assertCode(validateWithManifest(validManifest().replace("patternWindows: 1", "patternWindows: 17")),
                 "MANIFEST_INVALID");
+    }
+
+    @Test
+    void retainedPublishedContractIsAcceptedAndRejectionListsAllSupportedContracts() throws Exception {
+        List<SemanticVersion> contracts = List.of(
+                SemanticVersion.parse("0.8.0"), SemanticVersion.parse("0.7.0"));
+        ModJarValidator validator = new ModJarValidator(
+                com.openggf.io.ModInputLimits.production(), ignored -> { },
+                range -> contracts.stream().anyMatch(range::contains),
+                () -> contracts.stream().sorted().toList().toString());
+
+        assertTrue(validator.validate(jar(validEntries())).valid());
+        Map<String, byte[]> rejectedEntries = validEntries();
+        rejectedEntries.put(MANIFEST, validManifest()
+                .replace(">=0.7.0 <0.8.0", ">=0.9.0").getBytes(StandardCharsets.UTF_8));
+        ModJarValidator.Report rejected = validator.validate(jar(rejectedEntries));
+
+        ModJarValidator.Finding finding = rejected.findings().stream()
+                .filter(value -> value.code().equals("ENGINE_API_INCOMPATIBLE"))
+                .findFirst().orElseThrow();
+        assertEquals("Requires engine API >=0.9.0; supported contracts [0.7.0, 0.8.0]",
+                finding.message());
     }
 
     @Test

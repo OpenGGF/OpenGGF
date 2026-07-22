@@ -23,6 +23,6 @@ and [standalone](../../../src/test/resources/mods/sample-standalone-src/project/
 manifests. They exercise the Mod API 0.7 range across patch/standalone,
 music/art maps, entrypoints, and progression.
 
-Manifest format version `1` is independent of the engine Mod API version. Current
-code publishes Mod API `0.7.0`; maintained manifests use
+Manifest format version `1` is independent of the engine Mod API version. The
+current unpublished candidate is Mod API `0.7.0`; maintained manifests use
 `>=0.7.0 <0.8.0`.

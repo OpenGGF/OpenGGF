@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /** Bounded, non-executing validator for one packed mod jar. */
 public final class ModJarValidator {
@@ -45,18 +47,30 @@ public final class ModJarValidator {
 
     private final ModInputLimits limits;
     private final SnapshotHook snapshotHook;
+    private final Predicate<com.openggf.mods.VersionRange> apiSupport;
+    private final Supplier<String> supportedApiDiagnostic;
 
     public ModJarValidator() {
-        this(ModInputLimits.production(), ignored -> { });
+        this(ModInputLimits.production(), ignored -> { },
+                ModApiVersion::supports, ModApiVersion::supportedContractsDiagnostic);
     }
 
     ModJarValidator(ModInputLimits limits) {
-        this(limits, ignored -> { });
+        this(limits, ignored -> { }, ModApiVersion::supports, ModApiVersion::supportedContractsDiagnostic);
     }
 
     ModJarValidator(ModInputLimits limits, SnapshotHook snapshotHook) {
+        this(limits, snapshotHook, ModApiVersion::supports, ModApiVersion::supportedContractsDiagnostic);
+    }
+
+    ModJarValidator(ModInputLimits limits, SnapshotHook snapshotHook,
+                    Predicate<com.openggf.mods.VersionRange> apiSupport,
+                    Supplier<String> supportedApiDiagnostic) {
         this.limits = Objects.requireNonNull(limits, "limits");
         this.snapshotHook = Objects.requireNonNull(snapshotHook, "snapshotHook");
+        this.apiSupport = Objects.requireNonNull(apiSupport, "apiSupport");
+        this.supportedApiDiagnostic = Objects.requireNonNull(
+                supportedApiDiagnostic, "supportedApiDiagnostic");
     }
 
     public Report validate(Path jarPath) {
@@ -115,10 +129,11 @@ public final class ModJarValidator {
         return report(findings);
     }
 
-    private static void validateManifest(ModManifest manifest, List<Finding> findings) {
-        if (!manifest.engineApiRange().contains(ModApiVersion.CURRENT)) {
+    private void validateManifest(ModManifest manifest, List<Finding> findings) {
+        if (!apiSupport.test(manifest.engineApiRange())) {
             findings.add(error("ENGINE_API_INCOMPATIBLE", MANIFEST_PATH, "engineApiRange",
-                    "Requires engine API " + manifest.engineApiRange() + "; available " + ModApiVersion.CURRENT));
+                    "Requires engine API " + manifest.engineApiRange() + "; supported contracts "
+                            + supportedApiDiagnostic.get()));
         }
         int windows = manifest.patternWindows().orElse(1);
         if (windows < 1 || windows > 16) {

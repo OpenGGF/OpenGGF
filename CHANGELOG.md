@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Mod API release-line policy is now explicit and enforceable.** The root
+  descriptor owns branch topology, candidate/publication state, and retained
+  baselines. Mod API 0.7 remains the unpublished mutable candidate on `next`, with
+  no published baseline; runtime compatibility intersects manifest ranges with
+  the current and any future retained contracts, while candidate, release, and
+  maintenance signature pins follow distinct validation rules.
 - **The CNZ end-boss magnet now probes terrain through its owning gameplay session.**
   Its released-head floor check uses the injected level, plane provider, and
   collision-path selection at the native bottom point, preventing an unrelated
@@ -13,16 +19,16 @@ All notable changes to the OpenGGF project are documented in this file.
   `PatternAtlasRange` (`0x188000` today), and generic atlas range registration
   rejects any attempt to claim a permanent static range. Level unload/rebuild
   still clears and deterministically re-registers the session's mod windows.
-- **Mod API 0.7 establishes the first creator contract.** The exact recursive
+- **Mod API 0.7 establishes the first creator-contract candidate.** The exact recursive
   `@ModApi` surface is pinned by `mod-api-signatures-0.7.txt`, with maintained
   manifests targeting `>=0.7.0 <0.8.0`; provisional compatibility shims,
   including the retired sidekick history-edge constructor, and version-lineage
-  promises have been removed. The first baseline includes
+  promises have been removed. The candidate includes
   namespaced objects, bounded baked and ROM-derived art, complete Sonic 2 zones,
   host-adapted Sonic 3&K zones, owner-tagged characters, no-ROM standalone games,
   playable-subclass rewind hooks, and destination-scoped game-start, launch-team,
   deterministic input-filter, and HUD-profile policies. Exact signature, Javadoc,
-  SDK, and maintained-sample guards pin the publication.
+  SDK, and maintained-sample guards pin the candidate surface.
 - **Level loading now delegates transient handoffs to their runtime owners:**
   title-card object passes arm `OscillationManager` directly, keeping the gate
   in its rewind snapshot, while `LevelCheckpointCoordinator` owns the queued
@@ -183,7 +189,7 @@ All notable changes to the OpenGGF project are documented in this file.
   callbacks execute through owner fault boundaries and abort instead of publishing a
   partial policy set; session teardown restores identity input and the stock HUD. No
   movement, camera/scroll, world-wrap/rebase, or flight-fatigue framework was added.
-  The contracts are included in the first pinned Mod API 0.7 surface.
+  The contracts are included in the pinned Mod API 0.7 candidate surface.
 - **Host-adapted additive Sonic 3&K zones.** The mod runtime now
   delegates complete-zone validation/loading to a typed, game-owned `ModZoneAdapter` whose
   creator ABI contains only validation, loading, and runtime-profile selection, instead of

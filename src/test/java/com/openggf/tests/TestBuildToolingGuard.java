@@ -275,6 +275,49 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void modApiDestinationValidationShouldCoverEveryPullRequestAndPushTestPath() throws Exception {
+        String ci = normalizeLineEndings(Files.readString(Path.of(".github/workflows/ci.yml")));
+        String release = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
+        List<String> violations = new ArrayList<>();
+
+        if (!ci.contains("pull_request:\n    branches: [next, develop]")) {
+            violations.add(".github/workflows/ci.yml must validate pull requests targeting next and develop");
+        }
+        if (!ci.contains("push:\n    branches: [next, develop]")) {
+            violations.add(".github/workflows/ci.yml must validate pushes to next and develop");
+        }
+        if (!release.contains("pull_request:\n    branches: [master]")) {
+            violations.add(".github/workflows/release.yml must retain pull-request ownership for master only");
+        }
+        if (!release.contains("push:\n    branches: [master]")) {
+            violations.add(".github/workflows/release.yml must retain push ownership for master only");
+        }
+
+        assertDestinationAwareMavenStep(ci, ".github/workflows/ci.yml", "Run tests (pull request)",
+                "github.event_name == 'pull_request'", "github.base_ref", violations);
+        assertDestinationAwareMavenStep(ci, ".github/workflows/ci.yml", "Run tests (push)",
+                "github.event_name == 'push'", "github.ref_name", violations);
+        assertMavenStepOmitsDestination(ci, ".github/workflows/ci.yml", "Run tests (manual or scheduled)",
+                violations);
+
+        for (String step : List.of("Run tests", "Run trace replay policy tests")) {
+            assertDestinationAwareMavenStep(release, ".github/workflows/release.yml", step + " (pull request)",
+                    "github.event_name == 'pull_request'", "github.base_ref", violations);
+            assertDestinationAwareMavenStep(release, ".github/workflows/release.yml", step + " (push)",
+                    "github.event_name == 'push'", "github.ref_name", violations);
+            assertMavenStepOmitsDestination(release, ".github/workflows/release.yml",
+                    step + " (manual)", violations);
+        }
+        assertEveryEventGatedMavenTestHasDestination(ci, ".github/workflows/ci.yml", violations);
+        assertEveryEventGatedMavenTestHasDestination(release, ".github/workflows/release.yml", violations);
+
+        if (!violations.isEmpty()) {
+            fail("Mod API destination validation must be explicit on every PR/push broad-test path:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void releaseWorkflowShouldRunTraceReplayPolicyProfile() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
@@ -509,12 +552,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void developCiShouldProtectPullRequests() throws Exception {
-        // 2026-07-02: direct-push CI on develop was deliberately removed by
-        // f18d4d9be ("fix: stop develop push CI"), and that decision was
-        // confirmed. This guard now covers the pull-request path plus the
-        // scheduled develop trace-replay job; it no longer requires a push
-        // trigger or the validate-policy ci-push step.
+    void candidateCiShouldProtectPullRequestsAndPushes() throws Exception {
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
         String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
         String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
@@ -522,6 +560,9 @@ class TestBuildToolingGuard {
 
         if (!ci.contains("github.event_name == 'pull_request'")) {
             violations.add(".github/workflows/ci.yml policy job must keep pull-request branch policy validation");
+        }
+        if (!ci.contains(".githooks/validate-policy.sh ci-push")) {
+            violations.add(".github/workflows/ci.yml policy job must validate direct pushes to next and develop");
         }
         if (!ci.contains("develop-trace-replay:")) {
             violations.add(".github/workflows/ci.yml must include the nightly/manual develop trace replay job");
@@ -537,7 +578,7 @@ class TestBuildToolingGuard {
         }
 
         if (!violations.isEmpty()) {
-            fail("develop CI must protect pull requests and the scheduled trace replay:\n  "
+            fail("candidate CI must protect pull requests, pushes, and the scheduled trace replay:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -740,15 +781,15 @@ class TestBuildToolingGuard {
         String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
         List<String> violations = new ArrayList<>();
 
-        if (!shellPolicy.contains("if [ \"$base_ref\" != \"develop\" ] && [ \"$base_ref\" != \"master\" ]; then")) {
-            violations.add(".githooks/validate-policy.sh ci-pr mode must continue for base_ref=master");
+        if (!shellPolicy.contains("if [ \"$base_ref\" != \"next\" ] && [ \"$base_ref\" != \"develop\" ] && [ \"$base_ref\" != \"master\" ]; then")) {
+            violations.add(".githooks/validate-policy.sh ci-pr mode must continue for next, develop, and master");
         }
-        if (!powershellPolicy.contains("if ($BaseRef -ne \"develop\" -and $BaseRef -ne \"master\") {")) {
-            violations.add(".githooks/validate-policy.ps1 ci-pr mode must continue for BaseRef=master");
+        if (!powershellPolicy.contains("if ($BaseRef -ne \"next\" -and $BaseRef -ne \"develop\" -and $BaseRef -ne \"master\") {")) {
+            violations.add(".githooks/validate-policy.ps1 ci-pr mode must continue for next, develop, and master");
         }
 
         if (!violations.isEmpty()) {
-            fail("release PR commits must receive the same non-master branch trailer checks as develop PRs:\n  "
+            fail("release PR commits must receive the same non-master branch trailer checks as next/develop PRs:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -1402,6 +1443,70 @@ class TestBuildToolingGuard {
             stripped.append(current);
         }
         return stripped.toString();
+    }
+
+    private static void assertDestinationAwareMavenStep(String workflow, String file, String stepName,
+                                                        String eventCondition, String destinationExpression,
+                                                        List<String> violations) {
+        String step = workflowStep(workflow, stepName);
+        if (step == null) {
+            violations.add(file + " does not define step '" + stepName + "'");
+            return;
+        }
+        if (!step.contains("if: " + eventCondition)) {
+            violations.add(file + " step '" + stepName + "' is not gated to " + eventCondition);
+        }
+        if (!step.contains("mvn ")) {
+            violations.add(file + " step '" + stepName + "' is not a Maven test path");
+        }
+        String property = "-DmodApi.destinationBranch=\"${{ " + destinationExpression + " }}\"";
+        if (!step.contains(property)) {
+            violations.add(file + " step '" + stepName + "' does not pass " + property);
+        }
+    }
+
+    private static void assertMavenStepOmitsDestination(String workflow, String file, String stepName,
+                                                        List<String> violations) {
+        String step = workflowStep(workflow, stepName);
+        if (step == null) {
+            violations.add(file + " does not define step '" + stepName + "'");
+            return;
+        }
+        if (!step.contains("mvn ")) {
+            violations.add(file + " step '" + stepName + "' is not a Maven test path");
+        }
+        if (step.contains("modApi.destinationBranch")) {
+            violations.add(file + " step '" + stepName + "' must omit destination validation");
+        }
+    }
+
+    private static String workflowStep(String workflow, String stepName) {
+        String marker = "      - name: " + stepName + "\n";
+        int start = workflow.indexOf(marker);
+        if (start < 0) {
+            return null;
+        }
+        int end = workflow.indexOf("\n      - name: ", start + marker.length());
+        return end < 0 ? workflow.substring(start) : workflow.substring(start, end);
+    }
+
+    private static void assertEveryEventGatedMavenTestHasDestination(String workflow, String file,
+                                                                      List<String> violations) {
+        String[] steps = workflow.split("(?m)(?=^      - name: )", -1);
+        for (String step : steps) {
+            if (!step.contains("mvn ") || !step.contains(" test ")) {
+                continue;
+            }
+            String name = step.lines().findFirst().orElse("unnamed Maven step").strip();
+            if (step.contains("github.event_name == 'pull_request'")
+                    && !step.contains("-DmodApi.destinationBranch=\"${{ github.base_ref }}\"")) {
+                violations.add(file + " " + name + " is a PR Maven test path without github.base_ref");
+            }
+            if (step.contains("github.event_name == 'push'")
+                    && !step.contains("-DmodApi.destinationBranch=\"${{ github.ref_name }}\"")) {
+                violations.add(file + " " + name + " is a push Maven test path without github.ref_name");
+            }
+        }
     }
 
     private static Element profileById(Document pom, String id) {

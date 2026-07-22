@@ -2,8 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - develop
+    branches: [next, develop]
+  push:
+    branches: [next, develop]
   workflow_dispatch:
   schedule:
     - cron: '30 5 * * *'
@@ -21,6 +22,10 @@ jobs:
         if: github.event_name == 'pull_request'
         run: bash .githooks/validate-policy.sh ci-pr "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "${{ github.base_ref }}" "${{ github.head_ref }}"
 
+      - name: Validate branch policy (push)
+        if: github.event_name == 'push'
+        run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}"
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -34,7 +39,16 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run tests
+      - name: Run tests (pull request)
+        if: github.event_name == 'pull_request'
+        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.base_ref }}"
+
+      - name: Run tests (push)
+        if: github.event_name == 'push'
+        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
+
+      - name: Run tests (manual or scheduled)
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
         run: mvn -Dmse=off test -B
 
       - name: Assert default test coverage

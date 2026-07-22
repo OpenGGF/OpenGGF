@@ -27,7 +27,7 @@ class TestEffectiveCatalogBuilder {
     }
 
     @Test
-    void apiRangeUsesPinnedCurrentCompatibilityWithoutImplicitLegacyAcceptance() {
+    void apiRangeUsesSupportedContractCompatibility() {
         List<ModDescriptor> mods = List.of(
                 patch("canonical", "s1", "1.0.0", ">=0.7.0 <0.8.0"),
                 patch("exact-current", "s2", "1.0.0", "0.7.0"),
@@ -40,6 +40,24 @@ class TestEffectiveCatalogBuilder {
         assertEquals(List.of("canonical", "exact-current"), effectiveIds(result));
         assertReason(result, "future", "ENGINE_API_INCOMPATIBLE");
         assertReason(result, "legacy", "ENGINE_API_INCOMPATIBLE");
+    }
+
+    @Test
+    void retainedPublishedContractIsAcceptedAndRejectionListsAllSupportedContracts() {
+        List<SemanticVersion> contracts = List.of(
+                SemanticVersion.parse("0.8.0"), SemanticVersion.parse("0.7.0"));
+        EffectiveCatalogBuilder builder = new EffectiveCatalogBuilder(
+                range -> ModApiVersion.supports(range, contracts),
+                () -> ModApiVersion.supportedContractsDiagnostic(contracts));
+        List<ModDescriptor> mods = List.of(
+                patch("retained", "s1", "1.0.0", ">=0.7.0 <0.8.0"),
+                patch("disjoint", "s2", "1.0.0", ">=0.9.0"));
+
+        ModCatalog result = builder.build(mods, enabledState("retained", "disjoint"));
+
+        assertEquals(List.of("retained"), effectiveIds(result));
+        assertEquals("Requires engine API >=0.9.0; supported contracts [0.7.0, 0.8.0]",
+                reason(result, "disjoint", "ENGINE_API_INCOMPATIBLE").message());
     }
 
     @Test
