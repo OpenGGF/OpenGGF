@@ -64,6 +64,7 @@ class TestS3kIczTensionPlatformObject {
 
         assertTrue(solid.isTopSolidOnly());
         assertEquals(SolidExecutionMode.MANUAL_CHECKPOINT, solid.solidExecutionMode());
+        assertTrue(solid.usesGroundHalfHeightForTopSolidContact());
         assertEquals(0x23, params.halfWidth());
         assertEquals(0x14, params.airHalfHeight());
         assertEquals(0x0B, params.groundHalfHeight());

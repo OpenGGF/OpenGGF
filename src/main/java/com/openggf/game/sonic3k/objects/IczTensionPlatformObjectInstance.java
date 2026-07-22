@@ -253,6 +253,13 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        // SolidObjectTop's new-contact branch subtracts d3 from y_pos before
+        // comparing the player's feet (sonic3k.asm loc_1E44C-loc_1E45A).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return !isDestroyed();
     }

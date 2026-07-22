@@ -48281,3 +48281,16 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestStarPointerBadnikInstance` is green; the complete-run replay's
   next divergence is Sonic's vertical speed at f16710. Trace data remains
   comparison-only.
+
+## 2026-07-22 - ICZ tension-platform landing surface
+
+- **`s3k_icz1` physics and animation advanced from f16710 to f16975.** The
+  focused tension-platform suite remains green.
+- Root: `Obj_ICZTensionPlatform` calls `SolidObjectTop` with `d2=$14` and
+  `d3=$0B`. Its fresh-landing branch subtracts `d3` from the platform Y before
+  comparing the player's feet (`loc_1E44C`/`loc_1E45A`). The engine used `d2`
+  as the top surface, accepting rolling Sonic while he was still nine pixels
+  above the native landing window.
+- Fix: the platform now selects the shared top-solid profile's explicit
+  ground-half-height contact surface. The next replay divergence is Sonic's
+  downward velocity at f16975; trace data remains comparison-only.
