@@ -63,6 +63,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private static final int SHARD_ROUTINE_STOPPED = 0x06;
 
     private static final int HIT_COUNT = 6;
+    private static final int SST_CHILD_COUNT = 14;
     private static final int COLLISION_SIZE = 0x06;
     private static final int INVULNERABILITY_TIME = 0x20;
     private static final int BODY_PALETTE_LINE = 1;
@@ -149,6 +150,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private int[] hitFlashPaletteWords = HIT_FLASH_NORMAL_COLORS;
     private S3kBossExplosionController defeatExplosionController;
     private boolean defeatRenderComplete;
+    private boolean childSlotsReserved;
 
     private enum WaitCallback {
         NONE,
@@ -247,7 +249,12 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         }
 
         switch (state.routine) {
-            case ROUTINE_INIT -> state.routine = ROUTINE_DESCEND;
+            case ROUTINE_INIT -> {
+                // loc_711EC creates the eight orb and six shard SSTs only
+                // after loc_85CA4 has completed the camera gate.
+                reserveNativeChildSlots();
+                state.routine = ROUTINE_DESCEND;
+            }
             case ROUTINE_DESCEND -> {
                 moveWithVelocity();
                 tickWait();
@@ -277,6 +284,28 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
 
         updateShards();
         updateOrbs();
+    }
+
+    private void reserveNativeChildSlots() {
+        if (childSlotsReserved || getSlotIndex() < 0) {
+            return;
+        }
+        ObjectServices services = servicesOrNull();
+        if (services == null || services.objectManager() == null) {
+            return;
+        }
+        childSlotsReserved = true;
+        // Obj_ICZMiniboss creates eight orb SSTs followed by six shard SSTs
+        // with the CreateChild after-current helpers at loc_711EC. Their logic
+        // remains consolidated in this parent, but the native slots must stay
+        // occupied for later AllocateObject and Obj37 cadence parity.
+        services.objectManager().allocateChildSlotsAfter(
+                spawn, SST_CHILD_COUNT, getSlotIndex());
+    }
+
+    @Override
+    public int getReservedChildSlotCount() {
+        return SST_CHILD_COUNT;
     }
 
     private void initShards() {

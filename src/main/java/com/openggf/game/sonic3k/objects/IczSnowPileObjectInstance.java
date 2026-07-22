@@ -191,15 +191,12 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
             return;
         }
 
-        SnowdustSpec spec = buildSnowdustSpec(camera);
-        if (spec == null) {
-            // loc_8B6D2 sends rejected particles through loc_8B756, which
-            // decrements Hyudoro_count before deleting their SST.
-            onSnowdustExpired();
-            return;
-        }
         activeSnowdustCount++;
-        spawnFreeChild(() -> new SnowdustParticle(this, spec));
+        // AllocateObject installs loc_8B6AE in the new SST. RNG is consumed only
+        // when that slot reaches its first Process_Sprites pass, which can be this
+        // frame or the next depending on whether FindFreeObj selected a slot above
+        // or below the emitter's current slot.
+        spawnFreeChild(() -> new SnowdustParticle(this));
     }
 
     private Camera tryCamera() {
@@ -410,16 +407,18 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         private final SubpixelMotion.State motion;
         private int mappingFrame;
         private int priorityBucket;
+        private boolean initialized;
         private boolean enteredScreen;
         private boolean flickerBit;
-        private boolean drawThisFrame = true;
+        private boolean drawThisFrame;
 
-        private SnowdustParticle(IczSnowPileObjectInstance parent, SnowdustSpec spec) {
-            super(new ObjectSpawn(spec.x(), spec.y(), OBJECT_ID, 0, 0, false, spec.y()), "ICZSnowdustParticle");
+        private SnowdustParticle(IczSnowPileObjectInstance parent) {
+            super(new ObjectSpawn(parent.x, parent.y, OBJECT_ID, 0, 0, false, parent.y),
+                    "ICZSnowdustParticle");
             this.parent = parent;
-            this.motion = new SubpixelMotion.State(spec.x(), spec.y(), 0, 0, spec.xVel(), spec.yVel());
-            this.mappingFrame = spec.mappingFrame();
-            this.priorityBucket = spec.priorityBucket();
+            this.motion = new SubpixelMotion.State(parent.x, parent.y, 0, 0, 0, 0);
+            this.mappingFrame = FRAME_SNOWDUST;
+            this.priorityBucket = PRIORITY_BUCKET;
         }
 
         private SnowdustParticle(IczSnowPileObjectInstance parent, ObjectSpawn spawn) {
@@ -451,10 +450,31 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
 
         @Override
         public void update(int frameCounter, PlayableEntity player) {
+            if (!initialized) {
+                SnowdustSpec spec = parent.buildSnowdustSpec(parent.tryCamera());
+                if (spec == null) {
+                    // loc_8B6D2 sends rejected particles through loc_8B756,
+                    // decrementing Hyudoro_count before deleting the SST.
+                    expire();
+                    return;
+                }
+                motion.x = spec.x();
+                motion.y = spec.y();
+                motion.xSub = 0;
+                motion.ySub = 0;
+                motion.xVel = spec.xVel();
+                motion.yVel = spec.yVel();
+                mappingFrame = spec.mappingFrame();
+                priorityBucket = spec.priorityBucket();
+                initialized = true;
+                return;
+            }
+            // loc_8B720/loc_8B73A read render_flags bit 7 from the preceding
+            // Render_Sprites pass before this frame's MoveSprite2 changes x/y.
+            boolean wasOnScreen = isWithinSolidContactBounds();
             SubpixelMotion.moveSprite2(motion);
-            boolean onScreen = isOnScreen();
             if (!enteredScreen) {
-                if (onScreen) {
+                if (wasOnScreen) {
                     enteredScreen = true;
                     drawThisFrame = false;
                 } else {
@@ -463,7 +483,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
                 return;
             }
 
-            if (!onScreen) {
+            if (!wasOnScreen) {
                 expire();
                 return;
             }
@@ -492,8 +512,18 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         }
 
         @Override
+        public int getOnScreenHalfWidth() {
+            return 4;
+        }
+
+        @Override
+        public int getOnScreenHalfHeight() {
+            return 4;
+        }
+
+        @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            if (!drawThisFrame) {
+            if (!initialized || !drawThisFrame) {
                 return;
             }
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.ICZ_PLATFORMS);

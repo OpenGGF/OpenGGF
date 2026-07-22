@@ -211,6 +211,10 @@ class TestS3kIczEndBossObject {
                 .findFirst()
                 .orElseThrow();
 
+        // AllocateObject only installs loc_8B6AE; the particle samples RNG and
+        // initializes when its SST first executes.
+        particle.update(20, mock(PlayableEntity.class));
+        particle.update(21, mock(PlayableEntity.class));
         particle.appendRenderCommands(new ArrayList<>());
 
         org.mockito.Mockito.verify(services.renderManager, org.mockito.Mockito.atLeastOnce())

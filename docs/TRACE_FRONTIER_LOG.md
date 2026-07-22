@@ -48131,3 +48131,22 @@ standalone CNZ remains at f0 in both scopes.
   count for rejected particles (`docs/skdisasm/sonic3k.asm:190049-190112`). The
   48-case ICZ end-boss object suite stays green. The remaining f13517 pickup is
   an Obj37 slot/cadence mismatch; comparison data remains read-only.
+
+## 2026-07-21 - ICZ pre-emitter RNG stream alignment (frontier unchanged)
+
+- `s3k_icz1` remains at physics f13517 and animation f13900. Total reported
+  errors rose from 1,668 to 1,780 because the now-native frost-puff lifetime
+  exposes the remaining SST-allocation mismatch, rather than hiding it through
+  premature camera cleanup.
+- Root: the snowboard helper calls its dust allocator twice per grounded frame
+  (eight times for heavy-spray frames); Freezer frost puffs own their complete
+  17-step displacement script; each of the 24 Freezer shatter fragments samples
+  `Random_Number & 3`; and `Find_SonicTails` observes each player after that
+  player's movement dispatch. The engine under-consumed all of those calls and
+  admitted one boundary puff from the pre-movement Player 2 X.
+- Fix: the snowboard helper, frost-puff lifetime, shatter initialization, and
+  Freezer range gate now follow those native owners. The first Act 2 snow
+  emitter consequently sees native call index 3,809 and seed `$73FAE993`
+  exactly. The 20-case Freezer and 48-case ICZ end-boss suites are green.
+- The remaining f13517 missed pickup is an Obj37/SST-slot cadence mismatch;
+  trace data remains read-only.

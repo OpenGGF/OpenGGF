@@ -188,7 +188,13 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         ObjectPlayerQuery query = new ObjectPlayerQuery(
                 () -> playerEntity,
                 () -> serviceQuery != null ? serviceQuery.sidekicks() : List.of());
-        return query.nearestByRomX(PLAYER_PARTICIPATION, x).distance();
+        int nearest = Integer.MAX_VALUE;
+        for (PlayableEntity player : query.playersFor(PLAYER_PARTICIPATION)) {
+            int projectedX = (player.getCentreX() + (player.getXSpeed() >> 8)) & 0xFFFF;
+            int delta = (short) ((x - projectedX) & 0xFFFF);
+            nearest = Math.min(nearest, Math.abs(delta));
+        }
+        return nearest;
     }
 
     private void playSfx(int sfxId) {
@@ -771,6 +777,16 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             return RenderPriority.clamp(PRIORITY_BUCKET);
         }
 
+        /**
+         * {@code loc_8A72C} owns its lifetime and only deletes after the complete
+         * {@code sub_8A916} displacement script. It does not run an out-of-range
+         * tail while the parent/camera moves away.
+         */
+        @Override
+        public boolean isPersistent() {
+            return true;
+        }
+
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             if (isDestroyed() || !drawThisFrame) {
@@ -804,11 +820,18 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             super(new ObjectSpawn(x, y, OBJECT_ID, subtype, 0, false, y),
                     "ICZFreezerIceDebris", xVel, yVel, GRAVITY);
             this.rawAnimation = subtype >= 8 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
+            this.animFrame = initialAnimFrame();
         }
 
         private IceDebris(ObjectSpawn spawn, int ignored) {
             super(spawn, "ICZFreezerIceDebris", 0, 0, GRAVITY);
             this.rawAnimation = (spawn.subtype() & 0xFF) >= 8 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
+            this.animFrame = initialAnimFrame();
+        }
+
+        private int initialAnimFrame() {
+            ObjectServices services = constructionContext();
+            return services != null && services.rng() != null ? services.rng().nextBits(3) : 0;
         }
 
         @Override

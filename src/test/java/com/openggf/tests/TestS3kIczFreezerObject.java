@@ -121,6 +121,22 @@ class TestS3kIczFreezerObject {
     }
 
     @Test
+    void freezerRangeGateSamplesThePostMovementNativeXPosition() {
+        RecordingServices services = new RecordingServices();
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x01C1, (short) 0x0100);
+        player.setXSpeed((short) -0x0300);
+
+        freezer.update(0, player);
+
+        assertFalse(freezer.isFrostCycleActiveForTesting(),
+                "Find_SonicTails runs after the player slot moves from distance $3F to $42");
+    }
+
+    @Test
     void managedFreezerWaitsForPlaceholderRenderBeforeInitialization() {
         ObjectManager manager = mock(ObjectManager.class);
         RecordingServices services = new RecordingServices() {
@@ -517,6 +533,8 @@ class TestS3kIczFreezerObject {
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.ICZ_PLATFORMS)).thenReturn(renderer);
 
         AbstractObjectInstance puff = createFrostPuffForTesting(0x0200, 0x010C, false);
+        assertTrue(puff.isPersistent(),
+                "loc_8A72C owns deletion and does not run a camera-range cleanup tail");
         puff.setServices(new RenderingServices(renderManager));
         List<GLCommand> commands = new ArrayList<>();
 
