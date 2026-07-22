@@ -35,11 +35,17 @@ class TestPerGameRuleArchitectureGuard {
     private static final Pattern BLOCK_COMMENT = Pattern.compile("/\\*.*?\\*/", Pattern.DOTALL);
     private static final Pattern LINE_COMMENT = Pattern.compile("//.*$", Pattern.MULTILINE);
     private static final int MAX_RULE_COMPONENTS = 20;
-    // Existing migration surface: keep it frozen until the next split, and do not let other groups grow this large.
+    // Existing migration surfaces: keep each exact size frozen until a deliberate breaking split,
+    // and do not let other groups grow this large.
     // July 2026 merge audit: the ROM-wide sidekick hurt-radius restore gate was relocated out of
     // movement rules and into SidekickCpuRules (its more accurate owner), so this stays at 22.
+    // Mod API 2.4 published CollisionRules with 20 flat record components. The additive 2.5
+    // contract must retain those components while also publishing nested AirCollisionRules, so
+    // the three flat air fields are synchronized ABI aliases and only 18 values are independent.
+    // Do not grow this record further; removing or decomposing the aliases requires Mod API 3.0.
     private static final Map<Class<? extends Record>, Integer> FROZEN_RULE_COMPONENT_LIMITS = Map.of(
-            PlayerMovementRules.class, 22
+            PlayerMovementRules.class, 22,
+            CollisionRules.class, 21
     );
 
     private static final List<Class<? extends Record>> RULE_RECORDS = List.of(

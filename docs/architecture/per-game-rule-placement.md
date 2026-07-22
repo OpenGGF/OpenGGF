@@ -40,3 +40,7 @@ Every new per-game divergence must document:
 - Do not add raw game-name branches in shared runtime code.
 - Do not add broad feature-set bags or compatibility bridges as a parallel rule source.
 - Do not raise rule-record component-count guard thresholds without architecture review.
+- `CollisionRules` is frozen at 21 record components for Mod API 2.5 compatibility: its three
+  flat air-collision components are synchronized ABI aliases for the nested `AirCollisionRules`
+  component, not independent rule sources. Do not add another component. Decomposing or removing
+  those published aliases requires a deliberate Mod API 3.0 transition.
