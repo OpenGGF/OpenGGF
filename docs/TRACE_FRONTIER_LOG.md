@@ -48447,3 +48447,21 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
   former rolling landing mismatch. The next physics mismatch is Sonic X at
   f23189; animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss folded-child rider carry
+
+- **`s3k_icz1` physics advanced from f23189 to f23191; animation remains at
+  f23321.** Total errors fell from 831 to 671; the focused end-boss suite
+  remains green.
+- Root: native parent slot 5 updates before the bottom child's slot `$1C`, so
+  `SolidObjectFull` carries from the parent's saved pre-update X. The folded
+  engine child used post-update X one pass early. Its Y placement also combined
+  the constant +1 `$43` shift with parent integer crossings as though both
+  phases always had the same sign.
+- Fix: solid providers can select pre-update X for continued carry. The ICZ
+  boss opts in and composes its ride correction as the child step plus the
+  signed parent whole-pixel delta (0 upward, 1 unchanged, 2 downward). No trace
+  state is read or applied.
+- Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
+  former first horizontal-motion mismatch. The next physics mismatch is Sonic
+  Y at f23191; animation first diverges at f23321.

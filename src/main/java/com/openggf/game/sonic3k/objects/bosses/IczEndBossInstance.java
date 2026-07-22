@@ -990,10 +990,19 @@ public final class IczEndBossInstance extends AbstractBossInstance
 
     @Override
     public int getContinuedRideSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
-        // When the parent crosses a whole-pixel Y boundary during its own
-        // update, the folded child's published position has caught up with the
-        // later native child SST pass. Otherwise $43 is one pixel ahead here.
-        return state.y == getPreUpdateY() ? 1 : 0;
+        // The folded child publishes its +1 $43 shift together with the
+        // parent's whole-pixel transition, while the native child SST observes
+        // those phases separately. Compose the constant child step with the
+        // signed parent step: upward crossing=0, no crossing=1, downward=2.
+        return 1 + Integer.compare(state.y, getPreUpdateY());
+    }
+
+    @Override
+    public boolean usesPreUpdateXForContinuedRide(PlayableEntity player) {
+        // Parent slot 5 moves before child slot $1C calls SolidObjectFull.
+        // The engine's folded solid pass runs after the parent update, so its
+        // saved pre-update X is the native child's carry reference for this pass.
+        return true;
     }
 
     @Override

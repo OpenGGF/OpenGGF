@@ -764,6 +764,14 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether continued horizontal rider carry should use the object's
+     * pre-update X as this frame's platform position.
+     */
+    default boolean usesPreUpdateXForContinuedRide(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Number of newly-pressed horizontal-input frames to ignore while this
      * object is the player's current riding solid.
      * <p>

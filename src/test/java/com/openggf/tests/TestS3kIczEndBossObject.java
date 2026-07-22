@@ -480,6 +480,8 @@ class TestS3kIczEndBossObject {
 
         assertEquals(1, boss.getTopLandingSnapAdjustment(player, 0x13),
                 "loc_71F30 resolves its child-local surface one pixel before the folded parent pass");
+        assertTrue(boss.usesPreUpdateXForContinuedRide(player),
+                "the later child SST carries from the parent slot's saved pre-update X");
     }
 
     @Test

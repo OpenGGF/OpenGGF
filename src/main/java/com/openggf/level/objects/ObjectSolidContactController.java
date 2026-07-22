@@ -1929,7 +1929,10 @@ final class ObjectSolidContactController {
         }
 
         if (inBounds && provider.isSolidFor(player) && !blocksSolidContacts(player, instance)) {
-            int deltaX = currentX - ridingX;
+            int carryX = provider.usesPreUpdateXForContinuedRide(player)
+                    ? instance.getPreUpdateX()
+                    : currentX;
+            int deltaX = carryX - ridingX;
             if (deltaX != 0 && provider.carriesRiderOnHorizontalMove(player)) {
                 player.shiftX(deltaX);
             }
@@ -1958,7 +1961,7 @@ final class ObjectSolidContactController {
                     - rideAdjustment;
             int newY = newCentreY - (player.getHeight() / 2);
             player.setY((short) newY);
-            putRidingState(player, instance, currentX, rideY, ridingPieceIndex);
+            putRidingState(player, instance, carryX, rideY, ridingPieceIndex);
             setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
             preserveRidingPushStatusIfNeeded(player, instance, provider);
