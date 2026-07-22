@@ -61,4 +61,87 @@ class TestPatternAtlasDynamicRanges {
                 atlas.registeredRangesForTesting());
     }
 
+    @Test
+    void typedRegistrationRetainsVirtualDispatchThroughRawOverload() {
+        RawOnlyRecordingAtlas atlas = new RawOnlyRecordingAtlas();
+
+        atlas.registerRange(PatternAtlasRange.OBJECTS);
+
+        assertEquals(1, atlas.rawRegistrations);
+    }
+
+    @Test
+    void typedRegistrationAuthorityIsClearedWhenSubclassThrows() {
+        ThrowingRawAtlas atlas = new ThrowingRawAtlas();
+        PatternAtlasRange reserved = PatternAtlasRange.OBJECTS;
+
+        assertThrows(IllegalStateException.class, () -> atlas.registerRange(reserved));
+        assertThrows(IllegalArgumentException.class,
+                () -> atlas.registerRange(reserved.base(), reserved.size(), reserved.category()));
+        assertEquals(List.of(), atlas.registeredRangesForTesting());
+    }
+
+    @Test
+    void nestedTypedRegistrationsUseIndependentAuthority() {
+        ReentrantRawAtlas atlas = new ReentrantRawAtlas();
+
+        atlas.registerRange(PatternAtlasRange.OBJECTS);
+
+        assertEquals(List.of(
+                        new PatternAtlas.PatternRange(PatternAtlasRange.HUD.base(),
+                                PatternAtlasRange.HUD.size(), PatternAtlasRange.HUD.category()),
+                        new PatternAtlas.PatternRange(PatternAtlasRange.OBJECTS.base(),
+                                PatternAtlasRange.OBJECTS.size(),
+                                PatternAtlasRange.OBJECTS.category())),
+                atlas.registeredRangesForTesting());
+    }
+
+    private static final class RawOnlyRecordingAtlas extends PatternAtlas {
+        private int rawRegistrations;
+
+        private RawOnlyRecordingAtlas() {
+            super(256, 256);
+        }
+
+        @Override
+        public void registerRange(int base, int size, String category) {
+            rawRegistrations++;
+            super.registerRange(base, size, category);
+        }
+    }
+
+    private static final class ThrowingRawAtlas extends PatternAtlas {
+        private boolean throwNext = true;
+
+        private ThrowingRawAtlas() {
+            super(256, 256);
+        }
+
+        @Override
+        public void registerRange(int base, int size, String category) {
+            if (throwNext) {
+                throwNext = false;
+                throw new IllegalStateException("injected failure");
+            }
+            super.registerRange(base, size, category);
+        }
+    }
+
+    private static final class ReentrantRawAtlas extends PatternAtlas {
+        private boolean nested;
+
+        private ReentrantRawAtlas() {
+            super(256, 256);
+        }
+
+        @Override
+        public void registerRange(int base, int size, String category) {
+            if (!nested && base == PatternAtlasRange.OBJECTS.base()) {
+                nested = true;
+                registerRange(PatternAtlasRange.HUD);
+            }
+            super.registerRange(base, size, category);
+        }
+    }
+
 }

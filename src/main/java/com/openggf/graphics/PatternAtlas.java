@@ -40,6 +40,8 @@ public class PatternAtlas {
     private final int tilesPerRow;
     private final int tilesPerColumn;
     private final int maxSlots;
+    private final ThreadLocal<ArrayDeque<StaticRangeAuthority>> staticRangeAuthorities =
+            ThreadLocal.withInitial(ArrayDeque::new);
 
     // Tiered lookup, no Integer autoboxing on any render path:
     //  - fastEntries: flat array for dense low IDs (level tiles)
@@ -132,7 +134,17 @@ public class PatternAtlas {
 
     public void registerRange(PatternAtlasRange range) {
         java.util.Objects.requireNonNull(range, "range");
-        registerRange(range.base(), range.size(), range.category(), range);
+        ArrayDeque<StaticRangeAuthority> authorities = staticRangeAuthorities.get();
+        StaticRangeAuthority authority = new StaticRangeAuthority(range);
+        authorities.push(authority);
+        try {
+            registerRange(range.base(), range.size(), range.category());
+        } finally {
+            authorities.removeFirstOccurrence(authority);
+            if (authorities.isEmpty()) {
+                staticRangeAuthorities.remove();
+            }
+        }
     }
 
     private final List<PatternRange> registeredRanges = new ArrayList<>();
@@ -146,7 +158,15 @@ public class PatternAtlas {
      * @param category a human-readable name for logging (e.g., "Objects", "HUD")
      */
     public void registerRange(int base, int size, String category) {
-        registerRange(base, size, category, null);
+        String rangeCategory = java.util.Objects.requireNonNull(category, "category");
+        ArrayDeque<StaticRangeAuthority> authorities = staticRangeAuthorities.get();
+        StaticRangeAuthority authority = authorities.peek();
+        if (authority == null) {
+            staticRangeAuthorities.remove();
+        }
+        PatternAtlasRange staticOwner = authority != null
+                ? authority.consumeIfMatches(base, size, rangeCategory) : null;
+        registerRange(base, size, rangeCategory, staticOwner);
     }
 
     private void registerRange(int base, int size, String category,
@@ -184,6 +204,24 @@ public class PatternAtlas {
             }
         }
         registeredRanges.add(new PatternRange(base, size, rangeCategory));
+    }
+
+    private static final class StaticRangeAuthority {
+        private final PatternAtlasRange range;
+        private boolean consumed;
+
+        private StaticRangeAuthority(PatternAtlasRange range) {
+            this.range = range;
+        }
+
+        private PatternAtlasRange consumeIfMatches(int base, int size, String category) {
+            if (consumed || base != range.base() || size != range.size()
+                    || !category.equals(range.category())) {
+                return null;
+            }
+            consumed = true;
+            return range;
+        }
     }
 
     private static int checkedRangeEnd(PatternRange range) {
