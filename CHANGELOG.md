@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ miniboss parent, shard, arc, and orb waits now decrement before testing for underflow, matching `Obj_Wait`'s `subq/bmi` semantics. Orbiting snowballs become touch-active on the native frame, advancing both complete-run frontiers from frame 13205 to 13410.
 - Fix: ICZ miniboss entry now stages its vertical arena target across the engine's separated camera phase while S3K sidekick bounds mirror the live `Camera_max_Y_pos` word. This restores Tails' native boss-entry pit transition and advances both complete-run frontiers from frame 12700 to 13205.
 - Fix: the ICZ Act 1 miniboss now enters the shared S3K boss-camera gate without running `loc_85CA4` on its initialization dispatch. Its approaching bounds follow the live camera from the next SST pass, advancing both complete-run frontiers from frame 12699 to 12700.
 - Fix: ICZ Act 1 now waits for the secondary Kos/KosM workload queued at camera X `$6900` before executing the seamless Act 2 reload, matching the ROM's `Kos_decomp_queue_count` gate. Both complete-run frontiers advance to frame 12699.

@@ -48083,3 +48083,19 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:149699-149734,180548-180575,28409-28445`).
 - Validation: the 20-case miniboss suite and two-case S3K sidekick-bound suite
   pass. The complete-run replay remains red at f13205 on miniboss/player motion.
+
+## 2026-07-21 - ICZ miniboss wait underflow advances both frontiers
+
+- **`s3k_icz1` physics and animation advanced from f13205 to f13410.** Total
+  errors fell from 2,239 to 1,945: 1,727 physics and 218 animation.
+- Root: native `Obj_Wait` performs `subq.w #1,$2E(a0)` and branches on the new
+  negative value. The miniboss parent, shard, arc, and orb helpers tested the
+  old value while decrementing, adding one frame at each callback boundary.
+  Those accumulated delays left the orbiting snowballs' `$8B` touch response
+  inactive when Sonic reached them.
+- Fix: every ICZ miniboss wait now pre-decrements before its signed-underflow
+  test. The existing focused suite stays green and covers the parent arc,
+  shard release, orb rise/attach/orbit, and touch-region publication
+  (`docs/skdisasm/sonic3k.asm:149830-150055,178025-178033`).
+- The complete-run replay remains red at f13410 on the next player/miniboss
+  interaction; trace comparison data remains read-only.

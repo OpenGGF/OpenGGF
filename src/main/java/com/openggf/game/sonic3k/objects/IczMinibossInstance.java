@@ -392,7 +392,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void tickWait() {
-        if (routineTimer-- >= 0) {
+        if (--routineTimer >= 0) {
             return;
         }
         runWaitCallback();
@@ -515,7 +515,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void updateArcPass() {
-        if (routineTimer-- < 0) {
+        if (--routineTimer < 0) {
             runWaitCallback();
             return;
         }
@@ -531,7 +531,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                 }
                 shard.refreshFromParent(state.x, state.y);
             } else if (shard.routine == SHARD_ROUTINE_MOVE) {
-                if (shard.timer-- < 0) {
+                if (--shard.timer < 0) {
                     shard.routine = SHARD_ROUTINE_STOPPED;
                     shard.refreshFromParent(state.x, state.y);
                     continue;
@@ -602,7 +602,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void tickOrbWait(OrbState orb) {
-        if (orb.timer-- >= 0) {
+        if (--orb.timer >= 0) {
             return;
         }
         runOrbCallback(orb);
