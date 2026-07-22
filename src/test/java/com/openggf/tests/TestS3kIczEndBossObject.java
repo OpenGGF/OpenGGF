@@ -475,6 +475,14 @@ class TestS3kIczEndBossObject {
         assertEquals(invokeInt(instance, "getBottomChildYForTesting") - previousBottomY,
                 invokeInt(instance, "getBottomChildWholePixelDeltaForTesting"),
                 "continued ride correction is sourced from the published child displacement");
+
+        for (int pass = 0; pass < 0x42; pass++) {
+            instance.update(902 + pass, mock(PlayableEntity.class));
+        }
+        assertEquals(-1, invokeInt(instance, "getBottomChildShiftTimerForTesting"));
+        assertEquals(0x43, invokeInt(instance, "getBottomChildLocalYOffsetForTesting"),
+                "Obj_Wait invokes loc_71F1E only after the terminal 0 -> -1 decrement");
+
     }
 
     @Test

@@ -48481,3 +48481,20 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
   former f23191 mismatch. The next physics mismatch is Sonic Y at f23192;
   animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss terminal child shift
+
+- **`s3k_icz1` physics advanced from f23192 to f23193; animation remains at
+  f23321.** Total errors changed from 673 to 772; the focused end-boss suite
+  remains green.
+- Root: routine 4 adds `$40` to child-local `$43` before calling `Obj_Wait`.
+  The `$42` timer therefore includes a terminal displacement on the pass that
+  decrements zero to −1 and invokes `loc_71F1E`. The folded child stopped before
+  that terminal displacement.
+- Fix: active structural shifts now process timer zero, publish the terminal
+  signed displacement, and then become inactive at −1. Continued riding uses
+  the same-pass displacement correction before routine-2 steady state. No
+  trace state is read or applied.
+- Validation: `TestS3kIczEndBossObject` verifies the 67-step `$43` result and
+  the complete-run replay passes f23192. The next physics mismatch is Sonic Y
+  at f23193; animation first diverges at f23321.

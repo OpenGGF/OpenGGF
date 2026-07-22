@@ -179,6 +179,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private boolean defeatHandoffComplete;
     private boolean lastSideToggle;
     private int bottomChildWholePixelDelta;
+    private boolean bottomChildShiftedThisPass;
     private int robotnikShipX;
     private int robotnikShipXFixed;
     private int robotnikShipY;
@@ -256,6 +257,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         defeatHandoffComplete = false;
         lastSideToggle = false;
         bottomChildWholePixelDelta = 0;
+        bottomChildShiftedThisPass = false;
         robotnikShipX = state.x;
         robotnikShipXFixed = state.x << 8;
         robotnikShipY = state.y;
@@ -553,6 +555,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
             return;
         }
         int previousBottomY = structuralChildren[BOTTOM_CHILD_INDEX].y;
+        bottomChildShiftedThisPass = false;
         boolean flipped = (state.renderFlags & 1) != 0;
         boolean sideToggle = (parentFlags & PARENT_FLAG_SIDE_TOGGLE) != 0;
         for (StructuralChild child : structuralChildren) {
@@ -560,7 +563,10 @@ public final class IczEndBossInstance extends AbstractBossInstance
                 child.updateDetached();
                 continue;
             }
-            child.updateShift();
+            boolean shifted = child.updateShift();
+            if (child == structuralChildren[BOTTOM_CHILD_INDEX]) {
+                bottomChildShiftedThisPass = shifted;
+            }
             int dx = flipped ? -child.baseDx : child.baseDx;
             child.x = state.x + dx;
             child.y = state.y + child.baseDy + child.localYOffset;
@@ -999,7 +1005,11 @@ public final class IczEndBossInstance extends AbstractBossInstance
         // before its shared rider pass. Native loc_71F30 instead consumes the
         // prior child position and then publishes this displacement, so the
         // exact signed child delta is the ride-phase correction.
-        return bottomChildWholePixelDelta;
+        // Once routine 4 no longer shifts $43, parent-only motion is already
+        // the surface consumed by the corresponding native child pass.
+        return bottomChildShiftedThisPass
+                ? bottomChildWholePixelDelta
+                : 0;
     }
 
     @Override
@@ -1491,12 +1501,13 @@ public final class IczEndBossInstance extends AbstractBossInstance
             shiftTimer = shiftDuration;
         }
 
-        private void updateShift() {
-            if (shiftTimer <= 0) {
-                return;
+        private boolean updateShift() {
+            if (shiftVelocity == 0 || shiftTimer < 0) {
+                return false;
             }
             localYOffset += shiftVelocity;
             shiftTimer--;
+            return true;
         }
     }
 
