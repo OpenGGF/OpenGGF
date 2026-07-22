@@ -178,6 +178,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private boolean defeatStarted;
     private boolean defeatHandoffComplete;
     private boolean lastSideToggle;
+    private int bottomChildWholePixelDelta;
     private int robotnikShipX;
     private int robotnikShipXFixed;
     private int robotnikShipY;
@@ -254,6 +255,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         defeatStarted = false;
         defeatHandoffComplete = false;
         lastSideToggle = false;
+        bottomChildWholePixelDelta = 0;
         robotnikShipX = state.x;
         robotnikShipXFixed = state.x << 8;
         robotnikShipY = state.y;
@@ -550,6 +552,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if (structuralChildren == null) {
             return;
         }
+        int previousBottomY = structuralChildren[BOTTOM_CHILD_INDEX].y;
         boolean flipped = (state.renderFlags & 1) != 0;
         boolean sideToggle = (parentFlags & PARENT_FLAG_SIDE_TOGGLE) != 0;
         for (StructuralChild child : structuralChildren) {
@@ -572,6 +575,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
             structuralChildren[BOTTOM_CHILD_INDEX].startShift(velocity);
             lastSideToggle = sideToggle;
         }
+        int currentBottomY = structuralChildren[BOTTOM_CHILD_INDEX].y;
+        bottomChildWholePixelDelta = previousBottomY == 0 ? 0 : currentBottomY - previousBottomY;
         updateDamagedTopSteam();
     }
 
@@ -990,11 +995,11 @@ public final class IczEndBossInstance extends AbstractBossInstance
 
     @Override
     public int getContinuedRideSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
-        // The folded child publishes its +1 $43 shift together with the
-        // parent's whole-pixel transition, while the native child SST observes
-        // those phases separately. Compose the constant child step with the
-        // signed parent step: upward crossing=0, no crossing=1, downward=2.
-        return 1 + Integer.compare(state.y, getPreUpdateY());
+        // The engine publishes the folded child's new whole-pixel position
+        // before its shared rider pass. Native loc_71F30 instead consumes the
+        // prior child position and then publishes this displacement, so the
+        // exact signed child delta is the ride-phase correction.
+        return bottomChildWholePixelDelta;
     }
 
     @Override
@@ -1282,6 +1287,10 @@ public final class IczEndBossInstance extends AbstractBossInstance
             return 0;
         }
         return structuralChildren[BOTTOM_CHILD_INDEX].shiftTimer;
+    }
+
+    public int getBottomChildWholePixelDeltaForTesting() {
+        return bottomChildWholePixelDelta;
     }
 
     public int getBottomChildXForTesting() {

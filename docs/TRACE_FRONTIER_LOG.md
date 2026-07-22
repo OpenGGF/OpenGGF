@@ -48465,3 +48465,19 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
   former first horizontal-motion mismatch. The next physics mismatch is Sonic
   Y at f23191; animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss signed child displacement
+
+- **`s3k_icz1` physics advanced from f23191 to f23192; animation remains at
+  f23321.** Total errors changed from 671 to 673; the focused end-boss suite
+  remains green.
+- Root: parent integer movement is only one component of the folded bottom
+  child's published position. Inferring the ride correction from the parent
+  missed frames where `$43` and fixed-point parent motion cancelled or combined
+  across a whole-pixel boundary.
+- Fix: the boss records the bottom child's actual signed whole-pixel
+  displacement during its structural pass and publishes that as the native
+  child-SST continued-ride correction. No trace state is read or applied.
+- Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
+  former f23191 mismatch. The next physics mismatch is Sonic Y at f23192;
+  animation first diverges at f23321.

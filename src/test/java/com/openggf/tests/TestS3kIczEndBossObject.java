@@ -468,9 +468,13 @@ class TestS3kIczEndBossObject {
         assertEquals(0, invokeInt(instance, "getBottomChildLocalYOffsetForTesting"),
                 "loc_71F92 arms routine 4 but does not change child offset on that dispatch");
 
+        int previousBottomY = invokeInt(instance, "getBottomChildYForTesting");
         instance.update(901, mock(PlayableEntity.class));
         assertEquals(1, invokeInt(instance, "getBottomChildLocalYOffsetForTesting"));
         assertEquals(0x41, invokeInt(instance, "getBottomChildShiftTimerForTesting"));
+        assertEquals(invokeInt(instance, "getBottomChildYForTesting") - previousBottomY,
+                invokeInt(instance, "getBottomChildWholePixelDeltaForTesting"),
+                "continued ride correction is sourced from the published child displacement");
     }
 
     @Test

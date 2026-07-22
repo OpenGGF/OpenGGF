@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ end-boss continued riding now corrects folded-child placement from the bottom child's actual signed whole-pixel displacement instead of inferring it from the parent alone. This advances complete-run physics from frame 23191 to frame 23192 while animation remains at frame 23321.
 - Fix: ICZ end-boss rider carry now uses the parent slot's saved pre-update X and composes the bottom child's `$43` step with the parent's signed whole-pixel Y transition. This advances complete-run physics from frame 23189 to frame 23191 while animation remains at frame 23321.
 - Fix: ICZ's folded end-boss bottom child now arms its `$43` shift on the native transition dispatch and exposes separate fresh-landing/continued-ride SST-phase corrections. This aligns Sonic's first boss landing and advances complete-run physics from frame 23182 to frame 23189 while animation remains at frame 23321.
 - Fix: ICZ crushing columns now preserve the native `y_pos` subpixel word across terrain-impact integer corrections and probe ceilings through S3K's upward `FindFloor` path. This restores the phase of later return/crush cycles and advances complete-run physics from frame 22465 to 23182 and animation to frame 23321.
