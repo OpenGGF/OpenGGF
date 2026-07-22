@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ deferred Orbinaut callback phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 11697 to
+  frame 12111.** The next divergence is Sonic's object-controlled X position
+  (`$26E0` expected versus `$26DF` actual) on the LBZ ride grapple.
+- Root: the engine delayed Orbinaut child-slot materialization until the
+  parent's centre entered the viewport, but discarded the ROM continuation
+  already running after the `$20` `Obj_WaitOffscreen` placeholder was rendered.
+  The later left-moving Orbinaut therefore lost two `MoveSprite2` passes and
+  one effective circular child callback, moving its harmful orb contact one
+  frame late. Materializing all four children early was not equivalent because
+  it changed SST pressure and collision-list publication at the earlier
+  Orbinaut encounter.
+- Fix: the parent now advances the hidden restored callback without reserving
+  child slots, retaining its subpixel position and accumulated orbit angle.
+  When the child graph can be materialized, each child resumes at the native
+  setup or circular-movement callback according to the deferred lifecycle
+  progress. Focused coverage distinguishes the short and long deferred-window
+  callback phases.
+- Validation: all 9 focused Orbinaut tests pass and the LBZ replay reaches
+  frame 12111. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - LBZ Orbinaut wait-offscreen continuation
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 11126 to

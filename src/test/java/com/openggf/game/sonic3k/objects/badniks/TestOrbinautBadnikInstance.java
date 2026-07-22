@@ -144,6 +144,17 @@ class TestOrbinautBadnikInstance {
     }
 
     @Test
+    void deferredChildGraphRestoresTheNativeCallbackPhase() {
+        AbstractObjectInstance shortWindowChild = createDeferredChild(3);
+        AbstractObjectInstance longWindowChild = createDeferredChild(4);
+
+        assertFalse(readBoolean(shortWindowChild, "initialized"),
+                "a short deferred window still owes the child setup callback");
+        assertTrue(readBoolean(longWindowChild, "initialized"),
+                "a longer deferred window resumes at the circular-movement callback");
+    }
+
+    @Test
     void placeholderVisibilityCompletesRestoreBeforeMovementBegins() {
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 224, 0);
         AbstractObjectInstance orbinaut = (AbstractObjectInstance) new Sonic3kObjectRegistry().create(
@@ -182,6 +193,26 @@ class TestOrbinautBadnikInstance {
         orbinaut.setServices(services);
         orbinaut.update(0, playerAt(0x0180, 0x0100, false, 0, 0));
         return orbinaut;
+    }
+
+    private static AbstractObjectInstance createDeferredChild(int offscreenUpdates) {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x01F0, 0x0400, 0);
+        AbstractObjectInstance orbinaut = createOrbinaut();
+        ObjectServices services = mock(ObjectServices.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(services.objectManager()).thenReturn(objectManager);
+        orbinaut.setServices(services);
+        AbstractPlayableSprite player = playerAt(0x0180, 0x0100, false, -0x100, 0);
+        for (int i = 0; i < offscreenUpdates; i++) {
+            orbinaut.update(i, player);
+        }
+
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0400, 0x0400, 0);
+        orbinaut.update(offscreenUpdates, player);
+
+        ArgumentCaptor<ObjectInstance> childCaptor = ArgumentCaptor.forClass(ObjectInstance.class);
+        verify(objectManager, times(4)).addDynamicObjectAfterCurrent(childCaptor.capture());
+        return (AbstractObjectInstance) childCaptor.getAllValues().getFirst();
     }
 
     private static AbstractPlayableSprite playerAt(int x, int y, boolean air, int xSpeed, int ySpeed) {

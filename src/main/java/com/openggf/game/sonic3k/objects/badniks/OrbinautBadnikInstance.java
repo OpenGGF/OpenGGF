@@ -38,10 +38,16 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
     private static final int X_SPEED = 0x80;              // loc_8C662: move.w #-$80,d1.
     private static final int CHILD_COUNT = 4;
     private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
+    private static final int ORBIT_ANGLE_STEP = 8;
+    private static final int WAIT_OFFSCREEN_RESTORE_PASSES = 2;
 
     private boolean initialized;
     private boolean movementEnabled;
     private int movementEnableDelay = -1;
+    private boolean deferredWaitOffscreenActive;
+    private int deferredWaitOffscreenDelay = WAIT_OFFSCREEN_RESTORE_PASSES;
+    private int deferredMovementCount;
+    private int deferredOrbitAngle;
 
     public OrbinautBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Orbinaut",
@@ -51,7 +57,20 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || (!initialized && !isOnScreenX())) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite
+                ? sprite : null;
+        if (!initialized && !isOnScreenX()) {
+            if (isWithinRenderSpriteBounds(WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE)) {
+                // Obj_WaitOffscreen has observed render_flags bit 7 and restored
+                // the saved callback. Keep advancing that ROM state while child
+                // slot allocation remains deferred to the engine's centre window.
+                deferredWaitOffscreenActive = true;
+                advanceDeferredWaitOffscreen(player);
+            }
             return;
         }
 
@@ -60,6 +79,9 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
             // window admits the parent. Obj_WaitOffscreen's saved continuation
             // still keeps motion and orbit cadence dormant until its $20
             // placeholder has actually reached Render_Sprites.
+            if (deferredWaitOffscreenActive) {
+                advanceDeferredWaitOffscreen(player);
+            }
             spawnOrbitingOrbs();
             initialized = true;
             movementEnabled = isWithinRenderSpriteBounds(
@@ -67,8 +89,6 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
             return;
         }
 
-        AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite
-                ? sprite : null;
         updateFacingAndVelocity(player);
         if (!movementEnabled) {
             if (movementEnableDelay < 0) {
@@ -88,10 +108,37 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
         }
     }
 
+    private void advanceDeferredWaitOffscreen(AbstractPlayableSprite player) {
+        // The restored callback and the parent's setup/child-creation callback
+        // each consume a pass without movement before loc_8C662 can run.
+        if (deferredWaitOffscreenDelay > 0) {
+            deferredWaitOffscreenDelay--;
+            return;
+        }
+        advanceDeferredOperation(player);
+    }
+
+    private void advanceDeferredOperation(AbstractPlayableSprite player) {
+        updateFacingAndVelocity(player);
+        if (!canMoveThisFrame(player)) {
+            return;
+        }
+        moveWithVelocity();
+        deferredMovementCount++;
+        int angleStep = isFacingRight() ? -ORBIT_ANGLE_STEP : ORBIT_ANGLE_STEP;
+        deferredOrbitAngle = (deferredOrbitAngle + angleStep) & 0xFF;
+    }
+
     private void spawnOrbitingOrbs() {
         for (int i = 0; i < CHILD_COUNT; i++) {
             final int index = i;
-            spawnChild(() -> new OrbinautOrbInstance(spawn, this, index));
+            // When the engine delays slot materialisation, reconstruct both the
+            // accumulated circular phase and whether loc_8C692's setup callback
+            // has already yielded to loc_8C6B0. This keeps the ROM lifecycle
+            // without reserving four live SST slots outside the centre window.
+            spawnChild(() -> new OrbinautOrbInstance(
+                    spawn, this, index, deferredOrbitAngle,
+                    deferredMovementCount > WAIT_OFFSCREEN_RESTORE_PASSES));
         }
     }
 
@@ -148,14 +195,17 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
                 TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
         private final transient OrbinautBadnikInstance parent;
+        private boolean initialized;
         private int currentX;
         private int currentY;
         private int angle;
 
-        OrbinautOrbInstance(ObjectSpawn ownerSpawn, OrbinautBadnikInstance parent, int index) {
+        OrbinautOrbInstance(ObjectSpawn ownerSpawn, OrbinautBadnikInstance parent, int index,
+                int initialAngleOffset, boolean nativeRoutineActive) {
             super(ownerSpawn, "OrbinautOrb");
             this.parent = parent;
-            this.angle = (index * 0x40) & 0xFF; // ChildObjDat_8C704 cardinal offsets.
+            this.initialized = nativeRoutineActive;
+            this.angle = (index * 0x40 + initialAngleOffset) & 0xFF;
             updateOrbitPosition();
         }
 
@@ -169,7 +219,7 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
             if (liveParent == null) {
                 return null;
             }
-            return new OrbinautOrbInstance(ctx.spawn(), liveParent, 0);
+            return new OrbinautOrbInstance(ctx.spawn(), liveParent, 0, 0, false);
         }
 
         private static OrbinautBadnikInstance findNearestLiveParentForRewind(
@@ -199,6 +249,12 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
         public void update(int frameCounter, PlayableEntity playerEntity) {
             if (isDestroyed() || parent.isDestroyed()) {
                 setDestroyed(true);
+                return;
+            }
+
+            if (!initialized) {
+                initialized = true;
+                updateOrbitPosition();
                 return;
             }
 
