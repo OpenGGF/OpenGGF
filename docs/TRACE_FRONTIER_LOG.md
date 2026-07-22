@@ -48531,3 +48531,21 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczEndBossObject` covers both radius paths and the
   complete-run replay passes the former f23232 Tails Y mismatch. Both groups
   next diverge at f23321.
+
+## 2026-07-22 - ICZ end-boss frost capture range and child phase
+
+- **`s3k_icz1` physics advanced from f23321 to f23328 and animation advanced
+  from f23321 to f23329.** Total errors changed from 662 to 682; the focused
+  end-boss suite remains green.
+- Root: `word_7208A`/`word_720BE` encode a start offset followed by an extent,
+  but the engine treated the extent as the positive endpoint and doubled each
+  puff's positive capture range. Folded puff children also applied a later-slot
+  capture during the parent pass, and the capture rewrote integer positions,
+  clearing subpixel words that native `sub_8A9E0` never touches.
+- Fix: ordinary and top-puff ranges now resolve to symmetric ±$18 and ±$10
+  boxes, detected captures publish on the next folded-parent pass, and capture
+  leaves player position/subpixels intact. The queued state is player-indexed
+  primitive ROM state rather than a trace or object reference.
+- Validation: `TestS3kIczEndBossObject` verifies the excluded +$18 boundary and
+  delayed capture ownership. The complete-run replay reaches Sonic's frozen Y
+  placement at f23328; animation next diverges on Tails at f23329.

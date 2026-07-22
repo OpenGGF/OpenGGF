@@ -95,14 +95,16 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private static final int BOTTOM_HURT_CHILD_DY = 0x08;
     private static final int BOTTOM_HURT_FLAGS = 0x9B;
     private static final SolidObjectParams BOTTOM_SOLID_PARAMS = new SolidObjectParams(0x23, 4, 0x0A);
+    // Check_PlayerInRange tables encode (start offset, extent), so
+    // {-0x18, 0x30} and {-0x10, 0x20} end at +0x18 and +0x10.
     private static final int FROST_CAPTURE_NORMAL_MIN_X = -0x18;
-    private static final int FROST_CAPTURE_NORMAL_MAX_X = 0x30;
+    private static final int FROST_CAPTURE_NORMAL_MAX_X = 0x18;
     private static final int FROST_CAPTURE_NORMAL_MIN_Y = -0x18;
-    private static final int FROST_CAPTURE_NORMAL_MAX_Y = 0x30;
+    private static final int FROST_CAPTURE_NORMAL_MAX_Y = 0x18;
     private static final int FROST_CAPTURE_TOP_MIN_X = -0x10;
-    private static final int FROST_CAPTURE_TOP_MAX_X = 0x20;
+    private static final int FROST_CAPTURE_TOP_MAX_X = 0x10;
     private static final int FROST_CAPTURE_TOP_MIN_Y = -0x10;
-    private static final int FROST_CAPTURE_TOP_MAX_Y = 0x20;
+    private static final int FROST_CAPTURE_TOP_MAX_Y = 0x10;
     private static final int MIDDLE_CHILD_INDEX = 1;
     private static final int BOTTOM_CHILD_INDEX = 2;
     private static final int MIDDLE_CHILD_SHIFT_TIME = 0x24;
@@ -179,6 +181,11 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private boolean defeatHandoffComplete;
     private boolean lastSideToggle;
     private int bottomChildWholePixelDelta;
+    private int pendingFrostCaptureMask;
+    private int pendingFrostCaptureP1X;
+    private int pendingFrostCaptureP1Y;
+    private int pendingFrostCaptureP2X;
+    private int pendingFrostCaptureP2Y;
     private int robotnikShipX;
     private int robotnikShipXFixed;
     private int robotnikShipY;
@@ -256,6 +263,11 @@ public final class IczEndBossInstance extends AbstractBossInstance
         defeatHandoffComplete = false;
         lastSideToggle = false;
         bottomChildWholePixelDelta = 0;
+        pendingFrostCaptureMask = 0;
+        pendingFrostCaptureP1X = 0;
+        pendingFrostCaptureP1Y = 0;
+        pendingFrostCaptureP2X = 0;
+        pendingFrostCaptureP2Y = 0;
         robotnikShipX = state.x;
         robotnikShipXFixed = state.x << 8;
         robotnikShipY = state.y;
@@ -275,6 +287,9 @@ public final class IczEndBossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+        // Native smoke children execute in later SST slots than their parent;
+        // the folded child overlap becomes parent-visible on this next pass.
+        applyPendingFrostCaptures(player);
         updateHitFlash();
         if (!arenaGateComplete) {
             updateArenaGate();
@@ -633,9 +648,46 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if (!child.isCaptureActive()) {
             return;
         }
-        for (PlayableEntity candidate : frostCaptureParticipants(fallbackPlayer)) {
+        List<PlayableEntity> participants = frostCaptureParticipants(fallbackPlayer);
+        for (int index = 0; index < participants.size() && index < 2; index++) {
+            PlayableEntity candidate = participants.get(index);
             if (candidate instanceof AbstractPlayableSprite sprite && canFrostCapture(sprite, child)) {
-                frostCapture(sprite);
+                queueFrostCapture(index, sprite);
+            }
+        }
+    }
+
+    private void queueFrostCapture(int participantIndex, AbstractPlayableSprite player) {
+        int bit = 1 << participantIndex;
+        if ((pendingFrostCaptureMask & bit) != 0) {
+            return;
+        }
+        pendingFrostCaptureMask |= bit;
+        if (participantIndex == 0) {
+            pendingFrostCaptureP1X = player.getCentreX();
+            pendingFrostCaptureP1Y = player.getCentreY();
+        } else {
+            pendingFrostCaptureP2X = player.getCentreX();
+            pendingFrostCaptureP2Y = player.getCentreY();
+        }
+    }
+
+    private void applyPendingFrostCaptures(PlayableEntity fallbackPlayer) {
+        int captureMask = pendingFrostCaptureMask;
+        if (captureMask == 0) {
+            return;
+        }
+        pendingFrostCaptureMask = 0;
+        List<PlayableEntity> participants = frostCaptureParticipants(fallbackPlayer);
+        for (int index = 0; index < participants.size() && index < 2; index++) {
+            if ((captureMask & (1 << index)) == 0) {
+                continue;
+            }
+            PlayableEntity candidate = participants.get(index);
+            if (candidate instanceof AbstractPlayableSprite sprite) {
+                int capturedX = index == 0 ? pendingFrostCaptureP1X : pendingFrostCaptureP2X;
+                int capturedY = index == 0 ? pendingFrostCaptureP1Y : pendingFrostCaptureP2Y;
+                frostCapture(sprite, capturedX, capturedY);
             }
         }
     }
@@ -662,17 +714,13 @@ public final class IczEndBossInstance extends AbstractBossInstance
                 && dy >= child.captureMinY && dy < child.captureMaxY;
     }
 
-    private void frostCapture(AbstractPlayableSprite player) {
-        int capturedX = player.getCentreX();
-        int capturedY = player.getCentreY();
+    private void frostCapture(AbstractPlayableSprite player, int capturedX, int capturedY) {
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setAir(true);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         player.setAnimationId(0x1A);
-        player.setCentreX((short) capturedX);
-        player.setCentreY((short) capturedY);
         boolean flipped = (state.renderFlags & 1) != 0;
         spawnChild(() -> new IczFreezerObjectInstance.FrozenPlayerBlock(player, capturedX, capturedY,
                 state.x, flipped));

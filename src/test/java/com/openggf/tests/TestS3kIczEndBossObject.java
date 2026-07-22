@@ -843,6 +843,7 @@ class TestS3kIczEndBossObject {
 
         bindPlayerToFrostPuff(instance, player, activeTopSteam);
 
+        instance.update(nextFrame++, player);
         instance.update(nextFrame, player);
 
         org.mockito.Mockito.verify(player, org.mockito.Mockito.atLeastOnce()).setAnimationId(0x1A);
@@ -881,6 +882,7 @@ class TestS3kIczEndBossObject {
 
         bindPlayerToFrostPuff(instance, player, normalPuff);
         instance.update(nextFrame++, player);
+        instance.update(nextFrame++, player);
         long capturesBeforeDamagedTopSteam = frozenPlayerBlockCount(services);
         assertTrue(capturesBeforeDamagedTopSteam > 0);
 
@@ -907,6 +909,7 @@ class TestS3kIczEndBossObject {
         assertTrue(activeTopSteam >= 0);
 
         bindPlayerToFrostPuff(instance, player, activeTopSteam);
+        instance.update(nextFrame++, player);
         instance.update(nextFrame, player);
 
         assertTrue(frozenPlayerBlockCount(services) > capturesBeforeDamagedTopSteam,
@@ -942,11 +945,54 @@ class TestS3kIczEndBossObject {
         assertTrue(activePuff >= 0);
         bindPlayerToFrostPuff(instance, player, activePuff);
 
+        instance.update(nextFrame++, player);
         instance.update(nextFrame, player);
 
         org.mockito.Mockito.verify(player, org.mockito.Mockito.atLeastOnce()).setAnimationId(0x1A);
         assertTrue(services.spawnedChildren.stream().anyMatch(child ->
                 child.getClass().getSimpleName().contains("FrozenPlayerBlock")));
+    }
+
+    @Test
+    void frostPuffRangeTableUsesStartOffsetPlusExtent() throws Exception {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));
+        AbstractObjectInstance object = (AbstractObjectInstance) instance;
+        RecordingServices services = new RecordingServices();
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
+        services.camera.setX((short) 0x4390);
+        services.camera.setY((short) 0x05F8);
+        object.setServices(services);
+
+        int activePuff = -1;
+        int nextFrame = 1;
+        for (; nextFrame <= 720 && activePuff < 0; nextFrame++) {
+            instance.update(nextFrame, player);
+            int puffCount = invokeInt(instance, "getFrostPuffCountForTesting");
+            for (int i = 0; i < puffCount; i++) {
+                if ((Boolean) instance.getClass().getMethod("isFrostPuffCaptureActiveForTesting", int.class)
+                        .invoke(instance, i)) {
+                    activePuff = i;
+                    break;
+                }
+            }
+        }
+        assertTrue(activePuff >= 0);
+        int puffIndex = activePuff;
+        when(player.getCentreX()).thenAnswer(invocation ->
+                (short) (frostPuffCoordinate(instance, "getFrostPuffXForTesting", puffIndex) + 0x18));
+        when(player.getCentreY()).thenAnswer(invocation ->
+                frostPuffCoordinate(instance, "getFrostPuffYForTesting", puffIndex));
+
+        instance.update(nextFrame++, player);
+        assertEquals(0, frozenPlayerBlockCount(services),
+                "word_7208A's second word is an extent, making +$18 the excluded right edge");
+
+        bindPlayerToFrostPuff(instance, player, puffIndex);
+        instance.update(nextFrame++, player);
+        instance.update(nextFrame, player);
+        assertTrue(frozenPlayerBlockCount(services) > 0);
     }
 
     @Test
