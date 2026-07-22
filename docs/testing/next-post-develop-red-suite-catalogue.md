@@ -19,7 +19,7 @@ The exact 73-method deferred set is maintained in `docs/testing/unfinished-sk-zo
 
 | Root cause | Reds | Kind | Lineage | Recommended owner/action |
 |---|---:|---|---|---|
-| Mod API publication and compatibility surface is internally inconsistent | 6 | API/ABI | Existing `next`; merge widens already-red diagnostics | Restore old constructor compatibility, decide intentional exposure, then publish a new minor surface rather than rewriting 2.4 history |
+| Provisional Mod API publication and compatibility surface was internally inconsistent | 6 | API/ABI | Existing `next`; merge widened already-red diagnostics | Remove provisional shims, decide intentional exposure, then establish the first 0.7 baseline |
 | Mod object-art count/preflight contract is incomplete | 14 | Runtime/API | Existing `next` | Define explicit empty counts and one preflight/cache order for stock and mod providers |
 | S3K custom-zone factory inventory has drifted | 2 | Runtime/API | Existing `next` | Audit each S3KL/SKL factory dependency and declare stock-bound semantics explicitly |
 | Static and dynamic virtual-pattern ranges overlap | 2 | Architecture | Existing `next` | Assign one owner to the `0x108000` address space; do not allow ambiguous static/dynamic ownership |

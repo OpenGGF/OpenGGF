@@ -20,9 +20,9 @@ Use the checked [music](../samples/phase4-gallery-music-pack/META-INF/openggf-mo
 [badnik/zone](../../../src/test/resources/mods/sample-mod-src/project/src/main/resources/META-INF/openggf-mod.yaml),
 [character](../../../src/test/resources/mods/sample-character-src/project/src/main/resources/META-INF/openggf-mod.yaml),
 and [standalone](../../../src/test/resources/mods/sample-standalone-src/project/src/main/resources/META-INF/openggf-mod.yaml)
-manifests. They exercise data-only API 1.0/1.1 ranges, code API 1.1/1.2 ranges, patch/standalone,
+manifests. They exercise the Mod API 0.7 range across patch/standalone,
 music/art maps, entrypoints, and progression.
 
 Manifest format version `1` is independent of the engine Mod API version. Current
-code publishes API `1.2.0`; use a deliberate range such as `>=1.2.0 <2.0.0` when your
-code depends on Phase 3 APIs.
+code publishes Mod API `0.7.0`; maintained manifests use
+`>=0.7.0 <0.8.0`.

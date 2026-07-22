@@ -4,8 +4,8 @@ Phase 1 music packs are restart-loaded patch mods that replace stock music with
 bounded WAV or Ogg/Vorbis assets. They do not contain executable code, and they
 never replace ROM data on disk.
 
-The Phase 1 music-pack path accepts packed, data-only patch JARs only. The current
-engine also supports API 1.2 code-backed objects, art reskins, Sonic 2 zones,
+The music-pack path accepts packed, data-only patch JARs only. The current
+Mod API 0.7 also supports code-backed objects, art reskins, Sonic 2 zones,
 playable characters, no-ROM standalone games, and explicit development-directory
 runs through `ggfmod`; those use separate eligibility and trust rules documented in
 [Content mods](content-mods.md). Standalone games may play declared streamed SFX
@@ -45,7 +45,7 @@ version: 1.0.0
 authors:
   - Example Author
 description: Replaces Emerald Hill music with an original recording.
-engineApiRange: ">=1.0.0 <2.0.0"
+engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s2
 dependencies: []
@@ -66,8 +66,8 @@ artOverrides: {}
   suffix.
 - `engineApiRange` and dependency `versionRange` accept `*`, one exact version,
   or at most four whitespace-separated `<`, `<=`, `=`, `>=`, or `>`
-  comparators. Ranges must not be empty or contradictory. The current mod API is
-  `1.2.0`; the canonical Phase 1 range `>=1.0.0 <2.0.0` remains compatible.
+  comparators. Ranges must not be empty or contradictory. The current Mod API is
+  `0.7.0`; maintained manifests use `>=0.7.0 <0.8.0`.
 - The schema accepts `type: patch` or `standalone`. A music pack uses `patch` and
   requires `baseGame: s1`, `s2`, or `s3k`; a standalone manifest omits `baseGame`,
   requires a trusted entrypoint, and follows the separate

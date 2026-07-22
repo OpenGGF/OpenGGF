@@ -1,7 +1,7 @@
 # Quickstart: object or badnik
 
-The object/zone API surface starts at Mod API 1.1. Build against the current API and
-use an `engineApiRange` that includes the engine's current 1.2.0, then grant explicit
+The object/zone surface is part of the first Mod API 0.7 contract. Build against
+the current API, declare `engineApiRange: ">=0.7.0 <0.8.0"`, then grant explicit
 code trust.
 
 1. Run `ggfmod init <dir> --id <id> --package <java.package>`.

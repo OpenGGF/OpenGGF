@@ -191,7 +191,7 @@ class TestArchUnitRules {
             // prepared one-shot SFX cursor implements the same audio-owned boundary used
             // by standalone and patched games.
             "mods -> audio",
-            // Mod API 2.4's GameplayInputFilter intentionally consumes the canonical
+            // Mod API 0.7's GameplayInputFilter intentionally consumes the canonical
             // control-owned PlayerInputState value. Reusing the immutable engine input
             // vocabulary avoids a second mod-only input model; control does not depend
             // back on mods.
@@ -220,7 +220,7 @@ class TestArchUnitRules {
             // ObjectArtProvider implementation also references sprites.animation's
             // SpriteAnimationSet.
             "mods -> sprites",
-            // Mod API 2.1's ROM-art intake (RomArtMaterializer) deliberately reuses the
+            // Mod API 0.7's ROM-art intake (RomArtMaterializer) deliberately reuses the
             // engine's existing decompression pipeline (util.PatternDecompressor,
             // util.DplcStaticFlattener) instead of duplicating parsers; util is a leaf
             // utility package and never depends back on mods.

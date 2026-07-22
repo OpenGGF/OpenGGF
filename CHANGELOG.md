@@ -13,24 +13,15 @@ All notable changes to the OpenGGF project are documented in this file.
   `PatternAtlasRange` (`0x188000` today), and generic atlas range registration
   rejects any attempt to claim a permanent static range. Level unload/rebuild
   still clears and deterministically re-registers the session's mod windows.
-- **Mod API 2.4 compatibility shims preserve their runtime contracts under 2.5.**
-  The restored sidekick history-edge rule again suppresses repeated delayed jump
-  presses when enabled while newer constructors retain direct recorded-press
-  behavior; persistent transition snapshots are fresh mutable lists; and
-  persistent respawn snapshots defensively own both array components.
-- **Mod API 2.4 MGZ carry aliases retain their runtime semantics under 2.5.**
-  Protected owner and spring-handoff fields are again authoritative for legacy
-  subclasses and stay synchronized with the extracted playable controller.
-  Owner clear, reset, release, debug, and deferred-cleanup paths now clear both
-  representations, preventing a stale pending handoff after the carry ends.
-- **Mod API 2.5.0 publishes the accumulated runtime surface without breaking 2.4
-  creator binaries.** All frozen 2.4 constructors, record components, protected
-  members, and return descriptors are restored; accidental frame-handoff,
-  runtime-art, trace-reader, event, and GPU-upload helpers are narrowed behind
-  engine-internal seams. The reviewed 2.5 snapshot contains 921 recursive engine
-  types and 18,171 canonical signatures: 718 additions and zero removals from the
-  immutable 2.4 baseline. Exact signature, Javadoc, SDK, and sample-mod guards pin
-  the publication.
+- **Mod API 0.7 establishes the first creator contract.** The exact recursive
+  `@ModApi` surface is pinned by `mod-api-signatures-0.7.txt`, with maintained
+  manifests targeting `>=0.7.0 <0.8.0`; provisional compatibility shims and
+  version-lineage promises have been removed. The first baseline includes
+  namespaced objects, bounded baked and ROM-derived art, complete Sonic 2 zones,
+  host-adapted Sonic 3&K zones, owner-tagged characters, no-ROM standalone games,
+  playable-subclass rewind hooks, and destination-scoped game-start, launch-team,
+  deterministic input-filter, and HUD-profile policies. Exact signature, Javadoc,
+  SDK, and maintained-sample guards pin the publication.
 - **Level loading now delegates transient handoffs to their runtime owners:**
   title-card object passes arm `OscillationManager` directly, keeping the gate
   in its rewind snapshot, while `LevelCheckpointCoordinator` owns the queued
@@ -43,11 +34,6 @@ All notable changes to the OpenGGF project are documented in this file.
   The three magnetic factories that consume `FbzZoneRuntimeState` are restricted to
   the exact stock FBZ/S3KL context, while other factories that read a stock ROM zone
   remain unavailable to custom zones through explicit registry metadata.
-- **Playable-subclass rewind keeps its published constructor compatibility:**
-  `PlayerRewindExtra` again exposes the canonical pre-subclass-payload overload,
-  delegating to the current snapshot shape with a null `subclassExtra`, so mods
-  compiled against the earlier Mod API signature continue to link after later
-  base-player rewind fields were added.
 - **Background-plane player probes now preserve absent S3K layout rows:**
   provider-translated `FindFloor`/`FindWall` scans consult the level's ROM row-pointer
   presence before reading decoded padding, preventing MGZ2's state-eight rise transform
@@ -81,7 +67,7 @@ All notable changes to the OpenGGF project are documented in this file.
   Manager (and cannot be enabled), removed from standalone launch choices, and
   listed in a boot notice plus console warning. Data-only music packs and reskins
   are unaffected. Boot-notice wiring remains internal, does not expand the
-  frozen Mod API 2.4 surface, preserves the runtime package boundaries, and
+  pinned Mod API 0.7 surface, preserves the runtime package boundaries, and
   wraps long notice text within the native 320-pixel viewport.
 - **fix: MHZ1 now completes its miniboss, signpost, results, and Act 2 handoff.**
   The miniboss defeat timer, floor probe, camera-boundary worker, signpost landing
@@ -161,7 +147,7 @@ All notable changes to the OpenGGF project are documented in this file.
   also resolved once during level initialization, so the title card receives its
   red banner color before the first gameplay frame instead of sampling a stale GPU
   palette from the preceding screen.
-- Sixth gallery sample **`sample-flappy`** has been rebuilt as a Mod API 2.4
+- Sixth gallery sample **`sample-flappy`** has been rebuilt as a Mod API 0.7
   Sonic 3 & Knuckles patch with a maintained native-Tails guide
   (`docs/modding/guides/native-tails-flappy.md`). An anchorless fresh-game
   destination launches Tails alone, filters horizontal input, and relabels the
@@ -170,7 +156,7 @@ All notable changes to the OpenGGF project are documented in this file.
   layout design; normal Tails flight receives the ROM-faithful `0xF0` per-frame
   refill, collision/bounds use crush death, and sparse S3K palette claims preserve
   host character/HUD colors. Fresh and rewind-recreated sessions, deterministic
-  gap/scoring state, package contents, and the API 2.4 floor are integration-tested.
+  gap/scoring state, package contents, and the API 0.7 range are integration-tested.
 - Eighth gallery sample **`sample-rom-art-remix`** plus a source-first guide
   (`docs/modding/guides/rom-art-remix.md`): an additive Sonic 2 patch demonstrating
   bounded ROM-art, mapping, and DPLC intake, launch-memory-only materialization,
@@ -185,7 +171,7 @@ All notable changes to the OpenGGF project are documented in this file.
   host-compatible indices 2-5 override. The SDK scaffold and maintained Phase 2
   sample now place creator terrain and object art on line 1 so generated projects
   remain visible under that host-owned line-0 contract.
-- **Mod API 2.4.0: game-start insertion and destination gameplay policies.** Complete
+- **Game-start insertion and destination gameplay policies.** Complete
   zones may declare an exclusive fresh-game destination (last enabled declaration
   wins without changing stock progression), a launch-only required team that never
   overwrites the durable data-select/save choice, a deterministic P1 input filter
@@ -196,9 +182,8 @@ All notable changes to the OpenGGF project are documented in this file.
   callbacks execute through owner fault boundaries and abort instead of publishing a
   partial policy set; session teardown restores identity input and the stock HUD. No
   movement, camera/scroll, world-wrap/rebase, or flight-fatigue framework was added.
-  The strict additive ABI is frozen at 896 engine types / 17,453 canonical entries in
-  `mod-api-signatures-2.4.txt`; the 2.3 snapshot remains byte-for-byte historical.
-- **Mod API 2.3.0: host-adapted additive Sonic 3&K zones.** The mod runtime now
+  The contracts are included in the first pinned Mod API 0.7 surface.
+- **Host-adapted additive Sonic 3&K zones.** The mod runtime now
   delegates complete-zone validation/loading to a typed, game-owned `ModZoneAdapter` whose
   creator ABI contains only validation, loading, and runtime-profile selection, instead of
   selecting behavior through game-name branches. Strict level format v2 adds typed
@@ -213,14 +198,13 @@ All notable changes to the OpenGGF project are documented in this file.
   owner/local zone keys in S3K saves with safe AIZ1 fallback when an owner is absent.
   Neutral `ModZoneLevelData` / `ModZoneRuntimeContribution` payloads and a host
   palette-bridge interface keep shared gameplay code independent of the private
-  mod parser and concrete S3K palette composer. The exact additive ABI is frozen
-  in `mod-api-signatures-2.3.txt`.
+  mod parser and concrete S3K palette composer.
 - **fix: SDK sprite conversion now emits Genesis column-major multi-tile pieces.**
   `ggfmod convert art` previously wrote each piece row-major even though native
   mappings and `SpritePieceRenderer` consume columns first, scrambling rectangular
   gallery art and playable sheets. A non-square marker fixture now locks the shared
   converter contract used by both ordinary and playable art.
-- **Mod API 2.2.0: playable-subclass rewind capture hooks.** `AbstractPlayableSprite`
+- **Playable-subclass rewind capture hooks.** `AbstractPlayableSprite`
   now publishes an overridable `captureSubclassRewindState()` /
   `restoreSubclassRewindState(PlayableSubclassRewindExtra)` pair, carried as a new
   `PlayerRewindExtra.subclassExtra()` payload, so a mod character can capture and
@@ -253,14 +237,13 @@ All notable changes to the OpenGGF project are documented in this file.
   default `StockMusic(0)` placeholder — required for any TMX level feeding a
   standalone module (`ModZoneLoader#loadStandalone` requires a namespaced owned
   track). See `docs/modding/ggfmod.md`.
-- Mod API 2.1.0: ROM art intake for Sonic 2 patch mods — `ModContext.registerRomObjectArt`
+- ROM art intake for Sonic 2 patch mods — `ModContext.registerRomObjectArt`
   materializes object art (Nemesis/Kosinski/uncompressed + S2 mappings + optional DPLC)
   from the player's ROM at launch under the mod's namespaced art key.
-- **Mod support Phase 4 completes the creator-facing polish pass.** `ggfmod convert level --from-tmx` now imports a hardened, deterministic orthogonal Tiled subset into the exact baked-level format, including external TSX, palette conversion, dual collision layers/profiles, tagged objects, limits, and no-clobber publication. A source-first handbook, direct validator-finding reference, link guard, and five-project CI gallery keep music, reskin, object/zone, character, and standalone workflows executable. The additive Mod API 1.2 surface now includes the prescribed delegation, collision-sensor, and level-init helpers used by those maintained examples. An exhaustive 12-document deferred-scope audit schedules base-game streamed SFX plus separate S1/S3K zone adapters, while the GUI evaluation keeps the CLI authoritative and requires measured evidence before any targeted panel or studio proposal. See `docs/modding/index.md`.
-- **Mod support Phase 3 adds playable characters and no-ROM standalone games.** The additive Mod API 1.2 surface introduces owner-tagged character identity, registry-driven factories/physics/art/archetypes, a bounded playable-v2 `.ggfp` converter, one airborne ability hook, and explicit super-form gating. Standalone mods now register a detection-free `GameModule` over durable bounded assets, load game-agnostic levels, appear as dynamic master-title entries, stream namespaced music and bounded one-shot SFX, and use validated namespaced slot-1 New Game/Continue flow. Creator callbacks retain engine-authoritative owner boundaries across objects, solids/touch, rewind, and act transitions; checked-in character and standalone source projects exercise real convert/package/scan/validate/classload paths. See `docs/modding/characters.md` and `docs/modding/standalone-games.md`.
+- **Mod support Phase 4 completes the creator-facing polish pass.** `ggfmod convert level --from-tmx` now imports a hardened, deterministic orthogonal Tiled subset into the exact baked-level format, including external TSX, palette conversion, dual collision layers/profiles, tagged objects, limits, and no-clobber publication. A source-first handbook, direct validator-finding reference, link guard, and five-project CI gallery keep music, reskin, object/zone, character, and standalone workflows executable. The creator surface includes the prescribed delegation, collision-sensor, and level-init helpers used by those maintained examples. An exhaustive 12-document deferred-scope audit schedules base-game streamed SFX plus separate S1/S3K zone adapters, while the GUI evaluation keeps the CLI authoritative and requires measured evidence before any targeted panel or studio proposal. See `docs/modding/index.md`.
+- **Mod support Phase 3 adds playable characters and no-ROM standalone games.** The creator surface includes owner-tagged character identity, registry-driven factories/physics/art/archetypes, a bounded playable-v2 `.ggfp` converter, one airborne ability hook, and explicit super-form gating. Standalone mods now register a detection-free `GameModule` over durable bounded assets, load game-agnostic levels, appear as dynamic master-title entries, stream namespaced music and bounded one-shot SFX, and use validated namespaced slot-1 New Game/Continue flow. Creator callbacks retain engine-authoritative owner boundaries across objects, solids/touch, rewind, and act transitions; checked-in character and standalone source projects exercise real convert/package/scan/validate/classload paths. See `docs/modding/characters.md` and `docs/modding/standalone-games.md`.
 - **fix: ROM-backed level loads no longer break when the ROM is registered after the session opens.** The `GameDataSource` snapshot for a session opened before its ROM was available (tests wiring `openGameplaySession` then `setRom`, and the editor fresh-start reload) is no longer frozen empty: the placeholder source now live-resolves the active `RomManager`, lazily opening the configured stock ROM as the pre-abstraction call sites did, so `createGame`, parallax/scroll, audio, touch-response, and water loads see the ROM. The lazy scroll probe also resolves the world session null-safely, so a missing-ROM probe with no active session degrades gracefully instead of throwing. The pinned `RomDataSource` identity snapshot is unchanged.
 - **Object-facing namespaced SFX playback no longer couples the level layer to the mod runtime.** `ObjectServices.playSfx(...)` now accepts the audio-owned `StreamedMusicPort.SfxRef` instead of `com.openggf.mods.SfxKey`, removing the `level -> mods` package dependency that closed a `level -> mods -> level` architecture cycle; `SfxKey` becomes an internal mod-runtime type. No runtime behavior change.
-- **Mod API bumped to 2.0.0 (breaking).** The rewind-reference-closure and per-game rules work removed/changed signatures frozen in the 1.1 surface (`PerObjectRewindSnapshot$PlayerRewindExtra`/`$SidekickCpuRewindExtra` rewind-state consolidation, `CollisionRules`/`PlayerCapabilityRules`/`RingRules`/`SidekickCpuRules`/`WaterSystemSnapshot$DynamicWaterEntry` constructor changes, and removal of the four-argument `SpriteManager.drawUnifiedBucketWithPriority` overload). Per semver this is a major break, so `ModApiVersion.CURRENT` is now `2.0.0` and the published surface is pinned by `mod-api-signatures-2.0.txt`; the frozen `mod-api-signatures-1.1.txt` is retained as a closed historical baseline. Mods must now declare a `2.x` engine range (e.g. `>=2.0.0 <3.0.0`); `<2.0.0` mods are rejected as `ENGINE_API_INCOMPATIBLE`. The SDK template and sample mods target `>=2.0.0 <3.0.0`. See `docs/architecture/mod-api-compatibility.md` for the migration notes.
 - **Generic S3K traversal through Launch Base now supports every configured sidekick.** AutoSpin, LBZ automatic tunnels, and CNZ cylinders retain native P1/P2 state first while identity-owned state survives roster reorder, promotion, demotion, omission, death, unload, and fresh-object rewind replacement; cylinder promotion recomputes its aggregate extension-standing bit so a sole extension cannot briefly occupy both native P2 and extension masks or inject false motion. A generic object-control generation prevents an earlier tunnel from clearing a later owner's identical control bits. Doors, AIZ twisted ramps, horizontal-spring safety launches, and the HCZ miniboss vortex process the full team with ownership-safe cleanup; AIZ end-boss debris follows exact 320/352/400/528/800 viewport boundaries. Direct forced-roll/tunnel movement needs no S1-donation spin-dash workaround. Flying Battery and later zones are excluded.
 - **GHZ parallax coverage and AIZ2 background-tree entry now follow the active viewport.** GHZ's static background cache includes the full 320/352/400/528/800-pixel visible span before power-of-two wrapping, preventing 528/800-pixel views from exposing a non-adjacent 512-pixel seam; AIZ2 transition trees remain hidden through deferred-slot allocation and then enter just beyond the live right edge instead of flashing at native X=320 inside widescreen views. Native 320-pixel positions, periods, and GHZ/AIZ traces remain unchanged.
 - **Launch Base residual transports and triggers now support every configured sidekick.** Lowering grapples and rolling drums preserve native P1/P2-first state while adding PlayerRef-backed extension ownership and scalar-safe compact restore across reorder, omission, death, unload, and rewind; exploding triggers attribute rolling contacts to the actual extension player. Their world-space behavior is stable across 320/352/400/528/800 widths, requires no S1 spin-dash workaround, and preserves the exact LBZ known-red trace frontier.
@@ -285,7 +268,7 @@ All notable changes to the OpenGGF project are documented in this file.
 - **MGZ dash-trigger routes now remain traversable with donors that lack spin dash.** Native S3K activation remains animation-driven, while a player whose effective donated capabilities explicitly disable spin dash can arm the paired platform mechanism through sustained grounded run/push intent; the per-player threshold state is rewind-safe.
 - **LBZ player launchers now handle every configured sidekick independently.** The native P1/P2 counter order remains unchanged, while extension sidekicks receive separate launch counters and arm-reset ownership so third and later characters cannot be stranded at mandatory Launch Base launchers. Focused launcher, graph-rewind, and rewind-coverage tests protect the extension without changing the native path.
 - **Sonic 1 SBZ teleporters and junctions now safely support configured sidekicks.** Their native single-rider state machines keep main-player priority, retain the captured player by stable rewind identity, and release forced control when an owned player dies or the object unloads.
-- **Mod support Phase 2 adds code-backed objects, art reskins, and complete Sonic 2 zones.** The versioned 1.1.0 `@ModApi` surface now supports isolated trusted entrypoints, namespaced rewind-safe object factories, bounded baked sheets, exact full-level exports, append-only tagged mod-zone progression and saves, immutable development snapshots, and the deterministic two-artifact `ggfmod` creator toolchain. A checked-in source fixture exercises init through compile, convert, package, discovery, real S2 load, badnik destruction/rewind, keyed save fallback, and mods-off identity; see `docs/modding/content-mods.md`.
+- **Mod support Phase 2 adds code-backed objects, art reskins, and complete Sonic 2 zones.** The creator surface supports isolated trusted entrypoints, namespaced rewind-safe object factories, bounded baked sheets, exact full-level exports, append-only tagged mod-zone progression and saves, immutable development snapshots, and the deterministic two-artifact `ggfmod` creator toolchain. A checked-in source fixture exercises init through compile, convert, package, discovery, real S2 load, badnik destruction/rewind, keyed save fallback, and mods-off identity; see `docs/modding/content-mods.md`.
 - **Mod support Phase 1 adds restart-scoped data-only music packs.** OpenGGF now discovers bounded packed mod JARs from `mods/`, validates strict manifest/audio v1 metadata and dependency order without loading mod code, exposes a keyboard/gamepad mod manager with pending `modstate.json` changes, and prepares bounded WAV/OGG stock-music overrides for Sonic 1, Sonic 2, and Sonic 3&K. Streamed foreground music participates in jingles, fades, tempo effects, backend lifetime, and logical rewind keyframes, while deterministic test/replay/capture/time-attack sessions install an empty external-content view and base SMPS remains the fallback; see `docs/modding/music-packs.md`.
 - **Mod support Phase 0 establishes patch composition, bounded creator assets, and complete editor-side authoring foundations.** Owner-tagged `GamePatch` composition now resolves prerequisites, character offerings, dependency/failure policy, and deterministic launch-time module decoration through the engine-owned `ModuleResolutionService`; `LoadOp`/`ResourceLoader` can read validated, size-bounded assets from immutable mod JAR or development-directory roots without weakening ROM loading; and the editor now refuses trace-owned sessions while supporting stock object/ring placement, movement and deletion, spawn overlays, collision-mode and solid-tile-index edits, undo/redo/rewind-safe mutation, and versioned v2 sidecar persistence with historical v1 migration and explicit S3K runtime-apply status.
 - **Time-attack verification trust boundaries are now enforced end to end.** Network attempts begin only when the authoritative round enters `RUNNING`; finishes require a server-observed start, a contiguous spawn-to-finish ghost stream, pacing validation, consistent timing fields, and a server-computed SHA-256 match. Recording requests are pinned to the configured master origin, uploads require an identity-owned awaiting job, and the master applies per-identity rate and total-storage caps without promoting blank fallback display names into durable identity rows.

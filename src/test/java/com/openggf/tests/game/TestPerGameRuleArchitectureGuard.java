@@ -39,10 +39,10 @@ class TestPerGameRuleArchitectureGuard {
     // and do not let other groups grow this large.
     // July 2026 merge audit: the ROM-wide sidekick hurt-radius restore gate was relocated out of
     // movement rules and into SidekickCpuRules (its more accurate owner), so this stays at 22.
-    // Mod API 2.4 published CollisionRules with 20 flat record components. The additive 2.5
-    // contract must retain those components while also publishing nested AirCollisionRules, so
+    // Mod API 0.7 publishes CollisionRules with the flat air fields plus nested AirCollisionRules, so
     // the three flat air fields are synchronized ABI aliases and only 18 values are independent.
-    // Do not grow this record further; removing or decomposing the aliases requires Mod API 3.0.
+    // Do not grow this record further; removing or decomposing the aliases requires an explicit
+    // post-0.7 compatibility transition.
     private static final Map<Class<? extends Record>, Integer> FROZEN_RULE_COMPONENT_LIMITS = Map.of(
             PlayerMovementRules.class, 22,
             CollisionRules.class, 21

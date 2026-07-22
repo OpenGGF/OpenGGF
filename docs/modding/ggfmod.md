@@ -13,7 +13,7 @@ passing the two jar paths followed by a command. For example:
 ggfmod.ps1 OpenGGF-0.6.prerelease-jar-with-dependencies.jar OpenGGF-0.6.prerelease-openggf-mod-sdk.jar init my-mod --id my-mod --package example.mymod
 ```
 
-The generated project targets Mod API 1.2 and contains a canonical manifest, a
+The generated project targets Mod API 0.7 and contains a canonical manifest, a
 compilable namespaced sample badnik, a Phase 3 character stub, a Genesis-exact sample
 sheet, and a minimal level source in the editor's exact JSON/binary export format.
 The character stub demonstrates owner-scoped registration but deliberately has no
@@ -55,5 +55,5 @@ engine with `-Dggfmod.dev.modDir=<absolute-build-output>`. The engine snapshots 
 directory once into engine-owned immutable storage and never rereads the creator tree
 during the session. Merely enabling test mode does not enable directory loading.
 
-For complete API 1.2 examples, see [Content mods](content-mods.md),
+For complete Mod API 0.7 examples, see [Content mods](content-mods.md),
 [Playable characters](characters.md), and [Standalone games](standalone-games.md).

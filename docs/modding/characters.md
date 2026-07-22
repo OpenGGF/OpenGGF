@@ -1,6 +1,6 @@
 # Playable character mods
 
-Mod API 1.2 lets a code-bearing patch contribute playable characters to a stock
+Mod API 0.7 lets a code-bearing patch contribute playable characters to a stock
 game. A character has an owner-tagged identity, a factory, a ROM-routing archetype,
 a physics profile, baked playable art, and an optional airborne ability hook. The
 engine carries that identity through launch selection, saves, rewind, art loading,
@@ -15,7 +15,7 @@ headless Phase 3 acceptance test.
 ## Manifest and identity
 
 A character contribution is executable code, so its manifest needs a trusted
-entrypoint and an API 1.2 range:
+entrypoint and the maintained 0.7 range:
 
 ```yaml
 formatVersion: 1
@@ -24,7 +24,7 @@ name: My Character Pack
 version: 1.0.0
 authors: [Mod Author]
 description: Adds an original runner to Sonic 2.
-engineApiRange: ">=1.2.0 <2.0.0"
+engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s2
 entrypoint: example.characters.MyCharacterMod
@@ -176,7 +176,7 @@ consumes the press before built-in ability dispatch; `false` leaves stock dispat
 unchanged. It is not a general replacement for ground movement or the player state
 machine.
 
-Mod characters cannot opt into stock super forms in API 1.2: set
+Mod characters cannot opt into stock super forms in the current 0.7 contract: set
 `supportsSuperForm` to `false`. This prevents a custom sprite from transforming with
 Sonic's art merely because the stock ring and emerald requirements are met.
 
@@ -189,7 +189,7 @@ on the next launch, and returns the current session to the title where required.
 Keep mutable gameplay state in rewind-capturable instance fields, use injected
 services after construction, and never keep gameplay state in mutable statics.
 
-**Rewind capture for character subclass fields (Mod API 2.2.0):** the closed,
+**Rewind capture for character subclass fields:** the closed,
 hand-enumerated `PlayerRewindExtra` base surface is no longer the whole story.
 `AbstractPlayableSprite` exposes an overridable
 `captureSubclassRewindState()` / `restoreSubclassRewindState(PlayableSubclassRewindExtra)`
@@ -221,10 +221,8 @@ other immutable types) and must never alias mutable live sprite/controller
 state.
 
 **Null contract:** `extra` is `null` when the owning snapshot carries no
-subclass payload — the common case for base playable sprites, for subclasses
-that do not override `captureSubclassRewindState()`, and for snapshots
-produced by a pre-2.2.0 `PlayerRewindExtra` constructor overload (which has no
-`subclassExtra` parameter and therefore always yields `null` here). Overrides
+subclass payload — the common case for base playable sprites and for subclasses
+that do not override `captureSubclassRewindState()`. Overrides
 must tolerate a `null` argument, typically by resetting subclass state to its
 default, rather than assuming a payload is always present.
 
@@ -243,8 +241,8 @@ private record BoltRewindExtra(boolean doubleJumpUsed)
 }
 
 /**
- * Tolerates {@code null} (no subclass payload in the snapshot -- e.g. a pre-2.2.0
- * snapshot shape) by resetting the latch to its fresh default of {@code false} rather
+ * Tolerates {@code null} (no subclass payload in the snapshot) by resetting the
+ * latch to its fresh default of {@code false} rather
  * than assuming a payload is always present, per the hook's null contract.
  */
 @Override

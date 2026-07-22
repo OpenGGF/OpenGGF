@@ -3,7 +3,7 @@
 OpenGGF's mod workflow is source-first and reproducible: author files, convert them
 with `ggfmod`, validate/package a jar, then enable it in the Mod Manager and restart.
 Choose the smallest quickstart that matches your goal; they are ordered by typical
-effort. Mod API 2.5 retains the 2.4 exclusive fresh-game insertion plus destination-scoped,
+effort. Mod API 0.7 includes exclusive fresh-game insertion plus destination-scoped,
 launch-only teams, deterministic input filters, and row-only HUD profiles; the
 [content-mod reference](content-mods.md#choose-a-fresh-game-destination-and-presentation)
 defines their ordering, replay, persistence, width, stock-default, and owner-fault
@@ -48,7 +48,7 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 - [Manifest v1](formats/manifest.md)
 - [Baked art containers](formats/baked-containers.md)
 - [`ModLevelDefinition` formats v1 and v2](formats/level-definition.md)
-- [Content mods and Mod API 2.5](content-mods.md)
+- [Content mods and Mod API 0.7](content-mods.md)
 - [Audio manifest v1](formats/audio-manifest.md)
 - [Character archetypes](concepts/character-archetypes.md)
 - [Executable-code trust](concepts/trust.md)
