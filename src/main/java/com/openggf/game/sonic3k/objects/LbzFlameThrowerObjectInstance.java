@@ -80,6 +80,14 @@ public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj16 reaches SolidObject_cont through SolidObjectFull. Its unsigned
+        // broad-X gate uses `bhi`, so relX == d1*2 is a valid zero-distance
+        // side contact (sonic3k.asm:52098-52108, 41394-41401).
+        return true;
+    }
+
+    @Override
     public int getOnScreenHalfWidth() {
         return WIDTH_PIXELS;
     }

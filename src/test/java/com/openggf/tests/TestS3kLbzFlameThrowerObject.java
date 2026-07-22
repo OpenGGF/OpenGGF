@@ -51,6 +51,8 @@ class TestS3kLbzFlameThrowerObject {
         assertEquals(0x1B, solid.halfWidth());
         assertEquals(0x10, solid.airHalfHeight());
         assertEquals(0x11, solid.groundHalfHeight());
+        assertTrue(flameThrower.usesInclusiveRightEdge(),
+                "SolidObjectFull's unsigned bhi gate accepts relX == d1*2");
         assertEquals(3, flameThrower.getPriorityBucket());
         assertEquals(Sonic3kObjectArtKeys.LBZ_FLAME_THROWER, flameThrower.getArtKeyForTesting());
     }

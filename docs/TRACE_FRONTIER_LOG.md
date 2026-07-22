@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ flame-thrower inclusive solid edge
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 10272 to
+  frame 10565.** Total release-blocking errors fell from 5283 to 4987; the next
+  divergence is CPU Tails' routine (`$02` expected versus `$04` actual).
+- Root: CPU Tails' centre reached exactly `$1B` pixels right of the flame
+  thrower's centre. Native `SolidObjectFull` accepts that exact boundary via
+  its unsigned `bhi` broad-X gate and sets the object's P2 contact bit plus
+  Tails' push status; the engine's exclusive right edge missed the contact and
+  advanced Tails' mapping phase.
+- Fix: the LBZ flame thrower now advertises the native inclusive right edge to
+  the shared full-solid contact path. A focused assertion records the ROM gate
+  alongside the object's `$1B` by `$10/$11` solid profile.
+- Validation: all 6 focused flame-thrower tests pass and the LBZ replay reaches
+  frame 10565. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - LBZ native-P2 airborne drum release
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 9953 to
