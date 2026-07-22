@@ -323,7 +323,6 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
         // ROM: move.b #$81,object_control(a1)
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
 
         // ROM: move.b #2,anim(a1)
         player.setAnimationId(2);
@@ -633,7 +632,6 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
     private void releasePlayer(AbstractPlayableSprite player, CharState state) {
         ObjectControlState.none().applyTo(player);
-        player.setControlLocked(false);
         state.phase = 0;
         state.path = null;
     }

@@ -49,7 +49,7 @@ class TestAutomaticTunnelObjectInstance {
     }
 
     @Test
-    void captureUsesFullControlAndRouteReleaseClearsControlPolicy() {
+    void captureUsesFullObjectControlWithoutWritingSeparateControlLock() {
         AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
                 new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));
         tunnel.setServices(new TestObjectServices());
@@ -66,7 +66,8 @@ class TestAutomaticTunnelObjectInstance {
         assertFalse(player.isObjectControlAllowsCpu());
         assertTrue(player.isObjectControlSuppressesMovement());
         assertTrue(player.isTouchResponseSuppressedByObjectControl());
-        assertTrue(player.isControlLocked());
+        assertFalse(player.isControlLocked(),
+                "move.b #$81,object_control does not write the separate Ctrl_1_locked byte");
 
         for (int frame = 1; frame <= 80 && player.isObjectControlled(); frame++) {
             tunnel.update(frame, player);
@@ -142,7 +143,8 @@ class TestAutomaticTunnelObjectInstance {
         AbstractObjectInstance child = services.children.get(0);
         assertInstanceOf(TunnelExhaustControlObjectInstance.class, child);
         assertEquals(player.getCentreX(), child.getX());
-        assertEquals(player.getCentreY(), child.getY());
+        assertEquals(0x0378, child.getY(),
+                "the exhaust is allocated at the final waypoint before loc_29768 applies retained exit velocity");
         assertEquals(0, intField(child, "subtype"),
                 "Obj_AutomaticTunnel exit spawn does not copy subtype; subtype 0 selects directional exhaust");
         assertEquals(0, intField(child, "xVel"));

@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-07-22 - S3K automatic-tunnel logical input ownership
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 17402 to
+  frame 18938.** The next divergence is CPU Tails' Y speed (`$0070` expected
+  versus `$0038` actual).
+- Root: `Obj_AutomaticTunnel` writes `object_control=$81`, which suppresses
+  player movement but does not write the separate `Ctrl_1_locked` byte. The
+  engine set both controls, latching a stale RIGHT logical word throughout the
+  tunnel; sixteen frames later Tails CPU consumed that history entry and added
+  an unwanted `$18` X speed.
+- Fix: automatic-tunnel capture/release now owns only native object control and
+  leaves the independent logical-input lock untouched. The existing full
+  object-control policy still suppresses physics while live controller state is
+  recorded for follower history. Focused coverage verifies the separate byte,
+  and the exhaust test now explicitly verifies its native pre-move allocation
+  coordinate.
+- Validation: all 8 focused automatic-tunnel tests pass and the LBZ replay
+  reaches frame 18938 with 165 fewer downstream errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. No S3K, S1, or S2 frontier regressed.
+
 ## 2026-07-22 - LBZ Snale protected-hit collision byte
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 16585 to
