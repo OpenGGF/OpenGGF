@@ -255,6 +255,16 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Object-local correction applied while the shared rider path re-seats a
+     * player on this object's top surface. This is separate from fresh landing
+     * placement because ROM objects may execute those paths at different SST
+     * phases.
+     */
+    default int getContinuedRideSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        return 0;
+    }
+
+    /**
      * Whether a player landing on this object's top surface keeps its rolling
      * state instead of running the generic floor roll-clear.
      * <p>

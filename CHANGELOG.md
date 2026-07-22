@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ's folded end-boss bottom child now arms its `$43` shift on the native transition dispatch and exposes separate fresh-landing/continued-ride SST-phase corrections. This aligns Sonic's first boss landing and advances complete-run physics from frame 23182 to frame 23189 while animation remains at frame 23321.
 - Fix: ICZ crushing columns now preserve the native `y_pos` subpixel word across terrain-impact integer corrections and probe ceilings through S3K's upward `FindFloor` path. This restores the phase of later return/crush cycles and advances complete-run physics from frame 22465 to 23182 and animation to frame 23321.
 - Fix: ICZ tension platforms now expose ObjDat's native `width_pixels=$18` to Sonic's object-edge balance check while retaining `d1=$23` for `SolidObjectTop`. This restores the precarious left-edge facing and balance animation and advances both complete-run trace groups to frame 22465.
 - Fix: ICZ negative-subtype tension bridges now publish each rider's current segment through `sub_38BD8` before calculating the rope bend, instead of inheriting the ordinary bridge's prior-segment cadence. This removes the one-pixel rope surface drift and advances both complete-run trace groups to frame 21673.

@@ -48429,3 +48429,21 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczCrushingColumnObject` is green and the complete-run
   replay passes the former CPU-Tails landing cascade. The next physics mismatch
   is Sonic Y at f23182; animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss bottom-child solid phase
+
+- **`s3k_icz1` physics advanced from f23182 to f23189; animation remains at
+  f23321.** Total errors changed from 833 to 831; the focused end-boss suite
+  remains green.
+- Root: the engine folds the boss's independent bottom structural/solid SST
+  into the parent. Native `loc_71F92` only arms routine 4 on the flag-change
+  dispatch; `loc_71FDA` changes `$43` on the next child pass. The folded child
+  moved on the arming dispatch and shared fresh/continued contact placement did
+  not expose the child SST's distinct pre/post-parent whole-pixel phase.
+- Fix: structural shifts now arm after the current child pass. Solid providers
+  can separately correct continued-ride placement, and the ICZ boss derives
+  that correction from the parent whole-pixel transition while retaining its
+  one-pixel fresh-landing phase. No trace state is read or applied.
+- Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
+  former rolling landing mismatch. The next physics mismatch is Sonic X at
+  f23189; animation first diverges at f23321.

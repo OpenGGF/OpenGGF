@@ -1953,7 +1953,9 @@ final class ObjectSolidContactController {
             } else {
                 surfaceOffset = params.groundHalfHeight();
             }
-            int newCentreY = rideY + params.offsetY() - surfaceOffset - player.getYRadius();
+            int rideAdjustment = provider.getContinuedRideSnapAdjustment(player, getSolidTopYRadius(player));
+            int newCentreY = rideY + params.offsetY() - surfaceOffset - player.getYRadius()
+                    - rideAdjustment;
             int newY = newCentreY - (player.getHeight() / 2);
             player.setY((short) newY);
             putRidingState(player, instance, currentX, rideY, ridingPieceIndex);

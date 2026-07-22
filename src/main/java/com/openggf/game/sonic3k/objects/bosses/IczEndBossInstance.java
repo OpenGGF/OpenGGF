@@ -552,12 +552,6 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
         boolean flipped = (state.renderFlags & 1) != 0;
         boolean sideToggle = (parentFlags & PARENT_FLAG_SIDE_TOGGLE) != 0;
-        if (sideToggle != lastSideToggle) {
-            int velocity = sideToggle ? 1 : -1;
-            structuralChildren[MIDDLE_CHILD_INDEX].startShift(velocity);
-            structuralChildren[BOTTOM_CHILD_INDEX].startShift(velocity);
-            lastSideToggle = sideToggle;
-        }
         for (StructuralChild child : structuralChildren) {
             if (child.detached) {
                 child.updateDetached();
@@ -568,6 +562,15 @@ public final class IczEndBossInstance extends AbstractBossInstance
             child.x = state.x + dx;
             child.y = state.y + child.baseDy + child.localYOffset;
             child.flipX = flipped;
+        }
+        // loc_71F92/loc_71EF6 arm the child shift on the flag-transition
+        // dispatch, but only routine 4 (loc_71FDA/loc_71F10) changes $43 on
+        // the following SST pass. Arm after this frame's shift/refresh work.
+        if (sideToggle != lastSideToggle) {
+            int velocity = sideToggle ? 1 : -1;
+            structuralChildren[MIDDLE_CHILD_INDEX].startShift(velocity);
+            structuralChildren[BOTTOM_CHILD_INDEX].startShift(velocity);
+            lastSideToggle = sideToggle;
         }
         updateDamagedTopSteam();
     }
@@ -976,6 +979,24 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     @Override
+    public int getTopLandingSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        // The engine folds loc_71F30's solid child into the parent. On a fresh
+        // contact the shared pre-object pass therefore sees the child's $43
+        // shift one pixel later than the ROM child SST does. Both the fresh
+        // SolidObjectFull path and its continued-ride path use that child-local
+        // surface, so retain the correction while the boss is solid.
+        return 1;
+    }
+
+    @Override
+    public int getContinuedRideSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        // When the parent crosses a whole-pixel Y boundary during its own
+        // update, the folded child's published position has caught up with the
+        // later native child SST pass. Otherwise $43 is one pixel ahead here.
+        return state.y == getPreUpdateY() ? 1 : 0;
+    }
+
+    @Override
     public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
         return true;
     }
@@ -1245,6 +1266,13 @@ public final class IczEndBossInstance extends AbstractBossInstance
             return 0;
         }
         return structuralChildren[BOTTOM_CHILD_INDEX].localYOffset;
+    }
+
+    public int getBottomChildShiftTimerForTesting() {
+        if (structuralChildren == null || structuralChildren.length <= BOTTOM_CHILD_INDEX) {
+            return 0;
+        }
+        return structuralChildren[BOTTOM_CHILD_INDEX].shiftTimer;
     }
 
     public int getBottomChildXForTesting() {
