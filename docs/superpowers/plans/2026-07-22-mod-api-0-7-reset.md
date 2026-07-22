@@ -554,8 +554,12 @@ rg -n --glob '!target/**' `
   AGENTS.md CLAUDE.md README.md CHANGELOG.md docs src pom.xml
 ```
 
-Expected: no output. Generic semantic-version/dependency-range fixtures are outside
-this API-specific pattern and remain valid.
+Expected: exactly four intentional fixture/guard-definition hits: the three
+prohibited 2.4 marker literals in `TestNoProvisionalModApiShims` and the reversed
+`>=2.0.0 <1.0.0` invalid-range fixture in `TestModManifestParser`. There must be no
+active production or current-authority documentation hit. Generic
+semantic-version/dependency-range fixtures outside this API-specific pattern remain
+valid.
 
 - [ ] **Step 2: Prove allowlisted documents are historical, not current authority**
 

@@ -33,7 +33,7 @@ public record CollisionRules(
                 air.leftWallHitContinuesIntoCeilingSeparation();
     }
 
-    /** Constructor for the post-2.4 nested air-rule shape. */
+    /** Convenience constructor for the nested air-rule shape. */
     public CollisionRules(CollisionModel collisionModel,
             boolean groundWallCollisionEnabled, boolean groundWallPushRequiresFacingIntoWall,
             boolean repeatedObjectRideGroundWallResponseDeferred, boolean topSolidLandingAllowsZeroDist,

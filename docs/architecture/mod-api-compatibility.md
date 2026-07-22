@@ -95,6 +95,7 @@ members remain absent.
 | Legacy `PlayerAnimationRules` constructor | canonical-record constructor assertion |
 | Legacy `PlayerCapabilityRules` constructor | canonical-record constructor assertion |
 | Legacy `RingRules` constructor families | canonical-record constructor assertion |
+| Legacy `SidekickCpuRules` constructor | canonical-record constructor assertion |
 | Legacy `PerObjectRewindSnapshot.SidekickCpuRewindExtra` constructor | canonical-record constructor assertion |
 | Legacy `PerObjectRewindSnapshot.PlayerRewindExtra` constructor | canonical-record constructor assertion |
 | Legacy `ModZoneContribution` constructor | canonical-record constructor assertion |

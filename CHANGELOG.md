@@ -15,8 +15,9 @@ All notable changes to the OpenGGF project are documented in this file.
   still clears and deterministically re-registers the session's mod windows.
 - **Mod API 0.7 establishes the first creator contract.** The exact recursive
   `@ModApi` surface is pinned by `mod-api-signatures-0.7.txt`, with maintained
-  manifests targeting `>=0.7.0 <0.8.0`; provisional compatibility shims and
-  version-lineage promises have been removed. The first baseline includes
+  manifests targeting `>=0.7.0 <0.8.0`; provisional compatibility shims,
+  including the retired sidekick history-edge constructor, and version-lineage
+  promises have been removed. The first baseline includes
   namespaced objects, bounded baked and ROM-derived art, complete Sonic 2 zones,
   host-adapted Sonic 3&K zones, owner-tagged characters, no-ROM standalone games,
   playable-subclass rewind hooks, and destination-scoped game-start, launch-team,

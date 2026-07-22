@@ -11,6 +11,7 @@ import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.RingRules;
+import com.openggf.game.rules.SidekickCpuRules;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -46,7 +47,8 @@ class TestNoProvisionalModApiShims {
             "Binary-compatible constructor for the Mod API 2.4",
             "Binary-compatible constructor for Mod API 2.4",
             "Compatibility overload for API 1.1",
-            "Historical Mod API 2.4 view");
+            "Historical Mod API 2.4 view",
+            "post-2.");
     private static final Comparator<MarkerOccurrence> MARKER_ORDER = Comparator
             .comparing((MarkerOccurrence occurrence) -> portablePath(occurrence.relativePath()))
             .thenComparing(MarkerOccurrence::marker);
@@ -80,6 +82,7 @@ class TestNoProvisionalModApiShims {
         assertOnlyCanonicalRecordConstructor(PlayerAnimationRules.class);
         assertOnlyCanonicalRecordConstructor(PlayerCapabilityRules.class);
         assertOnlyCanonicalRecordConstructor(RingRules.class);
+        assertOnlyCanonicalRecordConstructor(SidekickCpuRules.class);
         assertOnlyCanonicalRecordConstructor(CameraSnapshot.class);
         assertOnlyCanonicalRecordConstructor(GameStateSnapshot.class);
         assertOnlyCanonicalRecordConstructor(WaterSystemSnapshot.DynamicWaterEntry.class);

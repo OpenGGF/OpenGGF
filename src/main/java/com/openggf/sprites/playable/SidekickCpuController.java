@@ -2594,9 +2594,9 @@ public class SidekickCpuController {
                     | AbstractPlayableSprite.INPUT_DOWN
                     | AbstractPlayableSprite.INPUT_LEFT
                     | AbstractPlayableSprite.INPUT_RIGHT)) == 0;
-            // The published 2.4 rule preserves the older S3K-style edge
+            // Enabling the history-edge rule preserves the older S3K-style edge
             // reconstruction: repeated history press bytes are suppressed.
-            // The post-2.4/default rule preserves the recorded low byte.
+            // The default disabled rule preserves the recorded low byte.
             boolean preservesRecordedJumpPress = recordedJumpPress
                     && (sidekickRules == null
                             || !sidekickRules.sidekickDelayedJumpPressUsesHistoryEdge());
