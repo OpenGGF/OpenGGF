@@ -48826,3 +48826,21 @@ standalone CNZ remains at f0 in both scopes.
   values remain exact through the native owner release. Both groups next
   diverge at f25093 only because the control restore has not yet published the
   Wait animation fields.
+
+## 2026-07-22 - ICZ native results-release dispatch
+
+- **`s3k_icz1` physics and animation advanced from f25093 to f25254.** Total
+  errors fell from 4 to 1; the focused ICZ end-boss and S3K results suites
+  remain green.
+- Root: the shared results exit did not publish `Restore_PlayerControl`'s Wait
+  animation for this retained route. Its final max-X helper also allocated into
+  an engine slot already visited during the live pass, while native boss slot 5
+  allocated the helper ahead in slot 11 and consumed its first `$4000`
+  accumulator entry immediately.
+- Fix: results owners can now opt into the direct Wait publication, which ICZ
+  applies to both players. A gradual max-X helper exposes its allocation
+  dispatch, and ICZ seeds it only when live slot-order detection reports that
+  its reserved slot is behind the current object cursor.
+- Validation: both ending poses release on the native frame and the helper's
+  no-motion accumulator entries plus early expansion match. The sole remaining
+  divergence is camera X at f25254.

@@ -72,8 +72,17 @@ public final class IczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCap
                 }
                 int x = camera.getX() & 0xFFFF;
                 int y = camera.getY() & 0xFFFF;
-                spawnFreeChild(() -> new HczEndBossGradualMaxXExtender(
-                        x, y, FINAL_CAMERA_MAX_X));
+                HczEndBossGradualMaxXExtender extender = spawnFreeChild(
+                        () -> new HczEndBossGradualMaxXExtender(x, y, FINAL_CAMERA_MAX_X));
+                if (extender != null && extender.getSlotIndex() >= 0
+                        && services().objectManager()
+                                .reservedSlotWaitsForNextObjectPass(extender.getSlotIndex())) {
+                    // Native allocates slot 11 after the retained boss in slot 5,
+                    // so it consumes the helper's zero-motion $4000 entry on this
+                    // pass. The consolidated results owner can allocate into an
+                    // already-visited hole; seed only that otherwise-missed entry.
+                    extender.dispatchCreation();
+                }
             }
             super.onExitReady();
         }
@@ -83,6 +92,11 @@ public final class IczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCap
             // loc_71DE2 restores only target max Y and starts Child6_IncLevX;
             // it does not copy the level's broad camera bounds directly.
             return false;
+        }
+
+        @Override
+        protected boolean shouldPublishWaitAnimationOnControlRestore() {
+            return true;
         }
 
         @Override

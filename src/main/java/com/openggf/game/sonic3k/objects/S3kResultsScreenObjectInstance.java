@@ -751,8 +751,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     sprite.setControlLocked(false);
                     ObjectControlState.none().applyTo(sprite);
                     sprite.setForcedAnimationId(-1);
-                    if (shouldPublishWaitAnimationOnControlRestore(
-                            waitDurationAdjustment, carriedAcrossSeamlessTransition)) {
+                    if (shouldPublishWaitAnimationOnControlRestore()) {
                         // Restore_PlayerControl writes anim/prev_anim to Wait.
                         // A retained results owner runs after player animation,
                         // so publish the new animation id while retaining the
@@ -767,6 +766,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     static boolean shouldPublishWaitAnimationOnControlRestore(
             int waitDurationAdjustment, boolean carriedAcrossSeamlessTransition) {
         return waitDurationAdjustment > 0 || carriedAcrossSeamlessTransition;
+    }
+
+    protected boolean shouldPublishWaitAnimationOnControlRestore() {
+        return shouldPublishWaitAnimationOnControlRestore(
+                waitDurationAdjustment, carriedAcrossSeamlessTransition);
     }
 
     static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {
