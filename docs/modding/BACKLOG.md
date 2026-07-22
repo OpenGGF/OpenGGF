@@ -2,8 +2,10 @@
 
 This is the Phase 4 disposition of deferred mod-support work. It is a triage record,
 not an implementation promise. Its linked dated design/plan corpus is historical
-scope provenance, not current API authority. The sole current version authority is
-the [Mod API compatibility guide](../architecture/mod-api-compatibility.md). The sweep covered the root mod-support design, every
+scope provenance, not current API authority. The sole current version and publication
+authority is the root `mod-api-release-policy.properties` descriptor; the
+[Mod API compatibility guide](../architecture/mod-api-compatibility.md) explains it.
+The sweep covered the root mod-support design, every
 Phase 0–4 design and implementation plan, and the shared format/security contract,
 case-insensitively for `defer`, `out-of-scope`, `parked`, `follow-on`, `future`,
 `revisit`, `when-demanded`, `later`, `optional`, `narrowing`, `non-goal`,
@@ -94,7 +96,7 @@ reclassified as optional.
 | Live apply without reload | Phase 1 Non-goals; Phase 2 §A | Session ownership/mod registration | No maintained sample needs mutation of a running mod registration graph. Applying code/data in place must reconcile active audio, saves, objects, providers, and gameplay references atomically. | **Keep parked** until a concrete sample defines which state may survive apply. |
 | Standalone-game patch stacking and launch-request choke-point amendment | Phase 3 §B3; Phase 4 §C | Module resolution/manifest | One global `GameId.STANDALONE` cannot safely match patches; the sample needs no stacking. Requires code-string identity plus new manifest vocabulary. | **Keep parked** pending two real standalone mods that need composition. |
 | Deterministic streamed-PCM capture/replay | Root design §4; Phase 1 non-goals | Audio recording/replay | Current policy deliberately keeps streams out of the SMPS command timeline and suppresses one-shots during rewind. No sample requests deterministic audio capture. | **Keep parked**; any proposal must preserve comparison-only traces. |
-| A future breaking Mod API transition | Root design §2 | Mod API governance | Mod API 0.7 is the first published contract. An incompatible successor requires migration guidance and an explicit compatibility decision. | **Keep parked** until an identified incompatibility cannot be added safely. |
+| A future breaking Mod API transition | Root design §2 | Mod API governance | Mod API 0.7 is the unpublished mutable candidate and no baseline has yet been published. After a first publication, an incompatible successor requires migration guidance and an explicit compatibility decision. | **Keep parked** until an identified incompatibility cannot be added safely. |
 
 ## Character and presentation polish
 

@@ -145,7 +145,7 @@ class TestPlayableSubclassRewind {
                 "the null payload must reset stale subclass state during public restore");
     }
 
-    // (d) The first published 0.7 surface exposes only the record's canonical
+    // (d) The current unpublished 0.7 candidate exposes only the record's canonical
     // constructor; provisional compatibility constructors must not return.
     @Test
     void playerRewindExtraExposesOnlyCanonicalZeroSevenConstructor() {

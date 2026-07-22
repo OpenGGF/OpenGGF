@@ -2,11 +2,9 @@ name: Release
 
 on:
   pull_request:
-    branches:
-      - master
+    branches: [master]
   push:
-    branches:
-      - master
+    branches: [master]
   workflow_dispatch:
 
 jobs:
@@ -60,7 +58,28 @@ jobs:
           done
           exit "$missing"
 
-      - name: Run tests
+      - name: Run tests (pull request)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          mvn -Dmse=off test -B \
+            -DmodApi.destinationBranch="${{ github.base_ref }}" \
+            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
+            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
+            -Ds3k.rom.path="${S3K_ROM_PATH}"
+
+      - name: Run tests (push)
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          mvn -Dmse=off test -B \
+            -DmodApi.destinationBranch="${{ github.ref_name }}" \
+            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
+            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
+            -Ds3k.rom.path="${S3K_ROM_PATH}"
+
+      - name: Run tests (manual)
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           mvn -Dmse=off test -B \
@@ -68,7 +87,28 @@ jobs:
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
-      - name: Run trace replay policy tests
+      - name: Run trace replay policy tests (pull request)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          mvn -Dmse=off test -Ptrace-replay -B \
+            -DmodApi.destinationBranch="${{ github.base_ref }}" \
+            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
+            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
+            -Ds3k.rom.path="${S3K_ROM_PATH}"
+
+      - name: Run trace replay policy tests (push)
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          mvn -Dmse=off test -Ptrace-replay -B \
+            -DmodApi.destinationBranch="${{ github.ref_name }}" \
+            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
+            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
+            -Ds3k.rom.path="${S3K_ROM_PATH}"
+
+      - name: Run trace replay policy tests (manual)
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           mvn -Dmse=off test -Ptrace-replay -B \

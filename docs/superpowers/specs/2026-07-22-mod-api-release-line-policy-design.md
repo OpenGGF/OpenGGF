@@ -28,6 +28,9 @@ published contracts. They must not consume new API versions or require
 compatibility layers between revisions.
 
 Compatibility begins only when an API baseline ships from `master`.
+No Mod API baseline has shipped yet. In particular, 0.7 is the mutable candidate
+for `next`, not the first published Mod API. Existing code, tests, or maintained
+documentation that call 0.7 "published" must be corrected as part of this work.
 
 ## Terminology
 
@@ -57,17 +60,23 @@ only for published baselines, never for superseded internal candidate shapes.
 ## Policy
 
 1. The normal API candidate on `master` matches the master release line.
-2. The `develop` candidate is exactly one release line ahead of `master`.
-3. The `next` candidate is exactly two release lines ahead of `master`.
-4. A branch has at most one mutable candidate pin.
-5. Internal changes regenerate the existing candidate pin without changing
+2. `masterLine`, `developLine`, and `nextLine` record the ordered product
+   release-line topology, with `develop` the successor of `master` and `next`
+   the successor of `develop`.
+3. A branch has at most one mutable candidate pin.
+4. Internal changes regenerate the existing candidate pin without changing
    `ModApiVersion.CURRENT` and without adding compatibility shims.
-6. Published signature pins are retained permanently and later current surfaces
+5. Published signature pins are retained permanently and later current surfaces
    are checked for compatibility against every published baseline.
-7. Promotion advances branch policy once. Repeated implementation changes on a
+6. Promotion advances branch policy once. Repeated implementation changes on a
    branch do not advance it again.
-8. The API version follows the target release line recorded by branch policy,
+7. The API version follows the target release line recorded by branch policy,
    not an incidental prerelease string in build metadata.
+8. Runtime compatibility is evaluated against the engine's supported-contract
+   set: the current candidate plus every published baseline retained by that
+   engine. A mod is eligible when its declared `engineApiRange` contains at
+   least one member of that set. Checking only `ModApiVersion.CURRENT` is not
+   sufficient after the first publication.
 
 For the current topology, `next` therefore uses `0.7.0` for its entire internal
 development cycle. Adding or removing creator APIs on `next` updates the
@@ -80,12 +89,15 @@ Maintenance product releases do not automatically change the Mod API.
 
 - An implementation defect that leaves the published API contract intact is
   fixed without an API version change.
-- A backward-compatible correction to the published surface may use the API
-  patch component, for example `0.5.0` to `0.5.1`. The earlier published pin is
-  retained and remains supported.
-- A correction that would break compiled mods cannot silently replace a
-  published baseline. The maintenance release must retain a compatibility
-  bridge or defer the breaking correction to a later release line.
+- A maintenance API patch, for example `0.5.0` to `0.5.1`, must have the same
+  checked signature surface as the earlier published baseline. It may correct
+  implementation behavior or non-contract metadata, but it may not add, remove,
+  or change a checked signature. An additive surface change waits for the next
+  release-line candidate.
+- A correction that would require adding or changing an API member, including a
+  new compatibility bridge, is not a maintenance API patch under this policy.
+  Keep the published surface intact for the maintenance release and defer the
+  contract change to the next release-line candidate.
 - A maintenance patch on `master` does not propagate its patch component to the
   normal downstream candidates. With master API 0.5.1, `develop` remains 0.6.0
   and `next` remains 0.7.0.
@@ -111,17 +123,35 @@ publishedBaselines=
 
 `currentStatus` is `candidate` while the current pin is mutable and `published`
 once that exact baseline has shipped from `master`. When the status is
-`published`, `currentApi` must also appear in `publishedBaselines`.
+`published`, `currentApi` must also appear in `publishedBaselines`. The empty
+list above is intentional: OpenGGF has not yet published any Mod API.
 
-The allowed signature-pin set is the union of every published baseline and the
-current API. Candidate filenames contain the mutable major/minor line, matching
-the existing `mod-api-signatures-0.7.txt` convention. Published filenames contain
-the immutable full version, for example `mod-api-signatures-0.5.0.txt` and
-`mod-api-signatures-0.5.1.txt`, so maintenance baselines cannot collide.
+A published baseline may predate all three lines in the current topology; it is
+not required to equal `masterLine`, `developLine`, or `nextLine`. It must not be
+later than `currentApi`. Compare release lines lexicographically by major/minor.
+Published baselines on an older line use forward compatibility. If more than one
+published patch exists on the current API's line, every such pin must have the
+same checked surface as the current API and therefore as each other.
+
+The expected signature-pin map is normalized as follows:
+
+- each entry in `publishedBaselines` maps to exactly one immutable full-version
+  filename, such as `mod-api-signatures-0.5.0.txt`;
+- when `currentStatus=candidate`, `currentApi` maps to exactly one mutable line
+  filename, such as `mod-api-signatures-0.7.txt`;
+- when `currentStatus=published`, `currentApi` contributes no candidate filename;
+  its entry in `publishedBaselines` supplies the one full-version filename; and
+- no other Mod API signature-pin files are allowed.
 
 Publishing a candidate renames its pin from the line form to the full-version
 form as part of release preparation. Ordinary internal changes never rename the
 candidate pin. The next downstream candidate receives its own new line-form pin.
+This is a rename, not two pins for the same surface.
+
+The descriptor is the machine-readable authority for version and publication
+state. `docs/architecture/mod-api-compatibility.md` remains the explanatory
+compatibility contract and must reflect, rather than independently define, the
+descriptor.
 
 ## Promotion workflow
 
@@ -157,6 +187,26 @@ The policy descriptor must be recalculated for the destination branch as part
 of merge preparation. A conflict in this file must never be resolved by blindly
 choosing either side.
 
+The topology is ordered product policy, not arithmetic on decimal-looking
+numbers. Promotion explicitly supplies the three distinct, increasing lines;
+the validator must not calculate a successor by incrementing a minor component.
+This permits transitions such as 0.9 to 1.0 and deliberate skipped product lines.
+
+For a release transition, the expected pin operations are explicit:
+
+| Destination state | Published pins | Candidate pin |
+|---|---|---|
+| Current `next` before any API release | none | `mod-api-signatures-0.7.txt` |
+| A candidate published from `master` | renamed full-version pin for the released API, plus all older published pins | none while `currentStatus=published` |
+| Downstream branch prepared for its next line | all full-version published pins | one line-form pin for that branch's `currentApi` |
+
+Each long-lived branch carries a descriptor for its own target. Consequently,
+after a coordinated promotion, the `master`, `develop`, and `next` descriptors
+may share the topology values while differing in `targetBranch`, `currentApi`,
+`currentStatus`, and candidate pin. Promotion instructions must list the exact
+before/after descriptor and filenames for every affected destination rather
+than implying that either side of a merge conflict is authoritative.
+
 ## Agent directives
 
 `AGENTS.md` and `CLAUDE.md` will contain a concise mandatory rule that names
@@ -191,23 +241,47 @@ covering these invariants:
 2. The current API major/minor matches the descriptor's target release line.
 3. Normal `develop` and `next` candidates have patch zero.
 4. The current surface exactly matches the current candidate pin.
-5. The set of pin files equals published baselines plus the current API.
-6. Every published baseline remains binary/source-surface compatible with the
-   current API under the existing signature rules.
+5. The set and names of pin files exactly match the normalized published/current
+   mapping defined above, including deduplication when current is published.
+6. Every published baseline remains compatible with the current API under the
+   repository's checked signature-surface rules. Removals or changes fail.
+   Additions are allowed whenever the current API belongs to a later configured
+   release line than the baseline, including across a major boundary such as
+   0.9 to 1.0. Candidate exactness and same-line maintenance-patch equality are
+   separate checks and never use this forward-compatibility allowance.
 7. Published baselines cannot be labeled as mutable candidates.
-8. The three configured lines are the current successive release topology.
+8. The three configured lines are distinct and strictly ordered according to
+   the explicitly configured product topology; no numeric successor arithmetic
+   is inferred.
 9. A supplied CI destination branch agrees with `targetBranch` for long-lived
    branch pushes and pull requests.
+10. Runtime and SDK manifest validation use the supported-contract set, not
+    `ModApiVersion.CURRENT` alone.
 
 CI must supply the destination branch explicitly from its push branch or pull
-request base ref. This avoids depending on detached-checkout Git heuristics.
+request base ref. Workflows must cover pushes to and pull requests targeting
+`next`, `develop`, and `master`; release-only coverage of `master` and PR-only
+coverage of `develop` is insufficient. A manual workflow with no destination
+must run non-branch invariants and require an explicit destination input before
+claiming promotion validation. This avoids depending on detached-checkout Git heuristics.
 Feature branches without that CI value validate their inherited descriptor and
 all non-branch invariants.
 
-Extend commit/merge policy validation so a staged change to
-`ModApiVersion.CURRENT` requires the policy descriptor in the same change. The
-CI destination check is the authoritative promotion gate: a PR into `develop`
-or `master` fails until its descriptor is recalculated for that destination.
+Extend the shell and PowerShell commit/merge policy validators with symmetric
+changed-path coupling according to this matrix:
+
+| Change | Required companion change |
+|---|---|
+| `ModApiVersion.CURRENT` | descriptor plus the normalized candidate/publication pin operation |
+| detectable `@ModApi` surface delta | current candidate pin content |
+| candidate pin content-only update | detectable API surface delta; descriptor unchanged |
+| candidate/full pin add, delete, or rename | descriptor publication/promotion metadata |
+| descriptor-only topology, destination, or status edit | only the pin operation implied by the resulting normalized map; no unconditional pin content rewrite |
+
+Merge commits remain governed by the existing merge policy plus the final-tree
+CI guard. The CI destination check is the authoritative promotion gate: a PR
+into `next`, `develop`, or `master` fails until its descriptor is correct for
+that destination.
 
 Existing provisional-shim marker guards remain in force. Their purpose is
 broadened explicitly: lineage comments or compatibility members for unpublished
@@ -223,6 +297,7 @@ Policy failures must explain the required action. Representative messages are:
 - `current API breaks published baseline 0.6.0`
 - `policy target next does not match pull-request destination develop; recalculate mod-api-release-policy.properties during promotion preparation`
 - `ModApiVersion.CURRENT changed without mod-api-release-policy.properties`
+- `manifest compatibility must be checked against current and published supported contracts`
 
 ## Testing
 
@@ -233,12 +308,20 @@ Tests will cover:
 - rejection of 0.7.1 or 0.8.0 as a second `next` candidate bump;
 - exact candidate-pin replacement;
 - preservation and compatibility of published pins;
-- a compatible master maintenance API patch;
-- rejection of a breaking maintenance patch without a bridge;
+- a signature-identical master maintenance API patch;
+- rejection of additive or breaking signature changes in a maintenance patch;
 - downstream 0.6.0/0.7.0 candidates remaining unchanged after master 0.5.1;
 - promotion destination mismatch and corrected promotion metadata;
 - missing, duplicate, malformed, or contradictory descriptor entries; and
-- the staged-version-change coupling rule.
+- bidirectional changed-path coupling for version, descriptor, pins, and API
+  surface changes;
+- a 0.7-range mod accepted by a later engine that retains published 0.7.0;
+- a manifest rejected when its range contains no supported contract;
+- push and pull-request destination checks for all three long-lived branches;
+  and
+- a 0.9 to 1.0 topology transition without minor-version arithmetic.
+- additive forward compatibility across a 0.9 to 1.0 transition, while still
+  rejecting removals and same-line maintenance additions.
 
 Focused tests will extend the existing Mod API signature, documentation, SDK,
 and provisional-shim suites. The full repository suite retains its separately
@@ -252,3 +335,6 @@ failures outside that baseline.
 - Automatically performing branch promotions or releases.
 - Changing the product's release numbering scheme.
 - Treating `pom.xml` prerelease text as the Mod API version authority.
+- Claiming full Java binary or source compatibility beyond the checked signature
+  model. Stronger claims require a dedicated compatibility tool and compiled
+  fixtures for each published baseline.

@@ -39,11 +39,155 @@ is_merge_from_master() {
 }
 
 staged_files() {
-    git diff --cached --name-only --diff-filter=ACMR
+    git diff --cached --name-only --diff-filter=ACMRD
 }
 
 commit_files() {
-    git diff-tree --root --no-commit-id --name-only --diff-filter=ACMR -r "$1"
+    git diff-tree --root --no-commit-id --name-only --diff-filter=ACMRD -r "$1"
+}
+
+MOD_API_DESCRIPTOR=mod-api-release-policy.properties
+MOD_API_VERSION=src/main/java/com/openggf/mods/ModApiVersion.java
+MOD_API_PIN_PREFIX=src/test/resources/mods/mod-api-signatures-
+
+blob_text() {
+    ref=$1
+    path=$2
+    if [ "$ref" = INDEX ]; then
+        git show ":$path" 2>/dev/null || true
+    elif [ "$ref" = EMPTY ]; then
+        :
+    else
+        git show "$ref:$path" 2>/dev/null || true
+    fi
+}
+
+descriptor_pins() {
+    ref=$1
+    text=$(blob_text "$ref" "$MOD_API_DESCRIPTOR")
+    status=$(printf '%s\n' "$text" | sed -n 's/^currentStatus=//p')
+    current=$(printf '%s\n' "$text" | sed -n 's/^currentApi=//p')
+    published=$(printf '%s\n' "$text" | sed -n 's/^publishedBaselines=//p')
+    old_ifs=$IFS
+    IFS=,
+    for version in $published; do
+        [ -n "$version" ] && printf '%s%s.txt\n' "$MOD_API_PIN_PREFIX" "$version"
+    done
+    IFS=$old_ifs
+    if [ "$status" = candidate ] && [ -n "$current" ]; then
+        printf '%s%s.txt\n' "$MOD_API_PIN_PREFIX" "${current%.*}"
+    fi
+}
+
+actual_pins() {
+    ref=$1
+    if [ "$ref" = INDEX ]; then
+        git ls-files --cached | grep "^$MOD_API_PIN_PREFIX.*\.txt$" || true
+    elif [ "$ref" != EMPTY ]; then
+        git ls-tree -r --name-only "$ref" | grep "^$MOD_API_PIN_PREFIX.*\.txt$" || true
+    fi
+}
+
+current_api_value() {
+    blob_text "$1" "$MOD_API_VERSION" |
+        sed -n '/^[[:space:]]*\(public[[:space:]]*\)\?static[[:space:]]*final.*CURRENT[[:space:]]*=/s/.*CURRENT[^=]*=[^(]*(\?"\([0-9][0-9.]*\)".*/\1/p' |
+        head -n 1
+}
+
+contains_mod_api_annotation() {
+    printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@ModApi([.([:space:]]|$)'
+}
+
+validate_mod_api_coupling() {
+    old_ref=$1
+    new_ref=$2
+    diff_args=$3
+    status_file=$(mktemp)
+    # shellcheck disable=SC2086 -- diff_args is an intentionally split revision argument.
+    git diff --cached --name-status -M >"$status_file" 2>/dev/null || true
+    if [ "$new_ref" != INDEX ]; then
+        # shellcheck disable=SC2086
+        git diff --name-status -M $diff_args >"$status_file"
+    fi
+
+    candidate=$(descriptor_pins "$new_ref" | awk -F/ '/mod-api-signatures-[0-9]+\.[0-9]+\.txt$/ { print; exit }')
+    descriptor_changed=0 current_changed=0 api_delta=0 candidate_content=0 published_content=0 pin_structural=0 candidate_structural=0
+    while IFS="$(printf '\t')" read -r status first second; do
+        [ -n "$status" ] || continue
+        paths=$first
+        [ -n "${second:-}" ] && paths="$paths
+$second"
+        printf '%s\n' "$paths" | while IFS= read -r path; do :; done
+        if printf '%s\n' "$paths" | grep -Fxq "$MOD_API_DESCRIPTOR"; then descriptor_changed=1; fi
+        if printf '%s\n' "$paths" | grep -Fxq "$MOD_API_VERSION"; then
+            old_current=$(current_api_value "$old_ref")
+            new_current=$(current_api_value "$new_ref")
+            [ "$old_current" != "$new_current" ] && current_changed=1
+        fi
+        if printf '%s\n' "$paths" | grep -q "^$MOD_API_PIN_PREFIX"; then
+            case "$status" in
+                M*)
+                    if [ "$first" = "$candidate" ]; then candidate_content=1; else published_content=1; fi
+                    ;;
+                *)
+                    pin_structural=1
+                    if [ -n "$candidate" ] && { [ "$first" = "$candidate" ] || [ "${second:-}" = "$candidate" ]; }; then candidate_structural=1; fi
+                    ;;
+            esac
+        fi
+        case "$status" in
+            A*) before=EMPTY; after=$new_ref ;;
+            D*) before=$old_ref; after=EMPTY ;;
+            R*) before=$old_ref; after=$new_ref ;;
+            *) before=$old_ref; after=$new_ref ;;
+        esac
+        saved_ifs=$IFS
+        IFS='
+'
+        for path in $paths; do
+            case "$path" in *.java)
+                old_text=$(blob_text "$before" "$path")
+                new_text=$(blob_text "$after" "$path")
+                if contains_mod_api_annotation "$old_text" || contains_mod_api_annotation "$new_text"; then
+                    [ "$old_text" != "$new_text" ] && api_delta=1
+                fi
+            esac
+        done
+        IFS=$saved_ifs
+    done <"$status_file"
+    rm -f "$status_file"
+
+    if [ "$current_changed" -eq 1 ] && { [ "$descriptor_changed" -ne 1 ] || { [ "$candidate_content" -ne 1 ] && [ "$candidate_structural" -ne 1 ]; }; }; then
+        append_error "ModApiVersion.CURRENT changes require the release descriptor and its normalized signature-pin operation."
+    fi
+    if [ "$published_content" -eq 1 ]; then
+        append_error "published full-version signature pins are immutable and may never be edited in place."
+    fi
+    if [ "$api_delta" -eq 1 ] && { [ -z "$candidate" ] || { [ "$candidate_content" -ne 1 ] && [ "$candidate_structural" -ne 1 ]; }; }; then
+        append_error "detectable @ModApi surface changes require updating the current candidate signature pin."
+    fi
+    if [ "$candidate_content" -eq 1 ] && [ "$api_delta" -ne 1 ]; then
+        append_error "candidate signature-pin content changes require a detectable @ModApi surface change; descriptor edits are not a substitute."
+    fi
+    if [ "$candidate_content" -eq 1 ] && [ "$descriptor_changed" -eq 1 ] && [ "$pin_structural" -ne 1 ]; then
+        append_error "ordinary candidate signature regeneration must not edit the release descriptor."
+    fi
+    if [ "$pin_structural" -eq 1 ] && [ "$descriptor_changed" -ne 1 ]; then
+        append_error "signature-pin additions, deletions, and renames require a descriptor publication or promotion edit."
+    fi
+    old_pins=$(descriptor_pins "$old_ref" | sort)
+    new_pins=$(descriptor_pins "$new_ref" | sort)
+    actual_old_pins=$(actual_pins "$old_ref" | sort)
+    actual_new_pins=$(actual_pins "$new_ref" | sort)
+    old_descriptor=$(blob_text "$old_ref" "$MOD_API_DESCRIPTOR")
+    bootstrap_normalized=0
+    if [ -z "$old_descriptor" ] && [ "$actual_old_pins" = "$new_pins" ] && [ "$actual_new_pins" = "$new_pins" ]; then bootstrap_normalized=1; fi
+    if [ "$descriptor_changed" -eq 1 ] && [ "$old_pins" != "$new_pins" ] && [ "$pin_structural" -ne 1 ] && [ "$bootstrap_normalized" -ne 1 ]; then
+        append_error "descriptor topology/status changes must include the normalized signature-pin add, delete, or rename implied by the new state."
+    fi
+    if { [ "$descriptor_changed" -eq 1 ] || [ "$pin_structural" -eq 1 ]; } && [ "$actual_new_pins" != "$new_pins" ]; then
+        append_error "the resulting signature-pin inventory does not match the descriptor's normalized pin map."
+    fi
 }
 
 staged_blob_size() {
@@ -416,6 +560,7 @@ validate_non_master_commit_message() {
     validate_agent_docs_trailer "$message" "$files"
     validate_exact_trailer "$message" "$files" "Configuration-Docs" "CONFIGURATION.md" "CONFIGURATION.md"
     validate_skills_trailer "$message" "$files"
+    validate_mod_api_coupling HEAD INDEX cached
 
     if [ -n "$ERRORS" ]; then
         note "non-master branch commits must declare the documentation/discrepancy policy explicitly."
@@ -519,12 +664,12 @@ validate_ci_pr() {
     base_ref=$3
     head_ref=$4
 
-    if [ "$base_ref" != "develop" ] && [ "$base_ref" != "master" ]; then
+    if [ "$base_ref" != "next" ] && [ "$base_ref" != "develop" ] && [ "$base_ref" != "master" ]; then
         return 0
     fi
 
     effective_base=$(effective_base_for_ci_pr "$base_sha" "$head_sha" "$base_ref")
-    range_files=$(git diff --name-only --diff-filter=ACMR "$effective_base...$head_sha")
+    range_files=$(git diff --name-only --diff-filter=ACMRD "$effective_base...$head_sha")
 
     if [ "$base_ref" = "develop" ]; then
         if [ "$head_ref" != "master" ] && ! has_exact "$range_files" "README.md"; then
@@ -557,6 +702,8 @@ validate_ci_commit_range() {
         validate_agent_docs_trailer "$message" "$files"
         validate_exact_trailer "$message" "$files" "Configuration-Docs" "CONFIGURATION.md" "CONFIGURATION.md"
         validate_skills_trailer "$message" "$files"
+        parent=$(git rev-parse "$commit^")
+        validate_mod_api_coupling "$parent" "$commit" "$parent $commit"
 
         if [ -n "$ERRORS" ]; then
             note "commit $commit violates the non-master branch documentation policy."

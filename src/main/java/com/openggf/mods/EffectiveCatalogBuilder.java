@@ -8,9 +8,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /** Freezes validated discovery results and startup state into one process-lifetime catalog. */
 public final class EffectiveCatalogBuilder {
+    private final Predicate<VersionRange> apiSupport;
+    private final Supplier<String> supportedApiDiagnostic;
+
+    public EffectiveCatalogBuilder() {
+        this(ModApiVersion::supports, ModApiVersion::supportedContractsDiagnostic);
+    }
+
+    EffectiveCatalogBuilder(Predicate<VersionRange> apiSupport,
+                            Supplier<String> supportedApiDiagnostic) {
+        this.apiSupport = Objects.requireNonNull(apiSupport, "apiSupport");
+        this.supportedApiDiagnostic = Objects.requireNonNull(
+                supportedApiDiagnostic, "supportedApiDiagnostic");
+    }
+
     public ModCatalog build(List<? extends ModCatalogEntry> scanned, ModState startupState) {
         List<ModCatalogEntry> retained = new ArrayList<>(Objects.requireNonNull(scanned, "scanned"));
         Objects.requireNonNull(startupState, "startupState");
@@ -135,9 +151,10 @@ public final class EffectiveCatalogBuilder {
         if (descriptor.hasErrors()) return blocked(id, "DESCRIPTOR_INVALID",
                 "Discovery or static validation reported an error", List.of(id));
         ModManifest manifest = descriptor.manifest();
-        if (!manifest.engineApiRange().contains(ModApiVersion.CURRENT)) {
+        if (!apiSupport.test(manifest.engineApiRange())) {
             return blocked(id, "ENGINE_API_INCOMPATIBLE",
-                    "Requires engine API " + manifest.engineApiRange() + "; available " + ModApiVersion.CURRENT,
+                    "Requires engine API " + manifest.engineApiRange() + "; supported contracts "
+                            + supportedApiDiagnostic.get(),
                     List.of());
         }
         if (descriptor.containsCode()

@@ -1,20 +1,26 @@
 # Mod API compatibility surface
 
-OpenGGF Mod API 0.7 (`0.7.0`) is the first published compiled-mod contract. The
+OpenGGF Mod API 0.7 (`0.7.0`) is the unpublished, mutable compiled-mod candidate
+owned by the `next` product branch. No Mod API baseline has been published yet. The
 runtime-visible, type-only `com.openggf.game.ModApi` annotation marks its roots.
 Every engine type reachable through those roots' public or protected
 constructors, methods, fields, generic bounds, annotations, nested types,
 supertypes, interfaces, record components, and sealed permits clauses belongs to
 the same recursive contract and must also be annotated.
 
-The exact current inventory is
+The exact current candidate inventory is
 `src/test/resources/mods/mod-api-signatures-0.7.txt`. `TestModApiSignatureSurface`
 requires that file to be unique, sorted canonical UTF-8 text and exactly equal to
-the dependency-complete runtime surface. This is the only published signature
-pin. Earlier 1.x and 2.x labels were provisional development markers and carry
-no compatibility promise.
+the dependency-complete runtime surface. This major/minor filename denotes a
+replaceable candidate pin; it carries no compatibility promise. Earlier 1.x and
+2.x labels were provisional development markers and carry no compatibility promise.
 
-Creator manifests should declare the maintained engine range:
+The root [`mod-api-release-policy.properties`](../../mod-api-release-policy.properties)
+descriptor is the sole authority for branch topology, current version and status,
+and the published-baseline set. This guide explains that policy but does not define
+version state. The current descriptor has an empty published set.
+
+Creator manifests should declare the maintained candidate range:
 
 ```yaml
 engineApiRange: ">=0.7.0 <0.8.0"
@@ -23,9 +29,9 @@ engineApiRange: ">=0.7.0 <0.8.0"
 Manifest `formatVersion: 1` is a separate wire-format version. It does not mean
 Mod API 1.x and must not be used to infer compiled-code compatibility.
 
-## What the 0.7 contract includes
+## What the 0.7 candidate includes
 
-The first baseline publishes the accumulated creator capabilities together:
+The candidate exposes the accumulated creator capabilities together:
 
 - restart-loaded music packs and trusted, code-backed patches;
 - namespaced object factories, bounded baked object art, Sonic 2 ROM-derived art,
@@ -43,9 +49,9 @@ object rewind entries retain their owning compiled-mod loader through
 `DynamicObjectEntry.ownerModId` and `RewindClassResolver`. Creator callbacks stay
 transactional, owner-fault-bounded, and engine-authoritative.
 
-## Publishing and reviewing the recursive surface
+## Reviewing, maintaining, and publishing the recursive surface
 
-Before changing the published baseline:
+Before changing the candidate surface:
 
 1. Run `TestModApiSignatureSurface` and inspect every added or changed line.
 2. Annotate every newly reachable engine type.
@@ -72,11 +78,25 @@ artifact. Architecture guards ignore only the `@ModApi` marker edge and the
 release tool's exact inventory lookup; the annotation does not establish runtime
 ownership.
 
+Until publication, ordinary compatible or incompatible 0.7 development keeps
+`0.7.0` and replaces the major/minor candidate pin in place. At promotion from
+`master`, change the descriptor status and published-baseline set, rename the pin
+to the immutable full SemVer form
+`mod-api-signatures-MAJOR.MINOR.PATCH.txt`, and update `ModApiVersion`'s supported
+contracts. A later engine accepts a creator manifest when its `engineApiRange`
+contains either the current contract or any retained published contract.
+
+Published pins are immutable evidence: on a later configured release line,
+additions are allowed but removals and signature changes are not. A maintenance
+patch on the same release line must have exactly the same recursive surface as the
+previous published baseline. Any incompatible successor requires an explicit
+migration and compatibility decision.
+
 New creator APIs should prefer narrow engine-owned facades and immutable value
 types. A public or protected signature may not leak an unannotated engine type or
-an unreviewed third-party type. Once 0.7 is published, removals, narrowing changes,
-record-shape changes, and unannotation require an intentional compatibility
-decision rather than a silent snapshot rewrite.
+an unreviewed third-party type. Before publication, removals, narrowing changes,
+record-shape changes, and unannotation require intentional candidate review and a
+pin rewrite; after publication they require an explicit compatibility decision.
 
 ## 0.7 reset inventory
 
@@ -134,6 +154,7 @@ They are not current version authority:
 - `docs/superpowers/plans/2026-07-14-rom-art-remix-sample.md`
 - `docs/superpowers/plans/2026-07-14-s3k-mod-zone-adapter.md`
 
-This document is the sole current Mod API version authority. The maintained
+The root release-policy descriptor is the sole current Mod API version authority.
+The maintained
 creator workflow and format documentation begins at
 [`docs/modding/index.md`](../modding/index.md).

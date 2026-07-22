@@ -45,6 +45,25 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestExternalContentPolicy {
     @TempDir Path temp;
+
+    @Test
+    void maintainedModApiDocumentationDescribesCandidateReleasePolicy() throws Exception {
+        String compatibility = Files.readString(Path.of(
+                "docs/architecture/mod-api-compatibility.md"));
+        String contentMods = Files.readString(Path.of("docs/modding/content-mods.md"));
+        String manifest = Files.readString(Path.of("docs/modding/formats/manifest.md"));
+        String directive = "`mod-api-release-policy.properties` is the sole authority";
+
+        assertTrue(compatibility.contains("unpublished, mutable compiled-mod candidate"));
+        assertTrue(compatibility.contains("current descriptor has an empty published set"));
+        assertTrue(compatibility.contains("mod-api-signatures-MAJOR.MINOR.PATCH.txt"));
+        assertTrue(contentMods.replaceAll("\\s+", " ")
+                .contains("no creator contract has been published yet"));
+        assertTrue(manifest.contains("current unpublished candidate is Mod API `0.7.0`"));
+        assertTrue(Files.readString(Path.of("AGENTS.md")).contains(directive));
+        assertTrue(Files.readString(Path.of("CLAUDE.md")).contains(directive));
+    }
+
     @Test
     void normalModeMayScanAtBootAndUseContentInSession() {
         ExternalContentPolicy policy = new ExternalContentPolicy(ExternalContentMode.NORMAL);
