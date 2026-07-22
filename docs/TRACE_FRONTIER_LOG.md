@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ Corkey Obj_WaitOffscreen activation phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 5896 to
+  frame 6057.** Total release-blocking errors fell from 6994 to 6973; the next
+  divergence is CPU Tails' animation (`$06` expected versus `$05` actual).
+- Root: native Corkeys first execute `Obj_WaitOffscreen`, publish a temporary
+  `$20`-square placeholder, observe its post-render sign bit on the following
+  object dispatch, and return after restoring Obj_Corkey. Their real
+  initialization and `Random_Number` call occur one dispatch later. The engine
+  initialized from a recurring horizontal-only camera gate, consuming RNG in
+  the wrong phase and leaving the two subtype-`$30` Corkeys 16-17 pixels beyond
+  their native patrol positions. Sonic therefore missed the Corkey that native
+  destroys at frame 5896 and did not receive `Touch_EnemyNormal`'s `$100`
+  rising-player rebound.
+- Fix: Corkey now retains the placeholder's post-camera visibility, the
+  separate restore dispatch, and normal uninterrupted execution after
+  activation. The behavior is driven by the object's native operation phase,
+  with no zone, route, or frame condition. A focused test covers the wait,
+  restore, initialize, and first patrol dispatches.
+- Validation: all seven focused Corkey tests pass and the LBZ replay reaches
+  frame 6057. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
 ## 2026-07-22 - S3K after-current lost-ring live-pointer publication
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 5314 to
