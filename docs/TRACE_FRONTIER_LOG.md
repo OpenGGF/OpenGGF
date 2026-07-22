@@ -48015,3 +48015,19 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:178500-178517,188988-189035,189053-189101`).
 - The focused swinging-platform suite passes with a regression that pins the
   half-pixel release fraction through the first falling step.
+
+## 2026-07-21 - ICZ swinging-platform live unload position advances both frontiers
+
+- Commands: combined focused `TestS3kIczSwingingPlatformObject` and
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f12168 to f12279 and animation advanced
+  from f12206 to f12369.** Total errors fell from 4,151 to 2,353: physics from
+  2,941 to 2,045 and animation from 1,210 to 308.
+- Root: ObjB4 tails every active routine with `Sprite_CheckDeleteTouch2`, whose
+  aligned range calculation reads the object's live `x_pos`. The engine instead
+  overrode the generic reference with the original chain anchor. When the camera
+  crossed the next `$80` bucket, it unloaded the detached platform even though
+  its moving body remained beside the player. The platform now inherits the
+  live-X reference used by the native macro
+  (`docs/skdisasm/sonic3k.asm:188966-189101,37245-37280`).
+- The focused suite pins the moving out-of-range reference after chain release.

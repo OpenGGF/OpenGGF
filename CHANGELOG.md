@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: released ICZ swinging platforms now run `Sprite_CheckDeleteTouch2` against their live moving X coordinate rather than their original chain anchor. This prevents premature unload while the player rides the detached platform, advancing complete-run physics from frame 12168 to 12279 and animation from frame 12206 to 12369.
 - Fix: ICZ swinging platforms now preserve the 16.16 fraction produced by `MoveSprite_CircularSimple` through chain release and subsequent `MoveSprite`/`MoveSprite2` motion. This removes the released platform's one-pixel vertical drift and advances the complete-run physics frontier from frame 12107 to 12168.
 - Fix: S3K attracted rings now sample Player 1's post-physics coordinates during the native touch phase, before later object slots can carry the player. This restores an ICZ lightning-shield ring pickup and advances the complete-run physics frontier from frame 11976 to 12107.
 - Fix: S3K horizontal-spring airborne landing handoffs now require a paired player foot probe to penetrate terrain, matching the native player-collision gate instead of comparing the player's centre Y with the spring. This removes an early ICZ sidekick launch, advancing complete-run physics from frame 11588 to 11976 and animation from frame 11589 to 12206.

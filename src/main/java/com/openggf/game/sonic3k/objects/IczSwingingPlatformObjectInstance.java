@@ -429,11 +429,6 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public int getOutOfRangeReferenceX() {
-        return spawnX;
-    }
-
-    @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY_BUCKET);
     }

@@ -175,6 +175,8 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(0, platform.getXSubpixelForTesting());
         assertEquals(0x8000, platform.getYSubpixelForTesting(),
                 "MoveSprite must retain the half-pixel produced by MoveSprite_CircularSimple");
+        assertEquals(0x1283, platform.getOutOfRangeReferenceX(),
+                "Sprite_CheckDeleteTouch2 checks the moving x_pos, including after chain release");
     }
 
     @Test
