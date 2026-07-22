@@ -507,20 +507,28 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
         private int breakTimer = BREAK_TIMER;
         private boolean landedOnTerrain;
+        private boolean nativeInitPassPending;
 
         public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
                 int parentX, boolean hFlip) {
+            this(capturedPlayer, capturedX, capturedY, parentX, hFlip, false);
+        }
+
+        public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
+                int parentX, boolean hFlip, boolean nativeInitPassPending) {
             super(new ObjectSpawn(capturedX, capturedY, OBJECT_ID, 0, hFlip ? 1 : 0, false, capturedY),
                     "ICZFreezerFrozenPlayer");
             this.capturedPlayer = capturedPlayer;
             int xSpeed = capturedX >= parentX ? INITIAL_X_SPEED : -INITIAL_X_SPEED;
             this.motion = new SubpixelMotion.State(capturedX, capturedY, 0, 0, xSpeed, INITIAL_Y_SPEED);
+            this.nativeInitPassPending = nativeInitPassPending;
         }
 
         private FrozenPlayerBlock(ObjectSpawn spawn) {
             super(spawn, "ICZFreezerFrozenPlayer");
             this.capturedPlayer = null;
             this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, INITIAL_Y_SPEED);
+            this.nativeInitPassPending = false;
         }
 
         @Override
@@ -537,7 +545,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
         @Override
         protected boolean skipsSameFrameUpdateAfterSpawn() {
-            return true;
+            return !nativeInitPassPending;
         }
 
         @Override
@@ -550,7 +558,10 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             if (isDestroyed()) {
                 return;
             }
-
+            if (nativeInitPassPending) {
+                nativeInitPassPending = false;
+                return;
+            }
             if (!landedOnTerrain) {
                 applyCameraSideVelocityClamp();
                 SubpixelMotion.moveSprite(motion, GRAVITY);
@@ -570,7 +581,9 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             }
             int cameraX = services.camera().getX() & 0xFFFF;
             int threshold = (cameraX + (motion.xVel < 0 ? 0x20 : 0x128)) & 0xFFFF;
-            if (Integer.compareUnsigned(threshold, motion.x & 0xFFFF) >= 0) {
+            int comparison = Integer.compareUnsigned(threshold, motion.x & 0xFFFF);
+            boolean clamp = motion.xVel < 0 ? comparison >= 0 : comparison < 0;
+            if (clamp) {
                 motion.xVel = 0;
                 motion.xSub = 0;
             }

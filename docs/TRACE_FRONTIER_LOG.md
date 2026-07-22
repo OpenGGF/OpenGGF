@@ -48569,3 +48569,25 @@ standalone CNZ remains at f0 in both scopes.
   in focused capture tests. The complete-run replay passes the f23328 carry and
   capture-status frame; the next physics mismatch is frozen Sonic X at f23329,
   while animation reaches f23457.
+
+## 2026-07-22 - ICZ boss-smoke frozen-block launch
+
+- **`s3k_icz1` physics advanced from f23329 to f23337 and animation advanced
+  from f23457 to f23578.** Total errors fell from 706 to 692; 73 focused
+  end-boss/freezer tests remain green.
+- Root: `sub_8A9E0` allocates the frozen block as a child of the capturing puff,
+  but the folded boss path compared Sonic with the boss body and launched the
+  block left. The child also needs its independent `loc_8A7AE` initialization
+  pass, and positive velocity uses the opposite unsigned camera-edge branch
+  from negative velocity. Finally, a ready capture was queued again before its
+  post-solid callback, creating a second block that overwrote the first block's
+  player position.
+- Fix: queued captures retain the puff's X word, use player facing for the
+  frozen child's render bit, and refuse a new pending bit while that player has
+  a ready capture. Boss-spawned blocks execute an initialization-only SST pass;
+  their camera clamp now follows the signed velocity branch around
+  `loc_8A80C..loc_8A82E`.
+- Validation: `TestS3kIczEndBossObject` covers the boss-spawned init pass and
+  rightward camera-edge case, while the freezer and replay suites cover the
+  shared block path. The next physics mismatch is Tails Y at f23337; animation
+  reaches f23578.

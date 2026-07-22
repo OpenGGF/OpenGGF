@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
@@ -999,6 +1000,25 @@ class TestS3kIczEndBossObject {
         instance.update(nextFrame, player);
         publishBossSolidContact(instance, player, nextFrame);
         assertTrue(frozenPlayerBlockCount(services) > 0);
+    }
+
+    @Test
+    void bossFrostBlockInitializesThenKeepsRightwardVelocityInsideCameraEdge() {
+        RecordingServices services = new RecordingServices();
+        services.camera.setX((short) 0x4390);
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(
+                        player, 0x4443, 0x066F, 0x443A, false, true);
+        block.setServices(services);
+
+        block.update(1, player);
+        assertEquals(0x4443, block.getX(), "loc_8A7AE initializes without running MoveSprite");
+        block.update(2, player);
+
+        assertEquals(0x4445, block.getX(),
+                "loc_8A80C keeps +$200 while x_pos is not beyond Camera_X_pos+$128");
+        assertEquals(0x066B, block.getY());
     }
 
     @Test
