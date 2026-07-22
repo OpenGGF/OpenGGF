@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestPatternAtlasDynamicRanges {
-    private static final int MOD_BASE = 0x108000;
+    private static final int MOD_BASE = 0x188000;
     private static final int WINDOW_SIZE = 0x8000;
 
     @Test
@@ -33,6 +33,15 @@ class TestPatternAtlasDynamicRanges {
         assertThrows(IllegalArgumentException.class,
                 () -> atlas.registerRange(MOD_BASE, 0, "empty"));
         assertDoesNotThrow(() -> atlas.registerRange(MOD_BASE, WINDOW_SIZE, "aligned"));
+    }
+
+    @Test
+    void dynamicRangesCannotClaimStaticRangeOwnership() {
+        PatternAtlas atlas = new PatternAtlas(256, 256);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> atlas.registerRange(PatternAtlasRange.MGZ_ZOOM_CUES.base(),
+                        WINDOW_SIZE, "mod:collision"));
     }
 
 }

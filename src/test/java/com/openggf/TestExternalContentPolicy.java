@@ -20,6 +20,7 @@ import com.openggf.mods.code.ModContext;
 import com.openggf.mods.PreparedAudioSession;
 import com.openggf.mods.PreparedModMusic;
 import com.openggf.io.ModInputLimits;
+import com.openggf.graphics.PatternAtlasRange;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -405,6 +406,9 @@ class TestExternalContentPolicy {
                 .anyMatch(descriptor -> descriptor.manifest().id().equals("boot-code")));
         assertTrue(accepted.trustedCodeOwners().contains("boot-code"));
         assertEquals(1, accepted.patternWindowStateForSession().totalWindows());
+        assertEquals(PatternAtlasRange.MGZ_ZOOM_CUES.endExclusive(),
+                accepted.patternWindowStateForSession().assignment("boot-code")
+                        .orElseThrow().base());
         accepted.disableForDeterministicSession();
         assertEquals(0, accepted.patternWindowStateForSession().totalWindows());
         accepted.close();

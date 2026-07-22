@@ -9,14 +9,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestPatternAtlasRangeRegistration {
+    private static final int SYNTHETIC_BASE = 0x188000;
 
     @Test
     public void adjacentHalfOpenRangesAreValid() {
         PatternAtlas atlas = new PatternAtlas(256, 256);
 
-        atlas.registerRange(0x38000, 0x1000, "First");
+        atlas.registerRange(SYNTHETIC_BASE, 0x1000, "First");
 
-        assertDoesNotThrow(() -> atlas.registerRange(0x39000, 0x1000, "Adjacent"));
+        assertDoesNotThrow(() -> atlas.registerRange(SYNTHETIC_BASE + 0x1000,
+                0x1000, "Adjacent"));
     }
 
     @Test
@@ -39,30 +41,30 @@ public class TestPatternAtlasRangeRegistration {
     public void partiallyOverlappingRangesFailFast() {
         PatternAtlas atlas = new PatternAtlas(256, 256);
 
-        atlas.registerRange(0x38000, 0x2000, "First");
+        atlas.registerRange(SYNTHETIC_BASE, 0x2000, "First");
 
         assertThrows(IllegalArgumentException.class,
-            () -> atlas.registerRange(0x39000, 0x2000, "Partial"));
+            () -> atlas.registerRange(SYNTHETIC_BASE + 0x1000, 0x2000, "Partial"));
     }
 
     @Test
     public void exactDuplicateRangesFailFast() {
         PatternAtlas atlas = new PatternAtlas(256, 256);
 
-        atlas.registerRange(0x38000, 0x1000, "First");
+        atlas.registerRange(SYNTHETIC_BASE, 0x1000, "First");
 
         assertThrows(IllegalArgumentException.class,
-            () -> atlas.registerRange(0x38000, 0x1000, "Duplicate"));
+            () -> atlas.registerRange(SYNTHETIC_BASE, 0x1000, "Duplicate"));
     }
 
     @Test
     public void enclosingRangesFailFast() {
         PatternAtlas atlas = new PatternAtlas(256, 256);
 
-        atlas.registerRange(0x39000, 0x1000, "Inner");
+        atlas.registerRange(SYNTHETIC_BASE + 0x1000, 0x1000, "Inner");
 
         assertThrows(IllegalArgumentException.class,
-            () -> atlas.registerRange(0x38000, 0x3000, "Outer"));
+            () -> atlas.registerRange(SYNTHETIC_BASE, 0x3000, "Outer"));
     }
 
     @Test

@@ -131,6 +131,7 @@ public class PatternAtlas {
     public record PatternRange(int base, int size, String category) {}
 
     public void registerRange(PatternAtlasRange range) {
+        java.util.Objects.requireNonNull(range, "range");
         registerRange(range.base(), range.size(), range.category());
     }
 
@@ -155,6 +156,19 @@ public class PatternAtlas {
         }
         String rangeCategory = java.util.Objects.requireNonNull(category, "category");
         int newEnd = Math.addExact(base, size);
+        for (PatternAtlasRange reserved : PatternAtlasRange.values()) {
+            if (base == reserved.base() && size == reserved.size()
+                    && rangeCategory.equals(reserved.category())) {
+                continue;
+            }
+            if (base < reserved.endExclusive() && reserved.base() < newEnd) {
+                throw new IllegalArgumentException("Pattern range collision: " + rangeCategory
+                        + " [0x" + Integer.toHexString(base) + "-0x"
+                        + Integer.toHexString(newEnd) + "] overlaps permanently reserved "
+                        + reserved.category() + " [0x" + Integer.toHexString(reserved.base())
+                        + "-0x" + Integer.toHexString(reserved.endExclusive()) + "]");
+            }
+        }
         for (PatternRange existing : registeredRanges) {
             int existingEnd = checkedRangeEnd(existing);
             if (base < existingEnd && existing.base() < newEnd) {

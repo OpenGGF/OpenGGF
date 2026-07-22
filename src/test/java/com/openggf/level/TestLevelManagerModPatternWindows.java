@@ -21,6 +21,7 @@ import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.PatternWindowSessionState;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlas;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.mods.code.ModPatternWindowAllocator;
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +37,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestLevelManagerModPatternWindows {
-    private static final int MOD_BASE = 0x108000;
+    private static final int MOD_BASE = PatternAtlasRange.MGZ_ZOOM_CUES.endExclusive();
 
     @Test
     void everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching() throws Exception {

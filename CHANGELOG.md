@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Dynamic mod pattern windows no longer overlap permanent MGZ zoom-cue banks.**
+  Production allocation starts at the first aligned pattern ID after the highest
+  `PatternAtlasRange` (`0x188000` today), and generic atlas range registration
+  rejects any attempt to claim a permanent static range. Level unload/rebuild
+  still clears and deterministically re-registers the session's mod windows.
 - **Mod API 2.4 compatibility shims preserve their runtime contracts under 2.5.**
   The restored sidekick history-edge rule again suppresses repeated delayed jump
   presses when enabled while newer constructors retain direct recorded-press

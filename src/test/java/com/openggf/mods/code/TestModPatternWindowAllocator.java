@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestModPatternWindowAllocator {
     private static final int FIRST_FREE = 0x108000;
+    private static final int PRODUCTION_FIRST_FREE = 0x188000;
 
     @Test
     void acceptsOneAndSixteenWindowOwnersInEffectiveOrder() {
@@ -46,7 +47,7 @@ class TestModPatternWindowAllocator {
     void assignmentsDoNotOverlapAndCanBeReRegisteredAfterAtlasClear() {
         ModPatternWindowAllocator allocator = new ModPatternWindowAllocator(List.of(
                 new ModPatternWindowAllocator.Request("first", 2),
-                new ModPatternWindowAllocator.Request("second", 3)), FIRST_FREE);
+                new ModPatternWindowAllocator.Request("second", 3)), PRODUCTION_FIRST_FREE);
         PatternWindowState.Assignment first = allocator.assignment("first").orElseThrow();
         PatternWindowState.Assignment second = allocator.assignment("second").orElseThrow();
         assertEquals(first.endExclusive(), second.base());

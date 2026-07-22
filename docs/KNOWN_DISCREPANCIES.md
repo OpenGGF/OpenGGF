@@ -195,6 +195,7 @@ We use **extended pattern ID ranges** with fixed bases that don't overlap:
 | `0xE8000` | S3K title sprites | Registered as `PatternAtlasRange.S3K_TITLE_SCREEN_SPRITES` |
 | `0x100000` | SEGA boot logos | S1/S2 SEGA logo tiles and S2 giant-Sonic boot-screen art; registered as `PatternAtlasRange.SEGA_BOOT_LOGOS` |
 | `0x108000`–`0x187FFF` | MGZ zoom-cue instance banks | 4096 non-overlapping 128-pattern banks for live/rewound MGZ end-boss scaled-art cues; registered as `PatternAtlasRange.MGZ_ZOOM_CUES`. Allocation is monotonic for process lifetime and fails loudly if exhausted, preventing a later cue from overwriting an earlier queued draw. |
+| `0x188000` and above | Dynamic mod pattern windows | Session-enabled mods receive deterministic 0x8000-pattern windows in effective mod order, starting after the highest permanent `PatternAtlasRange`. Generic range registration rejects overlap with every permanent range; clearing and rebuilding a level removes and re-registers only the dynamic governance windows without changing static ownership. |
 
 **Shared-base contexts** (`0x40000`):
 - S2 Title Card (`TitleCardManager.PATTERN_BASE`) — gameplay scope, not active during cutscenes
