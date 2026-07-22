@@ -146,6 +146,14 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Player_Move reads width_pixels(a1)=$20 for its object-edge balance
+        // calculation. Obj18's SolidObjectFull call separately extends d1 by
+        // $0B; that contact padding is not part of the SST width byte.
+        return WIDTH_PIXELS;
+    }
+
+    @Override
     public boolean usesCustomOutOfRangeCheck() {
         return true;
     }

@@ -1,5 +1,25 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ cup native edge-balance width
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 6057 to
+  frame 6484.** Total release-blocking errors fell from 6973 to 6971; the next
+  divergence is Sonic's X position (`$1588` expected versus `$158B` actual).
+- Root: CPU Tails stands motionless at the right edge of Obj18. Native
+  `Player_Move` reads the cup SST's `width_pixels=$20`, producing
+  `d1=d2=$3C` and selecting Balance (`anim=$06`, mapping `$9A`). The engine
+  reused Obj18's expanded full-solid contact reach (`d1=$20+$0B`) as its
+  balance width, classified Tails as safely inside the cup, and retained Wait
+  (`anim=$05`, mapping `$AD`).
+- Fix: the cup now exposes `$20` as its player-balance width while preserving
+  the separate `$2B` collision half-width used by `SolidObjectFull`. This
+  models the two distinct native inputs rather than changing shared balance
+  thresholds or adding a route exception.
+- Validation: all 14 focused cup-elevator tests pass and the LBZ replay reaches
+  frame 6484. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
 ## 2026-07-22 - LBZ Corkey Obj_WaitOffscreen activation phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 5896 to

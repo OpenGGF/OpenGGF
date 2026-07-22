@@ -78,6 +78,17 @@ class TestLbzCupElevatorInstance {
     }
 
     @Test
+    void balanceUsesWidthPixelsWithoutSolidObjectSidePadding() {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
+
+        assertEquals(0x20, elevator.getBalanceWidthPixels(),
+                "Player_Move reads Obj18 width_pixels, not SolidObjectFull's d1=$20+$0B reach");
+        assertEquals(0x2B, elevator.getSolidParams().halfWidth(),
+                "the independent full-solid contact extension must remain intact");
+    }
+
+    @Test
     void movingDownSubtypeStartsAtBottomAndUsesRoutine6() {
         LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
                 0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0x31, 1, false, 0));
