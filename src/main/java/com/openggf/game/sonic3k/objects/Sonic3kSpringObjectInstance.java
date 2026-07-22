@@ -24,6 +24,7 @@ import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.GroundMode;
 import com.openggf.physics.Direction;
+import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -537,9 +538,31 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         if (player.isInWater()) {
             return false;
         }
-        // Engine ordering can leave the sidekick airborne until the next tick;
-        // accept only the frame that has reached the spring's Y line.
-        return player.getYSpeed() > 0 && (player.getCentreY() & 0xFFFF) >= (spawn.y() & 0xFFFF);
+        if (player.getYSpeed() <= 0) {
+            return false;
+        }
+
+        // Engine ordering can leave the sidekick airborne until the next tick.
+        // Mirror the paired foot probes used by the native player landing path:
+        // the handoff is valid only once either foot has actually reached the
+        // terrain surface that will clear Status_InAir before sub_2326C runs.
+        // Comparing y_pos to the spring's y_pos is too broad: a horizontal
+        // spring can sit several pixels above nearby sloped terrain, so that
+        // approximation launches a falling player before the ROM does.
+        var leftFloor = ObjectTerrainUtils.checkFloorDist(
+                player.getCentreX() - player.getXRadius(),
+                player.getCentreY() + player.getYRadius());
+        var rightFloor = ObjectTerrainUtils.checkFloorDist(
+                player.getCentreX() + player.getXRadius(),
+                player.getCentreY() + player.getYRadius());
+        boolean leftHasTerrain = leftFloor != null && leftFloor.distance() != Short.MAX_VALUE;
+        boolean rightHasTerrain = rightFloor != null && rightFloor.distance() != Short.MAX_VALUE;
+        if (!leftHasTerrain && !rightHasTerrain) {
+            // Lightweight object tests do not install level collision data.
+            return (player.getCentreY() & 0xFFFF) >= (spawn.y() & 0xFFFF);
+        }
+        return (leftHasTerrain && leftFloor.distance() < 0)
+                || (rightHasTerrain && rightFloor.distance() < 0);
     }
 
     private int horizontalApproachSpeed(AbstractPlayableSprite player, boolean landingHandoff) {

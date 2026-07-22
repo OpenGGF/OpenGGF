@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+### 2026-07-22 -- ICZ complete-run f11588 early horizontal-spring launch FIXED; frontiers f11976/f12206
+
+CPU Tails descended beside the flipped yellow horizontal spring at
+`(0x63F9,0x05F0)`. The engine's object-order compatibility handoff treated
+`y_pos >= spring.y_pos` as a same-frame terrain landing, cleared
+`Status_InAir`/`y_vel`, and launched Tails at f11588. The ROM remained airborne
+through f11589 and launched only after the player floor-collision path had
+accepted actual terrain penetration.
+
+The handoff now mirrors the player's paired left/right foot probes and accepts
+only a negative terrain distance, matching the `< 0` collision gate. A zero
+distance is deliberately left airborne for that pass; ordinary player physics
+then lands the character and the following spring pass observes the grounded
+state. Missing collision data retains the prior centre-line fallback only for
+lightweight isolated object tests. The focused 16-case spring suite passes.
+`TestS3kIczCompleteRunTraceReplay` advances physics from f11588 to f11976
+(3115 -> 2986 errors) and animation from f11589 to f12206 (1080 -> 1210 errors).
+The corrected later cascade reshapes the total from 4195 to 4196 errors. The
+next physics root is a missed ring pickup at f11976; the next animation root is
+Sonic mapping `$07` versus `$08` at f12206.
+
 ### 2026-07-21 -- ICZ complete-run f11058 false offscreen Freezer capture FIXED; frontier f11588
 
 The engine Freezer at `(0x61D0,0x06FC)` ran its proximity/phase logic as soon
