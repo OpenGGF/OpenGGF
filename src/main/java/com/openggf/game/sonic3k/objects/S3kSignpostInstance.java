@@ -119,6 +119,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private boolean landingSparklePending;
     private boolean preservesPostLandingSparkleGate;
     private boolean preservesPostObjectResultDispatchBoundary;
+    private boolean preservesGroundedResultsDispatchBoundary;
 
     /**
      * Creates the signpost at the given X position.
@@ -144,6 +145,13 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
 
     S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
             int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries) {
+        this(spawnX, apparentAct, resultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
+                resultsPostControlHandoffDelayEntries, false);
+    }
+
+    S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
+            int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries,
+            boolean preservesGroundedResultsDispatchBoundary) {
         super(null, "S3kSignpost");
         this.worldX = spawnX;
         this.worldY = 0; // Set properly in INIT
@@ -151,6 +159,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         this.resultsTimerCatchUpEntries = Math.max(0, resultsTimerCatchUpEntries);
         this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
         this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
+        this.preservesGroundedResultsDispatchBoundary = preservesGroundedResultsDispatchBoundary;
     }
 
     private S3kSignpostInstance() {
@@ -472,7 +481,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         }
 
         boolean sidekickPoseWasAlreadyArmed = sidekickEndingPoseCheckArmed;
-        if (resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary) {
+        boolean preservesRoutineSixDispatch = resultsWaitedForPlayerLanding
+                || preservesPostObjectResultDispatchBoundary
+                || preservesGroundedResultsDispatchBoundary;
+        if (preservesRoutineSixDispatch) {
             // Obj_EndSignResults has occupied its native routine-6 slot, either
             // while waiting for the grounded player or through the preserved
             // post-object boundary. Apply P1 now; P2 belongs to routine 8.
@@ -508,7 +520,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries
                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
-                resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary
+                preservesRoutineSixDispatch
                         ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
                         : RESULTS_CARRIED_RETIRE_DISPATCHES));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");

@@ -48188,3 +48188,23 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczMinibossObject` is green (21 tests). The next replay
   divergence is a dual-player animation/control transition at f14780/f14782;
   trace data remains comparison-only.
+
+## 2026-07-22 - ICZ miniboss defeat-flow overlap
+
+- **`s3k_icz1` physics advanced from f14782 to f15257 and animation advanced
+  from f14780 to f15258.** Total errors fell from 3,148 to 3,081: physics to
+  2,213 and animation to 868.
+- Root: after the last hit, the ROM boss body waits `$3F` entries before
+  becoming `Obj_EndSignControl`, while `Child6_CreateBossExplosion` continues
+  its independent three-frame emission cadence. The engine's folded explosion
+  owner finished all remaining emissions before creating the control flow,
+  delaying the signpost by 31 entries. Its separately allocated signpost also
+  collapsed the grounded routine-`$06` result dispatch, delaying both ending
+  poses by one more entry.
+- Fix: the defeat flow carries the 31 already-overlapped wait entries, and the
+  signpost records the allocation provenance that preserves its grounded
+  routine-`$06` boundary without changing ordinary signposts
+  (`docs/skdisasm/sonic3k.asm:150430-150472,176198-176238,179732-179747`).
+- Validation: the ICZ miniboss, shared defeat-flow, and signpost focused suites
+  are green. The next replay divergence is the results-exit camera release at
+  f15257; trace data remains comparison-only.

@@ -456,6 +456,10 @@ class TestS3kIczMinibossObject {
         assertEquals(S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE,
                 readField(signpostFlow, "cleanupAction"),
                 "AfterBoss_ICZ2 reloads Pal_ICZ2 through PalLoad_Line1 so ICZ2 badniks do not keep the boss palette");
+        assertEquals(0x1F, readIntField(signpostFlow, "initialWaitCatchUpEntries"),
+                "the folded explosion child must preserve the 31 overlapping Obj_EndSignControl entries");
+        assertEquals(true, readField(signpostFlow, "preservesGroundedResultsDispatchBoundary"),
+                "the separately allocated flow must retain the grounded routine-$06 result dispatch");
         assertTrue(instance.isDestroyed(),
                 "The boss body should delete only after queuing the persistent signpost flow");
     }

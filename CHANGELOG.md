@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ miniboss defeat now preserves the ROM overlap between the independent boss-explosion child and `Obj_EndSignControl`, including the grounded routine-`$06` results dispatch. This aligns both ending poses and advances complete-run physics to frame 15257 and animation to frame 15258.
 - Fix: ICZ miniboss palette slowdown now follows the 105-dispatch `word_71B52` script instead of reusing the later `$3F` recovery wait. This prevents the next orb cycle from becoming touch-active early and advances complete-run animation to frame 14780 and physics to frame 14782.
 - Fix: ICZ snowdust now retains the last `Render_Sprites` on-screen bit across flicker frames, fixed lightning-shield sparks allocate at their native post-dynamic-object point, and seamless-act lost rings consume the inherited post-movement collision-list state. This restores the Act 2 snow/ring SST landscape and advances both complete-run frontiers to frame 14236.
 - Fix: ICZ snowboard dust now performs the native two/eight grounded allocations, Freezer frost puffs complete their own displacement scripts, Freezer shatter debris consumes its native random animation seed, and Freezer proximity samples post-movement player X. This aligns the shared RNG stream at the Act 2 snow emitter while preserving the current frame-13517 physics frontier.

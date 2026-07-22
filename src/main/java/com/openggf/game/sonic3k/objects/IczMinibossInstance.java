@@ -92,6 +92,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private static final int RECOVER_WAIT_TIME = 0x3F;
     private static final int RISE_TIME = 0x17;
     private static final int DEFEAT_TIME = 0xB3;
+    private static final int DEFEAT_FLOW_OVERLAP_ENTRIES = 0x1F;
 
     private static final int PARENT_FLAG_ORB_RELEASE = 1 << 1; // $38 bit 1
     private static final int PARENT_FLAG_ORBS_ARMED = 1 << 2;  // $38 bit 2
@@ -888,8 +889,13 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         }
         defeatRenderComplete = true;
         spawnChild(IczMinibossPostBossPaletteController::new);
+        // The ROM boss body changes into Wait_FadeToLevelMusic after its $3F
+        // wait while Child6_CreateBossExplosion continues in another SST. The
+        // engine folds that child's remaining 31 emission entries into this
+        // owner, so carry those already-elapsed entries into its first dispatch.
         spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE));
+                state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE,
+                DEFEAT_FLOW_OVERLAP_ENTRIES, 0, 0, 0, true));
         setDestroyed(true);
     }
 
