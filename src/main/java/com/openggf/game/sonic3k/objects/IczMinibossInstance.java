@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.bosses.S3kSharedBossCameraGate;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectServices;
@@ -135,10 +136,10 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private int parentFlags;
     private int arenaAnchorX;
     private int arenaAnchorY;
+    private S3kSharedBossCameraGate cameraGate;
     private boolean arenaGateInitialized;
     private boolean arenaGateComplete;
     private boolean bossMusicStarted;
-    private int bossGateTimer;
     private boolean shardsReleased;
     private boolean orbThrowRight;
     private int mappingFrame;
@@ -206,7 +207,11 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         arenaGateInitialized = false;
         arenaGateComplete = false;
         bossMusicStarted = false;
-        bossGateTimer = BOSS_GATE_FADE_TIME;
+        if (cameraGate == null) {
+            cameraGate = new S3kSharedBossCameraGate();
+        } else {
+            cameraGate.reset();
+        }
         waitCallback = WaitCallback.RELEASE_SHARDS;
         attackPatternIndex = 0;
         attackPassCounter = 0;
@@ -310,17 +315,18 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                 return;
             }
             initializeArenaGate(services);
-        }
-        maintainArenaCameraLock(services);
-        if (!bossMusicStarted) {
-            if (bossGateTimer-- <= 0) {
-                services.playMusic(Sonic3kMusic.MINIBOSS.id);
-                bossMusicStarted = true;
-                arenaGateComplete = true;
-            }
+            // Obj_ICZMiniboss's initialization dispatch calls sub_85D6A and
+            // returns through PalLoad_Line1. The loc_85CA4 gate does not run
+            // until the object's next SST dispatch, so its moving camera-bound
+            // writes must likewise begin on the following frame.
             return;
         }
-        arenaGateComplete = true;
+        arenaGateComplete = cameraGate.update(services.camera(), () -> {
+            if (!bossMusicStarted) {
+                services.playMusic(Sonic3kMusic.MINIBOSS.id);
+                bossMusicStarted = true;
+            }
+        });
     }
 
     private void initializeArenaGate(ObjectServices services) {
@@ -335,7 +341,11 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         }
         services.fadeOutMusic();
         installBossPalette(services);
-        maintainArenaCameraLock(services);
+        cameraGate.begin(
+                services.camera(),
+                new S3kSharedBossCameraGate.LockBounds(
+                        arenaAnchorY, arenaAnchorY, arenaAnchorX, arenaAnchorX),
+                BOSS_GATE_FADE_TIME);
     }
 
     private boolean isCameraInRouteRange(ObjectServices services) {
@@ -356,17 +366,6 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         int objectXCoarse = state.x & 0xFF80;
         int delta = (objectXCoarse - cameraXCoarseBack) & 0xFFFF;
         return delta > 0x280;
-    }
-
-    private void maintainArenaCameraLock(ObjectServices services) {
-        if (services.camera() == null) {
-            return;
-        }
-        services.camera().setMinX((short) arenaAnchorX);
-        services.camera().setMaxX((short) arenaAnchorX);
-        services.camera().setMinY((short) arenaAnchorY);
-        services.camera().setMaxY((short) arenaAnchorY);
-        services.camera().setMaxYTarget((short) arenaAnchorY);
     }
 
     private void installBossPalette(ObjectServices services) {

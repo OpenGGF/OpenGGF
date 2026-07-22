@@ -118,7 +118,7 @@ class TestS3kIczMinibossObject {
     }
 
     @Test
-    void firstUpdateLocksArenaAndMinibossMusicStartsAfterFadeGate() throws Exception {
+    void secondDispatchLocksArenaAndMinibossMusicStartsAfterFadeGate() throws Exception {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(0x05F0, 0x07F0, ICZ_MINIBOSS_ID, 0, 0, false, 0));
         AbstractObjectInstance object = (AbstractObjectInstance) instance;
@@ -130,16 +130,22 @@ class TestS3kIczMinibossObject {
 
         instance.update(1, mock(PlayableEntity.class));
 
+        assertEquals(0x0000, services.camera.getMinX() & 0xFFFF,
+                "Obj_ICZMiniboss returns after sub_85D6A; loc_85CA4 starts next dispatch");
+        instance.update(2, mock(PlayableEntity.class));
+
         assertEquals(0x06F0, services.camera.getMinX() & 0xFFFF);
         assertEquals(0x06F0, services.camera.getMaxX() & 0xFFFF);
         assertEquals(0x02B8, services.camera.getMinY() & 0xFFFF);
-        assertEquals(0x02B8, services.camera.getMaxY() & 0xFFFF);
+        assertEquals(0x0000, services.camera.getMaxY() & 0xFFFF,
+                "loc_85CF2 updates Camera_target_max_Y_pos, not the live maximum word");
+        assertEquals(0x02B8, services.camera.getMaxYTarget() & 0xFFFF);
         assertEquals(Sonic3kObjectIds.ICZ_MINIBOSS, services.gameState.getCurrentBossId());
         assertEquals(1, services.fadeOutCalls);
         assertEquals(0, services.lastMusicId);
         assertFalse((Boolean) boss.getClass().getMethod("isArenaGateCompleteForTesting").invoke(boss));
 
-        for (int frame = 2; frame <= 122; frame++) {
+        for (int frame = 3; frame <= 122; frame++) {
             instance.update(frame, mock(PlayableEntity.class));
         }
 
@@ -189,7 +195,13 @@ class TestS3kIczMinibossObject {
 
         assertEquals(1, services.fadeOutCalls);
         assertEquals(Sonic3kObjectIds.ICZ_MINIBOSS, services.gameState.getCurrentBossId());
-        assertEquals(0x06F0, services.camera.getMinX() & 0xFFFF);
+        assertEquals(0x0000, services.camera.getMinX() & 0xFFFF,
+                "The initialization dispatch returns before loc_85CA4");
+
+        instance.update(3, mock(PlayableEntity.class));
+
+        assertEquals(0x05F0, services.camera.getMinX() & 0xFFFF,
+                "loc_85CA4 follows the approaching camera until it reaches the X lock");
         assertEquals(0x02B8, services.camera.getMinY() & 0xFFFF);
     }
 
@@ -220,7 +232,7 @@ class TestS3kIczMinibossObject {
                 new ObjectSpawn(0x07F0, 0x0280, ICZ_MINIBOSS_ID, 0x00, 0, false, 0x0280));
         AbstractObjectInstance object = (AbstractObjectInstance) instance;
         RecordingServices services = new RecordingServices();
-        services.camera.setX((short) 0x05F0);
+        services.camera.setX((short) 0x06F0);
         services.camera.setY((short) 0x02B8);
         object.setServices(services);
         Object boss = instance;
@@ -379,7 +391,7 @@ class TestS3kIczMinibossObject {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(0x05F0, 0x07F0, ICZ_MINIBOSS_ID, 0, 0, false, 0));
         RecordingServices services = new RecordingServices();
-        services.camera.setX((short) 0x05F0);
+        services.camera.setX((short) 0x06F0);
         services.camera.setY((short) 0x02B8);
         ((AbstractObjectInstance) instance).setServices(services);
         Object boss = instance;
@@ -583,7 +595,7 @@ class TestS3kIczMinibossObject {
                 new ObjectSpawn(0x07F0, 0x0280, ICZ_MINIBOSS_ID, 0x00, 0, false, 0x0280));
         AbstractObjectInstance object = (AbstractObjectInstance) instance;
         RecordingServices services = new RecordingServices();
-        services.camera.setX((short) 0x05F0);
+        services.camera.setX((short) 0x06F0);
         services.camera.setY((short) 0x02B8);
         object.setServices(services);
         return instance;

@@ -48049,3 +48049,20 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:110280-110368`).
 - The focused transition test verifies that Act 1 remains active through every
   busy queue pass and reloads only after the workload drains.
+
+## 2026-07-21 - ICZ miniboss camera-gate entry advances both frontiers
+
+- **`s3k_icz1` physics and animation advanced from f12699 to f12700.** The
+  focused replay now reports 2,317 errors: 2,005 physics and 312 animation.
+- Root: `Obj_ICZMiniboss` calls `Check_CameraInRange`, initializes the generic
+  boss gate through `sub_85D6A`, and returns through `PalLoad_Line1`. Its
+  `loc_85CA4` dispatcher does not run until the next SST pass. The engine had
+  initialized and updated the gate in one pass, exposing its following
+  `Camera_min_X_pos` write to Tails one frame early.
+- Fix: ICZ now uses `S3kSharedBossCameraGate` with the native upper/lower-route
+  bounds, 120-frame music delay, and a separate initialization return. Focused
+  miniboss coverage asserts both the initialization pass and the following
+  moving-bound dispatch (`docs/skdisasm/sonic3k.asm:149699-149734,180486-180672`).
+- Validation: `TestS3kIczMinibossObject` is green (20 tests). The complete-run
+  replay remains red at f12700 on Tails' pit-boundary transition; the committed
+  comparison data remains read-only.
