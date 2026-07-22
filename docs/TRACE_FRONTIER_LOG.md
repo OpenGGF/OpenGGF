@@ -49047,3 +49047,21 @@ standalone CNZ remains at f0 in both scopes.
   frame 3969. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
   tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
   S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - S3K spike positive object-control contact
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 3969 to
+  frame 4057.** Total release-blocking errors fell from 6652 to 6649; the next
+  divergence is CPU Tails' X/ground speed (`$0085` expected versus `$006D`
+  actual).
+- Root: after the LBZ cup writes Sonic's position, a later Obj08 spike calls
+  `SolidObjectFull` and produces a one-frame side separation and push status.
+  Native `SolidObject_cont` rejects only signed/bit-7 `object_control`; the
+  engine incorrectly suppressed the spike for the cup's positive `$03` state.
+- Fix: S3K spikes opt into contacts during positive object control and retain
+  the helper's native bit-7 rejection for new contacts. The behavior follows
+  the shared solid routine's control byte, independent of zone or route.
+- Validation: all seven focused S3K spike tests pass and the LBZ replay reaches
+  frame 4057. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.

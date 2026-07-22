@@ -115,6 +115,20 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
     }
 
     @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // Obj_Spikes calls SolidObjectFull directly. Its shared
+        // SolidObject_cont gate rejects only a signed (bit-7) object_control;
+        // positive controller states such as the LBZ cup's $03 still receive
+        // ordinary side/top separation.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        return true;
+    }
+
+    @Override
     public int getOnScreenHalfHeight() {
         // S3K Render_Sprites reads height_pixels(a0) directly. Obj_Spikes
         // initializes that from byte_23F74, which matches the shared y-radius
