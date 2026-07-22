@@ -35,8 +35,14 @@ class TestLbzMovingPlatformInstance {
         assertFalse(platform instanceof PlaceholderObjectInstance,
                 "S3KL slot $11 is Obj_LBZMovingPlatform and must not remain a placeholder");
         assertEquals("LBZMovingPlatform", platform.getName());
-        assertInstanceOf(SolidObjectProvider.class, platform,
+        SolidObjectProvider solid = assertInstanceOf(SolidObjectProvider.class, platform,
                 "Obj_LBZMovingPlatform calls SolidObjectTop when visible");
+        assertTrue(solid.usesGroundHalfHeightForTopSolidContact(),
+                "loc_24F0E passes SolidObjectTop d3=9 independently of height_pixels=8");
+        assertFalse(solid.usesPlatformObjectLandingSnap(),
+                "SolidObjectTop keeps SolidObject_Landed's relative y_pos correction");
+        assertTrue(solid.rejectsZeroDistanceTopSolidLanding(),
+                "SolidObjectTop accepts only its unsigned negative overlap band");
     }
 
     @Test

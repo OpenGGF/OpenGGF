@@ -187,7 +187,26 @@ public final class LbzMovingPlatformObjectInstance extends AbstractObjectInstanc
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
+        return SolidRoutineProfile.fromProvider(this);
+    }
+
+    @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        // loc_24F0E passes d3=9 to SolidObjectTop even though height_pixels=8.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // SolidObjectTop's unsigned negative-overlap window excludes d0=0.
+        return true;
+    }
+
+    @Override
+    public boolean usesPlatformObjectLandingSnap() {
+        // The caller uses SolidObjectTop/SolidObject_Landed's relative
+        // y_pos += d0 + 3 result, not PlatformObject_ChkYRange's absolute snap.
+        return false;
     }
 
     @Override

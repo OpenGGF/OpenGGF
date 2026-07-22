@@ -49130,3 +49130,24 @@ standalone CNZ remains at f0 in both scopes.
   reaches frame 4723. The complete `*TraceReplay#replayMatchesTrace` sweep
   reports 61 tests, 45 green and the same 16 documented red routes. Every
   non-LBZ S3K, S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - LBZ moving-platform SolidObjectTop landing
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 4723 to
+  frame 4805.** Total release-blocking errors fell from 7267 to 7238; the next
+  divergence is CPU Tails' ground speed (`0` expected versus `-$01DF` actual).
+- Root: Obj_LBZMovingPlatform calls `SolidObjectTop` with `d1=width_pixels`
+  and a literal `d3=9`, while its art height remains 8. That helper lands the
+  player through `SolidObject_Landed`'s relative `y_pos += d0 + 3` correction
+  and excludes exact zero overlap. The engine's generic top-solid profile
+  instead applied `PlatformObject_ChkYRange`'s absolute snap, placing Tails one
+  pixel above the native landing position.
+- Fix: the moving platform now builds its routine profile from its concrete
+  provider contract, uses the native ground half-height for top contact,
+  rejects zero-distance fresh landings, and retains the relative
+  `SolidObject_Landed` correction. These are properties of the ROM helper call,
+  independent of route, zone state, or frame.
+- Validation: all five focused moving-platform tests pass and the LBZ replay
+  reaches frame 4805. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. Every
+  non-LBZ S3K, S1, and S2 frontier and error total remains unchanged.
