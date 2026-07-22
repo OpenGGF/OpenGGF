@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: trace routine projection now retains an object-solid hurt landing as routine `$04` only for games whose typed movement rules use the S2 capture latch. S3K publishes the normal routine on its recorded landing closure, advancing the combined LBZ frontier from frame 10565 to frame 11126 without regressing another trace frontier.
 - Fix: LBZ flame throwers now include the exact right-hand contact boundary accepted by `SolidObjectFull`'s unsigned `bhi` gate. This restores CPU Tails' recorded push contact and advances the combined LBZ frontier from frame 10272 to frame 10565 without regressing another trace frontier.
 - Fix: LBZ rolling drums now reserve the engine's stale-air latch repair for native P1 while native P2 follows `loc_2C46E` and releases immediately when its player slot publishes `Status_InAir`. This advances the combined LBZ frontier from frame 9953 to frame 10272 without regressing another trace frontier.
 - Fix: adjacent LBZ rolling drums now preserve the live ride latch during a valid rightward overlap handoff, matching the native case where the receiving drum's earlier SST slot captures before the outgoing controller can release. This advances the combined LBZ frontier from frame 9916 to frame 9953 without regressing another trace frontier.

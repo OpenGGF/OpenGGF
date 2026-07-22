@@ -75,4 +75,20 @@ class TestTraceCharacterState {
         assertEquals(0x02, state.routine(),
                 "Tails_HurtStop writes routine 2 in the sampled frame once recovery completes");
     }
+
+    @Test
+    void s3kObjectLandingDoesNotUseS2HurtRoutineCaptureLatch() {
+        Tails tails = new Tails("tails_p2", (short) 0x23A5, (short) 0x067F);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
+        tails.setHurt(true);
+        tails.captureOnObjectAtFrameStart();
+
+        tails.setHurt(false);
+        tails.setOnObject(true);
+
+        TraceCharacterState state = TraceCharacterState.fromSprite(tails);
+
+        assertEquals(0x02, state.routine(),
+                "S3K's sampled RideObject landing closure publishes the normal routine");
+    }
 }

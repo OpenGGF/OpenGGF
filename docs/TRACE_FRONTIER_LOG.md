@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - S3K object-landing hurt routine projection
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 10565 to
+  frame 11126.** Total release-blocking errors fell from 4987 to 4986; the next
+  divergence is Sonic's ground speed (`-$0782` expected versus `$0000` actual).
+- Root: `TraceCharacterState` retained routine `$04` whenever a player that was
+  hurt at frame start finished the frame standing on an object. That projection
+  was introduced for S2's object-solid capture phase, but was applied to every
+  game even though the S3K recording publishes routine `$02` on the matching
+  moving-platform landing closure.
+- Fix: a typed `PlayerMovementRules` gate now owns the object-solid hurt-routine
+  capture latch. S2 retains it; S1 and S3K report their native sampled routine.
+  A focused S3K test covers the landing state while the existing S2 tests keep
+  the delayed routine behavior authoritative.
+- Validation: all 5 focused trace-character-state tests pass and the LBZ replay
+  reaches frame 11126. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. No S3K,
+  S1, or S2 frontier regressed.
+
 ## 2026-07-22 - LBZ flame-thrower inclusive solid edge
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 10272 to
