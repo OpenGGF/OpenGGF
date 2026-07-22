@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestEffectiveCatalogBuilder {
     @Test
     void compatibleEnabledPatchBecomesEffective() {
-        ModDescriptor mod = descriptor("music", "s1", "1.0.0", ">=2.0.0 <3.0.0",
+        ModDescriptor mod = descriptor("music", "s1", "1.0.0", ">=0.7.0 <0.8.0",
                 List.of(), false, null, Map.of(), null, OptionalInt.empty(), List.of());
         ModState state = state(entry("music", true, 0));
 
@@ -27,19 +27,19 @@ class TestEffectiveCatalogBuilder {
     }
 
     @Test
-    void apiRangeUsesPinnedCurrentCompatibilityWithoutImplicitLowerMajorAcceptance() {
+    void apiRangeUsesPinnedCurrentCompatibilityWithoutImplicitLegacyAcceptance() {
         List<ModDescriptor> mods = List.of(
-                patch("canonical", "s1", "1.0.0", ">=2.0.0 <3.0.0"),
-                patch("exact-current", "s2", "1.0.0", "2.5.0"),
-                patch("future", "s1", "1.0.0", ">=2.6.0 <3.0.0"),
-                patch("old-major", "s3k", "1.0.0", "<2.0.0"));
+                patch("canonical", "s1", "1.0.0", ">=0.7.0 <0.8.0"),
+                patch("exact-current", "s2", "1.0.0", "0.7.0"),
+                patch("future", "s1", "1.0.0", ">=0.8.0 <0.9.0"),
+                patch("legacy", "s3k", "1.0.0", "<0.7.0"));
 
         ModCatalog result = new EffectiveCatalogBuilder().build(
-                mods, enabledState("canonical", "exact-current", "future", "old-major"));
+                mods, enabledState("canonical", "exact-current", "future", "legacy"));
 
         assertEquals(List.of("canonical", "exact-current"), effectiveIds(result));
         assertReason(result, "future", "ENGINE_API_INCOMPATIBLE");
-        assertReason(result, "old-major", "ENGINE_API_INCOMPATIBLE");
+        assertReason(result, "legacy", "ENGINE_API_INCOMPATIBLE");
     }
 
     @Test

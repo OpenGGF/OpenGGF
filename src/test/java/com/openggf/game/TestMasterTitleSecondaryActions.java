@@ -326,7 +326,7 @@ class TestMasterTitleSecondaryActions {
     private ModManagerScreen managerScreen(PixelFont font, Path root) {
         ModManifest manifest = new ModManifest(1, "pack-title", "Title Pack",
                 SemanticVersion.parse("1.0.0"), List.of("Alice"), "Title lifecycle fixture",
-                VersionRange.parse(">=1.0.0 <2.0.0"), ModType.PATCH, "s2", null,
+                VersionRange.parse(">=0.7.0 <0.8.0"), ModType.PATCH, "s2", null,
                 List.<ModDependency>of(), Map.of(), Map.of(), null, OptionalInt.empty());
         ModDescriptor descriptor = new ModDescriptor(Path.of("pack-title.jar"), manifest,
                 "a".repeat(64), false, List.of());

@@ -5,7 +5,7 @@ version: 1.0.0
 authors:
   - OpenGGF Sample Authors
 description: No-ROM standalone platformer sample with a TMX-authored act, an original character, a badnik, and a spring gimmick.
-engineApiRange: ">=2.2.0 <3.0.0"
+engineApiRange: ">=0.7.0 <0.8.0"
 type: standalone
 entrypoint: example.platformer.PlatformerMod
 dependencies: []

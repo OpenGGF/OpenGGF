@@ -5,7 +5,7 @@ version: 1.0.0
 authors:
   - OpenGGF Tests
 description: Test-only mod-owned dynamic rewind fixture.
-engineApiRange: ">=2.2.0 <3.0.0"
+engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s2
 entrypoint: example.dynamicrewind.DynamicProbe

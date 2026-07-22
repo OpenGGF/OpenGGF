@@ -47,12 +47,12 @@ class TestSampleFlappyRegistration {
     @TempDir Path temp;
 
     @Test
-    void flappyIsAnAnchorlessS3kApi24GameStartWithoutRomArt() throws Exception {
+    void flappyIsAnAnchorlessS3kApiZeroSevenGameStartWithoutRomArt() throws Exception {
         ModManifest manifest = new ModManifestParser().parse(Files.readAllBytes(
                 SAMPLE.resolve("src/main/resources/META-INF/openggf-mod.yaml")));
         assertEquals(ModType.PATCH, manifest.type());
         assertEquals("s3k", manifest.baseGame());
-        assertEquals(">=2.4.0 <3.0.0", manifest.engineApiRange().toString());
+        assertEquals(">=0.7.0 <0.8.0", manifest.engineApiRange().toString());
 
         ModRegistrationPlan plan = compileAndRegister();
         ModZoneContribution zone = plan.zones().getFirst();
