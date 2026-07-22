@@ -2345,6 +2345,28 @@ public class TestPlayableSpriteMovement {
                                 "an object-release frame does not use the terrain AnglePos detach bridge");
         }
 
+        @Test
+        public void s3kMoveLockDownKeepsWalkWhenPlayerSlotEnteredOnObject() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_3K);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setSpindash(false);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setCrouching(false);
+                mockSprite.setOnObject(true);
+                mockSprite.captureOnObjectAtFrameStart();
+                mockSprite.setOnObject(false);
+                mockSprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
+                setInputState(false, false, true, false, false);
+
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                crouchMethod.setAccessible(true);
+                crouchMethod.invoke(manager);
+
+                assertFalse(mockSprite.getCrouching(),
+                                "SonicKnux_Roll must see the player-slot Status_OnObj bit and skip Duck");
+        }
+
         /**
          * Test that releasing and re-pressing down unlocks rolling.
          */

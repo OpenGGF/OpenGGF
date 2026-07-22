@@ -19,6 +19,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.SolidTile;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
@@ -117,6 +118,49 @@ class TestS3kIczFreezerObject {
         assertEquals(1, freezer.captureCloudsSpawnedForTesting());
         assertEquals(33, freezer.frostPuffsSpawnedForTesting(),
                 "ROM spawns a frost puff immediately, then every second active frame");
+    }
+
+    @Test
+    void freezerRangeGateSamplesThePostMovementNativeXPosition() {
+        RecordingServices services = new RecordingServices();
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x01C1, (short) 0x0100);
+        player.setXSpeed((short) -0x0300);
+
+        freezer.update(0, player);
+
+        assertFalse(freezer.isFrostCycleActiveForTesting(),
+                "Find_SonicTails runs after the player slot moves from distance $3F to $42");
+    }
+
+    @Test
+    void managedFreezerWaitsForPlaceholderRenderBeforeInitialization() {
+        ObjectManager manager = mock(ObjectManager.class);
+        RecordingServices services = new RecordingServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        };
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0200, (short) 0x0100);
+
+        freezer.update(0, player);
+        assertFalse(freezer.isFrostCycleActiveForTesting());
+
+        freezer.refreshPostCameraRenderState();
+        freezer.update(1, player);
+        assertFalse(freezer.isFrostCycleActiveForTesting(),
+                "Obj_WaitOffscreen restores the saved entry point and returns");
+
+        freezer.update(2, player);
+        assertTrue(freezer.isFrostCycleActiveForTesting());
     }
 
     @Test
@@ -220,6 +264,8 @@ class TestS3kIczFreezerObject {
         assertNull(cloud.frozenBlockForTesting(), "precondition: active-phase capture delay has not elapsed");
 
         freezer.onUnload();
+        assertNull(freezer.lastCaptureCloudForTesting(),
+                "Unloading the parent slot must drop its reference to the independently surviving child SST");
         cloud.update(66, player);
         assertNull(cloud.frozenBlockForTesting(),
                 "ROM off-phase init runs first after the parent slot is cleared");
@@ -301,6 +347,36 @@ class TestS3kIczFreezerObject {
                 "loc_8A88A overwrites freezer-break x_vel from render_flags bit 0, not source-X comparison");
         assertEquals((short) -0x0400, tails.getYSpeed());
         assertEquals(42, tails.getRingCount(), "ROM Hurt_Sidekick does not spend the main player's rings");
+        assertEquals(List.of(), services.lostRingSpawnFrames);
+    }
+
+    @Test
+    void fallingNativePartnerShattersFrozenBlockAndBouncesWithoutHurtingCaptive() {
+        installLevelGamestate();
+
+        RecordingServices services = new RecordingServices();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x43A6, (short) 0x069C);
+        sonic.setAnimationId(2);
+        sonic.setYSpeed((short) 0x03E0);
+        sonic.setRingCount(12);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x43B0, (short) 0x06B3);
+        tails.setCpuControlled(true);
+        tails.setRingCount(42);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> sonic, () -> List.of(tails)));
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(tails, 0x43B0, 0x06B3, 0x4360, false);
+        block.setServices(services);
+
+        block.update(23822, sonic);
+
+        assertTrue(block.isDestroyed(), "ROM sub_8AA38 accepts a descending roll from the other native slot");
+        assertEquals((short) -0x03E0, sonic.getYSpeed(), "The attacker bounces by negating y_vel");
+        assertFalse(sonic.isHurt(), "Shattering the block does not damage the attacker");
+        assertFalse(tails.isHurt(), "The attack-break path skips HurtCharacter for the captive");
+        assertFalse(tails.isObjectControlled());
+        assertTrue(tails.getAir());
+        assertEquals(120, tails.getInvulnerableFrames());
+        assertEquals(12, block.debrisSpawnedForTesting());
         assertEquals(List.of(), services.lostRingSpawnFrames);
     }
 
@@ -489,6 +565,8 @@ class TestS3kIczFreezerObject {
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.ICZ_PLATFORMS)).thenReturn(renderer);
 
         AbstractObjectInstance puff = createFrostPuffForTesting(0x0200, 0x010C, false);
+        assertTrue(puff.isPersistent(),
+                "loc_8A72C owns deletion and does not run a camera-range cleanup tail");
         puff.setServices(new RenderingServices(renderManager));
         List<GLCommand> commands = new ArrayList<>();
 
@@ -590,7 +668,7 @@ class TestS3kIczFreezerObject {
         }
     }
 
-    private static final class RecordingServices extends StubObjectServices {
+    private static class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
         private final List<Integer> lostRingSpawnFrames = new ArrayList<>();
         private Camera camera;

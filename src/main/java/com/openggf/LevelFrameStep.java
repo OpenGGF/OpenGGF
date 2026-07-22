@@ -246,10 +246,18 @@ public final class LevelFrameStep {
         // frame's value while Sonic's position still updated one last time).
         boolean bonusStageExitRequestedThisFrame = bonusStageProvider != null
                 && bonusStageProvider.isStageComplete();
+        // A StartNewLevel-style object request sets the engine's inactive flag
+        // from inside Process_Sprites. ROM observes Restart_level_flag
+        // immediately after that object pass and branches back to Level before
+        // DeformBgLayer, leaving the camera at its prior position even though
+        // the final player/object updates remain visible on the boundary row.
+        boolean levelExitRequestedDuringObjects = levelManager.isLevelInactiveForTransition();
 
         // 4a. Camera scroll (ROM ScrollHoriz + ScrollVertical): move + clamp to the
         //     prior-frame bottom boundary, BEFORE the zone event handler runs.
-        if (!suppressDefaultCamera && !cameraDrivenScroll && !bonusStageExitRequestedThisFrame) {
+        if (!suppressDefaultCamera && !cameraDrivenScroll
+                && !bonusStageExitRequestedThisFrame
+                && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-scroll", camera::updatePosition);
         }
 
@@ -274,7 +282,9 @@ public final class LevelFrameStep {
         // 4d. Boundary easing (ROM DynamicLevelEvents boundary tail): ease the
         //     bottom boundary toward target reading the post-scroll camera, and
         //     record the boundary state for the NEXT frame's scroll clamp.
-        if (!suppressDefaultCamera && !cameraDrivenScroll && !bonusStageExitRequestedThisFrame) {
+        if (!suppressDefaultCamera && !cameraDrivenScroll
+                && !bonusStageExitRequestedThisFrame
+                && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-boundary", camera::updateBoundaryEasing);
         }
 

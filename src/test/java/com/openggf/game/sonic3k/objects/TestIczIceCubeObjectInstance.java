@@ -58,6 +58,7 @@ class TestIczIceCubeObjectInstance {
         assertEquals(0x10, params.airHalfHeight());
         assertEquals(0x10, params.groundHalfHeight());
         assertEquals(0x18, cube.getTopLandingHalfWidth(null, params.halfWidth()));
+        assertTrue(cube.usesInclusiveRightEdge());
         assertEquals(0x1200, cube.getX());
         assertEquals(0x0700, cube.getY());
         assertEquals(0x2E, cube.getCollisionFlags());
@@ -83,6 +84,7 @@ class TestIczIceCubeObjectInstance {
     @Test
     void standingRollPlayerShattersCubeLaunchesPlayerAndSpawnsDebris() {
         ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.getPreContactAnimationId()).thenReturn(Sonic3kAnimationIds.ROLL.id());
         IczIceCubeObjectInstance cube = new IczIceCubeObjectInstance(
                 new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_ICE_CUBE, 0, 1, false, 0));
         cube.setServices(services(objectManager));
@@ -99,6 +101,7 @@ class TestIczIceCubeObjectInstance {
         verify(player).setYSpeed((short) -0x300);
         verify(player).setAir(true);
         verify(player).setOnObject(false);
+        verify(objectManager).clearRidingObject(player);
 
         ArgumentCaptor<ObjectInstance> captor = ArgumentCaptor.forClass(ObjectInstance.class);
         verify(objectManager, times(12)).addDynamicObjectAfterCurrent(captor.capture());
@@ -110,6 +113,24 @@ class TestIczIceCubeObjectInstance {
         assertEquals(0x1200, first.getX());
         assertEquals(0x06F8, first.getY());
         assertEquals(0x12, first.getMappingFrameForTesting());
+    }
+
+    @Test
+    void shatterUsesAnimationCapturedBeforeSolidLandingClearsRoll() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.getPreContactAnimationId()).thenReturn(Sonic3kAnimationIds.ROLL.id());
+        IczIceCubeObjectInstance cube = new IczIceCubeObjectInstance(
+                new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_ICE_CUBE, 0, 0, false, 0));
+        cube.setServices(services(objectManager));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.WALK.id());
+        when(player.getCentreY()).thenReturn((short) 0x064F);
+
+        cube.onSolidContact(player, standingContact(), 12);
+
+        assertTrue(cube.isDestroyed());
+        verify(player).setYSpeed((short) -0x300);
+        verify(player).setAnimationId(Sonic3kAnimationIds.ROLL);
     }
 
     @Test

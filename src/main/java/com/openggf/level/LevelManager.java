@@ -1080,6 +1080,7 @@ public class LevelManager {
 
     public void updateZoneFeaturesAfterPlayablePhysics(AbstractPlayableSprite playable) {
         if (zoneFeatureProvider != null && level != null && playable != null) {
+            playable.capturePreZoneFeatureSnapshot();
             zoneFeatureProvider.updateAfterPlayablePhysics(playable, camera.getX(), getFeatureZoneId());
         }
     }
@@ -2380,6 +2381,15 @@ public class LevelManager {
     }
 
     public void spawnLostRingsAfterCurrentFrame(AbstractPlayableSprite player, int frameCounter) {
+        queueLostRingSpawn(player, frameCounter, false);
+    }
+
+    public void spawnLostRingsWithDeferredOwner(AbstractPlayableSprite player, int frameCounter) {
+        queueLostRingSpawn(player, frameCounter, true);
+    }
+
+    private void queueLostRingSpawn(
+            AbstractPlayableSprite player, int scheduledFrame, boolean deferOwnerRingClear) {
         if (player == null || ringManager == null) {
             return;
         }
@@ -2414,8 +2424,8 @@ public class LevelManager {
             slotsFullyReserved = true;
         }
         pendingLostRingSpawns.add(new PendingLostRingSpawn(
-                player, count, player.getCentreX(), player.getCentreY(), frameCounter,
-                preallocatedSlots, slotsFullyReserved));
+                player, count, player.getCentreX(), player.getCentreY(), scheduledFrame,
+                preallocatedSlots, slotsFullyReserved, deferOwnerRingClear));
     }
 
     private void processPendingLostRingSpawns() {
@@ -2432,7 +2442,7 @@ public class LevelManager {
                 ringManager.spawnLostRingsWithInitialObjectStep(
                         pending.player(), pending.ringCount(), frameCounter,
                         pending.x(), pending.y(), pending.preallocatedSlots(),
-                        pending.slotsFullyReserved());
+                        pending.slotsFullyReserved(), pending.deferOwnerRingClear());
             } else if (objectManager != null) {
                 for (int slot : pending.preallocatedSlots()) {
                     objectManager.releaseDynamicSlot(slot);
@@ -2444,7 +2454,7 @@ public class LevelManager {
 
     private record PendingLostRingSpawn(
             AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter,
-            int[] preallocatedSlots, boolean slotsFullyReserved) {
+            int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear) {
     }
 
     // ── Post-load assembly methods ──────────────────────────────────────
@@ -3070,7 +3080,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
-        objectManager.initRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
+        objectManager.inheritRingFloorCheckCounterPhase(ringFloorCheckCounterPhase - 1);
         GameRules gameRules = gameModule.getRules();
         if (gameRules != null
                 && gameRules.collision() != null

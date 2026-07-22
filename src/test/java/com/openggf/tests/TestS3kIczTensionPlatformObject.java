@@ -64,9 +64,13 @@ class TestS3kIczTensionPlatformObject {
 
         assertTrue(solid.isTopSolidOnly());
         assertEquals(SolidExecutionMode.MANUAL_CHECKPOINT, solid.solidExecutionMode());
+        assertTrue(solid.usesGroundHalfHeightForTopSolidContact());
+        assertTrue(solid.rejectsZeroDistanceTopSolidLanding());
         assertEquals(0x23, params.halfWidth());
         assertEquals(0x14, params.airHalfHeight());
         assertEquals(0x0B, params.groundHalfHeight());
+        assertEquals(0x18, ((AbstractObjectInstance) instance).getBalanceWidthPixels(),
+                "Sonic_Move must read ObjDat width_pixels, not SolidObjectTop's extended d1");
     }
 
     @Test

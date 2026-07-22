@@ -89,6 +89,7 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     private boolean standingLatched;
     private boolean decorationChildSpawned;
     private boolean renderDecorationInParent = true;
+    private boolean initialDispatchPending = true;
 
     public IczCrushingColumnObjectInstance(ObjectSpawn spawn) {
         super(spawn, "ICZCrushingColumn");
@@ -112,6 +113,13 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
         }
 
         ensureDecorationChild();
+        // Native routine 0 only installs attributes/child state and selects
+        // subtype*2; it returns before running that selected movement routine.
+        if (initialDispatchPending) {
+            initialDispatchPending = false;
+            updateDynamicSpawn(x, y);
+            return;
+        }
         switch (routine) {
             case ROUTINE_WAIT_STANDING -> updateWaitStanding();
             case ROUTINE_TIMER_TO_UP -> updateTimer(ROUTINE_CRUSH_UP);
@@ -201,8 +209,10 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     }
 
     private void impact(int terrainDistance) {
+        // loc_8A540 adds the signed terrain correction to the integer y_pos
+        // word only. The low subpixel word survives the impact and therefore
+        // sets the phase of every later return/crush cycle.
         y += terrainDistance;
-        ySub = 0;
         routine = ROUTINE_WAIT_AFTER_IMPACT;
         timer = INITIAL_TIMER;
         playSfx(Sonic3kSfx.MECHA_LAND.id);
@@ -228,7 +238,6 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     private void updateReturnUp() {
         int nextY = y - RETURN_STEP;
         if (nextY <= spawnY) {
-            y = spawnY;
             timer = RESET_TIMER;
             resetToSubtypeRoutine();
             return;
@@ -239,7 +248,6 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     private void updateReturnDown() {
         int nextY = y + RETURN_STEP;
         if (nextY >= spawnY) {
-            y = spawnY;
             timer = RESET_TIMER;
             resetToSubtypeRoutine();
             return;
@@ -286,7 +294,9 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
     }
 
     protected TerrainCheckResult checkCeilingDistance() {
-        return ObjectTerrainUtils.checkCeilingDist(x, y, TERRAIN_Y_RADIUS);
+        // ObjCheckCeilingDist enters S3K FindFloor with the upward EOR-$F
+        // coordinate transform and the X-indexed height map.
+        return ObjectTerrainUtils.checkNativeUpwardCeilingDist(x, y, TERRAIN_Y_RADIUS);
     }
 
     protected TerrainCheckResult checkFloorDistance() {
@@ -323,6 +333,20 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
         // SolidObjectFull is called after every routine; solidity follows
         // physical existence, not the internal crushing/return state.
         return !isDestroyed();
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // The moving column rewrites its engine spawn coordinates as it travels,
+        // but ROM standing/pushing bits live in this one SST's status byte.
+        return true;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // S3K SolidObjectFull's broad X gate rejects only with unsigned bhi;
+        // relX == d1*2 remains a valid zero-distance side contact.
+        return true;
     }
 
     @Override
@@ -383,6 +407,10 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
 
     public int getYVelocityForTesting() {
         return yVel;
+    }
+
+    public int getYSubpixelForTesting() {
+        return ySub;
     }
 
     public int getMappingFrameForTesting() {

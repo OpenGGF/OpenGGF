@@ -79,6 +79,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
     private int frostPuffsSpawned;
     private int captureCloudsSpawned;
     private CaptureCloud lastCaptureCloud;
+    private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
 
     public IczFreezerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "ICZFreezer");
@@ -90,6 +92,22 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        // Obj_WaitOffscreen installs a $20-by-$20 placeholder. Render_Sprites
+        // sets its on-screen bit after object execution, then the next object
+        // pass restores Obj_ICZFreezer and returns; initialization begins on
+        // the following pass. Isolated unit fixtures have no object manager
+        // and enter the routine directly.
+        ObjectServices objectServices = tryServices();
+        if (waitingForOnscreen && objectServices != null && objectServices.objectManager() != null) {
+            if (!placeholderRenderedOnscreen) {
+                return;
+            }
+            waitingForOnscreen = false;
+            placeholderRenderedOnscreen = false;
+            return;
+        }
+        waitingForOnscreen = false;
+
         if (!frostCycleActive) {
             if (nearestPlayerXDistance(playerEntity) < ACTIVATE_X_RANGE) {
                 startFrostCycle();
@@ -170,7 +188,13 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         ObjectPlayerQuery query = new ObjectPlayerQuery(
                 () -> playerEntity,
                 () -> serviceQuery != null ? serviceQuery.sidekicks() : List.of());
-        return query.nearestByRomX(PLAYER_PARTICIPATION, x).distance();
+        int nearest = Integer.MAX_VALUE;
+        for (PlayableEntity player : query.playersFor(PLAYER_PARTICIPATION)) {
+            int projectedX = (player.getCentreX() + (player.getXSpeed() >> 8)) & 0xFFFF;
+            int delta = (short) ((x - projectedX) & 0xFFFF);
+            nearest = Math.min(nearest, Math.abs(delta));
+        }
+        return nearest;
     }
 
     private void playSfx(int sfxId) {
@@ -250,9 +274,20 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(0x20, 0x20);
+        }
+    }
+
+    @Override
     public void onUnload() {
         frostCycleActive = false;
         freezeJetActive = false;
+        // The independently allocated capture child survives its parent slot
+        // and enters the ROM off-phase scanner. The parent must not retain that
+        // now-detached SST identity if placement later rematerializes it.
+        lastCaptureCloud = null;
     }
 
     public boolean isFrostCycleActiveForTesting() {
@@ -476,20 +511,28 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
         private int breakTimer = BREAK_TIMER;
         private boolean landedOnTerrain;
+        private boolean nativeInitPassPending;
 
         public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
                 int parentX, boolean hFlip) {
+            this(capturedPlayer, capturedX, capturedY, parentX, hFlip, false);
+        }
+
+        public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
+                int parentX, boolean hFlip, boolean nativeInitPassPending) {
             super(new ObjectSpawn(capturedX, capturedY, OBJECT_ID, 0, hFlip ? 1 : 0, false, capturedY),
                     "ICZFreezerFrozenPlayer");
             this.capturedPlayer = capturedPlayer;
             int xSpeed = capturedX >= parentX ? INITIAL_X_SPEED : -INITIAL_X_SPEED;
             this.motion = new SubpixelMotion.State(capturedX, capturedY, 0, 0, xSpeed, INITIAL_Y_SPEED);
+            this.nativeInitPassPending = nativeInitPassPending;
         }
 
         private FrozenPlayerBlock(ObjectSpawn spawn) {
             super(spawn, "ICZFreezerFrozenPlayer");
             this.capturedPlayer = null;
             this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, INITIAL_Y_SPEED);
+            this.nativeInitPassPending = false;
         }
 
         @Override
@@ -506,7 +549,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
         @Override
         protected boolean skipsSameFrameUpdateAfterSpawn() {
-            return true;
+            return !nativeInitPassPending;
         }
 
         @Override
@@ -519,7 +562,10 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             if (isDestroyed()) {
                 return;
             }
-
+            if (nativeInitPassPending) {
+                nativeInitPassPending = false;
+                return;
+            }
             if (!landedOnTerrain) {
                 applyCameraSideVelocityClamp();
                 SubpixelMotion.moveSprite(motion, GRAVITY);
@@ -528,8 +574,56 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             syncCapturedPlayer();
 
             if (--breakTimer < 0) {
-                breakOpen(frameCounter);
+                breakOpen(frameCounter, true);
+                return;
             }
+            if (tryBreakFromOtherPlayer(playerEntity)) {
+                breakOpen(frameCounter, false);
+            }
+        }
+
+        /**
+         * ROM {@code sub_8AA38}: the non-captured native player can shatter the
+         * block while falling in a roll or spin-dash animation. The successful
+         * contact reflects that player's vertical velocity before releasing the
+         * captured player without running the timer-expiry hurt path.
+         */
+        private boolean tryBreakFromOtherPlayer(PlayableEntity updatePlayer) {
+            for (PlayableEntity candidate : nativePlayers(updatePlayer)) {
+                if (!(candidate instanceof AbstractPlayableSprite attacker)
+                        || attacker == capturedPlayer
+                        || attacker.isObjectControlled()
+                        || attacker.getYSpeed() < 0) {
+                    continue;
+                }
+                int animation = attacker.getAnimationId();
+                if (animation != 2 && animation != 9) {
+                    continue;
+                }
+                int dx = (short) (attacker.getCentreX() - motion.x);
+                int dy = (short) (attacker.getCentreY() - motion.y);
+                if (dx < -0x1C || dx >= 0x1C || dy < -0x18 || dy >= 0x18) {
+                    continue;
+                }
+                attacker.setYSpeed((short) -attacker.getYSpeed());
+                return true;
+            }
+            return false;
+        }
+
+        private List<PlayableEntity> nativePlayers(PlayableEntity updatePlayer) {
+            ObjectServices services = tryServices();
+            if (services != null) {
+                try {
+                    ObjectPlayerQuery query = services.playerQuery();
+                    if (query != null) {
+                        return query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+                    }
+                } catch (RuntimeException ignored) {
+                    // Lightweight object tests may not install a participation query.
+                }
+            }
+            return updatePlayer == null ? List.of() : List.of(updatePlayer);
         }
 
         private void applyCameraSideVelocityClamp() {
@@ -539,7 +633,9 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             }
             int cameraX = services.camera().getX() & 0xFFFF;
             int threshold = (cameraX + (motion.xVel < 0 ? 0x20 : 0x128)) & 0xFFFF;
-            if (Integer.compareUnsigned(threshold, motion.x & 0xFFFF) >= 0) {
+            int comparison = Integer.compareUnsigned(threshold, motion.x & 0xFFFF);
+            boolean clamp = motion.xVel < 0 ? comparison >= 0 : comparison < 0;
+            if (clamp) {
                 motion.xVel = 0;
                 motion.xSub = 0;
             }
@@ -566,9 +662,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             capturedPlayer.setGSpeed((short) 0);
         }
 
-        private void breakOpen(int frameCounter) {
+        private void breakOpen(int frameCounter, boolean applyDamage) {
             if (capturedPlayer != null) {
-                applyBreakDamage(frameCounter);
+                if (applyDamage) {
+                    applyBreakDamage(frameCounter);
+                }
+                capturedPlayer.setAir(true);
                 capturedPlayer.releaseFromObjectControl(frameCounter);
                 capturedPlayer.setInvulnerableFrames(POST_BREAK_INVULNERABILITY);
             }
@@ -746,6 +845,16 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             return RenderPriority.clamp(PRIORITY_BUCKET);
         }
 
+        /**
+         * {@code loc_8A72C} owns its lifetime and only deletes after the complete
+         * {@code sub_8A916} displacement script. It does not run an out-of-range
+         * tail while the parent/camera moves away.
+         */
+        @Override
+        public boolean isPersistent() {
+            return true;
+        }
+
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             if (isDestroyed() || !drawThisFrame) {
@@ -779,11 +888,18 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             super(new ObjectSpawn(x, y, OBJECT_ID, subtype, 0, false, y),
                     "ICZFreezerIceDebris", xVel, yVel, GRAVITY);
             this.rawAnimation = subtype >= 8 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
+            this.animFrame = initialAnimFrame();
         }
 
         private IceDebris(ObjectSpawn spawn, int ignored) {
             super(spawn, "ICZFreezerIceDebris", 0, 0, GRAVITY);
             this.rawAnimation = (spawn.subtype() & 0xFF) >= 8 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
+            this.animFrame = initialAnimFrame();
+        }
+
+        private int initialAnimFrame() {
+            ObjectServices services = constructionContext();
+            return services != null && services.rng() != null ? services.rng().nextBits(3) : 0;
         }
 
         @Override

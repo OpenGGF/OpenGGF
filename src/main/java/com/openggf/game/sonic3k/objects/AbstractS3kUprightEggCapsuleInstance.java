@@ -282,6 +282,10 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     }
 
     private void lockForResults(AbstractPlayableSprite sprite) {
+        // Set_PlayerEndingPose preserves status and Obj_EggCapsule still tail-calls
+        // SolidObjectFull after its routine dispatch. Keep this capsule as the
+        // sole valid support while object_control=$81 suppresses normal solids.
+        sprite.setObjectControlledSolidContactObject(this);
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setControlLocked(true);
         sprite.setXSpeed((short) 0);

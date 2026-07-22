@@ -101,7 +101,8 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
         assertEquals(0, services.immediateLostRingSpawns,
                 "sub_1F58C allocates Obj_Bouncing_Ring first; ring count is spent when it runs next frame");
         assertEquals(1, services.delayedLostRingSpawns);
-        assertEquals(0x0C66, services.lastDelayedFrame);
+        assertTrue(services.deferredOwnerLostRingSpawn,
+                "the routine-0 owner must defer Ring_count until its first object update");
         assertTrue(player.hurtOrDeathCalled);
         assertTrue(player.lastHadRings);
     }
@@ -165,6 +166,7 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
         private int immediateLostRingSpawns;
         private int delayedLostRingSpawns;
         private int lastDelayedFrame;
+        private boolean deferredOwnerLostRingSpawn;
 
         @Override
         public void spawnLostRings(com.openggf.game.PlayableEntity player, int frameCounter) {
@@ -176,6 +178,13 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
             delayedLostRingSpawns++;
             lastDelayedFrame = frameCounter;
         }
+
+        @Override
+        public void spawnLostRingsWithDeferredOwner(
+                com.openggf.game.PlayableEntity player, int frameCounter) {
+            delayedLostRingSpawns++;
+            lastDelayedFrame = frameCounter;
+            deferredOwnerLostRingSpawn = true;
+        }
     }
 }
-

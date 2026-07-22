@@ -616,6 +616,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
         boolean retainedReloadState = act == 0 && carriedAcrossSeamlessTransition;
         boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
+        boolean preloadedNextActHandoff = isPreloadedNextActHandoff(act, services().currentAct());
         if (!controlsReleasedAheadOfHandoff) {
             releasePlayerControlsForExit();
         }
@@ -633,8 +634,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // to the pre-boss area (ROM: loc_694D4 uses Obj_IncLevEndXGradual).
         boolean iczAct2EndBossHandoff = zone == 0x05 && act == 1;
         var cam = services().camera();
-        applyCameraFollowExitState(cam, lbzAct2PostBossHandoff);
+        if (!preloadedNextActHandoff) {
+            applyCameraFollowExitState(cam, lbzAct2PostBossHandoff);
+        }
         if (!hasSeamlessTransition && !retainedReloadState
+                && !preloadedNextActHandoff
                 && shouldRestoreCameraBoundsOnExit(zone, act)
                 && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
@@ -695,18 +699,21 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             if (!skipTitleCard && !hasSeamlessTransition) {
                 var titleCardProvider = services().titleCardProvider();
                 titleCardProvider.initializeInLevel(zone, 1);
-                if (aizAct1MinibossTitleHandoff
-                        && titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
-                    s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
-                } else if (retainedReloadState
-                        && titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
-                    // This Obj_LevelResults survived an earlier Load_Level and
-                    // now mutates into Obj_TitleCard. The in-level title owner
-                    // resets Timer/Ring_count on its first Wait dispatch after
-                    // the queued create passes (sonic3k.asm:62708-62720,
-                    // 62150-62235).
-                    s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
-                            MUTATED_TITLE_CARD_RESET_DISPATCHES);
+                if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
+                    if (preloadedNextActHandoff) {
+                        s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
+                    }
+                    if (aizAct1MinibossTitleHandoff) {
+                        s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
+                    } else if (retainedReloadState) {
+                        // This Obj_LevelResults survived an earlier Load_Level and
+                        // now mutates into Obj_TitleCard. The in-level title owner
+                        // resets Timer/Ring_count on its first Wait dispatch after
+                        // the queued create passes (sonic3k.asm:62708-62720,
+                        // 62150-62235).
+                        s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
+                                MUTATED_TITLE_CARD_RESET_DISPATCHES);
+                    }
                 }
             }
 
@@ -744,8 +751,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     sprite.setControlLocked(false);
                     ObjectControlState.none().applyTo(sprite);
                     sprite.setForcedAnimationId(-1);
-                    if (shouldPublishWaitAnimationOnControlRestore(
-                            waitDurationAdjustment, carriedAcrossSeamlessTransition)) {
+                    if (shouldPublishWaitAnimationOnControlRestore()) {
                         // Restore_PlayerControl writes anim/prev_anim to Wait.
                         // A retained results owner runs after player animation,
                         // so publish the new animation id while retaining the
@@ -762,11 +768,24 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         return waitDurationAdjustment > 0 || carriedAcrossSeamlessTransition;
     }
 
+    protected boolean shouldPublishWaitAnimationOnControlRestore() {
+        return shouldPublishWaitAnimationOnControlRestore(
+                waitDurationAdjustment, carriedAcrossSeamlessTransition);
+    }
+
     static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {
         boolean actOneInLevelTitleHandoff = act == 0
                 && (zone == 0x00 || zone == 0x01 || zone == 0x02);
         boolean lbzActTwoPostBossHandoff = zone == 0x06 && act == 1;
         return !actOneInLevelTitleHandoff && !lbzActTwoPostBossHandoff;
+    }
+
+    static boolean isPreloadedNextActHandoff(int resultsAct, int currentAct) {
+        // Some mid-act bosses run after the next act's level state has already
+        // been loaded while Apparent_act still belongs to the results owner.
+        // The in-level title card, not Obj_LevelResults, later releases the
+        // retained Scroll_lock and camera bounds.
+        return resultsAct == 0 && currentAct > resultsAct;
     }
 
     protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {

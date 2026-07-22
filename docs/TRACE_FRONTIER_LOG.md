@@ -1,5 +1,79 @@
 # Trace Frontier Log
 
+### 2026-07-22 -- ICZ complete-run f11976 attracted-ring target phase FIXED; physics frontier f12107
+
+The ROM's slot-13 `Obj_Attracted_Ring` reaches `(0x6710,0x02C6)` and enters
+`AttractedRing_GiveRing` at f11976. The subsystem-backed engine ring moved late
+in the level update and targeted Sonic after the later ObjB4 swinging-platform
+slots had carried him. Native slot 13 executes after Player 1 but before those
+platform slots, so its X/Y acceleration uses Sonic's post-physics, pre-object
+coordinates (`docs/skdisasm/sonic3k.asm:35740-35835`).
+
+`RingManager` now captures Player 1's coordinates in the native
+`Test_Ring_Collisions`/touch phase and consumes that target during its late
+attracted-ring movement. A focused regression moves the player between those
+phases and verifies the ring still accelerates toward the captured target. The
+focused ring suite passes. `TestS3kIczCompleteRunTraceReplay` restores the f11976
+pickup and advances physics to f12107 (2986 -> 2985 errors); animation remains
+at f12206 with 1210 errors. Total errors return from 4196 to 4195. The next
+physics root is a one-pixel Sonic Y difference at f12107.
+
+### 2026-07-22 -- ICZ complete-run f11588 early horizontal-spring launch FIXED; frontiers f11976/f12206
+
+CPU Tails descended beside the flipped yellow horizontal spring at
+`(0x63F9,0x05F0)`. The engine's object-order compatibility handoff treated
+`y_pos >= spring.y_pos` as a same-frame terrain landing, cleared
+`Status_InAir`/`y_vel`, and launched Tails at f11588. The ROM remained airborne
+through f11589 and launched only after the player floor-collision path had
+accepted actual terrain penetration.
+
+The handoff now mirrors the player's paired left/right foot probes and accepts
+only a negative terrain distance, matching the `< 0` collision gate. A zero
+distance is deliberately left airborne for that pass; ordinary player physics
+then lands the character and the following spring pass observes the grounded
+state. Missing collision data retains the prior centre-line fallback only for
+lightweight isolated object tests. The focused 16-case spring suite passes.
+`TestS3kIczCompleteRunTraceReplay` advances physics from f11588 to f11976
+(3115 -> 2986 errors) and animation from f11589 to f12206 (1080 -> 1210 errors).
+The corrected later cascade reshapes the total from 4195 to 4196 errors. The
+next physics root is a missed ring pickup at f11976; the next animation root is
+Sonic mapping `$07` versus `$08` at f12206.
+
+### 2026-07-21 -- ICZ complete-run f11058 false offscreen Freezer capture FIXED; frontier f11588
+
+The engine Freezer at `(0x61D0,0x06FC)` ran its proximity/phase logic as soon
+as placement materialized it, spawned a capture cloud at `(0x61D0,0x072C)`,
+and froze CPU Tails at f11058. The ROM has no live Freezer or capture child at
+that point. `Obj_ICZFreezer` first calls `Obj_WaitOffscreen`, which publishes a
+temporary `$20`-square render box and suppresses all real logic until
+`Render_Sprites` sets bit 7. The helper restores the saved entry point and
+returns; real initialization begins on the next SST dispatch.
+
+`IczFreezerObjectInstance` now retains that post-render visibility latch and
+the separate restore pass. A managed-object regression test covers the three
+phases while isolated object tests retain direct entry. The focused trace
+improves from 4240 to 4195 errors: physics frontier 11058 -> 11588 (the later
+cascade reshapes the physics count from 3096 to 3115) and animation frontier
+11058 -> 11589 (1144 -> 1080 errors). The joint next root begins at f11588,
+where ROM Tails retains `y_vel=$03B8` but the engine clears it.
+
+### 2026-07-21 -- ICZ complete-run f10128 button exact-edge push FIXED; frontier f11058
+
+Sonic reaches the ordinary subtype-4 button at `(0x6140,0x0200)` with his
+centre exactly `d1=$1B` pixels to its right. S3K `Obj_Button` calls
+`SolidObjectFull` with `d1=$1B`; its unsigned broad-X gate rejects only values
+strictly above `d1*2` (`bhi`), so the equality case remains a side contact and
+sets `Status_Push`. The engine button used the shared exclusive-right default,
+leaving Sonic's positions and velocities correct but dropping the push bit and
+the resulting push mappings.
+
+`Sonic3kButtonObjectInstance` now declares the native inclusive right edge,
+with a focused contract test. `TestS3kIczCompleteRunTraceReplay` improves from
+4250 to 4240 errors: physics advances 10128 -> 11058 (3104 -> 3096 errors) and
+animation advances 10132 -> 11058 (1146 -> 1144 errors). The new joint frontier
+is CPU Tails at f11058: ROM continues with `y_vel=$052B`, run animation 2, while
+the engine has stopped (`y_vel=0`, animation `$1A`).
+
 ### 2026-07-21 -- S3K mega-run chain seg2 (aiz_2) f231 FIXED: broken-monitor respawn state now survives the bonus round-trip
 
 The f231 "phantom wall" root is closed. TRIPLE-PROVEN root (superseding the
@@ -47421,3 +47495,1370 @@ expected-red routes and unchanged non-CNZ frontiers. The animation fleet
 remains 44/58 green with the same eight unsupported S1 credits traces and six
 comparison-red routes; CNZ complete-run animation remains at f108 and legacy
 standalone CNZ remains at f0 in both scopes.
+## 2026-07-21 - S3K ICZ ice-cube pre-contact animation advances both gates
+
+- Branch/worktree context: repository root on `bugfix/ai-s3k-icz-trace-green`,
+  based on `develop` commit `6a4c39488`; local user changes in `.gitignore`,
+  `.idea/vcs.xml`, and `docs/plans/cnz2-knuckles-cutscene-boss-parity-tasks.md`
+  were left untouched and excluded.
+- Command: `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczCompleteRunTraceReplay' test`.
+- **`s3k_icz1` advanced from f2472 to f2519 and from 5,763 to 3,375 total
+  errors.** The physics gate advanced from f2472 `y_speed` (4,403 errors) to
+  f3174 `rings` (3,206 errors); the animation gate advanced from f2472
+  `player_animation_id` (1,360 errors) to f2519 `player_mapping_frame`
+  (169 errors).
+- Root: `Obj_ICZIceCube` saves Player 1/Player 2 `anim` into object bytes
+  `$3A/$3B` before `SolidObjectFull`, then tests those saved bytes after the
+  solid helper may clear rolling on a fresh landing
+  (`docs/skdisasm/sonic3k.asm:189711-189741`). The engine instead tested the
+  post-contact Walk animation, so the cube did not shatter and neither the
+  native `-$300` launch nor Roll animation was published. The object now reads
+  the shared resolver's per-player pre-contact animation snapshot.
+- Focused unit command: `mvn -q -Dmse=relaxed
+  '-Dtest=TestIczIceCubeObjectInstance' test`. Assertions could not execute for
+  Mockito-backed cases because the checkout is running Java 26 while the
+  bundled Byte Buddy supports through Java 24; the production trace replay
+  executed normally and proved the frontier movement.
+
+## 2026-07-21 - S3K ICZ trigger-bridge rider ownership advances animation
+
+- Command: `mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczCompleteRunTraceReplay' test`.
+- **`s3k_icz1` advanced from f2519 to f3174 and from 3,375 to 3,374 total
+  errors.** Physics remains at f3174 `rings` with 3,206 errors; animation
+  advanced from f2519 `player_mapping_frame` (169 errors) to f3858
+  `player_mapping_frame` (168 errors).
+- Root: the bridge collapse-wave snapshot used the player's global
+  `Status_OnObj` equivalent. When ICZ's trigger-mode Obj0F shattered while
+  Sonic was standing on a Star Pointer, the engine invented a bridge rider;
+  its later release wrote native `prev_anim=1` and spuriously restarted the
+  unchanged Walk script. ROM `Check_CollapsePlayerRelease` runs only when that
+  bridge's own P1/P2 standing bit is set
+  (`docs/skdisasm/sonic3k.asm:45379-45413`). Rider seeding now uses the
+  object-specific riding/standing latches.
+- `TestS3kCollapsingBridgeParity` passes all 11 focused cases, including a new
+  different-support ownership regression.
+
+## 2026-07-21 - S3K ICZ Obj37 ownership and touch phase advance physics to f3856
+
+- Command: `mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestSonic3kInvisibleHurtBlockHObjectInstance,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f3174 to f3856 and total errors fell
+  from 3,374 to 3,372.** Physics has 3,204 errors at the new `x_speed`
+  frontier; animation remains at f3858 with 168 errors.
+- Root: `HurtCharacter` allocates the routine-0 Obj37 owner while leaving
+  `Ring_count` unchanged; Obj37 init spends the rings on its later object
+  pass (`docs/skdisasm/sonic3k.asm:21091-21113,35579-35648`). The invisible
+  hurt block's post-player solid callback was queued against an unrelated
+  object counter that had fallen behind the level pending-spawn clock. The
+  spill now materializes in the ordinary post-player phase while its first
+  Obj37 slot owns the deferred `Ring_count` clear. TouchResponse consumes the
+  position retained by S3K's previous collision-response list, and
+  `Touch_ChkValue` only marks the ring collected; the slot's later routine-4
+  execution owns `GiveRing` and its sound (`sonic3k.asm:20682-20828,
+  35683-35742`). No trace data or zone/frame exception is consulted.
+- All eight focused invisible-hurt-block tests, all ten lost-ring ordering
+  tests, and all thirty lost-ring object tests pass.
+
+## 2026-07-21 - S3K ICZ crushing-column init advances both frontiers
+
+- Command: `mvn -Dmse=off -Dnet.bytebuddy.experimental=true
+  '-Dtest=TestS3kIczCrushingColumnObject' test`, followed by
+  `mvn -Dmse=off '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczCompleteRunTraceReplay' test`.
+- **`s3k_icz1` physics advanced from f3856 to f4895 and animation advanced
+  from f3858 to f4900.** The combined report currently has 6,148 errors:
+  4,783 physics and 1,365 animation. The larger residual is a downstream
+  cascade from the new f4895 vertical-velocity frontier, not an earlier
+  regression.
+- Root: native ObjAF routine 0 installs attributes and selects `subtype*2`,
+  then returns before the selected movement routine
+  (`docs/skdisasm/sonic3k.asm:187956-188025`). The constructor had already
+  selected the subtype routine, so the first engine dispatch moved every
+  column one frame early. A first-dispatch latch now preserves the native init
+  boundary. The moving column also rewrites its engine spawn coordinates;
+  using that mutable value as the solid-status key accumulated one stale
+  pushing key per Y position. ObjAF now uses the existing instance-key policy,
+  matching the single standing/pushing status byte owned by its live SST.
+- All eleven focused ICZ crushing-column tests pass on Java 26 with Byte Buddy's
+  experimental compatibility flag.
+
+## 2026-07-21 - S3K ICZ Penguinator activation advances both frontiers
+
+- Command: `mvn -Dmse=off -Dnet.bytebuddy.experimental=true
+  '-Dtest=TestS3kPenguinatorBadnik' test`, followed by
+  `mvn -Dmse=off -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczCompleteRunTraceReplay' test`.
+- **`s3k_icz1` physics advanced from f4895 to f5243 and animation advanced
+  from f4900 to f5246.** Total errors fell from 6,148 to 5,824: physics from
+  4,783 to 4,463 and animation from 1,365 to 1,361.
+- Root: `Obj_Penguinator` begins behind `Obj_WaitOffscreen`, whose temporary
+  sprite has `$20` half extents. The engine waited until Penguinator's centre
+  entered the viewport, activating it 13 frames late. Its accelerating patrol
+  was consequently seven pixels too far right at f4894 and produced a false
+  enemy bounce that the ROM's still-leftward Penguinator could not touch.
+  Activation now consumes the shared Render_Sprites-style bounds with the
+  native placeholder extent; later movement remains owned by the installed
+  active routine (`docs/skdisasm/sonic3k.asm:190431-190482`).
+- All six focused Penguinator tests pass, including a new placeholder-boundary
+  activation regression.
+
+## 2026-07-21 - S3K ICZ Penguinator slope cycle advances both frontiers
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczCompleteRunTraceReplay' test`.
+- **`s3k_icz1` physics advanced from f5243 to f5501 and animation advanced
+  from f5246 to f5513.** Total errors fell from 5,824 to 5,525: physics from
+  4,463 to 4,221 and animation from 1,361 to 1,304.
+- Root: Penguinator's second patrol reached a flipped terrain block. Native
+  `ObjCheckFloorDist` applies the chunk H/V transforms to `Primary_Angle`
+  before `loc_8BB90` tests its facing-relative bit 6; the engine consumed the
+  untransformed tile angle and incorrectly entered the `$40`-frame wait branch.
+  The resulting cycle was 65 frames late and missed Tails at f5243. The ground
+  decision now consumes the existing flip-aware object-terrain result and
+  clears FindFloor's odd-angle sentinel like the ROM. The same port also keeps
+  `Animate_RawGetFaster` phase when installing the hop script and includes the
+  final frame 3 from `byte_8BE16`
+  (`docs/skdisasm/sonic3k.asm:190568-190627,190657-190711,190833`).
+- All nine focused Penguinator tests pass, including raw hop-phase, complete
+  slide-recovery, and flipped-slope branch regressions.
+
+## 2026-07-21 - S3K ICZ swinging-platform child widths advance physics
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczSwingingPlatformObject,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f5501 to f5512.** Animation remains at
+  f5513, while total errors fell from 5,525 to 3,492: physics from 4,221 to
+  3,164 and animation from 1,304 to 328.
+- Root: the platform folds three native child SSTs into one multi-piece engine
+  object. `SolidObjectFull` first uses the child's broad `$2B/$0F` overlap but
+  `loc_1E154` re-reads that child slot's `width_pixels` for a fresh top landing.
+  The engine had explicitly treated the broad overlap as the landing width, so
+  the idle lower child accepted Sonic three frames early at f5500-f5502. The
+  shared multi-piece contract can now publish an explicit per-piece landing
+  width; the idle lower trigger supplies its native `$20` window, while the
+  armed child retains the broad continued-contact window needed by the folded
+  standing-bit model. Airborne stale child standing also returns after clearing
+  its own bit, matching `SolidObjectFull_1P` rather than re-entering fresh
+  contact in the same pass
+  (`docs/skdisasm/sonic3k.asm:188958-189143,189320-189369,41030-41055,41605-41637`).
+- All eight focused swinging-platform tests pass, and the previously green
+  f1708 jump-off path remains exact.
+
+## 2026-07-21 - S3K ICZ swinging-platform exact edge advances both frontiers
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczSwingingPlatformObject,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f5512 to f5536 and animation advanced
+  from f5513 to f5984.** Total errors fell from 3,492 to 3,466: physics from
+  3,164 to 3,151 and animation from 328 to 315.
+- Root: while Sonic rides the lower child, the adjacent upper child reaches an
+  exact `+d1` X overlap. S3K `SolidObjectFull` rejects this broad edge with
+  unsigned `bhi`, not `bhs`, so equality remains inside and sets
+  `Status_Push`. The engine used an exclusive right edge for ObjB4, clearing
+  the native push bit and allowing Walk's mapping script to advance instead of
+  holding frame `$B6`. ObjB4 now declares the inclusive full-solid boundary
+  used by its child callbacks
+  (`docs/skdisasm/sonic3k.asm:189320-189369,41380-41444`).
+- All eight focused swinging-platform tests pass with the boundary contract
+  pinned.
+
+## 2026-07-21 - S3K folded child stale-return advances physics
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczSwingingPlatformObject,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f5536 to f5545.** Animation remains at
+  f5984; total errors fell from 3,466 to 3,465, with physics falling from 3,151
+  to 3,150 and animation remaining at 315.
+- Root: ObjB4 folds the lower and upper native child SSTs into one engine
+  multi-piece provider. On the jump frame, the ridden lower child sees its own
+  standing bit plus `Status_InAir`, clears that bit, and returns. The later
+  upper child has no standing bit and still executes `SolidObjectFull`; its
+  overlapping top branch applies S3K's one-pixel loc_1E154 lift before rejecting
+  the upward player. The controller returned for the entire folded provider
+  after the lower child, skipping the upper slot. Piece-scoped providers now
+  defer stale-bit clearing/return to their per-piece loop so later siblings
+  remain executable (`docs/skdisasm/sonic3k.asm:189132-189143,41017-41035,41605-41637`).
+- The eight focused swinging-platform cases remain green, including the earlier
+  f1708 jump-off path.
+
+## 2026-07-21 - ICZ upper-child width advances physics
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczSwingingPlatformObject,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f5545 to f5980.** Animation remains at
+  f5984; total errors fell from 3,465 to 3,458, with physics falling from 3,150
+  to 3,143 and animation remaining at 315.
+- Root: the upper ObjB4 child passes broad half-width `$0F` to
+  `SolidObjectFull`, but `loc_1E154` re-reads that child SST's independent
+  `width_pixels=$30` before applying its position correction. The provider's
+  comment recorded `$30` while its implementation incorrectly returned `$0F`.
+  Sonic's exact `+d1` overlap therefore passed the broad S3K `bhi` boundary but
+  was wrongly rejected by the engine's narrow landing gate. Publishing `$30`
+  restores the native +2-pixel upward-velocity lift
+  (`docs/skdisasm/sonic3k.asm:189402-189417,189467-189472,41605-41637`).
+- All eight focused swinging-platform tests pass with both child widths pinned.
+
+## 2026-07-21 - ICZ continued trigger advances both frontiers
+
+- Command: `mvn -q -Dnet.bytebuddy.experimental=true
+  '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=TestS3kIczSwingingPlatformObject,TestS3kIczCompleteRunTraceReplay'
+  test`.
+- **`s3k_icz1` physics advanced from f5980 to f6139 and animation advanced
+  from f5984 to f6188.** The later route now exposes 3,785 errors (3,249
+  physics and 536 animation), replacing the prior 3,458-error downstream
+  cascade rather than representing a like-for-like count reduction.
+- Root: ObjB4's lower child saves its standing status before calling
+  `SolidObjectFull`. If the child was already supporting the player,
+  `sub_8B0B0` halves `x_vel` once before its ordinary swing derivation. The
+  folded provider callback previously received only the resulting contact, so
+  it treated the continued `$08F8` rider speed as a fresh contact and clamped
+  it to `$0800`; native output is `$047C`. Multi-piece callbacks now receive
+  their piece's standing-bit-at-entry state, and ObjB4 consumes it for the
+  saved-status branch
+  (`docs/skdisasm/sonic3k.asm:189419-189466`).
+- All nine focused swinging-platform tests pass, including fresh-contact clamp
+  and continued-contact halving cases.
+
+## 2026-07-21 - ICZ sidekick support grace advances both frontiers
+
+- Commands: focused `TestS3kIczCompleteRunTraceReplay` with the discovered S3K
+  ROM path, followed by focused `TestS3kIczSwingingPlatformObject` verification.
+- **`s3k_icz1` physics advanced from f6139 to f6972 and animation advanced
+  from f6188 to f7019.** Total errors fell from 3,785 to 3,006: physics from
+  3,249 to 2,624 and animation from 536 to 382.
+- Root: while Tails remains supported by ObjB4, the transient side-contact
+  `Status_Push` bit has already cleared at the native Tails CPU slot. ROM
+  therefore takes its ordinary `leader_on_object` path and applies the -1
+  follow nudge. The engine's multi-frame stale push-grace bridge instead took
+  `grace_push_bypass` and suppressed that nudge. Solid providers can now state
+  that live support keeps normal follow steering during stale grace; the CPU
+  phase resolves that support through its riding, latched-solid, or interact
+  ownership state, and ObjB4 opts in. The local-below-target grace branch now
+  honors the same support contract (`docs/skdisasm/sonic3k.asm:26696-26741`).
+- All nine focused swinging-platform tests pass.
+
+## 2026-07-21 - ICZ crushing-column return endpoint advances both frontiers
+
+- Commands: focused `TestS3kIczCrushingColumnObject` plus
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path, followed
+  by the focused column suite after updating its native endpoint assertions.
+- **`s3k_icz1` physics advanced from f6972 to f7100 and animation advanced
+  from f7019 to f7101.** Total errors fell from 3,006 to 2,984: physics from
+  2,624 to 2,610 and animation from 382 to 374.
+- Root: ObjAF's return routines calculate the next one-pixel Y, compare it to
+  saved spawn Y, and branch to reset without writing that terminal step. An
+  upward return therefore rests at `spawnY+1`, and a downward return at
+  `spawnY-1`. The engine instead snapped both paths to spawn Y. The supporting
+  column at `$5260` stopped at `$0300` rather than native `$0301`, and Sonic's
+  otherwise-correct ride snap inherited the one-pixel error
+  (`docs/skdisasm/sonic3k.asm:188160-188185`).
+- All eleven focused crushing-column tests pass with both endpoint semantics
+  and the resulting second-cycle timing pinned.
+
+## 2026-07-21 - ICZ crushing-column edge advances both frontiers
+
+- Command: focused `TestS3kIczCrushingColumnObject` plus
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f7100 to f7257 and animation advanced
+  from f7101 to f7274.** Total errors fell from 2,984 to 2,960: physics from
+  2,610 to 2,608 and animation from 374 to 352.
+- Root: Sonic reaches `$524B` against the adjacent column centred at `$5220`,
+  exactly `$2B` from its centre. ObjAF calls S3K `SolidObjectFull` with
+  `d1=$2B`; its unsigned `bhi` broad-X rejection includes equality, producing
+  the native zero-distance side contact and `Status_Push`. The column inherited
+  the engine's exclusive default and published the push state one frame late.
+  ObjAF now declares the verified inclusive full-solid boundary
+  (`docs/skdisasm/sonic3k.asm:188007-188020,41380-41444`).
+- All eleven focused crushing-column tests pass.
+
+## 2026-07-21 - ICZ sliding follow phase advances both frontiers
+
+- Commands: focused `TestSidekickCpuFollowParity`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f7257 to f7327 and animation advanced
+  from f7274 to f7350.** The later route exposes 2,980 errors (2,627 physics
+  and 353 animation), replacing the prior 2,960-error downstream cascade
+  rather than representing a like-for-like count reduction.
+- Root: at f7257 the sliding leader enters the frame with native
+  `ground_vel=$03C4`, then the engine's earlier movement projection publishes
+  `$0419` before Tails' CPU pass. ROM `Tails_CPU_Control` executes before that
+  projection and therefore takes the signed `<$0400` branch, subtracting the
+  `$20` lead offset from the delayed `$527B` position to target `$525B`. The
+  engine instead treated the leader as fast, targeted `$527B`, and applied a
+  +1 follow nudge to right-facing Tails. The lead-offset gate now consumes the
+  leader's pre-physics ground speed only while native slide state is active;
+  ordinary movement retains the established live phase because globally
+  using the snapshot regresses earlier follow decisions
+  (`docs/skdisasm/sonic3k.asm:26683-26724`).
+- The focused 102-case sidekick follow suite passes, including the exact
+  `$03C4` to `$0419` sliding-frame threshold crossing.
+
+## 2026-07-21 - ICZ slide-exit follow phase advances both frontiers
+
+- Commands: focused `TestSidekickCpuFollowParity`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f7327 to f7350 and animation advanced
+  from f7350 to the same f7350 shared divergence.** Total errors fell from
+  2,980 to 2,954: physics from 2,627 to 2,603 and animation from 353 to 351.
+- Root: the initial f7257 fix used positive `move_lock` as a proxy for the
+  later ICZ terrain-event write, but f7327 is deliberately the inverse case.
+  Sonic has left slide terrain, retains `move_lock=4`, and player physics has
+  already reduced `ground_vel` from `$0A2B` to `$0070` before Tails' CPU slot.
+  ROM therefore subtracts the `$20` lead offset and suppresses the engine's
+  extra right nudge. The phase gate now keys on the native slide-state bit
+  that actually owns the later velocity write, not the independent lock
+  countdown (`docs/skdisasm/sonic3k.asm:26683-26724,28918-28958`).
+- The focused 102-case sidekick follow suite remains green.
+
+## 2026-07-21 - ICZ two-player collapse landing advances both frontiers
+
+- Commands: focused `TestSonic3kCollapsingPlatformTransitionSolid`, followed by
+  `TestS3kIczCompleteRunTraceReplay` and the AIZ complete-run canary with the
+  discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f7350 to f7606 and animation advanced
+  from f7350 to f7595.** The later cascade exposes 5,050 errors (3,827 physics
+  and 1,223 animation), replacing the prior 2,954-error cascade rather than
+  representing a like-for-like count increase.
+- Root: Obj04's engine state intentionally fragments one dispatch before the
+  promoted `transitionFrameSlopeSkip`, compensating for the split contact
+  phase. At f7350 that pending pass corresponds to ROM's final `$38:1 -> 0`
+  decrement, where `loc_20594` still calls `SolidObjectTopSloped2`; Player 2's
+  saved support latch remains on the platform while descending Player 1 enters
+  its native slope catch range. Treating pending state as the actual
+  `CreateFragments` skip rejected Sonic's landing, leaving him airborne with
+  Roll animation. Pending state now admits that narrowly modeled P1/P2 support
+  handoff, while the promoted transition still rejects fresh contacts and
+  retains existing riders (`docs/skdisasm/sonic3k.asm:44814-44830,45394-45442`).
+- The focused five-case transition-solid suite passes. The AIZ canary remains at
+  its pre-existing two ring-timing errors (f9396 and f16780-f16781); restoring
+  Obj04's original fresh-contact predicate produces the same two errors, so
+  this frontier does not add that regression.
+
+## 2026-07-21 - ICZ ice-cube edge advances both frontiers
+
+- Commands: focused `TestIczIceCubeObjectInstance`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f7606 to f8227 and animation advanced
+  from f7595 to f8227.** Total errors fell from 5,050 to 4,680: physics from
+  3,827 to 3,487 and animation from 1,223 to 1,193.
+- Root: at f7594 CPU Tails is exactly `$23` pixels right of ObjB6's centre.
+  `loc_8B384` passes `d1=$23` to S3K `SolidObjectFull`, whose unsigned `bhi`
+  broad-X rejection includes equality. ROM therefore retains `Status_Push`
+  before `Animate_Tails`; the expired Walk-handler tick selects mapping `$AA`
+  at f7595. The cube inherited the engine's exclusive default, cleared push a
+  frame early, and left mapping `$08`. ObjB6 now declares the verified
+  inclusive full-solid boundary
+  (`docs/skdisasm/sonic3k.asm:189703-189741,41380-41444`).
+- The focused eight-case ICZ ice-cube suite passes with the boundary contract
+  pinned alongside its existing shatter and debris behavior.
+
+## 2026-07-22 - ICZ sliding follow threshold advances both frontiers
+
+- Commands: focused `TestSidekickCpuFollowParity`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f8227 to f8386 and animation advanced
+  from f8227 to f9040.** Total errors fell from 4,680 to 4,454: physics from
+  3,487 to 3,266 and animation from 1,193 to 1,188.
+- Root: ICZ slide terrain is a late zone-feature write. The earlier correction
+  sampled frame-start `ground_vel`, which was sufficient at f7257 but was too
+  early at f8227: native player physics had already projected `$03EE` across
+  the signed `$400` follow threshold before the slide handler added its next
+  `$40`. The runtime now captures a rewind-covered post-player-physics,
+  pre-zone-feature speed phase. Tails consumes that phase only while the
+  leader's native sliding bit owns inertia, suppressing the erroneous `$20`
+  lead offset without changing ordinary follow behavior
+  (`docs/skdisasm/sonic3k.asm:26683-26724,8979-9100`).
+- The focused 103-case sidekick follow suite passes, including both sides of
+  the slide-owned `$400` threshold transition.
+
+## 2026-07-22 - ICZ attracted-ring word wrap advances physics frontier
+
+- Commands: focused `TestRingManager`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f8386 to f8411; animation remains at
+  f9040.** The later cascade exposes 4,456 errors (3,268 physics and 1,188
+  animation), replacing the prior 4,454-error cascade rather than representing
+  a like-for-like count increase.
+- Root: Obj_Attracted_Ring matched ROM motion until its Y word crossed zero.
+  The engine then retained an unbounded signed coordinate and used Java's
+  signed target comparison, reversing the ring toward Sonic about 100 frames
+  early. Native `MoveSprite2` wraps the position high word and
+  `AttractedRing_Move` selects direction with unsigned `bhs`. Attracted rings
+  now preserve that 16-bit position/velocity domain both live and through
+  rewind restore, so the offscreen trajectory remains native
+  (`docs/skdisasm/sonic3k.asm:35751-35875`).
+- The focused 25-case ring-manager suite passes, including a two-step
+  `$0001 -> $FFFF` wraparound regression.
+
+## 2026-07-22 - ICZ path-follow platform edge advances physics frontier
+
+- Commands: focused `TestS3kIczPathFollowPlatformObject` and
+  `TestS3kIcz1PathFollowPlatformHeadless`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f8411 to f9039; animation remains at
+  f9040.** Total errors fell from 4,456 to 4,455: physics from 3,268 to 3,267
+  and animation remains at 1,188.
+- Root: at f8411 Sonic's centre is exactly `$2B` pixels right of the stationary
+  ObjB0 path-follow platform. `loc_89F64` passes `d1=$2B` to S3K
+  `SolidObjectFull`, whose unsigned `bhi` broad-X rejection accepts equality.
+  The platform inherited the engine's exclusive default and omitted the
+  one-frame native `Status_Push` contact despite otherwise identical position
+  and velocity. ObjB0 now declares the verified inclusive full-solid boundary
+  (`docs/skdisasm/sonic3k.asm:187437-187458,41380-41444`).
+- The focused path-follow platform suites pass, with the `$2B` boundary
+  contract pinned alongside the existing subtype, movement, and rewind tests.
+
+## 2026-07-22 - ICZ moving-platform latch identity advances both frontiers
+
+- Commands: focused `TestS3kIczPathFollowPlatformObject` and
+  `TestS3kIcz1PathFollowPlatformHeadless`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f9039 to f9125 and animation advanced
+  from f9040 to f9206.** Total errors fell from 4,455 to 4,448: physics from
+  3,267 to 3,262 and animation from 1,188 to 1,186.
+- Root: ObjB0 updates its dynamic engine spawn as it follows the floor, but
+  native standing/pushing bits belong to the stable SST status byte. The
+  shared latch map therefore inserted a new value-keyed `ObjectSpawn` for each
+  moving contact and could not remove the old coordinate key on the following
+  no-contact pass. The platform now uses its stable live instance as the
+  standing/pushing latch key, matching the same established contract used by
+  other moving S3K full solids. This restores the ROM's alternating push clear
+  and lets Walk animation advance normally.
+- The focused path-follow platform suites pass with both moving-latch identity
+  and inclusive-edge contracts pinned.
+
+## 2026-07-22 - ICZ first-landing fast camera advances physics frontier
+
+- Commands: focused `TestS3kIczPathFollowPlatformObject` and
+  `TestS3kIcz1PathFollowPlatformHeadless`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f9125 to f9126; animation remains at
+  f9206.** Total errors fell from 4,448 to 4,447: physics from 3,262 to 3,261
+  and animation remains at 1,186.
+- Root: ROM ObjB0 calls `SolidObjectFull` and only then calls `sub_8A3C4`, so a
+  standing bit established by that collision sets `Fast_V_scroll_flag` before
+  the same frame's camera scroll. The split engine callback was recorded after
+  the platform update but consumed on the next update, applying only the normal
+  six-pixel camera cap on the first landing. Fast-scroll publication now occurs
+  directly from the accepted standing contact when the platform is moving
+  (`docs/skdisasm/sonic3k.asm:187437-187457,187943-187957`).
+- The focused platform suites pass with the immediate post-contact camera
+  request covered.
+
+## 2026-07-22 - ICZ fresh-ride carry baseline advances both frontiers
+
+- Commands: focused `TestS3kIczPathFollowPlatformObject` and
+  `TestS3kIcz1PathFollowPlatformHeadless`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f9126 to f9504 and animation advanced
+  from f9206 to f10132.** Total errors fell from 4,447 to 4,294: physics from
+  3,261 to 3,148 and animation from 1,186 to 1,146.
+- Root: ObjB0 saves its pre-move X in `d4`, but `SolidObjectFull_1P` consumes
+  that value only when the platform's standing bit was already set and it calls
+  `MvSonicOnPtfm`. A fresh landing branches through `SolidObject_cont`, ignores
+  `d4`, and the next object pass saves the platform's new X. The provider
+  incorrectly seeded every fresh engine ride from pre-update X, adding the
+  landing frame's one-pixel move again on the first continued ride. Fresh rides
+  now use the shared post-move baseline
+  (`docs/skdisasm/sonic3k.asm:187437-187452,41011-41044`).
+- The focused platform suites pass with the fresh-landing baseline contract
+  pinned alongside its movement behavior.
+
+## 2026-07-22 - ICZ falling-wall fraction advances physics frontier
+
+- Commands: focused `TestS3kIczPathFollowPlatformObject` and
+  `TestS3kIcz1PathFollowPlatformHeadless`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f9504 to f10128; animation remains at
+  f10132.** Total errors fell from 4,294 to 4,250: physics from 3,148 to 3,104
+  and animation remains at 1,146.
+- Root: when ObjB0's falling path detects a wall, native `loc_8A154` adds the
+  signed wall distance to the integer `x_pos` word and clears only `x_vel`.
+  The engine also cleared `x_sub`. Integer positions initially stayed equal,
+  hiding the lost `$34` fraction until a later `$F40F/$0BD3` diagonal slope
+  step crossed opposite X/Y pixel boundaries and displaced the rider by
+  `(-1,+1)`. The wall stop now preserves the fractional accumulator
+  (`docs/skdisasm/sonic3k.asm:187631-187644`).
+- The focused platform suites pass with a nonzero-subpixel wall-stop regression
+  that verifies position correction and velocity clear without fraction loss.
+## 2026-07-21 - ICZ swinging-platform release fraction advances physics frontier
+
+- Commands: focused `TestS3kIczSwingingPlatformObject`, followed by
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f12107 to f12168; animation remains at
+  f12206.** Total errors fell from 4,195 to 4,151: physics from 2,985 to 2,941
+  and animation remains at 1,210.
+- Root: `MoveSprite_CircularSimple` converts both trig words into signed 16.16
+  offsets before adding the parent position. ObjB4 releases without clearing
+  that fraction, and its falling/sliding routines continue adding velocity to
+  the same long position. The engine reduced the circular result to integer
+  pixels, cleared the fraction on release, and then used the 16:8 helper, making
+  the released platform and rider one pixel high. Circular, falling, and sliding
+  motion now preserve the native 16.16 position
+  (`docs/skdisasm/sonic3k.asm:178500-178517,188988-189035,189053-189101`).
+- The focused swinging-platform suite passes with a regression that pins the
+  half-pixel release fraction through the first falling step.
+
+## 2026-07-21 - ICZ swinging-platform live unload position advances both frontiers
+
+- Commands: combined focused `TestS3kIczSwingingPlatformObject` and
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f12168 to f12279 and animation advanced
+  from f12206 to f12369.** Total errors fell from 4,151 to 2,353: physics from
+  2,941 to 2,045 and animation from 1,210 to 308.
+- Root: ObjB4 tails every active routine with `Sprite_CheckDeleteTouch2`, whose
+  aligned range calculation reads the object's live `x_pos`. The engine instead
+  overrode the generic reference with the original chain anchor. When the camera
+  crossed the next `$80` bucket, it unloaded the detached platform even though
+  its moving body remained beside the player. The platform now inherits the
+  live-X reference used by the native macro
+  (`docs/skdisasm/sonic3k.asm:188966-189101,37245-37280`).
+- The focused suite pins the moving out-of-range reference after chain release.
+
+## 2026-07-21 - ICZ Act 2 queue gate advances both frontiers
+
+- Commands: combined focused `TestS3kIczAct1TransitionHeadless` and
+  `TestS3kIczCompleteRunTraceReplay` with the discovered S3K ROM path.
+- **`s3k_icz1` physics advanced from f12279 to f12699 and animation advanced
+  from f12369 to f12699.** The now-correct Act 2 comparison has 2,419 total
+  errors: 2,015 physics and 404 animation, versus 2,353 downstream errors from
+  the premature reload.
+- Root: `ICZ1BGE_Normal` starts three secondary terrain/art streams and advances
+  the background routine, while `ICZ1BGE_Transition` keeps running Act 1 until
+  `Kos_decomp_queue_count` reaches zero. The engine combined those two routines
+  and reloaded Act 2 immediately at camera X `$6900`, offsetting both players
+  and the camera 41 native queue-dispatches early. ICZ now models the queued
+  workload before requesting the existing data-driven seamless transition
+  (`docs/skdisasm/sonic3k.asm:110280-110368`).
+- The focused transition test verifies that Act 1 remains active through every
+  busy queue pass and reloads only after the workload drains.
+
+## 2026-07-21 - ICZ miniboss camera-gate entry advances both frontiers
+
+- **`s3k_icz1` physics and animation advanced from f12699 to f12700.** The
+  focused replay now reports 2,317 errors: 2,005 physics and 312 animation.
+- Root: `Obj_ICZMiniboss` calls `Check_CameraInRange`, initializes the generic
+  boss gate through `sub_85D6A`, and returns through `PalLoad_Line1`. Its
+  `loc_85CA4` dispatcher does not run until the next SST pass. The engine had
+  initialized and updated the gate in one pass, exposing its following
+  `Camera_min_X_pos` write to Tails one frame early.
+- Fix: ICZ now uses `S3kSharedBossCameraGate` with the native upper/lower-route
+  bounds, 120-frame music delay, and a separate initialization return. Focused
+  miniboss coverage asserts both the initialization pass and the following
+  moving-bound dispatch (`docs/skdisasm/sonic3k.asm:149699-149734,180486-180672`).
+- Validation: `TestS3kIczMinibossObject` is green (20 tests). The complete-run
+  replay remains red at f12700 on Tails' pit-boundary transition; the committed
+  comparison data remains read-only.
+
+## 2026-07-21 - ICZ miniboss vertical gate advances both frontiers
+
+- **`s3k_icz1` physics and animation advanced from f12700 to f13205.** Total
+  errors fell from 2,317 to 2,239: 1,930 physics and 309 animation.
+- Root: ICZ's boss gate lowers `Camera_target_max_Y_pos` while the live maximum
+  remains the word read by `Tails_Check_Screen_Boundaries`. The engine's camera
+  easing is a separated phase, so the vertical target must be staged during the
+  initialization pass for the next playable dispatch to observe the same live
+  death plane. S3K's sidekick-bound mirror also incorrectly widened that plane
+  with `max(current,target)` instead of retaining `Camera_max_Y_pos` itself.
+- Fix: the miniboss initialization stages only its vertical resize target; its
+  X-following `loc_85CA4` write remains deferred to the next dispatch. The S3K
+  level-event mirror now publishes the live maximum-Y word to CPU sidekicks
+  (`docs/skdisasm/sonic3k.asm:149699-149734,180548-180575,28409-28445`).
+- Validation: the 20-case miniboss suite and two-case S3K sidekick-bound suite
+  pass. The complete-run replay remains red at f13205 on miniboss/player motion.
+
+## 2026-07-21 - ICZ miniboss wait underflow advances both frontiers
+
+- **`s3k_icz1` physics and animation advanced from f13205 to f13410.** Total
+  errors fell from 2,239 to 1,945: 1,727 physics and 218 animation.
+- Root: native `Obj_Wait` performs `subq.w #1,$2E(a0)` and branches on the new
+  negative value. The miniboss parent, shard, arc, and orb helpers tested the
+  old value while decrementing, adding one frame at each callback boundary.
+  Those accumulated delays left the orbiting snowballs' `$8B` touch response
+  inactive when Sonic reached them.
+- Fix: every ICZ miniboss wait now pre-decrements before its signed-underflow
+  test. The existing focused suite stays green and covers the parent arc,
+  shard release, orb rise/attach/orbit, and touch-region publication
+  (`docs/skdisasm/sonic3k.asm:149830-150055,178025-178033`).
+- The complete-run replay remains red at f13410 on the next player/miniboss
+  interaction; trace comparison data remains read-only.
+
+## 2026-07-21 - ICZ miniboss inter-pass wait advances both frontiers
+
+- **`s3k_icz1` physics advanced from f13410 to f13517 and animation advanced
+  from f13410 to f13900.** Total errors fell from 1,945 to 1,776: physics from
+  1,727 to 1,591 and animation from 218 to 185.
+- Root: after every routine `$A` sweep, `loc_71318` enters routine `$C` with a
+  `$3F` timer. Only the later `loc_7133A` callback decrements the pass counter
+  and either returns to `loc_712DA` or starts the orb attack. The engine skipped
+  that entire wait before the first return sweep, placing the boss and its
+  orbiting hurt regions 64 frames ahead of the ROM.
+- Fix: arc completion now always enters the native inter-pass wait; its callback
+  owns the pass-counter decision and transitions directly to the return sweep or
+  orb attack. Focused coverage pins all 64 wait dispatches
+  (`docs/skdisasm/sonic3k.asm:149830-149866`).
+- Validation: `TestS3kIczMinibossObject` is green (20 tests). The complete-run
+  replay remains red at f13517 on a missed ring pickup; trace data remains
+  comparison-only.
+
+## 2026-07-21 - ICZ snow-emitter RNG alignment (frontier unchanged)
+
+- `s3k_icz1` remains at physics f13517 and animation f13900, while total errors
+  fell from 1,776 to 1,668.
+- Root: `loc_8B6AE` calls `Random_Number` once, consumes its low word for the
+  particle X and its swapped high word for frame/priority/X velocity. The engine
+  advanced the shared RNG twice, changing snow-particle paths and their SST-slot
+  lifetimes during the miniboss spill. Rejected X samples also leaked the
+  engine's `Hyudoro_count` equivalent instead of following `loc_8B756`.
+- Fix: snowdust now splits one 32-bit native RNG result and decrements its active
+  count for rejected particles (`docs/skdisasm/sonic3k.asm:190049-190112`). The
+  48-case ICZ end-boss object suite stays green. The remaining f13517 pickup is
+  an Obj37 slot/cadence mismatch; comparison data remains read-only.
+
+## 2026-07-21 - ICZ pre-emitter RNG stream alignment (frontier unchanged)
+
+- `s3k_icz1` remains at physics f13517 and animation f13900. Total reported
+  errors rose from 1,668 to 1,780 because the now-native frost-puff lifetime
+  exposes the remaining SST-allocation mismatch, rather than hiding it through
+  premature camera cleanup.
+- Root: the snowboard helper calls its dust allocator twice per grounded frame
+  (eight times for heavy-spray frames); Freezer frost puffs own their complete
+  17-step displacement script; each of the 24 Freezer shatter fragments samples
+  `Random_Number & 3`; and `Find_SonicTails` observes each player after that
+  player's movement dispatch. The engine under-consumed all of those calls and
+  admitted one boundary puff from the pre-movement Player 2 X.
+- Fix: the snowboard helper, frost-puff lifetime, shatter initialization, and
+  Freezer range gate now follow those native owners. The first Act 2 snow
+  emitter consequently sees native call index 3,809 and seed `$73FAE993`
+  exactly. The 20-case Freezer and 48-case ICZ end-boss suites are green.
+- The remaining f13517 missed pickup is an Obj37/SST-slot cadence mismatch;
+  trace data remains read-only.
+
+## 2026-07-22 - ICZ Act 2 snow/ring SST alignment
+
+- **`s3k_icz1` physics advanced from f13517 to f14236 and animation advanced
+  from f13900 to f14236.** Total errors fell from 1,780 to 1,463: physics to
+  1,347 and animation to 116.
+- Root: snowdust routines read the retained `render_flags.on_screen` bit from
+  the most recent `Draw_Sprite` pass, including across alternating flicker
+  frames. Recomputing visibility on every object update freed low SST slots too
+  early. Lightning-shield sparks also allocated during player ability handling
+  instead of the later fixed shield-object turn. Together those differences
+  changed the 32 spilled rings' slot-derived phases and pickup paths.
+- Fix: snowdust now refreshes its retained visibility only on frames that call
+  `Draw_Sprite`; lightning sparks queue at the post-dynamic-object allocation
+  point; and lost rings created after a seamless manager rebuild consume the
+  inherited post-movement collision-list state. The native spill slots
+  (`47,55,56,58..86`) and all pickups through the miniboss approach now align.
+- Validation: the focused complete-run replay reaches f14236 in both groups;
+  the remaining divergence is the first miniboss contact response. Trace data
+  remains comparison-only.
+
+## 2026-07-22 - ICZ miniboss palette-slowdown duration
+
+- **`s3k_icz1` animation advanced from f14236 to f14780 and physics advanced
+  from f14236 to f14782.** The replay now passes the second-cycle miniboss
+  contact without falsely hurting Sonic; 3,148 errors remain (2,263 physics,
+  885 animation).
+- Root: `loc_7136C` starts palette script `word_71B52`, which retains parent
+  routine `$10` for 105 dispatches before calling `loc_71390`. The engine reused
+  the later `$3F` recovery timer, advancing the next parent/orb cycle by 41
+  frames and publishing the snowballs' `$8B` hurt response while the ROM
+  children were still in collision-inactive routine `$06`.
+- Fix: the palette slowdown now owns its script-derived 105-dispatch duration;
+  the subsequent routine `$12` wait remains independently `$3F`. Focused tests
+  pin both timer boundaries (`docs/skdisasm/sonic3k.asm:149899-149932`).
+- Validation: `TestS3kIczMinibossObject` is green (21 tests). The next replay
+  divergence is a dual-player animation/control transition at f14780/f14782;
+  trace data remains comparison-only.
+
+## 2026-07-22 - ICZ miniboss defeat-flow overlap
+
+- **`s3k_icz1` physics advanced from f14782 to f15257 and animation advanced
+  from f14780 to f15258.** Total errors fell from 3,148 to 3,081: physics to
+  2,213 and animation to 868.
+- Root: after the last hit, the ROM boss body waits `$3F` entries before
+  becoming `Obj_EndSignControl`, while `Child6_CreateBossExplosion` continues
+  its independent three-frame emission cadence. The engine's folded explosion
+  owner finished all remaining emissions before creating the control flow,
+  delaying the signpost by 31 entries. Its separately allocated signpost also
+  collapsed the grounded routine-`$06` result dispatch, delaying both ending
+  poses by one more entry.
+- Fix: the defeat flow carries the 31 already-overlapped wait entries, and the
+  signpost records the allocation provenance that preserves its grounded
+  routine-`$06` boundary without changing ordinary signposts
+  (`docs/skdisasm/sonic3k.asm:150430-150472,176198-176238,179732-179747`).
+- Validation: the ICZ miniboss, shared defeat-flow, and signpost focused suites
+  are green. The next replay divergence is the results-exit camera release at
+  f15257; trace data remains comparison-only.
+
+## 2026-07-22 - ICZ preloaded-act results camera ownership
+
+- **`s3k_icz1` physics advanced from f15257 to f15401 and animation advanced
+  from f15258 to f15435.** Total errors fell from 3,081 to 2,890: physics to
+  2,151 and animation to 739.
+- Root: the ICZ results object represents Apparent Act 1 after the seamless
+  reload has already installed Act 2 as the live level state. The ROM mutates
+  that results owner into the in-level title card and leaves `Scroll_lock` and
+  the boss camera bounds intact until the title-card owner releases them. The
+  engine restored level bounds and normal camera following directly from the
+  results exit. Its folded results timing also omitted the final wait entry
+  that publishes `Restore_PlayerControl`'s Wait animation.
+- Fix: results now recognize the generic `resultsAct < currentAct` provenance
+  and retain camera ownership for the in-level title handoff; the ICZ defeat
+  flow carries its one elapsed wait-entry adjustment independently of the
+  signpost's routine-`$06` boundary. Focused camera-policy and miniboss tests
+  are green.
+- The next replay divergence is the title card's camera-follow release at
+  f15401; trace data remains comparison-only.
+
+## 2026-07-22 - ICZ preloaded-act title-card camera release
+
+- **`s3k_icz1` physics and animation advanced to f15522**, up from the
+  f15401/f15435 frontiers. An earlier f20732 rewind-closure exception interrupted
+  the replay before its accumulated comparisons were asserted, so it was not a
+  valid frontier and is superseded by this verified result.
+- Root: after the in-level title card publishes `End_of_level_flag`, retained
+  `Obj_EndSignControlDoStart` runs `Change_Act2Sizes` and allocates independent
+  `Obj_IncLevEndXGradual`, `Obj_DecLevStartYGradual`, and
+  `Obj_IncLevEndYGradual` workers. Their `$4000/$8000` fixed-point accumulators,
+  combined with the dynamic bottom-boundary tail, produce the accelerating
+  post-arena camera release. Snapping full level bounds or relying on ordinary
+  two-pixel easing cannot reproduce that sequence.
+- Fix: the title-card bridge prepares ICZ's retained size-change owner one
+  object pass before completion, holds `Scroll_lock` for that pass, and then
+  releases it without clearing `H_scroll_frame_offset`. ICZ owns the three
+  native fixed-point boundary workers and keeps the copied max-Y target live.
+- Validation: the focused replay's first physics/animation divergence is now
+  Sonic's vertical motion at f15522. Trace data remains comparison-only.
+
+## 2026-07-22 - ICZ ice-cube rider release
+
+- **`s3k_icz1` physics and animation advanced from f15522 to f15940.** Total
+  errors fell from 2,951 to 2,234.
+- Root: `Obj_ICZIceCube` clears the player's `Status_OnObj` bit and deletes its
+  SST when it launches a rolling rider. The engine wrote the player bit but
+  retained its parallel `ObjectSolidContactController` ride reference. Once a
+  snowdust child reused that slot, the stale cube reference re-seated Sonic as
+  grounded instead of preserving the native airborne arc.
+- Fix: the cube's launch path now clears both the native player bit and the
+  shared riding-state reference in the same solid callback. Focused cube tests
+  assert the release alongside the `$300` launch and debris creation.
+- Validation: `TestIczIceCubeObjectInstance` is green; the complete-run replay's
+  next divergence is CPU Tails' horizontal speed at f15940. Trace data remains
+  comparison-only.
+
+## 2026-07-22 - ICZ Star Pointer child initialization
+
+- **`s3k_icz1` physics and animation advanced from f15940 to f16710.** Total
+  errors fell from 2,234 to 1,950.
+- Root: native Star Pointer children execute `loc_8BEB0` once after allocation,
+  installing attributes and their phase angle before returning without circular
+  movement or `Collision_response_list` publication. The engine constructor
+  installed those fields and then let the higher child SST run `loc_8BEE6` in
+  the same object pass, advancing both its orbit and touch eligibility by one
+  frame. That made an orbiting point hurt CPU Tails at f15940 instead of f15941.
+- Fix: the child now retains the parent's copied position through an explicit
+  initialization-only execution and publishes its touch entry only from its
+  subsequent active routine executions.
+- Validation: `TestStarPointerBadnikInstance` is green; the complete-run replay's
+  next divergence is Sonic's vertical speed at f16710. Trace data remains
+  comparison-only.
+
+## 2026-07-22 - ICZ tension-platform landing surface
+
+- **`s3k_icz1` physics and animation advanced from f16710 to f16975.** The
+  focused tension-platform suite remains green.
+- Root: `Obj_ICZTensionPlatform` calls `SolidObjectTop` with `d2=$14` and
+  `d3=$0B`. Its fresh-landing branch subtracts `d3` from the platform Y before
+  comparing the player's feet (`loc_1E44C`/`loc_1E45A`). The engine used `d2`
+  as the top surface, accepting rolling Sonic while he was still nine pixels
+  above the native landing window.
+- Fix: the platform now selects the shared top-solid profile's explicit
+  ground-half-height contact surface. The next replay divergence is Sonic's
+  downward velocity at f16975; trace data remains comparison-only.
+
+## 2026-07-22 - ICZ tension-platform zero-gap boundary
+
+- **`s3k_icz1` physics and animation advanced from f16975 to f17530.** Total
+  errors fell from 2,085 to 1,733; the focused tension-platform suite remains
+  green.
+- Root: on the exact zero-gap boundary, `SolidObjectTop` first falls through
+  its positive-distance `bhi`, then rejects the contact through the unsigned
+  `cmpi.w #-$10,d0 / blo` at `loc_1E45A`. The engine's default top-solid
+  boundary accepted that frame and grounded Sonic one pass early.
+- Fix: the tension platform explicitly rejects zero-distance fresh landings.
+  The next replay divergence is a missed ring at f17530; trace data remains
+  comparison-only.
+
+## 2026-07-22 - ICZ miniboss explosion and snow-emitter ownership
+
+- **`s3k_icz1` physics and animation advanced from f17530 to f19398.** The
+  lightning-shield ring count at f17530 now matches; total errors fell from
+  1,733 to 1,732.
+- Root: `Child6_CreateBossExplosion` owns a separate SST, so its three-frame
+  random explosion cadence can run before or after the snowflake SST allocated
+  that frame. Folding it into the miniboss parent changed the shared RNG order.
+  When the controller finishes, `loc_713E8` follows `_unkFAAE`, verifies the
+  live `loc_8B660` snow emitter, and sets its `$38` bit 5. The engine omitted
+  that shutdown and produced hundreds of extra snowflake SSTs, displacing two
+  attracted rings and reversing their touch order.
+- Fix: ICZ miniboss defeat now creates a rewind-recreatable explosion-controller
+  child with native SST cadence. Its completion callback stops the active
+  object-owned snow emitter before starting the signpost flow.
+- Validation: `TestS3kIczCompleteRunTraceReplay` now reaches f19398, where the
+  next divergence is Sonic's vertical speed. Trace data remains comparison-only.
+
+## 2026-07-22 - ICZ Cork Floor sloped-solid landing
+
+- **`s3k_icz1` physics advanced from f19398 to f19427; the combined frontier
+  is now animation at f19404.** The native landing at f19399 now matches its
+  position, subpixel word, velocity reset, ride slot, and camera cadence.
+- Root: ICZ subtype bit 4 clear installs `loc_2A6D4`, which calls
+  `sub_1DDC6` with `byte_2A894`. The engine treated the Cork Floor as a flat
+  `SolidObjectFull` box at `y-$24`, grounding Sonic one frame early and five
+  pixels too high. The sloped helper also receives only `d2=$24`; it does not
+  use the ordinary grounded `d3=d2+1` extent.
+- Fix: ICZ plane-switch Cork Floors now publish the ROM's 28-byte sampled
+  surface, first-byte baseline, catch-range overlap, and single `$24` vertical
+  extent through the shared sloped-solid profile. Other zone/subtype variants
+  remain on their existing flat `SolidObjectFull` path.
+- Validation: `TestS3kIczCompleteRunTraceReplay` now first diverges on Sonic's
+  animation at f19404; physics first diverges at f19427. Trace data remains
+  comparison-only.
+
+## 2026-07-22 - S3K move-lock object-support crouch gate
+
+- **`s3k_icz1` combined frontier advanced from animation f19404 to physics
+  f19523.** Physics advanced from f19427 to f19523 and animation from f19404
+  to f19531.
+- Root: while `move_lock` is nonzero, native `Sonic_Move` branches past every
+  animation write. The later `SonicKnux_Roll` low-speed Down path reads the
+  still-retained player `Status_OnObj` bit and returns without writing Duck.
+  The engine temporarily cleared live support for same-frame solid
+  revalidation, so its late crouch pass wrote Duck, and the following jump
+  press incorrectly entered spindash instead of the native Cork Floor break.
+- Fix: when the movement animation dispatch was suppressed by `move_lock`, the
+  S3K low-speed crouch decision now reads the player-slot entry object-support
+  snapshot. Ordinary unlocked Down behavior and terrain crouching are unchanged.
+- Validation: the focused movement regression and
+  `TestScriptedVelocityAnimationProfile` are green. The complete-run replay now
+  first diverges on Sonic's air state at f19523; trace data remains
+  comparison-only.
+
+## 2026-07-22 - ICZ Cork Floor grounded ride exit
+
+- **`s3k_icz1` physics and animation advanced from f19523 to f20133.** Total
+  errors fell from 1,821 to 1,151; the focused Cork Floor suites remain green.
+- Root: ICZ subtype bit 4 clear calls `sub_1DDC6`, whose continued-rider exit at
+  `loc_1DE00` clears `Status_OnObj` and the object's standing bit without
+  setting `Status_InAir`. The engine inherited generic `SolidObjectFull` exit
+  semantics and forced Sonic airborne when he crossed the final Cork Floor
+  edge, skipping the direct handoff to the terrain underneath.
+- Fix: the ICZ sloped Cork Floor now publishes its native non-airborne ride-exit
+  profile. Other Cork Floor variants still use `SolidObjectFull` and retain its
+  normal forced-air exit.
+- Validation: `TestS3kObjectPlayerQueryParticipation`,
+  `TestS3kIcz2CorkFloorRegression`, and the complete-run replay pass through the
+  former f19523 divergence. The next mismatch is Sonic's Y position at f20133;
+  trace data remains comparison-only.
+
+## 2026-07-22 - ICZ tension-rope current-segment bend
+
+- **`s3k_icz1` physics and animation advanced from f20133 to f21673.** Total
+  errors fell from 1,151 to 1,121; the focused tension-bridge suites remain
+  green.
+- Root: the ordinary bridge runs `sub_38CC2` before `sub_38A88` publishes the
+  rider's new segment, but ICZ's negative-subtype rope takes a different path.
+  `loc_38966` calls `sub_38BD8` first and then calculates `sub_38D74`. The
+  engine reused the ordinary prior-segment cadence, leaving the sampled rope
+  surface one pixel too high when Sonic crossed a segment boundary at f20133.
+- Fix: the rope variant now publishes both live riders' current segments before
+  its Player-2 anchor adjustment and bend calculation. Normal HCZ/LRZ and
+  positive-subtype ICZ bridges retain their prior-segment behavior.
+- Validation: `TestTensionBridgeBendTiming`, `TestS3kTensionBridgeObject`, and
+  the complete-run replay pass through f20133. The next mismatch is Sonic's
+  animation ID at f21673; trace data remains comparison-only.
+
+## 2026-07-22 - ICZ tension-platform balance width
+
+- **`s3k_icz1` physics and animation advanced from f21673 to f22465.** Total
+  errors fell from 1,121 to 1,118; the focused tension-platform suite remains
+  green.
+- Root: `SetUp_ObjAttributes` copies `width_pixels=$18` from
+  `ObjDat_ICZTensionPlatform`, while `sub_8BA1C` separately passes the extended
+  `d1=$23` to `SolidObjectTop`. The engine reused `$23` for Sonic's
+  `Sonic_Move` object-edge balance read, classifying his stationary left-edge
+  position as safely supported instead of precarious.
+- Fix: the platform now exposes `$18` as its balance width while retaining the
+  existing `$23` collision half-width. Sonic consequently selects the native
+  left-facing balance state and animation `$0C` at f21673.
+- Validation: `TestS3kIczTensionPlatformObject` and the complete-run replay pass
+  through the former animation mismatch. The next divergence is CPU Tails' Y
+  position at f22465; trace data remains comparison-only.
+
+## 2026-07-22 - ICZ crushing-column impact fraction and ceiling probe
+
+- **`s3k_icz1` physics advanced from f22465 to f23182 and animation advanced
+  from f22465 to f23321.** Total errors fell from 1,118 to 833; the focused
+  crushing-column suite remains green.
+- Root: `loc_8A540` corrects an impact with `add.w d1,y_pos(a0)`, preserving
+  the low subpixel word that phases every later fixed-point crush cycle. The
+  engine cleared that word. It also sent `ObjCheckCeilingDist` through the
+  legacy rotated ceiling metric instead of S3K's upward `FindFloor` entry,
+  whose EOR-`$F` coordinate transform still samples the X-indexed height map.
+- Fix: impact correction now changes only integer Y, and the column uses the
+  shared native upward-ceiling probe. No trace state is read or applied.
+- Validation: `TestS3kIczCrushingColumnObject` is green and the complete-run
+  replay passes the former CPU-Tails landing cascade. The next physics mismatch
+  is Sonic Y at f23182; animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss bottom-child solid phase
+
+- **`s3k_icz1` physics advanced from f23182 to f23189; animation remains at
+  f23321.** Total errors changed from 833 to 831; the focused end-boss suite
+  remains green.
+- Root: the engine folds the boss's independent bottom structural/solid SST
+  into the parent. Native `loc_71F92` only arms routine 4 on the flag-change
+  dispatch; `loc_71FDA` changes `$43` on the next child pass. The folded child
+  moved on the arming dispatch and shared fresh/continued contact placement did
+  not expose the child SST's distinct pre/post-parent whole-pixel phase.
+- Fix: structural shifts now arm after the current child pass. Solid providers
+  can separately correct continued-ride placement, and the ICZ boss derives
+  that correction from the parent whole-pixel transition while retaining its
+  one-pixel fresh-landing phase. No trace state is read or applied.
+- Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
+  former rolling landing mismatch. The next physics mismatch is Sonic X at
+  f23189; animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss folded-child rider carry
+
+- **`s3k_icz1` physics advanced from f23189 to f23191; animation remains at
+  f23321.** Total errors fell from 831 to 671; the focused end-boss suite
+  remains green.
+- Root: native parent slot 5 updates before the bottom child's slot `$1C`, so
+  `SolidObjectFull` carries from the parent's saved pre-update X. The folded
+  engine child used post-update X one pass early. Its Y placement also combined
+  the constant +1 `$43` shift with parent integer crossings as though both
+  phases always had the same sign.
+- Fix: solid providers can select pre-update X for continued carry. The ICZ
+  boss opts in and composes its ride correction as the child step plus the
+  signed parent whole-pixel delta (0 upward, 1 unchanged, 2 downward). No trace
+  state is read or applied.
+- Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
+  former first horizontal-motion mismatch. The next physics mismatch is Sonic
+  Y at f23191; animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss signed child displacement
+
+- **`s3k_icz1` physics advanced from f23191 to f23192; animation remains at
+  f23321.** Total errors changed from 671 to 673; the focused end-boss suite
+  remains green.
+- Root: parent integer movement is only one component of the folded bottom
+  child's published position. Inferring the ride correction from the parent
+  missed frames where `$43` and fixed-point parent motion cancelled or combined
+  across a whole-pixel boundary.
+- Fix: the boss records the bottom child's actual signed whole-pixel
+  displacement during its structural pass and publishes that as the native
+  child-SST continued-ride correction. No trace state is read or applied.
+- Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
+  former f23191 mismatch. The next physics mismatch is Sonic Y at f23192;
+  animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss terminal child shift
+
+- **`s3k_icz1` physics advanced from f23192 to f23193; animation remains at
+  f23321.** Total errors changed from 673 to 772; the focused end-boss suite
+  remains green.
+- Root: routine 4 adds `$40` to child-local `$43` before calling `Obj_Wait`.
+  The `$42` timer therefore includes a terminal displacement on the pass that
+  decrements zero to −1 and invokes `loc_71F1E`. The folded child stopped before
+  that terminal displacement.
+- Fix: active structural shifts now process timer zero, publish the terminal
+  signed displacement, and then become inactive at −1. Continued riding uses
+  the same-pass displacement correction before routine-2 steady state. No
+  trace state is read or applied.
+- Validation: `TestS3kIczEndBossObject` verifies the 67-step `$43` result and
+  the complete-run replay passes f23192. The next physics mismatch is Sonic Y
+  at f23193; animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss routine-2 ride phase
+
+- **`s3k_icz1` physics advanced from f23193 to f23232; animation remains at
+  f23321.** Total errors fell from 772 to 664; the focused end-boss suite
+  remains green.
+- Root: after `loc_71F1E` returns the bottom child to routine 2, the folded
+  engine object still publishes parent-driven whole-pixel child movement before
+  the shared continued-rider pass. Restricting the correction to active `$43`
+  shifts left routine-2 parent movement one pixel ahead on crossing frames.
+- Fix: continued riding now uses the bottom child's actual signed published
+  displacement in both routine 4 and routine 2. The terminal shift is retained,
+  so the engine child also reaches the native final `$43=$43` surface. No trace
+  state is read or applied.
+- Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
+  former f23193 steady-state mismatch. The next physics mismatch is CPU Tails Y
+  at f23232; animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss radius-driven fresh landing
+
+- **`s3k_icz1` physics advanced from f23232 to f23321, joining animation at
+  f23321.** Total errors fell from 664 to 662; the focused end-boss suite
+  remains green.
+- Root: the folded bottom-child correction was unconditional on every fresh
+  landing. Native Sonic reaches the child curled and exposes the extra phase
+  when `ResetOnFloor` restores a larger Y radius, while CPU Tails' one-pixel
+  radius restoration uses the ordinary `SolidObjectFull` surface.
+- Fix: the fresh-contact adjustment is now derived from the solid/player Y
+  radius delta. It retains the child-local one-pixel phase only when landing
+  restores more than one pixel of radius. No trace state is read or applied.
+- Validation: `TestS3kIczEndBossObject` covers both radius paths and the
+  complete-run replay passes the former f23232 Tails Y mismatch. Both groups
+  next diverge at f23321.
+
+## 2026-07-22 - ICZ end-boss frost capture range and child phase
+
+- **`s3k_icz1` physics advanced from f23321 to f23328 and animation advanced
+  from f23321 to f23329.** Total errors changed from 662 to 682; the focused
+  end-boss suite remains green.
+- Root: `word_7208A`/`word_720BE` encode a start offset followed by an extent,
+  but the engine treated the extent as the positive endpoint and doubled each
+  puff's positive capture range. Folded puff children also applied a later-slot
+  capture during the parent pass, and the capture rewrote integer positions,
+  clearing subpixel words that native `sub_8A9E0` never touches.
+- Fix: ordinary and top-puff ranges now resolve to symmetric ±$18 and ±$10
+  boxes, detected captures publish on the next folded-parent pass, and capture
+  leaves player position/subpixels intact. The queued state is player-indexed
+  primitive ROM state rather than a trace or object reference.
+- Validation: `TestS3kIczEndBossObject` verifies the excluded +$18 boundary and
+  delayed capture ownership. The complete-run replay reaches Sonic's frozen Y
+  placement at f23328; animation next diverges on Tails at f23329.
+
+## 2026-07-22 - ICZ end-boss post-solid frost capture
+
+- **`s3k_icz1` physics advanced from f23328 to f23329 and animation advanced
+  from f23329 to f23457.** Total errors changed from 682 to 706; the focused
+  end-boss suite remains green.
+- Root: promoting a folded frost overlap at the start of the next parent pass
+  set `object_control` before the bottom solid child's checkpoint. Native
+  `loc_71F30` has already carried the rider when later puff slot
+  `loc_7205E` calls `sub_8A9E0`, so the capture frame retains both
+  `Status_OnObj` and the newly set `Status_InAir` and includes the last child
+  displacement.
+- Fix: queued player-index capture bits now publish from the boss's compatibility
+  solid callback, after each player's checkpoint. Both contact and cleared
+  callbacks consume the same later-slot capture state without holding player
+  references or reading trace data.
+- Validation: `TestS3kIczEndBossObject` drives the same post-checkpoint callback
+  in focused capture tests. The complete-run replay passes the f23328 carry and
+  capture-status frame; the next physics mismatch is frozen Sonic X at f23329,
+  while animation reaches f23457.
+
+## 2026-07-22 - ICZ boss-smoke frozen-block launch
+
+- **`s3k_icz1` physics advanced from f23329 to f23337 and animation advanced
+  from f23457 to f23578.** Total errors fell from 706 to 692; 73 focused
+  end-boss/freezer tests remain green.
+- Root: `sub_8A9E0` allocates the frozen block as a child of the capturing puff,
+  but the folded boss path compared Sonic with the boss body and launched the
+  block left. The child also needs its independent `loc_8A7AE` initialization
+  pass, and positive velocity uses the opposite unsigned camera-edge branch
+  from negative velocity. Finally, a ready capture was queued again before its
+  post-solid callback, creating a second block that overwrote the first block's
+  player position.
+- Fix: queued captures retain the puff's X word, use player facing for the
+  frozen child's render bit, and refuse a new pending bit while that player has
+  a ready capture. Boss-spawned blocks execute an initialization-only SST pass;
+  their camera clamp now follows the signed velocity branch around
+  `loc_8A80C..loc_8A82E`.
+- Validation: `TestS3kIczEndBossObject` covers the boss-spawned init pass and
+  rightward camera-edge case, while the freezer and replay suites cover the
+  shared block path. The next physics mismatch is Tails Y at f23337; animation
+  reaches f23578.
+
+## 2026-07-22 - ICZ boss folded-child SST ordering
+
+- **`s3k_icz1` physics advanced from f23337 to f23558.** Total errors fell from
+  692 to 688; the focused end-boss/freezer tests remain green.
+- Root: the boss parent folds three structural children and its frost puffs into
+  one engine object, but those routines occupy independent native SST slots.
+  The f23328 Sonic capture runs from puff slot 41 after bottom-solid slot 28,
+  while the f23337 Tails capture runs from puff slot 21 before it. Publishing
+  every folded capture after the solid retained Tails' ride and left him one
+  pixel too low.
+- Fix: reserve phantom SST slots for the folded structural children when
+  `loc_71C36` runs after the shared camera/fade gate, and reserve/release a slot
+  for every folded frost child. Capture publication now follows the source
+  puff's slot relative to the bottom child, and the frozen block uses
+  `AllocateObjectAfterCurrent` semantics from that puff slot.
+- Validation: the complete-run replay passes both differently ordered capture
+  paths and the full Tails frozen-block flight. The next physics mismatch is
+  Sonic Y at f23558; animation remains at f23578.
+
+## 2026-07-22 - ICZ boss completed-shift landing surface
+
+- **`s3k_icz1` physics advanced from f23558 to f23578, joining animation.**
+  Total errors fell from 688 to 686; the focused end-boss tests remain green.
+- Root: the folded bottom-child fresh-landing adjustment remained active after
+  native `loc_71FDA` completed its `$43` shift and `Obj_Wait` returned the child
+  to routine 2. Later curled landings therefore snapped Sonic one pixel above
+  the ordinary `loc_71F30` surface for a single frame.
+- Fix: the radius-driven one-pixel correction now additionally requires the
+  child's shift velocity and nonterminal shift timer. Routine-2 landings use the
+  ordinary surface once the timer reaches -1; no character, route, zone, or
+  frame condition is involved.
+- Validation: focused coverage checks both active-shift and completed-shift
+  radius paths. The complete-run replay passes the isolated f23558 and f23583
+  landing frames; physics and animation next diverge together on Tails at
+  f23578.
+
+## 2026-07-22 - ICZ boss child-entry contact X
+
+- **`s3k_icz1` physics and animation advanced from f23578 to f23622.** Total
+  errors fell from 686 to 559; focused boss and solid-contact tests remain
+  green.
+- Root: at f23578 CPU Tails is exactly +$18 from native bottom-child slot 28,
+  outside `Solid_Landed`'s narrow width. The folded engine parent had already
+  published its next +1 X step, reducing the distance to $17 and landing Tails
+  one frame early. The longer replay also exposed the boss retaining its
+  stopped snow emitter after that object left the rewind identity table.
+- Fix: `MultiPieceSolidProvider` now has a narrow fresh-contact X hook distinct
+  from current piece position. The ICZ boss supplies its saved child-entry X,
+  while continued riding, rendering, and touch regions keep the live child X.
+  Stopping boss snow now clears the ended emitter ownership reference.
+- Validation: focused boss coverage verifies a moving folded child's entry X;
+  shared solid-contact tests cover the default current-X behavior. The replay
+  passes Tails' fall and next-frame landing, with both verification groups next
+  diverging at f23622.
+
+## 2026-07-22 - ICZ boss child-entry contact Y
+
+- **`s3k_icz1` physics and animation advanced from f23622 to f23822.** Total
+  errors fell from 559 to 544; focused boss and solid-contact tests remain
+  green.
+- Root: the folded boss parent had already published its next +1 Y swing step
+  when the shared fresh-contact pass ran. Native bottom-child slot 28 still
+  resolves that frame against the parent Y visible at its own entry, while
+  retaining the child's current local `$43` shift offset. The engine therefore
+  missed Sonic's f23622 landing and established the ride one frame late.
+- Fix: the multi-piece fresh-contact seam now supplies both coordinates. The
+  ICZ bottom child combines the parent's saved entry Y with its live local
+  offset, leaving current piece coordinates authoritative for riding, touch,
+  and rendering.
+- Validation: focused coverage verifies the folded child's saved parent Y plus
+  local offset, and the replay passes all intervening boss landings. Both
+  verification groups next diverge at f23822 on the sign of Sonic's vertical
+  boss-contact rebound.
+
+## 2026-07-22 - ICZ frozen-player partner shatter
+
+- **`s3k_icz1` physics and animation advanced from f23822 to f23895.** Total
+  errors fell from 544 to 394; the focused freezer suite remains green.
+- Root: the frozen-player block only implemented its `$2E` timer-expiry path.
+  Native `sub_8AA38` also scans the other P1/P2 slot after every nonterminal
+  timer decrement, allowing a descending Roll or Spindash animation inside its
+  asymmetric range to shatter the block and negate the attacker's `y_vel`.
+- Fix: the block now queries native P1/P2 participation, excludes the captured
+  or object-controlled slot, applies the ROM animation, direction, and range
+  checks, and separates attack release from the timer-only `HurtCharacter`
+  path. Both releases still set InAir, clear control, grant 120 invulnerability
+  frames, and allocate the twelve debris children.
+- Validation: focused coverage verifies attacker bounce and damage-free captive
+  release. Both replay groups pass the f23822 contact and next diverge at
+  f23895 on Sonic's horizontal velocity.
+
+## 2026-07-22 - ICZ damaged top-steam capture checkpoint
+
+- **`s3k_icz1` physics and animation advanced from f23895 to f24119.** Total
+  errors fell from 394 to 141; the focused boss and freezer suites remain
+  green.
+- Root: native adjusted-position top steam in `loc_72092`, occupying slot 28,
+  freezes Sonic during its f23895 execution. The folded engine child found the
+  same overlap on that frame but put every at/after-bottom frost routine through
+  the ordinary smoke's next-parent-pass promotion, allowing one extra player
+  movement before capture.
+- Fix: capture publication now preserves the source routine as well as SST
+  order. Adjusted-position top steam at or after the bottom checkpoint becomes
+  ready for the current solid callback; ordinary `loc_7205E` smoke and
+  before-bottom sources retain their established deferred phases.
+- Validation: focused top-steam coverage requires capture from the current
+  checkpoint. The full replay also revalidates the earlier f23327 normal-smoke
+  deferral and both groups next diverge at f24119 on ring state.
+
+## 2026-07-22 - S3K deferred Obj37 remainder execution
+
+- **`s3k_icz1` physics and animation advanced from f24119 to f24120.** The
+  focused lost-ring and freezer suites remain green.
+- Root: freezer expiry allocates the Obj37 owner into a slot already passed by
+  the live object cursor. Native does not run that owner or allocate its
+  `AllocateObjectAfterCurrent` remainder until the next pass. The engine eagerly
+  reserves the remainder to preserve ownership, but ahead-cursor children then
+  received an extra movement step on the allocation frame.
+- Fix: an eagerly allocated remainder now records the owner-behind-cursor state
+  and skips only its otherwise-impossible first execution. Owners, children
+  already behind the cursor, and ordinary immediate spills keep their existing
+  cadence.
+- Validation: focused coverage verifies the one-pass wait, and the replay now
+  collects the first matching spilled ring at f24119. Both groups next diverge
+  at f24120 on the second ring pickup.
+
+## 2026-07-22 - S3K logical Obj37 spill continuation
+
+- **`s3k_icz1` physics and animation advanced from f24120 to f24184.** Total
+  errors fell from 141 to 140; focused lost-ring coverage remains green.
+- Root: the engine's consolidated Java object representation exhausted its
+  managed dynamic-slot projection after materializing 23 of the 32 native
+  Obj37 entries. Native still had SST entries for the tail of the
+  `AllocateObjectAfterCurrent` chain, including the ring collected at f24120.
+- Fix: S3K after-current spills keep their remaining logical Obj37 entries in
+  the existing slotless object-execution path. Their logical slot numbers
+  continue beyond the last physical allocation solely to preserve the live
+  `Process_Sprites` countdown used for floor cadence and animation; they do not
+  consume or release fictitious physical slots. S1/S2 retain stop-on-allocation-
+  failure behavior.
+- Validation: focused coverage exhausts the S3K managed slot projection and
+  verifies the full 32-ring cap plus distinct continued countdown phases. The
+  replay restores the second post-boss pickup; both groups next diverge at
+  f24184 on CPU Tails' boss interaction.
+
+## 2026-07-22 - ICZ folded frost animation entry phase
+
+- **`s3k_icz1` physics and animation advanced from f24184 to f24374.** Total
+  errors fell from 140 to 60; the focused ICZ end-boss suite remains green.
+- Root: the folded parent updated each frost child's raw animation before
+  testing its overlap. Most earlier captures first entered native
+  `anim_frame` 4 on that update and correctly needed the existing one-pass
+  promotion, but the ordinary puff overlapping Tails at f24184 had entered the
+  capture range on its prior pass. Deferring that already-mature later-slot
+  child let Tails move for one extra frame.
+- Fix: each folded frost child now preserves whether it was capture-active at
+  object-entry. A mature child whose projected SST slot follows the bottom
+  solid child publishes `sub_8A9C6` through the current solid checkpoint; a
+  child that only becomes active during the folded update retains the pending
+  promotion that matches its native animation entry.
+- Validation: focused coverage requires a mature ordinary puff to freeze from
+  its current later-slot pass. The replay also revalidates the earlier f23327
+  and f23711 first-active-frame deferrals; both groups next diverge at f24374
+  on the post-boss camera X position.
+
+## 2026-07-22 - ICZ two-stage final defeat handoff
+
+- **`s3k_icz1` physics and animation advanced from f24374 to f24407.** Total
+  errors remain 60; the focused ICZ end-boss suite remains green.
+- Root: the ROM's final-hit path installs `Wait_FadeToLevelMusic` with the
+  retained `$2E=$3F` wait. Its callback releases the three shell fragments at
+  `loc_71D80`, seeds `$2E=(2*60)-1`, and waits another 120 object passes before
+  `loc_71D9E` allocates the capsule and gradual max-X helper. The engine had
+  collapsed both phases into one 128-frame delay, opening the arena 56 frames
+  early.
+- Fix: the defeated boss now owns separate shell-release and capsule-handoff
+  countdowns. The fragments allocate at the first callback, while the capsule
+  and fallible first-free max-X helper allocate only after the second wait.
+- Validation: focused coverage verifies fragments are live while the capsule
+  is still absent after the retained `$3F` phase. The replay reaches the native
+  handoff and next diverges at f24407 because the gradual max-X update is one
+  pass behind native.
+
+## 2026-07-22 - ICZ defeat callback dispatch cadence
+
+- **`s3k_icz1` physics and animation advanced from f24407 to f24576.** Total
+  errors fell from 60 to 59; the focused ICZ end-boss suite remains green.
+- Root: `Wait_FadeToLevelMusic` decrements the retained `$3F` word on its next
+  object pass. Its `loc_71D80` callback then tail-enters child creation and
+  `Obj_Wait`, consuming the freshly seeded 119 word during the callback
+  dispatch. The folded engine state returned after fragment creation, leaving
+  the capsule and gradual max-X helper one pass late.
+- Fix: the first phase uses the ROM's pre-decrement wait, while the folded
+  second phase preserves the callback-entry decrement before resuming its
+  countdown. The helper's `$4000` accumulator now changes live max-X on the
+  same pass as native.
+- Validation: the replay matches the complete post-boss camera expansion and
+  next diverges at f24576 on Sonic's grounded/airborne state at the capsule.
+
+## 2026-07-22 - S3K upright-capsule ending-pose support
+
+- **`s3k_icz1` physics and animation advanced from f24576 to f25080.** Total
+  errors fell from 59 to 56; the focused ICZ end-boss and camera suites remain
+  green.
+- Root: native `Set_PlayerEndingPose` writes object control, Victory animation,
+  and zero velocities without changing `Status_InAir` or `Status_OnObj`.
+  `Obj_EggCapsule` then continues to run its own `SolidObjectFull` tail. The
+  engine entered the pose with the correct button-piece ride but generic
+  object-control cleanup invalidated that support, replacing `OnObj` with
+  `InAir` for the whole results sequence.
+- Fix: upright capsules now register themselves through the existing
+  object-controlled solid-contact ownership seam before applying `$81`
+  control. Their real support remains eligible while all unrelated solids stay
+  suppressed; the generic setter also has a non-MGZ compatibility name.
+- Validation: the replay preserves Sonic's exact zero-velocity Victory pose,
+  status byte, and capsule ride through results. Both groups next diverge at
+  f25080 on post-results camera X restoration.
+
+## 2026-07-22 - ICZ retained post-results owner
+
+- **`s3k_icz1` physics and animation advanced from f25080 to f25093.** Total
+  errors fell from 56 to 4; the focused ICZ end-boss suite remains green.
+- Root: the engine retired its embedded result elements thirteen owner entries
+  before native Obj_LevelResults' final child SST. That cleared object control,
+  restored broad level camera bounds, and resumed Tails while the native boss
+  still ran `loc_71DE2` and pinned the arena.
+- Fix: ICZ uses a retained results subtype whose thirteen additional retirement
+  dispatches model the remaining child SSTs. Its exit preserves the arena
+  bounds, restores target max-Y, and allocates `Child6_IncLevX` toward `$47C0`
+  before the shared results exit releases control.
+- Validation: all camera, position, velocity, status, Tails CPU, and ending-pose
+  values remain exact through the native owner release. Both groups next
+  diverge at f25093 only because the control restore has not yet published the
+  Wait animation fields.
+
+## 2026-07-22 - ICZ native results-release dispatch
+
+- **`s3k_icz1` physics and animation advanced from f25093 to f25254.** Total
+  errors fell from 4 to 1; the focused ICZ end-boss and S3K results suites
+  remain green.
+- Root: the shared results exit did not publish `Restore_PlayerControl`'s Wait
+  animation for this retained route. Its final max-X helper also allocated into
+  an engine slot already visited during the live pass, while native boss slot 5
+  allocated the helper ahead in slot 11 and consumed its first `$4000`
+  accumulator entry immediately.
+- Fix: results owners can now opt into the direct Wait publication, which ICZ
+  applies to both players. A gradual max-X helper exposes its allocation
+  dispatch, and ICZ seeds it only when live slot-order detection reports that
+  its reserved slot is behind the current object cursor.
+- Validation: both ending poses release on the native frame and the helper's
+  no-motion accumulator entries plus early expansion match. The sole remaining
+  divergence is camera X at f25254.
+
+## 2026-07-22 - ICZ complete-run physics and animation green
+
+- **`s3k_icz1` physics and animation advanced from f25254 through the complete
+  trace.** The final error fell from 1 to 0; both release-blocking groups are
+  green through the ICZ-to-LBZ transition boundary.
+- Root: the subtype `$90` ICZ snow pile calls `StartNewLevel #$0600` from its
+  object pass. Native `LevelLoop` tests `Restart_level_flag` immediately after
+  `Process_Sprites` and branches back to `Level`, so the boundary row exposes
+  Sonic/Tails' final movement while retaining the prior camera X. The shared
+  engine frame step did not test its equivalent inactive-transition state
+  until after camera scroll and boundary easing, advancing camera X by eight.
+- Fix: `LevelFrameStep` now samples the generic inactive-transition request
+  after object execution and suppresses the later camera phases on that same
+  frame. The gate is driven by the live `StartNewLevel` request, with no
+  zone/route/frame exception.
+- Validation: the focused complete-run replay reports zero physics or animation
+  divergences through frame 25254 and the frozen transition tail.

@@ -32,6 +32,15 @@ public final class HczEndBossGradualMaxXExtender extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        advanceMaxX();
+    }
+
+    /** Runs the allocation-frame dispatch when the reserved slot is already behind the live cursor. */
+    public void dispatchCreation() {
+        advanceMaxX();
+    }
+
+    private void advanceMaxX() {
         var camera = services().camera();
         accumulator += ACCELERATION;
         int step = accumulator >>> 16;

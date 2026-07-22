@@ -1435,7 +1435,8 @@ final class ObjectSolidContactController {
             snapshotObjectStandingBit(player, instance);
             clearObjectStandingBit(player, instance);
             if (instance instanceof SolidObjectProvider staleStandingProvider
-                    && staleStandingProvider.airborneStaleStandingBitReturnsNoContact(player)) {
+                    && staleStandingProvider.airborneStaleStandingBitReturnsNoContact(player)
+                    && !usesPieceScopedStandingBits(instance)) {
                 // ROM SolidObjectFull_1P stale-rider branch: when this
                 // object's standing bit is set and the player is already
                 // airborne, loc_1DC98 clears Status_OnObj/d6 and returns
@@ -1470,7 +1471,8 @@ final class ObjectSolidContactController {
         // d6/Status_InAir gate at the SolidObjectFull*_1P entry; a
         // broader gate on the bare standing-bit-snapshot would suppress
         // legitimate first-frame contacts with neighbouring objects.
-        if (instance != null && instance == unseatedRidingObject) {
+        if (instance != null && instance == unseatedRidingObject
+                && !usesPieceScopedStandingBits(instance)) {
             return null;
         }
 
@@ -1927,7 +1929,10 @@ final class ObjectSolidContactController {
         }
 
         if (inBounds && provider.isSolidFor(player) && !blocksSolidContacts(player, instance)) {
-            int deltaX = currentX - ridingX;
+            int carryX = provider.usesPreUpdateXForContinuedRide(player)
+                    ? instance.getPreUpdateX()
+                    : currentX;
+            int deltaX = carryX - ridingX;
             if (deltaX != 0 && provider.carriesRiderOnHorizontalMove(player)) {
                 player.shiftX(deltaX);
             }
@@ -1951,10 +1956,12 @@ final class ObjectSolidContactController {
             } else {
                 surfaceOffset = params.groundHalfHeight();
             }
-            int newCentreY = rideY + params.offsetY() - surfaceOffset - player.getYRadius();
+            int rideAdjustment = provider.getContinuedRideSnapAdjustment(player, getSolidTopYRadius(player));
+            int newCentreY = rideY + params.offsetY() - surfaceOffset - player.getYRadius()
+                    - rideAdjustment;
             int newY = newCentreY - (player.getHeight() / 2);
             player.setY((short) newY);
-            putRidingState(player, instance, currentX, rideY, ridingPieceIndex);
+            putRidingState(player, instance, carryX, rideY, ridingPieceIndex);
             setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
             preserveRidingPushStatusIfNeeded(player, instance, provider);
@@ -2059,6 +2066,11 @@ final class ObjectSolidContactController {
         return multiPiece.usesPieceScopedStandingBits()
                 && multiPiece.airborneStaleStandingBitReturnsNoContact(player)
                 && hasObjectStandingBit(player, instance, ridingPieceIndex);
+    }
+
+    private boolean usesPieceScopedStandingBits(ObjectInstance instance) {
+        return instance instanceof MultiPieceSolidProvider multiPiece
+                && multiPiece.usesPieceScopedStandingBits();
     }
 
     private void preserveRidingPushStatusIfNeeded(PlayableEntity player, ObjectInstance instance,
@@ -2889,6 +2901,8 @@ final class ObjectSolidContactController {
         boolean anyPushing = false;
         SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
         for (int i = 0; i < ridingPieceIndex && i < multiPiece.getPieceCount(); i++) {
+            boolean standingBitWasSetAtEntry = hasObjectStandingBit(player, instance, i)
+                    || wasObjectStandingBitSetThisFrame(player, instance, i);
             SolidObjectParams params = multiPiece.getPieceParams(i);
             int anchorX = multiPiece.getPieceX(i) + params.offsetX();
             int anchorY = multiPiece.getPieceY(i) + params.offsetY();
@@ -2912,7 +2926,8 @@ final class ObjectSolidContactController {
                 if (contact.pushing()) {
                     anyPushing = true;
                 }
-                multiPiece.onPieceContact(i, player, contact, frameCounter);
+                multiPiece.onPieceContact(i, player, contact, frameCounter,
+                        standingBitWasSetAtEntry);
             }
         }
         return anyPushing;
@@ -2975,6 +2990,8 @@ final class ObjectSolidContactController {
                 && thisAoiGate.getSlotIndex() < riddenAoiGate.getSlotIndex();
 
         for (int i = 0; i < pieceCount; i++) {
+            boolean standingBitWasSetAtEntry = hasObjectStandingBit(player, instance, i)
+                    || wasObjectStandingBitSetThisFrame(player, instance, i);
             // ROM slot-order parity: when the earlier slots of this ridden object
             // were already side-pushed ahead of the ride-bounds re-check
             // (resolveEarlierMultiPieceSiblings set multiPieceEarlierPiecesResolvedUpTo
@@ -2997,8 +3014,8 @@ final class ObjectSolidContactController {
                 }
             }
             SolidObjectParams params = multiPiece.getPieceParams(i);
-            int pieceX = multiPiece.getPieceX(i);
-            int pieceY = multiPiece.getPieceY(i);
+            int pieceX = multiPiece.getPieceFreshContactX(i, player);
+            int pieceY = multiPiece.getPieceFreshContactY(i, player);
             if (ridingCurrentObject && i == currentRidingPieceIndex) {
                 anyStanding = true;
                 if (standingPieceIndex < 0) {
@@ -3006,7 +3023,7 @@ final class ObjectSolidContactController {
                     standingPieceX = pieceX;
                     standingPieceY = pieceY;
                 }
-                multiPiece.onPieceContact(i, player, SolidContact.STANDING, frameCounter);
+                multiPiece.onPieceContact(i, player, SolidContact.STANDING, frameCounter, true);
                 continue;
             }
             int anchorX = pieceX + params.offsetX();
@@ -3124,7 +3141,8 @@ final class ObjectSolidContactController {
                 anyPushing = true;
             }
 
-            multiPiece.onPieceContact(i, player, contact, frameCounter);
+            multiPiece.onPieceContact(i, player, contact, frameCounter,
+                    standingBitWasSetAtEntry);
         }
 
         SolidContact aggregateContact = (anyStanding || anyTouchTop || anyTouchBottom
@@ -3730,7 +3748,7 @@ final class ObjectSolidContactController {
                 && slopedProfile.usesGroundedStandingCatchWindow()
                 && relY >= 0
                 && relY <= maxTop
-                && isWithinTopLandingWidth(instance, player, relX, halfWidth)) {
+                && isWithinTopLandingWidth(instance, player, relX, halfWidth, -1)) {
             if (apply) {
                 // ROM parity: S2 SlopedSolid_cont (s2.asm:34927-35099) still
                 // enters SolidObject_Landed (s2.asm:35178-35383) before Obj41's
@@ -3841,7 +3859,7 @@ final class ObjectSolidContactController {
             }
             // ROM: Solid_Landed uses narrow obActWid for NEW landings only.
             // When sticky (already riding), ROM uses ExitPlatform's full collision width.
-            if (!sticky && !isWithinTopLandingWidth(instance, player, relX, halfWidth)) {
+            if (!sticky && !isWithinTopLandingWidth(instance, player, relX, halfWidth, pieceIndex)) {
                 return null;
             }
             if (apply) {
@@ -4000,7 +4018,7 @@ final class ObjectSolidContactController {
                 }
                 if (landingFrame > 0) {
                     // ROM: Solid_Landed narrow width only for NEW landings
-                    if (!sticky && !isWithinTopLandingWidth(instance, player, relX, halfWidth)) {
+                    if (!sticky && !isWithinTopLandingWidth(instance, player, relX, halfWidth, pieceIndex)) {
                         return null;
                     }
                     if (apply) {
@@ -4211,7 +4229,7 @@ final class ObjectSolidContactController {
             // effect; for the upward-velocity branch the player is by
             // definition not standing on the object so sticky doesn't apply.
             if (useTopLandingWidth && !sticky && !topSolidOnly
-                    && !isWithinTopLandingWidth(instance, player, relX, halfWidth)) {
+                    && !isWithinTopLandingWidth(instance, player, relX, halfWidth, pieceIndex)) {
                 // ROM loc_1E154 branches to loc_1E198 here. Unlike the ordinary
                 // no-overlap path at loc_1E0A2, this does not call sub_1E0C2, so
                 // a previously set native pushing bit remains authoritative.
@@ -4394,16 +4412,21 @@ final class ObjectSolidContactController {
     }
 
     private boolean isWithinTopLandingWidth(ObjectInstance instance, PlayableEntity player, int relX,
-            int collisionHalfWidth) {
+            int collisionHalfWidth, int pieceIndex) {
         if (!(instance instanceof SolidObjectProvider provider)) {
             return true;
         }
 
-        int configuredHalfWidth = provider.getTopLandingHalfWidth(player, collisionHalfWidth);
+        boolean pieceConfigured = pieceIndex >= 0
+                && provider instanceof MultiPieceSolidProvider multiPiece
+                && multiPiece.usesPieceSpecificLandingHalfWidths();
+        int configuredHalfWidth = pieceConfigured
+                ? ((MultiPieceSolidProvider) provider).getPieceLandingHalfWidth(pieceIndex)
+                : provider.getTopLandingHalfWidth(player, collisionHalfWidth);
         int allowedHalfWidth;
         if (provider.getSolidRoutineProfile().usesCollisionHalfWidthForTopLanding()) {
             allowedHalfWidth = collisionHalfWidth;
-        } else if (configuredHalfWidth != collisionHalfWidth) {
+        } else if (pieceConfigured || configuredHalfWidth != collisionHalfWidth) {
             // Provider explicitly set a landing width distinct from its side/body
             // collision half-width — use it directly (narrower OR wider). ROM
             // SolidObjectFull's top-slice clamp (loc_1E154 / Solid_Landed) re-reads

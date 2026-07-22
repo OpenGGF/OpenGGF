@@ -25,6 +25,7 @@ import java.util.List;
 public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x1A; // ObjSlot_Penguinator collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjSlot_Penguinator priority $280.
+    private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
 
     private static final int INITIAL_Y_RADIUS = 0x0F;
     private static final int SLIDE_Y_RADIUS = 0x0B;
@@ -43,7 +44,7 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
     private static final int START_INITIAL_DELAY = 7;
     private static final int START_LOOP_COUNT = 0x10;
     private static final int[] HOP_FRAMES = {3, 3, 4};    // byte_8BE11 after delay byte.
-    private static final int[] SLIDE_RECOVER_FRAMES = {8, 8, 7, 6, 5, 4}; // byte_8BE16.
+    private static final int[] SLIDE_RECOVER_FRAMES = {8, 8, 7, 6, 5, 4, 3}; // byte_8BE16.
     private static final int RAW_DELAY = 3;
     private static final int[] FLOOR_ANGLE_FRAMES = {
             4, 5, 6, 6, 7, 7, 8, 8, 8, 8, 7, 7, 6, 6, 5, 4
@@ -82,7 +83,15 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity player) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+        // Obj_WaitOffscreen publishes a temporary $20-by-$20 sprite and starts
+        // the real routine when Render_Sprites marks that placeholder visible.
+        // Its width_pixels/height_pixels values are half extents, so activation
+        // begins before the object's centre enters the viewport.
+        if (state == State.INIT
+                && !isWithinRenderSpriteBounds(WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE)) {
             return;
         }
 
@@ -162,8 +171,14 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
     }
 
     private void maybeStartHopFromGroundAngle() {
-        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, yRadius);
+        TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(
+                currentX, currentY, yRadius);
         byte angle = floor.foundSurface() ? floor.angle() : 0;
+        // ObjCheckFloorDist clears the angle byte when FindFloor publishes its
+        // odd-angle sentinel rather than a usable surface direction.
+        if ((angle & 1) != 0) {
+            angle = 0;
+        }
         if (angle == 0) {
             enterHop();
             return;
@@ -187,9 +202,9 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
         state = State.HOP;
         xVelocity = facingLeft ? -JUMP_X_SPEED : JUMP_X_SPEED;
         acceleration = facingLeft ? SLIDE_ACCEL : -SLIDE_ACCEL;
-        animFrame = 0;
-        animTimer = 0;
-        mappingFrame = 3;
+        // loc_8BBAC only replaces $30/$34 with the hop script and callback.
+        // Animate_RawGetFaster's anim_frame, timer, and visible mapping carry
+        // through both the direct and Obj_Wait callback paths.
     }
 
     private void updateHop() {
@@ -383,6 +398,15 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
             svc.playSfx(Sonic3kSfx.SLIDE_SKID_QUIET.id);
             spawnChild(() -> new PenguinatorSnowdustInstance(spawn, currentX, currentY + SNOWDUST_Y_OFFSET));
         }
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("state=%s vx=%04X vy=%04X acc=%04X wait=%04X raw=%02X/%02X anim=%02X/%02X map=%02X face=%s",
+                state, xVelocity & 0xFFFF, yVelocity & 0xFFFF, acceleration & 0xFFFF,
+                routineTimer & 0xFFFF, rawDelay & 0xFF, rawLoopCounter & 0xFF,
+                animFrame & 0xFF, animTimer & 0xFF, mappingFrame & 0xFF,
+                facingLeft ? "L" : "R");
     }
 
     private static final class PenguinatorSnowdustInstance extends AbstractObjectInstance

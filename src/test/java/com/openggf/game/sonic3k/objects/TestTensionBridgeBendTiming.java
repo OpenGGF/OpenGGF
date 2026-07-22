@@ -79,6 +79,32 @@ class TestTensionBridgeBendTiming {
     }
 
     @Test
+    void iczRopePublishesCurrentSegmentBeforeBending() throws Exception {
+        TensionBridgeObjectInstance bridge = new TensionBridgeObjectInstance(new ObjectSpawn(
+                0x1000, 0x0788, Sonic3kObjectIds.TENSION_BRIDGE, 0x88, 0, false, 0x0788));
+        ObjectManager objectManager = mock(ObjectManager.class);
+        StubObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return objectManager; }
+            @Override public int romZoneId() { return Sonic3kZoneIds.ZONE_ICZ; }
+            @Override public int featureZoneId() { return Sonic3kZoneIds.ZONE_ICZ; }
+        };
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        bridge.setServices(services);
+        when(objectManager.isAnyPlayerRiding(bridge)).thenReturn(true);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x1018); // current ROM segment 6
+        setField(bridge, "playerOnBridge", true);
+        setField(bridge, "playerSegmentIndex", 7); // prior contact segment
+        setField(bridge, "depressionAngle", 0x40);
+
+        bridge.update(0, player);
+
+        assertEquals(-22, bridge.getSlopeData()[6 * 8],
+                "loc_38966 must run sub_38BD8 before sub_38D74 bends the ICZ rope");
+    }
+
+    @Test
     void playerTwoSegmentWalksSharedBendAnchorBeforeCalculation() throws Exception {
         TensionBridgeObjectInstance bridge = new TensionBridgeObjectInstance(new ObjectSpawn(
                 0x1000, 0x0788, Sonic3kObjectIds.TENSION_BRIDGE, 0x08, 0, false, 0x0788));

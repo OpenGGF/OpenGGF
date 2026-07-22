@@ -64,6 +64,20 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void eagerRemainderCanWaitForDeferredOwnerInitializationPass() {
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                0x100, 0x100, 0x0200, -0x0400, 0, 0xFF);
+        ring.deferFirstUpdateUntilOwnerPass();
+
+        ring.update(1, null);
+        assertEquals(0x100, ring.getX(),
+                "An eagerly allocated child must not move before the behind-cursor owner initializes");
+
+        ring.update(2, null);
+        assertEquals(0x102, ring.getX());
+    }
+
+    @Test
     void obj37DoesNotUseSharedXAxisOutOfRangeMacro() {
         // S1 Obj37 RLoss_Bounce does not call the shared out_of_range macro; it deletes only when the
         // shared spill animation timer expires or y_pos passes v_limitbtm2 + 224
@@ -890,6 +904,34 @@ class TestLostRingObjectInstance {
             }
         });
         return ring;
+    }
+
+    @Test
+    void s3kAfterCurrentSpillContinuesLogicallyPastManagedSlotExhaustion() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        objectManager.reserveAllButNFreeSlots(3);
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+        ringManager.spawnLostRings(player, 32, 0);
+
+        List<LostRingObjectInstance> rings =
+                objectManager.activeObjectsOfType(LostRingObjectInstance.class);
+        assertEquals(32, rings.size(), "S3K's logical after-current chain keeps the full ROM spill cap");
+        assertEquals(3, rings.stream().filter(ring -> ring.getSlotIndex() >= 0).count());
+        List<LostRingObjectInstance> logical = rings.stream()
+                .filter(ring -> ring.getSlotIndex() < 0)
+                .toList();
+        assertEquals(29, logical.size());
+        assertEquals(16, logical.get(0).getPhaseOffset(),
+                "the first virtual entry continues after physical slot 92 in the 110-slot process loop");
+        assertEquals(15, logical.get(1).getPhaseOffset(),
+                "successive virtual entries retain distinct Process_Sprites countdown phases");
     }
 
     private void reserveS2Arz2LateFreedLostRingLayout(ObjectManager objectManager) {

@@ -2108,9 +2108,21 @@ public class SidekickCpuController {
         // matches ROM's mid-frame view and the air filter is no longer required;
         // ROM btst #Status_OnObj at sonic3k.asm:26690 has no air gate.
         boolean leaderStatusOnObject = effectiveLeader.getOnObjectAtFrameStart();
+        // Slide terrain is processed by the later level-event pass. The engine
+        // has already published that pass's next ground velocity when Tails'
+        // CPU slot runs, while ROM loc_13DA6 still sees the value from before
+        // the event update (sonic3k.asm:26690-26694, 28918-28958). Use the
+        // post-player-physics/pre-zone-feature sample while status_secondary's
+        // slide bit owns inertia. A frame-start sample is too early when terrain
+        // projection itself crosses the signed $400 gate.
+        // Ordinary movement, including the move_lock countdown after leaving
+        // the slide, uses the established live value seen after player physics.
+        short leaderFollowGateGSpeed = effectiveLeader.isSliding()
+                ? effectiveLeader.getPreZoneFeatureGSpeed()
+                : effectiveLeader.getGSpeed();
         if (leadOffset > 0
                 && !leaderStatusOnObject
-                && effectiveLeader.getGSpeed() < 0x400) {
+                && leaderFollowGateGSpeed < 0x400) {
             targetX -= leadOffset;
         }
 
@@ -2237,7 +2249,9 @@ public class SidekickCpuController {
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
         boolean objectOrderFollowSteeringContext = isObjectOrderFollowSteeringContext(effectiveLeader);
         boolean supportGraceKeepsFollowSteering =
-                localGracePushBypass && isDoorSupportGraceFollowSteeringContext();
+                localGracePushBypass
+                        && (isDoorSupportGraceFollowSteeringContext()
+                                || stalePushGraceKeepsFollowSteeringWhileRiding(ridingObject));
         boolean ridingObjectPushGrace = !sidekick.getAir()
                 && sidekick.isOnObject()
                 && !sidekick.getRolling()
@@ -2386,6 +2400,7 @@ public class SidekickCpuController {
         // (sonic3k.asm:26702-26729).
         boolean localBelowTargetGrace =
                 localGracePushBypass
+                        && !supportGraceKeepsFollowSteering
                         && !freshBelowTargetReboundGrace
                         && localBelowTargetBridgeWindow
                         && !delayedInputIntoFollowSide
@@ -3027,6 +3042,20 @@ public class SidekickCpuController {
             return provider.preservesSidekickCpuPushGraceWhileRiding(sidekick);
         }
         return false;
+    }
+
+    private boolean stalePushGraceKeepsFollowSteeringWhileRiding(ObjectInstance ridingObject) {
+        ObjectInstance support = hasLiveRidingObject(ridingObject)
+                ? ridingObject
+                : sidekick.getLatchedSolidObjectInstance();
+        if (!hasLiveRidingObject(support) && sidekick.isOnObject()) {
+            support = currentInteractSlotObject();
+        }
+        if (!hasLiveRidingObject(support)) {
+            return false;
+        }
+        return support instanceof SolidObjectProvider provider
+                && provider.sidekickCpuStalePushGraceKeepsFollowSteeringWhileRiding(sidekick);
     }
 
     private boolean preservesSidekickCpuPushGraceFromInteractSlot() {

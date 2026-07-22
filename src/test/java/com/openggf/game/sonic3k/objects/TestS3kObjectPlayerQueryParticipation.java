@@ -42,6 +42,27 @@ class TestS3kObjectPlayerQueryParticipation {
     }
 
     @Test
+    void iczSlopedCorkFloorRideExitPreservesGroundedTerrainHandoff() {
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public int romZoneId() {
+                return com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_ICZ;
+            }
+        };
+        CorkFloorObjectInstance slopedFloor = ObjectConstructionContext.construct(services,
+                () -> new CorkFloorObjectInstance(new ObjectSpawn(
+                        0x27B0, 0x0208, 0x2A, 0, 0, false, 0)));
+        CorkFloorObjectInstance smallFullSolid = ObjectConstructionContext.construct(services,
+                () -> new CorkFloorObjectInstance(new ObjectSpawn(
+                        0x27B0, 0x0208, 0x2A, 0x10, 0, false, 0)));
+
+        assertFalse(slopedFloor.forceAirOnRideExit(),
+                "sub_1DDC6 clears OnObj without setting InAir so terrain can take over next frame");
+        assertTrue(smallFullSolid.forceAirOnRideExit(),
+                "ICZ subtype bit 4 uses SolidObjectFull and its ordinary airborne ride exit");
+    }
+
+    @Test
     void aizCollapsingLogBridgeUsesPlayerQueryParticipantsForSidekickStanding() throws Exception {
         TestablePlayableSprite main = player("sonic", 0x0100, 0x0200);
         TestablePlayableSprite sidekick = player("tails_p2", 0x0100, 0x0200);

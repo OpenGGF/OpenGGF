@@ -194,6 +194,15 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
         return topSolid;
     }
 
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObjectFull's unsigned broad-X comparison rejects only values
+        // above d1*2 (bhi), so a player exactly on the right edge remains a
+        // valid zero-distance side contact. SolidObjectTop uses the same
+        // inclusive horizontal gate before its landing-only checks.
+        return true;
+    }
+
     // ========================================================================================
     // SolidObjectListener
     // ========================================================================================

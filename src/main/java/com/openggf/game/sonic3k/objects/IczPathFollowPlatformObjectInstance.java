@@ -118,6 +118,19 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObjectFull's unsigned broad-X gate branches on BHI, so +d1 is contact.
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Dynamic spawn coordinates follow the moving platform, but native
+        // standing/pushing bits remain owned by this one SST instance.
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
@@ -158,7 +171,6 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
             }
         }
 
-        updateFastVerticalScrollRequest(standing);
         updateDynamicSpawn(x, y);
     }
 
@@ -305,7 +317,6 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     private void stopFallingAgainstWall(int wallDistance) {
         x += wallDistance;
         xVel = 0;
-        xSub = 0;
     }
 
     private void spawnRevealedSpring() {
@@ -326,8 +337,8 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         playerEntity.setAir(true);
     }
 
-    private void updateFastVerticalScrollRequest(boolean standing) {
-        if (!standing || (xVel == 0 && yVel == 0)) {
+    private void requestFastVerticalScrollIfMoving() {
+        if (xVel == 0 && yVel == 0) {
             return;
         }
         ObjectServices services = tryServices();
@@ -412,19 +423,15 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean seedsNewRideCarryFromPreUpdateX() {
-        // loc_89F4E-loc_89F62 saves x_pos before ICZPathFollowPlatform_Index
-        // and passes the saved value in d4 to SolidObjectFull.
-        return true;
-    }
-
-    @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
         if (contact == null) {
             return;
         }
         if (contact.standing()) {
             standingThisFrame = true;
+            // sub_8A3C4 runs after SolidObjectFull and sees a newly established
+            // p1_standing_bit in this same object pass.
+            requestFastVerticalScrollIfMoving();
         }
         if (contact.pushing() && player != null) {
             pushingThisFrame = true;
@@ -501,6 +508,10 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
 
     public int getYVelocityForTesting() {
         return yVel;
+    }
+
+    public int getXSubpixelForTesting() {
+        return xSub;
     }
 
     public int getMappingFrameForTesting() {

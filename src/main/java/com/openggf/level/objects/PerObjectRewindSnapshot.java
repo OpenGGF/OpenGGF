@@ -346,6 +346,7 @@ public record PerObjectRewindSnapshot(
             byte topSolidBit, byte lrbSolidBit,
             boolean prePhysicsAir, byte prePhysicsAngle,
             short prePhysicsGSpeed, short prePhysicsXSpeed, short prePhysicsYSpeed,
+            short preZoneFeatureGSpeed,
             short prePhysicsCentreX, short prePhysicsCentreY,
             boolean air, boolean rolling, boolean jumping, boolean rollingJump,
             boolean pinballMode, boolean pinballSpeedLock,

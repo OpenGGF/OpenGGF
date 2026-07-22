@@ -106,6 +106,11 @@ public interface ObjectServices {
         spawnLostRings(player, frameCounter);
     }
 
+    /** Queues a spill whose Obj37 owner defers the native ring-count clear. */
+    default void spawnLostRingsWithDeferredOwner(PlayableEntity player, int frameCounter) {
+        spawnLostRingsAfterCurrentFrame(player, frameCounter);
+    }
+
     /** Returns the runtime-owned ROM-accurate pseudo-random number generator. */
     GameRng rng();
 

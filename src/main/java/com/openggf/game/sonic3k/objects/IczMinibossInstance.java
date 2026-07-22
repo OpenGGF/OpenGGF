@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.bosses.S3kSharedBossCameraGate;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectServices;
@@ -62,6 +63,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private static final int SHARD_ROUTINE_STOPPED = 0x06;
 
     private static final int HIT_COUNT = 6;
+    private static final int SST_CHILD_COUNT = 14;
     private static final int COLLISION_SIZE = 0x06;
     private static final int INVULNERABILITY_TIME = 0x20;
     private static final int BODY_PALETTE_LINE = 1;
@@ -86,9 +88,11 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private static final int ARC_TIME = 0x5F;
     private static final int ORB_PREP_TIME = 0x3F;
     private static final int ORB_ATTACK_TIME = 0x7F;
+    private static final int PALETTE_SLOWDOWN_TIME = 0x68;
     private static final int RECOVER_WAIT_TIME = 0x3F;
     private static final int RISE_TIME = 0x17;
     private static final int DEFEAT_TIME = 0xB3;
+    private static final int DEFEAT_FLOW_OVERLAP_ENTRIES = 0x1D;
 
     private static final int PARENT_FLAG_ORB_RELEASE = 1 << 1; // $38 bit 1
     private static final int PARENT_FLAG_ORBS_ARMED = 1 << 2;  // $38 bit 2
@@ -135,10 +139,10 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private int parentFlags;
     private int arenaAnchorX;
     private int arenaAnchorY;
+    private S3kSharedBossCameraGate cameraGate;
     private boolean arenaGateInitialized;
     private boolean arenaGateComplete;
     private boolean bossMusicStarted;
-    private int bossGateTimer;
     private boolean shardsReleased;
     private boolean orbThrowRight;
     private int mappingFrame;
@@ -146,8 +150,8 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private boolean hitFlashBright;
     private boolean hitFlashDirty;
     private int[] hitFlashPaletteWords = HIT_FLASH_NORMAL_COLORS;
-    private S3kBossExplosionController defeatExplosionController;
     private boolean defeatRenderComplete;
+    private boolean childSlotsReserved;
 
     private enum WaitCallback {
         NONE,
@@ -156,7 +160,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         ARM_ORBS,
         START_DROP,
         START_ARC,
-        FINISH_ARC,
+        RESOLVE_ARC_WAIT,
         START_ORB_ATTACK,
         FINISH_ORB_ATTACK,
         START_RECOVER,
@@ -206,7 +210,11 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         arenaGateInitialized = false;
         arenaGateComplete = false;
         bossMusicStarted = false;
-        bossGateTimer = BOSS_GATE_FADE_TIME;
+        if (cameraGate == null) {
+            cameraGate = new S3kSharedBossCameraGate();
+        } else {
+            cameraGate.reset();
+        }
         waitCallback = WaitCallback.RELEASE_SHARDS;
         attackPatternIndex = 0;
         attackPassCounter = 0;
@@ -219,12 +227,10 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         hitFlashBright = false;
         hitFlashDirty = false;
         hitFlashPaletteWords = HIT_FLASH_NORMAL_COLORS;
-        defeatExplosionController = null;
         defeatRenderComplete = false;
         shards = new ShardState[6];
         orbs = new OrbState[8];
         initShards();
-        initOrbs(false);
     }
 
     @Override
@@ -237,12 +243,17 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                 return;
             }
             updateShards();
-            updateOrbs();
             return;
         }
 
         switch (state.routine) {
-            case ROUTINE_INIT -> state.routine = ROUTINE_DESCEND;
+            case ROUTINE_INIT -> {
+                // loc_711EC creates the eight orb and six shard SSTs only
+                // after loc_85CA4 has completed the camera gate.
+                reserveNativeChildSlots();
+                initOrbs(false);
+                state.routine = ROUTINE_DESCEND;
+            }
             case ROUTINE_DESCEND -> {
                 moveWithVelocity();
                 tickWait();
@@ -272,6 +283,28 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
 
         updateShards();
         updateOrbs();
+    }
+
+    private void reserveNativeChildSlots() {
+        if (childSlotsReserved || getSlotIndex() < 0) {
+            return;
+        }
+        ObjectServices services = servicesOrNull();
+        if (services == null || services.objectManager() == null) {
+            return;
+        }
+        childSlotsReserved = true;
+        // Obj_ICZMiniboss creates eight orb SSTs followed by six shard SSTs
+        // with the CreateChild after-current helpers at loc_711EC. Their logic
+        // remains consolidated in this parent, but the native slots must stay
+        // occupied for later AllocateObject and Obj37 cadence parity.
+        services.objectManager().allocateChildSlotsAfter(
+                spawn, SST_CHILD_COUNT, getSlotIndex());
+    }
+
+    @Override
+    public int getReservedChildSlotCount() {
+        return SST_CHILD_COUNT;
     }
 
     private void initShards() {
@@ -310,17 +343,18 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                 return;
             }
             initializeArenaGate(services);
-        }
-        maintainArenaCameraLock(services);
-        if (!bossMusicStarted) {
-            if (bossGateTimer-- <= 0) {
-                services.playMusic(Sonic3kMusic.MINIBOSS.id);
-                bossMusicStarted = true;
-                arenaGateComplete = true;
-            }
+            // Obj_ICZMiniboss's initialization dispatch calls sub_85D6A and
+            // returns through PalLoad_Line1. The loc_85CA4 gate does not run
+            // until the object's next SST dispatch, so its moving camera-bound
+            // writes must likewise begin on the following frame.
             return;
         }
-        arenaGateComplete = true;
+        arenaGateComplete = cameraGate.update(services.camera(), () -> {
+            if (!bossMusicStarted) {
+                services.playMusic(Sonic3kMusic.MINIBOSS.id);
+                bossMusicStarted = true;
+            }
+        });
     }
 
     private void initializeArenaGate(ObjectServices services) {
@@ -328,14 +362,20 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         int subtype = spawn.subtype() & 0xFF;
         arenaAnchorY = subtype == 0 ? UPPER_ROUTE_ANCHOR_Y : LOWER_ROUTE_ANCHOR_Y;
         arenaAnchorX = ARENA_ANCHOR_X;
-        initOrbs(false);
 
         if (services.gameState() != null) {
             services.gameState().setCurrentBossId(Sonic3kObjectIds.ICZ_MINIBOSS);
         }
         services.fadeOutMusic();
         installBossPalette(services);
-        maintainArenaCameraLock(services);
+        cameraGate.begin(
+                services.camera(),
+                new S3kSharedBossCameraGate.LockBounds(
+                        arenaAnchorY, arenaAnchorY, arenaAnchorX, arenaAnchorX),
+                BOSS_GATE_FADE_TIME);
+        if (services.camera() != null) {
+            services.camera().setMaxYTarget((short) arenaAnchorY);
+        }
     }
 
     private boolean isCameraInRouteRange(ObjectServices services) {
@@ -356,17 +396,6 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         int objectXCoarse = state.x & 0xFF80;
         int delta = (objectXCoarse - cameraXCoarseBack) & 0xFFFF;
         return delta > 0x280;
-    }
-
-    private void maintainArenaCameraLock(ObjectServices services) {
-        if (services.camera() == null) {
-            return;
-        }
-        services.camera().setMinX((short) arenaAnchorX);
-        services.camera().setMaxX((short) arenaAnchorX);
-        services.camera().setMinY((short) arenaAnchorY);
-        services.camera().setMaxY((short) arenaAnchorY);
-        services.camera().setMaxYTarget((short) arenaAnchorY);
     }
 
     private void installBossPalette(ObjectServices services) {
@@ -390,7 +419,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void tickWait() {
-        if (routineTimer-- >= 0) {
+        if (--routineTimer >= 0) {
             return;
         }
         runWaitCallback();
@@ -405,7 +434,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
             case ARM_ORBS -> enterOrbArmWait();
             case START_DROP -> enterDrop();
             case START_ARC -> enterArc();
-            case FINISH_ARC -> finishArc();
+            case RESOLVE_ARC_WAIT -> resolveArcWait();
             case START_ORB_ATTACK -> enterOrbAttack();
             case FINISH_ORB_ATTACK -> enterPaletteSlowdown();
             case START_RECOVER -> enterRecoverWait();
@@ -457,19 +486,23 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         arcXVelocityLatch = -arcXVelocityLatch;
         state.xVel = arcXVelocityLatch;
         routineTimer = ARC_TIME;
-        waitCallback = WaitCallback.FINISH_ARC;
+        waitCallback = WaitCallback.NONE;
         playSfx(Sonic3kSfx.BOSS_ROTATE.id);
     }
 
-    private void finishArc() {
+    private void finishArcPass() {
+        state.routine = ROUTINE_ORB_PREP;
+        routineTimer = ORB_PREP_TIME;
+        waitCallback = WaitCallback.RESOLVE_ARC_WAIT;
+    }
+
+    private void resolveArcWait() {
         attackPassCounter--;
         if (attackPassCounter >= 0) {
             enterArcPass();
             return;
         }
-        state.routine = ROUTINE_ORB_PREP;
-        routineTimer = ORB_PREP_TIME;
-        waitCallback = WaitCallback.START_ORB_ATTACK;
+        enterOrbAttack();
     }
 
     private void enterOrbAttack() {
@@ -480,7 +513,10 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
 
     private void enterPaletteSlowdown() {
         state.routine = ROUTINE_PALETTE_SLOWDOWN;
-        routineTimer = RECOVER_WAIT_TIME;
+        // word_71B52's palette-rotation script reaches loc_71390 after 105
+        // dispatches. This is longer than the subsequent $3F Obj_Wait and
+        // controls when the next orb cycle becomes touch-active.
+        routineTimer = PALETTE_SLOWDOWN_TIME;
         waitCallback = WaitCallback.START_RECOVER;
         parentFlags &= ~PARENT_FLAG_ORBS_ARMED;
     }
@@ -513,8 +549,8 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void updateArcPass() {
-        if (routineTimer-- < 0) {
-            runWaitCallback();
+        if (--routineTimer < 0) {
+            finishArcPass();
             return;
         }
         state.yVel -= 0x10;
@@ -529,7 +565,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                 }
                 shard.refreshFromParent(state.x, state.y);
             } else if (shard.routine == SHARD_ROUTINE_MOVE) {
-                if (shard.timer-- < 0) {
+                if (--shard.timer < 0) {
                     shard.routine = SHARD_ROUTINE_STOPPED;
                     shard.refreshFromParent(state.x, state.y);
                     continue;
@@ -600,7 +636,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void tickOrbWait(OrbState orb) {
-        if (orb.timer-- >= 0) {
+        if (--orb.timer >= 0) {
             return;
         }
         runOrbCallback(orb);
@@ -836,24 +872,42 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void updateDefeated() {
-        if (defeatExplosionController == null) {
-            return;
-        }
-        defeatExplosionController.tick();
-        for (var pending : defeatExplosionController.drainPendingExplosions()) {
-            if (pending.playSfx()) {
-                playSfx(Sonic3kSfx.EXPLODE.id);
-            }
-            spawnChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
-        }
-        if (!defeatExplosionController.isFinished() || defeatRenderComplete) {
+        // Child6_CreateBossExplosion owns a separate SST and calls back when
+        // its timed emission sequence is complete.
+    }
+
+    void onDefeatExplosionControllerFinished() {
+        if (defeatRenderComplete) {
             return;
         }
         defeatRenderComplete = true;
+        stopActiveSnowdustEmitter();
         spawnChild(IczMinibossPostBossPaletteController::new);
+        // The ROM boss body changes into Wait_FadeToLevelMusic after its $3F
+        // wait while Child6_CreateBossExplosion continues in another SST. The
+        // engine folds that child's remaining 31 emission entries into this
+        // owner, so carry those already-elapsed entries into its first dispatch.
         spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE));
+                state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE,
+                DEFEAT_FLOW_OVERLAP_ENTRIES, 0, 1, 0, true));
         setDestroyed(true);
+    }
+
+    private void stopActiveSnowdustEmitter() {
+        ObjectServices services = servicesOrNull();
+        if (services == null || services.objectManager() == null) {
+            return;
+        }
+        // loc_713E8 follows _unkFAAE, verifies loc_8B660, then sets $38 bit 5.
+        // The emitter records itself as the active ICZ snow owner; stop that
+        // object rather than inferring anything from zone, route, or frame.
+        for (IczSnowPileObjectInstance snow
+                : services.objectManager().activeObjectsOfType(IczSnowPileObjectInstance.class)) {
+            if (snow.isSnowdustEmitter()) {
+                snow.stopSnowdustEmitter();
+                return;
+            }
+        }
     }
 
     @Override
@@ -880,7 +934,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
             state.xVel = 0;
             state.yVel = 0;
             defeatTimer = DEFEAT_TIME;
-            defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, defeatRng());
+            spawnChild(() -> new IczMinibossExplosionControllerChild(this, state.x, state.y));
             defeatRenderComplete = false;
             ObjectServices services = servicesOrNull();
             if (services != null) {
@@ -1077,7 +1131,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     public int getOrbRoutineForTesting(int index) {
-        return orbs[index].routine;
+        return orbs[index] == null ? -1 : orbs[index].routine;
     }
 
     public int getOrbCollisionFlagsForTesting(int index) {
@@ -1127,13 +1181,6 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         }
     }
 
-    private com.openggf.game.GameRng defeatRng() {
-        ObjectServices services = servicesOrNull();
-        if (services != null && services.rng() != null) {
-            return services.rng();
-        }
-        return new com.openggf.game.GameRng(com.openggf.game.GameRng.Flavour.S3K);
-    }
 
     private static final class ShardState
             implements com.openggf.game.rewind.RewindStateful<ShardState.RewindState> {

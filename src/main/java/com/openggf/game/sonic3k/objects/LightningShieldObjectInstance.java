@@ -103,7 +103,7 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
 
     @Override
     public void onAbilityActivated(int actionId) {
-        triggerSparks();
+        triggerSparks(true);
     }
 
     /**
@@ -111,6 +111,10 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
      * Creates 4 spark particles with diagonal velocities; shield stays on script 0.
      */
     public void triggerSparks() {
+        triggerSparks(false);
+    }
+
+    private void triggerSparks(boolean afterDynamicObjectPass) {
         AbstractPlayableSprite player = ((AbstractPlayableSprite) getPlayer());
         if (player == null) return;
         Sonic3kObjectArtProvider artProvider = getS3kArtProvider();
@@ -135,7 +139,12 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
         for (int[] vel : velocities) {
             LightningSparkObjectInstance spark = new LightningSparkObjectInstance(
                     cx, cy, vel[0], vel[1], sparkAnimationSet, sparkTiles);
-            spawnDynamicObject(spark);
+            if (afterDynamicObjectPass && tryServices() != null
+                    && tryServices().objectManager() != null) {
+                tryServices().objectManager().queueDynamicObjectAfterExec(spark);
+            } else {
+                spawnDynamicObject(spark);
+            }
         }
     }
 

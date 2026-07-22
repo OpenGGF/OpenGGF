@@ -31,6 +31,23 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     int getPieceY(int pieceIndex);
 
     /**
+     * X anchor used by a piece's fresh-contact {@code SolidObject} geometry.
+     *
+     * <p>Folded providers normally publish their current piece position. A
+     * provider that represents a later native SST child can retain that child's
+     * slot-phase X here without changing the current position used for riding,
+     * rendering, or touch regions.
+     */
+    default int getPieceFreshContactX(int pieceIndex, PlayableEntity player) {
+        return getPieceX(pieceIndex);
+    }
+
+    /** Fresh-contact Y counterpart to {@link #getPieceFreshContactX(int, PlayableEntity)}. */
+    default int getPieceFreshContactY(int pieceIndex, PlayableEntity player) {
+        return getPieceY(pieceIndex);
+    }
+
+    /**
      * Returns collision parameters for the specified piece.
      * Default implementation returns the same params for all pieces.
      * Override if pieces have different sizes.
@@ -82,6 +99,15 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     }
 
     /**
+     * Whether {@link #getPieceLandingHalfWidth(int)} publishes the native
+     * per-piece top width directly, rather than relying on the shared
+     * {@code collisionHalfWidth - $B} SolidObject heuristic.
+     */
+    default boolean usesPieceSpecificLandingHalfWidths() {
+        return false;
+    }
+
+    /**
      * Called when a piece makes contact with the player.
      * Allows the object to track which pieces are being touched.
      *
@@ -93,5 +119,16 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     default void onPieceContact(int pieceIndex, PlayableEntity player,
                                 SolidContact contact, int frameCounter) {
         // Default no-op - objects can override to track piece-specific contact
+    }
+
+    /**
+     * Piece-contact callback with the native child SST's standing-bit state at
+     * routine entry. Folded child objects can use this when their post-contact
+     * behavior distinguishes a continued ride from a fresh landing.
+     */
+    default void onPieceContact(int pieceIndex, PlayableEntity player,
+                                SolidContact contact, int frameCounter,
+                                boolean standingBitWasSetAtEntry) {
+        onPieceContact(pieceIndex, player, contact, frameCounter);
     }
 }

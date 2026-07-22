@@ -1,7 +1,6 @@
 package com.openggf.level.objects;
 
 
-import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
@@ -502,17 +501,6 @@ final class ObjectTouchResponseController {
                     int invuln = lostRingCollectionInvulnerableFrames(aps, isSidekick);
                     if (invuln < LOST_RING_INVULNERABLE_THRESHOLD && !lostRing.isCollected()) {
                         lostRing.markCollected(currentFrameCounter);
-                        // Outside competition mode both CollectRing and
-                        // CollectRing_Tails fall through to the shared 1P
-                        // Ring_count increment. A CPU sidekick does not own a
-                        // player-local LevelState, so route this through the
-                        // gameplay-scoped counter instead of the touching sprite.
-                        if (objectManager.services().levelGamestate() != null) {
-                            objectManager.services().levelGamestate().addRings(1);
-                        } else {
-                            aps.addRings(1);
-                        }
-                        objectManager.services().playSfx(GameSound.RING);
                     }
                 }
                 break; // ROM: rts — first overlapping object ends the loop (both paths).
@@ -576,11 +564,7 @@ final class ObjectTouchResponseController {
     }
 
     private static boolean usesCurrentTouchState(ObjectInstance instance) {
-        // S3K's Collision_response_list stores object RAM pointers, not copied
-        // coordinates. Obj37 publishes after MoveSprite2, so the next player
-        // pass observes the ring's live position from that published object.
-        return instance instanceof LostRingObjectInstance
-                || instance.usesCurrentTouchResponseState();
+        return instance.usesCurrentTouchResponseState();
     }
 
     /**
