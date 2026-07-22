@@ -48117,3 +48117,17 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczMinibossObject` is green (20 tests). The complete-run
   replay remains red at f13517 on a missed ring pickup; trace data remains
   comparison-only.
+
+## 2026-07-21 - ICZ snow-emitter RNG alignment (frontier unchanged)
+
+- `s3k_icz1` remains at physics f13517 and animation f13900, while total errors
+  fell from 1,776 to 1,668.
+- Root: `loc_8B6AE` calls `Random_Number` once, consumes its low word for the
+  particle X and its swapped high word for frame/priority/X velocity. The engine
+  advanced the shared RNG twice, changing snow-particle paths and their SST-slot
+  lifetimes during the miniboss spill. Rejected X samples also leaked the
+  engine's `Hyudoro_count` equivalent instead of following `loc_8B756`.
+- Fix: snowdust now splits one 32-bit native RNG result and decrements its active
+  count for rejected particles (`docs/skdisasm/sonic3k.asm:190049-190112`). The
+  48-case ICZ end-boss object suite stays green. The remaining f13517 pickup is
+  an Obj37 slot/cadence mismatch; comparison data remains read-only.

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ snow emitters now derive random X, frame, priority, and velocity from the low/high words of one `Random_Number` result and release rejected-particle count ownership. This restores native RNG consumption and reduces downstream ICZ complete-run divergence without moving the current frame-13517 frontier.
 - Fix: ICZ miniboss arc passes now enter the ROM's `$3F`-frame routine `$0C` wait before deciding whether to reverse for another sweep. This removes an immediate return-pass shortcut and advances complete-run physics from frame 13410 to 13517 and animation from frame 13410 to 13900.
 - Fix: ICZ miniboss parent, shard, arc, and orb waits now decrement before testing for underflow, matching `Obj_Wait`'s `subq/bmi` semantics. Orbiting snowballs become touch-active on the native frame, advancing both complete-run frontiers from frame 13205 to 13410.
 - Fix: ICZ miniboss entry now stages its vertical arena target across the engine's separated camera phase while S3K sidekick bounds mirror the live `Camera_max_Y_pos` word. This restores Tails' native boss-entry pit transition and advances both complete-run frontiers from frame 12700 to 13205.

@@ -193,6 +193,9 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
 
         SnowdustSpec spec = buildSnowdustSpec(camera);
         if (spec == null) {
+            // loc_8B6D2 sends rejected particles through loc_8B756, which
+            // decrements Hyudoro_count before deleting their SST.
+            onSnowdustExpired();
             return;
         }
         activeSnowdustCount++;
@@ -207,7 +210,8 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
     private SnowdustSpec buildSnowdustSpec(Camera camera) {
         ObjectServices services = tryServices();
         GameRng rng = services != null ? services.rng() : null;
-        int randomX = rng != null ? rng.nextWord() & 0x01FF : 0;
+        int random = rng != null ? rng.nextRaw() : 0;
+        int randomX = random & 0x01FF;
         if (randomX >= 0x0140) {
             randomX = (randomX & 0x003F) << 2;
         }
@@ -217,7 +221,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
             return null;
         }
 
-        int randomMeta = rng != null ? rng.nextWord() : 0;
+        int randomMeta = (random >>> 16) & 0xFFFF;
         int frameIndex = randomMeta & 0x03;
         int xVel = (randomMeta & 0x003C) - 0x20;
         int cameraY = camera != null ? camera.getY() : y;
