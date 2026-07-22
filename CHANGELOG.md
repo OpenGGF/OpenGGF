@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ miniboss defeat now runs its explosion controller in a real child SST and stops the active snow emitter from the native post-explosion callback. This preserves RNG/object-slot order, restores the missed lightning-shield ring, and advances both ICZ complete-run trace groups to frame 19398.
 - Fix: ICZ tension platforms now reject the exact zero-penetration `SolidObjectTop` boundary selected by the helper's unsigned `cmpi #-$10 / blo` branch. This advances both ICZ complete-run trace groups to frame 17530.
 - Fix: ICZ tension platforms now use the native `SolidObjectTop` `d3` surface height for fresh-contact detection, preventing rolling Sonic from landing one frame early. This advances both ICZ complete-run trace groups to frame 16975.
 - Fix: S3K Star Pointer orbiting children now preserve their native initialization-only first SST execution before beginning circular movement and publishing to the collision-response list. This advances both ICZ complete-run trace groups to frame 16710.

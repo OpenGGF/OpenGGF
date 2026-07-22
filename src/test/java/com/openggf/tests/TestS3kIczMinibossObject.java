@@ -439,6 +439,12 @@ class TestS3kIczMinibossObject {
 
         for (int frame = 124; frame <= 260; frame++) {
             instance.update(frame, mock(PlayableEntity.class));
+            for (ObjectInstance child : List.copyOf(services.spawnedChildren)) {
+                if (child.getClass().getSimpleName().equals("IczMinibossExplosionControllerChild")
+                        && !child.isDestroyed()) {
+                    child.update(frame, mock(PlayableEntity.class));
+                }
+            }
         }
 
         assertTrue(services.spawnedChildren.stream().anyMatch(S3kBossExplosionChild.class::isInstance),
@@ -456,8 +462,8 @@ class TestS3kIczMinibossObject {
         assertEquals(S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE,
                 readField(signpostFlow, "cleanupAction"),
                 "AfterBoss_ICZ2 reloads Pal_ICZ2 through PalLoad_Line1 so ICZ2 badniks do not keep the boss palette");
-        assertEquals(0x1F, readIntField(signpostFlow, "initialWaitCatchUpEntries"),
-                "the folded explosion child must preserve the 31 overlapping Obj_EndSignControl entries");
+        assertEquals(0x1D, readIntField(signpostFlow, "initialWaitCatchUpEntries"),
+                "the separate explosion-controller SST leaves 29 folded Obj_EndSignControl entries");
         assertEquals(true, readField(signpostFlow, "preservesGroundedResultsDispatchBoundary"),
                 "the separately allocated flow must retain the grounded routine-$06 result dispatch");
         assertEquals(1, readIntField(signpostFlow, "resultsWaitDurationAdjustment"),

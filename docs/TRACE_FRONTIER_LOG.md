@@ -48307,3 +48307,21 @@ standalone CNZ remains at f0 in both scopes.
 - Fix: the tension platform explicitly rejects zero-distance fresh landings.
   The next replay divergence is a missed ring at f17530; trace data remains
   comparison-only.
+
+## 2026-07-22 - ICZ miniboss explosion and snow-emitter ownership
+
+- **`s3k_icz1` physics and animation advanced from f17530 to f19398.** The
+  lightning-shield ring count at f17530 now matches; total errors fell from
+  1,733 to 1,732.
+- Root: `Child6_CreateBossExplosion` owns a separate SST, so its three-frame
+  random explosion cadence can run before or after the snowflake SST allocated
+  that frame. Folding it into the miniboss parent changed the shared RNG order.
+  When the controller finishes, `loc_713E8` follows `_unkFAAE`, verifies the
+  live `loc_8B660` snow emitter, and sets its `$38` bit 5. The engine omitted
+  that shutdown and produced hundreds of extra snowflake SSTs, displacing two
+  attracted rings and reversing their touch order.
+- Fix: ICZ miniboss defeat now creates a rewind-recreatable explosion-controller
+  child with native SST cadence. Its completion callback stops the active
+  object-owned snow emitter before starting the signpost flow.
+- Validation: `TestS3kIczCompleteRunTraceReplay` now reaches f19398, where the
+  next divergence is Sonic's vertical speed. Trace data remains comparison-only.

@@ -92,7 +92,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private static final int RECOVER_WAIT_TIME = 0x3F;
     private static final int RISE_TIME = 0x17;
     private static final int DEFEAT_TIME = 0xB3;
-    private static final int DEFEAT_FLOW_OVERLAP_ENTRIES = 0x1F;
+    private static final int DEFEAT_FLOW_OVERLAP_ENTRIES = 0x1D;
 
     private static final int PARENT_FLAG_ORB_RELEASE = 1 << 1; // $38 bit 1
     private static final int PARENT_FLAG_ORBS_ARMED = 1 << 2;  // $38 bit 2
@@ -150,7 +150,6 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private boolean hitFlashBright;
     private boolean hitFlashDirty;
     private int[] hitFlashPaletteWords = HIT_FLASH_NORMAL_COLORS;
-    private S3kBossExplosionController defeatExplosionController;
     private boolean defeatRenderComplete;
     private boolean childSlotsReserved;
 
@@ -228,7 +227,6 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         hitFlashBright = false;
         hitFlashDirty = false;
         hitFlashPaletteWords = HIT_FLASH_NORMAL_COLORS;
-        defeatExplosionController = null;
         defeatRenderComplete = false;
         shards = new ShardState[6];
         orbs = new OrbState[8];
@@ -874,20 +872,16 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void updateDefeated() {
-        if (defeatExplosionController == null) {
-            return;
-        }
-        defeatExplosionController.tick();
-        for (var pending : defeatExplosionController.drainPendingExplosions()) {
-            if (pending.playSfx()) {
-                playSfx(Sonic3kSfx.EXPLODE.id);
-            }
-            spawnChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
-        }
-        if (!defeatExplosionController.isFinished() || defeatRenderComplete) {
+        // Child6_CreateBossExplosion owns a separate SST and calls back when
+        // its timed emission sequence is complete.
+    }
+
+    void onDefeatExplosionControllerFinished() {
+        if (defeatRenderComplete) {
             return;
         }
         defeatRenderComplete = true;
+        stopActiveSnowdustEmitter();
         spawnChild(IczMinibossPostBossPaletteController::new);
         // The ROM boss body changes into Wait_FadeToLevelMusic after its $3F
         // wait while Child6_CreateBossExplosion continues in another SST. The
@@ -897,6 +891,23 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                 state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE,
                 DEFEAT_FLOW_OVERLAP_ENTRIES, 0, 1, 0, true));
         setDestroyed(true);
+    }
+
+    private void stopActiveSnowdustEmitter() {
+        ObjectServices services = servicesOrNull();
+        if (services == null || services.objectManager() == null) {
+            return;
+        }
+        // loc_713E8 follows _unkFAAE, verifies loc_8B660, then sets $38 bit 5.
+        // The emitter records itself as the active ICZ snow owner; stop that
+        // object rather than inferring anything from zone, route, or frame.
+        for (IczSnowPileObjectInstance snow
+                : services.objectManager().activeObjectsOfType(IczSnowPileObjectInstance.class)) {
+            if (snow.isSnowdustEmitter()) {
+                snow.stopSnowdustEmitter();
+                return;
+            }
+        }
     }
 
     @Override
@@ -923,7 +934,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
             state.xVel = 0;
             state.yVel = 0;
             defeatTimer = DEFEAT_TIME;
-            defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, defeatRng());
+            spawnChild(() -> new IczMinibossExplosionControllerChild(this, state.x, state.y));
             defeatRenderComplete = false;
             ObjectServices services = servicesOrNull();
             if (services != null) {
@@ -1170,13 +1181,6 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         }
     }
 
-    private com.openggf.game.GameRng defeatRng() {
-        ObjectServices services = servicesOrNull();
-        if (services != null && services.rng() != null) {
-            return services.rng();
-        }
-        return new com.openggf.game.GameRng(com.openggf.game.GameRng.Flavour.S3K);
-    }
 
     private static final class ShardState
             implements com.openggf.game.rewind.RewindStateful<ShardState.RewindState> {
