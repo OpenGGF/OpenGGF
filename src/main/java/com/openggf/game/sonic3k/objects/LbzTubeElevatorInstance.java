@@ -14,6 +14,8 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -34,7 +36,7 @@ import java.util.List;
  * {@link AutomaticTunnelObjectInstance#PATHS}.
  */
 public final class LbzTubeElevatorInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
     private static final int WIDTH_PIXELS = 0x18;
     private static final int HEIGHT_PIXELS = 0x30;
     private static final int SOLID_SIDE_PADDING = 0x0B;
@@ -177,6 +179,20 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
     @Override
     public int getOnScreenHalfHeight() {
         return HEIGHT_PIXELS;
+    }
+
+    @Override
+    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
+        if (!contact.standing() || !(playerEntity instanceof AbstractPlayableSprite player)) {
+            return;
+        }
+        PlayerTubeState tubeState = player == nativeP2OrNull() ? p2 : p1;
+        if (tubeState.phase == 0 && canCapture(player)) {
+            // ROM slot order is Action (including SolidObjectFull_Offset), then
+            // CheckPlayer. Consume a landing published by the shared solid pass
+            // in this same object slot so the capture snap is not one frame late.
+            capturePlayer(player, tubeState);
+        }
     }
 
     private void ensureOverlayChild() {

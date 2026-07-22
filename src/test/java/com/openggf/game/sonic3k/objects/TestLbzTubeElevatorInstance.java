@@ -6,6 +6,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TestObjectServices;
@@ -59,6 +60,22 @@ class TestLbzTubeElevatorInstance {
         assertEquals(0, player.getGSpeed());
         assertFalse(player.getAir(), "capture clears Status_InAir");
         assertFalse(player.isJumping(), "capture clears jumping");
+    }
+
+    @Test
+    void freshSolidLandingIsCapturedInTheSameObjectSlot() {
+        LbzTubeElevatorInstance elevator = (LbzTubeElevatorInstance) elevator(0x1200, 0x0600, 0);
+        TestablePlayableSprite player = playerAt(0x1205, 0x0601);
+        player.setAir(false);
+        player.setOnObject(true);
+
+        elevator.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+
+        assertTrue(player.isObjectControlled());
+        assertEquals(0x1200, player.getCentreX() & 0xFFFF,
+                "Action's SolidObjectFull_Offset landing is consumed by CheckPlayer in the same ROM slot");
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getGSpeed());
     }
 
     @Test

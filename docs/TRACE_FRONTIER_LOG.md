@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ tube-elevator same-slot landing capture
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 15188 to
+  frame 15599.** The next divergence is Sonic's mapping frame (`$57` expected
+  versus `$58` actual).
+- Root: native `LBZTubeElevator_Action` runs `SolidObjectFull_Offset` before
+  `LBZTubeElevator_CheckPlayer` in the same object slot, so a newly grounded
+  player is snapped to the elevator and stopped immediately. The engine ran
+  the object's player check before its shared solid pass and did not consume
+  the fresh standing contact until the following frame.
+- Fix: the tube elevator now consumes its shared standing callback as the
+  native post-solid `CheckPlayer` step, while retaining the existing path for
+  players grounded before the object slot. Focused coverage verifies the
+  same-slot position snap and velocity clear.
+- Validation: all 16 focused tube-elevator tests pass and the LBZ replay
+  reaches frame 15599. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. No S3K,
+  S1, or S2 frontier regressed.
+
 ## 2026-07-22 - LBZ P2 drum animation ownership
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 14174 to
