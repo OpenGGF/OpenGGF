@@ -109,6 +109,10 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private boolean act2TransitionRequested;
     private int act2TransitionKosDrainFrames;
     private int activeAct;
+    private boolean postTitleAct2SizeChangeActive;
+    private int act2MaxXAccumulator;
+    private int act2MinYAccumulator;
+    private int act2MaxYAccumulator;
     @RewindTransient(
             reason = "live snowboard intro object reference; object lifetime/state is captured by ObjectManager rewind")
     private IczSnowboardIntroInstance snowboardIntro;
@@ -127,6 +131,10 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         bigSnowPileSpawned = false;
         act2TransitionRequested = false;
         act2TransitionKosDrainFrames = 0;
+        postTitleAct2SizeChangeActive = false;
+        act2MaxXAccumulator = 0;
+        act2MinYAccumulator = 0;
+        act2MaxYAccumulator = 0;
         indoorPaletteCyclingActive = initialIndoorPaletteCycleState(act);
         applyInitialBackgroundPalette(act);
         if (act == 0 && hasSonicSnowboardIntroPlayerMode()) {
@@ -180,6 +188,72 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
     public boolean isAct2TransitionRequested() {
         return act2TransitionRequested;
+    }
+
+    /**
+     * ROM {@code Change_Act2Sizes}: install the three independently allocated
+     * gradual level-size workers retained by {@code Obj_EndSignControl}.
+     */
+    public void preparePostTitleAct2SizeChange() {
+        if (activeAct != 1 || postTitleAct2SizeChangeActive) {
+            return;
+        }
+        postTitleAct2SizeChangeActive = true;
+        act2MaxXAccumulator = 0;
+        act2MinYAccumulator = 0;
+        act2MaxYAccumulator = 0;
+        camera().setMaxYTarget((short) ICZ2_CAMERA_MAX_Y);
+    }
+
+    /** Runs the retained Child1_Act2LevelSize slots before the camera step. */
+    public void updatePostTitleAct2SizeWorkers() {
+        if (!postTitleAct2SizeChangeActive) {
+            return;
+        }
+
+        boolean maxXDone = updateGradualMaxX();
+        boolean minYDone = updateGradualMinY();
+        boolean maxYDone = updateGradualMaxY();
+        postTitleAct2SizeChangeActive = !(maxXDone && minYDone && maxYDone);
+    }
+
+    private boolean updateGradualMaxX() {
+        int current = camera().getMaxX() & 0xFFFF;
+        act2MaxXAccumulator += 0x4000;
+        int next = current + (act2MaxXAccumulator >>> 16);
+        if (next >= ICZ2_CAMERA_MAX_X) {
+            camera().setMaxX((short) ICZ2_CAMERA_MAX_X);
+            return true;
+        }
+        camera().setMaxX((short) next);
+        return false;
+    }
+
+    private boolean updateGradualMinY() {
+        int current = camera().getMinY() & 0xFFFF;
+        act2MinYAccumulator += 0x4000;
+        int next = current - (act2MinYAccumulator >>> 16);
+        if (next <= ICZ2_CAMERA_MIN_Y) {
+            camera().setMinY((short) ICZ2_CAMERA_MIN_Y);
+            return true;
+        }
+        camera().setMinY((short) next);
+        return false;
+    }
+
+    private boolean updateGradualMaxY() {
+        int current = camera().getMaxY() & 0xFFFF;
+        act2MaxYAccumulator += 0x8000;
+        int next = current + (act2MaxYAccumulator >>> 16);
+        if (next > ICZ2_CAMERA_MAX_Y) {
+            camera().setMaxY((short) ICZ2_CAMERA_MAX_Y);
+            return true;
+        }
+        camera().setMaxY((short) next);
+        // Change_Act2Sizes writes Camera_target_max_Y_pos before allocating
+        // this child; Camera#setMaxY also updates the target, so restore it.
+        camera().setMaxYTarget((short) ICZ2_CAMERA_MAX_Y);
+        return false;
     }
 
     private void spawnSonicSnowboardIntro() {

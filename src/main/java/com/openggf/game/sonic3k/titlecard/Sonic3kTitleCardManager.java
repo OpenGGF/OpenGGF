@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.titlecard;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
@@ -123,6 +124,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean inLevelPlayerControlLockOwned;
     private int inLevelExitDelayFrames;
     private boolean releasePreloadedActCameraOnComplete;
+    private boolean preloadedActCompletionPrepared;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
     private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
 
@@ -341,6 +343,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.inLevelPlayerControlLockOwned = false;
         this.inLevelExitDelayFrames = 0;
         this.releasePreloadedActCameraOnComplete = false;
+        this.preloadedActCompletionPrepared = false;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.phaseCounter = 0;
@@ -527,6 +530,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         retainedResultsHeldLevelCounterOwned = false;
         inLevelExitDelayFrames = 0;
         releasePreloadedActCameraOnComplete = false;
+        preloadedActCompletionPrepared = false;
         inLevelPlayerControlLockOwned = false;
         bonusMode = false;
         bonusFadeProgress = 0f;
@@ -663,6 +667,16 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
             }
             if (inLevelMode && inLevelExitDelayFrames > 0) {
                 inLevelExitDelayFrames--;
+                if (inLevelExitDelayFrames == 0
+                        && releasePreloadedActCameraOnComplete
+                        && !preloadedActCompletionPrepared) {
+                    // The retained EndSignControl slot runs one object pass
+                    // before Obj_TitleCard publishes its completion flag. It
+                    // installs Change_Act2Sizes workers while Scroll_lock is
+                    // still held for this frame.
+                    preloadedActCompletionPrepared = true;
+                    S3kTransitionWriteSupport.preparePreloadedActTitleCardCompletion();
+                }
                 return;
             }
             state = Sonic3kTitleCardState.COMPLETE;
@@ -683,16 +697,6 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         }
         releasePreloadedActCameraOnComplete = false;
         var camera = GameServices.camera();
-        var level = GameServices.level().getCurrentLevel();
-        if (level != null) {
-            // Obj_TitleCard clears Scroll_lock after restoring the level-size
-            // targets. The live bounds still expand through DynamicLevelEvents;
-            // snapping them here skips that visible post-boss easing.
-            camera.setMinXTarget((short) level.getMinX());
-            camera.setMaxXTarget((short) level.getMaxX());
-            camera.setMinYTarget((short) level.getMinY());
-            camera.setMaxYTarget((short) level.getMaxY());
-        }
         // Scroll_lock does not clear H_scroll_frame_offset, so the horizontal
         // history accumulated before the boss remains parked until this release.
         camera.setScrollLocked(false);

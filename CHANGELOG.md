@@ -3,7 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Fix: preloaded-act S3K title cards now release the retained ROM `Scroll_lock` without clearing horizontal scroll history or snapping live boss-arena bounds; the level-size targets resume through normal boundary easing. This advances both ICZ complete-run trace groups beyond frame 20731.
+- Fix: preloaded-act S3K title cards now preserve the retained ROM `Scroll_lock` through the first `Change_Act2Sizes` worker pass, then release it without clearing horizontal scroll history. ICZ's three fixed-point boundary workers now reproduce the post-miniboss camera expansion and advance both complete-run trace groups to frame 15522.
 - Fix: S3K results produced after next-act state is already loaded now leave camera lock and bounds with the in-level title-card owner; ICZ’s folded results owner also retains its final wait entry. This advances complete-run physics to frame 15401 and animation to frame 15435.
 - Fix: ICZ miniboss defeat now preserves the ROM overlap between the independent boss-explosion child and `Obj_EndSignControl`, including the grounded routine-`$06` results dispatch. This aligns both ending poses and advances complete-run physics to frame 15257 and animation to frame 15258.
 - Fix: ICZ miniboss palette slowdown now follows the 105-dispatch `word_71B52` script instead of reusing the later `$3F` recovery wait. This prevents the next orb cycle from becoming touch-active early and advances complete-run animation to frame 14780 and physics to frame 14782.

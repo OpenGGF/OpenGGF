@@ -48231,20 +48231,20 @@ standalone CNZ remains at f0 in both scopes.
 
 ## 2026-07-22 - ICZ preloaded-act title-card camera release
 
-- **`s3k_icz1` physics and animation advanced beyond f20731**, up from the
-  f15401/f15435 frontiers. The replay now survives the complete Act 1-to-Act 2
-  results/title-card handoff and most of Act 2.
-- Root: native `Obj_TitleCard` releases `Scroll_lock` without clearing
-  `H_scroll_frame_offset`, and restores level-size target words while the live
-  boss bounds continue through `DynamicLevelEvents`. The folded engine title
-  card instead cleared horizontal history and snapped all live bounds to the
-  Act 2 level extents, producing an immediate 24-pixel horizontal jump and a
-  six-pixel vertical jump.
-- Fix: retained preloaded-act title cards carry their remaining eleven native
-  Wait2/child-retirement dispatches, then publish level-size targets and clear
-  the camera's scroll-lock state without disturbing its parked horizontal
-  history. Live boundaries expand through the shared easing path.
-- Validation: the focused replay reaches f20732, where comparison is interrupted
-  by the next independent blocker: an invalid rewind reference from the ICZ
-  Freezer owner to an already-retired capture-cloud child. Trace data remains
-  comparison-only.
+- **`s3k_icz1` physics and animation advanced to f15522**, up from the
+  f15401/f15435 frontiers. An earlier f20732 rewind-closure exception interrupted
+  the replay before its accumulated comparisons were asserted, so it was not a
+  valid frontier and is superseded by this verified result.
+- Root: after the in-level title card publishes `End_of_level_flag`, retained
+  `Obj_EndSignControlDoStart` runs `Change_Act2Sizes` and allocates independent
+  `Obj_IncLevEndXGradual`, `Obj_DecLevStartYGradual`, and
+  `Obj_IncLevEndYGradual` workers. Their `$4000/$8000` fixed-point accumulators,
+  combined with the dynamic bottom-boundary tail, produce the accelerating
+  post-arena camera release. Snapping full level bounds or relying on ordinary
+  two-pixel easing cannot reproduce that sequence.
+- Fix: the title-card bridge prepares ICZ's retained size-change owner one
+  object pass before completion, holds `Scroll_lock` for that pass, and then
+  releases it without clearing `H_scroll_frame_offset`. ICZ owns the three
+  native fixed-point boundary workers and keeps the copied max-Y target live.
+- Validation: the focused replay's first physics/animation divergence is now
+  Sonic's vertical motion at f15522. Trace data remains comparison-only.

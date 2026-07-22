@@ -320,6 +320,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public void updateFixedInLevelObjectsBeforeDynamicObjects() {
+        if (iczEvents != null) {
+            iczEvents.updatePostTitleAct2SizeWorkers();
+        }
         if (hczEvents != null) {
             hczEvents.updateRetainedCarrierObjectPass(currentAct);
         }
@@ -1116,6 +1119,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             releasePendingMgzPostTransition();
         }
         return titleCardCompletionFlagStillOwned;
+    }
+
+    @Override
+    public void preparePreloadedActTitleCardCompletion() {
+        if (iczEvents != null) {
+            iczEvents.preparePostTitleAct2SizeChange();
+        }
     }
 
     @Override
