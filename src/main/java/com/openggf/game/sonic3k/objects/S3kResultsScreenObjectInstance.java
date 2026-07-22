@@ -699,18 +699,21 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             if (!skipTitleCard && !hasSeamlessTransition) {
                 var titleCardProvider = services().titleCardProvider();
                 titleCardProvider.initializeInLevel(zone, 1);
-                if (aizAct1MinibossTitleHandoff
-                        && titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
-                    s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
-                } else if (retainedReloadState
-                        && titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
-                    // This Obj_LevelResults survived an earlier Load_Level and
-                    // now mutates into Obj_TitleCard. The in-level title owner
-                    // resets Timer/Ring_count on its first Wait dispatch after
-                    // the queued create passes (sonic3k.asm:62708-62720,
-                    // 62150-62235).
-                    s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
-                            MUTATED_TITLE_CARD_RESET_DISPATCHES);
+                if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
+                    if (preloadedNextActHandoff) {
+                        s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
+                    }
+                    if (aizAct1MinibossTitleHandoff) {
+                        s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
+                    } else if (retainedReloadState) {
+                        // This Obj_LevelResults survived an earlier Load_Level and
+                        // now mutates into Obj_TitleCard. The in-level title owner
+                        // resets Timer/Ring_count on its first Wait dispatch after
+                        // the queued create passes (sonic3k.asm:62708-62720,
+                        // 62150-62235).
+                        s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
+                                MUTATED_TITLE_CARD_RESET_DISPATCHES);
+                    }
                 }
             }
 

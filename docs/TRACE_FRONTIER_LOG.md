@@ -48228,3 +48228,23 @@ standalone CNZ remains at f0 in both scopes.
   are green.
 - The next replay divergence is the title card's camera-follow release at
   f15401; trace data remains comparison-only.
+
+## 2026-07-22 - ICZ preloaded-act title-card camera release
+
+- **`s3k_icz1` physics and animation advanced beyond f20731**, up from the
+  f15401/f15435 frontiers. The replay now survives the complete Act 1-to-Act 2
+  results/title-card handoff and most of Act 2.
+- Root: native `Obj_TitleCard` releases `Scroll_lock` without clearing
+  `H_scroll_frame_offset`, and restores level-size target words while the live
+  boss bounds continue through `DynamicLevelEvents`. The folded engine title
+  card instead cleared horizontal history and snapped all live bounds to the
+  Act 2 level extents, producing an immediate 24-pixel horizontal jump and a
+  six-pixel vertical jump.
+- Fix: retained preloaded-act title cards carry their remaining eleven native
+  Wait2/child-retirement dispatches, then publish level-size targets and clear
+  the camera's scroll-lock state without disturbing its parked horizontal
+  history. Live boundaries expand through the shared easing path.
+- Validation: the focused replay reaches f20732, where comparison is interrupted
+  by the next independent blocker: an invalid rewind reference from the ICZ
+  Freezer owner to an already-retired capture-cloud child. Trace data remains
+  comparison-only.

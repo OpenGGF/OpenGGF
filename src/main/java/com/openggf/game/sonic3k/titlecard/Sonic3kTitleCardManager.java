@@ -107,6 +107,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     // banner overwrites height_pixels with $70; the remaining values are the
     // width_pixels bytes in ObjArray_TtlCard.
     private static final int BANNER_RENDER_HEIGHT = 0x70;
+    private static final int PRELOADED_ACT_CAMERA_RELEASE_DISPATCHES = 11;
     private static final int[] ELEMENT_RENDER_WIDTH = {0, 0x80, 0x24, 0x1C};
 
     // ---- State ----
@@ -121,6 +122,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean retainedResultsHeldLevelCounterOwned;
     private boolean inLevelPlayerControlLockOwned;
     private int inLevelExitDelayFrames;
+    private boolean releasePreloadedActCameraOnComplete;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
     private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
 
@@ -263,6 +265,16 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         inLevelPlayerControlLockOwned = false;
     }
 
+    public void requestPreloadedActCameraReleaseOnComplete() {
+        if (inLevelMode) {
+            releasePreloadedActCameraOnComplete = true;
+            // A results SST that mutates into Obj_TitleCard retains the parent
+            // Wait2/child retirement entries which the slotless overlay folds
+            // away. Keep Scroll_lock through those remaining dispatches.
+            inLevelExitDelayFrames += PRELOADED_ACT_CAMERA_RELEASE_DISPATCHES;
+        }
+    }
+
     @Override
     public void requestInLevelExitAdditionalDispatches(int dispatches) {
         requestInLevelExitAdditionalDispatches(dispatches, 0);
@@ -328,6 +340,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.retainedResultsHeldLevelCounterOwned = false;
         this.inLevelPlayerControlLockOwned = false;
         this.inLevelExitDelayFrames = 0;
+        this.releasePreloadedActCameraOnComplete = false;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.phaseCounter = 0;
@@ -513,6 +526,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         heldLevelCounterDispatchOwned = false;
         retainedResultsHeldLevelCounterOwned = false;
         inLevelExitDelayFrames = 0;
+        releasePreloadedActCameraOnComplete = false;
         inLevelPlayerControlLockOwned = false;
         bonusMode = false;
         bonusFadeProgress = 0f;
@@ -657,9 +671,31 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
                 // in-level title-card timer has elapsed and its child objects
                 // have disappeared (sonic3k.asm:62244-62279).
                 GameServices.gameState().setEndOfLevelFlag(true);
+                releasePreloadedActCamera();
             }
             LOG.fine("S3K title card: COMPLETE");
         }
+    }
+
+    private void releasePreloadedActCamera() {
+        if (!releasePreloadedActCameraOnComplete) {
+            return;
+        }
+        releasePreloadedActCameraOnComplete = false;
+        var camera = GameServices.camera();
+        var level = GameServices.level().getCurrentLevel();
+        if (level != null) {
+            // Obj_TitleCard clears Scroll_lock after restoring the level-size
+            // targets. The live bounds still expand through DynamicLevelEvents;
+            // snapping them here skips that visible post-boss easing.
+            camera.setMinXTarget((short) level.getMinX());
+            camera.setMaxXTarget((short) level.getMaxX());
+            camera.setMinYTarget((short) level.getMinY());
+            camera.setMaxYTarget((short) level.getMaxY());
+        }
+        // Scroll_lock does not clear H_scroll_frame_offset, so the horizontal
+        // history accumulated before the boss remains parked until this release.
+        camera.setScrollLocked(false);
     }
 
     private boolean isOutsideNativeViewport(int idx) {
