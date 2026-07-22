@@ -142,6 +142,27 @@ class TestS3kSnaleBlasterBadnik {
     }
 
     @Test
+    void lowerShooterUsesItsNativeChildSubtypeIndependentOfParentSubtype() throws Exception {
+        RecordingServices services = new RecordingServices();
+        AbstractObjectInstance snaleBlaster = createSnaleBlaster(services);
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
+        Object lowerShooter = readList(snaleBlaster, "shooters").get(1);
+        services.spawnedObjects.clear();
+
+        assertTrue(readBoolean(lowerShooter, "verticalFlipShot"),
+                "ChildObjDat_8C28A gives the lower shooter subtype 2 even when the parent subtype is zero");
+        setEnum(lowerShooter, "state", "FIRING");
+        setInt(lowerShooter, "animIndex", 2);
+        setInt(lowerShooter, "mappingFrame", 7);
+        setInt(lowerShooter, "animTimer", 0);
+        ((AbstractObjectInstance) lowerShooter).update(1, playerAt(0x0300, 0x0100, 0));
+
+        Object projectile = services.spawnedObjects.get(0);
+        assertEquals(0x100, readInt(projectile, "yVelocity"),
+                "loc_8C212 negates the lower shooter's projectile y_vel");
+    }
+
+    @Test
     void protectedCollisionPropertyReflectsAttackWithoutDestroying() throws Exception {
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
         setInt(snaleBlaster, "collisionProperty", 0x7F);
@@ -244,6 +265,10 @@ class TestS3kSnaleBlasterBadnik {
 
     private static int readInt(Object target, String fieldName) throws Exception {
         return findField(target, fieldName).getInt(target);
+    }
+
+    private static boolean readBoolean(Object target, String fieldName) throws Exception {
+        return findField(target, fieldName).getBoolean(target);
     }
 
     private static String readEnumName(Object target, String fieldName) throws Exception {

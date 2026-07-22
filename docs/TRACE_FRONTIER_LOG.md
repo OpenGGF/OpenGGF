@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ Snale Blaster lower-child subtype
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 13023 to
+  frame 13473.** The next divergence is Sonic's object-controlled X position
+  (`$29E0` expected versus `$29DF` actual) on another ride grapple.
+- Root: `ChildObjDat_8C28A` gives the lower shooter child subtype 2, which
+  selects `byte_8C2D9`'s longer firing delay and makes `loc_8C212` negate the
+  projectile Y velocity. The engine instead tested the placed Snale parent's
+  subtype, so a subtype-zero parent gave both shooters the short upper script.
+  The duplicate simultaneous projectile hurt Sonic where the ROM destroys the
+  vulnerable Snale and retains his roll and rings.
+- Fix: the lower child now owns its native alternate-script flag independently
+  of its parent placement subtype. Focused coverage verifies both the child
+  flag and the upward-to-downward projectile velocity inversion.
+- Validation: all 9 focused Snale Blaster tests pass and the LBZ replay reaches
+  frame 13473. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - LBZ ride-grapple parent subpixel carry
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 12111 to

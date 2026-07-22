@@ -163,7 +163,11 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         waitTimer = CLOSED_WAIT_FRAMES;
         state = State.CLOSED_WAIT;
         shooters.add(spawnChild(() -> new SnaleBlasterShooterChild(this, -8, 0, false)));
-        shooters.add(spawnChild(() -> new SnaleBlasterShooterChild(this, -8, 7, spawn.subtype() != 0)));
+        // ChildObjDat_8C28A assigns subtype 2 to the lower shooter itself.
+        // loc_8C1B2 uses that child subtype for the longer firing delay and
+        // loc_8C212 uses it to invert the projectile's Y velocity; the placed
+        // parent subtype is unrelated.
+        shooters.add(spawnChild(() -> new SnaleBlasterShooterChild(this, -8, 7, true)));
         cover = spawnChild(() -> new SnaleBlasterCoverChild(this, -8, 4));
     }
 
