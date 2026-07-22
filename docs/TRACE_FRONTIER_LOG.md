@@ -48099,3 +48099,21 @@ standalone CNZ remains at f0 in both scopes.
   (`docs/skdisasm/sonic3k.asm:149830-150055,178025-178033`).
 - The complete-run replay remains red at f13410 on the next player/miniboss
   interaction; trace comparison data remains read-only.
+
+## 2026-07-21 - ICZ miniboss inter-pass wait advances both frontiers
+
+- **`s3k_icz1` physics advanced from f13410 to f13517 and animation advanced
+  from f13410 to f13900.** Total errors fell from 1,945 to 1,776: physics from
+  1,727 to 1,591 and animation from 218 to 185.
+- Root: after every routine `$A` sweep, `loc_71318` enters routine `$C` with a
+  `$3F` timer. Only the later `loc_7133A` callback decrements the pass counter
+  and either returns to `loc_712DA` or starts the orb attack. The engine skipped
+  that entire wait before the first return sweep, placing the boss and its
+  orbiting hurt regions 64 frames ahead of the ROM.
+- Fix: arc completion now always enters the native inter-pass wait; its callback
+  owns the pass-counter decision and transitions directly to the return sweep or
+  orb attack. Focused coverage pins all 64 wait dispatches
+  (`docs/skdisasm/sonic3k.asm:149830-149866`).
+- Validation: `TestS3kIczMinibossObject` is green (20 tests). The complete-run
+  replay remains red at f13517 on a missed ring pickup; trace data remains
+  comparison-only.

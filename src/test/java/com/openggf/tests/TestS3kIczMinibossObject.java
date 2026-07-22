@@ -264,6 +264,16 @@ class TestS3kIczMinibossObject {
         assertEquals(-0x200, invokeInt(instance, "getXVelocityForTesting"),
                 "loc_712DA negates $3E before the first arc, so the first pass moves left");
 
+        stepUntil(instance, () -> invokeInt(instance, "getCurrentRoutine") == 0x0C, 120);
+
+        assertEquals(0x3F, invokeInt(instance, "getRoutineTimerForTesting"),
+                "loc_71318 enters routine $C and waits before loc_7133A decides whether to repeat the arc");
+        for (int frame = 0; frame < 63; frame++) {
+            instance.update(10_000 + frame, mock(PlayableEntity.class));
+        }
+        assertEquals(0x0C, invokeInt(instance, "getCurrentRoutine"),
+                "Obj_Wait must retain the ROM's full $3F countdown between arc passes");
+
         stepUntil(instance, () -> invokeInt(instance, "getCurrentRoutine") == 0x0A
                 && invokeInt(instance, "getXVelocityForTesting") == 0x200, 140);
 

@@ -157,7 +157,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         ARM_ORBS,
         START_DROP,
         START_ARC,
-        FINISH_ARC,
+        RESOLVE_ARC_WAIT,
         START_ORB_ATTACK,
         FINISH_ORB_ATTACK,
         START_RECOVER,
@@ -407,7 +407,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
             case ARM_ORBS -> enterOrbArmWait();
             case START_DROP -> enterDrop();
             case START_ARC -> enterArc();
-            case FINISH_ARC -> finishArc();
+            case RESOLVE_ARC_WAIT -> resolveArcWait();
             case START_ORB_ATTACK -> enterOrbAttack();
             case FINISH_ORB_ATTACK -> enterPaletteSlowdown();
             case START_RECOVER -> enterRecoverWait();
@@ -459,19 +459,23 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         arcXVelocityLatch = -arcXVelocityLatch;
         state.xVel = arcXVelocityLatch;
         routineTimer = ARC_TIME;
-        waitCallback = WaitCallback.FINISH_ARC;
+        waitCallback = WaitCallback.NONE;
         playSfx(Sonic3kSfx.BOSS_ROTATE.id);
     }
 
-    private void finishArc() {
+    private void finishArcPass() {
+        state.routine = ROUTINE_ORB_PREP;
+        routineTimer = ORB_PREP_TIME;
+        waitCallback = WaitCallback.RESOLVE_ARC_WAIT;
+    }
+
+    private void resolveArcWait() {
         attackPassCounter--;
         if (attackPassCounter >= 0) {
             enterArcPass();
             return;
         }
-        state.routine = ROUTINE_ORB_PREP;
-        routineTimer = ORB_PREP_TIME;
-        waitCallback = WaitCallback.START_ORB_ATTACK;
+        enterOrbAttack();
     }
 
     private void enterOrbAttack() {
@@ -516,7 +520,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
 
     private void updateArcPass() {
         if (--routineTimer < 0) {
-            runWaitCallback();
+            finishArcPass();
             return;
         }
         state.yVel -= 0x10;
