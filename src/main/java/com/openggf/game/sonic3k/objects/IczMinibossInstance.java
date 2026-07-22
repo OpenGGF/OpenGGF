@@ -88,6 +88,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private static final int ARC_TIME = 0x5F;
     private static final int ORB_PREP_TIME = 0x3F;
     private static final int ORB_ATTACK_TIME = 0x7F;
+    private static final int PALETTE_SLOWDOWN_TIME = 0x68;
     private static final int RECOVER_WAIT_TIME = 0x3F;
     private static final int RISE_TIME = 0x17;
     private static final int DEFEAT_TIME = 0xB3;
@@ -513,7 +514,10 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
 
     private void enterPaletteSlowdown() {
         state.routine = ROUTINE_PALETTE_SLOWDOWN;
-        routineTimer = RECOVER_WAIT_TIME;
+        // word_71B52's palette-rotation script reaches loc_71390 after 105
+        // dispatches. This is longer than the subsequent $3F Obj_Wait and
+        // controls when the next orb cycle becomes touch-active.
+        routineTimer = PALETTE_SLOWDOWN_TIME;
         waitCallback = WaitCallback.START_RECOVER;
         parentFlags &= ~PARENT_FLAG_ORBS_ARMED;
     }
@@ -1110,7 +1114,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     public int getOrbRoutineForTesting(int index) {
-        return orbs[index].routine;
+        return orbs[index] == null ? -1 : orbs[index].routine;
     }
 
     public int getOrbCollisionFlagsForTesting(int index) {

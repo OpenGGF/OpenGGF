@@ -83,7 +83,10 @@ class TestS3kIczMinibossObject {
         assertEquals(0xBF, invokeInt(boss, "getRoutineTimerForTesting"));
         assertEquals(0, invokeInt(boss, "getCurrentRoutine"));
 
-        instance.update(1, mock(PlayableEntity.class));
+        PlayableEntity player = mock(PlayableEntity.class);
+        instance.update(1, player);
+        instance.update(2, player);
+        instance.update(3, player);
 
         assertEquals(0x07F0, object.getY(),
                 "The ROM waits on the shared boss-camera gate before starting the descent");
@@ -327,6 +330,25 @@ class TestS3kIczMinibossObject {
                 "Orb routine $C must clear parent $38 bit 1 so the boss can leave loc_7135E");
         assertEquals(0, invokeInt(instance, "getParentFlagsForTesting") & (1 << 2),
                 "loc_7136C clears parent $38 bit 2 during palette slowdown");
+    }
+
+    @Test
+    void paletteSlowdownUsesRomScriptDurationBeforeRecoverWait() throws Exception {
+        ObjectInstance instance = createTriggeredUpperRouteBoss();
+
+        stepUntil(instance, () -> invokeInt(instance, "getCurrentRoutine") == 0x10, 1_500);
+
+        for (int frame = 0; frame < 104; frame++) {
+            instance.update(frame, mock(PlayableEntity.class));
+            assertEquals(0x10, invokeInt(instance, "getCurrentRoutine"),
+                    "word_71B52 must retain routine $10 until its 105th dispatch");
+        }
+
+        instance.update(104, mock(PlayableEntity.class));
+        assertEquals(0x12, invokeInt(instance, "getCurrentRoutine"),
+                "word_71B52 calls loc_71390 on the 105th dispatch");
+        assertEquals(0x3F, invokeInt(instance, "getRoutineTimerForTesting"),
+                "loc_71390 starts the separate $3F recovery wait");
     }
 
     @Test

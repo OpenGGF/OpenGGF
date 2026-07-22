@@ -48170,3 +48170,21 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: the focused complete-run replay reaches f14236 in both groups;
   the remaining divergence is the first miniboss contact response. Trace data
   remains comparison-only.
+
+## 2026-07-22 - ICZ miniboss palette-slowdown duration
+
+- **`s3k_icz1` animation advanced from f14236 to f14780 and physics advanced
+  from f14236 to f14782.** The replay now passes the second-cycle miniboss
+  contact without falsely hurting Sonic; 3,148 errors remain (2,263 physics,
+  885 animation).
+- Root: `loc_7136C` starts palette script `word_71B52`, which retains parent
+  routine `$10` for 105 dispatches before calling `loc_71390`. The engine reused
+  the later `$3F` recovery timer, advancing the next parent/orb cycle by 41
+  frames and publishing the snowballs' `$8B` hurt response while the ROM
+  children were still in collision-inactive routine `$06`.
+- Fix: the palette slowdown now owns its script-derived 105-dispatch duration;
+  the subsequent routine `$12` wait remains independently `$3F`. Focused tests
+  pin both timer boundaries (`docs/skdisasm/sonic3k.asm:149899-149932`).
+- Validation: `TestS3kIczMinibossObject` is green (21 tests). The next replay
+  divergence is a dual-player animation/control transition at f14780/f14782;
+  trace data remains comparison-only.
