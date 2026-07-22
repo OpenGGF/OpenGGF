@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: eagerly materialized S3K lost-ring remainder objects now defer their first execution when the preallocated Obj37 owner is behind the live SST cursor. This removes the extra movement step that delayed the first post-freezer ring pickup and advances both ICZ complete-run groups from frame 24119 to 24120.
 - Fix: ICZ end-boss adjusted-position top steam now publishes an at-or-after-bottom-slot freeze through the current solid checkpoint, while ordinary folded smoke retains its one-parent-pass promotion. This advances both complete-run groups from frame 23895 to 24119 without regressing the earlier smoke captures.
 - Fix: ICZ frozen-player blocks now implement the ROM's native-partner attack check: a descending roll or spin dash within the asymmetric block range reflects the attacker's vertical speed, releases the captive without timer-expiry damage, and spawns the shatter debris. This advances both complete-run groups from frame 23822 to 23895.
 - Fix: folded multi-piece solids can also expose a native fresh-contact Y independently from their live piece position; the ICZ boss combines its saved parent Y with the current child-local offset so descending-platform landings occur on the native child SST pass. This advances both complete-run groups from frame 23622 to 23822.

@@ -1602,6 +1602,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             boolean deferRingCountClear = forceDeferredOwnerRingClear || (objectManager != null
                     && firstReservedSlot >= 0
                     && objectManager.reservedSlotWaitsForNextObjectPass(firstReservedSlot));
+            boolean ownerWaitsForNextPass = objectManager != null
+                    && firstReservedSlot >= 0
+                    && objectManager.reservedSlotWaitsForNextObjectPass(firstReservedSlot);
             int previousSlot = firstReservedSlot;
             int spawned = 0;
             for (int i = 0; i < toSpawn; i++) {
@@ -1663,6 +1666,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                         // cursor remains routine 0 until the following pass
                         // (docs/skdisasm/sonic3k.asm:21065-21088,35549-35616).
                         ringObject.clearMainPlayerRingsOnFirstUpdate();
+                    }
+                    if (i > 0 && ownerWaitsForNextPass
+                            && !objectManager.reservedSlotWaitsForNextObjectPass(slotIndex)) {
+                        // Native AllocateObjectAfterCurrent does not create the
+                        // remainder until the behind-cursor owner initializes on
+                        // its next pass. Eager engine allocation preserves slot
+                        // ownership, but these ahead-cursor children must not
+                        // receive an extra movement step in the allocation pass.
+                        ringObject.deferFirstUpdateUntilOwnerPass();
                     }
                     objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
                     if (applyInitialObjectStep && appliesInitialObj37Step(slotIndex, firstReservedSlot)) {

@@ -48700,3 +48700,20 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: focused top-steam coverage requires capture from the current
   checkpoint. The full replay also revalidates the earlier f23327 normal-smoke
   deferral and both groups next diverge at f24119 on ring state.
+
+## 2026-07-22 - S3K deferred Obj37 remainder execution
+
+- **`s3k_icz1` physics and animation advanced from f24119 to f24120.** The
+  focused lost-ring and freezer suites remain green.
+- Root: freezer expiry allocates the Obj37 owner into a slot already passed by
+  the live object cursor. Native does not run that owner or allocate its
+  `AllocateObjectAfterCurrent` remainder until the next pass. The engine eagerly
+  reserves the remainder to preserve ownership, but ahead-cursor children then
+  received an extra movement step on the allocation frame.
+- Fix: an eagerly allocated remainder now records the owner-behind-cursor state
+  and skips only its otherwise-impossible first execution. Owners, children
+  already behind the cursor, and ordinary immediate spills keep their existing
+  cadence.
+- Validation: focused coverage verifies the one-pass wait, and the replay now
+  collects the first matching spilled ring at f24119. Both groups next diverge
+  at f24120 on the second ring pickup.

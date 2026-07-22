@@ -75,6 +75,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private boolean romRenderFlagForFloorProbe = true;
     private boolean clearMainPlayerRingsOnFirstUpdate;
     private boolean touchStateAlreadyPostMovement;
+    private boolean deferFirstUpdateUntilOwnerPass;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -275,6 +276,10 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         if (isDestroyed()) {
+            return;
+        }
+        if (deferFirstUpdateUntilOwnerPass) {
+            deferFirstUpdateUntilOwnerPass = false;
             return;
         }
         if (clearMainPlayerRingsOnFirstUpdate) {
@@ -645,6 +650,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     public void markTouchStateAlreadyPostMovement() {
         touchStateAlreadyPostMovement = true;
+    }
+
+    /**
+     * The Obj37 owner was allocated behind the current SST cursor, so children
+     * allocated eagerly by the engine must wait for that owner's next-pass init.
+     */
+    public void deferFirstUpdateUntilOwnerPass() {
+        deferFirstUpdateUntilOwnerPass = true;
     }
 
     @Override

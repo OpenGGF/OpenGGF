@@ -64,6 +64,20 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void eagerRemainderCanWaitForDeferredOwnerInitializationPass() {
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                0x100, 0x100, 0x0200, -0x0400, 0, 0xFF);
+        ring.deferFirstUpdateUntilOwnerPass();
+
+        ring.update(1, null);
+        assertEquals(0x100, ring.getX(),
+                "An eagerly allocated child must not move before the behind-cursor owner initializes");
+
+        ring.update(2, null);
+        assertEquals(0x102, ring.getX());
+    }
+
+    @Test
     void obj37DoesNotUseSharedXAxisOutOfRangeMacro() {
         // S1 Obj37 RLoss_Bounce does not call the shared out_of_range macro; it deletes only when the
         // shared spill animation timer expires or y_pos passes v_limitbtm2 + 224
