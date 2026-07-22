@@ -48362,3 +48362,20 @@ standalone CNZ remains at f0 in both scopes.
   `TestScriptedVelocityAnimationProfile` are green. The complete-run replay now
   first diverges on Sonic's air state at f19523; trace data remains
   comparison-only.
+
+## 2026-07-22 - ICZ Cork Floor grounded ride exit
+
+- **`s3k_icz1` physics and animation advanced from f19523 to f20133.** Total
+  errors fell from 1,821 to 1,151; the focused Cork Floor suites remain green.
+- Root: ICZ subtype bit 4 clear calls `sub_1DDC6`, whose continued-rider exit at
+  `loc_1DE00` clears `Status_OnObj` and the object's standing bit without
+  setting `Status_InAir`. The engine inherited generic `SolidObjectFull` exit
+  semantics and forced Sonic airborne when he crossed the final Cork Floor
+  edge, skipping the direct handoff to the terrain underneath.
+- Fix: the ICZ sloped Cork Floor now publishes its native non-airborne ride-exit
+  profile. Other Cork Floor variants still use `SolidObjectFull` and retain its
+  normal forced-air exit.
+- Validation: `TestS3kObjectPlayerQueryParticipation`,
+  `TestS3kIcz2CorkFloorRegression`, and the complete-run replay pass through the
+  former f19523 divergence. The next mismatch is Sonic's Y position at f20133;
+  trace data remains comparison-only.

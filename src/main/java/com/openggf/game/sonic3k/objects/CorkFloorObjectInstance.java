@@ -204,6 +204,17 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean forceAirOnRideExit() {
+        // ICZ's sloped helper has a deliberately different continued-ride
+        // exit from SolidObjectFull: sub_1DDC6/loc_1DE00 clears Status_OnObj
+        // and the object's standing bit but does not set Status_InAir
+        // (sonic3k.asm:41221-41264). This lets the next Player_AnglePos hand
+        // the rider directly to terrain beneath the cork floor. Other cork
+        // variants use SolidObjectFull and retain its ordinary airborne exit.
+        return mode != Mode.ICZ_PLANE_SWITCH;
+    }
+
+    @Override
     public int getBalanceWidthPixels() {
         // Sonic_Move reads the object's width_pixels byte, not the default
         // 16-pixel render width nor SolidObjectFull's +$B side extension.

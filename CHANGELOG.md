@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ's sloped Cork Floor now preserves grounded state when `sub_1DDC6` releases a rider, matching the helper's clear-`Status_OnObj`-without-set-`Status_InAir` exit and handing Sonic directly to terrain. This advances both complete-run trace groups from frame 19523 to frame 20133.
 - Fix: S3K's post-`Sonic_Move` low-speed crouch check now reads the player-slot entry `Status_OnObj` snapshot when `move_lock` suppressed the movement animation write. This prevents a retained Cork Floor ride from becoming a false Duck/spindash and advances ICZ complete-run physics to frame 19523 and animation to frame 19531.
 - Fix: ICZ Cork Floors now use `sub_1DDC6`'s native sloped full-solid height table and its single `$24` vertical catch range instead of a flat `SolidObjectFull` surface. This aligns the complete-run landing at frame 19399, advances physics to frame 19427, and leaves animation as the leading frontier at frame 19404.
 - Fix: ICZ miniboss defeat now runs its explosion controller in a real child SST and stops the active snow emitter from the native post-explosion callback. This preserves RNG/object-slot order, restores the missed lightning-shield ring, and advances both ICZ complete-run trace groups to frame 19398.
