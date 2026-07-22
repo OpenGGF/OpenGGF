@@ -48248,3 +48248,19 @@ standalone CNZ remains at f0 in both scopes.
   native fixed-point boundary workers and keeps the copied max-Y target live.
 - Validation: the focused replay's first physics/animation divergence is now
   Sonic's vertical motion at f15522. Trace data remains comparison-only.
+
+## 2026-07-22 - ICZ ice-cube rider release
+
+- **`s3k_icz1` physics and animation advanced from f15522 to f15940.** Total
+  errors fell from 2,951 to 2,234.
+- Root: `Obj_ICZIceCube` clears the player's `Status_OnObj` bit and deletes its
+  SST when it launches a rolling rider. The engine wrote the player bit but
+  retained its parallel `ObjectSolidContactController` ride reference. Once a
+  snowdust child reused that slot, the stale cube reference re-seated Sonic as
+  grounded instead of preserving the native airborne arc.
+- Fix: the cube's launch path now clears both the native player bit and the
+  shared riding-state reference in the same solid callback. Focused cube tests
+  assert the release alongside the `$300` launch and debris creation.
+- Validation: `TestIczIceCubeObjectInstance` is green; the complete-run replay's
+  next divergence is CPU Tails' horizontal speed at f15940. Trace data remains
+  comparison-only.

@@ -101,6 +101,7 @@ class TestIczIceCubeObjectInstance {
         verify(player).setYSpeed((short) -0x300);
         verify(player).setAir(true);
         verify(player).setOnObject(false);
+        verify(objectManager).clearRidingObject(player);
 
         ArgumentCaptor<ObjectInstance> captor = ArgumentCaptor.forClass(ObjectInstance.class);
         verify(objectManager, times(12)).addDynamicObjectAfterCurrent(captor.capture());

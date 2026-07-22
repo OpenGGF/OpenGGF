@@ -149,6 +149,14 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
         player.setYSpeed((short) SHATTER_Y_SPEED);
         player.setAir(true);
         player.setOnObject(false);
+        ObjectServices services = tryServices();
+        if (services != null && services.objectManager() != null) {
+            // The cube deletes its SST immediately after clearing Status_OnObj.
+            // Drop the engine's parallel ride reference as part of that same
+            // native release so the freed slot cannot re-seat the player after
+            // a snow particle reuses it.
+            services.objectManager().clearRidingObject(player);
+        }
         if (player instanceof AbstractPlayableSprite playable) {
             playable.setAnimationId(Sonic3kAnimationIds.ROLL);
         } else {
