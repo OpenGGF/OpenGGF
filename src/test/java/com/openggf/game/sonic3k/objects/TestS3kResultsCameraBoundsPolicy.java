@@ -19,4 +19,11 @@ class TestS3kResultsCameraBoundsPolicy {
         assertTrue(S3kResultsScreenObjectInstance.shouldRestoreLevelCameraBoundsOnExit(0x03, 0));
         assertTrue(S3kResultsScreenObjectInstance.shouldRestoreLevelCameraBoundsOnExit(0x05, 1));
     }
+
+    @Test
+    void preloadedNextActKeepsCameraOwnedByInLevelTitleHandoff() {
+        assertTrue(S3kResultsScreenObjectInstance.isPreloadedNextActHandoff(0, 1));
+        assertFalse(S3kResultsScreenObjectInstance.isPreloadedNextActHandoff(0, 0));
+        assertFalse(S3kResultsScreenObjectInstance.isPreloadedNextActHandoff(1, 1));
+    }
 }

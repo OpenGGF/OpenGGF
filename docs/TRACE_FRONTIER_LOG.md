@@ -48208,3 +48208,23 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: the ICZ miniboss, shared defeat-flow, and signpost focused suites
   are green. The next replay divergence is the results-exit camera release at
   f15257; trace data remains comparison-only.
+
+## 2026-07-22 - ICZ preloaded-act results camera ownership
+
+- **`s3k_icz1` physics advanced from f15257 to f15401 and animation advanced
+  from f15258 to f15435.** Total errors fell from 3,081 to 2,890: physics to
+  2,151 and animation to 739.
+- Root: the ICZ results object represents Apparent Act 1 after the seamless
+  reload has already installed Act 2 as the live level state. The ROM mutates
+  that results owner into the in-level title card and leaves `Scroll_lock` and
+  the boss camera bounds intact until the title-card owner releases them. The
+  engine restored level bounds and normal camera following directly from the
+  results exit. Its folded results timing also omitted the final wait entry
+  that publishes `Restore_PlayerControl`'s Wait animation.
+- Fix: results now recognize the generic `resultsAct < currentAct` provenance
+  and retain camera ownership for the in-level title handoff; the ICZ defeat
+  flow carries its one elapsed wait-entry adjustment independently of the
+  signpost's routine-`$06` boundary. Focused camera-policy and miniboss tests
+  are green.
+- The next replay divergence is the title card's camera-follow release at
+  f15401; trace data remains comparison-only.

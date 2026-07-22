@@ -520,7 +520,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries
                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
-                preservesRoutineSixDispatch
+                resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary
                         ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
                         : RESULTS_CARRIED_RETIRE_DISPATCHES));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");

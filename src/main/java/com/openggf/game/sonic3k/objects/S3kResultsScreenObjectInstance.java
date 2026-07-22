@@ -616,6 +616,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
         boolean retainedReloadState = act == 0 && carriedAcrossSeamlessTransition;
         boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
+        boolean preloadedNextActHandoff = isPreloadedNextActHandoff(act, services().currentAct());
         if (!controlsReleasedAheadOfHandoff) {
             releasePlayerControlsForExit();
         }
@@ -633,8 +634,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // to the pre-boss area (ROM: loc_694D4 uses Obj_IncLevEndXGradual).
         boolean iczAct2EndBossHandoff = zone == 0x05 && act == 1;
         var cam = services().camera();
-        applyCameraFollowExitState(cam, lbzAct2PostBossHandoff);
+        if (!preloadedNextActHandoff) {
+            applyCameraFollowExitState(cam, lbzAct2PostBossHandoff);
+        }
         if (!hasSeamlessTransition && !retainedReloadState
+                && !preloadedNextActHandoff
                 && shouldRestoreCameraBoundsOnExit(zone, act)
                 && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
@@ -767,6 +771,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 && (zone == 0x00 || zone == 0x01 || zone == 0x02);
         boolean lbzActTwoPostBossHandoff = zone == 0x06 && act == 1;
         return !actOneInLevelTitleHandoff && !lbzActTwoPostBossHandoff;
+    }
+
+    static boolean isPreloadedNextActHandoff(int resultsAct, int currentAct) {
+        // Some mid-act bosses run after the next act's level state has already
+        // been loaded while Apparent_act still belongs to the results owner.
+        // The in-level title card, not Obj_LevelResults, later releases the
+        // retained Scroll_lock and camera bounds.
+        return resultsAct == 0 && currentAct > resultsAct;
     }
 
     protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {

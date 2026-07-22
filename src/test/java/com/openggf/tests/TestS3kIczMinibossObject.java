@@ -460,6 +460,8 @@ class TestS3kIczMinibossObject {
                 "the folded explosion child must preserve the 31 overlapping Obj_EndSignControl entries");
         assertEquals(true, readField(signpostFlow, "preservesGroundedResultsDispatchBoundary"),
                 "the separately allocated flow must retain the grounded routine-$06 result dispatch");
+        assertEquals(1, readIntField(signpostFlow, "resultsWaitDurationAdjustment"),
+                "the folded results owner must retain its final wait entry before control restoration");
         assertTrue(instance.isDestroyed(),
                 "The boss body should delete only after queuing the persistent signpost flow");
     }
