@@ -234,8 +234,11 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
         int angleByte = angleAccumulatorByte();
         int sin = TrigLookupTable.sinHex(angleByte);
         int cos = TrigLookupTable.cosHex(angleByte);
-        int x = motion.x << 16;
-        int y = motion.y << 16;
+        // sub_2682E copies the parent's complete 16.16 x_pos/y_pos longs before
+        // accumulating the sine/cosine deltas. SubpixelMotion stores the same
+        // fraction as the high byte of the native low word.
+        int x = (motion.x << 16) | ((motion.xSub & 0xFF) << 8);
+        int y = (motion.y << 16) | ((motion.ySub & 0xFF) << 8);
         int dx = sin * linkLength;
         int dy = cos * linkLength;
         for (int i = 0; i < CHAIN_POINT_COUNT; i++) {

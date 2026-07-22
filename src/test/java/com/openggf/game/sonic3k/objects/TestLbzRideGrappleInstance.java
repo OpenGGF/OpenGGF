@@ -7,11 +7,14 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.physics.Direction;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -77,6 +80,22 @@ class TestLbzRideGrappleInstance {
             assertEquals(0x91, player.getMappingFrame(),
                     "byte_26794 should also use the high angle byte, not the rapidly changing low byte");
         }
+    }
+
+    @Test
+    void chainCoordinatesIncludeParentSubpixelCarry() throws ReflectiveOperationException {
+        LbzRideGrappleInstance grapple = (LbzRideGrappleInstance) grapple(0x1800, 0x0600, 0);
+        writeInt(grapple, "chainExtension", 0x28);
+        writeInt(grapple, "angle", 0x1000);
+        invokeUpdateChainCoordinates(grapple);
+        int wholePixelHandleX = readInt(grapple, "handleX");
+
+        SubpixelMotion.State motion = (SubpixelMotion.State) readField(grapple, "motion");
+        motion.xSub = 0xFF;
+        invokeUpdateChainCoordinates(grapple);
+
+        assertEquals(wholePixelHandleX + 1, readInt(grapple, "handleX"),
+                "sub_2682E adds the circular deltas to the complete 16.16 parent x_pos");
     }
 
     @Test
@@ -169,6 +188,31 @@ class TestLbzRideGrappleInstance {
         player.setYSpeed((short) 0x0200);
         player.setGSpeed((short) 0x0100);
         return player;
+    }
+
+    private static void invokeUpdateChainCoordinates(LbzRideGrappleInstance grapple)
+            throws ReflectiveOperationException {
+        Method method = LbzRideGrappleInstance.class.getDeclaredMethod("updateChainCoordinates");
+        method.setAccessible(true);
+        method.invoke(grapple);
+    }
+
+    private static Object readField(Object target, String name) throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static int readInt(Object target, String name) throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(target);
+    }
+
+    private static void writeInt(Object target, String name, int value) throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(target, value);
     }
 
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {

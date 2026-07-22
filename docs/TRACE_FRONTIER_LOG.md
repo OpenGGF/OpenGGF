@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ ride-grapple parent subpixel carry
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 12111 to
+  frame 13023.** The next divergence is Sonic's Y position (`$01AE` expected
+  versus `$01A9` actual).
+- Root: the ride grapple's circular-coordinate routine copies the complete
+  16.16 parent `x_pos` and `y_pos` longs before accumulating its sine/cosine
+  link deltas. The engine seeded that calculation from whole pixels and
+  discarded the fraction retained by `MoveSprite2`, leaving the handle one
+  pixel behind when the fixed-point sum carried.
+- Fix: chain-coordinate accumulation now includes `SubpixelMotion`'s fraction
+  as the high byte of the native position low word before applying every link
+  delta. Focused coverage verifies that a `$FF00` parent fraction carries into
+  the published handle coordinate.
+- Validation: all 8 focused ride-grapple tests pass and the LBZ replay reaches
+  frame 13023. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - LBZ deferred Orbinaut callback phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 11697 to
