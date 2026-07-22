@@ -16,9 +16,11 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +49,27 @@ class TestLbzCupElevatorInstance {
         assertEquals("LBZCupElevator", elevator.getName());
         assertInstanceOf(SolidObjectProvider.class, elevator,
                 "Obj_LBZCupElevator calls SolidObjectFull2_1P while near upright");
+        assertEquals(SolidExecutionMode.MANUAL_CHECKPOINT,
+                ((LbzCupElevatorInstance) elevator).solidExecutionMode(),
+                "Obj18 must resolve SolidObjectFull before its same-slot player-control tail");
+        assertTrue(((LbzCupElevatorInstance) elevator).bypassesOffscreenSolidGate(),
+                "SolidObjectFull2_1P must run its P2 pass without the regular render-flag gate");
+    }
+
+    @Test
+    void activeCupSamplesCpuSidekickBeforePlayer2MovementSlot() throws Exception {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
+        Tails sidekick = new Tails("tails", (short) 0x1800, (short) 0x0600);
+        sidekick.setCpuControlled(true);
+
+        assertEquals(0, elevator.getFullSolidPlayerPositionHistoryFrames(sidekick));
+        setPrivateInt(elevator, "activationFlag", 1);
+
+        assertEquals(1, elevator.getFullSolidPlayerPositionHistoryFrames(sidekick),
+                "active Obj18 executes before the native Player 2 movement slot");
+        assertFalse(elevator.airborneStaleStandingBitReturnsNoContact(sidekick),
+                "a provisional engine P2 bit must not hide the active cup's live Full2 contact");
     }
 
     @Test

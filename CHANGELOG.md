@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ cup elevators now run their native `SolidObjectFull2_1P` checkpoint before same-slot player control, bypass the regular P2 render gate, and sample active-cup CPU contact before Player 2's movement slot. This captures both players on their native dispatch and advances the combined LBZ frontier from frame 6484 to frame 6535 without moving any other trace frontier.
 - Fix: LBZ cup elevators now expose their native `$20` `width_pixels` value to player edge-balance logic while retaining the independent `$0B` `SolidObjectFull` side padding. This restores CPU Tails' cup-edge balance animation and advances the combined LBZ frontier from frame 6057 to frame 6484 without moving any other trace frontier.
 - Fix: S3K Corkeys now retain Obj_WaitOffscreen's rendered-placeholder restore pass before initialization and continue executing after activation without an extra horizontal camera pause. This restores LBZ's rising-player enemy rebound and advances the combined frontier from frame 5896 to frame 6057 without moving any other trace frontier.
 - Fix: S3K's complete `AllocateObjectAfterCurrent` lost-ring chain now exposes live SST coordinates through `Collision_response_list`, including owners that land behind the current object cursor and skip their same-pass movement step. This restores LBZ's frame-5314 ring pickup and advances the combined frontier to frame 5896 without moving any other trace frontier.

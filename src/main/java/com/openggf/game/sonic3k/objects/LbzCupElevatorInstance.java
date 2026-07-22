@@ -16,6 +16,7 @@ import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -188,8 +189,31 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
         updateAction();
         applyOrbitalX();
+        if (tryServices() != null) {
+            checkpointAll();
+        }
         processPlayers(playerEntity);
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        // Obj18 calls SolidObjectFull before LBZCupElevator_PlayerControl, so a
+        // player who lands in this SST dispatch is immediately eligible for
+        // capture by the same object routine.
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    @Override
+    public int getFullSolidPlayerPositionHistoryFrames(PlayableEntity player) {
+        // Player 1's fixed slot precedes Obj18, but Player 2's fixed slot follows
+        // it. Once $34 marks the moving cup active, its per-player SolidObject
+        // call therefore sees the CPU sidekick before that sidekick's movement
+        // slot. The engine advances both players before its object pass, so this
+        // active-cup P2 check samples the previous completed position.
+        return activationFlag != 0
+                && player instanceof AbstractPlayableSprite sprite
+                && sprite.isCpuControlled() ? 1 : 0;
     }
 
     @Override
@@ -218,6 +242,19 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     @Override
     public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // The engine can retain a provisional P2 standing bit while Player 2
+        // is still airborne below an already-active cup. Obj18's live P2 bit
+        // is clear in that slot ordering, so let the Full2 new-contact path
+        // re-evaluate the CPU sidekick against the sampled P2 position.
+        return activationFlag == 0
+                || !(player instanceof AbstractPlayableSprite sprite && sprite.isCpuControlled());
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj18 calls SolidObjectFull2_1P for both players. Unlike the regular
+        // SolidObjectFull entry, that helper does not test Player 2's on-screen
+        // render flag before resolving the P2 standing bit.
         return true;
     }
 
@@ -632,6 +669,29 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     private boolean isPlayerStandingOnThis(AbstractPlayableSprite player) {
         return player.isOnObject() && player.getLatchedSolidObjectInstance() == this;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        AbstractPlayableSprite player = mainPlayerOrNull();
+        AbstractPlayableSprite sidekick = nativeP2OrNull();
+        return "routine=" + routine
+                + " angle=" + Integer.toHexString(angleByte())
+                + " activation=" + activationFlag
+                + " p1=" + p1.inside + "/" + p1.cooldown
+                + " p2=" + p2.inside + "/" + p2.cooldown
+                + " solid=" + (player != null && isSolidFor(player))
+                + " standing=" + (player != null && isPlayerStandingOnThis(player))
+                + " latchSelf=" + (player != null && player.getLatchedSolidObjectInstance() == this)
+                + " p2present=" + (sidekick != null)
+                + " p2solid=" + (sidekick != null && isSolidFor(sidekick))
+                + " p2standing=" + (sidekick != null && isPlayerStandingOnThis(sidekick))
+                + " p2latchSelf=" + (sidekick != null && sidekick.getLatchedSolidObjectInstance() == this)
+                + " p2hist=" + (sidekick != null ? getFullSolidPlayerPositionHistoryFrames(sidekick) : -1)
+                + " p2prev=" + (sidekick != null
+                        ? Integer.toHexString(sidekick.getCentreX(1) & 0xFFFF) + ","
+                                + Integer.toHexString(sidekick.getCentreY(1) & 0xFFFF)
+                        : "none");
     }
 
     private boolean isCapturedByThis(PlayableEntity playerEntity) {

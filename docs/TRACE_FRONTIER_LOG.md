@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ cup same-slot P1/P2 capture
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 6484 to
+  frame 6535.** Total release-blocking errors fell from 6971 to 6845; the next
+  divergence is Sonic's mapping frame (`$55` expected versus `$96` actual).
+- Root: Obj18 calls `SolidObjectFull2_1P` immediately before each player's
+  `LBZCupElevator_PlayerControl` tail. The compatibility checkpoint ran after
+  the object update, delaying Sonic's capture one frame. After moving the
+  checkpoint inline, CPU Tails still missed its native capture because the
+  engine had already advanced Player 2 and applied the regular full-solid P2
+  render gate, while Obj18's Full2 call observes Player 2 before that slot and
+  bypasses the gate. A provisional engine P2 standing bit also incorrectly
+  consumed the active cup's live new-contact pass.
+- Fix: Obj18 now owns a manual solid checkpoint between orbital motion and
+  player control. Full-solid providers can select a player position-history
+  phase, and an active cup selects the previous completed CPU-sidekick
+  position while retaining the current Player 1 position. The cup advertises
+  Full2's off-screen behavior and lets the active P2 new-contact path replace
+  the engine-only provisional standing bit. All conditions are driven by cup
+  activation, player identity, helper semantics, and object state.
+- Validation: all 15 focused cup-elevator tests pass and the LBZ replay reaches
+  frame 6535. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
 ## 2026-07-22 - LBZ cup native edge-balance width
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 6057 to

@@ -19,6 +19,10 @@ public record SolidRoutineAdapter(SolidObjectProvider provider, SolidRoutineProf
         return provider.getTopSolidPlayerPositionHistoryFrames(player);
     }
 
+    public int getFullSolidPlayerPositionHistoryFrames(PlayableEntity player) {
+        return provider.getFullSolidPlayerPositionHistoryFrames(player);
+    }
+
     public boolean rejectsZeroDistanceTopSolidLanding() {
         return provider.rejectsZeroDistanceTopSolidLanding();
     }

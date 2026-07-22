@@ -36,6 +36,20 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Number of position-history frames to use for this object's new
+     * {@code SolidObjectFull} geometry check.
+     * <p>
+     * This is the full-solid counterpart to
+     * {@link #getTopSolidPlayerPositionHistoryFrames(PlayableEntity)}. It is
+     * intended for ROM object slots that observe a particular player before
+     * that player's movement slot has executed, while the engine's shared
+     * player pass has already advanced the live position.
+     */
+    default int getFullSolidPlayerPositionHistoryFrames(PlayableEntity player) {
+        return 0;
+    }
+
+    /**
      * Whether this top-solid object rejects the exact surface boundary before landing.
      * <p>
      * Most shared top-solid callers keep the established engine/profile behavior.
