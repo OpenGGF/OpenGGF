@@ -60,7 +60,7 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
             p2Counter = processPlayer(p2, p2Counter, false);
         }
 
-        if (!isOnScreen(0x80)) {
+        if (!spriteOnScreenTestPasses()) {
             setDestroyedByOffscreen();
         }
     }
@@ -85,6 +85,13 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
         int x = player.getCentreX() & 0xFFFF;
         int y = player.getCentreY() & 0xFFFF;
         return x >= left && x < right && y >= top && y < bottom;
+    }
+
+    private boolean spriteOnScreenTestPasses() {
+        int cameraCoarseBack = ((services().camera().getX() & 0xFFFF) - 0x80) & 0xFF80;
+        int objectCoarse = spawn.x() & 0xFF80;
+        int unsignedDistance = (objectCoarse - cameraCoarseBack) & 0xFFFF;
+        return unsignedDistance <= 0x280;
     }
 
     private int processPlayer(AbstractPlayableSprite player, int counter, boolean nativeP1) {

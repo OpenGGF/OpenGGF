@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ launcher coarse lifetime window
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 8071 to
+  frame 9706.** Total release-blocking errors changed from 6001 to 8495 as the
+  restored launcher boost exposes a different downstream route; the next
+  divergence is Sonic's Y speed (`-$0400` expected versus `$0000` actual).
+- Root: Obj15's native `Sprite_OnScreen_Test` rounds the launcher X position
+  and compares it unsigned against the `$280` coarse horizontal window. The
+  engine instead required the launcher to be within a two-dimensional viewport
+  margin, deleting this vertically distant placement before Sonic arrived.
+- Fix: launcher lifetime now uses the native coarse-back X arithmetic and
+  `$280` threshold while retaining the shared respawnable off-screen destroy
+  path. Focused tests cover vertical independence inside the window and
+  deletion after the launcher falls behind the coarse-back boundary.
+- Validation: both focused launcher tests pass and the LBZ replay reaches frame
+  9706. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61 tests,
+  45 green and the same 16 documented red routes. No S3K, S1, or S2 frontier
+  regressed.
+
 ## 2026-07-22 - LBZ Ribot activation and appendage physics
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 7305 to
