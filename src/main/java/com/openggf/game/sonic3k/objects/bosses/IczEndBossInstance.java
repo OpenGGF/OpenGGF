@@ -447,6 +447,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         } else if (bossSnowdustEmitter != null) {
             bossSnowdustEmitter.setDestroyed(true);
         }
+        bossSnowdustEmitter = null;
         if (services().objectManager() == null) {
             return;
         }
@@ -1186,6 +1187,14 @@ public final class IczEndBossInstance extends AbstractBossInstance
     @Override
     public int getPieceY(int pieceIndex) {
         return getSolidPlatformYForTesting();
+    }
+
+    @Override
+    public int getPieceFreshContactX(int pieceIndex, PlayableEntity player) {
+        // Parent slot 5 has already published its next X when the engine's
+        // folded solid pass runs. Native child slot 28 still uses the X saved
+        // at its own loc_71F30 entry for this contact window.
+        return getPreUpdateX();
     }
 
     @Override

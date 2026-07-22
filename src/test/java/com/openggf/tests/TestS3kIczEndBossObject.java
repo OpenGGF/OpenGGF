@@ -514,6 +514,25 @@ class TestS3kIczEndBossObject {
     }
 
     @Test
+    void foldedBottomChildUsesItsSavedEntryXForFreshContact() throws Exception {
+        ObjectInstance instance = createTriggeredBoss();
+        MultiPieceSolidProvider boss = (MultiPieceSolidProvider) instance;
+        PlayableEntity player = mock(PlayableEntity.class);
+
+        for (int frame = 0; frame < 900; frame++) {
+            instance.snapshotPreUpdatePosition();
+            int entryX = instance.getX();
+            instance.update(1200 + frame, player);
+            if (instance.getX() != entryX) {
+                assertEquals(entryX, boss.getPieceFreshContactX(0, player),
+                        "loc_71F30 saves x_pos before folded parent motion is published");
+                return;
+            }
+        }
+        assertTrue(false, "boss swing did not publish a horizontal step");
+    }
+
+    @Test
     void bottomSpikedPartIsAlsoTheRomSolidPlatform() throws Exception {
         ObjectInstance instance = createTriggeredBoss();
 

@@ -31,6 +31,18 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     int getPieceY(int pieceIndex);
 
     /**
+     * X anchor used by a piece's fresh-contact {@code SolidObject} geometry.
+     *
+     * <p>Folded providers normally publish their current piece position. A
+     * provider that represents a later native SST child can retain that child's
+     * slot-phase X here without changing the current position used for riding,
+     * rendering, or touch regions.
+     */
+    default int getPieceFreshContactX(int pieceIndex, PlayableEntity player) {
+        return getPieceX(pieceIndex);
+    }
+
+    /**
      * Returns collision parameters for the specified piece.
      * Default implementation returns the same params for all pieces.
      * Override if pieces have different sizes.

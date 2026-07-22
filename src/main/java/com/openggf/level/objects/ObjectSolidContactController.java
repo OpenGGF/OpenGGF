@@ -3014,7 +3014,7 @@ final class ObjectSolidContactController {
                 }
             }
             SolidObjectParams params = multiPiece.getPieceParams(i);
-            int pieceX = multiPiece.getPieceX(i);
+            int pieceX = multiPiece.getPieceFreshContactX(i, player);
             int pieceY = multiPiece.getPieceY(i);
             if (ridingCurrentObject && i == currentRidingPieceIndex) {
                 anyStanding = true;

@@ -48627,3 +48627,22 @@ standalone CNZ remains at f0 in both scopes.
   radius paths. The complete-run replay passes the isolated f23558 and f23583
   landing frames; physics and animation next diverge together on Tails at
   f23578.
+
+## 2026-07-22 - ICZ boss child-entry contact X
+
+- **`s3k_icz1` physics and animation advanced from f23578 to f23622.** Total
+  errors fell from 686 to 559; focused boss and solid-contact tests remain
+  green.
+- Root: at f23578 CPU Tails is exactly +$18 from native bottom-child slot 28,
+  outside `Solid_Landed`'s narrow width. The folded engine parent had already
+  published its next +1 X step, reducing the distance to $17 and landing Tails
+  one frame early. The longer replay also exposed the boss retaining its
+  stopped snow emitter after that object left the rewind identity table.
+- Fix: `MultiPieceSolidProvider` now has a narrow fresh-contact X hook distinct
+  from current piece position. The ICZ boss supplies its saved child-entry X,
+  while continued riding, rendering, and touch regions keep the live child X.
+  Stopping boss snow now clears the ended emitter ownership reference.
+- Validation: focused boss coverage verifies a moving folded child's entry X;
+  shared solid-contact tests cover the default current-X behavior. The replay
+  passes Tails' fall and next-frame landing, with both verification groups next
+  diverging at f23622.
