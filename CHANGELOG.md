@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: adjacent LBZ rolling drums now distinguish reverse-load receivers that already have native SST precedence from ordinary forward-load receivers. Reverse handoffs retain the live tumble phase, while later forward receivers observe the outgoing release and run `Player_TouchFloor`, advancing the combined LBZ frontier from frame 14074 to frame 14174 without regressing another trace frontier.
 - Fix: LBZ ride grapples now capture players at the parent SST position before following the handle child, and reset stale sway state on every zero-length chain dispatch. This restores the native first-link position and advances the combined LBZ frontier from frame 13473 to frame 14074 without regressing another trace frontier.
 - Fix: LBZ Snale Blasters now derive the lower shooter's alternate firing script and vertical projectile direction from its native child subtype rather than the placed parent subtype. This removes a duplicate short-cadence projectile, restores Sonic's recorded badnik defeat, and advances the combined LBZ frontier from frame 13023 to frame 13473 without regressing another trace frontier.
 - Fix: LBZ ride grapples now seed their chain and handle accumulation from the complete 16.16 parent position, preserving `MoveSprite2` subpixel carry through the native circular-coordinate routine. This advances the combined LBZ frontier from frame 12111 to frame 13023 without regressing another trace frontier.

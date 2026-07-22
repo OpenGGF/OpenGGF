@@ -50,6 +50,7 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     private int fallbackP1Angle;
     private boolean p2Riding;
     private int fallbackP2Angle;
+    private int activationCameraX = Integer.MIN_VALUE;
 
     public LbzRollingDrumInstance(ObjectSpawn spawn) {
         super(spawn, "LBZRollingDrum");
@@ -60,6 +61,7 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        captureActivationCameraX();
         int playerIndex = 0;
         for (PlayableEntity candidate : playersToProcess(playerEntity)) {
             if (candidate instanceof AbstractPlayableSprite player) {
@@ -299,6 +301,7 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             for (var instance : objectManager.getActiveObjects()) {
                 if (instance instanceof LbzRollingDrumInstance candidate
                         && candidate != this
+                        && receiverHasNativePrecedence(candidate)
                         && signedWordDelta(candidate.spawn.x(), spawn.x()) > 0
                         && candidate.canCaptureLivePlayer(player)) {
                     return true;
@@ -308,6 +311,34 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             // Direct object tests can instantiate without ObjectServices.
         }
         return false;
+    }
+
+    private void captureActivationCameraX() {
+        if (activationCameraX != Integer.MIN_VALUE) {
+            return;
+        }
+        try {
+            if (services().camera() != null) {
+                activationCameraX = services().camera().getX() & 0xFFFF;
+            }
+        } catch (IllegalStateException ignored) {
+            // Direct object tests do not need placement-load history.
+        }
+    }
+
+    private boolean receiverHasNativePrecedence(LbzRollingDrumInstance receiver) {
+        if (activationCameraX != Integer.MIN_VALUE
+                && receiver.activationCameraX != Integer.MIN_VALUE) {
+            // S3K's backward placement pass can materialize a right-hand drum
+            // after its left neighbour while assigning the newly freed lower
+            // SST slot. The decreasing activation camera coordinate records
+            // that native reverse-load ordering; ordinary forward loads let
+            // the outgoing left drum release before the later receiver runs.
+            return receiver.activationCameraX < activationCameraX;
+        }
+        return receiver.getSlotIndex() >= 0
+                && getSlotIndex() >= 0
+                && receiver.getSlotIndex() < getSlotIndex();
     }
 
     private boolean canCaptureLivePlayer(AbstractPlayableSprite player) {

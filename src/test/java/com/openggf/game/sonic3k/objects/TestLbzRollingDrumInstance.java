@@ -216,6 +216,8 @@ class TestLbzRollingDrumInstance {
     void rightwardOverlappingDrumHandoffPreservesLiveRideUntilReceiverRuns() {
         LbzRollingDrumInstance outgoing = drum(0x0600, 0x0640, 0x80);
         LbzRollingDrumInstance incoming = drum(0x0700, 0x0640, 0x80);
+        outgoing.setSlotIndex(13);
+        incoming.setSlotIndex(6);
         ObjectManager objectManager = mock(ObjectManager.class);
         when(objectManager.getActiveObjects()).thenReturn(List.of(outgoing, incoming));
         outgoing.setServices(new TestObjectServices() {
@@ -242,6 +244,36 @@ class TestLbzRollingDrumInstance {
                 "a live Status_OnObj handoff must not call Player_TouchFloor");
         assertEquals(0x44, player.getFlipAngle(),
                 "the receiving drum retains the active tumble phase");
+    }
+
+    @Test
+    void laterSlotRightDrumLetsOutgoingReleaseBeforeRecapture() {
+        LbzRollingDrumInstance outgoing = drum(0x0600, 0x0640, 0x80);
+        LbzRollingDrumInstance incoming = drum(0x0700, 0x0640, 0x80);
+        outgoing.setSlotIndex(6);
+        incoming.setSlotIndex(13);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.getActiveObjects()).thenReturn(List.of(outgoing, incoming));
+        outgoing.setServices(new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+        TestablePlayableSprite player = groundedPlayer(0x0600, 0x0640);
+        outgoing.update(0, player);
+        player.setFlipAngle(0x44);
+        player.setCentreXPreserveSubpixel((short) 0x0683);
+        player.setCentreY((short) 0x0645);
+
+        outgoing.update(1, player);
+        assertTrue(player.getAir(),
+                "a receiver in a later SST slot cannot capture before the outgoing controller releases");
+
+        incoming.update(1, player);
+        assertFalse(player.getAir());
+        assertEquals(0, player.getFlipAngle(),
+                "the later receiver observes live Status_InAir and runs Player_TouchFloor");
     }
 
     @Test

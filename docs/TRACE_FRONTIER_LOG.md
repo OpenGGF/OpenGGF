@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ rolling-drum activation precedence
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 14074 to
+  frame 14174.** The next divergence is CPU Tails' animation (`$00` expected
+  versus `$20` actual).
+- Root: the earlier rightward drum transfer was loaded during a backward camera
+  pass, where the newly materialized right receiver took an earlier free SST
+  slot and captured before the outgoing drum. This later transfer was loaded
+  in ordinary forward order, so its right receiver executes afterward. The
+  previous spatial-only workaround retained the live ride in both cases,
+  skipping the later transfer's native airborne release and
+  `Player_TouchFloor` tumble reset.
+- Fix: each drum records the camera X of its placement activation. A receiver
+  activated on the decreasing-camera pass retains native precedence; an
+  ordinary forward receiver lets the outgoing controller release first. Slot
+  order remains the focused-test fallback when no camera service is present.
+  Focused coverage exercises both earlier- and later-receiver handoffs.
+- Validation: all 22 focused rolling-drum tests pass and the LBZ replay reaches
+  frame 14174. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - LBZ ride-grapple capture and zero-length sway
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 13473 to
