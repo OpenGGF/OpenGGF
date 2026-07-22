@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance;
+import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossGradualMaxXExtender;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
@@ -1413,8 +1414,8 @@ class TestS3kIczEndBossObject {
             capsule.update(frame, player);
         }
 
-        assertTrue(services.spawnedChildren.stream().anyMatch(child ->
-                child.getClass().getSimpleName().equals("S3kResultsScreenObjectInstance")),
+        assertTrue(services.spawnedChildren.stream().anyMatch(
+                        S3kResultsScreenObjectInstance.class::isInstance),
                 "sub_865DE waits $40 pre-decremented frames before Obj_LevelResults is allocated");
         assertTrue(services.gameState.isEndOfLevelActive());
         org.mockito.Mockito.verify(player).setAnimationId(Sonic3kAnimationIds.VICTORY);

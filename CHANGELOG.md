@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ Act 2 results now retain their native `loc_71DE2` owner for the final thirteen child-retirement dispatches, keeping camera and ending-pose control locked until `_unkFAA8` clears, then restoring target max-Y and spawning the `$47C0` gradual max-X helper. This advances both complete-run groups from frame 25080 to 25093 and reduces remaining errors from 56 to 4.
 - Fix: upright S3K egg capsules now retain themselves as the sole valid solid-contact owner when `Set_PlayerEndingPose` applies object control, preserving the ROM's existing button support and status bits while ordinary solids remain suppressed. This advances both ICZ complete-run groups from frame 24576 to 25080.
 - Fix: the ICZ end-boss defeat countdown now preserves the distinct dispatch cadence of `Wait_FadeToLevelMusic` and the `loc_71D80` child-creation tail call, allowing the gradual max-X helper to begin on its native pass. This advances both complete-run groups from frame 24407 to 24576.
 - Fix: the ICZ end boss now preserves the final-hit `$3F` fade wait, releases its shell fragments at `loc_71D80`, and then consumes the newly seeded 119-count wait before allocating the capsule and gradual max-X helper. This restores the ROM's two-stage defeat handoff and advances both complete-run groups from frame 24374 to 24407.

@@ -48809,3 +48809,20 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: the replay preserves Sonic's exact zero-velocity Victory pose,
   status byte, and capsule ride through results. Both groups next diverge at
   f25080 on post-results camera X restoration.
+
+## 2026-07-22 - ICZ retained post-results owner
+
+- **`s3k_icz1` physics and animation advanced from f25080 to f25093.** Total
+  errors fell from 56 to 4; the focused ICZ end-boss suite remains green.
+- Root: the engine retired its embedded result elements thirteen owner entries
+  before native Obj_LevelResults' final child SST. That cleared object control,
+  restored broad level camera bounds, and resumed Tails while the native boss
+  still ran `loc_71DE2` and pinned the arena.
+- Fix: ICZ uses a retained results subtype whose thirteen additional retirement
+  dispatches model the remaining child SSTs. Its exit preserves the arena
+  bounds, restores target max-Y, and allocates `Child6_IncLevX` toward `$47C0`
+  before the shared results exit releases control.
+- Validation: all camera, position, velocity, status, Tails CPU, and ending-pose
+  values remain exact through the native owner release. Both groups next
+  diverge at f25093 only because the control restore has not yet published the
+  Wait animation fields.
