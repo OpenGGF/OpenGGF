@@ -48959,3 +48959,26 @@ standalone CNZ remains at f0 in both scopes.
   `*TraceReplay#replayMatchesTrace` sweep reports 48 passed, the same 16
   documented red routes, and two skips. All non-LBZ S3K, S1, and S2 frontiers
   and error totals remain unchanged.
+
+## 2026-07-22 - LBZ tube-elevator entry and bob phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 2997 to
+  frame 3039.** Total release-blocking errors fell from 9748 to 6994; the next
+  divergence is CPU Tails' X speed (`$0018` expected versus `$0030` actual).
+- Root: Obj29 uses `SolidObjectFull_Offset` while open, with `d2=$08` as both
+  its surface distance and collision half-height and `d3=$20` as the anchor Y
+  offset. It remains a full-solid routine. Partner fast-capture additionally
+  requires this object's standing bit, and `loc_29EE2` samples the current bob
+  phase before incrementing it while the later routines increment first. The
+  shared representation had conflated the two vertical arguments, treated the
+  opening as top-only, captured an airborne partner from P1 phase alone, and
+  advanced the start-spin bob before sampling it.
+- Fix: the tube elevator now represents the native offset solid parameters,
+  preserves its captured player's object-managed standing state, gates partner
+  fast-capture on object-specific support, stores the ROM's `$B0-$CF` bob-phase
+  skip, and uses the distinct start-spin sample cadence. All behavior follows
+  live object/player state with no route, zone, or frame exception.
+- Validation: six focused tube-elevator cases pass and the LBZ replay reaches
+  frame 3039. The complete `*TraceReplay#replayMatchesTrace` sweep reports 48
+  passed routes, the same 16 documented red routes, and two skips. All non-LBZ
+  S3K, S1, and S2 frontiers and error totals remain unchanged.

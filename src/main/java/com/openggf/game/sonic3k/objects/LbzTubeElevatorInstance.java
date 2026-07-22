@@ -72,7 +72,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
     private static final SolidObjectParams FULL_SOLID =
             new SolidObjectParams(WIDTH_PIXELS + SOLID_SIDE_PADDING, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
     private static final SolidObjectParams OPEN_SOLID =
-            new SolidObjectParams(WIDTH_PIXELS + SOLID_SIDE_PADDING, 8, 0x20);
+            new SolidObjectParams(WIDTH_PIXELS + SOLID_SIDE_PADDING, 8, 8, 0, 0x20);
 
     private final PlayerTubeState p1 = new PlayerTubeState();
     private final PlayerTubeState p2 = new PlayerTubeState();
@@ -147,7 +147,21 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
 
     @Override
     public boolean isTopSolidOnly() {
-        return state == STATE_WAIT_PLAYER || state == STATE_WAIT_EXIT;
+        // ROM uses SolidObjectFull_Offset while open and SolidObjectFull while
+        // spinning/closed. The offset changes d2/d3, not the routine family.
+        return false;
+    }
+
+    @Override
+    public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite
+                && sprite.isObjectControlled()
+                && sprite.getLatchedSolidObjectInstance() == this;
+    }
+
+    @Override
+    public Integer getObjectManagedRideCentreY(PlayableEntity player, int objectY, SolidObjectParams params) {
+        return objectY + PLAYER_Y_OFFSET - player.getYRadius();
     }
 
     @Override
@@ -210,7 +224,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             setupPath();
             requestFastVerticalScroll();
         }
-        applyBobFull();
+        applyStartSpinBob();
     }
 
     private void updateMovePath() {
@@ -343,7 +357,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             return;
         }
         if (tubeState.phase == 0) {
-            if (canCapture(player) || otherPlayerInside) {
+            if (canCapture(player) || (otherPlayerInside && isStandingOnThisElevator(player))) {
                 capturePlayer(player, tubeState);
             }
             return;
@@ -374,6 +388,21 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         }
         int dy = player.getCentreY() - y + PLAYER_Y_BIAS;
         return dy >= 0 && dy < PLAYER_Y_RANGE;
+    }
+
+    private boolean isStandingOnThisElevator(AbstractPlayableSprite player) {
+        if (!player.isOnObject()) {
+            return false;
+        }
+        try {
+            ObjectManager objectManager = services().objectManager();
+            if (objectManager != null) {
+                return objectManager.getRidingObject(player) == this;
+            }
+        } catch (IllegalStateException ignored) {
+            // Direct object tests can use the native solid-object latch.
+        }
+        return player.getLatchedSolidObjectInstance() == this;
     }
 
     private void capturePlayer(AbstractPlayableSprite player, PlayerTubeState tubeState) {
@@ -437,12 +466,25 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         applyBob();
     }
 
+    private void applyStartSpinBob() {
+        // ROM loc_29EE2 samples 1(a4) before incrementing it. The waiting,
+        // exit, and closed routines increment first and therefore use applyBob().
+        int sampleAngle = bobAngle;
+        bobAngle = (bobAngle + 2) & 0xFF;
+        int offset = TrigLookupTable.sinHex(sampleAngle) >> 6;
+        y = baseY - offset;
+        fixedY = (long) y << 16;
+    }
+
     private void applyBob() {
         bobAngle = (bobAngle + 2) & 0xFF;
         int adjusted = bobAngle;
         if (adjusted >= 0xB0 && adjusted < 0xD0) {
             adjusted = (adjusted + 0x20) & 0xFF;
         }
+        // ROM writes the adjusted value back to 1(a4), skipping the entire
+        // $B0-$CF phase band rather than reapplying the correction each frame.
+        bobAngle = adjusted;
         int offset = TrigLookupTable.sinHex(adjusted);
         if (offset == 0x100) {
             offset--;

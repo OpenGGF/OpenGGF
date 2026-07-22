@@ -5,6 +5,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
+import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TestObjectServices;
@@ -12,6 +13,7 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,13 +59,25 @@ class TestLbzTubeElevatorInstance {
     }
 
     @Test
-    void openWaitingElevatorDoesNotExposeSideCollisionThatWallsOffTubeEntry() {
+    void firstPlayerInsideDoesNotCaptureAirborneSecondPlayerWithoutStandingBit() {
+        LbzTubeElevatorInstance elevator = (LbzTubeElevatorInstance) elevator(0x1200, 0x0600, 0);
+        TestablePlayableSprite tails = playerAt(0x1200, 0x0600);
+        tails.setAir(true);
+        elevator.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+
+        elevator.update(0, playerAt(0x1200, 0x0600));
+
+        assertFalse(tails.isObjectControlled(),
+                "P2 fast capture requires both P1 phase and this object's p2_standing_bit");
+    }
+
+    @Test
+    void openWaitingElevatorRetainsSolidObjectFullOffsetRoutineFamily() {
         ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
         SolidObjectProvider solid = (SolidObjectProvider) elevator;
 
-        assertTrue(solid.isTopSolidOnly(),
-                "Obj_LBZTubeElevator waits for LBZTubeElevator_CheckPlayer to capture entry; "
-                        + "the shared solid pass must not side-wall the tube opening first");
+        assertFalse(solid.isTopSolidOnly(),
+                "SolidObjectFull_Offset changes the vertical extents but retains full-solid classification");
     }
 
     @Test
@@ -72,6 +86,30 @@ class TestLbzTubeElevatorInstance {
 
         assertEquals(1, elevator.getPriorityBucket(),
                 "Obj_LBZTubeElevator parent writes priority=$80; the overlay child owns the $280 layer");
+    }
+
+    @Test
+    void bobPhaseStoresTheRomAdjustedAngleAcrossSkippedBand() throws Exception {
+        ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
+        setField(elevator, "bobAngle", 0xAE);
+
+        elevator.update(0, playerAt(0x1300, 0x0600));
+
+        assertEquals(0xD0, field(elevator, "bobAngle").getInt(elevator),
+                "LBZTubeElevator writes the $B0+$20 adjustment back to 1(a4)");
+    }
+
+    @Test
+    void startSpinSamplesBobAngleBeforeIncrement() throws Exception {
+        ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
+        setField(elevator, "state", 2);
+        setField(elevator, "bobAngle", 0x14);
+
+        elevator.update(0, playerAt(0x1300, 0x0600));
+
+        assertEquals(0x16, field(elevator, "bobAngle").getInt(elevator));
+        assertEquals(0x05FF, elevator.getY() & 0xFFFF,
+                "loc_29EE2 uses sine($14) before storing the next $16 phase");
     }
 
     @Test
@@ -99,8 +137,13 @@ class TestLbzTubeElevatorInstance {
         elevator.update(0, player);
         elevator.update(0, player);
 
-        assertTrue(((SolidObjectProvider) elevator).isTopSolidOnly(),
-                "LBZTubeElevator_WaitExit waits for standing_mask to clear before running EndSpin");
+        SolidObjectParams params = ((SolidObjectProvider) elevator).getSolidParams();
+        assertEquals(8, params.airHalfHeight(),
+                "LBZTubeElevator_WaitExit retains SolidObjectFull_Offset's d2=$08 extent");
+        assertEquals(8, params.groundHalfHeight(),
+                "continued riding uses the same d2=$08 surface distance");
+        assertEquals(0x20, params.offsetY(),
+                "SolidObjectFull_Offset adds d3=$20 to the elevator anchor Y");
     }
 
     @Test
