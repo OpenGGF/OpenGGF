@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ frozen-player blocks now implement the ROM's native-partner attack check: a descending roll or spin dash within the asymmetric block range reflects the attacker's vertical speed, releases the captive without timer-expiry damage, and spawns the shatter debris. This advances both complete-run groups from frame 23822 to 23895.
 - Fix: folded multi-piece solids can also expose a native fresh-contact Y independently from their live piece position; the ICZ boss combines its saved parent Y with the current child-local offset so descending-platform landings occur on the native child SST pass. This advances both complete-run groups from frame 23622 to 23822.
 - Fix: folded multi-piece solids can now expose a native fresh-contact X independently from their current riding/render position; the ICZ end boss uses its saved child-entry X, preventing a boundary landing one frame early. The boss also clears its stopped snow-emitter reference when ownership ends. This advances both complete-run groups from frame 23578 to 23622.
 - Fix: ICZ end-boss fresh-landing correction now follows the bottom child's active `$43` shift routine and retires with its terminal `Obj_Wait`, removing one-pixel landing transients after the child returns to routine 2. This advances both complete-run physics and animation to frame 23578.

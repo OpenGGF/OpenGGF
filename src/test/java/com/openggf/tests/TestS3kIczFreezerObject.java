@@ -349,6 +349,36 @@ class TestS3kIczFreezerObject {
     }
 
     @Test
+    void fallingNativePartnerShattersFrozenBlockAndBouncesWithoutHurtingCaptive() {
+        installLevelGamestate();
+
+        RecordingServices services = new RecordingServices();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x43A6, (short) 0x069C);
+        sonic.setAnimationId(2);
+        sonic.setYSpeed((short) 0x03E0);
+        sonic.setRingCount(12);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x43B0, (short) 0x06B3);
+        tails.setCpuControlled(true);
+        tails.setRingCount(42);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> sonic, () -> List.of(tails)));
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(tails, 0x43B0, 0x06B3, 0x4360, false);
+        block.setServices(services);
+
+        block.update(23822, sonic);
+
+        assertTrue(block.isDestroyed(), "ROM sub_8AA38 accepts a descending roll from the other native slot");
+        assertEquals((short) -0x03E0, sonic.getYSpeed(), "The attacker bounces by negating y_vel");
+        assertFalse(sonic.isHurt(), "Shattering the block does not damage the attacker");
+        assertFalse(tails.isHurt(), "The attack-break path skips HurtCharacter for the captive");
+        assertFalse(tails.isObjectControlled());
+        assertTrue(tails.getAir());
+        assertEquals(120, tails.getInvulnerableFrames());
+        assertEquals(12, block.debrisSpawnedForTesting());
+        assertEquals(List.of(), services.lostRingSpawnFrames);
+    }
+
+    @Test
     void frozenPlayerBlockSyncPreservesCapturedPlayerSubpixelsUntilBreak() {
         installLevelGamestate();
 

@@ -570,8 +570,49 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             syncCapturedPlayer();
 
             if (--breakTimer < 0) {
-                breakOpen(frameCounter);
+                breakOpen(frameCounter, true);
+                return;
             }
+            if (tryBreakFromOtherPlayer(playerEntity)) {
+                breakOpen(frameCounter, false);
+            }
+        }
+
+        /**
+         * ROM {@code sub_8AA38}: the non-captured native player can shatter the
+         * block while falling in a roll or spin-dash animation. The successful
+         * contact reflects that player's vertical velocity before releasing the
+         * captured player without running the timer-expiry hurt path.
+         */
+        private boolean tryBreakFromOtherPlayer(PlayableEntity updatePlayer) {
+            for (PlayableEntity candidate : nativePlayers(updatePlayer)) {
+                if (!(candidate instanceof AbstractPlayableSprite attacker)
+                        || attacker == capturedPlayer
+                        || attacker.isObjectControlled()
+                        || attacker.getYSpeed() < 0) {
+                    continue;
+                }
+                int animation = attacker.getAnimationId();
+                if (animation != 2 && animation != 9) {
+                    continue;
+                }
+                int dx = (short) (attacker.getCentreX() - motion.x);
+                int dy = (short) (attacker.getCentreY() - motion.y);
+                if (dx < -0x1C || dx >= 0x1C || dy < -0x18 || dy >= 0x18) {
+                    continue;
+                }
+                attacker.setYSpeed((short) -attacker.getYSpeed());
+                return true;
+            }
+            return false;
+        }
+
+        private List<PlayableEntity> nativePlayers(PlayableEntity updatePlayer) {
+            ObjectServices services = tryServices();
+            if (services != null && services.playerQuery() != null) {
+                return services.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+            }
+            return updatePlayer == null ? List.of() : List.of(updatePlayer);
         }
 
         private void applyCameraSideVelocityClamp() {
@@ -610,9 +651,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             capturedPlayer.setGSpeed((short) 0);
         }
 
-        private void breakOpen(int frameCounter) {
+        private void breakOpen(int frameCounter, boolean applyDamage) {
             if (capturedPlayer != null) {
-                applyBreakDamage(frameCounter);
+                if (applyDamage) {
+                    applyBreakDamage(frameCounter);
+                }
+                capturedPlayer.setAir(true);
                 capturedPlayer.releaseFromObjectControl(frameCounter);
                 capturedPlayer.setInvulnerableFrames(POST_BREAK_INVULNERABILITY);
             }

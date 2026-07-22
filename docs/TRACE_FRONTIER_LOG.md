@@ -48665,3 +48665,20 @@ standalone CNZ remains at f0 in both scopes.
   local offset, and the replay passes all intervening boss landings. Both
   verification groups next diverge at f23822 on the sign of Sonic's vertical
   boss-contact rebound.
+
+## 2026-07-22 - ICZ frozen-player partner shatter
+
+- **`s3k_icz1` physics and animation advanced from f23822 to f23895.** Total
+  errors fell from 544 to 394; the focused freezer suite remains green.
+- Root: the frozen-player block only implemented its `$2E` timer-expiry path.
+  Native `sub_8AA38` also scans the other P1/P2 slot after every nonterminal
+  timer decrement, allowing a descending Roll or Spindash animation inside its
+  asymmetric range to shatter the block and negate the attacker's `y_vel`.
+- Fix: the block now queries native P1/P2 participation, excludes the captured
+  or object-controlled slot, applies the ROM animation, direction, and range
+  checks, and separates attack release from the timer-only `HurtCharacter`
+  path. Both releases still set InAir, clear control, grant 120 invulnerability
+  frames, and allocate the twelve debris children.
+- Validation: focused coverage verifies attacker bounce and damage-free captive
+  release. Both replay groups pass the f23822 contact and next diverge at
+  f23895 on Sonic's horizontal velocity.
