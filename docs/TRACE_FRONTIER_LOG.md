@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - S3K negative-flip skid suppression
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 9906 to
+  frame 9916.** Total release-blocking errors fell from 6059 to 6058; the next
+  divergence is Sonic's tumble mapping (`$31` expected versus `$37` actual).
+- Root: both S3K ground-braking directions test signed `flip_type` after their
+  speed thresholds and return before writing Stop animation or changing
+  facing when it is negative. The engine omitted that gate, so holding against
+  a fast rolling-drum ride incorrectly selected animation `$0D` for nine
+  frames while native retained Walk's tumble handler.
+- Fix: shared skid eligibility now rejects a negative native flip type before
+  any skid state, facing, sound, or dust side effect. The predicate is the ROM
+  state byte itself rather than an LBZ/controller condition. A focused movement
+  test covers the threshold-speed negative-flip case.
+- Validation: all 148 focused playable-movement tests pass and the LBZ replay
+  reaches frame 9916. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. No S3K,
+  S1, or S2 frontier regressed.
+
 ## 2026-07-22 - LBZ live-state drum transfer landing
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 9869 to

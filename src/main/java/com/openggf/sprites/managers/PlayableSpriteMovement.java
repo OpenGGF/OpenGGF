@@ -3692,6 +3692,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (angleCheck != 0) {
 			return false;
 		}
+		// Both S3K braking directions test signed flip_type after the speed
+		// threshold and return before writing Stop or changing facing when it is
+		// negative (sonic3k.asm:22840-22875, 22906-22941). Rolling drums use
+		// flip_type=$80 while the ordinary ground-movement slot still executes.
+		if ((sprite.getFlipType() & 0x80) != 0) {
+			return false;
+		}
 
 		// Retail S1/S2/S3K use the non-FixBugs path here: after storing the
 		// adjusted ground speed, the angle test writes only d0's low byte before

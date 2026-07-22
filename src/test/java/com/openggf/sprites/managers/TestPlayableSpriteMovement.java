@@ -1314,6 +1314,28 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void negativeFlipTypeSuppressesGroundSkid() throws Exception {
+                mockSprite.setGSpeed((short) 0x1000);
+                mockSprite.setAngle((byte) 0x00);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setDirection(Direction.RIGHT);
+                mockSprite.setFlipType(0x80);
+
+                setInputState(true, false, false, false, false);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doGroundMove");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals((short) 0x0F80, mockSprite.getGSpeed());
+                assertFalse(mockSprite.getSkidding(),
+                        "S3K braking returns before Stop when signed flip_type is negative");
+                assertEquals(Direction.RIGHT, mockSprite.getDirection(),
+                        "The suppressed skid must not flip the player's facing bit");
+        }
+
+        @Test
         public void oppositeDirectionCrossingZeroDoesNotPublishWalk() throws Exception {
                 ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
                                 .setIdleAnimId(5)
