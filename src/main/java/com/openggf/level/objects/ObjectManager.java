@@ -1498,9 +1498,11 @@ public class ObjectManager {
      * Slot-aware engine transitions use {@link #snapshotPersistentTransitionOccupants()}.
      */
     public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
-        return snapshotPersistentTransitionOccupants().stream()
-                .map(TransitionSstOccupant::identity)
-                .toList();
+        List<ObjectInstance> snapshot = new ArrayList<>();
+        for (TransitionSstOccupant occupant : snapshotPersistentTransitionOccupants()) {
+            snapshot.add(occupant.identity());
+        }
+        return snapshot;
     }
 
     /**

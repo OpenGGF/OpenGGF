@@ -22,4 +22,18 @@ package com.openggf.level.objects;
  */
 @com.openggf.game.ModApi
 public record PersistentRespawnState(long[] rememberedBits, long[] stayActiveBits) {
+    public PersistentRespawnState {
+        rememberedBits = rememberedBits == null ? null : rememberedBits.clone();
+        stayActiveBits = stayActiveBits == null ? null : stayActiveBits.clone();
+    }
+
+    @Override
+    public long[] rememberedBits() {
+        return rememberedBits == null ? null : rememberedBits.clone();
+    }
+
+    @Override
+    public long[] stayActiveBits() {
+        return stayActiveBits == null ? null : stayActiveBits.clone();
+    }
 }

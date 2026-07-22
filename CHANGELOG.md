@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **Mod API 2.4 compatibility shims preserve their runtime contracts under 2.5.**
+  The restored sidekick history-edge rule again suppresses repeated delayed jump
+  presses when enabled while newer constructors retain direct recorded-press
+  behavior; persistent transition snapshots are fresh mutable lists; and
+  persistent respawn snapshots defensively own both array components.
 - **Mod API 2.4 MGZ carry aliases retain their runtime semantics under 2.5.**
   Protected owner and spring-handoff fields are again authoritative for legacy
   subclasses and stay synchronized with the extracted playable controller.

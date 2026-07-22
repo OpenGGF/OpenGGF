@@ -15,7 +15,9 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestObjectManagerLifecycle {
@@ -143,6 +145,51 @@ public class TestObjectManagerLifecycle {
                 "Bonus-return respawn bits must be restored before the fresh manager materializes its initial window");
         assertTrue(reloadedManager.getActiveObjects().isEmpty(),
                 "A remembered non-stay-active spawn must remain absent after a bonus-return reload");
+    }
+
+    @Test
+    public void legacyTransitionSnapshotIsFreshMutableAndDetachedFromManagerStorage() {
+        ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
+        List<ObjectInstance> unloaded = new ArrayList<>();
+        ObjectInstance first = new TestInstance(new ObjectSpawn(1, 0, 1, 0, 0, false, 0), true, unloaded);
+        ObjectInstance second = new TestInstance(new ObjectSpawn(2, 0, 2, 0, 0, false, 0), true, unloaded);
+        ObjectInstance appended = new TestInstance(new ObjectSpawn(3, 0, 3, 0, 0, false, 0), true, unloaded);
+        manager.addDynamicObject(first);
+        manager.addDynamicObject(second);
+
+        List<ObjectInstance> snapshot = manager.snapshotPersistentDynamicObjectsForTransition();
+        snapshot.sort((left, right) -> Integer.compare(
+                right.getSpawn().objectId(), left.getSpawn().objectId()));
+        snapshot.remove(first);
+        snapshot.add(appended);
+
+        List<ObjectInstance> freshSnapshot = manager.snapshotPersistentDynamicObjectsForTransition();
+        assertEquals(List.of(first, second), freshSnapshot,
+                "Mutating a compatibility snapshot must not alter ObjectManager storage");
+        assertFalse(freshSnapshot.contains(appended));
+    }
+
+    @Test
+    public void persistentRespawnStateDefensivelyOwnsCanonicalArrayComponents() {
+        long[] remembered = {0x12L, 0x34L};
+        long[] stayActive = {0x56L};
+        PersistentRespawnState state = new PersistentRespawnState(remembered, stayActive);
+
+        remembered[0] = 0;
+        stayActive[0] = 0;
+        assertArrayEquals(new long[]{0x12L, 0x34L}, state.rememberedBits(),
+                "Constructor inputs must be cloned");
+        assertArrayEquals(new long[]{0x56L}, state.stayActiveBits(),
+                "Constructor inputs must be cloned");
+
+        long[] rememberedView = state.rememberedBits();
+        long[] stayActiveView = state.stayActiveBits();
+        rememberedView[1] = 0;
+        stayActiveView[0] = 0;
+        assertArrayEquals(new long[]{0x12L, 0x34L}, state.rememberedBits(),
+                "Accessor results must be cloned");
+        assertArrayEquals(new long[]{0x56L}, state.stayActiveBits(),
+                "Accessor results must be cloned");
     }
 
     private static final class TestRegistry implements ObjectRegistry {

@@ -1167,11 +1167,13 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
-    void delayedJumpPressReplaysConsecutiveRomPressBytes() throws Exception {
+    void delayedJumpPressReplaysConsecutiveRecordedPressBytesWhenHistoryEdgeRuleIsFalse() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
         tails.setGameRulesForTest(GameRules.SONIC_2);
+        setGameRulesForTest(tails, withSidekickCpuRules(GameRules.SONIC_2,
+                withDelayedJumpPressHistoryEdge(GameRules.SONIC_2.sidekickCpu(), false)));
         tails.setAir(true);
         tails.setCentreX((short) 0x1800);
         tails.setCentreY((short) 0x0400);
@@ -1205,6 +1207,47 @@ class TestSidekickCpuFollowParity {
                 () -> assertEquals(AbstractPlayableSprite.INPUT_JUMP,
                         controller.getDiagnosticGeneratedPressedInput()
                                 & AbstractPlayableSprite.INPUT_JUMP));
+    }
+
+    @Test
+    void delayedJumpPressSuppressesConsecutiveRecordedPressBytesWhenHistoryEdgeRuleIsTrue()
+            throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setGameRulesForTest(GameRules.SONIC_2);
+        setGameRulesForTest(tails, withSidekickCpuRules(GameRules.SONIC_2,
+                withDelayedJumpPressHistoryEdge(GameRules.SONIC_2.sidekickCpu(), true)));
+        tails.setAir(true);
+        tails.setCentreX((short) 0x1800);
+        tails.setCentreY((short) 0x0400);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x1800);
+        Arrays.fill(yHistory, (short) 0x0400);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        int delayedSlot = sonic.getHistorySlotIndex(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES);
+        int previousDelayedSlot = sonic.getHistorySlotIndex(
+                SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES + 1);
+        inputHistory[delayedSlot] = AbstractPlayableSprite.INPUT_JUMP;
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        setJumpPressHistorySlot(sonic, delayedSlot, true);
+        setJumpPressHistorySlot(sonic, previousDelayedSlot, true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        controller.update(0x1241);
+
+        Assertions.assertAll(
+                () -> assertTrue(controller.getInputJump(),
+                        "The delayed held jump remains active."),
+                () -> assertFalse(controller.getInputJumpPress(),
+                        "The 2.4 history-edge rule suppresses a repeated recorded press."),
+                () -> assertEquals(0, controller.getDiagnosticGeneratedPressedInput()
+                        & AbstractPlayableSprite.INPUT_JUMP));
     }
 
     @Test
@@ -4326,6 +4369,30 @@ class TestSidekickCpuFollowParity {
                 sidekickCpuRules,
                 base.powerUp(),
                 base.drowningBubble());
+    }
+
+    private static SidekickCpuRules withDelayedJumpPressHistoryEdge(
+            SidekickCpuRules base, boolean enabled) {
+        return new SidekickCpuRules(
+                base.sidekickFollowSnapThreshold(),
+                base.sidekickDespawnX(),
+                base.sidekickFollowLeadOffset(),
+                base.sidekickFollowNudgeBlockedByObjectControlBit0(),
+                enabled,
+                base.sidekickPanicTreatsPinballModeAsSpindashFlag(),
+                base.sidekickSpawningRequiresGroundedLeader(),
+                base.sidekickFlyLandStatusBlockerMask(),
+                base.sidekickFlyLandRequiresLeaderAlive(),
+                base.sidekickCatchUpYOffset(),
+                base.sidekickFlightAutoLandFrames(),
+                base.sidekickFlightMaxXStep(),
+                base.sidekickFlightYStep(),
+                base.sidekickFlightLeadXOffset(),
+                base.sidekickFlightLeadSuppressGSpeed(),
+                base.sidekickRespawnEntersCatchUpFlight(),
+                base.sidekickCpuUsesLevelFrameCounter(),
+                base.sidekickDeathUsesDeferredDespawn(),
+                base.sidekickHurtRestoresRadiiWithoutRoll());
     }
 
 }

@@ -2594,10 +2594,12 @@ public class SidekickCpuController {
                     | AbstractPlayableSprite.INPUT_DOWN
                     | AbstractPlayableSprite.INPUT_LEFT
                     | AbstractPlayableSprite.INPUT_RIGHT)) == 0;
-            // The Stat table stores the real low-byte logical press alongside
-            // the held byte. Preserve that sampled byte; loc_13E64 itself only
-            // contributes held high-byte bits.
-            boolean preservesRecordedJumpPress = recordedJumpPress;
+            // The published 2.4 rule preserves the older S3K-style edge
+            // reconstruction: repeated history press bytes are suppressed.
+            // The post-2.4/default rule preserves the recorded low byte.
+            boolean preservesRecordedJumpPress = recordedJumpPress
+                    && (sidekickRules == null
+                            || !sidekickRules.sidekickDelayedJumpPressUsesHistoryEdge());
             if (sidekick.getAir()
                     && delayedJumpOnly
                     && normalPushingGraceFrames <= 2
@@ -2782,13 +2784,18 @@ public class SidekickCpuController {
     }
 
     private boolean delayedJumpPress(AbstractPlayableSprite effectiveLeader, int delayFrames, short recordedInput) {
-        // ROM copies the delayed Ctrl_1_logical low-byte press bits directly
-        // into Ctrl_2_logical; consecutive recorded press bytes remain presses
-        // and are not reconstructed as edges here (s2.asm:38939-38946,
-        // 39025-39027; sonic3k.asm:26683-26689,26775-26782).
+        // The default rule copies the delayed Ctrl_1_logical low-byte press bits
+        // directly into Ctrl_2_logical; consecutive recorded press bytes remain
+        // presses (s2.asm:38939-38946,39025-39027;
+        // sonic3k.asm:26683-26689,26775-26782). The published 2.4 compatibility
+        // rule instead reconstructs the delayed press as a history edge.
         if ((recordedInput & AbstractPlayableSprite.INPUT_JUMP) == 0
                 || !effectiveLeader.getJumpPressHistory(delayFrames)) {
             return false;
+        }
+        SidekickCpuRules rules = sidekickCpuRulesOrNull();
+        if (rules != null && rules.sidekickDelayedJumpPressUsesHistoryEdge()) {
+            return !effectiveLeader.getJumpPressHistory(delayFrames + 1);
         }
         return true;
     }
