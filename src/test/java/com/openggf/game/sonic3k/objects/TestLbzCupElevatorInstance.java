@@ -253,6 +253,26 @@ class TestLbzCupElevatorInstance {
     }
 
     @Test
+    void flungCupPutsRidersInNativeHitRoutine() throws Exception {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0x83, 1, false, 0));
+        Sonic player = new Sonic("sonic", (short) 0x1800, (short) 0x0600);
+        Object state = getPrivateField(elevator, "p1");
+        setPlayerStateInside(state, true);
+
+        Class<?> stateClass = Class.forName(
+                "com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$PlayerState");
+        Method flingPlayer = LbzCupElevatorInstance.class.getDeclaredMethod("flingPlayer",
+                stateClass, com.openggf.sprites.playable.AbstractPlayableSprite.class, int.class);
+        flingPlayer.setAccessible(true);
+        flingPlayer.invoke(elevator, state, player, -0x300);
+
+        assertTrue(player.isHurt(), "sub_26E08 writes player routine=4 before launching the rider");
+        assertEquals((short) -0x300, player.getYSpeed());
+        assertEquals(0x1A, player.getAnimationId());
+    }
+
+    @Test
     void attachChildUsesRomFrameAndPositionFormula() {
         int anchorX = 0x1800;
 

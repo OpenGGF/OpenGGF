@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ cup elevators now enter the native Hit player routine before applying their bespoke fling velocities, without invoking the ordinary ring-loss damage path. This advances the combined LBZ frontier from frame 6939 to frame 7296 without moving any other trace frontier.
 - Fix: flung LBZ cup elevators now leave through the shared off-screen respawnable lifecycle, matching `Sprite_OnScreen_Test` clearing their placement bit. Returning routes can recreate the cup and land on it, advancing the combined LBZ frontier from frame 6643 to frame 6939 without moving any other trace frontier.
 - Fix: LBZ cup elevators now preserve the native `prev_anim` byte and script cursor while object-control bit 1 suppresses player animation. Roll animation therefore resumes with the ROM's retained mapping phase after cup release, advancing the combined LBZ frontier from frame 6535 to frame 6643 without moving any other trace frontier.
 - Fix: LBZ cup elevators now run their native `SolidObjectFull2_1P` checkpoint before same-slot player control, bypass the regular P2 render gate, and sample active-cup CPU contact before Player 2's movement slot. This captures both players on their native dispatch and advances the combined LBZ frontier from frame 6484 to frame 6535 without moving any other trace frontier.

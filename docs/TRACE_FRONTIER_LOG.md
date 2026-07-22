@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ cup native fling routine
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 6939 to
+  frame 7296.** Total release-blocking errors changed from 5912 to 6571 as the
+  corrected Hit trajectory exposes a different downstream path; the next
+  divergence is Sonic's Y position (`$01D7` expected versus `$01D2` actual).
+- Root: native `sub_26E08` writes player routine `$04` before installing the
+  cup's custom X/Y launch velocities and animation `$1A`. The engine applied
+  the launch state but left the player in routine `$02`, so subsequent frames
+  ran ordinary movement instead of the native Hit dispatcher.
+- Fix: cup fling now publishes the player's native hurt/routine state before
+  applying its custom launch values. This is driven by Obj18's fling routine
+  and deliberately does not invoke the separate player-damage/ring-loss path.
+  A focused test verifies the resulting native player routine.
+- Validation: all 17 focused cup-elevator tests pass and the LBZ replay reaches
+  frame 7296. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
 ## 2026-07-22 - LBZ flung-cup placement respawn
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 6643 to

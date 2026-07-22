@@ -627,6 +627,10 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         player.setOnObject(false);
         player.setPushing(false);
         player.setAir(true);
+        // sub_26E08 writes routine=4 directly. This is the player's Hit
+        // dispatcher even though the cup supplies bespoke launch velocities
+        // and does not run the ordinary ring-loss damage path.
+        player.setHurt(true);
         player.setYSpeed((short) yVelocity);
         player.setXSpeed((short) (hFlip ? 0x200 : -0x200));
         if (hFlip) {
