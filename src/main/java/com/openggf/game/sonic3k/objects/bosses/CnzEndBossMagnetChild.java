@@ -14,6 +14,7 @@ import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 
 import java.util.List;
 
@@ -127,7 +128,10 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
             centreY += ySubpixel >> 8;
             ySubpixel &= 0xFF;
             yVelocity += 0x38;
-            var floor = ObjectTerrainUtils.checkFloorDist(centreX, centreY, 0x10);
+            var levelManager = services().levelManager();
+            var floor = levelManager != null
+                    ? ObjectTerrainUtils.checkFloorDist(levelManager, centreX, centreY + 0x10)
+                    : TerrainCheckResult.noCollision();
             resolveFloorContact(floor.distance());
         }
         boolean animationSignalActive = magnetAnimationSignalActive();

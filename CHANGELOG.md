@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- **The CNZ end-boss magnet now probes terrain through its owning gameplay session.**
+  Its released-head floor check uses the injected level manager at the native
+  bottom point, preventing an unrelated active session from changing the first
+  falling frame while retaining movement-before-gravity and floor bounce behavior.
 - **Dynamic mod pattern windows no longer overlap permanent MGZ zoom-cue banks.**
   Production allocation starts at the first aligned pattern ID after the highest
   `PatternAtlasRange` (`0x188000` today), and generic atlas range registration

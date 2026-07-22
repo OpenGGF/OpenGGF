@@ -1,12 +1,17 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.level.ChunkDesc;
+import com.openggf.level.LevelManager;
+import com.openggf.level.SolidTile;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -243,6 +248,43 @@ class TestCnzEndBossChildren {
         assertEquals(startX + 2, magnet.getCentreX(),
                 "horizontal drop velocity must persist through later fall/bounce updates");
         assertEquals(0x70, magnet.yVelocityForTest());
+    }
+
+    @Test
+    void magnetDropIgnoresForeignGlobalTerrainWhenInjectedServicesOwnNoLevel() throws Exception {
+        GameplayModeContext globalContext = TestEnvironment.activeGameplayMode();
+        LevelManager originalGlobalLevel = globalContext.getLevelManager();
+        LevelManager foreignGlobalLevel = mock(LevelManager.class);
+        ChunkDesc foreignFloorDesc = mock(ChunkDesc.class);
+        SolidTile foreignFloor = mock(SolidTile.class);
+        when(foreignFloorDesc.isSolidityBitSet(0x0C)).thenReturn(true);
+        when(foreignGlobalLevel.getChunkDescAt(
+                org.mockito.ArgumentMatchers.anyByte(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt())).thenReturn(foreignFloorDesc);
+        when(foreignGlobalLevel.getSolidTileForChunkDesc(foreignFloorDesc, 0x0C, false))
+                .thenReturn(foreignFloor);
+        when(foreignFloor.getHeightAt(org.mockito.ArgumentMatchers.anyByte()))
+                .thenReturn((byte) 0x0F);
+        field(globalContext, "levelManager").set(globalContext, foreignGlobalLevel);
+
+        try {
+            CnzEndBossInstance boss = boss();
+            PlayableEntity player = playerAt(boss.getCentreX());
+            CnzEndBossMagnetChild magnet = magnet(boss, player);
+            magnet.beginDrop();
+            int startY = magnet.getCentreY();
+
+            magnet.update(0, player);
+            magnet.update(1, player);
+
+            assertEquals(startY, magnet.getCentreY(),
+                    "object terrain must come from injected services, not an unrelated active session");
+            assertEquals(0x38, magnet.yVelocityForTest());
+            assertFalse(magnet.isLanded());
+        } finally {
+            field(globalContext, "levelManager").set(globalContext, originalGlobalLevel);
+        }
     }
 
     @Test
