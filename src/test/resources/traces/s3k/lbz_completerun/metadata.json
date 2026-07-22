@@ -7,6 +7,7 @@
   "source_bk2": "s3k-complete-sonic-tails.bk2",
   "trace_frame_count": 46244,
   "pre_trace_osc_frames": 0,
+  "ring_floor_check_counter_phase": 6,
   "start_x": "0x00B0",
   "start_y": "0x0650",
   "characters": ["sonic", "tails"],

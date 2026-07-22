@@ -1693,6 +1693,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     if (applyInitialObjectStep
                             && (logicalOverflow || appliesInitialObj37Step(slotIndex, firstReservedSlot))) {
                         ringObject.updateMovement();
+                        // This deferred materialization has already consumed the
+                        // same-pass Obj37_Main movement represented by its live
+                        // x_pos/y_pos. S3K's previous collision-response list
+                        // holds the SST pointer, so the following player pass must
+                        // read that post-movement position rather than the ordinary
+                        // pre-update snapshot used by an immediate spill.
+                        if (!forceDeferredOwnerRingClear) {
+                            ringObject.markTouchStateAlreadyPostMovement();
+                        }
                     }
                     if (objectManager.hasInheritedRingCounterPhase()) {
                         ringObject.markTouchStateAlreadyPostMovement();

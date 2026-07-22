@@ -49006,3 +49006,27 @@ standalone CNZ remains at f0 in both scopes.
   complete `*TraceReplay#replayMatchesTrace` sweep reports 48 passed routes,
   the same 16 documented red routes, and two skips. Every non-LBZ S3K, S1,
   and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - S3K delayed lost-ring publication phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 3647 to
+  frame 3804.** Total release-blocking errors fell from 6664 to 6661; the next
+  divergence is Sonic's status byte (`$09` expected versus `$08` actual).
+- Root: old S3K trace fixtures did not retain the low byte of the free-running
+  `V_int_run_count`, and the replay therefore started LBZ's eight-frame Obj37
+  floor-probe cadence on the wrong phase. After restoring that recorded phase,
+  the ordinary post-player spill still consumed its same-pass `Obj37_Main`
+  movement but touch response read the older pre-update coordinate. A distinct
+  forced behind-cursor owner (used by ICZ's invisible hurt path) must retain
+  that older published coordinate instead.
+- Fix: LBZ metadata records counter phase 6. Ordinary delayed Obj37 rings mark
+  their live position as already post-movement for the following previous-list
+  touch pass, while forced deferred-owner spills retain the established prior
+  position. This follows the native allocation path and collision-list pointer
+  state; no zone, route, or frame condition participates in engine behavior.
+- Validation: 33 lost-ring physics tests, 10 lost-ring touch-order tests, and
+  the green ICZ complete run pass. The full
+  `*TraceReplay#replayMatchesTrace` sweep reports the same 16 red routes with
+  no newly red route or earlier frontier across S1, S2, or S3K. CNZ's complete
+  run also advances from frame 3035 to frame 14658 through the shared Obj37
+  correction; all other non-LBZ frontier/error pairs remain unchanged.
