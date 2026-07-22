@@ -132,7 +132,7 @@ public class PatternAtlas {
 
     public void registerRange(PatternAtlasRange range) {
         java.util.Objects.requireNonNull(range, "range");
-        registerRange(range.base(), range.size(), range.category());
+        registerRange(range.base(), range.size(), range.category(), range);
     }
 
     private final List<PatternRange> registeredRanges = new ArrayList<>();
@@ -146,6 +146,11 @@ public class PatternAtlas {
      * @param category a human-readable name for logging (e.g., "Objects", "HUD")
      */
     public void registerRange(int base, int size, String category) {
+        registerRange(base, size, category, null);
+    }
+
+    private void registerRange(int base, int size, String category,
+                               PatternAtlasRange staticOwner) {
         if (base < 0 || size <= 0
                 || base % GOVERNED_RANGE_ALIGNMENT != 0
                 || size % GOVERNED_RANGE_ALIGNMENT != 0) {
@@ -157,8 +162,7 @@ public class PatternAtlas {
         String rangeCategory = java.util.Objects.requireNonNull(category, "category");
         int newEnd = Math.addExact(base, size);
         for (PatternAtlasRange reserved : PatternAtlasRange.values()) {
-            if (base == reserved.base() && size == reserved.size()
-                    && rangeCategory.equals(reserved.category())) {
+            if (reserved == staticOwner) {
                 continue;
             }
             if (base < reserved.endExclusive() && reserved.base() < newEnd) {

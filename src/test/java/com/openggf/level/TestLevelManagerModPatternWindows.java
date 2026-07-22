@@ -117,5 +117,10 @@ class TestLevelManagerModPatternWindows {
             events.add("register:" + category);
             super.registerRange(base, size, category);
         }
+
+        @Override public void registerRange(PatternAtlasRange range) {
+            events.add("register:" + range.category());
+            super.registerRange(range);
+        }
     }
 }

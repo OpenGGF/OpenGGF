@@ -3,7 +3,10 @@ package com.openggf.graphics;
 import com.openggf.level.Pattern;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -42,6 +45,20 @@ class TestPatternAtlasDynamicRanges {
         assertThrows(IllegalArgumentException.class,
                 () -> atlas.registerRange(PatternAtlasRange.MGZ_ZOOM_CUES.base(),
                         WINDOW_SIZE, "mod:collision"));
+    }
+
+    @Test
+    void rawExactStaticRangeSpoofIsRejectedWithoutPoisoningLegitimateRegistration() {
+        PatternAtlas atlas = new PatternAtlas(256, 256);
+        PatternAtlasRange reserved = PatternAtlasRange.MGZ_ZOOM_CUES;
+
+        assertThrows(IllegalArgumentException.class,
+                () -> atlas.registerRange(reserved.base(), reserved.size(),
+                        reserved.category()));
+        assertDoesNotThrow(() -> atlas.registerRange(reserved));
+        assertEquals(List.of(new PatternAtlas.PatternRange(reserved.base(), reserved.size(),
+                        reserved.category())),
+                atlas.registeredRangesForTesting());
     }
 
 }
