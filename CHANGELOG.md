@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: upright S3K egg capsules now retain themselves as the sole valid solid-contact owner when `Set_PlayerEndingPose` applies object control, preserving the ROM's existing button support and status bits while ordinary solids remain suppressed. This advances both ICZ complete-run groups from frame 24576 to 25080.
 - Fix: the ICZ end-boss defeat countdown now preserves the distinct dispatch cadence of `Wait_FadeToLevelMusic` and the `loc_71D80` child-creation tail call, allowing the gradual max-X helper to begin on its native pass. This advances both complete-run groups from frame 24407 to 24576.
 - Fix: the ICZ end boss now preserves the final-hit `$3F` fade wait, releases its shell fragments at `loc_71D80`, and then consumes the newly seeded 119-count wait before allocating the capsule and gradual max-X helper. This restores the ROM's two-stage defeat handoff and advances both complete-run groups from frame 24374 to 24407.
 - Fix: folded ICZ end-boss frost children now distinguish an animation that was already capture-active on native child entry from one that only became active during the parent-folded update. Mature after-bottom puffs publish through the current solid checkpoint while newly active puffs retain their one-pass promotion, advancing both complete-run groups from frame 24184 to 24374.

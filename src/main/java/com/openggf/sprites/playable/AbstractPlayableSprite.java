@@ -3132,8 +3132,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 controller.notifyObjectControlledSolidContactInvalidated(candidate);
         }
 
-        public void setMgzTopPlatformCarrySolidContactObject(ObjectInstance instance) {
+        public void setObjectControlledSolidContactObject(ObjectInstance instance) {
                 controller.setObjectControlledSolidContactOwner(instance);
+        }
+
+        /** Legacy MGZ name retained for source compatibility. */
+        public void setMgzTopPlatformCarrySolidContactObject(ObjectInstance instance) {
+                setObjectControlledSolidContactObject(instance);
         }
 
         public boolean isMgzTopPlatformCarryOwnedBy(ObjectInstance instance) {

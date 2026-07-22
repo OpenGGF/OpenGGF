@@ -48790,3 +48790,22 @@ standalone CNZ remains at f0 in both scopes.
   same pass as native.
 - Validation: the replay matches the complete post-boss camera expansion and
   next diverges at f24576 on Sonic's grounded/airborne state at the capsule.
+
+## 2026-07-22 - S3K upright-capsule ending-pose support
+
+- **`s3k_icz1` physics and animation advanced from f24576 to f25080.** Total
+  errors fell from 59 to 56; the focused ICZ end-boss and camera suites remain
+  green.
+- Root: native `Set_PlayerEndingPose` writes object control, Victory animation,
+  and zero velocities without changing `Status_InAir` or `Status_OnObj`.
+  `Obj_EggCapsule` then continues to run its own `SolidObjectFull` tail. The
+  engine entered the pose with the correct button-piece ride but generic
+  object-control cleanup invalidated that support, replacing `OnObj` with
+  `InAir` for the whole results sequence.
+- Fix: upright capsules now register themselves through the existing
+  object-controlled solid-contact ownership seam before applying `$81`
+  control. Their real support remains eligible while all unrelated solids stay
+  suppressed; the generic setter also has a non-MGZ compatibility name.
+- Validation: the replay preserves Sonic's exact zero-velocity Victory pose,
+  status byte, and capsule ride through results. Both groups next diverge at
+  f25080 on post-results camera X restoration.
