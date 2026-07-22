@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+### 2026-07-22 -- ICZ complete-run f11976 attracted-ring target phase FIXED; physics frontier f12107
+
+The ROM's slot-13 `Obj_Attracted_Ring` reaches `(0x6710,0x02C6)` and enters
+`AttractedRing_GiveRing` at f11976. The subsystem-backed engine ring moved late
+in the level update and targeted Sonic after the later ObjB4 swinging-platform
+slots had carried him. Native slot 13 executes after Player 1 but before those
+platform slots, so its X/Y acceleration uses Sonic's post-physics, pre-object
+coordinates (`docs/skdisasm/sonic3k.asm:35740-35835`).
+
+`RingManager` now captures Player 1's coordinates in the native
+`Test_Ring_Collisions`/touch phase and consumes that target during its late
+attracted-ring movement. A focused regression moves the player between those
+phases and verifies the ring still accelerates toward the captured target. The
+focused ring suite passes. `TestS3kIczCompleteRunTraceReplay` restores the f11976
+pickup and advances physics to f12107 (2986 -> 2985 errors); animation remains
+at f12206 with 1210 errors. Total errors return from 4196 to 4195. The next
+physics root is a one-pixel Sonic Y difference at f12107.
+
 ### 2026-07-22 -- ICZ complete-run f11588 early horizontal-spring launch FIXED; frontiers f11976/f12206
 
 CPU Tails descended beside the flipped yellow horizontal spring at

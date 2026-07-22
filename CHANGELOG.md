@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K attracted rings now sample Player 1's post-physics coordinates during the native touch phase, before later object slots can carry the player. This restores an ICZ lightning-shield ring pickup and advances the complete-run physics frontier from frame 11976 to 12107.
 - Fix: S3K horizontal-spring airborne landing handoffs now require a paired player foot probe to penetrate terrain, matching the native player-collision gate instead of comparing the player's centre Y with the spring. This removes an early ICZ sidekick launch, advancing complete-run physics from frame 11588 to 11976 and animation from frame 11589 to 12206.
 - Fix: ICZ Freezers now remain in their native `$20`-square `Obj_WaitOffscreen` placeholder until `Render_Sprites` marks them visible, then restore their real entry point on the following object pass. This prevents offscreen Freezers from spawning capture clouds and advances both ICZ complete-run trace frontiers to frame 11588.
 - Fix: S3K buttons now include the exact `d1` right boundary accepted by `SolidObjectFull`'s unsigned `bhi` gate, restoring Sonic's push state and push animation at the ICZ Act 1 button. ICZ complete-run physics advances from frame 10128 to 11058 and animation from frame 10132 to 11058.

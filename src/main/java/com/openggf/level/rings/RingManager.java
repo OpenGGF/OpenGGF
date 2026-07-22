@@ -56,6 +56,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private final boolean stageRingsUseObjectTouchCollection;
     private PatternSpriteRenderer.FrameBounds spinBounds;
     private final AttractedRing[] attractedRings;
+    private int attractedRingTargetX;
+    private int attractedRingTargetY;
+    private boolean attractedRingTargetCaptured;
 
 
     public RingManager(List<RingSpawn> spawns, RingSpriteSheet spriteSheet,
@@ -92,6 +95,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         lostRings.reset();
         spinBounds = null;
         releaseAttractedRingSlots();
+        attractedRingTargetCaptured = false;
     }
 
     /**
@@ -103,6 +107,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         placement.replaceSpawnsAndReset(newSpawns);
         lostRings.reset();
         releaseAttractedRingSlots();
+        attractedRingTargetCaptured = false;
     }
 
     public void ensurePatternsCached(GraphicsManager graphicsManager, int basePatternIndex) {
@@ -147,6 +152,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * can carry or reposition it.
      */
     public void attractStageRings(AbstractPlayableSprite player) {
+        if (player != null && !player.isCpuControlled()) {
+            // Obj_Attracted_Ring can execute before later platform slots carry
+            // Player 1. Capture the post-physics player-slot coordinates here
+            // so the subsystem-backed late update sees the native target phase.
+            attractedRingTargetX = player.getCentreX();
+            attractedRingTargetY = player.getCentreY();
+            attractedRingTargetCaptured = true;
+        }
         if (player == null || player.getDead() || !lightningShieldEnabled(player)
                 || player.getShieldType() != ShieldType.LIGHTNING) {
             return;
@@ -185,6 +198,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * object slot yet and therefore must not be visible to a later player in the same frame.
      */
     public void prepareAttractedRingTouchSnapshot() {
+        attractedRingTargetCaptured = false;
         for (AttractedRing ring : attractedRings) {
             ring.listedForTouchThisFrame = ring.active && !ring.collected;
         }
@@ -776,8 +790,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * reverse quickly. Position updated via MoveSprite2 (velocity→subpixel).
      */
     private void updateAttractedRings(AbstractPlayableSprite player, int frameCounter, int cameraX) {
-        int pcx = player.getCentreX();
-        int pcy = player.getCentreY();
+        int pcx = attractedRingTargetCaptured ? attractedRingTargetX : player.getCentreX();
+        int pcy = attractedRingTargetCaptured ? attractedRingTargetY : player.getCentreY();
         boolean lightningShieldActive = lightningShieldEnabled(player)
                 && player.getShieldType() == ShieldType.LIGHTNING;
         for (AttractedRing ar : activeAttractedRingsInSlotOrder()) {
