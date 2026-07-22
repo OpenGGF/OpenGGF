@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ rightward drum handoff ordering
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 9916 to
+  frame 9953.** Total release-blocking errors fell from 6058 to 6057; the next
+  divergence is CPU Tails' Y position (`$06EE` expected versus `$06F1` actual).
+- Root: on the recorded rightward overlap, the receiving rolling drum occupies
+  an earlier native SST slot and replaces `interact` before the outgoing drum
+  executes. Engine placement-slot reuse put the outgoing controller first, so
+  it transiently set `Status_InAir` and made the receiver call
+  `Player_TouchFloor`, clearing Sonic's live tumble phase.
+- Fix: an outgoing drum now preserves the live ride bits when Sonic exits its
+  right boundary into another active drum's native capture volume. The
+  receiving controller replaces the latch later in the same object pass. This
+  is driven by the live object positions and capture predicates, not a zone
+  route or trace-frame exception. A focused test covers both the retained
+  `Status_OnObj` state and tumble phase.
+- Validation: all 20 focused rolling-drum tests pass and the LBZ replay reaches
+  frame 9953. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-22 - S3K negative-flip skid suppression
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 9906 to

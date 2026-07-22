@@ -188,6 +188,16 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         }
 
         if (!insideHorizontalWindow) {
+            if (dx >= rightBound && canHandOffToRightDrum(player)) {
+                // The native right-hand drum can occupy an earlier SST slot
+                // than this drum. It therefore captures the player before the
+                // old drum gets a chance to release him. Engine placement slot
+                // reuse is not guaranteed to preserve that ordering, so keep
+                // the live ride bits through this spatially valid handoff; the
+                // receiving drum replaces the latch later in this object pass.
+                setRiding(nativePlayerIndex, false);
+                return;
+            }
             release(player, nativePlayerIndex);
             return;
         }
@@ -275,6 +285,41 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     private void refreshRideLatch(AbstractPlayableSprite player) {
         player.setOnObject(true);
         player.setLatchedSolidObject(Sonic3kObjectIds.LBZ_ROLLING_DRUM, this);
+    }
+
+    private boolean canHandOffToRightDrum(AbstractPlayableSprite player) {
+        try {
+            var objectManager = services().objectManager();
+            if (objectManager == null) {
+                return false;
+            }
+            for (var instance : objectManager.getActiveObjects()) {
+                if (instance instanceof LbzRollingDrumInstance candidate
+                        && candidate != this
+                        && signedWordDelta(candidate.spawn.x(), spawn.x()) > 0
+                        && candidate.canCaptureLivePlayer(player)) {
+                    return true;
+                }
+            }
+        } catch (IllegalStateException ignored) {
+            // Direct object tests can instantiate without ObjectServices.
+        }
+        return false;
+    }
+
+    private boolean canCaptureLivePlayer(AbstractPlayableSprite player) {
+        int dx = signedWordDelta(player.getCentreX(), spawn.x());
+        if (dx < leftBound || dx >= rightBound) {
+            return false;
+        }
+        int verticalDelta = signedWordDelta(player.getCentreY(), spawn.y()) + TOP_BOTTOM_Y_BIAS;
+        if (verticalDelta < 0 || verticalDelta >= VERTICAL_RANGE) {
+            return false;
+        }
+        if (verticalDelta < LOWER_HALF_Y && player.getYSpeed() < 0) {
+            return false;
+        }
+        return verticalDelta < LOWER_HALF_Y || player.getYSpeed() <= MAX_BOTTOM_ENTRY_Y_SPEED;
     }
 
     /**

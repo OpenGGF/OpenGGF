@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: adjacent LBZ rolling drums now preserve the live ride latch during a valid rightward overlap handoff, matching the native case where the receiving drum's earlier SST slot captures before the outgoing controller can release. This advances the combined LBZ frontier from frame 9916 to frame 9953 without regressing another trace frontier.
 - Fix: grounded braking now honors S3K's signed `flip_type` skid suppression before writing Stop animation or changing facing. This preserves rolling-drum tumble ownership and advances the combined LBZ frontier from frame 9906 to frame 9916 without regressing another trace frontier.
 - Fix: LBZ rolling-drum transfers now decide `Player_TouchFloor` from the live airborne bit after the outgoing controller has run, matching `RideObject_SetRide` rather than retaining the player's frame-start ride state. This clears the transfer's stale tumble angle and advances the combined LBZ frontier from frame 9869 to frame 9906 without regressing another trace frontier.
 - Fix: LBZ Ribot hurt spheres now publish their post-movement coordinates to the next player-slot touch pass, matching the native child routine's move-before-`Child_DrawTouch_Sprite` order. This restores the recorded frame-9706 hit and advances the combined LBZ frontier to frame 9869 without regressing another trace frontier.

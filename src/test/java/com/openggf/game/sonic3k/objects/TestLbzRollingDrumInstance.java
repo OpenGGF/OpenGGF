@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
@@ -24,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestLbzRollingDrumInstance {
 
@@ -207,6 +210,38 @@ class TestLbzRollingDrumInstance {
                 "RideObject_SetRide calls Player_TouchFloor when the outgoing drum set the live InAir bit");
         assertEquals(0, player.getFlipAngle(),
                 "Player_TouchFloor clears the outgoing drum's tumble angle before the incoming capture");
+    }
+
+    @Test
+    void rightwardOverlappingDrumHandoffPreservesLiveRideUntilReceiverRuns() {
+        LbzRollingDrumInstance outgoing = drum(0x0600, 0x0640, 0x80);
+        LbzRollingDrumInstance incoming = drum(0x0700, 0x0640, 0x80);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.getActiveObjects()).thenReturn(List.of(outgoing, incoming));
+        outgoing.setServices(new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+        TestablePlayableSprite player = groundedPlayer(0x0600, 0x0640);
+        outgoing.update(0, player);
+        player.setRolling(true);
+        player.setFlipAngle(0x44);
+        player.setCentreXPreserveSubpixel((short) 0x0683);
+        player.setCentreY((short) 0x0645);
+
+        outgoing.update(1, player);
+        assertFalse(player.getAir(),
+                "the right-hand receiver's earlier native SST slot captures before the old drum releases");
+
+        incoming.update(1, player);
+        assertTrue(player.isOnObject());
+        assertFalse(player.getAir());
+        assertTrue(player.getRolling(),
+                "a live Status_OnObj handoff must not call Player_TouchFloor");
+        assertEquals(0x44, player.getFlipAngle(),
+                "the receiving drum retains the active tumble phase");
     }
 
     @Test
