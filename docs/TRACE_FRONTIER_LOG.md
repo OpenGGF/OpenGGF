@@ -1,5 +1,25 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ Snale protected-hit collision byte
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 16585 to
+  frame 17402.** The next divergence is CPU Tails' X speed (`$0000` expected
+  versus `$0018` actual).
+- Root: S3K `Touch_Enemy` treats the Snale's nonzero `collision_property` as a
+  protected special-enemy hit: it reverses player velocities once, then clears
+  the object's live `collision_flags` byte and decrements the property. Native
+  Snale routines 8 and `$A` do not restore the collision byte, while the engine
+  exposed the class's constant `$1A` flag and repeatedly reversed Sonic during
+  the same overlap.
+- Fix: the Snale now owns its live collision-enabled byte, clears and decrements
+  it on a protected hit, and restores it only in routines that explicitly write
+  `collision_flags` (including the timed routine `$C` callback). Focused tests
+  cover both the protected-hit clear and routine `$A` retention.
+- Validation: all 10 focused Snale Blaster tests pass and the LBZ replay reaches
+  frame 17402 with 1,565 fewer downstream errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. No S3K, S1, or S2 frontier regressed.
+
 ## 2026-07-22 - LBZ tube-elevator release mapping fallthrough
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 15599 to

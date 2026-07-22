@@ -165,15 +165,31 @@ class TestS3kSnaleBlasterBadnik {
     @Test
     void protectedCollisionPropertyReflectsAttackWithoutDestroying() throws Exception {
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        setBoolean(snaleBlaster, "collisionEnabled", true);
         setInt(snaleBlaster, "collisionProperty", 0x7F);
 
         ((TouchResponseAttackable) snaleBlaster).onPlayerAttack(
                 playerAt(0x0200, 0x0100, 2), enemyTouchResult());
 
-        assertEquals(0x7F, ((TouchResponseProvider) snaleBlaster).getCollisionProperty(),
-                "SnaleBlaster writes collision_property=$7F outside its open hit window");
+        assertEquals(0x7E, ((TouchResponseProvider) snaleBlaster).getCollisionProperty(),
+                "Touch_Enemy decrements the nonzero special-enemy hit byte");
+        assertEquals(0, ((TouchResponseProvider) snaleBlaster).getCollisionFlags(),
+                "Touch_Enemy clears collision_flags after the protected bounce");
         assertTrue(!snaleBlaster.isDestroyed(),
                 "S3K Touch_Enemy reflects nonzero collision_property instead of killing the object");
+    }
+
+    @Test
+    void earlyCloseWaitDoesNotRearmCollisionAfterProtectedHit() throws Exception {
+        AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        setEnum(snaleBlaster, "state", "EARLY_REOPEN_WAIT");
+        setInt(snaleBlaster, "waitTimer", 10);
+        setBoolean(snaleBlaster, "collisionEnabled", false);
+
+        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+
+        assertEquals(0, ((TouchResponseProvider) snaleBlaster).getCollisionFlags(),
+                "routine $A writes collision_property only and retains Touch_Enemy's cleared collision_flags");
     }
 
     @Test

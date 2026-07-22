@@ -74,6 +74,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
     private int verticalAnimTimer;
     private int openingPrepIndex;
     private int openingPrepTimer;
+    private boolean collisionEnabled;
     private int collisionProperty;
     private boolean firingWindow;
     private boolean waitingForOnscreen = true;
@@ -85,6 +86,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         super(spawn, "SnaleBlaster",
                 Sonic3kObjectArtKeys.SNALE_BLASTER, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
         this.mappingFrame = 0;
+        this.collisionEnabled = true;
         this.collisionProperty = 0;
     }
 
@@ -143,6 +145,11 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
+    public int getCollisionFlags() {
+        return collisionEnabled ? COLLISION_SIZE_INDEX : 0;
+    }
+
+    @Override
     public int getCollisionProperty() {
         return collisionProperty;
     }
@@ -153,6 +160,11 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         // SnaleBlaster writes $7F outside the brief open window, so the shared
         // touch controller reflects the player and this object must stay alive.
         if ((collisionProperty & 0xFF) != 0) {
+            // Touch_Enemy's boss/special-enemy branch saves then clears
+            // collision_flags before decrementing boss_hitcount2. Routines
+            // 8/A do not restore the flag, preventing repeated overlap hits.
+            collisionEnabled = false;
+            collisionProperty = (collisionProperty - 1) & 0xFF;
             return;
         }
         super.onPlayerAttack(playerEntity, result);
@@ -172,6 +184,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private void updateClosedWait() {
+        collisionEnabled = true;
         collisionProperty = firingWindow ? 0 : 0x7F;
         waitTimer--;
         if (waitTimer < 0) {
@@ -188,6 +201,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private void updateOpeningPrep() {
+        collisionEnabled = true;
         openingPrepTimer--;
         if (openingPrepTimer >= 0) {
             return;
@@ -208,6 +222,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private void updateOpenWait() {
+        collisionEnabled = true;
         collisionProperty = firingWindow ? 0 : 0x7F;
         waitTimer--;
         if (waitTimer < 0) {
@@ -230,6 +245,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
 
     private void updateVerticalMotion(AbstractPlayableSprite player,
             State completionState, int completionWait, boolean armsFiringWindow) {
+        collisionEnabled = true;
         collisionProperty = 0x7F;
         if (playerCanForceClose(player)) {
             state = State.CLOSING_FROM_PLAYER;
@@ -291,6 +307,8 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         if (waitTimer >= 0) {
             return;
         }
+        // loc_8C0F8 is Obj_Wait's callback and explicitly rewrites $1A.
+        collisionEnabled = true;
         waitTimer = 2;
         mappingFrame++;
         if (mappingFrame >= 3) {
