@@ -489,9 +489,12 @@ class TestS3kIczEndBossObject {
     void foldedBottomChildPublishesItsNativeFreshLandingPhase() throws Exception {
         SolidObjectProvider boss = (SolidObjectProvider) createTriggeredBoss();
         PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getYRadius()).thenReturn((short) 0x0E);
 
         assertEquals(1, boss.getTopLandingSnapAdjustment(player, 0x13),
                 "loc_71F30 resolves its child-local surface one pixel before the folded parent pass");
+        assertEquals(0, boss.getTopLandingSnapAdjustment(player, 0x0F),
+                "a one-pixel radius restoration uses the ordinary SolidObjectFull surface");
         assertTrue(boss.usesPreUpdateXForContinuedRide(player),
                 "the later child SST carries from the parent slot's saved pre-update X");
     }

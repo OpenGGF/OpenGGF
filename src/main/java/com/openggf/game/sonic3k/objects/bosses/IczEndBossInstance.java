@@ -988,9 +988,10 @@ public final class IczEndBossInstance extends AbstractBossInstance
         // The engine folds loc_71F30's solid child into the parent. On a fresh
         // contact the shared pre-object pass therefore sees the child's $43
         // shift one pixel later than the ROM child SST does. Both the fresh
-        // SolidObjectFull path and its continued-ride path use that child-local
-        // surface, so retain the correction while the boss is solid.
-        return 1;
+        // Sonic's first contact reaches loc_71F30 curled; the later
+        // ResetOnFloor radius restoration exposes the folded child's one-pixel
+        // entry phase. Standing Tails lands directly on the ordinary surface.
+        return solidTopYRadius - player.getYRadius() > 1 ? 1 : 0;
     }
 
     @Override

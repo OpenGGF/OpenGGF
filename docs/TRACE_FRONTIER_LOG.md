@@ -48515,3 +48515,19 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: `TestS3kIczEndBossObject` and the complete-run replay pass the
   former f23193 steady-state mismatch. The next physics mismatch is CPU Tails Y
   at f23232; animation first diverges at f23321.
+
+## 2026-07-22 - ICZ end-boss radius-driven fresh landing
+
+- **`s3k_icz1` physics advanced from f23232 to f23321, joining animation at
+  f23321.** Total errors fell from 664 to 662; the focused end-boss suite
+  remains green.
+- Root: the folded bottom-child correction was unconditional on every fresh
+  landing. Native Sonic reaches the child curled and exposes the extra phase
+  when `ResetOnFloor` restores a larger Y radius, while CPU Tails' one-pixel
+  radius restoration uses the ordinary `SolidObjectFull` surface.
+- Fix: the fresh-contact adjustment is now derived from the solid/player Y
+  radius delta. It retains the child-local one-pixel phase only when landing
+  restores more than one pixel of radius. No trace state is read or applied.
+- Validation: `TestS3kIczEndBossObject` covers both radius paths and the
+  complete-run replay passes the former f23232 Tails Y mismatch. Both groups
+  next diverge at f23321.
