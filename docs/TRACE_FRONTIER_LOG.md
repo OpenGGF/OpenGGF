@@ -1,5 +1,25 @@
 # Trace Frontier Log
 
+## 2026-07-22 - LBZ cup retained player animation state
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 6535 to
+  frame 6643.** Total release-blocking errors fell from 6845 to 6836; the next
+  divergence is Sonic's Y speed (`$0000` expected versus `$0390` actual).
+- Root: Obj18 writes `anim=$00` after each player's normal animation slot and
+  holds `object_control=$03`; bit 1 skips subsequent `Animate_Sonic` and
+  `Animate_Tails` calls. Native therefore leaves `prev_anim`, `anim_frame`, and
+  `anim_frame_timer` untouched until release. The engine incorrectly forced an
+  animation restart on cup capture, so the later `anim=$02` release always
+  restarted Roll instead of retaining each player's pre-capture Roll phase.
+- Fix: cup capture now changes only the raw animation byte and object-owned
+  mapping, preserving the animation manager's native previous-animation and
+  script-cursor state. The behavior is driven solely by Obj18's native control
+  bits and animation writes.
+- Validation: the focused cup-elevator tests pass and the LBZ replay reaches
+  frame 6643. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
 ## 2026-07-22 - LBZ cup same-slot P1/P2 capture
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 6484 to

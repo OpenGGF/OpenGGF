@@ -558,7 +558,11 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         player.setAnimationId(0);
-        player.forceAnimationRestart();
+        // Native writes anim=$00 after the player's Animate dispatch, then
+        // object_control bit 1 suppresses later Animate calls while held. It
+        // does not clear prev_anim or the script cursor. Preserving both is
+        // observable when anim=$02 is restored on release: a prior Roll can
+        // resume instead of restarting at its first mapping.
         holdPlayer(player);
     }
 
