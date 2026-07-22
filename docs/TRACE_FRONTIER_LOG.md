@@ -48610,3 +48610,20 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: the complete-run replay passes both differently ordered capture
   paths and the full Tails frozen-block flight. The next physics mismatch is
   Sonic Y at f23558; animation remains at f23578.
+
+## 2026-07-22 - ICZ boss completed-shift landing surface
+
+- **`s3k_icz1` physics advanced from f23558 to f23578, joining animation.**
+  Total errors fell from 688 to 686; the focused end-boss tests remain green.
+- Root: the folded bottom-child fresh-landing adjustment remained active after
+  native `loc_71FDA` completed its `$43` shift and `Obj_Wait` returned the child
+  to routine 2. Later curled landings therefore snapped Sonic one pixel above
+  the ordinary `loc_71F30` surface for a single frame.
+- Fix: the radius-driven one-pixel correction now additionally requires the
+  child's shift velocity and nonterminal shift timer. Routine-2 landings use the
+  ordinary surface once the timer reaches -1; no character, route, zone, or
+  frame condition is involved.
+- Validation: focused coverage checks both active-shift and completed-shift
+  radius paths. The complete-run replay passes the isolated f23558 and f23583
+  landing frames; physics and animation next diverge together on Tails at
+  f23578.

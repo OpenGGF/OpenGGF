@@ -489,14 +489,26 @@ class TestS3kIczEndBossObject {
 
     @Test
     void foldedBottomChildPublishesItsNativeFreshLandingPhase() throws Exception {
-        SolidObjectProvider boss = (SolidObjectProvider) createTriggeredBoss();
+        ObjectInstance instance = createTriggeredBoss();
+        SolidObjectProvider boss = (SolidObjectProvider) instance;
         PlayableEntity player = mock(PlayableEntity.class);
         when(player.getYRadius()).thenReturn((short) 0x0E);
 
+        for (int frame = 0; frame < 900
+                && invokeInt(instance, "getBottomChildShiftTimerForTesting") == 0; frame++) {
+            instance.update(frame, mock(PlayableEntity.class));
+        }
+        instance.update(901, mock(PlayableEntity.class));
         assertEquals(1, boss.getTopLandingSnapAdjustment(player, 0x13),
                 "loc_71F30 resolves its child-local surface one pixel before the folded parent pass");
         assertEquals(0, boss.getTopLandingSnapAdjustment(player, 0x0F),
                 "a one-pixel radius restoration uses the ordinary SolidObjectFull surface");
+
+        for (int pass = 0; pass < 0x42; pass++) {
+            instance.update(902 + pass, mock(PlayableEntity.class));
+        }
+        assertEquals(0, boss.getTopLandingSnapAdjustment(player, 0x13),
+                "routine 2 landings use the ordinary child surface after the $43 shift finishes");
         assertTrue(boss.usesPreUpdateXForContinuedRide(player),
                 "the later child SST carries from the parent slot's saved pre-update X");
     }

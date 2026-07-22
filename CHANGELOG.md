@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: ICZ end-boss fresh-landing correction now follows the bottom child's active `$43` shift routine and retires with its terminal `Obj_Wait`, removing one-pixel landing transients after the child returns to routine 2. This advances both complete-run physics and animation to frame 23578.
 - Fix: ICZ end-boss folded structural and frost children now reserve SST slots at the ROM's post-camera-gate initialization point, allowing captures before or after the bottom solid child to publish in native slot order and allocating each frozen block after its capturing puff. This advances complete-run physics from frame 23337 to 23558.
 - Fix: ICZ boss-smoke frozen blocks now inherit their launch side from the capturing puff SST, preserve their separate initialization pass, apply the ROM's direction-sensitive camera-edge velocity clamp, and suppress duplicate queued captures while an earlier capture is ready. This advances complete-run physics from frame 23329 to 23337 and animation from frame 23457 to 23578.
 - Fix: ICZ end-boss folded frost captures now publish from the boss solid-checkpoint tail, after the bottom child performs its final same-frame rider carry. This preserves native capture-frame `Status_OnObj|Status_InAir` and advances complete-run physics to frame 23329 and animation to frame 23457.

@@ -1196,7 +1196,13 @@ public final class IczEndBossInstance extends AbstractBossInstance
         // Sonic's first contact reaches loc_71F30 curled; the later
         // ResetOnFloor radius restoration exposes the folded child's one-pixel
         // entry phase. Standing Tails lands directly on the ordinary surface.
-        return solidTopYRadius - player.getYRadius() > 1 ? 1 : 0;
+        StructuralChild bottom = structuralChildren == null
+                ? null
+                : structuralChildren[BOTTOM_CHILD_INDEX];
+        boolean childShiftRoutineActive = bottom != null
+                && bottom.shiftVelocity != 0
+                && bottom.shiftTimer >= 0;
+        return childShiftRoutineActive && solidTopYRadius - player.getYRadius() > 1 ? 1 : 0;
     }
 
     @Override
