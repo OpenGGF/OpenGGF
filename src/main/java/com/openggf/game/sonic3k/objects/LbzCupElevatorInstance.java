@@ -682,7 +682,9 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         player.setYSpeed((short) yVelocity);
         player.setXSpeed((short) (hFlip ? 0x200 : -0x200));
         if (hFlip) {
-            player.setDirection(Direction.RIGHT);
+            // sub_26E08 negates x_vel and sets Status_Facing together when
+            // the cup's status bit 0 is set.
+            player.setDirection(Direction.LEFT);
         }
         player.setGSpeed((short) 0);
         player.setAnimationId(0x1A);

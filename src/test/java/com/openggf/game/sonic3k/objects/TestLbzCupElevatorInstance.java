@@ -273,6 +273,9 @@ class TestLbzCupElevatorInstance {
 
         assertTrue(player.isHurt(), "sub_26E08 writes player routine=4 before launching the rider");
         assertEquals((short) -0x300, player.getYSpeed());
+        assertEquals((short) 0x200, player.getXSpeed());
+        assertEquals(com.openggf.physics.Direction.LEFT, player.getDirection(),
+                "the flipped branch negates x_vel and sets Status_Facing");
         assertEquals(0x1A, player.getAnimationId());
     }
 

@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ flipped cup-fling facing
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 35015 to
+  frame 35626.** The next divergence is CPU Tails' Y position (`$05D6`
+  expected versus `$05D7` actual), accompanied by the first falling-speed
+  difference.
+- Root: `sub_26E08` launches a rider at `x_vel=-$200`, then, when Obj18's
+  status bit 0 is set, negates that velocity and sets the player's
+  `Status_Facing` bit. The engine produced the correct positive `$0200`
+  velocity but explicitly faced the rider right, leaving the status byte at
+  `$02` instead of native `$03` for the hurt arc and shifting its final
+  animation mapping.
+- Fix: the flipped fling branch now faces the rider left when it negates the
+  horizontal launch, matching the two adjacent native writes. The unflipped
+  branch continues to preserve the player's existing facing exactly as the
+  routine does.
+- Validation: all 17 focused cup-elevator tests pass and the focused LBZ
+  replay reaches frame 35626. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ cup live contact and SST solid-state identity
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 34752 to
