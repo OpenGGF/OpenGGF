@@ -20,6 +20,30 @@
 --      ends, or the frame cap is hit.
 ------------------------------------------------------------------------------
 
+------------------
+--- Shared lib ---
+------------------
+
+-- Locate tools/bizhawk/lib/ robustly across the .bat/%TEMP%-wrapper route, the
+-- direct --lua= route, and headless launches (see lib/oggf_trace_common.lua and
+-- SHARED_MODULE_HANDOFF.md). The launcher-provided env var wins; otherwise fall
+-- back to this recorder's own directory, then CWD. Scoped in a do-block so the
+-- helper's local slot is freed (these recorders sit near Lua's 200-locals cap).
+local C
+do
+    local function oggf_lib_dir()
+        local env = os.getenv("OGGF_BIZHAWK_LIB")        -- launcher-provided, most robust
+        if env and #env > 0 then return env end
+        local src = debug.getinfo(1, "S").source         -- "@<abs path to this recorder>"
+        local dir = src:match("^@(.*[/\\])")             -- strip filename
+        if dir then return dir .. "lib/" end
+        return "lib/"                                     -- CWD fallback
+    end
+    -- assert() so a bad path surfaces as a load error (visible without
+    -- --chromeless) instead of silently skipping the whole recorder.
+    C = assert(loadfile(oggf_lib_dir() .. "oggf_trace_common.lua"))()
+end
+
 -----------------
 --- Constants ---
 -----------------
@@ -119,12 +143,14 @@ local OBJ_SLOT_SIZE   = 0x40
 local OBJ_TOTAL_SLOTS = 128
 local OBJID_SS_RESULTS = 0x6F
 
--- Genesis joypad bitmask (matching engine convention).
-local INPUT_UP    = 0x01
-local INPUT_DOWN  = 0x02
-local INPUT_LEFT  = 0x04
-local INPUT_RIGHT = 0x08
-local INPUT_JUMP  = 0x10
+-- Genesis joypad bitmask (matching engine convention). The five directional/
+-- jump bits are single-sourced in lib/oggf_trace_common.lua; INPUT_START is
+-- s2_ss-specific and stays inline.
+local INPUT_UP    = C.INPUT_UP
+local INPUT_DOWN  = C.INPUT_DOWN
+local INPUT_LEFT  = C.INPUT_LEFT
+local INPUT_RIGHT = C.INPUT_RIGHT
+local INPUT_JUMP  = C.INPUT_JUMP
 local INPUT_START = 0x80
 
 -----------------
@@ -165,22 +191,17 @@ local unregister_run_objects_hook
 --- Helpers   ---
 -----------------
 
-local function json_escape(value)
-    value = tostring(value or "")
-    value = value:gsub("\\", "\\\\")
-    value = value:gsub('"', '\\"')
-    return value
-end
+-- json_escape single-sourced in lib/oggf_trace_common.lua.
+local json_escape = C.json_escape
 
 -- Write a JSONL line to aux file. Every emitted event uses a "type" key
 -- (never "event") so the generic TraceEvent parser's default branch
 -- preserves it as a StateSnapshot with the field intact for exact-match
 -- lookups (e.g. SpecialStageTraceData.isStageFinished checks fields["type"]).
+-- Body single-sourced in lib/oggf_trace_common.lua; thin local wrapper
+-- forwards the file-scope aux_file upvalue.
 local function write_aux(json_str)
-    if aux_file then
-        aux_file:write(json_str .. "\n")
-        aux_file:flush()
-    end
+    C.write_aux(aux_file, json_str)
 end
 
 -- Read one player's special-stage SST state. Returns present=false with
@@ -716,7 +737,7 @@ if HEADLESS then
     if client.SetSoundOn then
         pcall(client.SetSoundOn, false)
     end
-    if not HEADLESS_VISIBLE then
+    if not HEADLESS_VISIBLE and client.invisibleemulation then
         client.invisibleemulation(true)
     end
 end

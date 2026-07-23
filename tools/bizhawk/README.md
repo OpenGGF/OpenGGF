@@ -21,6 +21,17 @@ Use this folder for the recorder scripts and local BizHawk assets:
   "Trace Run Manifests" section below)
 - `record_s1_credits_traces.bat` launches forced Sonic 1 credits-demo capture
 - `s1_credits_trace_recorder.lua` records the built-in ending replays without a BK2
+- `lib/oggf_trace_common.lua` is a shared module of game-agnostic leaf helpers
+  (`bk2_input_mask`, `hex`, `angle_to_ground_mode`, `read_speed`,
+  `rom_joypad_to_mask`, `write_aux`, `json_escape`, `json_quote`, and the
+  `INPUT_*` bitmask constants) that every recorder `loadfile`s at startup via a
+  small `oggf_lib_dir()` loader. It holds only pure helpers whose emitted bytes
+  are identical to the previously-inlined copies — schema writers, `*_csv_version`
+  constants, and the fast-headless toggle block deliberately stay inline per
+  recorder. `run_bizhawk_lua.bat` exports `OGGF_BIZHAWK_LIB` so the loader finds
+  it on the wrapper/headless route; a `debug.getinfo` fallback covers direct
+  `--lua=` launches. Any edit here must be regen-validated for a byte-identical
+  `physics.csv` / `aux_state.jsonl` / `metadata.json` before committing.
 
 ## Trace Run Manifests
 
@@ -52,6 +63,32 @@ The S3K complete-run recorder handles stage detours as follows:
 The `OGGF_TRACE_RUN_ID` environment variable forces manifest emission and sets the `run_id`
 field, allowing trace runs with no detours to be tracked explicitly (useful for complete-game
 runs or for organizing capture sessions).
+
+## Linux Launcher (`run_bizhawk_lua.sh` / `record_trace.sh`)
+
+`run_bizhawk_lua.sh` is the Linux counterpart to `run_bizhawk_lua.bat`, and
+`record_trace.sh` mirrors `record_trace.bat`. They launch EmuHawk via `mono` and
+export the same `OGGF_BIZHAWK_LIB` contract for the shared-lib loader. Bring-up
+facts encoded there (BizHawk 2.11.1 `bizhawk-bin` on CachyOS/Wayland):
+
+- BizHawk runs portable and writes config/system dirs beside `EmuHawk.exe`; the
+  packaged `/opt/bizhawk` is root-owned, so run against a writable copy
+  (`cp -a /opt/bizhawk ~/.local/share/bizhawk-run`) via `BIZHAWK_HOME`.
+- `DISPLAY` must be set (EmuHawk is WinForms even headless); XWayland `:0` works.
+- Hardware GL under XWayland fails (`eglMakeCurrent … EGL_BAD_ACCESS`); the
+  launcher forces Mesa software GL by default (or set config `DispMethod=1` for
+  GDI+). `--luaconsole` is passed to dodge a `Stack empty` crash that
+  command-line `--lua` + `--movie` otherwise throws in `LuaConsole.EnableLuaFile`.
+- **KNOWN BLOCKER (upstream BizHawk 2.11.1 + mono, not the launcher):** loading a
+  BK2 via `--movie` hangs inside the movie-load path right after `WaterboxHost
+  Sealed`, before the form's `OnShown` — so the recorder's Lua never runs and no
+  `trace_output/` is produced. The hung process maps no X window (not a
+  dismissible dialog). The same recorder Lua launched *without* `--movie` runs
+  fine (Lua loads, frames advance, clean exit), isolating the fault to
+  command-line BK2 loading on this build. An end-to-end Linux regen needs a
+  working headless BK2 path (a different BizHawk build, a real X server via Xvfb,
+  or a Lua-side movie loader). Until then, run the byte-diff regen gate on a
+  platform where BizHawk plays BK2s headlessly (e.g. Windows).
 
 ## Capture Launch Notes (verified live 2026-07-19)
 
