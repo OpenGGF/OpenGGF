@@ -48987,3 +48987,28 @@ standalone CNZ remains at f0 in both scopes.
   zone/route/frame exception.
 - Validation: the focused complete-run replay reports zero physics or animation
   divergences through frame 25254 and the frozen transition tail.
+
+## 2026-07-23 - S3K universal CSV v7 fixture regeneration
+
+- Re-recorded the standalone AIZ/CNZ/MGZ movies, the complete-run route through
+  MHZ, and the multi-bonus/special-stage movie with Linux BizHawk 2.11 and the
+  locked-on S3K ROM (`CFBF98C36C776677290A872547AC47C53D2761D6`).
+  Physics, aux, and metadata were installed atomically from each run; normal
+  gameplay fixtures now carry CSV v7/schema 6 plus fresh frame-0 bootstrap and
+  RAM-sampled aux events.
+- The S3K recorders now skip expensive PC-execution hooks by default; focused
+  diagnostics opt in with `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`. The Linux
+  launcher defaults `OGGF_TRACE_QUIET=1` to avoid Mono repainting the full Lua
+  Console pane on each status line.
+- BK2 input normalization is profile-aware: `aiz_end_to_end` samples the
+  preceding physical row used by its replay bootstrap, while level-gated and
+  complete-run fixtures sample `bk2_frame_offset + trace_frame`.
+- Validation on local uncommitted regeneration changes:
+  `mvn -Dtest=TestS3kAizTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path=s3k.gen test` passes input alignment and reports 5,057 errors,
+  first at f290 (`y`, ROM `$0420`, engine `$041A`).
+  `mvn -Dtest=TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path=s3k.gen -Dsurefire.argLine="-Xshare:off -Xmx3g" test` passes
+  input alignment and reports 4,940 errors, first at f0 (`y_speed`, ROM
+  `$0000`, engine `$0038`). These are newly exposed comparison frontiers, not
+  input-alignment failures; no trace-to-engine hydration was added.

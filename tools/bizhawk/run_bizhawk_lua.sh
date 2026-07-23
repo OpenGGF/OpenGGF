@@ -97,6 +97,10 @@ export MONO_WINFORMS_XIM_STYLE=disabled
 # to :0 (XWayland is fine — the resulting BadMatch on the display control is a
 # non-fatal layout warning). Override DISPLAY to point at Xvfb for true headless.
 export DISPLAY="${DISPLAY:-:0}"
+# Mono repaints the entire Lua Console pane for every print, making long
+# recorder runs progressively slower. Keep launcher-driven captures quiet by
+# default; set OGGF_TRACE_QUIET=0 when interactive recorder status is useful.
+export OGGF_TRACE_QUIET="${OGGF_TRACE_QUIET:-1}"
 # The repo-local build loads BK2s only under hardware GL, so hardware GL is the
 # default. Set OGGF_BIZHAWK_SOFTGL=1 to force Mesa software GL (llvmpipe) — a
 # fallback for GPUs where the hardware GL context fails to go current
