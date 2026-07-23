@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ Flybot placeholder render bounds
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 25575 to
+  frame 25693.** Remaining release-blocking errors fell from 2245 to 2180; the
+  next divergence is Sonic's Y position (`$015E` expected versus `$0163`
+  actual).
+- Root: `Obj_WaitOffscreen` tests the placeholder's render-visible flag, which
+  includes both axes of its `$20` by `$20` bounds. The engine tested only X,
+  so the high layout Flybot at `$12D0,$0210` restored its chase routine while
+  native remained at `loc_85AD2`, then crossed Tails' path much later.
+- Fix: Flybot's initial placeholder phase now requires full two-axis render
+  visibility. Its restored routine also applies
+  `Sprite_CheckDeleteTouchSlotted`'s coarse-X deletion after movement and
+  before collision-list publication.
+- Validation: all ten focused Flybot tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ restored Flybot offscreen execution
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 24160 to

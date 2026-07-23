@@ -78,7 +78,7 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
             return;
         }
         if (waitingForOnscreen) {
-            if (!isOnScreenX(WAIT_OFFSCREEN_MARGIN)) {
+            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
                 return;
             }
             // Layout-loaded Flybots already occupy a Map_Offscreen SST slot
@@ -106,6 +106,14 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
             case WAIT_RETURN -> updateChase(player1, true);
         }
         updateDynamicSpawn(currentX, currentY);
+        // Sprite_CheckDeleteTouchSlotted runs the object's restored routine
+        // before applying the native coarse-X deletion window. Objects outside
+        // that window are released as respawnable layout/alarm slots and never
+        // reach the touch-response list for this pass.
+        if (!isInRangeAt(currentX)) {
+            setDestroyedByOffscreen();
+            return;
+        }
         publishedTouchResponseListEntryThisFrame = true;
     }
 

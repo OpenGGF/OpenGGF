@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ Flybot 767's initial `Obj_WaitOffscreen` placeholder now requires full two-axis render visibility, and its restored routine applies the native coarse-X delete before touch publication. This removes a false late Tails contact and advances the combined LBZ frontier from frame 25575 to frame 25693 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: restored LBZ Flybot 767 routines now continue through brief viewport exits before `Sprite_CheckDeleteTouchSlotted`, instead of re-entering their initial offscreen wait. This removes a false enemy bounce and advances the combined LBZ frontier from frame 24160 to frame 25575 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: ROM-layout LBZ Flybot 767 instances now preserve their retained `Map_Offscreen` placeholder pass and publish the live SST touch coordinate, while alarm-allocated Flybots keep their native dynamic-spawn phase. This advances the combined LBZ frontier from frame 24046 to frame 24160 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: LBZ spin launchers now include `sub_1DD24`'s native vertical catch range, preserve the launcher `y_pos` across rolling-radius changes, and skip per-player solidity through the cooldown's final decrement pass. This advances the combined LBZ frontier from frame 23827 to frame 24046 without regressing another S3K, S1, or S2 trace frontier.

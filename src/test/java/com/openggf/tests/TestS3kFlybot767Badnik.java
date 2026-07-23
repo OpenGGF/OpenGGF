@@ -69,9 +69,9 @@ class TestS3kFlybot767Badnik {
 
     @Test
     void restoredRoutineContinuesMovementDuringBriefViewportExit() {
-        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0300, 0x0300, 0);
-        AbstractObjectInstance flybot = createFlybotAt(0x0800, 0x0100);
-        AbstractPlayableSprite player = playerAt(0x0800, 0x0140);
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0140, 0x0300, 0);
+        AbstractObjectInstance flybot = createFlybotAt(0x0160, 0x0100);
+        AbstractPlayableSprite player = playerAt(0x0160, 0x0140);
         setEnum(flybot, "state", "DIVE");
         setInt(flybot, "xVelocity", 0x200);
         setInt(flybot, "yVelocity", 0x200);
@@ -80,15 +80,38 @@ class TestS3kFlybot767Badnik {
 
         flybot.update(0, player);
 
-        assertEquals(0x0802, flybot.getX(),
+        assertEquals(0x0162, flybot.getX(),
                 "Sprite_CheckDeleteTouchSlotted runs the restored routine before its deletion check");
         assertEquals(0x0102, flybot.getY());
+        assertFalse(flybot.isDestroyed(),
+                "the native coarse-X window extends beyond the exact viewport");
         assertTrue(flybot.publishesTouchResponseListEntryThisFrame());
     }
 
     @Test
+    void restoredRoutineDeletesAfterMovementOutsideNativeCoarseRange() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0140, 0x0300, 0);
+        AbstractObjectInstance flybot = createFlybotAt(0x0400, 0x0100);
+        AbstractPlayableSprite player = playerAt(0x0400, 0x0140);
+        setEnum(flybot, "state", "DIVE");
+        setInt(flybot, "xVelocity", 0x200);
+        setInt(flybot, "yVelocity", 0x200);
+        setInt(flybot, "waitTimer", 0x20);
+        setBoolean(flybot, "waitingForOnscreen", false);
+
+        flybot.update(0, player);
+
+        assertEquals(0x0402, flybot.getX(),
+                "Sprite_CheckDeleteTouchSlotted runs movement before its coarse-X check");
+        assertEquals(0x0102, flybot.getY());
+        assertTrue(flybot.isDestroyed());
+        assertTrue(flybot.isDestroyedRespawnable());
+        assertFalse(flybot.publishesTouchResponseListEntryThisFrame());
+    }
+
+    @Test
     void traceFrame410KeepsFlybotOnePixelColumnBeforeTouchOverlap() {
-        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        AbstractObjectInstance.updateCameraBounds(0, 0x0500, 0x0400, 0x0700, 0);
         AbstractObjectInstance flybot = createFlybotAt(0x0406, 0x05CC);
         AbstractPlayableSprite player = playerAt(0x0346, 0x062C);
 
@@ -118,6 +141,21 @@ class TestS3kFlybot767Badnik {
                 "The wait helper returns before Sprite_CheckDeleteTouchSlotted can add Flybot to the S3K touch list.");
         assertFalse(flybot.usesCurrentTouchResponseState(),
                 "an immediately visible alarm-spawned Flybot retains the frame-start touch phase");
+    }
+
+    @Test
+    void waitOffscreenRequiresPlaceholderToEnterVerticalRenderBounds() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0140, 0x00E0, 0);
+        AbstractObjectInstance flybot = createFlybotAt(0x0100, 0x0120);
+        AbstractPlayableSprite player = playerAt(0x0100, 0x0140);
+
+        flybot.update(0, player);
+        flybot.update(1, player);
+        flybot.update(2, player);
+
+        assertEquals("INIT", readEnumName(flybot, "state"));
+        assertFalse(flybot.publishesTouchResponseListEntryThisFrame(),
+                "Obj_WaitOffscreen tests Render_Sprites bit 7, including the placeholder's Y bounds");
     }
 
     @Test
