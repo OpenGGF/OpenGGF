@@ -6,6 +6,7 @@ The canonical trace replay documentation now lives in:
 
 Use this folder for the recorder scripts and local BizHawk assets:
 
+- `fetch_bizhawk_2_11_linux.sh` downloads and verifies the supported Linux build
 - `run_bizhawk_lua.bat` launches any Lua/BK2/ROM combination safely for
   diagnostics and one-off probes
 - `record_trace.bat` launches S1 recording through the reusable no-audio/no-render launcher
@@ -32,6 +33,25 @@ Use this folder for the recorder scripts and local BizHawk assets:
   it on the wrapper/headless route; a `debug.getinfo` fallback covers direct
   `--lua=` launches. Any edit here must be regen-validated for a byte-identical
   `physics.csv` / `aux_state.jsonl` / `metadata.json` before committing.
+
+## Required BizHawk version
+
+Linux trace recording is pinned to **BizHawk 2.11 Linux x64**. Install the
+official release from any working directory with:
+
+```bash
+tools/bizhawk/fetch_bizhawk_2_11_linux.sh
+```
+
+The script verifies the release checksum and installs it locally at
+`docs/BizHawk-2.11-linux-x64`. Local BizHawk installations follow the
+`docs/BizHawk-<version>-<platform>-<architecture>` naming convention and are
+ignored by Git.
+
+Do not substitute BizHawk 2.11.1 for trace recording. BizHawk 2.11.1 removed
+`client.invisibleemulation`, which these recorders require for fast no-render
+capture. An existing 2.11.1 installation may remain locally, but it must not be
+selected when running the trace tools.
 
 ## Trace Run Manifests
 

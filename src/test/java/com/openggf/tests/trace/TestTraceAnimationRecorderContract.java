@@ -98,6 +98,29 @@ class TestTraceAnimationRecorderContract {
     }
 
     @Test
+    void bizHawkLinuxToolingPinsRecorderCompatible211() throws IOException {
+        String ignore = Files.readString(Path.of(".gitignore"));
+        String fetch = Files.readString(TOOLS.resolve("fetch_bizhawk_2_11_linux.sh"));
+        String launcher = Files.readString(TOOLS.resolve("run_bizhawk_lua.sh"));
+        String readme = Files.readString(TOOLS.resolve("README.md"));
+
+        assertTrue(ignore.contains("/docs/BizHawk-*/"));
+        assertTrue(!ignore.contains("/docs/BizHawk-2.11-win-x64/*"));
+        assertTrue(fetch.contains("BizHawk-2.11-linux-x64.tar.gz"));
+        assertTrue(fetch.contains("cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8"));
+        assertTrue(fetch.contains("client.invisibleemulation"));
+        assertTrue(fetch.contains("[[ -e \"${destination}\" || -L \"${destination}\" ]]"));
+        assertTrue(fetch.contains("mv --no-clobber --no-target-directory"));
+        assertTrue(launcher.contains("docs/BizHawk-2.11-linux-x64"));
+        assertTrue(!launcher.contains("docs/BizHawk-*-linux-x64"));
+        assertTrue(!launcher.contains("docs/BizHawk-2.11.1-linux-x64"));
+        assertTrue(!launcher.contains("/opt/bizhawk"));
+        assertTrue(readme.contains("BizHawk 2.11"));
+        assertTrue(readme.contains("2.11.1"));
+        assertTrue(readme.contains("client.invisibleemulation"));
+    }
+
+    @Test
     void allCommittedGameplayFixturesCarryV7AnimationCsv() throws IOException {
         Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 10);
         for (Map.Entry<String, Integer> entry : expectedCounts.entrySet()) {
