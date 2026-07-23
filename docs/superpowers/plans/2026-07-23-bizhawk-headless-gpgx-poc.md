@@ -584,6 +584,7 @@ Use the required documentation trailers with justified `n/a`.
 
 Publication tests assert:
 
+- a missing nested output directory is created and publishes successfully;
 - handled writer failure removes the unique temporary file and creates no final;
 - pre-existing `smoke.csv` remains byte-identical;
 - a test hook that creates `smoke.csv` immediately before publication wins the race and remains byte-identical;
@@ -639,6 +640,7 @@ Expected: exit `1` at the intentional publisher/CLI
 
 - [ ] **Step 3: Implement Linux publication and composition root**
 
+Call `Directory.CreateDirectory(outputDirectory)` before opening any file.
 Create the temporary file with `FileMode.CreateNew` and a name
 `smoke.csv.tmp.<pid>.<cryptographic nonce>`. Flush writer and stream, then call
 `link(2)` through a small `DllImport("libc")`. Treat `EEXIST` as a clear
