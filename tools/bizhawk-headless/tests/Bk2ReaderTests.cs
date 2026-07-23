@@ -60,6 +60,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "Bk2Reader rejects duplicate sync JSON properties",
                 RejectsDuplicateSyncJsonProperties));
             tests.Add(new TestMain.TestCase(
+                "Bk2Reader rejects wrong sync JSON scalar token types",
+                RejectsWrongSyncJsonScalarTokenTypes));
+            tests.Add(new TestMain.TestCase(
                 "Bk2Reader rejects six-button and controller changes",
                 RejectsSixButtonAndControllerChanges));
             tests.Add(new TestMain.TestCase(
@@ -384,6 +387,32 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertSyncInvalid(
                 "{\"o\":" + settings + ",\"o\":" + settings + "}",
                 "duplicate");
+        }
+
+        private static void RejectsWrongSyncJsonScalarTokenTypes()
+        {
+            string sync = Fixture("ghz1-sync-settings.json");
+            AssertSyncInvalid(
+                sync.Replace("\"UseSixButton\":false", "\"UseSixButton\":\"false\""),
+                "field UseSixButton must be a JSON boolean");
+            AssertSyncInvalid(
+                sync.Replace("\"UseSixButton\":false", "\"UseSixButton\":0"),
+                "field UseSixButton must be a JSON boolean");
+            AssertSyncInvalid(
+                sync.Replace("\"Region\":0", "\"Region\":\"0\""),
+                "field Region must be a JSON integer");
+            AssertSyncInvalid(
+                sync.Replace("\"Region\":0", "\"Region\":0.0"),
+                "field Region must be a JSON integer");
+            AssertSyncInvalid(
+                sync.Replace("\"LowGain\":1.0", "\"LowGain\":\"1.0\""),
+                "field LowGain must be a JSON floating-point number");
+            AssertSyncInvalid(
+                sync.Replace(
+                    "\"$type\":\"BizHawk.Emulation.Cores.Consoles.Sega.gpgx."
+                        + "GPGX+GPGXSyncSettings, BizHawk.Emulation.Cores\"",
+                    "\"$type\":1"),
+                "field $type must be a JSON string");
         }
 
         private static void RejectsSixButtonAndControllerChanges()

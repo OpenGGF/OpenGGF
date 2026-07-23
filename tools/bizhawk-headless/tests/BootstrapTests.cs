@@ -21,6 +21,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "ROM identity reports mutated SHA-1",
                 ReportsMutatedSha1));
+            tests.Add(new TestMain.TestCase(
+                "ROM identity skips only when S1_ROM_PATH is absent",
+                SkipsOnlyWhenSonic1RomPathIsAbsent));
         }
 
         private static void AcceptsPinnedDistribution()
@@ -72,13 +75,42 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 actualSha1);
         }
 
+        private static void SkipsOnlyWhenSonic1RomPathIsAbsent()
+        {
+            string original = Environment.GetEnvironmentVariable("S1_ROM_PATH");
+            string missingPath = Path.Combine(
+                Path.GetTempPath(),
+                "openggf-missing-rom-" + Guid.NewGuid().ToString("N") + ".gen");
+            try
+            {
+                Environment.SetEnvironmentVariable("S1_ROM_PATH", null);
+                AssertEx.Throws<TestMain.SkipTestException>(
+                    () => ReadSonic1Rom(),
+                    "S1_ROM_PATH is not set");
+
+                Environment.SetEnvironmentVariable("S1_ROM_PATH", missingPath);
+                AssertEx.Throws<InvalidOperationException>(
+                    () => ReadSonic1Rom(),
+                    "does not exist");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("S1_ROM_PATH", original);
+            }
+        }
+
         private static byte[] ReadSonic1Rom()
         {
             string romPath = Environment.GetEnvironmentVariable("S1_ROM_PATH");
-            if (string.IsNullOrEmpty(romPath) || !File.Exists(romPath))
+            if (string.IsNullOrEmpty(romPath))
+            {
+                throw new TestMain.SkipTestException(
+                    "S1_ROM_PATH is not set.");
+            }
+            if (!File.Exists(romPath))
             {
                 throw new InvalidOperationException(
-                    "S1_ROM_PATH must identify the Sonic 1 World REV01 ROM.");
+                    "Supplied S1_ROM_PATH does not exist: " + romPath + ".");
             }
             return File.ReadAllBytes(romPath);
         }

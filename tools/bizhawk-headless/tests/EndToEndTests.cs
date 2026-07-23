@@ -651,6 +651,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(
                     ComputeSha256(firstCsv),
                     ComputeSha256(secondCsv));
+                AssertEx.Equal(
+                    CaptureFrameCount + 1,
+                    File.ReadLines(firstCsv).Count());
 
                 IDictionary<string, IDictionary<string, string>> canonical =
                     ReadRowsByFrame(physicsPath);

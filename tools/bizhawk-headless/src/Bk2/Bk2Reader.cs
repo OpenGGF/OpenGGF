@@ -321,6 +321,7 @@ namespace OpenGGF.BizHawk.Headless
                 settingsObject,
                 ExpectedSyncFields,
                 "sync");
+            ValidateSyncFieldTypes(settingsObject);
 
             var serializer = new JsonSerializer
             {
@@ -389,6 +390,126 @@ namespace OpenGGF.BizHawk.Headless
                 BackdropColor = dto.BackdropColor,
                 SpritesAlwaysOnTop = dto.SpritesAlwaysOnTop
             };
+        }
+
+        private static void ValidateSyncFieldTypes(JObject settings)
+        {
+            RequireSyncTokenType(
+                settings,
+                "$type",
+                JTokenType.String,
+                "string");
+            RequireSyncTokenType(
+                settings,
+                "UseSixButton",
+                JTokenType.Boolean,
+                "boolean");
+            RequireSyncTokenType(
+                settings,
+                "ControlTypeLeft",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "ControlTypeRight",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "Region",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "ForceVDP",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "LoadBIOS",
+                JTokenType.Boolean,
+                "boolean");
+            RequireSyncTokenType(
+                settings,
+                "Overscan",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "GGExtra",
+                JTokenType.Boolean,
+                "boolean");
+            RequireSyncTokenType(
+                settings,
+                "SMSFMSoundChip",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "GenesisFMSoundChip",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "Filter",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "LowPassRange",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "LowFreq",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "HighFreq",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "LowGain",
+                JTokenType.Float,
+                "floating-point number");
+            RequireSyncTokenType(
+                settings,
+                "MidGain",
+                JTokenType.Float,
+                "floating-point number");
+            RequireSyncTokenType(
+                settings,
+                "HighGain",
+                JTokenType.Float,
+                "floating-point number");
+            RequireSyncTokenType(
+                settings,
+                "BackdropColor",
+                JTokenType.Integer,
+                "integer");
+            RequireSyncTokenType(
+                settings,
+                "SpritesAlwaysOnTop",
+                JTokenType.Boolean,
+                "boolean");
+        }
+
+        private static void RequireSyncTokenType(
+            JObject settings,
+            string field,
+            JTokenType expected,
+            string expectedDescription)
+        {
+            JToken value = settings[field];
+            if (value.Type != expected)
+            {
+                throw new InvalidDataException(
+                    "SyncSettings.json field " + field
+                    + " must be a JSON " + expectedDescription
+                    + "; found " + value.Type + ".");
+            }
         }
 
         private static void ValidateExactFields(
