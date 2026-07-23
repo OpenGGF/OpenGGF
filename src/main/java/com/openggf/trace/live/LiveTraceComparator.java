@@ -101,6 +101,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
             }
         }
         return phase == TraceExecutionPhase.VBLANK_ONLY
+                || phase == TraceExecutionPhase.ADVANCE_ONLY
                 || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
     }
 
@@ -111,11 +112,18 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
 
     @Override
     public int vblankAdvanceCountOnSkippedTick(Bk2FrameInput frame) {
-        if (cursor <= 0 || cursor >= trace.frameCount()) {
+        if (cursor >= trace.frameCount()) {
             return 1;
         }
-        TraceFrame previous = trace.getFrame(cursor - 1);
+        TraceFrame previous = cursor > 0 ? trace.getFrame(cursor - 1) : null;
         TraceFrame current = trace.getFrame(cursor);
+        if (TraceReplayBootstrap.phaseForReplay(trace, previous, current)
+                == TraceExecutionPhase.ADVANCE_ONLY) {
+            return 0;
+        }
+        if (previous == null) {
+            return 1;
+        }
         if (previous.vblankCounter() < 0 || current.vblankCounter() < 0) {
             return 1;
         }
@@ -142,7 +150,9 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
             if (skippedPhase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
                 advancePlayableAnimationsOnly();
             } else {
-                laggedFrames++;
+                if (skippedPhase != TraceExecutionPhase.ADVANCE_ONLY) {
+                    laggedFrames++;
+                }
                 cursor++;
                 checkComplete();
                 return;

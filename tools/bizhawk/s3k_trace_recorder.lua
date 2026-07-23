@@ -32,8 +32,11 @@
 -- v5.3-s3k changes: emit pre-trace CPU/object snapshots on the first
 -- recorded physics frame so snapshot state and trace frame 0 share the same
 -- end-of-frame ROM instant.
--- v5.4-s3k changes: write pre_trace_osc_frames from Level_frame_counter so
--- seeded replays restore the ROM's global oscillation phase.
+-- v6.29-s3k changes: stop advertising replay phase controls in metadata.
+-- Replay derives prefix and LEVEL-transition scheduling from recorded mode
+-- events; recorder values remain comparison diagnostics only.
+-- v6.30-s3k changes: derive every profile's input column from
+-- bk2_frame_offset + trace_row with no profile-dependent adjustment.
 -- v6.0-s3k changes: emit per-frame cpu_state events with the full Tails CPU
 -- global block plus Ctrl_2_logical so engine SidekickCpuController state can
 -- be hydrated each frame in trace replay (closes the visibility gap that
@@ -669,11 +672,8 @@ local angle_to_ground_mode = C.angle_to_ground_mode
 local json_quote = C.json_quote
 
 local function bk2_input_mask(fallback_raw, trace_row)
-    -- The end-to-end AIZ bootstrap starts playback on the physical row before
-    -- its metadata offset; level-gated routes start directly at the offset.
-    local adjustment = TRACE_PROFILE == "aiz_end_to_end" and -1 or 0
     return C.bk2_input_mask(
-        fallback_raw, trace_row, bk2_frame_offset, adjustment)
+        fallback_raw, trace_row, bk2_frame_offset, 0)
 end
 
 local function write_aux(json_str)
@@ -948,7 +948,6 @@ local function write_metadata()
     meta_file:write('  "act": ' .. (start_act + 1) .. ',\n')
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
-    meta_file:write('  "pre_trace_osc_frames": ' .. start_gameplay_frame_counter .. ',\n')
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "characters": ["sonic", "tails"],\n')
@@ -956,7 +955,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.28-s3k",\n')
+    meta_file:write('  "lua_script_version": "6.30-s3k",\n')
     -- trace_schema remains 6 for the auxiliary event vocabulary. csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
@@ -4904,7 +4903,7 @@ elseif is_level_gated_reset_aware_profile() then
 else
     WAIT_DESC = "level gameplay (Game_Mode=0x0C, controls unlocked)"
 end
-print(string.format("S3K Trace Recorder v6.28-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
+print(string.format("S3K Trace Recorder v6.30-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
 
 -- Register the CNZ wire cage execution hooks. Done once at script load
 -- before the main loop runs so the memoryexecute callbacks are armed for
