@@ -1,0 +1,67 @@
+using System;
+using System.Collections.Generic;
+
+namespace OpenGGF.BizHawk.Headless.Tests
+{
+    internal static class TestMain
+    {
+        internal sealed class TestCase
+        {
+            public TestCase(string name, Action body)
+            {
+                Name = name;
+                Body = body;
+            }
+
+            public string Name { get; private set; }
+            public Action Body { get; private set; }
+        }
+
+        private static int Main(string[] args)
+        {
+            string filter = null;
+            if (args.Length == 2 && args[0] == "--filter")
+            {
+                filter = args[1];
+            }
+
+            var tests = new List<TestCase>
+            {
+                new TestCase("Harness scaffold runs", () => { })
+            };
+            BootstrapTests.Register(tests);
+            GpgxHostTests.Register(tests);
+
+            var matched = 0;
+            var failed = 0;
+            foreach (TestCase test in tests)
+            {
+                if (filter != null
+                    && test.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    continue;
+                }
+
+                matched++;
+                try
+                {
+                    test.Body();
+                    Console.WriteLine("PASS " + test.Name);
+                }
+                catch (Exception exception)
+                {
+                    failed++;
+                    Console.Error.WriteLine("FAIL " + test.Name + ": " + exception);
+                }
+            }
+
+            if (matched == 0)
+            {
+                Console.Error.WriteLine("No tests matched filter: " + filter);
+                return 2;
+            }
+
+            return failed == 0 ? 0 : 1;
+        }
+    }
+}
