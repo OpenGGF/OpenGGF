@@ -45,6 +45,7 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
     private boolean movementEnabled;
     private int movementEnableDelay = -1;
     private boolean deferredWaitOffscreenActive;
+    private boolean waitPlaceholderPassedAboveCamera;
     private int deferredWaitOffscreenDelay = WAIT_OFFSCREEN_RESTORE_PASSES;
     private int deferredMovementCount;
     private int deferredOrbitAngle;
@@ -63,6 +64,32 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
 
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite
                 ? sprite : null;
+        if (!initialized && !deferredWaitOffscreenActive && isWaitPlaceholderOutsideCoarseRange()) {
+            // loc_85AD2 deletes a placeholder which never reached
+            // Render_Sprites once its coarse X falls outside the live window.
+            setDestroyedByOffscreen();
+            return;
+        }
+        if (!initialized) {
+            boolean placeholderRendered = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE);
+            if (waitPlaceholderPassedAboveCamera && !placeholderRendered) {
+                return;
+            }
+            if (placeholderRendered) {
+                waitPlaceholderPassedAboveCamera = false;
+            } else if (!deferredWaitOffscreenActive
+                    && isWaitPlaceholderAboveCamera()
+                    && (player == null || player.getYSpeed() >= 0)) {
+                // The engine materializes placements before the ROM
+                // placeholder's render pass. Once the player is travelling
+                // downward away from an already-above-camera placeholder, do
+                // not fabricate its child graph unless the camera later
+                // actually renders that placeholder.
+                waitPlaceholderPassedAboveCamera = true;
+                return;
+            }
+        }
         if (!initialized && !isOnScreenX()) {
             if (isWithinRenderSpriteBounds(WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE)) {
                 // Obj_WaitOffscreen has observed render_flags bit 7 and restored
@@ -106,6 +133,23 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
         if (canMoveThisFrame(player)) {
             moveWithVelocity();
         }
+    }
+
+    private boolean isWaitPlaceholderOutsideCoarseRange() {
+        if (tryServices() == null || services().camera() == null) {
+            return false;
+        }
+        int objectCoarse = currentX & 0xFF80;
+        int cameraCoarseBack = (services().camera().getX() - 0x80) & 0xFF80;
+        boolean isBehindCamera = (short) (currentX - services().camera().getX()) < 0;
+        return isBehindCamera && ((objectCoarse - cameraCoarseBack) & 0xFFFF) > 0x280;
+    }
+
+    private boolean isWaitPlaceholderAboveCamera() {
+        if (tryServices() == null || services().camera() == null) {
+            return false;
+        }
+        return currentY + WAIT_OFFSCREEN_HALF_SIZE < services().camera().getY();
     }
 
     private void advanceDeferredWaitOffscreen(AbstractPlayableSprite player) {

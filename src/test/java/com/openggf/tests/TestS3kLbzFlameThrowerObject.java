@@ -77,6 +77,17 @@ class TestS3kLbzFlameThrowerObject {
     }
 
     @Test
+    void parentUsesRomVIntPhaseInsteadOfRawObjectUpdateCounter() {
+        RecordingServices services = new RecordingServices(6);
+        LbzFlameThrowerObjectInstance flameThrower = createParent(services, 0x20, false);
+
+        flameThrower.update(0x5A, playerAt(0x0200, 0x0100));
+
+        assertEquals(1, services.children.size(),
+                "Obj16 reads the phased low byte of V_int_run_count");
+    }
+
+    @Test
     void xFlippedParentSpawnsFlameToTheLeft() {
         RecordingServices services = new RecordingServices();
         LbzFlameThrowerObjectInstance flameThrower = createParent(services, 0x00, true);
@@ -146,8 +157,14 @@ class TestS3kLbzFlameThrowerObject {
         private final List<AbstractObjectInstance> children = new ArrayList<>();
         private final List<Integer> playedSfx = new ArrayList<>();
         private final List<PatternSpriteRenderer> renderers = new ArrayList<>();
+        private final int vIntPhase;
 
         private RecordingServices() {
+            this(0);
+        }
+
+        private RecordingServices(int vIntPhase) {
+            this.vIntPhase = vIntPhase;
             objectManager = mock(ObjectManager.class);
             doAnswer(invocation -> {
                 AbstractObjectInstance child = invocation.getArgument(0);
@@ -169,6 +186,11 @@ class TestS3kLbzFlameThrowerObject {
         @Override
         public ObjectRenderManager renderManager() {
             return renderManager;
+        }
+
+        @Override
+        public int vIntRunCounter(int objectUpdateCounter) {
+            return objectUpdateCounter + vIntPhase;
         }
 
         @Override

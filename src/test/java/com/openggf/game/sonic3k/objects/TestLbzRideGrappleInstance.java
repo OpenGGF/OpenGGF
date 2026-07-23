@@ -33,6 +33,8 @@ class TestLbzRideGrappleInstance {
         assertFalse(grapple instanceof PlaceholderObjectInstance,
                 "S3KL slot $17 is Obj_LBZRideGrapple and must not remain a placeholder");
         assertEquals("LBZRideGrapple", grapple.getName());
+        assertEquals(1, grapple.getReservedChildSlotCount(),
+                "Obj_LBZRideGrapple owns one loc_2668E multisprite SST child");
     }
 
     @Test
@@ -129,6 +131,18 @@ class TestLbzRideGrappleInstance {
 
         assertEquals(wholePixelHandleX + 1, readInt(grapple, "handleX"),
                 "sub_2682E adds the circular deltas to the complete 16.16 parent x_pos");
+    }
+
+    @Test
+    void movingGrappleDeletesOnlyAfterCurrentAndOriginalPositionsLeaveRange()
+            throws ReflectiveOperationException {
+        LbzRideGrappleInstance grapple = (LbzRideGrappleInstance) grapple(0x0E68, 0x0600, 9);
+        ((SubpixelMotion.State) readField(grapple, "motion")).x = 0x1398;
+
+        assertFalse(grapple.isCustomOutOfRange(0x0D00),
+                "loc_265A2 keeps the grapple alive while its saved original x_pos remains in range");
+        assertTrue(grapple.isCustomOutOfRange(0x1700),
+                "loc_265BC deletes only after both the moving and saved x_pos are out of range");
     }
 
     @Test

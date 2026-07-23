@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ replay now restores the captured `V_int_run_count` phase for flame scheduling, dispatches the miniboss explosion controller on its native creation pass, and preserves missed Orbinaut/ride-grapple/invisible-block SST lifetimes. This advances the combined LBZ frontier from frame 25693 to frame 27598 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ Flybot 767's initial `Obj_WaitOffscreen` placeholder now requires full two-axis render visibility, and its restored routine applies the native coarse-X delete before touch publication. This removes a false late Tails contact and advances the combined LBZ frontier from frame 25575 to frame 25693 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: restored LBZ Flybot 767 routines now continue through brief viewport exits before `Sprite_CheckDeleteTouchSlotted`, instead of re-entering their initial offscreen wait. This removes a false enemy bounce and advances the combined LBZ frontier from frame 24160 to frame 25575 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: ROM-layout LBZ Flybot 767 instances now preserve their retained `Map_Offscreen` placeholder pass and publish the live SST touch coordinate, while alarm-allocated Flybots keep their native dynamic-spawn phase. This advances the combined LBZ frontier from frame 24046 to frame 24160 without regressing another S3K, S1, or S2 trace frontier.

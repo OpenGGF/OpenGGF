@@ -99,6 +99,18 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void update(int frameCounter, PlayableEntity player) {
+        // The normal, horizontal-hurt, and vertical-hurt routines all finish
+        // with the same coarse Sprite_OnScreen_Test-style range check before
+        // returning (loc_1EC6C/loc_1F45E/loc_1F606). Clearing the respawn bit
+        // here is important as well as freeing the SST slot: Load_Sprites may
+        // then reconsider the placement if the camera backs up.
+        if (!isInRangeAt(getX())) {
+            setDestroyedByOffscreen();
+        }
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity,
                                SolidContact contact, int frameCounter) {
         // No special behavior - standard collision handled by ObjectManager.

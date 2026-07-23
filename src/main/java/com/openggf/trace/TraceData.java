@@ -135,24 +135,42 @@ public class TraceData {
      * {@code V_int_run_count}. S3K schema-v6 captures wrote the adjacent
      * life-count word (for example $0800/$0A00) into the CSV counter
      * column. A repeated value across changing gameplay rows identifies that
-     * recorder layout. BK2 advances once per hardware VBlank, so its low bit
-     * supplies the missing parity used by object routines while the recorded
-     * word retains the established higher-bit replay phase.
+     * recorder layout. Complete-run captures that carry an independently
+     * measured lost-ring floor-check phase expose the same low three bits of
+     * {@code V_int_run_count}; use those bits directly. Older fixtures fall
+     * back to BK2 parity while the recorded word retains the established
+     * higher-bit replay phase.
      */
     public int initialVIntRunCounterPhaseOffset() {
         int recorded = initialVblankCounter();
         if (!usesBk2VblankCounterFallback()) {
             return 0;
         }
+        Integer recordedCounterPhase = metadata.ringFloorCheckCounterPhase();
+        if (recordedCounterPhase != null) {
+            return recordedCounterPhase & 7;
+        }
         return (metadata.bk2FrameOffset() - recorded) & 1;
     }
 
     private boolean usesBk2VblankCounterFallback() {
-        return "s3k".equals(metadata.game())
-                && frames.size() > 1
-                && frames.get(0).vblankCounter() >= 0
-                && frames.get(0).vblankCounter() == frames.get(1).vblankCounter()
-                && !frames.get(0).stateEquals(frames.get(1));
+        if (!"s3k".equals(metadata.game()) || frames.size() < 2
+                || frames.get(0).vblankCounter() < 0) {
+            return false;
+        }
+        int recorded = frames.get(0).vblankCounter();
+        boolean gameplayChanged = false;
+        int sampleCount = Math.min(frames.size(), 1024);
+        for (int i = 1; i < sampleCount; i++) {
+            TraceFrame current = frames.get(i);
+            if (current.vblankCounter() != recorded) {
+                return false;
+            }
+            if (!current.stateEquals(frames.get(i - 1))) {
+                gameplayChanged = true;
+            }
+        }
+        return gameplayChanged;
     }
 
     public TraceFrame getFrame(int traceFrame) {

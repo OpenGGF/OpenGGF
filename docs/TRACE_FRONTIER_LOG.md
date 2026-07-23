@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ V-int scheduling and offscreen SST lifetime
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 25693 to
+  frame 27598.** The replay now reports 2512 release-blocking errors; the next
+  divergence is Sonic's Y speed (`$0000` expected versus `$01CE` actual).
+- Root: the schema-v6 complete-run CSV retained a constant adjacent RAM word
+  instead of `V_int_run_count`, so LBZ flame creation used the wrong low-bit
+  phase. The miniboss explosion controller also omitted its creation-time
+  callback, and a vertically missed Orbinaut incorrectly materialized four
+  child SST slots instead of remaining in `Obj_WaitOffscreen`. Those errors
+  changed the RNG and allocation sequence used by underwater bubbles, layout
+  objects, and spilled rings.
+- Fix: replay counter fallback now detects constant broken captures across an
+  initial gameplay sample and restores the independently recorded low-three-bit
+  phase. Flame throwers consume that V-int clock, the LBZ miniboss dispatches
+  its first explosion on child creation, and Orbinaut placeholders retain the
+  native no-child/offscreen-delete lifetime after the camera has passed above
+  them. Ride-grapple child-slot occupancy and coarse deletion, invisible-block
+  deletion, and their focused regressions were aligned at the same allocation
+  frontier.
+- Validation: 102 focused counter, explosion, signpost, flame, grapple,
+  Orbinaut, rules, and trace-parsing tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ Flybot placeholder render bounds
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 25575 to

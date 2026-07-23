@@ -119,6 +119,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private int defeatWaitTimer = -1;
     private boolean defeatFlowSpawned;
     private S3kBossExplosionController defeatExplosionController;
+    private boolean defeatExplosionCreationPending;
     private LbzMinibossBoxKnuxInstance knucklesFightParent;
 
     private enum WaitCallback {
@@ -575,6 +576,13 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         }
         defeatWaitTimer = DEFEAT_WAIT_FRAMES;
         defeatExplosionController = new S3kBossExplosionController(getX(), getY(), 0, services().rng());
+        // CreateChild1_Normal installs Obj_CreateBossExplosion after the live
+        // boss slot. Because that child slot is still ahead of the current
+        // Process_Sprites cursor, its zeroed Obj_Wait tail dispatches the first
+        // explosion in this same object pass. The following emission remains
+        // three complete child-slot turns later.
+        defeatExplosionController.dispatchCreation();
+        defeatExplosionCreationPending = true;
         // ROM Touch_Enemy sets status bit 7 on the final hit; loc_728C8/loc_72902
         // then unravel both arm chains one panel per frame.
         for (PanelState panel : panels) {
@@ -606,7 +614,11 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         if (defeatExplosionController == null || defeatExplosionController.isFinished()) {
             return;
         }
-        defeatExplosionController.tick();
+        if (defeatExplosionCreationPending) {
+            defeatExplosionCreationPending = false;
+        } else {
+            defeatExplosionController.tick();
+        }
         for (S3kBossExplosionController.PendingExplosion explosion
                 : defeatExplosionController.drainPendingExplosions()) {
             if (explosion.playSfx()) {

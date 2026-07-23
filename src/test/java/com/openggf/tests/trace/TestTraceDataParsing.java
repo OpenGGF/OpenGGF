@@ -623,7 +623,7 @@ public class TestTraceDataParsing {
         TraceData data = TraceData.load(dir);
 
         assertEquals(0x0800, data.initialVblankCounter());
-        assertEquals(1, data.initialVIntRunCounterPhaseOffset());
+        assertEquals(3, data.initialVIntRunCounterPhaseOffset());
     }
 
     @Test
