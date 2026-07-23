@@ -187,6 +187,22 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
+    void unchangedStateInputEdgeAfterGameplayStartUsesNormalExecutionPhase() throws Exception {
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceFrame previous = trace.getFrame(1823);
+        TraceFrame current = trace.getFrame(1824);
+
+        assertFalse(previous.input() == current.input());
+        assertTrue(current.stateEquals(previous));
+        assertEquals(previous.gameplayFrameCounter(), current.gameplayFrameCounter());
+        assertEquals(previous.vblankCounter(), current.vblankCounter());
+        assertEquals(previous.lagCounter(), current.lagCounter());
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current),
+                "The pre-level input-latch exception must end after the gameplay_start checkpoint.");
+    }
+
+    @Test
     void traceReplayBootstrapNeverReportsTraceFrameAsActualPrimaryState() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
 
@@ -293,10 +309,9 @@ class TestTraceReplayStartPositionPolicy {
                             + "before the frame-zero RNG seed is installed.");
             TraceExecutionPhase frameZeroPhase =
                     TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0));
-            assertEquals(frameZeroPhase == TraceExecutionPhase.VBLANK_ONLY ? 1 : 0,
+            assertEquals(0,
                     TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1),
-                    route + " only needs the setup OscillateNumDo pre-advance when its first row "
-                            + "is structural and therefore not driven through LevelLoop.");
+                    route + " must not schedule oscillator prelude from frame-zero outcome shape.");
             TraceFrame frameZero = trace.getFrame(0);
             boolean handoffBeforeNativeMotionRow = !frameZero.stateEquals(trace.getFrame(1))
                     && frameZero.xSpeed() == 0

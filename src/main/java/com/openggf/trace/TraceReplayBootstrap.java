@@ -191,22 +191,12 @@ public final class TraceReplayBootstrap {
                 || hasRecordedPreLevelPrefix(trace)) {
             return 0;
         }
+        if ("s3k".equals(trace.metadata().game())) {
+            return 0;
+        }
         int seedTraceIndex = replaySeedTraceIndexForTraceReplay(trace);
         if (seedTraceIndex < 0 || seedTraceIndex >= trace.frameCount()) {
             return 0;
-        }
-        if (isS3kCompleteRunSegment(trace)) {
-            TraceFrame firstFrame = trace.getFrame(0);
-            boolean firstRowIsVblankOnly =
-                    isS3kCompleteRunInitialHandoffRow(trace, null, firstFrame)
-                            || isS3kCompleteRunVisibleVelocityHoldRow(trace, null, firstFrame);
-            // A structural handoff/hold row is not driven through LevelLoop,
-            // so reproduce the ROM's already-completed setup OscillateNumDo
-            // pass before the first native object update. When frame 0 is a
-            // real FULL_LEVEL_FRAME (as in the AIZ complete run), that step
-            // advances OscillateNumDo itself; pre-advancing as well shifts
-            // every oscillating object one frame ahead.
-            return firstRowIsVblankOnly ? 1 : 0;
         }
         int firstComparedGameplayFrame =
                 trace.getFrame(seedTraceIndex).gameplayFrameCounter();
@@ -996,7 +986,7 @@ public final class TraceReplayBootstrap {
                                                          TraceFrame previous,
                                                          TraceFrame current) {
         if (trace == null || previous == null || current == null
-                || !hasRecordedPreLevelPrefix(trace)
+                || !shouldUsePreLevelIntroPrefix(trace, current)
                 || current.input() == previous.input()) {
             return false;
         }

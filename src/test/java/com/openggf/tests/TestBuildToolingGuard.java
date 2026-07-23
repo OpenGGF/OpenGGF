@@ -1242,6 +1242,40 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void s3kOscillatorPreludeDoesNotCallFrameZeroOutcomeHelpers() throws Exception {
+        String source = stripComments(Files.readString(
+                Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java")));
+        int methodStart = source.indexOf(
+                "public static int preTraceOscillationFramesForTraceReplay(");
+        int methodEnd = source.indexOf(
+                "public static int initialOscillationSuppressionFramesForTraceReplay(",
+                methodStart);
+        if (methodStart < 0 || methodEnd < 0) {
+            fail("Could not locate the pre-trace oscillator scheduling method.");
+        }
+
+        String schedulingMethod = source.substring(methodStart, methodEnd);
+        List<String> violations = List.of(
+                        "trace.getFrame(0)",
+                        "isS3kCompleteRunInitialHandoffRow(",
+                        "isS3kCompleteRunVisibleVelocityHoldRow(",
+                        "hasNativeInitialVelocity(",
+                        ".stateEquals(",
+                        ".xSpeed(",
+                        ".ySpeed(",
+                        ".gSpeed(")
+                .stream()
+                .filter(schedulingMethod::contains)
+                .toList();
+
+        if (!violations.isEmpty()) {
+            fail("S3K oscillator prelude scheduling must not call frame-zero outcome helpers "
+                    + "or inspect frame-zero player outcomes:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
     void sampleScannerDetectsTraceBootstrapPolicySignalsButIgnoresComments() {
         List<String> signals = traceBootstrapPolicySignals("sample/TraceReplayBootstrap.java", """
                 class TraceReplayBootstrap {
