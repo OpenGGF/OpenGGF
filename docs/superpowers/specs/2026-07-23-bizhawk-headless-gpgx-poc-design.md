@@ -9,9 +9,10 @@ native C# console harness around BizHawk's GPGX core, without starting EmuHawk,
 WinForms, X11, video rendering, or audio output.
 
 The first milestone is deliberately small. It loads the Sonic 1 REV01 ROM,
-replays a power-on Genesis BK2 movie, advances at most 1,000 frames, and writes a
-diagnostic CSV containing the completed frame number, P1 input mask, player
-centre coordinates, and player velocities.
+replays a power-on Genesis BK2 movie through a declared warm-up offset, records
+at most the following 1,000 frames, and writes a diagnostic CSV containing the
+trace-row number, P1 input mask, player centre coordinates, and player
+velocities.
 
 ### Non-goals
 
@@ -52,8 +53,8 @@ centre coordinates, and player velocities.
 3. It validates the ROM hash and BK2 platform/core/controller/sync assumptions
    before emulation, and applies the accepted sync profile to the constructed
    GPGX core.
-4. It replays the first 1,000 frames of a supported power-on Genesis BK2 using
-   its declared `LogKey`.
+4. It replays a supported power-on Genesis BK2 through the declared warm-up
+   offset and records the following 1,000 frames using its declared `LogKey`.
 5. It advances GPGX with `render: false` and `renderSound: false`.
 6. It emits `smoke.csv` with deterministic frame, input, centre-position, and
    velocity values.
@@ -274,15 +275,18 @@ replaces assembly references with pinned project references. It does not ask
 
 1. Validate CLI paths, BizHawk installation, ROM SHA-1, and BK2 metadata.
 2. Construct GPGX and resolve Main RAM.
-3. Exclusively create a uniquely named temporary CSV beside the requested
+3. Apply and advance every BK2 row before `--bk2-frame-offset` without emitting
+   output.
+4. Exclusively create a uniquely named temporary CSV beside the requested
    output. Concurrent runs never share a temporary path.
-4. For each BK2 row up to `--max-frames`:
+5. For each of the next `--max-frames` BK2 rows:
    1. clear the prior controller state;
    2. apply the row's Power/Reset/P1 button states;
+   3. advance GPGX once without rendering or sound;
    4. read the just-completed frame's S1 RAM values;
    5. append one CSV row.
-5. Flush and close the temporary file.
-6. Atomically publish it to `smoke.csv` with no-replace semantics. On Linux this
+6. Flush and close the temporary file.
+7. Atomically publish it to `smoke.csv` with no-replace semantics. On Linux this
    uses a hard-link publication in the same directory (`link(temp, final)`)
    followed by deletion of the temporary name; an existing final path makes
    `link` fail without replacing it.
@@ -293,7 +297,13 @@ The future source-build migration replaces release DLL references with
 `ProjectReference` entries into a pinned BizHawk checkout. The CLI, BK2 reader,
 recorder, `IGpgxHost`, tests, and data flow remain unchanged. Necessary
 BizHawk-version API adjustments stay inside `BizHawkGpgxHost` and bootstrap
-wiring.
+wiring. The first source-backed configuration pins the checkout to the same
+BizHawk 2.11 commit and continues using `gpgx.wbx.zst` and
+`libwaterboxhost.so` from the verified 2.11 release, with their checksums
+verified by bootstrap. A later, separate milestone may build Waterbox artifacts
+from source and must establish a new golden differential gate before replacing
+the release artifacts. Project references alone are never treated as a
+complete runnable GPGX distribution.
 
 ### Rollback
 
@@ -311,10 +321,12 @@ tools/bizhawk-headless/run.sh \
   --rom "/path/to/s1.gen" \
   --movie "/path/to/ghz1.bk2" \
   --output target/bizhawk-headless-smoke \
+  --bk2-frame-offset 840 \
   --max-frames 1000
 ```
 
 Required arguments are `--rom`, `--movie`, and `--output`.
+`--bk2-frame-offset` defaults to `0` and must be non-negative.
 `--max-frames` defaults to `1000` and must be in the inclusive range
 `1..1000`.
 
@@ -352,9 +364,16 @@ The smoke CSV `input` field uses the existing OpenGGF mask:
 
 ### Frame semantics
 
-Input row `N` is applied before the `N`th call to `FrameAdvance`. CSV row `N`
-contains RAM state after that call completes. The emitted `frame` field is the
-GPGX completed-frame counter, not a guessed zero-based CSV index.
+Every BK2 row before `--bk2-frame-offset` is applied and advanced normally but
+does not emit CSV. At offset `O`, BK2 input row `O` is applied before the next
+`FrameAdvance`; trace row `0000` contains RAM state after that call completes.
+Trace row `N` therefore describes the completed emulation of BK2 row `O + N`.
+The CSV `frame` field is this zero-based trace-row number. The host's absolute
+GPGX completed-frame counter remains available for assertions and diagnostics
+but is not written in the milestone CSV. GPGX begins with completed-frame
+counter `0`; after warm-up it is `O`, and immediately after emitting trace row
+`N` it must equal `O + N + 1`. For the canonical offset `840`, trace row `0000`
+is sampled at GPGX completed-frame counter `841`.
 
 ### RAM semantics
 
@@ -417,6 +436,8 @@ Per-frame logging is omitted.
 9. Prove `--max-frames` rejects zero and values above `1000`, and that early
    movie exhaustion fails without finalization.
 10. Assert exact UTF-8-without-BOM, LF, uppercase-hex, and final-newline output.
+11. Prove offset `2` advances two warm-up rows without output and emits trace
+    row `0000` only after advancing the third BK2 row.
 
 ### Integration tests
 
@@ -424,7 +445,8 @@ Per-frame logging is omitted.
    assemblies report version `2.11.0.0`, assert the runtime
    `PathUtils.DllDirectoryPath`, then with `DISPLAY` unset load GPGX and advance
    ten frames using the pinned local BizHawk distribution.
-2. Capture 1,000 frames twice and compare SHA-256 hashes of `smoke.csv`.
+2. With `--bk2-frame-offset 840`, capture 1,000 rows into two distinct temporary
+   output directories and compare SHA-256 hashes of their `smoke.csv` files.
 3. Compare the native smoke rows corresponding to canonical trace frames `0000`,
    `0001`, and `03E7` with
    `src/test/resources/traces/s1/ghz1_fullrun/physics.csv`. The expected
@@ -436,8 +458,10 @@ Per-frame logging is omitted.
    03E7: (0008,09A5,02AA,0272,FF80)
    ```
 
-   The test derives row alignment using the explicit completed-frame semantics;
-   it does not search the trace for matching values.
+   The tracked trace metadata declares `bk2_frame_offset: 840`, so trace row
+   `03E7` maps to BK2 input row `840 + 999 = 1839`. The test uses that declared
+   offset and the explicit completed-frame semantics; it does not search the
+   trace for matching values.
 
 ROM-backed integration tests skip with an explicit reason when the user-supplied
 ROM or downloaded BizHawk distribution is absent. They must fail, rather than
