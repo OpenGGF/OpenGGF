@@ -38,8 +38,13 @@ For an intro-prefix capture, the boundaries are distinct:
    mode.
 2. The first LEVEL-mode row is found from the existing `zone_act_state`
    transition and remains `VBLANK_ONLY`.
-3. The next counter-derived full-frame row is the first driven gameplay
-   iteration.
+3. The row after the LEVEL setup boundary is the first driven gameplay
+   iteration even when gameplay, VBlank, and lag counters remain pinned.
+   Subsequent prefix rows default to full native frames. A row is suppressed
+   only when the lag counter directly proves a lag/VBlank-only sample, or when
+   it changes controller input while every recorded gameplay field and all
+   counters remain identical to the preceding row; that latter case advances
+   only the input latch.
 4. Strict comparison begins at the existing `gameplay_start` checkpoint.
 5. Prefix classification and previous-input driving remain active through the
    `gameplay_start` checkpoint.
@@ -68,6 +73,9 @@ Focused policy tests will first prove that:
    prelude.
 5. Guards reject inference from frame-zero player/sidekick motion, animation,
    or oscillator outcome values.
+6. Pinned counters after a transition into LEVEL mode do not suppress native
+   prefix execution; explicit lag-counter evidence and unchanged-state
+   input-latch rows remain the only prefix exceptions.
 
 The AIZ and CNZ trace replay tests will verify input alignment and frontier
 behavior without another fixture regeneration. Existing trace bootstrap
