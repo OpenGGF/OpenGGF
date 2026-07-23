@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ miniboss tracker and linked-arm fixed-point phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 20365 to
+  frame 20519.** The next divergence is CPU Tails' vertical speed (`-$0400`
+  expected versus `$0000` actual).
+- Root: the miniboss tracker compared its pre-movement whole-pixel player X
+  at the four-pixel deadband, leaving the parent two pixels to the right of
+  its native path. Its linked arm simulation also truncated every
+  `MoveSprite_CircularSimple` result to a whole pixel, discarding the 16.16
+  fractions which native child `x_pos`/`y_pos` longs carry into the next link.
+- Fix: the horizontal tracker now projects the complete native 16:8 player
+  movement before applying the deadband. Linked arm children retain their
+  full 16.16 sine/cosine result and feed that fraction to the next child.
+  Focused coverage locks both the exact deadband edge and the outer arm's
+  accumulated native position.
+- Validation: both focused miniboss precision tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes; LBZ reaches frame 20519 with 5876 remaining
+  errors. No S3K, S1, or S2 frontier regressed. The full LBZ headless class
+  still has its pre-existing Player 2 release-order assertion.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ1 post-collapse max-X helper creation pass
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 19709 to

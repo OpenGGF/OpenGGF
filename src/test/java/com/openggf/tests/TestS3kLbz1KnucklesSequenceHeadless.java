@@ -320,6 +320,28 @@ class TestS3kLbz1KnucklesSequenceHeadless {
     }
 
     @Test
+    void lbzMinibossTrackerUsesCompleteNativePlayerMovementAtDeadband() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        removeLbz1GroundLaunchIntro();
+        applyTitleCardHandoff();
+        LbzMinibossInstance miniboss = GameServices.level().getObjectManager().createDynamicObject(
+                () -> new LbzMinibossInstance(new ObjectSpawn(
+                        0x3ED2, 0x01B8, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0)));
+        miniboss.forceOpenForTest(0x3ED2, 0x01B8);
+
+        player.setCentreX((short) 0x3ED7);
+        player.setCentreY((short) 0x01F0);
+        player.setSubpixelRaw(0x1A00, player.getYSubpixelRaw());
+        player.setXSpeed((short) 0xFF08);
+        miniboss.update(0, player);
+
+        assertEquals(0, miniboss.getXVelocityForTest(),
+                "The complete 16:8 movement reaches x=$3ED6, exactly four pixels from the boss; "
+                        + "loc_72522 must stop rather than move right from the pre-movement x_pos.");
+    }
+
+    @Test
     void lbzMinibossRendersPanelsFromMinibossMappingsNotBoxSheet() {
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         PatternSpriteRenderer bossRenderer = mock(PatternSpriteRenderer.class);
@@ -422,6 +444,10 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                 .count();
         assertEquals(12, hurtArmRegions,
                 "Each linked arm child uses ObjDat3 word_72968 collision_flags=$98.");
+        assertEquals(0x3EC2, regions[6].x(),
+                "MoveSprite_CircularSimple must carry 16.16 fractions through every first-arm link.");
+        assertEquals(0x01A6, regions[6].y(),
+                "The outer first-arm panel must retain the accumulated cosine fractions.");
     }
 
     @Test

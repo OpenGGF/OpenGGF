@@ -408,12 +408,21 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         if (isKnuckles()) {
             bossX += spawn.subtype() == 0 ? KNUCKLES_TARGET_X_OFFSET : -KNUCKLES_TARGET_X_OFFSET;
         }
-        int dx = signedDelta(player.getCentreX() & 0xFFFF, bossX);
+        int projectedPlayerX = projectNativePosition(
+                player.getCentreX(), player.getXSubpixelRaw(), player.getXSpeed());
+        int dx = signedDelta(projectedPlayerX & 0xFFFF, bossX);
         motion.xVel = Math.abs(dx) <= TARGET_DEADBAND ? 0 : (dx < 0 ? -TRACK_VEL : TRACK_VEL);
 
         int targetY = (player.getCentreY() + PLAYER_TARGET_Y_OFFSET) & 0xFFFF;
         int dy = signedDelta(targetY, getY());
         motion.yVel = Math.abs(dy) <= TARGET_DEADBAND ? 0 : (dy < 0 ? -TRACK_VEL : TRACK_VEL);
+    }
+
+    private int projectNativePosition(int position, int subpixel, int velocity) {
+        // The native tracker observes the player's complete 16:8 movement
+        // result. Preserve the high fractional byte when deciding which side
+        // of the four-pixel deadband the player reaches.
+        return ((position << 8) + ((subpixel >> 8) & 0xFF) + velocity) >> 8;
     }
 
     private boolean isKnuckles() {
@@ -709,6 +718,8 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             if (center) {
                 x = getX();
                 y = getY();
+                xSub = motion.xSub;
+                ySub = motion.ySub;
                 if (parentBit1) {
                     frame = centerChildFrame;
                 }
@@ -824,19 +835,27 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
 
         private void moveCircular() {
             int shift = index == 5 ? 4 : 5;
-            int xOffset = TrigLookupTable.sinHex(angle) >> shift;
-            int yOffset = TrigLookupTable.cosHex(angle) >> shift;
             PanelAnchor anchor = resolvePanelAnchor();
-            x = anchor.x() + xOffset;
-            y = anchor.y() + yOffset;
+            // MoveSprite_CircularSimple shifts the signed sine/cosine words as
+            // 16.16 longs, then adds them to the parent's complete x_pos/y_pos
+            // longs. Preserve each link's fractional remainder so it can carry
+            // into later links in the chain.
+            int xFixed = (anchor.x() << 16) | (anchor.xSub() & 0xFFFF);
+            int yFixed = (anchor.y() << 16) | (anchor.ySub() & 0xFFFF);
+            xFixed += TrigLookupTable.sinHex(angle) << (16 - shift);
+            yFixed += TrigLookupTable.cosHex(angle) << (16 - shift);
+            x = xFixed >> 16;
+            y = yFixed >> 16;
+            xSub = xFixed & 0xFFFF;
+            ySub = yFixed & 0xFFFF;
         }
 
         private PanelAnchor resolvePanelAnchor() {
             if (index == 0) {
-                return new PanelAnchor(getX(), getY());
+                return new PanelAnchor(getX(), getY(), motion.xSub, motion.ySub);
             }
             PanelState previous = linkedParent();
-            return new PanelAnchor(previous.x, previous.y);
+            return new PanelAnchor(previous.x, previous.y, previous.xSub, previous.ySub);
         }
 
         private PanelState linkedParent() {
@@ -860,6 +879,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         }
     }
 
-    private record PanelAnchor(int x, int y) {
+    private record PanelAnchor(int x, int y, int xSub, int ySub) {
     }
 }
