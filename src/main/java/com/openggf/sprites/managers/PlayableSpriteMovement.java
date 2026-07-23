@@ -2,6 +2,7 @@ package com.openggf.sprites.managers;
 
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.rules.CollisionRules;
@@ -3231,7 +3232,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
 		Consumer<AbstractPlayableSprite> landingHandler =
 				usesDirectHitFloorLanding(quadrant) ? this::calculateDirectFloorLanding : this::calculateLanding;
-		collisionSystem().resolveAirCollision(FrameCollisionPlan.terrainOnly(), sprite, landingHandler, forceFloorCheck);
+		collisionSystem().resolveAirCollision(FrameCollisionPlan.terrainOnly(), sprite, landingHandler,
+				landingTiltPublisher(), forceFloorCheck);
+	}
+
+	private Consumer<SensorResult[]> landingTiltPublisher() {
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		var sprites = GameServices.spritesOrNull();
+		return animationRules != null
+				&& animationRules.airLandingPublishesTiltAngles()
+				&& sprites != null
+				&& sprites.getMainPlayable() == sprite
+				? this::captureTiltAnglesFromLandingProbes
+				: null;
+	}
+
+	private void captureTiltAnglesFromLandingProbes(SensorResult[] groundResults) {
+		SensorResult left = groundResults != null && groundResults.length > 0 ? groundResults[0] : null;
+		SensorResult right = groundResults != null && groundResults.length > 1 ? groundResults[1] : null;
+		latchedNextTilt = right == null ? 3 : right.angle() & 0xFF;
+		latchedTilt = left == null ? 3 : left.angle() & 0xFF;
 	}
 
 	private static boolean usesDirectHitFloorLanding(int quadrant) {

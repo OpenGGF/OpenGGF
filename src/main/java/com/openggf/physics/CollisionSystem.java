@@ -809,6 +809,24 @@ public class CollisionSystem {
                                     AbstractPlayableSprite sprite,
                                     Consumer<AbstractPlayableSprite> landingHandler,
                                     boolean forceFloorCheck) {
+        resolveAirCollision(plan, sprite, landingHandler, null, forceFloorCheck);
+    }
+
+    /**
+     * Resolves airborne terrain collision and publishes the exact pair of floor
+     * probes when that pair produces a landing.
+     *
+     * <p>S3K copies the shared {@code Primary_Angle}/{@code Secondary_Angle}
+     * bytes into the player's {@code next_tilt}/{@code tilt} fields after the
+     * movement dispatch. Callers that model those bytes can consume the probe
+     * pair here; callers without that player-tail behavior use the legacy
+     * overload.
+     */
+    public void resolveAirCollision(FrameCollisionPlan plan,
+                                    AbstractPlayableSprite sprite,
+                                    Consumer<AbstractPlayableSprite> landingHandler,
+                                    Consumer<SensorResult[]> landingProbeHandler,
+                                    boolean forceFloorCheck) {
         requireTerrainOnlyPlan(plan, "resolveAirCollision");
         // SonicKnux_DoLevelCollision uses explicit world-space floor, ceiling,
         // and wall checks. The engine's sensor offsets otherwise rotate from a
@@ -825,7 +843,7 @@ public class CollisionSystem {
             case 0x00 -> {
                 doWallCheckBoth(sprite);
                 SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                doTerrainCollisionAir(sprite, groundResult, landingHandler);
+                doTerrainCollisionAir(sprite, groundResult, landingHandler, landingProbeHandler);
             }
             case 0x40 -> {
                 boolean wallHit = doWallCheck(sprite, 0);
@@ -838,7 +856,8 @@ public class CollisionSystem {
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit) {
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
+                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
+                            landingProbeHandler, forceFloorCheck);
                 }
             }
             case 0x80 -> {
@@ -856,7 +875,8 @@ public class CollisionSystem {
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit) {
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
+                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
+                            landingProbeHandler, forceFloorCheck);
                 }
             }
             default -> {
@@ -895,6 +915,13 @@ public class CollisionSystem {
     private void doTerrainCollisionAir(AbstractPlayableSprite sprite,
                                        SensorResult[] results,
                                        Consumer<AbstractPlayableSprite> landingHandler) {
+        doTerrainCollisionAir(sprite, results, landingHandler, null);
+    }
+
+    private void doTerrainCollisionAir(AbstractPlayableSprite sprite,
+                                       SensorResult[] results,
+                                       Consumer<AbstractPlayableSprite> landingHandler,
+                                       Consumer<SensorResult[]> landingProbeHandler) {
         if (sprite.getYSpeed() < 0) {
             return;
         }
@@ -914,6 +941,7 @@ public class CollisionSystem {
                 || (results[1] != null && results[1].distance() >= threshold);
 
         if (canLand) {
+            publishLandingProbes(results, landingProbeHandler);
             landOnFloor(sprite, lowestResult, landingHandler);
         }
     }
@@ -932,6 +960,14 @@ public class CollisionSystem {
                                               SensorResult[] results,
                                               Consumer<AbstractPlayableSprite> landingHandler,
                                               boolean forceFloorCheck) {
+        doTerrainCollisionAirDirect(sprite, results, landingHandler, null, forceFloorCheck);
+    }
+
+    private void doTerrainCollisionAirDirect(AbstractPlayableSprite sprite,
+                                              SensorResult[] results,
+                                              Consumer<AbstractPlayableSprite> landingHandler,
+                                              Consumer<SensorResult[]> landingProbeHandler,
+                                              boolean forceFloorCheck) {
         // ROM: tst.b (WindTunnel_flag).w / bne.s loc_12148
         //      tst.w y_vel(a0) / bmi.s locret_12170
         if (!forceFloorCheck && sprite.getYSpeed() < 0) {
@@ -948,7 +984,15 @@ public class CollisionSystem {
         }
 
         // No threshold check — land immediately if any floor found (d1 < 0).
+        publishLandingProbes(results, landingProbeHandler);
         landOnFloor(sprite, lowestResult, landingHandler);
+    }
+
+    private static void publishLandingProbes(SensorResult[] results,
+                                             Consumer<SensorResult[]> landingProbeHandler) {
+        if (landingProbeHandler != null) {
+            landingProbeHandler.accept(results);
+        }
     }
 
     private boolean shouldTreatZeroDistanceAsGround(AbstractPlayableSprite sprite, SensorResult support) {

@@ -50,6 +50,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -1509,6 +1510,38 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void mainPlayerLandingPublishesNativeTiltBytesWithoutSidekickRescan() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                GameServices.sprites().addSprite(mockSprite, "sonic");
+
+                Method publisherMethod = PlayableSpriteMovement.class.getDeclaredMethod("landingTiltPublisher");
+                publisherMethod.setAccessible(true);
+                @SuppressWarnings("unchecked")
+                Consumer<SensorResult[]> publisher =
+                                (Consumer<SensorResult[]>) publisherMethod.invoke(manager);
+                assertNotNull(publisher, "The configured main player owns the native landing-angle copy");
+
+                SensorResult left = new SensorResult((byte) 0xFF, (byte) -7, 0, Direction.DOWN);
+                SensorResult right = new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
+                publisher.accept(new SensorResult[]{left, right});
+
+                Field nextTilt = PlayableSpriteMovement.class.getDeclaredField("latchedNextTilt");
+                Field tilt = PlayableSpriteMovement.class.getDeclaredField("latchedTilt");
+                nextTilt.setAccessible(true);
+                tilt.setAccessible(true);
+                assertEquals(3, nextTilt.getInt(manager));
+                assertEquals(0xFF, tilt.getInt(manager));
+
+                Tails sidekick = new Tails("tails_p2", (short) 0, (short) 0);
+                sidekick.setCpuControlled(true);
+                GameServices.sprites().addSprite(sidekick, "tails");
+                PlayableSpriteMovement sidekickMovement = new PlayableSpriteMovement(sidekick);
+                assertNull(publisherMethod.invoke(sidekickMovement),
+                                "CPU Tails retains its separate player-tail cadence");
+        }
+
+        @Test
         public void s3kLiveLatchedSupportDoesNotReadAsClearedInteractSlot() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
                 setGameRulesForTest(GameRules.SONIC_3K);
@@ -2937,6 +2970,15 @@ public class TestPlayableSpriteMovement {
                 public void resolveAirCollision(FrameCollisionPlan plan,
                                                 AbstractPlayableSprite sprite,
                                                 Consumer<AbstractPlayableSprite> landingHandler,
+                                                boolean forceFloorCheck) {
+                        probe.accept(sprite, landingHandler, forceFloorCheck);
+                }
+
+                @Override
+                public void resolveAirCollision(FrameCollisionPlan plan,
+                                                AbstractPlayableSprite sprite,
+                                                Consumer<AbstractPlayableSprite> landingHandler,
+                                                Consumer<SensorResult[]> landingProbeHandler,
                                                 boolean forceFloorCheck) {
                         probe.accept(sprite, landingHandler, forceFloorCheck);
                 }

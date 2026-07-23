@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+## 2026-07-23 - S3K main-player landing angle publication
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 30784 to
+  frame 33571.** The next divergence is Sonic's lowering-grapple release
+  position (`y_sub=$2300` expected versus `$A300` actual), accompanied by the
+  grapple-owned launch velocity and camera follow.
+- Root: `SonicKnux_DoLevelCollision` leaves the two `Sonic_CheckFloor` results
+  in the shared `Primary_Angle`/`Secondary_Angle` bytes. Sonic's player tail
+  copies those bytes to `next_tilt`/`tilt` before the following grounded
+  `Sonic_Move` dispatch. The engine updated its tilt latches only through
+  grounded `Player_AnglePos`, so Sonic retained the pre-tunnel `$FF/$01`
+  angles after landing at `$2440,$018C`, selected Wait for one frame, and
+  delayed the ROM's right-edge Balance/facing correction.
+- Fix: airborne collision can now publish the exact floor-probe pair that
+  produced a landing, without a post-seat rescan. The S3K typed animation rule
+  lets the configured main player copy those results into its tilt latches;
+  CPU Tails retains its independently validated Wait-to-Balance cadence. This
+  is driven by game rules, player role, and live collision results, with no
+  zone, route, or frame carve-out. `PlayerAnimationRules` is the narrowest
+  shared-runtime owner because these bytes feed the next animation dispatch;
+  the cross-game values are S1 `false`, S2 `false`, and S3K `true`.
+- Validation: both focused landing-publication tests pass, S1 SYZ2 remains
+  green, and the focused LBZ replay reaches frame 33571. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ Flybot retained post-render activation
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 29799 to
