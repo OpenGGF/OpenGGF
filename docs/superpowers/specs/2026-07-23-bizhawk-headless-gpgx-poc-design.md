@@ -113,9 +113,10 @@ headless loop:
 - obtain `IMemoryDomains` and `IDebuggable` from the core service provider.
 
 The concrete GPGX constructor accepts
-`CoreLoadParameters<GPGXSettings, GPGXSyncSettings>`. GPGX exposes Genesis
-`Main RAM`, the M68K bus, registers, lag state, and memory callbacks. Only Main
-RAM is needed for this milestone.
+`CoreLoadParameters<GPGXSettings, GPGXSyncSettings>`. The pinned BizHawk 2.11
+GPGX runtime exposes Genesis work RAM as `68K RAM`, alongside the M68K bus,
+registers, lag state, and memory callbacks. Only that work-RAM domain is needed
+for this milestone.
 
 BK2 files are ZIP archives. The required first-milestone entries are
 `Header.txt`, `SyncSettings.json`, and `Input Log.txt`. `Input Log.txt` declares
@@ -182,7 +183,7 @@ Defines the recorder-facing emulator boundary:
 - expose the current completed frame number;
 - apply named controller button states;
 - advance one frame without video or sound;
-- read bytes and signed/unsigned words from Genesis Main RAM.
+- read bytes and signed/unsigned words from Genesis work RAM.
 
 It deliberately omits callbacks, registers, savestates, and rendering until a
 later milestone requires them.
@@ -195,8 +196,10 @@ implementation. `CoreComm` receives a local `ICoreFileProvider` whose firmware
 methods fail clearly if invoked, and `CorePreferencesFlags.None`; Sonic 1
 Genesis cartridge emulation requires no firmware.
 
-The host resolves Genesis Main RAM and implements `IGpgxHost`. It owns and
-disposes the core. It does not reference
+The host resolves the pinned runtime's `68K RAM` Genesis work-RAM domain and
+implements `IGpgxHost`. It tries `68K RAM` first; `Main RAM` is accepted only
+as a compatibility fallback for a future source-backed API. The selected domain
+must be exactly 65,536 bytes. The host owns and disposes the core. It does not reference
 `BizHawk.Client.Common.SimpleController`, keeping the compile-time dependency
 boundary at BizHawk Common, Emulation.Common, Emulation.Cores, BizInvoke, and
 their runtime dependency closure.
@@ -221,7 +224,7 @@ the committed real-movie parser fixture preserves that payload verbatim.
 
 #### `S1SmokeRecorder`
 
-Reads a fixed, documented set of Sonic 1 Main RAM fields after each completed
+Reads a fixed, documented set of Sonic 1 Genesis work-RAM fields after each completed
 frame and writes:
 
 ```text
@@ -274,7 +277,8 @@ replaces assembly references with pinned project references. It does not ask
 ### Data flow
 
 1. Validate CLI paths, BizHawk installation, ROM SHA-1, and BK2 metadata.
-2. Construct GPGX and resolve Main RAM.
+2. Construct GPGX and resolve `68K RAM` (with `Main RAM` only as the future
+   source-backed compatibility fallback), requiring exactly 65,536 bytes.
 3. Apply and advance every BK2 row before `--bk2-frame-offset` without emitting
    output.
 4. Exclusively create a uniquely named temporary CSV beside the requested
@@ -377,7 +381,8 @@ is sampled at GPGX completed-frame counter `841`.
 
 ### RAM semantics
 
-The GPGX `Main RAM` domain exposes the 64 KiB Genesis work-RAM window
+The pinned BizHawk 2.11 GPGX `68K RAM` domain exposes the 64 KiB Genesis
+work-RAM window
 `$FF0000`–`$FFFFFF` as offsets `$0000`–`$FFFF`. Sonic's object base `$FFD000`
 therefore maps to domain offset `$D000`. Multi-byte values are read explicitly
 as big-endian bytes from that domain:
@@ -427,7 +432,7 @@ Per-frame logging is omitted.
    sync settings, and savestate-start movies.
 4. Validate the accepted and rejected Sonic 1 ROM hashes.
 5. Decode signed velocities and unsigned centre coordinates from a synthetic
-   Main RAM reader.
+   Genesis work-RAM reader.
 6. Prove the recorder observes state after frame advancement rather than before
    it.
 7. Prove a failed run does not finalize `smoke.csv`.
@@ -444,7 +449,9 @@ Per-frame logging is omitted.
 1. As the mandatory feasibility gate, run `build.sh`, assert the release
    assemblies report version `2.11.0.0`, assert the runtime
    `PathUtils.DllDirectoryPath`, then with `DISPLAY` unset load GPGX and advance
-   ten frames using the pinned local BizHawk distribution.
+   ten frames using the pinned local BizHawk distribution. Assert that the
+   selected domain is `68K RAM` and its size is exactly `65536`; `Main RAM` is
+   only the documented future source-backed compatibility fallback.
 2. With `--bk2-frame-offset 840`, capture 1,000 rows into two distinct temporary
    output directories and compare SHA-256 hashes of their `smoke.csv` files.
 3. Compare the native smoke rows corresponding to canonical trace frames `0000`,

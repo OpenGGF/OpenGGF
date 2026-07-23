@@ -22,8 +22,22 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
 
             tests.Add(new TestMain.TestCase(
+                "GpgxHost binds 64KiB 68K RAM before compatibility Main RAM",
+                BindsPinnedMainRamDomain));
+            tests.Add(new TestMain.TestCase(
                 "GpgxHost advances ten frames",
                 AdvancesTenFrames));
+        }
+
+        private static void BindsPinnedMainRamDomain()
+        {
+            using (var host = GpgxHost.Open(
+                Environment.GetEnvironmentVariable("S1_ROM_PATH"),
+                GpgxHost.CreateGhz1SyncSettings()))
+            {
+                AssertEx.Equal("68K RAM", host.MainRamDomainName);
+                AssertEx.Equal(65536L, host.MainRamDomainSize);
+            }
         }
 
         private static void AdvancesTenFrames()

@@ -17,6 +17,9 @@
   to framework assemblies or bundled Newtonsoft.Json (`13.0.0.0`).
 - Set absolute `BIZHAWK_HOME`, `MONO_PATH`, and `LD_LIBRARY_PATH` before loading any BizHawk type.
 - Directly construct GPGX; do not reference EmuHawk, WinForms, graphics frontends, audio frontends, Lua, or `BizHawk.Client.Common`.
+- In the pinned BizHawk 2.11 runtime, resolve Genesis work RAM as `68K RAM`.
+  Permit `Main RAM` only as a future source-backed API compatibility fallback,
+  after `68K RAM`; require the selected domain to be exactly 65,536 bytes.
 - Accept only Sonic 1 World REV01 SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`.
 - The BK2 header's legacy 32-hex `SHA1 09DADB5071EB35050067A32462E39C5F` is metadata, not the ROM SHA-1, and must not be compared with the canonical 40-hex ROM hash.
 - Use the tracked GHZ1 BK2 SHA-256 `dced61b2d3a3346b2ecd62254140497ef2827374c1de8597780f91e39ca0dcea`, exact supported sync payload SHA-256 `8f4130ebee1f1593080371f1d257477fbb2cc68c1cb691620736639e768c97bc`, offset `840`, and canonical physics CSV SHA-256 `dd0a03bfddefa9570d4b49ee2d4ea5e35e2b8141147e17ab482a3654d311cb66`.
@@ -326,7 +329,13 @@ var core = new GPGX(
     });
 ```
 
-Resolve `core.ServiceProvider.GetService<IMemoryDomains>()["Main RAM"]`. `Advance()` calls `core.FrameAdvance(controller, false, false)`. Dispose the GPGX core.
+Resolve `core.ServiceProvider.GetService<IMemoryDomains>()["68K RAM"]` first.
+Only if that is absent, accept `"Main RAM"` as a compatibility fallback for a
+future source-backed API. Reject a missing domain or any selected domain whose
+size is not exactly `65536` bytes. Expose the selected domain name and size to
+the ROM-backed test, which must assert the pinned 2.11 result is `68K RAM` and
+`65536`. `Advance()` calls `core.FrameAdvance(controller, false, false)`.
+Dispose the GPGX core.
 
 `GpgxHost.Open` calls `RomIdentity.ValidateSonic1Rev01` before constructing
 `GameInfo`; the BK2 Header's legacy 32-hex value is never passed to this

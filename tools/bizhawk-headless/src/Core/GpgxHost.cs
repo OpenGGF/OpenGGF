@@ -18,19 +18,40 @@ namespace OpenGGF.BizHawk.Headless
             controller = new MutableController(core.ControllerDefinition);
             IMemoryDomains memoryDomains =
                 core.ServiceProvider.GetService<IMemoryDomains>();
-            mainRam = memoryDomains["Main RAM"] ?? memoryDomains["68K RAM"];
+            // BizHawk 2.11 GPGX names the Genesis work-RAM domain "68K RAM".
+            // A source-backed future API may use "Main RAM", so retain it only
+            // as the compatibility fallback after the pinned-runtime name.
+            mainRam = memoryDomains["68K RAM"] ?? memoryDomains["Main RAM"];
             if (mainRam == null)
             {
                 core.Dispose();
                 throw new InvalidOperationException(
-                    "GPGX did not expose the Main RAM memory domain. Available: "
+                    "GPGX did not expose the required 68K RAM memory domain "
+                    + "(Main RAM is a compatibility fallback). Available: "
                     + string.Join(", ", memoryDomains));
+            }
+            if (mainRam.Size != 65536L)
+            {
+                core.Dispose();
+                throw new InvalidOperationException(
+                    "GPGX memory domain '" + mainRam.Name + "' has size "
+                    + mainRam.Size + "; expected exactly 65536 bytes.");
             }
         }
 
         public int CompletedFrame
         {
             get { return core.Frame; }
+        }
+
+        public string MainRamDomainName
+        {
+            get { return mainRam.Name; }
+        }
+
+        public long MainRamDomainSize
+        {
+            get { return mainRam.Size; }
         }
 
         public static GpgxHost Open(
