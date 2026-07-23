@@ -998,7 +998,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 : Path.GetFullPath(supplied);
         }
 
-        private static EndToEndDependencies ResolveEndToEndDependencies(
+        internal static EndToEndDependencies ResolveEndToEndDependencies(
             string suppliedRomPath,
             string suppliedBizHawkHome,
             string fallbackBizHawkHome,
@@ -1137,7 +1137,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static string ComputeSha256(string path)
+        internal static string ComputeSha256(string path)
         {
             using (FileStream stream = File.OpenRead(path))
             using (SHA256 sha256 = SHA256.Create())
@@ -1168,7 +1168,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return RunProcess(start, 120000);
         }
 
-        private static ProcessResult RunProcess(
+        internal static ProcessResult RunProcess(
             ProcessStartInfo start,
             int timeoutMilliseconds)
         {
@@ -1238,7 +1238,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static string Quote(string value)
+        internal static string Quote(string value)
         {
             return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"")
                 + "\"";
@@ -1249,7 +1249,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return value.Replace("\r\n", "\n");
         }
 
-        private static string RepositoryRoot
+        internal static string RepositoryRoot
         {
             get
             {
@@ -1262,7 +1262,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static string ToolDirectory
+        internal static string ToolDirectory
         {
             get
             {
@@ -1273,7 +1273,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private sealed class ProcessResult
+        internal sealed class ProcessResult
         {
             public ProcessResult(
                 int exitCode,
@@ -1290,7 +1290,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public string StandardError { get; private set; }
         }
 
-        private sealed class EndToEndDependencies
+        internal sealed class EndToEndDependencies
         {
             public EndToEndDependencies(
                 string romPath,

@@ -49,6 +49,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             NoReplacePublisherTests.Register(tests);
             TraceCliTests.Register(tests);
             EndToEndTests.Register(tests);
+            S1TraceDifferentialTests.Register(tests);
 
             var matched = 0;
             var failed = 0;
