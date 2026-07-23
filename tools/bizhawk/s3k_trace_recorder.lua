@@ -4886,7 +4886,7 @@ if HEADLESS then
     if client.SetSoundOn then
         pcall(client.SetSoundOn, false)
     end
-    if not HEADLESS_VISIBLE then
+    if not HEADLESS_VISIBLE and client.invisibleemulation then
         client.invisibleemulation(true)
     end
 end
