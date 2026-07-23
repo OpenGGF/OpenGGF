@@ -57,10 +57,8 @@ class TestSegaPcmCommandRouting {
 
     @Test
     void rawSampleVoiceMatchesLegacyYmDacOutputScale() {
-        DecodedPcmCache cache = new DecodedPcmCache();
-        DecodedPcm pcm = cache.registerUnsigned8Mono("sega", 48_000,
-                new byte[] {0, (byte) 0x80, (byte) 0xFF});
-        SampleBackedVoice voice = SampleBackedVoice.rawSegaPcm(1, 0, pcm, 48_000);
+        SampleBackedVoice voice = SampleBackedVoice.unsigned8Mono(1, 0, "sega",
+                new byte[] {0, (byte) 0x80, (byte) 0xFF}, 48_000, 48_000, 0.25f);
         long[] accumulation = new long[6];
 
         voice.mixInto(accumulation, 3);
@@ -71,12 +69,13 @@ class TestSegaPcmCommandRouting {
     @Test
     void rawSampleVoiceRestoresAfterRemovalUsingCachedAsset() {
         DecodedPcmCache cache = new DecodedPcmCache();
-        DecodedPcm pcm = cache.registerUnsigned8Mono("sega", 48_000,
-                new byte[] {0, (byte) 0x80, (byte) 0xFF});
-        SampleBackedVoice removedVoice = SampleBackedVoice.rawSegaPcm(1, 0, pcm, 48_000);
+        DecodedPcm pcm = cache.registerUnsigned8Mono("sega",
+                new byte[] {0, (byte) 0x80, (byte) 0xFF}, 48_000);
+        SampleBackedVoice removedVoice = SampleBackedVoice.oneShot(1, 0, pcm, 48_000, 1.0f, 0.25f);
         removedVoice.mixInto(new long[2], 1);
         PresentationVoiceSnapshot.Sample snapshot = (PresentationVoiceSnapshot.Sample) removedVoice.snapshot();
-        SampleBackedVoice restored = SampleBackedVoice.restore(snapshot, cache);
+        SampleBackedVoice restored = SampleBackedVoice.oneShot(1, 0, cache.get("sega"), 48_000, 1.0f, 0.25f);
+        restored.restore(snapshot);
         long[] accumulation = new long[4];
 
         restored.mixInto(accumulation, 2);

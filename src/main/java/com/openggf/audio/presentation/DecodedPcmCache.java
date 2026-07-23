@@ -31,23 +31,23 @@ public final class DecodedPcmCache {
         }
     }
 
-    public DecodedPcm registerUnsigned8Mono(String assetId, int sampleRate, byte[] rawSamples) {
+    public DecodedPcm registerUnsigned8Mono(String assetId, byte[] source, int sourceRate) {
         String key = requireAssetId(assetId);
-        if (sampleRate <= 0) {
-            throw new IllegalArgumentException("sampleRate must be positive");
+        if (sourceRate <= 0) {
+            throw new IllegalArgumentException("sourceRate must be positive");
         }
-        Objects.requireNonNull(rawSamples, "rawSamples");
-        short[] signed = new short[rawSamples.length];
-        for (int index = 0; index < rawSamples.length; index++) {
-            signed[index] = (short) (((rawSamples[index] & 0xFF) - 128) << 8);
+        Objects.requireNonNull(source, "source");
+        short[] signed = new short[source.length];
+        for (int index = 0; index < source.length; index++) {
+            signed[index] = (short) (((source[index] & 0xFF) - 128) << 8);
         }
-        DecodedPcm requested = new DecodedPcm(key, 1, sampleRate, signed);
+        DecodedPcm requested = new DecodedPcm(key, 1, sourceRate, signed);
         DecodedPcm existing = decoded.get(key);
         if (existing == null) {
             decoded.put(key, requested);
             return requested;
         }
-        if (existing.channels() != 1 || existing.sampleRate() != sampleRate
+        if (existing.channels() != 1 || existing.sampleRate() != sourceRate
                 || !hasSamples(existing, signed)) {
             throw new IllegalArgumentException("assetId already registered with different PCM: " + key);
         }

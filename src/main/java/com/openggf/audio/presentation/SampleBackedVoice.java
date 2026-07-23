@@ -14,11 +14,11 @@ public final class SampleBackedVoice implements PresentationVoice {
     private final long voiceId;
     private final int priority;
     private final DecodedPcm pcm;
-    private final Integer musicId;
-    private final AudioSourceDescriptor sourceDescriptor;
-    private final long sourceStepQ32;
-    private final int gainQ16;
-    private final boolean looping;
+    private Integer musicId;
+    private AudioSourceDescriptor sourceDescriptor;
+    private long sourceStepQ32;
+    private int gainQ16;
+    private boolean looping;
     private final long endPositionQ32;
     private long sourcePositionQ32;
     private boolean stopped;
@@ -38,13 +38,10 @@ public final class SampleBackedVoice implements PresentationVoice {
         this.musicId = musicId;
         this.sourceDescriptor = sourceDescriptor;
         this.endPositionQ32 = ((long) pcm.sourceFrames()) << 32;
-        if (sourcePositionQ32 < 0 || sourcePositionQ32 > endPositionQ32) {
-            throw new IllegalArgumentException("sourcePositionQ32 is outside the sample");
-        }
         if (sourceStepQ32 <= 0) {
             throw new IllegalArgumentException("sourceStepQ32 must be positive");
         }
-        this.sourcePositionQ32 = sourcePositionQ32;
+        this.sourcePositionQ32 = normalizeSourcePosition(sourcePositionQ32, looping);
         this.sourceStepQ32 = sourceStepQ32;
         this.gainQ16 = gainQ16;
         this.looping = looping;
@@ -53,8 +50,27 @@ public final class SampleBackedVoice implements PresentationVoice {
 
     public static SampleBackedVoice rawSegaPcm(long voiceId, int priority, DecodedPcm pcm,
                                                 int outputSampleRate) {
-        return new SampleBackedVoice(voiceId, priority, pcm, outputSampleRate, 1.0,
-                YM_DAC_GAIN_Q16, false);
+        return oneShot(voiceId, priority, pcm, outputSampleRate, 1.0f,
+                YM_DAC_GAIN_Q16 / (float) (1 << 16));
+    }
+
+    public static SampleBackedVoice oneShot(long id, int priority, DecodedPcm pcm, int outputRate,
+                                             float pitch, float gain) {
+        return new SampleBackedVoice(id, priority, pcm, outputRate, pitch, toGainQ16(gain), false);
+    }
+
+    public static SampleBackedVoice loopingMusic(long id, DecodedPcm pcm, int outputRate, float gain) {
+        return new SampleBackedVoice(id, 0, pcm, outputRate, 1.0f, toGainQ16(gain), true);
+    }
+
+    public static SampleBackedVoice unsigned8Mono(long id, int priority, String assetId, byte[] source,
+                                                   int sourceRate, int outputRate, float gain) {
+        Objects.requireNonNull(source, "source");
+        short[] samples = new short[source.length];
+        for (int index = 0; index < source.length; index++) {
+            samples[index] = (short) (((source[index] & 0xFF) - 128) << 8);
+        }
+        return oneShot(id, priority, new DecodedPcm(assetId, 1, sourceRate, samples), outputRate, 1.0f, gain);
     }
 
     public static SampleBackedVoice restore(PresentationVoiceSnapshot.Sample snapshot, DecodedPcm pcm) {
@@ -74,6 +90,32 @@ public final class SampleBackedVoice implements PresentationVoice {
             throw new IllegalArgumentException("no cached PCM for " + snapshot.assetId());
         }
         return restore(snapshot, pcm);
+    }
+
+    public void restore(PresentationVoiceSnapshot.Sample snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        if (snapshot.voiceId() != voiceId || snapshot.priority() != priority
+                || !snapshot.assetId().equals(pcm.assetId())) {
+            throw new IllegalArgumentException("snapshot identity does not match voice");
+        }
+        if (snapshot.sourceStepQ32() <= 0) {
+            throw new IllegalArgumentException("sourceStepQ32 must be positive");
+        }
+        this.musicId = snapshot.musicId();
+        this.sourceDescriptor = snapshot.sourceDescriptor();
+        this.sourcePositionQ32 = normalizeSourcePosition(snapshot.sourcePositionQ32(), snapshot.looping());
+        this.sourceStepQ32 = snapshot.sourceStepQ32();
+        this.gainQ16 = snapshot.gainQ16();
+        this.looping = snapshot.looping();
+        this.stopped = snapshot.stopped();
+    }
+
+    public void setPitch(float pitch, int outputRate) {
+        sourceStepQ32 = calculateSourceStepQ32(pcm, outputRate, pitch);
+    }
+
+    public void setGain(float gain) {
+        gainQ16 = toGainQ16(gain);
     }
 
     @Override
@@ -161,5 +203,23 @@ public final class SampleBackedVoice implements PresentationVoice {
             throw new IllegalArgumentException("source step is too large");
         }
         return Math.max(1L, Math.round(step));
+    }
+
+    private long normalizeSourcePosition(long sourcePosition, boolean loopingSnapshot) {
+        if (sourcePosition < 0 || sourcePosition > endPositionQ32) {
+            throw new IllegalArgumentException("sourcePositionQ32 is outside the sample");
+        }
+        return loopingSnapshot && endPositionQ32 > 0 && sourcePosition == endPositionQ32 ? 0L : sourcePosition;
+    }
+
+    private static int toGainQ16(float gain) {
+        if (!Float.isFinite(gain) || gain < 0.0f) {
+            throw new IllegalArgumentException("gain must be finite and non-negative");
+        }
+        double scaled = gain * (1 << 16);
+        if (scaled > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("gain is too large");
+        }
+        return (int) Math.round(scaled);
     }
 }

@@ -31,18 +31,18 @@ class TestDecodedPcmCache {
     @Test
     void rawRegistrationRejectsConflictingMetadataOrContent() {
         DecodedPcmCache cache = new DecodedPcmCache();
-        cache.registerUnsigned8Mono("raw", 8_000, new byte[] {1});
+        cache.registerUnsigned8Mono("raw", new byte[] {1}, 8_000);
 
         assertThrows(IllegalArgumentException.class,
-                () -> cache.registerUnsigned8Mono("raw", 16_000, new byte[] {1}));
+                () -> cache.registerUnsigned8Mono("raw", new byte[] {1}, 16_000));
         assertThrows(IllegalArgumentException.class,
-                () -> cache.registerUnsigned8Mono("raw", 8_000, new byte[] {2}));
+                () -> cache.registerUnsigned8Mono("raw", new byte[] {2}, 8_000));
     }
 
     @Test
     void clearRemovesSessionOwnedAssets() {
         DecodedPcmCache cache = new DecodedPcmCache();
-        cache.registerUnsigned8Mono("raw", 8_000, new byte[] {1});
+        cache.registerUnsigned8Mono("raw", new byte[] {1}, 8_000);
 
         cache.clear();
 
