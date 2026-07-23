@@ -1,6 +1,7 @@
 package com.openggf.capture;
 
 import java.nio.file.Path;
+import java.time.Duration;
 
 /**
  * Driver-agnostic recording façade. A driver calls {@link #start} once,
@@ -40,9 +41,13 @@ public class CaptureRecorder {
     }
 
     public synchronized void abort() {
+        abort(Duration.ofSeconds(30));
+    }
+
+    synchronized void abort(Duration timeout) {
         if (!aborted) {
             aborted = true;
-            sink.abort();
+            sink.abort(timeout);
         }
     }
 

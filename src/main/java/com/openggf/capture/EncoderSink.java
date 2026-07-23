@@ -1,6 +1,7 @@
 package com.openggf.capture;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -134,16 +135,27 @@ public final class EncoderSink implements FrameSink {
     }
 
     public void abort() {
+        abort(Duration.ofMillis(stopJoinTimeoutMillis));
+    }
+
+    void abort(Duration timeout) {
+        long timeoutNanos = Math.max(0, timeout.toNanos());
+        long deadline = System.nanoTime() + timeoutNanos;
         synchronized (lifecycleLock) {
             if (terminal || abortRequested) return;
             abortRequested = true;
         }
-        encoder.abort();
+        if (encoder instanceof FfmpegEncoder ffmpegEncoder) {
+            ffmpegEncoder.abortUntil(deadline);
+        } else {
+            encoder.abort();
+        }
         queue.clear();
         if (worker != null && worker != Thread.currentThread()) {
             worker.interrupt();
             try {
-                worker.join(250);
+                long remaining = Math.max(0, deadline - System.nanoTime());
+                TimeUnit.NANOSECONDS.timedJoin(worker, remaining);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

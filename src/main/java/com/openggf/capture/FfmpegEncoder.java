@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 /**
  * {@link CaptureEncoder} that streams raw RGBA frames to ffmpeg and produces a
@@ -229,6 +230,10 @@ public final class FfmpegEncoder implements CaptureEncoder {
 
     @Override
     public void abort() {
+        abortUntil(System.nanoTime() + Duration.ofMillis(processTimeoutMillis).toNanos());
+    }
+
+    void abortUntil(long deadlineNanos) {
         Process video;
         Process mux;
         synchronized (lifecycleLock) {
@@ -239,12 +244,28 @@ public final class FfmpegEncoder implements CaptureEncoder {
         }
         try { if (videoStdin != null) videoStdin.close(); } catch (IOException ignored) { }
         closeAudioOutQuietly();
-        destroyAndWait(video);
-        destroyAndWait(mux);
+        forceDestroy(video);
+        forceDestroy(mux);
+        waitUntil(video, deadlineNanos);
+        waitUntil(mux, deadlineNanos);
         deleteQuietly(tempVideo);
         deleteQuietly(tempAudio);
         deleteQuietly(finalOut);
         synchronized (lifecycleLock) { terminal = true; }
+    }
+
+    private static void forceDestroy(Process process) {
+        if (process != null && process.isAlive()) process.destroyForcibly();
+    }
+
+    private static void waitUntil(Process process, long deadlineNanos) {
+        if (process == null) return;
+        long remaining = Math.max(0, deadlineNanos - System.nanoTime());
+        try {
+            process.waitFor(remaining, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private int waitForProcess(Process process, String phase)

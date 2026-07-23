@@ -128,21 +128,11 @@ public final class LiveCaptureController implements AutoCloseable {
             } catch (Exception failure) {
                 CaptureRecorder r;
                 synchronized (this) { r = recorder; }
-                Thread abortThread = null;
                 if (r != null) {
-                    abortThread = new Thread(r::abort, "live-capture-shutdown-abort");
-                    abortThread.setDaemon(true);
-                    abortThread.start();
+                    long remaining = Math.max(0, deadline - System.nanoTime());
+                    r.abort(Duration.ofNanos(remaining));
                 }
                 pending.cancel(true);
-                if (abortThread != null) {
-                    long remaining = Math.max(0, deadline - System.nanoTime());
-                    try {
-                        TimeUnit.NANOSECONDS.timedJoin(abortThread, remaining);
-                    } catch (InterruptedException interrupted) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
             }
         }
         deps.finalizer.shutdown();

@@ -184,8 +184,10 @@ class LiveCaptureControllerTest {
         controller.close();
         long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
         assertTrue(elapsedMillis < 600, "close exceeded its declared bound: " + elapsedMillis);
-        assertTrue(video.destroyed);
-        assertTrue(mux.destroyed);
+        assertTrue(video.destroyCalls > 0,
+                "video must be force-destroyed before waiting on the stuck mux");
+        assertTrue(mux.destroyCalls > 0,
+                "mux must be force-destroyed even though neither process terminates");
         assertNotNull(partialOutput.get());
         assertFalse(Files.exists(partialOutput.get()));
         for (Path temporaryFile : temporaryFiles) {
@@ -214,26 +216,33 @@ class LiveCaptureControllerTest {
 
     private static final class RetainedProcess extends Process {
         private final boolean waitCompletes;
-        private volatile boolean destroyed;
+        private volatile int destroyCalls;
         private final ByteArrayOutputStream stdin = new ByteArrayOutputStream();
         RetainedProcess(boolean waitCompletes) { this.waitCompletes = waitCompletes; }
         @Override public OutputStream getOutputStream() { return stdin; }
         @Override public InputStream getInputStream() { return new ByteArrayInputStream(new byte[0]); }
         @Override public InputStream getErrorStream() { return new ByteArrayInputStream(new byte[0]); }
         @Override public int waitFor() throws InterruptedException {
-            while (!waitCompletes && !destroyed) Thread.sleep(1);
+            while (!waitCompletes) Thread.sleep(1);
             return 0;
         }
         @Override public boolean waitFor(long timeout, TimeUnit unit) {
-            return waitCompletes || destroyed;
+            if (!waitCompletes) {
+                try {
+                    unit.sleep(timeout);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            return waitCompletes;
         }
         @Override public int exitValue() {
-            if (!waitCompletes && !destroyed) throw new IllegalThreadStateException();
+            if (!waitCompletes) throw new IllegalThreadStateException();
             return 0;
         }
-        @Override public void destroy() { destroyed = true; }
-        @Override public Process destroyForcibly() { destroyed = true; return this; }
-        @Override public boolean isAlive() { return !destroyed; }
+        @Override public void destroy() { destroyCalls++; }
+        @Override public Process destroyForcibly() { destroyCalls++; return this; }
+        @Override public boolean isAlive() { return true; }
     }
 
     private static void awaitNotStopping(LiveCaptureController c) throws InterruptedException {
