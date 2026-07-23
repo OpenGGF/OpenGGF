@@ -49287,3 +49287,74 @@ input-only driver operation latches both the controller snapshot and the P1
 action press edge for the following gameplay row. Focused live, real-driver,
 AIZ cadence, reference-closure, start-policy, and tooling guards pass (93 tests,
 zero failures or errors). The AIZ frontier remains f2707.
+
+## 2026-07-23 - Final clean-HEAD structural replay verification
+
+Verified commit: `8c9ae021a4a6cb0ebd3336a801dfa6aedbc661dc`.
+
+Focused CNZ:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 17 tests, 12 failures, 0 errors, 5 passes.
+- `replayMatchesTrace` reaches the true comparison frontier at f185
+  `y_speed` (ROM `0x0370`, engine `-0700`) with 9,114 errors and 0 warnings.
+- There is no input-alignment, bootstrap, or f0 regression in the focused
+  replay. The fleet repeat reaches the same f185 frontier with 9,140 errors;
+  the 26-error count difference does not move the first mismatch.
+
+Focused AIZ:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 16 tests, 14 failures, 0 errors, 2 passes.
+- `replayMatchesTrace` reaches the true comparison frontier at f2707
+  `tails_animation_id` (ROM `0x0000`, engine `0x0005`) with 1,298 errors and
+  0 warnings.
+- There is no input-alignment, bootstrap, or f0 regression in the focused
+  replay. The fleet repeat has the same count and first mismatch.
+
+Must-keep-green/bootstrap selection, using the classes' correct packages:
+
+```bash
+mvn -Dtest='com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.tests.trace.TestTraceReplayStartPositionPolicy,com.openggf.trace.TestPreludeFramesKnobsZero,com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.trace.TestTraceAnimationRecorderContract' test
+```
+
+- Exit 0: all 113 tests pass with 0 failures, errors, or skips.
+
+S3K fleet:
+
+```bash
+mvn -Dtest='*S3k*TraceReplay' \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 47 tests, 38 failures, 0 errors, 9 passes.
+
+| Replay | Errors / state | First failure |
+|---|---:|---|
+| AIZ standalone | 1,298 | f2707 `tails_animation_id`: `0x0000` / `0x0005` |
+| CNZ standalone | 9,140 | f185 `y_speed`: `0x0370` / `-0700` |
+| AIZ complete-run | 5,831 | f2574 `camera_x`: `0x1CCD` / `0x1CD7` |
+| CNZ complete-run | 9,503 | f0 `y`: `0x0600` / `0x061C` |
+| HCZ complete-run | 4,822 | f1088 `tails_cpu_target_y`: `0x0578` / `0x04F0` |
+| MGZ standalone | 10,768 | f5164 `air`: `0` / `1` |
+| MGZ complete-run | 8,050 | f5550 `air`: `0` / `1` |
+| ICZ complete-run | 7,930 | f0 `y`: `0x00F0` / `0x00F2` |
+| LBZ complete-run | 9,298 | f0 `player_mapping_frame`: `0x0000` / `0x0007` |
+| MHZ complete-run | 6,037 | f0 `y`: `0x0500` / `0x051C` |
+| Slots bonus | 11 | f1052 `x`: `0x0000` / `0x0572` |
+| Gumball bonus | 11 | f1300 `x`: `0x0000` / `0x0100` |
+| Pachinko bonus | 13 | f2926 `x`: `0x0000` / `0x015D` |
+| Special stage | green | 2 tests pass; report has 0 errors, 3 warnings |
+
+The requested standalone AIZ and CNZ gates are input-aligned and now reach
+later, genuine parity frontiers. The fleet is not globally frame-zero clean:
+CNZ complete-run, ICZ, LBZ, and MHZ still begin at f0. The result therefore
+remains `DONE_WITH_CONCERNS`, not a green fleet baseline.
