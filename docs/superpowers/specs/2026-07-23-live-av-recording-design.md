@@ -172,7 +172,7 @@ new history.
 
 ### Shared effective frame rate
 
-Add `com.openggf.game.FrameRateResolver.effective(SonicConfigurationService)`.
+Add `com.openggf.configuration.FrameRateResolver.effective(SonicConfigurationService)`.
 It returns 50 for PAL and `max(1, FPS)` otherwise. Engine scheduling, the live
 deterministic runtime, the capture audio clock, and FFmpeg all use this one
 value. This intentionally corrects the current PAL inconsistency where audio

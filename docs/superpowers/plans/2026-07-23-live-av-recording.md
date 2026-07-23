@@ -33,7 +33,7 @@
 | `audio/runtime/PresentationAudioCapture.java` | Public runtime-owned lease; keeps tap implementation private |
 | `audio/runtime/StreamBackedDeterministicAudioRuntime.java` | Attach/detach tap and forward presentation/reverse lifecycle events |
 | `audio/AudioManager.java` | Public runtime-identity-safe live audio handle |
-| `game/FrameRateResolver.java` | One PAL/non-PAL cadence used by Engine, audio, and capture |
+| `configuration/FrameRateResolver.java` | One PAL/non-PAL cadence used by Engine, audio, and capture |
 | `capture/CaptureViewport.java` | Immutable fixed viewport rectangle |
 | `capture/GlReadPixelsGrabber.java` | Read exact fixed GL_BACK region with validated sizing |
 | `capture/LiveCaptureChord.java` | Complete-chord rising-edge state machine |
@@ -117,8 +117,8 @@ Skills: n/a"
 ### Task 2: Build the presentation-frame audio tap
 
 **Files:**
-- Create: `src/main/java/com/openggf/game/FrameRateResolver.java`
-- Create: `src/test/java/com/openggf/game/FrameRateResolverTest.java`
+- Create: `src/main/java/com/openggf/configuration/FrameRateResolver.java`
+- Create: `src/test/java/com/openggf/configuration/FrameRateResolverTest.java`
 - Create: `src/main/java/com/openggf/audio/runtime/PresentationAudioCapture.java`
 - Create: `src/main/java/com/openggf/audio/runtime/LiveAudioCaptureTap.java`
 - Modify: `src/main/java/com/openggf/audio/runtime/StreamBackedDeterministicAudioRuntime.java`
@@ -269,8 +269,8 @@ Expected: PASS, zero failures/errors.
 - [ ] **Step 11: Stage exact scope and commit**
 
 ```bash
-git add -- src/main/java/com/openggf/game/FrameRateResolver.java \
-  src/test/java/com/openggf/game/FrameRateResolverTest.java \
+git add -- src/main/java/com/openggf/configuration/FrameRateResolver.java \
+  src/test/java/com/openggf/configuration/FrameRateResolverTest.java \
   src/main/java/com/openggf/audio/runtime/PresentationAudioCapture.java \
   src/main/java/com/openggf/audio/runtime/LiveAudioCaptureTap.java \
   src/main/java/com/openggf/audio/runtime/StreamBackedDeterministicAudioRuntime.java \
