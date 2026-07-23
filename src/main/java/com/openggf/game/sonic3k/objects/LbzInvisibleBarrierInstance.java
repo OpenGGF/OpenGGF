@@ -59,6 +59,22 @@ public final class LbzInvisibleBarrierInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj_LBZ1InvisibleBarrier calls SolidObjectFull2. Its unsigned
+        // broad-X gate rejects with BHI, so the exact +$4B right edge reaches
+        // SolidObject_AtEdge and sets Status_Push without displacement.
+        return true;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // SolidObjectFull2_1P enters SolidObject_cont directly; unlike
+        // SolidObjectFull_1P, it does not test render_flags first. The
+        // invisible barrier must therefore remain solid without a draw pass.
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if ((services().camera().getX() & 0xFFFF) >= RELEASE_CAMERA_X) {
             ObjectLifetimeOps.deleteNoRespawn(this);

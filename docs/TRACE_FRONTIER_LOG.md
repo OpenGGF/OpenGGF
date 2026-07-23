@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ1 ending-collapse barrier dispatch
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 19098 to
+  frame 19151.** The next divergence is CPU Tails' respawn counter (`$0000`
+  expected versus `$0006` actual).
+- Root: `Obj_LBZ1Robotnik` writes `Events_fg_4=-1` in its object slot; the
+  following `LBZ1_ScreenEvent` pass allocates `Obj_LBZ1InvisibleBarrier`.
+  The engine allocated the barrier immediately in Robotnik's slot, then
+  suppressed its contact behind the ordinary render-visibility gate. Native
+  `SolidObjectFull2` bypasses that gate and includes its exact right edge.
+- Fix: the event manager now retains a rewind-covered pending barrier
+  allocation until the first active collapse screen-event pass. The barrier
+  declares the native ungated `SolidObjectFull2` profile and inclusive
+  right edge, restoring Sonic's `$3C0B` separation and `Status_Push` on the
+  correct dispatch.
+- Validation: all 12 focused barrier, standalone-controller, and rewind guard
+  tests pass, and the LBZ replay reaches frame 19151 with 156 fewer downstream
+  errors. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. No S3K, S1, or S2
+  frontier regressed.
+
 ## 2026-07-23 - LBZ1 post-cutscene camera-boundary publication
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 19095 to

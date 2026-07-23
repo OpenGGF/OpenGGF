@@ -122,6 +122,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
 
     private boolean endingCollapseActive;
     private boolean endingCollapseFinished;
+    private boolean endingBarrierSpawnPending;
     private int endingCollapseGlobalFixed;
     private int endingCollapsePhase;
     private boolean eventsFg5;
@@ -286,10 +287,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         endingCollapsePhase = 0;
         Arrays.fill(endingCollapseFixed, 0);
         Arrays.fill(endingCollapseScroll, 0);
-        // ROM LBZ1_EventVScroll: the first armed frame allocates
-        // Obj_LBZ1InvisibleBarrier so the player cannot run ahead of the
-        // collapsing building.
-        spawnInvisibleBarrier();
+        // Robotnik writes Events_fg_4=-1 in his object slot. The following
+        // screen-event pass enters LBZ1_EventVScroll and allocates the barrier;
+        // it does not execute in Robotnik's already-active object pass.
+        endingBarrierSpawnPending = true;
     }
 
     public boolean isEndingCollapseActive() {
@@ -330,6 +331,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (!endingCollapseActive) {
             return;
         }
+        if (endingBarrierSpawnPending) {
+            endingBarrierSpawnPending = false;
+            spawnInvisibleBarrier();
+        }
 
         int globalFixedDelta = endingCollapseGlobalFixed;
         endingCollapseGlobalFixed += ENDING_COLLAPSE_GLOBAL_ACCEL;
@@ -362,6 +367,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private void finishEndingCollapse() {
         endingCollapseActive = false;
         endingCollapseFinished = true;
+        endingBarrierSpawnPending = false;
         currentLbzRuntimeState().ifPresent(state -> state.setLbz1KnucklesBombShakeActive(false));
         Arrays.fill(endingCollapseScroll, 0);
         applyEndingLayout();

@@ -201,10 +201,17 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         camera.setX((short) 0x3B40);
 
         events.startEndingCollapse();
+        assertNull(findActive(LbzInvisibleBarrierInstance.class),
+                "Robotnik only arms Events_fg_4 in his object slot.");
+        events.update(0, 1);
         LbzInvisibleBarrierInstance barrier = findActive(LbzInvisibleBarrierInstance.class);
         assertNotNull(barrier,
-                "LBZ1_EventVScroll allocates Obj_LBZ1InvisibleBarrier when the collapse arms.");
+                "The following LBZ1_EventVScroll pass allocates Obj_LBZ1InvisibleBarrier.");
         assertEquals(0x3BC0, barrier.getX());
+        assertTrue(barrier.usesInclusiveRightEdge(),
+                "SolidObjectFull2 keeps the exact +$4B right edge as a side contact.");
+        assertTrue(barrier.bypassesOffscreenSolidGate(),
+                "SolidObjectFull2_1P enters SolidObject_cont without a render_flags gate.");
 
         barrier.update(0, player);
         assertFalse(barrier.isDestroyed());
