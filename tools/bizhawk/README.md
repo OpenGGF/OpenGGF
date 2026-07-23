@@ -64,6 +64,32 @@ The `OGGF_TRACE_RUN_ID` environment variable forces manifest emission and sets t
 field, allowing trace runs with no detours to be tracked explicitly (useful for complete-game
 runs or for organizing capture sessions).
 
+## Linux Launcher (`run_bizhawk_lua.sh` / `record_trace.sh`)
+
+`run_bizhawk_lua.sh` is the Linux counterpart to `run_bizhawk_lua.bat`, and
+`record_trace.sh` mirrors `record_trace.bat`. They launch EmuHawk via `mono` and
+export the same `OGGF_BIZHAWK_LIB` contract for the shared-lib loader. Bring-up
+facts encoded there (BizHawk 2.11.1 `bizhawk-bin` on CachyOS/Wayland):
+
+- BizHawk runs portable and writes config/system dirs beside `EmuHawk.exe`; the
+  packaged `/opt/bizhawk` is root-owned, so run against a writable copy
+  (`cp -a /opt/bizhawk ~/.local/share/bizhawk-run`) via `BIZHAWK_HOME`.
+- `DISPLAY` must be set (EmuHawk is WinForms even headless); XWayland `:0` works.
+- Hardware GL under XWayland fails (`eglMakeCurrent … EGL_BAD_ACCESS`); the
+  launcher forces Mesa software GL by default (or set config `DispMethod=1` for
+  GDI+). `--luaconsole` is passed to dodge a `Stack empty` crash that
+  command-line `--lua` + `--movie` otherwise throws in `LuaConsole.EnableLuaFile`.
+- **KNOWN BLOCKER (upstream BizHawk 2.11.1 + mono, not the launcher):** loading a
+  BK2 via `--movie` hangs inside the movie-load path right after `WaterboxHost
+  Sealed`, before the form's `OnShown` — so the recorder's Lua never runs and no
+  `trace_output/` is produced. The hung process maps no X window (not a
+  dismissible dialog). The same recorder Lua launched *without* `--movie` runs
+  fine (Lua loads, frames advance, clean exit), isolating the fault to
+  command-line BK2 loading on this build. An end-to-end Linux regen needs a
+  working headless BK2 path (a different BizHawk build, a real X server via Xvfb,
+  or a Lua-side movie loader). Until then, run the byte-diff regen gate on a
+  platform where BizHawk plays BK2s headlessly (e.g. Windows).
+
 ## Capture Launch Notes (verified live 2026-07-19)
 
 Facts established during the first round-trip captures — they override any older
