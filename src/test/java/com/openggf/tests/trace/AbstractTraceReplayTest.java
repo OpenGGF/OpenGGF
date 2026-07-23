@@ -603,6 +603,7 @@ public abstract class AbstractTraceReplayTest {
                     fixture::stepFrameFromRecording,
                     fixture::stepFrameFromRecordingUsingPreviousInput,
                     fixture::skipFrameFromRecording,
+                    fixture::consumeRecordingFrameInputOnly,
                     fixture::advancePlayableAnimationsOnly,
                     fixture::suppressFirstSidekickAnimationOnce,
                     () -> {

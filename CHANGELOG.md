@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K trace `ADVANCE_ONLY` rows now consume and latch their BK2 input without dispatching the already-resident level or advancing timing counters. This removes three non-ROM AIZ plane-intro object updates and advances the standalone AIZ frontier from frame 717 to frame 2707.
 - Fix: The S3K recorder now derives every profile's input column from `bk2_frame_offset + trace_row`; the AIZ end-to-end fixture is canonically BK2-aligned with only its input column normalized, and obsolete replay-phase metadata is removed from the AIZ and CNZ fixtures.
 - Fix: S3K trace replay now derives pre-level intro prefixes from recorded mode transitions and drives level-gated frame zero through the ordinary production lifecycle, removing legacy sidekick, object, oscillator, and seed-row compensation scheduling, bounding input-latch-only phases to the recorded prefix window, and keeping phase/oscillator scheduling independent of frame-zero position, speed, and state outcomes.
 - Fix: S3K fresh starts now preserve the reset player's cleared grounded status through bootstrap so the first ordinary routine-2 dispatch owns terrain walk-off, grounded animation selection, and status publication. This removes the incorrect initialization-only first-dispatch marker and advances the focused CNZ frontier from frame 0 to frame 185 while leaving S1/S2 ground-snap policy unchanged.

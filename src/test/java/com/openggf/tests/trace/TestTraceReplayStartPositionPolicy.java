@@ -158,8 +158,8 @@ class TestTraceReplayStartPositionPolicy {
         assertEquals(TraceExecutionPhase.ADVANCE_ONLY,
                 TraceReplayBootstrap.phaseForReplay(trace, previous, current),
                 "Pre-level-prefix rows can record a new held input before the ROM applies it. "
-                        + "Replay must advance native gameplay for counter parity but skip comparing "
-                        + "the duplicated sampled state.");
+                        + "Replay must latch the BK2 row without dispatching the already-resident "
+                        + "level or changing timing counters.");
         assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceReplayBootstrap.phaseForReplay(trace, current, trace.getFrame(inputOnlyIndex + 1)),
                 "The following row remains before the structural LEVEL boundary.");

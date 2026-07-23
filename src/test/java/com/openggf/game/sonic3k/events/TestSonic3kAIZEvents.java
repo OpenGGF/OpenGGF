@@ -291,6 +291,42 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
+    public void setupProcessSpritesAdvancesIntroScrollExactlyOnceBeforeLevelLoop()
+            throws Exception {
+        AizPlaneIntroInstance intro = AizPlaneIntroInstance.getActiveIntroInstance();
+        assertNotNull(intro);
+        AbstractPlayableSprite sonic = fixture.sprite();
+
+        // SpawnLevelMainSprites installs the object, then the setup block runs
+        // Process_Sprites exactly once before LevelLoop
+        // (sonic3k.asm:7849-7855,8111-8128). Routine 0 initializes
+        // Events_fg_1=$E918 and the common object tail adds scroll speed 8
+        // (sonic3k.asm:135469-135475,135495-135508,135945-135956).
+        assertEquals(2, intro.getRoutine());
+        assertEquals((short) 0xE920, introEventsFg1(intro),
+                "the production setup path must contribute exactly one intro accumulator update");
+
+        // The next 430 native LevelLoop dispatches end on the accumulator's
+        // negative-to-zero transition. Because the ROM tests bpl before adding,
+        // Player_1 remains at $0040 on that update and moves by the live $40
+        // field ($10 here) on the following dispatch.
+        for (int levelLoopUpdate = 1; levelLoopUpdate <= 430; levelLoopUpdate++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+
+        assertEquals(0, introEventsFg1(intro));
+        assertEquals(0x0040, sonic.getCentreX() & 0xFFFF);
+        assertEquals(0, sonic.getXSpeed());
+        assertEquals(0, sonic.getYSpeed());
+        assertEquals(0, sonic.getGSpeed());
+
+        fixture.stepFrame(false, false, false, false, false);
+
+        assertEquals(0x0050, sonic.getCentreX() & 0xFFFF,
+                "the dispatch after Events_fg_1 reaches zero must move Player_1 by scroll speed");
+    }
+
+    @Test
     public void introSidekickDormantMarkerSurvivesProductionSidekickSpawnStep() {
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
@@ -1160,6 +1196,12 @@ public class TestSonic3kAIZEvents {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(AizPlaneIntroInstance.class::isInstance)
                 .count();
+    }
+
+    private static int introEventsFg1(AizPlaneIntroInstance intro) throws Exception {
+        Field field = AizPlaneIntroInstance.class.getDeclaredField("eventsFg1");
+        field.setAccessible(true);
+        return field.getInt(intro);
     }
 
     private static int[][] snapshotBlocks(Sonic3kLevel level) {

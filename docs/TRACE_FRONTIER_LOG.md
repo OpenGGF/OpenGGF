@@ -49238,3 +49238,45 @@ However, the fleet is not regression-clean. Several previously green or later
 frontier routes still begin at f0, and HCZ/MGZ/bonus results moved earlier
 relative to the immediately preceding verification. This remains a
 `DONE_WITH_CONCERNS` verification snapshot, not a green release baseline.
+
+## 2026-07-23 - AIZ pre-level input-latch execution correction
+
+- **Standalone AIZ advanced from f717 to f2707.** Release-blocking comparison
+  errors fell from 5,147 to 1,298. The new first error is
+  `tails_animation_id` (ROM `0x00`, engine `0x05`).
+- Root cause: the three structurally classified pre-LEVEL `ADVANCE_ONLY` input
+  rows at f161, f201, and f211 executed full headless level frames. Because the
+  replay fixture had already loaded AIZ, those rows dispatched
+  `Obj_AIZPlaneIntro` three times even though the ROM had not reached its setup
+  `Process_Sprites` call.
+- Fix: `ADVANCE_ONLY` keeps its existing structural classification but now
+  consumes the BK2 row through the input-only cursor operation. It does not
+  dispatch the resident level, advance VBlank/gameplay counters, animate
+  playables, or validate a post-step rewind closure. Headless trace replay and
+  `TraceCaptureTool` use the same operation.
+- ROM proof: `Obj_AIZPlaneIntro` always calls its scroll accumulator after
+  routine dispatch (`docs/skdisasm/sonic3k.asm:135469-135476`), and the
+  accumulator adds `$40(a0)` only while `Events_fg_1` is negative, moving
+  Player 1 only on the following nonnegative dispatch
+  (`docs/skdisasm/sonic3k.asm:135945-135956`). A production-object regression
+  confirms the one setup dispatch plus 430 LevelLoop dispatches leaves Sonic
+  at `$0040`; the next dispatch moves him to `$0050`.
+
+Focused replay:
+
+```bash
+mvn -Ptrace-replay \
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay' \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' \
+  -Dsurefire.forkCount=1 \
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -DfailIfNoTests=false test
+```
+
+Result: expected exit 1 at the later frontier; 16 tests ran with 14 failures,
+0 errors. `replayMatchesTrace` reports 1,298 errors, first at f2707
+`tails_animation_id`; the report contains no f717 mismatch.
+
+The focused cadence/driver regression and the bootstrap/policy/must-keep-green
+selection pass. The selected fresh Surefire reports contain 127 tests with
+zero failures or errors.
