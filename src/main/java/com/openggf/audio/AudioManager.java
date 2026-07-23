@@ -17,11 +17,13 @@ import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.AudioOutputFifo;
 import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.runtime.PresentationAudioCapture;
 import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
@@ -54,6 +56,7 @@ public class AudioManager {
     private DeterministicAudioRuntime deterministicAudioRuntime = NoOpDeterministicAudioRuntime.INSTANCE;
     private DeterministicAudioRuntime preCaptureRuntime;
     private StreamBackedDeterministicAudioRuntime captureRuntime;
+    private ManagerLiveCaptureAudioHandle activeLiveCaptureAudioHandle;
     private boolean deterministicRuntimeExplicitlyConfigured;
     private boolean audioFrameOwnedExternally;
     private boolean audioFrameAdvanced;
@@ -99,13 +102,46 @@ public class AudioManager {
         applyDeterministicAudioRuntime(deterministicAudioRuntime);
     }
 
-    private void applyDeterministicAudioRuntime(DeterministicAudioRuntime deterministicAudioRuntime) {
+    private synchronized void applyDeterministicAudioRuntime(DeterministicAudioRuntime deterministicAudioRuntime) {
+        if (activeLiveCaptureAudioHandle != null) {
+            closeLiveCaptureAudio(activeLiveCaptureAudioHandle);
+        }
         this.deterministicAudioRuntime = deterministicAudioRuntime != null
                 ? deterministicAudioRuntime
                 : NoOpDeterministicAudioRuntime.INSTANCE;
         this.deterministicAudioRuntime.setCommandHandler(this::replayTimelineCommand);
         if (backend != null) {
             backend.attachDeterministicAudioRuntime(this.deterministicAudioRuntime);
+        }
+    }
+
+    public synchronized LiveCaptureAudioHandle beginLiveCaptureAudio(int frameRate) {
+        if (activeLiveCaptureAudioHandle != null) {
+            throw new IllegalStateException("A live capture audio handle is already attached");
+        }
+        if (!(deterministicAudioRuntime instanceof StreamBackedDeterministicAudioRuntime attachedRuntime)) {
+            throw new IllegalStateException("The active audio runtime does not support live capture");
+        }
+        int sampleRate = Math.max(1, backend.outputSampleRate());
+        PresentationAudioCapture capture =
+                attachedRuntime.openPresentationAudioCapture(sampleRate, frameRate);
+        ManagerLiveCaptureAudioHandle handle =
+                new ManagerLiveCaptureAudioHandle(attachedRuntime, capture);
+        activeLiveCaptureAudioHandle = handle;
+        return handle;
+    }
+
+    private synchronized void closeLiveCaptureAudio(ManagerLiveCaptureAudioHandle handle) {
+        if (handle.closed) {
+            return;
+        }
+        handle.closed = true;
+        try {
+            handle.capture.close();
+        } finally {
+            if (activeLiveCaptureAudioHandle == handle) {
+                activeLiveCaptureAudioHandle = null;
+            }
         }
     }
 
@@ -183,11 +219,7 @@ public class AudioManager {
         if (config == null) {
             return 60;
         }
-        String region = config.getString(SonicConfiguration.REGION);
-        if ("PAL".equalsIgnoreCase(region)) {
-            return 50;
-        }
-        return Math.max(1, config.getInt(SonicConfiguration.FPS));
+        return FrameRateResolver.effective(config);
     }
 
     private static int configuredPcmHistoryFrames(int sampleRate) {
@@ -1298,6 +1330,49 @@ public class AudioManager {
 
     private boolean sendLiveBackendCommands() {
         return backend != null && !deterministicAudioRuntime.consumesSubmittedCommands();
+    }
+
+    private final class ManagerLiveCaptureAudioHandle implements LiveCaptureAudioHandle {
+        private final StreamBackedDeterministicAudioRuntime attachedRuntime;
+        private final PresentationAudioCapture capture;
+        private boolean closed;
+
+        private ManagerLiveCaptureAudioHandle(
+                StreamBackedDeterministicAudioRuntime attachedRuntime,
+                PresentationAudioCapture capture) {
+            this.attachedRuntime = attachedRuntime;
+            this.capture = capture;
+        }
+
+        @Override
+        public int sampleRate() {
+            return capture.sampleRate();
+        }
+
+        @Override
+        public int frameRate() {
+            return capture.frameRate();
+        }
+
+        @Override
+        public int maxStereoFramesPerPacket() {
+            return capture.maxStereoFramesPerPacket();
+        }
+
+        @Override
+        public int drainPresentationFrame(short[] target) {
+            synchronized (AudioManager.this) {
+                if (closed || deterministicAudioRuntime != attachedRuntime) {
+                    throw new IllegalStateException("Live capture audio handle is no longer attached");
+                }
+                return capture.drainPresentationFrame(target);
+            }
+        }
+
+        @Override
+        public void close() {
+            closeLiveCaptureAudio(this);
+        }
     }
 
     public void destroy() {

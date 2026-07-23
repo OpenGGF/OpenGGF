@@ -1,7 +1,5 @@
-package com.openggf.game;
+package com.openggf.configuration;
 
-import com.openggf.configuration.SonicConfiguration;
-import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

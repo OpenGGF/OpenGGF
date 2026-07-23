@@ -1,7 +1,4 @@
-package com.openggf.game;
-
-import com.openggf.configuration.SonicConfiguration;
-import com.openggf.configuration.SonicConfigurationService;
+package com.openggf.configuration;
 
 public final class FrameRateResolver {
     private FrameRateResolver() {
