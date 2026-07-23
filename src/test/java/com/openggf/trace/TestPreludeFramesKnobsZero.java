@@ -7,10 +7,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Verifies title-card workaround knobs stay inactive except for the S3K
- * Sonic+Tails seed-row setup tick.
- */
+/** Verifies replay-only title-card workaround knobs stay inactive for S3K. */
 class TestPreludeFramesKnobsZero {
 
     @Test
@@ -33,10 +30,9 @@ class TestPreludeFramesKnobsZero {
     }
 
     @Test
-    void s3kSonicAndTailsSeedFrameReturnsOneSidekickSetupTick() {
-        // Mirrors the S3K CNZ Sonic+Tails level-select trace. Frame 0 remains
-        // a seed comparison row after one native sidekick setup tick when the
-        // fixture explicitly advertises that replay phase.
+    void s3kLegacySeedCapabilityCannotRequestReplayPrelude() {
+        // Mirrors the old S3K CNZ metadata. The capability remains parseable,
+        // but Task 1's production fresh-playable lifecycle now owns frame 0.
         TraceFrame seed = buildFrame(0, /* gfc */ 1,
                 /* xSpeed */ (short) 0, /* ySpeed */ (short) 0, /* gSpeed */ (short) 0,
                 /* xSub */ 0, /* ySub */ 0);
@@ -47,9 +43,11 @@ class TestPreludeFramesKnobsZero {
                         List.of("sidekick_seed_frame_prelude")),
                 List.of(seed, next));
 
-        assertEquals(1, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
-        assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
-                "S3K Sonic+Tails seed-frame traces replay the native Process_Sprites setup pass before frame 1");
+        assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(0, TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1));
+        assertEquals(TraceReplayBootstrap.ReplayStartState.DEFAULT,
+                TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, null));
     }
 
     @Test
@@ -64,8 +62,9 @@ class TestPreludeFramesKnobsZero {
                 List.of(seed, next));
 
         assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
-                "S3K sidekick seed-frame prelude should come from explicit fixture capability metadata, "
-                        + "not first-frame movement shape.");
+                "S3K replay scheduling must not infer a seed prelude from frame-zero outcome shape.");
+        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(0, TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1));
     }
 
     @Test

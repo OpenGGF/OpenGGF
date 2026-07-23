@@ -89,20 +89,6 @@ public final class TraceReplayBootstrap {
 
     public static ReplayStartState applyReplayStartStateForTraceReplay(TraceData trace,
                                                                        TraceReplayFixture fixture) {
-        if (usesSidekickTitleCardSeedFrame(trace)) {
-            if (fixture != null) {
-                // The frame-0 row is reproduced by the native sidekick-only
-                // prelude, not by a full player physics tick. Consume only the
-                // matching BK2 input frame so trace frame 1 uses BK2 input 1
-                // and later Ctrl_1_pressed edges stay aligned with the recorded
-                // rows. Also append that live controller sample to Sonic's
-                // native follow history; Tails_Normal reads the delayed
-                // Ctrl_1_Logical stream independently of Sonic physics.
-                int seedInput = fixture.consumeRecordingFrameInputOnly();
-                recordSeedFrameInputHistory(fixture.sprite(), seedInput);
-            }
-            return new ReplayStartState(1, 0);
-        }
         return new ReplayStartState(replaySeedTraceIndexForTraceReplay(trace), -1);
     }
 
@@ -141,11 +127,45 @@ public final class TraceReplayBootstrap {
         return findFirstLevelGameplayFrame(trace);
     }
 
+    /**
+     * Returns whether the recorded mode timeline begins outside live LEVEL mode
+     * and later transitions into it.
+     *
+     * <p>This classification uses only recorder-observed {@code zone_act_state}
+     * events. Legacy phase-control metadata remains parseable but does not
+     * participate in replay scheduling.
+     */
+    public static boolean hasRecordedPreLevelPrefix(TraceData trace) {
+        if (trace == null || trace.frameCount() == 0) {
+            return false;
+        }
+        Integer firstRecordedMode = null;
+        for (int frame = 0; frame < trace.frameCount(); frame++) {
+            for (TraceEvent event : trace.getEventsForFrame(frame)) {
+                if (!(event instanceof TraceEvent.ZoneActState state)
+                        || state.gameMode() == null) {
+                    continue;
+                }
+                if (firstRecordedMode == null) {
+                    firstRecordedMode = state.gameMode();
+                    if (firstRecordedMode == 12) {
+                        return false;
+                    }
+                    continue;
+                }
+                if (state.gameMode() == 12) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static int replaySeedTraceIndexForTraceReplay(TraceData trace) {
         if (trace == null || trace.frameCount() == 0) {
             return 0;
         }
-        if (hasPreLevelIntroPrefix(trace)) {
+        if (hasRecordedPreLevelPrefix(trace)) {
             // Pre-level-prefix fixtures record the intro/cutscene timeline from
             // trace frame 0. Replaying from the first in-level frame skips
             // recorded native state that the seed frame alone cannot reconstruct.
@@ -168,7 +188,7 @@ public final class TraceReplayBootstrap {
             return override;
         }
         if (trace == null || trace.frameCount() == 0
-                || hasPreLevelIntroPrefix(trace)) {
+                || hasRecordedPreLevelPrefix(trace)) {
             return 0;
         }
         int seedTraceIndex = replaySeedTraceIndexForTraceReplay(trace);
@@ -186,17 +206,7 @@ public final class TraceReplayBootstrap {
             // real FULL_LEVEL_FRAME (as in the AIZ complete run), that step
             // advances OscillateNumDo itself; pre-advancing as well shifts
             // every oscillating object one frame ahead.
-            return firstRowIsVblankOnly
-                    ? Math.max(1, trace.metadata().preTraceOscillationFrames())
-                    : trace.metadata().preTraceOscillationFrames();
-        }
-        if (usesSidekickTitleCardSeedFrame(trace)) {
-            // The S3K Sonic+Tails seed row is not driven through a full engine
-            // frame, but the ROM row has already passed LevelLoop's
-            // OscillateNumDo after Process_Sprites (sonic3k.asm:7884-7910).
-            // Apply the metadata's one-time pre-trace oscillator tick so
-            // later CNZ objects read the same previous-frame oscillation phase.
-            return trace.metadata().preTraceOscillationFrames();
+            return firstRowIsVblankOnly ? 1 : 0;
         }
         int firstComparedGameplayFrame =
                 trace.getFrame(seedTraceIndex).gameplayFrameCounter();
@@ -233,11 +243,7 @@ public final class TraceReplayBootstrap {
      * player physics frame.
      */
     public static int sidekickTitleCardPreludeFramesForTraceReplay(TraceData trace) {
-        int s2PreludeFrames = resolveS2SidekickTitleCardPreludeFrames(trace);
-        if (s2PreludeFrames > 0) {
-            return s2PreludeFrames;
-        }
-        return resolveS3kSidekickSeedFramePreludeFrames(trace);
+        return resolveS2SidekickTitleCardPreludeFrames(trace);
     }
 
     /**
@@ -278,10 +284,6 @@ public final class TraceReplayBootstrap {
         int s1PreludeFrames = resolveS1LevelStartObjectPreludeFrames(trace);
         if (s1PreludeFrames > 0) {
             return s1PreludeFrames;
-        }
-        int s3kSeedFramePreludeFrames = resolveS3kSeedFrameObjectPreludeFrames(trace);
-        if (s3kSeedFramePreludeFrames > 0) {
-            return s3kSeedFramePreludeFrames;
         }
         int s3kCompleteRunPreludeFrames = resolveS3kCompleteRunObjectPreludeFrames(trace);
         if (s3kCompleteRunPreludeFrames > 0) {
@@ -369,30 +371,6 @@ public final class TraceReplayBootstrap {
         return isS3kCompleteRunSegment(trace)
                 ? S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES
                 : 0;
-    }
-
-    private static int resolveS3kSeedFrameObjectPreludeFrames(TraceData trace) {
-        return usesSidekickTitleCardSeedFrame(trace)
-                ? S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES
-                : 0;
-    }
-
-    /**
-     * Frame count of the S3K pre-LevelLoop sidekick prelude. Returns 1 only
-     * when seed-frame mode applies (S3K Sonic+Tails trace whose frame 0 row
-     * has Level_frame_counter=1 and Sonic primary movement still zero). The
-     * single tick fires Tails' carry-trigger init (CNZ loc_13A5A) and applies
-     * the in-air gravity that the ROM observes during that first iteration of
-     * LevelLoop's Process_Sprites pass.
-     */
-    private static int resolveS3kSidekickSeedFramePreludeFrames(TraceData trace) {
-        if (trace == null) {
-            return 0;
-        }
-        if (!usesSidekickTitleCardSeedFrame(trace)) {
-            return 0;
-        }
-        return 1;
     }
 
     private static int resolveS2SidekickTitleCardPreludeFrames(TraceData trace) {
@@ -501,13 +479,13 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean requiresFreshLevelLoadForTraceReplay(TraceData trace) {
-        return hasPreLevelIntroPrefix(trace)
+        return hasRecordedPreLevelPrefix(trace)
                 && replaySeedTraceIndexForTraceReplay(trace) == 0;
     }
 
     public static boolean shouldApplyMetadataStartPositionForTraceReplay(TraceData trace) {
         return replaySeedTraceIndexForTraceReplay(trace) == 0
-                && !hasPreLevelIntroPrefix(trace)
+                && !hasRecordedPreLevelPrefix(trace)
                 && !isS2TornadoRideStartMetadataCandidate(trace);
     }
 
@@ -601,7 +579,7 @@ public final class TraceReplayBootstrap {
         if (trace == null || trace.frameCount() == 0) {
             return 0;
         }
-        if (hasPreLevelIntroPrefix(trace)) {
+        if (hasRecordedPreLevelPrefix(trace)) {
             return findFirstLevelGameplayFrame(trace);
         }
         return replaySeedTraceIndexForTraceReplay(trace);
@@ -658,7 +636,14 @@ public final class TraceReplayBootstrap {
                 // trace frame instead of double-counting the setup work.
                 return TraceExecutionPhase.VBLANK_ONLY;
             }
-            return deriveLegacyPhase(previous, current);
+            if (hasDirectLagCounterEvidence(previous, current)) {
+                return TraceExecutionPhase.VBLANK_ONLY;
+            }
+            // Once the setup boundary has passed, the recorded intro runs the
+            // ordinary native LevelLoop even while all sampled counters remain
+            // pinned. Only direct lag evidence or the input-latch case above
+            // may suppress that execution before gameplay_start.
+            return TraceExecutionPhase.FULL_LEVEL_FRAME;
         }
         if (isSonic3kTransitionModeFrozenRow(trace, previous, current)) {
             return TraceExecutionPhase.VBLANK_ONLY;
@@ -998,22 +983,9 @@ public final class TraceReplayBootstrap {
         return current;
     }
 
-    private static void recordSeedFrameInputHistory(AbstractPlayableSprite sprite, int inputMask) {
-        if (sprite == null) {
-            return;
-        }
-        sprite.setLogicalInputState(
-                (inputMask & AbstractPlayableSprite.INPUT_UP) != 0,
-                (inputMask & AbstractPlayableSprite.INPUT_DOWN) != 0,
-                (inputMask & AbstractPlayableSprite.INPUT_LEFT) != 0,
-                (inputMask & AbstractPlayableSprite.INPUT_RIGHT) != 0,
-                (inputMask & AbstractPlayableSprite.INPUT_JUMP) != 0);
-        sprite.endOfTick();
-    }
-
     private static boolean shouldUsePreLevelIntroPrefix(TraceData trace,
                                                         TraceFrame current) {
-        if (trace == null || current == null || !hasPreLevelIntroPrefix(trace)) {
+        if (trace == null || current == null || !hasRecordedPreLevelPrefix(trace)) {
             return false;
         }
         int gameplayStartFrame = findCheckpointFrame(trace, "gameplay_start");
@@ -1024,12 +996,8 @@ public final class TraceReplayBootstrap {
                                                          TraceFrame previous,
                                                          TraceFrame current) {
         if (trace == null || previous == null || current == null
-                || !hasPreLevelIntroPrefix(trace)
+                || !hasRecordedPreLevelPrefix(trace)
                 || current.input() == previous.input()) {
-            return false;
-        }
-        int firstLevelFrame = findFirstLevelGameplayFrame(trace);
-        if (current.frame() <= firstLevelFrame) {
             return false;
         }
         return current.stateEquals(previous)
@@ -1039,7 +1007,7 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean shouldUsePreviousRecordingInputForTraceReplay(TraceData trace) {
-        return hasPreLevelIntroPrefix(trace);
+        return hasRecordedPreLevelPrefix(trace);
     }
 
     /**
@@ -1060,82 +1028,19 @@ public final class TraceReplayBootstrap {
                 || !"s3k".equals(metadata.game())
                 || metadata.recordedSidekicks().isEmpty()
                 || !"complete_run".equals(metadata.traceProfile())
-                || hasPreLevelIntroPrefix(trace)) {
+                || hasRecordedPreLevelPrefix(trace)) {
             return false;
         }
         return replaySeedTraceIndexForTraceReplay(trace) == 0;
     }
 
-    private static boolean usesSidekickTitleCardSeedFrame(TraceData trace) {
-        if (isS3kCompleteRunSegment(trace)) {
-            // Complete-run segments arm at the first compared frame; the
-            // gfc==1 sidekick-only prelude path must not fire for them.
-            return false;
-        }
-        if (!hasS3kSidekickTitleCardPrelude(trace)) {
-            return false;
-        }
-        return trace.metadata().hasSidekickSeedFramePrelude();
+    private static boolean hasDirectLagCounterEvidence(TraceFrame previous,
+                                                       TraceFrame current) {
+        return previous != null
+                && current != null
+                && previous.lagCounter() >= 0
+                && current.lagCounter() > previous.lagCounter();
     }
-
-    private static boolean hasS3kSidekickTitleCardPrelude(TraceData trace) {
-        if (trace == null || trace.frameCount() < 2
-                || !"s3k".equals(trace.metadata().game())
-                || trace.metadata().recordedSidekicks().isEmpty()
-                || hasPreLevelIntroPrefix(trace)) {
-            return false;
-        }
-        if (replaySeedTraceIndexForTraceReplay(trace) != 0) {
-            return false;
-        }
-        TraceFrame firstFrame = trace.getFrame(0);
-        // Level setup runs SpawnLevelMainSprites, then Load_Sprites and a
-        // pre-LevelLoop Process_Sprites pass before controls unlock
-        // (docs/skdisasm/sonic3k.asm:7848-7859). Headless fixtures load the
-        // team but do not run that setup sprite pass, so a trace whose first
-        // gameplay row has Level_frame_counter=1 needs one native sidekick
-        // prelude to advance Tails from Obj_Tails routine 0 to routine 2
-        // (docs/skdisasm/sonic3k.asm:26085-26156) before the first driven row.
-        return firstFrame.gameplayFrameCounter() == 1;
-    }
-
-    /**
-     * Pre-level-prefix traces can keep gameplay_frame_counter pinned during
-     * opening cutscenes, so the normal execution model misclassifies many real
-     * gameplay frames as VBlank-only. Use state changes inside that prefix
-     * window instead of forcing every frame to full execution.
-     */
-    private static TraceExecutionPhase deriveLegacyPhase(TraceFrame previous,
-                                                         TraceFrame current) {
-        if (previous == null || current == null) {
-            return TraceExecutionPhase.FULL_LEVEL_FRAME;
-        }
-        if (!current.stateEquals(previous)) {
-            return TraceExecutionPhase.FULL_LEVEL_FRAME;
-        }
-        // Pre-level frames (SEGA/title/level-load) leave stale non-zero speed
-        // fields in the Player_1 RAM block that the recorder samples. When the
-        // gameplay_frame_counter stays pinned across two consecutive frames,
-        // treat the state as "game is still initializing / intro cutscene
-        // running" rather than trusting the stale speed fields, which would
-        // otherwise misclassify frozen-state frames as VBLANK_ONLY.
-        if (previous.gameplayFrameCounter() >= 0
-                && current.gameplayFrameCounter() >= 0
-                && previous.gameplayFrameCounter() == current.gameplayFrameCounter()) {
-            return TraceExecutionPhase.FULL_LEVEL_FRAME;
-        }
-        return current.xSpeed() != 0 || current.ySpeed() != 0
-                || current.gSpeed() != 0 || current.air()
-                ? TraceExecutionPhase.VBLANK_ONLY
-                : TraceExecutionPhase.FULL_LEVEL_FRAME;
-    }
-
-    private static boolean hasPreLevelIntroPrefix(TraceData trace) {
-        return trace != null
-                && trace.metadata() != null
-                && trace.metadata().hasPreLevelIntroPrefix();
-    }
-
 
     private static int findCheckpointFrame(TraceData trace, String checkpointName) {
         for (int frame = 0; frame < trace.frameCount(); frame++) {

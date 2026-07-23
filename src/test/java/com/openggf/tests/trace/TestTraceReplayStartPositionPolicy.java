@@ -1,14 +1,26 @@
 package com.openggf.tests.trace;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.trace.*;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.zip.GZIPInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -16,9 +28,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceReplayStartPositionPolicy {
 
+    @TempDir
+    Path tempDir;
+
+    private int policyTraceCopyIndex;
+
     @Test
     void s3kEndToEndTraceUsesLiveIntroSpawnInsteadOfRecordedFrameZeroPosition() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
         TraceMetadata metadata = trace.metadata();
 
         AbstractTraceReplayTest subject = new AbstractTraceReplayTest() {
@@ -60,10 +77,12 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void s3kEndToEndTraceStartsAtFrameZeroWithoutSkippingIntro() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
-        assertTrue(trace.metadata().hasPreLevelIntroPrefix(),
-                "Pre-level prefix behavior must be declared by generic fixture metadata.");
+        assertFalse(trace.metadata().hasPreLevelIntroPrefix(),
+                "The regenerated fixture deliberately carries no legacy prefix capability.");
+        assertTrue(TraceReplayBootstrap.hasRecordedPreLevelPrefix(trace),
+                "The recorded non-LEVEL -> LEVEL zone-state transition must identify the prefix.");
         assertTrue(TraceReplayBootstrap.releaseBlockersForTraceReplay(trace).isEmpty(),
                 "The regenerated AIZ full-run fixture must not be release-blocked by legacy heuristics.");
         assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace));
@@ -92,7 +111,7 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void s3kEndToEndTracePreLevelPrefixAdvancesMovieWithoutTickingLevel() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
         assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0)),
@@ -101,7 +120,7 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void vblankOnlyRowsAdvanceMovieButDoNotCompareGameplayState() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
         assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(287), trace.getFrame(288)),
@@ -109,63 +128,28 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
-    void s3kSidekickCpuExecutionHookPromotesCounterPlateauToFullFrame() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/mgz_completerun"));
-        int promotedIndex = -1;
-        for (int i = 1; i < trace.frameCount(); i++) {
-            TraceFrame previous = trace.getFrame(i - 1);
-            TraceFrame current = trace.getFrame(i);
-            boolean hasCpuExecutionHook = trace.getEventsForFrame(current.frame()).stream()
-                    .anyMatch(TraceEvent.TailsCpuNormalStep.class::isInstance);
-            if (hasCpuExecutionHook
-                    && current.input() != previous.input()
-                    && TraceExecutionModel.forGame("s3k").phaseFor(previous, current)
-                    == TraceExecutionPhase.VBLANK_ONLY) {
-                promotedIndex = i;
-                break;
-            }
-        }
+    void aizLevelTransitionStartsNativePrefixExecutionAfterItsBoundaryRow() throws Exception {
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceFrame beforeTransition = trace.getFrame(288);
+        TraceFrame transition = trace.getFrame(289);
+        TraceFrame firstDrivenPrefixRow = trace.getFrame(290);
 
-        assertTrue(promotedIndex >= 0,
-                "Fixture must contain a counter-plateau row with direct sidekick CPU execution evidence.");
-        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
-                TraceReplayBootstrap.phaseForReplay(
-                        trace, trace.getFrame(promotedIndex - 1), trace.getFrame(promotedIndex)),
-                "A native Tails CPU hook proves the player/object loop ran even when sampled counters "
-                        + "and stationary main-player physics resemble a VBlank-only row.");
-    }
-
-    @Test
-    void s3kMidLoopSidekickHookAdvancesOnlyPlayableAnimation() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
-        TraceFrame previous = trace.getFrame(13098);
-        TraceFrame current = trace.getFrame(13099);
-
-        assertEquals(previous.input(), current.input());
-        assertTrue(trace.getEventsForFrame(current.frame()).stream()
-                .anyMatch(TraceEvent.TailsCpuNormalStep.class::isInstance));
+        assertTrue(transition.lagCounter() > beforeTransition.lagCounter(),
+                "The LEVEL transition row also carries direct lag-counter evidence.");
         assertEquals(TraceExecutionPhase.VBLANK_ONLY,
-                TraceExecutionModel.forGame("s3k").phaseFor(previous, current));
-        assertEquals(TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY,
-                TraceReplayBootstrap.phaseForReplay(trace, previous, current));
-    }
-
-    @Test
-    void s3kMovingSidekickDuckToWalkCanHoldOnlyItsAnimateDispatch() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
-        TraceFrame previous = trace.getFrame(30485);
-        TraceFrame current = trace.getFrame(30486);
-
-        assertFalse(current.sidekick().physicsStateEquals(previous.sidekick()));
-        assertEquals(previous.sidekick().animationId(), current.sidekick().animationId());
-        assertEquals(previous.sidekick().mappingFrame(), current.sidekick().mappingFrame());
-        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD,
-                TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+                TraceReplayBootstrap.phaseForReplay(trace, beforeTransition, transition),
+                "The zone_act_state transition into live LEVEL mode is still the setup boundary.");
+        assertEquals(transition.gameplayFrameCounter(), firstDrivenPrefixRow.gameplayFrameCounter());
+        assertEquals(transition.vblankCounter(), firstDrivenPrefixRow.vblankCounter());
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(trace, transition, firstDrivenPrefixRow),
+                "The first row after the LEVEL boundary must run native gameplay even while "
+                        + "the sampled execution counters remain pinned.");
     }
 
     @Test
     void preLevelPrefixInputEdgeWithoutStateAdvanceOnlyConsumesMovieInput() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
         int inputOnlyIndex = firstInputOnlyStateRow(trace);
         TraceFrame previous = trace.getFrame(inputOnlyIndex - 1);
@@ -176,15 +160,14 @@ class TestTraceReplayStartPositionPolicy {
                 "Pre-level-prefix rows can record a new held input before the ROM applies it. "
                         + "Replay must advance native gameplay for counter parity but skip comparing "
                         + "the duplicated sampled state.");
-        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceReplayBootstrap.phaseForReplay(trace, current, trace.getFrame(inputOnlyIndex + 1)),
-                "The following row advances state and should consume the already-aligned input normally "
-                        + "(selected trace row " + current.frame() + ").");
+                "The following row remains before the structural LEVEL boundary.");
     }
 
     @Test
     void preLevelPrefixInputEdgeWithStateAdvanceStillTicksGameplay() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
         int inputLatchIndex = firstStateAdvancingInputLatchRow(trace);
         TraceFrame previous = trace.getFrame(inputLatchIndex - 1);
@@ -229,42 +212,39 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
-    void s3kGameplayTraceSeedsFrameZeroAfterSidekickOnlyPrelude() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz"));
+    void s3kGameplayTraceDrivesFrameZeroWithoutReplayCompensationPreludes() throws Exception {
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/cnz"));
 
         assertFalse(trace.preTraceObjectSnapshots().isEmpty(),
                 "CNZ records object snapshots for randomised balloon bob phases.");
+        assertFalse(TraceReplayBootstrap.hasRecordedPreLevelPrefix(trace));
         assertEquals(0, TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace));
         assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace));
-        assertEquals(1,
+        assertEquals(0,
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
-                "S3K Sonic+Tails seed-frame traces need the single native sidekick setup tick "
-                        + "observed before the first compared row.");
-        assertEquals(1,
+                "Task 1's production fresh-playable lifecycle owns the first native dispatch.");
+        assertEquals(0,
                 TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
-                "The same seed-frame trace has already run the setup Process_Sprites pass "
-                        + "that initializes level objects such as Obj_CNZBalloon natively.");
-        assertEquals(new TraceReplayBootstrap.ReplayStartState(1, 0),
+                "CNZ frame 0 must run the normal level object pass, not a replay-only warmup.");
+        assertEquals(TraceReplayBootstrap.ReplayStartState.DEFAULT,
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, null),
-                "Frame 0 is still a strict seed comparison; normal full-frame driving starts "
-                        + "with trace frame 1.");
+                "CNZ must drive and compare frame 0 normally.");
         assertEquals(trace.metadata().bk2FrameOffset(),
                 TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace),
-                "Frame 0 is seed-compared from the recorded BK2 offset, then frame 1 drives "
-                        + "with the next movie row.");
-        assertEquals(1,
+                "Frame 0 consumes the first recorded BK2 input normally.");
+        assertEquals(0,
                 TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1),
-                "Frame 0 is seed-compared, not driven, but the ROM row has already passed one "
-                        + "OscillateNumDo tick.");
+                "The normal frame-0 LevelLoop owns OscillateNumDo.");
         assertEquals(0,
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace),
-                "Pre-level-prefix replay drives oscillator timing natively as well.");
+                "Replay must not compensate for the production lifecycle with oscillator suppression.");
     }
 
     @Test
     void s3kMgzGameplayTraceDrivesFrameZeroWhenSonicAlreadyMoved() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/mgz"));
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/mgz"));
 
+        assertFalse(TraceReplayBootstrap.hasRecordedPreLevelPrefix(trace));
         assertEquals(0x18, trace.getFrame(0).xSpeed(),
                 "MGZ frame 0 is after the first input-driven Obj_Sonic update: "
                         + "Sonic_Move accelerates right and MoveSprite_TestGravity applies gravity "
@@ -289,8 +269,10 @@ class TestTraceReplayStartPositionPolicy {
         for (String route : java.util.List.of("aiz_completerun", "hcz_completerun",
                 "mgz_completerun", "cnz_completerun", "icz_completerun",
                 "lbz_completerun", "mhz_completerun")) {
-            TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k", route));
+            TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k", route));
 
+            assertFalse(TraceReplayBootstrap.hasRecordedPreLevelPrefix(trace),
+                    route + " begins in live LEVEL mode and must not acquire an intro prefix.");
             assertTrue(TraceReplayBootstrap.isS3kCompleteRunSegment(trace),
                     route + " must be recognized as a complete-run segment.");
             assertTrue(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace),
@@ -342,8 +324,8 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void s3kCompleteRunAirborneStartsDriveFrameZeroWhenVelocityAlreadyIntegrated() throws Exception {
-        TraceData hcz = TraceData.load(Path.of("src/test/resources/traces/s3k/hcz_completerun"));
-        TraceData mgz = TraceData.load(Path.of("src/test/resources/traces/s3k/mgz_completerun"));
+        TraceData hcz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/hcz_completerun"));
+        TraceData mgz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/mgz_completerun"));
 
         assertEquals(0x0038, hcz.getFrame(0).ySpeed() & 0xFFFF,
                 "HCZ frame 0 already includes the first S3K gravity step.");
@@ -363,9 +345,9 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void s3kCompleteRunRepeatedRowsTickHiddenStartupState() throws Exception {
-        TraceData lbz = TraceData.load(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
-        TraceData cnz = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
-        TraceData mhz = TraceData.load(Path.of("src/test/resources/traces/s3k/mhz_completerun"));
+        TraceData lbz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
+        TraceData cnz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
+        TraceData mhz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/mhz_completerun"));
 
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(lbz, null, lbz.getFrame(0)),
@@ -392,21 +374,21 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
-    void s3kCompleteRunVisibleVelocityHoldRowsWaitForFirstStateChange() throws Exception {
-        TraceData icz = TraceData.load(Path.of("src/test/resources/traces/s3k/icz_completerun"));
-        TraceData lbz = TraceData.load(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
+    void s3kCompleteRunFormerVisibleHoldShapeDoesNotAcquirePrefixOrSeedPrelude() throws Exception {
+        TraceData icz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/icz_completerun"));
+        TraceData lbz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
 
+        assertFalse(TraceReplayBootstrap.hasRecordedPreLevelPrefix(icz),
+                "A visible-hold start shape is not a recorded non-LEVEL -> LEVEL transition.");
         assertEquals(0x0800, icz.getFrame(0).xSpeed() & 0xFFFF,
-                "ICZ frame 0 carries native launch velocity even though the visible row is still held.");
-        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                "ICZ frame 0 carries native launch velocity.");
+        assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(icz));
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(icz, null, icz.getFrame(0)),
-                "The initial ICZ complete-run visible hold row is before the first native motion sample.");
-        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
-                TraceReplayBootstrap.phaseForReplay(icz, icz.getFrame(27), icz.getFrame(28)),
-                "Repeated visible ICZ startup rows should not tick gameplay before motion appears.");
+                "The regenerated no-hook fixture exposes frame 0 as a normal native level row.");
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(icz, icz.getFrame(28), icz.getFrame(29)),
-                "The first ICZ state-changing row owns the native movement step.");
+                "Later ICZ rows remain counter-driven full frames.");
 
         assertEquals(0, lbz.getFrame(0).ySpeed(),
                 "LBZ's repeated rows are a zero-velocity hidden launch countdown, not a visible velocity hold.");
@@ -416,17 +398,16 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
-    void s3kCompleteRunVisibleHoldRowsSeedCounterFromCpuCursor() throws Exception {
-        TraceData icz = TraceData.load(Path.of("src/test/resources/traces/s3k/icz_completerun"));
-        TraceData lbz = TraceData.load(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
+    void s3kCompleteRunNormalFrameZeroDoesNotSeedCounterFromCpuCursor() throws Exception {
+        TraceData icz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/icz_completerun"));
+        TraceData lbz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
 
         TraceReplayBootstrap.ReplayStartState iczStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(icz, null);
-        assertEquals(29,
+        assertEquals(-1,
                 TraceReplaySessionBootstrap.s3kCompleteRunFrameCounterSeedForReplayStart(
                         icz, iczStart),
-                "ICZ skips 29 visible hold rows; the first native motion row's Pos_table index "
-                        + "0x78 means the pre-step counter seed is 29.");
+                "The regenerated ICZ fixture drives frame 0 normally and needs no skipped-row counter seed.");
 
         TraceReplayBootstrap.ReplayStartState lbzStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(lbz, null);
@@ -461,7 +442,7 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void s3kGameplayTraceStillDoesNotSeedFrameZeroWhenObjectSnapshotsExist() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz"));
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/cnz"));
 
         assertFalse(trace.preTraceObjectSnapshots().isEmpty());
         assertFalse(TraceReplayBootstrap.shouldSeedReplayStartStateForTraceReplay(trace, 0),
@@ -470,8 +451,8 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void s2SczAndWfzLevelSelectUseNativeTornadoRideStart() throws Exception {
-        TraceData scz = TraceData.load(Path.of("src/test/resources/traces/s2/scz"));
-        TraceData wfz = TraceData.load(Path.of("src/test/resources/traces/s2/wfz"));
+        TraceData scz = loadPolicyTrace(Path.of("src/test/resources/traces/s2/scz"));
+        TraceData wfz = loadPolicyTrace(Path.of("src/test/resources/traces/s2/wfz"));
 
         assertTrue(TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(scz),
                 "SCZ metadata is eligible for the ObjB2-authorized Tornado ride-start prelude.");
@@ -485,8 +466,8 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void s2SlotMachinePreludeUsesRecordedFeatureCapability() throws Exception {
-        TraceData slotMachineTrace = TraceData.load(Path.of("src/test/resources/traces/s2/cnz"));
-        TraceData tornadoTrace = TraceData.load(Path.of("src/test/resources/traces/s2/scz"));
+        TraceData slotMachineTrace = loadPolicyTrace(Path.of("src/test/resources/traces/s2/cnz"));
+        TraceData otherCapabilityTrace = loadPolicyTrace(Path.of("src/test/resources/traces/s2/scz"));
 
         assertTrue(slotMachineTrace.metadata().hasPerFrameSlotMachineState(),
                 "Replay policy should consume generic slot-machine recorder capability metadata.");
@@ -495,9 +476,9 @@ class TestTraceReplayStartPositionPolicy {
                 "SlotMachine state traces need the native short init window before comparison.");
         assertEquals(10,
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(slotMachineTrace));
-        assertEquals(0,
-                TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(tornadoTrace),
-                "Traces without the slot-machine recorder schema must not receive a zone-id prelude.");
+        assertEquals(4,
+                TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(otherCapabilityTrace),
+                "The generic recorder capability, not the route name, owns S2 feature prelude scheduling.");
         assertEquals(0,
                 TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(slotMachineTrace),
                 "Metadata-only replay policy must not apply Tornado object preludes to non-Tornado routes.");
@@ -505,28 +486,185 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void ordinaryS2TraceDoesNotUseTornadoRideStart() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s2/ehz1_fullrun"));
+        TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s2/ehz1_fullrun"));
 
         assertFalse(TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace));
     }
 
-    private static int firstInputOnlyStateRow(TraceData trace) {
-        boolean afterGameplayStart = false;
-        for (int i = 1; i + 1 < trace.frameCount(); i++) {
-            if (!afterGameplayStart) {
-                for (TraceEvent event : trace.getEventsForFrame(i)) {
-                    if (event instanceof TraceEvent.Checkpoint checkpoint
-                            && "gameplay_start".equals(checkpoint.name())) {
-                        afterGameplayStart = true;
-                    }
+    @Test
+    void bonusAndSingleCharacterStartsDoNotAcquireS3kPrefixOrSeedPrelude() throws Exception {
+        TraceData bonus = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/bonus_gumball"));
+
+        assertEquals(List.of("knuckles"), bonus.metadata().recordedCharacters());
+        assertFalse(TraceReplayBootstrap.hasRecordedPreLevelPrefix(bonus));
+        assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(bonus));
+        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(bonus));
+        assertEquals(0, TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(bonus, -1));
+    }
+
+    @Test
+    void contradictoryLegacyMetadataCannotChangeStructuralAizPolicy() throws Exception {
+        TraceData aiz = metadataVariant(
+                Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"),
+                "aiz-legacy-conflict",
+                false,
+                true,
+                73,
+                290);
+
+        assertFalse(aiz.metadata().hasPreLevelIntroPrefix());
+        assertTrue(aiz.metadata().hasSidekickSeedFramePrelude());
+        assertEquals(73, aiz.metadata().preTraceOscillationFrames());
+        assertTrue(TraceReplayBootstrap.hasRecordedPreLevelPrefix(aiz));
+        assertEquals(0, TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(aiz));
+        assertEquals(0, TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(aiz, -1));
+    }
+
+    @Test
+    void contradictoryLegacyMetadataCannotChangeStructuralCnzPolicy() throws Exception {
+        TraceData cnz = metadataVariant(
+                Path.of("src/test/resources/traces/s3k/cnz"),
+                "cnz-legacy-conflict",
+                true,
+                true,
+                91,
+                1);
+
+        assertTrue(cnz.metadata().hasPreLevelIntroPrefix());
+        assertTrue(cnz.metadata().hasSidekickSeedFramePrelude());
+        assertEquals(91, cnz.metadata().preTraceOscillationFrames());
+        assertFalse(TraceReplayBootstrap.hasRecordedPreLevelPrefix(cnz));
+        assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(cnz));
+        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(cnz));
+        assertEquals(0, TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(cnz, -1));
+    }
+
+    private TraceData metadataVariant(Path source,
+                                      String directoryName,
+                                      boolean preLevelPrefix,
+                                      boolean sidekickSeedPrelude,
+                                      int preTraceOscillationFrames,
+                                      int lastFrame) throws Exception {
+        Path target = tempDir.resolve(directoryName);
+        Files.createDirectories(target);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode metadata = (ObjectNode) mapper.readTree(source.resolve("metadata.json").toFile());
+        ArrayNode extras = metadata.withArray("aux_schema_extras");
+        for (int i = extras.size() - 1; i >= 0; i--) {
+            String value = extras.get(i).asText();
+            if ("pre_level_intro_prefix".equals(value)
+                    || "sidekick_seed_frame_prelude".equals(value)) {
+                extras.remove(i);
+            }
+        }
+        if (preLevelPrefix) {
+            extras.add("pre_level_intro_prefix");
+        }
+        if (sidekickSeedPrelude) {
+            extras.add("sidekick_seed_frame_prelude");
+        }
+        metadata.put("pre_trace_osc_frames", preTraceOscillationFrames);
+        metadata.put("trace_frame_count", lastFrame + 1);
+        mapper.writerWithDefaultPrettyPrinter().writeValue(target.resolve("metadata.json").toFile(), metadata);
+        copyPhysicsPrefix(source, target, lastFrame);
+        copyAuxPrefix(source, target, mapper, lastFrame);
+        return TraceData.load(target);
+    }
+
+    /**
+     * Loads the checked-in physics rows and only the aux event families used by
+     * replay scheduling policy. The regenerated no-hook fixtures carry more
+     * than 100 MiB of per-object diagnostics each; retaining those unrelated
+     * comparison events would make this policy-only suite depend on heap size.
+     */
+    private TraceData loadPolicyTrace(Path source) throws Exception {
+        Path target = tempDir.resolve("policy-"
+                + policyTraceCopyIndex++ + "-" + source.getFileName());
+        Files.createDirectories(target);
+        Files.copy(source.resolve("metadata.json"), target.resolve("metadata.json"),
+                StandardCopyOption.REPLACE_EXISTING);
+        copyTraceFile(source, target, "physics.csv");
+        try (BufferedReader reader = traceReader(source, "aux_state.jsonl");
+             BufferedWriter writer = Files.newBufferedWriter(
+                     target.resolve("aux_state.jsonl"), StandardCharsets.UTF_8)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (isReplayPolicyEvent(line)) {
+                    writer.write(line);
+                    writer.newLine();
                 }
-                continue;
+            }
+        }
+        return TraceData.load(target);
+    }
+
+    private static boolean isReplayPolicyEvent(String line) {
+        return line.contains("\"event\":\"zone_act_state\"")
+                || line.contains("\"event\":\"checkpoint\"")
+                || line.contains("\"event\":\"tails_cpu_normal_step\"")
+                || line.contains("\"event\":\"cpu_state\"")
+                || line.contains("\"event\":\"object_state_snapshot\"");
+    }
+
+    private static void copyTraceFile(Path source, Path target, String baseName) throws Exception {
+        Path compressed = source.resolve(baseName + ".gz");
+        Path input = Files.exists(compressed) ? compressed : source.resolve(baseName);
+        Files.copy(input, target.resolve(input.getFileName()), StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static void copyPhysicsPrefix(Path source, Path target, int lastFrame) throws Exception {
+        try (BufferedReader reader = traceReader(source, "physics.csv");
+             BufferedWriter writer = Files.newBufferedWriter(
+                     target.resolve("physics.csv"), StandardCharsets.UTF_8)) {
+            String header = reader.readLine();
+            writer.write(header);
+            writer.newLine();
+            for (int frame = 0; frame <= lastFrame; frame++) {
+                writer.write(reader.readLine());
+                writer.newLine();
+            }
+        }
+    }
+
+    private static void copyAuxPrefix(Path source,
+                                      Path target,
+                                      ObjectMapper mapper,
+                                      int lastFrame) throws Exception {
+        try (BufferedReader reader = traceReader(source, "aux_state.jsonl");
+             BufferedWriter writer = Files.newBufferedWriter(
+                     target.resolve("aux_state.jsonl"), StandardCharsets.UTF_8)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (mapper.readTree(line).path("frame").asInt() <= lastFrame) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+        }
+    }
+
+    private static BufferedReader traceReader(Path directory, String baseName) throws Exception {
+        Path compressed = directory.resolve(baseName + ".gz");
+        InputStream input = Files.newInputStream(
+                Files.exists(compressed) ? compressed : directory.resolve(baseName));
+        if (Files.exists(compressed)) {
+            input = new GZIPInputStream(input);
+        }
+        return new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+    }
+
+    private static int firstInputOnlyStateRow(TraceData trace) {
+        for (int i = 1; i + 1 < trace.frameCount(); i++) {
+            for (TraceEvent event : trace.getEventsForFrame(i)) {
+                if (event instanceof TraceEvent.Checkpoint checkpoint
+                        && "gameplay_start".equals(checkpoint.name())) {
+                    throw new AssertionError("No input-only state row found before gameplay_start");
+                }
             }
             TraceFrame previous = trace.getFrame(i - 1);
             TraceFrame current = trace.getFrame(i);
             if (current.input() != previous.input()
                     && current.stateEquals(previous)
-                    && !trace.getFrame(i + 1).stateEquals(current)
                     && current.gameplayFrameCounter() == previous.gameplayFrameCounter()
                     && current.vblankCounter() == previous.vblankCounter()
                     && current.lagCounter() == previous.lagCounter()) {

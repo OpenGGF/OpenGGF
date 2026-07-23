@@ -223,6 +223,11 @@ public final class TraceReplaySessionBootstrap {
         OscillationManager.suppressNextFrames(
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace));
         advanceAnimatedTilePreludeForTraceReplay(trace);
+        // S3K level-gated starts deliberately return zero for both replay-only
+        // prelude counts. Their first normal frame consumes the production
+        // fresh-main-playable dispatch armed by LevelManager, so Sonic, Tails,
+        // objects, input history, and OscillateNumDo stay in one native phase.
+        // S1/S2 retain their game-owned title-card setup rules below.
         int sidekickPreludeFrames =
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace);
         int objectPreludeFrames = 0;
