@@ -30,6 +30,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 new TestCase("Harness scaffold runs", () => { })
             };
             BootstrapTests.Register(tests);
+            Bk2ReaderTests.Register(tests);
             GpgxHostTests.Register(tests);
 
             var matched = 0;

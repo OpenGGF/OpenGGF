@@ -52,7 +52,20 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="src/**/*.cs" />
+    <Compile Include="src/Bootstrap/BizHawkInstallation.cs" />
+    <Compile Include="src/Bootstrap/RomIdentity.cs" />
+    <Compile Include="src/Bk2/Bk2Frame.cs" />
+    <Compile Include="src/Bk2/Bk2Movie.cs" />
+    <Compile Include="src/Bk2/Bk2Reader.cs" />
+    <Compile Include="src/Core/GpgxHost.cs" />
+    <Compile Include="src/Core/IGpgxHost.cs" />
+    <Compile Include="src/Core/MutableController.cs" />
+    <Compile Include="src/Core/NoFirmwareProvider.cs" />
+    <Compile Include="src/Core/RomAsset.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="fixtures/*.txt" />
+    <None Include="fixtures/*.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)/Microsoft.CSharp.targets" />
 </Project>

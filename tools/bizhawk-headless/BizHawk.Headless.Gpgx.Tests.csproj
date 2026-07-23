@@ -24,13 +24,27 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="netstandard" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="BizHawk.Emulation.Cores">
       <HintPath>$(BizHawkDllDir)/BizHawk.Emulation.Cores.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="tests/**/*.cs" />
+    <Compile Include="tests/AssertEx.cs" />
+    <Compile Include="tests/Bk2ReaderTests.cs" />
+    <Compile Include="tests/BootstrapTests.cs" />
+    <Compile Include="tests/GpgxHostTests.cs" />
+    <Compile Include="tests/TestMain.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="fixtures/*.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="fixtures/*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="BizHawk.Headless.Gpgx.csproj">
