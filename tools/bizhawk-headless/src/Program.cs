@@ -213,50 +213,104 @@ namespace BizHawk.Headless.Gpgx
                         + requiredFrames + ".");
                 }
 
-                int completedFrames;
-                using (new NativeStandardOutputSilencer())
-                using (IGpgxHost host = openHost(
-                    options.RomPath,
-                    movie.SyncSettings))
-                {
-                    new NoReplacePublisher().Publish(
-                        options.OutputDirectory,
-                        writer => SmokeCaptureRunner.Capture(
-                            movie,
-                            host,
-                            options.Bk2FrameOffset,
-                            options.MaxFrames,
-                            writer));
-                    completedFrames = host.CompletedFrame;
-                }
-
                 string finalPath = Path.GetFullPath(Path.Combine(
                     options.OutputDirectory,
                     "smoke.csv"));
-                stdout.Write(
-                    "BizHawk: " + installation.ManagedVersion + "\n"
-                    + "ROM SHA-1: " + romSha1 + "\n"
-                    + "Movie frames: "
-                    + movie.FrameCount.ToString(
-                        CultureInfo.InvariantCulture)
-                    + "\n"
-                    + "Requested trace frames: "
-                    + options.MaxFrames.ToString(
-                        CultureInfo.InvariantCulture)
-                    + "\n"
-                    + "Completed GPGX frames: "
-                    + completedFrames.ToString(
-                        CultureInfo.InvariantCulture)
-                    + "\n"
-                    + "Output: " + finalPath + "\n");
+                return RunCapture(
+                    options.OutputDirectory,
+                    stdout,
+                    stderr,
+                    () => new NativeStandardOutputSilencer(),
+                    () => openHost(
+                        options.RomPath,
+                        movie.SyncSettings),
+                    (host, writer) => SmokeCaptureRunner.Capture(
+                        movie,
+                        host,
+                        options.Bk2FrameOffset,
+                        options.MaxFrames,
+                        writer),
+                    completedFrames =>
+                        "BizHawk: " + installation.ManagedVersion + "\n"
+                        + "ROM SHA-1: " + romSha1 + "\n"
+                        + "Movie frames: "
+                        + movie.FrameCount.ToString(
+                            CultureInfo.InvariantCulture)
+                        + "\n"
+                        + "Requested trace frames: "
+                        + options.MaxFrames.ToString(
+                            CultureInfo.InvariantCulture)
+                        + "\n"
+                        + "Completed GPGX frames: "
+                        + completedFrames.ToString(
+                            CultureInfo.InvariantCulture)
+                        + "\n"
+                        + "Output: " + finalPath + "\n",
+                    new NoReplacePublisher());
+            }
+            catch (Exception exception)
+            {
+                ReportFailure(stderr, exception);
+                return 1;
+            }
+        }
+
+        internal static int RunCapture(
+            string outputDirectory,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<IDisposable> silenceNativeOutput,
+            Func<IGpgxHost> openHost,
+            Action<IGpgxHost, TextWriter> capture,
+            Func<int, string> formatSuccess,
+            NoReplacePublisher publisher)
+        {
+            NoReplacePublisher.StagedPublication staged = null;
+            try
+            {
+                int completedFrames;
+                using (silenceNativeOutput())
+                using (IGpgxHost host = openHost())
+                {
+                    staged = publisher.Stage(
+                        outputDirectory,
+                        writer => capture(host, writer));
+                    completedFrames = host.CompletedFrame;
+                }
+
+                stdout.Write(formatSuccess(completedFrames));
                 stdout.Flush();
+
+                // link(2) publication is the last commit point. Publish()
+                // absorbs only cleanup failures that happen after the link.
+                staged.Publish();
+                staged = null;
                 return 0;
             }
             catch (Exception exception)
             {
+                if (staged != null)
+                {
+                    staged.Dispose();
+                }
+                ReportFailure(stderr, exception);
+                return 1;
+            }
+        }
+
+        private static void ReportFailure(
+            TextWriter stderr,
+            Exception exception)
+        {
+            try
+            {
                 stderr.Write("Error: " + exception.Message + "\n");
                 stderr.Flush();
-                return 1;
+            }
+            catch (Exception)
+            {
+                // Reporting is best-effort. The failure status remains 1,
+                // and no final output has been published.
             }
         }
     }

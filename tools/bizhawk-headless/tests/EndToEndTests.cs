@@ -46,6 +46,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "Cli restores native descriptors after partial failures",
                 NativeDescriptorSilencerRestoresAfterPartialFailures));
             tests.Add(new TestMain.TestCase(
+                "Cli host disposal failure leaves no final output",
+                CliHostDisposalFailureLeavesNoFinalOutput));
+            tests.Add(new TestMain.TestCase(
+                "Cli descriptor restore failure leaves no final output",
+                CliDescriptorRestoreFailureLeavesNoFinalOutput));
+            tests.Add(new TestMain.TestCase(
+                "Cli reporting failure leaves no final output",
+                CliReportingFailureLeavesNoFinalOutput));
+            tests.Add(new TestMain.TestCase(
+                "Cli publication is the final non-failing commit point",
+                CliPublicationIsFinalNonFailingCommitPoint));
+            tests.Add(new TestMain.TestCase(
                 "Cli run script invokes only harness Mono with DISPLAY absent",
                 RunScriptInvokesHarnessHeadlessly));
             tests.Add(new TestMain.TestCase(
@@ -261,6 +273,130 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(1, restoreFailure.DescriptorTarget(1));
             AssertEx.Equal(2, restoreFailure.DescriptorTarget(2));
             AssertEx.Equal(true, restoreFailure.AllOpenedDescriptorsClosed);
+        }
+
+        private static void CliHostDisposalFailureLeavesNoFinalOutput()
+        {
+            WithUnusedOutput(
+                output =>
+                {
+                    var silencerDisposed = false;
+                    var stdout = new StringWriter(CultureInfo.InvariantCulture);
+                    var stderr = new StringWriter(CultureInfo.InvariantCulture);
+
+                    int exitCode = Program.RunCapture(
+                        output,
+                        stdout,
+                        stderr,
+                        () => new CallbackDisposable(
+                            () => silencerDisposed = true),
+                        () => new LifecycleHost(
+                            () => { throw new IOException("host disposal"); }),
+                        (host, writer) => writer.WriteLine("staged"),
+                        completed => "success\n",
+                        new NoReplacePublisher());
+
+                    AssertEx.Equal(1, exitCode);
+                    AssertEx.Equal(true, silencerDisposed);
+                    AssertEx.Equal(
+                        false,
+                        LinuxPathEntry.Exists(Path.Combine(output, "smoke.csv")));
+                    AssertContains(stderr.ToString(), "host disposal");
+                });
+        }
+
+        private static void CliDescriptorRestoreFailureLeavesNoFinalOutput()
+        {
+            WithUnusedOutput(
+                output =>
+                {
+                    var stderr = new StringWriter(CultureInfo.InvariantCulture);
+
+                    int exitCode = Program.RunCapture(
+                        output,
+                        new StringWriter(CultureInfo.InvariantCulture),
+                        stderr,
+                        () => new CallbackDisposable(
+                            () =>
+                            {
+                                throw new IOException("descriptor restore");
+                            }),
+                        () => new LifecycleHost(null),
+                        (host, writer) => writer.WriteLine("staged"),
+                        completed => "success\n",
+                        new NoReplacePublisher());
+
+                    AssertEx.Equal(1, exitCode);
+                    AssertEx.Equal(
+                        false,
+                        LinuxPathEntry.Exists(Path.Combine(output, "smoke.csv")));
+                    AssertContains(stderr.ToString(), "descriptor restore");
+                });
+        }
+
+        private static void CliReportingFailureLeavesNoFinalOutput()
+        {
+            WithUnusedOutput(
+                output =>
+                {
+                    var stderr = new StringWriter(CultureInfo.InvariantCulture);
+
+                    int exitCode = Program.RunCapture(
+                        output,
+                        new FailingFlushWriter(),
+                        stderr,
+                        () => new CallbackDisposable(null),
+                        () => new LifecycleHost(null),
+                        (host, writer) => writer.WriteLine("staged"),
+                        completed => "success\n",
+                        new NoReplacePublisher());
+
+                    AssertEx.Equal(1, exitCode);
+                    AssertEx.Equal(
+                        false,
+                        LinuxPathEntry.Exists(Path.Combine(output, "smoke.csv")));
+                    AssertContains(stderr.ToString(), "stdout flush");
+                });
+        }
+
+        private static void CliPublicationIsFinalNonFailingCommitPoint()
+        {
+            WithUnusedOutput(
+                output =>
+                {
+                    var hostDisposed = false;
+                    var silencerDisposed = false;
+                    var stdout = new TrackingWriter();
+                    var link = new OrderedLinkOperation(
+                        () => hostDisposed
+                            && silencerDisposed
+                            && stdout.WasFlushed);
+                    var publisher = new NoReplacePublisher(
+                        link,
+                        path =>
+                        {
+                            throw new IOException("post-link cleanup");
+                        });
+
+                    int exitCode = Program.RunCapture(
+                        output,
+                        stdout,
+                        new StringWriter(CultureInfo.InvariantCulture),
+                        () => new CallbackDisposable(
+                            () => silencerDisposed = true),
+                        () => new LifecycleHost(
+                            () => hostDisposed = true),
+                        (host, writer) => writer.WriteLine("staged"),
+                        completed => "exact success\n",
+                        publisher);
+
+                    AssertEx.Equal(0, exitCode);
+                    AssertEx.Equal(true, link.Created);
+                    AssertEx.Equal("exact success\n", stdout.ToString());
+                    AssertEx.Equal(
+                        "staged\n",
+                        File.ReadAllText(Path.Combine(output, "smoke.csv")));
+                });
         }
 
         private static void RunScriptInvokesHarnessHeadlessly()
@@ -1166,6 +1302,106 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             public string RomPath { get; private set; }
             public string BizHawkHome { get; private set; }
+        }
+
+        private sealed class CallbackDisposable : IDisposable
+        {
+            private readonly Action dispose;
+
+            public CallbackDisposable(Action dispose)
+            {
+                this.dispose = dispose;
+            }
+
+            public void Dispose()
+            {
+                if (dispose != null)
+                {
+                    dispose();
+                }
+            }
+        }
+
+        private sealed class LifecycleHost : IGpgxHost
+        {
+            private readonly Action dispose;
+
+            public LifecycleHost(Action dispose)
+            {
+                this.dispose = dispose;
+            }
+
+            public int CompletedFrame
+            {
+                get { return 7; }
+            }
+
+            public void ClearButtons()
+            {
+            }
+
+            public void SetButton(string name, bool pressed)
+            {
+            }
+
+            public void Advance()
+            {
+            }
+
+            public byte ReadMainRamByte(int offset)
+            {
+                return 0;
+            }
+
+            public void Dispose()
+            {
+                if (dispose != null)
+                {
+                    dispose();
+                }
+            }
+        }
+
+        private sealed class FailingFlushWriter : StringWriter
+        {
+            public override void Flush()
+            {
+                throw new IOException("stdout flush");
+            }
+        }
+
+        private sealed class TrackingWriter : StringWriter
+        {
+            public bool WasFlushed { get; private set; }
+
+            public override void Flush()
+            {
+                WasFlushed = true;
+                base.Flush();
+            }
+        }
+
+        private sealed class OrderedLinkOperation : ILinkOperation
+        {
+            private readonly Func<bool> prerequisitesComplete;
+
+            public OrderedLinkOperation(Func<bool> prerequisitesComplete)
+            {
+                this.prerequisitesComplete = prerequisitesComplete;
+            }
+
+            public bool Created { get; private set; }
+
+            public void Create(string temporary, string finalPath)
+            {
+                if (!prerequisitesComplete())
+                {
+                    throw new InvalidOperationException(
+                        "Publication preceded fallible lifecycle work.");
+                }
+                LibcLinkOperation.Instance.Create(temporary, finalPath);
+                Created = true;
+            }
         }
 
         private sealed class FakeNativeDescriptorApi

@@ -25,6 +25,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "Publisher leaves one UTF-8 LF final file",
                 LeavesOneUtf8LfFinalFile));
+            tests.Add(new TestMain.TestCase(
+                "Publisher ignores temporary cleanup failure after final link",
+                IgnoresTemporaryCleanupFailureAfterFinalLink));
         }
 
         private static void CreatesMissingNestedDirectory()
@@ -140,6 +143,33 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         bytes);
                     AssertEx.Equal(false, HasUtf8Bom(bytes));
                     AssertEx.Equal(false, bytes.Contains((byte)'\r'));
+                });
+        }
+
+        private static void IgnoresTemporaryCleanupFailureAfterFinalLink()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "cleanup-failure");
+                    var deleteCalls = 0;
+                    var publisher = new NoReplacePublisher(
+                        LibcLinkOperation.Instance,
+                        path =>
+                        {
+                            deleteCalls++;
+                            throw new IOException(
+                                "intentional temporary cleanup failure");
+                        });
+
+                    publisher.Publish(
+                        output,
+                        writer => writer.WriteLine("committed"));
+
+                    AssertEx.Equal(1, deleteCalls);
+                    AssertEx.Equal(
+                        "committed\n",
+                        File.ReadAllText(Path.Combine(output, "smoke.csv")));
                 });
         }
 
