@@ -83,6 +83,21 @@ class TestTraceAnimationRecorderContract {
     }
 
     @Test
+    void s3kRecorderUsesCanonicalBk2OffsetForEveryProfile() throws IOException {
+        String script = Files.readString(TOOLS.resolve("s3k_trace_recorder.lua"));
+        int wrapperStart = script.indexOf("local function bk2_input_mask(");
+        int wrapperEnd = script.indexOf("local function write_aux(", wrapperStart);
+        assertTrue(wrapperStart >= 0 && wrapperEnd > wrapperStart,
+                "s3k recorder must retain the shared BK2 input wrapper");
+
+        String wrapper = script.substring(wrapperStart, wrapperEnd);
+        assertFalse(wrapper.contains("TRACE_PROFILE"),
+                "BK2 input alignment must not depend on the recorder profile");
+        assertTrue(wrapper.contains("bk2_frame_offset, 0)"),
+                "BK2 input alignment must use metadata offset + trace row with no adjustment");
+    }
+
+    @Test
     void s1CompleteRunRecorderDisambiguatesEveryRepeatedSegmentDirectory() throws IOException {
         String script = Files.readString(TOOLS.resolve("s1_complete_run_recorder.lua"));
         assertTrue(script.contains("function next_segment_dir_token(base_token)"));

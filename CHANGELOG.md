@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K team registration now arms every newly created main playable for its native initialization-only first dispatch, including SharedLevel roster replacement without a level reload. The S3K recorder now derives every profile's input column from `bk2_frame_offset + trace_row`; the AIZ end-to-end fixture is canonically BK2-aligned with only its input column normalized, and obsolete replay-phase metadata is removed from the AIZ and CNZ fixtures.
 - Fix: S3K trace replay now derives pre-level intro prefixes from recorded mode transitions and drives level-gated frame zero through the production fresh-playable lifecycle, removing legacy sidekick, object, oscillator, and seed-row compensation scheduling, bounding input-latch-only phases to the recorded prefix window, and keeping phase/oscillator scheduling independent of frame-zero position, speed, and state outcomes.
 - Fix: S3K fresh main-player slots now consume their first ordinary dispatch as native initialization without movement while preserving controls, follower history, animation/status closure, sidekick/object execution, oscillator cadence, and rewind/replay of the armed one-shot; S1/S2 startup behavior remains unchanged.
 - Tooling: add Linux `dev.sh`, `run.sh`, and `run_renderdoc.sh` equivalents for the root Windows engine launchers.

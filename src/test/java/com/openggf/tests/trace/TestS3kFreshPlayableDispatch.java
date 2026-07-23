@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,8 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -137,6 +140,62 @@ class TestS3kFreshPlayableDispatch {
             assertEquals(armedY, main.getCentreY(),
                     "replay from the armed frame must initialize without Y movement");
         } finally {
+            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS,
+                    oldSkipIntros != null ? oldSkipIntros : false);
+        }
+    }
+
+    @Test
+    void sharedLevelRosterReplacementReceivesFreshMainInitializationDispatch() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        Object oldSkipIntros = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+        SharedLevel sharedLevel = null;
+        try {
+            sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+            Object retainedLevel = GameServices.level().getCurrentLevel();
+            AbstractPlayableSprite originalMain = (AbstractPlayableSprite) GameServices.sprites()
+                    .getSprite(sharedLevel.mainCharCode());
+
+            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                    .withSharedLevel(sharedLevel)
+                    .build();
+            AbstractPlayableSprite replacementMain = fixture.sprite();
+
+            assertSame(retainedLevel, GameServices.level().getCurrentLevel(),
+                    "the fixture must exercise SharedLevel reuse without a level reload");
+            assertNotSame(originalMain, replacementMain,
+                    "resetPerTest must replace the playable roster");
+
+            replacementMain.setCentreX((short) 0x1000);
+            replacementMain.setCentreY((short) 0x0200);
+            replacementMain.setXSpeed((short) 0x0100);
+            replacementMain.setYSpeed((short) 0x0080);
+            replacementMain.setGSpeed((short) 0x0100);
+            replacementMain.setAir(true);
+            replacementMain.setControlLocked(false);
+
+            short initialX = replacementMain.getCentreX();
+            short initialY = replacementMain.getCentreY();
+            short initialYSpeed = replacementMain.getYSpeed();
+
+            fixture.stepFrame(false, false, false, true, false);
+
+            assertEquals(initialX, replacementMain.getCentreX(),
+                    "the replacement main's first dispatch must not move X");
+            assertEquals(initialY, replacementMain.getCentreY(),
+                    "the replacement main's first dispatch must not apply gravity");
+            assertEquals(initialYSpeed, replacementMain.getYSpeed(),
+                    "the replacement main's first dispatch must preserve Y velocity");
+
+            fixture.stepFrame(false, false, false, true, false);
+
+            assertNotEquals(initialX, replacementMain.getCentreX(),
+                    "the replacement main's second dispatch must move normally");
+        } finally {
+            if (sharedLevel != null) {
+                sharedLevel.dispose();
+            }
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS,
                     oldSkipIntros != null ? oldSkipIntros : false);
         }

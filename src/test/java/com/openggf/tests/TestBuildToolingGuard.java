@@ -1029,7 +1029,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void traceReplayBootstrapContractsShouldBeDocumentedAndNotLegacy() throws Exception {
+    void traceReplayBootstrapContractsShouldBeDocumentedAndOutcomeFree() throws Exception {
         String bootstrap = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
         String discrepancies = Files.readString(Path.of("docs/KNOWN_DISCREPANCIES.md"));
         String roadmap = Files.readString(Path.of("docs/RELEASE_READINESS_ROADMAP.md"));
@@ -1061,8 +1061,23 @@ class TestBuildToolingGuard {
         if (!discrepancies.contains("S2 CNZ Slot-Machine Trace Bootstrap Contract")) {
             violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S2 CNZ slot-machine trace bootstrap contract");
         }
-        if (!discrepancies.contains("S3K Sidekick Seed-Frame Trace Bootstrap Debt")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S3K sidekick seed-frame trace bootstrap debt");
+        for (String relative : List.of(
+                "src/main/java/com/openggf/trace/TraceReplayBootstrap.java",
+                "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java")) {
+            String source = stripComments(Files.readString(Path.of(relative)));
+            for (String retiredAccessor : List.of(
+                    "hasSidekickSeedFramePrelude()",
+                    "hasPreLevelIntroPrefix()",
+                    "preTraceOscillationFrames()")) {
+                if (source.contains(retiredAccessor)) {
+                    violations.add(relative + " schedules replay from retired metadata "
+                            + retiredAccessor);
+                }
+            }
+            violations.addAll(firstRowReplaySchedulingSignals(relative, source));
+            if (relative.endsWith("/TraceReplayBootstrap.java")) {
+                violations.addAll(completeRunOutcomePhaseSchedulingSignals(relative, source));
+            }
         }
         if (!discrepancies.contains("S3K Complete-Run Segment Start-Position Bootstrap Debt")) {
             violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S3K complete-run start-position bootstrap debt");

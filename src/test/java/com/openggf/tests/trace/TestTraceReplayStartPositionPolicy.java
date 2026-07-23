@@ -189,8 +189,8 @@ class TestTraceReplayStartPositionPolicy {
     @Test
     void unchangedStateInputEdgeAfterGameplayStartUsesNormalExecutionPhase() throws Exception {
         TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
-        TraceFrame previous = trace.getFrame(1823);
-        TraceFrame current = trace.getFrame(1824);
+        TraceFrame previous = trace.getFrame(1822);
+        TraceFrame current = trace.getFrame(1823);
 
         assertFalse(previous.input() == current.input());
         assertTrue(current.stateEquals(previous));
