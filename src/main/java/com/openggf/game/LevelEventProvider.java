@@ -170,6 +170,15 @@ public interface LevelEventProvider {
     }
 
     /**
+     * Publishes state derived from the camera boundary after the
+     * DynamicLevelEvents easing tail has run. The resulting values are consumed
+     * by the next frame's player slots, matching the ROM's global-state order.
+     */
+    default void updateAfterCameraBoundaryEasing() {
+        // Default no-op
+    }
+
+    /**
      * Called when a player falls below the bottom boundary.
      * If this returns true, the pit death is intercepted (e.g. zone transition).
      * <p>

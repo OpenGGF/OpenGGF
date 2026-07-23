@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -340,6 +341,13 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         services().camera().setMaxX((short) EXIT_CAMERA_MAX_X);
         services().camera().setMaxXTarget((short) EXIT_CAMERA_MAX_X);
         services().camera().setMaxYTarget((short) EXIT_CAMERA_MAX_Y_TARGET);
+        if (services().levelEventProvider() instanceof Sonic3kLevelEventManager manager) {
+            // loc_6278A writes Camera_target_max_Y_pos before the current
+            // DynamicLevelEvents tail. Publish that tail's resulting live
+            // Camera_max_Y_pos to the controller mirror used by next frame's
+            // Tails_Check_Screen_Boundaries.
+            manager.requestSidekickBoundsPublishAfterCameraEasing();
+        }
         Sonic3kZoneEvents.loadPaletteFromPalPointers(Sonic3kConstants.PAL_POINTERS_LBZ1_INDEX);
     }
 

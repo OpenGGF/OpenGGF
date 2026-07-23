@@ -29,6 +29,7 @@ import com.openggf.game.sonic3k.runtime.IczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -400,6 +401,46 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 1) {
             mgzEvents.advanceInLevelTitleCardState();
+        }
+    }
+
+    @Override
+    public void updateAfterCameraBoundaryEasing() {
+        ZoneRuntimeRegistry registry = GameServices.zoneRuntimeRegistryOrNull();
+        LbzZoneRuntimeState state = registry != null
+                ? S3kRuntimeStates.currentLbz(registry).orElse(null)
+                : null;
+        if (state == null || !state.isLbz1KnucklesBoundaryPublishPending()) {
+            return;
+        }
+        Camera camera = GameServices.cameraOrNull();
+        if (camera == null) {
+            return;
+        }
+        boolean snapped = sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS).stream()
+                .map(AbstractPlayableSprite::getCpuController)
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(cpu -> Math.abs((short) (camera.getMaxY()
+                        - cpu.getMaxYBound(camera.getMaxY()))) > 8);
+        if (snapped) {
+            syncSidekickBoundsToCamera();
+            state.clearLbz1KnucklesBoundaryPublishPending();
+        } else if (camera.getMaxY() == camera.getMaxYTarget()) {
+            state.clearLbz1KnucklesBoundaryPublishPending();
+        }
+    }
+
+    /**
+     * Requests publication of the post-easing camera globals to the sidekick
+     * controller mirror. ROM object routines can change a boundary target
+     * before the DynamicLevelEvents tail; the next Tails slot then reads the
+     * resulting live Camera_* values.
+     */
+    public void requestSidekickBoundsPublishAfterCameraEasing() {
+        ZoneRuntimeRegistry registry = GameServices.zoneRuntimeRegistryOrNull();
+        if (registry != null) {
+            S3kRuntimeStates.currentLbz(registry)
+                    .ifPresent(LbzZoneRuntimeState::requestLbz1KnucklesBoundaryPublish);
         }
     }
 

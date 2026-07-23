@@ -286,6 +286,9 @@ public final class LevelFrameStep {
                 && !bonusStageExitRequestedThisFrame
                 && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-boundary", camera::updateBoundaryEasing);
+            if (levelEvents != null) {
+                levelEvents.updateAfterCameraBoundaryEasing();
+            }
         }
 
         if (levelManager.isLevelInactiveForTransition()) {

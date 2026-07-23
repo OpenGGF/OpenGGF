@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ1 post-cutscene camera-boundary publication
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 19095 to
+  frame 19098.** The next divergence is Sonic's X position (`$3C0B` expected
+  versus `$3C0A` actual).
+- Root: `CutsceneKnux_LBZ1` writes `Camera_target_max_Y_pos=$0148`, after
+  which the DynamicLevelEvents boundary tail eventually snaps the live
+  `Camera_max_Y_pos` to camera Y. The engine mirrored S3K sidekick bounds
+  before that tail, so Tails retained the pre-snap level bottom for one extra
+  player dispatch and missed the native death-plane crossing.
+- Fix: the cutscene's native exit routine now records a rewind-covered
+  camera-tail publication request in `LbzZoneRuntimeState`. The post-easing
+  level-event hook consumes it only when the pending target produces a
+  discontinuous live boundary write, then refreshes the controller mirror for
+  the next Tails slot. Ordinary 2/8-pixel boundary easing remains unchanged.
+- Validation: all 58 focused cutscene, cup, sidekick-bound, runtime-state, and
+  rewind tests pass; the ICZ complete run remains green; and the LBZ replay
+  reaches frame 19098. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. No S3K,
+  S1, or S2 frontier regressed.
+
 ## 2026-07-23 - LBZ1 rival-Knuckles exit and cup handoff
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 18938 to
