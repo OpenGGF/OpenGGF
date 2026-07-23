@@ -98,8 +98,14 @@ these exported absolute values to every delegated implementer and reviewer.
 `common-env.sh` honors an explicit `BIZHAWK_HOME`; only its fallback is relative
 to the current checkout. Switch the primary checkout away from
 `feature/ai-bizhawk-headless-poc`, then attach that existing branch at
-`.worktrees/bizhawk-headless-poc` with `git worktree add`; do not create a
-second feature branch.
+`.worktrees/bizhawk-headless-poc` with:
+
+```bash
+git worktree add .worktrees/bizhawk-headless-poc \
+  feature/ai-bizhawk-headless-poc
+```
+
+Do not create a second feature branch.
 
 ---
 
@@ -479,6 +485,20 @@ For orchestration, use three warm-up/input frames and a fake host that mutates R
 - it uses input and post-advance RAM from BK2 row `2`;
 - `CompletedFrame == offset + traceFrame + 1`.
 
+Add separate fake-host frames with system Power and Reset active. Record every
+host call and assert the exact per-row sequence:
+
+```text
+ClearButtons
+SetButton("Power", true)   # or Reset for the second case
+SetButton(<active P1 names>, true)
+Advance
+ReadMainRamByte...
+```
+
+Also assert the next row begins with `ClearButtons`, so Power/Reset cannot leak
+between frames.
+
 Reject negative offset, count outside `1..1000`, and movie exhaustion before `offset + count`.
 
 Add compilable recorder and runner types whose public methods throw
@@ -568,6 +588,11 @@ Before launching, parse
 `src/test/resources/traces/s1/ghz1_fullrun/metadata.json`, require its
 `bk2_frame_offset` to be integer `840`, and pass that parsed value—not a second
 hardcoded offset—to both captures and the expected BK2-row mapping assertion.
+
+If either `S1_ROM_PATH` or the ignored BizHawk distribution is absent, print an
+explicit `SKIP EndToEnd: <missing dependency>` and do not count it as pass.
+When either dependency is supplied/present but has the wrong hash, version, or
+runtime layout, fail rather than skip.
 
 Add observability assertions for exact labeled values: BizHawk version, uppercase
 ROM SHA-1, BK2 frame count, requested frame count, completed GPGX frame count,
