@@ -62,6 +62,8 @@
     <Compile Include="src/Core/MutableController.cs" />
     <Compile Include="src/Core/NoFirmwareProvider.cs" />
     <Compile Include="src/Core/RomAsset.cs" />
+    <Compile Include="src/Recording/S1SmokeRecorder.cs" />
+    <Compile Include="src/Recording/SmokeCaptureRunner.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="fixtures/*.txt" />

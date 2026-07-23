@@ -36,6 +36,8 @@
     <Compile Include="tests/Bk2ReaderTests.cs" />
     <Compile Include="tests/BootstrapTests.cs" />
     <Compile Include="tests/GpgxHostTests.cs" />
+    <Compile Include="tests/S1SmokeRecorderTests.cs" />
+    <Compile Include="tests/SmokeCaptureRunnerTests.cs" />
     <Compile Include="tests/TestMain.cs" />
   </ItemGroup>
   <ItemGroup>

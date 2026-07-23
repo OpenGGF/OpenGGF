@@ -32,6 +32,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             BootstrapTests.Register(tests);
             Bk2ReaderTests.Register(tests);
             GpgxHostTests.Register(tests);
+            S1SmokeRecorderTests.Register(tests);
+            SmokeCaptureRunnerTests.Register(tests);
 
             var matched = 0;
             var failed = 0;
