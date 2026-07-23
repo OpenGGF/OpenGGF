@@ -431,10 +431,11 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
 
         @Override
         public boolean usesCurrentTouchResponseState() {
-            // Obj_Ribot's active sphere runs its movement routine before
-            // Child_DrawTouch_Sprite publishes it (sonic3k.asm:191391-191399). The next
-            // player-slot TouchResponse must therefore consume that post-move x/y.
-            return true;
+            // The falling/swinging appendages run movement before
+            // Child_DrawTouch_Sprite publishes them (sonic3k.asm:191391-191399).
+            // The subtype-$04 head instead publishes through its circular-offset
+            // helper while retaining the prior player-slot touch coordinate.
+            return parent.subtypeForChildren() != 4;
         }
 
         @Override

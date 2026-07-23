@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ Ribot children now select touch-coordinate publication from their native subtype routine, retaining post-move collision for falling appendages while the circular head uses its prior player-slot coordinate. This advances the combined LBZ frontier from frame 23533 to frame 23650 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: interrupted trace-replay playable-slot slices now execute `Sonic_RecordPos` before playable animation, keeping the leader history ring and retained S3K CPU cadence aligned across in-level title resets. This advances the combined LBZ frontier from frame 22669 to frame 23533 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: retained S3K in-level title owners now distinguish pre-reset history-projected object cadence from the post-reset increment-visible held-counter phase. This prevents false CPU Tails auto-jumps after LBZ's title reset, advances the combined LBZ frontier from frame 22412 to frame 22669, and preserves CNZ and every other S3K, S1, and S2 frontier.
 - Fix: LBZ's retained end-sign controller now publishes the loaded act-2 level bounds and runs the three ROM gradual boundary workers after the mutated title card exits. This aligns the post-transition camera release, advances the combined LBZ frontier from frame 22334 to frame 22412, and preserves the worker phase in rewind snapshots without regressing another S3K, S1, or S2 trace frontier.

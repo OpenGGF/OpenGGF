@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ circular Ribot touch phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 23533 to
+  frame 23650.** Remaining release-blocking errors fell from 3023 to 2908; the
+  next divergence is Sonic's ring count (`$0001` expected versus `$0000`
+  actual).
+- Root: Ribot's falling appendages and subtype-$04 circular head shared one
+  touch-coordinate phase even though their native child routines publish
+  through different movement helpers. The circular head therefore exposed its
+  new orbit coordinate one player slot early and hurt Sonic at frame 23533
+  instead of frame 23534.
+- Fix: Ribot now selects the touch-coordinate phase from its ROM subtype. The
+  falling/swinging appendages retain their post-move publication established at
+  the earlier frontier, while the circular head retains its prior player-slot
+  coordinate. Focused coverage asserts both behaviors.
+- Validation: all 64 focused Ribot and touch-response tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - Retained playable-slot history closure
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 22669 to

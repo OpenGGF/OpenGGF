@@ -102,6 +102,8 @@ class TestRibotBadnikInstance {
         ribot.update(0, playerAt(0, 0));
         ObjectInstance headSphere = capturedChildren(objectManager, 1).get(0);
         assertTrue(headSphere instanceof AbstractObjectInstance);
+        assertFalse(headSphere.usesCurrentTouchResponseState(),
+                "the circular head retains its prior player-slot touch coordinate");
         installObjectManager((AbstractObjectInstance) headSphere);
 
         headSphere.update(1, playerAt(0, 0));
