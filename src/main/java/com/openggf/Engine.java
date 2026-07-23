@@ -274,7 +274,17 @@ public class Engine {
 				(text, x, y, red, green, blue, alpha, fontScale) ->
 						liveCaptureTextRenderer.drawShadowedText(
 								text, x, y, DebugColor.WHITE, fontScale),
-				liveCaptureTextRenderer::measureWidth);
+				new LiveCaptureIndicatorRenderer.TextMeasurer() {
+					@Override
+					public int width(String text, float fontScale) {
+						return liveCaptureTextRenderer.measureWidth(text, fontScale);
+					}
+
+					@Override
+					public int height(float fontScale) {
+						return liveCaptureTextRenderer.lineHeight(fontScale);
+					}
+				});
 		this.editorInputHandler = new EditorInputHandler(
 				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel);
 

@@ -16,6 +16,7 @@ public final class LiveCaptureIndicatorRenderer {
 
     public interface TextMeasurer {
         int width(String text, float scale);
+        int height(float scale);
     }
 
     private static final int MARGIN = 8;
@@ -37,9 +38,12 @@ public final class LiveCaptureIndicatorRenderer {
 
     public void render(int projectionWidth, int projectionHeight) {
         int labelWidth = measurer.width(LABEL, TEXT_SCALE);
+        int labelHeight = measurer.height(TEXT_SCALE);
         int dotX = projectionWidth - MARGIN - labelWidth - GAP - DOT_DIAMETER;
-        primitives.filledCircle(dotX, MARGIN, DOT_DIAMETER, 1f, 0f, 0f, 1f);
-        text.draw(LABEL, dotX + DOT_DIAMETER + GAP, MARGIN,
+        int dotY = projectionHeight - MARGIN - DOT_DIAMETER;
+        int labelY = projectionHeight - MARGIN - labelHeight;
+        primitives.filledCircle(dotX, dotY, DOT_DIAMETER, 1f, 0f, 0f, 1f);
+        text.draw(LABEL, dotX + DOT_DIAMETER + GAP, labelY,
                 1f, 1f, 1f, 1f, TEXT_SCALE);
     }
 }

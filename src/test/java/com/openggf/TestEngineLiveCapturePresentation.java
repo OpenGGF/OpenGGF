@@ -2,6 +2,7 @@ package com.openggf;
 
 import com.openggf.capture.CaptureViewport;
 import com.openggf.capture.LiveCaptureController;
+import com.openggf.capture.LiveCapturePresentationCoordinator;
 import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -11,18 +12,45 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumSet;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 class TestEngineLiveCapturePresentation {
     @Test
-    void allRenderedGameModesUseTheSamePostPresentationSeam() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
-        assertEquals(1, occurrences(source, "liveCapturePresentation.present("));
-        assertTrue(EnumSet.allOf(GameMode.class).containsAll(List.of(
-                GameMode.LEVEL, GameMode.SPECIAL_STAGE, GameMode.EDITOR,
-                GameMode.TITLE_SCREEN, GameMode.MASTER_TITLE_SCREEN)));
+    void allRenderedGameModesAndPresentationStatesUseTheSameSeamExactlyOnce() {
+        LiveCaptureController controller = mock(LiveCaptureController.class);
+        List<String> calls = new ArrayList<>();
+        doAnswer(invocation -> {
+            calls.add("capture");
+            return null;
+        }).when(controller).capturePresentedFrame(any(CaptureViewport.class));
+        LiveCapturePresentationCoordinator coordinator =
+                new LiveCapturePresentationCoordinator(controller);
+        CaptureViewport viewport = new CaptureViewport(0, 0, 320, 224);
+        EnumSet<GameMode> renderedModes = EnumSet.allOf(GameMode.class);
+        List<String> presentationStates = List.of(
+                "normal", "modal-shader-picker", "paused", "frame-step", "rewind");
+        assertTrue(renderedModes.contains(GameMode.BONUS_STAGE));
+
+        int presentations = 0;
+        for (GameMode ignoredMode : renderedModes) {
+            for (String ignoredState : presentationStates) {
+                coordinator.present(viewport, () -> calls.add("screenshot"),
+                        () -> calls.add("indicator"));
+                presentations++;
+            }
+        }
+
+        assertEquals(presentations * 3, calls.size());
+        for (int i = 0; i < calls.size(); i += 3) {
+            assertEquals(List.of("capture", "screenshot", "indicator"),
+                    calls.subList(i, i + 3));
+        }
+        verify(controller, times(presentations)).capturePresentedFrame(viewport);
     }
 
     @Test
@@ -57,7 +85,4 @@ class TestEngineLiveCapturePresentation {
         assertTrue(capture >= 0 && capture < audio && capture < graphics);
     }
 
-    private static int occurrences(String source, String needle) {
-        return (source.length() - source.replace(needle, "").length()) / needle.length();
-    }
 }
