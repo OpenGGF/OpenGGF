@@ -102,4 +102,12 @@ final class LiveAudioCaptureTap {
         clearForwardPcm();
         return requestedFrames;
     }
+
+    long totalStereoFrames() {
+        return frameClock.totalSamplesProduced();
+    }
+
+    AudioFrameClock.Snapshot clockSnapshot() {
+        return frameClock.captureSnapshot();
+    }
 }

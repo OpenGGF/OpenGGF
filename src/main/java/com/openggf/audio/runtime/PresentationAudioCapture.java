@@ -9,6 +9,10 @@ public interface PresentationAudioCapture extends AutoCloseable {
 
     int drainPresentationFrame(short[] target);
 
+    long totalStereoFrames();
+
+    AudioFrameClock.Snapshot clockSnapshot();
+
     @Override
     void close();
 }

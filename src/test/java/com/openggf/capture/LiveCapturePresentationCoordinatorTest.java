@@ -1,6 +1,7 @@
 package com.openggf.capture;
 
 import com.openggf.audio.LiveCaptureAudioHandle;
+import com.openggf.audio.runtime.AudioFrameClock;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -80,14 +81,22 @@ class LiveCapturePresentationCoordinatorTest {
     private static final class Harness {
         private final CaptureViewport viewport = new CaptureViewport(0, 0, 320, 224);
         private final LiveCaptureAudioHandle audio = mock(LiveCaptureAudioHandle.class);
+        private final AudioFrameClock audioClock =
+                new AudioFrameClock(48_000, 60);
         private final VideoFrameGrabber grabber = mock(VideoFrameGrabber.class);
         private final CaptureRecorder recorder = mock(CaptureRecorder.class);
         private final LiveCaptureController controller;
 
         private Harness() {
             when(audio.sampleRate()).thenReturn(48_000);
+            when(audio.frameRate()).thenReturn(60);
             when(audio.maxStereoFramesPerPacket()).thenReturn(800);
-            when(audio.drainPresentationFrame(any(short[].class))).thenReturn(800);
+            when(audio.drainPresentationFrame(any(short[].class)))
+                    .thenAnswer(ignored -> audioClock.samplesForNextFrame());
+            when(audio.totalStereoFrames())
+                    .thenAnswer(ignored -> audioClock.totalSamplesProduced());
+            when(audio.clockSnapshot())
+                    .thenAnswer(ignored -> audioClock.captureSnapshot());
             when(grabber.grab()).thenReturn(new byte[viewport.rgbaByteSize()]);
             controller = new LiveCaptureController(new LiveCaptureController.Dependencies(
                     rate -> audio, ignored -> grabber, (ignored, rate) -> recorder,
@@ -98,10 +107,20 @@ class LiveCapturePresentationCoordinatorTest {
     private static LiveCaptureController noOpController(List<String> calls) {
         return new LiveCaptureController(new LiveCaptureController.Dependencies(
                 rate -> new LiveCaptureAudioHandle() {
+                    private final AudioFrameClock clock =
+                            new AudioFrameClock(48_000, rate);
                     public int sampleRate() { return 48_000; }
                     public int frameRate() { return rate; }
                     public int maxStereoFramesPerPacket() { return 800; }
-                    public int drainPresentationFrame(short[] target) { return 800; }
+                    public int drainPresentationFrame(short[] target) {
+                        return clock.samplesForNextFrame();
+                    }
+                    public long totalStereoFrames() {
+                        return clock.totalSamplesProduced();
+                    }
+                    public AudioFrameClock.Snapshot clockSnapshot() {
+                        return clock.captureSnapshot();
+                    }
                     public void close() {}
                 },
                 viewport -> new VideoFrameGrabber() {

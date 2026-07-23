@@ -14,6 +14,13 @@ public final class PcmHistoryRing {
     // per-frame write path avoids a long floorMod inside the stream lock.
     private int writeSlot;
 
+    public record CursorState(
+            double sourceFrame,
+            long oldestReadableFrame,
+            double rate,
+            long epoch) {
+    }
+
     public PcmHistoryRing(int capacityFrames) {
         if (capacityFrames <= 0) {
             throw new IllegalArgumentException("capacityFrames must be positive");
@@ -142,6 +149,11 @@ public final class PcmHistoryRing {
                 Arrays.fill(target, read * CHANNELS, frames * CHANNELS, (short) 0);
             }
             return read;
+        }
+
+        public CursorState state() {
+            return new CursorState(
+                    sourceFrame, oldestReadableFrame, rate, epoch);
         }
 
         long committedNextFrameIndex() {

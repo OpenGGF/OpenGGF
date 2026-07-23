@@ -450,6 +450,16 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
         }
 
         @Override
+        public long totalStereoFrames() {
+            return tap.totalStereoFrames();
+        }
+
+        @Override
+        public AudioFrameClock.Snapshot clockSnapshot() {
+            return tap.clockSnapshot();
+        }
+
+        @Override
         public void close() {
             if (closed) {
                 return;

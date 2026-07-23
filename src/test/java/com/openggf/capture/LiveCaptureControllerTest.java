@@ -1,6 +1,7 @@
 package com.openggf.capture;
 
 import com.openggf.audio.LiveCaptureAudioHandle;
+import com.openggf.audio.runtime.AudioFrameClock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -198,10 +199,17 @@ class LiveCaptureControllerTest {
 
     private static LiveCaptureAudioHandle quietAudio(int rate) {
         return new LiveCaptureAudioHandle() {
+            private final AudioFrameClock clock = new AudioFrameClock(48_000, rate);
             public int sampleRate() { return 48000; }
             public int frameRate() { return rate; }
             public int maxStereoFramesPerPacket() { return 801; }
-            public int drainPresentationFrame(short[] target) { return 800; }
+            public int drainPresentationFrame(short[] target) {
+                return clock.samplesForNextFrame();
+            }
+            public long totalStereoFrames() { return clock.totalSamplesProduced(); }
+            public AudioFrameClock.Snapshot clockSnapshot() {
+                return clock.captureSnapshot();
+            }
             public void close() {}
         };
     }
@@ -266,12 +274,20 @@ class LiveCaptureControllerTest {
                     rate -> {
                         if (failAudio) throw new IllegalStateException("audio");
                         return new LiveCaptureAudioHandle() {
+                            private final AudioFrameClock clock =
+                                    new AudioFrameClock(48_000, rate);
                             public int sampleRate() { return 48000; }
                             public int frameRate() { return rate; }
                             public int maxStereoFramesPerPacket() { return 801; }
                             public int drainPresentationFrame(short[] target) {
                                 if (failDrain) throw new IllegalStateException("drain");
-                                return 800;
+                                return clock.samplesForNextFrame();
+                            }
+                            public long totalStereoFrames() {
+                                return clock.totalSamplesProduced();
+                            }
+                            public AudioFrameClock.Snapshot clockSnapshot() {
+                                return clock.captureSnapshot();
                             }
                             public void close() {
                                 audioClosed = true;

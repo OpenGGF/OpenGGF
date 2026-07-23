@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Centralized final-PCM cadence, silence, history, reverse playback, crossfade, and phase-exact non-consuming capture taps in one producer.
 - Added bounded frame-boundary audio commands and deterministic voice admission without dropping structural state.
 - Preserved SMPS music, SFX arbitration, DAC, and continuous effects as one composite presentation voice.
 - Added deterministic WAV and raw-PCM decoding, interpolation, looping, pitch, and cursor restoration.

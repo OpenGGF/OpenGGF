@@ -1,5 +1,6 @@
 package com.openggf.audio;
 
+import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
 import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
@@ -62,6 +63,9 @@ class TestAudioManagerRuntimeInstallation {
         assertEquals(2, capture.drainPresentationFrame(captured));
         assertArrayEquals(new short[] {1035, 1035, 1036, 1036}, captured,
                 "speaker draining must not consume the capture-owned PCM");
+        assertEquals(2, capture.totalStereoFrames());
+        assertEquals(new AudioFrameClock.Snapshot(120, 60, 2, 0),
+                capture.clockSnapshot());
 
         audio.advanceGameplayFrameAudio();
         capture.close();

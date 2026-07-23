@@ -44,6 +44,9 @@ class AudioManagerLiveCaptureTest {
         short[] captured = new short[4];
         assertEquals(2, handle.drainPresentationFrame(captured));
         assertArrayEquals(new short[] {1, 10, 2, 20}, captured);
+        assertEquals(2, handle.totalStereoFrames());
+        assertEquals(new AudioFrameClock.Snapshot(2, 1, 2, 0),
+                handle.clockSnapshot());
 
         handle.close();
         handle.close();

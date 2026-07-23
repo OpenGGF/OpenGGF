@@ -1419,6 +1419,20 @@ public class AudioManager {
         }
 
         @Override
+        public long totalStereoFrames() {
+            synchronized (AudioManager.this) {
+                return capture.totalStereoFrames();
+            }
+        }
+
+        @Override
+        public AudioFrameClock.Snapshot clockSnapshot() {
+            synchronized (AudioManager.this) {
+                return capture.clockSnapshot();
+            }
+        }
+
+        @Override
         public void close() {
             closeLiveCaptureAudio(this);
         }
