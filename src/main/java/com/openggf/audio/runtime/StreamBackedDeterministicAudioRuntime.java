@@ -41,6 +41,8 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     private int lastProducedFrames;
     private int firstPendingCommand;
     private boolean dispatchingCommands;
+    private LiveAudioCaptureTap presentationAudioCaptureTap;
+    private boolean reversePresentationActive;
 
     public StreamBackedDeterministicAudioRuntime(AudioFrameClock frameClock, AudioOutputFifo outputFifo) {
         this(frameClock, outputFifo, null);
@@ -144,11 +146,16 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
             mixSfxIntoMusic(samples);
         }
         if (mode == FrameAudioMode.NORMAL) {
+            if (presentationAudioCaptureTap != null) {
+                presentationAudioCaptureTap.acceptForwardPcm(musicScratch, samples / 2);
+            }
             if (pcmHistory != null) {
                 pcmHistory.write(musicScratch, samples / 2);
             }
             outputFifo.write(musicScratch, samples / 2);
             lastProducedFrames = samples / 2;
+        } else if (mode == FrameAudioMode.SILENT_STEP && presentationAudioCaptureTap != null) {
+            presentationAudioCaptureTap.clearForwardPcm();
         }
     }
 
@@ -174,6 +181,18 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
         return read;
     }
 
+    public PresentationAudioCapture openPresentationAudioCapture(int sampleRate, int frameRate) {
+        if (presentationAudioCaptureTap != null) {
+            throw new IllegalStateException("A presentation audio capture is already attached");
+        }
+        LiveAudioCaptureTap tap = new LiveAudioCaptureTap(sampleRate, frameRate);
+        if (reversePresentationActive) {
+            tap.beginReversePresentation(reverseCursor != null ? reverseCursor.fork() : null);
+        }
+        presentationAudioCaptureTap = tap;
+        return new PresentationAudioCaptureLease(tap);
+    }
+
     @Override
     public void flushPresentationFifo() {
         outputFifo.flush();
@@ -181,9 +200,14 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
 
     @Override
     public void beginReversePresentation() {
+        reversePresentationActive = true;
         reverseCursor = pcmHistory != null ? pcmHistory.createReverseCursor() : null;
         if (reverseCursor != null) {
             reverseCursor.setRate(pendingReverseRate);
+        }
+        if (presentationAudioCaptureTap != null) {
+            presentationAudioCaptureTap.beginReversePresentation(
+                    reverseCursor != null ? reverseCursor.fork() : null);
         }
         cancelReleaseCrossfade();
     }
@@ -194,6 +218,9 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
         if (reverseCursor != null) {
             reverseCursor.setRate(pendingReverseRate);
         }
+        if (presentationAudioCaptureTap != null) {
+            presentationAudioCaptureTap.setReversePlaybackRate(pendingReverseRate);
+        }
     }
 
     @Override
@@ -202,6 +229,10 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
             pcmHistory.commitReverseCursor(reverseCursor);
         }
         reverseCursor = null;
+        reversePresentationActive = false;
+        if (presentationAudioCaptureTap != null) {
+            presentationAudioCaptureTap.endReversePresentation();
+        }
         if (hasLastReverseFrame && reverseFrameOutputThisSession && reverseReleaseCrossfadeFrames > 0) {
             releaseCrossfadeRemaining = reverseReleaseCrossfadeFrames;
         }
@@ -212,9 +243,13 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     @Override
     public void clearPcmHistory() {
         reverseCursor = null;
+        reversePresentationActive = false;
         cancelReleaseCrossfade();
         if (pcmHistory != null) {
             pcmHistory.clear();
+        }
+        if (presentationAudioCaptureTap != null) {
+            presentationAudioCaptureTap.clearPcmHistory();
         }
     }
 
@@ -376,5 +411,48 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
             }
         }
         return false;
+    }
+
+    private final class PresentationAudioCaptureLease implements PresentationAudioCapture {
+        private final LiveAudioCaptureTap tap;
+        private boolean closed;
+
+        private PresentationAudioCaptureLease(LiveAudioCaptureTap tap) {
+            this.tap = tap;
+        }
+
+        @Override
+        public int sampleRate() {
+            return tap.sampleRate();
+        }
+
+        @Override
+        public int frameRate() {
+            return tap.frameRate();
+        }
+
+        @Override
+        public int maxStereoFramesPerPacket() {
+            return tap.maxStereoFramesPerPacket();
+        }
+
+        @Override
+        public int drainPresentationFrame(short[] target) {
+            if (closed) {
+                throw new IllegalStateException("Presentation audio capture is closed");
+            }
+            return tap.drainPresentationFrame(target);
+        }
+
+        @Override
+        public void close() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            if (presentationAudioCaptureTap == tap) {
+                presentationAudioCaptureTap = null;
+            }
+        }
     }
 }

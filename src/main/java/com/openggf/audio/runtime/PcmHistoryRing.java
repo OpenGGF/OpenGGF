@@ -9,6 +9,7 @@ public final class PcmHistoryRing {
     private final int capacityFrames;
     private long nextFrameIndex;
     private int storedFrames;
+    private long epoch;
     // Always equals ringSlot(nextFrameIndex); maintained incrementally so the
     // per-frame write path avoids a long floorMod inside the stream lock.
     private int writeSlot;
@@ -54,11 +55,11 @@ public final class PcmHistoryRing {
     }
 
     public ReverseCursor createReverseCursor() {
-        return new ReverseCursor(nextFrameIndex - 1, nextFrameIndex - storedFrames);
+        return new ReverseCursor(nextFrameIndex - 1, nextFrameIndex - storedFrames, 1.0, epoch);
     }
 
     public void commitReverseCursor(ReverseCursor cursor) {
-        if (cursor == null) {
+        if (cursor == null || cursor.epoch != epoch) {
             return;
         }
         long newNextFrameIndex = cursor.committedNextFrameIndex();
@@ -69,6 +70,7 @@ public final class PcmHistoryRing {
     }
 
     public void clear() {
+        epoch++;
         nextFrameIndex = 0;
         storedFrames = 0;
         writeSlot = 0;
@@ -91,11 +93,22 @@ public final class PcmHistoryRing {
     public final class ReverseCursor {
         private double sourceFrame;
         private final long oldestReadableFrame;
-        private double rate = 1.0;
+        private final long epoch;
+        private double rate;
 
-        private ReverseCursor(long initialSourceFrame, long oldestReadableFrame) {
+        private ReverseCursor(
+                double initialSourceFrame,
+                long oldestReadableFrame,
+                double rate,
+                long epoch) {
             this.sourceFrame = initialSourceFrame;
             this.oldestReadableFrame = oldestReadableFrame;
+            this.rate = rate;
+            this.epoch = epoch;
+        }
+
+        public ReverseCursor fork() {
+            return new ReverseCursor(sourceFrame, oldestReadableFrame, rate, epoch);
         }
 
         public void setRate(double rate) {
@@ -108,6 +121,10 @@ public final class PcmHistoryRing {
 
         public int readPrevious(short[] target, int frames) {
             validateBuffer(target, frames);
+            if (epoch != PcmHistoryRing.this.epoch) {
+                Arrays.fill(target, 0, frames * CHANNELS, (short) 0);
+                return 0;
+            }
             int read = 0;
             while (read < frames) {
                 long pickedFrame = (long) Math.floor(sourceFrame + 0.5);

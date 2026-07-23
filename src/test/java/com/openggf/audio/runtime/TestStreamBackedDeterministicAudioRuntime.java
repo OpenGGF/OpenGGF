@@ -11,6 +11,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestStreamBackedDeterministicAudioRuntime {
     @Test
@@ -230,6 +231,173 @@ class TestStreamBackedDeterministicAudioRuntime {
         short[] forward = new short[4];
         assertEquals(2, runtime.drainPcm(forward, 2));
         assertArrayEquals(new short[] {0, 0, 1000, 1000}, forward);
+    }
+
+    @Test
+    void liveTapDrainLeavesSpeakerFifoByteIdentical() {
+        AudioOutputFifo fifo = new AudioOutputFifo(8);
+        StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
+                new AudioFrameClock(2, 1), fifo, new PcmHistoryRing(8));
+        PresentationAudioCapture capture = runtime.openPresentationAudioCapture(2, 1);
+        runtime.setMusicStream(new SequenceStream(1, 10, 2, 20));
+        runtime.setSfxStream(new SequenceStream(100, 1000, 200, 2000));
+        runtime.advanceFrame(1, FrameAudioMode.NORMAL);
+
+        assertEquals(2, capture.sampleRate());
+        assertEquals(1, capture.frameRate());
+        assertEquals(2, capture.maxStereoFramesPerPacket());
+        short[] captured = new short[4];
+        assertEquals(2, capture.drainPresentationFrame(captured));
+        assertArrayEquals(new short[] {101, 1010, 202, 2020}, captured);
+        assertEquals(2, fifo.availableFrames());
+
+        short[] speaker = new short[4];
+        assertEquals(2, runtime.drainPcm(speaker, 2));
+        assertArrayEquals(new short[] {101, 1010, 202, 2020}, speaker);
+    }
+
+    @Test
+    void liveTapUsesIndependentReverseCursor() {
+        StreamBackedDeterministicAudioRuntime runtime = runtimeWithHistory(
+                1, 1, 8, 1, 10, 2, 20, 3, 30, 4, 40);
+        PresentationAudioCapture capture = runtime.openPresentationAudioCapture(1, 1);
+        runtime.beginReversePresentation();
+
+        short[] speakerFirst = new short[2];
+        short[] captureFirst = new short[2];
+        short[] speakerSecond = new short[2];
+        short[] captureSecond = new short[2];
+
+        assertEquals(1, runtime.drainPcm(speakerFirst, 1));
+        assertEquals(1, capture.drainPresentationFrame(captureFirst));
+        assertEquals(1, runtime.drainPcm(speakerSecond, 1));
+        assertEquals(1, capture.drainPresentationFrame(captureSecond));
+
+        assertArrayEquals(new short[] {4, 40}, speakerFirst);
+        assertArrayEquals(new short[] {4, 40}, captureFirst);
+        assertArrayEquals(new short[] {3, 30}, speakerSecond);
+        assertArrayEquals(new short[] {3, 30}, captureSecond);
+    }
+
+    @Test
+    void attachingAfterSpeakerAdvancedReverseForksExactCursorPosition() {
+        StreamBackedDeterministicAudioRuntime runtime = runtimeWithHistory(
+                1, 1, 8, 1, 10, 2, 20, 3, 30, 4, 40);
+        runtime.beginReversePresentation();
+        short[] speaker = new short[4];
+        assertEquals(2, runtime.drainPcm(speaker, 2));
+        assertArrayEquals(new short[] {4, 40, 3, 30}, speaker);
+
+        PresentationAudioCapture capture = runtime.openPresentationAudioCapture(1, 1);
+        short[] captured = new short[2];
+
+        assertEquals(1, capture.drainPresentationFrame(captured));
+        assertArrayEquals(new short[] {2, 20}, captured);
+    }
+
+    @Test
+    void reverseRateIsMirroredToCaptureCursor() {
+        StreamBackedDeterministicAudioRuntime runtime = runtimeWithHistory(
+                2, 1, 8, 1, 10, 2, 20, 3, 30, 4, 40, 5, 50, 6, 60);
+        PresentationAudioCapture capture = runtime.openPresentationAudioCapture(2, 1);
+        runtime.beginReversePresentation();
+        runtime.setReversePlaybackRate(2.0);
+
+        short[] speaker = new short[4];
+        short[] captured = new short[4];
+
+        assertEquals(2, runtime.drainPcm(speaker, 2));
+        assertEquals(2, capture.drainPresentationFrame(captured));
+        assertArrayEquals(new short[] {6, 60, 4, 40}, speaker);
+        assertArrayEquals(new short[] {6, 60, 4, 40}, captured);
+    }
+
+    @Test
+    void captureCursorDoesNotCommitLiveHistoryOnRelease() {
+        StreamBackedDeterministicAudioRuntime runtime = runtimeWithHistory(
+                2, 1, 8, 1, 10, 2, 20, 3, 30, 4, 40, 5, 50, 6, 60);
+        PresentationAudioCapture capture = runtime.openPresentationAudioCapture(2, 1);
+        runtime.beginReversePresentation();
+
+        short[] live = new short[2];
+        assertEquals(1, runtime.drainPcm(live, 1));
+        assertArrayEquals(new short[] {6, 60}, live);
+
+        short[] captured = new short[4];
+        assertEquals(2, capture.drainPresentationFrame(captured));
+        assertArrayEquals(new short[] {6, 60, 5, 50}, captured);
+
+        runtime.endReversePresentation();
+        runtime.beginReversePresentation();
+
+        short[] speaker = new short[2];
+        assertEquals(1, runtime.drainPcm(speaker, 1));
+        assertArrayEquals(new short[] {5, 50}, speaker);
+        capture.close();
+    }
+
+    @Test
+    void exhaustedReverseHistoryReturnsFullZeroPaddedClockCount() {
+        StreamBackedDeterministicAudioRuntime runtime = runtimeWithHistory(
+                1, 1, 8, 1, 10);
+        PresentationAudioCapture capture = runtime.openPresentationAudioCapture(3, 1);
+        runtime.beginReversePresentation();
+
+        short[] captured = new short[6];
+        assertEquals(3, capture.drainPresentationFrame(captured));
+        assertArrayEquals(new short[] {1, 10, 0, 0, 0, 0}, captured);
+    }
+
+    @Test
+    void historyClearInvalidatesCaptureCursorEpochAndReturnsSilence() {
+        PcmHistoryRing history = new PcmHistoryRing(8);
+        StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
+                new AudioFrameClock(2, 1), new AudioOutputFifo(8), history);
+        runtime.setMusicStream(new SequenceStream(1, 10, 2, 20));
+        runtime.advanceFrame(1, FrameAudioMode.NORMAL);
+        PresentationAudioCapture capture = runtime.openPresentationAudioCapture(2, 1);
+        runtime.beginReversePresentation();
+
+        runtime.clearPcmHistory();
+        history.write(new short[] {9, 90, 8, 80}, 2);
+
+        short[] captured = new short[] {-1, -1, -1, -1};
+        assertEquals(2, capture.drainPresentationFrame(captured));
+        assertArrayEquals(new short[] {0, 0, 0, 0}, captured);
+    }
+
+    @Test
+    void secondLeaseIsRejectedAndCloseIsIdempotent() {
+        StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
+                new AudioFrameClock(2, 1), new AudioOutputFifo(8), new PcmHistoryRing(8));
+        PresentationAudioCapture first = runtime.openPresentationAudioCapture(2, 1);
+
+        assertThrows(IllegalStateException.class,
+                () -> runtime.openPresentationAudioCapture(2, 1));
+
+        first.close();
+        first.close();
+
+        PresentationAudioCapture replacement = runtime.openPresentationAudioCapture(2, 1);
+        replacement.close();
+    }
+
+    private static StreamBackedDeterministicAudioRuntime runtimeWithHistory(
+            int sampleRate,
+            int frameRate,
+            int historyFrames,
+            int... samples) {
+        StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
+                new AudioFrameClock(sampleRate, frameRate),
+                new AudioOutputFifo(Math.max(historyFrames, samples.length / 2)),
+                new PcmHistoryRing(historyFrames));
+        runtime.setMusicStream(new SequenceStream(samples));
+        int stereoFrames = samples.length / 2;
+        int framesToAdvance = stereoFrames / sampleRate * frameRate;
+        for (int frame = 1; frame <= framesToAdvance; frame++) {
+            runtime.advanceFrame(frame, FrameAudioMode.NORMAL);
+        }
+        return runtime;
     }
 
     private static final class SequenceStream implements AudioStream {
