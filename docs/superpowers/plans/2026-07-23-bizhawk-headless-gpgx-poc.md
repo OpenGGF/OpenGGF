@@ -41,6 +41,7 @@ tools/bizhawk-headless/
   src/
     Program.cs                       CLI composition root
     Bootstrap/BizHawkInstallation.cs install/path/version validation
+    Bootstrap/RomIdentity.cs         Sonic 1 ROM SHA-1 validation
     Bk2/Bk2Frame.cs                  typed system/P1/P2 input state
     Bk2/Bk2Movie.cs                  parsed metadata, sync settings, frames
     Bk2/Bk2Reader.cs                 ZIP/header/sync/input grammar
@@ -96,8 +97,11 @@ Verify the ROM hash before continuing. The linked worktree receives neither
 path because both assets are ignored; do not copy, rename, or symlink them. Pass
 these exported absolute values to every delegated implementer and reviewer.
 `common-env.sh` honors an explicit `BIZHAWK_HOME`; only its fallback is relative
-to the current checkout. Switch the primary checkout away from
-`feature/ai-bizhawk-headless-poc`, then attach that existing branch at
+to the current checkout. Preserve all unrelated dirty/untracked files, then run
+`git switch bugfix/ai-s3k-structural-replay-phases` in the primary checkout
+(this was the branch active before this feature branch). If Git reports an
+overlapping tracked change, stop rather than stashing or overwriting it. Then
+attach the existing feature branch at
 `.worktrees/bizhawk-headless-poc` with:
 
 ```bash
@@ -242,8 +246,16 @@ xbuild /nologo /verbosity:minimal \
 ```
 
 `build.sh` sources `common-env.sh` itself so it is a valid standalone gate.
-`test.sh` sources `common-env.sh`, invokes `build.sh`, unsets `DISPLAY`, and
-forwards all arguments to the test executable through Mono.
+`test.sh` implements one dependency-aware exception before sourcing
+`common-env.sh`: when invoked with `--filter EndToEnd` or
+`--filter GpgxHost`, no explicit `BIZHAWK_HOME` was supplied, and the default
+distribution directory is absent, it prints
+`SKIP <filter>: BizHawk distribution not installed` and exits `0`. An explicitly
+supplied but invalid `BIZHAWK_HOME` always fails. Other invocations require the
+distribution because the production/test assemblies cannot compile without
+their references. After that check, `test.sh` sources `common-env.sh`, invokes
+`build.sh`, unsets `DISPLAY`, and forwards all arguments to the test executable
+through Mono.
 
 - [ ] **Step 5: Implement bootstrap, ROM validation, and exact direct-core adapters**
 
@@ -320,7 +332,10 @@ Resolve `core.ServiceProvider.GetService<IMemoryDomains>()["Main RAM"]`. `Advanc
 `GameInfo`; the BK2 Header's legacy 32-hex value is never passed to this
 validator.
 
-`CreateGhz1SyncSettings()` assigns every field from the tracked JSON, including normal three-button controls, autodetect region, disabled forced VDP/BIOS, all overscan, MAME YM2413/YM2612, no filter, and the exact numeric EQ/backdrop values in the design.
+`CreateGhz1SyncSettings()` assigns every field from the tracked JSON, including
+normal three-button controls, autodetect region, disabled forced VDP/BIOS, all
+overscan, MAME YM2413/YM2612, no filter, and the exact numeric EQ/backdrop values
+from the authoritative `ghz1-sync-settings.json` fixture.
 
 - [ ] **Step 6: Run the gate and observe GREEN**
 
@@ -386,6 +401,11 @@ Add one-frame variants for each accepted P1 bit:
 Up=0001 Down=0002 Left=0004 Right=0008
 A=0010 B=0020 C=0040 Start=0080
 ```
+
+Add synthetic system-group rows `|P.|........|........|` and
+`|.R|........|........|`; assert the parsed frames expose `Power=true,
+Reset=false` and `Power=false, Reset=true` respectively, while both P1 masks
+remain zero.
 
 Reject duplicate/missing Core or Platform, `StartsFromSavestate True`, `StartsFromSaveRam True`, wrong/missing/extra sync fields, six-button/controller changes, multiple input sections, malformed group lengths, active P2, and unknown group names.
 
