@@ -14,12 +14,56 @@ import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class TestEngineLiveCapturePresentation {
+    @Test
+    void immediateLiveCaptureFailureWarnsExactlyOnceAndRetryCanWarnAgain() {
+        LiveCaptureController controller = mock(LiveCaptureController.class);
+        Throwable failure = new IllegalStateException("tap open failed");
+        AtomicReference<LiveCaptureController.State> state =
+                new AtomicReference<>(LiveCaptureController.State.FAILED);
+        when(controller.state()).thenAnswer(ignored -> state.get());
+        when(controller.lastFailure()).thenReturn(failure);
+        List<Throwable> warnings = new ArrayList<>();
+        Engine.LiveCaptureFailureTransitionReporter reporter =
+                new Engine.LiveCaptureFailureTransitionReporter(warnings::add);
+
+        reporter.observe(controller);
+        reporter.observe(controller);
+        assertEquals(List.of(failure), warnings);
+
+        state.set(LiveCaptureController.State.ACTIVE);
+        reporter.observe(controller);
+        state.set(LiveCaptureController.State.FAILED);
+        reporter.observe(controller);
+        assertEquals(List.of(failure, failure), warnings);
+    }
+
+    @Test
+    void asynchronousFinalizationFailureWarnsExactlyOnceOnSubsequentFrames() {
+        LiveCaptureController controller = mock(LiveCaptureController.class);
+        Throwable failure = new IllegalStateException("mux failed");
+        AtomicReference<LiveCaptureController.State> state =
+                new AtomicReference<>(LiveCaptureController.State.STOPPING);
+        when(controller.state()).thenAnswer(ignored -> state.get());
+        when(controller.lastFailure()).thenReturn(failure);
+        List<Throwable> warnings = new ArrayList<>();
+        Engine.LiveCaptureFailureTransitionReporter reporter =
+                new Engine.LiveCaptureFailureTransitionReporter(warnings::add);
+
+        reporter.observe(controller);
+        state.set(LiveCaptureController.State.FAILED);
+        reporter.observe(controller);
+        reporter.observe(controller);
+
+        assertEquals(List.of(failure), warnings);
+    }
+
     @Test
     void allRenderedGameModesAndPresentationStatesUseTheSameSeamExactlyOnce() {
         LiveCaptureController controller = mock(LiveCaptureController.class);

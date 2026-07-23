@@ -72,6 +72,8 @@ import java.time.Duration;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -79,6 +81,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.Callbacks.*;
@@ -193,6 +197,33 @@ public class Engine {
 		REWIND
 	}
 
+	static final class LiveCaptureFailureTransitionReporter {
+		private static final Throwable UNKNOWN_FAILURE =
+				new IllegalStateException("Live capture entered FAILED without a cause");
+		private final Consumer<Throwable> warningSink;
+		private final Set<Throwable> reported =
+				Collections.newSetFromMap(new IdentityHashMap<>());
+
+		LiveCaptureFailureTransitionReporter(Consumer<Throwable> warningSink) {
+			this.warningSink = Objects.requireNonNull(warningSink, "warningSink");
+		}
+
+		void observe(LiveCaptureController controller) {
+			Objects.requireNonNull(controller, "controller");
+			if (controller.state() != LiveCaptureController.State.FAILED) {
+				reported.clear();
+				return;
+			}
+			Throwable failure = controller.lastFailure();
+			if (failure == null) {
+				failure = UNKNOWN_FAILURE;
+			}
+			if (reported.add(failure)) {
+				warningSink.accept(failure);
+			}
+		}
+	}
+
 	private boolean overlayStateReady = false;
 
 	// Input handler for keyboard input
@@ -229,6 +260,10 @@ public class Engine {
 	private final LiveCaptureController liveCaptureController;
 	private final LiveCapturePresentationCoordinator liveCapturePresentation;
 	private final LiveCaptureIndicatorRenderer liveCaptureIndicator;
+	private final LiveCaptureFailureTransitionReporter liveCaptureFailureReporter =
+			new LiveCaptureFailureTransitionReporter(failure ->
+					LOGGER.log(java.util.logging.Level.WARNING,
+							"Live viewport recording failed", failure));
 	private long lastFrameTime;
 	private boolean paused = false;
 	private long userPauseIndicatorHiddenUntilNanos;
@@ -1639,6 +1674,7 @@ public class Engine {
 		profiler.beginSection("update");
 		processDisplayShaderPackRescan();
 		handleLiveCaptureShortcut();
+		liveCaptureFailureReporter.observe(liveCaptureController);
 		boolean frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
 				&& inputHandler != null
 				&& inputHandler.isKeyPressed(
@@ -1799,6 +1835,7 @@ public class Engine {
 				() -> liveCapturePresentation.present(currentCaptureViewport(),
 						this::captureScreenshotIfRequested,
 						this::renderLiveCaptureIndicatorIfActive));
+		liveCaptureFailureReporter.observe(liveCaptureController);
 
 		profiler.endFrame();
 		overlayStateReady = false;
