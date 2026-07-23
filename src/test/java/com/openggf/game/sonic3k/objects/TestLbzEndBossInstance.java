@@ -119,6 +119,23 @@ class TestLbzEndBossInstance {
     }
 
     @Test
+    void runnerSeparatesAllocationAndInitializationFromFirstMovement() {
+        LbzEndBossInstance boss = constructBoss(new TestObjectServices().withCamera(cameraAt(0x3A20, 0x05A0)));
+
+        enterIntro(boss);
+        var runner = boss.getOwnedChildrenForTests().stream()
+                .filter(child -> "LBZEndBossRunner".equals(child.getName()))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(0x3B70, runner.getX(), "ChildObjDat_7415A allocates the runner at boss X+$70");
+        runner.update(0x7000, null);
+        assertEquals(0x3B70, runner.getX(), "loc_73D8E initializes without applying x_vel");
+        runner.update(0x7001, null);
+        assertEquals(0x3B6E, runner.getX(), "loc_73DB6 begins movement on the following dispatch");
+    }
+
+    @Test
     void scrollLockClearsWhenBossStartsRising() {
         LbzEndBossInstance boss = constructBoss(new TestObjectServices().withCamera(cameraAt(0x3A20, 0x05A0)));
 

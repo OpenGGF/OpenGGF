@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ end-boss runner initialization phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 37597 to
+  frame 37858.** The next divergence is Sonic's status byte (`$28` expected
+  versus `$20` actual).
+- Root: `CreateChild1_Normal` allocates the Robotnik runner, then its first
+  `Process_Sprites` dispatch executes only `loc_73D8E`, which installs
+  attributes, velocity, animation data, and the `$1F` wait callback.
+  The engine constructed those fields and immediately ran `loc_73DB6` motion,
+  finishing the runner one frame early and starting the boss camera pan early.
+- Fix: the runner now retains both the allocation phase and the
+  initialization-only dispatch before movement begins. The phase is ordinary
+  object state and is therefore preserved by rewind rather than inferred from
+  a trace frame or arena position.
+- Validation: all 17 focused LBZ end-boss tests pass and the focused replay
+  reaches frame 37858. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. HCZ
+  remains at frame 31335, ICZ remains green, and no S3K, S1, or S2 frontier
+  regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ end-boss tower render bounds
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 37448 to

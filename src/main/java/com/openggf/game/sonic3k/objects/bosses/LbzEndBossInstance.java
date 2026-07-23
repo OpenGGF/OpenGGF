@@ -1185,6 +1185,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         private int animIndex;
         private int animTimer;
         private int frame;
+        private int initialDispatchesRemaining;
 
         private LbzEndBossRunnerChild(LbzEndBossInstance parent) {
             super(parent, "LBZEndBossRunner", 5, 0xCB);
@@ -1195,6 +1196,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             animIndex = 0;
             animTimer = 0;
             frame = 0;
+            initialDispatchesRemaining = 2;
             syncPositionWithParent();
             currentX += 0x70;
             currentY -= 0x18;
@@ -1211,6 +1213,16 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         @Override
         public void update(int frameCounter, PlayableEntity player) {
             if (!beginUpdate(frameCounter)) {
+                return;
+            }
+            // loc_73D8E only installs ObjDat3_740F8, velocity, animation data,
+            // and the first wait callback. The child is allocated after the
+            // parent slot, then receives its initialization dispatch on the
+            // next Process_Sprites pass; movement begins one dispatch later at
+            // loc_73DB6.
+            if (initialDispatchesRemaining > 0) {
+                initialDispatchesRemaining--;
+                updateDynamicSpawn();
                 return;
             }
             if (phase == 0) {
