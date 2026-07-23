@@ -924,6 +924,16 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
+        public int getOnScreenHalfWidth() {
+            return 8;
+        }
+
+        @Override
+        public int getOnScreenHalfHeight() {
+            return 0x80;
+        }
+
+        @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_END_BOSS);
             if (renderer != null && renderer.isReady()) {

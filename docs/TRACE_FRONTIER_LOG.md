@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ end-boss tower render bounds
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 37448 to
+  frame 37597.** The next divergence is the camera X position (`$3A20`
+  expected versus `$3A1E` actual).
+- Root: the end-boss tower's `ObjDat3_74110` sets `width_pixels=$08` and
+  `height_pixels=$80`. The engine inherited the generic 16-by-16 render
+  footprint, so the shared `SolidObjectFull` on-screen gate treated the tower
+  as offscreen while its tall collision column was still visible. Sonic
+  therefore crossed the tower's left boundary without the native horizontal
+  stop.
+- Fix: `LbzEndBossTowerChild` now publishes the ROM's 8-pixel horizontal and
+  `$80`-pixel vertical render half-extents. This keeps the data-driven
+  `render_flags` equivalent live for the complete tower without changing its
+  collision dimensions or adding an arena-specific contact exception.
+- Validation: all 16 focused LBZ end-boss tests pass and the focused replay
+  reaches frame 37597. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. HCZ
+  remains at frame 31335, ICZ remains green, and no S3K, S1, or S2 frontier
+  regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ ride-grapple offscreen release
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 35626 to

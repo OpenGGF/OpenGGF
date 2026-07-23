@@ -45,6 +45,15 @@ class TestLbzEndBossInstance {
         assertEquals(0x05F8, boss.getY(), "ROM y_pos maps to centre Y");
         assertEquals(Sonic3kObjectArtKeys.LBZ_END_BOSS, boss.getArtKeyForTests());
         assertEquals(2, boss.getOwnedChildrenForTests().size(), "init spawns cockpit and tower children");
+        LbzEndBossInstance.LbzEndBossTowerChild tower = boss.getOwnedChildrenForTests().stream()
+                .filter(LbzEndBossInstance.LbzEndBossTowerChild.class::isInstance)
+                .map(LbzEndBossInstance.LbzEndBossTowerChild.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(8, tower.getOnScreenHalfWidth(),
+                "ObjDat3_74110 width_pixels keeps the tower's SolidObjectFull gate live");
+        assertEquals(0x80, tower.getOnScreenHalfHeight(),
+                "ObjDat3_74110 height_pixels covers the full launcher tower");
         assertEquals(0x77, boss.getRequestedPlcIdForTests(), "routine 0 requests PLC $77");
         assertTrue(boss.isLbzEndBossArtQueuedForTests(), "routine 0 queues/uses LBZ end-boss art");
         assertTrue(boss.isLbzEndBossPaletteLine1RequestedForTests(), "routine 0 requests Pal_LBZEndBoss line 1");
