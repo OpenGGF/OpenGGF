@@ -16,6 +16,7 @@ import java.util.zip.GZIPInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Guards the normal-gameplay recorder side of the CSV v7 animation contract. */
@@ -85,16 +86,23 @@ class TestTraceAnimationRecorderContract {
     @Test
     void s3kRecorderUsesCanonicalBk2OffsetForEveryProfile() throws IOException {
         String script = Files.readString(TOOLS.resolve("s3k_trace_recorder.lua"));
-        int wrapperStart = script.indexOf("local function bk2_input_mask(");
-        int wrapperEnd = script.indexOf("local function write_aux(", wrapperStart);
-        assertTrue(wrapperStart >= 0 && wrapperEnd > wrapperStart,
-                "s3k recorder must retain the shared BK2 input wrapper");
+        assertCanonicalS3kInputWrapper(script);
+    }
 
-        String wrapper = script.substring(wrapperStart, wrapperEnd);
-        assertFalse(wrapper.contains("TRACE_PROFILE"),
-                "BK2 input alignment must not depend on the recorder profile");
-        assertTrue(wrapper.contains("bk2_frame_offset, 0)"),
-                "BK2 input alignment must use metadata offset + trace row with no adjustment");
+    @Test
+    void s3kRecorderCanonicalInputGuardRejectsAnAlternateAdjustedCall() throws IOException {
+        String script = Files.readString(TOOLS.resolve("s3k_trace_recorder.lua"));
+        String bypass = script.replace(
+                "    return C.bk2_input_mask(\n"
+                        + "        fallback_raw, trace_row, bk2_frame_offset, 0)\n",
+                "    local shifted = C.bk2_input_mask(\n"
+                        + "        fallback_raw, trace_row, bk2_frame_offset, -1)\n"
+                        + "    return C.bk2_input_mask(\n"
+                        + "        fallback_raw, trace_row, bk2_frame_offset, 0)\n");
+
+        assertFalse(script.equals(bypass), "the adversarial recorder mutation must be applied");
+        assertThrows(AssertionError.class, () -> assertCanonicalS3kInputWrapper(bypass),
+                "a second nonzero-adjustment call must fail the canonical wrapper contract");
     }
 
     @Test
@@ -190,5 +198,23 @@ class TestTraceAnimationRecorderContract {
                         new InputStreamReader(input, StandardCharsets.UTF_8))) {
             return reader.readLine();
         }
+    }
+
+    private static void assertCanonicalS3kInputWrapper(String script) {
+        int wrapperStart = script.indexOf("local function bk2_input_mask(");
+        int wrapperEnd = script.indexOf("local function write_aux(", wrapperStart);
+        assertTrue(wrapperStart >= 0 && wrapperEnd > wrapperStart,
+                "s3k recorder must retain the shared BK2 input wrapper");
+
+        String canonicalWrapper = """
+                local function bk2_input_mask(fallback_raw, trace_row)
+                    return C.bk2_input_mask(
+                        fallback_raw, trace_row, bk2_frame_offset, 0)
+                end
+                """;
+        String actualWrapper = script.substring(wrapperStart, wrapperEnd);
+        assertEquals(canonicalWrapper.replaceAll("\\s+", ""),
+                actualWrapper.replaceAll("\\s+", ""),
+                "the input wrapper must contain exactly one canonical zero-adjustment call");
     }
 }
