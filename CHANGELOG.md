@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ1's seamless reload now preserves the live `Level_end_flag` owned by its carried results and end-sign objects while leaving the later `End_of_level_flag` edge reset. This retains both players' native victory-pose control through the reload and advances the combined LBZ frontier from frame 21729 to frame 22073 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: LBZ1's seamless act transition now preserves the two-stage background-event flow, waiting for the three queued LBZ2 secondary Kos/KosM streams to drain before reloading and applying the `$3A00` world offset. This advances the combined LBZ frontier from frame 21671 to frame 21729 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: LBZ miniboss arm collision publication now samples the interleaved parent Y during the native routine-$0A escape step. This removes an early boundary contact on CPU Tails and advances the combined LBZ frontier from frame 21228 to frame 21671 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: folded LBZ miniboss arm children now retain their native slot-entry collision coordinate while synchronized/rotating, with the outer routine-$0A wait tail publishing its post-circular-move coordinate. This aligns both arm-hit phases and advances the combined LBZ frontier from frame 20970 to frame 21228 without regressing another S3K, S1, or S2 trace frontier.

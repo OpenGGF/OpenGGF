@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ retained results state across act reload
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 21729 to
+  frame 22073.** The next divergence is Sonic's victory-pose mapping frame
+  (`$B1` expected versus `$B2` actual).
+- Root: `LBZ1BGE_DoTransition` reloads the act while the native
+  `Obj_LevelResults` and `Obj_EndSignControl` owners remain live. The engine
+  carried those persistent objects but cleared `Level_end_flag`, causing the
+  end-sign owner to restore player control immediately after the reload rather
+  than waiting for the results exit.
+- Fix: LBZ's seamless request now preserves `Level_end_flag` while allowing
+  `End_of_level_flag` to reset for its later completion edge. Focused coverage
+  verifies both globals across the reload.
+- Validation: all eleven focused LBZ miniboss/transition tests pass. The
+  complete `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green
+  and the same 16 documented red routes; LBZ reaches frame 22073 with 5505
+  remaining errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ1-to-LBZ2 queued-art transition gate
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 21671 to

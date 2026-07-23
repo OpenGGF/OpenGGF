@@ -551,6 +551,11 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 .deactivateLevelNow(false)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
+                // Obj_LevelResults and Obj_EndSignControl survive
+                // LBZ1BGE_DoTransition's Load_Level. Level_end_flag therefore
+                // remains set until the carried results owner finishes, while
+                // End_of_level_flag is cleared for the later title-card edge.
+                .preserveEndOfLevelActive(true)
                 .showInLevelTitleCard(false)
                 .preserveOffsetCameraPosition(true)
                 .postTransitionMinX(postTransitionMinX)

@@ -326,6 +326,7 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         camera.setY((short) 0x0100);
         camera.setMinX((short) 0x3DA0);
         camera.setMaxX((short) 0x3EA0);
+        GameServices.gameState().setEndOfLevelActive(true);
 
         lbzEvents().setEventsFg5(true);
         manager.update();
@@ -341,6 +342,10 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
 
         assertEquals(1, GameServices.level().getCurrentAct(),
                 "LBZ1BGE_DoTransition writes Current_zone_and_act=$0601 before Load_Level.");
+        assertTrue(GameServices.gameState().isEndOfLevelActive(),
+                "LBZ Load_Level must retain Level_end_flag for the carried results/end-sign owners.");
+        assertFalse(GameServices.gameState().isEndOfLevelFlag(),
+                "LBZ Load_Level clears End_of_level_flag until the in-level title-card completes.");
         assertEquals((ARENA_X - 0x3A00) & 0xFFFF, player.getCentreX() & 0xFFFF,
                 "LBZ1BGE_DoTransition subtracts $3A00 from Player_1 x_pos.");
         assertEquals(0x0160, player.getCentreY() & 0xFFFF,
