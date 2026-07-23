@@ -294,9 +294,9 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 |-----|-----------|------|---------|-------------|
 | `CAPTURE_OUTPUT_DIR` | `capture.outputDir` | string | `"target/trace-videos"` | Output directory for live and trace capture videos. |
 | `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `O` | Complete-chord live viewport recording toggle (`Shift` + this key, with Ctrl/Alt released). |
-| `CAPTURE_SCALE` | `capture.scale` | int | `4` | Integer nearest-neighbor upscale factor applied to the captured frames. |
-| `CAPTURE_FPS` | `capture.fps` | int | `60` | Output frame rate for the captured video. |
-| `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Capture video codec (e.g. `ffv1`). |
+| `CAPTURE_SCALE` | `capture.scale` | int | `4` | Trace capture only: integer nearest-neighbor upscale factor applied to captured frames; live viewport recording always uses scale 1. |
+| `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
+| `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Trace capture only: video codec selection; live recording always uses FFV1. |
 
 Invoke the tool through Maven (requires a ROM in the working directory, an offscreen-capable GL context, and `ffmpeg` on `PATH`):
 

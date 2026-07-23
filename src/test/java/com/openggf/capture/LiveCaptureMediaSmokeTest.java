@@ -28,8 +28,8 @@ class LiveCaptureMediaSmokeTest {
 
     @Test
     void liveRecorderProducesLosslessViewportVideoAndExactPresentationAudio() throws Exception {
-        Optional<Path> ffmpeg = executableOnPath("ffmpeg");
-        Optional<Path> ffprobe = executableOnPath("ffprobe");
+        Optional<Path> ffmpeg = FfmpegEncoder.findFfmpeg();
+        Optional<Path> ffprobe = findFfprobe();
         Assumptions.assumeTrue(ffmpeg.isPresent() && ffprobe.isPresent(),
                 "ffmpeg and ffprobe must both be on PATH");
 
@@ -64,6 +64,11 @@ class LiveCaptureMediaSmokeTest {
             assertEquals(WIDTH, video.path("width").asInt());
             assertEquals(HEIGHT, video.path("height").asInt());
             assertEquals(FRAME_COUNT, video.path("nb_read_frames").asInt());
+            double expectedDuration = FRAME_COUNT / (double) FRAME_RATE;
+            double probedAudioDuration = mediaDurationSeconds(audio, probe.path("format"));
+            assertTrue(Math.abs(probedAudioDuration - expectedDuration) <= 1.0 / SAMPLE_RATE,
+                    () -> "ffprobe audio duration " + probedAudioDuration + " differs from "
+                            + expectedDuration + " by more than one sample");
 
             byte[] decodedRgba = run(ffmpeg.orElseThrow().toString(), "-v", "error",
                     "-i", output.toString(), "-map", "0:v:0", "-vf", "vflip",
@@ -85,7 +90,6 @@ class LiveCaptureMediaSmokeTest {
                     "FLAC must preserve tone, silence, and reversed sample regions exactly");
             int decodedStereoFrames = decodedPcm.length / 2;
             double audioDuration = decodedStereoFrames / (double) SAMPLE_RATE;
-            double expectedDuration = FRAME_COUNT / (double) FRAME_RATE;
             assertTrue(Math.abs(audioDuration - expectedDuration) <= 1.0 / SAMPLE_RATE,
                     () -> "audio duration " + audioDuration + " differs from "
                             + expectedDuration + " by more than one sample");
@@ -110,6 +114,35 @@ class LiveCaptureMediaSmokeTest {
             }
         }
         throw new AssertionError("missing " + codecType + " stream: " + probe);
+    }
+
+    private static double mediaDurationSeconds(JsonNode stream, JsonNode format) {
+        JsonNode durationTs = stream.path("duration_ts");
+        String timeBase = stream.path("time_base").asText();
+        if (durationTs.canConvertToLong() && timeBase.contains("/")) {
+            String[] fraction = timeBase.split("/", 2);
+            return durationTs.asLong()
+                    * Double.parseDouble(fraction[0])
+                    / Double.parseDouble(fraction[1]);
+        }
+        String streamDuration = stream.path("duration").asText();
+        if (!streamDuration.isBlank() && !"N/A".equals(streamDuration)) {
+            return Double.parseDouble(streamDuration);
+        }
+        String taggedDuration = stream.path("tags").path("DURATION").asText();
+        if (!taggedDuration.isBlank()) {
+            String[] fields = taggedDuration.split(":");
+            if (fields.length == 3) {
+                return Double.parseDouble(fields[0]) * 3600
+                        + Double.parseDouble(fields[1]) * 60
+                        + Double.parseDouble(fields[2]);
+            }
+        }
+        String formatDuration = format.path("duration").asText();
+        if (!formatDuration.isBlank() && !"N/A".equals(formatDuration)) {
+            return Double.parseDouble(formatDuration);
+        }
+        throw new AssertionError("ffprobe supplied no usable audio duration");
     }
 
     private static byte[] viewportFrame(int frame) {
@@ -166,13 +199,17 @@ class LiveCaptureMediaSmokeTest {
         return output.toByteArray();
     }
 
-    private static Optional<Path> executableOnPath(String name) {
+    private static Optional<Path> findFfprobe() {
         String path = System.getenv("PATH");
         if (path == null) {
             return Optional.empty();
         }
+        String executable = FfmpegEncoder.isWindows() ? "ffprobe.exe" : "ffprobe";
         for (String directory : path.split(java.io.File.pathSeparator)) {
-            Path candidate = Path.of(directory, name);
+            if (directory.isBlank()) {
+                continue;
+            }
+            Path candidate = Path.of(directory, executable);
             if (Files.isExecutable(candidate)) {
                 return Optional.of(candidate);
             }
