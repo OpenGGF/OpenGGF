@@ -364,7 +364,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
             implements RewindRecreatable {
         private static final int PRIORITY_BUCKET = 4; // word_8C278 priority $200.
         private static final int REST_FRAME = 7;
-        private static final int PROJECTILE_ANIM_INDEX = 3;
+        private static final int PROJECTILE_ANIM_INDEX = 2;
         private static final int[] FRAMES = {7, 7, 8, 7};
         private static final int[] DELAYS_NORMAL = {2, 0x1F, 3, 0};
         private static final int[] DELAYS_ALT = {2, 0x2F, 3, 0};
@@ -429,7 +429,12 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
             state = State.FIRING;
-            animIndex = -1;
+            // loc_8C1B2 installs byte_8C2D0 without calling Set_Raw_Animation.
+            // The child retains anim_frame=0 from setup, so the first
+            // Animate_RawMultiDelay dispatch adds two and reads script offset
+            // two (table index 1). Offset zero is the already-installed setup
+            // frame.
+            animIndex = 0;
             animTimer = 0;
             shotFired = false;
         }

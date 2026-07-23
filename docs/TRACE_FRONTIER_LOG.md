@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ transition oscillator tail and Snale projectile cadence
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 27598 to
+  frame 27969.** Release-blocking errors fell from 2512 to 2111; the next
+  divergence is Sonic's Y speed (`-$0270` expected versus `-$0370` actual).
+- Root: `LBZ1BGE_DoTransition` reloads Act 2 from `ScreenEvents`, after which
+  native `LevelLoop` still reaches `OscillateNumDo`. The engine's pending
+  seamless reload skips that loop tail unless the source runtime publishes
+  the retained tick, leaving every Act 2 oscillator-driven platform one frame
+  behind. Later, Snale Blaster's shooter installs `byte_8C2D0` without
+  resetting `anim_frame`; `Animate_RawMultiDelay` therefore begins at offset
+  two and creates the projectile when the cursor reaches offset four. The
+  engine replayed offset zero and waited through offset six, launching seven
+  motion frames late into CPU Tails' path.
+- Fix: `LbzZoneRuntimeState` now advertises the existing state-driven
+  seamless-transition oscillator tail. Snale shooters retain the setup
+  animation cursor, start the raw script at its second entry, and fire on
+  native `anim_frame=$04`. Both changes model ROM state and dispatch order,
+  without a route, frame, or trace exception.
+- Validation: all 18 focused LBZ runtime-state and Snale Blaster tests pass,
+  and the focused replay reaches frame 27969. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ V-int scheduling and offscreen SST lifetime
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 25693 to

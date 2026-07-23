@@ -94,6 +94,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return 0; }
     @Override public boolean isActTransitionFlagActive() { return false; }
+    @Override public boolean advancesOscillationOnSeamlessTransition() { return true; }
 
     public boolean isAlarmAnimationActive() {
         return alarmAnimationActive;

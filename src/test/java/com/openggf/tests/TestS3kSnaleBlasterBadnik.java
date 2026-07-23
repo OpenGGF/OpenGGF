@@ -119,7 +119,7 @@ class TestS3kSnaleBlasterBadnik {
     }
 
     @Test
-    void shooterChildFiresSingleProjectileAtRomFrameFour() throws Exception {
+    void shooterChildFiresSingleProjectileAtRawAnimationOffsetFour() throws Exception {
         RecordingServices services = new RecordingServices();
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(services);
         activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
@@ -127,7 +127,7 @@ class TestS3kSnaleBlasterBadnik {
         services.spawnedObjects.clear();
 
         setEnum(shooter, "state", "FIRING");
-        setInt(shooter, "animIndex", 2);
+        setInt(shooter, "animIndex", 1);
         setInt(shooter, "mappingFrame", 7);
         setInt(shooter, "animTimer", 0);
 
@@ -152,7 +152,7 @@ class TestS3kSnaleBlasterBadnik {
         assertTrue(readBoolean(lowerShooter, "verticalFlipShot"),
                 "ChildObjDat_8C28A gives the lower shooter subtype 2 even when the parent subtype is zero");
         setEnum(lowerShooter, "state", "FIRING");
-        setInt(lowerShooter, "animIndex", 2);
+        setInt(lowerShooter, "animIndex", 1);
         setInt(lowerShooter, "mappingFrame", 7);
         setInt(lowerShooter, "animTimer", 0);
         ((AbstractObjectInstance) lowerShooter).update(1, playerAt(0x0300, 0x0100, 0));
