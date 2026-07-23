@@ -54,6 +54,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     // Pre-allocated buffers for fillBuffer() to avoid per-call allocations (~43 times/sec)
     protected final short[] streamData = new short[STREAM_BUFFER_SIZE * 2];
     protected final short[] sfxStreamData = new short[STREAM_BUFFER_SIZE * 2];
+    private final short[] handoffMusicData = new short[STREAM_BUFFER_SIZE * 2];
+    private final short[] handoffSfxData = new short[STREAM_BUFFER_SIZE * 2];
+    private short[] presentationHandoff = new short[0];
+    private int presentationHandoffFrame;
 
     protected AudioStream currentStream;
     protected AudioStream sfxStream;
@@ -676,16 +680,20 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         // processed buffer in updateStream); PerformanceProfiler accumulates section time.
         int sampleRate;
         synchronized (streamLock) {
+            boolean runtimePresentation = runtimeProvidesPresentationPcm();
+            boolean handoffPresentation = !runtimePresentation && presentationHandoffFrames() > 0;
             beginProfileSection("audio.music_stream");
             try {
                 // Clear and reuse pre-allocated buffer
                 Arrays.fill(streamData, (short) 0);
-                boolean runtimePresentation = runtimeProvidesPresentationPcm();
                 if (reverseCursor != null) {
                     reverseCursor.readPrevious(streamData, STREAM_BUFFER_SIZE);
                 } else if (runtimePresentation) {
                     deterministicAudioRuntime.drainPcm(streamData, STREAM_BUFFER_SIZE);
                     clearCompletedRuntimeSfxIfNeeded();
+                } else if (handoffPresentation) {
+                    int copiedFrames = copyPresentationHandoff(streamData, STREAM_BUFFER_SIZE);
+                    readLegacyPresentationTail(copiedFrames, STREAM_BUFFER_SIZE - copiedFrames);
                 } else if (currentStream != null) {
                     currentStream.read(streamData);
                 }
@@ -695,8 +703,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
             beginProfileSection("audio.sfx_stream");
             try {
-                boolean runtimePresentation = runtimeProvidesPresentationPcm();
-                if (!runtimePresentation && sfxStream != null) {
+                if (!runtimePresentation && !handoffPresentation && sfxStream != null) {
                     Arrays.fill(sfxStreamData, (short) 0);
                     sfxStream.read(sfxStreamData);
 
@@ -753,7 +760,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         if (!runtimeProvidesPresentationPcm()) {
             return;
         }
-        deterministicAudioRuntime.setMusicStream(smpsDriver);
+        deterministicAudioRuntime.setMusicStream(currentStream);
         if (sfxStream != null) {
             deterministicAudioRuntime.setSfxStream(sfxStream);
         } else {
@@ -1018,9 +1025,64 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     @Override
     public void attachDeterministicAudioRuntime(DeterministicAudioRuntime runtime) {
         synchronized (streamLock) {
+            preservePresentationTail(deterministicAudioRuntime, runtime);
             deterministicAudioRuntime = runtime;
             bindRuntimePresentationStreams();
             reconcilePcmHistoryOwnershipLocked();
+        }
+    }
+
+    private void preservePresentationTail(
+            DeterministicAudioRuntime previous,
+            DeterministicAudioRuntime replacement) {
+        if (previous == null || replacement == null
+                || !previous.providesPresentationPcm()
+                || replacement.providesPresentationPcm()) {
+            return;
+        }
+        int frames = previous.availablePresentationFrames();
+        presentationHandoff = new short[Math.max(0, frames) * 2];
+        presentationHandoffFrame = 0;
+        if (frames > 0) {
+            previous.drainPcm(presentationHandoff, frames);
+        }
+    }
+
+    private int presentationHandoffFrames() {
+        return presentationHandoff.length / 2 - presentationHandoffFrame;
+    }
+
+    private int copyPresentationHandoff(short[] target, int requestedFrames) {
+        int frames = Math.min(requestedFrames, presentationHandoffFrames());
+        System.arraycopy(presentationHandoff, presentationHandoffFrame * 2, target, 0, frames * 2);
+        presentationHandoffFrame += frames;
+        if (presentationHandoffFrames() == 0) {
+            presentationHandoff = new short[0];
+            presentationHandoffFrame = 0;
+        }
+        return frames;
+    }
+
+    private void readLegacyPresentationTail(int offsetFrames, int frames) {
+        if (frames <= 0) {
+            return;
+        }
+        int samples = frames * 2;
+        Arrays.fill(handoffMusicData, 0, samples, (short) 0);
+        Arrays.fill(handoffSfxData, 0, samples, (short) 0);
+        if (currentStream != null) {
+            currentStream.read(handoffMusicData, samples);
+        }
+        if (sfxStream != null) {
+            sfxStream.read(handoffSfxData, samples);
+        }
+        for (int i = 0; i < samples; i++) {
+            int mixed = handoffMusicData[i] + handoffSfxData[i];
+            streamData[offsetFrames * 2 + i] =
+                    (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, mixed));
+        }
+        if (sfxStream != null && sfxStream.isComplete()) {
+            sfxStream = null;
         }
     }
 

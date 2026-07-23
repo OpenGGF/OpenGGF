@@ -49,7 +49,7 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
     }
 
     @Override
-    public boolean supportsDeterministicRuntimePresentation() {
+    public boolean supportsLiveCapturePresentation() {
         return true;
     }
 

@@ -2,6 +2,9 @@ package com.openggf.audio;
 
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.runtime.AudioFrameClock;
+import com.openggf.audio.runtime.AudioOutputFifo;
+import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
@@ -56,6 +59,8 @@ class TestSegaPcmCommandRouting {
         audio.setBackend(backend);
         audio.setAudioProfile(new Sonic3kAudioProfile());
         audio.setRom(rom);
+        audio.setDeterministicAudioRuntime(new StreamBackedDeterministicAudioRuntime(
+                new AudioFrameClock(48_000, 60), new AudioOutputFifo(48_000)));
 
         audio.playMusic(Sonic3kSmpsConstants.CMD_SEGA);
         audio.playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);

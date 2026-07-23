@@ -64,6 +64,10 @@ public interface DeterministicAudioRuntime {
         return 0;
     }
 
+    default int availablePresentationFrames() {
+        return 0;
+    }
+
     default void flushPresentationFifo() {
     }
 

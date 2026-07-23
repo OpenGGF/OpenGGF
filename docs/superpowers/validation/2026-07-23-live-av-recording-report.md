@@ -41,12 +41,16 @@ User documentation was updated in `README.md`, `CONFIGURATION.md`, and
 
 ## Automated Test Evidence
 
-- Post-validation production regression: `TestAudioManagerRuntimeInstallation`
-  now exercises the LWJGL backend's real stream-backed presentation path without
-  an OpenAL device. It proves `beginLiveCaptureAudio(...)` succeeds and that
-  draining speaker PCM does not consume the capture-owned copy. The focused
-  test passed (3 tests), and the subsequent full `mvn test -Dmse=off` run passed
-  12,568 tests with 0 failures/errors and 11 skipped.
+- A manual production run exposed that globally enabling deterministic
+  presentation on LWJGL silenced gameplay audio. The corrective regression
+  keeps ordinary LWJGL sessions on the legacy/NoOp path and hot-attaches the
+  stream-backed runtime only while recording. `TestAudioManagerRuntimeInstallation`
+  exercises that production path without an OpenAL device: ongoing music and
+  SFX survive capture start, speaker and capture drains are independent,
+  synthesized-but-not-yet-uploaded PCM bridges capture stop, and stopping
+  during rewind defers legacy restoration until reverse release. Focused audio
+  verification passed 36 tests; the corrective full `mvn test -Dmse=off` run
+  passed 12,569 tests with 0 failures/errors and 11 skipped.
 - Task-focused audio, viewport, controller, Engine-boundary, configuration,
   and media tests passed throughout Tasks 2–7. The final media command
   `mvn -Dtest=LiveCaptureMediaSmokeTest,FfmpegEncoderSmokeTest test` executed

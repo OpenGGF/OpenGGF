@@ -181,6 +181,11 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
         return read;
     }
 
+    @Override
+    public int availablePresentationFrames() {
+        return outputFifo.availableFrames();
+    }
+
     public PresentationAudioCapture openPresentationAudioCapture(int sampleRate, int frameRate) {
         if (presentationAudioCaptureTap != null) {
             throw new IllegalStateException("A presentation audio capture is already attached");

@@ -204,6 +204,10 @@ public interface AudioBackend {
         return false;
     }
 
+    default boolean supportsLiveCapturePresentation() {
+        return false;
+    }
+
     default int outputSampleRate() {
         return 48_000;
     }

@@ -41,25 +41,55 @@ class TestAudioManagerRuntimeInstallation {
     }
 
     @Test
-    void lwjglBackendFeedsSpeakerAndLiveCaptureFromSameNonConsumingPresentationFrame() {
+    void lwjglBackendKeepsLegacyPresentationUntilLiveCaptureStarts() {
         TestLwjglBackend backend = new TestLwjglBackend();
         AudioManager audio = AudioManager.getInstance();
         audio.setBackend(backend);
+        backend.installLegacyStreams(new CountingStereoStream(1), new ConstantStereoStream(10));
+        backend.pumpSpeaker();
+        assertArrayEquals(new short[] {11, 11}, backend.firstSpeakerFrames(1));
 
-        StreamBackedDeterministicAudioRuntime runtime =
-                assertInstanceOf(StreamBackedDeterministicAudioRuntime.class, backend.attachedRuntime);
-        runtime.setMusicStream(new SequenceStream(1, 10, 2, 20));
+        assertSame(NoOpDeterministicAudioRuntime.INSTANCE, backend.attachedRuntime);
+
         LiveCaptureAudioHandle capture = audio.beginLiveCaptureAudio(60);
+        assertInstanceOf(StreamBackedDeterministicAudioRuntime.class, backend.attachedRuntime);
 
         audio.advanceGameplayFrameAudio();
         backend.pumpSpeaker();
         short[] captured = new short[4];
 
-        assertArrayEquals(new short[] {1, 10, 2, 20}, backend.firstSpeakerFrames(2));
+        assertArrayEquals(new short[] {1035, 1035, 1036, 1036}, backend.firstSpeakerFrames(2));
         assertEquals(2, capture.drainPresentationFrame(captured));
-        assertArrayEquals(new short[] {1, 10, 2, 20}, captured,
+        assertArrayEquals(new short[] {1035, 1035, 1036, 1036}, captured,
                 "speaker draining must not consume the capture-owned PCM");
+
+        audio.advanceGameplayFrameAudio();
         capture.close();
+        assertSame(NoOpDeterministicAudioRuntime.INSTANCE, backend.attachedRuntime);
+        backend.pumpSpeaker();
+        assertArrayEquals(new short[] {
+                1037, 1037, 1038, 1038, 1039, 1039
+        }, backend.firstSpeakerFrames(3), "stop must bridge queued runtime PCM into legacy playback");
+    }
+
+    @Test
+    void stoppingCaptureDuringRewindDefersLegacyRestoreUntilReverseEnds() {
+        TestLwjglBackend backend = new TestLwjglBackend();
+        AudioManager audio = AudioManager.getInstance();
+        audio.setBackend(backend);
+        backend.installLegacyStreams(new CountingStereoStream(1), null);
+
+        LiveCaptureAudioHandle capture = audio.beginLiveCaptureAudio(60);
+        audio.advanceGameplayFrameAudio();
+        audio.beginReverseAudioPresentation();
+        capture.close();
+
+        assertInstanceOf(StreamBackedDeterministicAudioRuntime.class, backend.attachedRuntime,
+                "the rewind cursor owner must remain attached until reverse presentation ends");
+
+        audio.endReverseAudioPresentation();
+
+        assertSame(NoOpDeterministicAudioRuntime.INSTANCE, backend.attachedRuntime);
     }
 
     private static class CapturingNullBackend extends NullAudioBackend {
@@ -128,25 +158,52 @@ class TestAudioManagerRuntimeInstallation {
         private short[] firstSpeakerFrames(int frames) {
             return Arrays.copyOf(uploaded, frames * 2);
         }
+
+        private void installLegacyStreams(AudioStream music, AudioStream sfx) {
+            currentStream = music;
+            sfxStream = sfx;
+        }
     }
 
-    private static final class SequenceStream implements AudioStream {
-        private final short[] samples;
-        private int cursor;
+    private static final class CountingStereoStream implements AudioStream {
+        private int nextFrame;
 
-        private SequenceStream(int... samples) {
-            this.samples = new short[samples.length];
-            for (int i = 0; i < samples.length; i++) {
-                this.samples[i] = (short) samples[i];
-            }
+        private CountingStereoStream(int firstFrame) {
+            nextFrame = firstFrame;
         }
 
         @Override
         public int read(short[] buffer) {
-            int count = Math.min(buffer.length, samples.length - cursor);
-            System.arraycopy(samples, cursor, buffer, 0, count);
-            cursor += count;
-            return count;
+            return read(buffer, buffer.length);
+        }
+
+        @Override
+        public int read(short[] buffer, int samples) {
+            for (int i = 0; i < samples; i += 2) {
+                short value = (short) nextFrame++;
+                buffer[i] = value;
+                buffer[i + 1] = value;
+            }
+            return samples;
+        }
+    }
+
+    private static final class ConstantStereoStream implements AudioStream {
+        private final short value;
+
+        private ConstantStereoStream(int value) {
+            this.value = (short) value;
+        }
+
+        @Override
+        public int read(short[] buffer) {
+            return read(buffer, buffer.length);
+        }
+
+        @Override
+        public int read(short[] buffer, int samples) {
+            Arrays.fill(buffer, 0, samples, value);
+            return samples;
         }
     }
 }

@@ -61,6 +61,8 @@ public class AudioManager {
     private boolean audioFrameOwnedExternally;
     private boolean audioFrameAdvanced;
     private boolean reverseAudioPresentationActive;
+    private StreamBackedDeterministicAudioRuntime deferredLiveCaptureRuntime;
+    private DeterministicAudioRuntime deferredLiveCapturePriorRuntime;
 
     // Donor audio overlay: secondary SFX path for cross-game feature donation
     private final Map<String, SmpsLoader> donorLoaders = new HashMap<>();
@@ -119,16 +121,42 @@ public class AudioManager {
         if (activeLiveCaptureAudioHandle != null) {
             throw new IllegalStateException("A live capture audio handle is already attached");
         }
+        DeterministicAudioRuntime priorRuntime = null;
+        boolean ownsRuntime = false;
+        if (!(deterministicAudioRuntime instanceof StreamBackedDeterministicAudioRuntime)) {
+            if (backend == null || !backend.supportsLiveCapturePresentation()) {
+                throw new IllegalStateException("The active audio runtime does not support live capture");
+            }
+            priorRuntime = deterministicAudioRuntime;
+            int sampleRate = Math.max(1, backend.outputSampleRate());
+            int minFrameCapacity = Math.max(1, sampleRate / Math.max(1, frameRate));
+            int fifoFrames = Math.max(minFrameCapacity, sampleRate * OUTPUT_FIFO_SECONDS);
+            int historyFrames = Math.max(minFrameCapacity, configuredPcmHistoryFrames(sampleRate));
+            int crossfadeFrames = Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000);
+            applyDeterministicAudioRuntime(new StreamBackedDeterministicAudioRuntime(
+                    new AudioFrameClock(sampleRate, frameRate),
+                    new AudioOutputFifo(fifoFrames),
+                    new PcmHistoryRing(historyFrames),
+                    crossfadeFrames));
+            ownsRuntime = true;
+        }
         if (!(deterministicAudioRuntime instanceof StreamBackedDeterministicAudioRuntime attachedRuntime)) {
             throw new IllegalStateException("The active audio runtime does not support live capture");
         }
-        int sampleRate = Math.max(1, backend.outputSampleRate());
-        PresentationAudioCapture capture =
-                attachedRuntime.openPresentationAudioCapture(sampleRate, frameRate);
-        ManagerLiveCaptureAudioHandle handle =
-                new ManagerLiveCaptureAudioHandle(attachedRuntime, capture);
-        activeLiveCaptureAudioHandle = handle;
-        return handle;
+        try {
+            int sampleRate = Math.max(1, backend.outputSampleRate());
+            PresentationAudioCapture capture =
+                    attachedRuntime.openPresentationAudioCapture(sampleRate, frameRate);
+            ManagerLiveCaptureAudioHandle handle =
+                    new ManagerLiveCaptureAudioHandle(attachedRuntime, capture, priorRuntime, ownsRuntime);
+            activeLiveCaptureAudioHandle = handle;
+            return handle;
+        } catch (RuntimeException | Error failure) {
+            if (ownsRuntime && deterministicAudioRuntime == attachedRuntime) {
+                applyDeterministicAudioRuntime(priorRuntime);
+            }
+            throw failure;
+        }
     }
 
     private synchronized void closeLiveCaptureAudio(ManagerLiveCaptureAudioHandle handle) {
@@ -141,6 +169,14 @@ public class AudioManager {
         } finally {
             if (activeLiveCaptureAudioHandle == handle) {
                 activeLiveCaptureAudioHandle = null;
+            }
+            if (handle.ownsRuntime && deterministicAudioRuntime == handle.attachedRuntime) {
+                if (reverseAudioPresentationActive) {
+                    deferredLiveCaptureRuntime = handle.attachedRuntime;
+                    deferredLiveCapturePriorRuntime = handle.priorRuntime;
+                } else {
+                    applyDeterministicAudioRuntime(handle.priorRuntime);
+                }
             }
         }
     }
@@ -404,9 +440,10 @@ public class AudioManager {
         }
         try {
             byte[] pcm = rom.readBytes(spec.address(), spec.length());
-            if (sendLiveBackendCommands()) {
-                backend.playPcmSample(pcm, spec.sampleRate());
-            }
+            // System PCM is not represented in AudioCommandTimeline. Always
+            // deliver it to the backend; an attached presentation runtime is
+            // rebound by the backend to the resulting PCM stream.
+            backend.playPcmSample(pcm, spec.sampleRate());
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Failed to play SEGA PCM sample", e);
         }
@@ -416,9 +453,7 @@ public class AudioManager {
         if (suppressingRewindReplay()) {
             return;
         }
-        if (sendLiveBackendCommands()) {
-            backend.stopPcmSample();
-        }
+        backend.stopPcmSample();
     }
 
     private SmpsDriverSnapshot.DependencyResolver createSmpsDependencyResolver() {
@@ -770,6 +805,12 @@ public class AudioManager {
         deterministicAudioRuntime.endReversePresentation();
         if (backend != null) {
             backend.endReversePresentation();
+        }
+        if (deterministicAudioRuntime == deferredLiveCaptureRuntime) {
+            DeterministicAudioRuntime prior = deferredLiveCapturePriorRuntime;
+            deferredLiveCaptureRuntime = null;
+            deferredLiveCapturePriorRuntime = null;
+            applyDeterministicAudioRuntime(prior);
         }
     }
 
@@ -1311,6 +1352,8 @@ public class AudioManager {
         this.audioFrameOwnedExternally = false;
         this.audioFrameAdvanced = false;
         this.reverseAudioPresentationActive = false;
+        this.deferredLiveCaptureRuntime = null;
+        this.deferredLiveCapturePriorRuntime = null;
         this.deterministicAudioRuntime.clearSubmittedCommands();
         this.deterministicAudioRuntime.clearPcmHistory();
         this.commandTimeline.clear();
@@ -1335,13 +1378,19 @@ public class AudioManager {
     private final class ManagerLiveCaptureAudioHandle implements LiveCaptureAudioHandle {
         private final StreamBackedDeterministicAudioRuntime attachedRuntime;
         private final PresentationAudioCapture capture;
+        private final DeterministicAudioRuntime priorRuntime;
+        private final boolean ownsRuntime;
         private boolean closed;
 
         private ManagerLiveCaptureAudioHandle(
                 StreamBackedDeterministicAudioRuntime attachedRuntime,
-                PresentationAudioCapture capture) {
+                PresentationAudioCapture capture,
+                DeterministicAudioRuntime priorRuntime,
+                boolean ownsRuntime) {
             this.attachedRuntime = attachedRuntime;
             this.capture = capture;
+            this.priorRuntime = priorRuntime;
+            this.ownsRuntime = ownsRuntime;
         }
 
         @Override

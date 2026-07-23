@@ -3,7 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Fix: the production LWJGL audio backend now enables its existing deterministic presentation path, allowing live viewport recording to attach its non-consuming audio tap while speaker playback continues from the same PCM stream.
+- Fix: live viewport recording now hot-attaches its deterministic audio tap only for the recording lifetime, preserving normal LWJGL playback before and after capture. Ongoing music/SFX are rebound without restarting, synthesized speaker PCM is handed back without a stop gap, reverse ownership is retained until rewind release, and non-timeline SEGA PCM commands remain audible and recordable.
 - Feature: configurable live viewport A/V recording toggles with `Shift+O` by default, producing lossless FFV1/stereo-FLAC MKV files in `capture.outputDir`. Capture is limited to the fixed game viewport, finalizes automatically on viewport/resize changes and ordinary engine shutdown, and preserves synchronized forward, silent pause/frame-step, and reverse-rewind presentation audio without consuming speaker output. The window-only red-dot/white-`REC` indicator and F12 screenshots remain outside the recorded frames. This requires `ffmpeg` on `PATH` and is separate from the Shift+F9 input/movie recorder.
 - Tooling: add Linux `dev.sh`, `run.sh`, and `run_renderdoc.sh` equivalents for the root Windows engine launchers.
 - Fix: ICZ Act 1 miniboss rendering now skips orb child slots until the camera gate creates their state, preventing a null dereference while approaching the arena with boss art ready.
