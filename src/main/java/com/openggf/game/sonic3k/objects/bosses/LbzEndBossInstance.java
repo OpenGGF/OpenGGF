@@ -1117,6 +1117,15 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
+        public boolean rejectsZeroDistanceTopSolidLanding() {
+            // sub_73FCE calls SolidObjectTop with d3=7. At loc_1E45A the
+            // exact-zero surface distance is outside the accepted -$10..-$1
+            // window, preventing a later overlapping chain slot from stealing
+            // a ride established by the preceding slot.
+            return true;
+        }
+
+        @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_END_BOSS);
             if (renderer != null && renderer.isReady()) {

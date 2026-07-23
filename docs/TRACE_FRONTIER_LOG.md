@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ end-boss linked-platform takeover boundary
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 37910 to
+  frame 38873.** The next divergence is CPU Tails' ground speed (`0` expected
+  versus `$0018` actual).
+- Root: during the boss-platform circular sweep, Tails can overlap several
+  linked platform slots in one `Process_Sprites` pass. Native
+  `SolidObjectTop` accepts the preceding slot's one-pixel vertical overlap,
+  but its `loc_1E45A` range rejects the next slot's exact-zero boundary. The
+  engine accepted zero for this call site, transferred Tails to the lower
+  platform, and left both his Y and `Tails_CPU_interact` word wrong.
+- Fix: the concrete `sub_73FCE` platform profile now excludes exact-zero new
+  landings while retaining its normal continued-ride path. Slot-order ride
+  takeover therefore follows the native standing-bit/interact-pointer flow
+  without player, route, or frame special cases.
+- Validation: all 18 focused LBZ end-boss tests pass and the focused replay
+  reaches frame 38873. The later corrected path currently reports 1333
+  release-blocking errors. The complete `*TraceReplay#replayMatchesTrace`
+  sweep reports 61 tests, 45 green and the same 16 documented red routes.
+  HCZ remains at frame 31335, ICZ remains green, and no S3K, S1, or S2
+  frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ end-boss platform balance width
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 37859 to
