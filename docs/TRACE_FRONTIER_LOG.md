@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - S3K ending-pose playable-slot replay phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 22073 to
+  frame 22188.** The next divergence is the results handoff animation
+  (`$05` expected versus `$13` actual).
+- Root: a results-era VBlank sample lands after the playable slots but before
+  later object slots. The replay model normally recognizes that partial native
+  pass from `tails_cpu_normal_step`, but Tails' ending routine `$06` does not
+  emit that hook even though `Sonic_RecordPos` still advances the shared
+  position-history cursor.
+- Fix: S3K replay phase classification now treats a one-entry
+  `Pos_table_index` advance as generic playable-slot execution evidence on an
+  otherwise VBlank-only, input-stable row. Replay advances animation only and
+  does not hydrate any recorded value into engine state. Focused coverage locks
+  the LBZ ending-routine case.
+- Validation: the focused execution-model test passes. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes; LBZ reaches frame 22188 with 5490 remaining
+  errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ retained results state across act reload
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 21729 to

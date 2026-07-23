@@ -673,12 +673,17 @@ public final class TraceReplayBootstrap {
             return TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD;
         }
         if (counterPhase == TraceExecutionPhase.VBLANK_ONLY
-                && hasSidekickCpuExecutionHookWithoutInputEdge(trace, previous, current)) {
+                && (hasSidekickCpuExecutionHookWithoutInputEdge(trace, previous, current)
+                        || hasPlayableSlotHistoryAdvanceWithoutInputEdge(
+                                trace, previous, current))) {
             // The VBlank sample can land after the playable slots (and their
             // Animate calls) but before the rest of Process_Sprites completes.
-            // The native Tails normal-step hook proves that prefix ran. Advance
-            // only playable animation state; a complete level tick would also
-            // run later object slots that are not yet visible in this sample.
+            // The native Tails normal-step hook normally proves that prefix
+            // ran. During ending routine $06 that hook is absent, but
+            // Pos_table_index advancing by one Sonic_RecordPos entry proves the
+            // same playable-slot prefix completed. Advance only playable
+            // animation state; a complete level tick would also run later
+            // object slots that are not yet visible in this sample.
             return TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
         }
         if (counterPhase == TraceExecutionPhase.VBLANK_ONLY
@@ -814,6 +819,27 @@ public final class TraceReplayBootstrap {
         }
         for (TraceEvent event : trace.getEventsForFrame(current.frame())) {
             if (event instanceof TraceEvent.TailsCpuNormalStep) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasPlayableSlotHistoryAdvanceWithoutInputEdge(
+            TraceData trace, TraceFrame previous, TraceFrame current) {
+        if (trace == null || previous == null || current == null
+                || current.input() != previous.input()
+                || (current.lagCounter() >= 0 && previous.lagCounter() >= 0
+                        && current.lagCounter() > previous.lagCounter())) {
+            return false;
+        }
+        for (String sidekick : trace.metadata().recordedSidekicks()) {
+            TraceEvent.CpuState before =
+                    trace.cpuStateForFrame(previous.frame(), sidekick);
+            TraceEvent.CpuState after =
+                    trace.cpuStateForFrame(current.frame(), sidekick);
+            if (before != null && after != null
+                    && ((after.posTableIndex() - before.posTableIndex()) & 0xFF) == 4) {
                 return true;
             }
         }

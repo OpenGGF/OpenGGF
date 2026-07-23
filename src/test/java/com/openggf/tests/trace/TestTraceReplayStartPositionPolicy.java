@@ -151,6 +151,26 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
+    void s3kEndingHistoryAdvanceProvesPlayableAnimationSliceWithoutNormalHook() throws Exception {
+        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
+        TraceFrame previous = trace.getFrame(22067);
+        TraceFrame current = trace.getFrame(22068);
+        TraceEvent.CpuState before = trace.cpuStateForFrame(previous.frame(), "tails");
+        TraceEvent.CpuState after = trace.cpuStateForFrame(current.frame(), "tails");
+
+        assertEquals(6, after.cpuRoutine(),
+                "The ending-pose CPU routine intentionally emits no tails_cpu_normal_step hook.");
+        assertFalse(trace.getEventsForFrame(current.frame()).stream()
+                .anyMatch(TraceEvent.TailsCpuNormalStep.class::isInstance));
+        assertEquals(4, (after.posTableIndex() - before.posTableIndex()) & 0xFF,
+                "Sonic_RecordPos still advances one history entry after the playable slots run.");
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceExecutionModel.forGame("s3k").phaseFor(previous, current));
+        assertEquals(TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY,
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+    }
+
+    @Test
     void s3kMovingSidekickDuckToWalkCanHoldOnlyItsAnimateDispatch() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
         TraceFrame previous = trace.getFrame(30485);
