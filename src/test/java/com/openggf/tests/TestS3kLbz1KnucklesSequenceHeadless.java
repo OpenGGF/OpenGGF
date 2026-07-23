@@ -771,7 +771,7 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         assertNotNull(findActive(CutsceneKnucklesLbz1RangeHelper.class),
                 "Init should create the invisible range helper at x offset -$40.");
 
-        fixture.stepFrame(false, false, false, false, false);
+        fixture.stepFrame(false, false, false, true, false);
 
         assertTrue(knuckles.hasHelperSignalForTest(),
                 "Helper overlap should set parent signal bit 3.");
@@ -779,6 +779,8 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                 "sub_62800 writes object_control=$81 for touched players.");
         assertTrue(player.isObjectControlSuppressesMovement(),
                 "object_control=$81 should suppress normal movement while the cutscene owns Sonic.");
+        assertTrue(player.isRightPressed(),
+                "Ctrl_1_logical must retain live input for Sonic_RecordPos while object control owns movement.");
 
         fixture.stepIdleFrames(59);
         assertEquals(0x04, knuckles.getRoutineForTest(),

@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ1 rival-Knuckles exit and cup handoff
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 18938 to
+  frame 19095.** The next divergence is CPU Tails' Y position (`$022F`
+  expected versus `$0235` actual).
+- Root: `CutsceneKnux_LBZ1` remained alive past its native render cutoff and
+  used the engine's separate control lock while applying `object_control=$81`.
+  Its eventual release did not mirror both fixed player slots, and the cup's
+  private rider state then restored movement suppression over the cutscene
+  handoff. Together these lost Sonic's retained logical input, froze Tails,
+  and delayed Sonic's native cup jump/roll animation.
+- Fix: the cutscene exit now uses its prior-render position and native sprite
+  extent, captures with object control alone, releases registered sidekicks
+  alongside Player 1, and lets the cup consume the falling cutscene-control
+  edge while preserving its position-only hold. The cup publishes its bespoke
+  jump velocities and the character's current roll-script cursor on the
+  release dispatch.
+- Validation: all 47 focused cutscene, cup, and rewind tests pass and the LBZ
+  replay reaches frame 19095 with 187 fewer downstream errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. No S3K, S1, or S2 frontier regressed.
+
 ## 2026-07-22 - S3K automatic-tunnel logical input ownership
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 17402 to

@@ -110,9 +110,9 @@ public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstanc
             state.setLbz1KnucklesCutsceneControlLocked(true);
         }
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
-        player.clearForcedInputMask();
-        player.clearLogicalInputState();
+        // sub_62800 only writes object_control and facing.  Ctrl_1_logical is
+        // left intact, so Sonic_RecordPos can retain the directional sample
+        // that Player 2 consumes after the cutscene releases both slots.
         player.setDirection(Direction.RIGHT);
     }
 

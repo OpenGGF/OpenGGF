@@ -235,7 +235,10 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
     }
 
     private void routineExitRight() {
-        if (isOnScreen(96)) {
+        // loc_62778 reads render_flags.on_screen before moving Knuckles.  The
+        // flag comes from the prior Render_Sprites pass rather than the wider
+        // placement lifetime margin used by ordinary tracked objects.
+        if (isPreUpdateWithinRenderSpriteBounds(0x0E, 0)) {
             currentX += EXIT_SPEED;
             animateRun();
             return;
@@ -320,11 +323,14 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         if (services().spriteManager() != null) {
             for (com.openggf.sprites.Sprite sprite : services().spriteManager().getAllSprites()) {
                 if (sprite instanceof AbstractPlayableSprite player) {
-                    ObjectControlState.none().applyTo(player);
-                    player.setControlLocked(false);
-                    player.clearForcedInputMask();
-                    player.clearLogicalInputState();
+                    releasePlayer(player);
                 }
+            }
+            // Player 2 is maintained in the sidekick registry even during CPU
+            // suppression.  Clear the native fixed-slot counterpart explicitly,
+            // mirroring loc_6278A's Player_1/Player_2 object_control writes.
+            for (AbstractPlayableSprite sidekick : services().spriteManager().getRegisteredSidekicks()) {
+                releasePlayer(sidekick);
             }
         }
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
@@ -335,6 +341,13 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         services().camera().setMaxXTarget((short) EXIT_CAMERA_MAX_X);
         services().camera().setMaxYTarget((short) EXIT_CAMERA_MAX_Y_TARGET);
         Sonic3kZoneEvents.loadPaletteFromPalPointers(Sonic3kConstants.PAL_POINTERS_LBZ1_INDEX);
+    }
+
+    private static void releasePlayer(AbstractPlayableSprite player) {
+        ObjectControlState.none().applyTo(player);
+        player.setControlLocked(false);
+        player.clearForcedInputMask();
+        player.clearLogicalInputState();
     }
 
     private void applyCollapseShake(int frameCounter) {

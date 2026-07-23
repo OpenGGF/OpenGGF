@@ -91,6 +91,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     private boolean flickerMode;
     private boolean flickerHidden;
     private boolean attachHidden;
+    private boolean cutsceneControlWasLocked;
     @RewindTransient(reason = "Structural child reference; the attachment child is spawned from parent state.")
     private AttachChild attachChild;
     @RewindTransient(reason = "Structural child reference; the base child is spawned from parent state.")
@@ -196,7 +197,10 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         if (tryServices() != null) {
             checkpointAll();
         }
-        processPlayers(playerEntity);
+        boolean cutsceneControlLocked = isLbz1KnucklesCutsceneControlLocked();
+        boolean cutsceneReleased = cutsceneControlWasLocked && !cutsceneControlLocked;
+        processPlayers(playerEntity, cutsceneReleased);
+        cutsceneControlWasLocked = cutsceneControlLocked;
         updateDynamicSpawn(x, y);
     }
 
@@ -510,14 +514,21 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         }
     }
 
-    private void processPlayers(PlayableEntity playerEntity) {
-        processPlayer(mainSprite(playerEntity), p1);
-        processPlayer(nativeP2OrNull(), p2);
+    private void processPlayers(PlayableEntity playerEntity, boolean cutsceneReleased) {
+        processPlayer(mainSprite(playerEntity), p1, cutsceneReleased);
+        processPlayer(nativeP2OrNull(), p2, cutsceneReleased);
     }
 
-    private void processPlayer(AbstractPlayableSprite player, PlayerState state) {
+    private void processPlayer(AbstractPlayableSprite player, PlayerState state, boolean cutsceneReleased) {
         if (player == null) {
             return;
+        }
+        if (cutsceneReleased && state.inside) {
+            // CutsceneKnux_LBZ1 clears object_control after Obj18's slot.  On
+            // the following cup dispatch, preserve the standing contact but
+            // retire the cup's movement-control write so it does not restore
+            // object_control=$03 over the cutscene handoff.
+            state.cutsceneReleased = true;
         }
         if (!state.inside) {
             if (state.cooldown > 0) {
@@ -532,6 +543,15 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
         if (!isPlayerValidForCapture(player)) {
             releasePlayer(player, state, OFFSCREEN_RELEASE_COOLDOWN, false);
+            return;
+        }
+        if (state.cutsceneReleased) {
+            if (player.isJumpJustPressed()) {
+                jumpReleasePlayer(player, state);
+                publishInitialJumpMapping(player);
+                return;
+            }
+            holdPlayerPosition(player);
             return;
         }
         if (player.isJumpJustPressed() && !isLbz1KnucklesCutsceneControlLocked()) {
@@ -557,6 +577,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     private void capturePlayer(AbstractPlayableSprite player, PlayerState state) {
         state.inside = true;
+        state.cutsceneReleased = false;
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
@@ -572,6 +593,10 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     private void holdPlayer(AbstractPlayableSprite player) {
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        holdPlayerPosition(player);
+    }
+
+    private void holdPlayerPosition(AbstractPlayableSprite player) {
         NativePositionOps.writeXPosPreserveSubpixel(player, x);
         NativePositionOps.writeYPosPreserveSubpixel(player, y + PLAYER_Y_OFFSET);
         player.setPriorityBucket(isPlayerBehindCup() ? PLAYER_PRIORITY : PLAYER_CUP_PRIORITY);
@@ -601,8 +626,26 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         player.setYSpeed((short) -0x480);
     }
 
+    private static void publishInitialJumpMapping(AbstractPlayableSprite player) {
+        if (player.getAnimationSet() != null
+                && player.getAnimationSet().getScript(2) != null
+                && !player.getAnimationSet().getScript(2).frames().isEmpty()) {
+            // The native object write is visible in the same post-object
+            // snapshot as the release velocities. Publish the character's own
+            // first jump-script mapping rather than retaining the cup twist.
+            var script = player.getAnimationSet().getScript(2);
+            player.setMappingFrame(script.frames().getFirst());
+            player.setAnimationFrameIndex(1);
+            player.setAnimationTick(Math.max(0, 0x400 - Math.abs(player.getGSpeed())) >> 8);
+            if (player.getAnimationManager() != null) {
+                player.getAnimationManager().publishPreviousAnimationId(2);
+            }
+        }
+    }
+
     private void releasePlayer(AbstractPlayableSprite player, PlayerState state, int cooldown, boolean airborne) {
         state.inside = false;
+        state.cutsceneReleased = false;
         state.cooldown = cooldown;
         player.setPriorityBucket(PLAYER_PRIORITY);
         ObjectControlState.none().applyTo(player);
@@ -620,6 +663,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
             return;
         }
         state.inside = false;
+        state.cutsceneReleased = false;
         state.cooldown = RELEASE_COOLDOWN;
         ObjectControlState.none().applyTo(player);
         player.setObjectMappingFrameControl(false);
@@ -645,7 +689,11 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     private boolean isLbz1KnucklesCutsceneControlLocked() {
-        return S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry())
+        var objectServices = tryServices();
+        if (objectServices == null) {
+            return false;
+        }
+        return S3kRuntimeStates.currentLbz(objectServices.zoneRuntimeRegistry())
                 .map(com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState::isLbz1KnucklesCutsceneControlLocked)
                 .orElse(false);
     }
@@ -783,20 +831,22 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     private static final class PlayerState implements RewindStateful<PlayerState.Snapshot> {
         boolean inside;
+        boolean cutsceneReleased;
         int cooldown;
 
         @Override
         public Snapshot captureRewindStateValue() {
-            return new Snapshot(inside, cooldown);
+            return new Snapshot(inside, cutsceneReleased, cooldown);
         }
 
         @Override
         public void restoreRewindStateValue(Snapshot state) {
             inside = state.inside();
+            cutsceneReleased = state.cutsceneReleased();
             cooldown = state.cooldown();
         }
 
-        private record Snapshot(boolean inside, int cooldown) {
+        private record Snapshot(boolean inside, boolean cutsceneReleased, int cooldown) {
         }
     }
 

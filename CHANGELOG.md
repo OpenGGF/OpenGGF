@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the LBZ1 rival-Knuckles exit now observes the native render cutoff, leaves logical pad history live under `object_control=$81`, releases both fixed player slots, and hands cup position/control/roll animation back in native object order. This advances the combined LBZ frontier from frame 18938 to frame 19095 without regressing another trace frontier.
 - Fix: S3K automatic tunnels now write only native `object_control=$81` and leave the separate `Ctrl_1_locked` byte untouched, allowing ROM logical input history to update while object movement remains suppressed. This advances the combined LBZ frontier from frame 17402 to frame 18938 without regressing another trace frontier.
 - Fix: LBZ Snale Blasters now preserve `Touch_Enemy`'s live `collision_flags` clear after a protected hit and re-arm collision only from native routines that explicitly write the byte. This prevents repeated overlap rebounds and advances the combined LBZ frontier from frame 16585 to frame 17402 without regressing another trace frontier.
 - Fix: LBZ tube elevators now retain `CheckPlayer`'s final mapping/DPLC fallthrough after `WaitExit` clears object control, while allowing normal player animation to resume on the next frame. This advances the combined LBZ frontier from frame 15599 to frame 16585 without regressing another trace frontier.
