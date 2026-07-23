@@ -219,6 +219,12 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
         player.setRollingJump(false);
         player.setFlipAngle(0);
         player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
+        // Obj_LBZLoweringGrapple runs after the native player slot. The jump
+        // press that releases the handle has therefore already missed
+        // Sonic_ShieldMoves for this frame; when our consolidated frame runs
+        // the object before player movement, hide that same edge from the
+        // airborne ability pass while preserving the held jump state.
+        player.suppressNextJumpPress();
     }
 
     private void clearGrab(AbstractPlayableSprite player, int slot, int frameCounter, int releaseCooldown) {

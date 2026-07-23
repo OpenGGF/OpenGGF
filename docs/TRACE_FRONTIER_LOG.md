@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ lowering-grapple release input phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 33571 to
+  frame 34752.** The next divergence is CPU Tails' horizontal position
+  (`$2D3E` expected versus `$2D3A` actual), with the first subpixel mismatch
+  occurring on the same frame.
+- Root: `Obj_LBZLoweringGrapple` occupies a later native SST slot than Sonic.
+  The fresh jump press therefore releases the handle only after Sonic's player
+  routine has already missed `Sonic_ShieldMoves`. The engine's consolidated
+  object-before-player frame exposed that same input edge to the immediately
+  following airborne pass, activating Sonic's Bubble Shield bounce and
+  replacing the correct grapple launch velocities with `$0000,$0800`.
+- Fix: the lowering grapple now suppresses only the next fresh jump edge after
+  its jump release, while retaining the held jump state and its directional
+  launch. This uses the existing object-slot phase handoff already shared by
+  other native post-player grab objects; it is driven by the concrete release
+  routine and input edge, without a zone, route, or frame exception.
+- Validation: all nine focused lowering-grapple tests pass and the focused LBZ
+  replay reaches frame 34752. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - S3K main-player landing angle publication
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 30784 to
