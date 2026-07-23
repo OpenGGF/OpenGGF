@@ -324,6 +324,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (iczEvents != null) {
             iczEvents.updatePostTitleAct2SizeWorkers();
         }
+        if (lbzEvents != null) {
+            lbzEvents.updatePostTitleAct2SizeWorkers();
+        }
         if (hczEvents != null) {
             hczEvents.updateRetainedCarrierObjectPass(currentAct);
         }
@@ -1167,6 +1170,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (iczEvents != null) {
             iczEvents.preparePostTitleAct2SizeChange();
         }
+        if (lbzEvents != null) {
+            lbzEvents.preparePostTitleAct2SizeChange();
+        }
     }
 
     @Override
@@ -1611,6 +1617,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   1 byte    icz handler present flag
         //   4 bytes   icz schema payload length, when present
         //   N bytes   icz schema payload, when present
+        //   1 byte    lbz handler present flag
+        //   4 bytes   lbz schema payload length, when present
+        //   N bytes   lbz schema payload, when present
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
         byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
         byte[] hczBytes = hczEvents != null ? ZoneEventSchemaSidecar.capture(hczEvents) : null;
@@ -1618,6 +1627,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] mgzBytes = mgzEvents != null ? ZoneEventSchemaSidecar.capture(mgzEvents) : null;
         byte[] mhzBytes = mhzEvents != null ? ZoneEventSchemaSidecar.capture(mhzEvents) : null;
         byte[] iczBytes = iczEvents != null ? ZoneEventSchemaSidecar.capture(iczEvents) : null;
+        byte[] lbzBytes = lbzEvents != null ? ZoneEventSchemaSidecar.capture(lbzEvents) : null;
         int size = EXTRA_MANAGER_BYTES;
         size += aizBytes != null ? 1 + Integer.BYTES + aizBytes.length : 1;
         size += hczBytes != null ? 1 + Integer.BYTES + hczBytes.length : 1;
@@ -1625,6 +1635,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         size += mgzBytes != null ? 1 + Integer.BYTES + mgzBytes.length : 1;
         size += mhzBytes != null ? 1 + Integer.BYTES + mhzBytes.length : 1;
         size += iczBytes != null ? 1 + Integer.BYTES + iczBytes.length : 1;
+        size += lbzBytes != null ? 1 + Integer.BYTES + lbzBytes.length : 1;
         size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES;
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(size);
         // Manager-level
@@ -1685,6 +1696,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             buf.put((byte) 1);
             buf.putInt(iczBytes.length);
             buf.put(iczBytes);
+        } else {
+            buf.put((byte) 0);
+        }
+        // LBZ
+        if (lbzBytes != null) {
+            buf.put((byte) 1);
+            buf.putInt(lbzBytes.length);
+            buf.put(lbzBytes);
         } else {
             buf.put((byte) 0);
         }
@@ -1826,6 +1845,24 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 }
             }
         }
+        // LBZ
+        if (buf.remaining() >= 1) {
+            boolean lbzPresent = buf.get() != 0;
+            if (lbzPresent) {
+                if (buf.remaining() < Integer.BYTES) {
+                    return;
+                }
+                int lbzLength = buf.getInt();
+                if (lbzLength < 0 || buf.remaining() < lbzLength) {
+                    return;
+                }
+                byte[] bytes = new byte[lbzLength];
+                buf.get(bytes);
+                if (lbzEvents != null) {
+                    restoreLbzSidecar(bytes);
+                }
+            }
+        }
         if (buf.remaining() >= S3kFixedAirCountdownManager.REWIND_STATE_BYTES) {
             fixedAirCountdownManager.readRewindState(buf);
         }
@@ -1861,6 +1898,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (!skipLengthPrefixedSidecar(buf,
                 () -> expectedSidecarBytes(iczEvents, Sonic3kLevelEventManager::newIczFramingProbe))) {
+            return false;
+        }
+        if (!skipLengthPrefixedSidecar(buf,
+                () -> expectedSidecarBytes(lbzEvents, Sonic3kLevelEventManager::newLbzFramingProbe))) {
             return false;
         }
         return buf.remaining() == 0
@@ -1918,6 +1959,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     private static Object newIczFramingProbe() {
         return new Sonic3kICZEvents();
+    }
+
+    private static Object newLbzFramingProbe() {
+        return new Sonic3kLBZEvents();
     }
 
     private static boolean skipVariableLengthSchemaSidecar(
@@ -2024,6 +2069,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 e.addSuppressed(rollbackFailure);
             }
             LOG.warning("Skipping malformed ICZ zone-event rewind sidecar: " + e.getMessage());
+        }
+    }
+
+    private void restoreLbzSidecar(byte[] bytes) {
+        byte[] before = ZoneEventSchemaSidecar.capture(lbzEvents);
+        try {
+            ZoneEventSchemaSidecar.restore(lbzEvents, bytes);
+        } catch (RuntimeException e) {
+            try {
+                ZoneEventSchemaSidecar.restore(lbzEvents, before);
+            } catch (RuntimeException rollbackFailure) {
+                e.addSuppressed(rollbackFailure);
+            }
+            LOG.warning("Skipping malformed LBZ zone-event rewind sidecar: " + e.getMessage());
         }
     }
 }

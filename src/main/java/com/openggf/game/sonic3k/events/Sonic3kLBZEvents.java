@@ -135,6 +135,15 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private int lbz2CopiedWindowScreenX;
     private int lbz2CopiedWindowScreenY;
     private boolean lbz2CopiedWindowActive;
+    private int activeAct;
+    private boolean postTitleAct2SizeChangeActive;
+    private int postTitleAct2TargetMaxX;
+    private int postTitleAct2TargetMinY;
+    private int postTitleAct2TargetMaxY;
+    private boolean postTitleAct2WorkersCreatedThisPass;
+    private int act2MaxXAccumulator;
+    private int act2MinYAccumulator;
+    private int act2MaxYAccumulator;
     private final PatternDesc lbz2CopiedWindowPatternDesc = new PatternDesc();
     private final int[] endingCollapseFixed = new int[ENDING_COLLAPSE_COLUMN_COUNT];
     private final int[] endingCollapseScroll = new int[ENDING_COLLAPSE_COLUMN_COUNT];
@@ -184,6 +193,20 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     };
 
     @Override
+    public void init(int act) {
+        super.init(act);
+        activeAct = act;
+        postTitleAct2SizeChangeActive = false;
+        postTitleAct2TargetMaxX = 0;
+        postTitleAct2TargetMinY = 0;
+        postTitleAct2TargetMaxY = 0;
+        postTitleAct2WorkersCreatedThisPass = false;
+        act2MaxXAccumulator = 0;
+        act2MinYAccumulator = 0;
+        act2MaxYAccumulator = 0;
+    }
+
+    @Override
     public void update(int act, int frameCounter) {
         if (!hasRuntime()) {
             return;
@@ -231,6 +254,81 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 return;
             }
         }
+    }
+
+    /**
+     * ROM {@code Change_Act2Sizes}: publish LBZ2's loaded level bounds and
+     * retain the three gradual boundary workers created by the ending sign.
+     */
+    public void preparePostTitleAct2SizeChange() {
+        if (activeAct != 1 || postTitleAct2SizeChangeActive) {
+            return;
+        }
+        Level level = levelManager().getCurrentLevel();
+        if (level == null) {
+            return;
+        }
+        postTitleAct2TargetMaxX = level.getMaxX();
+        postTitleAct2TargetMinY = level.getMinY();
+        postTitleAct2TargetMaxY = level.getMaxY();
+        postTitleAct2SizeChangeActive = true;
+        postTitleAct2WorkersCreatedThisPass = true;
+        act2MaxXAccumulator = 0;
+        act2MinYAccumulator = 0;
+        act2MaxYAccumulator = 0;
+        camera().setMaxYTarget((short) postTitleAct2TargetMaxY);
+    }
+
+    /** Runs the retained {@code Child1_Act2LevelSize} slots before the camera step. */
+    public void updatePostTitleAct2SizeWorkers() {
+        if (!postTitleAct2SizeChangeActive) {
+            return;
+        }
+        if (postTitleAct2WorkersCreatedThisPass) {
+            postTitleAct2WorkersCreatedThisPass = false;
+            return;
+        }
+        boolean maxXDone = updateGradualMaxX();
+        boolean minYDone = updateGradualMinY();
+        boolean maxYDone = updateGradualMaxY();
+        postTitleAct2SizeChangeActive = !(maxXDone && minYDone && maxYDone);
+    }
+
+    private boolean updateGradualMaxX() {
+        int current = camera().getMaxX() & 0xFFFF;
+        act2MaxXAccumulator += 0x4000;
+        int next = current + (act2MaxXAccumulator >>> 16);
+        if (next >= postTitleAct2TargetMaxX) {
+            camera().setMaxX((short) postTitleAct2TargetMaxX);
+            return true;
+        }
+        camera().setMaxX((short) next);
+        return false;
+    }
+
+    private boolean updateGradualMinY() {
+        int current = camera().getMinY() & 0xFFFF;
+        act2MinYAccumulator += 0x4000;
+        int next = current - (act2MinYAccumulator >>> 16);
+        if (next <= postTitleAct2TargetMinY) {
+            camera().setMinY((short) postTitleAct2TargetMinY);
+            return true;
+        }
+        camera().setMinY((short) next);
+        return false;
+    }
+
+    private boolean updateGradualMaxY() {
+        int current = camera().getMaxY() & 0xFFFF;
+        act2MaxYAccumulator += 0x8000;
+        int next = current + (act2MaxYAccumulator >>> 16);
+        if (next > postTitleAct2TargetMaxY) {
+            camera().setMaxY((short) postTitleAct2TargetMaxY);
+            return true;
+        }
+        camera().setMaxY((short) next);
+        camera().setMaxYTarget((short) postTitleAct2TargetMaxY);
+        return false;
     }
 
     /**

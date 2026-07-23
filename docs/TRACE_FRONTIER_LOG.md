@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ post-title act-size workers
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 22334 to
+  frame 22412.** The next divergence is CPU Tails' X speed (`$0000` expected
+  versus `-$00E8` actual).
+- Root: LBZ1's seamless reload intentionally retains the offset act-1 camera
+  bounds. After the mutated title card exits, the native end-sign controller
+  publishes LBZ2's stored bounds and allocates three retained
+  `Child1_Act2LevelSize` workers. The engine did not model those workers, so
+  max X remained pinned at `$04A0` instead of beginning its quarter-pixel
+  accumulator advance.
+- Fix: LBZ now reads the loaded act-2 level limits at title completion and
+  runs the independent max-X, min-Y, and max-Y gradual workers before the
+  camera step, including their native next-object-pass creation phase. The
+  worker state is included in the LBZ zone-event rewind sidecar.
+- Validation: 78 focused LBZ event, transition, rewind-schema, rewind-snapshot,
+  and coverage tests pass, plus a dedicated LBZ sidecar round-trip test. The
+  complete `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green
+  and the same 16 documented red routes; LBZ reaches frame 22412 with 5207
+  remaining errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ mutated title-card state-reset phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 22226 to
