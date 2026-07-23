@@ -59,12 +59,6 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
             {0x1A, 7},
             {0x1B, 0}
     };
-    private static final byte[] SCREEN_SHAKE_CONTINUOUS = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
-    };
 
     private Routine routine = Routine.INIT;
     private int currentX;
@@ -212,19 +206,19 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
     }
 
     private void routineWaitBeforeCollapse(int frameCounter) {
-        applyCollapseShake(frameCounter);
+        applyCollapseShake();
         timer--;
         if (timer >= 0) {
             return;
         }
         spawnCollapseChildrenOnce();
-        applyCollapseShake(frameCounter);
+        applyCollapseShake();
         timer = COLLAPSE_WAIT;
         routine = Routine.COLLAPSE_WAIT;
     }
 
     private void routineCollapseWait(int frameCounter) {
-        applyCollapseShake(frameCounter);
+        applyCollapseShake();
         timer--;
         if (timer >= 0) {
             return;
@@ -358,10 +352,13 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         player.clearLogicalInputState();
     }
 
-    private void applyCollapseShake(int frameCounter) {
+    private void applyCollapseShake() {
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
         if (state != null) {
-            state.requestScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]);
+            // The object writes Screen_shake_flag=-1; it does not sample
+            // ScreenShakeArray2 itself. The later ShakeScreen/scroll phase
+            // owns the Level_frame_counter-indexed offset.
+            state.setLbz1KnucklesBombShakeActive(true);
         }
     }
 

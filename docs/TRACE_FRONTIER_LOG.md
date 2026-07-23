@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ1 continuous screen-shake phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 19151 to
+  frame 19664.** The next divergence is Sonic's ring count (`43` expected
+  versus `44` actual).
+- Root: `CutsceneKnux_LBZ1` writes `Screen_shake_flag=-1`; it does not sample
+  `ScreenShakeArray2` in the object pass. Native `ShakeScreen_Setup` samples
+  the later `Level_frame_counter` phase. The engine sampled in both the object
+  and event paths with the current published counter, moving the render camera
+  by one pixel on the visibility boundary. Tails consequently became visible
+  one frame late and retained a six-frame CPU flight counter.
+- Fix: the cutscene and collapse event now retain only the active native shake
+  flag. `SwScrlLbz` owns the concrete continuous-shake offset and samples
+  `ScreenShakeArray2[(frameCounter-1)&$3F]` in the later scroll phase.
+- Validation: the 14 LBZ scroll tests and 3 LBZ cutscene rewind tests pass.
+  The complete `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45
+  green and the same 16 documented red routes; LBZ reaches frame 19664 with
+  3420 remaining errors. No S3K, S1, or S2 frontier regressed. The unrelated
+  ICZ rewind-annotation baseline and the pre-existing LBZ headless Player 2
+  release assertion remain outside this change.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ1 ending-collapse barrier dispatch
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 19098 to

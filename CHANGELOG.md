@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ1's continuous collapse shake now retains the native `Screen_shake_flag` owner and samples `ScreenShakeArray2` only in the later scroll phase using the prior published level counter. This restores CPU Tails' native render-visible recovery edge and advances the combined LBZ frontier from frame 19151 to frame 19664 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: the LBZ1 ending-collapse barrier now materializes on the screen-event pass after Robotnik arms the collapse, then runs its native ungated, inclusive-edge `SolidObjectFull2` contact. This advances the combined LBZ frontier from frame 19098 to frame 19151 while preserving every other S3K, S1, and S2 trace frontier.
 - Fix: the LBZ1 rival-Knuckles camera-target handoff now publishes a rewind-safe, object-routine-owned request through the post-easing camera phase, so the next Tails slot observes a discontinuous `Camera_max_Y_pos` snap without changing ordinary boundary-easing cadence. This advances the combined LBZ frontier from frame 19095 to frame 19098 while preserving the green ICZ run and every other trace frontier.
 - Fix: the LBZ1 rival-Knuckles exit now observes the native render cutoff, leaves logical pad history live under `object_control=$81`, releases both fixed player slots, and hands cup position/control/roll animation back in native object order. This advances the combined LBZ frontier from frame 18938 to frame 19095 without regressing another trace frontier.

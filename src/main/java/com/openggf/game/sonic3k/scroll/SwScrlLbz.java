@@ -141,7 +141,9 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         if (runtimeState != null) {
             screenShakeOffset = runtimeState.consumeScreenShakeOffset();
             if (screenShakeOffset == 0 && runtimeState.isLbz1KnucklesBombShakeActive()) {
-                screenShakeOffset = SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F];
+                // ShakeScreen_Setup samples Level_frame_counter before the
+                // engine's end-of-frame counter publication.
+                screenShakeOffset = SCREEN_SHAKE_CONTINUOUS[(frameCounter - 1) & 0x3F];
             }
         }
 

@@ -291,6 +291,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         // screen-event pass enters LBZ1_EventVScroll and allocates the barrier;
         // it does not execute in Robotnik's already-active object pass.
         endingBarrierSpawnPending = true;
+        currentLbzRuntimeState().ifPresent(state -> state.setLbz1KnucklesBombShakeActive(true));
     }
 
     public boolean isEndingCollapseActive() {
@@ -355,7 +356,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             endingCollapseScroll[i] = scroll;
         }
 
-        requestScreenShakeOffset(frameCounter);
         if (((frameCounter - 1) & ENDING_COLLAPSE_RUMBLE_MASK) == 0 && unfinishedColumns > 0) {
             audio().playSfx(Sonic3kSfx.BIG_RUMBLE.id);
         }

@@ -71,6 +71,20 @@ class SwScrlLbzTest {
     }
 
     @Test
+    void continuousShakeSamplesPriorPublishedLevelCounter() {
+        TestEnvironment.activeGameplayMode();
+        LbzZoneRuntimeState state = new LbzZoneRuntimeState(0, PlayerCharacter.SONIC_AND_TAILS);
+        state.setLbz1KnucklesBombShakeActive(true);
+        GameServices.zoneRuntimeRegistry().install(state);
+        SwScrlLbz handler = new SwScrlLbz();
+
+        handler.update(new int[VISIBLE_LINES], 0x3B60, 0x0148, 37, 0);
+
+        assertEquals(1, handler.getShakeOffsetY(),
+                "ShakeScreen_Setup reads ScreenShakeArray2[(Level_frame_counter-1)&$3F].");
+    }
+
+    @Test
     void act2UsesRomWaterlineBackgroundCameraAndParallaxBands() {
         SwScrlLbz handler = new SwScrlLbz();
         int[] buffer = new int[VISIBLE_LINES];
