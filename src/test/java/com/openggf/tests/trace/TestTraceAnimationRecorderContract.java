@@ -57,8 +57,9 @@ class TestTraceAnimationRecorderContract {
         for (String name : List.of(
                 "s3k_trace_recorder.lua", "s3k_complete_run_recorder.lua")) {
             String script = Files.readString(TOOLS.resolve(name));
-            assertTrue(script.contains("OGGF_TRACE_LIGHTWEIGHT"), name);
-            assertTrue(script.contains("physics_animation_only"), name);
+            assertTrue(script.contains("OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS"), name);
+            assertTrue(script.contains(
+                    "physics_animation_aux_without_diagnostic_hooks"), name);
             assertTrue(script.contains("if not LIGHTWEIGHT_REGEN then"), name);
         }
     }
@@ -122,7 +123,7 @@ class TestTraceAnimationRecorderContract {
 
     @Test
     void allCommittedGameplayFixturesCarryV7AnimationCsv() throws IOException {
-        Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 10);
+        Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 13);
         for (Map.Entry<String, Integer> entry : expectedCounts.entrySet()) {
             Path gameRoot = Path.of("src/test/resources/traces", entry.getKey());
             List<Path> fixtures;

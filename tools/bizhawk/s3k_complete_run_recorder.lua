@@ -341,9 +341,15 @@ local MOVIE_FRAME_SAFETY_MARGIN = 30
 local TRACE_PROFILE = "complete_run"
 TRACE_STOP_FRAME = tonumber(os.getenv("OGGF_TRACE_STOP_FRAME") or "")
 local BK2_FRAME_COUNT = tonumber(os.getenv("OGGF_BK2_FRAME_COUNT") or "")
--- Physics/animation-only regeneration skips expensive diagnostic hooks/scans.
--- Existing aux_state streams can be retained when only CSV v7 is refreshed.
-LIGHTWEIGHT_REGEN = os.getenv("OGGF_TRACE_LIGHTWEIGHT") == "1"
+-- Fixture regeneration is physics/animation-only by default. PC-execution
+-- diagnostics cross the Lua/C# boundary frequently and are especially costly
+-- under Mono; opt into them only for focused frontier investigation.
+DIAGNOSTIC_HOOKS_ENABLED =
+    os.getenv("OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS") == "1"
+LIGHTWEIGHT_REGEN = not DIAGNOSTIC_HOOKS_ENABLED
+if os.getenv("OGGF_TRACE_QUIET") == "1" then
+    print = function() end
+end
 -- GLOBALS (no `local`): keeps the main chunk under Lua's 200-local limit.
 BIZHAWK_VERSION = "2.11"
 GENESIS_CORE = "Genplus-gx"
@@ -1367,7 +1373,7 @@ local function write_metadata()
     meta_file:write('  "trace_schema": 6,\n')
     meta_file:write('  "csv_version": 7,\n')
     if LIGHTWEIGHT_REGEN then
-        meta_file:write('  "capture_mode": "physics_animation_only",\n')
+        meta_file:write('  "capture_mode": "physics_animation_aux_without_diagnostic_hooks",\n')
     end
     local aux_schema_extras = {
         "cpu_state_per_frame",
@@ -5519,10 +5525,8 @@ function on_frame_end()
     end
 
     if not pre_trace_snapshots_written then
-        if not LIGHTWEIGHT_REGEN then
-            write_tails_cpu_snapshot()
-            write_object_snapshots()
-        end
+        write_tails_cpu_snapshot()
+        write_object_snapshots()
         pre_trace_snapshots_written = true
         -- v6.1-s3k: capture Level_frame_counter at the moment the first
         -- physics row is recorded. The engine's seeded-frame-0 mode
@@ -5624,11 +5628,6 @@ function on_frame_end()
     end
     if trace_frame % 300 == 0 then
         write_metadata()
-    end
-
-    if LIGHTWEIGHT_REGEN then
-        trace_frame = trace_frame + 1
-        return
     end
 
     emit_s3k_semantic_events(trace_frame)
