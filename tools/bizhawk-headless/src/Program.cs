@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Runtime.InteropServices;
+using BizHawk.Emulation.Cores.Consoles.Sega.gpgx;
 using OpenGGF.BizHawk.Headless;
 
 namespace BizHawk.Headless.Gpgx
@@ -93,7 +93,7 @@ namespace BizHawk.Headless.Gpgx
             string finalPath = Path.Combine(
                 fullOutputDirectory,
                 "smoke.csv");
-            if (File.Exists(finalPath) || Directory.Exists(finalPath))
+            if (LinuxPathEntry.Exists(finalPath))
             {
                 throw new IOException(
                     "Final output already exists and will not be replaced: "
@@ -167,6 +167,20 @@ namespace BizHawk.Headless.Gpgx
             TextWriter stdout,
             TextWriter stderr)
         {
+            return Run(
+                args,
+                stdout,
+                stderr,
+                (romPath, syncSettings) =>
+                    GpgxHost.Open(romPath, syncSettings));
+        }
+
+        internal static int Run(
+            string[] args,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
             try
             {
                 CommandLineOptions options =
@@ -201,7 +215,7 @@ namespace BizHawk.Headless.Gpgx
 
                 int completedFrames;
                 using (new NativeStandardOutputSilencer())
-                using (GpgxHost host = GpgxHost.Open(
+                using (IGpgxHost host = openHost(
                     options.RomPath,
                     movie.SyncSettings))
                 {
@@ -244,85 +258,6 @@ namespace BizHawk.Headless.Gpgx
                 stderr.Flush();
                 return 1;
             }
-        }
-
-        private sealed class NativeStandardOutputSilencer : IDisposable
-        {
-            private readonly FileStream nullStream;
-            private readonly int savedStandardOutput;
-            private readonly int savedStandardError;
-            private bool disposed;
-
-            public NativeStandardOutputSilencer()
-            {
-                Console.Out.Flush();
-                savedStandardOutput = Dup(1);
-                if (savedStandardOutput < 0)
-                {
-                    throw new IOException(
-                        "Unable to preserve standard output.");
-                }
-                savedStandardError = Dup(2);
-                if (savedStandardError < 0)
-                {
-                    Close(savedStandardOutput);
-                    throw new IOException(
-                        "Unable to preserve standard error.");
-                }
-
-                nullStream = new FileStream(
-                    "/dev/null",
-                    FileMode.Open,
-                    FileAccess.Write,
-                    FileShare.ReadWrite);
-                int nullDescriptor =
-                    nullStream.SafeFileHandle.DangerousGetHandle().ToInt32();
-                if (Dup2(nullDescriptor, 1) < 0
-                    || Dup2(nullDescriptor, 2) < 0)
-                {
-                    Close(savedStandardOutput);
-                    Close(savedStandardError);
-                    nullStream.Dispose();
-                    throw new IOException(
-                        "Unable to suppress GPGX console output.");
-                }
-            }
-
-            public void Dispose()
-            {
-                if (disposed)
-                {
-                    return;
-                }
-                disposed = true;
-                FFlush(IntPtr.Zero);
-                if (Dup2(savedStandardOutput, 1) < 0
-                    || Dup2(savedStandardError, 2) < 0)
-                {
-                    Close(savedStandardOutput);
-                    Close(savedStandardError);
-                    nullStream.Dispose();
-                    throw new IOException(
-                        "Unable to restore console output.");
-                }
-                Close(savedStandardOutput);
-                Close(savedStandardError);
-                nullStream.Dispose();
-            }
-
-            [DllImport("libc", EntryPoint = "dup", SetLastError = true)]
-            private static extern int Dup(int oldDescriptor);
-
-            [DllImport("libc", EntryPoint = "dup2", SetLastError = true)]
-            private static extern int Dup2(
-                int oldDescriptor,
-                int newDescriptor);
-
-            [DllImport("libc", EntryPoint = "close", SetLastError = true)]
-            private static extern int Close(int descriptor);
-
-            [DllImport("libc", EntryPoint = "fflush", SetLastError = true)]
-            private static extern int FFlush(IntPtr stream);
         }
     }
 }

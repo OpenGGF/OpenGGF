@@ -54,6 +54,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src/Bootstrap/BizHawkInstallation.cs" />
+    <Compile Include="src/Bootstrap/LinuxPathEntry.cs" />
+    <Compile Include="src/Bootstrap/NativeStandardOutputSilencer.cs" />
     <Compile Include="src/Bootstrap/RomIdentity.cs" />
     <Compile Include="src/Bk2/Bk2Frame.cs" />
     <Compile Include="src/Bk2/Bk2Movie.cs" />

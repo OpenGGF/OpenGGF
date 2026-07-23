@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using BizHawk.Headless.Gpgx;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -39,8 +40,26 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "Cli rejects an existing final output",
                 CliRejectsExistingFinalOutput));
             tests.Add(new TestMain.TestCase(
+                "Cli rejects a dangling final-output symlink before host construction",
+                CliRejectsDanglingFinalOutputBeforeHostConstruction));
+            tests.Add(new TestMain.TestCase(
+                "Cli restores native descriptors after partial failures",
+                NativeDescriptorSilencerRestoresAfterPartialFailures));
+            tests.Add(new TestMain.TestCase(
                 "Cli run script invokes only harness Mono with DISPLAY absent",
                 RunScriptInvokesHarnessHeadlessly));
+            tests.Add(new TestMain.TestCase(
+                "EndToEnd shell validates an explicit ROM before missing BizHawk skip",
+                TestScriptValidatesExplicitRomBeforeMissingBizHawkSkip));
+            tests.Add(new TestMain.TestCase(
+                "EndToEnd dependency checks validate present inputs before skipping",
+                DependencyChecksValidatePresentInputsBeforeSkipping));
+            tests.Add(new TestMain.TestCase(
+                "EndToEnd child runner drains both output pipes concurrently",
+                ChildRunnerDrainsBothPipesConcurrently));
+            tests.Add(new TestMain.TestCase(
+                "EndToEnd child runner kills a timed-out process",
+                ChildRunnerKillsTimedOutProcess));
             tests.Add(new TestMain.TestCase(
                 "EndToEnd production assembly excludes frontend references",
                 ProductionAssemblyExcludesFrontendReferences));
@@ -190,6 +209,60 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 });
         }
 
+        private static void CliRejectsDanglingFinalOutputBeforeHostConstruction()
+        {
+            WithUnusedOutput(
+                output =>
+                {
+                    Directory.CreateDirectory(output);
+                    string finalPath = Path.Combine(output, "smoke.csv");
+                    CreateSymbolicLink(
+                        Path.Combine(output, "missing-target.csv"),
+                        finalPath);
+                    var hostConstructionCount = 0;
+                    var stdout = new StringWriter(CultureInfo.InvariantCulture);
+                    var stderr = new StringWriter(CultureInfo.InvariantCulture);
+
+                    int exitCode = Program.Run(
+                        RequiredArguments(output),
+                        stdout,
+                        stderr,
+                        (romPath, syncSettings) =>
+                        {
+                            hostConstructionCount++;
+                            return null;
+                        });
+
+                    AssertEx.Equal(1, exitCode);
+                    AssertEx.Equal(0, hostConstructionCount);
+                    AssertContains(stderr.ToString(), "already exists");
+                    AssertEx.Equal(true, LinuxPathEntry.Exists(finalPath));
+                });
+        }
+
+        private static void NativeDescriptorSilencerRestoresAfterPartialFailures()
+        {
+            var setupFailure = new FakeNativeDescriptorApi();
+            setupFailure.FailRedirectCall = 2;
+            AssertEx.Throws<IOException>(
+                () => new NativeStandardOutputSilencer(setupFailure),
+                "suppress");
+            AssertEx.Equal(1, setupFailure.DescriptorTarget(1));
+            AssertEx.Equal(2, setupFailure.DescriptorTarget(2));
+            AssertEx.Equal(true, setupFailure.AllOpenedDescriptorsClosed);
+
+            var restoreFailure = new FakeNativeDescriptorApi();
+            NativeStandardOutputSilencer silencer =
+                new NativeStandardOutputSilencer(restoreFailure);
+            restoreFailure.FailRedirectCall = 3;
+            AssertEx.Throws<IOException>(
+                () => silencer.Dispose(),
+                "restore");
+            AssertEx.Equal(1, restoreFailure.DescriptorTarget(1));
+            AssertEx.Equal(2, restoreFailure.DescriptorTarget(2));
+            AssertEx.Equal(true, restoreFailure.AllOpenedDescriptorsClosed);
+        }
+
         private static void RunScriptInvokesHarnessHeadlessly()
         {
             string runScript = Path.Combine(ToolDirectory, "run.sh");
@@ -277,6 +350,180 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
+        private static void TestScriptValidatesExplicitRomBeforeMissingBizHawkSkip()
+        {
+            string root = Path.Combine(
+                Path.GetTempPath(),
+                "openggf-test-script-" + Guid.NewGuid().ToString("N"));
+            string toolDirectory = Path.Combine(
+                root,
+                "tools",
+                "bizhawk-headless");
+            Directory.CreateDirectory(toolDirectory);
+            try
+            {
+                string copiedScript = Path.Combine(toolDirectory, "test.sh");
+                File.Copy(
+                    Path.Combine(ToolDirectory, "test.sh"),
+                    copiedScript);
+                string invalidRom = Path.Combine(root, "invalid.gen");
+                File.WriteAllText(
+                    invalidRom,
+                    "not the canonical Sonic 1 ROM",
+                    new UTF8Encoding(false));
+                var start = new ProcessStartInfo
+                {
+                    FileName = "/bin/bash",
+                    Arguments = Quote(copiedScript) + " --filter EndToEnd",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                start.EnvironmentVariables.Remove("BIZHAWK_HOME");
+                start.EnvironmentVariables["S1_ROM_PATH"] = invalidRom;
+
+                ProcessResult result = RunProcess(start, 5000);
+
+                AssertEx.Equal(1, result.ExitCode);
+                AssertContains(result.StandardError, "S1_ROM_PATH SHA-1");
+                AssertContains(
+                    result.StandardError,
+                    RomIdentity.Sonic1Rev01Sha1);
+                AssertEx.Equal(
+                    false,
+                    result.StandardOutput.IndexOf(
+                        "SKIP",
+                        StringComparison.Ordinal) >= 0);
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
+
+        private static void DependencyChecksValidatePresentInputsBeforeSkipping()
+        {
+            string root = Path.Combine(
+                Path.GetTempPath(),
+                "openggf-dependencies-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                string rom = Path.Combine(root, "supplied.gen");
+                File.WriteAllBytes(rom, new byte[] { 1, 2, 3 });
+                string bizHawk = Path.Combine(root, "supplied-bizhawk");
+                Directory.CreateDirectory(bizHawk);
+                string missingFallback = Path.Combine(root, "missing-bizhawk");
+                var romValidations = 0;
+                var bizHawkValidations = 0;
+
+                AssertEx.Throws<InvalidOperationException>(
+                    () => ResolveEndToEndDependencies(
+                        rom,
+                        null,
+                        missingFallback,
+                        path =>
+                        {
+                            romValidations++;
+                            throw new InvalidOperationException(
+                                "invalid ROM identity");
+                        },
+                        path => bizHawkValidations++),
+                    "invalid ROM identity");
+                AssertEx.Equal(1, romValidations);
+                AssertEx.Equal(0, bizHawkValidations);
+
+                AssertEx.Throws<InvalidOperationException>(
+                    () => ResolveEndToEndDependencies(
+                        null,
+                        bizHawk,
+                        missingFallback,
+                        path => romValidations++,
+                        path =>
+                        {
+                            bizHawkValidations++;
+                            throw new InvalidOperationException(
+                                "invalid BizHawk layout");
+                        }),
+                    "invalid BizHawk layout");
+                AssertEx.Equal(1, romValidations);
+                AssertEx.Equal(1, bizHawkValidations);
+
+                romValidations = 0;
+                bizHawkValidations = 0;
+                AssertEx.Throws<InvalidOperationException>(
+                    () => ResolveEndToEndDependencies(
+                        rom,
+                        bizHawk,
+                        missingFallback,
+                        path =>
+                        {
+                            romValidations++;
+                            throw new InvalidOperationException("bad ROM");
+                        },
+                        path =>
+                        {
+                            bizHawkValidations++;
+                            throw new InvalidOperationException("bad BizHawk");
+                        }),
+                    "bad ROM");
+                AssertEx.Equal(1, romValidations);
+                AssertEx.Equal(1, bizHawkValidations);
+
+                romValidations = 0;
+                AssertEx.Throws<TestMain.SkipTestException>(
+                    () => ResolveEndToEndDependencies(
+                        rom,
+                        null,
+                        missingFallback,
+                        path => romValidations++,
+                        path => { }),
+                    "BizHawk");
+                AssertEx.Equal(1, romValidations);
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
+
+        private static void ChildRunnerDrainsBothPipesConcurrently()
+        {
+            var start = new ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = "-c " + Quote(
+                    "for i in {1..20000}; do "
+                    + "printf 'stderr-%05d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\\n' "
+                    + "\"$i\" >&2; done; printf 'stdout-complete\\n'"),
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            ProcessResult result = RunProcess(start, 5000);
+
+            AssertEx.Equal(0, result.ExitCode);
+            AssertEx.Equal("stdout-complete\n", result.StandardOutput);
+            AssertContains(result.StandardError, "stderr-20000-");
+        }
+
+        private static void ChildRunnerKillsTimedOutProcess()
+        {
+            var start = new ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = "-c " + Quote("sleep 30"),
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            AssertEx.Throws<TimeoutException>(
+                () => RunProcess(start, 100),
+                "100");
+        }
+
         private static void ProductionAssemblyExcludesFrontendReferences()
         {
             Assembly production = typeof(NoReplacePublisher).Assembly;
@@ -323,8 +570,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static void CapturesCanonicalRowsDeterministically()
         {
-            string romPath = RequireRomPath();
-            string bizHawkHome = RequireBizHawkHome();
+            EndToEndDependencies dependencies =
+                ResolveEndToEndDependencies(
+                    Environment.GetEnvironmentVariable("S1_ROM_PATH"),
+                    Environment.GetEnvironmentVariable("BIZHAWK_HOME"),
+                    Path.Combine(
+                        RepositoryRoot,
+                        "docs",
+                        "BizHawk-2.11-linux-x64"),
+                    path => RomIdentity.ValidateSonic1Rev01(
+                        File.ReadAllBytes(path)),
+                    path => BizHawkInstallation.Validate(path));
+            string romPath = dependencies.RomPath;
+            string bizHawkHome = dependencies.BizHawkHome;
             BizHawkInstallation installation =
                 BizHawkInstallation.Validate(bizHawkHome);
             AssertEx.Equal(new Version(2, 11, 0, 0), installation.ManagedVersion);
@@ -589,49 +847,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return offset.Value<int>();
         }
 
-        private static string RequireRomPath()
-        {
-            string romPath =
-                Environment.GetEnvironmentVariable("S1_ROM_PATH");
-            if (string.IsNullOrEmpty(romPath))
-            {
-                throw new TestMain.SkipTestException(
-                    "S1_ROM_PATH is not set");
-            }
-            if (!File.Exists(romPath))
-            {
-                throw new InvalidOperationException(
-                    "Supplied S1_ROM_PATH does not exist: " + romPath);
-            }
-            return Path.GetFullPath(romPath);
-        }
-
-        private static string RequireBizHawkHome()
-        {
-            string supplied =
-                Environment.GetEnvironmentVariable("BIZHAWK_HOME");
-            if (!string.IsNullOrEmpty(supplied))
-            {
-                if (!Directory.Exists(supplied))
-                {
-                    throw new InvalidOperationException(
-                        "Supplied BIZHAWK_HOME does not exist: " + supplied);
-                }
-                return Path.GetFullPath(supplied);
-            }
-
-            string fallback = Path.Combine(
-                RepositoryRoot,
-                "docs",
-                "BizHawk-2.11-linux-x64");
-            if (!Directory.Exists(fallback))
-            {
-                throw new TestMain.SkipTestException(
-                    "BizHawk distribution is not installed");
-            }
-            return Path.GetFullPath(fallback);
-        }
-
         private static string ResolveBizHawkHome()
         {
             string supplied =
@@ -642,6 +857,109 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "docs",
                     "BizHawk-2.11-linux-x64")
                 : Path.GetFullPath(supplied);
+        }
+
+        private static EndToEndDependencies ResolveEndToEndDependencies(
+            string suppliedRomPath,
+            string suppliedBizHawkHome,
+            string fallbackBizHawkHome,
+            Action<string> validateRom,
+            Action<string> validateBizHawk)
+        {
+            var failures = new List<string>();
+            string romPath = null;
+            string bizHawkHome = null;
+            bool romMissing = string.IsNullOrEmpty(suppliedRomPath);
+            bool bizHawkMissing = false;
+
+            if (!romMissing)
+            {
+                romPath = Path.GetFullPath(suppliedRomPath);
+                if (!File.Exists(romPath))
+                {
+                    failures.Add(
+                        "Supplied S1_ROM_PATH does not exist: "
+                        + romPath + ".");
+                }
+                else
+                {
+                    TryValidate(
+                        "S1_ROM_PATH",
+                        romPath,
+                        validateRom,
+                        failures);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(suppliedBizHawkHome))
+            {
+                bizHawkHome = Path.GetFullPath(suppliedBizHawkHome);
+                if (!Directory.Exists(bizHawkHome))
+                {
+                    failures.Add(
+                        "Supplied BIZHAWK_HOME does not exist: "
+                        + bizHawkHome + ".");
+                }
+                else
+                {
+                    TryValidate(
+                        "BIZHAWK_HOME",
+                        bizHawkHome,
+                        validateBizHawk,
+                        failures);
+                }
+            }
+            else if (Directory.Exists(fallbackBizHawkHome))
+            {
+                bizHawkHome = Path.GetFullPath(fallbackBizHawkHome);
+                TryValidate(
+                    "BizHawk fallback",
+                    bizHawkHome,
+                    validateBizHawk,
+                    failures);
+            }
+            else
+            {
+                bizHawkMissing = true;
+            }
+
+            if (failures.Count != 0)
+            {
+                throw new InvalidOperationException(
+                    string.Join(" ", failures.ToArray()));
+            }
+            if (romMissing || bizHawkMissing)
+            {
+                var missing = new List<string>();
+                if (romMissing)
+                {
+                    missing.Add("S1_ROM_PATH is not set");
+                }
+                if (bizHawkMissing)
+                {
+                    missing.Add("BizHawk distribution is not installed");
+                }
+                throw new TestMain.SkipTestException(
+                    string.Join("; ", missing.ToArray()));
+            }
+
+            return new EndToEndDependencies(romPath, bizHawkHome);
+        }
+
+        private static void TryValidate(
+            string name,
+            string path,
+            Action<string> validate,
+            ICollection<string> failures)
+        {
+            try
+            {
+                validate(path);
+            }
+            catch (Exception exception)
+            {
+                failures.Add(name + " is invalid: " + exception.Message);
+            }
         }
 
         private static string[] RequiredArguments(string output)
@@ -708,15 +1026,63 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static ProcessResult RunProcess(ProcessStartInfo start)
         {
+            return RunProcess(start, 120000);
+        }
+
+        private static ProcessResult RunProcess(
+            ProcessStartInfo start,
+            int timeoutMilliseconds)
+        {
             using (Process process = Process.Start(start))
             {
-                string stdout = process.StandardOutput.ReadToEnd();
-                string stderr = process.StandardError.ReadToEnd();
+                Task<string> stdout =
+                    process.StandardOutput.ReadToEndAsync();
+                Task<string> stderr =
+                    process.StandardError.ReadToEndAsync();
+                if (!process.WaitForExit(timeoutMilliseconds))
+                {
+                    try
+                    {
+                        process.Kill();
+                    }
+                    finally
+                    {
+                        process.WaitForExit();
+                        Task.WaitAll(stdout, stderr);
+                    }
+                    throw new TimeoutException(
+                        "Child process exceeded "
+                        + timeoutMilliseconds.ToString(
+                            CultureInfo.InvariantCulture)
+                        + " ms and was killed.");
+                }
                 process.WaitForExit();
+                Task.WaitAll(stdout, stderr);
                 return new ProcessResult(
                     process.ExitCode,
-                    stdout,
-                    stderr);
+                    stdout.Result,
+                    stderr.Result);
+            }
+        }
+
+        private static void CreateSymbolicLink(
+            string target,
+            string linkPath)
+        {
+            var start = new ProcessStartInfo
+            {
+                FileName = "/bin/ln",
+                Arguments = "-s " + Quote(target) + " " + Quote(linkPath),
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            ProcessResult result = RunProcess(start, 5000);
+            if (result.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    "Unable to create test symlink: "
+                    + result.StandardError);
             }
         }
 
@@ -783,6 +1149,86 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public int ExitCode { get; private set; }
             public string StandardOutput { get; private set; }
             public string StandardError { get; private set; }
+        }
+
+        private sealed class EndToEndDependencies
+        {
+            public EndToEndDependencies(
+                string romPath,
+                string bizHawkHome)
+            {
+                RomPath = romPath;
+                BizHawkHome = bizHawkHome;
+            }
+
+            public string RomPath { get; private set; }
+            public string BizHawkHome { get; private set; }
+        }
+
+        private sealed class FakeNativeDescriptorApi
+            : INativeDescriptorApi
+        {
+            private readonly IDictionary<int, int> descriptors =
+                new Dictionary<int, int>
+                {
+                    { 1, 1 },
+                    { 2, 2 }
+                };
+            private readonly ISet<int> opened = new HashSet<int>();
+            private readonly ISet<int> closed = new HashSet<int>();
+            private int nextDescriptor = 10;
+            private int redirectCallCount;
+
+            public int FailRedirectCall { get; set; }
+
+            public bool AllOpenedDescriptorsClosed
+            {
+                get { return opened.SetEquals(closed); }
+            }
+
+            public int DescriptorTarget(int descriptor)
+            {
+                return descriptors[descriptor];
+            }
+
+            public int Duplicate(int descriptor)
+            {
+                int duplicate = nextDescriptor++;
+                descriptors.Add(duplicate, descriptors[descriptor]);
+                opened.Add(duplicate);
+                return duplicate;
+            }
+
+            public int OpenNull()
+            {
+                int descriptor = nextDescriptor++;
+                descriptors.Add(descriptor, -1);
+                opened.Add(descriptor);
+                return descriptor;
+            }
+
+            public int Redirect(int oldDescriptor, int newDescriptor)
+            {
+                redirectCallCount++;
+                if (redirectCallCount == FailRedirectCall)
+                {
+                    return -1;
+                }
+                descriptors[newDescriptor] = descriptors[oldDescriptor];
+                return newDescriptor;
+            }
+
+            public int Close(int descriptor)
+            {
+                closed.Add(descriptor);
+                descriptors.Remove(descriptor);
+                return 0;
+            }
+
+            public int FlushAll()
+            {
+                return 0;
+            }
         }
     }
 }
