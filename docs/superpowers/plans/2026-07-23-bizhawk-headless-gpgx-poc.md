@@ -13,7 +13,8 @@
 - Linux only; do not add Windows launch or packaging support.
 - Pin BizHawk 2.11/source commit `427556b5ef3ac437eba754d90c5e7e9096c9a8df`.
 - Reference the verified local `docs/BizHawk-2.11-linux-x64/dll` assemblies; do not vendor BizHawk files.
-- Require managed assembly version `2.11.0.0`.
+- Require BizHawk managed assembly version `2.11.0.0`; do not apply that check
+  to framework assemblies or bundled Newtonsoft.Json (`13.0.0.0`).
 - Set absolute `BIZHAWK_HOME`, `MONO_PATH`, and `LD_LIBRARY_PATH` before loading any BizHawk type.
 - Directly construct GPGX; do not reference EmuHawk, WinForms, graphics frontends, audio frontends, Lua, or `BizHawk.Client.Common`.
 - Accept only Sonic 1 World REV01 SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`.
@@ -71,6 +72,24 @@ No Java production or test source changes are required.
 
 ---
 
+## Execution Worktree Preflight
+
+Before Task 1, use the worktree workflow requested by the user. From the primary
+checkout, preserve these absolute paths before entering the linked worktree:
+
+```bash
+export BIZHAWK_HOME="$(realpath docs/BizHawk-2.11-linux-x64)"
+export S1_ROM_PATH="$(realpath s1.gen)"
+```
+
+Verify the ROM hash before continuing. The linked worktree receives neither
+path because both assets are ignored; do not copy, rename, or symlink them. Pass
+these exported absolute values to every delegated implementer and reviewer.
+`common-env.sh` honors an explicit `BIZHAWK_HOME`; only its fallback is relative
+to the current checkout.
+
+---
+
 ### Task 1: Mono Build, Bootstrap, and Direct GPGX Feasibility Gate
 
 **Files:**
@@ -80,6 +99,7 @@ No Java production or test source changes are required.
 - Create: `tools/bizhawk-headless/build.sh`
 - Create: `tools/bizhawk-headless/test.sh`
 - Create: `tools/bizhawk-headless/src/Bootstrap/BizHawkInstallation.cs`
+- Create: `tools/bizhawk-headless/src/Bootstrap/RomIdentity.cs`
 - Create: `tools/bizhawk-headless/src/Core/MutableController.cs`
 - Create: `tools/bizhawk-headless/src/Core/NoFirmwareProvider.cs`
 - Create: `tools/bizhawk-headless/src/Core/RomAsset.cs`
@@ -94,7 +114,30 @@ No Java production or test source changes are required.
 - Produces: `BizHawkInstallation.Validate(string root)`, `IGpgxHost`, and `GpgxHost.Open(string romPath, GPGX.GPGXSyncSettings syncSettings)`.
 - `IGpgxHost` exposes `int CompletedFrame { get; }`, `void ClearButtons()`, `void SetButton(string name, bool pressed)`, `void Advance()`, `byte ReadMainRamByte(int offset)`, and `Dispose()`.
 
-- [ ] **Step 1: Add failing bootstrap and host tests**
+- [ ] **Step 1: Add and verify the build/test scaffold**
+
+Create the non-SDK production project initially as a `Library`, the executable
+test project, `AssertEx`, and `TestMain`. `TestMain` accepts optional
+`--filter <case-insensitive-substring>`, runs only matching test names, and
+returns `2` with `No tests matched filter: <value>` when none match.
+
+The production project references BizHawk/Newtonsoft with bundle `HintPath`s.
+`System.IO.Compression` and `System.IO.Compression.FileSystem` are framework
+references without `HintPath`.
+
+Create `common-env.sh`, `build.sh`, and `test.sh` as specified below, then add a
+single `Harness scaffold runs` test.
+
+Run:
+
+```bash
+tools/bizhawk-headless/test.sh --filter scaffold
+tools/bizhawk-headless/test.sh --filter absent-test-name
+```
+
+Expected: scaffold exits `0`; no-match exits `2`.
+
+- [ ] **Step 2: Add compilable failing bootstrap, ROM, and host tests**
 
 Create a console test registry that runs named `Action` tests, reports `PASS`/`FAIL`, and exits `1` on any failure. Add tests which:
 
@@ -106,6 +149,12 @@ AssertEx.Throws<InvalidOperationException>(
     () => BizHawkInstallation.Validate(missingRoot),
     "gpgx.wbx.zst");
 ```
+
+Add `RomIdentity.ValidateSonic1Rev01(byte[])` tests for the accepted SHA-1 and a
+one-byte mutation. The rejection message must contain the actual uppercase
+40-hex SHA-1. Add minimal production stubs whose methods throw
+`NotImplementedException`, so the suite compiles and fails behaviorally rather
+than because a script or type is absent.
 
 Add a ROM-backed test enabled only when `S1_ROM_PATH` exists:
 
@@ -121,7 +170,7 @@ using (IGpgxHost host = GpgxHost.Open(
 
 When the ROM variable is absent, print `SKIP GpgxHost advances ten frames: S1_ROM_PATH not set`; do not report pass.
 
-- [ ] **Step 2: Run the tests and observe RED**
+- [ ] **Step 3: Run the tests and observe RED**
 
 Run:
 
@@ -129,9 +178,10 @@ Run:
 tools/bizhawk-headless/test.sh
 ```
 
-Expected: non-zero because the project/scripts and referenced types do not yet exist.
+Expected: exit `1`; the scaffold runs, then bootstrap/ROM/host tests fail at the
+intentional `NotImplementedException`.
 
-- [ ] **Step 3: Add non-SDK projects and Linux environment scripts**
+- [ ] **Step 4: Complete the Linux environment/build scripts**
 
 The production project targets `v4.8`, includes `src/**/*.cs`, and references exact `HintPath`s under `$(BizHawkDllDir)` for:
 
@@ -142,11 +192,11 @@ BizHawk.Emulation.Cores.dll
 BizHawk.Emulation.DiscSystem.dll
 BizHawk.BizInvoke.dll
 Newtonsoft.Json.dll
-System.IO.Compression.dll
-System.IO.Compression.FileSystem.dll
 ```
 
-The test project is an executable, references the production project, and includes `tests/**/*.cs`.
+`System.IO.Compression` and `System.IO.Compression.FileSystem` are framework
+references without `HintPath`. The test project is an executable, references
+the production project, and includes `tests/**/*.cs`.
 
 `common-env.sh` resolves the repository root, defaults `BIZHAWK_HOME` to the absolute `docs/BizHawk-2.11-linux-x64`, exports:
 
@@ -156,7 +206,8 @@ export MONO_PATH="$BIZHAWK_HOME/dll${MONO_PATH:+:$MONO_PATH}"
 export LD_LIBRARY_PATH="$BIZHAWK_HOME/dll${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 ```
 
-It validates `mono`, `xbuild`, the six managed DLLs above, `gpgx.wbx.zst`, and `libwaterboxhost.so`. `build.sh` invokes:
+It validates `mono`, `xbuild`, the six BizHawk/Newtonsoft bundle DLLs above,
+`gpgx.wbx.zst`, and `libwaterboxhost.so`. `build.sh` invokes:
 
 ```bash
 xbuild /nologo /verbosity:minimal \
@@ -169,9 +220,10 @@ xbuild /nologo /verbosity:minimal \
   BizHawk.Headless.Gpgx.Tests.csproj
 ```
 
-`test.sh` sources `common-env.sh`, invokes `build.sh`, unsets `DISPLAY`, then runs the test executable with Mono.
+`test.sh` sources `common-env.sh`, invokes `build.sh`, unsets `DISPLAY`, and
+forwards all arguments to the test executable through Mono.
 
-- [ ] **Step 4: Implement bootstrap and exact direct-core adapters**
+- [ ] **Step 5: Implement bootstrap, ROM validation, and exact direct-core adapters**
 
 `BizHawkInstallation.Validate` verifies required files, checks each direct BizHawk assembly with `AssemblyName.GetAssemblyName(path).Version == new Version(2, 11, 0, 0)`, and verifies:
 
@@ -207,19 +259,24 @@ var core = new GPGX(
 
 Resolve `core.ServiceProvider.GetService<IMemoryDomains>()["Main RAM"]`. `Advance()` calls `core.FrameAdvance(controller, false, false)`. Dispose the GPGX core.
 
+`GpgxHost.Open` calls `RomIdentity.ValidateSonic1Rev01` before constructing
+`GameInfo`; the BK2 Header's legacy 32-hex value is never passed to this
+validator.
+
 `CreateGhz1SyncSettings()` assigns every field from the tracked JSON, including normal three-button controls, autodetect region, disabled forced VDP/BIOS, all overscan, MAME YM2413/YM2612, no filter, and the exact numeric EQ/backdrop values in the design.
 
-- [ ] **Step 5: Run the gate and observe GREEN**
+- [ ] **Step 6: Run the gate and observe GREEN**
 
 Run:
 
 ```bash
-S1_ROM_PATH="$PWD/s1.gen" tools/bizhawk-headless/test.sh
+S1_ROM_PATH="$S1_ROM_PATH" BIZHAWK_HOME="$BIZHAWK_HOME" \
+  tools/bizhawk-headless/test.sh
 ```
 
 Expected: build succeeds; bootstrap tests pass; with `DISPLAY` unset GPGX advances ten frames and reports completed frame `10`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add tools/bizhawk-headless
@@ -407,6 +464,7 @@ Use the required documentation trailers with justified `n/a`.
 - Create: `tools/bizhawk-headless/src/Program.cs`
 - Create: `tools/bizhawk-headless/run.sh`
 - Create: `tools/bizhawk-headless/tests/NoReplacePublisherTests.cs`
+- Create: `tools/bizhawk-headless/tests/EndToEndTests.cs`
 - Modify: project files
 - Modify: `tools/bizhawk-headless/tests/TestMain.cs`
 
@@ -426,6 +484,24 @@ Publication tests assert:
 
 CLI parsing tests assert required arguments, offset `>= 0`, count `1..1000`, unknown/duplicate arguments rejected, and no existing final output accepted.
 
+Add the ROM-backed end-to-end test before production CLI wiring. It verifies the
+canonical BK2 and physics CSV hashes, launches two captures into distinct
+temporary directories with offset `840` and count `1000`, and asserts identical
+SHA-256 output. It parses canonical `physics.csv` by header name and compares
+the native `input`, `x`, `y`, `x_velocity`, and `y_velocity` columns against
+canonical `input`, `player_x`, `player_y`, `player_x_speed`, and
+`player_y_speed` for rows `0000`, `0001`, and `03E7`.
+
+Add observability assertions for exact labeled values: BizHawk version, uppercase
+ROM SHA-1, BK2 frame count, requested frame count, completed GPGX frame count,
+and finalized absolute CSV path.
+
+Add an assembly-reference test using `Assembly.GetReferencedAssemblies()` on
+the production assembly: names must not include `BizHawk.Client.Common`,
+`System.Windows.Forms`, or any BizHawk graphics/audio frontend assembly. The
+child-process environment asserts `DISPLAY` is absent, and `run.sh` is inspected
+to invoke only the harness executable through Mono.
+
 - [ ] **Step 2: Run tests and observe RED**
 
 Run:
@@ -433,9 +509,11 @@ Run:
 ```bash
 tools/bizhawk-headless/test.sh --filter Publisher
 tools/bizhawk-headless/test.sh --filter Cli
+tools/bizhawk-headless/test.sh --filter EndToEnd
 ```
 
-Expected: non-zero due to missing publisher and CLI.
+Expected: exit `1` from missing publisher/CLI wiring; the end-to-end test also
+fails because no production executable exists.
 
 - [ ] **Step 3: Implement Linux publication and composition root**
 
@@ -453,6 +531,11 @@ and final path, and returns non-zero on a concise exception message.
 `run.sh` sources `common-env.sh`, builds if the executable is absent, unsets
 `DISPLAY`, and executes it via Mono. Do not set or access an X server.
 
+Change the production project from `Library` to `Exe`, set startup object
+`BizHawk.Headless.Gpgx.Program`, and place the release executable at
+`bin/Release/BizHawk.Headless.Gpgx.exe`. Update the test project reference to
+that executable assembly.
+
 - [ ] **Step 4: Run tests and observe GREEN**
 
 Run:
@@ -460,6 +543,8 @@ Run:
 ```bash
 tools/bizhawk-headless/test.sh --filter Publisher
 tools/bizhawk-headless/test.sh --filter Cli
+S1_ROM_PATH="$S1_ROM_PATH" BIZHAWK_HOME="$BIZHAWK_HOME" \
+  tools/bizhawk-headless/test.sh --filter EndToEnd
 tools/bizhawk-headless/test.sh
 ```
 
@@ -476,61 +561,35 @@ Use the required documentation trailers with justified `n/a`.
 
 ---
 
-### Task 5: End-to-End Determinism and Golden Gate
+### Task 5: Documentation and Final Determinism Gate
 
 **Files:**
-- Create: `tools/bizhawk-headless/tests/EndToEndTests.cs`
-- Modify: `tools/bizhawk-headless/tests/TestMain.cs`
 - Modify: `tools/bizhawk/README.md`
 - Modify: `CHANGELOG.md`
-- Modify: project files if needed for test content
 
 **Interfaces:**
 - Consumes the CLI and components from Tasks 1–4.
 - Produces a documented, repeatable Linux POC command and golden verification.
 
-- [ ] **Step 1: Add the failing end-to-end test**
-
-When `S1_ROM_PATH` and the local BizHawk install are available, verify the
-canonical BK2 and physics CSV hashes, run two captures into distinct temporary
-directories with offset `840` and count `1000`, and assert identical SHA-256.
-
-Parse native rows `0000`, `0001`, and `03E7` and assert:
-
-```text
-0000,0000,0050,03B0,0000,0000
-0001,0000,0050,03B0,0000,0000
-03E7,0008,09A5,02AA,0272,FF80
-```
-
-Assert no `DISPLAY` variable is present in the child process and no EmuHawk
-process/executable is invoked. Missing ROM or BizHawk distribution prints an
-explicit skip; present-but-incompatible dependencies fail.
-
-- [ ] **Step 2: Run the end-to-end test and observe RED**
-
-Run:
+- [ ] **Step 1: Re-run the existing end-to-end golden gate**
 
 ```bash
-S1_ROM_PATH="$PWD/s1.gen" tools/bizhawk-headless/test.sh --filter EndToEnd
+S1_ROM_PATH="$S1_ROM_PATH" BIZHAWK_HOME="$BIZHAWK_HOME" \
+  tools/bizhawk-headless/test.sh --filter EndToEnd
 ```
 
-Expected before final wiring: non-zero at the first unmet golden assertion.
+Expected: pass before documentation changes. This is a verification gate, not a
+new TDD cycle; any failure returns to Task 4's reviewed implementation rather
+than being patched by loosening fixtures.
 
-- [ ] **Step 3: Make only the minimal integration corrections**
-
-Correct dependency copying, launcher environment, controller names, sync-field
-mapping, or frame ordering as identified by the red test. Do not loosen fixture
-hashes or golden values and do not add a trace/zone/frame carve-out.
-
-- [ ] **Step 4: Document the verified command**
+- [ ] **Step 2: Document the verified command**
 
 Add a concise `Native headless GPGX proof of concept` section to
 `tools/bizhawk/README.md` with:
 
 ```bash
 tools/bizhawk-headless/run.sh \
-  --rom "$PWD/s1.gen" \
+  --rom "$S1_ROM_PATH" \
   --movie "$PWD/src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2" \
   --output "$PWD/target/bizhawk-headless-smoke" \
   --bk2-frame-offset 840 \
@@ -540,14 +599,15 @@ tools/bizhawk-headless/run.sh \
 State Linux/Mono/BizHawk 2.11 limitations and that this smoke CSV is not yet a
 canonical trace schema. Add a changelog entry for the new developer tool.
 
-- [ ] **Step 5: Run full verification**
+- [ ] **Step 3: Run full verification**
 
 Run:
 
 ```bash
-S1_ROM_PATH="$PWD/s1.gen" tools/bizhawk-headless/test.sh
+S1_ROM_PATH="$S1_ROM_PATH" BIZHAWK_HOME="$BIZHAWK_HOME" \
+  tools/bizhawk-headless/test.sh
 env -u DISPLAY tools/bizhawk-headless/run.sh \
-  --rom "$PWD/s1.gen" \
+  --rom "$S1_ROM_PATH" \
   --movie "$PWD/src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2" \
   --output "$(mktemp -d)/capture" \
   --bk2-frame-offset 840 \
@@ -557,15 +617,16 @@ env -u DISPLAY tools/bizhawk-headless/run.sh \
 Expected: every test passes, the CLI exits zero, and the finalized CSV has
 1,001 lines.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add tools/bizhawk-headless tools/bizhawk/README.md CHANGELOG.md
 git commit -m "feat(trace): prove deterministic native GPGX capture"
 ```
 
-Trailers must set `Changelog: updated` and `Guide: updated`; all other mappings
-use accurate `n/a` attestations.
+Trailers must set `Changelog: updated` and `Guide: n/a`; all other mappings use
+accurate `n/a` attestations. `tools/bizhawk/README.md` is not mapped to the
+`Guide` trailer.
 
 ---
 
@@ -574,10 +635,14 @@ use accurate `n/a` attestations.
 After all task reviews are green:
 
 ```bash
-S1_ROM_PATH="$PWD/s1.gen" tools/bizhawk-headless/test.sh
+S1_ROM_PATH="$S1_ROM_PATH" BIZHAWK_HOME="$BIZHAWK_HOME" \
+  tools/bizhawk-headless/test.sh
 git diff --check "$(git merge-base develop HEAD)" HEAD
 git status --short
 ```
+
+Use the absolute `S1_ROM_PATH` and `BIZHAWK_HOME` preserved by the worktree
+preflight, not worktree-relative ignored paths.
 
 Then run an independent whole-branch review against:
 
@@ -587,3 +652,8 @@ Then run an independent whole-branch review against:
 
 The branch is ready for human review only when that reviewer reports no
 critical or important findings.
+
+If the human later authorizes merging this branch into `develop`, update root
+`README.md` in the merge commit as required by repository policy. That
+merge-only documentation change is intentionally outside this feature
+implementation plan.
