@@ -587,12 +587,6 @@ public final class TraceReplayBootstrap {
     public static TraceExecutionPhase phaseForReplay(TraceData trace,
                                                      TraceFrame previous,
                                                      TraceFrame current) {
-        if (isS3kCompleteRunInitialHandoffRow(trace, previous, current)) {
-            return TraceExecutionPhase.VBLANK_ONLY;
-        }
-        if (isS3kCompleteRunVisibleVelocityHoldRow(trace, previous, current)) {
-            return TraceExecutionPhase.VBLANK_ONLY;
-        }
         if (isPreLevelPrefixInputLatchRow(trace, previous, current)) {
             return TraceExecutionPhase.ADVANCE_ONLY;
         }

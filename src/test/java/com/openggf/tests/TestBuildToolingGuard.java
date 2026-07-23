@@ -1231,8 +1231,11 @@ class TestBuildToolingGuard {
         for (String relative : List.of(
                 "src/main/java/com/openggf/trace/TraceReplayBootstrap.java",
                 "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java")) {
-            violations.addAll(firstRowReplaySchedulingSignals(
-                    relative, Files.readString(Path.of(relative))));
+            String source = Files.readString(Path.of(relative));
+            violations.addAll(firstRowReplaySchedulingSignals(relative, source));
+            if (relative.endsWith("/TraceReplayBootstrap.java")) {
+                violations.addAll(completeRunOutcomePhaseSchedulingSignals(relative, source));
+            }
         }
         if (!violations.isEmpty()) {
             fail("trace replay scheduling must not infer execution phase from frame-zero "
@@ -1441,6 +1444,30 @@ class TestBuildToolingGuard {
                     signals.add(relative + ":" + (i + 1) + " - " + line.replaceAll("\\s+", " "));
                     break;
                 }
+            }
+        }
+        return signals;
+    }
+
+    private static List<String> completeRunOutcomePhaseSchedulingSignals(
+            String relative, String source) {
+        String stripped = stripComments(source);
+        int methodStart = stripped.indexOf("public static TraceExecutionPhase phaseForReplay(");
+        int methodEnd = stripped.indexOf(
+                "private static boolean isSidekickAnimationHeldAfterRawTransition(",
+                methodStart);
+        if (methodStart < 0 || methodEnd < 0) {
+            return List.of(relative + " - could not locate phaseForReplay");
+        }
+
+        Pattern outcomeHelper = Pattern.compile(
+                "\\b(?:isS3kCompleteRun\\w*|hasNativeInitialVelocity)\\s*\\(");
+        List<String> signals = new ArrayList<>();
+        String[] lines = stripped.substring(methodStart, methodEnd).split("\\R", -1);
+        for (String rawLine : lines) {
+            String line = rawLine.strip();
+            if (outcomeHelper.matcher(line).find()) {
+                signals.add(relative + " phaseForReplay - " + line.replaceAll("\\s+", " "));
             }
         }
         return signals;

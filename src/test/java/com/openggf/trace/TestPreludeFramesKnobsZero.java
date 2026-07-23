@@ -68,18 +68,23 @@ class TestPreludeFramesKnobsZero {
     }
 
     @Test
-    void s3kSonicAndTailsWithPrimaryMovementReturnsZero() {
-        // S3K MGZ-style frame 0 already has primary movement — old code returned 0 here too.
+    void s3kCompleteRunVisibleVelocityHoldShapeDoesNotControlPhase() {
         TraceFrame seed = buildFrame(0, /* gfc */ 1,
                 /* xSpeed */ (short) 0x18, (short) 0, (short) 0x18, 0, 0);
-        TraceFrame next = buildFrame(1, /* gfc */ 2,
-                (short) 0x20, (short) 0, (short) 0x20, 0, 0);
+        TraceFrame next = buildFrame(1, /* gfc */ 1,
+                (short) 0x18, (short) 0, (short) 0x18, 0, 0);
         TraceData trace = TraceFixtures.trace(
-                metadata("s3k", "mgz", 4, 0, List.of("sonic", "tails")),
+                metadataWithProfile(
+                        "s3k", "mgz", 4, 0, List.of("sonic", "tails"), "complete_run"),
                 List.of(seed, next));
 
         assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
-        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
+                "The separate complete-run setup object pass is not phase classification.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(trace, null, seed),
+                "Matching frame-zero/next-row state with visible velocity is an outcome shape, "
+                        + "not phase scheduling evidence.");
     }
 
     @Test
@@ -208,6 +213,19 @@ class TestPreludeFramesKnobsZero {
     private static TraceMetadata metadata(String game, String zone, int zoneId, int act,
                                            List<String> characters,
                                            List<String> auxSchemaExtras) {
+        return metadata(game, zone, zoneId, act, characters, auxSchemaExtras, null);
+    }
+
+    private static TraceMetadata metadataWithProfile(
+            String game, String zone, int zoneId, int act,
+            List<String> characters, String traceProfile) {
+        return metadata(game, zone, zoneId, act, characters, null, traceProfile);
+    }
+
+    private static TraceMetadata metadata(String game, String zone, int zoneId, int act,
+                                           List<String> characters,
+                                           List<String> auxSchemaExtras,
+                                           String traceProfile) {
         return new TraceMetadata(
                 game,
                 zone,
@@ -222,7 +240,7 @@ class TestPreludeFramesKnobsZero {
                 /* luaScriptVersion */ "9.2-s2",
                 /* traceSchema */ 3,
                 /* csvVersion */ null,
-                /* traceProfile */ null,
+                traceProfile,
                 /* bizhawkVersion */ null,
                 /* genesisCore */ null,
                 /* auxSchemaExtras */ auxSchemaExtras,

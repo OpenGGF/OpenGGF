@@ -307,31 +307,16 @@ class TestTraceReplayStartPositionPolicy {
             assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
                     route + " complete-run segments must reproduce the native S3K setup Process_Sprites pass "
                             + "before the frame-zero RNG seed is installed.");
-            TraceExecutionPhase frameZeroPhase =
-                    TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0));
             assertEquals(0,
                     TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1),
                     route + " must not schedule oscillator prelude from frame-zero outcome shape.");
-            TraceFrame frameZero = trace.getFrame(0);
-            boolean handoffBeforeNativeMotionRow = !frameZero.stateEquals(trace.getFrame(1))
-                    && frameZero.xSpeed() == 0
-                    && frameZero.ySpeed() == 0
-                    && frameZero.gSpeed() == 0;
-            boolean visibleVelocityHoldRow = frameZero.stateEquals(trace.getFrame(1))
-                    && (frameZero.xSpeed() != 0 || frameZero.ySpeed() != 0 || frameZero.gSpeed() != 0)
-                    && frameZero.gameplayFrameCounter() == trace.getFrame(1).gameplayFrameCounter()
-                    && frameZero.vblankCounter() == trace.getFrame(1).vblankCounter()
-                    && frameZero.lagCounter() == trace.getFrame(1).lagCounter();
-            TraceExecutionPhase expectedFrameZeroPhase = handoffBeforeNativeMotionRow
-                    || visibleVelocityHoldRow
-                    ? TraceExecutionPhase.VBLANK_ONLY
-                    : TraceExecutionPhase.FULL_LEVEL_FRAME;
-            assertEquals(expectedFrameZeroPhase, frameZeroPhase,
-                    route + " frame 0 phase follows the structural handoff shape.");
-            assertEquals(handoffBeforeNativeMotionRow,
-                    TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace),
-                    route + " only handoff-before-motion rows tick Level_frame_counter without driving compared gameplay.");
-            assertEquals(1 + (handoffBeforeNativeMotionRow ? 1 : 0),
+            assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                    TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0)),
+                    route + " frame 0 follows the normal direct counter model, independent of "
+                            + "recorded position, speed, or next-row state shape.");
+            boolean hasHandoffCounterTick =
+                    TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace);
+            assertEquals(1 + (hasHandoffCounterTick ? 1 : 0),
                     TraceReplayBootstrap.s3kCompleteRunAnimatedTilePreludeFramesForTraceReplay(trace),
                     route + " advances only native S3K Animate_Tiles calls skipped before the first driven motion row.");
         }
@@ -359,7 +344,7 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
-    void s3kCompleteRunRepeatedRowsTickHiddenStartupState() throws Exception {
+    void s3kCompleteRunFormerHandoffShapesAreNotPhaseClassifiedFromOutcomes() throws Exception {
         TraceData lbz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
         TraceData cnz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
         TraceData mhz = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/mhz_completerun"));
@@ -372,20 +357,28 @@ class TestTraceReplayStartPositionPolicy {
                 "Repeated LBZ rows still run hidden startup object state.");
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(cnz, cnz.getFrame(0), cnz.getFrame(1)),
-                "CNZ row 1 advances state from the handoff row and should tick exactly once.");
-        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                "CNZ row 1 advances state from the former handoff-shaped row and should tick exactly once.");
+        assertFalse(cnz.getFrame(0).stateEquals(cnz.getFrame(1)));
+        assertEquals(0, cnz.getFrame(0).xSpeed());
+        assertEquals(0, cnz.getFrame(0).ySpeed());
+        assertEquals(0, cnz.getFrame(0).gSpeed());
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(cnz, null, cnz.getFrame(0)),
-                "CNZ frame 0 is the visible state before the first level tick.");
+                "CNZ's zero-velocity/state-change shape must not override the direct frame-zero phase.");
         assertTrue(TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(cnz),
-                "CNZ's handoff-before-motion row consumes the ROM counter edge without driving carry physics.");
-        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                "The separate legacy handoff debt remains visible without controlling phase classification.");
+        assertFalse(mhz.getFrame(0).stateEquals(mhz.getFrame(1)));
+        assertEquals(0, mhz.getFrame(0).xSpeed());
+        assertEquals(0, mhz.getFrame(0).ySpeed());
+        assertEquals(0, mhz.getFrame(0).gSpeed());
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(mhz, null, mhz.getFrame(0)),
-                "MHZ frame 0 is the visible state before the first level tick.");
+                "MHZ's zero-velocity/state-change shape must not override the direct frame-zero phase.");
         assertTrue(TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(mhz),
-                "MHZ's handoff-before-motion row consumes the ROM counter edge without driving carry physics.");
+                "The separate legacy handoff debt remains visible without controlling phase classification.");
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(mhz, mhz.getFrame(0), mhz.getFrame(1)),
-                "MHZ row 1 advances state from the handoff row and should tick exactly once.");
+                "MHZ row 1 advances state from the former handoff-shaped row and should tick exactly once.");
     }
 
     @Test
