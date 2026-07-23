@@ -480,29 +480,28 @@ class TestLbzFinalBoss1Instance {
 
         assertTrue(player.isObjectMappingFrameControl(),
                 "Animate_ExternalPlayerSprite writes mapping_frame directly under object control");
-        assertEquals(0xC4, player.getMappingFrame(),
-                "byte_7386A starts Sonic on mapping frame $C4 before the turn-away/look-up frames");
+        assertEquals(0x55, player.getMappingFrame(),
+                "Animate_ExternalPlayerSprite advances past byte_7386A's retained $C4 mapping "
+                        + "and emits $55 first");
         assertEquals(Direction.RIGHT, player.getDirection(),
-                "Animate_ExternalPlayerSprite leaves render_flags bit0 clear when the following delay byte is 0");
-        assertEquals(0xC4, sidekick.getMappingFrame(),
-                "byte_73874 starts P2 on the same $C4 frame as Sonic");
+                "Animate_ExternalPlayerSprite must not change Sonic's status-facing bit");
+        assertEquals(0x55, sidekick.getMappingFrame(),
+                "byte_73874 emits the same first external frame for P2");
         assertEquals(Direction.RIGHT, sidekick.getDirection(),
-                "P2 $C4 also sees a following delay byte of 0, so render_flags bit0 remains clear");
+                "P2's external render flip must not change its status-facing bit");
         assertEquals(LbzFinalBoss1Instance.FinalePhase.WAIT_LAUNCH_MILESTONE_B, boss.getFinalePhase());
 
         for (int i = 0; i < 6; i++) {
             boss.update(frame++, player);
         }
-        assertExternalFrame(player, 0x55, Direction.RIGHT, "byte_7386A second Sonic frame");
-        assertExternalFrame(sidekick, 0x55, Direction.RIGHT, "byte_73874 second P2 frame");
+        assertExternalFrame(player, 0x59, Direction.LEFT, "byte_7386A second Sonic frame");
+        assertExternalFrame(sidekick, 0x59, Direction.LEFT, "byte_73874 second P2 frame");
 
-        boss.update(frame++, player);
-        assertExternalFrame(player, 0x59, Direction.LEFT, "byte_7386A third Sonic frame");
-        assertExternalFrame(sidekick, 0x59, Direction.LEFT, "byte_73874 third P2 frame");
-
-        boss.update(frame++, player);
-        assertExternalFrame(player, 0x5A, Direction.LEFT, "byte_7386A fourth Sonic frame");
-        assertExternalFrame(sidekick, 0x5A, Direction.LEFT, "byte_73874 fourth P2 frame");
+        for (int i = 0; i < 6; i++) {
+            boss.update(frame++, player);
+        }
+        assertExternalFrame(player, 0x5A, Direction.LEFT, "byte_7386A third Sonic frame");
+        assertExternalFrame(sidekick, 0x5A, Direction.LEFT, "byte_73874 third P2 frame");
 
         for (int i = 0; i < 8; i++) {
             boss.update(frame++, player);
@@ -687,7 +686,10 @@ class TestLbzFinalBoss1Instance {
             Direction direction,
             String message) {
         assertEquals(mappingFrame, sprite.getMappingFrame(), message + " mapping_frame");
-        assertEquals(direction, sprite.getDirection(), message + " render_flags bit0 direction");
+        assertEquals(direction == Direction.LEFT, sprite.getRenderHFlip(),
+                message + " render_flags bit0");
+        assertEquals(Direction.RIGHT, sprite.getDirection(),
+                message + " must preserve the status-facing bit");
     }
 
     private static final class HarnessServices extends StubObjectServices {

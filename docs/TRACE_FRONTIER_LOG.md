@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ final-boss defeat and launch sequence
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 43495 to
+  frame 46066.** Release-blocking errors fell from 137 to two; the next
+  divergence is CPU Tails' flight/respawn counter (`0` expected versus `1`
+  actual) during the final camera fall.
+- Root: the two LBZ bosses share the global boss-explosion RNG stream and
+  native free-slot allocation failures, while FinalBoss1's laser-head creation,
+  trail emission, and charging muzzle retain distinct child-slot dispatch
+  boundaries. After defeat, the boss uses a signed `$FF` P2 lock that preserves
+  the existing logical direction, a boss-owned results set with two remaining
+  child-SST retire dispatches, then `Restore_PlayerControl/2` and the shared
+  positive-lock helper. The launch animation tables use one shared delay byte;
+  their `$C4` entry is the retained pre-script mapping, not the first emitted
+  frame, and their flip bytes change `render_flags` without changing
+  `Status_Facing`.
+- Fix: LBZ's end-boss explosion controller now consumes the shared RNG and
+  completes its native emission/lifetime tail. FinalBoss1 preserves laser child
+  creation and allocation order, refreshes a charging muzzle from its parent,
+  distinguishes signed and positive P2 lock behavior, retains the results child
+  retirement tail, publishes the exact control/animation reset at launch, and
+  decodes the external player scripts as delayed mapping/flip pairs. The shared
+  sidekick controller now mirrors `Check_TailsEndPose` input only when that
+  native handoff is actually queued.
+- Validation: 141 focused LBZ boss and sidekick-CPU tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and every other S3K, S1, and S2 frontier and error total is unchanged.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ final-boss collision publication coordinates
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 43062 to

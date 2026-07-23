@@ -408,7 +408,9 @@ public class SidekickCpuController {
 
         if (controller2SignedLocked) {
             carryController().setParentagePending(false);
-            if (sidekick.isObjectControlled() && !sidekick.isObjectControlAllowsCpu()) {
+            if (nativeEndingPosePending
+                    && sidekick.isObjectControlled()
+                    && !sidekick.isObjectControlAllowsCpu()) {
                 mirrorRawController2LogicalForEndingPose();
             }
             beginNormalStepDiagnostics("ctrl2_signed_lock_skip");

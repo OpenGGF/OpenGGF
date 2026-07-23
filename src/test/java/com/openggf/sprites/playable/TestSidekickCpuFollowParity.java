@@ -270,7 +270,7 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
-    void negativeCtrl2LockReportsClearedLogicalWordOnceEndingPoseObjectControlOwnsSidekick() {
+    void queuedNativeEndingPoseReportsClearedLogicalWordOnceObjectControlOwnsSidekick() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
@@ -298,6 +298,7 @@ class TestSidekickCpuFollowParity {
         tails.setObjectControlled(true);
         tails.setObjectControlAllowsCpu(false);
         controller.setController2SignedLocked(true);
+        controller.queueNativeEndingPoseForNextPlayerSlot();
         controller.update(0x4CC1);
 
         Assertions.assertAll(
@@ -309,6 +310,28 @@ class TestSidekickCpuFollowParity {
                                 + "freezes Tails with object_control=$81, so the trace-visible "
                                 + "Ctrl_2_logical word follows the cleared raw controller state "
                                 + "(sonic3k.asm:26196-26203,181919-181988)."));
+    }
+
+    @Test
+    void directEndingPosePreservesLogicalWordWhileNegativeCtrl2LockRemainsSet() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        controller.setController2Input(AbstractPlayableSprite.INPUT_LEFT, 0);
+        controller.update(0x4CC0);
+
+        tails.setObjectControlled(true);
+        tails.setObjectControlAllowsCpu(false);
+        controller.setController2SignedLocked(true);
+        controller.update(0x4CC1);
+
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_LEFT,
+                "A direct Set_PlayerEndingPose call does not clear Ctrl_2_locked "
+                        + "or Ctrl_2_logical; only Check_TailsEndPose queues that handoff.");
     }
 
     @Test

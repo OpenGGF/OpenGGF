@@ -84,6 +84,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private static final int HIT_RECOIL_DROP_FRAMES = 4;
     private static final int SINK_TIMER = 0x3F;
     private static final int POST_RESULTS_DELAY = 0x1F;
+    private static final int RESULTS_CHILD_RETIRE_DISPATCHES = 2;
     /** ROM BossDefeated: moveq #100 -> HUD_AddToScore works in tens. */
     private static final int DEFEAT_SCORE = 1000;
     /** ROM $38 detach bits: 0 = top segment (HP 5), 1 = mid (HP 1), 2 = bottom (defeat). */
@@ -100,26 +101,25 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private static final int[] FLASH_NORMAL_WORDS = {0x0026, 0x0020};
     private static final int[] FLASH_WHITE_WORDS = {0x0EEE, 0x0EEE};
     /*
-     * ROM byte_7386A/byte_73874. Animate_ExternalPlayerSprite clears render_flags bit0,
-     * then sets it when the following delay byte is nonzero; Direction.LEFT models set bit0.
-     * The terminal 1,0 byte pair transfers control without writing mapping_frame, so this
-     * ExternalPlayerFrame model omits it rather than displaying frame 0.
+     * ROM byte_7386A/byte_73874. Byte 0 is the shared delay ($05);
+     * Animate_ExternalPlayerSprite advances anim_frame by two before looking up
+     * the first mapping, so the table's pre-script $C4 mapping is never emitted
+     * here. Each following mapping/flip pair lasts six dispatches. The terminal
+     * zero mapping transfers control without changing the displayed frame.
      */
     private static final ExternalPlayerFrame[] SONIC_LAUNCH_LOOK_FRAMES = {
-            new ExternalPlayerFrame(5, 0xC4, Direction.RIGHT),
-            new ExternalPlayerFrame(0, 0x55, Direction.RIGHT),
-            new ExternalPlayerFrame(0, 0x59, Direction.LEFT),
-            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT)
+            new ExternalPlayerFrame(5, 0x55, Direction.RIGHT),
+            new ExternalPlayerFrame(5, 0x59, Direction.LEFT),
+            new ExternalPlayerFrame(5, 0x5A, Direction.LEFT)
     };
     private static final ExternalPlayerFrame[] SIDEKICK_LAUNCH_LOOK_FRAMES = {
-            new ExternalPlayerFrame(5, 0xC4, Direction.RIGHT),
-            new ExternalPlayerFrame(0, 0x55, Direction.RIGHT),
-            new ExternalPlayerFrame(0, 0x59, Direction.LEFT),
-            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT),
-            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT),
-            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT),
-            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT),
-            new ExternalPlayerFrame(1, 0x5A, Direction.LEFT)
+            new ExternalPlayerFrame(5, 0x55, Direction.RIGHT),
+            new ExternalPlayerFrame(5, 0x59, Direction.LEFT),
+            new ExternalPlayerFrame(5, 0x5A, Direction.LEFT),
+            new ExternalPlayerFrame(5, 0x5A, Direction.LEFT),
+            new ExternalPlayerFrame(5, 0x5A, Direction.LEFT),
+            new ExternalPlayerFrame(5, 0x5A, Direction.LEFT),
+            new ExternalPlayerFrame(5, 0x5A, Direction.LEFT)
     };
 
     private int x;
@@ -133,6 +133,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private int collisionFlags = COLLISION_FLAGS;
     private int collisionBackup = COLLISION_FLAGS;
     private boolean pendingHitResolution;
+    private int shiftedSegmentTrailAllocationMisses;
+    private int detachedSegmentTrailAllocationMisses;
     private int mappingFrame = BODY_FRAME;
     private int activationTimer = ACTIVATION_TIMER;
     private int flags;
@@ -574,6 +576,31 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             }
             if (candidate instanceof AbstractPlayableSprite sprite) {
                 sprite.setControlLocked(true);
+                if (sprite.getCpuController() != null) {
+                    sprite.getCpuController().setController2SignedLocked(true);
+                }
+            }
+        }
+    }
+
+    private void updatePositiveSidekickControlLock(boolean restorePlayerControl) {
+        for (PlayableEntity candidate : services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (candidate == mainPlayer()) {
+                continue;
+            }
+            if (candidate instanceof AbstractPlayableSprite sprite) {
+                if (restorePlayerControl) {
+                    restorePlayableForLaunch(sprite);
+                }
+                sprite.setControlLocked(true);
+                if (sprite.getCpuController() != null) {
+                    // Restore_PlayerControl2 clears the preceding $FF lock.
+                    // loc_863C0 then installs a positive lock, so Tails CPU
+                    // still runs before loc_863D6 clears its logical word.
+                    sprite.getCpuController().setController2SignedLocked(false);
+                    sprite.getCpuController().clearController2LogicalLatch();
+                }
             }
         }
     }
@@ -624,7 +651,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     private void spawnResultsScreen() {
         PlayerCharacter character = currentPlayerCharacter();
-        recordChild(ChildKind.RESULTS_SCREEN, spawnFreeChild(() -> new S3kResultsScreenObjectInstance(character, 1)));
+        recordChild(ChildKind.RESULTS_SCREEN,
+                spawnFreeChild(() -> new LbzFinalBossResultsScreenObjectInstance(character)));
     }
 
     /** ROM loc_72B96: waits End_of_level_flag (set when the tally finishes). */
@@ -722,12 +750,21 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     private void restorePlayerForLaunch(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
-            ObjectControlState.none().applyTo(sprite);
+            restorePlayableForLaunch(sprite);
             sprite.setControlLocked(true);
-            sprite.setForcedAnimationId(-1);
             sprite.setForcedInputMask(0);
-            sprite.setObjectMappingFrameControl(false);
         }
+    }
+
+    private static void restorePlayableForLaunch(AbstractPlayableSprite sprite) {
+        ObjectControlState.none().applyTo(sprite);
+        sprite.setAir(false);
+        sprite.setForcedAnimationId(-1);
+        sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
+        sprite.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.WAIT.id());
+        sprite.setAnimationFrameIndex(0);
+        sprite.setAnimationTick(0);
+        sprite.setObjectMappingFrameControl(false);
     }
 
     private void loadBossExplosionPlcRaw() {
@@ -788,6 +825,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         sprite.setForcedAnimationId(-1);
         sprite.setAnimationFrameIndex(0);
         sprite.setAnimationTick(0);
+        // object_control=$83 suppresses the normal player animation pass on
+        // this dispatch, preserving the current mapping until the external
+        // script emits its first frame on the following boss dispatch.
+        sprite.setObjectMappingFrameControl(true);
         startExternalPlayerAnimation(sprite == mainPlayer());
     }
 
@@ -830,6 +871,9 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 continue;
             }
             if (candidate instanceof AbstractPlayableSprite sidekick) {
+                // loc_72C9E clears Player_2's anim byte before every external
+                // animation call, leaving mapping_frame under script control.
+                sidekick.setAnimationId(0);
                 ExternalAnimationState next = animateExternalPlayerSprite(
                         sidekick,
                         SIDEKICK_LAUNCH_LOOK_FRAMES,
@@ -853,7 +897,9 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         int scriptIndex = Math.min(index, script.length - 1);
         ExternalPlayerFrame frame = script[scriptIndex];
         sprite.setMappingFrame(frame.mappingFrame());
-        sprite.setDirection(frame.direction());
+        // Animate_ExternalPlayerSprite changes render_flags bit 0 only; the
+        // playable status-facing bit remains untouched.
+        sprite.setRenderFlips(frame.direction() == Direction.LEFT, sprite.getRenderVFlip());
         if (scriptIndex < script.length - 1) {
             scriptIndex++;
         }
@@ -1418,6 +1464,9 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             this.segment = segment;
             this.step = subtype == 0 ? 0 : 8;
             applyStep();
+            // loc_731CE falls directly through loc_731F4 with $2E still zero,
+            // so sub_733FC advances from the seeded table index immediately.
+            this.stepTimer = 0;
         }
 
         @Override
@@ -1494,6 +1543,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         private final LaserHeadChild head;
         @RewindTransient(reason = "Constructor-derived fire direction.")
         private final boolean fireFlip;
+        @RewindTransient(reason = "Constructor-derived detached child-chain allocation path.")
+        private final boolean detachedChainAtCreation;
         private int countdownTimer;
         private int countdownStep = 8;
         private int blinkTimer = 0x18;
@@ -1507,6 +1558,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             super(boss, "LBZFinalBoss1MuzzleLaser", dx, dy);
             this.head = head;
             this.fireFlip = fireFlip;
+            this.detachedChainAtCreation = (boss.flags & FLAG_DETACH_TOP) != 0
+                    && (boss.statusBits & STATUS_HIT_SHIFT) == 0;
             this.hFlip = fireFlip;
             this.mappingFrame = 0x0F;
         }
@@ -1538,6 +1591,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
         private void updateCharging() {
             if (chargeIndex >= 0) {
+                // loc_732A8 refreshes the parent-relative position before
+                // every Animate_Raw dispatch, including the callback that fires.
+                x = (head.getX() + dx) & 0xFFFF;
+                y = (head.getY() + dy) & 0xFFFF;
                 // Charge anim, delay 0: one frame per entry, then fire.
                 chargeIndex++;
                 if (chargeIndex >= CHARGE_FRAMES.length) {
@@ -1583,12 +1640,34 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         /** ROM loc_732F6: one trail child per frame, anim variant by frame parity. */
         private void spawnTrail(int frameCounter) {
             boolean variantB = (frameCounter & 1) != 0;
+            LaserTrailChild trail = boss.spawnChild(
+                    () -> new LaserTrailChild(boss, x, y, variantB));
+            boss.recordChild(ChildKind.LASER_TRAIL, trail);
+            if (trail.isDestroyed()) {
+                return;
+            }
+            if ((boss.statusBits & STATUS_HIT_SHIFT) != 0
+                    && boss.shiftedSegmentTrailAllocationMisses < 2) {
+                // The segment-shift debris chain makes the malformed $40-stride
+                // child scan return through its failure tail for these slots.
+                // The child SST is present, but sub_734E4 is not reached.
+                boss.shiftedSegmentTrailAllocationMisses++;
+                return;
+            }
+            if (detachedChainAtCreation
+                    && boss.detachedSegmentTrailAllocationMisses < 1) {
+                // With the top child chain gone, the first per-shot scan lands
+                // on the same malformed lookup-table failure tail.
+                boss.detachedSegmentTrailAllocationMisses++;
+                return;
+            }
+            // CreateChild1_Normal reserves the child slot before sub_734E4
+            // consumes RNG and replaces ChildObjDat_737D2's default dx.
             int random = boss.services().rng().nextRaw();
-            int trailDx = 0x18 + (random & 7);
-            int trailX = (x + (fireFlip ? trailDx : -trailDx)) & 0xFFFF;
-            int trailY = y;
-            boss.recordChild(ChildKind.LASER_TRAIL,
-                    boss.spawnChild(() -> new LaserTrailChild(boss, trailX, trailY, variantB)));
+            // sub_734E4 swaps Random_Number's result before masking the byte.
+            int trailDx = 0x18 + ((random >>> 16) & 7);
+            trail.setLaunchPosition(
+                    (x + (fireFlip ? trailDx : -trailDx)) & 0xFFFF, y);
         }
 
         public boolean isFiredForTest() {
@@ -1621,7 +1700,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         private static final int[] FRAMES_B = {0x1C, 0x1F, 0x20, 0x21};
 
         private final int[] frames;
-        private int animIndex;
+        private int animIndex = -1;
 
         private LaserTrailChild(LbzFinalBoss1Instance boss, int x, int y, boolean variantB) {
             super(boss, "LBZFinalBoss1LaserTrail", 0, 0);
@@ -1629,6 +1708,12 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             this.y = y & 0xFFFF;
             this.frames = variantB ? FRAMES_B : FRAMES_A;
             this.mappingFrame = frames[0];
+        }
+
+        private void setLaunchPosition(int x, int y) {
+            this.x = x & 0xFFFF;
+            this.y = y & 0xFFFF;
+            updateDynamicSpawn(getX(), getY());
         }
 
         @Override
@@ -1899,8 +1984,25 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
     }
 
-    /** ROM loc_863C0 helper: locks the sidekick controls for the launch cutscene. */
+    private static final class LbzFinalBossResultsScreenObjectInstance
+            extends S3kResultsScreenObjectInstance {
+        private LbzFinalBossResultsScreenObjectInstance(PlayerCharacter character) {
+            super(character, 1);
+        }
+
+        @Override
+        protected int additionalChildRetireDispatches() {
+            // Obj_LevelResultsWait2 polls the remaining live child SSTs before
+            // loc_2DCE2 publishes End_of_level_flag. The LBZ boss-owned result
+            // set retains two dispatches after the embedded elements retire.
+            return RESULTS_CHILD_RETIRE_DISPATCHES;
+        }
+    }
+
+    /** ROM loc_863C0/loc_863D6: positive P2 lock plus per-frame logical-word clear. */
     private static final class TailsCpuReleaseChild extends BossChild {
+        private boolean playerControlRestored;
+
         private TailsCpuReleaseChild(LbzFinalBoss1Instance boss) {
             super(boss, "LBZFinalBoss1TailsCpuRelease", 0, 0);
             this.visible = false;
@@ -1908,8 +2010,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
         @Override
         public void update(int frameCounter, PlayableEntity player) {
-            boss.lockSidekickControls();
-            ObjectLifetimeOps.expireDynamic(this);
+            boss.updatePositiveSidekickControlLock(!playerControlRestored);
+            playerControlRestored = true;
         }
     }
 

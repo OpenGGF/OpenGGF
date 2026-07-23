@@ -72,6 +72,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     private static final int PAN_TARGET_X = 0x39F0;
     private static final int POST_DEFEAT_CAMERA_MAX_X = 0x3AB8;
     private static final int DEFEAT_TIMER = 0x7F;
+    private static final int DEFEAT_EXPLOSION_EMISSIONS = 41;
     // loc_7403A: moveq #100 -> HUD_AddToScore works in tens, so 1000 points.
     private static final int DEFEAT_SCORE = 1000;
     // sub_73FE2 writes Normal_palette_line_2+$16: palette line 1 (0-based), color 11.
@@ -769,6 +770,9 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
                 svc.gameState().setCurrentBossId(0);
             }
             svc.playMusic(Sonic3kMusic.LBZ2.id);
+        }
+        if (deferredExplosionControllerChild != null) {
+            deferredExplosionControllerChild.finishParentWindow();
         }
         ObjectLifetimeOps.deleteNoRespawn(this);
     }
@@ -1725,11 +1729,14 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
 
         private LbzEndBossExplosionControllerChild(LbzEndBossInstance parent) {
             super(parent, "LBZEndBossExplosionController", 0, 0xCB);
-            controller = new S3kBossExplosionController(parent.getX(), parent.getY(), 4);
+            controller = new S3kBossExplosionController(
+                    parent.getX(), parent.getY(), 4, parent.services().rng());
+            controller.dispatchCreation();
         }
 
         @Override
         protected boolean destroyWhenParentDestroyed() {
+            // The child remains in its SST through the parent's delete dispatch.
             return false;
         }
 
@@ -1744,6 +1751,23 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
                 return;
             }
             controller.tick();
+            drainExplosions();
+            if (boss.sharedExplosionEmissionCount >= DEFEAT_EXPLOSION_EMISSIONS) {
+                ObjectLifetimeOps.expireDynamic(this);
+            }
+        }
+
+        private void finishParentWindow() {
+            LbzEndBossInstance boss = boss();
+            while (boss.sharedExplosionEmissionCount < DEFEAT_EXPLOSION_EMISSIONS
+                    && !controller.isFinished()) {
+                controller.dispatchCreation();
+                drainExplosions();
+            }
+        }
+
+        private void drainExplosions() {
+            LbzEndBossInstance boss = boss();
             for (S3kBossExplosionController.PendingExplosion pending : controller.drainPendingExplosions()) {
                 boss.noteSharedExplosionEmission();
                 if (pending.playSfx()) {
