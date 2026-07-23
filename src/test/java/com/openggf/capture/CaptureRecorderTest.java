@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CaptureRecorderTest {
 
-    private static final class FakeEncoder implements CaptureEncoder {
+    private static class FakeEncoder implements CaptureEncoder {
         final List<Long> encoded = new ArrayList<>();
         Path openedOutput;
         int width, height, fps, sampleRate;
@@ -49,5 +49,18 @@ class CaptureRecorderTest {
         assertEquals(48000, enc.sampleRate);
         assertEquals(List.of(0L, 1L, 2L, 3L, 4L), enc.encoded);
         assertNotNull(enc.finishedAt);
+    }
+
+    @Test void abortIsIdempotentAndDelegated() {
+        class AbortEncoder extends FakeEncoder {
+            int aborts;
+            @Override public void abort() { aborts++; }
+        }
+        AbortEncoder enc = new AbortEncoder();
+        CaptureRecorder recorder = new CaptureRecorder(enc, BackpressurePolicy.BLOCK, 1,
+                Path.of("target"), "live", "now");
+        recorder.abort();
+        recorder.abort();
+        assertEquals(1, enc.aborts);
     }
 }
