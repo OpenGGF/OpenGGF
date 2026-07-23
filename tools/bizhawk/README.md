@@ -53,6 +53,28 @@ Do not substitute BizHawk 2.11.1 for trace recording. BizHawk 2.11.1 removed
 capture. An existing 2.11.1 installation may remain locally, but it must not be
 selected when running the trace tools.
 
+## Native headless GPGX proof of concept
+
+The Linux-only native GPGX smoke-capture proof of concept runs the BizHawk 2.11
+core through Mono without starting EmuHawk or requiring `DISPLAY`:
+
+```bash
+tools/bizhawk-headless/run.sh \
+  --rom "$S1_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2" \
+  --output "$PWD/target/bizhawk-headless-smoke" \
+  --bk2-frame-offset 840 \
+  --max-frames 1000
+```
+
+It requires the supported Linux x64 BizHawk 2.11 distribution, Mono, and a
+valid Sonic 1 REV01 ROM in `S1_ROM_PATH`; set `BIZHAWK_HOME` to an absolute,
+writable BizHawk installation when it is not available at the default location.
+This is deliberately a narrow GPGX/Genesis smoke path, not a replacement for
+the Lua recorders or their Windows capture workflow. The resulting `smoke.csv`
+is a deterministic developer diagnostic only: it is **not yet the canonical
+trace schema** and must not be committed as a trace fixture.
+
 ## Trace Run Manifests
 
 A **trace run** is a complete playthrough captured in typed per-zone or per-stage segment

@@ -6,4 +6,3 @@ emuVersion Version 2.11
 OriginalEmuVersion Version 2.11
 GameName Sonic The Hedgehog (W) (REV01) [!]
 SHA1 09DADB5071EB35050067A32462E39C5F
-
