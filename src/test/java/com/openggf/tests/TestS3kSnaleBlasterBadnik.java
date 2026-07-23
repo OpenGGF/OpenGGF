@@ -119,6 +119,49 @@ class TestS3kSnaleBlasterBadnik {
     }
 
     @Test
+    void completedClosingPassUsesTheSharedOpenWaitAndReversesDirection() throws Exception {
+        AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
+        int initialY = snaleBlaster.getY();
+        setEnum(snaleBlaster, "state", "CLOSING");
+        setInt(snaleBlaster, "verticalStep", 2);
+        setInt(snaleBlaster, "openCyclesRemaining", 0);
+        setInt(snaleBlaster, "verticalAnimTimer", 0);
+        setInt(snaleBlaster, "mappingFrame", 3);
+
+        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+
+        assertEquals(initialY + 2, snaleBlaster.getY());
+        assertEquals("OPEN_WAIT", readEnumName(snaleBlaster, "state"),
+                "loc_8C08A returns both movement directions to routine 2");
+        assertEquals(0x90, readInt(snaleBlaster, "waitTimer"));
+        assertEquals(-2, readInt(snaleBlaster, "verticalStep"),
+                "loc_8C08A negates the shared vertical step for the next pass");
+        assertTrue(readBoolean(snaleBlaster, "firingWindow"),
+                "loc_8C08A sets parent bit 1 after a closing pass too");
+    }
+
+    @Test
+    void sharedWaitResumesVerticalScriptWithoutResettingItsCursor() throws Exception {
+        AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
+        setEnum(snaleBlaster, "state", "OPEN_WAIT");
+        setInt(snaleBlaster, "waitTimer", 0);
+        setInt(snaleBlaster, "verticalStep", -2);
+        setInt(snaleBlaster, "verticalAnimTimer", 9);
+        setInt(snaleBlaster, "mappingFrame", 4);
+
+        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+
+        assertEquals("OPENING", readEnumName(snaleBlaster, "state"));
+        assertEquals(9, readInt(snaleBlaster, "verticalAnimTimer"),
+                "loc_8C03E leaves anim_frame_timer untouched");
+        assertEquals(4, readInt(snaleBlaster, "mappingFrame"),
+                "loc_8C03E leaves mapping_frame untouched");
+        assertEquals(2, readInt(snaleBlaster, "openCyclesRemaining"));
+    }
+
+    @Test
     void shooterChildFiresSingleProjectileAtRawAnimationOffsetFour() throws Exception {
         RecordingServices services = new RecordingServices();
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(services);

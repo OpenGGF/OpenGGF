@@ -44,7 +44,6 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
     private static final int CLOSED_WAIT_FRAMES = 0x20;   // loc_8BFD4: move.w #$20,$2E.
     private static final int OPEN_WAIT_FRAMES = 0x90;     // loc_8C08A: move.w #$90,$2E.
     private static final int VERTICAL_STEP_OPEN = -2;     // loc_8C030: move.w #-2,$40.
-    private static final int VERTICAL_STEP_CLOSE = 2;
     private static final int VERTICAL_TOGGLE_DELAY = 0x0F; // byte_8C2C0 frame delays.
     private static final int VERTICAL_CYCLE_COUNT = 2;     // loc_8C03E: move.b #2,$39.
     private static final int PLAYER_CLOSE_RANGE = 0x30;    // sub_8C23C x/y distance.
@@ -116,7 +115,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
             case OPENING_PREP -> updateOpeningPrep();
             case OPENING -> updateVerticalMotion(player, State.OPEN_WAIT, OPEN_WAIT_FRAMES, true);
             case OPEN_WAIT -> updateOpenWait();
-            case CLOSING -> updateVerticalMotion(player, State.CLOSED_WAIT, CLOSED_WAIT_FRAMES, false);
+            case CLOSING -> updateVerticalMotion(player, State.OPEN_WAIT, OPEN_WAIT_FRAMES, true);
             case CLOSING_FROM_PLAYER -> updateEarlyClose();
             case EARLY_REOPEN_WAIT -> updateEarlyReopenWait();
             case EARLY_REOPENING -> updateEarlyReopen();
@@ -152,6 +151,19 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
     @Override
     public int getCollisionProperty() {
         return collisionProperty;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return super.traceDebugDetails()
+                + " state=" + state
+                + " wait=" + waitTimer
+                + " step=" + verticalStep
+                + " cycles=" + openCyclesRemaining
+                + " animTimer=" + verticalAnimTimer
+                + " prep=" + openingPrepIndex + "/" + openingPrepTimer
+                + " fire=" + firingWindow
+                + " colProp=" + String.format("%02X", collisionProperty & 0xFF);
     }
 
     @Override
@@ -216,24 +228,22 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         openingPrepTimer = OPENING_PREP_DELAY;
     }
 
-    private void beginOpeningVerticalMotion() {
-        verticalStep = VERTICAL_STEP_OPEN;
-        beginVerticalMotion(State.OPENING);
-    }
-
     private void updateOpenWait() {
         collisionEnabled = true;
         collisionProperty = firingWindow ? 0 : 0x7F;
         waitTimer--;
         if (waitTimer < 0) {
-            beginClosing();
+            beginTimedVerticalMotion();
         }
     }
 
-    private void beginClosing() {
+    private void beginTimedVerticalMotion() {
         firingWindow = false;
-        verticalStep = VERTICAL_STEP_CLOSE;
-        beginVerticalMotion(State.CLOSING);
+        // loc_8C03E resumes byte_8C2C0 without resetting its raw-animation
+        // cursor. loc_8C08A negates $40 after every completed three-step pass,
+        // so the sign selects whether this pass opens or closes the shell.
+        state = verticalStep < 0 ? State.OPENING : State.CLOSING;
+        openCyclesRemaining = VERTICAL_CYCLE_COUNT;
     }
 
     private void beginVerticalMotion(State nextState) {
@@ -312,7 +322,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         waitTimer = 2;
         mappingFrame++;
         if (mappingFrame >= 3) {
-            beginOpeningVerticalMotion();
+            beginTimedVerticalMotion();
         }
     }
 

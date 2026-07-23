@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ Snale shared shell-cycle wait
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 27969 to
+  frame 28456.** The next divergence is Sonic's animation (`$08` expected
+  versus `$00` actual).
+- Root: both directions of Snale Blaster's three-step shell motion finish in
+  `loc_8C08A`. That routine always returns to routine 2 with a `$90`-frame
+  wait, sets parent bit 1 to expose the vulnerable/firing window, negates the
+  shared vertical step, and retains `byte_8C2C0`'s raw-animation cursor. The
+  engine instead sent a completed closing pass through the one-time `$20`
+  initialization wait and reset the cursor. It therefore reopened early,
+  stopped two pixels above the ROM parent when Sonic approached, and missed
+  the recorded normal enemy defeat and upward-hit `$100` rebound.
+- Fix: completed opening and closing passes now share the `$90` wait and
+  vulnerable window. Expiry resumes the direction selected by the retained
+  signed vertical step without resetting the raw-animation timer or mapping
+  frame. Focused tests cover closing-pass completion and cursor retention.
+  The change models object routine state only, with no zone, route, or frame
+  exception.
+- Validation: all 12 focused Snale Blaster tests pass, and the focused replay
+  reaches frame 28456. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. HCZ
+  remains at frame 31335, ICZ remains green, and no S3K, S1, or S2 frontier
+  regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ transition oscillator tail and Snale projectile cadence
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 27598 to
