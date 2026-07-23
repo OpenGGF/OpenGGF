@@ -17,6 +17,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public Action Body { get; private set; }
         }
 
+        internal sealed class SkipTestException : Exception
+        {
+            public SkipTestException(string message)
+                : base(message)
+            {
+            }
+        }
+
         private static int Main(string[] args)
         {
             string filter = null;
@@ -34,6 +42,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             GpgxHostTests.Register(tests);
             S1SmokeRecorderTests.Register(tests);
             SmokeCaptureRunnerTests.Register(tests);
+            NoReplacePublisherTests.Register(tests);
+            EndToEndTests.Register(tests);
 
             var matched = 0;
             var failed = 0;
@@ -50,6 +60,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 {
                     test.Body();
                     Console.WriteLine("PASS " + test.Name);
+                }
+                catch (SkipTestException exception)
+                {
+                    Console.WriteLine(
+                        "SKIP " + test.Name + ": " + exception.Message);
                 }
                 catch (Exception exception)
                 {

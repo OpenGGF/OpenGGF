@@ -30,12 +30,18 @@
       <HintPath>$(BizHawkDllDir)/BizHawk.Emulation.Cores.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(BizHawkDllDir)/Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="tests/AssertEx.cs" />
     <Compile Include="tests/Bk2ReaderTests.cs" />
     <Compile Include="tests/BootstrapTests.cs" />
     <Compile Include="tests/GpgxHostTests.cs" />
+    <Compile Include="tests/NoReplacePublisherTests.cs" />
+    <Compile Include="tests/EndToEndTests.cs" />
     <Compile Include="tests/S1SmokeRecorderTests.cs" />
     <Compile Include="tests/SmokeCaptureRunnerTests.cs" />
     <Compile Include="tests/TestMain.cs" />
