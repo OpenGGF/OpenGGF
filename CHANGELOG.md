@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ1 Robotnik's gradual post-collapse max-X helper now executes its native first accumulator step in the same `Process_Sprites` pass that allocates its after-current SST slot. This aligns the camera release and subsequent attracted-ring sequence, advancing the combined LBZ frontier from frame 19709 to frame 20365 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: S3K's active ring window now treats `Ring_end_addr_ROM` as an exclusive pointer when a record lies exactly at `camera_x-$8+$150`. This prevents an endpoint ring from attracting before the camera advances, aligns LBZ's native attracted-ring allocation sequence, and advances the combined LBZ frontier from frame 19664 to frame 19709 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: LBZ1's continuous collapse shake now retains the native `Screen_shake_flag` owner and samples `ScreenShakeArray2` only in the later scroll phase using the prior published level counter. This restores CPU Tails' native render-visible recovery edge and advances the combined LBZ frontier from frame 19151 to frame 19664 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: the LBZ1 ending-collapse barrier now materializes on the screen-event pass after Robotnik arms the collapse, then runs its native ungated, inclusive-edge `SolidObjectFull2` contact. This advances the combined LBZ frontier from frame 19098 to frame 19151 while preserving every other S3K, S1, and S2 trace frontier.

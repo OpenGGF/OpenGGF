@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ1 post-collapse max-X helper creation pass
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 19709 to
+  frame 20365.** The next divergence is CPU Tails' horizontal speed (`-$0200`
+  expected versus `$0179` actual).
+- Root: `CreateChild6_Simple` allocates `Obj_IncLevEndXGradual` in an SST slot
+  after Robotnik's current slot. The native `Process_Sprites` cursor therefore
+  executes that new child later in the same pass, advancing its hidden
+  `$4000` accumulator even though the first update has no whole-pixel carry.
+  The engine did not seed the accumulator until the following parent update,
+  keeping `Camera_max_X_pos` one pixel behind throughout the release.
+- Fix: Robotnik's collapse-clear dispatch now performs the helper's first
+  accumulator update when it creates the logical after-current child. Focused
+  coverage verifies the creation-frame fractional step and the resulting
+  swapped-high-word max-X cadence.
+- Validation: the focused Robotnik camera-release test passes. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes; LBZ reaches frame 20365 with 3417 remaining
+  errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - S3K exclusive ring-window endpoint
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 19664 to

@@ -691,29 +691,25 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         assertEquals(0x0A, robotnik.getRoutineForTest(),
                 "loc_8CC8C advances Obj_LBZ1Robotnik to routine $0A after LBZ1_EventVScroll clears.");
         assertEquals(0x3B60, GameServices.camera().getMaxX() & 0xFFFF,
-                "loc_8CC8C writes Camera_stored_max_X_pos=$3EA0, but Child6_IncLevX does not "
-                        + "snap Camera_max_X_pos on the creation frame.");
+                "Child6_IncLevX runs after Robotnik on its creation frame, but its first $4000 "
+                        + "accumulator step has no integer carry.");
 
         GameServices.camera().setX((short) 0x3C00);
         robotnik.update(611, player);
         assertEquals(0x3C00, GameServices.camera().getMinX() & 0xFFFF,
                 "loc_8CCB4 keeps Camera_min_X_pos pinned to Camera_X_pos until the boss approach.");
         assertEquals(0x3B60, GameServices.camera().getMaxX() & 0xFFFF,
-                "Obj_IncLevEndXGradual's first three $4000 accumulator updates have no integer carry.");
+                "Obj_IncLevEndXGradual's first two post-creation updates still have no integer carry.");
 
         robotnik.update(612, player);
         robotnik.update(613, player);
-        assertEquals(0x3B60, GameServices.camera().getMaxX() & 0xFFFF,
-                "The first three gradual updates keep Camera_max_X_pos locked.");
-
-        robotnik.update(614, player);
         assertEquals(0x3B61, GameServices.camera().getMaxX() & 0xFFFF,
-                "The fourth $4000 accumulator update increases Camera_max_X_pos by one pixel.");
+                "The creation-frame step plus three later $4000 updates increase Camera_max_X_pos.");
 
-        for (int frame = 615; frame <= 618; frame++) {
+        for (int frame = 614; frame <= 618; frame++) {
             robotnik.update(frame, player);
         }
-        assertEquals(0x3B66, GameServices.camera().getMaxX() & 0xFFFF,
+        assertEquals(0x3B68, GameServices.camera().getMaxX() & 0xFFFF,
                 "Obj_IncLevEndXGradual applies the swapped high word each frame, "
                         + "not a simple fractional carry.");
     }
