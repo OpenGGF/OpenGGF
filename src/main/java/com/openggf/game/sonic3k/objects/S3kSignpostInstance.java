@@ -120,6 +120,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private boolean preservesPostLandingSparkleGate;
     private boolean preservesPostObjectResultDispatchBoundary;
     private boolean preservesGroundedResultsDispatchBoundary;
+    private boolean usesShortResultsChildRetireTail;
 
     /**
      * Creates the signpost at the given X position.
@@ -152,6 +153,15 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
             int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries,
             boolean preservesGroundedResultsDispatchBoundary) {
+        this(spawnX, apparentAct, resultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
+                resultsPostControlHandoffDelayEntries,
+                preservesGroundedResultsDispatchBoundary, false);
+    }
+
+    S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
+            int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries,
+            boolean preservesGroundedResultsDispatchBoundary,
+            boolean usesShortResultsChildRetireTail) {
         super(null, "S3kSignpost");
         this.worldX = spawnX;
         this.worldY = 0; // Set properly in INIT
@@ -160,6 +170,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
         this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
         this.preservesGroundedResultsDispatchBoundary = preservesGroundedResultsDispatchBoundary;
+        this.usesShortResultsChildRetireTail = usesShortResultsChildRetireTail;
     }
 
     private S3kSignpostInstance() {
@@ -520,14 +531,24 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries
                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
-                resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary
-                        ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
-                        : RESULTS_CARRIED_RETIRE_DISPATCHES));
+                resultsChildRetireDispatches(resultsWaitedForPlayerLanding,
+                        preservesPostObjectResultDispatchBoundary,
+                        usesShortResultsChildRetireTail)));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
         if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
             applyNativeSidekickEndingPose(player);
         }
+    }
+
+    static int resultsChildRetireDispatches(boolean waitedForPlayerLanding,
+            boolean preservesPostObjectResultDispatchBoundary,
+            boolean usesShortResultsChildRetireTail) {
+        return waitedForPlayerLanding
+                        || preservesPostObjectResultDispatchBoundary
+                        || usesShortResultsChildRetireTail
+                ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
+                : RESULTS_CARRIED_RETIRE_DISPATCHES;
     }
 
     static void applySidekickInputLock(AbstractPlayableSprite sprite) {

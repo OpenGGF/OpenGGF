@@ -637,7 +637,8 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         // and loads Pal_MHZ2's first line during the results (original game bug).
         spawnChild(() -> new S3kBossDefeatSignpostFlow(
                 homeX, SIGNPOST_APPARENT_ACT,
-                S3kBossDefeatSignpostFlow.CleanupAction.LOAD_MHZ2_OBJECT_PALETTE));
+                S3kBossDefeatSignpostFlow.CleanupAction.LOAD_MHZ2_OBJECT_PALETTE,
+                0, 0, 0, 0, false, true));
     }
 
     private boolean allPanelsGone() {

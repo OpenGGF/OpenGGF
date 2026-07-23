@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ retained results child retirement tail
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 22188 to
+  frame 22226.** The next divergence is the act-transition ring reset
+  (`46` expected versus `0` actual).
+- Root: the LBZ miniboss end-sign flow allocates its retained results children
+  with two dispatch-visible retirement entries before
+  `Restore_PlayerControl`. The engine used the ordinary three-entry carried
+  results tail, keeping both players object-controlled for one extra frame.
+- Fix: the boss-defeat/signpost lifecycle now carries an explicit short-results
+  child-tail property. LBZ's miniboss flow selects the two-entry tail while
+  ordinary carried results and the existing waited-for-landing path retain
+  their established three- and two-entry behavior.
+- Validation: all fourteen focused signpost and boss-defeat-flow tests pass.
+  The complete `*TraceReplay#replayMatchesTrace` sweep reports 61 tests,
+  45 green and the same 16 documented red routes; LBZ reaches frame 22226
+  with 5443 remaining errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - S3K ending-pose playable-slot replay phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 22073 to

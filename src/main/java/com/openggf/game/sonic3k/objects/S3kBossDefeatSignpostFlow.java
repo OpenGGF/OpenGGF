@@ -69,6 +69,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     private int resultsWaitDurationAdjustment;
     private int resultsPostControlHandoffDelayEntries;
     private boolean preservesGroundedResultsDispatchBoundary;
+    private boolean usesShortResultsChildRetireTail;
     private boolean initialized;
 
     /**
@@ -104,6 +105,17 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
             int initialWaitCatchUpEntries, int signpostResultsTimerCatchUpEntries,
             int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries,
             boolean preservesGroundedResultsDispatchBoundary) {
+        this(signpostX, apparentAct, cleanupAction, initialWaitCatchUpEntries,
+                signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
+                resultsPostControlHandoffDelayEntries,
+                preservesGroundedResultsDispatchBoundary, false);
+    }
+
+    S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,
+            int initialWaitCatchUpEntries, int signpostResultsTimerCatchUpEntries,
+            int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries,
+            boolean preservesGroundedResultsDispatchBoundary,
+            boolean usesShortResultsChildRetireTail) {
         super(new ObjectSpawn(signpostX, 0, 0, 0, 0, false, 0), "S3kBossDefeatSignpostFlow");
         this.signpostX = signpostX;
         this.apparentAct = apparentAct;
@@ -113,6 +125,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
         this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
         this.preservesGroundedResultsDispatchBoundary = preservesGroundedResultsDispatchBoundary;
+        this.usesShortResultsChildRetireTail = usesShortResultsChildRetireTail;
         this.phase = Phase.WAIT_FADE;
         this.timer = FADE_TIMER;
     }
@@ -214,7 +227,8 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         // Spawn signpost above camera
         S3kSignpostInstance signpost = new S3kSignpostInstance(
                 signpostX, apparentAct, signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
-                resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary);
+                resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary,
+                usesShortResultsChildRetireTail);
         spawnDynamicObject(signpost);
         LOG.fine("S3K defeat flow spawned signpost at X=" + signpostX);
 

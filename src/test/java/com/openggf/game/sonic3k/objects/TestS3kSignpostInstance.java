@@ -34,6 +34,14 @@ import static org.mockito.Mockito.verify;
 class TestS3kSignpostInstance {
 
     @Test
+    void shortNativeResultsTailUsesTwoChildRetireDispatches() {
+        assertEquals(2, S3kSignpostInstance.resultsChildRetireDispatches(false, false, true));
+        assertEquals(2, S3kSignpostInstance.resultsChildRetireDispatches(true, false, false));
+        assertEquals(2, S3kSignpostInstance.resultsChildRetireDispatches(false, true, false));
+        assertEquals(3, S3kSignpostInstance.resultsChildRetireDispatches(false, false, false));
+    }
+
+    @Test
     void sparkleYOffsetConsumesRomRandomWord() {
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 0x00001234L);
 
