@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ cup live contact and SST solid-state identity
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 34752 to
+  frame 35015.** The next divergence is Sonic's status byte (`$03` expected
+  versus `$02` actual).
+- Root: the active Obj18 cup sampled CPU Tails' previous completed position to
+  approximate its pre-P2 native slot. At the `$2D17` cup position this missed
+  the live `$2D42` exact right boundary that `SolidObject_cont` accepts because
+  its unsigned comparison rejects only values above the doubled width. After
+  restoring that contact, the cup's per-frame `updateDynamicSpawn` also exposed
+  a second identity fault: standing/pushing bits were keyed by the rebuilt
+  moving placement record instead of Obj18's persistent SST status byte, so
+  the following no-contact pass could not clear Tails' push state.
+- Fix: Obj18 now consumes the live player position at its manual Full2
+  checkpoint, opts into the helper's inclusive right edge, and keys solid
+  status to the live object instance while its placement coordinates move.
+  These gates are driven by the concrete solid helper and SST state ownership;
+  there is no zone, route, or frame exception.
+- Validation: all 17 focused cup-elevator tests pass and the focused LBZ
+  replay reaches frame 35015. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ lowering-grapple release input phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 33571 to

@@ -57,7 +57,7 @@ class TestLbzCupElevatorInstance {
     }
 
     @Test
-    void activeCupSamplesCpuSidekickBeforePlayer2MovementSlot() throws Exception {
+    void activeCupUsesLiveCpuSidekickPositionAndInclusiveRightEdge() throws Exception {
         LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
                 0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
         Tails sidekick = new Tails("tails", (short) 0x1800, (short) 0x0600);
@@ -66,8 +66,12 @@ class TestLbzCupElevatorInstance {
         assertEquals(0, elevator.getFullSolidPlayerPositionHistoryFrames(sidekick));
         setPrivateInt(elevator, "activationFlag", 1);
 
-        assertEquals(1, elevator.getFullSolidPlayerPositionHistoryFrames(sidekick),
-                "active Obj18 executes before the native Player 2 movement slot");
+        assertEquals(0, elevator.getFullSolidPlayerPositionHistoryFrames(sidekick),
+                "Obj18's Full2 contact consumes Player 2's live position");
+        assertTrue(elevator.usesInclusiveRightEdge(),
+                "SolidObject_cont accepts the exact right-hand boundary via `bhi`");
+        assertTrue(elevator.usesInstanceSolidStateLatchKey(),
+                "the moving cup's native status bits belong to its live SST instance");
         assertFalse(elevator.airborneStaleStandingBitReturnsNoContact(sidekick),
                 "a provisional engine P2 bit must not hide the active cup's live Full2 contact");
     }

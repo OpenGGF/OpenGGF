@@ -213,18 +213,6 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     @Override
-    public int getFullSolidPlayerPositionHistoryFrames(PlayableEntity player) {
-        // Player 1's fixed slot precedes Obj18, but Player 2's fixed slot follows
-        // it. Once $34 marks the moving cup active, its per-player SolidObject
-        // call therefore sees the CPU sidekick before that sidekick's movement
-        // slot. The engine advances both players before its object pass, so this
-        // active-cup P2 check samples the previous completed position.
-        return activationFlag != 0
-                && player instanceof AbstractPlayableSprite sprite
-                && sprite.isCpuControlled() ? 1 : 0;
-    }
-
-    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (flickerMode && flickerHidden) {
             return;
@@ -263,6 +251,22 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         // Obj18 calls SolidObjectFull2_1P for both players. Unlike the regular
         // SolidObjectFull entry, that helper does not test Player 2's on-screen
         // render flag before resolving the P2 standing bit.
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Obj18 keeps its standing/pushing bits in the live SST status byte
+        // while x_pos changes on every orbit step. updateDynamicSpawn rebuilds
+        // the engine placement identity after each checkpoint, so the native
+        // bits must follow this instance rather than that moving spawn record.
+        return true;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObject_cont rejects horizontal separation with `bhi`, so the
+        // exact x_pos == cup_x + d1 boundary remains a live side contact.
         return true;
     }
 
@@ -747,7 +751,6 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
                 + " p2solid=" + (sidekick != null && isSolidFor(sidekick))
                 + " p2standing=" + (sidekick != null && isPlayerStandingOnThis(sidekick))
                 + " p2latchSelf=" + (sidekick != null && sidekick.getLatchedSolidObjectInstance() == this)
-                + " p2hist=" + (sidekick != null ? getFullSolidPlayerPositionHistoryFrames(sidekick) : -1)
                 + " p2prev=" + (sidekick != null
                         ? Integer.toHexString(sidekick.getCentreX(1) & 0xFFFF) + ","
                                 + Integer.toHexString(sidekick.getCentreY(1) & 0xFFFF)
