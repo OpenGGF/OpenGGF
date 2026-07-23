@@ -162,8 +162,12 @@ would read 0 (a "dead frame").
   (`0..CompletedFrame-1`) have been consumed, the next unconsumed row is row
   `offset` — identical to the Lua's `emu.framecount()` convention.
 - Recording phase, per trace row N (starting at N = 0):
-  - **(a)** If `offset + N >= <movie input-row count>`: finish. Row N is NOT
-    recorded (movie exhaustion; see §2.4 for why the check moves pre-advance).
+  - **(a)** If `offset + N + 1 >= <movie input-row count>`: finish. Row N is
+    NOT recorded. This single pre-advance predicate folds BOTH Lua movie
+    checks — the row-count guard AND `movie.mode() == "FINISHED"` — and the
+    FINISHED one fires first, on the frame fed by the movie's LAST input row
+    (see §2.4). The final input row of a movie is therefore never consumed or
+    recorded.
   - **(b)** Apply BK2 row `offset + N`, `Advance()`.
   - **(c)** Read `game_mode` (u8 `0xF600`). If `!= 0x0C`: finish WITHOUT
     recording row N.
@@ -183,25 +187,36 @@ All of (3)–(5) run **after** the frame advance and **before** any bytes for
 row N are written — exactly steps (b)→(c)→(d) above. The two apparent
 reorderings are byte-neutral:
 
-- **Movie exhaustion moved pre-advance:** the Lua condition
-  `(offset + trace_frame) >= movie_length` depends only on constants and the
-  row counter, not on the advanced frame's RAM, so it evaluates identically
-  before or after the advance. The Lua does advance one extra emulator frame
-  before noticing (its `frameadvance` is unconditional) — but nothing is
-  recorded from that frame, so the output files are unaffected. The native
-  harness cannot apply a nonexistent input row, hence check (a) first.
-  The Lua also checks `game_mode` (3) before exhaustion (4); when both
-  conditions hold on the same frame either order finishes without recording
-  row N — identical bytes either way.
-- **`movie.mode() == "FINISHED"`** is subsumed by (a): the row-count check
-  fires at or before the frame BizHawk would flag FINISHED, and both paths
-  write nothing.
+- **`movie.mode() == "FINISHED"` is the effective Lua movie stop, and it
+  fires one iteration BEFORE the row-count guard.** In the pinned BizHawk
+  2.11 binaries, `MovieSession.HandleFrameAfter` calls `HandlePlaybackEnd` →
+  `Movie.FinishedMode()` exactly when `Emulator.Frame == Movie.FrameCount`,
+  and `MainForm.StepRunLoop_Core` orders FrameAdvance → HandleFrameAfter →
+  Lua resume. So on the `on_frame_end()` after the advance that consumed the
+  movie's LAST input row (`offset + trace_frame == movie_length - 1`), the
+  Lua sees FINISHED and finalizes WITHOUT recording that row; its row-count
+  guard `(offset + trace_frame) >= movie_length` would only fire one
+  iteration later (it exists as a safety net for chromeless runs where movie
+  mode lags). The native predicate (a), `offset + N + 1 >= rows`, reproduces
+  the earlier of the two: the frame fed by the final input row is never
+  recorded.
+- **Movie-end check moved pre-advance:** predicate (a) depends only on
+  constants and the row counter, not on the advanced frame's RAM, so it
+  evaluates identically before or after the advance. The Lua does advance
+  the emulator through the final input row before noticing FINISHED — but
+  nothing is recorded from that frame, so the output files are unaffected;
+  the native harness simply never applies that row. The Lua also checks
+  `game_mode` (3) before the movie checks (4); when both conditions hold on
+  the same frame either order finishes without recording row N — identical
+  bytes either way.
 - The Lua constant `MOVIE_FRAME_SAFETY_MARGIN` is declared but **unused**; do
   not port it.
 
-For the canonical GHZ1 fixture, the run ends via (c): `offset + N` =
-840 + 3905 = 4745 < 4806 rows, i.e. `game_mode` left `0x0C` before the movie
-ran out.
+For the canonical GHZ1 fixture, the run ends via (c): `offset + N + 1` =
+840 + 3905 + 1 = 4746 < 4806 rows, i.e. `game_mode` left `0x0C` well before
+either movie stop could fire — the differential gate therefore cannot
+exercise the movie-end path, which is why it is covered by unit tests
+instead.
 
 ---
 

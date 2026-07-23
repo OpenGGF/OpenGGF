@@ -124,9 +124,18 @@ namespace OpenGGF.BizHawk.Headless
                 int traceFrame = 0;
                 while (true)
                 {
-                    if ((long)offset + traceFrame >= movie.FrameCount)
+                    // Lua stop parity for movie end: BizHawk 2.11 flags the
+                    // movie FINISHED on the frame that consumes the last
+                    // input row (MovieSession.HandleFrameAfter fires between
+                    // FrameAdvance and the Lua resume), so the Lua recorder's
+                    // movie.mode() == "FINISHED" check finalizes WITHOUT
+                    // recording that row — one iteration before its row-count
+                    // guard would fire. Fold both Lua checks into a single
+                    // pre-advance predicate: the last recordable trace row is
+                    // the one fed by input row (FrameCount - 2).
+                    if ((long)offset + traceFrame + 1 >= movie.FrameCount)
                     {
-                        break;      // Movie exhausted; row N is not recorded.
+                        break;      // Movie end; row N is not recorded.
                     }
                     if (!frames.MoveNext())
                     {

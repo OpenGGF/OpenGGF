@@ -180,8 +180,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void TraceRunPublishesThreeFilesWithLabeledStdout()
         {
             TraceCliDependencies dependencies = ResolveDependencies();
+            // 7 rows with offset 3 yields 3 trace rows: the movie's final
+            // input row is never consumed (Lua FINISHED parity).
             WithSyntheticMovie(
-                6,
+                7,
                 moviePath => WithUnusedOutput(
                     output =>
                     {
@@ -225,7 +227,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "ROM SHA-1: "
                             + RomIdentity.Sonic1Rev01Sha1
                             + "\n"
-                            + "Movie frames: 6\n"
+                            + "Movie frames: 7\n"
                             + "BK2 frame offset: 3\n"
                             + "Trace frames: 3\n"
                             + "Physics CSV: " + physicsPath + "\n"

@@ -47,6 +47,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     BlankRow,
                     "|..|...R....|........|",
                     "|..|.D...B..|........|",
+                    BlankRow,
+                    // Final input row: never consumed or recorded (BizHawk
+                    // flags the movie FINISHED on the frame that consumes it,
+                    // and the Lua finalizes on FINISHED before recording).
                     BlankRow
                 },
                 movie =>
@@ -213,16 +217,22 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         new StringWriter(),
                         metadata);
 
+                    // Lua parity: with offset 2 and 5 input rows, the frame
+                    // fed by the final row (index 4) would be the one where
+                    // BizHawk flags the movie FINISHED, and the Lua finalizes
+                    // on FINISHED without recording it. So only rows 2 and 3
+                    // are consumed (trace rows 0 and 1); the final input row
+                    // is never applied to the host.
                     AssertEx.Equal(2, result.Bk2FrameOffset);
-                    AssertEx.Equal(3, result.TraceFrameCount);
-                    AssertEx.Equal(5, host.AdvanceCount);
+                    AssertEx.Equal(2, result.TraceFrameCount);
+                    AssertEx.Equal(4, host.AdvanceCount);
                     AssertEx.Equal(
-                        5,
+                        4,
                         physics.ToString().Split('\n').Length);
                     AssertEx.Equal(
                         true,
                         metadata.ToString().Contains(
-                            "  \"trace_frame_count\": 3,\n"));
+                            "  \"trace_frame_count\": 2,\n"));
                 });
         }
 
@@ -254,8 +264,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         new StringWriter(),
                         metadata);
 
+                    // 8 input rows, offset 4: rows 4-6 are recorded; row 7
+                    // (the movie's final input row) is never consumed
+                    // (Lua FINISHED parity).
                     AssertEx.Equal(4, result.Bk2FrameOffset);
-                    AssertEx.Equal(4, result.TraceFrameCount);
+                    AssertEx.Equal(3, result.TraceFrameCount);
                     AssertEx.Equal(
                         true,
                         metadata.ToString().Contains(
@@ -269,7 +282,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 new[]
                 {
                     "|P.|UDLRABCS|........|",
-                    "|.R|.D...B..|........|"
+                    "|.R|.D...B..|........|",
+                    // Trailing row so the movie does not end on row 1: the
+                    // final input row of a movie is never consumed (Lua
+                    // FINISHED parity), and this test needs row 1 applied.
+                    BlankRow
                 },
                 movie =>
                 {
