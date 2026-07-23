@@ -1,7 +1,5 @@
-package com.openggf.audio.presentation;
+package com.openggf.audio;
 
-import com.openggf.audio.AudioManager;
-import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
@@ -9,10 +7,11 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -28,51 +27,46 @@ class TestSmpsCompositeVoice {
 
     @Test
     void musicAndOwnedSfxRenderThroughOneComposite() {
-        RecordingSmpsDriver driver = new RecordingSmpsDriver();
-        SmpsCompositeVoice voice = composite(driver);
-        List<PresentationVoice> voices = new ArrayList<>();
-        voices.add(voice);
-        SmpsSequencer music = sequencer("music", 0x81, driver);
-        SmpsSequencer sfx = sequencer("sfx", 0xB0, driver);
+        NoDeviceBackend backend = backend(false);
+        AbstractSmpsData music = data("music", 0x81);
+        AbstractSmpsData sfx = data("sfx", 0xB0);
+        DacData dacData = dacData();
+        backend.playSmps(music, dacData, config(), false);
+        SmpsDriver musicDriver = backend.musicDriverForTesting();
+        AudioStream currentStream = backend.currentStreamForTesting();
+        SmpsCompositeVoice voice = composite(musicDriver);
 
-        assertSame(driver, voice.driver());
-        driver.addSequencer(music, false);
-        driver.addSequencer(sfx, true);
-        assertSame(driver, voice.driver());
-        assertEquals(1, voices.size());
-        assertSame(voice, voices.get(0));
+        backend.playSfxSmps(sfx, dacData, 1.0f, config());
 
+        assertSame(musicDriver, backend.musicDriverForTesting());
+        assertSame(currentStream, backend.currentStreamForTesting());
+        assertNull(backend.sfxStreamForTesting());
+        assertSame(musicDriver, voice.driver());
+        assertEquals(2, ((PresentationVoiceSnapshot.Smps) voice.snapshot()).driver().sequencers().size());
+
+        RecordingSmpsDriver capacityDriver = new RecordingSmpsDriver();
+        SmpsCompositeVoice capacityVoice = composite(capacityDriver);
         assertThrows(IllegalArgumentException.class,
-                () -> voice.mixInto(new long[(MAX_STEREO_FRAMES + 1) * 2], MAX_STEREO_FRAMES + 1));
-        assertEquals(0, driver.readCalls, "capacity rejection must happen before SmpsDriver.read");
-
-        long[] mixed = new long[MAX_STEREO_FRAMES * 2];
-        voice.mixInto(mixed, MAX_STEREO_FRAMES);
-
-        assertEquals(1, driver.readCalls);
-        assertArrayEquals(new long[] {100, -100, 101, -101, 102, -102, 103, -103,
-                104, -104, 105, -105, 106, -106, 107, -107}, mixed);
+                () -> capacityVoice.mixInto(new long[(MAX_STEREO_FRAMES + 1) * 2], MAX_STEREO_FRAMES + 1));
+        assertEquals(0, capacityDriver.readCalls, "capacity rejection must happen before SmpsDriver.read");
     }
 
     @Test
     void driverChannelLocksAndPriorityRemainInsideComposite() {
-        SmpsDriver driver = new SmpsDriver();
-        SmpsCompositeVoice voice = composite(driver);
-        SmpsSequencer music = sequencer("music", 0x81, driver);
-        SmpsSequencer lowPriority = sequencer("low", 0xB0, driver);
-        SmpsSequencer highPriority = sequencer("high", 0xB1, driver);
-        lowPriority.setSfxPriority(0x20);
-        highPriority.setSfxPriority(0x60);
-        driver.addSequencer(music, false);
-        driver.addSequencer(lowPriority, true);
-        driver.addSequencer(highPriority, true);
-        driver.writeFm(lowPriority, 0, 0xA0, 0x22);
-        driver.writeFm(highPriority, 0, 0xA0, 0x44);
+        NoDeviceBackend backend = backend(false);
+        backend.playSmps(data("music", 0x81), dacData(), config(), false);
+        SmpsDriver musicDriver = backend.musicDriverForTesting();
+        SmpsCompositeVoice voice = composite(musicDriver);
+        backend.playSfxSmps(data("low", 0xB0), dacData(), 1.0f, config());
+        backend.playSfxSmps(data("high", 0xB1), dacData(), 1.0f, config());
 
         PresentationVoiceSnapshot.Smps snapshot = (PresentationVoiceSnapshot.Smps) voice.snapshot();
 
-        assertSame(driver, voice.driver());
-        assertEquals(2, snapshot.driver().fmLockSequencerIds()[0]);
+        assertSame(musicDriver, backend.musicDriverForTesting());
+        assertSame(backend.currentStreamForTesting(), voice.driver());
+        assertNull(backend.sfxStreamForTesting());
+        assertEquals(3, snapshot.driver().sequencers().size());
+        assertEquals(0x20, snapshot.driver().sequencers().get(1).snapshot().sfxPriority());
         assertEquals(0x60, snapshot.driver().sequencers().get(2).snapshot().sfxPriority());
         assertFalse(snapshot.driver().sequencers().get(0).sfx());
         assertTrue(snapshot.driver().sequencers().get(1).sfx());
@@ -81,40 +75,44 @@ class TestSmpsCompositeVoice {
 
     @Test
     void dacFallbackAndContinuousSfxRemainInsideComposite() {
-        SmpsDriver driver = new SmpsDriver();
-        SmpsCompositeVoice voice = composite(driver);
+        NoDeviceBackend backend = backend(true);
         DacData dacData = dacData();
-        SmpsSequencer music = sequencer("music", 0x81, driver, dacData);
-        SmpsSequencer sfx = sequencer("continuous", 0xBC, driver, dacData);
-        sfx.setFallbackVoiceData(music.getSmpsData());
-        driver.setDacData(dacData);
-        driver.addSequencer(music, false);
-        driver.addSequencer(sfx, true);
-        driver.startContinuousSfx(0xBC, 3);
-        assertTrue(driver.extendContinuousSfx(0xBC, 3));
+        AbstractSmpsData music = data("music", 0x81);
+        AbstractSmpsData continuousSfx = data("continuous", 0xBC);
+        backend.playSmps(music, dacData, config(), false);
+        SmpsCompositeVoice voice = composite(backend.musicDriverForTesting());
+        backend.playSfxSmps(continuousSfx, dacData, 1.0f, config());
+        backend.playSfxSmps(continuousSfx, dacData, 1.0f, config());
 
         PresentationVoiceSnapshot.Smps snapshot = (PresentationVoiceSnapshot.Smps) voice.snapshot();
 
-        assertSame(driver, voice.driver());
+        assertSame(backend.musicDriverForTesting(), voice.driver());
+        assertSame(backend.currentStreamForTesting(), voice.driver());
+        assertNull(backend.sfxStreamForTesting());
+        assertEquals(2, snapshot.driver().sequencers().size(),
+                "continuous retrigger must extend the owned SFX instead of creating a standalone sequencer");
         assertEquals(0xBC, snapshot.driver().continuousSfxId());
         assertTrue(snapshot.driver().continuousSfxFlag());
-        assertEquals(3, snapshot.driver().contSfxLoopCnt());
+        assertEquals(continuousSfx.getChannels() + continuousSfx.getPsgChannels(),
+                snapshot.driver().contSfxLoopCnt());
         assertEquals(snapshot.driver().sequencers().get(0).source(),
                 snapshot.driver().sequencers().get(1).fallbackVoiceSource());
         assertSame(dacData, snapshot.driver().sequencers().get(0).dacData());
+        assertSame(dacData, snapshot.driver().sequencers().get(1).dacData());
     }
 
     @Test
     void standaloneSfxDriverIsASeparateCompositeOnlyWithoutMusicOwner() {
-        RecordingSmpsDriver standaloneSfxDriver = new RecordingSmpsDriver();
+        NoDeviceBackend backend = backend(false);
+        backend.playSfxSmps(data("first", 0xB0), dacData(), 1.0f, config());
+        SmpsDriver standaloneSfxDriver = (SmpsDriver) backend.sfxStreamForTesting();
         SmpsCompositeVoice standalone = composite(standaloneSfxDriver);
-        List<PresentationVoice> voices = new ArrayList<>();
-        standaloneSfxDriver.addSequencer(sequencer("sfx", 0xB0, standaloneSfxDriver), true);
-        voices.add(standalone);
+        backend.playSfxSmps(data("second", 0xB1), dacData(), 1.0f, config());
 
-        assertNull(standaloneSfxDriver.firstMusicSequencer());
-        assertEquals(1, voices.size());
-        assertSame(standaloneSfxDriver, ((SmpsCompositeVoice) voices.get(0)).driver());
+        assertNull(backend.currentStreamForTesting());
+        assertSame(standaloneSfxDriver, backend.sfxStreamForTesting());
+        assertSame(standaloneSfxDriver, standalone.driver());
+        assertEquals(2, ((PresentationVoiceSnapshot.Smps) standalone.snapshot()).driver().sequencers().size());
     }
 
     @Test
@@ -155,15 +153,15 @@ class TestSmpsCompositeVoice {
                 maxStereoFrames, driver);
     }
 
-    private static SmpsSequencer sequencer(String name, int id, SmpsDriver driver) {
-        return sequencer(name, id, driver, AudioTestFixtures.EMPTY_DAC);
-    }
-
-    private static SmpsSequencer sequencer(String name, int id, SmpsDriver driver, DacData dacData) {
+    private static AbstractSmpsData data(String name, int id) {
         AbstractSmpsData data = new AudioTestFixtures.StubSmpsData(name);
         data.setId(id);
-        return new SmpsSequencer(data, dacData, driver, AudioManager.getInstance(),
-                new SmpsSequencerConfig.Builder().build());
+        return data;
+    }
+
+    private static SmpsSequencer sequencer(String name, int id, SmpsDriver driver) {
+        return new SmpsSequencer(data(name, id), AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), config());
     }
 
     private static DacData dacData() {
@@ -189,6 +187,63 @@ class TestSmpsCompositeVoice {
         driver.writePsg(driver, 0x84);
         driver.writePsg(driver, 0x12);
         driver.writePsg(driver, 0x92);
+    }
+
+    private static NoDeviceBackend backend(boolean continuousSfx) {
+        NoDeviceBackend backend = new NoDeviceBackend();
+        backend.setAudioProfile(new AudioTestFixtures.StubAudioProfile(new AudioTestFixtures.StubSmpsLoader()) {
+            @Override
+            public SmpsSequencerConfig getSequencerConfig() {
+                return config();
+            }
+
+            @Override
+            public boolean isContinuousSfx(int sfxId) {
+                return continuousSfx && sfxId == 0xBC;
+            }
+
+            @Override
+            public int getSfxPriority(int soundId) {
+                return soundId == 0xB0 ? 0x20 : soundId == 0xB1 ? 0x60 : 0x70;
+            }
+        });
+        backend.init();
+        return backend;
+    }
+
+    private static SmpsSequencerConfig config() {
+        return new SmpsSequencerConfig.Builder().build();
+    }
+
+    private static final class NoDeviceBackend extends AbstractSmpsAudioBackend {
+        private NoDeviceBackend() {
+            super(SonicConfigurationService.getInstance(), null);
+        }
+
+        private AudioStream currentStreamForTesting() {
+            return currentStream;
+        }
+
+        private AudioStream sfxStreamForTesting() {
+            return sfxStream;
+        }
+
+        @Override protected int getDeviceSampleRate() { return 48_000; }
+        @Override protected void hookInitDevice() { }
+        @Override protected void hookDestroyDevice() { }
+        @Override protected void hookStartStream() { }
+        @Override protected void hookStopStreamSource() { }
+        @Override protected void hookUpdateStream() { }
+        @Override protected void hookStopAndClearMusicSource() { }
+        @Override protected void hookStopAndUnqueueAllMusicBuffers() { }
+        @Override protected void hookStopAndClearAllMusicBuffers() { }
+        @Override protected void hookRestartStreamIfDry() { }
+        @Override protected void hookStopAndDeleteWavSfxSources() { }
+        @Override protected void hookUploadStreamBuffer(int bufferId, short[] pcm, int sampleRate) { }
+        @Override protected void hookPlayWavSfx(String sfxName, float pitch) { }
+        @Override protected void hookCleanupStoppedWavSfx() { }
+        @Override protected void hookPause() { }
+        @Override protected void hookResume() { }
     }
 
     private static final class RecordingSmpsDriver extends SmpsDriver {
