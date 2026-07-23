@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - S3K exclusive ring-window endpoint
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 19664 to
+  frame 19709.** The next divergence is the camera X position (`$3B61`
+  expected versus `$3B60` actual).
+- Root: S3K `Load_Rings` advances `Ring_end_addr_ROM` only while the candidate
+  X is strictly below `camera_x-$8+$150`. A record exactly on that upper
+  boundary remains at the end pointer, and `Test_Ring_Collisions` treats the
+  pointer as exclusive. The engine's inclusive integer window admitted LBZ's
+  ring at `$3CA8,$01B0` while camera X was `$3B60`, allocating and collecting
+  its attracted-ring object 58 frames before the ROM.
+- Fix: S3K's raw ring placement window now ends one integer pixel before the
+  exclusive pointer boundary. When the camera advances to `$3B61`, the record
+  enters the window and follows the native `Obj_Attracted_Ring` trajectory.
+  Focused coverage locks the exact boundary and its one-pixel camera handoff.
+- Validation: all 27 ring-manager tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes; LBZ reaches frame 19709 with 3421 remaining
+  errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ1 continuous screen-shake phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 19151 to

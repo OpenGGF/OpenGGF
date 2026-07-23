@@ -29,6 +29,7 @@ import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.tests.rules.SonicGame;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.RecordComponent;
@@ -252,6 +253,28 @@ public class TestRingManager {
 
         assertTrue(ringManager.isCollected(spawn),
                 "Lightning attraction geometry should come from typed ring rules");
+    }
+
+    @Test
+    public void testS3kRawRingWindowExcludesRecordAtUpperPointer() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        RingSpawn spawn = new RingSpawn(0x0248, 0x0100);
+        RingManager ringManager = buildRingManager(List.of(spawn));
+        ringManager.reset(0x0100);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0x0208, (short) 0x0100);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.giveShield(ShieldType.LIGHTNING);
+
+        ringManager.update(0x0100, player, 0);
+
+        assertFalse(ringManager.isCollected(spawn),
+                "Ring_end_addr_ROM is exclusive when a record equals camera_x-$8+$150");
+
+        ringManager.update(0x0101, player, 1);
+
+        assertTrue(ringManager.isCollected(spawn),
+                "Advancing the camera one pixel should bring the boundary record into the native window");
     }
 
     @Test

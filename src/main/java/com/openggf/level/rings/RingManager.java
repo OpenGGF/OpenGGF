@@ -1390,7 +1390,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (!useRawCameraWindow) {
                 return getWindowEnd(cameraX);
             }
-            return cameraX + S3K_RAW_WINDOW_AHEAD;
+            // S3K Load_Rings leaves Ring_end_addr_ROM pointing at the first
+            // record whose X equals camera_x-$8+$150. Render_Rings and
+            // Test_Ring_Collisions treat that pointer as exclusive, so the
+            // integer-coordinate window ends one pixel before that record.
+            return cameraX + S3K_RAW_WINDOW_AHEAD - 1;
         }
 
         private boolean areAllCollected() {
