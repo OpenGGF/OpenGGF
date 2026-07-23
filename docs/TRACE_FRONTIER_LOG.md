@@ -3,8 +3,8 @@
 ## 2026-07-23 - LBZ Flybot retained post-render activation
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 29799 to
-  frame 30784.** The next divergence is Sonic's animation (`$06` Run expected
-  versus `$05` Walk actual).
+  frame 30784.** The next divergence is Sonic's animation (`$06` Balance
+  expected versus `$05` Wait actual).
 - Root: ROM-layout Flybots remain in `loc_85AD2` until the sign bit published
   by the preceding `Render_Sprites` pass becomes visible. The engine's delayed
   placement approximation queried bounds during the object pass, before the
