@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ2 Robotnik ship touch and camera worker
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 39145 to
+  frame 41869.** The next divergence is Sonic's Y (`$06CA` expected versus
+  `$06C9` actual).
+- Root: the Robotnik ship used a broad object-local proximity check instead of
+  native `collision_flags=$CA` / `Touch_Special` property accumulation, pinned
+  the player and cleared retained velocities on the capture dispatch, and
+  opened the camera through the generic two-pixel boundary easer. Native
+  `loc_8D2B6` consumes collision property 1/3, publishes Hang without pinning,
+  and creates `Child6_IncLevX`; that child accelerates the maximum-X boundary
+  with a `$4000` 16.16 accumulator.
+- Fix: the ship now participates in the shared continuous S3K special-touch
+  pipeline, consumes the native P1/P2 collision-property values, delays its
+  first position pin until `loc_8D370`, preserves player velocities, and
+  creates a rewind-recreatable gradual camera child before its exhaust child.
+  This also restores the native camera-worker/exhaust SST ordering.
+- Validation: all 13 focused LBZ2 ship/cameo tests pass and the focused replay
+  reaches frame 41869 with 602 release-blocking errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ shortened-tower zero-speed side stop
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 38873 to

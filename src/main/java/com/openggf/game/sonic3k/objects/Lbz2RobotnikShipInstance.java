@@ -17,6 +17,9 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.SwingMotion;
@@ -36,8 +39,11 @@ import java.util.List;
  * ({@code Screen_shake_flag} + {@code Events_fg_5}), and finally throws the
  * player into the arena before spawning {@code Obj_LBZFinalBoss1}.
  */
-public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseListener {
     private static final int OBJ_LBZ_FINAL_BOSS_1 = 0xCA;
+    private static final int COLLISION_FLAGS = 0xCA;
+    private static final int COLLISION_SIZE_INDEX = 0x0A;
     /** ROM sub_8D506: P1 centre = (ship.x - 4, ship.y - $12). */
     private static final int PLAYER_PIN_DX = -4;
     private static final int PLAYER_PIN_DY = -0x12;
@@ -81,6 +87,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance imple
     private boolean forcedOffscreen;
     private boolean exhaustSpawned;
     private boolean wroteLegacyEventsFg5;
+    private int collisionProperty;
     private AbstractPlayableSprite carriedPlayer;
     private CutsceneKnucklesLbz2Instance attachedKnuckles;
     private Phase phase = Phase.WAIT;
@@ -117,6 +124,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance imple
         registerLaunchAnchor();
         applyLaunchRiderDelta();
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : carriedPlayer;
+        boolean wasCarryingPlayer = carryingPlayer;
         switch (phase) {
             case WAIT -> updateWait(player, frameCounter);
             case RISE -> updateRise();
@@ -130,7 +138,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance imple
             case RIDE_TO_RELEASE -> updateRideToRelease(frameCounter);
             case FLY_AWAY -> updateFlyAway();
         }
-        if (carryingPlayer && carriedPlayer != null) {
+        if (wasCarryingPlayer && carryingPlayer && carriedPlayer != null) {
             pinPlayer(carriedPlayer);
         }
         updateDynamicSpawn(x, y);
@@ -172,7 +180,10 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance imple
     }
 
     private void updateWait(AbstractPlayableSprite player, int frameCounter) {
-        if (player == null || player.isObjectControlled() || !isPlayerTouching(player)) {
+        int touchValue = collisionProperty;
+        collisionProperty = 0;
+        if (touchValue == 0 || touchValue == 2
+                || player == null || player.isObjectControlled()) {
             return;
         }
         // ROM loc_8D2B6 grab branch.
@@ -311,24 +322,22 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance imple
         player.setDirection(Direction.RIGHT);
         player.setRenderFlips(false, player.getRenderVFlip());
         player.setHighPriority(true);
-        pinPlayer(player);
+        // loc_8D2B6 publishes Hang/$BA on the capture dispatch, but position
+        // and velocity remain live until loc_8D370 calls sub_8D506 next time.
+        player.setMappingFrame(playerMappingFrame(player));
+        player.setObjectMappingFrameControl(true);
     }
 
     private void startRidePresentation() {
-        openRideCamera();
         runtimeState().ifPresent(state -> state.setLbz2RideAnimatedTileGateActive(true));
         if (!exhaustSpawned) {
             exhaustSpawned = true;
+            GradualCameraMaxXChild cameraChild = spawnChild(() -> new GradualCameraMaxXChild(this));
+            cameraChild.setServices(services());
+            spawnedChildren.add(cameraChild);
             ExhaustFlameChild flame = spawnChild(() -> new ExhaustFlameChild(this));
             flame.setServices(services());
             spawnedChildren.add(flame);
-        }
-    }
-
-    private void openRideCamera() {
-        Camera camera = services().camera();
-        if (camera != null) {
-            camera.setMaxXTarget((short) 0x6000);
         }
     }
 
@@ -337,9 +346,6 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance imple
         NativePositionOps.writeYPosPreserveSubpixel(player, y + PLAYER_PIN_DY);
         player.setMappingFrame(playerMappingFrame(player));
         player.setObjectMappingFrameControl(true);
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
-        player.setGSpeed((short) 0);
     }
 
     private void releasePlayer(int frameCounter) {
@@ -366,10 +372,34 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance imple
         return "tails".equalsIgnoreCase(player.getCode()) ? 0xAD : 0xBA;
     }
 
-    private boolean isPlayerTouching(AbstractPlayableSprite player) {
-        int dx = Math.abs((player.getCentreX() & 0xFFFF) - x);
-        int dy = Math.abs((player.getCentreY() & 0xFFFF) - y);
-        return dx <= 0x20 && dy <= 0x20;
+    @Override
+    public int getCollisionFlags() {
+        return COLLISION_FLAGS;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return collisionProperty;
+    }
+
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        return true;
+    }
+
+    @Override
+    public boolean usesS3kTouchSpecialPropertyResponse() {
+        return true;
+    }
+
+    @Override
+    public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
+        if (phase != Phase.WAIT || result.sizeIndex() != COLLISION_SIZE_INDEX) {
+            return;
+        }
+        // Touch_Special loc_103FA increments once for P1 and twice for every
+        // other player slot. loc_8D2B6 ignores the isolated P2 value of 2.
+        collisionProperty = (collisionProperty + (player.isCpuControlled() ? 2 : 1)) & 0xFF;
     }
 
     /** ROM MoveSprite2: subpixel move by x_vel/y_vel, no gravity. */
@@ -448,6 +478,54 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance imple
 
     private static int unsigned(int value) {
         return value & 0xFFFF;
+    }
+
+    /** ROM Child6_IncLevX / Obj_IncLevEndXGradual. */
+    static final class GradualCameraMaxXChild extends AbstractObjectInstance implements RewindRecreatable {
+        private static final int TARGET_MAX_X = 0x6000;
+
+        @RewindTransient(reason = "Structural parent link; lifetime follows the live ship.")
+        private final Lbz2RobotnikShipInstance parent;
+        private int accumulator;
+
+        private GradualCameraMaxXChild(Lbz2RobotnikShipInstance parent) {
+            super(new ObjectSpawn(parent.getCentreX(), parent.getCentreY(),
+                    0xC6, 0, 0, false, parent.getCentreY()),
+                    "LBZ2RobotnikShipGradualCameraMaxX");
+            this.parent = parent;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            Lbz2RobotnikShipInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
+                    ctx, Lbz2RobotnikShipInstance.class);
+            return liveParent != null ? new GradualCameraMaxXChild(liveParent) : null;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            if (parent.isDestroyed()) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            Camera camera = services().camera();
+            if (camera == null) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            accumulator += 0x4000;
+            int next = (camera.getMaxX() & 0xFFFF) + (accumulator >>> 16);
+            if (next >= TARGET_MAX_X) {
+                camera.setMaxX((short) TARGET_MAX_X);
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            camera.setMaxX((short) next);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
     }
 
     public static final class ExhaustFlameChild extends AbstractObjectInstance implements RewindRecreatable {

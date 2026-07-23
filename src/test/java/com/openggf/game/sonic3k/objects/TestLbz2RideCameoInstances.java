@@ -18,6 +18,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.LevelManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -47,8 +49,20 @@ class TestLbz2RideCameoInstances {
         Fixture fixture = new Fixture(PlayerCharacter.SONIC_AND_TAILS);
         Lbz2RobotnikShipInstance ship = fixture.ship(0x3BDE, 0x0654);
         TestablePlayableSprite sonic = playerAt(0x3BDE, 0x0654, "sonic");
+        sonic.setXSpeed((short) 0x00AB);
+        sonic.setYSpeed((short) 0x0680);
 
+        touchShip(ship, sonic, 0);
         ship.update(0, sonic);
+
+        assertEquals(0x3BDE, sonic.getCentreX() & 0xFFFF,
+                "loc_8D2B6 capture does not run sub_8D506 on the same dispatch");
+        assertEquals(0x0654, sonic.getCentreY() & 0xFFFF);
+        assertEquals((short) 0x00AB, sonic.getXSpeed());
+        assertEquals((short) 0x0680, sonic.getYSpeed());
+        assertEquals(0xBA, sonic.getMappingFrame(),
+                "capture still publishes the object-owned Hang mapping immediately");
+
         ship.update(1, sonic);
 
         assertTrue(sonic.isObjectControlled());
@@ -72,11 +86,28 @@ class TestLbz2RideCameoInstances {
         Lbz2RobotnikShipInstance ship = fixture.ship(0x3BDE, 0x0654);
         TestablePlayableSprite sonic = playerAt(0x3BDE, 0x0654, "sonic");
 
+        touchShip(ship, sonic, 0);
         ship.update(0, sonic);
 
         assertEquals(0x3AB8, camera.getMaxX() & 0xFFFF,
                 "ship should request gradual camera opening, not snap current max X");
-        assertEquals(0x6000, camera.getMaxXTarget() & 0xFFFF);
+        assertEquals(0x3AB8, camera.getMaxXTarget() & 0xFFFF,
+                "the post-camera-pass stored write is not visible immediately");
+        Lbz2RobotnikShipInstance.GradualCameraMaxXChild cameraChild =
+                ship.spawnedChildrenForTest().stream()
+                        .filter(Lbz2RobotnikShipInstance.GradualCameraMaxXChild.class::isInstance)
+                        .map(Lbz2RobotnikShipInstance.GradualCameraMaxXChild.class::cast)
+                        .findFirst()
+                        .orElseThrow();
+        cameraChild.update(0, sonic);
+        assertEquals(0x3AB8, camera.getMaxX() & 0xFFFF);
+        cameraChild.update(1, sonic);
+        assertEquals(0x3AB8, camera.getMaxX() & 0xFFFF);
+        cameraChild.update(2, sonic);
+        assertEquals(0x3AB8, camera.getMaxX() & 0xFFFF);
+        cameraChild.update(3, sonic);
+        assertEquals(0x3AB9, camera.getMaxX() & 0xFFFF,
+                "the $4000 accumulator reaches its first whole pixel");
         assertTrue(fixture.runtime.isLbz2RideAnimatedTileGateActive());
         assertTrue(ship.spawnedChildrenForTest().stream()
                         .anyMatch(Lbz2RobotnikShipInstance.ExhaustFlameChild.class::isInstance),
@@ -107,6 +138,7 @@ class TestLbz2RideCameoInstances {
         Lbz2RobotnikShipInstance ship = fixture.ship(0x3BDE, 0x0654);
         TestablePlayableSprite sonic = playerAt(0x3BDE, 0x0654, "sonic");
 
+        touchShip(ship, sonic, 0);
         ship.update(0, sonic);
         Lbz2RobotnikShipInstance.ExhaustFlameChild flame = ship.spawnedChildrenForTest().stream()
                 .filter(Lbz2RobotnikShipInstance.ExhaustFlameChild.class::isInstance)
@@ -133,6 +165,7 @@ class TestLbz2RideCameoInstances {
         Lbz2RobotnikShipInstance ship = fixture.ship(0x3BDE, 0x0654);
         TestablePlayableSprite tails = playerAt(0x3BDE, 0x0654, "tails");
 
+        touchShip(ship, tails, 0);
         ship.update(0, tails);
 
         assertEquals(0xAD, tails.getMappingFrame());
@@ -146,6 +179,7 @@ class TestLbz2RideCameoInstances {
         ship.attachCutsceneKnuckles(knuckles);
         TestablePlayableSprite sonic = playerAt(0x3BDE, 0x0654, "sonic");
 
+        touchShip(ship, sonic, 0);
         boolean launchRequested = false;
         int frame = 0;
         for (; frame < 1200 && !launchRequested; frame++) {
@@ -166,6 +200,13 @@ class TestLbz2RideCameoInstances {
             knuckles.update(frame + extra, sonic);
         }
         assertTrue(knuckles.isScreenShakeObservedForTest());
+    }
+
+    private static void touchShip(Lbz2RobotnikShipInstance ship,
+            TestablePlayableSprite player, int frameCounter) {
+        ship.onTouchResponse(player,
+                new TouchResponseResult(0x0A, 0x10, 8, TouchCategory.SPECIAL),
+                frameCounter);
     }
 
     @Test
