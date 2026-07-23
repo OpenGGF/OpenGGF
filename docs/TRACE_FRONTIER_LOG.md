@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ Flybot retained post-render activation
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 29799 to
+  frame 30784.** The next divergence is Sonic's animation (`$06` Run expected
+  versus `$05` Walk actual).
+- Root: ROM-layout Flybots remain in `loc_85AD2` until the sign bit published
+  by the preceding `Render_Sprites` pass becomes visible. The engine's delayed
+  placement approximation queried bounds during the object pass, before the
+  current camera step. The Flybot at `$25B0,$052C` therefore restored one
+  dispatch late, reached its dive one chase-acceleration step behind, and
+  missed Sonic's recorded normal enemy rebound.
+- Fix: layout-loaded Flybots now retain the `$20`-square placeholder's
+  post-camera render result and consume it on the following object dispatch,
+  matching `render_flags` ownership and `Obj_WaitOffscreen`'s saved-operation
+  handoff. Alarm-allocated Flybots retain their distinct dynamic-child phase.
+  Focused tests cover the retained horizontal camera-entry edge.
+- Validation: all 12 focused Flybot tests pass and the focused LBZ replay
+  reaches frame 30784. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. HCZ
+  remains at frame 31335, ICZ remains green, and no S3K, S1, or S2 frontier
+  regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - S3K moving crouch before slope repel
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 28456 to

@@ -165,15 +165,50 @@ class TestS3kFlybot767Badnik {
         AbstractPlayableSprite player = playerAt(0x0800, 0x0140);
 
         flybot.update(0, player);
+        flybot.refreshPostCameraRenderState();
         flybot.update(1, player);
+        flybot.update(2, player);
 
         assertTrue(flybot.usesCurrentTouchResponseState(),
-                "A retained layout slot exposes the live SST coordinate published after its object pass");
-        assertEquals("INIT", readEnumName(flybot, "state"),
-                "Map_Offscreen's retained slot pass precedes Obj_WaitOffscreen's restore pass");
-        assertFalse(flybot.publishesTouchResponseListEntryThisFrame());
+                "a layout slot exposes the live SST coordinate published after its object pass");
+        assertEquals("CHASE", readEnumName(flybot, "state"));
+        assertTrue(flybot.publishesTouchResponseListEntryThisFrame());
+    }
 
+    @Test
+    void layoutPlacementRestoresOnFirstVisibleDispatchAfterOffscreenWait() {
+        AbstractObjectInstance.updateCameraBounds(0x0700, 0, 0x0900, 0x00E0, 0);
+        AbstractObjectInstance flybot = createPlacedFlybotAt(0x0800, 0x0120);
+        AbstractPlayableSprite player = playerAt(0x0800, 0x0140);
+
+        flybot.update(0, player);
+        flybot.refreshPostCameraRenderState();
+        AbstractObjectInstance.updateCameraBounds(0x0700, 0x0100, 0x0900, 0x0300, 0);
+        flybot.update(1, player);
+        flybot.refreshPostCameraRenderState();
         flybot.update(2, player);
+        assertEquals("INIT", readEnumName(flybot, "state"),
+                "Obj_WaitOffscreen restores the saved Flybot operation and returns");
+        flybot.update(3, player);
+
+        assertEquals("CHASE", readEnumName(flybot, "state"));
+        assertTrue(flybot.publishesTouchResponseListEntryThisFrame());
+    }
+
+    @Test
+    void layoutWaitReadsRenderFlagPublishedAfterHorizontalCameraStep() {
+        AbstractObjectInstance.updateCameraBounds(0x0700, 0x0100, 0x0900, 0x0300, 0);
+        AbstractObjectInstance flybot = createPlacedFlybotAt(0x0980, 0x0120);
+        AbstractPlayableSprite player = playerAt(0x0980, 0x0140);
+
+        flybot.update(0, player);
+        AbstractObjectInstance.updateCameraBounds(0x0800, 0x0100, 0x0A00, 0x0300, 0);
+        flybot.refreshPostCameraRenderState();
+        flybot.update(1, player);
+        assertEquals("INIT", readEnumName(flybot, "state"),
+                "loc_85AD2 restores Obj_Flybot767 from the prior post-camera render flag");
+        flybot.update(2, player);
+
         assertEquals("CHASE", readEnumName(flybot, "state"));
         assertTrue(flybot.publishesTouchResponseListEntryThisFrame());
     }

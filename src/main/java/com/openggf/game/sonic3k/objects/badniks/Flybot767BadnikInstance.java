@@ -62,13 +62,14 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
     private int animTimer;
     private boolean inLoop;
     private boolean waitingForOnscreen = true;
-    private boolean retainedLayoutPlaceholderPass;
+    private final boolean layoutWaitUsesRetainedRenderFlag;
+    private boolean placeholderRenderedOnscreen;
     private boolean publishedTouchResponseListEntryThisFrame;
 
     public Flybot767BadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Flybot767",
                 Sonic3kObjectArtKeys.FLYBOT_767, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
-        retainedLayoutPlaceholderPass = spawn.layoutIndex() >= 0;
+        layoutWaitUsesRetainedRenderFlag = spawn.layoutIndex() >= 0;
     }
 
     @Override
@@ -78,16 +79,18 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
             return;
         }
         if (waitingForOnscreen) {
-            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+            if (layoutWaitUsesRetainedRenderFlag) {
+                if (!placeholderRenderedOnscreen) {
+                    return;
+                }
+                // loc_85AD2 observes the sign bit published by the preceding
+                // Render_Sprites pass, restores the saved continuation, and
+                // returns before Obj_Flybot767 dispatch resumes.
+                placeholderRenderedOnscreen = false;
+                waitingForOnscreen = false;
                 return;
             }
-            // Layout-loaded Flybots already occupy a Map_Offscreen SST slot
-            // before the engine's placement window instantiates them. Preserve
-            // that retained placeholder pass before Obj_WaitOffscreen restores
-            // the saved operation pointer. Alarm-allocated children enter the
-            // helper directly and do not have this prior slot pass.
-            if (retainedLayoutPlaceholderPass) {
-                retainedLayoutPlaceholderPass = false;
+            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
                 return;
             }
             // Obj_WaitOffscreen restores the saved operation pointer and
@@ -115,6 +118,14 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
             return;
         }
         publishedTouchResponseListEntryThisFrame = true;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen && layoutWaitUsesRetainedRenderFlag) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN);
+        }
     }
 
     private void initialize() {
