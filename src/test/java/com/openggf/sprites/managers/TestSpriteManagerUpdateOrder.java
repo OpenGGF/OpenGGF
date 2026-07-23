@@ -79,6 +79,22 @@ public class TestSpriteManagerUpdateOrder {
         assertFalse(main.isLeftPressed());
     }
 
+    @Test
+    void interruptedPlayablePrefixRecordsLeaderHistoryBeforeAnimation() {
+        SpriteManager manager = new SpriteManager();
+        TestPlayableSprite main = new TestPlayableSprite("main");
+        main.setCentreX((short) 0x1234);
+        main.setCentreY((short) 0x0567);
+        manager.addSprite(main);
+        int previousSlot = main.getHistorySlotIndex(0);
+
+        manager.advancePlayableSlotPrefix();
+
+        assertEquals((previousSlot + 1) & 0x3F, main.getHistorySlotIndex(0));
+        assertEquals((short) 0x1234, main.getCentreX(0));
+        assertEquals((short) 0x0567, main.getCentreY(0));
+    }
+
     private static final class TestPlayableSprite extends AbstractPlayableSprite {
         private TestPlayableSprite(String code) {
             super(code, (short) 0, (short) 0);

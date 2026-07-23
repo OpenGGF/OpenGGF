@@ -2691,9 +2691,7 @@ public class SidekickCpuController {
                 // gameplay counter is held. Sonic_RecordPos runs immediately
                 // before the Player_2 CPU slot on each such dispatch, so its
                 // next-free ring index supplies the same low-six-bit phase
-                // observed by loc_13E7C/loc_13E9C. The engine records the leader
-                // after the sidekick controller, hence the two-slot projection
-                // from its latest-written entry.
+                // observed by loc_13E7C/loc_13E9C.
                 autoJumpFrameCounter = projectRetainedResultsSpriteCadence(
                         autoJumpFrameCounter, effectiveLeader);
             }
@@ -3216,16 +3214,11 @@ public class SidekickCpuController {
         if (titleCardProvider == null) {
             return monotonicCounter;
         }
-        int fixedCpuPhase = titleCardProvider.retainedResultsHeldLevelCounterCpuPhase();
-        if (fixedCpuPhase >= 0) {
-            return projectCounterToLowSixBitPhase(monotonicCounter, fixedCpuPhase);
-        }
-        if (!titleCardProvider.projectsPreResetRetainedResultsSpriteCadence()
+        if (!titleCardProvider.projectsRetainedResultsSpriteCadence()
                 || effectiveLeader == null) {
             return monotonicCounter;
         }
-        int nativeNextFreeHistorySlot =
-                (effectiveLeader.getHistorySlotIndex(0) + 2) & 0x3F;
+        int nativeNextFreeHistorySlot = effectiveLeader.getHistorySlotIndex(0);
         return projectCounterToLowSixBitPhase(monotonicCounter, nativeNextFreeHistorySlot);
     }
 

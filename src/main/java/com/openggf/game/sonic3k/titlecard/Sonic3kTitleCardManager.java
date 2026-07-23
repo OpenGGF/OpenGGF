@@ -253,19 +253,9 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     }
 
     @Override
-    public boolean projectsPreResetRetainedResultsSpriteCadence() {
+    public boolean projectsRetainedResultsSpriteCadence() {
         return inLevelMode
-                && retainedResultsHeldLevelCounterOwned
-                && resetLevelGamestateOnInLevelDisplay;
-    }
-
-    @Override
-    public int retainedResultsHeldLevelCounterCpuPhase() {
-        return inLevelMode
-                && retainedResultsHeldLevelCounterOwned
-                && !resetLevelGamestateOnInLevelDisplay
-                ? 1
-                : -1;
+                && retainedResultsHeldLevelCounterOwned;
     }
 
     @Override

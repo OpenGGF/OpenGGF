@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-07-23 - Retained playable-slot history closure
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 22669 to
+  frame 23533.** The next divergence is Sonic's X speed (`$016F` expected
+  versus `$0200` actual).
+- Root: replay classified interrupted native `Process_Sprites` rows as
+  playable-animation-only after `Pos_table_index` proved the player slots had
+  run, but advanced only `Animate_*`. Native `Sonic_RecordPos` runs earlier in
+  that same player slot, so the engine's leader history ring fell roughly
+  fifty entries behind the ROM during LBZ's retained in-level title.
+- Fix: every proven playable-slot prefix now records the main player's
+  position/input/status entry before advancing playable animation. Retained
+  results cadence remains projected from that live ring across the one-shot
+  gamestate reset, matching the native Tails auto-jump gate without a fixed
+  post-reset phase.
+- Validation: the focused LBZ trace reaches frame 23533 with 3023 remaining
+  errors; all 108 focused sprite-manager, title-cadence, and sidekick CPU tests
+  pass. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61 tests,
+  45 green and the same 16 documented red routes. No S3K, S1, or S2 frontier
+  regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - Retained-title post-reset CPU counter phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 22412 to

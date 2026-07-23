@@ -82,22 +82,9 @@ public interface TitleCardProvider {
         return false;
     }
 
-    /**
-     * Whether the retained results owner is still before its one-shot
-     * in-level gamestate reset and therefore projects fixed-object dispatch
-     * cadence from the playable history ring.
-     */
-    default boolean projectsPreResetRetainedResultsSpriteCadence() {
+    /** Whether retained fixed-object cadence follows the playable history ring. */
+    default boolean projectsRetainedResultsSpriteCadence() {
         return false;
-    }
-
-    /**
-     * Low-six-bit {@code Level_frame_counter} phase visible to fixed player
-     * slots after the retained title owner has performed its one-shot reset.
-     * A negative value means that no fixed phase is owned.
-     */
-    default int retainedResultsHeldLevelCounterCpuPhase() {
-        return -1;
     }
 
     /**
