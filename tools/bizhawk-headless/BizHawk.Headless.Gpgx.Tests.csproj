@@ -42,7 +42,9 @@
     <Compile Include="tests/GpgxHostTests.cs" />
     <Compile Include="tests/NoReplacePublisherTests.cs" />
     <Compile Include="tests/EndToEndTests.cs" />
+    <Compile Include="tests/S1AuxEventEngineTests.cs" />
     <Compile Include="tests/S1SmokeRecorderTests.cs" />
+    <Compile Include="tests/S1TraceCsvWriterTests.cs" />
     <Compile Include="tests/SmokeCaptureRunnerTests.cs" />
     <Compile Include="tests/TestMain.cs" />
   </ItemGroup>
