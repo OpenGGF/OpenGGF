@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-07-23 - Retained-owner ring floor phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 23650 to
+  frame 23827.** The prior ring-count divergence is gone; the next divergence
+  is Sonic's X position (`$1335` expected versus `$1330` actual).
+- **`s3k_hcz1` also advanced from frame 29037 to frame 31335.** Its four
+  ring-count errors are gone, leaving one camera-Y mismatch on its already-red
+  route.
+- Root: all seamless act reloads subtracted one dispatch from the inherited
+  spilled-ring V-int floor-probe phase. That is correct for ordinary reloads
+  such as ICZ, but not when the native end-level/results owner survives
+  `Load_Level`: its continuing `Process_Sprites` dispatch retains the current
+  phase. LBZ's affected ring consequently bounced one pass late and missed its
+  recorded recollection.
+- Fix: the act-transition executor now passes the request's retained
+  end-level-owner state into manager reconstruction. Retained-owner reloads
+  preserve the ring phase; ordinary reloads keep the established one-dispatch
+  adjustment. ICZ remains fully green.
+- Validation: focused LBZ and ICZ complete-run replays reach frame 23827 and
+  green respectively. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. No S3K,
+  S1, or S2 route regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ circular Ribot touch phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 23533 to

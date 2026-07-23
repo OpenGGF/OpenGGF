@@ -88,7 +88,10 @@ final class LevelActTransitionExecutor {
                 ? levelManager.objectManager.snapshotPersistentDynamicObjectsForTransition()
                 : List.of();
 
-        levelManager.rebuildManagersForActTransition(cam, persistentDynamicObjects);
+        levelManager.rebuildManagersForActTransition(
+                cam,
+                persistentDynamicObjects,
+                request.preserveEndOfLevelActive());
         levelManager.applySeamlessOffsets(request, cam);
         levelManager.offsetCarriedObjectsForTransition(persistentDynamicObjects, request);
 

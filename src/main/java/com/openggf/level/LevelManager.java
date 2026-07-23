@@ -3060,7 +3060,10 @@ public class LevelManager {
      * reconstruct both managers so they reference {@code level.getObjects()}
      * and {@code level.getRings()} from the newly loaded act.
      */
-    void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
+    void rebuildManagersForActTransition(
+            Camera cam,
+            List<ObjectInstance> persistentDynamicObjects,
+            boolean retainedEndLevelOwner) {
         int cameraX = cam.getX();
         // V_int_run_count is global work RAM, outside Dynamic_object_RAM, and
         // Load_Level does not clear it. The ObjectManager owns our live copy of
@@ -3080,7 +3083,12 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
-        objectManager.inheritRingFloorCheckCounterPhase(ringFloorCheckCounterPhase - 1);
+        // Ordinary seamless reloads consume one transition dispatch before the
+        // rebuilt object list becomes visible. A retained end-level owner
+        // survives Load_Level and keeps the current Process_Sprites phase
+        // instead.
+        int inheritedRingPhase = ringFloorCheckCounterPhase - (retainedEndLevelOwner ? 0 : 1);
+        objectManager.inheritRingFloorCheckCounterPhase(inheritedRingPhase);
         GameRules gameRules = gameModule.getRules();
         if (gameRules != null
                 && gameRules.collision() != null
