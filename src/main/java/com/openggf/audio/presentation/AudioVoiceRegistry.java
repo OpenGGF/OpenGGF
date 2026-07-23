@@ -14,6 +14,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceRawPcm;
 import com.openggf.audio.presentation.AudioPresentationCommand.ResetRingAlternation;
 import com.openggf.audio.presentation.AudioPresentationCommand.RestoreMusicOverride;
 import com.openggf.audio.presentation.AudioPresentationCommand.RewindBoundary;
+import com.openggf.audio.presentation.AudioPresentationCommand.SampleVoiceDescriptor;
 import com.openggf.audio.presentation.AudioPresentationCommand.SetSpeedMultiplier;
 import com.openggf.audio.presentation.AudioPresentationCommand.SetSpeedShoes;
 import com.openggf.audio.presentation.AudioPresentationCommand.SetVoiceGain;
@@ -24,6 +25,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.StopMusic;
 import com.openggf.audio.presentation.AudioPresentationCommand.StopRawPcm;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleMute;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleSolo;
+import com.openggf.audio.presentation.AudioPresentationCommand.VoiceDescriptor;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -46,12 +48,19 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private static final int WARNED_REJECTION_CAPACITY =
             AudioPresentationCommandQueue.CAPACITY;
 
+    private record MusicSlot(
+            int musicId,
+            com.openggf.audio.rewind.AudioSourceDescriptor sourceDescriptor,
+            PresentationVoice voice) {
+    }
+
     private final Thread ownerThread;
     private final SmpsSfxInstantiation sfxInstantiation;
+    private final AudioPresentationDependencyResolver dependencyResolver;
     private final SmpsCoordFlagHandlerOwner coordFlagHandlers;
     private final Consumer<String> warningConsumer;
-    private final MusicVoiceEntry[] overrideStack =
-            new MusicVoiceEntry[MAX_MUSIC_OVERRIDES];
+    private final MusicSlot[] overrideStack =
+            new MusicSlot[MAX_MUSIC_OVERRIDES];
     private final SampleBackedVoice[] sampleSfx =
             new SampleBackedVoice[MAX_SAMPLE_SFX_VOICES];
     private final PresentationVoice[] orderedVoices =
@@ -61,7 +70,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private final long[] warnedRejectionVoiceIds =
             new long[WARNED_REJECTION_CAPACITY];
 
-    private MusicVoiceEntry activeMusic;
+    private MusicSlot activeMusic;
     private SmpsCompositeVoice standaloneSmps;
     private SampleBackedVoice rawPcm;
     private int overrideCount;
@@ -97,7 +106,8 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     ResolvedSmpsSfxSource source) {
                 return null;
             }
-        }, new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()),
+        }, rejectingDependencyResolver(),
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()),
                 ignored -> {
                 });
     }
@@ -106,9 +116,20 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             SmpsSfxInstantiation sfxInstantiation,
             SmpsCoordFlagHandlerOwner coordFlagHandlers,
             Consumer<String> warningConsumer) {
+        this(sfxInstantiation, rejectingDependencyResolver(),
+                coordFlagHandlers, warningConsumer);
+    }
+
+    public AudioVoiceRegistry(
+            SmpsSfxInstantiation sfxInstantiation,
+            AudioPresentationDependencyResolver dependencyResolver,
+            SmpsCoordFlagHandlerOwner coordFlagHandlers,
+            Consumer<String> warningConsumer) {
         ownerThread = Thread.currentThread();
         this.sfxInstantiation =
                 Objects.requireNonNull(sfxInstantiation, "sfxInstantiation");
+        this.dependencyResolver =
+                Objects.requireNonNull(dependencyResolver, "dependencyResolver");
         this.coordFlagHandlers =
                 Objects.requireNonNull(coordFlagHandlers, "coordFlagHandlers");
         this.warningConsumer =
@@ -120,9 +141,9 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         Objects.requireNonNull(command, "command");
 
         if (command instanceof ReplaceMusic replace) {
-            replaceMusic(replace.music());
+            replaceMusic(materializeMusic(replace.music()));
         } else if (command instanceof PushMusicOverride push) {
-            pushMusicOverride(push.music());
+            pushMusicOverride(materializeMusic(push.music()));
         } else if (command instanceof RestoreMusicOverride) {
             restoreMusicOverride();
         } else if (command instanceof EndMusicOverride end) {
@@ -130,9 +151,9 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         } else if (command instanceof AddSmpsSfx add) {
             addSmpsSfx(add.source());
         } else if (command instanceof StartSampleSfx start) {
-            admitSampleSfx(start.voice());
+            admitSampleSfx(materializeSample(start.voice()));
         } else if (command instanceof ReplaceRawPcm replace) {
-            replaceRawPcm(replace.voice());
+            replaceRawPcm(materializeSample(replace.voice()));
         } else if (command instanceof StopRawPcm) {
             stopRawPcm();
         } else if (command instanceof StopMusic) {
@@ -228,6 +249,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     public void deferRemoval(long voiceId) {
+        assertOwnerThread();
         if (!rendering) {
             throw new IllegalStateException(
                     "voice removal may be deferred only during traversal");
@@ -236,6 +258,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     public void onVoiceFailure(PresentationVoice voice) {
+        assertOwnerThread();
         Objects.requireNonNull(voice, "voice");
         warningConsumer.accept(
                 "Audio presentation voice " + voice.voiceId()
@@ -243,7 +266,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         if (rendering) {
             deferRemovalInternal(voice.voiceId());
         } else {
-            assertOwnerBoundary();
             removeVoiceById(voice.voiceId());
             rebuildOrderedVoices();
         }
@@ -408,14 +430,50 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         pendingRestore = pending;
     }
 
-    private void replaceMusic(MusicVoiceEntry music) {
+    private MusicSlot materializeMusic(MusicVoiceEntry music) {
+        PresentationVoice voice = materializeVoice(music.voiceDescriptor());
+        return new MusicSlot(
+                music.musicId(), music.sourceDescriptor(), voice);
+    }
+
+    private SampleBackedVoice materializeSample(
+            SampleVoiceDescriptor descriptor) {
+        PresentationVoice voice = materializeVoice(descriptor);
+        if (!(voice instanceof SampleBackedVoice sample)) {
+            throw new IllegalStateException(
+                    "sample descriptor recreated as " + voice.getClass().getName());
+        }
+        return sample;
+    }
+
+    private PresentationVoice materializeVoice(VoiceDescriptor descriptor) {
+        PresentationVoice voice = Objects.requireNonNull(
+                dependencyResolver.recreateVoice(descriptor),
+                "dependency resolver returned no voice");
+        if (voice.voiceId() != descriptor.voiceId()
+                || voice.priority() != descriptor.priority()) {
+            voice.stop();
+            throw new IllegalStateException(
+                    "dependency resolver changed voice identity");
+        }
+        return voice;
+    }
+
+    private void replaceMusic(MusicSlot music) {
         stopMusic();
         activeMusic = music;
         noteVoiceId(music.voice());
         applyActiveMusicControls();
     }
 
-    private void pushMusicOverride(MusicVoiceEntry music) {
+    private void pushMusicOverride(MusicSlot music) {
+        if (activeMusic != null && activeMusic.musicId() == music.musicId()) {
+            activeMusic.voice().stop();
+            activeMusic = music;
+            noteVoiceId(music.voice());
+            applyActiveMusicControls();
+            return;
+        }
         if (activeMusic != null) {
             if (overrideCount == overrideStack.length) {
                 throw new IllegalStateException(
@@ -511,6 +569,28 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             warnRejected(source.standaloneVoiceId(),
                     "SMPS SFX cache miss for " + source.assetKey());
             return;
+        }
+        applyDriverMasks(standalone.driver());
+        SmpsSequencer sequencer;
+        try {
+            sequencer = sfxInstantiation.instantiateCached(
+                    source, standalone.driver());
+        } catch (RuntimeException cacheFailure) {
+            standalone.stop();
+            warnRejected(source.standaloneVoiceId(),
+                    "SMPS SFX cache rejected " + source.assetKey());
+            return;
+        }
+        if (sequencer == null) {
+            standalone.stop();
+            warnRejected(source.standaloneVoiceId(),
+                    "SMPS SFX cache miss for " + source.assetKey());
+            return;
+        }
+        standalone.driver().addSequencer(sequencer, true);
+        if (source.continuousSfxId() != 0) {
+            standalone.driver().startContinuousSfx(
+                    source.continuousSfxId(), source.trackCount());
         }
         standaloneSmps = standalone;
         noteVoiceId(standalone);
@@ -609,7 +689,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         sampleSfxCount = 0;
     }
 
-    private static void stopOwnedSfx(MusicVoiceEntry music) {
+    private static void stopOwnedSfx(MusicSlot music) {
         if (music != null
                 && music.voice() instanceof SmpsCompositeVoice composite) {
             composite.driver().stopAllSfx();
@@ -835,7 +915,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     private void addMusicSnapshot(
-            List<PresentationVoiceSnapshot> voices, MusicVoiceEntry music) {
+            List<PresentationVoiceSnapshot> voices, MusicSlot music) {
         if (music != null) {
             addVoiceSnapshot(voices, music.voice(), music);
         }
@@ -844,7 +924,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private void addVoiceSnapshot(
             List<PresentationVoiceSnapshot> voices,
             PresentationVoice voice,
-            MusicVoiceEntry music) {
+            MusicSlot music) {
         if (voice == null || containsVoiceId(voices, voice.voiceId())) {
             return;
         }
@@ -884,7 +964,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     private static AudioPresentationSnapshot.MusicSlotSnapshot slotSnapshot(
-            MusicVoiceEntry music) {
+            MusicSlot music) {
         return new AudioPresentationSnapshot.MusicSlotSnapshot(
                 music.musicId(), music.sourceDescriptor(),
                 music.voice().voiceId());
@@ -913,7 +993,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         return composite;
     }
 
-    private MusicVoiceEntry restoreMusicSlot(
+    private MusicSlot restoreMusicSlot(
             AudioPresentationSnapshot.MusicSlotSnapshot slot,
             PresentationVoice[] recreated,
             boolean[] claimed) {
@@ -922,7 +1002,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
         PresentationVoice voice =
                 claimVoice(slot.voiceId(), recreated, claimed);
-        return new MusicVoiceEntry(
+        return new MusicSlot(
                 slot.musicId(), slot.sourceDescriptor(), voice);
     }
 
@@ -1002,5 +1082,23 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             throw new IllegalStateException(
                     "audio registry accessed outside its owner thread");
         }
+    }
+
+    private static AudioPresentationDependencyResolver
+            rejectingDependencyResolver() {
+        return new AudioPresentationDependencyResolver() {
+            @Override
+            public DecodedPcm resolvePcm(String assetId) {
+                throw new IllegalStateException(
+                        "no presentation PCM resolver for " + assetId);
+            }
+
+            @Override
+            public SmpsCompositeVoice recreateSmps(
+                    PresentationVoiceSnapshot.Smps snapshot) {
+                throw new IllegalStateException(
+                        "no presentation SMPS snapshot resolver");
+            }
+        };
     }
 }

@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -46,7 +47,7 @@ class TestAudioPresentationCommandQueue {
         AudioPresentationCommandQueue queue = new AudioPresentationCommandQueue();
 
         for (int index = 0; index < AudioPresentationCommandQueue.CAPACITY; index++) {
-            queue.submit(new StartSampleSfx(sample(index, 1)), () -> true, ignored -> {
+            queue.submit(StartSampleSfx.fromVoice(sample(index, 1)), () -> true, ignored -> {
             });
         }
 
@@ -59,7 +60,7 @@ class TestAudioPresentationCommandQueue {
     void structuralAdmissionEvictsOldestDroppableSampleStart() {
         AudioPresentationCommandQueue queue = new AudioPresentationCommandQueue();
         for (int index = 0; index < 224; index++) {
-            queue.submit(new StartSampleSfx(sample(index, 1)), () -> true, ignored -> {
+            queue.submit(StartSampleSfx.fromVoice(sample(index, 1)), () -> true, ignored -> {
             });
         }
         for (int index = 0; index < 32; index++) {
@@ -216,20 +217,65 @@ class TestAudioPresentationCommandQueue {
                 Set.of(AudioPresentationCommand.class.getPermittedSubclasses()));
         for (Class<?> commandType : expectedRecords) {
             assertTrue(commandType.isRecord());
-            for (RecordComponent component : commandType.getRecordComponents()) {
-                Class<?> type = component.getType();
-                assertFalse(Runnable.class.isAssignableFrom(type), commandType.getName());
-                assertFalse(Consumer.class.isAssignableFrom(type), commandType.getName());
-                assertFalse(type.getName().startsWith("java.util.function."), commandType.getName());
-                assertFalse(type.getSimpleName().equals("AbstractSmpsData"), commandType.getName());
-                assertFalse(type.getSimpleName().equals("DacData"), commandType.getName());
-                assertFalse(type.getSimpleName().equals("SmpsSequencerConfig"), commandType.getName());
-                assertFalse(type.getSimpleName().equals("SmpsSequencer"), commandType.getName());
-            }
+            assertRecursivelyImmutablePayload(commandType, new HashSet<>());
         }
 
         assertTrue(new ToggleMute(ChannelType.FM, 0).structural());
         assertTrue(new ToggleSolo(ChannelType.PSG, 0).structural());
+    }
+
+    @Test
+    void queuedVoiceCommandsOwnImmutableSnapshotsAfterOriginalVoicesMutate() {
+        AudioPresentationCommandQueue queue = new AudioPresentationCommandQueue();
+        SampleBackedVoice sample = sample(70, 5);
+        SampleBackedVoice raw = sample(71, 0);
+        SampleBackedVoice musicVoice = SampleBackedVoice.loopingMusic(72,
+                new DecodedPcm("music", 1, 48_000, new short[] {10, 20}),
+                48_000, 1.0f);
+        AudioPresentationCommand.MusicVoiceEntry music =
+                AudioPresentationCommand.MusicVoiceEntry.fromVoice(
+                        0x81, com.openggf.audio.rewind.AudioSourceDescriptor.baseMusic(0x81),
+                        musicVoice);
+        PresentationVoiceSnapshot.Sample initialSample =
+                (PresentationVoiceSnapshot.Sample) sample.snapshot();
+        PresentationVoiceSnapshot.Sample initialRaw =
+                (PresentationVoiceSnapshot.Sample) raw.snapshot();
+        PresentationVoiceSnapshot.Sample initialMusic =
+                (PresentationVoiceSnapshot.Sample) musicVoice.snapshot();
+
+        queue.submit(StartSampleSfx.fromVoice(sample), () -> true, ignored -> {
+        });
+        queue.submit(ReplaceRawPcm.fromVoice(raw), () -> true, ignored -> {
+        });
+        queue.submit(new ReplaceMusic(music), () -> true, ignored -> {
+        });
+        sample.setGain(0.25f);
+        raw.setPitch(2.0f, 48_000);
+        musicVoice.setGain(0.5f);
+        sample.stop();
+        raw.stop();
+        musicVoice.stop();
+
+        List<AudioPresentationCommand> applied = new ArrayList<>();
+        queue.applyPending(applied::add);
+
+        PresentationVoiceSnapshot.Sample queuedSample =
+                ((StartSampleSfx) applied.get(0)).voice().snapshot();
+        PresentationVoiceSnapshot.Sample queuedRaw =
+                ((ReplaceRawPcm) applied.get(1)).voice().snapshot();
+        PresentationVoiceSnapshot.Sample queuedMusic =
+                ((AudioPresentationCommand.SampleVoiceDescriptor)
+                        ((ReplaceMusic) applied.get(2)).music()
+                                .voiceDescriptor()).snapshot();
+        assertFalse(queuedSample.stopped());
+        assertFalse(queuedRaw.stopped());
+        assertFalse(queuedMusic.stopped());
+        assertEquals(70, queuedSample.voiceId());
+        assertEquals(71, queuedRaw.voiceId());
+        assertEquals(72, queuedMusic.voiceId());
+        assertEquals(initialSample.gainQ16(), queuedSample.gainQ16());
+        assertEquals(initialRaw.sourceStepQ32(), queuedRaw.sourceStepQ32());
+        assertEquals(initialMusic.gainQ16(), queuedMusic.gainQ16());
     }
 
     private static SampleBackedVoice sample(long id, int priority) {
@@ -244,5 +290,31 @@ class TestAudioPresentationCommandQueue {
             values.add(value);
         }
         return values;
+    }
+
+    private static void assertRecursivelyImmutablePayload(
+            Class<?> type, Set<Class<?>> visited) {
+        if (!visited.add(type) || type.isPrimitive() || type.isEnum()
+                || type == String.class || Number.class.isAssignableFrom(type)
+                || type == Boolean.class || type == Character.class) {
+            return;
+        }
+        assertFalse(PresentationVoice.class.isAssignableFrom(type), type.getName());
+        assertFalse(Runnable.class.isAssignableFrom(type), type.getName());
+        assertFalse(Consumer.class.isAssignableFrom(type), type.getName());
+        assertFalse(type.getName().startsWith("java.util.function."), type.getName());
+        assertFalse(Set.of("AbstractSmpsData", "DacData", "SmpsSequencerConfig",
+                "SmpsSequencer", "SmpsDriver").contains(type.getSimpleName()), type.getName());
+        if (type.isSealed()) {
+            for (Class<?> permitted : type.getPermittedSubclasses()) {
+                assertRecursivelyImmutablePayload(permitted, visited);
+            }
+            return;
+        }
+        if (type.isRecord()) {
+            for (RecordComponent component : type.getRecordComponents()) {
+                assertRecursivelyImmutablePayload(component.getType(), visited);
+            }
+        }
     }
 }
