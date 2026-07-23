@@ -71,7 +71,9 @@
     <Compile Include="src/Recording/S1InputMask.cs" />
     <Compile Include="src/Recording/S1Ram.cs" />
     <Compile Include="src/Recording/S1SmokeRecorder.cs" />
+    <Compile Include="src/Recording/S1TraceCaptureRunner.cs" />
     <Compile Include="src/Recording/S1TraceCsvWriter.cs" />
+    <Compile Include="src/Recording/S1TraceMetadataWriter.cs" />
     <Compile Include="src/Recording/SmokeCaptureRunner.cs" />
   </ItemGroup>
   <ItemGroup>
