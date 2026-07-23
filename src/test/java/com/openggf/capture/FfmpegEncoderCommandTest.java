@@ -10,6 +10,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -104,6 +106,84 @@ class FfmpegEncoderCommandTest {
         assertTrue(failure.getMessage().contains("mux process timed out"));
         assertTrue(mux.destroyed);
         assertFalse(Files.exists(output));
+    }
+
+    @Test
+    void abortBeforeMuxPublicationDestroysUnpublishedMuxAndPreventsSuccess() throws Exception {
+        FakeProcess video = new FakeProcess(true);
+        FakeProcess mux = new FakeProcess(false);
+        Path output = Files.createTempDirectory("ffmpeg-race").resolve("out.mkv");
+        CountDownLatch atPublication = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        int[] launches = {0};
+        FfmpegEncoder encoder = new FfmpegEncoder("ffmpeg", 1, command -> {
+            if (launches[0]++ == 0) return video;
+            Files.writeString(output, "partial");
+            return mux;
+        }, 20, new FfmpegEncoder.LifecycleSeam() {
+            @Override public void beforeMuxPublication(Process process) throws InterruptedException {
+                atPublication.countDown();
+                release.await();
+            }
+        });
+        encoder.open(output, 1, 1, 60, 48000);
+        AsyncFinish finish = finishAsync(encoder);
+        assertTrue(atPublication.await(1, TimeUnit.SECONDS));
+        encoder.abort();
+        release.countDown();
+        awaitFinish(finish);
+        assertInstanceOf(CaptureException.class, finish.result().get());
+        assertTrue(mux.destroyed, "the launched-but-unpublished mux must not escape");
+        assertFalse(Files.exists(output));
+    }
+
+    @Test
+    void abortBeforeSuccessPublicationPreventsReturningDeletedPath() throws Exception {
+        FakeProcess video = new FakeProcess(true);
+        FakeProcess mux = new FakeProcess(true);
+        Path output = Files.createTempDirectory("ffmpeg-race").resolve("out.mkv");
+        CountDownLatch atSuccess = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        int[] launches = {0};
+        FfmpegEncoder encoder = new FfmpegEncoder("ffmpeg", 1, command -> {
+            if (launches[0]++ == 0) return video;
+            Files.writeString(output, "complete-looking");
+            return mux;
+        }, 20, new FfmpegEncoder.LifecycleSeam() {
+            @Override public void beforeSuccessPublication() throws InterruptedException {
+                atSuccess.countDown();
+                release.await();
+            }
+        });
+        encoder.open(output, 1, 1, 60, 48000);
+        AsyncFinish finish = finishAsync(encoder);
+        assertTrue(atSuccess.await(1, TimeUnit.SECONDS));
+        encoder.abort();
+        release.countDown();
+        awaitFinish(finish);
+        assertInstanceOf(CaptureException.class, finish.result().get(),
+                "finish must not return a path after abort deleted it");
+        assertFalse(Files.exists(output));
+    }
+
+    private record AsyncFinish(Thread thread, AtomicReference<Object> result) {}
+
+    private static AsyncFinish finishAsync(FfmpegEncoder encoder) {
+        AtomicReference<Object> result = new AtomicReference<>();
+        Thread thread = new Thread(() -> {
+            try {
+                result.set(encoder.finish());
+            } catch (Throwable failure) {
+                result.set(failure);
+            }
+        }, "ffmpeg-finish-race-test");
+        thread.start();
+        return new AsyncFinish(thread, result);
+    }
+
+    private static void awaitFinish(AsyncFinish finish) throws InterruptedException {
+        finish.thread().join(1_000);
+        assertFalse(finish.thread().isAlive());
     }
 
     private static final class FakeProcess extends Process {

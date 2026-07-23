@@ -5,12 +5,19 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -140,6 +147,93 @@ class LiveCaptureControllerTest {
         c.close();
         c.close();
         assertEquals(LiveCaptureController.State.INACTIVE, c.state());
+    }
+
+    @Test void closeUsesOneBoundedBudgetToAbortBothFfmpegProcessesAndCleanFiles() throws Exception {
+        RetainedProcess video = new RetainedProcess(true);
+        RetainedProcess mux = new RetainedProcess(false);
+        CountDownLatch muxLaunched = new CountDownLatch(1);
+        List<Path> temporaryFiles = new ArrayList<>();
+        Path outputDirectory = Files.createTempDirectory("live-close");
+        AtomicReference<Path> partialOutput = new AtomicReference<>();
+        int[] launches = {0};
+        FfmpegEncoder encoder = new FfmpegEncoder("ffmpeg", 1, command -> {
+            if (launches[0]++ == 0) {
+                temporaryFiles.add(Path.of(command.get(command.size() - 1)));
+                return video;
+            }
+            temporaryFiles.add(Path.of(command.get(command.lastIndexOf("-i") + 1)));
+            Path muxOutput = Path.of(command.get(command.size() - 1));
+            partialOutput.set(muxOutput);
+            Files.writeString(muxOutput, "partial");
+            muxLaunched.countDown();
+            return mux;
+        }, 30_000);
+        CaptureRecorder actualRecorder = new CaptureRecorder(encoder, BackpressurePolicy.BLOCK, 8,
+                outputDirectory, "live", "bounded");
+        ExecutorService finalizer = Executors.newSingleThreadExecutor();
+        executors.add(finalizer);
+        LiveCaptureController controller = new LiveCaptureController(
+                new LiveCaptureController.Dependencies(rate -> quietAudio(rate),
+                        v -> zeroGrabber(v), (v, rate) -> actualRecorder,
+                        finalizer, Duration.ofMillis(300)));
+        controller.start(new CaptureViewport(0, 0, 1, 1), 60);
+        controller.requestStop(LiveCaptureController.StopReason.SHUTDOWN);
+        assertTrue(muxLaunched.await(1, TimeUnit.SECONDS));
+        long start = System.nanoTime();
+        controller.close();
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+        assertTrue(elapsedMillis < 600, "close exceeded its declared bound: " + elapsedMillis);
+        assertTrue(video.destroyed);
+        assertTrue(mux.destroyed);
+        assertNotNull(partialOutput.get());
+        assertFalse(Files.exists(partialOutput.get()));
+        for (Path temporaryFile : temporaryFiles) {
+            assertFalse(Files.exists(temporaryFile), "temporary file leaked: " + temporaryFile);
+        }
+        assertEquals(LiveCaptureController.State.INACTIVE, controller.state());
+    }
+
+    private static LiveCaptureAudioHandle quietAudio(int rate) {
+        return new LiveCaptureAudioHandle() {
+            public int sampleRate() { return 48000; }
+            public int frameRate() { return rate; }
+            public int maxStereoFramesPerPacket() { return 801; }
+            public int drainPresentationFrame(short[] target) { return 800; }
+            public void close() {}
+        };
+    }
+
+    private static VideoFrameGrabber zeroGrabber(CaptureViewport viewport) {
+        return new VideoFrameGrabber() {
+            public int width() { return viewport.width(); }
+            public int height() { return viewport.height(); }
+            public byte[] grab() { return new byte[viewport.rgbaByteSize()]; }
+        };
+    }
+
+    private static final class RetainedProcess extends Process {
+        private final boolean waitCompletes;
+        private volatile boolean destroyed;
+        private final ByteArrayOutputStream stdin = new ByteArrayOutputStream();
+        RetainedProcess(boolean waitCompletes) { this.waitCompletes = waitCompletes; }
+        @Override public OutputStream getOutputStream() { return stdin; }
+        @Override public InputStream getInputStream() { return new ByteArrayInputStream(new byte[0]); }
+        @Override public InputStream getErrorStream() { return new ByteArrayInputStream(new byte[0]); }
+        @Override public int waitFor() throws InterruptedException {
+            while (!waitCompletes && !destroyed) Thread.sleep(1);
+            return 0;
+        }
+        @Override public boolean waitFor(long timeout, TimeUnit unit) {
+            return waitCompletes || destroyed;
+        }
+        @Override public int exitValue() {
+            if (!waitCompletes && !destroyed) throw new IllegalThreadStateException();
+            return 0;
+        }
+        @Override public void destroy() { destroyed = true; }
+        @Override public Process destroyForcibly() { destroyed = true; return this; }
+        @Override public boolean isAlive() { return !destroyed; }
     }
 
     private static void awaitNotStopping(LiveCaptureController c) throws InterruptedException {

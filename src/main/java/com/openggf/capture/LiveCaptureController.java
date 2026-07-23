@@ -113,6 +113,8 @@ public final class LiveCaptureController implements AutoCloseable {
 
     @Override
     public void close() {
+        long timeoutNanos = Math.max(0, deps.shutdownTimeout.toNanos());
+        long deadline = System.nanoTime() + timeoutNanos;
         Future<?> pending;
         synchronized (this) {
             if (state == State.ACTIVE) requestStop(StopReason.SHUTDOWN);
@@ -120,12 +122,27 @@ public final class LiveCaptureController implements AutoCloseable {
         }
         if (pending != null) {
             try {
-                pending.get(deps.shutdownTimeout.toMillis(), TimeUnit.MILLISECONDS);
+                long gracefulNanos = timeoutNanos - Math.min(
+                        TimeUnit.MILLISECONDS.toNanos(250), Math.max(1, timeoutNanos / 5));
+                pending.get(Math.max(1, gracefulNanos), TimeUnit.NANOSECONDS);
             } catch (Exception failure) {
                 CaptureRecorder r;
                 synchronized (this) { r = recorder; }
-                if (r != null) r.abort();
+                Thread abortThread = null;
+                if (r != null) {
+                    abortThread = new Thread(r::abort, "live-capture-shutdown-abort");
+                    abortThread.setDaemon(true);
+                    abortThread.start();
+                }
                 pending.cancel(true);
+                if (abortThread != null) {
+                    long remaining = Math.max(0, deadline - System.nanoTime());
+                    try {
+                        TimeUnit.NANOSECONDS.timedJoin(abortThread, remaining);
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
             }
         }
         deps.finalizer.shutdown();

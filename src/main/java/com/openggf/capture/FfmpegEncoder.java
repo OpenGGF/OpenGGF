@@ -25,6 +25,12 @@ public final class FfmpegEncoder implements CaptureEncoder {
         Process start(List<String> command) throws IOException;
     }
 
+    interface LifecycleSeam {
+        LifecycleSeam NONE = new LifecycleSeam() {};
+        default void beforeMuxPublication(Process process) throws InterruptedException {}
+        default void beforeSuccessPublication() throws InterruptedException {}
+    }
+
     private static final long DEFAULT_PROCESS_TIMEOUT_MILLIS = 30_000;
 
     private final String ffmpeg;
@@ -32,6 +38,7 @@ public final class FfmpegEncoder implements CaptureEncoder {
     private final int sampleRate0;            // captured for phase 2
     private final ProcessLauncher launcher;
     private final long processTimeoutMillis;
+    private final LifecycleSeam lifecycleSeam;
     private final Object lifecycleLock = new Object();
     private Path finalOut;
     private Path tempVideo;
@@ -48,15 +55,21 @@ public final class FfmpegEncoder implements CaptureEncoder {
     /** @param ffmpeg path/name of the ffmpeg executable; @param scale integer upscale factor */
     public FfmpegEncoder(String ffmpeg, int scale) {
         this(ffmpeg, scale, command -> new ProcessBuilder(command).redirectErrorStream(false).start(),
-                DEFAULT_PROCESS_TIMEOUT_MILLIS);
+                DEFAULT_PROCESS_TIMEOUT_MILLIS, LifecycleSeam.NONE);
     }
 
     FfmpegEncoder(String ffmpeg, int scale, ProcessLauncher launcher, long processTimeoutMillis) {
+        this(ffmpeg, scale, launcher, processTimeoutMillis, LifecycleSeam.NONE);
+    }
+
+    FfmpegEncoder(String ffmpeg, int scale, ProcessLauncher launcher, long processTimeoutMillis,
+                  LifecycleSeam lifecycleSeam) {
         this.ffmpeg = ffmpeg;
         this.scale = Math.max(1, scale);
         this.sampleRate0 = 0;
         this.launcher = launcher;
         this.processTimeoutMillis = Math.max(1, processTimeoutMillis);
+        this.lifecycleSeam = lifecycleSeam;
     }
 
     // ---- pure helpers (unit-tested) ----
@@ -175,14 +188,26 @@ public final class FfmpegEncoder implements CaptureEncoder {
             closeAudioOut();
             if (vexit != 0) throw new CaptureException("ffmpeg video exited " + vexit);
             // phase 2 mux
-            muxProc = launcher.start(
+            Process launchedMux = launcher.start(
                     phase2MuxCommand(ffmpeg, tempVideo, tempAudio, sampleRate, finalOut));
-            Thread muxDrain = drainAsync(muxProc);
-            int mexit = waitForProcess(muxProc, "mux");
+            lifecycleSeam.beforeMuxPublication(launchedMux);
+            synchronized (lifecycleLock) {
+                if (aborted) {
+                    destroyAndWait(launchedMux);
+                    throw new CaptureException("ffmpeg capture aborted before mux publication");
+                }
+                muxProc = launchedMux;
+            }
+            Thread muxDrain = drainAsync(launchedMux);
+            int mexit = waitForProcess(launchedMux, "mux");
             muxDrain.join(2000);
             if (mexit != 0) throw new CaptureException("ffmpeg mux exited " + mexit);
-            success = true;
-            synchronized (lifecycleLock) { terminal = true; }
+            lifecycleSeam.beforeSuccessPublication();
+            synchronized (lifecycleLock) {
+                if (aborted) throw new CaptureException("ffmpeg capture aborted before success publication");
+                terminal = true;
+                success = true;
+            }
             return finalOut;
         } catch (IOException e) {
             throw new CaptureException("ffmpeg finish failed", e);
@@ -204,14 +229,18 @@ public final class FfmpegEncoder implements CaptureEncoder {
 
     @Override
     public void abort() {
+        Process video;
+        Process mux;
         synchronized (lifecycleLock) {
             if (aborted || terminal) return;
             aborted = true;
+            video = videoProc;
+            mux = muxProc;
         }
         try { if (videoStdin != null) videoStdin.close(); } catch (IOException ignored) { }
         closeAudioOutQuietly();
-        destroyAndWait(videoProc);
-        destroyAndWait(muxProc);
+        destroyAndWait(video);
+        destroyAndWait(mux);
         deleteQuietly(tempVideo);
         deleteQuietly(tempAudio);
         deleteQuietly(finalOut);
