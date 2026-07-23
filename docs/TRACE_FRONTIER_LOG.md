@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ shortened-tower zero-speed side stop
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 38873 to
+  frame 39145.** The next divergence is Sonic's X (`$3BDF` expected versus
+  `$3BDA` actual).
+- Root: CPU steering nudges airborne Tails one pixel into the left side of the
+  shortened launcher tower while leaving `x_vel=0`. Native
+  `SolidObject_cont` treats zero as entering from that side: only negative
+  velocity bypasses `loc_1E056`, so it clears `ground_vel` before applying the
+  one-pixel separation. The engine separated Tails correctly but used a
+  strict-positive entering test and retained `$0018` ground speed.
+- Fix: the tower's concrete `SolidObjectFull` profile opts into the shared
+  zero-X-speed left-side stop behavior. The decision is owned by the ROM helper
+  call site rather than CPU-sidekick, zone, route, or frame logic.
+- Validation: all 18 focused LBZ end-boss tests pass and the focused replay
+  reaches frame 39145 with 1331 release-blocking errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ end-boss linked-platform takeover boundary
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 37910 to

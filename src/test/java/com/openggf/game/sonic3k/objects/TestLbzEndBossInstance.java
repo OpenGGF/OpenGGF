@@ -54,6 +54,8 @@ class TestLbzEndBossInstance {
                 "ObjDat3_74110 width_pixels keeps the tower's SolidObjectFull gate live");
         assertEquals(0x80, tower.getOnScreenHalfHeight(),
                 "ObjDat3_74110 height_pixels covers the full launcher tower");
+        assertTrue(tower.zeroXSpeedStopsOnLeftSideContact(),
+                "SolidObject_cont routes zero x_vel through the left-side stop path");
         assertEquals(0x77, boss.getRequestedPlcIdForTests(), "routine 0 requests PLC $77");
         assertTrue(boss.isLbzEndBossArtQueuedForTests(), "routine 0 queues/uses LBZ end-boss art");
         assertTrue(boss.isLbzEndBossPaletteLine1RequestedForTests(), "routine 0 requests Pal_LBZEndBoss line 1");

@@ -937,6 +937,13 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
+        public boolean zeroXSpeedStopsOnLeftSideContact() {
+            // loc_1E042 treats x_vel=0 as entering from the player's left:
+            // only a negative velocity skips loc_1E056's speed reset.
+            return true;
+        }
+
+        @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_END_BOSS);
             if (renderer != null && renderer.isReady()) {
