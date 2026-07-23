@@ -75,18 +75,31 @@ No Java production or test source changes are required.
 ## Execution Worktree Preflight
 
 Before Task 1, use the worktree workflow requested by the user. From the primary
-checkout, preserve these absolute paths before entering the linked worktree:
+checkout, discover rather than assume the ROM filename:
 
 ```bash
 export BIZHAWK_HOME="$(realpath docs/BizHawk-2.11-linux-x64)"
-export S1_ROM_PATH="$(realpath s1.gen)"
+mapfile -t S1_ROM_CANDIDATES < <(
+  rg --files -g '*.gen' -g '!**/.worktrees/**' |
+  while read -r candidate; do
+    [ "$(sha1sum "$candidate" | cut -d' ' -f1)" = \
+      "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b" ] &&
+      realpath "$candidate"
+  done |
+  sort
+)
+[ "${#S1_ROM_CANDIDATES[@]}" -gt 0 ]
+export S1_ROM_PATH="${S1_ROM_CANDIDATES[0]}"
 ```
 
 Verify the ROM hash before continuing. The linked worktree receives neither
 path because both assets are ignored; do not copy, rename, or symlink them. Pass
 these exported absolute values to every delegated implementer and reviewer.
 `common-env.sh` honors an explicit `BIZHAWK_HOME`; only its fallback is relative
-to the current checkout.
+to the current checkout. Switch the primary checkout away from
+`feature/ai-bizhawk-headless-poc`, then attach that existing branch at
+`.worktrees/bizhawk-headless-poc` with `git worktree add`; do not create a
+second feature branch.
 
 ---
 
@@ -198,7 +211,9 @@ Newtonsoft.Json.dll
 references without `HintPath`. The test project is an executable, references
 the production project, and includes `tests/**/*.cs`.
 
-`common-env.sh` resolves the repository root, defaults `BIZHAWK_HOME` to the absolute `docs/BizHawk-2.11-linux-x64`, exports:
+`common-env.sh` resolves the repository root, defaults `BIZHAWK_HOME` to the
+absolute `docs/BizHawk-2.11-linux-x64`, normalizes an explicit value with
+`realpath`, rejects a nonexistent or relative result, and exports:
 
 ```bash
 export BIZHAWK_HOME
@@ -220,6 +235,7 @@ xbuild /nologo /verbosity:minimal \
   BizHawk.Headless.Gpgx.Tests.csproj
 ```
 
+`build.sh` sources `common-env.sh` itself so it is a valid standalone gate.
 `test.sh` sources `common-env.sh`, invokes `build.sh`, unsets `DISPLAY`, and
 forwards all arguments to the test executable through Mono.
 
@@ -232,7 +248,42 @@ Path.GetFullPath(PathUtils.DllDirectoryPath)
     == Path.GetFullPath(Path.Combine(root, "dll"))
 ```
 
-Implement a local immutable `IRomAsset`, local no-firmware `ICoreFileProvider`, and local dictionary-backed `IController`. Construct:
+Implement a local immutable `IRomAsset`, local no-firmware `ICoreFileProvider`,
+and local dictionary-backed `IController`. `MutableController` is constructed
+with `core.ControllerDefinition`, returns that exact instance from
+`Definition`, returns `0` from `AxisValue`, returns an empty
+`IReadOnlyCollection<(string Name, int Strength)>` from `GetHapticsSnapshot`,
+and no-ops `SetHapticChannelStrength`. `Clear` releases every button before the
+next row; `Set` and `IsPressed` use the core's exact names `P1 Up`, `P1 Down`,
+`P1 Left`, `P1 Right`, `P1 A`, `P1 B`, `P1 C`, `P1 Start`, `Power`, and
+`Reset`. Construct:
+
+The exact pinned interfaces implemented are:
+
+```csharp
+// IRomAsset
+byte[] RomData { get; }
+byte[] FileData { get; }
+string Extension { get; }
+string RomPath { get; }
+GameInfo Game { get; }
+
+// IController
+ControllerDefinition Definition { get; }
+bool IsPressed(string button);
+int AxisValue(string name);
+IReadOnlyCollection<(string Name, int Strength)> GetHapticsSnapshot();
+void SetHapticChannelStrength(string name, int strength);
+
+// ICoreFileProvider
+byte[] GetFirmware(FirmwareID id, string msg = null);
+byte[] GetFirmwareOrThrow(FirmwareID id, string msg = null);
+(byte[] FW, GameInfo Game) GetFirmwareWithGameInfoOrThrow(
+    FirmwareID id, string msg = null);
+string GetRetroSaveRAMDirectory(IGameInfo game);
+string GetRetroSystemPath(IGameInfo game);
+string GetUserPath(string sysID, bool temp);
+```
 
 ```csharp
 var game = new GameInfo {
@@ -302,10 +353,13 @@ Use the repository trailer policy; set `Changelog: n/a: proof-of-concept tooling
 
 **Interfaces:**
 - Produces: `Bk2Movie Bk2Reader.Read(string path)`.
-- `Bk2Movie` exposes `IReadOnlyList<Bk2Frame> Frames`, `GPGX.GPGXSyncSettings SyncSettings`, and header properties.
+- `Bk2Movie` exposes `int FrameCount`,
+  `IEnumerable<Bk2Frame> OpenFrameStream()`,
+  `GPGX.GPGXSyncSettings SyncSettings`, and header properties. Each enumeration
+  opens and streams the archive input entry; it does not retain every movie row.
 - `Bk2Frame` exposes system `Power`/`Reset`, P1 named button states, P2 activity, and `ushort OpenGgfInputMask`.
 
-- [ ] **Step 1: Add the real prefix fixtures and failing parser tests**
+- [ ] **Step 1: Add the real prefix fixtures, parser stubs, and failing tests**
 
 Extract the tracked BK2's `Header.txt`, complete `SyncSettings.json`, `LogKey`, and first three input rows into small text fixtures. Do not copy the full movie.
 
@@ -313,10 +367,11 @@ Tests must build synthetic ZIPs in a temporary directory and assert:
 
 ```csharp
 var movie = Bk2Reader.Read(validZip);
+var frames = movie.OpenFrameStream().ToList();
 AssertEx.Equal("Genplus-gx", movie.Core);
 AssertEx.Equal("GEN", movie.Platform);
-AssertEx.Equal(3, movie.Frames.Count);
-AssertEx.Equal((ushort) 0, movie.Frames[0].OpenGgfInputMask);
+AssertEx.Equal(3, movie.FrameCount);
+AssertEx.Equal((ushort) 0, frames[0].OpenGgfInputMask);
 ```
 
 Add one-frame variants for each accepted P1 bit:
@@ -332,6 +387,9 @@ Assert the fixture sync payload SHA-256 is exactly
 `8f4130ebee1f1593080371f1d257477fbb2cc68c1cb691620736639e768c97bc`.
 Assert the legacy 32-hex Header `SHA1` is retained as metadata and is not used as a ROM identity.
 
+Add compilable `Bk2Frame`, `Bk2Movie`, and `Bk2Reader` stubs with
+`Bk2Reader.Read` throwing `NotImplementedException`.
+
 - [ ] **Step 2: Run the parser tests and observe RED**
 
 Run:
@@ -340,13 +398,17 @@ Run:
 tools/bizhawk-headless/test.sh --filter Bk2Reader
 ```
 
-Expected: non-zero due to missing `Bk2Reader` types.
+Expected: exit `1` at the intentional `NotImplementedException`.
 
 - [ ] **Step 3: Implement the strict ZIP grammar**
 
 Use `ZipArchive` and reject missing/duplicate archive entries. Parse header lines at the first space with duplicate-key detection. Deserialize sync JSON into a local DTO with all expected fields, reject missing/unknown fields, compare exact supported values, then construct the exact `GPGXSyncSettings`.
 
-Parse one `[Input]` section. Require the exact declared group names from the design. Split each row as `|SS|PPPPPPPP|QQQQQQQQ|`, map characters through the declared group order, and treat `.` as released and any other character as pressed. Reject active P2.
+Parse one `[Input]` section during validation to obtain `FrameCount`. Require the
+exact declared group names from the design. `OpenFrameStream` reopens the ZIP
+and streams rows through an iterator. Split each row as
+`|SS|PPPPPPPP|QQQQQQQQ|`, map characters through the declared group order, and
+treat `.` as released and any other character as pressed. Reject active P2.
 
 The reader verifies the full BK2 SHA-256 only when the input path is the canonical integration fixture; synthetic unit movies validate content rather than the canonical archive hash.
 
@@ -385,7 +447,7 @@ Use the required documentation trailers with justified `n/a`.
 - Produces: `string S1SmokeRecorder.Header`, `string S1SmokeRecorder.Record(int traceFrame, ushort input, IGpgxHost host)`.
 - Produces: `void SmokeCaptureRunner.Capture(Bk2Movie movie, IGpgxHost host, int bk2FrameOffset, int maxFrames, TextWriter output)`.
 
-- [ ] **Step 1: Add failing RAM decode and frame-order tests**
+- [ ] **Step 1: Add recorder/runner stubs and failing RAM decode/frame-order tests**
 
 Use a fake `IGpgxHost` backed by a 64 KiB byte array. Set:
 
@@ -419,6 +481,9 @@ For orchestration, use three warm-up/input frames and a fake host that mutates R
 
 Reject negative offset, count outside `1..1000`, and movie exhaustion before `offset + count`.
 
+Add compilable recorder and runner types whose public methods throw
+`NotImplementedException`.
+
 - [ ] **Step 2: Run focused tests and observe RED**
 
 Run:
@@ -427,7 +492,7 @@ Run:
 tools/bizhawk-headless/test.sh --filter Smoke
 ```
 
-Expected: non-zero due to missing recorder/runner.
+Expected: exit `1` at the intentional `NotImplementedException`.
 
 - [ ] **Step 3: Implement recorder and runner**
 
@@ -470,9 +535,12 @@ Use the required documentation trailers with justified `n/a`.
 
 **Interfaces:**
 - Produces: `NoReplacePublisher.Publish(string outputDirectory, Action<TextWriter> write)`.
+- An internal constructor accepts `ILinkOperation.Create(string temporary,
+  string finalPath)` so the race test can deterministically act immediately
+  before the real `link(2)` call.
 - Produces CLI arguments `--rom`, `--movie`, `--output`, `--bk2-frame-offset`, and `--max-frames`.
 
-- [ ] **Step 1: Add failing no-replace and CLI tests**
+- [ ] **Step 1: Add publisher/CLI stubs and failing no-replace and CLI tests**
 
 Publication tests assert:
 
@@ -484,6 +552,10 @@ Publication tests assert:
 
 CLI parsing tests assert required arguments, offset `>= 0`, count `1..1000`, unknown/duplicate arguments rejected, and no existing final output accepted.
 
+The race test injects an `ILinkOperation` decorator which writes the competing
+final file and then delegates to the real libc link implementation. Add
+compilable publisher and CLI stubs throwing `NotImplementedException`.
+
 Add the ROM-backed end-to-end test before production CLI wiring. It verifies the
 canonical BK2 and physics CSV hashes, launches two captures into distinct
 temporary directories with offset `840` and count `1000`, and asserts identical
@@ -491,6 +563,11 @@ SHA-256 output. It parses canonical `physics.csv` by header name and compares
 the native `input`, `x`, `y`, `x_velocity`, and `y_velocity` columns against
 canonical `input`, `player_x`, `player_y`, `player_x_speed`, and
 `player_y_speed` for rows `0000`, `0001`, and `03E7`.
+
+Before launching, parse
+`src/test/resources/traces/s1/ghz1_fullrun/metadata.json`, require its
+`bk2_frame_offset` to be integer `840`, and pass that parsed value—not a second
+hardcoded offset—to both captures and the expected BK2-row mapping assertion.
 
 Add observability assertions for exact labeled values: BizHawk version, uppercase
 ROM SHA-1, BK2 frame count, requested frame count, completed GPGX frame count,
@@ -512,8 +589,8 @@ tools/bizhawk-headless/test.sh --filter Cli
 tools/bizhawk-headless/test.sh --filter EndToEnd
 ```
 
-Expected: exit `1` from missing publisher/CLI wiring; the end-to-end test also
-fails because no production executable exists.
+Expected: exit `1` at the intentional publisher/CLI
+`NotImplementedException`; the end-to-end test fails at the stub executable.
 
 - [ ] **Step 3: Implement Linux publication and composition root**
 
@@ -530,6 +607,17 @@ and final path, and returns non-zero on a concise exception message.
 
 `run.sh` sources `common-env.sh`, builds if the executable is absent, unsets
 `DISPLAY`, and executes it via Mono. Do not set or access an X server.
+
+Successful stdout is exactly these six LF-terminated lines:
+
+```text
+BizHawk: 2.11.0.0
+ROM SHA-1: 69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B
+Movie frames: <validated integer>
+Requested trace frames: <max-frames>
+Completed GPGX frames: <offset + max-frames>
+Output: <absolute path to smoke.csv>
+```
 
 Change the production project from `Library` to `Exe`, set startup object
 `BizHawk.Headless.Gpgx.Program`, and place the release executable at
