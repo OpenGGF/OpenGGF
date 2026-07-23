@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ2's departing Robotnik ship now uses its `$20` Render_Sprites bounds for `loc_8D4CC` instead of the coarse object unload window, allocating the final-boss graph on the native offscreen edge. This advances the combined LBZ frontier from frame 42267 to frame 42727 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ2's Robotnik ship now performs `loc_8D47C`'s moved-position player pin before clearing object control and publishing the release throw. This advances the combined LBZ frontier from frame 41869 to frame 42267 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ2's Robotnik ship now consumes native S3K special-touch properties, separates capture from its first player pin, preserves retained player velocities, and creates the `$4000`-accumulator gradual camera worker ahead of its exhaust child. This advances the combined LBZ frontier from frame 39145 to frame 41869 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ's shortened end-boss tower now follows `SolidObject_cont`'s zero-X-speed left-side stop path, clearing CPU Tails' ground speed while preserving the native one-pixel separation. This advances the combined LBZ frontier from frame 38873 to frame 39145 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.

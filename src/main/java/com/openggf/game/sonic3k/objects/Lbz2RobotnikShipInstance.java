@@ -120,6 +120,16 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOnScreenHalfWidth() {
+        return 0x20;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 0x20;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         registerLaunchAnchor();
         applyLaunchRiderDelta();
@@ -309,11 +319,15 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
 
     /** ROM loc_8D4CC: keep swinging+flying until off-screen, then spawn the boss. */
     private void updateFlyAway() {
-        if (!forcedOffscreen) {
+        // tst.b render_flags observes Render_Sprites' 32x32 bounds before
+        // this dispatch. It is not the much wider out_of_range unload window.
+        boolean onScreen = isWithinRenderSpriteBounds(
+                getOnScreenHalfWidth(), getOnScreenHalfHeight());
+        if (!forcedOffscreen && onScreen) {
             swing();
             move();
         }
-        if ((forcedOffscreen || !isInRangeAt(x)) && !finalBossSpawned) {
+        if ((forcedOffscreen || !onScreen) && !finalBossSpawned) {
             spawnFinalBoss();
             setDestroyedByOffscreen();
         }

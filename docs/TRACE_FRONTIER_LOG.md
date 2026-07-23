@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ2 ship render-bound boss handoff
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 42267 to
+  frame 42727.** The next divergence is Sonic's X speed (`-$0200` expected
+  versus `$02A1` actual).
+- Root: `loc_8D4CC` tests the ship's retained `render_flags` and creates
+  `Obj_LBZFinalBoss1` as soon as its 32-by-32 render footprint leaves the
+  screen. The engine instead kept the ship through the coarse chunk-aligned
+  object unload window, so the boss graph was absent when Sonic and Tails
+  reached the recorded encounter.
+- Fix: the ship exposes `ObjDat_LBZ2RobotnikShip`'s `$20` render half-extents
+  and uses the shared Render_Sprites bounds predicate before its fly-away
+  movement. Its final-boss allocation now occurs on the native visibility
+  edge, without a camera, route, or frame condition.
+- Validation: all 13 focused LBZ2 ship/cameo tests pass and the focused replay
+  reaches frame 42727 with 441 release-blocking errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ2 Robotnik ship release-order pin
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 41869 to

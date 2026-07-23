@@ -215,6 +215,8 @@ class TestLbz2RideCameoInstances {
         Lbz2RobotnikShipInstance ship = fixture.ship(0x443F, 0x0640);
         TestablePlayableSprite sonic = playerAt(0x443F, 0x0640, "sonic");
 
+        assertEquals(0x20, ship.getOnScreenHalfWidth());
+        assertEquals(0x20, ship.getOnScreenHalfHeight());
         ship.grabPlayerForTest(sonic);
         fixture.runtime.setLaunchActive(true);
         ship.setRideRightForTest(0x0100);
