@@ -3211,16 +3211,30 @@ public class SidekickCpuController {
 
     private int projectRetainedResultsSpriteCadence(
             int monotonicCounter, AbstractPlayableSprite effectiveLeader) {
-        if (!titleCardOwnsRetainedResultsHeldLevelCounter() || effectiveLeader == null) {
+        GameModule module = sidekick.currentGameModule();
+        var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
+        if (titleCardProvider == null) {
+            return monotonicCounter;
+        }
+        int fixedCpuPhase = titleCardProvider.retainedResultsHeldLevelCounterCpuPhase();
+        if (fixedCpuPhase >= 0) {
+            return projectCounterToLowSixBitPhase(monotonicCounter, fixedCpuPhase);
+        }
+        if (!titleCardProvider.projectsPreResetRetainedResultsSpriteCadence()
+                || effectiveLeader == null) {
             return monotonicCounter;
         }
         int nativeNextFreeHistorySlot =
                 (effectiveLeader.getHistorySlotIndex(0) + 2) & 0x3F;
+        return projectCounterToLowSixBitPhase(monotonicCounter, nativeNextFreeHistorySlot);
+    }
+
+    private int projectCounterToLowSixBitPhase(int monotonicCounter, int phase) {
         // Project the monotonic engine counter onto the nearest value with the
         // native low-six-bit sprite-dispatch phase. This preserves later cycles
         // for one-shot guards and carries across byte boundaries ($40FF plus
         // phase 0 becomes $4100, rather than $40C0).
-        int phaseDelta = (nativeNextFreeHistorySlot - (monotonicCounter & 0x3F)) & 0x3F;
+        int phaseDelta = ((phase & 0x3F) - (monotonicCounter & 0x3F)) & 0x3F;
         if (phaseDelta > 0x1F) {
             phaseDelta -= 0x40;
         }

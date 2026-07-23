@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - Retained-title post-reset CPU counter phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 22412 to
+  frame 22669.** The next divergence is CPU Tails' Y position (`$01F1`
+  expected versus `$01F0` actual).
+- Root: the retained results owner needs the playable history ring to project
+  fixed-object cadence before its one-shot in-level gamestate reset. The engine
+  kept using that projection after the reset, so each history-ring wrap looked
+  like a zero-phase `Level_frame_counter` sample and incorrectly fired Tails'
+  normal CPU auto-jump gate.
+- Fix: the title provider now distinguishes its pre-reset history-projected
+  phase from the post-reset counter held at zero. Fixed player slots observe
+  the native increment-visible low-six-bit phase `$01` after the reset, while
+  CNZ's earlier retained-results projection remains intact.
+- Validation: all 104 focused title-counter and sidekick CPU tests pass. The
+  complete `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green
+  and the same 16 documented red routes; LBZ reaches frame 22669 with 3022
+  remaining errors. CNZ remains at its established frame-14658 frontier, and
+  no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ post-title act-size workers
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 22334 to
