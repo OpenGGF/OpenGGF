@@ -43,14 +43,15 @@ public interface LevelInitProfile {
     }
 
     /**
-     * Whether the freshly reset main playable's first ordinary object dispatch
-     * initializes the slot without running movement.
+     * Whether a fresh level start must preserve the player's cleared grounded
+     * status until the first ordinary playable dispatch.
      *
-     * <p>S3K's routine-0 player dispatch initializes the cleared slot and
-     * returns before {@code Sonic_Control}; S1/S2 retain their existing startup
-     * sequencing unless their profiles explicitly opt in.
+     * <p>S3K creates and initializes the player slot before the first compared
+     * level frame. That frame therefore enters routine 2 grounded and lets
+     * {@code Player_AnglePos} publish any terrain walk-off transition itself.
+     * S1/S2 retain their established pre-frame ground-snap sequencing.
      */
-    default boolean firstMainPlayableDispatchInitializesWithoutMovement() {
+    default boolean preserveFreshGroundedStatusUntilFirstDispatch() {
         return false;
     }
 

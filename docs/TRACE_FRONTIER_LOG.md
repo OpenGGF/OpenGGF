@@ -1,9 +1,43 @@
 # Trace Frontier Log
 
+### 2026-07-23 -- CNZ fresh-start lifecycle advances from f0 to f185
+
+The focused CNZ level-select replay previously failed at frame 0 because
+bootstrap's synthetic terrain attachment detached Sonic before the first
+ordinary dispatch, while a separate S3K-only fresh-player marker then skipped
+that dispatch's movement/control path. The combination suppressed gravity but
+also prevented the grounded Wait selection: the engine published animation
+`$00` / mapping `$07` instead of the ROM's animation `$05` / mapping `$BA`.
+
+S3K's `LevelInitProfile` now states the actual fresh-start lifecycle:
+bootstrap preserves the reset player's cleared grounded status and routine 2's
+first ordinary dispatch owns `Player_AnglePos` terrain walk-off. The incorrect
+initialization-only dispatch marker and its rewind field are removed. Existing
+structural replay policy still excludes complete-run, bonus-stage, and
+mid-level starts; there is no trace-profile predicate or trace-to-engine state
+hydration. S1/S2 retain their existing pre-frame ground-snap behavior.
+
+Strict lifecycle regression:
+
+- `mvn -Ptrace-replay -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#freshCnzStartRunsGroundedWalkOffBeforeCarryInit' -Dsurefire.argLine='-Xshare:off -Xmx3g' -Dsurefire.forkCount=1 -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' -DfailIfNoTests=false test`
+  first failed at frame 0 (`animation_id`, expected `$05`, actual `$00`) and
+  then passed after the lifecycle correction. It checks Sonic's frame-0
+  airborne/y-speed/animation/mapping closure, Tails' routine `$0C` carry-init
+  state, and Sonic's frame-1 carried state with `object_control=$03`.
+
+Focused replay:
+
+- The same 3 GiB command selecting the full `TestS3kCnzTraceReplay` class now
+  reports 9,169 downstream mismatches with its first divergence at frame 185:
+  `y_speed` expected `$0370`, actual `-$0700`. The pre-fix run reported 9,116
+  mismatches beginning at frame 0 (`player_animation_id`, expected `$05`,
+  actual `$00`). The larger downstream count is exposed state beyond the
+  advanced frontier, not a pre-frontier regression.
+
 ### 2026-07-23 -- S3K structural replay scheduling baseline for Task 4
 
 Task 3 removes recorder-emitted phase-control metadata only. The replay engine
-now follows the production fresh-main-playable lifecycle and classifies the AIZ
+now follows the ordinary production playable lifecycle and classifies the AIZ
 prefix from the recorded LEVEL transition; trace rows remain comparison-only.
 No fixture was changed.
 

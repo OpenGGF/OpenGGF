@@ -66,9 +66,11 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
     }
 
     @Override
-    public boolean firstMainPlayableDispatchInitializesWithoutMovement() {
-        // ROM Sonic_Init (sonic3k.asm:21902-21941) initializes routine 0 and
-        // returns; movement begins only on the later Sonic_Control dispatch.
+    public boolean preserveFreshGroundedStatusUntilFirstDispatch() {
+        // ROM fresh-start frame 0 is already routine 2. Grounded control
+        // selects Wait before Player_AnglePos detaches at the platform edge;
+        // Animate_Sonic then publishes mapping $BA without an air-gravity tick
+        // (sonic3k.asm:24740-24771; AniSonic05).
         return true;
     }
 

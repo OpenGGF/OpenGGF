@@ -238,7 +238,7 @@ class TestTraceReplayStartPositionPolicy {
         assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace));
         assertEquals(0,
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
-                "Task 1's production fresh-playable lifecycle owns the first native dispatch.");
+                "The ordinary S3K playable lifecycle owns the first native dispatch.");
         assertEquals(0,
                 TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
                 "CNZ frame 0 must run the normal level object pass, not a replay-only warmup.");

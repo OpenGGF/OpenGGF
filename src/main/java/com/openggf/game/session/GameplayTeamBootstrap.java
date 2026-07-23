@@ -54,10 +54,6 @@ public final class GameplayTeamBootstrap {
         String mainCharacter = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
         AbstractPlayableSprite mainSprite = createPlayable(mainCharacter, mainCharacter, mainX, mainY);
         spriteManager.addSprite(mainSprite);
-        if (module.getLevelInitProfile()
-                .firstMainPlayableDispatchInitializesWithoutMovement()) {
-            spriteManager.armFreshMainPlayableDispatch(mainSprite);
-        }
 
         List<AbstractPlayableSprite> sidekicks = new ArrayList<>();
         if (module.supportsSidekick() || CrossGameFeatureProvider.isActive()) {

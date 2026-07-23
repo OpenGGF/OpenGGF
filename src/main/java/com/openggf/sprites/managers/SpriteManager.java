@@ -109,7 +109,6 @@ public class SpriteManager {
 	private final IdentityHashMap<AbstractPlayableSprite, List<Runnable>> deferredPostTickMutations =
 			new IdentityHashMap<>();
 	private AbstractPlayableSprite activePlayableUpdate;
-	private AbstractPlayableSprite freshMainPlayableDispatch;
 	private boolean playableFrameActive;
 
 	public SpriteManager() {
@@ -260,7 +259,6 @@ public class SpriteManager {
 		playableScheduledScratch.clear();
 		playableAvailableScratch.clear();
 		activePlayableUpdate = null;
-		freshMainPlayableDispatch = null;
 		playableFrameActive = false;
 	}
 
@@ -582,9 +580,6 @@ public class SpriteManager {
 								false, false);
 					}
 
-					if (tickFreshMainPlayableInitialization(playable, frameCounter)) {
-						continue;
-					}
 					tickPlayablePhysics(playable, effectiveUp, effectiveDown, effectiveLeft,
 							effectiveRight, effectiveJump, effectiveTest, speedUp, slowDown,
 							levelManager, frameCounter);
@@ -653,9 +648,6 @@ public class SpriteManager {
 							false, false, false, false, false,
 							false, false, false, false, false,
 							false, false);
-					if (tickFreshMainPlayableInitialization(playable, frameCounter)) {
-						continue;
-					}
 					tickPlayablePhysics(playable, false, false, false, false, false, false, false, false,
 							levelManager, frameCounter);
 					levelManager.updateZoneFeaturesAfterPlayablePhysics(playable);
@@ -914,44 +906,6 @@ public class SpriteManager {
 		for (Runnable mutation : deferred) {
 			mutation.run();
 		}
-	}
-
-	/**
-	 * Arms the given main playable's next ordinary update as its fresh-slot
-	 * initialization dispatch. Identity is intentional: replacing a registered
-	 * sprite must not transfer the one-shot lifecycle state to its replacement.
-	 */
-	public void armFreshMainPlayableDispatch(AbstractPlayableSprite mainPlayable) {
-		freshMainPlayableDispatch = mainPlayable;
-	}
-
-	/**
-	 * Consumes the armed fresh-main dispatch after the ordinary update path has
-	 * applied queued control state and published this frame's logical controls.
-	 *
-	 * <p>ROM S3K {@code Sonic_Init} initializes routine 0 and returns before the
-	 * movement path ({@code sonic3k.asm:21902-21941}). Keep the engine's native
-	 * history/animation/status closure so the rest of the frame, including
-	 * sidekicks, objects, and oscillation, remains an ordinary level frame.
-	 *
-	 * @return true when the one-shot was consumed and normal playable physics
-	 *         must be skipped for this playable
-	 */
-	public boolean tickFreshMainPlayableInitialization(
-			AbstractPlayableSprite playable, int frameCounter) {
-		if (freshMainPlayableDispatch != playable) {
-			return false;
-		}
-		freshMainPlayableDispatch = null;
-		playable.recordFollowerHistoryForTick();
-		if (playable.getMovementManager() instanceof PlayableSpriteMovement movement) {
-			movement.applyDeferredSpindashAnimationPushClear();
-		}
-		playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
-		playable.getAnimationManager().update(frameCounter);
-		playable.tickStatus();
-		playable.endOfTick();
-		return true;
 	}
 
 	private static void publishInputState(AbstractPlayableSprite playable,
@@ -1781,10 +1735,7 @@ public class SpriteManager {
 				}
 				return new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot(
 						frameCounter,
-						snap.toArray(new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry[0]),
-						freshMainPlayableDispatch != null
-								? freshMainPlayableDispatch.getCode()
-								: null);
+						snap.toArray(new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry[0]));
 			}
 
 			@Override
@@ -1828,12 +1779,6 @@ public class SpriteManager {
 						}
 					}
 				}
-				Sprite armedPlayable = s.freshMainPlayableDispatchCode() != null
-						? getSprite(s.freshMainPlayableDispatchCode())
-						: null;
-				freshMainPlayableDispatch = armedPlayable instanceof AbstractPlayableSprite playable
-						? playable
-						: null;
 			}
 		};
 	}

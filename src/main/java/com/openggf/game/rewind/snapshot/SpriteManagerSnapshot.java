@@ -7,8 +7,7 @@ import java.util.Map;
 /**
  * Snapshot of {@link com.openggf.sprites.managers.SpriteManager}'s
  * gameplay-relevant runtime state — the per-sprite captures keyed by
- * sprite code, the manager's own per-frame counter, and the stable code
- * of the playable whose fresh dispatch remains armed.
+ * sprite code and the manager's own per-frame counter.
  *
  * <p>SpriteManager.frameCounter is incremented every {@code stepFrame} and
  * passed into {@code SidekickCpuController.update(frameCount)} and the
@@ -21,21 +20,16 @@ import java.util.Map;
  */
 public record SpriteManagerSnapshot(
         int frameCounter,
-        SpriteEntry[] sprites,
-        String freshMainPlayableDispatchCode) {
+        SpriteEntry[] sprites) {
 
     public SpriteManagerSnapshot {
         sprites = sprites == null ? new SpriteEntry[0] : sprites.clone();
     }
 
-    public SpriteManagerSnapshot(int frameCounter, SpriteEntry[] sprites) {
-        this(frameCounter, sprites, null);
-    }
-
     public SpriteManagerSnapshot(int frameCounter, Map<String, PerObjectRewindSnapshot> sprites) {
         this(frameCounter, sprites.entrySet().stream()
                 .map(entry -> new SpriteEntry(entry.getKey(), entry.getValue()))
-                .toArray(SpriteEntry[]::new), null);
+                .toArray(SpriteEntry[]::new));
     }
 
     public record SpriteEntry(String code, PerObjectRewindSnapshot state) {}
