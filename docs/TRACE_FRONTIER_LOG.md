@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ final-boss collision publication coordinates
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 43062 to
+  frame 43495.** Release-blocking errors fell from 330 to 137; the next
+  divergence is Sonic's ground speed (`0` expected versus `-$00A8` actual).
+- Root: `Obj_LBZFinalBoss1` moves before `sub_734FA` publishes its slot through
+  `Add_SpriteToCollisionResponseList`, and each collidable linked child
+  refreshes from the parent before its own draw/touch publication. The engine
+  exposed their older routine-entry coordinates to the following player slot,
+  delaying the recorded boss rebound and turret damage contacts.
+- Fix: the boss and its linked child family now declare their native
+  move-before-touch publication order through the existing current-touch-state
+  contract. The shared collision pipeline remains unchanged, and the decision
+  is driven by the publishing object routine rather than zone, route, or frame.
+- Validation: all 19 focused LBZ final-boss tests pass and the focused replay
+  reaches frame 43495 with 137 release-blocking errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ final-boss post-routine hit resolution
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 43003 to

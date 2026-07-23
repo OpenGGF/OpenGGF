@@ -252,6 +252,14 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // ROM sub_734FA moves the ship before Add_SpriteToCollisionResponseList.
+        // The following player slot therefore sees the published post-move position,
+        // rather than the routine-entry coordinates retained in preUpdateX/Y.
+        return true;
+    }
+
+    @Override
     public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
         if (hp <= 0 || invulnerabilityTimer > 0 || collisionFlags == 0) {
             return;
@@ -1157,6 +1165,13 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             this.dx = dx;
             this.dy = dy;
             refreshFromBoss();
+        }
+
+        @Override
+        public boolean usesCurrentTouchResponseState() {
+            // Each collidable child refreshes its coordinates before its draw/touch
+            // helper publishes the slot to Collision_response_list.
+            return true;
         }
 
         @Override

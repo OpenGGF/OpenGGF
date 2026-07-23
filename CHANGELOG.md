@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ's first final boss and its linked collidable children now publish their post-move coordinates to S3K's collision-response list, restoring the recorded boss rebound and turret damage contacts. This advances the combined LBZ frontier from frame 43062 to frame 43495 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ's first final boss now resolves player-slot hit publications and hit-flash expiry after its current object routine, matching `Obj_LBZFinalBoss1` → `sub_734FA` order and preserving each hit frame's vertical movement. This advances the combined LBZ frontier from frame 43003 to frame 43062 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ's first final boss now applies `loc_72AAA`'s `swap d0` before testing the RNG side-selection bit, keeping the native RNG advance while placing each shuttle pass on the recorded side. This advances the combined LBZ frontier from frame 42727 to frame 43003 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ2's departing Robotnik ship now uses its `$20` Render_Sprites bounds for `loc_8D4CC` instead of the coarse object unload window, allocating the final-boss graph on the native offscreen edge. This advances the combined LBZ frontier from frame 42267 to frame 42727 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.

@@ -51,6 +51,8 @@ class TestLbzFinalBoss1Instance {
 
         assertEquals(9, boss.getCollisionProperty(), "loc_729DE writes collision_property(a0)=9");
         assertEquals(0x0F, boss.getCollisionFlags(), "ObjDat_LBZFinalBoss1 collision_flags is raw $0F");
+        assertTrue(boss.usesCurrentTouchResponseState(),
+                "sub_734FA publishes the ship's post-move position to Collision_response_list");
         assertEquals(0x7F, boss.getActivationTimer(), "Sonic/Tails branch arms a $7F wait before activation");
         assertEquals(0x0C, boss.getMappingFrame(), "Robotnik ship body starts on frame $0C");
         assertEquals(Sonic3kObjectArtKeys.ROBOTNIK_SHIP, boss.getBodyArtKey());
@@ -58,6 +60,9 @@ class TestLbzFinalBoss1Instance {
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ROBOTNIK_HEAD).size());
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.TOP_ATTACHMENT).size());
         assertEquals(3, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT).size());
+        assertTrue(firstBossChild(boss, LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT)
+                        .usesCurrentTouchResponseState(),
+                "boss children publish their refreshed post-move coordinates");
         assertEquals(4, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_HEAD).size(),
                 "ChildObjDat_737BA is reached by both loc_7308E and loc_730F8, so top and middle segments each get a laser-head pair");
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ORBITING_POD).size());
