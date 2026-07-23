@@ -94,6 +94,55 @@ class TestS3kFreshPlayableDispatch {
     }
 
     @Test
+    void rewindToArmedFrameRestoresFreshMainInitializationDispatch() {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        Object oldSkipIntros = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+        try {
+            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                    .withZoneAndAct(0, 0)
+                    .build();
+            AbstractPlayableSprite main = fixture.sprite();
+            SpriteManager sprites = GameServices.sprites();
+
+            main.setCentreX((short) 0x1000);
+            main.setCentreY((short) 0x0200);
+            main.setXSpeed((short) 0x0100);
+            main.setYSpeed((short) 0x0080);
+            main.setGSpeed((short) 0x0100);
+            main.setAir(true);
+            main.setControlLocked(false);
+
+            short armedX = main.getCentreX();
+            short armedY = main.getCentreY();
+            var rewind = sprites.rewindSnapshottable();
+            var armedSnapshot = rewind.capture();
+
+            fixture.stepFrame(false, false, false, true, false);
+            assertEquals(armedX, main.getCentreX(), "initial fresh dispatch must hold X");
+            assertEquals(armedY, main.getCentreY(), "initial fresh dispatch must hold Y");
+
+            fixture.stepFrame(false, false, false, true, false);
+            assertNotEquals(armedX, main.getCentreX(),
+                    "the live one-shot must be consumed before rewind");
+
+            rewind.restore(armedSnapshot);
+            assertEquals(armedX, main.getCentreX(), "rewind must restore the armed X position");
+            assertEquals(armedY, main.getCentreY(), "rewind must restore the armed Y position");
+
+            fixture.stepFrame(false, false, false, true, false);
+
+            assertEquals(armedX, main.getCentreX(),
+                    "replay from the armed frame must initialize without X movement");
+            assertEquals(armedY, main.getCentreY(),
+                    "replay from the armed frame must initialize without Y movement");
+        } finally {
+            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS,
+                    oldSkipIntros != null ? oldSkipIntros : false);
+        }
+    }
+
+    @Test
     void onlyS3kEnablesFreshMainInitializationDispatch() {
         assertFalse(new Sonic1GameModule().getLevelInitProfile()
                 .firstMainPlayableDispatchInitializesWithoutMovement());

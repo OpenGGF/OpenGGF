@@ -1781,7 +1781,10 @@ public class SpriteManager {
 				}
 				return new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot(
 						frameCounter,
-						snap.toArray(new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry[0]));
+						snap.toArray(new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry[0]),
+						freshMainPlayableDispatch != null
+								? freshMainPlayableDispatch.getCode()
+								: null);
 			}
 
 			@Override
@@ -1825,6 +1828,12 @@ public class SpriteManager {
 						}
 					}
 				}
+				Sprite armedPlayable = s.freshMainPlayableDispatchCode() != null
+						? getSprite(s.freshMainPlayableDispatchCode())
+						: null;
+				freshMainPlayableDispatch = armedPlayable instanceof AbstractPlayableSprite playable
+						? playable
+						: null;
 			}
 		};
 	}
