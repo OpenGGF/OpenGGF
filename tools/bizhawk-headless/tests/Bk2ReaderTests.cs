@@ -39,6 +39,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "Bk2Reader frame streams reopen the archive",
                 FrameStreamsReopenArchive));
             tests.Add(new TestMain.TestCase(
+                "Bk2Reader only hashes the canonical archive identity",
+                OnlyHashesCanonicalArchiveIdentity));
+            tests.Add(new TestMain.TestCase(
                 "Bk2Reader rejects duplicate and missing required entries",
                 RejectsDuplicateAndMissingRequiredEntries));
             tests.Add(new TestMain.TestCase(
@@ -53,6 +56,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "Bk2Reader rejects wrong missing and extra sync fields",
                 RejectsWrongMissingAndExtraSyncFields));
+            tests.Add(new TestMain.TestCase(
+                "Bk2Reader rejects duplicate sync JSON properties",
+                RejectsDuplicateSyncJsonProperties));
             tests.Add(new TestMain.TestCase(
                 "Bk2Reader rejects six-button and controller changes",
                 RejectsSixButtonAndControllerChanges));
@@ -245,6 +251,37 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
+        private static void OnlyHashesCanonicalArchiveIdentity()
+        {
+            string directory = CreateTempDirectory();
+            string path = Path.Combine(
+                directory,
+                "copy",
+                "src",
+                "test",
+                "resources",
+                "traces",
+                "s1",
+                "ghz1_fullrun",
+                "ghz1_fullrun.bk2");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                WriteMovie(
+                    path,
+                    Entries(
+                        Fixture("ghz1-header.txt"),
+                        Fixture("ghz1-sync-settings.json"),
+                        Fixture("ghz1-input-prefix.txt")));
+
+                AssertEx.Equal(3, Bk2Reader.Read(path).FrameCount);
+            }
+            finally
+            {
+                Directory.Delete(directory, true);
+            }
+        }
+
         private static void RejectsDuplicateAndMissingRequiredEntries()
         {
             string[] required = { HeaderEntry, SyncEntry, InputEntry };
@@ -329,6 +366,24 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "\"SpritesAlwaysOnTop\":false",
                     "\"SpritesAlwaysOnTop\":false,\"Unexpected\":0"),
                 "unknown sync field Unexpected");
+        }
+
+        private static void RejectsDuplicateSyncJsonProperties()
+        {
+            string sync = Fixture("ghz1-sync-settings.json");
+            AssertSyncInvalid(
+                sync.Replace("\"Region\":0,", "\"Region\":0,\"Region\":2,"),
+                "duplicate");
+            AssertSyncInvalid(
+                sync.Replace("\"Region\":0,", "\"Region\":0,\"Region\":0,"),
+                "duplicate");
+
+            string settings = sync.Substring(
+                "{\"o\":".Length,
+                sync.Length - "{\"o\":".Length - 1);
+            AssertSyncInvalid(
+                "{\"o\":" + settings + ",\"o\":" + settings + "}",
+                "duplicate");
         }
 
         private static void RejectsSixButtonAndControllerChanges()

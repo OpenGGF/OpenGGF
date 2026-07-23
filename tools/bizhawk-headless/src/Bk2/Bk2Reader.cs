@@ -31,6 +31,15 @@ namespace OpenGGF.BizHawk.Headless
             InputEntryName
         };
 
+        private static readonly string CanonicalMoviePath = Path.GetFullPath(
+            Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "..",
+                CanonicalMovieRelativePath));
+
         private static readonly string[] ExpectedSyncFields =
         {
             "$type",
@@ -286,12 +295,18 @@ namespace OpenGGF.BizHawk.Headless
             JObject root;
             try
             {
-                root = JObject.Parse(json);
+                root = JObject.Parse(
+                    json,
+                    new JsonLoadSettings
+                    {
+                        DuplicatePropertyNameHandling =
+                            DuplicatePropertyNameHandling.Error
+                    });
             }
             catch (JsonException exception)
             {
                 throw new InvalidDataException(
-                    "SyncSettings.json is not valid JSON.",
+                    "SyncSettings.json is not valid JSON or contains a duplicate property.",
                     exception);
             }
 
@@ -700,16 +715,9 @@ namespace OpenGGF.BizHawk.Headless
 
         private static void VerifyCanonicalMovieHash(string path)
         {
-            string normalized = path.Replace(
-                Path.AltDirectorySeparatorChar,
-                Path.DirectorySeparatorChar);
-            string canonicalSuffix =
-                Path.DirectorySeparatorChar
-                + CanonicalMovieRelativePath.Replace(
-                    '/',
-                    Path.DirectorySeparatorChar);
-            if (!normalized.EndsWith(
-                canonicalSuffix,
+            if (!string.Equals(
+                path,
+                CanonicalMoviePath,
                 StringComparison.Ordinal))
             {
                 return;

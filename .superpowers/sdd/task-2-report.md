@@ -122,3 +122,117 @@ were removed by switching both project compile lists to explicit entries.
   file list.
 
 No unresolved correctness concern or blocker remains.
+
+## Review-fix follow-up
+
+The review found two strictness gaps in the initial implementation:
+
+- `JObject.Parse` used Newtonsoft's default duplicate-property replacement,
+  which hid duplicate properties before `ValidateExactFields` ran. The parser
+  now uses `JsonLoadSettings.DuplicatePropertyNameHandling = Error`, rejecting
+  duplicate properties at both the root and nested sync-settings object before
+  field-name or value validation.
+- The canonical SHA-256 gate previously used a relative-path suffix. It now
+  compares the resolved input path with the one exact absolute GHZ1 fixture
+  path resolved from this tool's executable location, so a synthetic file with
+  the same suffix is content-validated but is not misidentified as canonical.
+
+Focused tests cover nested duplicate `Region` properties with both differing
+and identical values, duplicate root `o`, and a valid synthetic archive placed
+under the former canonical suffix.
+
+### Review RED evidence
+
+Command:
+
+```bash
+env BIZHAWK_HOME=/home/farrell/code/projects/OpenGGF/docs/BizHawk-2.11-linux-x64 \
+  S1_ROM_PATH='/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  tools/bizhawk-headless/test.sh --filter Bk2Reader
+```
+
+Result: exit `1`, with the intended new regression failures:
+
+```text
+FAIL Bk2Reader only hashes the canonical archive identity: System.IO.InvalidDataException: Canonical GHZ1 BK2 SHA-256 is ea391387ef0461b4a4f25338309bf0409e24f244f8432b6b99087b03f97651cb; expected dced61b2d3a3346b2ecd62254140497ef2827374c1de8597780f91e39ca0dcea.
+FAIL Bk2Reader rejects duplicate sync JSON properties: System.InvalidOperationException: Expected exception message to contain <duplicate> but was <SyncSettings.json field Region is 2; expected 0.>.
+```
+
+### Review GREEN evidence
+
+Focused command (exit `0`):
+
+```bash
+env BIZHAWK_HOME=/home/farrell/code/projects/OpenGGF/docs/BizHawk-2.11-linux-x64 \
+  S1_ROM_PATH='/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  tools/bizhawk-headless/test.sh --filter Bk2Reader
+```
+
+Exact test result lines:
+
+```text
+PASS Bk2Reader fixture sync payload has canonical SHA-256
+PASS Bk2Reader reads the tracked GHZ1 prefix
+PASS Bk2Reader validates the canonical GHZ1 archive
+PASS Bk2Reader maps every supported P1 input bit
+PASS Bk2Reader maps Power and Reset independently
+PASS Bk2Reader derives button positions from LogKey
+PASS Bk2Reader frame streams reopen the archive
+PASS Bk2Reader only hashes the canonical archive identity
+PASS Bk2Reader rejects duplicate and missing required entries
+PASS Bk2Reader rejects duplicate and missing Core or Platform
+PASS Bk2Reader rejects savestate and SaveRAM starts
+PASS Bk2Reader accepts explicit false power-on header flags
+PASS Bk2Reader rejects wrong missing and extra sync fields
+PASS Bk2Reader rejects duplicate sync JSON properties
+PASS Bk2Reader rejects six-button and controller changes
+PASS Bk2Reader rejects multiple input sections
+PASS Bk2Reader rejects malformed input group lengths
+PASS Bk2Reader rejects malformed input row delimiters
+PASS Bk2Reader rejects active P2
+PASS Bk2Reader rejects unknown groups and buttons
+```
+
+Full command (exit `0`):
+
+```bash
+env BIZHAWK_HOME=/home/farrell/code/projects/OpenGGF/docs/BizHawk-2.11-linux-x64 \
+  S1_ROM_PATH='/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  tools/bizhawk-headless/test.sh
+```
+
+Exact full-suite result lines (28 passing tests):
+
+```text
+PASS Harness scaffold runs
+PASS BizHawk installation accepts pinned distribution
+PASS BizHawk installation reports missing GPGX core
+PASS ROM identity accepts Sonic 1 REV01
+PASS ROM identity reports mutated SHA-1
+PASS Bk2Reader fixture sync payload has canonical SHA-256
+PASS Bk2Reader reads the tracked GHZ1 prefix
+PASS Bk2Reader validates the canonical GHZ1 archive
+PASS Bk2Reader maps every supported P1 input bit
+PASS Bk2Reader maps Power and Reset independently
+PASS Bk2Reader derives button positions from LogKey
+PASS Bk2Reader frame streams reopen the archive
+PASS Bk2Reader only hashes the canonical archive identity
+PASS Bk2Reader rejects duplicate and missing required entries
+PASS Bk2Reader rejects duplicate and missing Core or Platform
+PASS Bk2Reader rejects savestate and SaveRAM starts
+PASS Bk2Reader accepts explicit false power-on header flags
+PASS Bk2Reader rejects wrong missing and extra sync fields
+PASS Bk2Reader rejects duplicate sync JSON properties
+PASS Bk2Reader rejects six-button and controller changes
+PASS Bk2Reader rejects multiple input sections
+PASS Bk2Reader rejects malformed input group lengths
+PASS Bk2Reader rejects malformed input row delimiters
+PASS Bk2Reader rejects active P2
+PASS Bk2Reader rejects unknown groups and buttons
+PASS GpgxHost GHZ1 sync settings match tracked movie
+PASS GpgxHost binds 64KiB 68K RAM before compatibility Main RAM
+PASS GpgxHost advances ten frames
+```
+
+Both runs emitted only the existing Mono/xbuild warning that its ToolsVersion
+14 toolset does not officially support the targeted .NET Framework v4.8.
