@@ -185,6 +185,14 @@ public class Engine {
 	record PauseIndicatorPlacement(int x, int y) {
 	}
 
+	enum LiveCapturePresentationState {
+		NORMAL,
+		MODAL_SHADER_PICKER,
+		PAUSED,
+		FRAME_STEP,
+		REWIND
+	}
+
 	private boolean overlayStateReady = false;
 
 	// Input handler for keyboard input
@@ -1631,6 +1639,10 @@ public class Engine {
 		profiler.beginSection("update");
 		processDisplayShaderPackRescan();
 		handleLiveCaptureShortcut();
+		boolean frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
+				&& inputHandler != null
+				&& inputHandler.isKeyPressed(
+						configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
 		boolean displayShaderPickerHandledInput = updateDisplayShaderInput();
 		if (displayColorProfileController != null && !displayShaderPickerHandledInput) {
 			displayColorProfileController.update(inputHandler);
@@ -1780,12 +1792,52 @@ public class Engine {
 		applyDisplayShaderPhase(ShaderPhase.FINAL);
 		// F12 screenshot capture (after all rendering is complete) is the middle
 		// callback: capture pixels first, then screenshot, then window-only REC.
-		liveCapturePresentation.present(currentCaptureViewport(),
-				this::captureScreenshotIfRequested,
-				this::renderLiveCaptureIndicatorIfActive);
+		LiveCapturePresentationState presentationState = resolveLiveCapturePresentationState(
+				displayShaderPickerHandledInput, userPaused, frameStepPresentation,
+				gameLoop != null && gameLoop.liveRewindEffectIntensity() > 0.0f);
+		presentLiveCaptureFrame(getCurrentGameMode(), presentationState,
+				() -> liveCapturePresentation.present(currentCaptureViewport(),
+						this::captureScreenshotIfRequested,
+						this::renderLiveCaptureIndicatorIfActive));
 
 		profiler.endFrame();
 		overlayStateReady = false;
+	}
+
+	static LiveCapturePresentationState resolveLiveCapturePresentationState(
+			boolean modalShaderPicker, boolean paused, boolean frameStep, boolean rewind) {
+		if (modalShaderPicker) {
+			return LiveCapturePresentationState.MODAL_SHADER_PICKER;
+		}
+		if (rewind) {
+			return LiveCapturePresentationState.REWIND;
+		}
+		if (frameStep) {
+			return LiveCapturePresentationState.FRAME_STEP;
+		}
+		if (paused) {
+			return LiveCapturePresentationState.PAUSED;
+		}
+		return LiveCapturePresentationState.NORMAL;
+	}
+
+	static void presentLiveCaptureFrame(GameMode mode,
+									 LiveCapturePresentationState state,
+									 Runnable presentationSeam) {
+		Objects.requireNonNull(presentationSeam, "presentationSeam");
+		boolean renderedMode = switch (Objects.requireNonNull(mode, "mode")) {
+			case LEVEL, TITLE_CARD, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS,
+					TITLE_SCREEN, DATA_SELECT, LEVEL_SELECT, EDITOR, CREDITS_TEXT,
+					CREDITS_DEMO, MASTER_TITLE_SCREEN, LEGAL_DISCLAIMER, TRY_AGAIN_END,
+					ENDING_CUTSCENE, BONUS_STAGE -> true;
+		};
+		boolean renderedState = switch (Objects.requireNonNull(state, "state")) {
+			case NORMAL, MODAL_SHADER_PICKER, PAUSED, FRAME_STEP, REWIND -> true;
+		};
+		if (!renderedMode || !renderedState) {
+			throw new IllegalStateException("Unsupported rendered presentation");
+		}
+		presentationSeam.run();
 	}
 
 	private void handleLiveCaptureShortcut() {

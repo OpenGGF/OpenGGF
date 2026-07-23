@@ -32,15 +32,17 @@ class TestEngineLiveCapturePresentation {
                 new LiveCapturePresentationCoordinator(controller);
         CaptureViewport viewport = new CaptureViewport(0, 0, 320, 224);
         EnumSet<GameMode> renderedModes = EnumSet.allOf(GameMode.class);
-        List<String> presentationStates = List.of(
-                "normal", "modal-shader-picker", "paused", "frame-step", "rewind");
+        EnumSet<Engine.LiveCapturePresentationState> presentationStates =
+                EnumSet.allOf(Engine.LiveCapturePresentationState.class);
         assertTrue(renderedModes.contains(GameMode.BONUS_STAGE));
 
         int presentations = 0;
-        for (GameMode ignoredMode : renderedModes) {
-            for (String ignoredState : presentationStates) {
-                coordinator.present(viewport, () -> calls.add("screenshot"),
-                        () -> calls.add("indicator"));
+        for (GameMode mode : renderedModes) {
+            for (Engine.LiveCapturePresentationState state : presentationStates) {
+                Engine.presentLiveCaptureFrame(mode, state,
+                        () -> coordinator.present(viewport,
+                                () -> calls.add("screenshot"),
+                                () -> calls.add("indicator")));
                 presentations++;
             }
         }
@@ -51,6 +53,34 @@ class TestEngineLiveCapturePresentation {
                     calls.subList(i, i + 3));
         }
         verify(controller, times(presentations)).capturePresentedFrame(viewport);
+    }
+
+    @Test
+    void productionDisplayHasOneUnconditionalCoordinatorInvocation() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        int displayStart = source.indexOf("private void display()");
+        int displayEnd = source.indexOf(
+                "static LiveCapturePresentationState resolveLiveCapturePresentationState(",
+                displayStart);
+        String display = source.substring(displayStart, displayEnd);
+        assertEquals(1, occurrences(display, "liveCapturePresentation.present("));
+        assertEquals(1, occurrences(display, "presentLiveCaptureFrame("));
+        assertFalse(display.substring(display.lastIndexOf("applyDisplayShaderPhase(ShaderPhase.FINAL)"))
+                .contains("if ("));
+    }
+
+    @Test
+    void productionPresentationFlagsResolveEveryExecutableStateBranch() {
+        assertEquals(Engine.LiveCapturePresentationState.NORMAL,
+                Engine.resolveLiveCapturePresentationState(false, false, false, false));
+        assertEquals(Engine.LiveCapturePresentationState.MODAL_SHADER_PICKER,
+                Engine.resolveLiveCapturePresentationState(true, false, false, false));
+        assertEquals(Engine.LiveCapturePresentationState.PAUSED,
+                Engine.resolveLiveCapturePresentationState(false, true, false, false));
+        assertEquals(Engine.LiveCapturePresentationState.FRAME_STEP,
+                Engine.resolveLiveCapturePresentationState(false, true, true, false));
+        assertEquals(Engine.LiveCapturePresentationState.REWIND,
+                Engine.resolveLiveCapturePresentationState(false, false, false, true));
     }
 
     @Test
@@ -83,6 +113,10 @@ class TestEngineLiveCapturePresentation {
         int audio = source.indexOf("cleanupStep(\"audio manager\"");
         int graphics = source.indexOf("cleanupStep(\"graphics manager\"");
         assertTrue(capture >= 0 && capture < audio && capture < graphics);
+    }
+
+    private static int occurrences(String source, String needle) {
+        return (source.length() - source.replace(needle, "").length()) / needle.length();
     }
 
 }
