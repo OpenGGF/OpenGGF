@@ -49029,3 +49029,93 @@ standalone CNZ remains at f0 in both scopes.
   input alignment and reports 4,940 errors, first at f0 (`y_speed`, ROM
   `$0000`, engine `$0038`). These are newly exposed comparison frontiers, not
   input-alignment failures; no trace-to-engine hydration was added.
+
+## 2026-07-23 - S3K structural replay phase verification failed
+
+Verification ran at clean tracked commit `2a688288f7ce5007e2c1eda9e533d048cefdad3e`
+on branch `bugfix/ai-s3k-structural-replay-phases-impl`. The worktree contained
+only the existing untracked disassembly links under `docs/`; no local production
+or test edits were present. Every command for which the task brief specified a
+heap override used the requested 3 GiB heap.
+
+Focused CNZ command:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1. The class ran 16 tests with 11 failures, 0 errors, and 5 passes.
+- BK2/CSV input alignment passed, but the expected frame-zero bootstrap repair
+  did not: `replayMatchesTrace` reports 4,940 comparison errors, first at f0
+  `y_speed` (ROM `0x0000`, engine `0x0038`). The other ten failures are focused
+  route assertions.
+- `target/trace-reports/s3k_cnz1_context.txt` does not expose the
+  fresh-main-playable marker's armed/consumed state. Its observable f0 engine
+  diagnostics show both Sonic and Tails at `y_speed=0x0038`; Sonic is
+  `anim=00/map=07` while ROM is `anim=05/map=BA`. Therefore this run cannot
+  claim the marker was armed or consumed, and its first-dispatch outcome does
+  not meet the Task 4 target.
+
+Focused AIZ command:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1. The class ran 16 tests with 15 failures, 0 errors, and 1 pass.
+- `replayMatchesTrace` aborts on an input-alignment error at f161: BK2 input
+  `0x0004`, trace input `0x0000`. Because comparison stops at the alignment
+  guard, this run has no valid AIZ comparison-error count or first parity
+  frame/field; the expected later post-f290 frontier was not reached. Fourteen
+  focused route-state assertions also fail.
+
+Must-keep-green/bootstrap command:
+
+```bash
+mvn -Dtest='com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kBootstrapResolver,com.openggf.tests.TestSonic3kDecodingUtils,com.openggf.tests.trace.TestTraceReplayStartPositionPolicy,com.openggf.trace.TestPreludeFramesKnobsZero,com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.trace.TestTraceAnimationRecorderContract' test
+```
+
+- Exit 1. The selected suite ran 103 tests with 1 failure, 0 errors, and 102
+  passes.
+- The sole regression is
+  `TestBuildToolingGuard.traceReplayBootstrapContractsShouldBeDocumentedAndNotLegacy`:
+  `docs/KNOWN_DISCREPANCIES.md` does not document the S3K sidekick seed-frame
+  trace bootstrap debt.
+
+S3K trace-fleet command:
+
+```bash
+mvn -Dtest='*S3k*TraceReplay' \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1. The fleet ran 46 tests with 38 failures, 0 errors, and 8 passes.
+  The two special-stage tests pass; the remaining six passes are focused
+  methods within the AIZ/CNZ classes.
+- Release-comparison results:
+
+| Replay | Errors / state | First failure |
+|---|---:|---|
+| AIZ standalone | alignment abort | f161 input: BK2 `0x0004`, trace `0x0000` |
+| CNZ standalone | 4,940 | f0 `y_speed`: `0x0000` / `0x0038` |
+| AIZ complete-run | 5,831 | f2574 `camera_x`: `0x1CCD` / `0x1CD7` |
+| CNZ complete-run | 9,503 | f0 `y`: `0x0600` / `0x061C` |
+| HCZ complete-run | 4,822 | f1088 `tails_cpu_target_y`: `0x0578` / `0x04F0` |
+| MGZ standalone | 10,768 | f5164 `air`: `0` / `1` |
+| MGZ complete-run | 8,050 | f5550 `air`: `0` / `1` |
+| ICZ complete-run | 7,930 | f0 `y`: `0x00F0` / `0x00F2` |
+| LBZ complete-run | 9,298 | f0 `player_mapping_frame`: `0x0000` / `0x0007` |
+| MHZ complete-run | 6,037 | f0 `y`: `0x0500` / `0x051C` |
+| Slots bonus | 11 | f1052 `x`: `0x0000` / `0x0572` |
+| Gumball bonus | 11 | f1300 `x`: `0x0000` / `0x0100` |
+| Pachinko bonus | 13 | f2926 `x`: `0x0000` / `0x015D` |
+| Special stage | green | 2 tests pass |
+
+This is a failed verification snapshot, not a new accepted parity baseline.
+It regresses explicitly recorded green results for AIZ complete-run, both MGZ
+replays, and ICZ complete-run, and moves several known-red complete-run
+frontiers substantially earlier (including CNZ, HCZ, LBZ, and MHZ). The AIZ
+alignment abort and CNZ f0 bootstrap mismatch are input/bootstrap regressions,
+not later true parity frontiers.
