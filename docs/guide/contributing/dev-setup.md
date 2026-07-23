@@ -50,11 +50,23 @@ mvn test -Ds3k.rom.path=s3k.gen
 
 ## Run the Engine
 
+Build and run a distributable jar with the launcher for your platform:
+
 ```bash
-java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
+# Linux
+./run.sh
+
+# Windows
+run.cmd
 ```
 
-On Windows, you can also use the included `run.cmd`.
+For faster iteration, `dev.sh` (Linux) and `dev.cmd` (Windows) compile only
+changed sources and run directly from `target/classes`. The first offline
+development launch may require `run.sh` or `run.cmd` to populate Maven's local
+dependency cache.
+
+Linux developers can launch a RenderDoc capture with `./run_renderdoc.sh` when
+`renderdoccmd` is installed and available on `PATH`.
 
 The engine will open a window showing the master title screen. Select a game with the
 arrow keys and press Space. If a ROM file is missing, you will see an error message.

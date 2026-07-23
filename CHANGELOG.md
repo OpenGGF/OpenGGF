@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: add Linux `dev.sh`, `run.sh`, and `run_renderdoc.sh` equivalents for the root Windows engine launchers.
 - Fix: ICZ Act 1 miniboss rendering now skips orb child slots until the camera gate creates their state, preventing a null dereference while approaching the arena with boss art ready.
 - Fix: `LevelFrameStep` now observes a `StartNewLevel`-style inactive transition immediately after the object pass and skips the same frame's camera scroll/boundary work, matching the ROM's post-`Process_Sprites` `Restart_level_flag` branch. This clears the final ICZ complete-run camera mismatch and makes both physics and animation groups green through the LBZ handoff.
 - Fix: the ICZ retained results exit now publishes `Restore_PlayerControl`'s Wait animation to both players and seeds a behind-cursor final max-X helper with its otherwise-missed zero-motion creation dispatch. This advances both complete-run groups from frame 25093 to 25254 and leaves one camera mismatch.

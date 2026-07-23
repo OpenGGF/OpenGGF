@@ -74,9 +74,10 @@
 
                mvn -q -Pdev-run compile exec:exec
 
-             This is what dev.cmd invokes. It skips the ~40s fat-jar assembly /
-             mod-SDK / verify packaging that run.cmd performs; use run.cmd when you
-             need the distributable jar. The forked JVM args mirror run.cmd. -->
+             This is what dev.cmd and dev.sh invoke. It skips the ~40s fat-jar
+             assembly / mod-SDK / verify packaging that run.cmd and run.sh perform;
+             use the full launcher when you need the distributable jar. The forked
+             JVM args mirror those launchers. -->
         <profile>
             <id>dev-run</id>
             <build>
