@@ -49,6 +49,11 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
     }
 
     @Override
+    public boolean supportsDeterministicRuntimePresentation() {
+        return true;
+    }
+
+    @Override
     protected int getDeviceSampleRate() {
         return deviceSampleRate;
     }

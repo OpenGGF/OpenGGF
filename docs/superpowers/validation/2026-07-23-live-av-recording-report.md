@@ -41,6 +41,12 @@ User documentation was updated in `README.md`, `CONFIGURATION.md`, and
 
 ## Automated Test Evidence
 
+- Post-validation production regression: `TestAudioManagerRuntimeInstallation`
+  now exercises the LWJGL backend's real stream-backed presentation path without
+  an OpenAL device. It proves `beginLiveCaptureAudio(...)` succeeds and that
+  draining speaker PCM does not consume the capture-owned copy. The focused
+  test passed (3 tests), and the subsequent full `mvn test -Dmse=off` run passed
+  12,568 tests with 0 failures/errors and 11 skipped.
 - Task-focused audio, viewport, controller, Engine-boundary, configuration,
   and media tests passed throughout Tasks 2–7. The final media command
   `mvn -Dtest=LiveCaptureMediaSmokeTest,FfmpegEncoderSmokeTest test` executed
