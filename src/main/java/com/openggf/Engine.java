@@ -19,7 +19,9 @@ import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.editor.render.EditorOverlayRenderer;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.LWJGLAudioBackend;
+import com.openggf.capture.*;
 import com.openggf.camera.Camera;
+import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugOption;
@@ -65,6 +67,8 @@ import com.openggf.render.EngineRenderDispatcher;
 import com.openggf.util.RetroArchGlslShaderPackDownloader;
 
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Duration;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -73,6 +77,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.Callbacks.*;
@@ -120,6 +126,8 @@ public class Engine {
 	private final PixelFontTextRenderer traceHudTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private final PixelFontTextRenderer pauseTextRenderer =
+		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	private final PixelFontTextRenderer liveCaptureTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private static final String USER_PAUSE_INDICATOR_TEXT = "PAUSED";
 	private static final int USER_PAUSE_INDICATOR_MARGIN = 8;
@@ -209,6 +217,10 @@ public class Engine {
 
 	// Frame timing
 	private int targetFps;
+	private final LiveCaptureChord liveCaptureChord = new LiveCaptureChord();
+	private final LiveCaptureController liveCaptureController;
+	private final LiveCapturePresentationCoordinator liveCapturePresentation;
+	private final LiveCaptureIndicatorRenderer liveCaptureIndicator;
 	private long lastFrameTime;
 	private boolean paused = false;
 	private long userPauseIndicatorHiddenUntilNanos;
@@ -254,7 +266,15 @@ public class Engine {
 		this.debugViewEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
 		this.windowWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH);
 		this.windowHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT);
-		this.targetFps = configService.getInt(SonicConfiguration.FPS);
+		this.targetFps = resolveTargetFps(configService);
+		this.liveCaptureController = createLiveCaptureController();
+		this.liveCapturePresentation = new LiveCapturePresentationCoordinator(liveCaptureController);
+		this.liveCaptureIndicator = new LiveCaptureIndicatorRenderer(
+				this::drawLiveCaptureDot,
+				(text, x, y, red, green, blue, alpha, fontScale) ->
+						liveCaptureTextRenderer.drawShadowedText(
+								text, x, y, DebugColor.WHITE, fontScale),
+				liveCaptureTextRenderer::measureWidth);
 		this.editorInputHandler = new EditorInputHandler(
 				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel);
 
@@ -268,6 +288,28 @@ public class Engine {
 		gameLoop.setEditorFreshStartHandler(this::startGameplayFromBeginning);
 
 		instance = this;
+	}
+
+	static int resolveTargetFps(SonicConfigurationService config) {
+		return FrameRateResolver.effective(config);
+	}
+
+	private LiveCaptureController createLiveCaptureController() {
+		String ffmpeg = FfmpegEncoder.findFfmpeg().map(Path::toString).orElse("ffmpeg");
+		LiveCaptureRecorderFactory recorderFactory =
+				new LiveCaptureRecorderFactory(configService, Clock.systemUTC(), ffmpeg);
+		ExecutorService finalizer = Executors.newSingleThreadExecutor(runnable -> {
+			Thread thread = new Thread(runnable, "live-capture-finalizer");
+			thread.setDaemon(true);
+			return thread;
+		});
+		return new LiveCaptureController(new LiveCaptureController.Dependencies(
+				audioManager::beginLiveCaptureAudio,
+				viewport -> new GlReadPixelsGrabber(
+						viewport.x(), viewport.y(), viewport.width(), viewport.height()),
+				recorderFactory::create,
+				finalizer,
+				Duration.ofSeconds(10)));
 	}
 
 	static String buildWindowTitle() {
@@ -351,6 +393,7 @@ public class Engine {
 
 		// Setup window resize callback
 		glfwSetFramebufferSizeCallback(window, (windowHandle, width, height) -> {
+			liveCaptureController.requestStop(LiveCaptureController.StopReason.VIEWPORT_CHANGED);
 			this.windowWidth = width;
 			this.windowHeight = height;
 			// Only reshape if GL context is initialized (avoids crash during window setup)
@@ -1577,6 +1620,7 @@ public class Engine {
 
 		profiler.beginSection("update");
 		processDisplayShaderPackRescan();
+		handleLiveCaptureShortcut();
 		boolean displayShaderPickerHandledInput = updateDisplayShaderInput();
 		if (displayColorProfileController != null && !displayShaderPickerHandledInput) {
 			displayColorProfileController.update(inputHandler);
@@ -1724,22 +1768,71 @@ public class Engine {
 
 		renderDisplayShaderPickerOverlay();
 		applyDisplayShaderPhase(ShaderPhase.FINAL);
-
-		// F12 screenshot capture (after all rendering is complete)
-		if (inputHandler != null && inputHandler.isKeyPressed(GLFW_KEY_F12)) {
-			try {
-				String timestamp = java.time.LocalDateTime.now()
-						.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-				java.nio.file.Path path = java.nio.file.Path.of("screenshot_" + timestamp + ".png");
-				ScreenshotCapture.captureAndSavePNG(viewportWidth, viewportHeight, path);
-				LOGGER.info("Screenshot saved: " + path);
-			} catch (Exception e) {
-				LOGGER.warning("Screenshot failed: " + e.getMessage());
-			}
-		}
+		// F12 screenshot capture (after all rendering is complete) is the middle
+		// callback: capture pixels first, then screenshot, then window-only REC.
+		liveCapturePresentation.present(currentCaptureViewport(),
+				this::captureScreenshotIfRequested,
+				this::renderLiveCaptureIndicatorIfActive);
 
 		profiler.endFrame();
 		overlayStateReady = false;
+	}
+
+	private void handleLiveCaptureShortcut() {
+		if (inputHandler == null) {
+			return;
+		}
+		int key = configService.getInt(SonicConfiguration.CAPTURE_TOGGLE_KEY);
+		if (!liveCaptureChord.update(inputHandler.isKeyDown(key), inputHandler.isShiftDown(),
+				inputHandler.isControlDown(), inputHandler.isAltDown())) {
+			return;
+		}
+		switch (liveCaptureController.state()) {
+			case ACTIVE -> liveCaptureController.requestStop(LiveCaptureController.StopReason.USER);
+			case INACTIVE, FAILED -> liveCaptureController.start(currentCaptureViewport(), targetFps);
+			case STARTING, STOPPING -> { }
+		}
+	}
+
+	private CaptureViewport currentCaptureViewport() {
+		return new CaptureViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+	}
+
+	private void captureScreenshotIfRequested() {
+		if (inputHandler == null || !inputHandler.isKeyPressed(GLFW_KEY_F12)) {
+			return;
+		}
+		try {
+			String timestamp = java.time.LocalDateTime.now()
+					.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+			Path path = Path.of("screenshot_" + timestamp + ".png");
+			ScreenshotCapture.captureAndSavePNG(viewportWidth, viewportHeight, path);
+			LOGGER.info("Screenshot saved: " + path);
+		} catch (Exception e) {
+			LOGGER.warning("Screenshot failed: " + e.getMessage());
+		}
+	}
+
+	private void renderLiveCaptureIndicatorIfActive() {
+		if (!liveCaptureController.indicatorVisible()) {
+			return;
+		}
+		prepareOverlayState();
+		liveCaptureTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		liveCaptureIndicator.render((int) projectionWidth, (int) realHeight);
+	}
+
+	private void drawLiveCaptureDot(int x, int y, int diameter,
+									float red, float green, float blue, float alpha) {
+		int radius = diameter / 2;
+		for (int row = 0; row < diameter; row++) {
+			double dy = row + 0.5 - radius;
+			int halfWidth = (int) Math.floor(Math.sqrt(radius * radius - dy * dy));
+			new GLCommand(GLCommand.CommandType.RECTI, GL_TRIANGLE_FAN,
+					GLCommand.BlendType.SOLID, red, green, blue, alpha,
+					x + radius - halfWidth, y + row,
+					x + radius + halfWidth, y + row + 1).execute(0, 0, 0, 0);
+		}
 	}
 
 	private void applySpecialStageClearColor() {
@@ -2375,6 +2468,7 @@ public class Engine {
 	}
 
 	private void cleanup() {
+		cleanupStep("live capture", liveCaptureController::close);
 		cleanupStep("session state", SessionManager::clear);
 		cleanupStep("donor audio", audioManager::clearDonorAudio);
 		cleanupStep("cross-game features", crossGameFeatureProvider::resetState);
@@ -2387,6 +2481,7 @@ public class Engine {
 		});
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
 		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
+		cleanupStep("live capture text renderer", liveCaptureTextRenderer::cleanup);
 		cleanupStep("VHS rewind effect", () -> {
 			if (rewindVhsEffectPass != null) {
 				rewindVhsEffectPass.dispose();
