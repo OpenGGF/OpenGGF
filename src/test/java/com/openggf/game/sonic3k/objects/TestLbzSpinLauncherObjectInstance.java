@@ -77,6 +77,8 @@ class TestLbzSpinLauncherObjectInstance {
                 "loc_1DECE subtracts byte_28FF4[0] before fresh contact classification");
         assertTrue(sloped.usesSlopeForNewLanding(),
                 "sub_1DD24's no-standing-bit path samples byte_28FF4 before side/top classification");
+        assertTrue(sloped.addsSlopeCatchRangeToVerticalOverlap(),
+                "sub_1DD24 adds the launcher's d2=$10 catch range to y_radius before classification");
         assertFalse(sloped.isSlopeFlipped());
     }
 
@@ -121,6 +123,23 @@ class TestLbzSpinLauncherObjectInstance {
         verify(player, never()).setYSpeed((short) -0x0A00);
         verify(player, never()).setCentreYPreserveSubpixel((short) LAUNCHER_Y);
         assertEquals(0, launcher.cooldownForTesting(true));
+    }
+
+    @Test
+    void launchCooldownSkipsSolidRoutineThroughOneToZeroTick() {
+        LbzSpinLauncherObjectInstance launcher = new LbzSpinLauncherObjectInstance(spawn(0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) (LAUNCHER_X + 0x08));
+
+        launcher.onSolidContact(player, new SolidContact(false, false, true, false, false), 0);
+        for (int frame = 1; frame <= 0x10; frame++) {
+            launcher.update(frame, player);
+            assertFalse(launcher.isSolidFor(player),
+                    "loc_28DE4 skips sub_1DD24 for the entire nonzero cooldown tick");
+        }
+
+        launcher.update(0x11, player);
+        assertTrue(launcher.isSolidFor(player));
     }
 
     @Test

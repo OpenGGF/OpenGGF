@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ spin-launcher collision and cooldown phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 23827 to
+  frame 24046.** Remaining release-blocking errors fell from 2908 to 2340; the
+  next divergence is Sonic's X speed (`$0200` expected versus `-$0303`
+  actual).
+- Root: Obj_LBZSpinLauncher passes its `$10` catch range through
+  `sub_1DD24`, writes native `x_pos/y_pos` independently of the radius-byte
+  changes, and skips that player's solid helper for every nonzero cooldown
+  pass. The engine omitted the catch range, changed its derived centre after
+  writing `y_pos`, and continued resolving solidity during cooldown. This
+  launched Sonic three frames early and then erased the launch ground speed.
+- Fix: the launcher's sloped-solid profile now includes the native catch
+  range, applies the engine's rolling-bounds transition before the native
+  position writes, and suppresses each player's solid pass through the
+  cooldown's final `1 -> 0` tick.
+- Validation: all 14 focused spin-launcher tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - Retained-owner ring floor phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 23650 to

@@ -49,6 +49,8 @@ public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
 
     private int p1Cooldown;
     private int p2Cooldown;
+    private boolean p1SolidSuppressedThisFrame;
+    private boolean p2SolidSuppressedThisFrame;
 
     public LbzSpinLauncherObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LBZSpinLauncher");
@@ -56,6 +58,10 @@ public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        // Native loc_28DE4 tests the byte before decrementing it and skips
+        // sub_1DD24 for that whole object pass, including the 1 -> 0 tick.
+        p1SolidSuppressedThisFrame = p1Cooldown > 0;
+        p2SolidSuppressedThisFrame = p2Cooldown > 0;
         if (p1Cooldown > 0) {
             p1Cooldown--;
         }
@@ -63,6 +69,16 @@ public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
         if (p2Cooldown > 0) {
             p2Cooldown--;
         }
+    }
+
+    @Override
+    public boolean isSolidFor(PlayableEntity player) {
+        if (!(player instanceof AbstractPlayableSprite sprite)) {
+            return true;
+        }
+        return sprite.isCpuControlled()
+                ? !p2SolidSuppressedThisFrame
+                : !p1SolidSuppressedThisFrame;
     }
 
     @Override
@@ -88,6 +104,15 @@ public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean usesSlopeForNewLanding() {
+        return true;
+    }
+
+    @Override
+    public boolean addsSlopeCatchRangeToVerticalOverlap() {
+        // Obj_LBZSpinLauncher passes d2=$10 to sub_1DD24. The new-contact
+        // path keeps that value, adds the player's y_radius, and then adds
+        // the combined range to the vertical overlap before classifying the
+        // contact (sonic3k.asm:56500-56509, 41337-41343).
         return true;
     }
 
@@ -142,6 +167,11 @@ public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
         }
 
         int targetX = spawn.x() + (facingLeft() ? -EXIT_X_OFFSET : EXIT_X_OFFSET);
+        // setRolling changes the engine's visual bounds and therefore its
+        // derived centre. Apply it before the native x_pos/y_pos writes so
+        // the launcher leaves y_pos exactly at the object's centre, as
+        // sub_28E76 does when it writes the radius bytes afterward.
+        player.setRolling(true);
         NativePositionOps.writeXPosPreserveSubpixel(player, targetX);
         NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y());
         player.setXSpeed((short) 0);
@@ -149,7 +179,6 @@ public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
         player.setGSpeed((short) LAUNCH_GROUND_SPEED);
         player.setAir(true);
         player.setJumping(false);
-        player.setRolling(true);
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
         return SIDE_LAUNCH_COOLDOWN;
     }
