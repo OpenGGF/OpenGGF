@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ's end-boss linked platforms now retain `ObjDat3_74140`'s 8-pixel balance width independently of their `$12` `SolidObjectTop` collision span. This restores Sonic's recorded edge-balance animation and advances the combined LBZ frontier from frame 37859 to frame 37910 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ's end-boss camera pan now evaluates the two-pixel candidate before deciding whether the `$39F0` target was reached, entering the rising routine on the native clamp frame. This aligns the bobbing-platform phase and advances the combined LBZ frontier from frame 37858 to frame 37859 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ's end-boss runner now preserves its separate child-allocation and `loc_73D8E` initialization dispatches before applying movement. This aligns the boss camera-pan handoff and advances the combined LBZ frontier from frame 37597 to frame 37858 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ's end-boss launcher tower now uses `ObjDat3_74110`'s tall render bounds for the native `SolidObjectFull` on-screen gate. This restores the first arena wall stop and advances the combined LBZ frontier from frame 37448 to frame 37597 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.

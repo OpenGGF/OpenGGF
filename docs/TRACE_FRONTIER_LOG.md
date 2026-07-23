@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ end-boss platform balance width
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 37859 to
+  frame 37910.** The player animation divergence is cleared; the next
+  divergence is CPU Tails' Y (`$0627` expected versus `$062A` actual).
+- Root: `ObjDat3_74140` stores `width_pixels=8` for each linked platform even
+  though the `SolidObjectTop` call passes `$12` as its separate collision
+  half-width. The engine used the collision span for both purposes, so Sonic
+  selected the wrong edge-balance mapping while standing 18 pixels left of
+  the platform centre.
+- Fix: the LBZ boss platform retains its `$12` top-solid collision span while
+  exposing the ROM data record's 8-pixel width to the shared balance-animation
+  routine. The behavior is derived from the platform profile, without a zone,
+  route, or frame condition in player code.
+- Validation: all 18 focused LBZ end-boss tests pass and the focused replay
+  reaches frame 37910 with 631 release-blocking errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ end-boss camera-pan boundary
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 37858 to

@@ -100,6 +100,9 @@ class TestLbzEndBossInstance {
         runFrames(boss, 121);
 
         assertEquals(4, boss.getPlatformChildrenForTests().size(), "gate callback spawns four bobbing platforms");
+        assertTrue(boss.getPlatformChildrenForTests().stream()
+                        .allMatch(platform -> platform.getBalanceWidthPixels() == 8),
+                "ObjDat3_74140 width_pixels drives edge balancing independently of the $12 collision span");
         assertTrue(boss.hasRunnerForTests(), "gate callback spawns Robotnik runner");
         assertEquals(4, boss.getState().routine, "gate callback enters routine $04 intro wait");
         assertEquals(0x3A20, camera.getMinX() & 0xFFFF);

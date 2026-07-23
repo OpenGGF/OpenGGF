@@ -1110,6 +1110,13 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
+        public int getBalanceWidthPixels() {
+            // ObjDat3_74140 stores width_pixels=8 even though SolidObjectTop
+            // receives d1=$12 for the platform's collision span.
+            return 8;
+        }
+
+        @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_END_BOSS);
             if (renderer != null && renderer.isReady()) {
