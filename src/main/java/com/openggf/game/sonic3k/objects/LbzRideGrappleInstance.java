@@ -294,7 +294,13 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     }
 
     private void updateHeldPlayer(PlayerState state, AbstractPlayableSprite player) {
-        if (player == null || player.getDead() || player.isHurt() || player.isDebugMode()) {
+        if (player == null
+                || player.getDead()
+                || player.isHurt()
+                || player.isDebugMode()
+                || (player.hasRenderFlagOnScreenState() && !player.isRenderFlagOnScreen())) {
+            // sub_266B0 tests render_flags bit 7 before input and immediately
+            // clears object_control/the grab byte when the player is offscreen.
             releaseWithoutLaunch(state, player, RELEASE_LONG_COOLDOWN);
             return;
         }

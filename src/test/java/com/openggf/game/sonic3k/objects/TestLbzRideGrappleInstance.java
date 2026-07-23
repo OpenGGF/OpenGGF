@@ -224,6 +224,27 @@ class TestLbzRideGrappleInstance {
                 "object-controlled release must consume the held release press before airborne shield ability checks");
     }
 
+    @Test
+    void heldOffscreenPlayerIsReleasedBeforeAnotherHandleSnap() {
+        LbzRideGrappleInstance grapple =
+                (LbzRideGrappleInstance) grapple(0x1800, 0x0600, 0);
+        TestablePlayableSprite player = playerAt(0x1800, 0x0620);
+
+        grapple.update(0, player);
+        int capturedX = player.getCentreX() & 0xFFFF;
+        int capturedY = player.getCentreY() & 0xFFFF;
+        player.setRenderFlagOnScreen(false);
+        grapple.update(1, player);
+
+        assertFalse(player.isObjectControlled(),
+                "loc_26718 clears object_control when render_flags bit 7 is clear");
+        assertFalse(grapple.isNativeGrabbedForTest(0));
+        assertEquals(0x3C, grapple.getReleaseCooldownForTest(0));
+        assertEquals(capturedX, player.getCentreX() & 0xFFFF);
+        assertEquals(capturedY, player.getCentreY() & 0xFFFF,
+                "the offscreen release returns before loc_2673E follows the handle");
+    }
+
     private static ObjectInstance grapple(int x, int y, int subtype) {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_LBZ);
         return registry.create(new ObjectSpawn(

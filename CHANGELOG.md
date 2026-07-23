@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ ride grapples now consume the player's retained `render_flags` visibility while held and run `loc_26718`'s offscreen release before input or another handle-position write. This advances the combined LBZ frontier from frame 35626 to frame 37448 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: flipped LBZ cup-elevator flings now pair their positive horizontal launch with the native `Status_Facing` set instead of forcing the rider to face right. This advances the combined LBZ frontier from frame 35015 to frame 35626 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ cup elevators now resolve `SolidObjectFull2_1P` against the live CPU-sidekick position, accept `SolidObject_cont`'s inclusive right boundary, and retain native standing/pushing bits on the moving SST instance rather than its rebuilt placement record. This advances the combined LBZ frontier from frame 34752 to frame 35015 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.
 - Fix: LBZ lowering-grapple jump releases now hide their already-consumed button edge from the consolidated same-frame player pass, preventing a Bubble Shield bounce from replacing the ROM's grapple launch. This advances the combined LBZ frontier from frame 33571 to frame 34752 while the full 61-trace fleet remains at 45 green with the same 16 documented red routes.

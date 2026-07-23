@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ ride-grapple offscreen release
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 35626 to
+  frame 37448.** The next divergence is Sonic's ground speed (`$0000`
+  expected versus `-$05A0` actual).
+- Root: after Obj17 captures a player, `sub_266B0` checks the player's retained
+  `render_flags` sign before input or handle positioning. When CPU Tails'
+  previous render pass clears bit 7, native `loc_26718` clears
+  `object_control`, retires the per-player grab byte, installs the `$3C`
+  cooldown, and returns without another position snap. The engine omitted
+  that visibility gate, kept Tails held for extra frames, and pinned his
+  position and zero velocity while native P2 had resumed airborne gravity.
+- Fix: held ride-grapple players now release when their valid retained render
+  state is offscreen, using the same player-owned visibility bit consumed by
+  the ROM routine. The release remains ordered before jump input and handle
+  following, and uninitialized render state retains the existing safe path.
+- Validation: all 12 focused ride-grapple tests pass and the focused LBZ
+  replay reaches frame 37448. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ flipped cup-fling facing
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 35015 to
