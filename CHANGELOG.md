@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: the native headless GPGX harness now records full canonical Sonic 1 traces (`--mode trace`: physics.csv v7, aux_state.jsonl, metadata.json trace_schema 4) with auto-detected BK2 frame offset, byte-identical to the Lua `s1_trace_recorder.lua` output on the canonical GHZ1 fixture (only `recording_date` differs), replacing the Lua recorder for S1 capture on Linux; a ROM-backed differential test gates the parity.
 - Tooling: add a Linux/Mono BizHawk 2.11 native headless GPGX smoke-capture CLI for deterministic Sonic 1 BK2 diagnostics.
 - Tooling: add Linux `dev.sh`, `run.sh`, and `run_renderdoc.sh` equivalents for the root Windows engine launchers.
 - Fix: ICZ Act 1 miniboss rendering now skips orb child slots until the camera gate creates their state, preventing a null dereference while approaching the arena with boss art ready.
