@@ -223,6 +223,8 @@ class TestLbz2RideCameoInstances {
         assertFalse(sonic.isObjectControlled());
         assertFalse(sonic.isObjectMappingFrameControl());
         assertTrue(sonic.getAir());
+        assertEquals(0x443C, sonic.getCentreX() & 0xFFFF,
+                "release dispatch pins from the moved ship before throwing Sonic");
         assertEquals((short) -0x0100, sonic.getXSpeed());
         assertEquals((short) -0x0600, sonic.getYSpeed());
         assertEquals(2, sonic.getAnimationId());

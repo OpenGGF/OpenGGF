@@ -297,6 +297,11 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         swing();
         move();
         if (unsigned(x) >= RELEASE_X) {
+            // loc_8D47C calls sub_8D506 before clearing object_control and
+            // publishing the throw velocities.
+            if (carriedPlayer != null) {
+                pinPlayer(carriedPlayer);
+            }
             releasePlayer(frameCounter);
             phase = Phase.FLY_AWAY;
         }

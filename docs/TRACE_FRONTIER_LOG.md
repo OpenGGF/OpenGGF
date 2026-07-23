@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ2 Robotnik ship release-order pin
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 41869 to
+  frame 42267.** The next divergence is CPU Tails' X (`$448F` expected versus
+  `$448E` actual).
+- Root: native `loc_8D47C` swings and moves the ship, calls `sub_8D506` to pin
+  Sonic from that new position, and only then clears `object_control` and
+  writes the throw velocities. The engine released Sonic before its common
+  end-of-update pin, so the release dispatch retained the previous ship
+  position and left both coordinates one pixel behind.
+- Fix: the threshold dispatch now performs the moved-position pin before the
+  existing release routine publishes airborne state, animation, and throw
+  velocity. The ordering is owned entirely by the ship routine.
+- Validation: all 13 focused LBZ2 ship/cameo tests pass and the focused replay
+  reaches frame 42267 with 593 release-blocking errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ2 Robotnik ship touch and camera worker
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 39145 to
