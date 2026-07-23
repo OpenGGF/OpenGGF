@@ -185,6 +185,9 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
                 boolean outerPause = panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE;
                 int touchX = outerPause ? panel.x : panel.touchX;
                 int touchY = outerPause ? panel.y : panel.touchY;
+                if (routine == ROUTINE_ESCAPE) {
+                    touchY = (touchY - 1) & 0xFFFF;
+                }
                 regions.add(new TouchRegion(touchX, touchY, ARM_COLLISION_FLAGS));
             }
         }
@@ -311,6 +314,16 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     public int getPanelTouchXForTest(int index, boolean secondRing) {
         PanelState panel = panelForTest(index, secondRing);
         return panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE ? panel.x : panel.touchX;
+    }
+
+    public int getPanelRetainedTouchYForTest(int index, boolean secondRing) {
+        return panelForTest(index, secondRing).touchY;
+    }
+
+    public int getPanelTouchYForTest(int index, boolean secondRing) {
+        PanelState panel = panelForTest(index, secondRing);
+        int touchY = panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE ? panel.y : panel.touchY;
+        return routine == ROUTINE_ESCAPE ? (touchY - 1) & 0xFFFF : touchY;
     }
 
     private PanelState panelForTest(int index, boolean secondRing) {

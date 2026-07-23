@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ miniboss escape-step child collision phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 21228 to
+  frame 21671.** The next divergence is Sonic's X position (`$3EC1`
+  expected versus `$04C1` actual).
+- Root: while the miniboss parent executes routine `$0A`'s two-pixel upward
+  escape step, folded arm children observed its Y one pixel below the
+  interleaved native child-slot collision phase. An outer panel consequently
+  contacted CPU Tails one frame early at an exact vertical boundary.
+- Fix: arm collision publication now samples the interleaved parent Y during
+  routine `$0A`, independently of the retained child X/routine phase. Focused
+  coverage locks that one-pixel relationship.
+- Validation: all eleven focused LBZ miniboss/transition tests pass. The
+  complete `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green
+  and the same 16 documented red routes; LBZ reaches frame 21671 with 5501
+  remaining errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ miniboss arm collision publication by child routine
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 20970 to

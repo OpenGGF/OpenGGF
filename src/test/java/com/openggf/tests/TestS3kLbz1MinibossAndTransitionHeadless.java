@@ -223,6 +223,24 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
     }
 
     @Test
+    void minibossEscapeArmTouchUsesInterleavedParentYPhase() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        LbzMinibossInstance miniboss = spawnMiniboss();
+        miniboss.forceOpenForTest(ARENA_X, ARENA_Y);
+        player.setCentreX((short) ARENA_X);
+        player.setCentreY((short) (ARENA_Y + 0x38));
+
+        miniboss.onPlayerAttack(player, enemyTouch());
+        miniboss.update(0, player);
+
+        assertEquals(
+                (miniboss.getPanelRetainedTouchYForTest(0, false) - 1) & 0xFFFF,
+                miniboss.getPanelTouchYForTest(0, false),
+                "Later child slots observe the parent between native two-pixel escape steps.");
+    }
+
+    @Test
     void boxOpenedChunkSwapWritesBossAreaChunk() {
         lbzFixture();
         Sonic3kLBZEvents events = lbzEvents();
