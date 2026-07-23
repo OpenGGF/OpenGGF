@@ -198,6 +198,31 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
     }
 
     @Test
+    void minibossArmTouchPhaseFollowsNativeChildRoutineTail() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        LbzMinibossInstance miniboss = spawnMiniboss();
+        miniboss.forceOpenForTest(ARENA_X, ARENA_Y);
+        player.setCentreX((short) (ARENA_X + 0x40));
+        player.setCentreY((short) (ARENA_Y + 0x38));
+
+        miniboss.update(0, player);
+        assertNotEquals(miniboss.getPanelXForTest(0, false),
+                miniboss.getPanelTouchXForTest(0, false),
+                "Ordinary linked-child routines retain their slot-entry touch coordinate.");
+
+        int frame = 1;
+        while (miniboss.getPanelRoutineForTest(5, false) != 0x0A && frame < 0x800) {
+            miniboss.update(frame++, player);
+        }
+        assertEquals(0x0A, miniboss.getPanelRoutineForTest(5, false),
+                "The outer child must reach its native pause routine.");
+        assertEquals(miniboss.getPanelXForTest(5, false),
+                miniboss.getPanelTouchXForTest(5, false),
+                "Routine $0A publishes the coordinate from its MoveSprite_CircularSimple tail.");
+    }
+
+    @Test
     void boxOpenedChunkSwapWritesBossAreaChunk() {
         lbzFixture();
         Sonic3kLBZEvents events = lbzEvents();

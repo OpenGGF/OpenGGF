@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ miniboss arm collision publication by child routine
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 20970 to
+  frame 21228.** The next divergence is CPU Tails' horizontal speed (`$02B7`
+  expected versus `-$0200` actual).
+- Root: folded linked-arm children exposed their live circular coordinates
+  uniformly. Native synchronized/rotating child routines retain the coordinate
+  published on slot entry for the following player pass, while the outer
+  routine-$0A pause reaches `MoveSprite_CircularSimple` through its wait
+  callback tail and exposes that resulting coordinate at the folded checkpoint.
+- Fix: each arm child now retains its slot-entry touch coordinate independently
+  of its live render position, with routine `$0A` selecting the tail-call
+  coordinate. Focused coverage locks both publication paths.
+- Validation: all ten focused LBZ miniboss/transition tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes; LBZ reaches frame 21228 with 5600 remaining
+  errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ miniboss parent-slot collision publication
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 20804 to

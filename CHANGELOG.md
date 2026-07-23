@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: folded LBZ miniboss arm children now retain their native slot-entry collision coordinate while synchronized/rotating, with the outer routine-$0A wait tail publishing its post-circular-move coordinate. This aligns both arm-hit phases and advances the combined LBZ frontier from frame 20970 to frame 21228 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: the folded LBZ miniboss now retains its parent-slot X when publishing the body to S3K's collision-response list while its live tracker continues moving. This restores the native third-hit boundary and advances the combined LBZ frontier from frame 20804 to frame 20970 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: LBZ miniboss arm children now perform their native placement-only initialization dispatch before starting the `$100` wait, rather than consuming two wait ticks on creation. This restores the propagated arm routine phase and advances the combined LBZ frontier from frame 20519 to frame 20804 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: the LBZ miniboss now applies its horizontal tracking deadband to the player's complete native 16:8 movement result and preserves 16.16 sine/cosine fractions through every linked arm child. This restores the native parent/arm phase and advances the combined LBZ frontier from frame 20365 to frame 20519 without regressing another S3K, S1, or S2 trace frontier.

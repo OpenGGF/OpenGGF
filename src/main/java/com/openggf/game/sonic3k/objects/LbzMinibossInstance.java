@@ -182,7 +182,10 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         }
         for (PanelState panel : panels) {
             if (!panel.center && !panel.detached && !panel.deleted) {
-                regions.add(new TouchRegion(panel.x, panel.y, ARM_COLLISION_FLAGS));
+                boolean outerPause = panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE;
+                int touchX = outerPause ? panel.x : panel.touchX;
+                int touchY = outerPause ? panel.y : panel.touchY;
+                regions.add(new TouchRegion(touchX, touchY, ARM_COLLISION_FLAGS));
             }
         }
         return regions.isEmpty() ? null : regions.toArray(TouchRegion[]::new);
@@ -299,6 +302,20 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     public int getPanelRoutineForTest(int index, boolean secondRing) {
         int offset = 1 + (secondRing ? PANEL_FRAMES.length : 0);
         return panels.get(offset + index).childRoutine;
+    }
+
+    public int getPanelXForTest(int index, boolean secondRing) {
+        return panelForTest(index, secondRing).x;
+    }
+
+    public int getPanelTouchXForTest(int index, boolean secondRing) {
+        PanelState panel = panelForTest(index, secondRing);
+        return panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE ? panel.x : panel.touchX;
+    }
+
+    private PanelState panelForTest(int index, boolean secondRing) {
+        int offset = 1 + (secondRing ? PANEL_FRAMES.length : 0);
+        return panels.get(offset + index);
     }
 
     public int getXVelocityForTest() {
@@ -673,6 +690,8 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         private final boolean secondRing;
         private int x;
         private int y;
+        private int touchX;
+        private int touchY;
         private int xSub;
         private int ySub;
         private int xVel;
@@ -714,6 +733,12 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             if (deleted) {
                 return;
             }
+            if (initialized) {
+                // Each native child publishes its slot pointer before the
+                // folded aggregate advances that child's circular position.
+                touchX = x;
+                touchY = y;
+            }
             if (detached) {
                 SubpixelMotion.State state = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
                 SubpixelMotion.moveSprite(state, SubpixelMotion.S3K_GRAVITY);
@@ -746,6 +771,8 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
                 // dispatch.
                 initialized = true;
                 moveCircular();
+                touchX = x;
+                touchY = y;
                 return;
             }
             // ROM loc_728C8 (subtype 0) / loc_72902 (others): a marked panel
