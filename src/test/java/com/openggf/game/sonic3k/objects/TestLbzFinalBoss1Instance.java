@@ -180,7 +180,7 @@ class TestLbzFinalBoss1Instance {
         boss.activateForTest();
 
         boss.forceHitCountForTest(6);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
 
         assertEquals(5, boss.getCollisionProperty());
         assertTrue(boss.isDetachFlagSetForTest(0), "HP 5 sets $38 bit0 — the TOP segment detaches");
@@ -190,7 +190,7 @@ class TestLbzFinalBoss1Instance {
 
         boss.finishHitFlashForTest();
         boss.forceHitCountForTest(2);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
 
         assertEquals(1, boss.getCollisionProperty());
         assertTrue(boss.isDetachFlagSetForTest(1), "HP 1 sets $38 bit1 — the MID segment detaches");
@@ -215,7 +215,7 @@ class TestLbzFinalBoss1Instance {
         head.forceArcStepForTest(8);
         head.forceStepTimerExpiredForTest();
         boss.forceHitCountForTest(6);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
         topSegment.update(1, null);
 
         assertTrue(topSegment.isDestroyed(), "HP 5 detaches the top segment before its laser-head children update.");
@@ -240,7 +240,7 @@ class TestLbzFinalBoss1Instance {
         // In range: y_vel*2 within ±$800 is applied.
         boss.forceYVelocityForTest(0x0300);
         boss.forceHitCountForTest(7);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
 
         assertEquals(0x0600, boss.getYVelocity(),
                 "sub_734FA doubles y_vel when the doubled value stays within ±$800");
@@ -249,7 +249,7 @@ class TestLbzFinalBoss1Instance {
         boss.finishHitFlashForTest();
         boss.forceYVelocityForTest(0x0600);
         boss.forceHitCountForTest(7);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
 
         assertEquals(0x0600, boss.getYVelocity(),
                 "sub_734FA leaves y_vel unchanged when y_vel*2 exceeds +$800 (no clamping)");
@@ -257,7 +257,7 @@ class TestLbzFinalBoss1Instance {
         boss.finishHitFlashForTest();
         boss.forceYVelocityForTest(-0x0600);
         boss.forceHitCountForTest(7);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
 
         assertEquals(-0x0600, boss.getYVelocity(),
                 "sub_734FA leaves y_vel unchanged when y_vel*2 exceeds -$800 (no clamping)");
@@ -270,7 +270,7 @@ class TestLbzFinalBoss1Instance {
         boss.update(0, null);
         boss.activateForTest();
         boss.forceHitCountForTest(6);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
         int startY = boss.getCentreY();
 
         // ROM loc_72AEE: $40 = $F decrements to -1 — sixteen wait frames.
@@ -306,7 +306,7 @@ class TestLbzFinalBoss1Instance {
         boss.activateForTest();
 
         boss.forceHitCountForTest(1);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
         boss.setCentreYForTest(services.cameraY() + 0x140);
         boss.setPlayersReadyForResultsForTest(true);
         // Sink bottom reached: loc_72B34 arms the $3F wait + Ctrl_2 lock.
@@ -333,7 +333,7 @@ class TestLbzFinalBoss1Instance {
         boss.update(0, null);
         boss.activateForTest();
         boss.forceHitCountForTest(1);
-        boss.onPlayerAttack(player, null);
+        hitBoss(boss, player);
         boss.setCentreYForTest(services.cameraY() + 0x140);
 
         boss.update(10, player);
@@ -360,7 +360,7 @@ class TestLbzFinalBoss1Instance {
         boss.setCentreYForTest(services.cameraY() - 0x4E);
 
         boss.forceHitCountForTest(1);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
         boss.update(1, null);
 
         assertEquals(LbzFinalBoss1Instance.FinalePhase.KNUCKLES_HANDOFF, boss.getFinalePhase(),
@@ -614,6 +614,11 @@ class TestLbzFinalBoss1Instance {
                 0x44A0, 0x0780, OBJ_LBZ_FINAL_BOSS_1, 0, 0, false, 0));
         boss.setServices(services);
         return boss;
+    }
+
+    private static void hitBoss(LbzFinalBoss1Instance boss, PlayableEntity player) {
+        boss.onPlayerAttack(player, null);
+        boss.update(0, player);
     }
 
     private static AbstractObjectInstance newDeathEggExplosionDebrisForTest(

@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ final-boss post-routine hit resolution
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 43003 to
+  frame 43062.** The next divergence is Sonic's ground speed (`-$0134`
+  expected versus `$0134` actual).
+- Root: native player touch clears the boss collision flag and decrements its
+  hit count in the earlier player slot. `Obj_LBZFinalBoss1` still dispatches
+  its current movement routine before `sub_734FA` observes that clear and
+  enters hit-stun; flash expiry likewise restores the saved routine after the
+  current dispatch. The engine entered and left hit-stun before dispatch,
+  skipping one vertical movement step per hit and placing the orbiting pod one
+  frame low.
+- Fix: touch now publishes a pending boss hit, while the boss resolves it and
+  advances the hit-flash lifecycle after its current routine. The pending flag
+  is ordinary rewind-captured boss state and is independent of player, route,
+  zone, or frame.
+- Validation: all 19 focused LBZ final-boss tests pass and the focused replay
+  reaches frame 43062 with 330 release-blocking errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ final-boss swapped RNG side selector
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 42727 to

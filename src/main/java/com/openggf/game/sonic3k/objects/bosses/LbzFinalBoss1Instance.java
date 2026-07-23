@@ -132,6 +132,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private int hp = INITIAL_HP;
     private int collisionFlags = COLLISION_FLAGS;
     private int collisionBackup = COLLISION_FLAGS;
+    private boolean pendingHitResolution;
     private int mappingFrame = BODY_FRAME;
     private int activationTimer = ACTIVATION_TIMER;
     private int flags;
@@ -257,11 +258,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
         hp = Math.max(0, hp - 1);
         collisionFlags = 0;
-        if (hp == 0) {
-            startDefeat();
-            return;
-        }
-        startHitReaction();
+        pendingHitResolution = true;
     }
 
     @Override
@@ -277,7 +274,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             updateDynamicSpawn(getX(), getY());
             return;
         }
-        updateHitFlash();
         switch (routine) {
             case ROUTINE_WAIT -> updateActivationWait();
             case ROUTINE_SHUTTLE -> updateVerticalShuttle();
@@ -290,7 +286,25 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 // Keep unknown test-forced routines inert instead of inventing behavior.
             }
         }
+        resolvePendingHit();
+        updateHitFlash();
         updateDynamicSpawn(getX(), getY());
+    }
+
+    /**
+     * ROM Obj_LBZFinalBoss1 dispatches its current routine before sub_734FA
+     * observes the collision_flags clear written by the earlier player slot.
+     */
+    private void resolvePendingHit() {
+        if (!pendingHitResolution) {
+            return;
+        }
+        pendingHitResolution = false;
+        if (hp == 0) {
+            startDefeat();
+            return;
+        }
+        startHitReaction();
     }
 
     private void ensureInitialized() {
@@ -1067,6 +1081,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     public void forceHitCountForTest(int hp) {
         this.hp = hp;
         this.collisionFlags = hp > 0 ? COLLISION_FLAGS : 0;
+        this.pendingHitResolution = false;
     }
 
     public void finishHitFlashForTest() {
