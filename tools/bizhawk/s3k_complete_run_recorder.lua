@@ -971,10 +971,10 @@ local aux_file = nil
 -- Leaf helpers single-sourced in lib/oggf_trace_common.lua. Rebound to locals
 -- so the many call sites below stay unchanged; the two that captured file-scope
 -- upvalues (bk2_input_mask -> bk2_frame_offset, write_aux -> aux_file) keep thin
--- local wrappers that forward those upvalues. rom_joypad_to_mask is retained as
--- a local because the SS-specific ss_input_mask() below still calls it.
+-- local wrappers that forward those upvalues. rom_joypad_to_mask is NOT rebound
+-- to a local here: this recorder's main chunk sits at Lua 5.4's 200-local cap,
+-- so its only caller (ss_input_mask) uses C.rom_joypad_to_mask directly instead.
 local read_speed = C.read_speed
-local rom_joypad_to_mask = C.rom_joypad_to_mask
 local hex = C.hex
 local angle_to_ground_mode = C.angle_to_ground_mode
 local json_quote = C.json_quote
@@ -5068,12 +5068,12 @@ end
 -- is loaded, same convention as bk2_input_mask/rom_joypad_to_mask.
 function ss_input_mask(player, fallback_raw, trace_row)
     if not movie.isloaded() then
-        return rom_joypad_to_mask(fallback_raw)
+        return C.rom_joypad_to_mask(fallback_raw)
     end
     local frame_index = bk2_frame_offset + trace_row
     local jp = movie.getinput(frame_index, player)
     if jp == nil then
-        return rom_joypad_to_mask(fallback_raw)
+        return C.rom_joypad_to_mask(fallback_raw)
     end
     local prefix = "P" .. player .. " "
     local mask = 0
