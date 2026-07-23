@@ -123,36 +123,55 @@ The registry owns active music and SFX voices and preserves existing policies:
 
 The registry provides deterministic iteration order. Voice creation/removal is
 applied at frame boundaries so the mixer never traverses a concurrently
-mutating collection. State-changing commands are never silently dropped.
+mutating collection. Structural commands are never silently dropped.
 Bounded admission uses a 256-entry command queue whose final 32 entries are
-reserved for stop, restore, fade, rewind-boundary, and ownership commands.
+reserved for structural commands. Structural commands include play/replace/
+stop music, override push/pop/restore, fade, stop-all-SFX, rewind-boundary,
+registry ownership, and hard-boundary reset. They are never coalesced.
 Redundant pending gain, pitch, speed-shoes, and speed-multiplier changes for the
-same target may be coalesced without reordering other commands. At most 32
-simultaneous sample-backed one-shot SFX voices are admitted; music, raw SEGA
-PCM, and SMPS composites have dedicated slots outside that count. An SFX start
-at the limit may replace only the lowest-priority older sample SFX when the new
-voice has strictly higher priority; otherwise it is rejected with one warning.
-It cannot evict music, raw SEGA PCM, an SMPS composite, an equal/higher-priority
-SFX, or a state-changing command. These limits are named constants and are not
-new user configuration.
+same target may be coalesced without reordering other commands.
+
+When admitting a structural command to a full queue, the registry first evicts
+the oldest queued droppable sample-voice start. If none exists, the game-thread
+producer synchronously applies the pending structural batch at the next safe
+non-rendering boundary, then admits the new command. Rendering never drains
+commands concurrently, and structural overflow never blocks on OpenAL or
+recording. Tests exceed both the normal 224-entry region and all 32 reserved
+entries.
+
+At most 32 simultaneous sample-backed one-shot SFX voices are admitted; music,
+raw SEGA PCM, and SMPS composites have dedicated slots outside that count. An
+SFX start at the limit may replace only the lowest-priority older sample SFX
+when the new voice has strictly higher priority; otherwise it is rejected with
+one warning. It cannot evict music, raw SEGA PCM, an SMPS composite, an
+equal/higher-priority SFX, or a structural command. These limits are named
+constants and are not new user configuration.
 
 ### Audio presentation mixer
 
-The engine presentation tick is the only producer clock. It advances the mixer
-exactly once for every presented frame in gameplay, title/menu, special/bonus
-stage, editor, pause, frame-step, modal shader-picker, and rewind paths. Neither
-OpenAL nor recording may advance a voice, history cursor, or crossfade.
+The engine presentation tick is the only producer clock. It invokes the
+producer exactly once for every presented frame. Neither OpenAL nor recording
+may advance a voice, history cursor, or crossfade.
 
-For each tick, the mixer uses one
-`AudioFrameClock(sampleRate, effectiveFrameRate)` and:
+Every tick has one explicit `PresentationMode`:
 
-1. obtains the exact stereo-frame count for the frame;
-2. clears reusable wide accumulation buffers;
-3. renders every active voice in stable order;
-4. saturates once into a reusable 16-bit stereo packet;
-5. commits the final packet to presentation history;
-6. broadcasts the same immutable packet contents to a bounded speaker FIFO and
-   the capture tap.
+- `FORWARD`: normal gameplay, legal/title/menu screens, special/bonus stages,
+  title cards, editor, and every other non-paused rendered mode;
+- `SILENT`: ordinary pause, paused frame-step presentation, and modal
+  shader-picker frames;
+- `REVERSE`: every frame while held rewind presentation is active.
+
+All modes obtain the exact stereo-frame count from one
+`AudioFrameClock(sampleRate, effectiveFrameRate)`, but their mutations differ:
+
+- `FORWARD` applies queued commands at the frame boundary, advances active
+  voices, mixes and saturates one packet, appends it to forward history, and
+  broadcasts it.
+- `SILENT` does not advance voice cursors or append history. It broadcasts a
+  newly cleared clock-sized zero packet. Structural commands that must take
+  effect while paused are applied without rendering or advancing voices.
+- `REVERSE` does not advance voices or append history. It advances only the
+  producer-owned reverse cursor and broadcasts that history packet.
 
 OpenAL may aggregate or split these packets into its 1,024-frame device
 buffers, but it never requests synthesis or advances a cursor. No voice writes
@@ -160,9 +179,22 @@ directly to OpenAL.
 
 ### OpenAL PCM sink
 
-LWJGL/OpenAL owns a bounded queue of buffers containing only final mixer PCM.
-It exposes device initialization, negotiated sample rate, enqueue/update, and
-cleanup. It does not decode WAV files or own voice cursors.
+LWJGL/OpenAL owns a bounded speaker FIFO containing only final mixer PCM. Its
+capacity is two seconds at the negotiated sample rate. It exposes device
+initialization, negotiated sample rate, enqueue/update, and cleanup. It does
+not decode WAV files or own voice cursors.
+
+The producer never blocks on this FIFO. If it would overrun, the sink discards
+the oldest speaker-only packets until at least one second of capacity is free,
+retains the newest tail, and reprimes from that tail. It emits at most one
+overrun warning per second. History and recording packets are never discarded
+by speaker overflow.
+
+No-device and headless sinks consume-and-discard speaker packets immediately;
+they do not accumulate a FIFO or backpressure the producer. An OpenAL enqueue
+or device-update failure atomically replaces the device sink with the
+no-device sink, clears stale speaker packets, and leaves voices, history,
+rewind, and capture running.
 
 Entering reverse presentation flushes queued forward OpenAL PCM and reprimes
 the device queue from reverse packets before playback resumes. This makes the
@@ -276,15 +308,15 @@ correct.
 
 ## Concurrency and Real-Time Constraints
 
-- Audio commands enter a bounded frame-boundary queue with reserved
-  state-command capacity and deterministic voice admission.
+- Audio commands enter a bounded frame-boundary queue with reserved structural
+  capacity, droppable-start eviction, and safe-boundary structural draining.
 - The mixer has one state owner; OpenAL and capture consumers receive immutable
   packet views or copies from bounded reusable pools.
 - No decoding, file access, process launch, logging formatting, or collection
   growth occurs inside voice rendering.
 - Accumulation uses reusable wide integer buffers and one final saturation pass.
-- Voice and queue counts have explicit named bounds. State-changing commands
-  are never dropped; rejected voice starts warn once.
+- Voice and queue counts have explicit named bounds. Structural commands are
+  never dropped; rejected voice starts warn once.
 - Cleanup order is recording tap, voice registry/history, then OpenAL sink.
 - Failure cleanup is idempotent.
 
@@ -326,7 +358,10 @@ recording.
 - SMPS music plus simultaneous SMPS/WAV/PCM SFX;
 - ring/SFX priority and continuous-SFX behavior;
 - exact frame-clock packet sizes for NTSC and PAL;
-- OpenAL sink queue bounds and no-device fallback;
+- OpenAL sink two-second queue bound, oldest-speaker-only overrun discard,
+  one-second reprime tail, and rate-limited warning;
+- stalled-device, enqueue-failure, no-device long-run, and FIFO-overrun cases
+  proving producer/capture continuity without gameplay blocking;
 - exact equality between each producer packet and both consumer copies before
   OpenAL aggregation;
 - reverse-entry forward-queue flush/reprime and reverse-release ordering;
@@ -334,9 +369,10 @@ recording.
 - silent capture degradation at attach and mid-session;
 - immediate capture start from an active reverse cursor;
 - rewind rate changes, release crossfade, epoch reset, and repeated recording;
-- ordinary exception and shutdown cleanup.
+- ordinary exception and shutdown cleanup;
 - command-capacity reservation, safe coalescing, deterministic voice overflow,
-  and proof that state commands are never dropped.
+  overflow beyond both queue regions, synchronous safe-boundary structural
+  drain, and proof that structural commands are never dropped.
 
 ### Integration tests
 
