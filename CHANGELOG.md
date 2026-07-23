@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: forward live playback and visual rewind now retain `ADVANCE_ONLY` action edges across held no-gameplay rows until the next actual gameplay dispatch; visual rewind also latches input without advancing gameplay, animation, VBlank, lag, object, or oscillator state.
 - Fix: S3K trace `ADVANCE_ONLY` rows now consistently suppress gameplay in headless, capture, and live playback while consuming and latching their BK2 controller snapshot and action edge without advancing timing counters. This removes three non-ROM AIZ plane-intro object updates and advances the standalone AIZ frontier from frame 717 to frame 2707.
 - Fix: The S3K recorder now derives every profile's input column from `bk2_frame_offset + trace_row`; the AIZ end-to-end fixture is canonically BK2-aligned with only its input column normalized, and obsolete replay-phase metadata is removed from the AIZ and CNZ fixtures.
 - Fix: S3K trace replay now derives pre-level intro prefixes from recorded mode transitions and drives level-gated frame zero through the ordinary production lifecycle, removing legacy sidekick, object, oscillator, and seed-row compensation scheduling, bounding input-latch-only phases to the recorded prefix window, and keeping phase/oscillator scheduling independent of frame-zero position, speed, and state outcomes.

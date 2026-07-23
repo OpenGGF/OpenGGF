@@ -49358,3 +49358,43 @@ The requested standalone AIZ and CNZ gates are input-aligned and now reach
 later, genuine parity frontiers. The fleet is not globally frame-zero clean:
 CNZ complete-run, ICZ, LBZ, and MHZ still begin at f0. The result therefore
 remains `DONE_WITH_CONCERNS`, not a green fleet baseline.
+
+## 2026-07-23 - ADVANCE_ONLY live and visual-rewind edge closure
+
+Forward live playback and visual rewind now preserve an action edge latched by
+an `ADVANCE_ONLY` row until the next gameplay dispatch, even when the next
+movie row keeps the action held. Visual rewind consumes the input row without
+advancing gameplay, animation, VBlank, lag, object, or oscillator state.
+
+Focused bridge, rewind, driver, closure, invariant, bootstrap, and must-keep
+tests pass:
+
+```bash
+mvn -Dtest=TestPlaybackAdvanceOnlyInputBridge,TestTraceSessionLauncherAdvanceOnlyRewind,LiveTraceComparatorTest,TestRecordingFrameDriverInputOnly,TestTraceReplayReferenceClosureGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestTraceSessionLauncherRewindPresentation,TestBonusStagePlaybackBridge,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils \
+  -Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen test
+```
+
+- Exit 0.
+- `TestLiveTraceComparatorObserver` also passes when run independently; mixing
+  it after the selected ROM-backed fixture classes exposes pre-existing static
+  sidekick-state leakage between classes.
+
+Policy guards pass:
+
+```bash
+mvn -Dtest=TestArchitecturalSourceGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestProductionSingletonClosureGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault test
+```
+
+- Exit 0.
+
+Focused AIZ remains at the established true frontier:
+
+```bash
+mvn -Dtest=TestS3kAizTraceReplay \
+  -Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen test
+```
+
+- Expected exit 1: 16 tests, 14 failures, 0 errors.
+- `replayMatchesTrace` reports 1,298 errors and 0 warnings.
+- First mismatch remains f2707 `tails_animation_id` (ROM `0x0000`, engine
+  `0x0005`); there is no f717 scheduling regression.

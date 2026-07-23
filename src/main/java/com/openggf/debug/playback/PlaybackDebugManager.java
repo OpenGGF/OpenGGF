@@ -189,7 +189,9 @@ public final class PlaybackDebugManager {
 
         int actionMask = frame.p1ActionMask();
         int pressed = (actionMask ^ previousActionMask) & actionMask;
-        currentForcedJumpPress = pressed != 0;
+        if (pressed != 0) {
+            currentForcedJumpPress = true;
+        }
         previousActionMask = actionMask;
         currentForcedStartPress = frame.p1StartPressed() && !previousStartPressed;
         previousStartPressed = frame.p1StartPressed();
@@ -203,6 +205,16 @@ public final class PlaybackDebugManager {
 
     public synchronized boolean isCurrentForcedStartPress() {
         return currentForcedStartPress;
+    }
+
+    /**
+     * Consumes a pending playback action edge after the level gameplay body
+     * actually ran. Input-only rows may advance the movie cursor without
+     * gameplay, so their edge remains latched across later held rows until this
+     * callback.
+     */
+    public synchronized void onCurrentGameplayTickExecuted() {
+        currentForcedJumpPress = false;
     }
 
     public synchronized void onLevelFrameAdvanced() {
