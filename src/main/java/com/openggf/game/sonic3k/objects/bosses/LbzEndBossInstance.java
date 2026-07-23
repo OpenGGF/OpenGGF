@@ -610,8 +610,11 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         if (camera != null) {
             int x = camera.getX() & 0xFFFF;
             if (x > PAN_TARGET_X) {
-                camera.setX((short) Math.max(PAN_TARGET_X, x - 2));
-                return;
+                int nextX = x - 2;
+                camera.setX((short) Math.max(PAN_TARGET_X, nextX));
+                if (nextX > PAN_TARGET_X) {
+                    return;
+                }
             }
         }
         startRising();

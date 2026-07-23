@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ end-boss camera-pan boundary
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 37858 to
+  frame 37859.** The next divergence is Sonic's mapping frame (`$A1`
+  expected versus `$A4` actual).
+- Root: native `loc_7399E` subtracts two from `Camera_X_pos` and compares that
+  candidate with `$39F0`. When the candidate reaches the target, it enters
+  `loc_739B2` in the same dispatch and starts the rising timer. The engine
+  clamped to `$39F0`, returned, and waited one more frame before entering the
+  rising routine, leaving the linked boss platforms one circular step behind.
+- Fix: the camera-pan routine now publishes the two-pixel candidate first and
+  starts rising immediately when that candidate reaches or crosses the target.
+  The corrected parent timer phase advances the platform naturally; no
+  platform-position or trace-frame exception is used.
+- Validation: all 18 focused LBZ end-boss tests pass and the focused replay
+  reaches frame 37859. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. HCZ
+  remains at frame 31335, ICZ remains green, and no S3K, S1, or S2 frontier
+  regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ end-boss runner initialization phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 37597 to

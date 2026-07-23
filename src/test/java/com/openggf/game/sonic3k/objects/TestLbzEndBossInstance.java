@@ -145,6 +145,22 @@ class TestLbzEndBossInstance {
     }
 
     @Test
+    void cameraPanStartsRisingOnTheClampToTargetFrame() {
+        Camera camera = cameraAt(0x3A20, 0x05A0);
+        LbzEndBossInstance boss = constructBoss(new TestObjectServices().withCamera(camera));
+        enterIntro(boss);
+        runFrames(boss, 0x1F + 0x29 + 4);
+        assertEquals(6, boss.getState().routine);
+
+        camera.setX((short) 0x39F2);
+        boss.update(0x7777, null);
+
+        assertEquals(0x39F0, camera.getX() & 0xFFFF);
+        assertEquals(8, boss.getState().routine,
+                "loc_7399E subtracts two before comparing, then falls through to loc_739B2");
+    }
+
+    @Test
     void fireCycleGatesPlatformsAndLaunchesRomSubtypeSequence() {
         LbzEndBossInstance boss = constructBoss(new TestObjectServices().withCamera(cameraAt(0x3A20, 0x05A0)));
 
