@@ -533,7 +533,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
                 resultsChildRetireDispatches(resultsWaitedForPlayerLanding,
                         preservesPostObjectResultDispatchBoundary,
-                        usesShortResultsChildRetireTail)));
+                        usesShortResultsChildRetireTail),
+                usesShortResultsChildRetireTail));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
         if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {

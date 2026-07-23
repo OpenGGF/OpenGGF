@@ -89,6 +89,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int waitDurationAdjustment;
     private int postControlHandoffDelayEntries;
     private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
+    private boolean usesShortResultsChildRetireTail;
     private boolean controlsReleasedAheadOfHandoff;
     private boolean carriedAcrossSeamlessTransition;
 
@@ -134,12 +135,20 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries, int carriedResultsRetireDispatches) {
+        this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
+                carriedResultsRetireDispatches, false);
+    }
+
+    S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
+            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
+            boolean usesShortResultsChildRetireTail) {
         super("S3kResults");
         this.character = character;
         this.act = act;
         this.waitDurationAdjustment = Math.max(0, waitDurationAdjustment);
         this.postControlHandoffDelayEntries = Math.max(0, postControlHandoffDelayEntries);
         this.carriedResultsRetireDispatches = Math.max(0, carriedResultsRetireDispatches);
+        this.usesShortResultsChildRetireTail = usesShortResultsChildRetireTail;
 
         // Calculate bonuses from current game state (ROM lines 62550-62578)
         calculateBonuses();
@@ -712,7 +721,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                         // the queued create passes (sonic3k.asm:62708-62720,
                         // 62150-62235).
                         s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
-                                MUTATED_TITLE_CARD_RESET_DISPATCHES);
+                                mutatedTitleCardResetDispatches(
+                                        usesShortResultsChildRetireTail));
                     }
                 }
             }
@@ -735,6 +745,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         ObjectLifetimeOps.deleteNoRespawn(this);
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
+    }
+
+    static int mutatedTitleCardResetDispatches(boolean usesShortResultsChildRetireTail) {
+        // A short child-retirement tail hands ownership to the mutated title
+        // card one frame earlier, before the native child/create phase has
+        // exposed its final two dispatches.
+        return MUTATED_TITLE_CARD_RESET_DISPATCHES
+                + (usesShortResultsChildRetireTail ? 2 : 0);
     }
 
     private void releasePlayerControlsForExit() {

@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ mutated title-card state-reset phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 22226 to
+  frame 22334.** The next divergence is camera X (`$04A1` expected versus
+  `$04A0` actual).
+- Root: shortening the retained results child tail correctly hands control to
+  the mutated in-level title card earlier, but its timer/ring reset countdown
+  still began from the ordinary carried-results create phase. LBZ therefore
+  cleared the retained 46-ring state two frames before the native title
+  children reached their reset dispatch.
+- Fix: the short-tail lifecycle property now follows the results owner into
+  its mutated title card and retains the two outstanding create dispatches
+  before resetting level gamestate. Other carried and waited-for-landing
+  results retain the existing 38-dispatch countdown.
+- Validation: all twenty-five focused results, signpost, and boss-defeat-flow
+  tests pass. The complete `*TraceReplay#replayMatchesTrace` sweep reports
+  61 tests, 45 green and the same 16 documented red routes; LBZ reaches frame
+  22334 with 5442 remaining errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ retained results child retirement tail
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 22188 to

@@ -73,6 +73,12 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
+    void shortResultsChildTailRetainsTwoMutatedTitleCreateDispatches() {
+        assertEquals(38, S3kResultsScreenObjectInstance.mutatedTitleCardResetDispatches(false));
+        assertEquals(40, S3kResultsScreenObjectInstance.mutatedTitleCardResetDispatches(true));
+    }
+
+    @Test
     void cnzActOneExitStartsActTwoTitleCardAndMusic() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
         S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
