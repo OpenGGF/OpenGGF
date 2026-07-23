@@ -1,5 +1,22 @@
 # Trace Frontier Log
 
+### 2026-07-23 -- S3K structural replay scheduling baseline for Task 4
+
+Task 3 removes recorder-emitted phase-control metadata only. The replay engine
+now follows the production fresh-main-playable lifecycle and classifies the AIZ
+prefix from the recorded LEVEL transition; trace rows remain comparison-only.
+No fixture was changed.
+
+Pre-fix focused evidence (the final measured counts and frontiers are owned by
+Task 4 and are intentionally not filled in here):
+
+- `mvn -Dtest=TestS3kAizTraceReplay#replayMatchesTrace -Ds3k.rom.path=s3k.gen test`
+  reported 5,057 errors, first at f290: `y` (ROM `$0420`, engine `$041A`).
+- `mvn -Dtest=TestS3kCnzTraceReplay#replayMatchesTrace -Ds3k.rom.path=s3k.gen -Dsurefire.argLine="-Xshare:off -Xmx3g" test`
+  reported 4,940 errors, first at f0: `y_speed` (ROM `$0000`, engine `$0038`).
+
+These are comparison frontiers, not trace-to-engine synchronization failures.
+
 ### 2026-07-23 -- CPZ2 and DEZ level-select regressions fixed
 
 CPZ2's sole remaining divergence at f7206 was a missing

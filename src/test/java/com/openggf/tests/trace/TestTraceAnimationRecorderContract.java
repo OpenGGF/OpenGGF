@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Guards the normal-gameplay recorder side of the CSV v7 animation contract. */
@@ -62,6 +63,23 @@ class TestTraceAnimationRecorderContract {
                     "physics_animation_aux_without_diagnostic_hooks"), name);
             assertTrue(script.contains("if not LIGHTWEIGHT_REGEN then"), name);
         }
+    }
+
+    @Test
+    void s3kRecorderMetadataOmitsRetiredReplayPhaseControls() throws IOException {
+        String script = Files.readString(TOOLS.resolve("s3k_trace_recorder.lua"));
+
+        assertFalse(script.contains("pre_level_intro_prefix"));
+        assertFalse(script.contains("sidekick_seed_frame_prelude"));
+        assertFalse(script.contains("pre_trace_osc_frames"));
+
+        assertTrue(script.contains("\"trace_profile\""));
+        assertTrue(script.contains("\"bk2_frame_offset\""));
+        assertTrue(script.contains("\"trace_schema\": 6"));
+        assertTrue(script.contains("\"csv_version\": 7"));
+        assertTrue(script.contains("OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS"));
+        assertTrue(script.contains("OGGF_TRACE_QUIET"));
+        assertTrue(script.contains("if not LIGHTWEIGHT_REGEN then"));
     }
 
     @Test
