@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ retained Flybot placeholder phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 24046 to
+  frame 24160.** Remaining release-blocking errors fell from 2340 to 2183; the
+  next divergence is Sonic's Y speed (`-$0F14` expected versus `-$0E14`
+  actual).
+- Root: a ROM-layout Flybot already occupies a `Map_Offscreen` SST slot before
+  `Obj_WaitOffscreen` restores its saved operation pointer. The engine's
+  delayed placement object omitted that retained placeholder pass, applied one
+  extra chase acceleration step, and left the Flybot two pixels short of its
+  native collision-list coordinate. Alarm-created Flybots do not have the
+  retained layout slot and were already correctly phased.
+- Fix: layout-loaded Flybots now preserve their retained placeholder pass and
+  publish the live SST coordinate consumed by the following S3K player-slot
+  touch response. Dynamically allocated alarm Flybots retain their existing
+  frame-start touch phase.
+- Validation: all seven focused Flybot tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ spin-launcher collision and cooldown phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 23827 to

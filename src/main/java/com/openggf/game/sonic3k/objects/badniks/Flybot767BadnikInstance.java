@@ -62,11 +62,13 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
     private int animTimer;
     private boolean inLoop;
     private boolean waitingForOnscreen = true;
+    private boolean retainedLayoutPlaceholderPass;
     private boolean publishedTouchResponseListEntryThisFrame;
 
     public Flybot767BadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Flybot767",
                 Sonic3kObjectArtKeys.FLYBOT_767, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
+        retainedLayoutPlaceholderPass = spawn.layoutIndex() >= 0;
     }
 
     @Override
@@ -77,6 +79,15 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
         }
         if (waitingForOnscreen) {
             if (!isOnScreenX(WAIT_OFFSCREEN_MARGIN)) {
+                return;
+            }
+            // Layout-loaded Flybots already occupy a Map_Offscreen SST slot
+            // before the engine's placement window instantiates them. Preserve
+            // that retained placeholder pass before Obj_WaitOffscreen restores
+            // the saved operation pointer. Alarm-allocated children enter the
+            // helper directly and do not have this prior slot pass.
+            if (retainedLayoutPlaceholderPass) {
+                retainedLayoutPlaceholderPass = false;
                 return;
             }
             // Obj_WaitOffscreen restores the saved operation pointer and
@@ -327,6 +338,17 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
         // Add_SpriteToCollisionResponseList (sonic3k.asm:179081-179090,
         // 191981-191989). The routine publishes on later passes only.
         return publishedTouchResponseListEntryThisFrame;
+    }
+
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // A layout-loaded Flybot occupies a retained object slot while
+        // Map_Offscreen/Obj_WaitOffscreen schedules its operation pointer. Its
+        // Sprite_CheckDeleteTouchSlotted entry therefore exposes the live SST
+        // coordinate reached by that object pass. Obj_LBZAlarm allocates its
+        // Flybots dynamically (layout index -1), after the frame-start touch
+        // snapshot, so those keep the ordinary snapshot phase.
+        return getSpawn().layoutIndex() >= 0;
     }
 
     @Override

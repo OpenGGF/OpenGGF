@@ -97,6 +97,28 @@ class TestS3kFlybot767Badnik {
                 "Obj_WaitOffscreen returns before Obj_Flybot767 dispatches its routine.");
         assertFalse(flybot.publishesTouchResponseListEntryThisFrame(),
                 "The wait helper returns before Sprite_CheckDeleteTouchSlotted can add Flybot to the S3K touch list.");
+        assertFalse(flybot.usesCurrentTouchResponseState(),
+                "an immediately visible alarm-spawned Flybot retains the frame-start touch phase");
+    }
+
+    @Test
+    void layoutPlacementPublishesLiveSstCoordinateAfterWaitOffscreenRestore() {
+        AbstractObjectInstance.updateCameraBounds(0x0700, 0, 0x0900, 0x0300, 0);
+        AbstractObjectInstance flybot = createPlacedFlybotAt(0x0800, 0x0100);
+        AbstractPlayableSprite player = playerAt(0x0800, 0x0140);
+
+        flybot.update(0, player);
+        flybot.update(1, player);
+
+        assertTrue(flybot.usesCurrentTouchResponseState(),
+                "A retained layout slot exposes the live SST coordinate published after its object pass");
+        assertEquals("INIT", readEnumName(flybot, "state"),
+                "Map_Offscreen's retained slot pass precedes Obj_WaitOffscreen's restore pass");
+        assertFalse(flybot.publishesTouchResponseListEntryThisFrame());
+
+        flybot.update(2, player);
+        assertEquals("CHASE", readEnumName(flybot, "state"));
+        assertTrue(flybot.publishesTouchResponseListEntryThisFrame());
     }
 
     @Test
@@ -122,6 +144,14 @@ class TestS3kFlybot767Badnik {
     private static AbstractObjectInstance createFlybotAt(int x, int y) {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(x, y, Sonic3kObjectIds.FLYBOT_767, 0, 0, false, 0));
+        assertTrue(instance instanceof AbstractObjectInstance,
+                "Flybot767 registry entry should create an object instance");
+        return (AbstractObjectInstance) instance;
+    }
+
+    private static AbstractObjectInstance createPlacedFlybotAt(int x, int y) {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(x, y, Sonic3kObjectIds.FLYBOT_767, 0, 0, false, 0, 123));
         assertTrue(instance instanceof AbstractObjectInstance,
                 "Flybot767 registry entry should create an object instance");
         return (AbstractObjectInstance) instance;
