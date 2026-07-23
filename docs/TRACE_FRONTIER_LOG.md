@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-07-23 - S3K moving crouch before slope repel
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 28456 to
+  frame 29799.** The next divergence is Sonic's Y speed (`-$0156` expected
+  versus `-$0256` actual).
+- Root: on the LBZ slope landing, `SonicKnux_Roll` sees ground speed `$00D9`
+  and writes Duck because it is below the S3K `$0100` roll threshold.
+  `SlopeRepel` runs later and raises the published speed to `$0168`. The
+  engine delayed its moving-crouch decision until after its combined
+  movement/collision pipeline and compared that later `$0168`, selecting Walk
+  for the one frame before both paths enter Roll.
+- Fix: the normal-ground dispatcher now snapshots ground speed immediately
+  before its native roll-entry decision. S3K's later moving-crouch animation
+  write consumes that pre-`SlopeRepel` value, while standing-still crouch and
+  S1/S2 behavior retain their existing paths. A focused movement test covers
+  the `$00D9` to `$0168` boundary.
+- Validation: the focused movement test passes and the focused LBZ replay
+  reaches frame 29799. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. HCZ
+  remains at frame 31335, ICZ remains green, and no S3K, S1, or S2 frontier
+  regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ Snale shared shell-cycle wait
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 27969 to

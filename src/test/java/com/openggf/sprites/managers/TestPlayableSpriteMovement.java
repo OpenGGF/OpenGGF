@@ -2408,6 +2408,25 @@ public class TestPlayableSpriteMovement {
                                 "SonicKnux_Roll must see the player-slot Status_OnObj bit and skip Duck");
         }
 
+        @Test
+        public void s3kMovingCrouchUsesPreSlopeRepelGroundSpeed() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_3K);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setSpindash(false);
+                mockSprite.setGSpeed((short) 0x168);
+                mockSprite.setCrouching(false);
+                setMovementField("preRollGroundSpeed", 0x0D9);
+                setInputState(false, false, true, false, false);
+
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                crouchMethod.setAccessible(true);
+                crouchMethod.invoke(manager);
+
+                assertTrue(mockSprite.getCrouching(),
+                                "SonicKnux_Roll tests inertia below $100 before SlopeRepel raises it");
+        }
+
         /**
          * Test that releasing and re-pressing down unlocks rolling.
          */
