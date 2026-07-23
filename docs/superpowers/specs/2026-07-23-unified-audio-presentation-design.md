@@ -133,11 +133,19 @@ same target may be coalesced without reordering other commands.
 
 When admitting a structural command to a full queue, the registry first evicts
 the oldest queued droppable sample-voice start. If none exists, the game-thread
-producer synchronously applies the pending structural batch at the next safe
-non-rendering boundary, then admits the new command. Rendering never drains
-commands concurrently, and structural overflow never blocks on OpenAL or
-recording. Tests exceed both the normal 224-entry region and all 32 reserved
-entries.
+producer, at an asserted owner-thread/non-rendering boundary, synchronously
+drains and applies the entire pending queue in original order after the
+permitted same-target scalar coalescing, then admits the new command. This
+preserves dependencies such as a speed change preceding music replacement.
+External command submission is forbidden while voice rendering is active.
+Render-discovered lifecycle changes such as voice completion enter a separate
+fixed 64-entry deferred-mutation list that is applied immediately after the
+render traversal; completion of more than 64 voices in one tick is collapsed
+into one deterministic registry sweep rather than growing or dropping state.
+Rendering never drains the external command queue concurrently, and overflow
+never blocks on OpenAL or recording. Tests exceed both the normal 224-entry
+region and all 32 reserved entries, assert original-order application, and
+exercise deferred-mutation overflow.
 
 At most 32 simultaneous sample-backed one-shot SFX voices are admitted; music,
 raw SEGA PCM, and SMPS composites have dedicated slots outside that count. An
@@ -309,7 +317,8 @@ correct.
 ## Concurrency and Real-Time Constraints
 
 - Audio commands enter a bounded frame-boundary queue with reserved structural
-  capacity, droppable-start eviction, and safe-boundary structural draining.
+  capacity, droppable-start eviction, and safe-boundary full-queue draining in
+  original order.
 - The mixer has one state owner; OpenAL and capture consumers receive immutable
   packet views or copies from bounded reusable pools.
 - No decoding, file access, process launch, logging formatting, or collection
@@ -371,8 +380,9 @@ recording.
 - rewind rate changes, release crossfade, epoch reset, and repeated recording;
 - ordinary exception and shutdown cleanup;
 - command-capacity reservation, safe coalescing, deterministic voice overflow,
-  overflow beyond both queue regions, synchronous safe-boundary structural
-  drain, and proof that structural commands are never dropped.
+  overflow beyond both queue regions, synchronous safe-boundary full-queue
+  drain in original order, deferred-mutation overflow, and proof that
+  structural commands are never dropped.
 
 ### Integration tests
 
