@@ -59,7 +59,7 @@ Audio commands
      |
      v
 Software voice registry
-  - SMPS music/SFX
+  - composite SMPS drivers
   - raw SEGA PCM
   - decoded WAV music
   - decoded/pitched WAV SFX
@@ -84,6 +84,10 @@ own independent music or SFX playback state.
 
 ## Components
 
+The mixer and registry are owned by `AudioManager`, above both the LWJGL and
+headless/no-device sinks. Replacing or losing an output device therefore never
+destroys logical voices, presentation history, or capture state.
+
 ### Presentation voice contract
 
 Every audible source implements a small software voice contract with:
@@ -95,9 +99,16 @@ Every audible source implements a small software voice contract with:
 - explicit stop semantics;
 - snapshot/restore data required by rewind.
 
-SMPS drivers are adapted without duplicating synthesis. Raw SEGA PCM and WAV
-assets use decoded sample-backed voices. Decoding and resampling setup occur
-outside the real-time mixing loop.
+An existing `SmpsDriver` is adapted as one `SmpsCompositeVoice`. Music and the
+SFX sequencers already hosted by that driver are never flattened into
+independent voices: YM2612/PSG ownership, channel locks and stealing, priority,
+DAC fallback, continuous-SFX extension, and `SmpsDriverSnapshot` remain inside
+the composite. A standalone SFX `SmpsDriver` remains a separate composite only
+when the existing rules would create one because no music driver can own it.
+
+Raw SEGA PCM and WAV assets use decoded sample-backed voices. The SEGA PCM
+voice preserves its current replacement/preemption rules. Decoding and
+resampling setup occur outside the real-time mixing loop.
 
 ### Software voice registry
 
@@ -112,21 +123,40 @@ The registry owns active music and SFX voices and preserves existing policies:
 
 The registry provides deterministic iteration order. Voice creation/removal is
 applied at frame boundaries so the mixer never traverses a concurrently
-mutating collection.
+mutating collection. State-changing commands are never silently dropped.
+Bounded admission uses a 256-entry command queue whose final 32 entries are
+reserved for stop, restore, fade, rewind-boundary, and ownership commands.
+Redundant pending gain, pitch, speed-shoes, and speed-multiplier changes for the
+same target may be coalesced without reordering other commands. At most 32
+simultaneous sample-backed one-shot SFX voices are admitted; music, raw SEGA
+PCM, and SMPS composites have dedicated slots outside that count. An SFX start
+at the limit may replace only the lowest-priority older sample SFX when the new
+voice has strictly higher priority; otherwise it is rejected with one warning.
+It cannot evict music, raw SEGA PCM, an SMPS composite, an equal/higher-priority
+SFX, or a state-changing command. These limits are named constants and are not
+new user configuration.
 
 ### Audio presentation mixer
 
-The mixer advances once per presentation frame using one
-`AudioFrameClock(sampleRate, effectiveFrameRate)`. It:
+The engine presentation tick is the only producer clock. It advances the mixer
+exactly once for every presented frame in gameplay, title/menu, special/bonus
+stage, editor, pause, frame-step, modal shader-picker, and rewind paths. Neither
+OpenAL nor recording may advance a voice, history cursor, or crossfade.
+
+For each tick, the mixer uses one
+`AudioFrameClock(sampleRate, effectiveFrameRate)` and:
 
 1. obtains the exact stereo-frame count for the frame;
 2. clears reusable wide accumulation buffers;
 3. renders every active voice in stable order;
 4. saturates once into a reusable 16-bit stereo packet;
 5. commits the final packet to presentation history;
-6. publishes it independently to the OpenAL sink and any capture tap.
+6. broadcasts the same immutable packet contents to a bounded speaker FIFO and
+   the capture tap.
 
-No voice writes directly to OpenAL.
+OpenAL may aggregate or split these packets into its 1,024-frame device
+buffers, but it never requests synthesis or advances a cursor. No voice writes
+directly to OpenAL.
 
 ### OpenAL PCM sink
 
@@ -134,27 +164,50 @@ LWJGL/OpenAL owns a bounded queue of buffers containing only final mixer PCM.
 It exposes device initialization, negotiated sample rate, enqueue/update, and
 cleanup. It does not decode WAV files or own voice cursors.
 
+Entering reverse presentation flushes queued forward OpenAL PCM and reprimes
+the device queue from reverse packets before playback resumes. This makes the
+audible reverse boundary the selected history position rather than accepting
+device-queue latency. Releasing rewind follows the same flush/reprime boundary
+after the single reverse-to-forward crossfade packet.
+
 If OpenAL initialization or output fails, the engine switches to a no-device
 sink. The mixer, rewind history, and recording remain operational.
 
 ### Presentation history and rewind
 
 One history ring stores final audible PCM after all voices are mixed. The
-audible cursor is either:
+producer-owned audible state is either:
 
 - forward, consuming newly mixed packets; or
 - reverse, reading backward from the history ring at the requested rate.
 
-Starting recording forks the active audible cursor:
+During reverse presentation, forward sample generation is frozen and only
+reverse-history packets are broadcast. Gameplay rewind may continue restoring
+logical voice-registry snapshots at keyframes, but those restored voices do
+not render into history. On release, the selected logical snapshot is
+committed, the existing `AudioPresentationPolicy` transient-SFX cleanup is
+applied, and one crossfade bridges into newly generated forward PCM.
+
+Logical snapshots include the registry structure and durable voice cursors.
+SMPS composites retain the existing `SmpsDriverSnapshot` path. Looping music
+voices are restored. Transient WAV/PCM SFX follow the existing transient-SFX
+policy: their logical instances may be restored for identity/command
+consistency but are stopped at the reverse-release policy boundary rather than
+reintroduced into audible forward output. Raw SEGA boot PCM is transient and
+uses the same rule.
+
+Starting recording observes the producer's active presentation state:
 
 - in forward playback, the tap starts at the current forward presentation
   boundary;
-- during held rewind, it forks the active reverse cursor with the same
-  position, rate, bounds, and history epoch.
+- during held rewind, it attaches before the next producer-generated reverse
+  packet and receives the same packet as the speaker.
 
-Recording never owns or advances the speaker cursor. Rewind release crossfades
-from reverse history to live mixed PCM once, before both speaker and recording
-observe the resulting presentation packet.
+Recording never owns or advances a second playback timeline. A diagnostic
+cursor fork may copy position, rate, bounds, and history epoch for assertions,
+but both consumers receive the one producer-selected packet. History arming,
+hard-boundary epoch clearing, stale-cursor silence, and deferred logical
+restore behavior remain explicit and test-covered.
 
 ### Live recording tap
 
@@ -171,6 +224,38 @@ Each submitted video frame receives exactly one stereo PCM packet. If no fresh
 audio exists for that presented frame, the packet is explicit silence rather
 than stale PCM.
 
+The capture sample rate and frame clock are selected before tap attachment. If
+attachment fails, `LiveCaptureController` substitutes a
+`ClockedSilenceAudioHandle` and still starts video. If a live tap fails while
+draining, the controller atomically closes it once, logs once, replaces only
+the audio handle with a silence handle at the same clock phase, and continues
+monotonic video frame submission. Framebuffer grab, video submission,
+temporary-file write, encoder, and mux failures retain the whole-recorder abort
+path: an unwritable encoder audio file cannot be recovered merely by producing
+silence.
+
+### Sample-backed voice decoding
+
+The deterministic software baseline supports the formats currently accepted by
+the OpenAL path:
+
+- unsigned 8-bit PCM and signed little-endian 16-bit PCM;
+- mono duplication to stereo and native stereo;
+- source sample-rate conversion to the negotiated presentation rate;
+- per-voice pitch expressed as a fixed-point source-frame step;
+- linear interpolation between source frames;
+- exact loop wrapping for music and completion for one-shot SFX;
+- existing route gain applied before wide accumulation.
+
+`WavDecoder` validation is tightened so malformed channel counts, bit depths,
+rates, or truncated data fail before voice admission. Decoded immutable sample
+data is cached by asset identity; voice cursors and pitch are per-instance.
+Cache population and resampler setup occur outside the presentation tick.
+
+“Unchanged audio” means command, lifecycle, priority, timing, and audible-source
+parity. The deterministic software resampler becomes the new PCM reference;
+bit equality with implementation-dependent OpenAL resampling is not required.
+
 ## Audio Failure Policy
 
 Audio failure must be graceful and must not stop video recording or gameplay.
@@ -182,7 +267,7 @@ Audio failure must be graceful and must not stop video recording or gameplay.
 | Recording tap fails mid-session | Detach failed tap and submit clocked stereo silence for the remaining video |
 | One malformed WAV/PCM asset | Warn, reject that voice, continue other voices |
 | One software voice throws while rendering | Warn, remove that voice at the frame boundary, continue the mix |
-| Encoder audio write fails but video remains viable | Continue video with silence if the recorder can maintain a valid container |
+| Encoder audio-file write fails | Abort the whole recorder; the container can no longer be guaranteed |
 | Whole recorder/mux fails | Use the existing bounded abort and warning path |
 
 The MKV retains a stereo audio track even when capture audio is unavailable.
@@ -191,13 +276,15 @@ correct.
 
 ## Concurrency and Real-Time Constraints
 
-- Audio commands enter a bounded frame-boundary queue.
+- Audio commands enter a bounded frame-boundary queue with reserved
+  state-command capacity and deterministic voice admission.
 - The mixer has one state owner; OpenAL and capture consumers receive immutable
   packet views or copies from bounded reusable pools.
 - No decoding, file access, process launch, logging formatting, or collection
   growth occurs inside voice rendering.
 - Accumulation uses reusable wide integer buffers and one final saturation pass.
-- Voice and queue counts have explicit bounds with warning/drop policy.
+- Voice and queue counts have explicit named bounds. State-changing commands
+  are never dropped; rejected voice starts warn once.
 - Cleanup order is recording tap, voice registry/history, then OpenAL sink.
 - Failure cleanup is idempotent.
 
@@ -205,13 +292,22 @@ correct.
 
 Migration is staged so every commit retains usable audio:
 
-1. Introduce/test the mixer and software sample voices without changing LWJGL.
-2. Route SEGA PCM and fallback WAV voices through the software registry.
-3. Adapt SMPS music/SFX into the same mixer and prove command parity.
-4. Change LWJGL to consume only final mixed PCM.
-5. Remove legacy independent OpenAL voice/source ownership.
-6. Attach rewind history and live recording to final presentation PCM.
-7. Remove the temporary live-capture runtime switching and handoff code.
+1. Introduce/test the `AudioManager`-owned mixer, composite SMPS adapter, and
+   software sample voices without changing LWJGL output.
+2. Route SEGA PCM and fallback WAV voices through the software registry while
+   retaining legacy output behind parity tests.
+3. Move final-packet history/rewind ownership into the manager-owned
+   presentation producer.
+4. Add speaker FIFO sinks for LWJGL and no-device/headless operation; migrate
+   LWJGL to consume only final mixed PCM.
+5. Remove legacy independent OpenAL music/SFX sources after an architecture
+   guard proves no route uses them.
+6. Attach live recording to final presentation packets and add
+   `ClockedSilenceAudioHandle` degradation.
+7. Preserve `beginCaptureMode` / `drainCaptureFrame` / `endCaptureMode` as
+   compatibility APIs over the same producer, and migrate
+   `TraceCaptureTool`/`TraceCaptureSession` tests before removing temporary
+   runtime switching and handoff code.
 
 The normal playback path must never again be changed by merely toggling
 recording.
@@ -222,16 +318,25 @@ recording.
 
 - exact stereo mixing, saturation, gain, pitch, looping, completion, and stop;
 - decoded WAV and raw PCM resampling;
+- unsigned 8-bit/signed 16-bit, mono/stereo, pitch, interpolation, loop-wrap,
+  completion, cache, and malformed-input behavior;
+- `SmpsCompositeVoice` channel arbitration, priority, DAC fallback,
+  continuous-SFX behavior, and snapshot parity without splitting sequencers;
 - stable multi-voice ordering and frame-boundary mutation;
 - SMPS music plus simultaneous SMPS/WAV/PCM SFX;
 - ring/SFX priority and continuous-SFX behavior;
 - exact frame-clock packet sizes for NTSC and PAL;
 - OpenAL sink queue bounds and no-device fallback;
+- exact equality between each producer packet and both consumer copies before
+  OpenAL aggregation;
+- reverse-entry forward-queue flush/reprime and reverse-release ordering;
 - non-consuming speaker/recording equality;
 - silent capture degradation at attach and mid-session;
 - immediate capture start from an active reverse cursor;
 - rewind rate changes, release crossfade, epoch reset, and repeated recording;
 - ordinary exception and shutdown cleanup.
+- command-capacity reservation, safe coalescing, deterministic voice overflow,
+  and proof that state commands are never dropped.
 
 ### Integration tests
 
@@ -242,9 +347,19 @@ recording.
   in final captured PCM;
 - pause and frame-step submit fresh silence;
 - recording toggles do not reset music or voice cursors;
+- capture-toggle continuity compares logical voice snapshots and cursors
+  immediately before and after attach/detach;
 - audio failure produces a valid silent-track MKV while video continues;
+- injected tap failure preserves frame index, audio-clock phase, recorder
+  state, uninterrupted video, and yields a playable clock-continuous MKV;
 - FFmpeg/ffprobe confirm stereo FLAC duration remains within one sample of the
   video duration.
+- `TraceCaptureTool` and `TraceCaptureSession` retain their offline API
+  behavior through the unified producer.
+- source/architecture guards prove no OpenAL source owns music or SFX after
+  migration.
+- ROM-backed final-PCM assertions cover known title, gameplay, ring, and
+  special-stage events rather than only command dispatch.
 
 ### Manual ROM-backed matrix
 
@@ -275,6 +390,9 @@ tests failed to expose production OpenAL ownership regressions.
 7. Audio capture failure yields correctly timed stereo silence; video and
    gameplay continue.
 8. OpenAL owns only final PCM output after migration.
-9. All automated suites pass, and the three-game manual matrix passes before
+9. Headless/offline capture mixes the same SMPS, WAV, and PCM sources without
+   opening an audio device.
+10. No-device fallback preserves mixer, history, rewind, and capture state
+    across LWJGL initialization failure.
+11. All automated suites pass, and the three-game manual matrix passes before
    the branch is considered ready to merge.
-
