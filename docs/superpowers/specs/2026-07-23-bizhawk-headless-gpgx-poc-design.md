@@ -32,6 +32,9 @@ centre coordinates, and player velocities.
 - Use the verified local BizHawk 2.11 Linux binary distribution and reference
   its managed assemblies directly.
 - Use Mono on Linux for the initial build and runtime.
+- Treat compilation and one direct ten-frame GPGX advance under Mono 6.12 as a
+  feasibility gate. No parser or recorder implementation proceeds until that
+  gate passes with the release dependency set.
 - Load the GPGX core directly. Do not instantiate EmuHawk or any frontend
   display, audio, or movie-session component.
 - Reject ROMs whose SHA-1 is not the Sonic 1 World REV01 hash
@@ -46,8 +49,9 @@ centre coordinates, and player velocities.
    and the locally installed BizHawk 2.11 distribution.
 2. It runs with `DISPLAY` unset and does not instantiate EmuHawk, WinForms,
    rendering, or audio output.
-3. It validates the ROM hash and BK2 platform/core/controller assumptions before
-   emulation.
+3. It validates the ROM hash and BK2 platform/core/controller/sync assumptions
+   before emulation, and applies the accepted sync profile to the constructed
+   GPGX core.
 4. It replays the first 1,000 frames of a supported power-on Genesis BK2 using
    its declared `LogKey`.
 5. It advances GPGX with `render: false` and `renderSound: false`.
@@ -64,20 +68,26 @@ centre coordinates, and player velocities.
   the authoritative way to obtain the binary distribution.
 - The distribution contains a mutually compatible managed dependency set,
   `gpgx.wbx.zst`, and `libwaterboxhost.so`.
-- The first selected BK2 is a power-on movie with a Genesis three-button P1
-  layout and no embedded savestate requirement.
-- A suitable existing Sonic 1 movie and canonical Lua trace are available
-  locally or under test resources for the integration comparison.
+- The first selected BK2 is the tracked
+  `src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2`, SHA-256
+  `dced61b2d3a3346b2ecd62254140497ef2827374c1de8597780f91e39ca0dcea`.
+- Its canonical comparison trace is
+  `src/test/resources/traces/s1/ghz1_fullrun/physics.csv`, SHA-256
+  `dd0a03bfddefa9570d4b49ee2d4ea5e35e2b8141147e17ab482a3654d311cb66`.
 
 ### Risks
 
-- BizHawk may assume a particular process working directory when locating
-  `gpgx.wbx.zst`. The launcher must set and verify the DLL directory explicitly.
+- BizHawk resolves its DLL directory as `$BIZHAWK_HOME/dll` on Unix. The
+  launcher must export an absolute `BIZHAWK_HOME`, set `MONO_PATH` and
+  `LD_LIBRARY_PATH` before Mono starts, and verify the required files before
+  launching.
 - Direct references to a release DLL set can expose transitive assembly-loading
   failures. The launcher must report the missing assembly or native library.
 - BK2 input rows are grouped according to `LogKey`; fixed character offsets
   would silently replay the wrong controls. The parser must derive groups and
   button order from the header.
+- Movie sync settings affect deterministic emulation. The POC must instantiate
+  the exact supported profile from the movie rather than merely inspect it.
 - Recorder timing can be off by one frame. Tests must prove that each row
   describes state after advancing the corresponding BK2 input row.
 - The BizHawk binary bundle contains components with varied licenses. The POC
@@ -117,13 +127,19 @@ BizHawk 2.11 distribution. The current environment provides Mono 6.12, `csc`,
 `mcs`, and `xbuild`; it does not currently provide the .NET SDK. Direct release
 assembly references are therefore the smallest viable first step.
 
+This remains a hypothesis until the first implementation task compiles a
+minimal executable against the release assemblies and advances GPGX ten frames
+under Mono 6.12. Failure of that spike stops this design and triggers a choice
+between a pinned source build and a different supported compiler/runtime.
+
 ## Architecture Decision
 
 ### Decision
 
-Create a Linux-only C# console tool under `tools/bizhawk-headless/`. Compile it
-against the verified BizHawk 2.11 release assemblies and run it with managed and
-native search paths pointing at that installation.
+Create a Linux-only C# console tool under `tools/bizhawk-headless/`. Use
+non-SDK, .NET Framework 4.8-compatible MSBuild projects accepted by Mono
+`xbuild`. Compile them against the verified BizHawk 2.11 release assemblies and
+run with managed and native search paths pointing at that installation.
 
 The application owns no EmuHawk, WinForms, graphics, sound, Lua, or Client.Common
 movie-session objects.
@@ -138,9 +154,25 @@ failure.
 
 #### `BizHawkBootstrap`
 
-Validates the configured BizHawk installation and supplies the directory
-containing managed assemblies, `gpgx.wbx.zst`, and native Waterbox support.
-Release-layout knowledge is confined here and in build/launcher scripts.
+Validates the configured BizHawk installation. On Linux the launcher exports:
+
+```text
+BIZHAWK_HOME=<absolute path to docs/BizHawk-2.11-linux-x64>
+MONO_PATH=$BIZHAWK_HOME/dll
+LD_LIBRARY_PATH=$BIZHAWK_HOME/dll:<existing value>
+```
+
+BizHawk's Unix `PathUtils` consequently resolves
+`DllDirectoryPath` to `$BIZHAWK_HOME/dll`. Before starting Mono, the launcher
+requires `BizHawk.Common.dll`, `BizHawk.Emulation.Common.dll`,
+`BizHawk.Emulation.Cores.dll`, `BizHawk.BizInvoke.dll`, `gpgx.wbx.zst`, and
+`libwaterboxhost.so`. The caller's working directory is not used for asset
+resolution. Release-layout knowledge is confined here and in build/launcher
+scripts.
+
+Before constructing any BizHawk type, the process has `BIZHAWK_HOME` set. The
+feasibility gate asserts at runtime that `PathUtils.DllDirectoryPath` equals the
+absolute `$BIZHAWK_HOME/dll` path.
 
 #### `IGpgxHost`
 
@@ -156,16 +188,35 @@ later milestone requires them.
 
 #### `BizHawkGpgxHost`
 
-Constructs `CoreComm`, `GameInfo`, the ROM asset, GPGX settings, and
-`SimpleController`. It resolves the Genesis Main RAM domain and implements
-`IGpgxHost`. It owns and disposes the core.
+Constructs `CoreComm`, `GameInfo`, a local immutable `IRomAsset`
+implementation, GPGX settings, and a local mutable `IController`
+implementation. `CoreComm` receives a local `ICoreFileProvider` whose firmware
+methods fail clearly if invoked, and `CorePreferencesFlags.None`; Sonic 1
+Genesis cartridge emulation requires no firmware.
+
+The host resolves Genesis Main RAM and implements `IGpgxHost`. It owns and
+disposes the core. It does not reference
+`BizHawk.Client.Common.SimpleController`, keeping the compile-time dependency
+boundary at BizHawk Common, Emulation.Common, Emulation.Cores, BizInvoke, and
+their runtime dependency closure.
 
 #### `Bk2Reader`
 
-Reads the BK2 ZIP, validates `Header.txt` and supported `SyncSettings.json`,
-derives controller groups and button order from `LogKey`, and streams typed
-input frames. Unsupported platforms, cores, controller layouts, malformed rows,
-or savestate-start requirements are errors.
+Reads the BK2 ZIP, validates `Header.txt` and the one supported
+`SyncSettings.json` profile, derives controller groups and button order from
+`LogKey`, and streams typed input frames. Unsupported platforms, cores,
+controller layouts, malformed rows, or savestate-start requirements are
+errors.
+
+For milestone one, the accepted sync profile is the tracked GHZ1 movie's GPGX
+profile: `UseSixButton=false`, `ControlTypeLeft=1`, `ControlTypeRight=1`,
+`Region=0`, `ForceVDP=0`, `LoadBIOS=false`, and `Overscan=3`. All remaining
+serialized fields are parsed and required to equal that fixture. These values
+are assigned to the corresponding GPGX settings object before core
+construction. An unknown or omitted field is rejected rather than defaulted.
+The raw tracked `SyncSettings.json` payload has SHA-256
+`8f4130ebee1f1593080371f1d257477fbb2cc68c1cb691620736639e768c97bc`;
+the committed real-movie parser fixture preserves that payload verbatim.
 
 #### `S1SmokeRecorder`
 
@@ -185,19 +236,56 @@ script locates the verified repository-local installation, supplies Mono and
 native-library paths, unsets frontend-only assumptions, and invokes the console
 application.
 
+### Project and test layout
+
+```text
+tools/bizhawk-headless/
+  BizHawk.Headless.Gpgx.csproj
+  BizHawk.Headless.Gpgx.Tests.csproj
+  src/
+  tests/
+  fixtures/
+  build.sh
+  test.sh
+  run.sh
+```
+
+Both projects are non-SDK projects targeting .NET Framework 4.8-compatible Mono
+assemblies. The test project is a dependency-free console runner with focused
+test methods and assertion helpers; any failure prints the test name and returns
+non-zero. This avoids adding a NuGet test framework for the POC.
+
+The exact gates are:
+
+```bash
+tools/bizhawk-headless/build.sh
+tools/bizhawk-headless/test.sh
+env -u DISPLAY tools/bizhawk-headless/run.sh ...
+```
+
+`build.sh` invokes `xbuild` for both projects. `test.sh` runs the test executable
+through Mono with the same BizHawk environment as `run.sh`. A future
+source-build migration converts these project files to SDK style while
+retaining the source directories, interfaces, fixtures, and tests, then
+replaces assembly references with pinned project references. It does not ask
+`xbuild` to consume BizHawk's SDK-style source projects.
+
 ### Data flow
 
 1. Validate CLI paths, BizHawk installation, ROM SHA-1, and BK2 metadata.
 2. Construct GPGX and resolve Main RAM.
-3. Open a temporary CSV beside the requested output.
+3. Exclusively create a uniquely named temporary CSV beside the requested
+   output. Concurrent runs never share a temporary path.
 4. For each BK2 row up to `--max-frames`:
    1. clear the prior controller state;
    2. apply the row's Power/Reset/P1 button states;
-   3. advance GPGX once without rendering or sound;
    4. read the just-completed frame's S1 RAM values;
    5. append one CSV row.
 5. Flush and close the temporary file.
-6. Atomically rename it to `smoke.csv`.
+6. Atomically publish it to `smoke.csv` with no-replace semantics. On Linux this
+   uses a hard-link publication in the same directory (`link(temp, final)`)
+   followed by deletion of the temporary name; an existing final path makes
+   `link` fail without replacing it.
 
 ### Migration to a source-built BizHawk
 
@@ -227,21 +315,40 @@ tools/bizhawk-headless/run.sh \
 ```
 
 Required arguments are `--rom`, `--movie`, and `--output`.
-`--max-frames` defaults to `1000` and must be positive.
+`--max-frames` defaults to `1000` and must be in the inclusive range
+`1..1000`.
 
 The output directory may be created by the tool. An existing finalized
-`smoke.csv` is not overwritten; the command fails and asks the caller to choose
-another output directory or remove the file explicitly.
+`smoke.csv` is not overwritten. Finalization uses same-directory hard-link
+publication so a file created between the initial check and publication is
+also preserved.
 
 ### Supported movie subset
 
-- Platform: Genesis.
-- Core: Genplus-gx.
-- Start: power-on, without an embedded savestate dependency.
+- `Header.txt` must contain exactly one `Core Genplus-gx` entry and one
+  `Platform GEN` entry. Duplicate keys are rejected. `StartsFromSavestate` and
+  `StartsFromSaveRam` must both be absent or parse as `false`; true values are
+  rejected.
+- Start: power-on, without an embedded savestate or SaveRAM dependency.
+- `Input Log.txt` contains a single `[Input]` ... `[/Input]` section. Its first
+  nonblank line is:
+
+  ```text
+  LogKey:#Power|Reset|#P1 Up|P1 Down|P1 Left|P1 Right|P1 A|P1 B|P1 C|P1 Start|#P2 Up|P2 Down|P2 Left|P2 Right|P2 A|P2 B|P2 C|P2 Start|
+  ```
+
+- Each subsequent input row is exactly
+  `|SS|PPPPPPPP|QQQQQQQQ|`, where each character is `.` for released or a
+  non-dot button marker for pressed. `SS`, `PPPPPPPP`, and `QQQQQQQQ` map by
+  their declared group entries, not by a second hardcoded button table.
 - Controllers: system Power/Reset plus the declared P1 three-button layout.
 - P2 inputs may be parsed but are rejected if active in milestone one.
 - Button order is derived from `LogKey`; it is never hardcoded to character
   offsets.
+
+The smoke CSV `input` field uses the existing OpenGGF mask:
+`Up=0x0001`, `Down=0x0002`, `Left=0x0004`, `Right=0x0008`,
+`A=0x0010`, `B=0x0020`, `C=0x0040`, and `Start=0x0080`.
 
 ### Frame semantics
 
@@ -251,22 +358,37 @@ GPGX completed-frame counter, not a guessed zero-based CSV index.
 
 ### RAM semantics
 
-The smoke recorder reads the Sonic 1 player object's native `x_pos`, `y_pos`,
-`x_vel`, and `y_vel` fields from Genesis Main RAM using the core domain's byte
-ordering. Position values are ROM centre coordinates.
+The GPGX `Main RAM` domain exposes the 64 KiB Genesis work-RAM window
+`$FF0000`–`$FFFFFF` as offsets `$0000`–`$FFFF`. Sonic's object base `$FFD000`
+therefore maps to domain offset `$D000`. Multi-byte values are read explicitly
+as big-endian bytes from that domain:
 
-The exact addresses and signedness are named constants in the Sonic 1 smoke
-recorder and covered by focused decode tests.
+- `x_pos`: `$D008`, unsigned 16-bit centre X;
+- `y_pos`: `$D00C`, unsigned 16-bit centre Y;
+- `x_vel`: `$D010`, signed two's-complement 16-bit velocity;
+- `y_vel`: `$D012`, signed two's-complement 16-bit velocity.
+
+The implementation composes words from two byte reads rather than relying on an
+ambiguous domain-endianness convenience method.
+
+All CSV numeric columns use uppercase four-digit hexadecimal without `0x`. The
+file is UTF-8 without BOM, uses LF line endings and invariant formatting, and
+ends with one newline.
 
 ### Error handling
 
 - Validation completes before the finalized output path is created.
 - Errors identify the rejected ROM hash, movie field, controller setting,
   missing BizHawk file, or malformed BK2 row.
-- Partial output uses a deterministic temporary filename within the output
-  directory and is removed on handled failure.
-- Successful finalization uses an atomic rename on the same filesystem.
+- Partial output uses an exclusively created unique temporary filename within
+  the output directory and is removed on handled failure.
+- Successful finalization uses same-directory hard-link publication with
+  no-replace semantics.
 - The process returns zero only after finalization succeeds.
+- Reaching movie end before the requested frame count is an error and does not
+  finalize output.
+- An uncatchable termination such as `SIGKILL` may leave the uniquely named
+  temporary file, but can never create a false finalized `smoke.csv`.
 
 ### Observability
 
@@ -278,7 +400,9 @@ Per-frame logging is omitted.
 
 ### Unit tests
 
-1. Parse a synthetic BK2 ZIP whose `LogKey` uses a known Genesis layout.
+1. Parse a synthetic BK2 ZIP whose `LogKey` uses the accepted Genesis grammar,
+   plus a small committed fixture containing the real GHZ1 movie's header,
+   sync-settings document, log key, and first input rows.
 2. Map Power, Reset, directions, A, B, C, and Start by declared name and group.
 3. Reject malformed rows, unsupported core/platform, active P2 input, unsupported
    sync settings, and savestate-start movies.
@@ -288,18 +412,41 @@ Per-frame logging is omitted.
 6. Prove the recorder observes state after frame advancement rather than before
    it.
 7. Prove a failed run does not finalize `smoke.csv`.
+8. Prove both a pre-existing final file and a file created immediately before
+   publication remain byte-identical and are not replaced.
+9. Prove `--max-frames` rejects zero and values above `1000`, and that early
+   movie exhaustion fails without finalization.
+10. Assert exact UTF-8-without-BOM, LF, uppercase-hex, and final-newline output.
 
 ### Integration tests
 
-1. With `DISPLAY` unset, load GPGX and advance ten frames using the pinned local
-   BizHawk distribution.
+1. As the mandatory feasibility gate, run `build.sh`, assert the release
+   assemblies report version `2.11.0.0`, assert the runtime
+   `PathUtils.DllDirectoryPath`, then with `DISPLAY` unset load GPGX and advance
+   ten frames using the pinned local BizHawk distribution.
 2. Capture 1,000 frames twice and compare SHA-256 hashes of `smoke.csv`.
-3. Compare selected input, position, and velocity rows with an existing
-   canonical Lua trace from the same ROM and BK2.
+3. Compare the native smoke rows corresponding to canonical trace frames `0000`,
+   `0001`, and `03E7` with
+   `src/test/resources/traces/s1/ghz1_fullrun/physics.csv`. The expected
+   `(input,x,y,x_velocity,y_velocity)` values are respectively:
+
+   ```text
+   0000: (0000,0050,03B0,0000,0000)
+   0001: (0000,0050,03B0,0000,0000)
+   03E7: (0008,09A5,02AA,0272,FF80)
+   ```
+
+   The test derives row alignment using the explicit completed-frame semantics;
+   it does not search the trace for matching values.
 
 ROM-backed integration tests skip with an explicit reason when the user-supplied
 ROM or downloaded BizHawk distribution is absent. They must fail, rather than
 skip, when dependencies are present but incompatible.
+
+GPGX may initialize its internal video-emulation state and buffers during core
+construction. “Headless” here means no EmuHawk/frontend/display context, no
+video presentation or rendered frames, and no audio synthesis/output; it does
+not mean removing the emulated VDP from the core.
 
 ## Future Milestones
 
