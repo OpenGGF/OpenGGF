@@ -1014,10 +1014,10 @@ public class TestTraceBinder {
 
     @Test
     void testSidekickCpuPresentReportsEngineAbsenceWhenTraceCarriesCpuState() {
-        TraceFrame frame = TraceFrame.of(117, 0x0000,
-            (short) 0x0050, (short) 0x03B0,
-            (short) 0x0000, (short) 0x0000, (short) 0x0000,
-            (byte) 0x00, false, false, 0);
+        TraceCharacterState recordedTails = new TraceCharacterState(
+                true, (short) 0, (short) 0, (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0, 0, 0, 0x02, 0, 0);
+        TraceFrame frame = frameWithSidekick(117, recordedTails);
         TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
                 117, "tails", 0x11, 0, 0, 0x06,
                 (short) 0x0000, (short) 0x0000, 0,
@@ -1034,6 +1034,30 @@ public class TestTraceBinder {
 
         assertEquals(Severity.ERROR, result.fields().get("tails_cpu_present").severity());
         assertTrue(result.hasError());
+    }
+
+    @Test
+    void testSidekickCpuComparisonSkippedWhenRecordedSidekickIsAbsent() {
+        TraceCharacterState absentTails = new TraceCharacterState(
+                false, (short) 0, (short) 0, (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0, 0, 0, 0, 0, 0);
+        TraceFrame frame = frameWithSidekick(117, absentTails);
+        TraceEvent.CpuState dormantCpuGlobals = new TraceEvent.CpuState(
+                117, "tails", 0, 0, 0, 0,
+                (short) 0, (short) 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, (short) 0, (short) 0,
+                0, 0, 0, 0, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0, (short) 0,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0,
+                null, null, "tails", absentTails, dormantCpuGlobals, null);
+
+        assertFalse(result.fields().containsKey("tails_cpu_present"));
+        assertTrue(result.fields().keySet().stream().noneMatch(name -> name.startsWith("tails_cpu_")));
     }
 
     @Test

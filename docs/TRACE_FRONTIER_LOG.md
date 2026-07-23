@@ -1,5 +1,25 @@
 # Trace Frontier Log
 
+### 2026-07-23 -- S2 suppressed-sidekick and render-entry regressions fixed
+
+A full 20-class / 21-test S2 trace sweep exposed two independent regressions.
+SCZ and WFZ are Sonic+Tails sessions whose level flow suppresses the Tails
+sprite; their dormant CPU globals no longer make `TraceBinder` invent an
+active sidekick when the recorded `sidekick_present` bit is clear.
+
+The OOZ2 fresh-render-entry compatibility predicate was also too broad. It
+delayed `Tails_respawn_counter` reset for one frame in CNZ2, CPZ2, MCZ2, and
+OOZ1 whenever the delayed leader sample was air+rolling, even though those
+entries occurred near the vertical centre. The delay now additionally requires
+the native lower render-boundary state. CNZ2, MCZ2, OOZ1, SCZ, and WFZ are
+green again, while OOZ2 remains green. CPZ2 advances from f1601 to its
+independent f7206 `tails_cpu_target_y` frontier.
+
+Fresh full-sweep result: 19/21 tests pass across all S2 trace replay classes.
+The remaining frontiers are CPZ2 f7206 / 1 error (`tails_cpu_target_y`,
+expected `$050F`, actual `$0521`) and DEZ ending bootstrap f0 / 38 errors
+(`player_history.y[26]`, expected `$0131`, actual `$0130`).
+
 ### 2026-07-22 -- ICZ complete-run f11976 attracted-ring target phase FIXED; physics frontier f12107
 
 The ROM's slot-13 `Obj_Attracted_Ring` reaches `(0x6710,0x02C6)` and enters

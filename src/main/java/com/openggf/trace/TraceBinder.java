@@ -640,7 +640,7 @@ public class TraceBinder {
             TraceEvent.CpuState expected, EngineSidekickCpuState actual,
             TraceCharacterState expectedSidekick, TraceCharacterState actualSidekick,
             TraceEvent.TailsCpuNormalStep expectedNormalStep) {
-        if (expected == null) {
+        if (expected == null || expectedSidekick != null && !expectedSidekick.present()) {
             return;
         }
         boolean actualPresent = actual != null;
