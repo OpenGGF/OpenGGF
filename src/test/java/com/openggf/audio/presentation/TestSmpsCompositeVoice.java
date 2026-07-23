@@ -49,23 +49,40 @@ class TestSmpsCompositeVoice {
         assertThrows(IllegalArgumentException.class,
                 () -> capacityVoice.mixInto(new long[(MAX_STEREO_FRAMES + 1) * 2], MAX_STEREO_FRAMES + 1));
         assertEquals(0, capacityDriver.readCalls, "capacity rejection must happen before SmpsDriver.read");
+
+        long[] mixed = new long[MAX_STEREO_FRAMES * 2];
+        capacityVoice.mixInto(mixed, MAX_STEREO_FRAMES);
+
+        assertEquals(1, capacityDriver.readCalls);
+        assertArrayEquals(new long[] {100, -100, 101, -101, 102, -102, 103, -103,
+                104, -104, 105, -105, 106, -106, 107, -107}, mixed);
     }
 
     @Test
     void driverChannelLocksAndPriorityRemainInsideComposite() {
-        NoDeviceBackend backend = backend(false);
-        backend.playSmps(data("music", 0x81), dacData(), config(), false);
-        SmpsDriver musicDriver = backend.musicDriverForTesting();
-        SmpsCompositeVoice voice = composite(musicDriver);
-        backend.playSfxSmps(data("low", 0xB0), dacData(), 1.0f, config());
-        backend.playSfxSmps(data("high", 0xB1), dacData(), 1.0f, config());
+        RecordingSmpsDriver driver = new RecordingSmpsDriver();
+        SmpsCompositeVoice voice = composite(driver);
+        SmpsSequencer music = sequencer(fixtureData("music", 0x81), driver);
+        SmpsSequencer lowPriority = sequencer(fixtureData("low", 0xB0), driver);
+        SmpsSequencer highPriority = sequencer(fixtureData("high", 0xB1), driver);
+        lowPriority.setSfxPriority(0x20);
+        highPriority.setSfxPriority(0x60);
+        driver.addSequencer(music, false);
+        driver.addSequencer(lowPriority, true);
+        driver.addSequencer(highPriority, true);
+        driver.writeFm(lowPriority, 0, 0xA0, 0x22);
+        driver.writeFm(highPriority, 0, 0xA0, 0x44);
+
+        long[] mixed = new long[4];
+        voice.mixInto(mixed, 2);
 
         PresentationVoiceSnapshot.Smps snapshot = (PresentationVoiceSnapshot.Smps) voice.snapshot();
 
-        assertSame(musicDriver, backend.musicDriverForTesting());
-        assertSame(backend.currentStreamForTesting(), voice.driver());
-        assertNull(backend.sfxStreamForTesting());
+        assertArrayEquals(new long[] {100, -100, 101, -101}, mixed);
+        assertEquals(1, driver.readCalls);
+        assertSame(driver, voice.driver());
         assertEquals(3, snapshot.driver().sequencers().size());
+        assertEquals(2, snapshot.driver().fmLockSequencerIds()[0]);
         assertEquals(0x20, snapshot.driver().sequencers().get(1).snapshot().sfxPriority());
         assertEquals(0x60, snapshot.driver().sequencers().get(2).snapshot().sfxPriority());
         assertFalse(snapshot.driver().sequencers().get(0).sfx());
@@ -160,8 +177,15 @@ class TestSmpsCompositeVoice {
     }
 
     private static SmpsSequencer sequencer(String name, int id, SmpsDriver driver) {
-        return new SmpsSequencer(data(name, id), AudioTestFixtures.EMPTY_DAC, driver,
-                AudioManager.getInstance(), config());
+        return sequencer(data(name, id), driver);
+    }
+
+    private static SmpsSequencer sequencer(AbstractSmpsData data, SmpsDriver driver) {
+        return new SmpsSequencer(data, AudioTestFixtures.EMPTY_DAC, driver, AudioManager.getInstance(), config());
+    }
+
+    private static AbstractSmpsData fixtureData(String name, int id) {
+        return new FixtureSmpsData(name, id);
     }
 
     private static DacData dacData() {
@@ -265,5 +289,24 @@ class TestSmpsCompositeVoice {
             stopAllCalls++;
             super.stopAll();
         }
+    }
+
+    private static final class FixtureSmpsData extends AbstractSmpsData {
+        private final String name;
+
+        private FixtureSmpsData(String name, int id) {
+            super(new byte[] {0}, 0);
+            this.name = name;
+            setId(id);
+            dividingTiming = 1;
+            tempo = 1;
+        }
+
+        @Override protected void parseHeader() { }
+        @Override public byte[] getVoice(int voiceId) { return new byte[25]; }
+        @Override public byte[] getPsgEnvelope(int id) { return new byte[0]; }
+        @Override public int read16(int offset) { return 0; }
+        @Override public int getBaseNoteOffset() { return 0; }
+        @Override public String toString() { return name; }
     }
 }
