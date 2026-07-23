@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ miniboss parent-slot collision publication
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 20804 to
+  frame 20970.** The next divergence is Sonic's horizontal speed (`$0134`
+  expected versus `$0200` actual).
+- Root: the engine folds the miniboss parent tracker and its later child slots
+  into one aggregate update. Its live parent X had therefore advanced beyond
+  the parent-slot value published to the native `Collision_response_list`,
+  making the third body contact occur one frame early at an exact horizontal
+  boundary.
+- Fix: the miniboss body retains the X published on parent-slot entry while
+  its tracker advances the live render position. Independently phased arm
+  children continue to publish their own coordinates. Focused coverage locks
+  the distinction between the retained body touch X and the advanced parent X.
+- Validation: all nine focused LBZ miniboss/transition tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes; LBZ reaches frame 20970 with 5638 remaining
+  errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ miniboss arm-child initialization dispatch
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 20519 to

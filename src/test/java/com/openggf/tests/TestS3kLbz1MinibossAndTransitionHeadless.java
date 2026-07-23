@@ -178,6 +178,26 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
     }
 
     @Test
+    void minibossBodyTouchRegionRetainsPublishedParentSlotX() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        LbzMinibossInstance miniboss = spawnMiniboss();
+        miniboss.forceOpenForTest(ARENA_X, ARENA_Y);
+        player.setCentreX((short) (ARENA_X + 0x40));
+        player.setCentreY((short) (ARENA_Y + 0x38));
+
+        miniboss.update(0, player);
+
+        assertEquals(ARENA_X + 1, miniboss.getX(),
+                "The folded parent tracker advances after publishing its collision-list entry.");
+        TouchResponseProvider.TouchRegion[] regions = miniboss.getMultiTouchRegions();
+        assertNotNull(regions);
+        assertEquals(ARENA_X, regions[0].x(),
+                "The body region must retain the parent slot X published before tracker movement.");
+        assertEquals(0x06, regions[0].collisionFlags());
+    }
+
+    @Test
     void boxOpenedChunkSwapWritesBossAreaChunk() {
         lbzFixture();
         Sonic3kLBZEvents events = lbzEvents();

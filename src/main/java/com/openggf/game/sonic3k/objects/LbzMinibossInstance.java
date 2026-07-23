@@ -102,6 +102,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private int hitReactionTimer;
     private int savedRoutine;
     private int homeX;
+    private int bodyTouchX;
     private int openingLoopCounter;
     private int bodyFrame;
     private int bodyAnimIndex;
@@ -130,6 +131,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     public LbzMinibossInstance(ObjectSpawn spawn) {
         super(spawn, "LBZMiniboss");
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+        this.bodyTouchX = spawn.x();
     }
 
     /**
@@ -176,7 +178,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         List<TouchRegion> regions = new ArrayList<>();
         int bodyFlags = getCollisionFlags();
         if (bodyFlags != 0) {
-            regions.add(new TouchRegion(getX(), getY(), bodyFlags));
+            regions.add(new TouchRegion(bodyTouchX, getY(), bodyFlags));
         }
         for (PanelState panel : panels) {
             if (!panel.center && !panel.detached && !panel.deleted) {
@@ -225,6 +227,12 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             updateDynamicSpawn(getX(), getY());
             return;
         }
+        // The native Collision_response_list retains the parent slot's X from
+        // the execution pass that published it. The engine folds the parent's
+        // later-slot tracker into this aggregate object, so retain that
+        // published X separately from the position advanced below. Arm child
+        // regions already maintain their own independent slot phase.
+        bodyTouchX = getX();
         switch (routine) {
             case ROUTINE_INIT -> initialize();
             case ROUTINE_INIT_WAIT -> tickWait();
@@ -321,6 +329,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         motion.xVel = 0;
         motion.yVel = 0;
         homeX = x;
+        bodyTouchX = x;
         bodyFrame = 0;
         bodyAnimIndex = 0;
         bodyAnimTimer = OPENING_WAIT;
