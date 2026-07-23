@@ -68,6 +68,25 @@ class TestS3kFlybot767Badnik {
     }
 
     @Test
+    void restoredRoutineContinuesMovementDuringBriefViewportExit() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0300, 0x0300, 0);
+        AbstractObjectInstance flybot = createFlybotAt(0x0800, 0x0100);
+        AbstractPlayableSprite player = playerAt(0x0800, 0x0140);
+        setEnum(flybot, "state", "DIVE");
+        setInt(flybot, "xVelocity", 0x200);
+        setInt(flybot, "yVelocity", 0x200);
+        setInt(flybot, "waitTimer", 0x20);
+        setBoolean(flybot, "waitingForOnscreen", false);
+
+        flybot.update(0, player);
+
+        assertEquals(0x0802, flybot.getX(),
+                "Sprite_CheckDeleteTouchSlotted runs the restored routine before its deletion check");
+        assertEquals(0x0102, flybot.getY());
+        assertTrue(flybot.publishesTouchResponseListEntryThisFrame());
+    }
+
+    @Test
     void traceFrame410KeepsFlybotOnePixelColumnBeforeTouchOverlap() {
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
         AbstractObjectInstance flybot = createFlybotAt(0x0406, 0x05CC);

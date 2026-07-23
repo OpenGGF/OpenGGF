@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ restored Flybot offscreen execution
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 24160 to
+  frame 25575.** The next divergence is CPU Tails' Y speed (`-$0680`
+  expected versus `-$0580` actual).
+- Root: after `Obj_WaitOffscreen` restores `Obj_Flybot767`, the native routine
+  continues executing before `Sprite_CheckDeleteTouchSlotted` performs its
+  deletion/publication tail. The engine instead applied its initial wait gate
+  on every later viewport exit, freezing the Flybot for twelve passes and
+  leaving it in Sonic's path for a false enemy bounce.
+- Fix: the viewport wait now gates only the initial
+  `Map_Offscreen`/`Obj_WaitOffscreen` phase. Restored Flybot routines continue
+  movement and collision-list publication during brief viewport exits.
+- Validation: all eight focused Flybot tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ retained Flybot placeholder phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 24046 to
