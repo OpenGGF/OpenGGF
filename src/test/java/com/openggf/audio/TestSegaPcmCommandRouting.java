@@ -5,6 +5,10 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.AudioOutputFifo;
 import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
+import com.openggf.audio.presentation.DecodedPcm;
+import com.openggf.audio.presentation.DecodedPcmCache;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.SampleBackedVoice;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
@@ -49,6 +53,35 @@ class TestSegaPcmCommandRouting {
         assertEquals(6, stream.read(buffer));
 
         assertArrayEquals(new short[] {-8192, -8192, 0, 0, 8128, 8128}, buffer);
+    }
+
+    @Test
+    void rawSampleVoiceMatchesLegacyYmDacOutputScale() {
+        DecodedPcmCache cache = new DecodedPcmCache();
+        DecodedPcm pcm = cache.registerUnsigned8Mono("sega", 48_000,
+                new byte[] {0, (byte) 0x80, (byte) 0xFF});
+        SampleBackedVoice voice = SampleBackedVoice.rawSegaPcm(1, 0, pcm, 48_000);
+        long[] accumulation = new long[6];
+
+        voice.mixInto(accumulation, 3);
+
+        assertArrayEquals(new long[] {-8192, -8192, 0, 0, 8128, 8128}, accumulation);
+    }
+
+    @Test
+    void rawSampleVoiceRestoresAfterRemovalUsingCachedAsset() {
+        DecodedPcmCache cache = new DecodedPcmCache();
+        DecodedPcm pcm = cache.registerUnsigned8Mono("sega", 48_000,
+                new byte[] {0, (byte) 0x80, (byte) 0xFF});
+        SampleBackedVoice removedVoice = SampleBackedVoice.rawSegaPcm(1, 0, pcm, 48_000);
+        removedVoice.mixInto(new long[2], 1);
+        PresentationVoiceSnapshot.Sample snapshot = (PresentationVoiceSnapshot.Sample) removedVoice.snapshot();
+        SampleBackedVoice restored = SampleBackedVoice.restore(snapshot, cache);
+        long[] accumulation = new long[4];
+
+        restored.mixInto(accumulation, 2);
+
+        assertArrayEquals(new long[] {0, 0, 8128, 8128}, accumulation);
     }
 
     @Test
