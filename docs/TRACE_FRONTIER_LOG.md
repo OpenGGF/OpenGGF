@@ -49119,3 +49119,88 @@ replays, and ICZ complete-run, and moves several known-red complete-run
 frontiers substantially earlier (including CNZ, HCZ, LBZ, and MHZ). The AIZ
 alignment abort and CNZ f0 bootstrap mismatch are input/bootstrap regressions,
 not later true parity frontiers.
+
+## 2026-07-23 - S3K structural replay corrective verification
+
+Verification was repeated at clean tracked commit
+`737fc562ec6c1f40e4c0ffc53de2ad9c6213f6a8` on branch
+`bugfix/ai-s3k-structural-replay-phases-impl`. Only the existing untracked
+disassembly links under `docs/` were present. Commands with a task-specified
+heap override used `-Xshare:off -Xmx3g`.
+
+Focused CNZ:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 16 tests, 12 failures, 0 errors, 4 passes.
+- Input alignment passes and the prior f0 `y_speed` bootstrap divergence is
+  gone. The new first comparison error is f0 `player_animation_id` (ROM
+  `0x0005`, engine `0x0000`), with 9,125 total errors in the focused run.
+- The fleet invocation later reproduced the same first frame/field/value but
+  reported 9,116 errors. Both exact measurements are retained because the
+  nine-error repeat-order difference means the downstream count is not stable
+  across these two invocations.
+
+Focused AIZ:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 16 tests, 14 failures, 0 errors, 2 passes.
+- Input alignment now passes. The prior f290 route-state/bootstrap divergence
+  is gone; comparison reaches f717 `x` (ROM `0x0040`, engine `0x0050`) with
+  5,147 errors. The fleet reproduces the same count and first error.
+
+Must-keep-green/bootstrap selection:
+
+```bash
+mvn -Dtest='com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kBootstrapResolver,com.openggf.tests.TestSonic3kDecodingUtils,com.openggf.tests.trace.TestTraceReplayStartPositionPolicy,com.openggf.trace.TestPreludeFramesKnobsZero,com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.trace.TestTraceAnimationRecorderContract' test
+```
+
+- Exit 0. The prescribed command discovered 105 tests; all 105 passed with 0
+  failures or errors. The prior `TestBuildToolingGuard` failure is fixed.
+- The command's two `TestSonic3k*` package names are stale:
+  `TestSonic3kBootstrapResolver` and `TestSonic3kDecodingUtils` actually live
+  under `com.openggf.game.sonic3k`, not `com.openggf.tests`, so those classes
+  were not among the 105 discovered tests. Supplemental command
+  `mvn -Dtest='com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils' test`
+  exits 0 with all 8 tests passing (5 + 3).
+
+S3K fleet:
+
+```bash
+mvn -Dtest='*S3k*TraceReplay' \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 46 tests, 38 failures, 0 errors, 8 passes. The two special-stage
+  tests pass; the other six passes are focused AIZ/CNZ methods.
+
+| Replay | Errors / state | First failure |
+|---|---:|---|
+| AIZ standalone | 5,147 | f717 `x`: `0x0040` / `0x0050` |
+| CNZ standalone | 9,116 | f0 `player_animation_id`: `0x0005` / `0x0000` |
+| AIZ complete-run | 5,831 | f2574 `camera_x`: `0x1CCD` / `0x1CD7` |
+| CNZ complete-run | 9,721 | f0 `y`: `0x0600` / `0x061C` |
+| HCZ complete-run | 6,008 | f0 `x`: `0x027F` / `0x0280` |
+| MGZ standalone | 7,623 | f0 `x_sub`: `0x1800` / `0x0000` |
+| MGZ complete-run | 9,347 | f0 `y_speed`: `0x0038` / `0x0000` |
+| ICZ complete-run | 6,563 | f0 `player_mapping_frame`: `0x0000` / `0x0096` |
+| LBZ complete-run | 9,298 | f0 `player_mapping_frame`: `0x0000` / `0x0007` |
+| MHZ complete-run | 6,037 | f0 `y`: `0x0500` / `0x051C` |
+| Slots bonus | 11 | f1052 `x`: `0x0000` / `0x0572` |
+| Gumball bonus | 209 | f0 `x`: `0x00FF` / `0x0100` |
+| Pachinko bonus | 1,064 | f0 `air`: `1` / `0` |
+| Special stage | green | 2 tests pass; report has 0 errors, 3 warnings |
+
+The corrective commits fix both requested standalone gates: AIZ is input-aligned
+at a later true comparison frontier, and CNZ no longer applies f0 gravity.
+However, the fleet is not regression-clean. Several previously green or later
+frontier routes still begin at f0, and HCZ/MGZ/bonus results moved earlier
+relative to the immediately preceding verification. This remains a
+`DONE_WITH_CONCERNS` verification snapshot, not a green release baseline.
