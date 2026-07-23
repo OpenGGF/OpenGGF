@@ -1,5 +1,42 @@
 # Trace Frontier Log
 
+### 2026-07-23 -- CPZ2 and DEZ level-select regressions fixed
+
+CPZ2's sole remaining divergence at f7206 was a missing
+`TailsCPU_Flying_Part2` water clamp. The routine publishes the delayed leader Y
+through `min(Pos_table_y, Water_Level_1-$10)` (`docs/s2disasm/s2.asm:
+39219-39227`). The engine now applies its existing semantic water-target clamp
+to automatic recovery flight. The clamp also resolves water through
+`LevelManager.getFeatureZoneId/getFeatureActId`, matching player water physics;
+using the progression zone (`CPZ=1`) missed WaterSystem's ROM-zone key
+(`CPZ=$0D`) and silently returned no water.
+
+DEZ's 38 frame-zero history errors were a title-card bootstrap regression.
+`isS2TornadoRideStartMetadataCandidate` is intentionally broad, but bootstrap
+placement incorrectly treated it as proof that a live ObjB2 Tornado existed.
+DEZ therefore skipped the native `(0x0060,0x012D)` leader anchor and prefilled
+`Sonic_Pos_Record_Buf` from the post-title-card Y `0x012C`, producing `0x0130`
+instead of `0x0131`. Confirmed Tornado ordering now depends only on the live
+ROM-loaded Tornado object; generic S2 routes retain their native level-start
+anchor.
+
+Focused verification on local branch `bugfix/ai-cpz2-dez-trace-regressions`:
+
+- `TestSidekickCpuControllerFlightAutoRecovery,TestRespawnStrategies`: 43/43
+  pass.
+- `TestS2ReplayBootstrapTailsFrame0#nativePreludeSeedsPlayerHistoryFromRomOrdering`:
+  EHZ, SCZ, WFZ, and DEZ all pass.
+- `TestS2Cpz2LevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay`:
+  2/2 pass with zero release-blocking divergences.
+
+The all-game `*TraceReplay` command used the discovered REV01 S1/S2 and locked-on
+S3K ROMs. It completed 57 tests before the Surefire fork exhausted its Java
+heap. Every S1 and S2 trace executed before termination passed, including the
+full 20-class / 21-test S2 fleet. The observed failures were pre-existing S3K
+frontiers: MHZ complete-run f218 (`tails_animation_id`, 4651 errors) and MGZ
+f5164 (`air`, 8072 errors). The heap failure prevented this run from being a
+complete all-game fleet result.
+
 ### 2026-07-23 -- S2 suppressed-sidekick and render-entry regressions fixed
 
 A full 20-class / 21-test S2 trace sweep exposed two independent regressions.

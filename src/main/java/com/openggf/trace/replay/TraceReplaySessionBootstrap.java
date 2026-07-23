@@ -313,9 +313,9 @@ public final class TraceReplaySessionBootstrap {
                             && gameplayMode.getSpriteManager() != null;
             boolean tornadoPreludeOrder =
                     interleaveSidekickPrelude
-                            && TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace);
+                            && findRideStartTornado(objectManager) != null;
             if (interleaveSidekickPrelude) {
-                prepareSidekickPreludePlacement(trace, gameplayMode);
+                prepareSidekickPreludePlacement(trace, gameplayMode, tornadoPreludeOrder);
             }
             int consumedPreludeFrames = 0;
             if (tornadoPreludeOrder) {
@@ -365,7 +365,7 @@ public final class TraceReplaySessionBootstrap {
             // begins ticking. Otherwise the first prelude leader-record write
             // for slot 0 is overwritten when SidekickCpuController.updateInit
             // re-runs the pre-fill from its own first tick.
-            prepareSidekickPreludePlacement(trace, gameplayMode);
+            prepareSidekickPreludePlacement(trace, gameplayMode, false);
             gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(
                     sidekickPreludeFrames,
                     gameplayMode.getLevelManager(),
@@ -567,12 +567,13 @@ public final class TraceReplaySessionBootstrap {
 
     private static void prepareSidekickPreludePlacement(
             TraceData trace,
-            com.openggf.game.session.GameplayModeContext gameplayMode) {
+            com.openggf.game.session.GameplayModeContext gameplayMode,
+            boolean tornadoPreludeOrder) {
         boolean useMetadataStartAnchor = trace != null
                 && trace.metadata() != null
                 && "s2".equals(trace.metadata().game())
                 && trace.metadata().nativePreludeMode()
-                && !TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace);
+                && !tornadoPreludeOrder;
         int[] levelStart = useMetadataStartAnchor
                 ? resolveCurrentLevelStart()
                 : null;
