@@ -4421,7 +4421,8 @@ public class SidekickCpuController {
                 && sidekick.getAir()
                 && sidekick.getRolling()
                 && delayedLeaderSampleIsUncontrolledAirRoll()
-                && isNearHorizontalRenderEntryEdge()) {
+                && isNearHorizontalRenderEntryEdge()
+                && isNearVerticalRenderBoundary()) {
             onScreen = false;
             delayingFreshRenderEntry = true;
             normalDespawnFreshRenderEntryDelayConsumed = true;
@@ -4554,6 +4555,19 @@ public class SidekickCpuController {
         int relX = sidekick.getRenderCentreX() - camera.getX();
         return (relX > -widthPixels && relX < 0)
                 || (relX >= camera.getWidth() && relX < camera.getWidth() + widthPixels);
+    }
+
+    private boolean isNearVerticalRenderBoundary() {
+        var camera = sidekick.currentCamera();
+        if (camera == null) {
+            return false;
+        }
+        // The native display list publishes this lower-edge entry across two
+        // 0x20-pixel cells; the engine viewport may be taller than the 224-line
+        // Mega Drive display and must not widen that native window.
+        int relY = sidekick.getRenderCentreY() - camera.getY();
+        int nativeDisplayHeight = Math.min(camera.getHeight(), 224);
+        return relY >= nativeDisplayHeight - 0x40;
     }
 
     /**

@@ -1454,6 +1454,27 @@ class TestSidekickCpuDespawnParity {
         }
     }
 
+    @Test
+    void s2NormalDespawnResetsAirRollingRenderEntryAwayFromVerticalBoundary() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        seedDelayedLeaderStatus(sonic,
+                (byte) (AbstractPlayableSprite.STATUS_IN_AIR | AbstractPlayableSprite.STATUS_ROLLING),
+                false);
+
+        TestableSprite tails = createS2Ooz2FreshRenderEntrySidekick();
+        tails.setCentreY((short) 0x0210);
+        SidekickCpuController controller = createS2Ooz2FreshRenderEntryController(tails, sonic);
+
+        tails.setRenderFlagOnScreen(false);
+        controller.update(3671);
+        tails.setRenderFlagOnScreen(true);
+        controller.update(3672);
+
+        assertEquals(0, controller.getDiagnosticRespawnCounter(),
+                "A horizontal entry near the vertical centre resets immediately; the delayed "
+                        + "render-entry shape requires proximity to the native lower boundary");
+    }
+
     private static TestableSprite createS2Ooz2FreshRenderEntrySidekick() {
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.useGameRules(GameRules.SONIC_2);
