@@ -379,7 +379,9 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     private void repositionForNextPass() {
         int random = services().rng().nextRaw();
-        boolean leftSide = (random & 1) != 0;
+        // loc_72AAA swaps Random_Number's d0 before testing bit 0, so the
+        // side selector is bit 0 of the raw result's high word.
+        boolean leftSide = ((random >>> 16) & 1) != 0;
         renderXFlip = leftSide;
         int cameraX = cameraX();
         setCentreX(cameraX + (leftSide ? 0x30 : 0x110));

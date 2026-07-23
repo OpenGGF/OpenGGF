@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ final-boss swapped RNG side selector
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 42727 to
+  frame 43003.** The next divergence is CPU Tails' X speed (`$0200` expected
+  versus `$0015` actual).
+- Root: `loc_72AAA` calls `Random_Number`, swaps `d0`, and then tests bit 0 to
+  select the boss shuttle's next arena side. The engine tested bit 0 of the
+  unswapped raw result, so an otherwise identical RNG seed placed the entire
+  boss graph on the opposite side and removed the recorded orbiting-pod hit.
+- Fix: the side selector now reads bit 0 of the raw result's high word,
+  preserving both the native RNG advance and the post-`swap` decision.
+- Validation: all 19 focused LBZ final-boss tests pass and the focused replay
+  reaches frame 43003 with 348 release-blocking errors. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes. HCZ remains at frame 31335, ICZ remains
+  green, and no S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ2 ship render-bound boss handoff
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 42267 to

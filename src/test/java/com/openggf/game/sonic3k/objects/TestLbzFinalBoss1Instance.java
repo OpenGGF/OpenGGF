@@ -99,7 +99,7 @@ class TestLbzFinalBoss1Instance {
 
         boss.forceHitCountForTest(2);
         boss.setCentreYForTest(services.cameraY() - 0xB0);
-        services.rng().setSeed(1); // Odd Random_Number bit: word_72AE8+$2 => camera.x+$30.
+        services.rng().setSeed(0x10001); // Odd post-swap bit: word_72AE8+$2 => camera.x+$30.
         boss.update(1, null);
         head.update(1, null);
 
@@ -109,7 +109,7 @@ class TestLbzFinalBoss1Instance {
                 "Robotnik head must inherit render_flags bit0 and face right/inward on the left side");
 
         boss.setCentreYForTest(services.cameraY() + 0x118);
-        services.rng().setSeed(2); // Even Random_Number bit: word_72AE8 => camera.x+$110.
+        services.rng().setSeed(1); // Even post-swap bit: word_72AE8 => camera.x+$110.
         boss.update(2, null);
         head.update(2, null);
 
