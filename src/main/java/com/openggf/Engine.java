@@ -208,6 +208,10 @@ public class Engine {
 			this.warningSink = Objects.requireNonNull(warningSink, "warningSink");
 		}
 
+		void beginAttempt() {
+			reported.clear();
+		}
+
 		void observe(LiveCaptureController controller) {
 			Objects.requireNonNull(controller, "controller");
 			if (controller.state() != LiveCaptureController.State.FAILED) {
@@ -1877,6 +1881,15 @@ public class Engine {
 		presentationSeam.run();
 	}
 
+	static void startLiveCaptureAttempt(
+			LiveCaptureController controller,
+			LiveCaptureFailureTransitionReporter failureReporter,
+			CaptureViewport viewport,
+			int frameRate) {
+		failureReporter.beginAttempt();
+		controller.start(viewport, frameRate);
+	}
+
 	private void handleLiveCaptureShortcut() {
 		if (inputHandler == null) {
 			return;
@@ -1888,7 +1901,9 @@ public class Engine {
 		}
 		switch (liveCaptureController.state()) {
 			case ACTIVE -> liveCaptureController.requestStop(LiveCaptureController.StopReason.USER);
-			case INACTIVE, FAILED -> liveCaptureController.start(currentCaptureViewport(), targetFps);
+			case INACTIVE, FAILED -> startLiveCaptureAttempt(
+					liveCaptureController, liveCaptureFailureReporter,
+					currentCaptureViewport(), targetFps);
 			case STARTING, STOPPING -> { }
 		}
 	}

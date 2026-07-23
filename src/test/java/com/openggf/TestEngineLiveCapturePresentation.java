@@ -65,6 +65,26 @@ class TestEngineLiveCapturePresentation {
     }
 
     @Test
+    void synchronousRetryFailureWithSameThrowableWarnsOncePerAttempt() {
+        LiveCaptureController controller = mock(LiveCaptureController.class);
+        Throwable failure = new IllegalStateException("same synchronous failure");
+        when(controller.state()).thenReturn(LiveCaptureController.State.FAILED);
+        when(controller.lastFailure()).thenReturn(failure);
+        List<Throwable> warnings = new ArrayList<>();
+        Engine.LiveCaptureFailureTransitionReporter reporter =
+                new Engine.LiveCaptureFailureTransitionReporter(warnings::add);
+        CaptureViewport viewport = new CaptureViewport(0, 0, 320, 224);
+
+        reporter.observe(controller);
+        Engine.startLiveCaptureAttempt(controller, reporter, viewport, 60);
+        reporter.observe(controller);
+        reporter.observe(controller);
+
+        assertEquals(List.of(failure, failure), warnings);
+        verify(controller).start(viewport, 60);
+    }
+
+    @Test
     void allRenderedGameModesAndPresentationStatesUseTheSameSeamExactlyOnce() {
         LiveCaptureController controller = mock(LiveCaptureController.class);
         List<String> calls = new ArrayList<>();
