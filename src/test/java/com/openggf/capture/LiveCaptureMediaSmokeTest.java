@@ -75,11 +75,12 @@ class LiveCaptureMediaSmokeTest {
                     "-pix_fmt", "rgba", "-f", "rawvideo", "pipe:1");
             int frameBytes = WIDTH * HEIGHT * 4;
             assertEquals(FRAME_COUNT * frameBytes, decodedRgba.length);
-            assertArrayEquals(submittedRgba.get(0),
-                    Arrays.copyOfRange(decodedRgba, 0, frameBytes));
-            assertArrayEquals(submittedRgba.get(FRAME_COUNT - 1),
-                    Arrays.copyOfRange(decodedRgba,
-                            (FRAME_COUNT - 1) * frameBytes, FRAME_COUNT * frameBytes));
+            for (int frame = 0; frame < FRAME_COUNT; frame++) {
+                assertArrayEquals(submittedRgba.get(frame),
+                        Arrays.copyOfRange(decodedRgba,
+                                frame * frameBytes, (frame + 1) * frameBytes),
+                        "decoded RGBA differs at frame " + frame);
+            }
 
             byte[] decodedAudioBytes = run(ffmpeg.orElseThrow().toString(), "-v", "error",
                     "-i", output.toString(), "-map", "0:a:0", "-f", "s16le",
