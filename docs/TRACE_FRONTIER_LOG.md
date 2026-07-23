@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ1-to-LBZ2 queued-art transition gate
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 21671 to
+  frame 21729.** The next divergence is CPU Tails' horizontal speed (`$0000`
+  expected versus `$000C` actual).
+- Root: the engine collapsed `LBZ1BGE_Normal`'s three secondary Kos/KosM
+  requests and `LBZ1BGE_DoTransition` into an immediate reload. The ROM first
+  advances its background-event routine, then polls `Kos_modules_left` while
+  those streams drain before applying the `$3A00` world offset.
+- Fix: LBZ now retains explicit queued-art state and consumes the verified
+  55-poll secondary-art workload before executing the seamless reload. Focused
+  coverage locks the queue-only trigger pass, every busy poll, and the final
+  reload.
+- Validation: all eleven focused LBZ miniboss/transition tests pass. The
+  complete `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green
+  and the same 16 documented red routes; LBZ reaches frame 21729 with 5492
+  remaining errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ miniboss escape-step child collision phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 21228 to

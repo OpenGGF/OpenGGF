@@ -84,6 +84,8 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private static final int KNUX_BOX_OPENED_DEST_WIDTH = 3;
     /** ROM LBZ1BGE_DoTransition: world shift applied to players/objects/camera. */
     private static final int LBZ2_TRANSITION_OFFSET_X = -0x3A00;
+    /** Three queued LBZ2 secondary Kos/KosM streams keep Kos_modules_left busy for this many polls. */
+    private static final int LBZ2_SECONDARY_KOS_DRAIN_FRAMES = 55;
     /** ROM LBZ2SE_FromTransition: LBZ2_LayoutMod applies once Player_1 x >= $60A. */
     private static final int LBZ2_ENTRY_CORRIDOR_GATE_X = 0x60A;
     /** ROM LBZ1 screen init: restart past $3B60 re-applies the ending layout. */
@@ -126,6 +128,8 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private int endingCollapseGlobalFixed;
     private int endingCollapsePhase;
     private boolean eventsFg5;
+    private boolean lbz2TransitionArtQueued;
+    private int lbz2TransitionKosDrainFrames;
     private boolean restartInitChecked;
     private int[] lbz2CopiedWindowDescriptors;
     private int lbz2CopiedWindowScreenX;
@@ -516,10 +520,23 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
      * @return true when the reload was performed this frame
      */
     private boolean handleSeamlessReloadStage() {
-        if (!eventsFg5) {
+        if (eventsFg5) {
+            // LBZ1BGE_Normal queues the secondary 128x128, 16x16 and 8x8
+            // streams, then advances Events_routine_bg. DoTransition is first
+            // polled on the following ScreenEvents pass.
+            eventsFg5 = false;
+            lbz2TransitionArtQueued = true;
+            lbz2TransitionKosDrainFrames = 0;
             return false;
         }
-        eventsFg5 = false;
+        if (!lbz2TransitionArtQueued) {
+            return false;
+        }
+        lbz2TransitionKosDrainFrames++;
+        if (lbz2TransitionKosDrainFrames < LBZ2_SECONDARY_KOS_DRAIN_FRAMES) {
+            return false;
+        }
+        lbz2TransitionArtQueued = false;
 
         Camera camera = camera();
         int postTransitionMinX = offsetCameraBoundWord(camera.getMinX(), LBZ2_TRANSITION_OFFSET_X);

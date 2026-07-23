@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: LBZ1's seamless act transition now preserves the two-stage background-event flow, waiting for the three queued LBZ2 secondary Kos/KosM streams to drain before reloading and applying the `$3A00` world offset. This advances the combined LBZ frontier from frame 21671 to frame 21729 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: LBZ miniboss arm collision publication now samples the interleaved parent Y during the native routine-$0A escape step. This removes an early boundary contact on CPU Tails and advances the combined LBZ frontier from frame 21228 to frame 21671 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: folded LBZ miniboss arm children now retain their native slot-entry collision coordinate while synchronized/rotating, with the outer routine-$0A wait tail publishing its post-circular-move coordinate. This aligns both arm-hit phases and advances the combined LBZ frontier from frame 20970 to frame 21228 without regressing another S3K, S1, or S2 trace frontier.
 - Fix: the folded LBZ miniboss now retains its parent-slot X when publishing the body to S3K's collision-response list while its live tracker continues moving. This restores the native third-hit boundary and advances the combined LBZ frontier from frame 20804 to frame 20970 without regressing another S3K, S1, or S2 trace frontier.

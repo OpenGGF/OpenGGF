@@ -330,6 +330,15 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         lbzEvents().setEventsFg5(true);
         manager.update();
 
+        assertEquals(0, GameServices.level().getCurrentAct(),
+                "LBZ1BGE_Normal only queues the three secondary Kos/KosM streams.");
+        for (int frame = 1; frame < 55; frame++) {
+            manager.update();
+            assertEquals(0, GameServices.level().getCurrentAct(),
+                    "LBZ1BGE_DoTransition must poll while Kos_modules_left is nonzero.");
+        }
+        manager.update();
+
         assertEquals(1, GameServices.level().getCurrentAct(),
                 "LBZ1BGE_DoTransition writes Current_zone_and_act=$0601 before Load_Level.");
         assertEquals((ARENA_X - 0x3A00) & 0xFFFF, player.getCentreX() & 0xFFFF,
