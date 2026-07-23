@@ -269,11 +269,31 @@ Allowed launch profile enums:
 
 ## Capture
 
-Trace video capture (the headless trace-capture driver / `TraceCaptureTool`) renders a chosen trace and muxes a lossless MKV via ffmpeg. These keys set the code defaults; CLI flags override them. The bundled `config.yaml` omits the optional `capture` block until a user needs to override one of these defaults.
+OpenGGF has two separate recording systems:
+
+- **Live viewport recording:** press `Shift+O` (or `Shift+<capture.toggleKey>`)
+  during normal windowed execution to start and press it again to stop. This
+  writes `capture-live-<UTC timestamp>.mkv` under `capture.outputDir` using
+  lossless FFV1 video and stereo FLAC audio. It captures only the physical game
+  viewport—not window borders or letterbox/pillarbox bars—and automatically
+  stops if the viewport moves or changes size. Forward play, pause/frame-step
+  silence, and held-rewind/release audio are synchronized with the displayed
+  frames. The red-dot/white-`REC` indicator is window-only: both the MKV and F12
+  screenshots exclude it.
+- **Trace capture:** the headless `TraceCaptureTool` renders a chosen trace.
+  Its scale, frame-rate, and codec settings remain trace-tool options.
+
+Both paths require `ffmpeg` on `PATH`; live media verification and inspection
+also use `ffprobe`. Live recording is distinct from the Shift+F9
+`debug.recording.recordKey` input/movie recorder.
+
+These keys set the code defaults; trace CLI flags override the trace-specific
+ones. The bundled `config.yaml` supplies the live toggle default.
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
-| `CAPTURE_OUTPUT_DIR` | `capture.outputDir` | string | `"target/trace-videos"` | Output directory for trace capture videos. |
+| `CAPTURE_OUTPUT_DIR` | `capture.outputDir` | string | `"target/trace-videos"` | Output directory for live and trace capture videos. |
+| `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `O` | Complete-chord live viewport recording toggle (`Shift` + this key, with Ctrl/Alt released). |
 | `CAPTURE_SCALE` | `capture.scale` | int | `4` | Integer nearest-neighbor upscale factor applied to the captured frames. |
 | `CAPTURE_FPS` | `capture.fps` | int | `60` | Output frame rate for the captured video. |
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Capture video codec (e.g. `ffv1`). |
