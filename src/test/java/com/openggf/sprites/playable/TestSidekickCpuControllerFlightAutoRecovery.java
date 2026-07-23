@@ -3,7 +3,9 @@ package com.openggf.sprites.playable;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.level.WaterSystem;
 import com.openggf.physics.Direction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +36,13 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         @Override protected void createSensorLines() {}
         void useGameRules(GameRules featureSet) {
             super.setGameRulesForTest(featureSet);
+        }
+    }
+
+    static class GameplayWaterLineSystem extends WaterSystem {
+        @Override
+        public int getGameplayWaterLevelY(int zoneId, int actId) {
+            return 0x0520;
         }
     }
 
@@ -87,6 +96,31 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "X steps toward Sonic by (clamp(|dx|>>4, 0xC) + |Sonic.x_vel| + 1) = 0xD");
         assertEquals(Direction.LEFT, tails.getDirection(),
                 "ROM loc_13C98 sets Status_Facing when routine 4 steers Tails left toward the target");
+    }
+
+    @Test
+    void flightClampsDelayedTargetYToGameplayWaterLine() {
+        GameplayModeContext mode = TestEnvironment.activeGameplayMode();
+        mode.attachLevelManagers(new GameplayWaterLineSystem(), mode.getParallaxManager(),
+                mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
+                mode.getSpriteManager(), mode.getLevelManager());
+
+        TestableSprite sonic = sonicAt(0x1000, 0x0600);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0500);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertEquals(0x0510, controller.targetY(),
+                "TailsCPU_Flying_Part2 clamps target_y to Water_Level_1-$10");
     }
 
     @Test
