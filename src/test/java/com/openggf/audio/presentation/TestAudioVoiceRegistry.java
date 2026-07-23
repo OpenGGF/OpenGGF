@@ -84,6 +84,115 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
+    void blockedSampleStartWarnsWithoutResolvingItsAsset() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        List<String> warnings = new ArrayList<>();
+        AudioVoiceRegistry registry = registry(instantiation, warnings);
+        registry.setSfxBlocked(true);
+        instantiation.failingPcmAsset = "blocked";
+
+        registry.apply(start(sample(40, 4, "blocked")));
+
+        assertEquals(0, instantiation.pcmResolveCount);
+        assertEquals(List.of("sample SFX blocked at presentation boundary"),
+                warnings);
+        assertEquals(0, registry.orderedVoiceCount());
+    }
+
+    @Test
+    void fullSampleBankRejectsEqualAndLowerPriorityWithoutResolvingAssets() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        List<String> warnings = new ArrayList<>();
+        AudioVoiceRegistry registry = registry(instantiation, warnings);
+        for (int index = 0; index < 32; index++) {
+            registry.apply(start(sample(index, 4, "sample-" + index)));
+        }
+        instantiation.pcmResolveCount = 0;
+        instantiation.resolvedPcmAssets.clear();
+        instantiation.failingPcmAsset = "equal";
+        AudioPresentationCommandQueue queue = new AudioPresentationCommandQueue();
+        queue.submit(start(sample(100, 4, "equal")), () -> true,
+                registry::apply);
+        queue.submit(start(sample(101, 3, "lower")), () -> true,
+                registry::apply);
+        queue.submit(new ToggleMute(ChannelType.FM, 3), () -> true,
+                registry::apply);
+
+        queue.applyPending(registry::apply);
+
+        assertEquals(0, instantiation.pcmResolveCount);
+        assertTrue(instantiation.resolvedPcmAssets.isEmpty());
+        assertEquals(List.of(
+                "sample SFX capacity rejected voice 100",
+                "sample SFX capacity rejected voice 101"), warnings);
+        assertEquals(32, registry.orderedVoiceCount());
+        assertFalse(orderedIds(registry).contains(100L));
+        assertFalse(orderedIds(registry).contains(101L));
+        assertEquals(0, queue.size());
+        assertEquals(1 << 3, registry.snapshot().fmMuteMask(),
+                "rejected starts cannot stop later queued commands");
+    }
+
+    @Test
+    void fullSampleBankResolvesAcceptedHigherPriorityExactlyOnce() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        for (int index = 0; index < 32; index++) {
+            registry.apply(start(sample(index, 4, "sample-" + index)));
+        }
+        instantiation.pcmResolveCount = 0;
+        instantiation.resolvedPcmAssets.clear();
+
+        registry.apply(start(sample(100, 5, "higher")));
+
+        assertEquals(1, instantiation.pcmResolveCount);
+        assertEquals(List.of("higher"), instantiation.resolvedPcmAssets);
+        assertEquals(32, registry.orderedVoiceCount());
+        assertFalse(orderedIds(registry).contains(0L),
+                "oldest strictly lower-priority voice is replaced");
+        assertTrue(orderedIds(registry).contains(100L));
+    }
+
+    @Test
+    void failedAcceptedMaterializationPreservesBankAndQueueContinuation() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        for (int index = 0; index < 32; index++) {
+            registry.apply(start(sample(index, 4, "sample-" + index)));
+        }
+        List<Long> originalIds = orderedIds(registry);
+        PresentationVoice oldest = registry.orderedVoiceAt(0);
+        instantiation.pcmResolveCount = 0;
+        instantiation.resolvedPcmAssets.clear();
+        instantiation.failingPcmAsset = "failing";
+        AudioPresentationCommandQueue queue = new AudioPresentationCommandQueue();
+        queue.submit(start(sample(100, 5, "failing")), () -> true,
+                registry::apply);
+        queue.submit(start(sample(101, 6, "continuation")), () -> true,
+                registry::apply);
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertEquals(originalIds, orderedIds(registry));
+        assertFalse(oldest.isComplete(),
+                "failed materialization cannot stop the replacement candidate");
+        assertEquals(1, queue.size(),
+                "commands after the failed start remain pending");
+        assertEquals(List.of("failing"), instantiation.resolvedPcmAssets);
+
+        instantiation.failingPcmAsset = null;
+        queue.applyPending(registry::apply);
+
+        assertEquals(0, queue.size());
+        assertFalse(orderedIds(registry).contains(0L));
+        assertFalse(orderedIds(registry).contains(100L));
+        assertTrue(orderedIds(registry).contains(101L));
+        assertEquals(List.of("failing", "continuation"),
+                instantiation.resolvedPcmAssets);
+    }
+
+    @Test
     void higherPrioritySampleReplacesOnlyOldestStrictlyLowerPrioritySample() {
         AudioVoiceRegistry registry = registry(new RecordingInstantiation(), new ArrayList<>());
         for (int index = 0; index < 32; index++) {
@@ -771,6 +880,9 @@ class TestAudioVoiceRegistry {
         private int cachedCalls;
         private int standaloneCalls;
         private int musicDriverIndex;
+        private final List<String> resolvedPcmAssets = new ArrayList<>();
+        private int pcmResolveCount;
+        private String failingPcmAsset;
         private SmpsDriver lastCachedOwner;
         private boolean cacheMiss;
         private boolean failIfCached;
@@ -782,6 +894,12 @@ class TestAudioVoiceRegistry {
 
         @Override
         public DecodedPcm resolvePcm(String assetId) {
+            pcmResolveCount++;
+            resolvedPcmAssets.add(assetId);
+            if (assetId.equals(failingPcmAsset)) {
+                throw new IllegalStateException(
+                        "fixture PCM resolution failure for " + assetId);
+            }
             if ("music".equals(assetId)) {
                 return pcm(assetId, 100, 200, 300, 400);
             }

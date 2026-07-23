@@ -151,7 +151,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         } else if (command instanceof AddSmpsSfx add) {
             addSmpsSfx(add.source());
         } else if (command instanceof StartSampleSfx start) {
-            admitSampleSfx(materializeSample(start.voice()));
+            admitSampleSfx(start.voice());
         } else if (command instanceof ReplaceRawPcm replace) {
             replaceRawPcm(materializeSample(replace.voice()));
         } else if (command instanceof StopRawPcm) {
@@ -596,39 +596,41 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         noteVoiceId(standalone);
     }
 
-    private void admitSampleSfx(SampleBackedVoice voice) {
+    private void admitSampleSfx(SampleVoiceDescriptor descriptor) {
         if (sfxBlocked) {
-            warnRejected(voice.voiceId(),
+            warnRejected(descriptor.voiceId(),
                     "sample SFX blocked at presentation boundary");
             return;
         }
-        if (sampleSfxCount < sampleSfx.length) {
-            insertSampleSorted(voice);
-            noteVoiceId(voice);
-            return;
-        }
         int replacement = -1;
-        int replacementPriority = Integer.MAX_VALUE;
-        for (int index = 0; index < sampleSfxCount; index++) {
-            int existingPriority = sampleSfx[index].priority();
-            if (existingPriority < voice.priority()
-                    && existingPriority < replacementPriority) {
-                replacement = index;
-                replacementPriority = existingPriority;
+        if (sampleSfxCount == sampleSfx.length) {
+            int replacementPriority = Integer.MAX_VALUE;
+            for (int index = 0; index < sampleSfxCount; index++) {
+                int existingPriority = sampleSfx[index].priority();
+                if (existingPriority < descriptor.priority()
+                        && existingPriority < replacementPriority) {
+                    replacement = index;
+                    replacementPriority = existingPriority;
+                }
+            }
+            if (replacement < 0) {
+                warnRejected(descriptor.voiceId(),
+                        "sample SFX capacity rejected voice "
+                                + descriptor.voiceId());
+                return;
             }
         }
-        if (replacement < 0) {
-            warnRejected(voice.voiceId(),
-                    "sample SFX capacity rejected voice " + voice.voiceId());
-            return;
+
+        SampleBackedVoice voice = materializeSample(descriptor);
+        if (replacement >= 0) {
+            sampleSfx[replacement].stop();
+            int remaining = sampleSfxCount - replacement - 1;
+            if (remaining > 0) {
+                System.arraycopy(sampleSfx, replacement + 1, sampleSfx,
+                        replacement, remaining);
+            }
+            sampleSfx[--sampleSfxCount] = null;
         }
-        sampleSfx[replacement].stop();
-        int remaining = sampleSfxCount - replacement - 1;
-        if (remaining > 0) {
-            System.arraycopy(sampleSfx, replacement + 1, sampleSfx,
-                    replacement, remaining);
-        }
-        sampleSfx[--sampleSfxCount] = null;
         insertSampleSorted(voice);
         noteVoiceId(voice);
     }
