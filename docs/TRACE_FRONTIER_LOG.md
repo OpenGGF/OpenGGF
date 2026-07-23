@@ -49280,3 +49280,10 @@ Result: expected exit 1 at the later frontier; 16 tests ran with 14 failures,
 The focused cadence/driver regression and the bootstrap/policy/must-keep-green
 selection pass. The selected fresh Surefire reports contain 127 tests with
 zero failures or errors.
+
+Review follow-up closed the remaining playback-path contract: live comparison
+now treats `ADVANCE_ONLY` as a zero-VBlank, zero-lag gameplay skip, and the
+input-only driver operation latches both the controller snapshot and the P1
+action press edge for the following gameplay row. Focused live, real-driver,
+AIZ cadence, reference-closure, start-policy, and tooling guards pass (93 tests,
+zero failures or errors). The AIZ frontier remains f2707.

@@ -5,11 +5,15 @@ import com.openggf.game.GroundMode;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -19,6 +23,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(SingletonResetExtension.class)
 class LiveTraceComparatorTest {
 
     @Test
@@ -76,6 +81,46 @@ class LiveTraceComparatorTest {
         assertEquals(0, repeated.vblankAdvanceCountOnSkippedTick(empty));
         assertEquals(1, advanced.vblankAdvanceCountOnSkippedTick(empty));
         assertEquals(2, doubleAdvanced.vblankAdvanceCountOnSkippedTick(empty));
+    }
+
+    @Test
+    void advanceOnlySkipsGameplayWithoutAdvancingVblankOrLagCount() {
+        TraceFrame beforeLatch = TraceFrame.of(0, 0,
+                (short) 0, (short) 0,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0);
+        TraceFrame inputLatch = TraceFrame.of(1, AbstractPlayableSprite.INPUT_JUMP,
+                (short) 0, (short) 0,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0);
+        TraceFrame levelBoundary = TraceFrame.of(2, AbstractPlayableSprite.INPUT_JUMP,
+                (short) 0, (short) 0,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0);
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadata("s3k", 0, 0),
+                List.of(beforeLatch, inputLatch, levelBoundary),
+                Map.of(
+                        0, List.of(new TraceEvent.ZoneActState(0, 0, 0, 0, 4)),
+                        2, List.of(
+                                new TraceEvent.ZoneActState(2, 0, 0, 0, 12),
+                                new TraceEvent.Checkpoint(
+                                        2, "gameplay_start", 0, 0, 0, 12, null))));
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 1, () -> null);
+        Bk2FrameInput jump = new Bk2FrameInput(
+                1, 0, 1, false, "jump latch");
+
+        assertTrue(comparator.shouldSkipGameplayTick(jump),
+                "ADVANCE_ONLY must suppress the already-resident level");
+        assertFalse(comparator.shouldAdvanceVblankOnSkippedTick(jump));
+        assertEquals(0, comparator.vblankAdvanceCountOnSkippedTick(jump));
+
+        comparator.afterFrameAdvanced(jump, true);
+
+        assertEquals(0, comparator.laggedFrames(),
+                "an input-latch row is not a ROM lag/VBlank frame");
+        assertEquals(1, comparator.currentVisualFrame().frame());
     }
 
     @Test

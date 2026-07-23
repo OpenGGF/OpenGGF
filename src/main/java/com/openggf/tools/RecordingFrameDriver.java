@@ -316,10 +316,10 @@ public final class RecordingFrameDriver {
         }
 
         Bk2FrameInput frameInput = bk2Movie.getFrame(currentBk2Index);
-        int mask = frameInput.p1InputMask();
-        if (frameInput.p1ActionMask() != 0) {
-            mask |= AbstractPlayableSprite.INPUT_JUMP;
-        }
+        int mask = inputMask(frameInput);
+        applyP1ActionPressEdge(currentBk2Index);
+        previousDriverSnapshot =
+                RecordedInputSnapshots.fromBk2(frameInput, previousBk2Input(currentBk2Index));
         currentBk2Index++;
         return mask;
     }
