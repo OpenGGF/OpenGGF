@@ -288,6 +288,11 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         return panels.size();
     }
 
+    public int getPanelRoutineForTest(int index, boolean secondRing) {
+        int offset = 1 + (secondRing ? PANEL_FRAMES.length : 0);
+        return panels.get(offset + index).childRoutine;
+    }
+
     public int getXVelocityForTest() {
         return motion.xVel;
     }
@@ -616,7 +621,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         for (int i = 0; i < PANEL_FRAMES.length; i++) {
             panels.add(new PanelState(false, i, true));
         }
-        updatePanels();
     }
 
     private void updatePanels() {
@@ -670,6 +674,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         private int childRoutine = ROUTINE_INIT_WAIT;
         private int childWaitTimer = 0x100;
         private PanelWaitCallback waitCallback = PanelWaitCallback.START_ROTATE_IF_ARMED;
+        private boolean initialized;
         private boolean bit1;
         private boolean detached;
         private boolean markedForDetach;
@@ -723,6 +728,15 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
                 if (parentBit1) {
                     frame = centerChildFrame;
                 }
+                return;
+            }
+            if (!initialized) {
+                // loc_7261C falls through loc_727B0 to perform the initial
+                // circular placement, then returns without calling Obj_Wait.
+                // The $100 timer starts decrementing on the child's next SST
+                // dispatch.
+                initialized = true;
+                moveCircular();
                 return;
             }
             // ROM loc_728C8 (subtype 0) / loc_72902 (others): a marked panel

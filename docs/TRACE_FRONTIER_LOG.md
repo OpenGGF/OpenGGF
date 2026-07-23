@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-07-23 - LBZ miniboss arm-child initialization dispatch
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 20519 to
+  frame 20804.** The next divergence is Sonic's ground speed (`$017C`
+  expected versus `-$017C` actual).
+- Root: the folded miniboss arm children ran their ordinary routine-$02
+  `Obj_Wait` path twice on their creation pass. Native `loc_7261C` instead
+  falls through `loc_727B0` for one initial circular placement and returns
+  without decrementing the `$100` timer. Every propagated arm transition was
+  therefore two frames early, causing the harmful outer panel to miss Tails.
+- Fix: panel materialization no longer performs an eager ordinary update, and
+  each new linked child handles its first dispatch as placement-only before
+  entering the wait routine. Focused coverage locks the `$100` underflow edge.
+- Validation: the focused child-lifecycle test and three related miniboss
+  precision/render tests pass. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 61 tests, 45 green and the
+  same 16 documented red routes; LBZ reaches frame 20804 with 5812 remaining
+  errors. No S3K, S1, or S2 frontier regressed.
+- Command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest='*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.forkCount=4 -Dsurefire.argLine='-Xmx3g' test`, run from
+  `bugfix/ai-s3k-lbz-trace-frontier` with the milestone candidate uncommitted.
+
 ## 2026-07-23 - LBZ miniboss tracker and linked-arm fixed-point phase
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 20365 to

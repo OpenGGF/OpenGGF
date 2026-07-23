@@ -451,6 +451,24 @@ class TestS3kLbz1KnucklesSequenceHeadless {
     }
 
     @Test
+    void lbzMinibossArmWaitStartsAfterInitialChildPlacement() {
+        LbzMinibossInstance miniboss = new LbzMinibossInstance(new ObjectSpawn(
+                0x3EC0, 0x01B8, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0));
+        miniboss.setServices(new TestObjectServices());
+        miniboss.forceOpenForTest(0x3EC0, 0x01B8);
+
+        for (int frame = 0; frame < 0x100; frame++) {
+            miniboss.update(frame, null);
+        }
+        assertEquals(0x02, miniboss.getPanelRoutineForTest(0, false),
+                "loc_7261C's creation dispatch places the child without decrementing its $100 Obj_Wait.");
+
+        miniboss.update(0x100, null);
+        assertEquals(0x04, miniboss.getPanelRoutineForTest(0, false),
+                "The first arm child enters routine $04 only when the following $100 wait underflows.");
+    }
+
+    @Test
     void lbzMinibossCenterChildUsesRawAnimationDelay() {
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         PatternSpriteRenderer bossRenderer = mock(PatternSpriteRenderer.class);
