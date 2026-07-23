@@ -66,6 +66,13 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
     }
 
     @Override
+    public boolean firstMainPlayableDispatchInitializesWithoutMovement() {
+        // ROM Sonic_Init (sonic3k.asm:21902-21941) initializes routine 0 and
+        // returns; movement begins only on the later Sonic_Control dispatch.
+        return true;
+    }
+
+    @Override
     protected InitStep spawnSidekickStep() {
         return new InitStep("SpawnSidekick",
             "S3K: SpawnLevelMainSprites_SpawnPlayers — Tails at player_pos - $20, +4 Y",

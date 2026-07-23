@@ -2579,6 +2579,10 @@ public class LevelManager {
             playable.setLrbSolidBit(ctx.getCheckpointLrbSolidBit());
         }
         audioManager.setSpeedShoes(false);
+        if (GameServices.module().getLevelInitProfile()
+                .firstMainPlayableDispatchInitializesWithoutMovement()) {
+            spriteManager.armFreshMainPlayableDispatch(playable);
+        }
     }
 
     /**

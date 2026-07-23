@@ -43,6 +43,18 @@ public interface LevelInitProfile {
     }
 
     /**
+     * Whether the freshly reset main playable's first ordinary object dispatch
+     * initializes the slot without running movement.
+     *
+     * <p>S3K's routine-0 player dispatch initializes the cleared slot and
+     * returns before {@code Sonic_Control}; S1/S2 retain their existing startup
+     * sequencing unless their profiles explicitly opt in.
+     */
+    default boolean firstMainPlayableDispatchInitializesWithoutMovement() {
+        return false;
+    }
+
+    /**
      * Ordered steps for entering a level (title card through control unlock).
      * <p>
      * Maps to the game's {@code Level:} routine: S1 has 44 steps (phases A-L),

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K fresh main-player slots now consume their first ordinary dispatch as native initialization without movement while preserving controls, follower history, animation/status closure, sidekick/object execution, and oscillator cadence; S1/S2 startup behavior remains unchanged.
 - Tooling: add Linux `dev.sh`, `run.sh`, and `run_renderdoc.sh` equivalents for the root Windows engine launchers.
 - Fix: ICZ Act 1 miniboss rendering now skips orb child slots until the camera gate creates their state, preventing a null dereference while approaching the arena with boss art ready.
 - Fix: `LevelFrameStep` now observes a `StartNewLevel`-style inactive transition immediately after the object pass and skips the same frame's camera scroll/boundary work, matching the ROM's post-`Process_Sprites` `Restart_level_flag` branch. This clears the final ICZ complete-run camera mismatch and makes both physics and animation groups green through the LBZ handoff.
