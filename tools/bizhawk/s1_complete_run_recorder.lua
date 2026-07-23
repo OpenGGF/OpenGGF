@@ -116,6 +116,30 @@
 -- lua_script_version reports "3.12"; aux_schema_extras gains object_near_objoff_32.
 ------------------------------------------------------------------------------
 
+------------------
+--- Shared lib ---
+------------------
+
+-- Locate tools/bizhawk/lib/ robustly across the .bat/%TEMP%-wrapper route, the
+-- direct --lua= route, and headless launches (see lib/oggf_trace_common.lua and
+-- SHARED_MODULE_HANDOFF.md). The launcher-provided env var wins; otherwise fall
+-- back to this recorder's own directory, then CWD. Scoped in a do-block so the
+-- helper's local slot is freed (these recorders sit near Lua's 200-locals cap).
+local C
+do
+    local function oggf_lib_dir()
+        local env = os.getenv("OGGF_BIZHAWK_LIB")        -- launcher-provided, most robust
+        if env and #env > 0 then return env end
+        local src = debug.getinfo(1, "S").source         -- "@<abs path to this recorder>"
+        local dir = src:match("^@(.*[/\\])")             -- strip filename
+        if dir then return dir .. "lib/" end
+        return "lib/"                                     -- CWD fallback
+    end
+    -- assert() so a bad path surfaces as a load error (visible without
+    -- --chromeless) instead of silently skipping the whole recorder.
+    C = assert(loadfile(oggf_lib_dir() .. "oggf_trace_common.lua"))()
+end
+
 -----------------
 --- Constants ---
 -----------------
@@ -256,12 +280,13 @@ local OBJ_DYNAMIC_COUNT    = 96   -- dynamic slots 32-127
 local ADDR_FRAMECOUNT      = 0xFE04
 local ADDR_VBLA_WORD       = 0xFE0E
 
--- Genesis joypad bitmask (matching engine convention)
-local INPUT_UP    = 0x01
-local INPUT_DOWN  = 0x02
-local INPUT_LEFT  = 0x04
-local INPUT_RIGHT = 0x08
-local INPUT_JUMP  = 0x10
+-- Genesis joypad bitmask (matching engine convention) — single-sourced in
+-- lib/oggf_trace_common.lua; rebound locally to keep hot-loop lookups cheap.
+local INPUT_UP    = C.INPUT_UP
+local INPUT_DOWN  = C.INPUT_DOWN
+local INPUT_LEFT  = C.INPUT_LEFT
+local INPUT_RIGHT = C.INPUT_RIGHT
+local INPUT_JUMP  = C.INPUT_JUMP
 
 -- Game mode values
 local GAMEMODE_LEVEL = 0x0C
@@ -430,78 +455,20 @@ local aux_file = nil
 --- Helpers   ---
 -----------------
 
--- Read a 16-bit signed value (big-endian)
-local function read_speed(base, offset)
-    return mainmemory.read_s16_be(base + offset)
-end
+-- Leaf helpers single-sourced in lib/oggf_trace_common.lua. Rebound to locals
+-- so the many call sites below stay unchanged; the two that captured file-scope
+-- upvalues (bk2_input_mask -> bk2_frame_offset, write_aux -> aux_file) keep thin
+-- local wrappers that forward those upvalues.
+local read_speed = C.read_speed
+local hex = C.hex
+local angle_to_ground_mode = C.angle_to_ground_mode
 
--- Convert raw ROM joypad byte (v_jpadhold1) to engine input bitmask.
--- ROM bits: 0=Up 1=Down 2=Left 3=Right 4=B 5=C 6=A 7=Start
--- Bits 0-3 already match INPUT_UP/DOWN/LEFT/RIGHT; collapse A/B/C to JUMP.
-local function rom_joypad_to_mask(raw)
-    local mask = raw & 0x0F                        -- directions (bits 0-3)
-    if (raw & 0x70) ~= 0 then mask = mask + INPUT_JUMP end  -- A|B|C -> JUMP
-    return mask
-end
-
--- Mirrors the S2 recorder's BK2-derived input read. ROM-side v_jpadhold1
--- updates from inside ReadJoypads which runs only from specific V-int
--- subroutines; on lag frames and during long V-int paths the written byte
--- can lag the BK2 logical input by one game frame, producing spurious
--- "Input alignment error" failures in AbstractCreditsDemoTraceReplayTest.
--- Read the BK2 movie input directly so the CSV input column matches what
--- the test fixture's BK2 reader will see during validation.
 local function bk2_input_mask(fallback_raw, trace_row)
-    if not movie.isloaded() then
-        return rom_joypad_to_mask(fallback_raw)
-    end
-    -- Replay metadata defines trace row N as BK2 frame
-    -- (bk2_frame_offset + N). Use that same convention here; direct
-    -- emu.framecount() is one frame ahead in this recorder loop.
-    local frame_index = bk2_frame_offset ~= nil
-        and trace_row ~= nil
-        and (bk2_frame_offset + trace_row)
-        or emu.framecount()
-    local jp = movie.getinput(frame_index, 1)
-    if jp == nil then
-        return rom_joypad_to_mask(fallback_raw)
-    end
-    local mask = 0
-    if jp["P1 Up"]    or jp["Up"]    then mask = mask | INPUT_UP    end
-    if jp["P1 Down"]  or jp["Down"]  then mask = mask | INPUT_DOWN  end
-    if jp["P1 Left"]  or jp["Left"]  then mask = mask | INPUT_LEFT  end
-    if jp["P1 Right"] or jp["Right"] then mask = mask | INPUT_RIGHT end
-    if jp["P1 A"] or jp["A"] or jp["P1 B"] or jp["B"]
-            or jp["P1 C"] or jp["C"] then
-        mask = mask | INPUT_JUMP
-    end
-    return mask
+    return C.bk2_input_mask(fallback_raw, trace_row, bk2_frame_offset)
 end
 
--- Format a number as hex with specified width
-local function hex(val, width)
-    width = width or 4
-    if val < 0 then
-        val = val + 0x10000
-    end
-    return string.format("%0" .. width .. "X", val)
-end
-
--- Get ground mode from angle (offset quadrants matching ROM thresholds).
--- Floor wraps: 0xE0-0xFF and 0x00-0x1F are both mode 0.
-local function angle_to_ground_mode(angle)
-    if angle <= 0x1F or angle >= 0xE0 then return 0 end   -- floor
-    if angle >= 0x20 and angle <= 0x5F then return 1 end   -- right wall
-    if angle >= 0x60 and angle <= 0x9F then return 2 end   -- ceiling
-    return 3                                                 -- left wall
-end
-
--- Write a JSONL line to aux file
 local function write_aux(json_str)
-    if aux_file then
-        aux_file:write(json_str .. "\n")
-        aux_file:flush()
-    end
+    C.write_aux(aux_file, json_str)
 end
 
 -----------------
