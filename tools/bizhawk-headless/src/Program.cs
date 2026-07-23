@@ -7,15 +7,34 @@ using OpenGGF.BizHawk.Headless;
 
 namespace BizHawk.Headless.Gpgx
 {
+    internal enum CaptureMode
+    {
+        Smoke,
+        Trace
+    }
+
     internal sealed class CommandLineOptions
     {
+        /// <summary>
+        /// Trace-mode output file names, in staging/publication order. The
+        /// writer array passed to the trace capture uses the same order.
+        /// </summary>
+        internal static readonly string[] TraceOutputFileNames =
+        {
+            "physics.csv",
+            "aux_state.jsonl",
+            "metadata.json"
+        };
+
         private CommandLineOptions(
+            CaptureMode mode,
             string romPath,
             string moviePath,
             string outputDirectory,
             int bk2FrameOffset,
             int maxFrames)
         {
+            Mode = mode;
             RomPath = romPath;
             MoviePath = moviePath;
             OutputDirectory = outputDirectory;
@@ -23,6 +42,7 @@ namespace BizHawk.Headless.Gpgx
             MaxFrames = maxFrames;
         }
 
+        public CaptureMode Mode { get; private set; }
         public string RomPath { get; private set; }
         public string MoviePath { get; private set; }
         public string OutputDirectory { get; private set; }
@@ -67,6 +87,16 @@ namespace BizHawk.Headless.Gpgx
             string romPath = Required(values, "--rom");
             string moviePath = Required(values, "--movie");
             string outputDirectory = Required(values, "--output");
+            CaptureMode mode = ParseMode(values);
+            if (mode == CaptureMode.Trace)
+            {
+                return ParseTrace(
+                    values,
+                    romPath,
+                    moviePath,
+                    outputDirectory);
+            }
+
             int offset = ParseInteger(
                 values,
                 "--bk2-frame-offset",
@@ -101,6 +131,7 @@ namespace BizHawk.Headless.Gpgx
             }
 
             return new CommandLineOptions(
+                CaptureMode.Smoke,
                 Path.GetFullPath(romPath),
                 Path.GetFullPath(moviePath),
                 fullOutputDirectory,
@@ -108,11 +139,76 @@ namespace BizHawk.Headless.Gpgx
                 maxFrames);
         }
 
+        private static CommandLineOptions ParseTrace(
+            IDictionary<string, string> values,
+            string romPath,
+            string moviePath,
+            string outputDirectory)
+        {
+            RejectInTraceMode(values, "--bk2-frame-offset");
+            RejectInTraceMode(values, "--max-frames");
+
+            string fullOutputDirectory =
+                Path.GetFullPath(outputDirectory);
+            foreach (string fileName in TraceOutputFileNames)
+            {
+                string finalPath = Path.Combine(
+                    fullOutputDirectory,
+                    fileName);
+                if (LinuxPathEntry.Exists(finalPath))
+                {
+                    throw new IOException(
+                        "Final output already exists and will not be"
+                        + " replaced: " + finalPath);
+                }
+            }
+
+            return new CommandLineOptions(
+                CaptureMode.Trace,
+                Path.GetFullPath(romPath),
+                Path.GetFullPath(moviePath),
+                fullOutputDirectory,
+                0,
+                0);
+        }
+
+        private static CaptureMode ParseMode(
+            IDictionary<string, string> values)
+        {
+            string value;
+            if (!values.TryGetValue("--mode", out value))
+            {
+                return CaptureMode.Smoke;
+            }
+            if (value == "smoke")
+            {
+                return CaptureMode.Smoke;
+            }
+            if (value == "trace")
+            {
+                return CaptureMode.Trace;
+            }
+            throw new ArgumentException(
+                "Argument --mode must be \"smoke\" or \"trace\".");
+        }
+
+        private static void RejectInTraceMode(
+            IDictionary<string, string> values,
+            string name)
+        {
+            if (values.ContainsKey(name))
+            {
+                throw new ArgumentException(
+                    "Argument " + name + " is not supported in trace mode.");
+            }
+        }
+
         private static bool IsSupportedArgument(string name)
         {
             return name == "--rom"
                 || name == "--movie"
                 || name == "--output"
+                || name == "--mode"
                 || name == "--bk2-frame-offset"
                 || name == "--max-frames";
         }
@@ -203,6 +299,18 @@ namespace BizHawk.Headless.Gpgx
                         options.MoviePath);
                 }
                 Bk2Movie movie = Bk2Reader.Read(options.MoviePath);
+                if (options.Mode == CaptureMode.Trace)
+                {
+                    return RunTrace(
+                        options,
+                        installation,
+                        romSha1,
+                        movie,
+                        stdout,
+                        stderr,
+                        openHost);
+                }
+
                 long requiredFrames =
                     (long)options.Bk2FrameOffset + options.MaxFrames;
                 if (requiredFrames > movie.FrameCount)
@@ -250,6 +358,105 @@ namespace BizHawk.Headless.Gpgx
             }
             catch (Exception exception)
             {
+                ReportFailure(stderr, exception);
+                return 1;
+            }
+        }
+
+        private static int RunTrace(
+            CommandLineOptions options,
+            BizHawkInstallation installation,
+            string romSha1,
+            Bk2Movie movie,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
+            string physicsPath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[0]);
+            string auxStatePath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[1]);
+            string metadataPath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[2]);
+            return RunTraceCapture(
+                options.OutputDirectory,
+                stdout,
+                stderr,
+                () => new NativeStandardOutputSilencer(),
+                () => openHost(
+                    options.RomPath,
+                    movie.SyncSettings),
+                (host, writers) => S1TraceCaptureRunner.Capture(
+                    movie,
+                    host,
+                    DateTime.Now.ToString(
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture),
+                    writers[0],
+                    writers[1],
+                    writers[2]),
+                result =>
+                    "BizHawk: " + installation.ManagedVersion + "\n"
+                    + "ROM SHA-1: " + romSha1 + "\n"
+                    + "Movie frames: "
+                    + movie.FrameCount.ToString(
+                        CultureInfo.InvariantCulture)
+                    + "\n"
+                    + "BK2 frame offset: "
+                    + result.Bk2FrameOffset.ToString(
+                        CultureInfo.InvariantCulture)
+                    + "\n"
+                    + "Trace frames: "
+                    + result.TraceFrameCount.ToString(
+                        CultureInfo.InvariantCulture)
+                    + "\n"
+                    + "Physics CSV: " + physicsPath + "\n"
+                    + "Aux state JSONL: " + auxStatePath + "\n"
+                    + "Metadata JSON: " + metadataPath + "\n",
+                new NoReplacePublisher());
+        }
+
+        internal static int RunTraceCapture(
+            string outputDirectory,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<IDisposable> silenceNativeOutput,
+            Func<IGpgxHost> openHost,
+            Func<IGpgxHost, TextWriter[], S1TraceCaptureResult> capture,
+            Func<S1TraceCaptureResult, string> formatSuccess,
+            NoReplacePublisher publisher)
+        {
+            NoReplacePublisher.StagedPublicationSet staged = null;
+            try
+            {
+                S1TraceCaptureResult result = null;
+                using (silenceNativeOutput())
+                using (IGpgxHost host = openHost())
+                {
+                    staged = publisher.StageAll(
+                        outputDirectory,
+                        CommandLineOptions.TraceOutputFileNames,
+                        writers => { result = capture(host, writers); });
+                }
+
+                stdout.Write(formatSuccess(result));
+                stdout.Flush();
+
+                // link(2) publication is the last commit point; the set
+                // rolls back any partially linked finals on failure.
+                staged.Publish();
+                staged = null;
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                if (staged != null)
+                {
+                    staged.Dispose();
+                }
                 ReportFailure(stderr, exception);
                 return 1;
             }

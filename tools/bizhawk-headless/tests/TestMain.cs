@@ -47,6 +47,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             S1TraceCaptureRunnerTests.Register(tests);
             SmokeCaptureRunnerTests.Register(tests);
             NoReplacePublisherTests.Register(tests);
+            TraceCliTests.Register(tests);
             EndToEndTests.Register(tests);
 
             var matched = 0;

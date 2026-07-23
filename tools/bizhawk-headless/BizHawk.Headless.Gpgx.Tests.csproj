@@ -49,6 +49,7 @@
     <Compile Include="tests/S1TraceMetadataWriterTests.cs" />
     <Compile Include="tests/SmokeCaptureRunnerTests.cs" />
     <Compile Include="tests/TestMain.cs" />
+    <Compile Include="tests/TraceCliTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="fixtures/*.txt">
