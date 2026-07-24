@@ -276,21 +276,9 @@ namespace OpenGGF.BizHawk.Headless
 
                     // Recorded row (§7 order): zone_act_state/checkpoint
                     // before the CSV row, then the frame-shared aux events.
-                    foreach (string line in
-                        auxEngine.ProcessFrameStart(traceFrame, host))
-                    {
-                        auxBuf.Append(line).Append('\n');
-                    }
-                    physicsBuf.Append(S2TraceCsvWriter.FormatRow(
-                        traceFrame,
-                        S1InputMask.FromFrame(frame),
-                        host));
-                    physicsBuf.Append('\n');
-                    foreach (string line in
-                        auxEngine.ProcessFrame(traceFrame, host))
-                    {
-                        auxBuf.Append(line).Append('\n');
-                    }
+                    AppendRecordedRow(
+                        physicsBuf, auxBuf, auxEngine, traceFrame, frame,
+                        host);
                     if (S2Ram.U8(host, S2Ram.SidekickBase + S2Ram.OffId) != 0)
                     {
                         recordedSidekickPresent = true;
@@ -321,6 +309,38 @@ namespace OpenGGF.BizHawk.Headless
                     recordingDate));
                 return new S2TraceCaptureResult(
                     offset, traceFrame, gameplaySegmentIndex);
+            }
+        }
+
+        /// <summary>
+        /// Appends one recorded level trace row in the recorder's exact
+        /// per-frame order (spec §7): step-1 zone_act_state/checkpoint aux
+        /// events, then the CSV v7 row (BK2-derived input mask), then the
+        /// frame-shared aux events. Shared with the run-mode capture runner
+        /// so run level segments are produced by exactly the plain-mode
+        /// code (s2-run-mode-behavior.md §8).
+        /// </summary>
+        internal static void AppendRecordedRow(
+            StringBuilder physicsBuf,
+            StringBuilder auxBuf,
+            S2AuxEventEngine auxEngine,
+            int traceFrame,
+            Bk2Frame frame,
+            IGpgxHost host)
+        {
+            foreach (string line in
+                auxEngine.ProcessFrameStart(traceFrame, host))
+            {
+                auxBuf.Append(line).Append('\n');
+            }
+            physicsBuf.Append(S2TraceCsvWriter.FormatRow(
+                traceFrame,
+                S1InputMask.FromFrame(frame),
+                host));
+            physicsBuf.Append('\n');
+            foreach (string line in auxEngine.ProcessFrame(traceFrame, host))
+            {
+                auxBuf.Append(line).Append('\n');
             }
         }
     }

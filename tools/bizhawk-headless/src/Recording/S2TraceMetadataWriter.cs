@@ -46,6 +46,48 @@ namespace OpenGGF.BizHawk.Headless
             string sourceBk2,
             string recordingDate)
         {
+            return Format(
+                romZoneId,
+                actRaw,
+                gameplaySegment,
+                bk2FrameOffset,
+                traceFrameCount,
+                startX,
+                startY,
+                sidekickPresent,
+                rngSeed,
+                traceProfile,
+                sourceBk2,
+                recordingDate,
+                null,
+                0);
+        }
+
+        /// <summary>
+        /// Run-mode overload (s2-run-mode-behavior.md §7): when
+        /// <paramref name="runId"/> is non-null, a two-line block
+        /// <c>"run_id"</c> / <c>"segment_index"</c> is inserted between
+        /// <c>source_bk2</c> and <c>rom_checksum</c>. The Lua writes the
+        /// run_id value RAW (no json_escape — L578), and segment_index is
+        /// the number of segments finished before this one (#segments_done
+        /// at write time). A null run id reproduces plain-mode bytes.
+        /// </summary>
+        public static string Format(
+            int romZoneId,
+            int actRaw,
+            int gameplaySegment,
+            int bk2FrameOffset,
+            int traceFrameCount,
+            int startX,
+            int startY,
+            bool sidekickPresent,
+            uint rngSeed,
+            string traceProfile,
+            string sourceBk2,
+            string recordingDate,
+            string runId,
+            int segmentIndex)
+        {
             if (traceProfile == null)
             {
                 throw new ArgumentNullException("traceProfile");
@@ -105,6 +147,12 @@ namespace OpenGGF.BizHawk.Headless
             json.Append("  \"route\": \"").Append(zoneName).Append("\",\n");
             json.Append("  \"source_bk2\": \"")
                 .Append(JsonEscape(sourceBk2)).Append("\",\n");
+            if (runId != null)
+            {
+                json.Append("  \"run_id\": \"").Append(runId).Append("\",\n");
+                json.Append("  \"segment_index\": ")
+                    .Append(Dec(segmentIndex)).Append(",\n");
+            }
             json.Append("  \"rom_checksum\": \"\",\n");
             json.Append("  \"notes\": \"\"\n");
             json.Append("}\n");

@@ -50,6 +50,9 @@
     <Compile Include="tests/S1TraceMetadataWriterTests.cs" />
     <Compile Include="tests/S2AuxArmBlockTests.cs" />
     <Compile Include="tests/S2AuxEventEngineTests.cs" />
+    <Compile Include="tests/S2RunCaptureRunnerTests.cs" />
+    <Compile Include="tests/S2RunManifestWriterTests.cs" />
+    <Compile Include="tests/S2SpecialStageWriterTests.cs" />
     <Compile Include="tests/S2TraceCaptureRunnerTests.cs" />
     <Compile Include="tests/S2TraceCsvWriterTests.cs" />
     <Compile Include="tests/S2TraceMetadataWriterTests.cs" />

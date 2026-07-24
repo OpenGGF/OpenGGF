@@ -117,8 +117,13 @@ namespace OpenGGF.BizHawk.Headless
         /// <paramref name="fileNames"/> (all writers open at once, in the
         /// same order), then returns a set whose Publish() links every file
         /// into place with the same no-replace link(2) semantics as the
-        /// single-file path. On any staging failure all temporaries are
-        /// removed and no final path is touched.
+        /// single-file path. Names may carry relative subdirectory paths
+        /// (e.g. "seg1_ehz1/physics.csv"); each parent directory is created
+        /// at staging time and every temporary lives next to its final so
+        /// link(2) never crosses a filesystem boundary. On any staging
+        /// failure all temporaries are removed and no final path is
+        /// touched; on a partial multi-file publication failure the
+        /// already-linked finals are revoked (no partial finals).
         /// </summary>
         internal StagedPublicationSet StageAll(
             string outputDirectory,
@@ -149,12 +154,17 @@ namespace OpenGGF.BizHawk.Headless
             var staged = new StagedPublication[fileNames.Length];
             for (var index = 0; index < fileNames.Length; index++)
             {
-                temporaryPaths[index] = Path.Combine(
+                string finalPath = Path.Combine(
                     fullOutputDirectory,
-                    CreateTemporaryName(fileNames[index]));
+                    fileNames[index]);
+                string finalDirectory = Path.GetDirectoryName(finalPath);
+                Directory.CreateDirectory(finalDirectory);
+                temporaryPaths[index] = Path.Combine(
+                    finalDirectory,
+                    CreateTemporaryName(Path.GetFileName(fileNames[index])));
                 staged[index] = new StagedPublication(
                     temporaryPaths[index],
-                    Path.Combine(fullOutputDirectory, fileNames[index]),
+                    finalPath,
                     linkOperation,
                     deleteFile);
             }

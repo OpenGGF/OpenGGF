@@ -305,6 +305,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
 
             public int CompletedFrame { get; private set; }
+
+            public bool IsLagged
+            {
+                get { return false; }
+            }
             public int AdvanceCount { get; private set; }
             public List<string> Calls { get; private set; }
             public List<int> CompletedFramesAtRead { get; private set; }

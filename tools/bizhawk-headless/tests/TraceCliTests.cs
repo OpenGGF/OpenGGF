@@ -41,6 +41,440 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "TraceCli trace run failure leaves no partial outputs",
                 TraceRunFailureLeavesNoPartialOutputs));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli validates the S2 trace arguments",
+                ValidatesS2TraceArguments));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli run mode refuses only an existing run manifest",
+                RunModeRefusesOnlyExistingRunManifest));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli rejects S2 arguments with the Sonic 1 ROM",
+                RejectsS2ArgumentsWithSonic1Rom));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S2 trace run publishes with labeled stdout",
+                S2TraceRunPublishesWithLabeledStdout));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S2 run mode publishes segments and manifest",
+                S2RunModePublishesSegmentsAndManifest));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S2 run mode failure leaves no partial outputs",
+                S2RunModeFailureLeavesNoPartialOutputs));
+        }
+
+        private static void ValidatesS2TraceArguments()
+        {
+            WithUnusedOutput(
+                output =>
+                {
+                    // --run-id is mutually exclusive with the plain-mode
+                    // selection arguments (Lua env semantics: the run
+                    // capture procedure sets neither env var).
+                    AssertEx.Throws<ArgumentException>(
+                        () => CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--run-id", "run",
+                            "--trace-profile", "gameplay_unlock")),
+                        "--run-id cannot be combined with --trace-profile");
+                    AssertEx.Throws<ArgumentException>(
+                        () => CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--run-id", "run",
+                            "--gameplay-segment", "1")),
+                        "--run-id cannot be combined with"
+                        + " --gameplay-segment");
+
+                    AssertEx.Throws<ArgumentOutOfRangeException>(
+                        () => CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--gameplay-segment", "-1")),
+                        "--gameplay-segment must be at least 0");
+                    AssertEx.Throws<ArgumentException>(
+                        () => CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--gameplay-segment", "one")),
+                        "--gameplay-segment must be an integer");
+
+                    // The S2 selection arguments are trace-mode only.
+                    foreach (string[] pair in new[]
+                    {
+                        new[] { "--trace-profile", "gameplay_unlock" },
+                        new[] { "--gameplay-segment", "1" },
+                        new[] { "--run-id", "run" }
+                    })
+                    {
+                        AssertEx.Throws<ArgumentException>(
+                            () => CommandLineOptions.Parse(Append(
+                                SmokeArguments(output),
+                                pair[0], pair[1])),
+                            pair[0] + " is only supported in trace mode");
+                    }
+
+                    // Valid combinations parse.
+                    CommandLineOptions plain =
+                        CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--trace-profile", "level_gated_reset_aware",
+                            "--gameplay-segment", "1"));
+                    AssertEx.Equal(
+                        "level_gated_reset_aware", plain.TraceProfile);
+                    AssertEx.Equal(1, plain.GameplaySegment ?? -1);
+                    AssertEx.Equal(null, plain.RunId);
+
+                    CommandLineOptions run =
+                        CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--run-id", "my-run"));
+                    AssertEx.Equal("my-run", run.RunId);
+                    AssertEx.Equal(null, run.TraceProfile);
+                    AssertEx.Equal(false, run.GameplaySegment.HasValue);
+                });
+        }
+
+        private static void RunModeRefusesOnlyExistingRunManifest()
+        {
+            WithUnusedOutput(
+                output =>
+                {
+                    Directory.CreateDirectory(output);
+                    string manifestPath = Path.Combine(
+                        output,
+                        "run_manifest.json");
+                    File.WriteAllText(
+                        manifestPath,
+                        "{}\n",
+                        new UTF8Encoding(false));
+
+                    AssertEx.Throws<IOException>(
+                        () => CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--run-id", "run")),
+                        "already exists and will not be replaced: "
+                        + manifestPath);
+
+                    // A leftover manifest does not block plain trace mode,
+                    // and leftover plain outputs do not block run mode.
+                    CommandLineOptions plain =
+                        CommandLineOptions.Parse(TraceArguments(output));
+                    AssertEx.Equal(CaptureMode.Trace, plain.Mode);
+                });
+            WithUnusedOutput(
+                output =>
+                {
+                    Directory.CreateDirectory(output);
+                    File.WriteAllText(
+                        Path.Combine(output, "physics.csv"),
+                        "existing plain trace output\n",
+                        new UTF8Encoding(false));
+
+                    CommandLineOptions run =
+                        CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--run-id", "run"));
+                    AssertEx.Equal("run", run.RunId);
+                });
+        }
+
+        private static void RejectsS2ArgumentsWithSonic1Rom()
+        {
+            TraceCliDependencies dependencies = ResolveDependencies();
+            WithSyntheticMovie(
+                4,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output,
+                                "--trace-profile", "gameplay_unlock"
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) =>
+                                new ScriptedTraceHost(-1));
+
+                        AssertEx.Equal(1, exitCode);
+                        AssertEx.Equal(string.Empty, stdout.ToString());
+                        AssertContains(
+                            stderr.ToString(),
+                            "only supported with the Sonic 2 ROM");
+                        AssertEx.Equal(
+                            false,
+                            Directory.Exists(Path.GetFullPath(output))
+                            && Directory.GetFileSystemEntries(
+                                Path.GetFullPath(output)).Length > 0);
+                    }));
+        }
+
+        private static void S2TraceRunPublishesWithLabeledStdout()
+        {
+            S2TraceCliDependencies dependencies = ResolveS2Dependencies();
+            // 7 rows with detection at frame 3 yields 3 trace rows (the
+            // movie's final input row is never consumed).
+            WithSyntheticMovie(
+                7,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        var host = new S2RunCaptureRunnerTests.FakeRunHost(
+                            (h, frame) =>
+                            {
+                                if (frame == 3)
+                                {
+                                    h.Ram[0xF600] = 0x0C;
+                                }
+                            });
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) => host);
+
+                        AssertEx.Equal(string.Empty, stderr.ToString());
+                        AssertEx.Equal(0, exitCode);
+
+                        string fullOutput = Path.GetFullPath(output);
+                        AssertEx.Equal(
+                            "BizHawk: "
+                            + dependencies.ManagedVersion
+                            + "\n"
+                            + "ROM SHA-1: "
+                            + RomIdentity.Sonic2Rev01Sha1
+                            + "\n"
+                            + "Movie frames: 7\n"
+                            + "Trace profile: gameplay_unlock\n"
+                            + "Gameplay segment: 0\n"
+                            + "BK2 frame offset: 3\n"
+                            + "Trace frames: 3\n"
+                            + "Physics CSV: "
+                            + Path.Combine(fullOutput, "physics.csv") + "\n"
+                            + "Aux state JSONL: "
+                            + Path.Combine(fullOutput, "aux_state.jsonl")
+                            + "\n"
+                            + "Metadata JSON: "
+                            + Path.Combine(fullOutput, "metadata.json")
+                            + "\n",
+                            stdout.ToString());
+
+                        string physics = File.ReadAllText(
+                            Path.Combine(fullOutput, "physics.csv"));
+                        AssertEx.Equal(
+                            true,
+                            physics.StartsWith(
+                                S2TraceCsvWriter.Header + "\n0000,"));
+                        string metadata = File.ReadAllText(
+                            Path.Combine(fullOutput, "metadata.json"));
+                        AssertContains(
+                            metadata,
+                            "  \"trace_profile\": \"gameplay_unlock\",\n");
+                        AssertContains(
+                            metadata,
+                            "  \"source_bk2\": \"synthetic.bk2\",\n"
+                            + "  \"rom_checksum\": \"\",\n");
+                    }));
+        }
+
+        private static void S2RunModePublishesSegmentsAndManifest()
+        {
+            S2TraceCliDependencies dependencies = ResolveS2Dependencies();
+            WithSyntheticMovie(
+                12,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        var host = new S2RunCaptureRunnerTests.FakeRunHost(
+                            RoundTripSchedule);
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output,
+                                "--run-id", "cli-run"
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) => host);
+
+                        AssertEx.Equal(string.Empty, stderr.ToString());
+                        AssertEx.Equal(0, exitCode);
+
+                        string fullOutput = Path.GetFullPath(output);
+                        AssertEx.Equal(
+                            "BizHawk: "
+                            + dependencies.ManagedVersion
+                            + "\n"
+                            + "ROM SHA-1: "
+                            + RomIdentity.Sonic2Rev01Sha1
+                            + "\n"
+                            + "Movie frames: 12\n"
+                            + "Run ID: cli-run\n"
+                            + "Segments: 3\n"
+                            + "Transitions: 2\n"
+                            + "Segment seg1_ehz1: kind=level,"
+                            + " BK2 frame offset=3, trace frames=2\n"
+                            + "Segment ss: kind=special_stage,"
+                            + " BK2 frame offset=6, trace frames=2\n"
+                            + "Segment seg2_ehz1: kind=level,"
+                            + " BK2 frame offset=9, trace frames=2\n"
+                            + "Run manifest: "
+                            + Path.Combine(fullOutput, "run_manifest.json")
+                            + "\n",
+                            stdout.ToString());
+
+                        string[] files = Directory.GetFiles(
+                                fullOutput,
+                                "*",
+                                SearchOption.AllDirectories)
+                            .Select(path =>
+                                path.Substring(fullOutput.Length + 1))
+                            .OrderBy(
+                                name => name,
+                                StringComparer.Ordinal)
+                            .ToArray();
+                        AssertEx.Equal(
+                            "run_manifest.json,"
+                            + "seg1_ehz1/aux_state.jsonl,"
+                            + "seg1_ehz1/metadata.json,"
+                            + "seg1_ehz1/physics.csv,"
+                            + "seg2_ehz1/aux_state.jsonl,"
+                            + "seg2_ehz1/metadata.json,"
+                            + "seg2_ehz1/physics.csv,"
+                            + "ss/aux_state.jsonl,"
+                            + "ss/metadata.json,"
+                            + "ss/physics.csv",
+                            string.Join(",", files));
+
+                        // The ss aux file exists and is byte-empty (§4).
+                        AssertEx.Equal(
+                            0L,
+                            new FileInfo(Path.Combine(
+                                fullOutput,
+                                "ss",
+                                "aux_state.jsonl")).Length);
+                        AssertContains(
+                            File.ReadAllText(Path.Combine(
+                                fullOutput,
+                                "run_manifest.json")),
+                            "  \"run_id\": \"cli-run\",\n");
+                        AssertContains(
+                            File.ReadAllText(Path.Combine(
+                                fullOutput,
+                                "seg2_ehz1",
+                                "metadata.json")),
+                            "  \"segment_index\": 2,\n");
+                    }));
+        }
+
+        private static void S2RunModeFailureLeavesNoPartialOutputs()
+        {
+            S2TraceCliDependencies dependencies = ResolveS2Dependencies();
+            WithSyntheticMovie(
+                12,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        // A competing final inside a segment directory makes
+                        // the multi-file publication fail after some links
+                        // succeeded; every published final must be revoked.
+                        Directory.CreateDirectory(
+                            Path.Combine(output, "ss"));
+                        string competingPath = Path.Combine(
+                            output,
+                            "ss",
+                            "physics.csv");
+                        File.WriteAllText(
+                            competingPath,
+                            "competing ss capture\n",
+                            new UTF8Encoding(false));
+
+                        var host = new S2RunCaptureRunnerTests.FakeRunHost(
+                            RoundTripSchedule);
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output,
+                                "--run-id", "cli-run"
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) => host);
+
+                        AssertEx.Equal(1, exitCode);
+                        AssertContains(
+                            stderr.ToString(),
+                            "already exists and will not be replaced");
+
+                        string fullOutput = Path.GetFullPath(output);
+                        string[] files = Directory.GetFiles(
+                            fullOutput,
+                            "*",
+                            SearchOption.AllDirectories);
+                        AssertEx.Equal(1, files.Length);
+                        AssertEx.Equal(
+                            Path.GetFullPath(competingPath),
+                            Path.GetFullPath(files[0]));
+                        AssertEx.Equal(
+                            "competing ss capture\n",
+                            File.ReadAllText(files[0]));
+                    }));
+        }
+
+        /// <summary>
+        /// Minimal round-trip schedule for a 12-row movie: arm at F=3, ss
+        /// entry at F=6, exit + same-frame re-arm at F=9, movie-done guard
+        /// at F=12. Yields segments seg1_ehz1/ss/seg2_ehz1 with offsets
+        /// 3/6/9 and 2 rows each.
+        /// </summary>
+        private static void RoundTripSchedule(
+            S2RunCaptureRunnerTests.FakeRunHost host,
+            int frame)
+        {
+            if (frame == 3)
+            {
+                host.Ram[0xF600] = 0x0C;
+            }
+            if (frame == 6)
+            {
+                host.Ram[0xF600] = 0x10;
+            }
+            if (frame == 9)
+            {
+                host.Ram[0xF600] = 0x0C;
+            }
         }
 
         private static void ModeDefaultsToSmokeAndAcceptsExplicitValues()
@@ -478,6 +912,51 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 installation.ManagedVersion.ToString());
         }
 
+        private static S2TraceCliDependencies ResolveS2Dependencies()
+        {
+            string romPath =
+                Environment.GetEnvironmentVariable("S2_ROM_PATH");
+            string bizHawkHome =
+                Environment.GetEnvironmentVariable("BIZHAWK_HOME");
+            var missing = new List<string>();
+            if (string.IsNullOrEmpty(romPath))
+            {
+                missing.Add("S2_ROM_PATH is not set");
+            }
+            if (string.IsNullOrEmpty(bizHawkHome))
+            {
+                missing.Add("BIZHAWK_HOME is not set");
+            }
+            if (missing.Count != 0)
+            {
+                throw new TestMain.SkipTestException(
+                    string.Join("; ", missing.ToArray()));
+            }
+
+            // Present inputs are validated, not skipped over.
+            romPath = Path.GetFullPath(romPath);
+            RomIdentity.ValidateSonic2Rev01(File.ReadAllBytes(romPath));
+            BizHawkInstallation installation =
+                BizHawkInstallation.Validate(bizHawkHome);
+            return new S2TraceCliDependencies(
+                romPath,
+                installation.ManagedVersion.ToString());
+        }
+
+        private sealed class S2TraceCliDependencies
+        {
+            public S2TraceCliDependencies(
+                string romPath,
+                string managedVersion)
+            {
+                RomPath = romPath;
+                ManagedVersion = managedVersion;
+            }
+
+            public string RomPath { get; private set; }
+            public string ManagedVersion { get; private set; }
+        }
+
         private static void AssertContains(
             string value,
             string expectedFragment)
@@ -522,6 +1001,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
 
             public int CompletedFrame { get; private set; }
+
+            public bool IsLagged
+            {
+                get { return false; }
+            }
 
             public void ClearButtons()
             {
