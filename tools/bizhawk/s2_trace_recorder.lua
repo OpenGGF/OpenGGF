@@ -911,7 +911,7 @@ end
 
 -- v9.13-s2 run-mode SS aux events: hook-free subset of
 -- s2_ss_trace_recorder.lua v1.4-s2ss's aux surface (templates verbatim from
--- that file -- all events are "type"-keyed, lowercase unpadded hex). NOT
+-- that file -- all events are "type"-keyed, lowercase zero-padded hex). NOT
 -- ported: run_objects_end (needs the standalone's two event.onmemoryexecute
 -- hooks; hard rule for this run port is no execute hooks), so at the finish
 -- frame the standalone's checkpoint -> terminal run_objects_end ->

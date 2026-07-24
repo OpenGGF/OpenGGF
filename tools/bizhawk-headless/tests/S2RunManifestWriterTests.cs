@@ -82,23 +82,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     starpost1, exit1, starpost2, exit2
                 });
 
-            // Ground truth: the committed fixture manifest. The capture ran
-            // on Windows EmuHawk whose text-mode io expanded the Lua's "\n"
-            // to CRLF; the native writer emits the written LF. The fixture
-            // was captured by the v9.12 Lua and the native writer stamps
-            // 9.13-s2 (v9.13 declares this shape byte-identical apart from
-            // the version string), so CRLF normalization plus that one
-            // version line are the only permitted differences here.
+            // Ground truth: the committed fixture manifest, regenerated from
+            // a native 9.13-s2 capture (CRLF per the run-publication
+            // convention; the native writer emits LF before publication
+            // expands it). CRLF normalization is the only permitted
+            // difference here — the version line must match exactly.
             string fixture = File.ReadAllText(Path.Combine(
                 EndToEndTests.RepositoryRoot,
                 "src", "test", "resources", "traces", "s2", "runs",
                 "s2-ehz-halfpipe-roundtrip", "run_manifest.json"));
             AssertEx.Equal(
-                fixture
-                    .Replace("\r\n", "\n")
-                    .Replace(
-                        "  \"lua_script_version\": \"9.12-s2\",\n",
-                        "  \"lua_script_version\": \"9.13-s2\",\n"),
+                fixture.Replace("\r\n", "\n"),
                 produced);
         }
 
