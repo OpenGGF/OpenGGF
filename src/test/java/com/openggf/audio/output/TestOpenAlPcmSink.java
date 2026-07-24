@@ -3,8 +3,20 @@ package com.openggf.audio.output;
 import com.openggf.audio.presentation.AudioPresentationCommandQueue;
 import com.openggf.audio.presentation.AudioPresentationMixer;
 import com.openggf.audio.presentation.AudioPresentationProducer;
+import com.openggf.audio.presentation.AudioPresentationCommand;
+import com.openggf.audio.presentation.AudioPresentationDependencyResolver;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
+import com.openggf.audio.presentation.DecodedPcm;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
+import com.openggf.audio.presentation.SampleBackedVoice;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.audio.presentation.SmpsSfxInstantiation;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
+import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.LiveCaptureAudioHandle;
 import org.junit.jupiter.api.Test;
 
@@ -24,16 +36,20 @@ class TestOpenAlPcmSink {
     void aggregatesVariablePresentationPacketsInto1024FrameDeviceBuffers() {
         FakeDevice device = new FakeDevice(57_600);
         OpenAlPcmSink sink = sink(device);
-        AudioPresentationProducer producer = producer(sink, 57_600, 60);
+        short[] source = stereoRamp(1_920);
+        AudioPresentationProducer producer = producer(
+                sink, 57_600, 60, sourceRegistry(57_600, source));
         int queued;
         try {
-            producer.present(0, PresentationMode.SILENT);
-            producer.present(1, PresentationMode.SILENT);
+            producer.present(0, PresentationMode.FORWARD);
+            producer.present(1, PresentationMode.FORWARD);
             sink.updateDevice();
             queued = sink.queuedStereoFrames();
         } finally { producer.close(); }
 
         assertEquals(List.of(1_024), device.enqueuedFrames);
+        assertArrayEquals(java.util.Arrays.copyOf(source, 1_024 * 2),
+                device.enqueuedSamples.getFirst());
         assertEquals(896, queued);
     }
 
@@ -166,10 +182,18 @@ class TestOpenAlPcmSink {
     void replacingOnlyTheSinkPreservesProducerHistoryClockCaptureAndNextPacket() {
         FakeDevice device = new FakeDevice(48_000);
         OpenAlPcmSink first = sink(device);
-        AudioPresentationProducer producer = producer(first, 48_000, 60);
+        short[] source = stereoRamp(4_800);
+        AudioPresentationProducer producer = producer(
+                first, 48_000, 60, sourceRegistry(48_000, source));
+        RecordingSink controlSink = new RecordingSink(48_000);
+        AudioPresentationProducer control = producer(
+                controlSink, 48_000, 60, sourceRegistry(48_000, source));
         producer.setHistoryArmed(true);
+        control.setHistoryArmed(true);
         producer.present(0, PresentationMode.FORWARD);
+        control.present(0, PresentationMode.FORWARD);
         producer.beginReverse(1.0);
+        control.beginReverse(1.0);
         LiveCaptureAudioHandle capture = producer.attachCapture(60);
         var before = producer.transactionFingerprint();
         RecordingSink replacement = new RecordingSink(48_000);
@@ -177,15 +201,25 @@ class TestOpenAlPcmSink {
         producer.replaceSink(replacement);
 
         assertEquals(before, producer.transactionFingerprint());
+        assertEquals(1, before.voiceIdentities().size());
+        assertTrue(before.history().storedFrames() > 0);
+        assertTrue(before.reverseActive());
+        assertEquals(1, before.captureCount());
         producer.present(1, PresentationMode.REVERSE);
+        control.present(1, PresentationMode.REVERSE);
         short[] captured =
                 new short[capture.maxStereoFramesPerPacket() * 2];
         int frames = capture.drainPresentationFrame(captured);
         assertEquals(replacement.frames, frames);
+        assertTrue(java.util.Arrays.stream(toInts(replacement.samples))
+                .anyMatch(sample -> sample != 0));
+        assertArrayEquals(controlSink.samples, replacement.samples,
+                "sink replacement must not change the exact next PCM packet");
         assertArrayEquals(replacement.samples,
                 java.util.Arrays.copyOf(captured, frames * 2));
         capture.close();
         producer.close();
+        control.close();
     }
 
     private static OpenAlPcmSink sink(FakeDevice device) {
@@ -196,16 +230,81 @@ class TestOpenAlPcmSink {
 
     private static AudioPresentationProducer producer(
             AudioPresentationSink sink, int sampleRate, int frameRate) {
+        return producer(sink, sampleRate, frameRate,
+                new AudioVoiceRegistry());
+    }
+
+    private static AudioPresentationProducer producer(
+            AudioPresentationSink sink, int sampleRate, int frameRate,
+            AudioVoiceRegistry registry) {
         int maxFrames = (sampleRate + frameRate - 1) / frameRate;
         return new AudioPresentationProducer(sampleRate, frameRate,
-                sampleRate, 0, new AudioVoiceRegistry(),
+                sampleRate, 0, registry,
                 new AudioPresentationCommandQueue(),
                 new AudioPresentationMixer(maxFrames), sink);
+    }
+
+    private static AudioVoiceRegistry sourceRegistry(
+            int sampleRate, short[] source) {
+        DecodedPcm pcm = new DecodedPcm(
+                "source-bearing-test", 2, sampleRate, source);
+        AudioPresentationDependencyResolver resolver =
+                new AudioPresentationDependencyResolver() {
+                    @Override public DecodedPcm resolvePcm(String assetId) {
+                        return pcm;
+                    }
+
+                    @Override public SmpsCompositeVoice recreateSmps(
+                            PresentationVoiceSnapshot.Smps snapshot) {
+                        throw new AssertionError("unexpected SMPS recreation");
+                    }
+                };
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                new SmpsSfxInstantiation() {
+                    @Override public SmpsSequencer instantiateCached(
+                            ResolvedSmpsSfxSource ignored,
+                            SmpsDriver currentOwner) {
+                        return null;
+                    }
+
+                    @Override public SmpsCompositeVoice
+                    instantiateStandaloneCached(
+                            ResolvedSmpsSfxSource ignored) {
+                        return null;
+                    }
+                },
+                resolver,
+                new SmpsCoordFlagHandlerOwner(
+                        new SmpsCoordFlagRuntimeState()),
+                ignored -> {
+                });
+        SampleBackedVoice voice = SampleBackedVoice.oneShot(
+                1, 10, pcm, sampleRate, 1.0f, 1.0f);
+        registry.apply(
+                AudioPresentationCommand.StartSampleSfx.fromVoice(voice));
+        return registry;
+    }
+
+    private static short[] stereoRamp(int stereoFrames) {
+        short[] samples = new short[stereoFrames * 2];
+        for (int sample = 0; sample < samples.length; sample++) {
+            samples[sample] = (short) (sample + 1);
+        }
+        return samples;
+    }
+
+    private static int[] toInts(short[] samples) {
+        int[] converted = new int[samples.length];
+        for (int index = 0; index < samples.length; index++) {
+            converted[index] = samples[index];
+        }
+        return converted;
     }
 
     private static final class FakeDevice implements OpenAlPcmSink.Device {
         private final int sampleRate;
         private final List<Integer> enqueuedFrames = new ArrayList<>();
+        private final List<short[]> enqueuedSamples = new ArrayList<>();
         private boolean failEnqueue;
         private boolean failUpdate;
         private boolean failClose;
@@ -228,6 +327,8 @@ class TestOpenAlPcmSink {
                 throw new IllegalStateException("enqueue");
             }
             enqueuedFrames.add(stereoFrames);
+            enqueuedSamples.add(java.util.Arrays.copyOf(
+                    stereoPcm, stereoFrames * 2));
         }
 
         @Override

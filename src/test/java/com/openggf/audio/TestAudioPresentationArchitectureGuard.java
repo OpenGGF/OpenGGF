@@ -1,11 +1,17 @@
 package com.openggf.audio;
 
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestAudioPresentationArchitectureGuard {
     private static final Path AUDIO_ROOT =
             Path.of("src/main/java/com/openggf/audio");
+    private static final Set<String> BACKEND_COMMANDS = Set.of(
+            "playMusic", "playSfx", "playSmps", "playSfxSmps",
+            "toggleMute", "toggleSolo", "isMuted", "isSoloed");
 
     @Test
     void lwjglBackendDoesNotOwnIndependentMusicOrSfxSources()
@@ -97,5 +106,62 @@ class TestAudioPresentationArchitectureGuard {
         assertFalse(source.contains("legacyCoordFlagHandlers"));
         assertFalse(source.contains("inactiveCoordFlagHandlers"));
         assertFalse(source.contains("createLegacySourceFactory"));
+    }
+
+    @Test
+    void productionDoesNotBypassManagerOwnedAudioCommands() {
+        JavaClasses production = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.openggf");
+
+        assertEquals(List.of(), directBackendCommandBypasses(production));
+    }
+
+    @Test
+    void directBackendGuardRejectsRepresentativeBypass() {
+        JavaClasses fixture = new ClassFileImporter()
+                .importClasses(RepresentativeBackendBypass.class);
+
+        List<String> bypasses = directBackendCommandBypasses(fixture);
+
+        assertEquals(2, bypasses.size(), bypasses::toString);
+        assertTrue(bypasses.stream().anyMatch(
+                call -> call.contains(".playMusic(")));
+        assertTrue(bypasses.stream().anyMatch(
+                call -> call.contains(".toggleMute(")));
+    }
+
+    private static List<String> directBackendCommandBypasses(
+            JavaClasses classes) {
+        return classes.stream()
+                .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
+                .filter(TestAudioPresentationArchitectureGuard
+                        ::targetsBackendCommand)
+                .filter(call -> !isApprovedBackendCommandOwner(
+                        call.getOriginOwner()))
+                .map(JavaMethodCall::getDescription)
+                .sorted()
+                .toList();
+    }
+
+    private static boolean targetsBackendCommand(JavaMethodCall call) {
+        return BACKEND_COMMANDS.contains(call.getName())
+                && call.getTargetOwner().isAssignableTo(AudioBackend.class);
+    }
+
+    private static boolean isApprovedBackendCommandOwner(
+            com.tngtech.archunit.core.domain.JavaClass owner) {
+        return owner.isEquivalentTo(AudioManager.class)
+                || owner.isEquivalentTo(AudioPresentationSourceFactory.class)
+                || owner.isAssignableTo(AudioBackend.class);
+    }
+
+    private static final class RepresentativeBackendBypass {
+        private final AudioBackend backend = new NullAudioBackend();
+
+        private void bypass() {
+            backend.playMusic(1);
+            backend.toggleMute(ChannelType.FM, 0);
+        }
     }
 }
