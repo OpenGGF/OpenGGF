@@ -20,8 +20,29 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioPresentationProducerRewind {
+    @Test
+    void transactionIdentityFingerprintsContainOnlyScalarTokens() {
+        Fixture fixture = fixture();
+        fixture.startMusic();
+        fixture.producer.present(0, PresentationMode.FORWARD);
+
+        var first = fixture.producer.transactionFingerprint();
+        var second = fixture.producer.transactionFingerprint();
+
+        assertEquals(first.voiceIdentities(), second.voiceIdentities());
+        for (var field : AudioPresentationProducer.IdentityFingerprint.class
+                .getDeclaredFields()) {
+            if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                assertTrue(field.getType().isPrimitive(),
+                        "diagnostic identities must not retain live objects: "
+                                + field);
+            }
+        }
+    }
+
     @Test
     void reverseEntryFlushesSinkBeforeFirstReversePacket() {
         Fixture fixture = fixture();

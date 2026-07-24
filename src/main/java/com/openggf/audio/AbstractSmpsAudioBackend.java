@@ -564,6 +564,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     sfxDriver = new SmpsDriver(getSmpsOutputRate());
                     sfxDriver.setDacInterpolate(dacInterpolate);
                     sfxStream = sfxDriver;
+                    applyUserMasks(sfxDriver, hasAnyUserSolo());
                 }
                 sfxDriver.setOutputSampleRate(getSmpsOutputRate());
                 applyPsgNoiseConfig(sfxDriver);
@@ -671,6 +672,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             smpsDriver = savedState.driver;
             currentMusicId = savedState.musicId;
             currentMusicDescriptor = savedState.descriptor;
+            updateSynthesizerConfig();
             bindRuntimePresentationStreams();
         }
 
@@ -1579,17 +1581,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     }
 
     private void updateSynthesizerConfig() {
-        boolean anyFmSolo = false;
-        for (boolean s : fmUserSolos)
-            if (s)
-                anyFmSolo = true;
-
-        boolean anyPsgSolo = false;
-        for (boolean s : psgUserSolos)
-            if (s)
-                anyPsgSolo = true;
-
-        boolean anySolo = anyFmSolo || anyPsgSolo;
+        boolean anySolo = hasAnyUserSolo();
 
         if (smpsDriver != null) {
             applyUserMasks(smpsDriver, anySolo);
@@ -1598,6 +1590,20 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 && sfxDriver != smpsDriver) {
             applyUserMasks(sfxDriver, anySolo);
         }
+    }
+
+    private boolean hasAnyUserSolo() {
+        for (boolean solo : fmUserSolos) {
+            if (solo) {
+                return true;
+            }
+        }
+        for (boolean solo : psgUserSolos) {
+            if (solo) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void applyUserMasks(SmpsDriver driver, boolean anySolo) {

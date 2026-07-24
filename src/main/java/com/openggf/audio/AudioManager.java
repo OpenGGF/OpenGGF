@@ -1112,7 +1112,7 @@ public class AudioManager implements MusicRestoreSink {
     /**
      * Immutable diagnostic counters for the temporary shadow-parity gate.
      */
-    public AudioPresentationParityProbe.Snapshot shadowParitySnapshot() {
+    AudioPresentationParityProbe.Snapshot shadowParitySnapshot() {
         ensureShadowPresentation();
         return shadowParity.snapshot();
     }

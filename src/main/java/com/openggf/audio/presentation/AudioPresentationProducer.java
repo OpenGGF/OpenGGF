@@ -5,6 +5,8 @@ import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.PcmHistoryRing;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -32,6 +34,8 @@ public final class AudioPresentationProducer {
     private final CaptureHandle[] captures =
             new CaptureHandle[MAX_CAPTURE_HANDLES];
     private final Consumer<AudioPresentationCommand> commandApplier;
+    private final IdentityTokenRegistry diagnosticIdentityTokens =
+            new IdentityTokenRegistry();
 
     private AudioPresentationSink sink;
     private PcmHistoryRing.ReverseCursor reverseCursor;
@@ -252,7 +256,7 @@ public final class AudioPresentationProducer {
         IdentityFingerprint[] voiceIdentities =
                 new IdentityFingerprint[registry.orderedVoiceCount()];
         for (int index = 0; index < registry.orderedVoiceCount(); index++) {
-            voiceIdentities[index] = new IdentityFingerprint(
+            voiceIdentities[index] = identityFingerprint(
                     registry.orderedVoiceAt(index));
         }
         return new TransactionFingerprint(
@@ -260,9 +264,9 @@ public final class AudioPresentationProducer {
                 history.diagnosticSnapshot(),
                 List.of(voiceIdentities),
                 reverseCursor != null ? reverseCursor.state() : null,
-                new IdentityFingerprint(selectedRestore),
-                new IdentityFingerprint(selectedRestoreResolver),
-                new IdentityFingerprint(preparedSelectedRestore),
+                identityFingerprint(selectedRestore),
+                identityFingerprint(selectedRestoreResolver),
+                identityFingerprint(preparedSelectedRestore),
                 releaseCrossfadeRemaining,
                 lastReverseLeft,
                 lastReverseRight,
@@ -303,28 +307,46 @@ public final class AudioPresentationProducer {
     /**
      * Opaque, collision-free reference identity used only in diagnostics.
      */
-    public static final class IdentityFingerprint {
-        private final Object reference;
+    public record IdentityFingerprint(long token) {
+    }
 
-        private IdentityFingerprint(Object reference) {
-            this.reference = reference;
+    private IdentityFingerprint identityFingerprint(Object reference) {
+        return new IdentityFingerprint(
+                diagnosticIdentityTokens.tokenFor(reference));
+    }
+
+    /**
+     * Assigns stable, collision-free diagnostic ids without keeping runtime
+     * voices, snapshots, or resolvers alive.
+     */
+    private static final class IdentityTokenRegistry {
+        private final List<TokenEntry> entries = new ArrayList<>();
+        private long nextToken = 1;
+
+        private long tokenFor(Object reference) {
+            if (reference == null) {
+                return 0;
+            }
+            for (int index = entries.size() - 1; index >= 0; index--) {
+                TokenEntry entry = entries.get(index);
+                Object existing = entry.reference().get();
+                if (existing == null) {
+                    entries.remove(index);
+                } else if (existing == reference) {
+                    return entry.token();
+                }
+            }
+            long token = nextToken++;
+            if (token == 0) {
+                throw new IllegalStateException(
+                        "diagnostic identity token space exhausted");
+            }
+            entries.add(new TokenEntry(new WeakReference<>(reference), token));
+            return token;
         }
 
-        @Override
-        public boolean equals(Object other) {
-            return other instanceof IdentityFingerprint fingerprint
-                    && reference == fingerprint.reference;
-        }
-
-        @Override
-        public int hashCode() {
-            return System.identityHashCode(reference);
-        }
-
-        @Override
-        public String toString() {
-            return "IdentityFingerprint["
-                    + Integer.toHexString(hashCode()) + "]";
+        private record TokenEntry(
+                WeakReference<Object> reference, long token) {
         }
     }
 

@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 /**
  * Rewind restores must rebuild the music override stack — the saved zone
@@ -58,6 +59,51 @@ class TestAudioBackendOverrideStackRestore {
                 "ending the override after a rewind restore must resume the saved zone music");
         assertTrue(after.overrideStack().isEmpty());
         assertNotNull(backend.musicDriverForTesting());
+    }
+
+    @Test
+    void masksSelectedDuringOverrideApplyWhenSavedBaseBecomesAudible() {
+        HeadlessSmpsAudioBackend backend = backendWithZoneMusicUnderJingle();
+
+        backend.toggleMute(ChannelType.FM, 2);
+        backend.toggleSolo(ChannelType.PSG, 1);
+        backend.restoreMusic();
+        backend.doRestoreMusic();
+
+        AudioBackendLogicalSnapshot restored =
+                backend.captureLogicalSnapshot();
+        assertArrayEquals(
+                new boolean[]{true, true, true, true, true, true},
+                restored.musicDriver().synthSnapshot().ym().mutes());
+        assertArrayEquals(
+                new boolean[]{true, false, true, true},
+                restored.musicDriver().synthSnapshot().psg().mutes());
+
+        backend.toggleMute(ChannelType.FM, 2);
+        backend.toggleSolo(ChannelType.PSG, 1);
+        assertFalse(backend.isMuted(ChannelType.FM, 2));
+        assertFalse(backend.isSoloed(ChannelType.PSG, 1));
+    }
+
+    @Test
+    void masksSelectedBeforeStandaloneSfxApplyAtConstruction() {
+        HeadlessSmpsAudioBackend backend = newBackend();
+        backend.toggleMute(ChannelType.FM, 2);
+        backend.toggleSolo(ChannelType.PSG, 1);
+        AbstractSmpsData sfx = new AudioTestFixtures.StubSmpsData("sfx");
+        sfx.setId(0xA0);
+
+        backend.playSfxSmps(sfx, dacData(), 1.0f, config());
+
+        AudioBackendLogicalSnapshot state =
+                backend.captureLogicalSnapshot();
+        assertNotNull(state.standaloneSfxDriver());
+        assertArrayEquals(
+                new boolean[]{true, true, true, true, true, true},
+                state.standaloneSfxDriver().synthSnapshot().ym().mutes());
+        assertArrayEquals(
+                new boolean[]{true, false, true, true},
+                state.standaloneSfxDriver().synthSnapshot().psg().mutes());
     }
 
     @Test

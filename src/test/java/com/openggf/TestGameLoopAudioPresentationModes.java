@@ -3,6 +3,7 @@ package com.openggf;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.AudioStream;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.LiveCaptureAudioHandle;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.runtime.AudioFrameClock;
@@ -127,8 +128,8 @@ class TestGameLoopAudioPresentationModes {
         assertEquals(6, capture.totalStereoFrames());
         assertEquals(6, capture.clockSnapshot().totalSamplesProduced());
         assertEquals(6, runtime.lastProducedFrames());
-        assertEquals(1, audio
-                .shadowParitySnapshot().presentedFrames());
+        assertEquals(1, AudioManagerTestDiagnostics
+                .shadowParitySnapshot(audio).presentedFrames());
         capture.close();
     }
 
@@ -141,8 +142,8 @@ class TestGameLoopAudioPresentationModes {
 
         assertEquals(0, runtime.advances,
                 "reverse consumes history rather than advancing synthesis");
-        assertEquals(1, AudioManager.getInstance()
-                .shadowParitySnapshot().reverseFrames());
+        assertEquals(1, AudioManagerTestDiagnostics.shadowParitySnapshot(
+                AudioManager.getInstance()).reverseFrames());
     }
 
     private CountingRuntime installCountingRuntime() throws Exception {
