@@ -84,6 +84,7 @@
     <Compile Include="src/Recording/S2Ram.cs" />
     <Compile Include="src/Recording/S2RunCaptureRunner.cs" />
     <Compile Include="src/Recording/S2RunManifestWriter.cs" />
+    <Compile Include="src/Recording/S2SpecialStageAuxEventEngine.cs" />
     <Compile Include="src/Recording/S2SpecialStageCsvWriter.cs" />
     <Compile Include="src/Recording/S2SpecialStageMetadataWriter.cs" />
     <Compile Include="src/Recording/S2TraceCaptureRunner.cs" />

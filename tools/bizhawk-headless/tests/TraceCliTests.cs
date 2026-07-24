@@ -665,12 +665,27 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             "--gameplay-segment", "one")),
                         "--gameplay-segment must be an integer");
 
+                    // --effective-movie-length models the capture session's
+                    // movie-length signal (run-mode movie-done guard only).
+                    AssertEx.Throws<ArgumentException>(
+                        () => CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--effective-movie-length", "22612")),
+                        "--effective-movie-length requires --run-id");
+                    AssertEx.Throws<ArgumentOutOfRangeException>(
+                        () => CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--run-id", "run",
+                            "--effective-movie-length", "0")),
+                        "--effective-movie-length must be at least 1");
+
                     // The S2 selection arguments are trace-mode only.
                     foreach (string[] pair in new[]
                     {
                         new[] { "--trace-profile", "gameplay_unlock" },
                         new[] { "--gameplay-segment", "1" },
-                        new[] { "--run-id", "run" }
+                        new[] { "--run-id", "run" },
+                        new[] { "--effective-movie-length", "22612" }
                     })
                     {
                         AssertEx.Throws<ArgumentException>(
@@ -698,6 +713,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     AssertEx.Equal("my-run", run.RunId);
                     AssertEx.Equal(null, run.TraceProfile);
                     AssertEx.Equal(false, run.GameplaySegment.HasValue);
+                    AssertEx.Equal(0, run.EffectiveMovieLength);
+
+                    CommandLineOptions sessionRun =
+                        CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--run-id", "my-run",
+                            "--effective-movie-length", "22612"));
+                    AssertEx.Equal(22612, sessionRun.EffectiveMovieLength);
                 });
         }
 
@@ -941,13 +964,23 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "ss/physics.csv",
                             string.Join(",", files));
 
-                        // The ss aux file exists and is byte-empty (§4).
+                        // v9.13-s2 §11.3: the ss aux file carries the
+                        // frame -1 pre-trace snapshot (all-zero SS
+                        // parameter RAM here) and the first-row
+                        // control_state, CRLF-expanded like every other
+                        // run-mode file.
                         AssertEx.Equal(
-                            0L,
-                            new FileInfo(Path.Combine(
+                            "{\"frame\":-1,\"type\":\"state_snapshot\","
+                            + "\"ring_requirement\":\"0x0000\","
+                            + "\"current_level_layout\":\"0x00000000\","
+                            + "\"initial_speed_factor\":\"0x0000\","
+                            + "\"perfect_rings_left\":\"0x0000\"}\r\n"
+                            + "{\"frame\":0,\"type\":\"control_state\","
+                            + "\"started\":0}\r\n",
+                            File.ReadAllText(Path.Combine(
                                 fullOutput,
                                 "ss",
-                                "aux_state.jsonl")).Length);
+                                "aux_state.jsonl")));
                         // Run-mode files carry the canonical capture's
                         // Windows text-mode CRLF line endings
                         // (docs/s2-run-mode-behavior.md §9).

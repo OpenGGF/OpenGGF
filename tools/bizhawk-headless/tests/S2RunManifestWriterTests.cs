@@ -7,9 +7,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// Literal-byte tests for run_manifest.json: reconstructing the
     /// canonical s2-ehz-halfpipe-roundtrip manifest from its recorded
     /// values must reproduce the committed fixture exactly (the fixture was
-    /// captured through Windows text-mode io, so its CRLF line endings are
-    /// normalized to the Lua's written LF before comparison — the only
-    /// difference). Also covers the optional-field emission rule (present
+    /// captured through Windows text-mode io by the v9.12 Lua, so its CRLF
+    /// line endings are normalized to the Lua's written LF and its version
+    /// line to the native writer's 9.13-s2 stamp before comparison — the
+    /// only differences). Also covers the optional-field emission rule (present
     /// iff recorded, zero values still render) and Lua %q escaping.
     /// </summary>
     internal static class S2RunManifestWriterTests
@@ -81,15 +82,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     starpost1, exit1, starpost2, exit2
                 });
 
-            // Ground truth: the committed fixture manifest. The capture ran
-            // on Windows EmuHawk whose text-mode io expanded the Lua's "\n"
-            // to CRLF; the native writer emits the written LF, so CRLF
-            // normalization is the single permitted difference here.
+            // Ground truth: the committed fixture manifest, regenerated from
+            // a native 9.13-s2 capture (CRLF per the run-publication
+            // convention; the native writer emits LF before publication
+            // expands it). CRLF normalization is the only permitted
+            // difference here — the version line must match exactly.
             string fixture = File.ReadAllText(Path.Combine(
                 EndToEndTests.RepositoryRoot,
                 "src", "test", "resources", "traces", "s2", "runs",
                 "s2-ehz-halfpipe-roundtrip", "run_manifest.json"));
-            AssertEx.Equal(fixture.Replace("\r\n", "\n"), produced);
+            AssertEx.Equal(
+                fixture.Replace("\r\n", "\n"),
+                produced);
         }
 
         private static void OptionalFieldsRenderByPresenceNotValue()

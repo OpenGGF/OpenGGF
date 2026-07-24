@@ -34,7 +34,8 @@ public record TraceRunManifest(
     public static final int SUPPORTED_RUN_SCHEMA = 1;
     public static final Set<String> SEGMENT_KINDS = Set.of("level", "special_stage", "bonus_stage");
     public static final Set<String> ENTRY_KINDS =
-        Set.of("giant_ring", "starpost_special", "starpost_bonus", "stage_exit");
+        Set.of("giant_ring", "starpost_special", "starpost_bonus", "stage_exit",
+            "death_restart", "level_advance");
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Segment(

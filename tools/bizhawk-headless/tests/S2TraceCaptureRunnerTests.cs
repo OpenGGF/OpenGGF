@@ -179,7 +179,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         + "  \"sidekicks\": [],\n"
                         + "  \"rng_seed\": \"0x12345678\",\n"
                         + "  \"recording_date\": \"2026-07-13\",\n"
-                        + "  \"lua_script_version\": \"9.12-s2\",\n"
+                        + "  \"lua_script_version\": \"9.13-s2\",\n"
                         + "  \"trace_schema\": 9,\n"
                         + "  \"csv_version\": 7,\n"
                         + "  \"aux_schema_extras\": "

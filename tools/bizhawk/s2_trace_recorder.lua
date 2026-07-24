@@ -117,7 +117,26 @@ end
 -- except this version string (see the run/detour functions block below for
 -- the placement rationale and the on_frame_end comments for the exact
 -- plain-mode-unreachable gates).
-local LUA_SCRIPT_VERSION = "9.12-s2"
+-- v9.13-s2 changes: complete-run extension (design: tools/bizhawk-headless/
+-- docs/s2-run-mode-behavior.md §11). (a) Run mode survives in-level reloads:
+-- Game_Mode $8C (Level|TitleCard, the death-restart / act-transition /
+-- zone-transition reload family) observed while a level segment is armed now
+-- finalizes that segment and re-arms on the next $0C frame instead of
+-- finalizing the whole run, emitting a "death_restart" or "level_advance"
+-- transition (classified by comparing Current_ZoneAndAct at the $8C boundary
+-- against the finished segment's start zone/act). (b) Run-mode ss segments'
+-- aux_state.jsonl gains the hook-free subset of s2_ss_trace_recorder.lua
+-- v1.4-s2ss's event stream (frame -1 state_snapshot, control_state,
+-- checkpoint, stage_finished, message_state, results_started -- templates
+-- verbatim; run_objects_end is NOT ported, it needs onmemoryexecute hooks).
+-- BYTE-COMPATIBILITY: 9.13 output is byte-identical to 9.12 for all
+-- previously-capturable shapes -- plain mode entirely, and run mode on
+-- movies confined to Game_Mode {$0C, $10} -- modulo recording_date and this
+-- version string, with the single documented exception that run-mode ss
+-- segments' aux_state.jsonl changes from 0 bytes to the event stream above
+-- (a pure superset; ss physics.csv/metadata.json stay byte-identical). The
+-- new code paths activate only on previously-fatal shapes ($8C while armed).
+local LUA_SCRIPT_VERSION = "9.13-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -155,6 +174,24 @@ current_ss_index = nil
 level_segment_count = 0
 -- SS detours: first dir token is bare "ss", repeats "ss_2", "ss_3", ...
 ss_segment_count = 0
+-- v9.13-s2: transition record captured at a $8C reload boundary (Block 1.5)
+-- but NOT yet pushed to transitions_done -- the completing level re-arm
+-- fills in the *_after fields and pushes it. If the run terminates first,
+-- the pending record is discarded (never emitted), so run_manifest.json
+-- always satisfies TraceRunManifest.validate (to_segment < segments.size()).
+pending_reload_transition = nil
+-- v9.13-s2: per-detour SS aux-event state, reset/seeded in start_ss_segment()
+-- so ss_2+ segments re-emit their own frame -1 snapshot and first-row
+-- control_state (mirrors the standalone's arm-time seeding, v1.4-s2ss
+-- L676-679).
+ss_aux_prev_check_rings_flag = 0
+ss_aux_prev_hide_rings_to_go = 0
+ss_aux_prev_trigger_rings_to_go = 0
+ss_aux_prev_no_rings_togo_lifetime = 0
+ss_aux_prev_special_stage_started = nil
+ss_aux_stage_finished_emitted = false
+ss_aux_results_started_emitted = false
+ss_aux_last_nonlag_trace_frame = -1
 -- Run-mode per-segment file-open target. Stays == OUTPUT_DIR for the whole
 -- run in plain mode (never reassigned outside `if run_id ~= nil` branches);
 -- open_files()/write_metadata()/reset_recording_state() below were switched
@@ -204,6 +241,30 @@ SS_ADDR_SWAP_POSITIONS_FLAG     = 0xF742  -- SS_Swap_Positions_Flag (u8)
 -- v_lastspecial-equivalent special-stage index, sampled at SS arm time.
 SS_ADDR_SPECIAL_STAGE_INDEX     = 0xFE16
 INPUT_START                     = 0x80
+
+-- v9.13-s2 run-mode SS aux-event RAM addresses, transcribed from
+-- s2_ss_trace_recorder.lua v1.4-s2ss (the byte authority for the event
+-- templates ported below). Globals, SS_-prefixed like the block above.
+SS_ADDR_SPECIAL_STAGE_STARTED   = 0xDB23  -- SpecialStage_Started (u8)
+SS_ADDR_RING_REQUIREMENT        = 0xDB8C  -- SS_Ring_Requirement (u16be)
+SS_ADDR_CURRENT_LEVEL_LAYOUT    = 0xDB8E  -- SS_CurrentLevelLayout (u32be)
+SS_ADDR_PERFECT_RINGS_LEFT      = 0xDB9A  -- SS_Perfect_rings_left (u16be)
+SS_ADDR_NO_RINGS_TOGO_LIFETIME  = 0xDBA2  -- SS_NoRingsTogoLifetime (u16be)
+SS_ADDR_HIDE_RINGS_TOGO         = 0xDBA6  -- SS_HideRingsToGo (u8)
+SS_ADDR_TRIGGER_RINGS_TOGO      = 0xDBA7  -- SS_TriggerRingsToGo (u8)
+SS_OBJID_SS_RESULTS             = 0x6F    -- ObjID_SSResults
+
+-- v9.13-s2: Game_Mode $8C = GameModeID_Level with GameModeFlag_TitleCard
+-- (bit 7) set -- the in-$0C reload family (death/star-post restart, time
+-- over, act 1->2, zone->zone, ObjB2 SCZ->WFZ->DEZ routes). Every member
+-- funnels through Level_Inactive_flag -> Level:
+-- (bset #GameModeFlag_TitleCard, s2.asm:4758) -> Level_StartGame (bclr,
+-- s2.asm:5082); the base mode never changes across a reload, only bit 7
+-- toggles. Exact-match on purpose: $88 (Demo|TitleCard) is out of scope.
+-- A continue-accepted restart also reloads through $8C, but Block 1.5 can
+-- never observe it while armed: the run already finalized at the terminal
+-- $14 continue screen, so that $8C only ever occurs after `finished`.
+GAMEMODE_LEVEL_TITLECARD        = 0x8C
 
 -- Detour transition RAM fields (contract item 3/4; VERIFY-ON-FIRST-CAPTURE).
 ADDR_BIGRING_FLAG               = 0xF7CD  -- f_bigring / special_bonus_entry_flag
@@ -848,6 +909,107 @@ function write_ss_metadata()
     meta_file:close()
 end
 
+-- v9.13-s2 run-mode SS aux events: hook-free subset of
+-- s2_ss_trace_recorder.lua v1.4-s2ss's aux surface (templates verbatim from
+-- that file -- all events are "type"-keyed, lowercase zero-padded hex). NOT
+-- ported: run_objects_end (needs the standalone's two event.onmemoryexecute
+-- hooks; hard rule for this run port is no execute hooks), so at the finish
+-- frame the standalone's checkpoint -> terminal run_objects_end ->
+-- stage_finished order becomes checkpoint -> stage_finished here. Aux
+-- `frame` is the run-mode ss trace_frame -- same base as this segment's
+-- physics.csv rows, i.e. one emu frame later than the interior recorder's
+-- convention because the run port skips the $10 entry frame (frame -1 =
+-- pre-row-0, sampled at the entry/arm frame).
+
+-- Frame -1 pre-trace snapshot: fixed special-stage parameters captured once
+-- per ss segment, at arm (standalone: write_pretrace_snapshot, L431-441).
+-- All-zero values at entry are correct -- SS init has not populated these
+-- yet on the $10 entry frame.
+function write_ss_pretrace_snapshot()
+    if not aux_file then return end
+    write_aux(string.format(
+        '{"frame":-1,"type":"state_snapshot","ring_requirement":"0x%04x",'
+        .. '"current_level_layout":"0x%08x","initial_speed_factor":"0x%04x",'
+        .. '"perfect_rings_left":"0x%04x"}',
+        mainmemory.read_u16_be(SS_ADDR_RING_REQUIREMENT),
+        mainmemory.read_u32_be(SS_ADDR_CURRENT_LEVEL_LAYOUT),
+        mainmemory.read_u16_be(SS_ADDR_CUR_SPEED_FACTOR),
+        mainmemory.read_u16_be(SS_ADDR_PERFECT_RINGS_LEFT)))
+end
+
+-- SpecialStage_Started edge (standalone: check_control_state, L496-505).
+-- Emits on change OR on the first row (prev == nil seed).
+function ss_check_control_state()
+    local special_stage_started = mainmemory.read_u8(SS_ADDR_SPECIAL_STAGE_STARTED)
+    if ss_aux_prev_special_stage_started == nil
+            or special_stage_started ~= ss_aux_prev_special_stage_started then
+        write_aux(string.format(
+            '{"frame":%d,"type":"control_state","started":%d}',
+            trace_frame, special_stage_started ~= 0 and 1 or 0))
+        ss_aux_prev_special_stage_started = special_stage_started
+    end
+end
+
+-- 0->nonzero edge of SS_Check_Rings_flag (standalone: check_checkpoint,
+-- L459-477), ported WITHOUT publish_pending_finish_pass and WITHOUT the
+-- error() assertions inside it (run_objects_end machinery). The
+-- standalone's own `last_nonlag_trace_frame < 0` error() guard IS kept:
+-- it validates the stage_finished frame source, not the per-pass records.
+-- stage_finished's `frame` is the last non-lag trace_frame (maintained
+-- hook-free in write_ss_row), `observed_frame` the current trace_frame.
+function ss_check_checkpoint(check_rings_flag)
+    if ss_aux_prev_check_rings_flag == 0 and check_rings_flag ~= 0 then
+        write_aux(string.format(
+            '{"frame":%d,"type":"checkpoint","check_rings_flag":"0x%02x"}',
+            trace_frame, check_rings_flag))
+        if not ss_aux_stage_finished_emitted then
+            if ss_aux_last_nonlag_trace_frame < 0 then
+                error("final checkpoint resolved before any logical observation")
+            end
+            write_aux(string.format(
+                '{"frame":%d,"observed_frame":%d,"type":"stage_finished",'
+                .. '"check_rings_flag":"0x%02x"}',
+                ss_aux_last_nonlag_trace_frame, trace_frame, check_rings_flag))
+            ss_aux_stage_finished_emitted = true
+        end
+    end
+    ss_aux_prev_check_rings_flag = check_rings_flag
+end
+
+-- Rings-to-go HUD message state changes (standalone: check_message_state,
+-- L479-494).
+function ss_check_message_state()
+    local hide_rings_to_go = mainmemory.read_u8(SS_ADDR_HIDE_RINGS_TOGO)
+    local trigger_rings_to_go = mainmemory.read_u8(SS_ADDR_TRIGGER_RINGS_TOGO)
+    local no_rings_togo_lifetime = mainmemory.read_u16_be(SS_ADDR_NO_RINGS_TOGO_LIFETIME)
+    if hide_rings_to_go ~= ss_aux_prev_hide_rings_to_go
+            or trigger_rings_to_go ~= ss_aux_prev_trigger_rings_to_go
+            or no_rings_togo_lifetime ~= ss_aux_prev_no_rings_togo_lifetime then
+        write_aux(string.format(
+            '{"frame":%d,"type":"message_state","hide_rings_to_go":"0x%02x",'
+            .. '"trigger_rings_to_go":"0x%02x","no_rings_togo_lifetime":"0x%04x"}',
+            trace_frame, hide_rings_to_go, trigger_rings_to_go, no_rings_togo_lifetime))
+        ss_aux_prev_hide_rings_to_go = hide_rings_to_go
+        ss_aux_prev_trigger_rings_to_go = trigger_rings_to_go
+        ss_aux_prev_no_rings_togo_lifetime = no_rings_togo_lifetime
+    end
+end
+
+-- First sighting of ObjID_SSResults ($6F) across the 128-slot SST scan
+-- (standalone: check_results_started, L446-457); at most once per segment.
+function ss_check_results_started()
+    if ss_aux_results_started_emitted then return end
+    for slot = 0, OBJ_TOTAL_SLOTS - 1 do
+        local addr = OBJ_TABLE_START + (slot * OBJ_SLOT_SIZE)
+        if mainmemory.read_u8(addr) == SS_OBJID_SS_RESULTS then
+            write_aux(string.format('{"frame":%d,"type":"results_started","slot":%d}',
+                trace_frame, slot))
+            ss_aux_results_started_emitted = true
+            return
+        end
+    end
+end
+
 -- Arm the special-stage segment. Called exactly once per SS detour, on the
 -- first frame game_mode reads $10 after detour_active was not already
 -- "special_stage" (see the on_frame_end entry-vs-continuation gate).
@@ -882,7 +1044,22 @@ function start_ss_segment()
     physics_file:write(
         "frame,input,input_p2,lag,speed_factor,track_anim,track_anim_frame,track_drawing_index,track_orientation,track_duration_timer,current_segment,player_anim_frame_timer,rings_togo_bcd,check_rings_flag,tails_control_counter,swap_positions_flag,sonic_present,sonic_ss_x,sonic_ss_x_sub,sonic_ss_y,sonic_ss_y_sub,sonic_ss_z,sonic_angle,sonic_routine,sonic_routine_secondary,sonic_status,sonic_anim,sonic_anim_frame,sonic_rings_bcd,sonic_hurt_timer,sonic_slide_timer,sonic_flip_timer,tails_present,tails_ss_x,tails_ss_x_sub,tails_ss_y,tails_ss_y_sub,tails_ss_z,tails_angle,tails_routine,tails_routine_secondary,tails_status,tails_anim,tails_anim_frame,tails_rings_bcd,tails_hurt_timer,tails_slide_timer,tails_flip_timer\n")
     physics_file:flush()
+    -- v9.13-s2: reset + seed the per-detour SS aux-event state (standalone
+    -- seeds its prev_* trackers from RAM at arm, v1.4-s2ss L676-679) so
+    -- ss_2+ segments re-emit their own frame -1 snapshot and first-row
+    -- control_state.
+    ss_aux_prev_check_rings_flag = mainmemory.read_u8(SS_ADDR_CHECK_RINGS_FLAG)
+    ss_aux_prev_hide_rings_to_go = mainmemory.read_u8(SS_ADDR_HIDE_RINGS_TOGO)
+    ss_aux_prev_trigger_rings_to_go = mainmemory.read_u8(SS_ADDR_TRIGGER_RINGS_TOGO)
+    ss_aux_prev_no_rings_togo_lifetime = mainmemory.read_u16_be(SS_ADDR_NO_RINGS_TOGO_LIFETIME)
+    ss_aux_prev_special_stage_started = nil
+    ss_aux_stage_finished_emitted = false
+    ss_aux_results_started_emitted = false
+    ss_aux_last_nonlag_trace_frame = -1
     write_ss_metadata()
+    -- v9.13-s2: standalone order is metadata -> pretrace snapshot; sampled
+    -- on the $10 entry frame (frame -1 = pre-row-0).
+    write_ss_pretrace_snapshot()
     print(string.format(
         "SS segment armed at BizHawk frame %d (dir=%s, special_stage_index=%d).",
         bk2_frame_offset, current_segment_dir_token, current_ss_index))
@@ -906,6 +1083,12 @@ function write_ss_row()
     local input_mask = joypad_mask_from_frame(frame_index, 1)
     local input_p2_mask = joypad_mask_from_frame(frame_index, 2)
     local lag = emu.islagged() and 1 or 0
+    -- v9.13-s2: hook-free stage_finished frame source (standalone maintains
+    -- this in record_frame, v1.4-s2ss L617-621, minus the run_objects_end
+    -- flush that needs execute hooks).
+    if lag == 0 then
+        ss_aux_last_nonlag_trace_frame = trace_frame
+    end
 
     physics_file:write(string.format(
         "%d,%x,%x,%d,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n",
@@ -927,6 +1110,13 @@ function write_ss_row()
 
     if trace_frame % 60 == 0 then physics_file:flush() end
     if trace_frame % 300 == 0 then write_ss_metadata() end
+    -- v9.13-s2: SS aux events, in the standalone's record_frame order
+    -- (v1.4-s2ss L650-653), after the flush/metadata cadence checks and
+    -- before the trace_frame increment.
+    ss_check_control_state()
+    ss_check_checkpoint(state.check_rings_flag)
+    ss_check_message_state()
+    ss_check_results_started()
     trace_frame = trace_frame + 1
 end
 
@@ -1569,6 +1759,61 @@ local function on_frame_end()
         -- are manifest-only until the level arm gate below re-arms.
     end
 
+    -- Block 1.5 (v9.13-s2), RUN MODE ONLY: in-level reload survival. First
+    -- frame Game_Mode reads $8C (Level|TitleCard -- the death-restart / act-
+    -- transition / zone-transition reload family, see the constant's comment)
+    -- while a LEVEL segment is armed: finalize that segment exactly like the
+    -- SS-entry sequence, capture a PENDING reload transition (pushed only at
+    -- the completing re-arm, where the *_after fields are read), then reset
+    -- and fall through -- $8C frames are manifest-only until the next $0C +
+    -- move_lock==0 frame re-arms via the unchanged arm gate below. `started`
+    -- is false on subsequent $8C frames so this fires once per reload. An
+    -- armed SS segment can never reach here ($10 frames return in Block 1
+    -- above; the post-SS $8C reload happens unarmed). v9.12 answered this
+    -- shape by truncating the whole run at the first reload.
+    if run_id ~= nil and started and game_mode == GAMEMODE_LEVEL_TITLECARD then
+        if physics_file then physics_file:flush() end
+        write_metadata()
+        append_level_segment_done(trace_frame)
+        close_files()
+        started = false
+        trace_frame = 0
+        -- Kind decision: compare Current_ZoneAndAct ($FFFE10 word) on this
+        -- boundary frame against the finished segment's start zone/act.
+        -- Differs -> "level_advance" (act->act, zone->zone, ObjB2 routes);
+        -- equal -> "death_restart" (death, star-post
+        -- respawn, time over). Obj3A writes the destination into
+        -- Current_ZoneAndAct on $0C tail frames BEFORE Level_Inactive lands,
+        -- so comparing against the segment-START values keeps those
+        -- pre-boundary tail frames from affecting classification.
+        local finished_zone_act = (start_rom_zone_id << 8) | start_act
+        local boundary_zone_act = mainmemory.read_u16_be(ADDR_ZONE)
+        local reload_kind = (boundary_zone_act ~= finished_zone_act)
+            and "level_advance" or "death_restart"
+        pending_reload_transition = {
+            entry_kind = reload_kind,
+            mode_change_bk2_frame = emu.framecount(),
+            rings_before = mainmemory.read_u16_be(ADDR_RING_COUNT),
+            emeralds_before = mainmemory.read_u8(ADDR_EMERALDS),
+        }
+        if reload_kind == "death_restart" then
+            -- The values the reload will consume; the LevelOrder path clears
+            -- Last_star_pole_hit, hence these are omitted for level_advance.
+            pending_reload_transition.saved_x_pos = mainmemory.read_u16_be(ADDR_SAVED_X_POS)
+            pending_reload_transition.saved_y_pos = mainmemory.read_u16_be(ADDR_SAVED_Y_POS)
+            pending_reload_transition.last_star_post_hit = mainmemory.read_u8(ADDR_LAST_STAR_POST_HIT)
+        end
+        print(string.format(
+            "S2 %s reload boundary at bk2 frame %d (zone_act 0x%04X -> 0x%04X, rings_before=%d, emeralds_before=%d).",
+            reload_kind, pending_reload_transition.mode_change_bk2_frame,
+            finished_zone_act, boundary_zone_act,
+            pending_reload_transition.rings_before,
+            pending_reload_transition.emeralds_before))
+        reset_recording_state_keep_files()
+        -- fall through (mirrors Block 2): the arm gate below re-arms on the
+        -- next $0C frame and completes/pushes the pending transition.
+    end
+
     if not started then
         if finished then return end
         if skipping_segment then
@@ -1687,6 +1932,31 @@ local function on_frame_end()
                         "S2 stage_exit transition at bk2 frame %d (rings_after=%d, emeralds_after=%d).",
                         exit_frame, rings_after, emeralds_after))
                 end
+
+                -- v9.13-s2: complete + push the pending reload transition
+                -- captured at the last $8C boundary (Block 1.5). Mutually
+                -- exclusive with the stage_exit push above at any one arm:
+                -- the previous finished segment is either the ss (stage_exit)
+                -- or a level (pending reload). Indices are exact here for
+                -- the same reason stage_exit's are -- the boundary finalize
+                -- already appended the from-segment, and this arm has not
+                -- yet pushed the new level segment. *_after fields are read
+                -- on this arm frame (same convention as stage_exit; ROM
+                -- zeroes ring tracking on a death reload -- record the
+                -- truth, 0 included).
+                if pending_reload_transition ~= nil then
+                    local t = pending_reload_transition
+                    pending_reload_transition = nil
+                    t.from_segment = #segments_done - 1
+                    t.to_segment = #segments_done
+                    t.rings_after = mainmemory.read_u16_be(ADDR_RING_COUNT)
+                    t.emeralds_after = mainmemory.read_u8(ADDR_EMERALDS)
+                    transitions_done[#transitions_done + 1] = t
+                    print(string.format(
+                        "S2 %s transition completed at bk2 frame %d (from_segment=%d, to_segment=%d, rings_after=%d, emeralds_after=%d).",
+                        t.entry_kind, emu.framecount(), t.from_segment,
+                        t.to_segment, t.rings_after, t.emeralds_after))
+                end
             end
 
             open_files()
@@ -1725,13 +1995,14 @@ local function on_frame_end()
             return
         end
         print("Left level gameplay at trace frame " .. trace_frame .. ". Finalising.")
-        -- Run mode: game_mode reaching $10 (the SS detour) is already
-        -- intercepted by Block 1 above while `started`, so this branch only
-        -- fires here for a genuinely different non-level mode (results,
-        -- game over, pause, etc.) -- a real stop, now funneled through
-        -- finalize_run_end() so the manifest captures whatever segments/
-        -- transitions were already recorded. Plain mode: unchanged
-        -- (finished=true only).
+        -- Run mode: game_mode reaching $10 (the SS detour) is intercepted by
+        -- Block 1 above while `started`, and $8C (the in-level reload family)
+        -- by Block 1.5 (v9.13-s2), so this branch only fires for genuinely
+        -- terminal modes -- $20 ending (the graceful complete-run end), $14
+        -- continue screen, $00 game over/sega, $18 2P results, etc. -- a
+        -- real stop, funneled through finalize_run_end() so the manifest
+        -- captures whatever segments/transitions were already recorded.
+        -- Plain mode: unchanged (finished=true only).
         if run_id ~= nil then
             finalize_run_end()
         end

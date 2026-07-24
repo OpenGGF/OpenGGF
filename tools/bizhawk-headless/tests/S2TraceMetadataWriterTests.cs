@@ -6,7 +6,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// Literal-byte tests for the S2 metadata writer against the shapes of
     /// the three canonical level fixtures (ehz1_fullrun / arz / arz2). The
     /// expected strings are the fixture bytes with lua_script_version
-    /// switched to the native port's "9.12-s2" and the injected recording
+    /// switched to the native port's "9.13-s2" and the injected recording
     /// date — exactly the two normalizations the differential gate permits.
     /// </summary>
     internal static class S2TraceMetadataWriterTests
@@ -55,7 +55,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "  \"sidekicks\": [\"tails\"],\n"
                 + "  \"rng_seed\": \"0x00000000\",\n"
                 + "  \"recording_date\": \"2026-07-13\",\n"
-                + "  \"lua_script_version\": \"9.12-s2\",\n"
+                + "  \"lua_script_version\": \"9.13-s2\",\n"
                 + "  \"trace_schema\": 9,\n"
                 + "  \"csv_version\": 7,\n"
                 + "  \"aux_schema_extras\": "
@@ -103,7 +103,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "  \"sidekicks\": [\"tails\"],\n"
                 + "  \"rng_seed\": \"0x00000000\",\n"
                 + "  \"recording_date\": \"2026-07-13\",\n"
-                + "  \"lua_script_version\": \"9.12-s2\",\n"
+                + "  \"lua_script_version\": \"9.13-s2\",\n"
                 + "  \"trace_schema\": 9,\n"
                 + "  \"csv_version\": 7,\n"
                 + "  \"aux_schema_extras\": "

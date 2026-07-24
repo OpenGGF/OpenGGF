@@ -11,7 +11,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// level -> ss -> level sequencing, per-segment naming/offsets/rows,
     /// transition records with RAM fields read at the specified frames, the
     /// movie-done guard (including mid-detour movie end and the effective
-    /// movie length override), and the run-end finalize routing.
+    /// movie length override), the run-end finalize routing, and the
+    /// v9.13-s2 Block 1.5 title-card reload survival (death_restart vs
+    /// level_advance kind selection, boundary/re-arm field sourcing,
+    /// pending-transition discard, terminal-mode finalize).
     /// </summary>
     internal static class S2RunCaptureRunnerTests
     {
@@ -42,6 +45,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S2RunCaptureRunner honors the effective movie length override",
                 HonorsEffectiveMovieLengthOverride));
+            tests.Add(new TestMain.TestCase(
+                "S2RunCaptureRunner survives a death restart reload and re-arms",
+                SurvivesDeathRestartReloadAndRearms));
+            tests.Add(new TestMain.TestCase(
+                "S2RunCaptureRunner classifies a changed zone-act reload as level advance",
+                ClassifiesChangedZoneActReloadAsLevelAdvance));
+            tests.Add(new TestMain.TestCase(
+                "S2RunCaptureRunner discards a pending reload when the run ends first",
+                DiscardsPendingReloadWhenRunEndsBeforeRearm));
+            tests.Add(new TestMain.TestCase(
+                "S2RunCaptureRunner ends the run on the continue screen while armed",
+                EndsRunOnContinueScreenWhileArmed));
+            tests.Add(new TestMain.TestCase(
+                "S2RunCaptureRunner emits the special-stage aux event stream",
+                EmitsSpecialStageAuxEventStream));
         }
 
         /// <summary>
@@ -141,7 +159,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(0, ss.ManifestEntry.ZoneId);
                 AssertEx.Equal(0, ss.ManifestEntry.Act);
                 AssertEx.Equal(2, ss.ManifestEntry.SpecialStageIndex ?? -1);
-                AssertEx.Equal(string.Empty, ss.AuxStateJsonl);
+                // v9.13-s2 §11.3: the ss aux stream carries the frame -1
+                // pre-trace snapshot (all-zero here: nothing populated the
+                // SS parameter RAM) and the first-row control_state from
+                // the null seed; no further events fire because no tracked
+                // state changes across the 5 rows.
+                AssertEx.Equal(
+                    "{\"frame\":-1,\"type\":\"state_snapshot\","
+                    + "\"ring_requirement\":\"0x0000\","
+                    + "\"current_level_layout\":\"0x00000000\","
+                    + "\"initial_speed_factor\":\"0x0000\","
+                    + "\"perfect_rings_left\":\"0x0000\"}\n"
+                    + "{\"frame\":0,\"type\":\"control_state\","
+                    + "\"started\":0}\n",
+                    ss.AuxStateJsonl);
                 string[] ssLines = ss.PhysicsCsv.Split('\n');
                 AssertEx.Equal(7, ssLines.Length);      // header+5+empty
                 AssertEx.Equal(S2SpecialStageCsvWriter.Header, ssLines[0]);
@@ -290,6 +321,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "starpost_special", result.Transitions[2].EntryKind);
                 AssertEx.Equal(
                     "stage_exit", result.Transitions[3].EntryKind);
+
+                // v9.13-s2 §11.3: the per-detour aux state resets at each
+                // ss arm, so ss_2 re-emits its own frame -1 snapshot and
+                // first-row control_state.
+                foreach (int ssIndex in new[] { 1, 3 })
+                {
+                    AssertContains(
+                        result.Segments[ssIndex].AuxStateJsonl,
+                        "{\"frame\":-1,\"type\":\"state_snapshot\",");
+                    AssertContains(
+                        result.Segments[ssIndex].AuxStateJsonl,
+                        "{\"frame\":0,\"type\":\"control_state\","
+                        + "\"started\":0}");
+                }
             });
         }
 
@@ -429,6 +474,335 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(5, result.Segments[0].ManifestEntry.Bk2FrameOffset);
                 // rows = effective length - offset - 1 = 12 - 5 - 1.
                 AssertEx.Equal(6, result.Segments[0].ManifestEntry.TraceFrameCount);
+            });
+        }
+
+        /// <summary>
+        /// v9.13-s2 Block 1.5 (§11.2), death_restart branch: arm at F=3
+        /// (EHZ act 1); level rows F=4-7; Game_Mode $8C at F=8 with
+        /// Current_ZoneAndAct unchanged finalizes seg1 and captures the
+        /// pending transition's boundary fields (rings/emeralds_before,
+        /// saved_x/y_pos, last_star_post_hit — all read on the $8C frame:
+        /// saved_x is overwritten before the re-arm to prove the sourcing
+        /// moment); $8C holds through F=11; the $0C frame at F=12 re-arms
+        /// seg2_ehz1 and completes the transition with the re-arm frame's
+        /// rings/emeralds_after (the ROM zeroed rings on the reload).
+        /// </summary>
+        private static void SurvivesDeathRestartReloadAndRearms()
+        {
+            WithMovie(Rows(20), movie =>
+            {
+                var host = new FakeRunHost((h, frame) =>
+                {
+                    if (frame == 3)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                        h.Ram[0xFE10] = 0x00;           // EHZ
+                        h.Ram[0xFE11] = 0x00;           // act raw 0
+                    }
+                    if (frame == 8)
+                    {
+                        h.Ram[0xF600] = 0x8C;
+                        h.SetU16(0xFE20, 7);            // rings before
+                        h.Ram[0xFFB1] = 3;              // emeralds before
+                        h.SetU16(0xFE32, 100);          // saved x
+                        h.SetU16(0xFE34, 50);           // saved y
+                        h.Ram[0xFE30] = 2;              // last star post
+                    }
+                    if (frame == 12)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                        h.SetU16(0xFE20, 0);            // post-reload zeroing
+                        h.Ram[0xFFB1] = 4;              // emeralds after
+                        h.SetU16(0xFE32, 999);          // must NOT be read
+                    }
+                });
+
+                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                    movie, host, "death-run", "synthetic.bk2",
+                    "2026-07-24", 0);
+
+                AssertEx.Equal(2, result.Segments.Count);
+                S2RunSegmentOutput seg1 = result.Segments[0];
+                AssertEx.Equal("seg1_ehz1", seg1.DirToken);
+                AssertEx.Equal("level", seg1.ManifestEntry.Kind);
+                AssertEx.Equal(3, seg1.ManifestEntry.Bk2FrameOffset);
+                // Rows F=4..7; the F=8 boundary records no partial row.
+                AssertEx.Equal(4, seg1.ManifestEntry.TraceFrameCount);
+                S2RunSegmentOutput seg2 = result.Segments[1];
+                AssertEx.Equal("seg2_ehz1", seg2.DirToken);
+                AssertEx.Equal("level", seg2.ManifestEntry.Kind);
+                AssertEx.Equal(12, seg2.ManifestEntry.Bk2FrameOffset);
+                // rows = movie length - offset - 1 = 20 - 12 - 1.
+                AssertEx.Equal(7, seg2.ManifestEntry.TraceFrameCount);
+                AssertContains(seg2.MetadataJson,
+                    "  \"segment_index\": 1,\n");
+                // The re-arm rebuilt the aux engine: gameplay_start again.
+                AssertContains(seg2.AuxStateJsonl, "\"gameplay_start\"");
+
+                AssertEx.Equal(1, result.Transitions.Count);
+                RunManifestTransition reload = result.Transitions[0];
+                AssertEx.Equal(0, reload.FromSegment);
+                AssertEx.Equal(1, reload.ToSegment);
+                AssertEx.Equal("death_restart", reload.EntryKind);
+                AssertEx.Equal(8, reload.ModeChangeBk2Frame);
+                AssertEx.Equal(100, reload.SavedXPos ?? -1);
+                AssertEx.Equal(50, reload.SavedYPos ?? -1);
+                AssertEx.Equal(2, reload.LastStarPostHit ?? -1);
+                AssertEx.Equal(7, reload.RingsBefore ?? -1);
+                AssertEx.Equal(3, reload.EmeraldsBefore ?? -1);
+                AssertEx.Equal(0, reload.RingsAfter ?? -1);
+                AssertEx.Equal(4, reload.EmeraldsAfter ?? -1);
+                AssertEx.Equal(
+                    false, reload.SpecialBonusEntryFlag.HasValue);
+
+                // Manifest renders the death_restart optional fields in the
+                // fixed §6 order.
+                AssertContains(result.RunManifestJson,
+                    "{\"from_segment\": 0, \"to_segment\": 1,"
+                    + " \"entry_kind\": \"death_restart\","
+                    + " \"mode_change_bk2_frame\": 8,"
+                    + " \"saved_x_pos\": 100, \"saved_y_pos\": 50,"
+                    + " \"last_star_post_hit\": 2,"
+                    + " \"rings_before\": 7, \"rings_after\": 0,"
+                    + " \"emeralds_before\": 3, \"emeralds_after\": 4}");
+            });
+        }
+
+        /// <summary>
+        /// v9.13-s2 Block 1.5 (§11.2), level_advance branch: arm at F=3
+        /// (EHZ act 1); Obj3A writes the destination act into
+        /// Current_ZoneAndAct on a $0C tail frame (F=6) BEFORE the reload —
+        /// classification still compares the $8C boundary value against the
+        /// segment-START zone/act, so the tail write must not matter; the
+        /// $8C boundary at F=8 differs from the start (act 2) ->
+        /// level_advance, which omits saved_x/y_pos and last_star_post_hit
+        /// even though they hold values; the re-arm at F=11 produces
+        /// seg2_ehz2 from the boundary's new act.
+        /// </summary>
+        private static void ClassifiesChangedZoneActReloadAsLevelAdvance()
+        {
+            WithMovie(Rows(18), movie =>
+            {
+                var host = new FakeRunHost((h, frame) =>
+                {
+                    if (frame == 3)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                        h.Ram[0xFE10] = 0x00;           // EHZ
+                        h.Ram[0xFE11] = 0x00;           // act raw 0
+                        h.SetU16(0xFE32, 100);          // stale saved x
+                        h.SetU16(0xFE34, 50);           // stale saved y
+                        h.Ram[0xFE30] = 1;              // stale star post
+                    }
+                    if (frame == 6)
+                    {
+                        h.Ram[0xFE11] = 0x01;           // Obj3A tail write
+                    }
+                    if (frame == 8)
+                    {
+                        h.Ram[0xF600] = 0x8C;
+                        h.SetU16(0xFE20, 12);           // rings before
+                        h.Ram[0xFFB1] = 1;              // emeralds before
+                    }
+                    if (frame == 11)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                });
+
+                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                    movie, host, "advance-run", "synthetic.bk2",
+                    "2026-07-24", 0);
+
+                AssertEx.Equal(2, result.Segments.Count);
+                AssertEx.Equal("seg1_ehz1", result.Segments[0].DirToken);
+                AssertEx.Equal("seg2_ehz2", result.Segments[1].DirToken);
+                AssertEx.Equal(
+                    11, result.Segments[1].ManifestEntry.Bk2FrameOffset);
+                AssertEx.Equal(2, result.Segments[1].ManifestEntry.Act);
+
+                AssertEx.Equal(1, result.Transitions.Count);
+                RunManifestTransition reload = result.Transitions[0];
+                AssertEx.Equal(0, reload.FromSegment);
+                AssertEx.Equal(1, reload.ToSegment);
+                AssertEx.Equal("level_advance", reload.EntryKind);
+                AssertEx.Equal(8, reload.ModeChangeBk2Frame);
+                AssertEx.Equal(false, reload.SavedXPos.HasValue);
+                AssertEx.Equal(false, reload.SavedYPos.HasValue);
+                AssertEx.Equal(false, reload.LastStarPostHit.HasValue);
+                AssertEx.Equal(
+                    false, reload.SpecialBonusEntryFlag.HasValue);
+                AssertEx.Equal(12, reload.RingsBefore ?? -1);
+                AssertEx.Equal(1, reload.EmeraldsBefore ?? -1);
+                AssertEx.Equal(12, reload.RingsAfter ?? -1);
+                AssertEx.Equal(1, reload.EmeraldsAfter ?? -1);
+
+                AssertContains(result.RunManifestJson,
+                    "{\"from_segment\": 0, \"to_segment\": 1,"
+                    + " \"entry_kind\": \"level_advance\","
+                    + " \"mode_change_bk2_frame\": 8,"
+                    + " \"rings_before\": 12, \"rings_after\": 12,"
+                    + " \"emeralds_before\": 1, \"emeralds_after\": 1}");
+            });
+        }
+
+        /// <summary>
+        /// A run terminating mid-reload (movie exhausted while Game_Mode is
+        /// still $8C, before the completing re-arm) discards the pending
+        /// transition — the manifest carries the finalized segment and NO
+        /// transition record whose to_segment would point past it.
+        /// </summary>
+        private static void DiscardsPendingReloadWhenRunEndsBeforeRearm()
+        {
+            WithMovie(Rows(10), movie =>
+            {
+                var host = new FakeRunHost((h, frame) =>
+                {
+                    if (frame == 3)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 7)
+                    {
+                        h.Ram[0xF600] = 0x8C;
+                    }
+                });
+
+                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                    movie, host, "midreload", "synthetic.bk2",
+                    "2026-07-24", 0);
+
+                AssertEx.Equal(1, result.Segments.Count);
+                AssertEx.Equal("seg1_ehz1", result.Segments[0].DirToken);
+                // Rows F=4..6; the F=7 boundary records no partial row.
+                AssertEx.Equal(
+                    3, result.Segments[0].ManifestEntry.TraceFrameCount);
+                AssertEx.Equal(0, result.Transitions.Count);
+                AssertContains(result.RunManifestJson,
+                    "  \"transitions\": [\n  ]\n}\n");
+            });
+        }
+
+        /// <summary>
+        /// With Block 1.5 intercepting $8C, the armed non-level branch
+        /// fires only for genuinely terminal modes: the continue screen
+        /// ($14, a direct write from $0C — no title-card bit) while armed
+        /// ends the run with the segment finalized and the manifest
+        /// written.
+        /// </summary>
+        private static void EndsRunOnContinueScreenWhileArmed()
+        {
+            WithMovie(Rows(16), movie =>
+            {
+                var host = new FakeRunHost((h, frame) =>
+                {
+                    if (frame == 3)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 9)
+                    {
+                        h.Ram[0xF600] = 0x14;   // ContinueScreen
+                    }
+                });
+
+                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                    movie, host, "continue", "synthetic.bk2",
+                    "2026-07-24", 0);
+
+                AssertEx.Equal(1, result.Segments.Count);
+                // Rows F=4..8; the F=9 mode change records no partial row.
+                AssertEx.Equal(
+                    5, result.Segments[0].ManifestEntry.TraceFrameCount);
+                AssertEx.Equal(0, result.Transitions.Count);
+                AssertContains(result.RunManifestJson,
+                    "  \"run_id\": \"continue\",\n");
+            });
+        }
+
+        /// <summary>
+        /// v9.13-s2 §11.3 SS aux surface, full-event pass: arm at F=3; ss
+        /// entry at F=8 with populated SS parameter RAM (pre-trace snapshot
+        /// sampled on the entry frame); row 0 at F=9 (control_state from
+        /// the null seed, started 0); row 1 at F=10 flips
+        /// SpecialStage_Started and a message-state byte (control_state
+        /// then message_state, standalone order); rows 2-3 at F=11-12 are
+        /// lag frames so last_nonlag holds at 1; F=12 also raises
+        /// SS_Check_Rings_flag and spawns ObjID_SSResults in slot 2 —
+        /// checkpoint (frame 3), stage_finished (frame=last non-lag 1,
+        /// observed_frame 3), then results_started (slot 2). Exit at F=13
+        /// re-arms the return level segment.
+        /// </summary>
+        private static void EmitsSpecialStageAuxEventStream()
+        {
+            WithMovie(Rows(18), movie =>
+            {
+                var host = new FakeRunHost((h, frame) =>
+                {
+                    if (frame == 3)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 8)
+                    {
+                        h.Ram[0xF600] = 0x10;
+                        h.SetU16(0xDB8C, 0x0032);       // ring requirement
+                        h.SetU32(0xDB8E, 0x12345678u);  // level layout
+                        h.SetU16(0xDB16, 0x0400);       // speed factor
+                        h.SetU16(0xDB9A, 0x0032);       // perfect rings
+                    }
+                    if (frame == 10)
+                    {
+                        h.Ram[0xDB23] = 1;              // SS started
+                        h.Ram[0xDBA7] = 0x0A;           // trigger rings
+                    }
+                    if (frame == 11)
+                    {
+                        h.IsLagged = true;
+                    }
+                    if (frame == 12)
+                    {
+                        h.Ram[0xDB86] = 0x01;           // check rings flag
+                        h.Ram[0xB000 + 2 * 0x40] = 0x6F; // SS results obj
+                    }
+                    if (frame == 13)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                        h.IsLagged = false;
+                    }
+                });
+
+                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                    movie, host, "ss-aux", "synthetic.bk2",
+                    "2026-07-24", 0);
+
+                AssertEx.Equal(3, result.Segments.Count);
+                S2RunSegmentOutput ss = result.Segments[1];
+                AssertEx.Equal("ss", ss.DirToken);
+                AssertEx.Equal(4, ss.ManifestEntry.TraceFrameCount);
+                AssertEx.Equal(
+                    "{\"frame\":-1,\"type\":\"state_snapshot\","
+                    + "\"ring_requirement\":\"0x0032\","
+                    + "\"current_level_layout\":\"0x12345678\","
+                    + "\"initial_speed_factor\":\"0x0400\","
+                    + "\"perfect_rings_left\":\"0x0032\"}\n"
+                    + "{\"frame\":0,\"type\":\"control_state\","
+                    + "\"started\":0}\n"
+                    + "{\"frame\":1,\"type\":\"control_state\","
+                    + "\"started\":1}\n"
+                    + "{\"frame\":1,\"type\":\"message_state\","
+                    + "\"hide_rings_to_go\":\"0x00\","
+                    + "\"trigger_rings_to_go\":\"0x0a\","
+                    + "\"no_rings_togo_lifetime\":\"0x0000\"}\n"
+                    + "{\"frame\":3,\"type\":\"checkpoint\","
+                    + "\"check_rings_flag\":\"0x01\"}\n"
+                    + "{\"frame\":1,\"observed_frame\":3,"
+                    + "\"type\":\"stage_finished\","
+                    + "\"check_rings_flag\":\"0x01\"}\n"
+                    + "{\"frame\":3,\"type\":\"results_started\","
+                    + "\"slot\":2}\n",
+                    ss.AuxStateJsonl);
             });
         }
 

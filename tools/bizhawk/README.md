@@ -19,7 +19,9 @@ Use this folder for the recorder scripts and local BizHawk assets:
 - `record_s2_trace.bat` launches the Sonic 2 recorder through the reusable no-audio/no-render launcher
 - `record_s2_level_select_traces.ps1` records the Sonic 2 level-select BK2 set into test resources
 - `s2_trace_recorder.lua` captures Sonic 2 ROM-side trace data using schema v8, including
-  first-sidekick state for Sonic/Tails parity debugging
+  first-sidekick state for Sonic/Tails parity debugging; its v9.13-s2 run mode
+  (`OGGF_TRACE_RUN_ID`) survives in-level title-card reloads, so complete-game
+  S2 runs capture end-to-end (see "Recording S2 Complete-Game Runs" below)
 - `record_s3k_trace.bat` launches the Sonic 3&K recorder through the reusable no-audio/no-render launcher
 - `s3k_trace_recorder.lua` captures Sonic 3&K ROM-side trace data using schema v3, including
   `zone_act_state` diagnostics and the `aiz_end_to_end` checkpoint stream
@@ -193,7 +195,7 @@ text and the Lua disagree, the Lua wins.
 ### Sonic 2 trace mode (all three recorder modes)
 
 With an S2 World REV01 ROM, `--mode trace` replaces `s2_trace_recorder.lua`
-(v9.12-s2) on Linux across **all three of its operating modes**. The Lua
+(v9.13-s2) on Linux across **all three of its operating modes**. The Lua
 recorder's environment inputs become CLI flags:
 
 - **Plain `gameplay_unlock`** — the default; no extra flags.
@@ -210,7 +212,18 @@ recorder's environment inputs become CLI flags:
   procedure always records `gameplay_unlock` level segments with no segment
   skipping. Run-mode output is staged fully in memory and published as one
   all-or-nothing no-replace set (the manifest is linked last, so it can never
-  exist without its segment files).
+  exist without its segment files). Mirroring Lua v9.13-s2, run mode
+  survives the in-level `Game_Mode $8C` reload family (death/star-post
+  restarts, time overs, act and zone transitions, the ObjB2
+  SCZ→WFZ→DEZ routes) — the armed level segment finalizes, a
+  `death_restart` or `level_advance` transition is recorded, and the next
+  `$0C` gameplay frame re-arms — and run-mode special-stage segments emit
+  the hook-free subset of the standalone SS recorder's aux event stream.
+  The run-mode-only `--effective-movie-length <frames>` flag injects a
+  capture session's movie-length signal into the movie-done guard when the
+  canonical session ended earlier than the BK2's file-derived row count
+  (needed by the halfpipe differential gate; see
+  `tools/bizhawk-headless/docs/s2-run-mode-behavior.md` §11.5).
 
 Verified plain-mode command (as with S1, the BK2 frame offset is
 auto-detected):
@@ -224,7 +237,7 @@ tools/bizhawk-headless/run.sh \
   --output "$PWD/target/bizhawk-headless-trace"
 ```
 
-**Byte-parity guarantee vs the Lua recorder:** four canonical fixtures gate
+**Byte-parity guarantee vs the Lua recorder:** five canonical fixtures gate
 the S2 port end to end via the ROM-backed `S2TraceDifferential` tests in
 `tools/bizhawk-headless/test.sh`:
 
@@ -232,20 +245,32 @@ the S2 port end to end via the ROM-backed `S2TraceDifferential` tests in
 - `src/test/resources/traces/s2/arz/` — `level_gated_reset_aware`, segment 0;
 - `src/test/resources/traces/s2/arz2/` — `level_gated_reset_aware`, segment 1;
 - `src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/` — run mode
-  over the full level → halfpipe → level → halfpipe → level round trip.
+  over the full level → halfpipe → level → halfpipe → level round trip
+  (regenerated from a verified native 9.13-s2 capture at the canonical
+  session's effective movie length 22612 — exactly the documented §11.4
+  delta vs the old 9.12 set: the `ss`/`ss_2` `aux_state.jsonl` go from
+  0 bytes to the SS aux event stream, `lua_script_version` stamps move to
+  `9.13-s2`, and everything else including the `.bk2` is unchanged);
+- `src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/` —
+  run mode over the full complete-game movie (35 segments, all seven
+  special stages, 34 transitions, no movie-length injection).
 
 `physics.csv` and `aux_state.jsonl` are byte-identical on every fixture, and
 run mode additionally reproduces `run_manifest.json` and every per-segment
-file byte-identically with **no normalization**. `metadata.json` differs only
+file byte-identically with **no normalization**, plus an exact-output-layout
+assertion (the canonical segment directories and `run_manifest.json`,
+nothing else). `metadata.json` differs only
 in the `recording_date` value, plus — on the older `ehz1_fullrun`/`arz`/`arz2`
 fixtures stamped `9.11-s2` — the documented `lua_script_version`
-`9.11-s2` → `9.12-s2` delta (the native port emits the v9.12-s2 surface,
+`9.11-s2` → `9.13-s2` delta (the native port emits the v9.13-s2 surface,
 whose plain-mode output is declared byte-identical to v9.11-s2 except that
-version string). The byte-level porting contracts live in
-`tools/bizhawk-headless/docs/s2-trace-recorder-behavior.md` (plain +
+version string; the run fixtures are themselves stamped `9.13-s2`, so no
+version normalization applies there). The byte-level porting contracts live
+in `tools/bizhawk-headless/docs/s2-trace-recorder-behavior.md` (plain +
 segment-selection modes) and
-`tools/bizhawk-headless/docs/s2-run-mode-behavior.md` (run mode); where any
-spec text and the Lua disagree, the Lua wins.
+`tools/bizhawk-headless/docs/s2-run-mode-behavior.md` (run mode, incl. the
+§11 complete-run extension); where any spec text and the Lua disagree, the
+Lua wins.
 
 ### Limitations and smoke mode
 
@@ -725,6 +750,12 @@ detour state machine added to `s2_trace_recorder.lua` (env-gated on `OGGF_TRACE_
 level segment finalizes at the `Game_Mode=$10` edge, a minimal special-stage segment is sampled
 directly (no `event.onmemoryexecute` hooks), and the return level segment re-arms on exit.
 
+Since v9.13-s2, run-mode `ss` segments also carry the hook-free subset of the standalone SS
+recorder's aux event stream (frame −1 `state_snapshot`, `control_state`, `checkpoint`,
+`stage_finished`, `message_state`, `results_started`) in their previously empty
+`aux_state.jsonl` — the committed halfpipe fixture set was regenerated accordingly (its `.bk2`
+is unchanged).
+
 **Human Recording Procedure (BizHawk 2.11 + Genplus-gx):**
 
 1. Start a new movie from power-on with the S2 World REV01 ROM, 1-player Sonic+Tails.
@@ -840,6 +871,90 @@ Any surprise in these prints means re-verify the RAM table before committing the
 
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.
+
+## Recording S2 Complete-Game Runs (s2-sonic-tails-complete-emeralds)
+
+`s2_trace_recorder.lua` v9.13-s2 extends run mode (`OGGF_TRACE_RUN_ID`) from the
+single-detour halfpipe round trip to **complete-game runs**. Design contract:
+`tools/bizhawk-headless/docs/s2-run-mode-behavior.md` §11 (the Lua wins on any
+disagreement).
+
+**Title-card-reload survival:** every in-level reload funnels through
+`Game_Mode $8C` (Level with the title-card bit set) — death and star-post
+restarts, time overs, act 1→2 and zone→zone transitions, and the ObjB2
+SCZ→WFZ→DEZ routes. v9.12 finalized the whole run at the first such reload;
+v9.13 instead finalizes only the armed level segment, records a pending
+transition, and re-arms on the next `$0C` gameplay frame, so a full playthrough
+captures end-to-end. Two new manifest transition kinds classify the boundary by
+comparing `Current_ZoneAndAct` at the `$8C` frame against the finished
+segment's start zone/act: **`death_restart`** (equal — death, star-post
+respawn, time over) and **`level_advance`** (differs — act/zone transitions and
+ObjB2 routes). `TraceRunManifest.ENTRY_KINDS` accepts both. Genuinely terminal
+modes (`$14` continue screen, `$20` ending, `$00` game over/Sega) still
+finalize the run. Run-mode `ss` segments now also emit the standalone SS
+recorder's hook-free aux event stream (see the halfpipe section above).
+
+**Canonical run fixture:**
+`src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/` — a
+259,590-row Sonic+Tails movie from title screen through the DEZ ending,
+collecting all seven emeralds: 35 segments (`seg1_ehz1` … `seg28_dez1` plus
+`ss` … `ss_7`) and 34 transitions (7 `starpost_special`, 7 `stage_exit`,
+19 `level_advance`, 1 `death_restart` in SCZ), with the source
+`sonic-2-sonic-tails-complete-emeralds.bk2` committed alongside. The installed
+set comes from a native 9.13-s2 capture proven content-identical — modulo
+CRLF vs LF and `recording_date` — to a validated Lua reference capture of the
+same movie. The permanent differential gate
+(`S2TraceDifferential native run mode capture matches canonical complete
+emeralds run`, in `tools/bizhawk-headless/test.sh`) re-runs one native
+`--run-id` capture and asserts per-segment sha256 for all 35 `physics.csv` /
+`aux_state.jsonl` pairs, normalized metadata/manifest equality
+(`recording_date` only), and the exact output layout.
+
+**Verified native capture command (Linux):**
+
+```bash
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S2_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2" \
+  --output "$PWD/target/bizhawk-headless-trace" \
+  --run-id s2-sonic-tails-complete-emeralds
+```
+
+No `--effective-movie-length` is needed for this movie: its file-derived row
+count matches the capture session's movie-length signal (unlike the halfpipe
+fixture — see §11.5 of the run-mode spec).
+
+**Verified Lua reference capture command (Linux, BizHawk 2.11 via
+`fetch_bizhawk_2_11_linux.sh` — full movie ≈ 6 minutes; run ONE EmuHawk at a
+time, and move any existing `tools/bizhawk/trace_output/` aside first, since
+the recorder always writes there):**
+
+```bash
+cd <repo-root> && DISPLAY=:0 \
+BIZHAWK_HOME=$PWD/docs/BizHawk-2.11-linux-x64 \
+OGGF_TRACE_RUN_ID=s2-sonic-tails-complete-emeralds \
+OGGF_BK2_FRAME_COUNT=259590 \
+OGGF_BK2_BASENAME=sonic-2-sonic-tails-complete-emeralds.bk2 \
+tools/bizhawk/run_bizhawk_lua.sh tools/bizhawk/s2_trace_recorder.lua \
+  <path-to-bk2> s2.gen
+```
+
+(The "KNOWN BLOCKER" note in the Linux Launcher section above applies to
+BizHawk **2.11.1** only — the pinned 2.11 build plays BK2s through
+`run_bizhawk_lua.sh` fine, verified with this capture.)
+
+**Newline convention:** Lua on Linux writes LF; the native run publisher
+writes CRLF (matching the committed run-fixture convention of
+`s2-run-mode-behavior.md` §9). Content comparisons between the two must
+normalize line endings; committed run fixtures are CRLF.
+
+**Commit layout:** as with the halfpipe run — gzip `physics.csv` /
+`aux_state.jsonl` per segment (`compress-traces.ps1 <dir> -Recurse
+-ThresholdBytes 0` or equivalent), keep each segment's `metadata.json` and the
+root `run_manifest.json` plain, and commit the `.bk2` under its truthful name
+matching every `source_bk2` field.
 
 ## Recorder capability parity follow-up
 

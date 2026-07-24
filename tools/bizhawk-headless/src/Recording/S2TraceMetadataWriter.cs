@@ -14,9 +14,9 @@ namespace OpenGGF.BizHawk.Headless
     /// matter, so the native port formats once at finish. The recording
     /// date is injected (production passes DateTime.Now as yyyy-MM-dd;
     /// tests pass a fixed value) — it is the only nondeterministic field.
-    /// The native port always stamps lua_script_version "9.12-s2"; the
-    /// v9.12 Lua header declares plain-mode output byte-identical to
-    /// 9.11-s2 except this string.
+    /// The native port always stamps lua_script_version "9.13-s2"; the
+    /// v9.12 and v9.13 Lua headers declare plain-mode output byte-identical
+    /// to 9.11-s2 except this string.
     /// </summary>
     public static class S2TraceMetadataWriter
     {
@@ -134,7 +134,7 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(Hex8(rngSeed)).Append("\",\n");
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
-            json.Append("  \"lua_script_version\": \"9.12-s2\",\n");
+            json.Append("  \"lua_script_version\": \"9.13-s2\",\n");
             json.Append("  \"trace_schema\": 9,\n");
             json.Append("  \"csv_version\": 7,\n");
             json.Append("  \"aux_schema_extras\": "

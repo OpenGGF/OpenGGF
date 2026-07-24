@@ -6,8 +6,8 @@ namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
     /// Byte-exact port of the S2 Lua run-mode ss metadata.json layout
-    /// (tools/bizhawk/s2_trace_recorder.lua v9.12-s2, write_ss_metadata
-    /// L827-849; spec s2-run-mode-behavior.md §4): a distinct shape from the
+    /// (tools/bizhawk/s2_trace_recorder.lua v9.13-s2, write_ss_metadata;
+    /// spec s2-run-mode-behavior.md §4): a distinct shape from the
     /// level metadata — trace_profile is unconditionally "s2_special_stage",
     /// characters/sidekicks are hardcoded sonic+tails (not derived from slot
     /// presence), fresh_load is always false, and segment_index (the last
@@ -54,7 +54,7 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(Dec(traceFrameCount)).Append(",\n");
             json.Append("  \"source_bk2\": \"")
                 .Append(JsonEscape(sourceBk2)).Append("\",\n");
-            json.Append("  \"lua_script_version\": \"9.12-s2\",\n");
+            json.Append("  \"lua_script_version\": \"9.13-s2\",\n");
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
             if (runId != null)

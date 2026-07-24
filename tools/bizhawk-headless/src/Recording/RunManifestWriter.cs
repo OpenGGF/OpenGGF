@@ -68,13 +68,18 @@ namespace OpenGGF.BizHawk.Headless
     /// starpost_special records set the five *_before-side fields; S1
     /// giant_ring records set only rings_before / emeralds_before (S1 has no
     /// starpost machinery); stage_exit records set only rings_after /
-    /// emeralds_after on both games.
+    /// emeralds_after on both games. The S2 v9.13-s2 reload kinds
+    /// (s2-run-mode-behavior.md §11.2) set rings/emeralds before+after, and
+    /// death_restart additionally saved_x/y_pos + last_star_post_hit;
+    /// neither sets special_bonus_entry_flag.
     /// </summary>
     public sealed class RunManifestTransition
     {
         public const string StarpostSpecialKind = "starpost_special";
         public const string GiantRingKind = "giant_ring";
         public const string StageExitKind = "stage_exit";
+        public const string DeathRestartKind = "death_restart";
+        public const string LevelAdvanceKind = "level_advance";
 
         public RunManifestTransition(
             int fromSegment,
