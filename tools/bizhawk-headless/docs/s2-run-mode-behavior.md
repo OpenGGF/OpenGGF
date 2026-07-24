@@ -599,8 +599,12 @@ fixtures and must not be inherited from the plain spec's §9 ("LF-only"):
 
 ## 11. v9.13-s2 design: complete-run extension (title-card reloads + SS aux)
 
-Status: DESIGN for the `9.13-s2` recorder revision. §§1-10 above remain the
-v9.12 byte authority; this section specifies the only behavioral deltas.
+Status: IMPLEMENTED — in `s2_trace_recorder.lua` v9.13-s2 and mirrored by the
+native harness's S2 run runner; §11.5 records the gate-derived addenda and
+corrections discovered during implementation (the shipped Lua is the
+authority where they disagree with the design text). §§1-10 above remain the
+v9.12 byte authority except where §11.4/§11.5 note deltas; this section
+specifies the only behavioral changes.
 Motivating capture (this session, `sonic-2-sonic-tails-complete-emeralds.bk2`,
 259,590 rows): the run stopped at emu frame ~32,760 after 7 segments because a
 death restart reloads the level with the title-card bit set — `Game_Mode`
@@ -837,3 +841,66 @@ finalize; the run-mode ss `metadata.json` keeps its §4 shape
 - The new code paths activate only on previously-**fatal** shapes (`$8C`
   observed while a level segment is armed), which v9.12 answered by
   truncating the run at the first reload.
+
+### 11.5 Implementation addenda (gate-derived; Lua v9.13-s2 + native mirror)
+
+Facts established while implementing and gating §§11.1-11.4. Where these
+correct the design text above, the shipped Lua is the authority.
+
+1. **Continue-accepted restarts are unreachable while armed.** §11.1's
+   reload-family table lists "Continue accepted" and §11.2's kind decision
+   mentions continue-accepted restarts, but Block 1.5 can never observe that
+   path: the run already finalized at the terminal `$14` continue screen, so
+   the continue path's `$8C` only ever occurs after `finished`. The
+   `GAMEMODE_LEVEL_TITLECARD` constant's comment in `s2_trace_recorder.lua`
+   states this; treat the §11.1 row as documentation of the ROM's mode
+   sequence only, not of Block 1.5 coverage. (A future movie that continues
+   past game over still needs the out-of-scope `continue_restart` kind noted
+   under "Run termination".)
+2. **One `stage_finished` guard IS ported.** §11.3 item 4 says the
+   standalone's `error()` assertions are dropped as `run_objects_end`
+   machinery, but the `last_nonlag_trace_frame < 0` guard is hook-free and
+   validates the `stage_finished` frame source (a `-1` would silently emit a
+   bogus record). Both the Lua (`ss_check_checkpoint`) and the native
+   `S2SpecialStageAuxEventEngine` keep it, verbatim from
+   `s2_ss_trace_recorder.lua`'s `check_checkpoint` error path. Only the
+   `run_objects_end`-machinery assertions are dropped.
+3. **The canonical halfpipe movie is NOT mode-confined at file length —
+   capture-session movie length now matters.** §11.4's "movies confined to
+   `{$0C, $10}`" byte-compat claim holds for the canonical halfpipe
+   *capture session* (effective movie length 22612, §10 item 8), not the
+   committed 22,819-row `.bk2`: the movie's tail reaches the EHZ1→EHZ2 act
+   transition's `$8C` at the very frame the 22612 guard ends the run. v9.12
+   truncated there identically under a file-derived length; a v9.13 capture
+   fed the file-derived 22819 instead survives the reload and records a
+   sixth segment (`seg4_ehz2`) plus a `level_advance` transition. The native
+   harness therefore grew a run-mode-only `--effective-movie-length`
+   argument to inject the session's movie-length signal into the movie-done
+   guard; the halfpipe differential gate passes 22612. The
+   complete-emeralds movie needs no injection (its file-derived length
+   matches the session signal).
+4. **Halfpipe fixture regeneration (9.13 stamps).** The committed
+   `s2-ehz-halfpipe-roundtrip` fixture set was regenerated from a verified
+   native 9.13-s2 capture at effective length 22612, after proving a Lua
+   9.13 capture and a native capture of the same BK2 content-identical
+   across all segments plus `run_manifest.json` modulo LF/CRLF and
+   `recording_date`. The delta vs the 9.12 set is exactly §11.4's claim:
+   `ss`/`ss_2` `aux_state.jsonl` go from 0 bytes to the §11.3 event stream,
+   `lua_script_version` stamps become `9.13-s2`, everything else (including
+   the `.bk2`) is unchanged. Consequently §9's "ss aux is exactly 0 bytes"
+   and §10 item 5's "ss aux file exists and is empty" no longer describe
+   9.13-era fixtures — ss aux files are non-empty and, like every other
+   non-empty run-fixture file, CRLF-terminated. The native writers stamp
+   `lua_script_version "9.13-s2"` in level/ss metadata and the manifest.
+5. **Complete-run validation outcome.** The motivating movie
+   (`sonic-2-sonic-tails-complete-emeralds.bk2`, 259,590 rows) captures
+   end-to-end under 9.13: 35 segments (`seg1_ehz1` … `seg28_dez1` + 7 ss
+   dirs) and 34 transitions (7 `starpost_special`, 7 `stage_exit`,
+   19 `level_advance`, 1 `death_restart` — the SCZ death), emeralds 0→7,
+   finalizing at the `$20` ending. Lua and native captures are
+   content-identical modulo CRLF and `recording_date`; the native capture is
+   installed as the canonical fixture set at
+   `src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/`
+   with a permanent differential gate (per-segment sha256 over all 35
+   physics/aux pairs, normalized metadata/manifest comparison, and an
+   exact-output-layout assertion applied to both run gates).
