@@ -38,7 +38,7 @@ class TestShadowAudioPresentationRouting {
         for (int frame = 0; frame < 60; frame++) {
             audio.presentShadowFrame(PresentationMode.FORWARD);
         }
-        var snapshot = audio.shadowParitySnapshotForTesting();
+        var snapshot = audio.shadowParitySnapshot();
         assertEquals(60, snapshot.presentedFrames());
         assertEquals(60, snapshot.forwardFrames());
         assertEquals(0, snapshot.silentFrames());
@@ -56,7 +56,7 @@ class TestShadowAudioPresentationRouting {
         audio.restoreMusic();
         audio.presentShadowFrame(PresentationMode.SILENT);
         assertEquals(6,
-                audio.shadowParitySnapshotForTesting().commandCount());
+                audio.shadowParitySnapshot().commandCount());
     }
 
     @Test
@@ -93,7 +93,7 @@ class TestShadowAudioPresentationRouting {
         assertEquals(1, runtime.advances);
         assertEquals(FrameAudioMode.NORMAL, runtime.lastMode);
         assertEquals(1,
-                audio.shadowParitySnapshotForTesting().presentedFrames());
+                audio.shadowParitySnapshot().presentedFrames());
     }
 
     @ParameterizedTest

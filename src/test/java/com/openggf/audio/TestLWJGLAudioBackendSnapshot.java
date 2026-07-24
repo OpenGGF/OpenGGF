@@ -23,8 +23,53 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestLWJGLAudioBackendSnapshot {
+    @Test
+    void logicalRestoreSynchronizesFmAndPsgUserMasksAndToggleSemantics() {
+        SmpsDriver music = configuredDriver();
+        addSequencer(music);
+        SmpsDriver sfx = configuredDriver();
+        addSfxSequencer(sfx);
+        LWJGLAudioBackend backend =
+                new LWJGLAudioBackend(
+                        SonicConfigurationService.getInstance());
+        backend.restoreLogicalSnapshot(new AudioBackendLogicalSnapshot(
+                AudioSourceDescriptor.baseMusic(0x81), false, false,
+                false, 1, List.of(), music.captureSnapshot(),
+                sfx.captureSnapshot()));
+
+        backend.toggleMute(ChannelType.FM, 2);
+        backend.toggleSolo(ChannelType.PSG, 1);
+        AudioBackendLogicalSnapshot selected =
+                backend.captureLogicalSnapshot();
+        assertEquals(1 << 2, selected.fmUserMuteMask());
+        assertEquals(1 << 1, selected.psgUserSoloMask());
+
+        backend.toggleMute(ChannelType.FM, 2);
+        backend.toggleSolo(ChannelType.PSG, 1);
+        backend.toggleSolo(ChannelType.FM, 4);
+        backend.toggleMute(ChannelType.PSG, 3);
+        backend.restoreLogicalSnapshot(selected);
+
+        assertTrue(backend.isMuted(ChannelType.FM, 2));
+        assertFalse(backend.isSoloed(ChannelType.FM, 4));
+        assertTrue(backend.isSoloed(ChannelType.PSG, 1));
+        assertFalse(backend.isMuted(ChannelType.PSG, 3));
+        assertSynthMasks(selected.musicDriver(),
+                backend.captureLogicalSnapshot().musicDriver());
+        assertSynthMasks(selected.standaloneSfxDriver(),
+                backend.captureLogicalSnapshot().standaloneSfxDriver());
+
+        backend.toggleMute(ChannelType.FM, 2);
+        backend.toggleSolo(ChannelType.PSG, 1);
+        assertFalse(backend.isMuted(ChannelType.FM, 2),
+                "next toggle must invert restored FM user state");
+        assertFalse(backend.isSoloed(ChannelType.PSG, 1),
+                "next toggle must invert restored PSG user state");
+    }
+
     @Test
     void preparedRestoreLeavesLiveDriversUntouchedUntilCommit() {
         SmpsDriver liveSource = configuredDriver();
@@ -297,6 +342,17 @@ class TestLWJGLAudioBackendSnapshot {
         driver.setDacData(dacData());
         driver.setDacInterpolate(true);
         return driver;
+    }
+
+    private static void assertSynthMasks(
+            SmpsDriverSnapshot expected,
+            SmpsDriverSnapshot actual) {
+        assertArrayEquals(
+                expected.synthSnapshot().ym().mutes(),
+                actual.synthSnapshot().ym().mutes());
+        assertArrayEquals(
+                expected.synthSnapshot().psg().mutes(),
+                actual.synthSnapshot().psg().mutes());
     }
 
     private static void addSequencer(SmpsDriver driver) {

@@ -812,7 +812,11 @@ public class AudioManager implements MusicRestoreSink {
                 overrides,
                 musicDriver,
                 standaloneSfxDriver,
-                previous.legacyCoordFlagRuntimeState());
+                previous.legacyCoordFlagRuntimeState(),
+                presentation.fmMuteMask(),
+                presentation.fmSoloMask(),
+                presentation.psgMuteMask(),
+                presentation.psgSoloMask());
     }
 
     private SmpsDriverSnapshot driverForVoice(
@@ -1105,7 +1109,10 @@ public class AudioManager implements MusicRestoreSink {
         presentShadowFrame(mode);
     }
 
-    public AudioPresentationParityProbe.Snapshot shadowParitySnapshotForTesting() {
+    /**
+     * Immutable diagnostic counters for the temporary shadow-parity gate.
+     */
+    public AudioPresentationParityProbe.Snapshot shadowParitySnapshot() {
         ensureShadowPresentation();
         return shadowParity.snapshot();
     }
@@ -1153,13 +1160,13 @@ public class AudioManager implements MusicRestoreSink {
         return new ReleaseStateForTesting(
                 captureLogicalSnapshot(),
                 backendState,
-                shadowProducer.stateForTesting());
+                shadowProducer.transactionFingerprint());
     }
 
     record ReleaseStateForTesting(
             AudioLogicalSnapshot logical,
             AbstractSmpsAudioBackend.StateForTesting backend,
-            AudioPresentationProducer.StateForTesting producer) {
+            AudioPresentationProducer.TransactionFingerprint producer) {
     }
 
     void submitShadowRawPcmForTesting(

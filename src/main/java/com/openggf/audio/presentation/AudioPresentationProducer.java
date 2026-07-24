@@ -243,24 +243,26 @@ public final class AudioPresentationProducer {
 
     /**
      * Read-only identity/state fingerprint used by transactional-release
-     * regression tests. Mutable runtime objects are represented by identity
-     * hashes so taking the fingerprint cannot perturb presentation state.
+     * diagnostics. Mutable runtime objects are represented by opaque,
+     * collision-free reference-identity tokens so taking the fingerprint
+     * cannot perturb presentation state or expose those objects to callers.
      */
-    public StateForTesting stateForTesting() {
+    public TransactionFingerprint transactionFingerprint() {
         assertOwnerBoundary();
-        PresentationVoice[] voices =
-                new PresentationVoice[registry.orderedVoiceCount()];
+        IdentityFingerprint[] voiceIdentities =
+                new IdentityFingerprint[registry.orderedVoiceCount()];
         for (int index = 0; index < registry.orderedVoiceCount(); index++) {
-            voices[index] = registry.orderedVoiceAt(index);
+            voiceIdentities[index] = new IdentityFingerprint(
+                    registry.orderedVoiceAt(index));
         }
-        return new StateForTesting(
+        return new TransactionFingerprint(
                 clock.captureSnapshot(),
-                history.stateForTesting(),
-                List.of(voices),
+                history.diagnosticSnapshot(),
+                List.of(voiceIdentities),
                 reverseCursor != null ? reverseCursor.state() : null,
-                selectedRestore,
-                selectedRestoreResolver,
-                preparedSelectedRestore,
+                new IdentityFingerprint(selectedRestore),
+                new IdentityFingerprint(selectedRestoreResolver),
+                new IdentityFingerprint(preparedSelectedRestore),
                 releaseCrossfadeRemaining,
                 lastReverseLeft,
                 lastReverseRight,
@@ -271,15 +273,20 @@ public final class AudioPresentationProducer {
                 captureCount);
     }
 
-    public record StateForTesting(
+    /**
+     * Immutable diagnostic fingerprint for atomic rewind-release verification.
+     * Runtime voices, resolvers, and prepared tokens are represented by
+     * opaque reference-identity fingerprints; no live mutable object is
+     * directly accessible through this snapshot.
+     */
+    public record TransactionFingerprint(
             AudioFrameClock.Snapshot clock,
-            PcmHistoryRing.StateForTesting history,
-            List<PresentationVoice> voices,
+            PcmHistoryRing.DiagnosticSnapshot history,
+            List<IdentityFingerprint> voiceIdentities,
             PcmHistoryRing.CursorState reverseCursor,
-            AudioPresentationSnapshot selectedRestore,
-            AudioPresentationDependencyResolver selectedRestoreResolver,
-            AudioVoiceRegistry.PreparedSnapshotRestore
-                    preparedSelectedRestore,
+            IdentityFingerprint selectedRestoreIdentity,
+            IdentityFingerprint selectedRestoreResolverIdentity,
+            IdentityFingerprint preparedSelectedRestoreIdentity,
             int releaseCrossfadeRemaining,
             short lastReverseLeft,
             short lastReverseRight,
@@ -288,8 +295,36 @@ public final class AudioPresentationProducer {
             boolean reverseFrameOutput,
             boolean hasLastReverseFrame,
             int captureCount) {
-        public StateForTesting {
-            voices = List.copyOf(voices);
+        public TransactionFingerprint {
+            voiceIdentities = List.copyOf(voiceIdentities);
+        }
+    }
+
+    /**
+     * Opaque, collision-free reference identity used only in diagnostics.
+     */
+    public static final class IdentityFingerprint {
+        private final Object reference;
+
+        private IdentityFingerprint(Object reference) {
+            this.reference = reference;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof IdentityFingerprint fingerprint
+                    && reference == fingerprint.reference;
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(reference);
+        }
+
+        @Override
+        public String toString() {
+            return "IdentityFingerprint["
+                    + Integer.toHexString(hashCode()) + "]";
         }
     }
 

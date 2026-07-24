@@ -128,7 +128,7 @@ class TestGameLoopAudioPresentationModes {
         assertEquals(6, capture.clockSnapshot().totalSamplesProduced());
         assertEquals(6, runtime.lastProducedFrames());
         assertEquals(1, audio
-                .shadowParitySnapshotForTesting().presentedFrames());
+                .shadowParitySnapshot().presentedFrames());
         capture.close();
     }
 
@@ -142,7 +142,7 @@ class TestGameLoopAudioPresentationModes {
         assertEquals(0, runtime.advances,
                 "reverse consumes history rather than advancing synthesis");
         assertEquals(1, AudioManager.getInstance()
-                .shadowParitySnapshotForTesting().reverseFrames());
+                .shadowParitySnapshot().reverseFrames());
     }
 
     private CountingRuntime installCountingRuntime() throws Exception {

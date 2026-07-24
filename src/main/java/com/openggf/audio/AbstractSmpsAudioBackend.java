@@ -115,7 +115,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             boolean speedShoesEnabled,
             int speedMultiplier,
             Deque<MusicState> overrideStack,
-            SmpsCoordFlagRuntimeState.Snapshot coordState) {
+            SmpsCoordFlagRuntimeState.Snapshot coordState,
+            int fmUserMuteMask,
+            int fmUserSoloMask,
+            int psgUserMuteMask,
+            int psgUserSoloMask) {
     }
 
     private final Deque<MusicState> musicStack = new ArrayDeque<>();
@@ -886,7 +890,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     sfxStream instanceof SmpsDriver driver
                             ? driver.sequencersForTesting()
                             : List.of(),
-                    legacyCoordFlagHandlers.state().snapshot());
+                    legacyCoordFlagHandlers.state().snapshot(),
+                    maskOf(fmUserMutes), maskOf(fmUserSolos),
+                    maskOf(psgUserMutes), maskOf(psgUserSolos));
         }
     }
 
@@ -920,7 +926,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             List<SmpsSequencer> musicSequencers,
             SmpsDriverSnapshot standaloneSfxDriverSnapshot,
             List<SmpsSequencer> standaloneSfxSequencers,
-            SmpsCoordFlagRuntimeState.Snapshot coordState) {
+            SmpsCoordFlagRuntimeState.Snapshot coordState,
+            int fmUserMuteMask,
+            int fmUserSoloMask,
+            int psgUserMuteMask,
+            int psgUserSoloMask) {
         StateForTesting {
             overrideStack = List.copyOf(overrideStack);
             musicSequencers = List.copyOf(musicSequencers);
@@ -949,7 +959,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     overrides,
                     musicDriverSnapshot,
                     sfxDriverSnapshot,
-                    legacyCoordFlagHandlers.state().snapshot());
+                    legacyCoordFlagHandlers.state().snapshot(),
+                    maskOf(fmUserMutes), maskOf(fmUserSolos),
+                    maskOf(psgUserMutes), maskOf(psgUserSolos));
         }
     }
 
@@ -1034,6 +1046,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             sfxBlocked = snapshot.sfxBlocked();
             speedShoesEnabled = snapshot.speedShoesEnabled();
             speedMultiplier = snapshot.speedMultiplier();
+            restoreUserMasks(snapshot.fmUserMuteMask(),
+                    snapshot.fmUserSoloMask(), snapshot.psgUserMuteMask(),
+                    snapshot.psgUserSoloMask());
 
             musicStack.clear();
             musicStack.addAll(prepared.overrideStack());
@@ -1047,6 +1062,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             if (prepared.standaloneSfxDriver() != null) {
                 sfxStream = prepared.standaloneSfxDriver();
             }
+            updateSynthesizerConfig();
             pendingRestore = snapshot.pendingRestore() && !musicStack.isEmpty();
             if (sfxBlocked && musicStack.isEmpty() && !restoredFadeInActive()) {
                 // No override to fade back into and no fade-in in flight: with
@@ -1091,7 +1107,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 pendingMusicDescriptor, sfxBlocked, pendingRestore,
                 speedShoesEnabled, speedMultiplier,
                 new ArrayDeque<>(musicStack),
-                legacyCoordFlagHandlers.state().snapshot());
+                legacyCoordFlagHandlers.state().snapshot(),
+                maskOf(fmUserMutes), maskOf(fmUserSolos),
+                maskOf(psgUserMutes), maskOf(psgUserSolos));
     }
 
     private void restoreLiveLogicalState(LegacyLiveState state) {
@@ -1109,6 +1127,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         musicStack.clear();
         musicStack.addAll(state.overrideStack());
         legacyCoordFlagHandlers.state().restore(state.coordState());
+        restoreUserMasks(state.fmUserMuteMask(), state.fmUserSoloMask(),
+                state.psgUserMuteMask(), state.psgUserSoloMask());
+        updateSynthesizerConfig();
     }
 
     private void rebindFadeCompleteCallbackIfNeeded() {
@@ -1558,10 +1579,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     }
 
     private void updateSynthesizerConfig() {
-        if (currentSmps == null || currentSmps.getSynthesizer() == null)
-            return;
-        var synth = currentSmps.getSynthesizer();
-
         boolean anyFmSolo = false;
         for (boolean s : fmUserSolos)
             if (s)
@@ -1574,24 +1591,60 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
         boolean anySolo = anyFmSolo || anyPsgSolo;
 
-        for (int i = 0; i < 6; i++) {
-            boolean soloed = fmUserSolos[i];
-            boolean muted = fmUserMutes[i];
-            if (soloed)
-                muted = false;
-            else if (anySolo)
-                muted = true;
-            synth.setFmMute(i, muted);
+        if (smpsDriver != null) {
+            applyUserMasks(smpsDriver, anySolo);
         }
+        if (sfxStream instanceof SmpsDriver sfxDriver
+                && sfxDriver != smpsDriver) {
+            applyUserMasks(sfxDriver, anySolo);
+        }
+    }
 
-        for (int i = 0; i < 4; i++) {
-            boolean soloed = psgUserSolos[i];
-            boolean muted = psgUserMutes[i];
-            if (soloed)
+    private void applyUserMasks(SmpsDriver driver, boolean anySolo) {
+        for (int channel = 0; channel < fmUserMutes.length; channel++) {
+            boolean muted = fmUserMutes[channel];
+            if (fmUserSolos[channel]) {
                 muted = false;
-            else if (anySolo)
+            } else if (anySolo) {
                 muted = true;
-            synth.setPsgMute(i, muted);
+            }
+            driver.setFmMute(channel, muted);
+        }
+        for (int channel = 0; channel < psgUserMutes.length; channel++) {
+            boolean muted = psgUserMutes[channel];
+            if (psgUserSolos[channel]) {
+                muted = false;
+            } else if (anySolo) {
+                muted = true;
+            }
+            driver.setPsgMute(channel, muted);
+        }
+    }
+
+    private static int maskOf(boolean[] values) {
+        int mask = 0;
+        for (int index = 0; index < values.length; index++) {
+            if (values[index]) {
+                mask |= 1 << index;
+            }
+        }
+        return mask;
+    }
+
+    private void restoreUserMasks(
+            int fmMuteMask,
+            int fmSoloMask,
+            int psgMuteMask,
+            int psgSoloMask) {
+        restoreMask(fmUserMutes, fmMuteMask);
+        restoreMask(fmUserSolos, fmSoloMask);
+        restoreMask(psgUserMutes, psgMuteMask);
+        restoreMask(psgUserSolos, psgSoloMask);
+    }
+
+    private static void restoreMask(boolean[] target, int mask) {
+        for (int index = 0; index < target.length; index++) {
+            target[index] = (mask & (1 << index)) != 0;
         }
     }
 

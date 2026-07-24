@@ -21,11 +21,43 @@ public final class PcmHistoryRing {
             long epoch) {
     }
 
-    public record StateForTesting(
+    public record DiagnosticSnapshot(
             long nextFrameIndex,
             int storedFrames,
             long epoch,
-            int writeSlot) {
+            int writeSlot,
+            ReadablePcmFingerprint readablePcm) {
+    }
+
+    /**
+     * Immutable diagnostic copy of all readable PCM in chronological order.
+     */
+    public static final class ReadablePcmFingerprint {
+        private final short[] samples;
+
+        private ReadablePcmFingerprint(short[] samples) {
+            this.samples = samples;
+        }
+
+        public short[] samples() {
+            return samples.clone();
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof ReadablePcmFingerprint fingerprint
+                    && Arrays.equals(samples, fingerprint.samples);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(samples);
+        }
+
+        @Override
+        public String toString() {
+            return "ReadablePcmFingerprint[samples=" + samples.length + "]";
+        }
     }
 
     public PcmHistoryRing(int capacityFrames) {
@@ -91,9 +123,25 @@ public final class PcmHistoryRing {
         Arrays.fill(samples, (short) 0);
     }
 
-    public StateForTesting stateForTesting() {
-        return new StateForTesting(
-                nextFrameIndex, storedFrames, epoch, writeSlot);
+    public DiagnosticSnapshot diagnosticSnapshot() {
+        return new DiagnosticSnapshot(
+                nextFrameIndex, storedFrames, epoch, writeSlot,
+                readablePcmFingerprint());
+    }
+
+    private ReadablePcmFingerprint readablePcmFingerprint() {
+        short[] readable = new short[storedFrames * CHANNELS];
+        long oldestFrame = nextFrameIndex - storedFrames;
+        int copiedFrames = 0;
+        while (copiedFrames < storedFrames) {
+            int slot = ringSlot(oldestFrame + copiedFrames);
+            int chunk = Math.min(storedFrames - copiedFrames,
+                    capacityFrames - slot);
+            System.arraycopy(samples, slot * CHANNELS, readable,
+                    copiedFrames * CHANNELS, chunk * CHANNELS);
+            copiedFrames += chunk;
+        }
+        return new ReadablePcmFingerprint(readable);
     }
 
     private int ringSlot(long frameIndex) {

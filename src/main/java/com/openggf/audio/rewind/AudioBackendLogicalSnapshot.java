@@ -13,17 +13,26 @@ public record AudioBackendLogicalSnapshot(
         List<AudioSourceDescriptor> overrideStack,
         SmpsDriverSnapshot musicDriver,
         SmpsDriverSnapshot standaloneSfxDriver,
-        SmpsCoordFlagRuntimeState.Snapshot legacyCoordFlagRuntimeState) {
+        SmpsCoordFlagRuntimeState.Snapshot legacyCoordFlagRuntimeState,
+        int fmUserMuteMask,
+        int fmUserSoloMask,
+        int psgUserMuteMask,
+        int psgUserSoloMask) {
 
     private static final AudioBackendLogicalSnapshot EMPTY =
             new AudioBackendLogicalSnapshot(null, false, false, false, 1,
                     List.of(), null, null,
-                    new SmpsCoordFlagRuntimeState.Snapshot(0));
+                    new SmpsCoordFlagRuntimeState.Snapshot(0),
+                    0, 0, 0, 0);
 
     public AudioBackendLogicalSnapshot {
         overrideStack = List.copyOf(Objects.requireNonNull(overrideStack, "overrideStack"));
         legacyCoordFlagRuntimeState = Objects.requireNonNull(
                 legacyCoordFlagRuntimeState, "legacyCoordFlagRuntimeState");
+        fmUserMuteMask &= 0x3F;
+        fmUserSoloMask &= 0x3F;
+        psgUserMuteMask &= 0x0F;
+        psgUserSoloMask &= 0x0F;
     }
 
     public AudioBackendLogicalSnapshot(
@@ -35,7 +44,8 @@ public record AudioBackendLogicalSnapshot(
             List<AudioSourceDescriptor> overrideStack) {
         this(currentMusic, sfxBlocked, pendingRestore, speedShoesEnabled, speedMultiplier,
                 overrideStack, null, null,
-                new SmpsCoordFlagRuntimeState.Snapshot(0));
+                new SmpsCoordFlagRuntimeState.Snapshot(0),
+                0, 0, 0, 0);
     }
 
     public AudioBackendLogicalSnapshot(
@@ -50,7 +60,24 @@ public record AudioBackendLogicalSnapshot(
         this(currentMusic, sfxBlocked, pendingRestore, speedShoesEnabled,
                 speedMultiplier, overrideStack, musicDriver,
                 standaloneSfxDriver,
-                new SmpsCoordFlagRuntimeState.Snapshot(0));
+                new SmpsCoordFlagRuntimeState.Snapshot(0),
+                0, 0, 0, 0);
+    }
+
+    public AudioBackendLogicalSnapshot(
+            AudioSourceDescriptor currentMusic,
+            boolean sfxBlocked,
+            boolean pendingRestore,
+            boolean speedShoesEnabled,
+            int speedMultiplier,
+            List<AudioSourceDescriptor> overrideStack,
+            SmpsDriverSnapshot musicDriver,
+            SmpsDriverSnapshot standaloneSfxDriver,
+            SmpsCoordFlagRuntimeState.Snapshot legacyCoordFlagRuntimeState) {
+        this(currentMusic, sfxBlocked, pendingRestore, speedShoesEnabled,
+                speedMultiplier, overrideStack, musicDriver,
+                standaloneSfxDriver, legacyCoordFlagRuntimeState,
+                0, 0, 0, 0);
     }
 
     public static AudioBackendLogicalSnapshot empty() {
