@@ -64,6 +64,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             EndToEndTests.Register(tests);
             S1TraceDifferentialTests.Register(tests);
             S1CompleteRunDifferentialTests.Register(tests);
+            S1RunModeDifferentialTests.Register(tests);
             S2TraceDifferentialTests.Register(tests);
 
             var matched = 0;

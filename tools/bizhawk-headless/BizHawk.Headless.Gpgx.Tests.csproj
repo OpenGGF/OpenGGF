@@ -48,6 +48,7 @@
     <Compile Include="tests/S1CompleteRunMetadataWriterTests.cs" />
     <Compile Include="tests/S1RunCaptureRunnerTests.cs" />
     <Compile Include="tests/S1RunManifestWriterTests.cs" />
+    <Compile Include="tests/S1RunModeDifferentialTests.cs" />
     <Compile Include="tests/S1SmokeRecorderTests.cs" />
     <Compile Include="tests/S1SpecialStageWriterTests.cs" />
     <Compile Include="tests/S1TraceCaptureRunnerTests.cs" />
