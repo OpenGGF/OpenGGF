@@ -223,6 +223,11 @@ public final class TraceReplaySessionBootstrap {
         OscillationManager.suppressNextFrames(
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace));
         advanceAnimatedTilePreludeForTraceReplay(trace);
+        // S3K level-gated starts deliberately return zero for both replay-only
+        // prelude counts. Their first normal frame runs the ordinary production
+        // playable dispatch, so Sonic, Tails, objects, input history, and
+        // OscillateNumDo stay in one native phase.
+        // S1/S2 retain their game-owned title-card setup rules below.
         int sidekickPreludeFrames =
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace);
         int objectPreludeFrames = 0;
@@ -313,9 +318,9 @@ public final class TraceReplaySessionBootstrap {
                             && gameplayMode.getSpriteManager() != null;
             boolean tornadoPreludeOrder =
                     interleaveSidekickPrelude
-                            && TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace);
+                            && findRideStartTornado(objectManager) != null;
             if (interleaveSidekickPrelude) {
-                prepareSidekickPreludePlacement(trace, gameplayMode);
+                prepareSidekickPreludePlacement(trace, gameplayMode, tornadoPreludeOrder);
             }
             int consumedPreludeFrames = 0;
             if (tornadoPreludeOrder) {
@@ -365,7 +370,7 @@ public final class TraceReplaySessionBootstrap {
             // begins ticking. Otherwise the first prelude leader-record write
             // for slot 0 is overwritten when SidekickCpuController.updateInit
             // re-runs the pre-fill from its own first tick.
-            prepareSidekickPreludePlacement(trace, gameplayMode);
+            prepareSidekickPreludePlacement(trace, gameplayMode, false);
             gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(
                     sidekickPreludeFrames,
                     gameplayMode.getLevelManager(),
@@ -567,12 +572,13 @@ public final class TraceReplaySessionBootstrap {
 
     private static void prepareSidekickPreludePlacement(
             TraceData trace,
-            com.openggf.game.session.GameplayModeContext gameplayMode) {
+            com.openggf.game.session.GameplayModeContext gameplayMode,
+            boolean tornadoPreludeOrder) {
         boolean useMetadataStartAnchor = trace != null
                 && trace.metadata() != null
                 && "s2".equals(trace.metadata().game())
                 && trace.metadata().nativePreludeMode()
-                && !TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace);
+                && !tornadoPreludeOrder;
         int[] levelStart = useMetadataStartAnchor
                 ? resolveCurrentLevelStart()
                 : null;
@@ -956,7 +962,8 @@ public final class TraceReplaySessionBootstrap {
         }
         refreshSidekickCpuBoundsFromCamera();
         var collision = GameServices.collisionOrNull();
-        if (collision != null && sprite != null) {
+        if (collision != null && sprite != null
+                && !shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
             collision.resolveGroundAttachment(
                     FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
         }
@@ -1024,10 +1031,22 @@ public final class TraceReplaySessionBootstrap {
         // the first state-changing row is driven.
         var collision = GameServices.collisionOrNull();
         if (collision != null
-                && TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)) {
+                && TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)
+                && !shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
             collision.resolveGroundAttachment(
                     FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
         }
+    }
+
+    /**
+     * Applies the game-owned fresh-player lifecycle rule to a structurally
+     * fresh trace start. Complete-run, bonus-stage, and mid-level segments do
+     * not enter this path.
+     */
+    public static boolean shouldPreserveFreshGroundedStatusUntilFirstDispatch(TraceData trace) {
+        return TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)
+                && GameServices.module().getLevelInitProfile()
+                        .preserveFreshGroundedStatusUntilFirstDispatch();
     }
 
     /**

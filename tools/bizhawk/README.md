@@ -6,6 +6,7 @@ The canonical trace replay documentation now lives in:
 
 Use this folder for the recorder scripts and local BizHawk assets:
 
+- `fetch_bizhawk_2_11_linux.sh` downloads and verifies the supported Linux build
 - `run_bizhawk_lua.bat` launches any Lua/BK2/ROM combination safely for
   diagnostics and one-off probes
 - `record_trace.bat` launches S1 recording through the reusable no-audio/no-render launcher
@@ -21,6 +22,86 @@ Use this folder for the recorder scripts and local BizHawk assets:
   "Trace Run Manifests" section below)
 - `record_s1_credits_traces.bat` launches forced Sonic 1 credits-demo capture
 - `s1_credits_trace_recorder.lua` records the built-in ending replays without a BK2
+- `lib/oggf_trace_common.lua` is a shared module of game-agnostic leaf helpers
+  (`bk2_input_mask`, `hex`, `angle_to_ground_mode`, `read_speed`,
+  `rom_joypad_to_mask`, `write_aux`, `json_escape`, `json_quote`, and the
+  `INPUT_*` bitmask constants) that every recorder `loadfile`s at startup via a
+  small `oggf_lib_dir()` loader. It holds only pure helpers whose emitted bytes
+  are identical to the previously-inlined copies — schema writers, `*_csv_version`
+  constants, and the fast-headless toggle block deliberately stay inline per
+  recorder. `run_bizhawk_lua.bat` exports `OGGF_BIZHAWK_LIB` so the loader finds
+  it on the wrapper/headless route; a `debug.getinfo` fallback covers direct
+  `--lua=` launches. Any edit here must be regen-validated for a byte-identical
+  `physics.csv` / `aux_state.jsonl` / `metadata.json` before committing.
+
+## Required BizHawk version
+
+Linux trace recording is pinned to **BizHawk 2.11 Linux x64**. Install the
+official release from any working directory with:
+
+```bash
+tools/bizhawk/fetch_bizhawk_2_11_linux.sh
+```
+
+The script verifies the release checksum and installs it locally at
+`docs/BizHawk-2.11-linux-x64`. Local BizHawk installations follow the
+`docs/BizHawk-<version>-<platform>-<architecture>` naming convention and are
+ignored by Git.
+
+Do not substitute BizHawk 2.11.1 for trace recording. BizHawk 2.11.1 removed
+`client.invisibleemulation`, which these recorders require for fast no-render
+capture. An existing 2.11.1 installation may remain locally, but it must not be
+selected when running the trace tools.
+
+## Native headless GPGX harness (S1 trace recorder on Linux)
+
+The Linux-only native GPGX harness (`tools/bizhawk-headless/`) runs the
+BizHawk 2.11 core through Mono without starting EmuHawk and without requiring
+`DISPLAY`. It now records **full canonical Sonic 1 traces** — `physics.csv`
+(CSV v7), `aux_state.jsonl`, and `metadata.json` (`trace_schema` 4) — and is
+the supported replacement for `s1_trace_recorder.lua` when recording S1 on
+Linux. Verified trace-mode command (the BK2 frame offset is auto-detected
+from gameplay start, so there is no `--bk2-frame-offset` in trace mode):
+
+```bash
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S1_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2" \
+  --output "$PWD/target/bizhawk-headless-trace"
+```
+
+**Byte-parity guarantee vs the Lua recorder:** on the canonical GHZ1 fixture
+(`src/test/resources/traces/s1/ghz1_fullrun/`) the native harness reproduces
+`physics.csv` and `aux_state.jsonl` byte-identically (sha256
+`dd0a03bfddefa9570d4b49ee2d4ea5e35e2b8141147e17ab482a3654d311cb66` and
+`026794b175c7fea65491f57cbf5a83684f183b802c7fabaa15eb699e82184a86`) with the
+same auto-detected
+`bk2_frame_offset` 840 and `trace_frame_count` 3905; `metadata.json` differs
+only in the `recording_date` value. The ROM-backed differential gate
+(`tools/bizhawk-headless/test.sh`, test
+`S1TraceDifferential native capture matches canonical GHZ1 trace`) re-verifies
+this end to end.
+
+**Intentional differences from the Lua recorder** (no output-byte impact):
+`metadata.json` is written once at capture end instead of Lua's periodic
+crash-resilience rewrites; stdout progress/diagnostic text is different; and
+`lua_script_version` stays `"3.5"` as a schema-compatibility marker even
+though no Lua runs. The byte-level porting contract lives in
+`tools/bizhawk-headless/docs/s1-trace-recorder-behavior.md`.
+
+**Limitations:** Linux/Mono only, and S1 only — the S2, S3K, and complete-run
+recorders remain Lua scripts, and `s1_trace_recorder.lua` remains the
+reference implementation and the recording path on non-Linux platforms. The
+harness needs the BizHawk 2.11 Linux x64 assemblies (`BIZHAWK_HOME` must point
+at an absolute install, default `docs/BizHawk-2.11-linux-x64`), Mono, and a
+verified Sonic 1 REV01 ROM in `S1_ROM_PATH`.
+
+The original smoke-capture proof-of-concept mode is still available
+(`--mode smoke`, the default) with explicit `--bk2-frame-offset` /
+`--max-frames`; its `smoke.csv` is a deterministic developer diagnostic only —
+not the canonical trace schema — and must not be committed as a trace fixture.
 
 ## Trace Run Manifests
 
@@ -52,6 +133,32 @@ The S3K complete-run recorder handles stage detours as follows:
 The `OGGF_TRACE_RUN_ID` environment variable forces manifest emission and sets the `run_id`
 field, allowing trace runs with no detours to be tracked explicitly (useful for complete-game
 runs or for organizing capture sessions).
+
+## Linux Launcher (`run_bizhawk_lua.sh` / `record_trace.sh`)
+
+`run_bizhawk_lua.sh` is the Linux counterpart to `run_bizhawk_lua.bat`, and
+`record_trace.sh` mirrors `record_trace.bat`. They launch EmuHawk via `mono` and
+export the same `OGGF_BIZHAWK_LIB` contract for the shared-lib loader. Bring-up
+facts encoded there (BizHawk 2.11.1 `bizhawk-bin` on CachyOS/Wayland):
+
+- BizHawk runs portable and writes config/system dirs beside `EmuHawk.exe`; the
+  packaged `/opt/bizhawk` is root-owned, so run against a writable copy
+  (`cp -a /opt/bizhawk ~/.local/share/bizhawk-run`) via `BIZHAWK_HOME`.
+- `DISPLAY` must be set (EmuHawk is WinForms even headless); XWayland `:0` works.
+- Hardware GL under XWayland fails (`eglMakeCurrent … EGL_BAD_ACCESS`); the
+  launcher forces Mesa software GL by default (or set config `DispMethod=1` for
+  GDI+). `--luaconsole` is passed to dodge a `Stack empty` crash that
+  command-line `--lua` + `--movie` otherwise throws in `LuaConsole.EnableLuaFile`.
+- **KNOWN BLOCKER (upstream BizHawk 2.11.1 + mono, not the launcher):** loading a
+  BK2 via `--movie` hangs inside the movie-load path right after `WaterboxHost
+  Sealed`, before the form's `OnShown` — so the recorder's Lua never runs and no
+  `trace_output/` is produced. The hung process maps no X window (not a
+  dismissible dialog). The same recorder Lua launched *without* `--movie` runs
+  fine (Lua loads, frames advance, clean exit), isolating the fault to
+  command-line BK2 loading on this build. An end-to-end Linux regen needs a
+  working headless BK2 path (a different BizHawk build, a real X server via Xvfb,
+  or a Lua-side movie loader). Until then, run the byte-diff regen gate on a
+  platform where BizHawk plays BK2s headlessly (e.g. Windows).
 
 ## Capture Launch Notes (verified live 2026-07-19)
 
@@ -571,6 +678,18 @@ Any surprise in these prints means re-verify the RAM table before committing the
 
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.
+
+## Recorder capability parity follow-up
+
+Treat `s1_complete_run_recorder.lua` as the current reference bar for recorder
+ergonomics and resilience: repeated-segment naming, multi-mode run manifests,
+direct BK2 input alignment, periodic metadata rewrites, lag and object-state
+diagnostics, self-check summaries, movie-end finalization, and fast-headless
+operation through the shared launcher. Audit the S1/S2/S3K single-segment and
+complete-run recorders against that capability list before the next recorder
+schema uplift. Game-specific RAM fields may differ; lifecycle safety,
+reporting quality, truthful source-movie metadata, and launch behavior should
+not.
 
 For trace recording, use the `record_*_trace.bat` wrappers. They route through
 `run_bizhawk_lua.bat`, which means recorder regeneration gets the same generated

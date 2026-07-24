@@ -41,6 +41,16 @@ public class TestGameModuleProfiles {
     }
 
     @Test
+    public void onlySonic3kPreservesFreshGroundedStatusUntilFirstDispatch() {
+        assertFalse(new Sonic1GameModule().getLevelInitProfile()
+                .preserveFreshGroundedStatusUntilFirstDispatch());
+        assertFalse(new Sonic2GameModule().getLevelInitProfile()
+                .preserveFreshGroundedStatusUntilFirstDispatch());
+        assertTrue(new Sonic3kGameModule().getLevelInitProfile()
+                .preserveFreshGroundedStatusUntilFirstDispatch());
+    }
+
+    @Test
     public void audioProfilesMapCommonMusicCues() {
         var s1Music = new Sonic1GameModule().getAudioProfile().getMusicMap();
         assertEquals(Sonic1Music.GOT_THROUGH.id, s1Music.get(GameMusic.ACT_CLEAR));
@@ -124,5 +134,4 @@ public class TestGameModuleProfiles {
         assertTrue(profile.postTeardownFixups().isEmpty());
     }
 }
-
 

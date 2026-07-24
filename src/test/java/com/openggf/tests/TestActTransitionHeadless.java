@@ -97,6 +97,20 @@ public class TestActTransitionHeadless {
     }
 
     @Test
+    public void fullLevelReloadPreservesGlobalVintClock() {
+        LevelManager lm = GameServices.level();
+        ObjectManager beforeOM = lm.getObjectManager();
+        beforeOM.initVblaCounter(0x4567);
+
+        lm.loadCurrentLevel();
+
+        assertNotSame(beforeOM, lm.getObjectManager(),
+                "A full reload must rebuild dynamic object RAM");
+        assertEquals(0x4567, lm.getObjectManager().getVblaCounter(),
+                "Global V_int_run_count survives deaths and results-screen level loads");
+    }
+
+    @Test
     public void seamlessReloadTicksGlobalVintClockAcrossTransitionOnlyFrame() {
         LevelManager lm = GameServices.level();
         lm.getObjectManager().initVblaCounter(0x4567);

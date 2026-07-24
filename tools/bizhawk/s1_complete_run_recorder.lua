@@ -116,6 +116,30 @@
 -- lua_script_version reports "3.12"; aux_schema_extras gains object_near_objoff_32.
 ------------------------------------------------------------------------------
 
+------------------
+--- Shared lib ---
+------------------
+
+-- Locate tools/bizhawk/lib/ robustly across the .bat/%TEMP%-wrapper route, the
+-- direct --lua= route, and headless launches (see lib/oggf_trace_common.lua and
+-- SHARED_MODULE_HANDOFF.md). The launcher-provided env var wins; otherwise fall
+-- back to this recorder's own directory, then CWD. Scoped in a do-block so the
+-- helper's local slot is freed (these recorders sit near Lua's 200-locals cap).
+local C
+do
+    local function oggf_lib_dir()
+        local env = os.getenv("OGGF_BIZHAWK_LIB")        -- launcher-provided, most robust
+        if env and #env > 0 then return env end
+        local src = debug.getinfo(1, "S").source         -- "@<abs path to this recorder>"
+        local dir = src:match("^@(.*[/\\])")             -- strip filename
+        if dir then return dir .. "lib/" end
+        return "lib/"                                     -- CWD fallback
+    end
+    -- assert() so a bad path surfaces as a load error (visible without
+    -- --chromeless) instead of silently skipping the whole recorder.
+    C = assert(loadfile(oggf_lib_dir() .. "oggf_trace_common.lua"))()
+end
+
 -----------------
 --- Constants ---
 -----------------
@@ -123,7 +147,10 @@
 -- Output directory (relative to BizHawk working dir).
 -- MULTI-SEGMENT complete-run recorder: OUTPUT_DIR is reassigned per act to
 -- BASE_OUTPUT_DIR<zone><act>/ (e.g. trace_output/ghz1/) on each arm. See on_frame_end.
-local BASE_OUTPUT_DIR = "trace_output/"
+local BASE_OUTPUT_DIR = os.getenv("OGGF_TRACE_OUTPUT_DIR") or "trace_output/"
+if BASE_OUTPUT_DIR:sub(-1) ~= "/" and BASE_OUTPUT_DIR:sub(-1) ~= "\\" then
+    BASE_OUTPUT_DIR = BASE_OUTPUT_DIR .. "/"
+end
 local OUTPUT_DIR = BASE_OUTPUT_DIR
 
 -- Headless mode: run at maximum speed, auto-exit when done.
@@ -146,6 +173,10 @@ local ADDR_CAMERA_Y        = 0xF704   -- long: v_screenposy (camera Y pixel:sub)
 local ADDR_ZONE            = 0xFE10   -- byte: current zone number (v_zone)
 local ADDR_ACT             = 0xFE11   -- byte: current act number (v_act)
 local ADDR_RANDOM          = 0xF636   -- long: v_random pseudo-random number buffer
+ADDR_RANDOM_NUMBER = 0x0029AC        -- RandomNumber (sonic.lst:5991)
+ADDR_FZ_BOSS_PROBE  = 0x01A6DE        -- loc_19F2E, immediately before SolidObject
+ADDR_FZ_BOSS_NO_SIDE = 0x01A6F8       -- loc_19F48, SolidObject returned d4 <= 0
+ADDR_FZ_BOSS_SIDE   = 0x01A700        -- loc_19F50 (sonic.lst:81101)
 
 -- Player object base ($FFD000)
 local PLAYER_BASE          = 0xD000
@@ -249,12 +280,13 @@ local OBJ_DYNAMIC_COUNT    = 96   -- dynamic slots 32-127
 local ADDR_FRAMECOUNT      = 0xFE04
 local ADDR_VBLA_WORD       = 0xFE0E
 
--- Genesis joypad bitmask (matching engine convention)
-local INPUT_UP    = 0x01
-local INPUT_DOWN  = 0x02
-local INPUT_LEFT  = 0x04
-local INPUT_RIGHT = 0x08
-local INPUT_JUMP  = 0x10
+-- Genesis joypad bitmask (matching engine convention) — single-sourced in
+-- lib/oggf_trace_common.lua; rebound locally to keep hot-loop lookups cheap.
+local INPUT_UP    = C.INPUT_UP
+local INPUT_DOWN  = C.INPUT_DOWN
+local INPUT_LEFT  = C.INPUT_LEFT
+local INPUT_RIGHT = C.INPUT_RIGHT
+local INPUT_JUMP  = C.INPUT_JUMP
 
 -- Game mode values
 local GAMEMODE_LEVEL = 0x0C
@@ -356,6 +388,41 @@ ss_min_angle_seen = nil           -- self-check accumulators
 ss_max_angle_seen = nil
 ss_last_rotate = nil
 run_id = os.getenv("OGGF_TRACE_RUN_ID") or nil
+source_bk2_name = os.getenv("OGGF_TRACE_SOURCE_BK2") or "s1-complete-run.bk2"
+
+-- Focused, comparison-only RandomNumber call tracing. Enable with
+-- OGGF_S1_RNG_CALL_RANGE=<first>-<last>, where the bounds are segment-local
+-- trace frames. The hook remains Final Zone act 2 gated and never writes RAM.
+S1_RNG_CALLS = {
+    enabled = false,
+    frame_start = 0,
+    frame_end = 0,
+    hooks_registered = false,
+    hits = {},
+}
+S1_RNG_CALLS.range = os.getenv("OGGF_S1_RNG_CALL_RANGE")
+if S1_RNG_CALLS.range and S1_RNG_CALLS.range ~= "" then
+    local range_start, range_end = S1_RNG_CALLS.range:match("^(%d+)%-(%d+)$")
+    if range_start and range_end then
+        S1_RNG_CALLS.enabled = true
+        S1_RNG_CALLS.frame_start = tonumber(range_start)
+        S1_RNG_CALLS.frame_end = tonumber(range_end)
+    else
+        print("WARN: invalid OGGF_S1_RNG_CALL_RANGE, expected <start>-<end>: "
+            .. S1_RNG_CALLS.range)
+    end
+end
+
+-- Returns a stable, unique directory token for every segment arm. A complete
+-- movie can enter the same level more than once (special-stage return,
+-- death/restart, or another mode round-trip), so using only <zone><act> would
+-- overwrite the earlier segment while leaving duplicate manifest entries.
+-- Mirrors s3k_complete_run_recorder.lua's start_new_segment naming contract.
+function next_segment_dir_token(base_token)
+    local n = (segment_dir_counts[base_token] or 0) + 1
+    segment_dir_counts[base_token] = n
+    return (n == 1) and base_token or (base_token .. "_" .. n)
+end
 
 -----------------
 --- State     ---
@@ -388,78 +455,20 @@ local aux_file = nil
 --- Helpers   ---
 -----------------
 
--- Read a 16-bit signed value (big-endian)
-local function read_speed(base, offset)
-    return mainmemory.read_s16_be(base + offset)
-end
+-- Leaf helpers single-sourced in lib/oggf_trace_common.lua. Rebound to locals
+-- so the many call sites below stay unchanged; the two that captured file-scope
+-- upvalues (bk2_input_mask -> bk2_frame_offset, write_aux -> aux_file) keep thin
+-- local wrappers that forward those upvalues.
+local read_speed = C.read_speed
+local hex = C.hex
+local angle_to_ground_mode = C.angle_to_ground_mode
 
--- Convert raw ROM joypad byte (v_jpadhold1) to engine input bitmask.
--- ROM bits: 0=Up 1=Down 2=Left 3=Right 4=B 5=C 6=A 7=Start
--- Bits 0-3 already match INPUT_UP/DOWN/LEFT/RIGHT; collapse A/B/C to JUMP.
-local function rom_joypad_to_mask(raw)
-    local mask = raw & 0x0F                        -- directions (bits 0-3)
-    if (raw & 0x70) ~= 0 then mask = mask + INPUT_JUMP end  -- A|B|C -> JUMP
-    return mask
-end
-
--- Mirrors the S2 recorder's BK2-derived input read. ROM-side v_jpadhold1
--- updates from inside ReadJoypads which runs only from specific V-int
--- subroutines; on lag frames and during long V-int paths the written byte
--- can lag the BK2 logical input by one game frame, producing spurious
--- "Input alignment error" failures in AbstractCreditsDemoTraceReplayTest.
--- Read the BK2 movie input directly so the CSV input column matches what
--- the test fixture's BK2 reader will see during validation.
 local function bk2_input_mask(fallback_raw, trace_row)
-    if not movie.isloaded() then
-        return rom_joypad_to_mask(fallback_raw)
-    end
-    -- Replay metadata defines trace row N as BK2 frame
-    -- (bk2_frame_offset + N). Use that same convention here; direct
-    -- emu.framecount() is one frame ahead in this recorder loop.
-    local frame_index = bk2_frame_offset ~= nil
-        and trace_row ~= nil
-        and (bk2_frame_offset + trace_row)
-        or emu.framecount()
-    local jp = movie.getinput(frame_index, 1)
-    if jp == nil then
-        return rom_joypad_to_mask(fallback_raw)
-    end
-    local mask = 0
-    if jp["P1 Up"]    or jp["Up"]    then mask = mask | INPUT_UP    end
-    if jp["P1 Down"]  or jp["Down"]  then mask = mask | INPUT_DOWN  end
-    if jp["P1 Left"]  or jp["Left"]  then mask = mask | INPUT_LEFT  end
-    if jp["P1 Right"] or jp["Right"] then mask = mask | INPUT_RIGHT end
-    if jp["P1 A"] or jp["A"] or jp["P1 B"] or jp["B"]
-            or jp["P1 C"] or jp["C"] then
-        mask = mask | INPUT_JUMP
-    end
-    return mask
+    return C.bk2_input_mask(fallback_raw, trace_row, bk2_frame_offset)
 end
 
--- Format a number as hex with specified width
-local function hex(val, width)
-    width = width or 4
-    if val < 0 then
-        val = val + 0x10000
-    end
-    return string.format("%0" .. width .. "X", val)
-end
-
--- Get ground mode from angle (offset quadrants matching ROM thresholds).
--- Floor wraps: 0xE0-0xFF and 0x00-0x1F are both mode 0.
-local function angle_to_ground_mode(angle)
-    if angle <= 0x1F or angle >= 0xE0 then return 0 end   -- floor
-    if angle >= 0x20 and angle <= 0x5F then return 1 end   -- right wall
-    if angle >= 0x60 and angle <= 0x9F then return 2 end   -- ceiling
-    return 3                                                 -- left wall
-end
-
--- Write a JSONL line to aux file
 local function write_aux(json_str)
-    if aux_file then
-        aux_file:write(json_str .. "\n")
-        aux_file:flush()
-    end
+    C.write_aux(aux_file, json_str)
 end
 
 -----------------
@@ -501,19 +510,24 @@ local function write_metadata()
     meta_file:write('  "sidekicks": [],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.15",\n')
+    meta_file:write('  "lua_script_version": "3.17",\n')
     meta_file:write('  "trace_schema": 4,\n')
     meta_file:write('  "csv_version": 7,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
         .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c", '
         .. '"object_near_objoff_34_36_38", "v_oscillate_per_frame", "lag_state_per_frame", '
-        .. '"object_near_objoff_32"],\n')
+        .. '"object_near_objoff_32"')
+    -- Final Zone is encoded by the ROM as SBZ act 3 (zone 5, zero-based act 2).
+    if S1_RNG_CALLS.enabled and start_zone_id == 5 and start_act == 2 then
+        meta_file:write(', "rng_call_per_frame"')
+    end
+    meta_file:write('],\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": "",\n')
     -- The complete-run recorder always plays the shared complete-run BK2. Emit
     -- source_bk2 so AbstractTraceReplayTest's _movies/ resolver finds it; without
     -- it the regenerated trace silently SKIPS (no BK2 -> Assumptions.assumeTrue).
-    meta_file:write('  "source_bk2": "s1-complete-run.bk2"\n')
+    meta_file:write(string.format('  "source_bk2": %q\n', source_bk2_name))
     meta_file:write("}\n")
     meta_file:close()
     print(string.format("Metadata written. Zone: %s Act %d, Trace frames: %d",
@@ -578,8 +592,8 @@ function write_ss_metadata()
     meta_file:write('  "sidekicks": [],\n')
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
-    meta_file:write('  "source_bk2": "s1-complete-run.bk2",\n')
-    meta_file:write('  "lua_script_version": "3.15",\n')
+    meta_file:write(string.format('  "source_bk2": %q,\n', source_bk2_name))
+    meta_file:write('  "lua_script_version": "3.17",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     if run_id ~= nil then
         meta_file:write('  "run_id": "' .. run_id .. '",\n')
@@ -603,9 +617,7 @@ end
 -- bare "ss" token (and "ss_2", "ss_3", ... for further detours in the same
 -- run) never collides with a level segment dir.
 function start_ss_segment()
-    local n = (segment_dir_counts["ss"] or 0) + 1
-    segment_dir_counts["ss"] = n
-    local dir_token = (n == 1) and "ss" or ("ss_" .. n)
+    local dir_token = next_segment_dir_token("ss")
     OUTPUT_DIR = BASE_OUTPUT_DIR .. dir_token .. "/"
     current_segment_dir_token = dir_token
     ensure_segment_dir(OUTPUT_DIR)
@@ -767,8 +779,9 @@ end
 -- Unlike the S3K emitter, this recorder has no SOURCE_BK2_NAME /
 -- S3K_ROM_CHECKSUM / LUA_SCRIPT_VERSION globals -- a literal port would hit
 -- string.format('%q', nil). Inline the S1-specific literals instead:
--- "3.15" (script version), "AFE05EEE" (S1 World REV01 CRC32, per
--- CLAUDE.md), "s1-complete-run.bk2" (source_bk2, matching write_metadata).
+-- "3.17" (script version), "AFE05EEE" (S1 World REV01 CRC32, per
+-- CLAUDE.md), and source_bk2_name (provided by the shared launcher from the
+-- actual loaded BK2 filename).
 function write_run_manifest()
     if #transitions_done == 0 and run_id == nil then
         return  -- stage-free legacy run: no manifest, output layout unchanged
@@ -794,9 +807,9 @@ function write_run_manifest()
     f:write('  "run_schema": 1,\n')
     f:write('  "game": "s1",\n')
     if run_id then f:write(string.format('  "run_id": %q,\n', run_id)) end
-    f:write('  "source_bk2": "s1-complete-run.bk2",\n')
+    f:write(string.format('  "source_bk2": %q,\n', source_bk2_name))
     f:write('  "rom_checksum": "AFE05EEE",\n')
-    f:write('  "lua_script_version": "3.15",\n')
+    f:write('  "lua_script_version": "3.17",\n')
     f:write('  "segments": [\n')
     for i, s in ipairs(segments_done) do
         local extra = ""
@@ -1156,6 +1169,163 @@ local function check_mode_changes(status, routine)
     prev_routine = routine
 end
 
+-- Reconstruct the value returned in d0 and the next v_random value from the
+-- entry seed. This is the S1/S2 flavour: full-long zero check and $2A6D365A
+-- reseed (docs/s1disasm/_incObj/sub RandomNumber.asm).
+function S1_RNG_CALLS.random_step(seed)
+    local d1 = seed & 0xFFFFFFFF
+    if d1 == 0 then d1 = 0x2A6D365A end
+    local d0 = d1
+    d1 = ((d1 << 2) + d0) & 0xFFFFFFFF
+    d1 = ((d1 << 3) + d0) & 0xFFFFFFFF
+    d0 = (d0 & 0xFFFF0000) | (d1 & 0xFFFF)
+    d1 = (((d1 >> 16) & 0xFFFF) | ((d1 & 0xFFFF) << 16)) & 0xFFFFFFFF
+    d0 = (d0 & 0xFFFF0000) | (((d0 & 0xFFFF) + (d1 & 0xFFFF)) & 0xFFFF)
+    d1 = (d1 & 0xFFFF0000) | (d0 & 0xFFFF)
+    d1 = (((d1 >> 16) & 0xFFFF) | ((d1 & 0xFFFF) << 16)) & 0xFFFFFFFF
+    return d0 & 0xFFFFFFFF, d1 & 0xFFFFFFFF
+end
+
+function S1_RNG_CALLS.object_context(register_value)
+    local ptr = register_value % 0x10000
+    local max_addr = OBJ_TABLE_START + (OBJ_TOTAL_SLOTS * OBJ_SLOT_SIZE)
+    local slot = -1
+    local object_id = 0
+    local routine = 0
+    local subtype = 0
+    local x = 0
+    local y = 0
+    if ptr >= OBJ_TABLE_START and ptr < max_addr
+            and ((ptr - OBJ_TABLE_START) % OBJ_SLOT_SIZE) == 0 then
+        slot = math.floor((ptr - OBJ_TABLE_START) / OBJ_SLOT_SIZE)
+        object_id = mainmemory.read_u8(ptr)
+        routine = mainmemory.read_u8(ptr + OFF_ROUTINE)
+        subtype = mainmemory.read_u8(ptr + OFF_SUBTYPE)
+        x = mainmemory.read_u16_be(ptr + OFF_X_POS)
+        y = mainmemory.read_u16_be(ptr + OFF_Y_POS)
+    end
+    return {ptr=ptr, slot=slot, object_id=object_id, routine=routine,
+        subtype=subtype, x=x, y=y}
+end
+
+function S1_RNG_CALLS.source_label(caller_pc)
+    if caller_pc == 0x01A668 then return "FZBoss.cylinder_selection" end
+    if caller_pc == 0x01B0E2 then return "FZPlasma.launch" end
+    if caller_pc >= 0x01A600 and caller_pc < 0x01B300 then return "FZBoss.other" end
+    return "unknown"
+end
+
+function S1_RNG_CALLS.record_hit()
+    if not aux_file or not started or not S1_RNG_CALLS.enabled then return end
+    if trace_frame < S1_RNG_CALLS.frame_start or trace_frame > S1_RNG_CALLS.frame_end then return end
+    if mainmemory.read_u8(ADDR_ZONE) ~= 5 or mainmemory.read_u8(ADDR_ACT) ~= 2 then return end
+
+    local seed_before = mainmemory.read_u32_be(ADDR_RANDOM)
+    local result, seed_after = S1_RNG_CALLS.random_step(seed_before)
+    local sp = (emu.getregister("M68K A7") or 0) % 0x10000
+    local caller_pc = 0
+    if sp <= 0xFFFC then caller_pc = mainmemory.read_u32_be(sp) & 0xFFFFFF end
+    local a0 = S1_RNG_CALLS.object_context(emu.getregister("M68K A0") or 0)
+    local a1 = S1_RNG_CALLS.object_context(emu.getregister("M68K A1") or 0)
+    S1_RNG_CALLS.hits[#S1_RNG_CALLS.hits + 1] = {
+        caller_pc=caller_pc, seed_before=seed_before, seed_after=seed_after,
+        result=result, source=S1_RNG_CALLS.source_label(caller_pc), a0=a0, a1=a1}
+end
+
+function S1_RNG_CALLS.record_fz_boss_side()
+    if not aux_file or not started or not S1_RNG_CALLS.enabled then return end
+    if trace_frame < S1_RNG_CALLS.frame_start or trace_frame > S1_RNG_CALLS.frame_end then return end
+    if mainmemory.read_u8(ADDR_ZONE) ~= 5 or mainmemory.read_u8(ADDR_ACT) ~= 2 then return end
+
+    local a0 = S1_RNG_CALLS.object_context(emu.getregister("M68K A0") or 0)
+    S1_RNG_CALLS.hits[#S1_RNG_CALLS.hits + 1] = {
+        boss_side=true, seed_before=mainmemory.read_u32_be(ADDR_RANDOM), a0=a0}
+end
+
+function S1_RNG_CALLS.record_fz_collision_path(source)
+    if not aux_file or not started or not S1_RNG_CALLS.enabled then return end
+    if trace_frame < S1_RNG_CALLS.frame_start or trace_frame > S1_RNG_CALLS.frame_end then return end
+    if mainmemory.read_u8(ADDR_ZONE) ~= 5 or mainmemory.read_u8(ADDR_ACT) ~= 2 then return end
+
+    local a0 = S1_RNG_CALLS.object_context(emu.getregister("M68K A0") or 0)
+    S1_RNG_CALLS.hits[#S1_RNG_CALLS.hits + 1] = {
+        collision_path=source, seed_before=mainmemory.read_u32_be(ADDR_RANDOM), a0=a0,
+        player_x=mainmemory.read_u16_be(PLAYER_BASE + OFF_X_POS),
+        player_y=mainmemory.read_u16_be(PLAYER_BASE + OFF_Y_POS),
+        player_x_speed=mainmemory.read_u16_be(PLAYER_BASE + OFF_X_VEL),
+        player_y_speed=mainmemory.read_u16_be(PLAYER_BASE + OFF_Y_VEL),
+        player_y_radius=mainmemory.read_u8(PLAYER_BASE + OFF_RADIUS_Y),
+        player_status=mainmemory.read_u8(PLAYER_BASE + OFF_STATUS),
+        boss_render=mainmemory.read_u8(a0.ptr + OFF_RENDER_FLAGS),
+        d4=(emu.getregister("M68K D4") or 0) & 0xFFFF}
+end
+
+function S1_RNG_CALLS.format_context(prefix, ctx)
+    return string.format(
+        '"%s_ptr":"0x%04X","%s_slot":%d,"%s_object_code":"0x%08X",'
+            .. '"%s_routine":"0x%02X","%s_subtype":"0x%02X",'
+            .. '"%s_x":"0x%04X","%s_y":"0x%04X"',
+        prefix, ctx.ptr & 0xFFFF, prefix, ctx.slot,
+        prefix, ctx.object_id & 0xFF, prefix, ctx.routine & 0xFF,
+        prefix, ctx.subtype & 0xFF, prefix, ctx.x & 0xFFFF,
+        prefix, ctx.y & 0xFFFF)
+end
+
+function S1_RNG_CALLS.flush()
+    if not aux_file or #S1_RNG_CALLS.hits == 0 then return end
+    local parts = {}
+    for _, hit in ipairs(S1_RNG_CALLS.hits) do
+        if hit.collision_path then
+            parts[#parts + 1] = string.format(
+                '{"pc":"0x%06X","source":%q,"seed_before":"0x%08X",'
+                    .. '"player_x":"0x%04X","player_y":"0x%04X",'
+                    .. '"player_x_speed":"0x%04X","player_y_speed":"0x%04X",'
+                    .. '"player_y_radius":"0x%02X","player_status":"0x%02X",'
+                    .. '"boss_render":"0x%02X","d4":"0x%04X",%s}',
+                hit.collision_path == "FZBoss.before_solid" and ADDR_FZ_BOSS_PROBE or ADDR_FZ_BOSS_NO_SIDE,
+                hit.collision_path, hit.seed_before, hit.player_x, hit.player_y,
+                hit.player_x_speed, hit.player_y_speed, hit.player_y_radius,
+                hit.player_status, hit.boss_render, hit.d4,
+                S1_RNG_CALLS.format_context("a0", hit.a0))
+        elseif hit.boss_side then
+            parts[#parts + 1] = string.format(
+                '{"pc":"0x%06X","source":"FZBoss.side_contact",'
+                    .. '"seed_before":"0x%08X",%s}',
+                ADDR_FZ_BOSS_SIDE, hit.seed_before,
+                S1_RNG_CALLS.format_context("a0", hit.a0))
+        else
+            parts[#parts + 1] = string.format(
+                '{"pc":"0x%05X","caller_pc":"0x%06X","source":%q,'
+                    .. '"seed_before":"0x%08X","seed_after":"0x%08X",'
+                    .. '"result":"0x%08X","result_byte":"0x%02X",%s,%s}',
+                ADDR_RANDOM_NUMBER, hit.caller_pc, hit.source,
+                hit.seed_before, hit.seed_after, hit.result, hit.result & 0xFF,
+                S1_RNG_CALLS.format_context("a0", hit.a0),
+                S1_RNG_CALLS.format_context("a1", hit.a1))
+        end
+    end
+    write_aux(string.format('{"frame":%d,"vfc":%d,"event":"rng_call","hits":%s}',
+        trace_frame, mainmemory.read_u16_be(ADDR_FRAMECOUNT),
+        "[" .. table.concat(parts, ",") .. "]"))
+    S1_RNG_CALLS.hits = {}
+end
+
+function S1_RNG_CALLS.register_hooks()
+    if not S1_RNG_CALLS.enabled or S1_RNG_CALLS.hooks_registered then return end
+    S1_RNG_CALLS.hooks_registered = true
+    event.onmemoryexecute(S1_RNG_CALLS.record_hit, ADDR_RANDOM_NUMBER)
+    event.onmemoryexecute(function()
+        S1_RNG_CALLS.record_fz_collision_path("FZBoss.before_solid")
+    end, ADDR_FZ_BOSS_PROBE)
+    event.onmemoryexecute(function()
+        S1_RNG_CALLS.record_fz_collision_path("FZBoss.no_side")
+    end, ADDR_FZ_BOSS_NO_SIDE)
+    event.onmemoryexecute(S1_RNG_CALLS.record_fz_boss_side, ADDR_FZ_BOSS_SIDE)
+    print(string.format("S1 FZ RNG/contact hooks registered: 0x%05X, 0x%06X/0x%06X/0x%06X, segment frames %d-%d",
+        ADDR_RANDOM_NUMBER, ADDR_FZ_BOSS_PROBE, ADDR_FZ_BOSS_NO_SIDE, ADDR_FZ_BOSS_SIDE,
+        S1_RNG_CALLS.frame_start, S1_RNG_CALLS.frame_end))
+end
+
 -----------------
 --- Main Loop ---
 -----------------
@@ -1275,8 +1445,9 @@ local function on_frame_end()
             -- every zone segment. ensure_segment_dir is a no-op shell-free fallback that
             -- only fires (one shell-out) for an unexpected/unknown zone id not covered
             -- by the pre-created set.
-            OUTPUT_DIR = BASE_OUTPUT_DIR .. start_zone_name .. tostring(start_act + 1) .. "/"
-            current_segment_dir_token = start_zone_name .. tostring(start_act + 1)
+            local dir_token = next_segment_dir_token(start_zone_name .. tostring(start_act + 1))
+            OUTPUT_DIR = BASE_OUTPUT_DIR .. dir_token .. "/"
+            current_segment_dir_token = dir_token
             ensure_segment_dir(OUTPUT_DIR)
 
             -- s1-maze plan: the just-finalized predecessor was a special-
@@ -1464,6 +1635,7 @@ local function on_frame_end()
     -- lag-frame state, to confirm whether the OscillateNumDo/counter "skip" frames
     -- coincide with emulator lag frames (SLZ1/SLZ2/MZ1/MZ2/FZ cluster).
     write_lag_state()
+    S1_RNG_CALLS.flush()
 
     -- OPL cursor state: emit event on chunk transitions for ROM↔engine comparison.
     -- v_opl_screen changes only when OPL_Next processes a new chunk.
@@ -1492,13 +1664,14 @@ end
 -- (defined just after ZONE_NAMES). This single load-time shell-out replaces the
 -- old per-segment os.execute("mkdir") that flashed one cmd window per zone.
 precreate_segment_dirs()
+S1_RNG_CALLS.register_hooks()
 
 -- Run at maximum speed in headless mode.
 -- emu.limitframerate(false) removes the 60fps cap.
 -- client.speedmode(6400) sets emulator speed to 6400% as backup.
 -- invisibleemulation(true) skips rendering for additional speedup.
 -- Set HEADLESS_VISIBLE = true to keep the window visible for progress feedback.
-local HEADLESS_VISIBLE = false
+local HEADLESS_VISIBLE = os.getenv("OGGF_TRACE_VISIBLE") == "1"
 if HEADLESS then
     emu.limitframerate(false)
     client.speedmode(6400)
@@ -1508,7 +1681,7 @@ if HEADLESS then
     if client.SetSoundOn then
         pcall(client.SetSoundOn, false)
     end
-    if not HEADLESS_VISIBLE then
+    if not HEADLESS_VISIBLE and client.invisibleemulation then
         client.invisibleemulation(true)
     end
 end

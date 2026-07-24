@@ -114,8 +114,8 @@ class TestS3kIczFreezerGraphRewind {
         assertNotSame(divergentFreezer, restoredFreezer, "restore must drop divergent freezer");
         assertNotSame(divergentCloud, restoredCloud, "restore must drop divergent capture cloud");
         assertNotSame(divergentBlock, restoredBlock, "restore must drop divergent frozen block");
-        assertSame(restoredCloud, readObjectField(restoredFreezer, "lastCaptureCloud"),
-                "freezer lastCaptureCloud must relink to the restored cloud");
+        assertNull(readObjectField(restoredFreezer, "lastCaptureCloud"),
+                "transient freezer diagnostic handle must not retain a stale cloud identity");
         assertSame(restoredFreezer, readObjectField(restoredCloud, "parent"),
                 "capture cloud parent must relink to the restored freezer");
         assertSame(restoredBlock, readObjectField(restoredCloud, "frozenBlock"),
@@ -157,17 +157,7 @@ class TestS3kIczFreezerGraphRewind {
     }
 
     @Test
-    void capturedIczFreezerObjectRefsFailLoudlyWhenTargetHasNoRewindIdentity() {
-        assertMissingReferenceFails(() -> {
-            Harness harness = Harness.create(player("old-sonic", 0x2410, 0x0340));
-            IczFreezerObjectInstance freezer = harness.objectManager().createDynamicObject(
-                    () -> new IczFreezerObjectInstance(FREEZER_SPAWN));
-            IczFreezerObjectInstance.CaptureCloud unmanagedCloud =
-                    freezer.createCaptureCloudForTesting(0x2400, 0x0330, false);
-            writeObjectField(freezer, "lastCaptureCloud", unmanagedCloud);
-            return harness.objectManager();
-        });
-
+    void capturedIczFreezerGameplayRefsFailLoudlyWhenTargetHasNoRewindIdentity() {
         assertMissingReferenceFails(() -> {
             TestablePlayableSprite capturedPlayer = player("old-sonic", 0x2410, 0x0340);
             Harness harness = Harness.create(capturedPlayer);

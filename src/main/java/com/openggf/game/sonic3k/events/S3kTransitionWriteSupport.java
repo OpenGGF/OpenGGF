@@ -42,8 +42,7 @@ public final class S3kTransitionWriteSupport {
         return false;
     }
 
-    public static void preparePreloadedActTitleCardCompletion() {
-        Object provider = com.openggf.game.GameServices.module().getLevelEventProvider();
+    public static void preparePreloadedActTitleCardCompletion(LevelEventProvider provider) {
         if (provider instanceof S3kTransitionEventBridge bridge) {
             bridge.preparePreloadedActTitleCardCompletion();
         }

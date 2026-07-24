@@ -938,6 +938,7 @@ public final class TraceSessionLauncher {
         private final TraceData trace;
         private final int movieBaseFrame;
         private final int traceBaseFrame;
+        private boolean pendingForcedJumpPress;
 
         private VisualTraceRewindStepper(GameLoop loop, Bk2Movie movie, TraceData trace,
                                          int movieBaseFrame, int traceBaseFrame) {
@@ -953,6 +954,10 @@ public final class TraceSessionLauncher {
             int relative = Math.max(0, inputs.frameIndex() - movieBaseFrame + 1);
             int traceIndex = traceBaseFrame + relative - 1;
             TraceExecutionPhase phase = executionPhase(traceIndex);
+            if (phase == TraceExecutionPhase.ADVANCE_ONLY) {
+                publishPlaybackInput(inputs);
+                return;
+            }
             if (phase == TraceExecutionPhase.VBLANK_ONLY
                     || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
                 var level = GameServices.levelOrNull();
@@ -983,19 +988,12 @@ public final class TraceSessionLauncher {
                 return;
             }
 
-            AbstractPlayableSprite player = loop.getMainPlayableSprite();
-            if (player != null) {
-                player.setForcedInputMask(inputs.p1InputMask());
-                int previousAction = inputs.frameIndex() > 0
-                        ? movie.getFrame(inputs.frameIndex() - 1).p1ActionMask()
-                        : 0;
-                int pressed = (inputs.p1ActionMask() ^ previousAction) & inputs.p1ActionMask();
-                player.setForcedJumpPress(pressed != 0);
-            }
+            publishPlaybackInput(inputs);
             sprites.setPlaybackInputSuppressed(true);
             sprites.publishHeldInputForLevelEvents(loop.getInputHandler());
             LevelFrameStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
                     level, camera, () -> sprites.update(loop.getInputHandler()));
+            pendingForcedJumpPress = false;
         }
 
         @Override
@@ -1003,7 +1001,30 @@ public final class TraceSessionLauncher {
             AbstractPlayableSprite player = loop.getMainPlayableSprite();
             if (player != null && inputAtFrame != null) {
                 player.setForcedInputMask(inputAtFrame.p1InputMask());
-                player.setForcedJumpPress(false);
+                pendingForcedJumpPress = player.isForcedJumpPress();
+            } else {
+                pendingForcedJumpPress = false;
+            }
+        }
+
+        private void publishPlaybackInput(Bk2FrameInput inputs) {
+            AbstractPlayableSprite player = loop.getMainPlayableSprite();
+            if (player == null) {
+                return;
+            }
+            player.setForcedInputMask(inputs.p1InputMask());
+            int previousAction = inputs.frameIndex() > 0
+                    ? movie.getFrame(inputs.frameIndex() - 1).p1ActionMask()
+                    : 0;
+            int pressed = (inputs.p1ActionMask() ^ previousAction) & inputs.p1ActionMask();
+            if (pressed != 0) {
+                pendingForcedJumpPress = true;
+            }
+            player.setForcedJumpPress(pendingForcedJumpPress);
+
+            var sprites = GameServices.spritesOrNull();
+            if (sprites != null) {
+                sprites.setPlaybackInputSuppressed(true);
             }
         }
 

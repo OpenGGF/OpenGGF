@@ -234,12 +234,12 @@ class TestCnzEndBossChildren {
         assertEquals(startY, magnet.getCentreY());
         assertEquals(0, magnet.yVelocityForTest());
 
-        magnet.update(1, main);
+        magnet.advanceDropMotion();
 
         assertEquals(startX + 1, magnet.getCentreX(), "MoveSprite applies x_vel on the first falling frame");
         assertEquals(startY, magnet.getCentreY(), "MoveSprite moves with the old zero y_vel first");
         assertEquals(0x38, magnet.yVelocityForTest(), "MoveSprite adds $38 gravity after movement");
-        magnet.update(2, main);
+        magnet.advanceDropMotion();
         assertEquals(startX + 2, magnet.getCentreX(),
                 "horizontal drop velocity must persist through later fall/bounce updates");
         assertEquals(0x70, magnet.yVelocityForTest());

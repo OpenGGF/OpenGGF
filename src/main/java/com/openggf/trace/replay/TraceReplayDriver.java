@@ -163,7 +163,9 @@ public final class TraceReplayDriver {
         // driven frame despite byte-identical pre-frame state to the trace;
         // not yet root-caused). It is kept because it is independently
         // correct regardless of that open issue.
-        if (TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)) {
+        if (TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)
+                && !TraceReplaySessionBootstrap
+                        .shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
             AbstractPlayableSprite preSnapSprite = fixture.sprite();
             if (preSnapSprite != null) {
                 TraceMetadata meta = trace.metadata();

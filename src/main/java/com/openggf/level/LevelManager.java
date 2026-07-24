@@ -17,6 +17,7 @@ import com.openggf.game.DynamicStartPositionProvider;
 import com.openggf.debug.DebugObjectArtViewer;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.PerformanceProfiler;
+import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
@@ -162,6 +163,7 @@ public class LevelManager {
     int currentZone = 0;
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
+    private boolean resetCounterPlacementAfterCameraSnap;
 
     void writeCurrentZone(int zone) {
         this.currentZone = zone;
@@ -2618,14 +2620,16 @@ public class LevelManager {
             if (objectManager != null
                     && (objectManager.usesTwoAxisCursorPlacement()
                             || (camera.getX() != preSnapCameraX
-                                    && !objectManager.usesCounterBasedRespawn()))) {
+                                    && (!objectManager.usesCounterBasedRespawn()
+                                            || resetCounterPlacementAfterCameraSnap)))) {
                 // The object manager is constructed before the level-start
                 // camera snap. Rebuild its initial window once Camera_X_pos
-                // matches the new start, otherwise cross-zone loads can seed
+                // matches the new start, otherwise full reloads can seed
                 // objects from the previous level's camera band (e.g. SCZ ->
-                // WFZ missing ObjB2 at x=$0060). S1 counter-based ObjPosLoad
-                // is initialized before the snap; replaying OPL_Main from the
-                // snapped camera drops early route objects from the SST window.
+                // WFZ missing ObjB2 at x=$0060). This also matters for S1 death
+                // reloads: seeding from the death camera temporarily occupies
+                // low SST slots, then frees them before start-area ring groups
+                // execute, reversing parent/child FindFreeObj allocation.
                 // S3K also needs this for its separate Y-camera placement pass.
                 objectManager.reset(camera.getX());
             }
@@ -2733,8 +2737,10 @@ public class LevelManager {
      * Skipped in headless mode and when zone feature provider suppresses it.
      */
     public void requestTitleCardIfNeeded(LevelLoadContext ctx) {
+        boolean headlessWholeRunHandoff = graphicsManager.isHeadlessMode()
+                && GameServices.playbackDebug().hasScheduledLevelLoadSession();
         if (ctx.isShowTitleCard()
-                && !graphicsManager.isHeadlessMode()
+                && (!graphicsManager.isHeadlessMode() || headlessWholeRunHandoff)
                 && !(zoneFeatureProvider != null && zoneFeatureProvider.shouldSuppressInitialTitleCard(currentZone, currentAct))) {
             // ROM: title card reads Apparent_act, not Current_act.
             // After AIZ's seamless fire transition, Current_act is 1 but
@@ -2778,7 +2784,7 @@ public class LevelManager {
     }
 
     public void loadCurrentLevel(LevelLoadMode loadMode, boolean showTitleCard) {
-        loadCurrentLevel(showTitleCard, loadMode);
+        loadCurrentLevel(showTitleCard, loadMode, true);
     }
 
     /**
@@ -2788,11 +2794,21 @@ public class LevelManager {
      *                      respawns
      */
     private void loadCurrentLevel(boolean showTitleCard) {
-        loadCurrentLevel(showTitleCard, LevelLoadMode.FULL);
+        loadCurrentLevel(showTitleCard, LevelLoadMode.FULL, true);
     }
 
-    private void loadCurrentLevel(boolean showTitleCard, LevelLoadMode loadMode) {
+    private void loadCurrentLevel(
+            boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload) {
         try {
+            // V_int_run_count is global work RAM, outside Dynamic_object_RAM.
+            // A full death/results reload rebuilds ObjectManager just like the
+            // seamless act-transition path, but must carry this clock across
+            // the rebuild so slot-phased object gates (e.g. Batbrain) retain
+            // their native timing.
+            int inheritedVblaCounter = objectManager != null ? objectManager.getVblaCounter() : 0;
+            int inheritedVIntRunCounterPhaseOffset = objectManager != null
+                    ? objectManager.getVIntRunCounterPhaseOffset()
+                    : 0;
             transitions.setSpecialStageReturnLevelReloadRequested(false);
             transitions.setLevelInactiveForTransition(false);
 
@@ -2811,18 +2827,48 @@ public class LevelManager {
             ctx.setIncludePostLoadAssembly(true);
             ctx.snapshotCheckpoint(checkpointCoordinator.state());
 
+            resetCounterPlacementAfterCameraSnap = runtimeReload;
             loadLevel(levelData.getLevelIndex(), loadMode, ctx);
             if (loadMode != LevelLoadMode.PREVIEW_CAPTURE) {
                 applyPersistedEditorEdits();
             }
             restoreCheckpointRuntimeState(ctx);
 
+            if (objectManager != null) {
+                objectManager.initVblaCounter(inheritedVblaCounter);
+                objectManager.initVIntRunCounterPhaseOffset(inheritedVIntRunCounterPhaseOffset);
+            }
+
             frameCounter = 0;
             sidekickRomVisibleReloadFrameCounterBridgeActive = false;
             sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
+            activateScheduledPlaybackForLoadedLevel();
 
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } finally {
+            resetCounterPlacementAfterCameraSnap = false;
+        }
+    }
+
+    /**
+     * Completes a whole-run playback rebind at the common level-load seam.
+     * Results objects can load the next level synchronously from inside their
+     * own object tick, so this cannot live only in {@code GameLoop}'s fade
+     * callbacks. Apply frame-0 input to the rebuilt player immediately: the
+     * caller may continue into that player's first tick before the loop-top
+     * playback bridge runs again.
+     */
+    private void activateScheduledPlaybackForLoadedLevel() {
+        PlaybackDebugManager playback = GameServices.playbackDebug();
+        if (!playback.activateScheduledLevelLoadSession()) {
+            return;
+        }
+        spriteManager.setPlaybackInputSuppressed(true);
+        Sprite main = spriteManager.getSprite(resolveMainCharacterCode());
+        if (main instanceof AbstractPlayableSprite playable) {
+            playable.setForcedInputMask(playback.getCurrentForcedInputMask());
+            playable.setForcedJumpPress(playback.isCurrentForcedJumpPress());
         }
     }
 
@@ -2906,7 +2952,7 @@ public class LevelManager {
             writeCurrentZone(zone);
             // Clear checkpoint when manually changing level
             checkpointCoordinator.clear();
-            loadCurrentLevel(loadMode != LevelLoadMode.PREVIEW_CAPTURE, loadMode);
+            loadCurrentLevel(loadMode != LevelLoadMode.PREVIEW_CAPTURE, loadMode, false);
         } finally {
             // A load that fails before initCameraBounds must not leak a bonus-return
             // respawn table into a later, potentially different, level.
@@ -3203,10 +3249,16 @@ public class LevelManager {
     public LevelTransitionCoordinator getTransitions() { return transitions; }
 
     /** @see LevelTransitionCoordinator#requestSpecialStageFromCheckpoint() */
-    public void requestSpecialStageFromCheckpoint() { transitions.requestSpecialStageFromCheckpoint(); }
+    public void requestSpecialStageFromCheckpoint() {
+        transitions.requestSpecialStageFromCheckpoint();
+        GameServices.playbackDebug().onSpecialStageRequestRaised();
+    }
 
     /** @see LevelTransitionCoordinator#requestSpecialStageEntry() */
-    public void requestSpecialStageEntry() { transitions.requestSpecialStageEntry(); }
+    public void requestSpecialStageEntry() {
+        transitions.requestSpecialStageEntry();
+        GameServices.playbackDebug().onSpecialStageRequestRaised();
+    }
 
     /** @see LevelTransitionCoordinator#consumeSpecialStageRequest() */
     public boolean consumeSpecialStageRequest() { return transitions.consumeSpecialStageRequest(); }

@@ -118,15 +118,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
             // starts when routine 4 is dispatched on the next object pass.
             dropJustStarted = false;
         } else if (!landed) {
-            // ROM MoveSprite: integrate the old velocity first, then add $38
-            // gravity. Both halves retain their 8-bit subpixel remainder.
-            xSubpixel += xVelocity;
-            centreX += xSubpixel >> 8;
-            xSubpixel &= 0xFF;
-            ySubpixel += yVelocity;
-            centreY += ySubpixel >> 8;
-            ySubpixel &= 0xFF;
-            yVelocity += 0x38;
+            advanceDropMotion();
             var floor = ObjectTerrainUtils.checkFloorDist(centreX, centreY, 0x10);
             resolveFloorContact(floor.distance());
         }
@@ -138,6 +130,19 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
             resetAnimation();
         }
         updateDynamicSpawn(getCentreX(), getCentreY());
+    }
+
+    /** ROM MoveSprite followed by the magnet routine's {@code addi.w #$38,y_vel}. */
+    void advanceDropMotion() {
+        // Integrate the old velocity first. Both halves retain their 8-bit
+        // subpixel remainder.
+        xSubpixel += xVelocity;
+        centreX += xSubpixel >> 8;
+        xSubpixel &= 0xFF;
+        ySubpixel += yVelocity;
+        centreY += ySubpixel >> 8;
+        ySubpixel &= 0xFF;
+        yVelocity += 0x38;
     }
 
     /** ROM descending-only floor response after {@code MoveSprite}'s gravity step. */

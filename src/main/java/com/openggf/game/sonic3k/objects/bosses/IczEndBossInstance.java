@@ -19,6 +19,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectListener;
@@ -607,9 +608,10 @@ public final class IczEndBossInstance extends AbstractBossInstance
         int predecessorSlot = getSlotIndex();
         for (int i = 0; i < offsets.length; i++) {
             int[][] script = frostScriptForSubtype(selector, i);
-            int nativeSlot = services().objectManager() == null || predecessorSlot < 0
+            int nativeSlot = services().objectManager() == null
                     ? -1
-                    : services().objectManager().allocateSlotAfter(predecessorSlot);
+                    : ObjectLifetimeOps.reserveFindNextFreeChildSlot(
+                            services().objectManager(), predecessorSlot);
             if (nativeSlot >= 0) {
                 predecessorSlot = nativeSlot;
             }

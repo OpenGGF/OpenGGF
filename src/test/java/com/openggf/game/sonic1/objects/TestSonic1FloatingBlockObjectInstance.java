@@ -3,6 +3,7 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.camera.Camera;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.sonic1.Sonic1SwitchManager;
+import com.openggf.game.sonic1.Sonic1FloatingBlockState;
 import com.openggf.game.sonic1.Sonic1ZoneFeatureProvider;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.StubObjectServices;
@@ -23,19 +24,57 @@ public class TestSonic1FloatingBlockObjectInstance {
 
     private ObjectServices testServices;
     private Sonic1SwitchManager switchManager;
+    private Sonic1FloatingBlockState floatingBlockState;
 
     @BeforeEach
     public void resetSwitchState() {
         switchManager = new Sonic1SwitchManager();
+        floatingBlockState = new Sonic1FloatingBlockState();
         switchManager.resetState();
         testServices = new StubObjectServices() {
             @SuppressWarnings("unchecked")
             @Override
             public <T> T gameService(Class<T> type) {
                 if (type == Sonic1SwitchManager.class) return (T) switchManager;
+                if (type == Sonic1FloatingBlockState.class) return (T) floatingBlockState;
                 return null;
             }
         };
+    }
+
+    @Test
+    public void syz3DestinationProxyDeletesUntilRealBlockCompletesTrip() {
+        Sonic1FloatingBlockObjectInstance proxy = createSyz3TunnelBlock(0x1F38);
+
+        proxy.update(1, null);
+
+        assertTrue(proxy.isDestroyed(),
+                "REV01 deletes the fake $1F38 block while f_obj56 is clear");
+    }
+
+    @Test
+    public void syz3DestinationProxyRemainsStationaryAfterRealBlockCompletesTrip() {
+        floatingBlockState.markTunnelBlockAtDestination();
+        Sonic1FloatingBlockObjectInstance proxy = createSyz3TunnelBlock(0x1F38);
+
+        proxy.update(1, null);
+
+        assertFalse(proxy.isDestroyed());
+        assertEquals(0x1F38, proxy.getX(),
+                "REV01 clears the proxy subtype to stationary");
+    }
+
+    @Test
+    public void syz3RealBlockSetsDestinationFlagAfterMovingThreeEightyPixels() {
+        switchManager.setBit(0x0F, 0);
+        Sonic1FloatingBlockObjectInstance real = createSyz3TunnelBlock(0x1BB8);
+
+        for (int frame = 1; frame <= 0x380; frame++) {
+            real.update(frame, null);
+        }
+
+        assertEquals(0x1F38, real.getX());
+        assertTrue(floatingBlockState.isTunnelBlockAtDestination());
     }
 
     @Test
@@ -212,5 +251,21 @@ public class TestSonic1FloatingBlockObjectInstance {
         Sonic1FloatingBlockObjectInstance door = new Sonic1FloatingBlockObjectInstance(spawn, Sonic1Constants.ZONE_LZ);
         door.setServices(testServices);
         return door;
+    }
+
+    private Sonic1FloatingBlockObjectInstance createSyz3TunnelBlock(int x) {
+        ObjectSpawn spawn = new ObjectSpawn(
+                x,
+                0x549,
+                Sonic1ObjectIds.FLOATING_BLOCK,
+                0x37,
+                0,
+                false,
+                0
+        );
+        Sonic1FloatingBlockObjectInstance block = new Sonic1FloatingBlockObjectInstance(
+                spawn, Sonic1Constants.ZONE_SYZ);
+        block.setServices(testServices);
+        return block;
     }
 }

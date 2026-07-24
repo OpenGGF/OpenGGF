@@ -160,12 +160,13 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
      *   <li>1 byte: endingEvents.bootstrapApplied</li>
      *   <li>1 byte: endingEvents.endingSonicSpawned</li>
      *   <li>14 bytes: fixed v_sonicbubbles countdown sidecar</li>
+     *   <li>4 bytes + 1 byte: logical FZ PLC frames and initialized flag</li>
      * </ol>
      */
     @Override
     protected byte[] captureExtra() {
         ByteBuffer buf = ByteBuffer.allocate(1 + 7 * 4 + 3
-                + Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES);
+                + Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES + 5);
         buf.put((byte) (sbz3TransitionRequested ? 1 : 0));
         buf.putInt(ghzEvents.eventRoutine);
         buf.putInt(lzEvents.eventRoutine);
@@ -178,6 +179,8 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         buf.put((byte) (endingEvents.isBootstrapApplied() ? 1 : 0));
         buf.put((byte) (endingEvents.isEndingSonicSpawned() ? 1 : 0));
         fixedAirCountdownManager.writeRewindState(buf);
+        buf.putInt(sbzEvents.getFzPlcFramesRemaining());
+        buf.put((byte) (sbzEvents.isFzPlcTimingInitialized() ? 1 : 0));
         return buf.array();
     }
 
@@ -201,6 +204,12 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         endingEvents.setEndingSonicSpawned(buf.get() != 0);
         if (buf.remaining() >= Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES) {
             fixedAirCountdownManager.readRewindState(buf);
+        }
+        // Appended for backward compatibility with snapshots captured before
+        // logical S1 PLC timing participated in rewind.
+        if (buf.remaining() >= 5) {
+            sbzEvents.setFzPlcFramesRemaining(buf.getInt());
+            sbzEvents.setFzPlcTimingInitialized(buf.get() != 0);
         }
     }
 
@@ -247,6 +256,8 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
 
     @Override
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
-        return java.util.List.of(new com.openggf.game.sonic1.Sonic1ConveyorStateRewindAdapter());
+        return java.util.List.of(
+                new com.openggf.game.sonic1.Sonic1ConveyorStateRewindAdapter(),
+                new com.openggf.game.sonic1.Sonic1FloatingBlockStateRewindAdapter());
     }
 }

@@ -42,6 +42,18 @@ public interface LevelInitProfile {
         return 0;
     }
 
+    /**
+     * Whether a fresh level start must preserve the player's cleared grounded
+     * status until the first ordinary playable dispatch.
+     *
+     * <p>S3K creates and initializes the player slot before the first compared
+     * level frame. That frame therefore enters routine 2 grounded and lets
+     * {@code Player_AnglePos} publish any terrain walk-off transition itself.
+     * S1/S2 retain their established pre-frame ground-snap sequencing.
+     */
+    default boolean preserveFreshGroundedStatusUntilFirstDispatch() {
+        return false;
+    }
 
     /**
      * Ordered steps for entering a level (title card through control unlock).

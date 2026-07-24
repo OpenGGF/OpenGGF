@@ -3993,7 +3993,11 @@ public class SidekickCpuController {
         //    (sonic3k.asm:26690-26694). An earlier iteration of this body
         //    mis-applied that offset here and produced a chronic -0x20 X drift.
         int targetX = leader.getCentreX(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF;
-        int targetY = leader.getCentreY(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF;
+        // S2 TailsCPU_Flying_Part2 clamps the sampled Pos_table Y to
+        // Water_Level_1-$10 before publishing Tails_CPU_target_y
+        // (docs/s2disasm/s2.asm:39219-39227).
+        int targetY = clampTargetYToWater(
+                leader.getCentreY(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF);
         catchUpTargetX = targetX;
         catchUpTargetY = targetY;
 
@@ -4367,7 +4371,11 @@ public class SidekickCpuController {
         // TailsCPU_Respawn / TailsCPU_Flying clamp target_y against
         // Water_Level_1, the gameplay waterline used by Sonic_Water, not the
         // non-oscillated base/current water register.
-        int waterY = waterSystem.getGameplayWaterLevelY(levelManager.getCurrentZone(), levelManager.getCurrentAct());
+        // WaterSystem is keyed by the effective ROM feature zone/act, not the
+        // zone-registry progression index (CPZ is progression 1 but ROM zone
+        // $0D). Match LevelWaterCoordinator's player-water-state lookup.
+        int waterY = waterSystem.getGameplayWaterLevelY(
+                levelManager.getFeatureZoneId(), levelManager.getFeatureActId());
         if (waterY == 0) {
             return targetY;
         }
@@ -4430,7 +4438,8 @@ public class SidekickCpuController {
                 && sidekick.getAir()
                 && sidekick.getRolling()
                 && delayedLeaderSampleIsUncontrolledAirRoll()
-                && isNearHorizontalRenderEntryEdge()) {
+                && isNearHorizontalRenderEntryEdge()
+                && isNearVerticalRenderBoundary()) {
             onScreen = false;
             delayingFreshRenderEntry = true;
             normalDespawnFreshRenderEntryDelayConsumed = true;
@@ -4563,6 +4572,19 @@ public class SidekickCpuController {
         int relX = sidekick.getRenderCentreX() - camera.getX();
         return (relX > -widthPixels && relX < 0)
                 || (relX >= camera.getWidth() && relX < camera.getWidth() + widthPixels);
+    }
+
+    private boolean isNearVerticalRenderBoundary() {
+        var camera = sidekick.currentCamera();
+        if (camera == null) {
+            return false;
+        }
+        // The native display list publishes this lower-edge entry across two
+        // 0x20-pixel cells; the engine viewport may be taller than the 224-line
+        // Mega Drive display and must not widen that native window.
+        int relY = sidekick.getRenderCentreY() - camera.getY();
+        int nativeDisplayHeight = Math.min(camera.getHeight(), 224);
+        return relY >= nativeDisplayHeight - 0x40;
     }
 
     /**

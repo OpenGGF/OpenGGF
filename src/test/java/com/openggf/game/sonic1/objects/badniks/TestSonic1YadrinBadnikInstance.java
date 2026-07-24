@@ -49,6 +49,15 @@ public class TestSonic1YadrinBadnikInstance {
     }
 
     @Test
+    public void customReactYadrinPathIsPolledEveryOverlappingFrame() {
+        Sonic1YadrinBadnikInstance yadrin = new Sonic1YadrinBadnikInstance(
+                new ObjectSpawn(160, 100, 0x50, 0, 0, false, 0));
+
+        assertTrue(yadrin.getTouchResponseProfile().continuousCallbacks(),
+                "S1 ReactToItem re-evaluates Yadrin's spike-vs-enemy branch every overlapping frame");
+    }
+
+    @Test
     public void rollingTopHitHurtsWithoutDestroyingBadnik() {
         // Rolling (attacking) Sonic landing squarely on the spiked head region
         // with a shallow graze (penetration=4, well within the <8 window):

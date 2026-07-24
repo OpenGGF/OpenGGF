@@ -6,6 +6,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
+import com.openggf.game.profiles.trace.TracePlaybackProfile;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectRegistry;
@@ -273,6 +274,14 @@ public interface GameModule {
             throw new IllegalStateException("No PhysicsProvider for " + getIdentifier());
         }
         return provider.getRules();
+    }
+
+    /**
+     * Returns measured movie-replay timing facts for this game. Games opt in
+     * only when their ROM lifecycle timing has been established from captures.
+     */
+    default TracePlaybackProfile getTracePlaybackProfile() {
+        return TracePlaybackProfile.DISABLED;
     }
 
     /**

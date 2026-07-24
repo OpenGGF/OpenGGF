@@ -126,9 +126,17 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     private int escapeHitTimer;
     private int escapeCollisionFlags;
     private boolean endingTransitionRequested;
+    private int startupPlcFramesRemaining;
+    private boolean suppressCurrentRollAttack;
+    private boolean suppressedRollLeftInitialMapping;
 
     public Sonic1FZBossInstance(ObjectSpawn spawn) {
+        this(spawn, 0);
+    }
+
+    public Sonic1FZBossInstance(ObjectSpawn spawn, int startupPlcFramesRemaining) {
         super(spawn, "FZ Boss");
+        this.startupPlcFramesRemaining = Math.max(0, startupPlcFramesRemaining);
     }
 
     @Override
@@ -340,7 +348,12 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // exactly what ROM's ExecuteObjects-time read sees. Read it directly.
         int camX = services().camera().getX() & 0xFFFF;
 
-        if (camX >= BOSS_FZ_X) {
+        boolean plcBusy = startupPlcFramesRemaining > 0;
+        if (plcBusy) {
+            startupPlcFramesRemaining--;
+        }
+
+        if (!plcBusy && camX >= BOSS_FZ_X) {
             state.routineSecondary = STATE_CYLINDER_ATTACK;
         }
 
@@ -360,6 +373,27 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     // === State 2: CYLINDER_ATTACK (loc_19EA8) ===
     // Select and activate cylinder pairs, handle solid collision and damage
     private void updateCylinderAttack(AbstractPlayableSprite player) {
+        if (player != null
+                && !suppressCurrentRollAttack
+                && player.getPushingAtFrameStart()
+                && player.getMappingFrame() == 0x2E
+                && player.getGSpeed() != 0
+                && (player.getCentreX() & 0xFFFF) < (state.x & 0xFFFF)
+                && Math.abs(player.getCentreX() - state.x) <= COMBAT_SOLID_PARAMS.halfWidth() + 0x10) {
+            suppressCurrentRollAttack = true;
+            suppressedRollLeftInitialMapping = false;
+        }
+        if (player == null || !player.getAir() || !player.getRolling()) {
+            suppressCurrentRollAttack = false;
+            suppressedRollLeftInitialMapping = false;
+        } else if (suppressCurrentRollAttack) {
+            if (player.getMappingFrame() != 0x2E) {
+                suppressedRollLeftInitialMapping = true;
+            } else if (suppressedRollLeftInitialMapping && player.getGSpeed() == 0) {
+                suppressCurrentRollAttack = false;
+                suppressedRollLeftInitialMapping = false;
+            }
+        }
         if (cylinderState < 0) {
             // ROM: clr.w objoff_30 then select new pair
             cylinderState = 0;
@@ -385,6 +419,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
             }
             // ROM: addq.b #2,objoff_34 — advance to plasma phase
             state.routineSecondary = STATE_PLASMA_PHASE;
+            suppressCurrentRollAttack = false;
+            suppressedRollLeftInitialMapping = false;
             cylinderState = -1;
             activeCylinderCount = 0;
             return;
@@ -844,6 +880,13 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // SolidObject returned d4 == 1 "side collision", sub SolidObject.asm:13).
         if (!contact.touchSide()) return;
 
+        // SolidObject biases the combined-height check by +4, yielding the native
+        // asymmetric window [-extent-4, extent-5]. The shared touchSide flag uses a
+        // symmetric box, so reproduce that gate before applying side-branch state.
+        int verticalExtent = COMBAT_SOLID_PARAMS.airHalfHeight() + player.getYRadius();
+        int relativeY = player.getCentreY() - state.y;
+        if (relativeY < -verticalExtent - 4 || relativeY >= verticalExtent - 4) return;
+
         // ROM: loc_19F50 — addq.w #7,(v_random).w runs on EVERY side-contact frame,
         // BEFORE the rolling/bounce check, whether or not the player is rolling
         // (_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:192-195).
@@ -860,7 +903,21 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // ROM: cmpi.b #id_Roll,(v_player+obAnim).w
         int animId = player.getAnimationId();
         boolean rollAnimating = animId == Sonic1AnimationIds.ROLL.id() || animId == Sonic1AnimationIds.ROLL2.id();
-        if (!rollAnimating && !player.getRolling()) return;
+        if (!rollAnimating) return;
+        // The ROM can replace obAnim again before BossFinal_Eggman_Crush polls it
+        // when a jump begins from Status_Push beside the boss while the first roll
+        // mapping frame is displayed. Suppress through its first neutral-speed wrap;
+        // an already-established roll merely wrapping to frame 0x2E must remain
+        // able to hit and must not start a new suppression cycle.
+        if (!suppressCurrentRollAttack
+                && player.getPushingAtFrameStart()
+                && player.getMappingFrame() == 0x2E
+                && player.getGSpeed() != 0
+                && (player.getCentreX() & 0xFFFF) < (state.x & 0xFFFF)) {
+            suppressCurrentRollAttack = true;
+            suppressedRollLeftInitialMapping = false;
+        }
+        if (suppressCurrentRollAttack) return;
 
         // ROM: Bounce player back — move.w #$300,d0
         int bounceVel = 0x300;
@@ -988,6 +1045,14 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     }
 
     // === SolidObjectProvider interface ===
+
+    @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        // BossFinal_Eggman_Crush calls SolidObject from the boss slot before the
+        // later cylinder slots update the parent's y_pos. During the cylinder
+        // attack, contact therefore observes the boss's frame-start position.
+        return state.routineSecondary == STATE_CYLINDER_ATTACK;
+    }
 
     @Override
     public SolidObjectParams getSolidParams() {
