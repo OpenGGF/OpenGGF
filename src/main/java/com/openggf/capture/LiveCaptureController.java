@@ -48,6 +48,7 @@ public final class LiveCaptureController implements AutoCloseable {
     private Future<?> finalization;
     private boolean audioWarningLogged;
     private AudioFrameClock.Snapshot nextAudioPhase;
+    private int captureSampleRate;
 
     public LiveCaptureController(Dependencies deps) {
         this.deps = deps;
@@ -61,22 +62,18 @@ public final class LiveCaptureController implements AutoCloseable {
         try {
             try {
                 audio = deps.audio.open(frameRate);
-                nextAudioPhase = audio.clockSnapshot();
-                pcm = new short[Math.multiplyExact(
-                        audio.maxStereoFramesPerPacket(), 2)];
+                prepareAudioHandle(frameRate);
             } catch (Throwable audioFailure) {
                 Throwable closeFailure = closeAudioOnCaller();
                 if (closeFailure != null) audioFailure.addSuppressed(closeFailure);
                 warnAudioOnce(audioFailure);
                 audio = new ClockedSilenceAudioHandle(
                         Math.max(1, deps.audioSampleRate.getAsInt()), frameRate);
-                nextAudioPhase = audio.clockSnapshot();
-                pcm = new short[Math.multiplyExact(
-                        audio.maxStereoFramesPerPacket(), 2)];
+                prepareAudioHandle(frameRate);
             }
             grabber = deps.grabber.create(viewport);
             recorder = deps.recorder.create(viewport, frameRate);
-            recorder.start(viewport.width(), viewport.height(), frameRate, audio.sampleRate());
+            recorder.start(viewport.width(), viewport.height(), frameRate, captureSampleRate);
             this.viewport = viewport;
             frameIndex = 0;
             state = State.ACTIVE;
@@ -210,6 +207,28 @@ public final class LiveCaptureController implements AutoCloseable {
         }
     }
 
+    private void prepareAudioHandle(int expectedFrameRate) {
+        int sampleRate = audio.sampleRate();
+        int actualFrameRate = audio.frameRate();
+        int maxStereoFrames = audio.maxStereoFramesPerPacket();
+        AudioFrameClock.Snapshot phase = audio.clockSnapshot();
+        if (sampleRate <= 0) {
+            throw new IllegalStateException("capture audio sample rate must be positive");
+        }
+        if (actualFrameRate != expectedFrameRate) {
+            throw new IllegalStateException("capture audio frame rate does not match video");
+        }
+        if (maxStereoFrames <= 0) {
+            throw new IllegalStateException("capture audio packet capacity must be positive");
+        }
+        if (phase.sampleRate() != sampleRate || phase.frameRate() != actualFrameRate) {
+            throw new IllegalStateException("capture audio clock metadata is inconsistent");
+        }
+        captureSampleRate = sampleRate;
+        nextAudioPhase = phase;
+        pcm = new short[Math.multiplyExact(maxStereoFrames, 2)];
+    }
+
     private void warnAudioOnce(Throwable failure) {
         if (!audioWarningLogged) {
             audioWarningLogged = true;
@@ -226,5 +245,6 @@ public final class LiveCaptureController implements AutoCloseable {
         recorder = null;
         pcm = null;
         nextAudioPhase = null;
+        captureSampleRate = 0;
     }
 }

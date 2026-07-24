@@ -164,6 +164,19 @@ class LiveCaptureControllerTest {
         assertFalse(h.recorder.aborted);
     }
 
+    @Test void audioMetadataFailureClosesTapAndStartsVideoWithSilentStereoTrack() {
+        Harness h = new Harness();
+        h.failAudioSampleRate = true;
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+        assertEquals(LiveCaptureController.State.ACTIVE, c.state());
+        c.capturePresentedFrame(h.viewport);
+        assertEquals(1, h.audioCloseCalls);
+        assertEquals(48_000, h.recorder.startedSampleRate);
+        assertSilent(h.recorder.frames.get(0));
+        assertFalse(h.recorder.aborted);
+    }
+
     @Test void recorderOpenFailureAbortsRecorderAndClosesAudio() {
         Harness h = new Harness();
         h.recorder.failStart = true;
@@ -332,7 +345,8 @@ class LiveCaptureControllerTest {
         final CaptureViewport viewport = new CaptureViewport(0, 0, 320, 224);
         final FakeRecorder recorder = new FakeRecorder();
         final List<String> events = new ArrayList<>();
-        boolean failAudio, failRecorderCreate, failDrain, advanceThenFailDrain,
+        boolean failAudio, failAudioSampleRate, failRecorderCreate,
+                failDrain, advanceThenFailDrain,
                 failGrab, failAudioClose, audioClosed;
         int sampleRate = 48_000;
         int debugFailAfterFrames = -1;
@@ -348,7 +362,12 @@ class LiveCaptureControllerTest {
                         LiveCaptureAudioHandle raw = new LiveCaptureAudioHandle() {
                             private final AudioFrameClock clock =
                                     new AudioFrameClock(sampleRate, rate);
-                            public int sampleRate() { return sampleRate; }
+                            public int sampleRate() {
+                                if (failAudioSampleRate) {
+                                    throw new IllegalStateException("sample rate");
+                                }
+                                return sampleRate;
+                            }
                             public int frameRate() { return rate; }
                             public int maxStereoFramesPerPacket() {
                                 return Math.floorDiv(sampleRate + rate - 1, rate);
@@ -398,6 +417,7 @@ class LiveCaptureControllerTest {
             final List<Long> indexes = new ArrayList<>();
             final List<CapturedFrame> frames = new ArrayList<>();
             boolean aborted, failStart, failSubmit, failStop;
+            int startedSampleRate;
             java.util.concurrent.CountDownLatch stopGate;
 
             FakeRecorder() {
@@ -410,6 +430,7 @@ class LiveCaptureControllerTest {
             }
             @Override public void start(int w, int h, int f, int s) throws CaptureException {
                 if (failStart) throw new CaptureException("start");
+                startedSampleRate = s;
             }
             @Override public void submit(CapturedFrame frame) throws CaptureException {
                 if (failSubmit) throw new CaptureException("submit");
