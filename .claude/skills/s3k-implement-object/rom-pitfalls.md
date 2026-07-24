@@ -751,7 +751,7 @@ every game implicitly.
 **ROM citation.** S3K `docs/skdisasm/sonic3k.asm:40723-40753`; S3-side
 `docs/skdisasm/s3.asm:33392-33421`; S2 analogue
 `docs/s2disasm/s2.asm:25618-25631`; S1 analogue
-`docs/s1disasm/_incObj/2E Monitor Content Power-Up.asm:35-43`.
+`docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:35-43`.
 
 **Originating commit.** `<pending>` (cross-game mirror of S2 P19 entry;
 CNZ speed-shoes monitor reward timing advanced the S2 CNZ frontier from f976
