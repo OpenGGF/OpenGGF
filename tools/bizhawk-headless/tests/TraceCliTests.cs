@@ -143,7 +143,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// 4 rows), no detour, no manifest.
         /// </summary>
         private static void CompleteRunSchedule(
-            S1CompleteRunCaptureRunnerTests.FakeS1Host host,
+            FakeS1Host host,
             int frame)
         {
             if (frame == 3)
@@ -174,7 +174,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     output =>
                     {
                         var host =
-                            new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                            new FakeS1Host(
                                 CompleteRunSchedule);
                         var stdout = new StringWriter(
                             CultureInfo.InvariantCulture);
@@ -280,7 +280,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// 3/6/9 and 2 rows each, transitions giant_ring + stage_exit.
         /// </summary>
         private static void S1RoundTripSchedule(
-            S1CompleteRunCaptureRunnerTests.FakeS1Host host,
+            FakeS1Host host,
             int frame)
         {
             if (frame == 3)
@@ -314,7 +314,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     output =>
                     {
                         var host =
-                            new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                            new FakeS1Host(
                                 S1RoundTripSchedule);
                         var stdout = new StringWriter(
                             CultureInfo.InvariantCulture);
@@ -455,7 +455,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     output =>
                     {
                         var host =
-                            new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                            new FakeS1Host(
                                 S1RoundTripSchedule);
                         var stdout = new StringWriter(
                             CultureInfo.InvariantCulture);
@@ -547,8 +547,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             stdout,
                             stderr,
                             (romPath, syncSettings) =>
-                                new S1CompleteRunCaptureRunnerTests
-                                    .FakeS1Host(CompleteRunSchedule));
+                                new FakeS1Host(CompleteRunSchedule));
 
                         AssertEx.Equal(1, exitCode);
                         AssertEx.Equal(string.Empty, stdout.ToString());
@@ -593,7 +592,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             new UTF8Encoding(false));
 
                         var host =
-                            new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                            new FakeS1Host(
                                 S1RoundTripSchedule);
                         var stdout = new StringWriter(
                             CultureInfo.InvariantCulture);

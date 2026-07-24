@@ -43,10 +43,11 @@
     <Compile Include="tests/NoReplacePublisherTests.cs" />
     <Compile Include="tests/EndToEndTests.cs" />
     <Compile Include="tests/S1AuxEventEngineTests.cs" />
-    <Compile Include="tests/S1CompleteRunCaptureRunnerTests.cs" />
+    <Compile Include="tests/FakeS1Host.cs" />
     <Compile Include="tests/S1CompleteRunDifferentialTests.cs" />
     <Compile Include="tests/S1CompleteRunMetadataWriterTests.cs" />
     <Compile Include="tests/S1RunCaptureRunnerTests.cs" />
+    <Compile Include="tests/S1RunCaptureRunnerStageFreeTests.cs" />
     <Compile Include="tests/S1RunManifestWriterTests.cs" />
     <Compile Include="tests/S1RunModeDifferentialTests.cs" />
     <Compile Include="tests/S1SmokeRecorderTests.cs" />

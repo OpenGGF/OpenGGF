@@ -549,10 +549,20 @@ Facts established from git history (do not re-derive):
   `recording_date`**.
 - Consequence for the differential gate: the handed-down rule "3.15-stamped
   fixtures get NO version normalization" collides with the current Lua's
-  "3.17". The port/gate design must resolve which version string the native
-  recorder stamps for run mode; this spec records the facts and takes no
-  side. (The separate 3.14-stamped `*_completerun` fixtures and their version
-  rule are out of this document's scope.)
+  "3.17" — that rule presumed the port would stamp "3.15", but the Lua is
+  the behavioral authority and stamps "3.17", so a byte-identical version
+  line is unattainable against immutable fixtures. Adjudicated resolution
+  (adversarial-review round): the native recorder stamps the current Lua's
+  "3.17" everywhere; the ROM-backed gates drive the production CLI and
+  compare with exactly one pinned-line substitution (fixture line must be
+  exactly the `"3.15"` string, produced line must be exactly `"3.17"`,
+  exactly once per file, every other byte exact) — which also pins the
+  production stamp itself, unlike injecting "3.15" into the runner, and
+  matches the precedent already merged for S2 (9.11-s2 -> 9.12-s2 in
+  S2TraceDifferentialTests). The byte-neutrality of the stamp delta is the
+  verified fact set above, not an assumption. (The separate 3.14-stamped
+  `*_completerun` fixtures follow the same resolution via spec
+  s1-complete-run-behavior.md §2.)
 
 ---
 

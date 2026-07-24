@@ -46,7 +46,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             S1AuxEventEngineTests.Register(tests);
             S1TraceCaptureRunnerTests.Register(tests);
             S1CompleteRunMetadataWriterTests.Register(tests);
-            S1CompleteRunCaptureRunnerTests.Register(tests);
+            S1RunCaptureRunnerStageFreeTests.Register(tests);
             S1SpecialStageWriterTests.Register(tests);
             S1RunManifestWriterTests.Register(tests);
             S1RunCaptureRunnerTests.Register(tests);

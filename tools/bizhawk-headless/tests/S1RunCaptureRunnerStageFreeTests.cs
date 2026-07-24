@@ -7,15 +7,23 @@ using System.Text;
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Synthetic-movie tests for the S1 complete-run segmentation engine:
-    /// arm/finalize/re-arm across mode exits, per-segment offsets, counts
-    /// and dir tokens, cross-segment tracker carry-over (spec section 5),
-    /// the death-does-not-split rule, the never-re-arm ending/credits tail,
-    /// movie-end and S1_STOP_AT_FRAME truncation, and byte-literal
-    /// expectations for the complete-run aux additions (extended
-    /// object_near plus the four per-frame diagnostic events).
+    /// Synthetic-movie tests for the stage-free path of the shipping S1
+    /// complete-run engine, <see cref="S1RunCaptureRunner"/> — the runner
+    /// Program.cs routes BOTH S1 complete-run entry points through
+    /// (--trace-profile complete_run and --run-id). A movie that never
+    /// reads game_mode $10 must exercise exactly the legacy complete-run
+    /// segmentation semantics: arm/finalize/re-arm across mode exits,
+    /// per-segment offsets, counts and dir tokens, cross-segment tracker
+    /// carry-over (spec section 5), the death-does-not-split rule, the
+    /// never-re-arm ending/credits tail, movie-end and S1_STOP_AT_FRAME
+    /// truncation, and byte-literal expectations for the complete-run aux
+    /// additions (extended object_near plus the four per-frame diagnostic
+    /// events). Every capture here passes a null run id, so the shared
+    /// helper additionally asserts the stage-free layout invariant: zero
+    /// transitions, a null run manifest, and only kind "level" segments.
+    /// The detour-route scenarios live in S1RunCaptureRunnerTests.
     /// </summary>
-    internal static class S1CompleteRunCaptureRunnerTests
+    internal static class S1RunCaptureRunnerStageFreeTests
     {
         private const string LogKey =
             "LogKey:#Power|Reset|"
@@ -27,35 +35,36 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunCaptureRunner finalizes and re-arms across a"
-                + " mode exit",
+                "S1RunCaptureRunner stage-free finalizes and re-arms across"
+                + " a mode exit",
                 FinalizesAndRearmsAcrossModeExit));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunCaptureRunner carries trackers across segment"
-                + " boundaries",
+                "S1RunCaptureRunner stage-free carries trackers across"
+                + " segment boundaries",
                 CarriesTrackersAcrossSegmentBoundaries));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunCaptureRunner keeps one segment through an"
+                "S1RunCaptureRunner stage-free keeps one segment through an"
                 + " in-mode death",
                 KeepsOneSegmentThroughInModeDeath));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunCaptureRunner suffixes repeated zone-act dir"
-                + " tokens",
+                "S1RunCaptureRunner stage-free suffixes repeated zone-act"
+                + " dir tokens",
                 SuffixesRepeatedZoneActDirTokens));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunCaptureRunner never re-arms after the ending"
-                + " modes",
+                "S1RunCaptureRunner stage-free never re-arms after the"
+                + " ending modes",
                 NeverRearmsAfterEndingModes));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunCaptureRunner drops the movie's last input row",
+                "S1RunCaptureRunner stage-free drops the movie's last input"
+                + " row",
                 DropsMovieLastInputRow));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunCaptureRunner honors the stop-at-frame hard"
-                + " stop",
+                "S1RunCaptureRunner stage-free honors the stop-at-frame"
+                + " hard stop",
                 HonorsStopAtFrameHardStop));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunCaptureRunner emits complete-run aux events"
-                + " byte-exactly",
+                "S1RunCaptureRunner stage-free emits complete-run aux"
+                + " events byte-exactly",
                 EmitsCompleteRunAuxEventsByteExactly));
         }
 
@@ -103,21 +112,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1CompleteRunSegmentOutput> segments;
-                S1CompleteRunCaptureResult result =
+                List<S1RunSegmentOutput> segments;
+                S1RunCaptureResult result =
                     Capture(movie, host, 0, out segments);
 
-                AssertEx.Equal(2, result.SegmentCount);
+                AssertEx.Equal(2, result.Segments.Count);
                 AssertEx.Equal(2, segments.Count);
-                AssertEx.Equal("ghz1", result.SegmentDirTokens[0]);
-                AssertEx.Equal("ghz2", result.SegmentDirTokens[1]);
+                AssertEx.Equal("ghz1", result.Segments[0].Dir);
+                AssertEx.Equal("ghz2", result.Segments[1].Dir);
 
-                S1CompleteRunSegmentOutput seg1 = segments[0];
+                S1RunSegmentOutput seg1 = segments[0];
                 AssertEx.Equal("ghz1", seg1.DirToken);
-                AssertEx.Equal(0, seg1.ZoneId);
-                AssertEx.Equal(0, seg1.ActRaw);
-                AssertEx.Equal(5, seg1.Bk2FrameOffset);
-                AssertEx.Equal(9, seg1.TraceFrameCount);
+                AssertEx.Equal(0, seg1.ManifestEntry.ZoneId);
+                AssertEx.Equal(1, seg1.ManifestEntry.Act);
+                AssertEx.Equal(5, seg1.ManifestEntry.Bk2FrameOffset);
+                AssertEx.Equal(9, seg1.ManifestEntry.TraceFrameCount);
                 string[] seg1Lines = seg1.PhysicsCsv.Split('\n');
                 AssertEx.Equal(11, seg1Lines.Length);   // header+9+empty
                 AssertEx.Equal(S1TraceCsvWriter.Header, seg1Lines[0]);
@@ -139,10 +148,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertContains(seg1.MetadataJson,
                     "  \"source_bk2\": \"synthetic.bk2\"\n");
 
-                S1CompleteRunSegmentOutput seg2 = segments[1];
+                S1RunSegmentOutput seg2 = segments[1];
                 AssertEx.Equal("ghz2", seg2.DirToken);
-                AssertEx.Equal(18, seg2.Bk2FrameOffset);
-                AssertEx.Equal(6, seg2.TraceFrameCount);
+                AssertEx.Equal(18, seg2.ManifestEntry.Bk2FrameOffset);
+                AssertEx.Equal(6, seg2.ManifestEntry.TraceFrameCount);
                 AssertContains(seg2.MetadataJson, "  \"act\": 2,\n");
                 AssertContains(seg2.MetadataJson,
                     "  \"rng_seed\": \"0x00000000\",\n");
@@ -190,7 +199,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1CompleteRunSegmentOutput> segments;
+                List<S1RunSegmentOutput> segments;
                 Capture(movie, host, 0, out segments);
 
                 AssertEx.Equal(2, segments.Count);
@@ -247,13 +256,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1CompleteRunSegmentOutput> segments;
-                S1CompleteRunCaptureResult result =
+                List<S1RunSegmentOutput> segments;
+                S1RunCaptureResult result =
                     Capture(movie, host, 0, out segments);
 
-                AssertEx.Equal(1, result.SegmentCount);
+                AssertEx.Equal(1, result.Segments.Count);
                 // Rows F=4..19: the guard at F=20 drops only the last row.
-                AssertEx.Equal(16, segments[0].TraceFrameCount);
+                AssertEx.Equal(
+                    16, segments[0].ManifestEntry.TraceFrameCount);
                 AssertContains(segments[0].AuxStateJsonl,
                     "\"event\":\"routine_change\",\"from\":\"0x02\","
                     + "\"to\":\"0x06\"");
@@ -289,13 +299,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1CompleteRunSegmentOutput> segments;
-                S1CompleteRunCaptureResult result =
+                List<S1RunSegmentOutput> segments;
+                S1RunCaptureResult result =
                     Capture(movie, host, 0, out segments);
 
-                AssertEx.Equal(2, result.SegmentCount);
-                AssertEx.Equal("ghz1", result.SegmentDirTokens[0]);
-                AssertEx.Equal("ghz1_2", result.SegmentDirTokens[1]);
+                AssertEx.Equal(2, result.Segments.Count);
+                AssertEx.Equal("ghz1", result.Segments[0].Dir);
+                AssertEx.Equal("ghz1_2", result.Segments[1].Dir);
             });
         }
 
@@ -325,13 +335,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1CompleteRunSegmentOutput> segments;
-                S1CompleteRunCaptureResult result =
+                List<S1RunSegmentOutput> segments;
+                S1RunCaptureResult result =
                     Capture(movie, host, 0, out segments);
 
-                AssertEx.Equal(1, result.SegmentCount);
-                AssertEx.Equal(3, segments[0].Bk2FrameOffset);
-                AssertEx.Equal(6, segments[0].TraceFrameCount);
+                AssertEx.Equal(1, result.Segments.Count);
+                AssertEx.Equal(3, segments[0].ManifestEntry.Bk2FrameOffset);
+                AssertEx.Equal(6, segments[0].ManifestEntry.TraceFrameCount);
             });
         }
 
@@ -353,19 +363,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1CompleteRunSegmentOutput> segments;
-                S1CompleteRunCaptureResult result =
+                List<S1RunSegmentOutput> segments;
+                S1RunCaptureResult result =
                     Capture(movie, host, 0, out segments);
 
-                AssertEx.Equal(1, result.SegmentCount);
-                AssertEx.Equal(3, segments[0].Bk2FrameOffset);
-                AssertEx.Equal(8, segments[0].TraceFrameCount);
+                AssertEx.Equal(1, result.Segments.Count);
+                AssertEx.Equal(3, segments[0].ManifestEntry.Bk2FrameOffset);
+                AssertEx.Equal(8, segments[0].ManifestEntry.TraceFrameCount);
             });
         }
 
         /// <summary>
         /// S1_STOP_AT_FRAME mid-segment finalizes a truncated but
-        /// well-formed segment: metadata reflects the rows written so far.
+        /// well-formed segment: metadata reflects the rows written so far,
+        /// and the stage-free manifest gate stays closed even on the hard
+        /// stop.
         /// </summary>
         private static void HonorsStopAtFrameHardStop()
         {
@@ -379,13 +391,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1CompleteRunSegmentOutput> segments;
-                S1CompleteRunCaptureResult result =
+                List<S1RunSegmentOutput> segments;
+                S1RunCaptureResult result =
                     Capture(movie, host, 10, out segments);
 
-                AssertEx.Equal(1, result.SegmentCount);
-                AssertEx.Equal(3, segments[0].Bk2FrameOffset);
-                AssertEx.Equal(6, segments[0].TraceFrameCount);
+                AssertEx.Equal(1, result.Segments.Count);
+                AssertEx.Equal(3, segments[0].ManifestEntry.Bk2FrameOffset);
+                AssertEx.Equal(6, segments[0].ManifestEntry.TraceFrameCount);
                 AssertContains(segments[0].MetadataJson,
                     "  \"trace_frame_count\": 6,\n");
             });
@@ -435,7 +447,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1CompleteRunSegmentOutput> segments;
+                List<S1RunSegmentOutput> segments;
                 Capture(movie, host, 0, out segments);
 
                 AssertEx.Equal(1, segments.Count);
@@ -520,22 +532,38 @@ namespace OpenGGF.BizHawk.Headless.Tests
             });
         }
 
-        private static S1CompleteRunCaptureResult Capture(
+        /// <summary>
+        /// Runs the shipping engine with a null run id and asserts the
+        /// stage-free layout invariant on every pass: a movie that never
+        /// reads game_mode $10 records zero transitions, the manifest gate
+        /// stays closed (null run_manifest.json — the legacy complete-run
+        /// layout), and every finished segment is kind "level".
+        /// </summary>
+        private static S1RunCaptureResult Capture(
             Bk2Movie movie,
             FakeS1Host host,
             int stopAtFrame,
-            out List<S1CompleteRunSegmentOutput> segments)
+            out List<S1RunSegmentOutput> segments)
         {
-            var collected = new List<S1CompleteRunSegmentOutput>();
-            S1CompleteRunCaptureResult result =
-                S1CompleteRunCaptureRunner.Capture(
-                    movie,
-                    host,
-                    "synthetic.bk2",
-                    "2026-07-24",
-                    stopAtFrame,
-                    collected.Add);
+            var collected = new List<S1RunSegmentOutput>();
+            S1RunCaptureResult result = S1RunCaptureRunner.Capture(
+                movie,
+                host,
+                null,
+                "synthetic.bk2",
+                "2026-07-24",
+                S1CompleteRunMetadataWriter.LuaScriptVersion,
+                stopAtFrame,
+                collected.Add);
             segments = collected;
+            AssertEx.Equal(0, result.Transitions.Count);
+            AssertEx.Equal(true, result.RunManifestJson == null);
+            foreach (S1RunSegmentOutput segment in collected)
+            {
+                AssertEx.Equal(
+                    RunManifestSegment.LevelKind,
+                    segment.ManifestEntry.Kind);
+            }
             return result;
         }
 
@@ -641,70 +669,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AppDomain.CurrentDomain.BaseDirectory,
                 "fixtures",
                 name));
-        }
-
-        /// <summary>
-        /// Fake S1 host whose Advance() stamps the completed frame into vfc
-        /// (0xFE04), then runs the per-advance script with the host itself
-        /// so scripts drive RAM, the lag flag and the cumulative lag count
-        /// by completed-frame number. Player position is script-controlled
-        /// (never auto-stamped) so aux expectations stay byte-exact.
-        /// </summary>
-        internal sealed class FakeS1Host : IGpgxHost
-        {
-            private readonly Action<FakeS1Host, int> onAdvance;
-
-            public FakeS1Host(Action<FakeS1Host, int> onAdvance)
-            {
-                this.onAdvance = onAdvance;
-                Ram = new byte[0x10000];
-            }
-
-            public byte[] Ram { get; private set; }
-            public int CompletedFrame { get; private set; }
-            public bool IsLagged { get; set; }
-            public int LagCount { get; set; }
-
-            public void ClearButtons()
-            {
-            }
-
-            public void SetButton(string name, bool pressed)
-            {
-            }
-
-            public void Advance()
-            {
-                CompletedFrame++;
-                SetU16(0xFE04, (ushort)CompletedFrame);
-                if (onAdvance != null)
-                {
-                    onAdvance(this, CompletedFrame);
-                }
-            }
-
-            public byte ReadMainRamByte(int offset)
-            {
-                return Ram[offset];
-            }
-
-            public void Dispose()
-            {
-            }
-
-            public void SetU16(int offset, ushort value)
-            {
-                Ram[offset] = (byte)(value >> 8);
-                Ram[offset + 1] = (byte)value;
-            }
-
-            public void SetU32(int offset, uint value)
-            {
-                Ram[offset] = (byte)(value >> 24);
-                Ram[offset + 1] = (byte)(value >> 16);
-                Ram[offset + 2] = (byte)(value >> 8);
-                Ram[offset + 3] = (byte)value;
-            }
         }
     }
 }

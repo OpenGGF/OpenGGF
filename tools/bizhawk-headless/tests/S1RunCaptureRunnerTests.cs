@@ -70,7 +70,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             rows[17] = "|..|...RA...|........|";     // ss row 1 input.
             WithMovie(rows, movie =>
             {
-                var host = new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                var host = new FakeS1Host(
                     (h, frame) =>
                 {
                     if (frame == 5)
@@ -263,7 +263,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             WithMovie(Rows(20), movie =>
             {
-                var host = new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                var host = new FakeS1Host(
                     (h, frame) =>
                 {
                     if (frame == 3)
@@ -345,7 +345,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             WithMovie(Rows(12), movie =>
             {
-                var host = new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                var host = new FakeS1Host(
                     (h, frame) =>
                 {
                     if (frame == 3)
@@ -390,7 +390,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             WithMovie(Rows(12), movie =>
             {
-                var host = new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                var host = new FakeS1Host(
                     (h, frame) =>
                 {
                     if (frame == 2)
@@ -428,7 +428,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             WithMovie(Rows(20), movie =>
             {
-                var host = new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                var host = new FakeS1Host(
                     (h, frame) =>
                 {
                     if (frame == 3)
@@ -472,7 +472,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             WithMovie(Rows(20), movie =>
             {
-                var host = new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                var host = new FakeS1Host(
                     (h, frame) =>
                 {
                     if (frame == 3)
@@ -516,7 +516,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             WithMovie(Rows(30), movie =>
             {
-                var host = new S1CompleteRunCaptureRunnerTests.FakeS1Host(
+                var host = new FakeS1Host(
                     (h, frame) =>
                 {
                     if (frame == 3)

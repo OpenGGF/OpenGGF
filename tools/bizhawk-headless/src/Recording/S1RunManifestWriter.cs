@@ -16,14 +16,17 @@ namespace OpenGGF.BizHawk.Headless
     /// occurred — pass null to omit the line).
     ///
     /// lua_script_version is a capture-session input rather than an inline
-    /// constant: the current Lua stamps "3.17", but the canonical
+    /// constant so the runner threads ONE session stamp through all three
+    /// writers (level metadata, ss metadata, manifest); production captures
+    /// pass <see cref="S1CompleteRunMetadataWriter.LuaScriptVersion"/>
+    /// ("3.17", the current Lua's). The canonical
     /// runs/s1-ghz-maze-roundtrip fixtures were captured by an interim
     /// script stamped "3.15" whose output is byte-identical apart from the
     /// version strings (verified against the actual version-bump commits,
-    /// spec §10). Injecting the session's stamp keeps the differential gate
-    /// an exact byte comparison with no version-line normalization.
-    /// Production captures pass
-    /// <see cref="S1CompleteRunMetadataWriter.LuaScriptVersion"/>.
+    /// spec §10); the ROM-backed differential gate drives the production
+    /// CLI and compares those fixtures with exactly that one pinned line
+    /// substituted ("3.15" fixture line -> "3.17" produced line, all other
+    /// bytes exact — see S1RunModeDifferentialTests).
     /// </summary>
     public static class S1RunManifestWriter
     {

@@ -75,9 +75,9 @@ namespace OpenGGF.BizHawk.Headless
     /// <paramref name="runId"/> only (a) forces manifest emission for a
     /// detour-free pass and (b) adds the run_id lines to ss metadata and
     /// the manifest. A movie that never reads game_mode $10 produces
-    /// exactly the plain complete-run layout with a null manifest
-    /// (<see cref="S1CompleteRunCaptureRunner"/> is the equivalent
-    /// stage-free engine).
+    /// exactly the plain complete-run layout with a null manifest (the
+    /// stage-free semantics are gated by S1RunCaptureRunnerStageFreeTests
+    /// and the ROM-backed complete-run differential gate).
     ///
     /// Frame alignment is the complete-run model per segment: post-advance
     /// inspection, bk2_frame_offset := completed frame count at detection

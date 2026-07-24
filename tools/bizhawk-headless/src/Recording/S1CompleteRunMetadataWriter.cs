@@ -78,13 +78,16 @@ namespace OpenGGF.BizHawk.Headless
         }
 
         /// <summary>
-        /// Overload with an injectable lua_script_version stamp for run-mode
-        /// captures: level metadata inside a run is byte-identical to the
-        /// plain layout (spec s1-run-mode-behavior.md §7), but the canonical
-        /// run fixtures were captured by an interim script stamped "3.15"
-        /// (see <see cref="S1RunManifestWriter"/> for the provenance chain),
-        /// so run-context reproduction injects the session's stamp instead
-        /// of normalizing the fixture bytes.
+        /// Overload with an explicit lua_script_version stamp: the run
+        /// runner threads one session stamp through the level, ss and
+        /// manifest writers (level metadata inside a run is byte-identical
+        /// to the plain layout, spec s1-run-mode-behavior.md §7). All
+        /// production paths pass <see cref="LuaScriptVersion"/>; the
+        /// canonical fixtures carry older stamps ("3.14" complete-run,
+        /// "3.15" run/ss — see <see cref="S1RunManifestWriter"/> for the
+        /// provenance chain), which the ROM-backed differential gates
+        /// handle by substituting exactly that one pinned line in the
+        /// comparison, not by injecting a non-production stamp here.
         /// </summary>
         public static string Format(
             int zoneId,
