@@ -1,7 +1,7 @@
 package com.openggf.audio.driver;
 
 import com.openggf.audio.AudioStream;
-import com.openggf.audio.AudioManager;
+import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -333,7 +333,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private record ResolvedSequencerDependencies(
             AbstractSmpsData smpsData,
             DacData dacData,
-            AudioManager audioManager,
+            MusicRestoreSink audioManager,
             SmpsSequencerConfig config) {
     }
 

@@ -1699,10 +1699,8 @@ public class GameLoop {
             return;
         }
         profiler.beginSection("audio");
-        if (doFrameStep) {
-            audioManager.advancePausedFrameStepAudio();
-        } else {
-            audioManager.update();
+        if (!doFrameStep) {
+            audioManager.updateLegacyDevice();
         }
         audioUpdatedThisStep = true;
         profiler.endSection("audio");
@@ -1724,11 +1722,8 @@ public class GameLoop {
             return;
         }
         profiler.beginSection("audio");
-        if (doFrameStep) {
-            audioManager.advancePausedFrameStepAudio();
-        } else {
-            audioManager.advanceGameplayFrameAudio();
-            audioManager.update();
+        if (!doFrameStep) {
+            audioManager.updateLegacyDevice();
         }
         audioUpdatedThisStep = true;
         profiler.endSection("audio");

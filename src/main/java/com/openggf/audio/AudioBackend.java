@@ -13,6 +13,13 @@ public interface AudioBackend {
 
     void setAudioProfile(GameAudioProfile profile);
 
+    default void registerAudioProfileCoordHandlers(GameAudioProfile profile) {
+    }
+
+    default AudioPresentationTuning presentationTuning() {
+        return AudioPresentationTuning.DEFAULT;
+    }
+
     /**
      * Plays music by ID (potentially loading from ROM or fallback map).
      * 

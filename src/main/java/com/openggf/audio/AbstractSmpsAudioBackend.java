@@ -247,6 +247,31 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     }
 
     @Override
+    public void registerAudioProfileCoordHandlers(GameAudioProfile profile) {
+        if (profile != null && !legacyCoordFlagHandlersConfigured
+                && "s3k".equals(profile.presentationGameId())) {
+            profile.configurePresentationCoordFlagHandlers(
+                    legacyCoordFlagHandlers);
+            legacyCoordFlagHandlersConfigured = true;
+        }
+    }
+
+    @Override
+    public AudioPresentationTuning presentationTuning() {
+        SmpsSequencer.Region region =
+                "PAL".equalsIgnoreCase(
+                        configService.getString(SonicConfiguration.REGION))
+                        ? SmpsSequencer.Region.PAL
+                        : SmpsSequencer.Region.NTSC;
+        return new AudioPresentationTuning(
+                region,
+                configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE),
+                configService.getBoolean(
+                        SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
+                configService.getBoolean(SonicConfiguration.FM6_DAC_OFF));
+    }
+
+    @Override
     public void init() {
         hookInitDevice();
     }

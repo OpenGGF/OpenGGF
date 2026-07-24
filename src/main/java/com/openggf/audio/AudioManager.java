@@ -52,7 +52,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class AudioManager {
+public class AudioManager implements MusicRestoreSink {
     private static final Logger LOGGER = Logger.getLogger(AudioManager.class.getName());
     private static final int PCM_HISTORY_SECONDS = 60;
     private static final int OUTPUT_FIFO_SECONDS = 2;
@@ -83,6 +83,8 @@ public class AudioManager {
     private AudioVoiceRegistry shadowRegistry;
     private AudioPresentationProducer shadowProducer;
     private AudioPresentationParityProbe shadowParity;
+    private boolean shadowRestoreRequested;
+    private AudioPresentationTuning shadowTuning;
     private SmpsCoordFlagHandlerOwner presentationCoordFlagHandlers;
     private final Set<String> presentationCoordHandlerGameIds =
             new LinkedHashSet<>();
@@ -473,13 +475,12 @@ public class AudioManager {
         }
         try {
             byte[] pcm = rom.readBytes(spec.address(), spec.length());
-            ensureShadowPresentation();
-            shadowResolver.submitRawPcm(pcm, spec.sampleRate());
-            shadowParity.commandSubmitted();
             // System PCM is not represented in AudioCommandTimeline. Always
             // deliver it to the backend; an attached presentation runtime is
             // rebound by the backend to the resulting PCM stream.
             backend.playPcmSample(pcm, spec.sampleRate());
+            mirrorShadowCommand(() ->
+                    shadowResolver.submitRawPcm(pcm, spec.sampleRate()));
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Failed to play SEGA PCM sample", e);
         }
@@ -490,9 +491,7 @@ public class AudioManager {
             return;
         }
         backend.stopPcmSample();
-        ensureShadowPresentation();
-        shadowResolver.stopRawPcm();
-        shadowParity.commandSubmitted();
+        mirrorShadowCommand(() -> shadowResolver.stopRawPcm());
     }
 
     private SmpsDriverSnapshot.DependencyResolver createSmpsDependencyResolver() {
@@ -905,11 +904,32 @@ public class AudioManager {
         ensureShadowPresentation();
         shadowProducer.present(commandTimeline.currentFrame(), mode);
         shadowParity.presented(mode);
+        if (shadowRestoreRequested) {
+            shadowRestoreRequested = false;
+            mirrorShadowCommand(() -> shadowCommands.submit(
+                    new AudioPresentationCommand.RestoreMusicOverride(),
+                    () -> false, command -> { }));
+        }
+    }
+
+    /** Advances all presentation consumers once for one displayed outer frame. */
+    public void presentOuterFrame(PresentationMode mode) {
+        FrameAudioMode runtimeMode = mode == PresentationMode.SILENT
+                ? FrameAudioMode.SILENT_STEP : FrameAudioMode.NORMAL;
+        if (mode != PresentationMode.REVERSE) {
+            advanceRuntimeFrame(runtimeMode);
+        }
+        presentShadowFrame(mode);
     }
 
     public AudioPresentationParityProbe.Snapshot shadowParitySnapshotForTesting() {
         ensureShadowPresentation();
         return shadowParity.snapshot();
+    }
+
+    AudioPresentationTuning shadowTuningForTesting() {
+        ensureShadowPresentation();
+        return shadowTuning;
     }
 
     public void advancePausedFrameStepAudio() {
@@ -1154,9 +1174,19 @@ public class AudioManager {
     }
 
     public void update() {
+        updateBackend(true);
+    }
+
+    /** Pumps the legacy device without advancing a presentation runtime. */
+    public void updateLegacyDevice() {
+        updateBackend(false);
+    }
+
+    private void updateBackend(boolean allowRuntimeFallbackAdvance) {
         if (!reverseAudioPresentationActive
                 && deterministicAudioRuntime.consumesSubmittedCommands()
-                && !audioFrameAdvanced) {
+                && !audioFrameAdvanced
+                && allowRuntimeFallbackAdvance) {
             advanceRuntimeFrame(FrameAudioMode.NORMAL);
         }
         backend.update();
@@ -1377,6 +1407,9 @@ public class AudioManager {
         }
         if (donorProfile != null) {
             donorProfiles.put(gameId, donorProfile);
+            if (backend != null) {
+                backend.registerAudioProfileCoordHandlers(donorProfile);
+            }
         }
         configurePresentationCoordHandlers(donorProfile);
     }
@@ -1442,13 +1475,27 @@ public class AudioManager {
     private AudioTimelineEntry recordTimelineCommand(AudioCommand command) {
         if (!suppressingRewindReplay()) {
             AudioTimelineEntry entry = commandTimeline.record(command);
-            deterministicAudioRuntime.submit(entry);
-            ensureShadowPresentation();
-            shadowResolver.submit(command);
-            shadowParity.commandSubmitted();
+            try {
+                deterministicAudioRuntime.submit(entry);
+            } catch (RuntimeException failure) {
+                LOGGER.log(Level.WARNING,
+                        "Deterministic audio command mirror failed", failure);
+            }
+            mirrorShadowCommand(() -> shadowResolver.submit(command));
             return entry;
         }
         return null;
+    }
+
+    private void mirrorShadowCommand(Runnable submission) {
+        try {
+            ensureShadowPresentation();
+            submission.run();
+            shadowParity.commandSubmitted();
+        } catch (RuntimeException failure) {
+            LOGGER.log(Level.WARNING,
+                    "Presentation shadow command mirror failed", failure);
+        }
     }
 
     private boolean sendLiveBackendCommands() {
@@ -1457,18 +1504,16 @@ public class AudioManager {
 
     public void toggleMute(ChannelType type, int channel) {
         backend.toggleMute(type, channel);
-        ensureShadowPresentation();
-        shadowCommands.submit(new AudioPresentationCommand.ToggleMute(type, channel),
-                () -> true, shadowRegistry::apply);
-        shadowParity.commandSubmitted();
+        mirrorShadowCommand(() -> shadowCommands.submit(
+                new AudioPresentationCommand.ToggleMute(type, channel),
+                () -> true, shadowRegistry::apply));
     }
 
     public void toggleSolo(ChannelType type, int channel) {
         backend.toggleSolo(type, channel);
-        ensureShadowPresentation();
-        shadowCommands.submit(new AudioPresentationCommand.ToggleSolo(type, channel),
-                () -> true, shadowRegistry::apply);
-        shadowParity.commandSubmitted();
+        mirrorShadowCommand(() -> shadowCommands.submit(
+                new AudioPresentationCommand.ToggleSolo(type, channel),
+                () -> true, shadowRegistry::apply));
     }
 
     public boolean isMuted(ChannelType type, int channel) {
@@ -1488,6 +1533,10 @@ public class AudioManager {
         int sampleRate = Math.max(1, backend != null ? backend.outputSampleRate() : 48_000);
         int frameRate = configuredFrameRate();
         int maxFrames = (sampleRate + frameRate - 1) / frameRate;
+        AudioPresentationTuning tuning = backend != null
+                ? backend.presentationTuning()
+                : AudioPresentationTuning.DEFAULT;
+        shadowTuning = tuning;
         presentationCoordFlagHandlers =
                 new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
         presentationCoordHandlerGameIds.clear();
@@ -1496,8 +1545,10 @@ public class AudioManager {
                 this::configurePresentationCoordHandlers);
         AudioPresentationSourceFactory.Settings settings =
                 new AudioPresentationSourceFactory.Settings(sampleRate,
-                        SmpsSequencer.Region.NTSC, false, false, false,
-                        false, 1, this, new DecodedPcmCache(),
+                        tuning.region(), tuning.dacInterpolate(),
+                        tuning.psgNoiseShiftEveryToggle(), tuning.fm6DacOff(),
+                        false, 1, this::restoreShadowMusic,
+                        new DecodedPcmCache(),
                         AudioManager.class.getClassLoader()::getResourceAsStream);
         shadowFactory = new AudioPresentationSourceFactory(
                 () -> true, presentationCoordFlagHandlers, settings);
@@ -1518,6 +1569,10 @@ public class AudioManager {
         shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
     }
 
+    private void restoreShadowMusic() {
+        shadowRestoreRequested = true;
+    }
+
     private void closeShadowPresentation() {
         if (shadowProducer != null) {
             shadowProducer.close();
@@ -1528,6 +1583,8 @@ public class AudioManager {
         shadowCommands = null;
         shadowFactory = null;
         shadowParity = null;
+        shadowTuning = null;
+        shadowRestoreRequested = false;
         presentationCoordFlagHandlers = null;
         presentationCoordHandlerGameIds.clear();
     }

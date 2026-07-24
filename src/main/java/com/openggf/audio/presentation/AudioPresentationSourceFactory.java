@@ -1,6 +1,7 @@
 package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.presentation.AudioPresentationCommand.MusicVoiceEntry;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
@@ -47,7 +48,7 @@ public final class AudioPresentationSourceFactory
             boolean fm6DacOff,
             boolean speedShoesEnabled,
             int speedMultiplier,
-            AudioManager audioManager,
+            MusicRestoreSink audioManager,
             DecodedPcmCache pcmCache,
             WavAssets wavAssets) {
         public Settings {
@@ -404,9 +405,9 @@ public final class AudioPresentationSourceFactory
             }
 
             @Override
-            public AudioManager resolveAudioManager(
+            public MusicRestoreSink resolveAudioManager(
                     SmpsDriverSnapshot.SequencerEntry entry) {
-                AudioManager manager = delegate.resolveAudioManager(entry);
+                MusicRestoreSink manager = delegate.resolveAudioManager(entry);
                 return manager != null ? manager : settings.audioManager();
             }
 
