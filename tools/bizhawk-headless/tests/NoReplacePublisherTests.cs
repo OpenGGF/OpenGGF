@@ -43,6 +43,340 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "Publisher set rolls back published finals on later link race",
                 SetRollsBackPublishedFinalsOnLaterLinkRace));
+            tests.Add(new TestMain.TestCase(
+                "Publisher set stages and publishes subdirectory finals",
+                SetStagesAndPublishesSubdirectoryFinals));
+            tests.Add(new TestMain.TestCase(
+                "Publisher set revokes subdirectory finals on partial failure",
+                SetRevokesSubdirectoryFinalsOnPartialFailure));
+            tests.Add(new TestMain.TestCase(
+                "Publisher session stages incrementally and publishes"
+                + " all-or-nothing",
+                SessionStagesIncrementallyAndPublishes));
+            tests.Add(new TestMain.TestCase(
+                "Publisher session dispose without complete removes"
+                + " temporaries",
+                SessionDisposeWithoutCompleteRemovesTemporaries));
+            tests.Add(new TestMain.TestCase(
+                "Publisher session publish failure revokes linked finals",
+                SessionPublishFailureRevokesLinkedFinals));
+            tests.Add(new TestMain.TestCase(
+                "Publisher session refuses staging after complete",
+                SessionRefusesStagingAfterComplete));
+            tests.Add(new TestMain.TestCase(
+                "Publisher session with no files publishes nothing",
+                SessionWithNoFilesPublishesNothing));
+        }
+
+        /// <summary>
+        /// The incremental session mirrors StageAll for a file set that is
+        /// discovered over time: files staged across separate calls (each
+        /// written verbatim, byte-for-byte) land only when the completed
+        /// set publishes, and CRLF content passes through untouched.
+        /// </summary>
+        private static void SessionStagesIncrementallyAndPublishes()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "session");
+                    NoReplacePublisher.IncrementalStagingSession session =
+                        new NoReplacePublisher().OpenSession(output);
+                    session.StageFile("ghz1/physics.csv", "ghz1 physics\n");
+                    session.StageFile("ghz1/aux_state.jsonl", "");
+                    session.StageFile("ss/physics.csv", "ss\r\nphysics\r\n");
+                    session.StageFile(
+                        "run_manifest.json",
+                        "manifest\n");
+
+                    // Nothing is committed while files are being staged;
+                    // each temporary lives next to its final.
+                    AssertEx.Equal(
+                        false,
+                        File.Exists(Path.Combine(
+                            output, "ghz1", "physics.csv")));
+                    AssertEx.Equal(
+                        2,
+                        Directory.GetFiles(
+                            Path.Combine(output, "ghz1")).Length);
+
+                    NoReplacePublisher.StagedPublicationSet staged =
+                        session.Complete();
+                    staged.Publish();
+
+                    string[] files = Directory.GetFiles(
+                            output,
+                            "*",
+                            SearchOption.AllDirectories)
+                        .Select(path => path.Substring(output.Length + 1))
+                        .OrderBy(name => name, StringComparer.Ordinal)
+                        .ToArray();
+                    AssertEx.Equal(
+                        "ghz1/aux_state.jsonl,ghz1/physics.csv,"
+                        + "run_manifest.json,ss/physics.csv",
+                        string.Join(",", files));
+                    byte[] ghz1Physics = File.ReadAllBytes(
+                        Path.Combine(output, "ghz1", "physics.csv"));
+                    AssertBytesEqual(
+                        Encoding.UTF8.GetBytes("ghz1 physics\n"),
+                        ghz1Physics);
+                    AssertEx.Equal(false, HasUtf8Bom(ghz1Physics));
+                    AssertEx.Equal(
+                        0L,
+                        new FileInfo(Path.Combine(
+                            output, "ghz1", "aux_state.jsonl")).Length);
+                    AssertBytesEqual(
+                        Encoding.UTF8.GetBytes("ss\r\nphysics\r\n"),
+                        File.ReadAllBytes(Path.Combine(
+                            output, "ss", "physics.csv")));
+                });
+        }
+
+        private static void SessionDisposeWithoutCompleteRemovesTemporaries()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "abandoned-session");
+                    NoReplacePublisher.IncrementalStagingSession session =
+                        new NoReplacePublisher().OpenSession(output);
+                    session.StageFile("ghz1/physics.csv", "physics\n");
+                    session.StageFile("run_manifest.json", "manifest\n");
+                    AssertEx.Equal(
+                        2,
+                        Directory.GetFiles(
+                            output,
+                            "*",
+                            SearchOption.AllDirectories).Length);
+
+                    session.Dispose();
+
+                    AssertEx.Equal(
+                        0,
+                        Directory.GetFiles(
+                            output,
+                            "*",
+                            SearchOption.AllDirectories).Length);
+                    // Dispose after dispose is a no-op, and completing a
+                    // disposed session is refused.
+                    session.Dispose();
+                    AssertEx.Throws<InvalidOperationException>(
+                        () => session.Complete(),
+                        "already finalized");
+                });
+        }
+
+        /// <summary>
+        /// No partial finals through the incremental path either: a
+        /// competing final for a later file revokes every earlier link.
+        /// </summary>
+        private static void SessionPublishFailureRevokesLinkedFinals()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "session-partial");
+                    byte[] competing = Encoding.UTF8.GetBytes(
+                        "competing-manifest\n");
+                    Directory.CreateDirectory(output);
+                    string manifestPath = Path.Combine(
+                        output,
+                        "run_manifest.json");
+                    File.WriteAllBytes(manifestPath, competing);
+
+                    NoReplacePublisher.IncrementalStagingSession session =
+                        new NoReplacePublisher().OpenSession(output);
+                    session.StageFile("ghz1/physics.csv", "physics\n");
+                    session.StageFile("run_manifest.json", "manifest\n");
+                    NoReplacePublisher.StagedPublicationSet staged =
+                        session.Complete();
+
+                    AssertEx.Throws<IOException>(
+                        () => staged.Publish(),
+                        "already exists");
+
+                    string[] files = Directory.GetFiles(
+                        output,
+                        "*",
+                        SearchOption.AllDirectories);
+                    AssertEx.Equal(1, files.Length);
+                    AssertEx.Equal(
+                        Path.GetFullPath(manifestPath),
+                        Path.GetFullPath(files[0]));
+                    AssertBytesEqual(
+                        competing,
+                        File.ReadAllBytes(manifestPath));
+                });
+        }
+
+        private static void SessionRefusesStagingAfterComplete()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "completed-session");
+                    NoReplacePublisher.IncrementalStagingSession session =
+                        new NoReplacePublisher().OpenSession(output);
+                    session.StageFile("ghz1/physics.csv", "physics\n");
+                    NoReplacePublisher.StagedPublicationSet staged =
+                        session.Complete();
+
+                    AssertEx.Throws<InvalidOperationException>(
+                        () => session.StageFile("late.txt", "late\n"),
+                        "already finalized");
+                    AssertEx.Throws<InvalidOperationException>(
+                        () => session.Complete(),
+                        "already finalized");
+
+                    // Ownership moved to the set: publishing still works
+                    // and session Dispose() no longer discards anything.
+                    session.Dispose();
+                    staged.Publish();
+                    AssertEx.Equal(
+                        "physics\n",
+                        File.ReadAllText(Path.Combine(
+                            output, "ghz1", "physics.csv")));
+                });
+        }
+
+        /// <summary>
+        /// A capture that discovers no output files (a complete-run pass
+        /// whose movie never arms a segment and emits no manifest)
+        /// completes into an empty set whose Publish() is a no-op.
+        /// </summary>
+        private static void SessionWithNoFilesPublishesNothing()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "empty-session");
+                    NoReplacePublisher.IncrementalStagingSession session =
+                        new NoReplacePublisher().OpenSession(output);
+                    NoReplacePublisher.StagedPublicationSet staged =
+                        session.Complete();
+                    staged.Publish();
+
+                    AssertEx.Equal(true, Directory.Exists(output));
+                    AssertEx.Equal(
+                        0,
+                        Directory.GetFileSystemEntries(output).Length);
+                });
+        }
+
+        private static readonly string[] RunFileNames =
+        {
+            "seg1_ehz1/physics.csv",
+            "seg1_ehz1/metadata.json",
+            "ss/physics.csv",
+            "run_manifest.json"
+        };
+
+        private static NoReplacePublisher.StagedPublicationSet StageRunSet(
+            NoReplacePublisher publisher,
+            string output)
+        {
+            return publisher.StageAll(
+                output,
+                RunFileNames,
+                writers =>
+                {
+                    writers[0].WriteLine("level physics");
+                    writers[1].WriteLine("level metadata");
+                    writers[2].WriteLine("ss physics");
+                    writers[3].WriteLine("manifest");
+                });
+        }
+
+        /// <summary>
+        /// Run-mode publication set: names carry relative subdirectory
+        /// paths, each parent directory is created at staging time, every
+        /// temporary lives next to its final, and nothing lands under a
+        /// final name until Publish() links the whole set.
+        /// </summary>
+        private static void SetStagesAndPublishesSubdirectoryFinals()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "run");
+                    NoReplacePublisher.StagedPublicationSet staged =
+                        StageRunSet(new NoReplacePublisher(), output);
+
+                    foreach (string name in RunFileNames)
+                    {
+                        AssertEx.Equal(
+                            false,
+                            File.Exists(Path.Combine(output, name)));
+                    }
+                    // Temporaries are staged inside their final's directory
+                    // so the link(2) publication never crosses directories.
+                    AssertEx.Equal(
+                        2,
+                        Directory.GetFiles(
+                            Path.Combine(output, "seg1_ehz1")).Length);
+
+                    staged.Publish();
+
+                    string[] files = Directory.GetFiles(
+                            output,
+                            "*",
+                            SearchOption.AllDirectories)
+                        .Select(path => path.Substring(output.Length + 1))
+                        .OrderBy(name => name, StringComparer.Ordinal)
+                        .ToArray();
+                    AssertEx.Equal(
+                        "run_manifest.json,seg1_ehz1/metadata.json,"
+                        + "seg1_ehz1/physics.csv,ss/physics.csv",
+                        string.Join(",", files));
+                    AssertEx.Equal(
+                        "level metadata\n",
+                        File.ReadAllText(Path.Combine(
+                            output, "seg1_ehz1", "metadata.json")));
+                    AssertEx.Equal(
+                        "manifest\n",
+                        File.ReadAllText(Path.Combine(
+                            output, "run_manifest.json")));
+                });
+        }
+
+        /// <summary>
+        /// No partial finals across directories: when a later link loses to
+        /// an existing final (here the run manifest, linked last), every
+        /// already-published segment file is revoked and only the competing
+        /// writer's file survives.
+        /// </summary>
+        private static void SetRevokesSubdirectoryFinalsOnPartialFailure()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "run-partial");
+                    byte[] competing = Encoding.UTF8.GetBytes(
+                        "competing-manifest\n");
+                    Directory.CreateDirectory(output);
+                    string manifestPath = Path.Combine(
+                        output,
+                        "run_manifest.json");
+                    File.WriteAllBytes(manifestPath, competing);
+
+                    NoReplacePublisher.StagedPublicationSet staged =
+                        StageRunSet(new NoReplacePublisher(), output);
+                    AssertEx.Throws<IOException>(
+                        () => staged.Publish(),
+                        "already exists");
+
+                    string[] files = Directory.GetFiles(
+                        output,
+                        "*",
+                        SearchOption.AllDirectories);
+                    AssertEx.Equal(1, files.Length);
+                    AssertEx.Equal(
+                        Path.GetFullPath(manifestPath),
+                        Path.GetFullPath(files[0]));
+                    AssertBytesEqual(
+                        competing,
+                        File.ReadAllBytes(manifestPath));
+                });
         }
 
         private static readonly string[] TraceFileNames =

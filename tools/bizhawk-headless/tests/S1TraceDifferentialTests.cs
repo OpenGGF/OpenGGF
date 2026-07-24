@@ -2,44 +2,89 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Text.RegularExpressions;
 
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Differential gate proving the native trace capture reproduces the Lua
-    /// recorder byte-for-byte against the canonical GHZ1 fixture
-    /// (src/test/resources/traces/s1/ghz1_fullrun/). Runs the trace-mode CLI
-    /// end-to-end through run.sh and asserts the canonical physics.csv and
-    /// aux_state.jsonl sha256 hashes, the detected BK2 frame offset of 840,
+    /// Differential gates proving the native trace capture reproduces the Lua
+    /// recorder byte-for-byte against the canonical S1 fixtures
+    /// (src/test/resources/traces/s1/ghz1_fullrun/ and
+    /// src/test/resources/traces/s1/mz1_fullrun/). Each case runs the
+    /// trace-mode CLI end-to-end through run.sh and asserts the canonical
+    /// physics.csv and aux_state.jsonl sha256 hashes (fixtures stored only as
+    /// .gz are hashed after decompression), the detected BK2 frame offset,
     /// and metadata.json equality normalized only on the recording_date
     /// value. Skips (does not pass) when S1_ROM_PATH or a BizHawk
     /// distribution is absent; fails (does not skip) on any hash mismatch.
     /// </summary>
     internal static class S1TraceDifferentialTests
     {
-        private const string CanonicalPhysicsSha256 =
-            "dd0a03bfddefa9570d4b49ee2d4ea5e35e2b8141147e17ab482a3654d311cb66";
-        private const string CanonicalAuxStateSha256 =
-            "026794b175c7fea65491f57cbf5a83684f183b802c7fabaa15eb699e82184a86";
-        private const int CanonicalBk2FrameOffset = 840;
-        private const int CanonicalTraceFrameCount = 3905;
-        private const int CanonicalMovieFrameCount = 4806;
         private const int CaptureTimeoutMilliseconds = 600000;
         private const string RecordingDateLinePrefix =
             "  \"recording_date\": \"";
         private static readonly Regex RecordingDateLine = new Regex(
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
+        private sealed class CanonicalTrace
+        {
+            public string CaseName;
+            public string FixtureDirectoryName;
+            public string MovieFileName;
+            public string PhysicsSha256;
+            public string AuxStateSha256;
+            public int Bk2FrameOffset;
+            public int TraceFrameCount;
+            public int MovieFrameCount;
+        }
+
+        private static readonly CanonicalTrace Ghz1 = new CanonicalTrace
+        {
+            CaseName = "GHZ1",
+            FixtureDirectoryName = "ghz1_fullrun",
+            MovieFileName = "ghz1_fullrun.bk2",
+            PhysicsSha256 =
+                "dd0a03bfddefa9570d4b49ee2d4ea5e35e2b8141147e17ab482a3654d3"
+                + "11cb66",
+            AuxStateSha256 =
+                "026794b175c7fea65491f57cbf5a83684f183b802c7fabaa15eb699e82"
+                + "184a86",
+            Bk2FrameOffset = 840,
+            TraceFrameCount = 3905,
+            MovieFrameCount = 4806
+        };
+
+        private static readonly CanonicalTrace Mz1 = new CanonicalTrace
+        {
+            CaseName = "MZ1",
+            FixtureDirectoryName = "mz1_fullrun",
+            MovieFileName = "s1-mz1.bk2",
+            PhysicsSha256 =
+                "25f511e6470e60c5769897161755d0634f9c9f02b2df9c164dcbef7b6c"
+                + "1828f3",
+            AuxStateSha256 =
+                "1c942da3a877950e78c1941f63aabee72ea434103ef154e276232bd74e"
+                + "d331e8",
+            Bk2FrameOffset = 1075,
+            TraceFrameCount = 7936,
+            MovieFrameCount = 9012
+        };
+
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
                 "S1TraceDifferential native capture matches canonical GHZ1"
                 + " trace",
-                NativeCaptureMatchesCanonicalGhz1Trace));
+                () => NativeCaptureMatchesCanonicalTrace(Ghz1)));
+            tests.Add(new TestMain.TestCase(
+                "S1TraceDifferential native capture matches canonical MZ1"
+                + " trace",
+                () => NativeCaptureMatchesCanonicalTrace(Mz1)));
         }
 
-        private static void NativeCaptureMatchesCanonicalGhz1Trace()
+        private static void NativeCaptureMatchesCanonicalTrace(
+            CanonicalTrace trace)
         {
             EndToEndTests.EndToEndDependencies dependencies =
                 EndToEndTests.ResolveEndToEndDependencies(
@@ -62,17 +107,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "resources",
                 "traces",
                 "s1",
-                "ghz1_fullrun");
+                trace.FixtureDirectoryName);
             string moviePath = Path.Combine(
                 traceDirectory,
-                "ghz1_fullrun.bk2");
+                trace.MovieFileName);
             AssertEx.Equal(
-                CanonicalPhysicsSha256,
-                EndToEndTests.ComputeSha256(
+                trace.PhysicsSha256,
+                ComputeFixtureSha256(
                     Path.Combine(traceDirectory, "physics.csv")));
             AssertEx.Equal(
-                CanonicalAuxStateSha256,
-                EndToEndTests.ComputeSha256(
+                trace.AuxStateSha256,
+                ComputeFixtureSha256(
                     Path.Combine(traceDirectory, "aux_state.jsonl")));
 
             string root = Path.Combine(
@@ -88,14 +133,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     output);
 
                 AssertEx.Equal(
-                    ExpectedStdout(installation, output),
+                    ExpectedStdout(installation, trace, output),
                     stdout);
                 AssertEx.Equal(
-                    CanonicalPhysicsSha256,
+                    trace.PhysicsSha256,
                     EndToEndTests.ComputeSha256(
                         Path.Combine(output, "physics.csv")));
                 AssertEx.Equal(
-                    CanonicalAuxStateSha256,
+                    trace.AuxStateSha256,
                     EndToEndTests.ComputeSha256(
                         Path.Combine(output, "aux_state.jsonl")));
                 AssertDateNormalizedMetadataEquality(
@@ -108,6 +153,40 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 {
                     Directory.Delete(root, true);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Hashes a canonical fixture file that may be stored plain or only
+        /// gzip-compressed (mz1_fullrun ships physics.csv.gz and
+        /// aux_state.jsonl.gz without plain copies). The plain file wins when
+        /// present; otherwise the .gz sibling is decompressed in memory and
+        /// the decompressed bytes are hashed. The fixture itself is never
+        /// written to.
+        /// </summary>
+        private static string ComputeFixtureSha256(string plainPath)
+        {
+            if (File.Exists(plainPath))
+            {
+                return EndToEndTests.ComputeSha256(plainPath);
+            }
+            string gzipPath = plainPath + ".gz";
+            if (!File.Exists(gzipPath))
+            {
+                throw new InvalidOperationException(
+                    "Fixture file missing (plain and .gz): " + plainPath);
+            }
+            using (FileStream compressed = File.OpenRead(gzipPath))
+            using (var gzip = new GZipStream(
+                compressed,
+                CompressionMode.Decompress))
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            {
+                byte[] hash = sha.ComputeHash(gzip);
+                return BitConverter
+                    .ToString(hash)
+                    .Replace("-", string.Empty)
+                    .ToLowerInvariant();
             }
         }
 
@@ -148,14 +227,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static string ExpectedStdout(
             BizHawkInstallation installation,
+            CanonicalTrace trace,
             string output)
         {
             return
                 "BizHawk: " + installation.ManagedVersion + "\n"
                 + "ROM SHA-1: " + RomIdentity.Sonic1Rev01Sha1 + "\n"
-                + "Movie frames: " + CanonicalMovieFrameCount + "\n"
-                + "BK2 frame offset: " + CanonicalBk2FrameOffset + "\n"
-                + "Trace frames: " + CanonicalTraceFrameCount + "\n"
+                + "Movie frames: " + trace.MovieFrameCount + "\n"
+                + "BK2 frame offset: " + trace.Bk2FrameOffset + "\n"
+                + "Trace frames: " + trace.TraceFrameCount + "\n"
                 + "Physics CSV: "
                 + Path.Combine(output, "physics.csv") + "\n"
                 + "Aux state JSONL: "

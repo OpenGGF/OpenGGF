@@ -187,7 +187,12 @@ namespace OpenGGF.BizHawk.Headless
             }
         }
 
-        private static void ApplyFrame(Bk2Frame frame, IGpgxHost host)
+        /// <summary>
+        /// Applies one BK2 movie row to the host controller in the shared
+        /// button order. Internal so the S2 capture runner reuses the exact
+        /// same input application instead of forking it.
+        /// </summary>
+        internal static void ApplyFrame(Bk2Frame frame, IGpgxHost host)
         {
             host.ClearButtons();
             SetIfPressed(host, "Power", frame.Power);
