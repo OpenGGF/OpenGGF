@@ -21,6 +21,13 @@ namespace OpenGGF.BizHawk.Headless
         public const int FrameCount = 0xFE04;            // u16be v_framecount
         public const int VblankWord = 0xFE0E;            // u16be VBlank word (NOT 0xFE0C)
 
+        // Special-stage state (s1_complete_run_recorder.lua run mode).
+        public const int SsAngle = 0xF780;               // u16be v_ssangle
+        public const int SsRotate = 0xF782;              // u16be v_ssrotate
+        public const int SsBgAnim = 0xF7A0;              // u16be v_ssbganim
+        public const int Emeralds = 0xFE57;              // u8 v_emeralds (count 0-6)
+        public const int LastSpecial = 0xFE16;           // u8 v_lastspecial (0-5)
+
         // ObjPosLoad cursor state.
         public const int OplScreen = 0xF76E;             // u16be v_opl_screen
         public const int OplDataForward = 0xF770;        // u32be v_opl_data forward cursor

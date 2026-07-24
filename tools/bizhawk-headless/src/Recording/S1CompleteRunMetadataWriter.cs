@@ -64,6 +64,44 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             string sourceBk2)
         {
+            return Format(
+                zoneId,
+                actRaw,
+                bk2FrameOffset,
+                traceFrameCount,
+                startX,
+                startY,
+                rngSeed,
+                recordingDate,
+                sourceBk2,
+                LuaScriptVersion);
+        }
+
+        /// <summary>
+        /// Overload with an injectable lua_script_version stamp for run-mode
+        /// captures: level metadata inside a run is byte-identical to the
+        /// plain layout (spec s1-run-mode-behavior.md §7), but the canonical
+        /// run fixtures were captured by an interim script stamped "3.15"
+        /// (see <see cref="S1RunManifestWriter"/> for the provenance chain),
+        /// so run-context reproduction injects the session's stamp instead
+        /// of normalizing the fixture bytes.
+        /// </summary>
+        public static string Format(
+            int zoneId,
+            int actRaw,
+            int bk2FrameOffset,
+            int traceFrameCount,
+            int startX,
+            int startY,
+            uint rngSeed,
+            string recordingDate,
+            string sourceBk2,
+            string luaScriptVersion)
+        {
+            if (luaScriptVersion == null)
+            {
+                throw new ArgumentNullException("luaScriptVersion");
+            }
             if (recordingDate == null)
             {
                 throw new ArgumentNullException("recordingDate");
@@ -106,7 +144,7 @@ namespace OpenGGF.BizHawk.Headless
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
             json.Append("  \"lua_script_version\": \"")
-                .Append(LuaScriptVersion).Append("\",\n");
+                .Append(luaScriptVersion).Append("\",\n");
             json.Append("  \"trace_schema\": 4,\n");
             json.Append("  \"csv_version\": 7,\n");
             json.Append(AuxSchemaExtrasLine);

@@ -13,7 +13,7 @@ namespace OpenGGF.BizHawk.Headless
     public sealed class S2RunSegmentOutput
     {
         public S2RunSegmentOutput(
-            S2RunManifestSegment manifestEntry,
+            RunManifestSegment manifestEntry,
             string physicsCsv,
             string auxStateJsonl,
             string metadataJson)
@@ -24,7 +24,7 @@ namespace OpenGGF.BizHawk.Headless
             MetadataJson = metadataJson;
         }
 
-        public S2RunManifestSegment ManifestEntry { get; private set; }
+        public RunManifestSegment ManifestEntry { get; private set; }
 
         public string DirToken
         {
@@ -45,7 +45,7 @@ namespace OpenGGF.BizHawk.Headless
     {
         public S2RunCaptureResult(
             IList<S2RunSegmentOutput> segments,
-            IList<S2RunManifestTransition> transitions,
+            IList<RunManifestTransition> transitions,
             string runManifestJson)
         {
             Segments = segments;
@@ -54,7 +54,7 @@ namespace OpenGGF.BizHawk.Headless
         }
 
         public IList<S2RunSegmentOutput> Segments { get; private set; }
-        public IList<S2RunManifestTransition> Transitions { get; private set; }
+        public IList<RunManifestTransition> Transitions { get; private set; }
         public string RunManifestJson { get; private set; }
     }
 
@@ -262,8 +262,8 @@ namespace OpenGGF.BizHawk.Headless
 
             private readonly List<S2RunSegmentOutput> segments =
                 new List<S2RunSegmentOutput>();
-            private readonly List<S2RunManifestTransition> transitions =
-                new List<S2RunManifestTransition>();
+            private readonly List<RunManifestTransition> transitions =
+                new List<RunManifestTransition>();
 
             // Armed-segment state (shared between level and ss segments,
             // exactly one of which can be armed at a time).
@@ -337,12 +337,12 @@ namespace OpenGGF.BizHawk.Headless
                 // genuinely records 0 (§3).
                 if (segments.Count > 0
                     && segments[segments.Count - 1].ManifestEntry.Kind
-                        == S2RunManifestSegment.SpecialStageKind)
+                        == RunManifestSegment.SpecialStageKind)
                 {
-                    var exit = new S2RunManifestTransition(
+                    var exit = new RunManifestTransition(
                         segments.Count - 1,
                         segments.Count,
-                        S2RunManifestTransition.StageExitKind,
+                        RunManifestTransition.StageExitKind,
                         frameNow);
                     exit.RingsAfter = S2Ram.U16(host, S2Ram.RingCount);
                     exit.EmeraldsAfter = S2Ram.U8(host, AddrEmeralds);
@@ -398,9 +398,9 @@ namespace OpenGGF.BizHawk.Headless
                     runId,
                     segments.Count);
                 segments.Add(new S2RunSegmentOutput(
-                    new S2RunManifestSegment(
+                    new RunManifestSegment(
                         dirToken,
-                        S2RunManifestSegment.LevelKind,
+                        RunManifestSegment.LevelKind,
                         S2TraceCaptureRunner.GameplayUnlockProfile,
                         bk2FrameOffset,
                         traceFrame,
@@ -423,10 +423,10 @@ namespace OpenGGF.BizHawk.Headless
             internal void PushStarpostSpecialTransition(
                 int frameNow, IGpgxHost host)
             {
-                var entry = new S2RunManifestTransition(
+                var entry = new RunManifestTransition(
                     segments.Count - 1,
                     segments.Count,
-                    S2RunManifestTransition.StarpostSpecialKind,
+                    RunManifestTransition.StarpostSpecialKind,
                     frameNow);
                 entry.SpecialBonusEntryFlag = S2Ram.U8(host, AddrBigringFlag);
                 entry.SavedXPos = S2Ram.U16(host, AddrSavedXPos);
@@ -486,9 +486,9 @@ namespace OpenGGF.BizHawk.Headless
                     runId,
                     segments.Count);
                 segments.Add(new S2RunSegmentOutput(
-                    new S2RunManifestSegment(
+                    new RunManifestSegment(
                         dirToken,
-                        S2RunManifestSegment.SpecialStageKind,
+                        RunManifestSegment.SpecialStageKind,
                         "s2_special_stage",
                         bk2FrameOffset,
                         traceFrame,
@@ -524,7 +524,7 @@ namespace OpenGGF.BizHawk.Headless
                 if (!manifestWritten)
                 {
                     var manifestSegments =
-                        new List<S2RunManifestSegment>(segments.Count);
+                        new List<RunManifestSegment>(segments.Count);
                     foreach (S2RunSegmentOutput segment in segments)
                     {
                         manifestSegments.Add(segment.ManifestEntry);

@@ -724,7 +724,7 @@ namespace BizHawk.Headless.Gpgx
                     .Append('\n');
                 foreach (S2RunSegmentOutput segment in result.Segments)
                 {
-                    S2RunManifestSegment entry = segment.ManifestEntry;
+                    RunManifestSegment entry = segment.ManifestEntry;
                     summary.Append("Segment ").Append(entry.Dir)
                         .Append(": kind=").Append(entry.Kind)
                         .Append(", BK2 frame offset=")

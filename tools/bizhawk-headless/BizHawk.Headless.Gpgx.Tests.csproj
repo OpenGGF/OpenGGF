@@ -45,7 +45,10 @@
     <Compile Include="tests/S1AuxEventEngineTests.cs" />
     <Compile Include="tests/S1CompleteRunCaptureRunnerTests.cs" />
     <Compile Include="tests/S1CompleteRunMetadataWriterTests.cs" />
+    <Compile Include="tests/S1RunCaptureRunnerTests.cs" />
+    <Compile Include="tests/S1RunManifestWriterTests.cs" />
     <Compile Include="tests/S1SmokeRecorderTests.cs" />
+    <Compile Include="tests/S1SpecialStageWriterTests.cs" />
     <Compile Include="tests/S1TraceCaptureRunnerTests.cs" />
     <Compile Include="tests/S1TraceDifferentialTests.cs" />
     <Compile Include="tests/S1TraceCsvWriterTests.cs" />
