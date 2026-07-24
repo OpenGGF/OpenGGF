@@ -954,11 +954,21 @@ public class AudioManager implements MusicRestoreSink {
                     return;
                 }
             }
+            if (deferredBackendRestore != null && backend != null) {
+                try {
+                    backend.commitLogicalRestore(deferredBackendRestore);
+                } catch (RuntimeException failure) {
+                    try {
+                        backend.rollbackLogicalRestore(
+                                deferredBackendRestore);
+                    } catch (RuntimeException rollbackFailure) {
+                        failure.addSuppressed(rollbackFailure);
+                    }
+                    throw failure;
+                }
+            }
             if (shadowProducer != null) {
                 shadowProducer.endReverse();
-            }
-            if (deferredBackendRestore != null && backend != null) {
-                backend.commitLogicalRestore(deferredBackendRestore);
             }
             if (selected != null) {
                 ringLeft = selected.ringLeft();

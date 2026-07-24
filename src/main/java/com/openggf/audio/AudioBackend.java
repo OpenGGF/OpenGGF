@@ -190,6 +190,15 @@ public interface AudioBackend {
                 restore.preservePresentationQueue());
     }
 
+    /**
+     * Reverts a prepared restore after publication failed. Implementations
+     * whose commit can publish mutable state must retain the exact prior
+     * object graph in the prepared token so retry does not reconstruct or
+     * advance either timeline.
+     */
+    default void rollbackLogicalRestore(PreparedLogicalRestore prepared) {
+    }
+
     record DeferredLogicalRestore(
             AudioBackendLogicalSnapshot snapshot,
             SmpsDriverSnapshot.DependencyResolver resolver,

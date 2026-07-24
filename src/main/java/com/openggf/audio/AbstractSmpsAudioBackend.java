@@ -97,8 +97,25 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             SmpsDriver standaloneSfxDriver,
             Deque<MusicState> overrideStack,
             AudioBackendLogicalSnapshot snapshot,
-            boolean preservePresentationQueue)
+            boolean preservePresentationQueue,
+            LegacyLiveState prior)
             implements AudioBackend.PreparedLogicalRestore {
+    }
+
+    private record LegacyLiveState(
+            AudioStream currentStream,
+            AudioStream sfxStream,
+            SmpsSequencer currentSmps,
+            SmpsDriver smpsDriver,
+            AudioSourceDescriptor currentMusicDescriptor,
+            int currentMusicId,
+            AudioSourceDescriptor pendingMusicDescriptor,
+            boolean sfxBlocked,
+            boolean pendingRestore,
+            boolean speedShoesEnabled,
+            int speedMultiplier,
+            Deque<MusicState> overrideStack,
+            SmpsCoordFlagRuntimeState.Snapshot coordState) {
     }
 
     private final Deque<MusicState> musicStack = new ArrayDeque<>();
@@ -893,6 +910,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
         synchronized (streamLock) {
+            LegacyLiveState prior = captureLiveLogicalState();
             SmpsCoordFlagRuntimeState.Snapshot previousCoord =
                     legacyCoordFlagHandlers.state().snapshot();
             try {
@@ -916,7 +934,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                                 snapshot.speedMultiplier());
                 return new PreparedSmpsLogicalRestore(
                         this, preparedMusic, preparedSfx, preparedOverrides,
-                        snapshot, preservePresentationQueue);
+                        snapshot, preservePresentationQueue,
+                        prior);
             } catch (RuntimeException failure) {
                 throw failure;
             } finally {
@@ -928,11 +947,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     @Override
     public void commitLogicalRestore(
             AudioBackend.PreparedLogicalRestore restore) {
-        if (!(restore instanceof PreparedSmpsLogicalRestore prepared)
-                || prepared.owner() != this) {
-            throw new IllegalArgumentException(
-                    "Prepared restore belongs to a different backend");
-        }
+        PreparedSmpsLogicalRestore prepared = requirePreparedRestore(restore);
         AudioBackendLogicalSnapshot snapshot = prepared.snapshot();
         synchronized (streamLock) {
             legacyCoordFlagHandlers.state().restore(
@@ -975,6 +990,53 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         if (!prepared.preservePresentationQueue()) {
             hookStopAndClearAllMusicBuffers();
         }
+    }
+
+    @Override
+    public void rollbackLogicalRestore(
+            AudioBackend.PreparedLogicalRestore restore) {
+        PreparedSmpsLogicalRestore prepared = requirePreparedRestore(restore);
+        synchronized (streamLock) {
+            restoreLiveLogicalState(prepared.prior());
+            bindRuntimePresentationStreams();
+        }
+    }
+
+    private PreparedSmpsLogicalRestore requirePreparedRestore(
+            AudioBackend.PreparedLogicalRestore restore) {
+        if (!(restore instanceof PreparedSmpsLogicalRestore prepared)
+                || prepared.owner() != this) {
+            throw new IllegalArgumentException(
+                    "Prepared restore belongs to a different backend");
+        }
+        return prepared;
+    }
+
+    private LegacyLiveState captureLiveLogicalState() {
+        return new LegacyLiveState(
+                currentStream, sfxStream, currentSmps, smpsDriver,
+                currentMusicDescriptor, currentMusicId,
+                pendingMusicDescriptor, sfxBlocked, pendingRestore,
+                speedShoesEnabled, speedMultiplier,
+                new ArrayDeque<>(musicStack),
+                legacyCoordFlagHandlers.state().snapshot());
+    }
+
+    private void restoreLiveLogicalState(LegacyLiveState state) {
+        currentStream = state.currentStream();
+        sfxStream = state.sfxStream();
+        currentSmps = state.currentSmps();
+        smpsDriver = state.smpsDriver();
+        currentMusicDescriptor = state.currentMusicDescriptor();
+        currentMusicId = state.currentMusicId();
+        pendingMusicDescriptor = state.pendingMusicDescriptor();
+        sfxBlocked = state.sfxBlocked();
+        pendingRestore = state.pendingRestore();
+        speedShoesEnabled = state.speedShoesEnabled();
+        speedMultiplier = state.speedMultiplier();
+        musicStack.clear();
+        musicStack.addAll(state.overrideStack());
+        legacyCoordFlagHandlers.state().restore(state.coordState());
     }
 
     private void rebindFadeCompleteCallbackIfNeeded() {
