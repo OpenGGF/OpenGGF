@@ -10,15 +10,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// <summary>
     /// Differential gate proving the native S3K standard trace capture
     /// reproduces the Lua recorder (tools/bizhawk/s3k_trace_recorder.lua)
-    /// byte-for-byte against the canonical AIZ end-to-end fixture
-    /// src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/. The case runs
-    /// the trace-mode CLI end-to-end through run.sh (game auto-detected
-    /// from the S3K locked-on ROM) with --trace-profile aiz_end_to_end and
-    /// asserts:
+    /// byte-for-byte against the canonical fixtures under
+    /// src/test/resources/traces/s3k/. Each case runs the trace-mode CLI
+    /// end-to-end through run.sh (game auto-detected from the S3K
+    /// locked-on ROM) with the fixture's own --trace-profile and asserts:
     ///
-    /// - the exact stdout contract, including BK2 frame offset 511 and
-    ///   20798 trace frames (the AIZ movie's 21309 input rows exactly:
-    ///   511 + 20798, so the run ends on the BK2-end guard);
+    /// - the exact stdout contract, including the canonical BK2 frame
+    ///   offset and trace frame count;
     /// - physics.csv and aux_state.jsonl sha256 hashes with ZERO
     ///   normalization — the fixtures ship gzipped only, so the canonical
     ///   bytes are decompressed read-only into the temp root and hashed
@@ -26,12 +24,26 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   src/test/resources/traces/ are never written to.
     /// - metadata.json line-for-line equality except the two deltas
     ///   pinned by docs/s3k-trace-recorder-behavior.md §6.2: the
-    ///   recording_date value (nondeterministic) and the fixture's
+    ///   recording_date value (nondeterministic) and the fixtures'
     ///   lua_script_version "6.28-s3k" being produced as "6.30-s3k" (the
-    ///   v6.29/v6.30 Lua commits changed nothing else in AIZ output, and
-    ///   the AIZ physics.csv.gz was regenerated under the v6.30 input
-    ///   rule). Both deltas are asserted as exact literals — never a loose
-    ///   regex over the version, and no other line may differ.
+    ///   v6.29/v6.30 Lua commits changed nothing else in these fixtures'
+    ///   output, and the physics.csv.gz bytes were regenerated under the
+    ///   v6.30 input rule). Both deltas are asserted as exact literals —
+    ///   never a loose regex over the version, and no other line may
+    ///   differ.
+    ///
+    /// The cases deliberately cover both terminating profiles:
+    ///
+    /// - aiz1_to_hcz_fullrun / aiz_end_to_end records its arm frame as row
+    ///   0 and ends on the BK2-end guard (511 + 20798 == the movie's 21309
+    ///   input rows exactly);
+    /// - cnz / level_gated_reset_aware drops its arm frame, survives the
+    ///   pause+A soft reset out of AIZ through the discard-and-re-arm path
+    ///   (offset 3171 belongs to the LAST armed segment), and finalizes on
+    ///   the zone-leave check rather than either movie-end stop (3171 +
+    ///   42253 == 45424, short of the movie's 45597 input rows) — so it
+    ///   also pins that the zone-leave row is never recorded and that the
+    ///   finalization aux checkpoint lands at frame == the row count.
     ///
     /// Skips (does not pass) when S3K_ROM_PATH, a BizHawk distribution, or
     /// the fixture directory is absent; fails (does not skip) on any
@@ -66,12 +78,29 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "1fd26d37b3d07b5a95dd355bd56d9ba39b5cf63e68e93233320efd60"
                 + "7646979e");
 
+        private static readonly S3KDifferentialCase CnzLevelGatedCase =
+            new S3KDifferentialCase(
+                "cnz",
+                "s3k-cnz-sonic-tails.bk2",
+                "level_gated_reset_aware",
+                3171,
+                42253,
+                45597,
+                "08e7920aa2ab358adb8a051d3e6b8aa6fc23a9c90b783b396e28cdd73"
+                + "9f8cf58",
+                "661c0b58cf65368dd87f20db146076cf5e2893656648f575aef4a8163"
+                + "0543ce1");
+
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
                 "S3KTraceDifferential native capture matches canonical AIZ"
                 + " end-to-end trace",
                 () => NativeCaptureMatchesCanonicalTrace(AizEndToEndCase)));
+            tests.Add(new TestMain.TestCase(
+                "S3KTraceDifferential native capture matches canonical CNZ"
+                + " level-gated trace",
+                () => NativeCaptureMatchesCanonicalTrace(CnzLevelGatedCase)));
         }
 
         /// <summary>
