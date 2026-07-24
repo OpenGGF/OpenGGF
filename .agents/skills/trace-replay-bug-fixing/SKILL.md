@@ -103,8 +103,8 @@ the recorder is unchanged. Pick by game:
 |---|---|---|
 | S1 standard + complete-run | **native** (`tools/bizhawk-headless/`) | Migrated and gated |
 | S2 all modes + complete-run | **native** | Migrated and gated |
-| S3K standard | Lua (`tools/bizhawk/s3k_trace_recorder.lua`) | Native port in flight — check `tools/bizhawk-headless/docs/` for an `s3k-*-behavior.md` spec before assuming |
-| S3K complete-run | Lua (`s3k_complete_run_recorder.lua`) | Not yet migrated |
+| S3K standard | **native** | Migrated and gated (AIZ end-to-end, CNZ, MGZ). Hook-driven aux families are deferred, and the CLI refuses every unmodeled `OGGF_*` recorder variable rather than diverging silently |
+| S3K complete-run | Lua (`s3k_complete_run_recorder.lua`) | Not yet migrated — everything stamped `6.32-s3k-completerun` (`runs/`, `special_stage/`, `bonus_*`, `*_completerun`) |
 
 **Native harness (`tools/bizhawk-headless/`)** — Linux/Mono, no display required, ~1240-2790
 fps vs ~840 fps for Lua-on-Linux.
@@ -381,8 +381,8 @@ same frame's `ObjectMoveAndFall` from the marker (`docs/s2disasm/s2.asm:40736-40
 
 When you need new diagnostic data, regenerate the trace.
 
-**S1 / S2 — native harness (preferred).** No display, no EmuHawk process to babysit, and
-it fails loudly instead of silently writing nothing:
+**S1 / S2 / S3K standard — native harness (preferred).** No display, no EmuHawk process to
+babysit, and it fails loudly instead of silently writing nothing:
 
 ```bash
 tools/bizhawk-headless/run.sh \
@@ -398,8 +398,18 @@ run-mode/complete-run captures, and add `--gameplay-segment <n>` for S2 segment 
 ROM paths come from `S1_ROM_PATH` / `S2_ROM_PATH` / `S3K_ROM_PATH`, following the
 SKIP-when-absent convention.
 
-**S3K — Lua on Linux.** Lua captures do work here; the old "Windows only" README note is
-stale. Clear the scratch dir first, since the recorder appends into it:
+For S3K the profile is `aiz_end_to_end`, `level_gated_reset_aware`, or `gameplay_unlock`
+(passed as `--trace-profile`, not the Lua's `OGGF_S3K_TRACE_PROFILE` env var). The S3K CLI
+**refuses** to run if any unmodeled `OGGF_*` recorder variable is set — hook-arming,
+`*_RANGE` window overrides, or `OGGF_TRACE_STOP_FRAME` / `OGGF_BK2_FRAME_COUNT` — so clear
+them from your shell rather than working around the error, since honoring them silently
+would produce non-canonical output.
+
+**S3K via Lua** — still required for the complete-run recorder
+(`s3k_complete_run_recorder.lua`, everything stamped `6.32-s3k-completerun`), and for the
+hook-driven aux families the native port defers. Lua captures do work on Linux; the old
+"Windows only" README note is stale. Clear the scratch dir first, since the recorder
+appends into it (swap in `s3k_complete_run_recorder.lua` for complete-run captures):
 
 ```bash
 rm -rf tools/bizhawk/trace_output
@@ -425,10 +435,10 @@ When a divergence can't be pinpointed without more ROM-side state:
 
 1. **Recorder side.** Emit a JSONL line with a new `event` type from the per-frame entry,
    reading the RAM block of interest. Bump the recorder version and add an opt-in key to
-   `aux_schema_extras` (e.g. `"<feature>_per_frame"`). On the **native** harness (S1/S2)
-   that means extending the relevant `*AuxEventEngine` and its writer, with a test in
-   `tools/bizhawk-headless/tests/`; on **Lua** (S3K) add a helper function (e.g.
-   `write_<feature>_per_frame()`) and bump `LUA_SCRIPT_VERSION`. If a native recorder gains
+   `aux_schema_extras` (e.g. `"<feature>_per_frame"`). On the **native** harness (S1/S2, and
+   S3K standard) that means extending the relevant `*AuxEventEngine` and its writer, with a
+   test in `tools/bizhawk-headless/tests/`; on **Lua** (S3K complete-run) add a helper
+   function (e.g. `write_<feature>_per_frame()`) and bump `LUA_SCRIPT_VERSION`. If a native recorder gains
    a field the Lua one lacks, the differential gate will fail — extend both, or extend the
    Lua one first since it is the behavioural authority.
    If a focused frontier only needs a few extra fields on an existing generic diagnostic such as `state_snapshot`, add the fields there and force snapshots for a narrow frame window instead of creating a new event type. Typical S1/S2 movement-input questions need both BK2/CSV input and ROM-side `Ctrl_1_Held_Logical` plus `move_lock`, because `Sonic_Move` consumes the logical RAM byte after `ReadJoypads` runs from V-int (`docs/s2disasm/s2.asm:701,1361-1387,36253-36260`).

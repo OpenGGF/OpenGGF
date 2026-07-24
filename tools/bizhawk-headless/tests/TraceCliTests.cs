@@ -79,6 +79,430 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "TraceCli S1 run mode failure leaves no partial outputs",
                 S1RunModeFailureLeavesNoPartialOutputs));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S3K trace publishes with labeled stdout",
+                S3kTracePublishesWithLabeledStdout));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli rejects segment and run arguments with the S3K"
+                + " ROM",
+                RejectsSegmentAndRunArgumentsWithS3kRom));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S3K trace refuses every unmodeled output"
+                + " affecting environment variable",
+                S3kTraceRefusesUnmodeledEnvironment));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S3K trace does not refuse the deferred"
+                + " families' hook-gated window overrides",
+                S3kTraceAcceptsHookGatedWindowEnvironment));
+        }
+
+        /// <summary>
+        /// S3K standard trace (auto-detected from the locked-on ROM's
+        /// SHA-1): the shared three-file publication pipeline with the
+        /// S3K runner and the S2-style stdout contract minus the
+        /// segment line (S3K has no --gameplay-segment).
+        /// </summary>
+        private static void S3kTracePublishesWithLabeledStdout()
+        {
+            S3kTraceCliDependencies dependencies = ResolveS3kDependencies();
+            // 7 rows with detection at frame 3 yields 3 trace rows (the
+            // frame fed by the movie's final input row is never
+            // recorded).
+            WithSyntheticMovie(
+                7,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        var host = new FakeS1Host(
+                            (h, frame) =>
+                            {
+                                if (frame == 3)
+                                {
+                                    h.Ram[0xF600] = 0x0C;
+                                    h.Ram[0xFE10] = 0x03;
+                                }
+                            });
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) => host);
+
+                        AssertEx.Equal(string.Empty, stderr.ToString());
+                        AssertEx.Equal(0, exitCode);
+
+                        string fullOutput = Path.GetFullPath(output);
+                        AssertEx.Equal(
+                            "BizHawk: "
+                            + dependencies.ManagedVersion
+                            + "\n"
+                            + "ROM SHA-1: "
+                            + RomIdentity.Sonic3kLockOnSha1
+                            + "\n"
+                            + "Movie frames: 7\n"
+                            + "Trace profile: gameplay_unlock\n"
+                            + "BK2 frame offset: 3\n"
+                            + "Trace frames: 3\n"
+                            + "Physics CSV: "
+                            + Path.Combine(fullOutput, "physics.csv") + "\n"
+                            + "Aux state JSONL: "
+                            + Path.Combine(fullOutput, "aux_state.jsonl")
+                            + "\n"
+                            + "Metadata JSON: "
+                            + Path.Combine(fullOutput, "metadata.json")
+                            + "\n",
+                            stdout.ToString());
+
+                        string physics = File.ReadAllText(
+                            Path.Combine(fullOutput, "physics.csv"));
+                        AssertEx.Equal(
+                            true,
+                            physics.StartsWith(
+                                S3KTraceCsvWriter.Header + "\n0000,"));
+                        string metadata = File.ReadAllText(
+                            Path.Combine(fullOutput, "metadata.json"));
+                        AssertContains(
+                            metadata,
+                            "  \"game\": \"s3k\",\n"
+                            + "  \"zone\": \"cnz\",\n");
+                        AssertContains(
+                            metadata,
+                            "  \"lua_script_version\": \"6.30-s3k\",\n");
+                        AssertContains(
+                            metadata,
+                            "  \"trace_profile\": \"gameplay_unlock\",\n");
+                        AssertContains(
+                            metadata,
+                            "  \"capture_mode\": \"physics_animation_aux"
+                            + "_without_diagnostic_hooks\",\n");
+                    }));
+        }
+
+        /// <summary>
+        /// --gameplay-segment stays S2-only, and --run-id is refused
+        /// until the S3K complete-run recorder migration.
+        /// </summary>
+        private static void RejectsSegmentAndRunArgumentsWithS3kRom()
+        {
+            S3kTraceCliDependencies dependencies = ResolveS3kDependencies();
+            var rejections = new[]
+            {
+                new[]
+                {
+                    "--gameplay-segment", "1",
+                    "only supported with the Sonic 2 ROM"
+                },
+                new[]
+                {
+                    "--run-id", "s3k-run",
+                    "complete-run recorder"
+                }
+            };
+            foreach (string[] rejection in rejections)
+            {
+                WithSyntheticMovie(
+                    4,
+                    moviePath => WithUnusedOutput(
+                        output =>
+                        {
+                            var stdout = new StringWriter(
+                                CultureInfo.InvariantCulture);
+                            var stderr = new StringWriter(
+                                CultureInfo.InvariantCulture);
+
+                            int exitCode = Program.Run(
+                                new[]
+                                {
+                                    "--mode", "trace",
+                                    "--rom", dependencies.RomPath,
+                                    "--movie", moviePath,
+                                    "--output", output,
+                                    rejection[0], rejection[1]
+                                },
+                                stdout,
+                                stderr,
+                                (romPath, syncSettings) =>
+                                    new ScriptedTraceHost(-1));
+
+                            AssertEx.Equal(1, exitCode);
+                            AssertEx.Equal(
+                                string.Empty, stdout.ToString());
+                            AssertContains(
+                                stderr.ToString(), rejection[2]);
+                            AssertEx.Equal(
+                                false,
+                                Directory.Exists(Path.GetFullPath(output))
+                                && Directory.GetFileSystemEntries(
+                                    Path.GetFullPath(output)).Length > 0);
+                        }));
+            }
+        }
+
+        /// <summary>
+        /// The Lua S3K recorder reads its whole diagnostic surface from
+        /// the environment rather than from CLI flags, so "the native CLI
+        /// exposes no such flag" does not stop a variable exported by an
+        /// earlier Lua investigation from changing the capture. The port
+        /// models none of them, so each must be a loud refusal that
+        /// publishes nothing. Covered here:
+        ///
+        /// - the hook switch and the two variables that ARM a deferred
+        ///   hook-driven aux family;
+        /// - the frame-window overrides for the five poll-driven families
+        ///   the port DOES implement with the Lua defaults pinned as
+        ///   constants (aiz_fire_transition, terrain_wall_sensor,
+        ///   collision_response_list_end_of_frame, cnz_cylinder_state,
+        ///   aiz_handoff_terrain_state) — these change aux_state.jsonl
+        ///   with the hook switch off, which is exactly how every gated
+        ///   fixture was captured;
+        /// - the two early-stop variables, which truncate physics.csv and
+        ///   aux_state.jsonl.
+        ///
+        /// Refusal keys on non-emptiness, so a malformed value the Lua
+        /// would have warned about and ignored is refused too rather than
+        /// silently producing a canonical-looking file.
+        /// </summary>
+        private static void S3kTraceRefusesUnmodeledEnvironment()
+        {
+            var refusals = new[]
+            {
+                new[]
+                {
+                    "OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS", "1",
+                    "diagnostic"
+                },
+                new[]
+                {
+                    "OGGF_S3K_CNZ_EVENT_RAM_RANGE", "15620-15735",
+                    "OGGF_S3K_CNZ_EVENT_RAM_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_RNG_CALL_RANGE", "600-700",
+                    "OGGF_S3K_RNG_CALL_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_FIRE_RANGE", "100-200",
+                    "OGGF_S3K_AIZ_FIRE_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_WALL_SENSOR_RANGE", "7000-7100",
+                    "OGGF_S3K_AIZ_WALL_SENSOR_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_CRL_RANGE", "600-700",
+                    "OGGF_S3K_CRL_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_CNZ_CYLINDER_RANGE", "4400-4600",
+                    "OGGF_S3K_CNZ_CYLINDER_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START", "5000",
+                    "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START"
+                },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_END", "5500",
+                    "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_END"
+                },
+                new[]
+                {
+                    "OGGF_TRACE_STOP_FRAME", "120",
+                    "OGGF_TRACE_STOP_FRAME"
+                },
+                new[]
+                {
+                    "OGGF_BK2_FRAME_COUNT", "3",
+                    "OGGF_BK2_FRAME_COUNT"
+                },
+                // A value the Lua would warn about and ignore is still an
+                // operator intent to change the capture: refuse it too.
+                new[]
+                {
+                    "OGGF_S3K_CRL_RANGE", "not-a-range",
+                    "OGGF_S3K_CRL_RANGE"
+                }
+            };
+            foreach (string[] refusal in refusals)
+            {
+                string stderrText = RunS3kTraceWithEnvironment(
+                    refusal[0],
+                    refusal[1],
+                    1);
+                AssertContains(stderrText, refusal[2]);
+                AssertContains(stderrText, "Lua recorder");
+            }
+        }
+
+        /// <summary>
+        /// The refusal must stay scoped to variables that actually change
+        /// output. The window overrides belonging to families the port
+        /// defers entirely (position_write, solid_object_cont_entry,
+        /// aiz_boundary_state, aiz_transition_floor_solid, ...) only ever
+        /// widen a window whose flush is gated on a hook-populated
+        /// `state.seen`/hit list, so with the hook switch off — itself a
+        /// refusal — they change no byte of the Lua's own output either.
+        /// Refusing them would be a false refusal, so this pins that the
+        /// CLI does not name them.
+        /// </summary>
+        private static void S3kTraceAcceptsHookGatedWindowEnvironment()
+        {
+            var accepted = new[]
+            {
+                new[] { "OGGF_S3K_POSITION_WRITE_RANGE", "4788-4792" },
+                new[] { "OGGF_S3K_VELOCITY_WRITE_RANGE", "3640-3660" },
+                new[] { "OGGF_S3K_SOLID_CONT_RANGE", "7600-7625" },
+                new[] { "OGGF_S3K_AIZ_SHIP_LOOP_RANGE", "16320-16335" },
+                new[] { "OGGF_S3K_AIZ_BOUNDARY_RANGE", "4660-4679" },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_TRANSITION_FLOOR_FRAME_START", "5408"
+                },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_TRANSITION_FLOOR_FRAME_END", "5438"
+                }
+            };
+            foreach (string[] entry in accepted)
+            {
+                // The scripted host never arms, so the capture still
+                // fails (exit 1) — but it must fail on the recording, not
+                // on the variable.
+                string stderrText = RunS3kTraceWithEnvironment(
+                    entry[0],
+                    entry[1],
+                    1);
+                if (stderrText.Contains(entry[0]))
+                {
+                    throw new Exception(
+                        "S3K trace refused " + entry[0] + ", which only"
+                        + " retunes a hook-gated family the port defers"
+                        + " and therefore cannot change output with the"
+                        + " diagnostic hooks off. stderr: " + stderrText);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Runs the S3K trace CLI once with a single environment variable
+        /// set (and restored afterwards), asserting the exit code, an
+        /// empty stdout, and that nothing was published. Returns stderr.
+        /// </summary>
+        private static string RunS3kTraceWithEnvironment(
+            string variable,
+            string value,
+            int expectedExitCode)
+        {
+            S3kTraceCliDependencies dependencies = ResolveS3kDependencies();
+            string captured = null;
+            WithSyntheticMovie(
+                4,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        Environment.SetEnvironmentVariable(
+                            variable, value);
+                        try
+                        {
+                            var stdout = new StringWriter(
+                                CultureInfo.InvariantCulture);
+                            var stderr = new StringWriter(
+                                CultureInfo.InvariantCulture);
+
+                            int exitCode = Program.Run(
+                                new[]
+                                {
+                                    "--mode", "trace",
+                                    "--rom", dependencies.RomPath,
+                                    "--movie", moviePath,
+                                    "--output", output
+                                },
+                                stdout,
+                                stderr,
+                                (romPath, syncSettings) =>
+                                    new ScriptedTraceHost(-1));
+
+                            AssertEx.Equal(expectedExitCode, exitCode);
+                            AssertEx.Equal(
+                                string.Empty, stdout.ToString());
+                            AssertEx.Equal(
+                                false,
+                                Directory.Exists(
+                                    Path.GetFullPath(output))
+                                && Directory.GetFileSystemEntries(
+                                    Path.GetFullPath(output))
+                                    .Length > 0);
+                            captured = stderr.ToString();
+                        }
+                        finally
+                        {
+                            Environment.SetEnvironmentVariable(
+                                variable, null);
+                        }
+                    }));
+            return captured;
+        }
+
+        private static S3kTraceCliDependencies ResolveS3kDependencies()
+        {
+            string romPath =
+                Environment.GetEnvironmentVariable("S3K_ROM_PATH");
+            string bizHawkHome =
+                Environment.GetEnvironmentVariable("BIZHAWK_HOME");
+            var missing = new List<string>();
+            if (string.IsNullOrEmpty(romPath))
+            {
+                missing.Add("S3K_ROM_PATH is not set");
+            }
+            if (string.IsNullOrEmpty(bizHawkHome))
+            {
+                missing.Add("BIZHAWK_HOME is not set");
+            }
+            if (missing.Count != 0)
+            {
+                throw new TestMain.SkipTestException(
+                    string.Join("; ", missing.ToArray()));
+            }
+
+            // Present inputs are validated, not skipped over.
+            romPath = Path.GetFullPath(romPath);
+            RomIdentity.ValidateSonic3kLockOn(File.ReadAllBytes(romPath));
+            BizHawkInstallation installation =
+                BizHawkInstallation.Validate(bizHawkHome);
+            return new S3kTraceCliDependencies(
+                romPath,
+                installation.ManagedVersion.ToString());
+        }
+
+        private sealed class S3kTraceCliDependencies
+        {
+            public S3kTraceCliDependencies(
+                string romPath,
+                string managedVersion)
+            {
+                RomPath = romPath;
+                ManagedVersion = managedVersion;
+            }
+
+            public string RomPath { get; private set; }
+            public string ManagedVersion { get; private set; }
         }
 
         /// <summary>

@@ -1,0 +1,241 @@
+using System;
+using System.Globalization;
+using System.Text;
+
+namespace OpenGGF.BizHawk.Headless
+{
+    /// <summary>
+    /// Byte-exact port of the S3K Lua trace recorder's metadata.json
+    /// layout (tools/bizhawk/s3k_trace_recorder.lua write_metadata,
+    /// v6.30-s3k, trace_schema 6; spec
+    /// tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md §6):
+    /// 2-space indent, fixed key order, LF line endings, and a trailing
+    /// newline after the closing brace. The Lua rewrites the file at arm,
+    /// every 300 recorded rows, and at finalize; only the final bytes
+    /// survive, so the native port formats once at finish.
+    ///
+    /// Unlike the S1/S2 writers there is no source_bk2/route/segment
+    /// surface; characters/main_character/sidekicks are HARDCODED
+    /// literals, rom_checksum is the Lua's S3K_ROM_CHECKSUM constant (the
+    /// BizHawk header hash of the locked-on image, never computed), and
+    /// notes/aux_schema_extras derive from the trace profile. The
+    /// capture_mode line is emitted unconditionally: the Lua writes it
+    /// only in lightweight mode (LIGHTWEIGHT_REGEN), and the native
+    /// recorder is always lightweight — diagnostic hooks are deferred and
+    /// the CLI refuses OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1. For the same
+    /// reason the env-armed cnz_event_ram_per_frame / rng_call_per_frame
+    /// advertisement entries are never appended (the CLI refuses their
+    /// arming env vars; both were unset for every gated fixture).
+    ///
+    /// The recording date is injected (production passes DateTime.Now as
+    /// yyyy-MM-dd; tests pass a fixed value) — it is the only
+    /// nondeterministic field. Versus the 6.28-stamped fixtures the only
+    /// permitted deltas are the version string, the date, and MGZ's
+    /// leftover pre_trace_osc_frames line (removed in v6.29; never
+    /// emitted here) — spec §6.2 pins them exactly.
+    /// </summary>
+    public static class S3KTraceMetadataWriter
+    {
+        public const string LuaScriptVersion = "6.30-s3k";
+
+        /// <summary>
+        /// The Lua's hardcoded S3K_ROM_CHECKSUM constant: the BizHawk
+        /// movie-header hash of the locked-on combined image (32-hex,
+        /// MD5-shaped). NOT the file SHA-1 used by RomIdentity.
+        /// </summary>
+        public const string RomChecksum = "C5B1C655C19F462ADE0AC4E17A844D10";
+
+        private const string AizNotes =
+            "AIZ intro through HCZ handoff end-to-end fixture";
+        private const string CnzNotes =
+            "CNZ1+CNZ2 Sonic+Tails playthrough from level-select BK2"
+            + " (pause+A reset from AIZ)";
+
+        /// <summary>
+        /// Formats the complete metadata.json contents, including the
+        /// final newline. All start-captured values come from the arm
+        /// frame's RAM. <paramref name="startAct"/> is the raw byte at
+        /// 0xFE11; the emitted "act" is startAct + 1 (1-based, no
+        /// apparent-act remap — the S2 MTZ shift has no S3K analog).
+        /// <paramref name="traceProfile"/> is written VERBATIM (the Lua
+        /// concatenates TRACE_PROFILE raw); notes go through json_quote.
+        /// Profile semantics are string-keyed exactly like the Lua: only
+        /// "aiz_end_to_end" selects the AIZ notes and aux tail, only
+        /// "level_gated_reset_aware" with a cnz start zone selects the
+        /// CNZ notes; every other string gets the non-AIZ tail and empty
+        /// notes.
+        /// </summary>
+        public static string Format(
+            int startZoneId,
+            int startAct,
+            int bk2FrameOffset,
+            int traceFrameCount,
+            int startX,
+            int startY,
+            uint rngSeed,
+            string traceProfile,
+            string recordingDate)
+        {
+            if (traceProfile == null)
+            {
+                throw new ArgumentNullException("traceProfile");
+            }
+            if (recordingDate == null)
+            {
+                throw new ArgumentNullException("recordingDate");
+            }
+
+            bool aiz =
+                traceProfile == S3KTraceCaptureRunner.AizEndToEndProfile;
+            bool levelGated = traceProfile
+                == S3KTraceCaptureRunner.LevelGatedResetAwareProfile;
+            string zoneName = S3KRam.ZoneName(startZoneId);
+
+            string notes = "";
+            if (aiz)
+            {
+                notes = AizNotes;
+            }
+            else if (levelGated && zoneName == "cnz")
+            {
+                notes = CnzNotes;
+            }
+
+            var json = new StringBuilder(1536);
+            json.Append("{\n");
+            json.Append("  \"game\": \"s3k\",\n");
+            json.Append("  \"zone\": \"").Append(zoneName).Append("\",\n");
+            json.Append("  \"zone_id\": ")
+                .Append(Dec(startZoneId)).Append(",\n");
+            json.Append("  \"act\": ").Append(Dec(startAct + 1)).Append(",\n");
+            json.Append("  \"bk2_frame_offset\": ")
+                .Append(Dec(bk2FrameOffset)).Append(",\n");
+            json.Append("  \"trace_frame_count\": ")
+                .Append(Dec(traceFrameCount)).Append(",\n");
+            json.Append("  \"start_x\": \"0x")
+                .Append(Hex4(startX)).Append("\",\n");
+            json.Append("  \"start_y\": \"0x")
+                .Append(Hex4(startY)).Append("\",\n");
+            json.Append("  \"characters\": [\"sonic\", \"tails\"],\n");
+            json.Append("  \"main_character\": \"sonic\",\n");
+            json.Append("  \"sidekicks\": [\"tails\"],\n");
+            json.Append("  \"rng_seed\": \"0x")
+                .Append(Hex8(rngSeed)).Append("\",\n");
+            json.Append("  \"recording_date\": \"")
+                .Append(recordingDate).Append("\",\n");
+            json.Append("  \"lua_script_version\": \"")
+                .Append(LuaScriptVersion).Append("\",\n");
+            json.Append("  \"trace_schema\": 6,\n");
+            json.Append("  \"csv_version\": 7,\n");
+            json.Append("  \"capture_mode\": "
+                + "\"physics_animation_aux_without_diagnostic_hooks\",\n");
+            json.Append("  \"aux_schema_extras\": [");
+            AppendAuxSchemaExtras(json, aiz);
+            json.Append("],\n");
+            json.Append("  \"trace_profile\": \"")
+                .Append(traceProfile).Append("\",\n");
+            json.Append("  \"bizhawk_version\": \"2.11\",\n");
+            json.Append("  \"genesis_core\": \"Genplus-gx\",\n");
+            json.Append("  \"rom_checksum\": \"")
+                .Append(RomChecksum).Append("\",\n");
+            json.Append("  \"notes\": ").Append(JsonQuote(notes)).Append('\n');
+            json.Append("}\n");
+            return json.ToString();
+        }
+
+        /// <summary>
+        /// The fixed-order aux_schema_extras entries, each json_quote-d
+        /// and joined with ", ": the 11-entry base list, then the AIZ
+        /// tail (aiz_end_to_end) or the shared non-AIZ tail (every other
+        /// profile — the advertisement is profile-based, not zone-based,
+        /// so MGZ advertises the CNZ families too). The hook event names
+        /// are advertised unconditionally even though the native recorder
+        /// never emits them — exactly like the lightweight-mode Lua.
+        /// </summary>
+        private static void AppendAuxSchemaExtras(
+            StringBuilder json, bool aiz)
+        {
+            string[] baseEntries =
+            {
+                "cpu_state_per_frame",
+                "oscillation_state_per_frame",
+                "object_state_per_frame",
+                "interact_state_per_frame",
+                "velocity_write_per_frame",
+                "position_write_per_frame",
+                "tails_cpu_normal_step_per_frame",
+                "sidekick_interact_object_per_frame",
+                "control_lock_state_per_frame",
+                "sonic_record_pos_per_frame",
+                "air_countdown_state_per_frame"
+            };
+            string[] tail = aiz
+                ? new[]
+                {
+                    "aiz_boundary_state_per_frame",
+                    "aiz_transition_floor_solid_per_frame",
+                    "aiz_handoff_terrain_state_per_frame",
+                    "terrain_wall_sensor_per_frame",
+                    "aiz_ship_loop_per_frame",
+                    "aiz_fire_transition_per_frame"
+                }
+                : new[]
+                {
+                    "cage_state_per_frame",
+                    "cage_execution_per_frame",
+                    "cnz_cylinder_state_per_frame",
+                    "cnz_cylinder_execution_per_frame",
+                    "solid_object_cont_entry_per_frame",
+                    "collision_response_list_per_frame",
+                    "collision_response_list_end_of_frame"
+                };
+
+            var first = true;
+            foreach (string entry in baseEntries)
+            {
+                AppendEntry(json, entry, ref first);
+            }
+            foreach (string entry in tail)
+            {
+                AppendEntry(json, entry, ref first);
+            }
+        }
+
+        private static void AppendEntry(
+            StringBuilder json, string entry, ref bool first)
+        {
+            if (!first)
+            {
+                json.Append(", ");
+            }
+            first = false;
+            json.Append(JsonQuote(entry));
+        }
+
+        /// <summary>
+        /// json_quote (S3K oggf_trace_common.lua): quote-wrapping with
+        /// backslash-then-quote escaping.
+        /// </summary>
+        private static string JsonQuote(string value)
+        {
+            return "\""
+                + value.Replace("\\", "\\\\").Replace("\"", "\\\"")
+                + "\"";
+        }
+
+        private static string Dec(int value)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private static string Hex4(int value)
+        {
+            return value.ToString("X4", CultureInfo.InvariantCulture);
+        }
+
+        private static string Hex8(uint value)
+        {
+            return value.ToString("X8", CultureInfo.InvariantCulture);
+        }
+    }
+}

@@ -493,6 +493,34 @@ namespace BizHawk.Headless.Gpgx
                             stderr,
                             openHost);
                     }
+                    if (traceGame == "s3k")
+                    {
+                        if (options.GameplaySegment.HasValue)
+                        {
+                            throw new ArgumentException(
+                                "Argument --gameplay-segment is only"
+                                + " supported with the Sonic 2 ROM.");
+                        }
+                        if (options.RunId != null)
+                        {
+                            throw new ArgumentException(
+                                "Argument --run-id is not supported with"
+                                + " the Sonic 3 & Knuckles ROM: the S3K"
+                                + " complete-run recorder"
+                                + " (s3k_complete_run_recorder.lua) has"
+                                + " not been migrated to the native"
+                                + " pipeline yet.");
+                        }
+                        RejectUnmodeledS3kEnvironment();
+                        return RunS3kTrace(
+                            options,
+                            installation,
+                            romSha1,
+                            movie,
+                            stdout,
+                            stderr,
+                            openHost);
+                    }
                     if (options.RunId != null)
                     {
                         return RunS2TraceRun(
@@ -866,6 +894,242 @@ namespace BizHawk.Headless.Gpgx
                     + result.GameplaySegment.ToString(
                         CultureInfo.InvariantCulture)
                     + "\n"
+                    + "BK2 frame offset: "
+                    + result.Bk2FrameOffset.ToString(
+                        CultureInfo.InvariantCulture)
+                    + "\n"
+                    + "Trace frames: "
+                    + result.TraceFrameCount.ToString(
+                        CultureInfo.InvariantCulture)
+                    + "\n"
+                    + "Physics CSV: " + physicsPath + "\n"
+                    + "Aux state JSONL: " + auxStatePath + "\n"
+                    + "Metadata JSON: " + metadataPath + "\n",
+                new NoReplacePublisher());
+        }
+
+        /// <summary>
+        /// The Lua S3K recorder takes its entire diagnostic surface from
+        /// the ENVIRONMENT, never from CLI flags, so "the native CLI does
+        /// not expose that switch" is no protection at all: a variable
+        /// still exported by a frontier-investigation shell silently
+        /// changes what the Lua would have produced from the same movie,
+        /// and the native capture — which models none of it — would be
+        /// committed as canonical with no diagnostic. Every such variable
+        /// is a loud refusal instead. Three classes, all output-affecting:
+        ///
+        /// (a) <c>OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1</c> plus the two
+        ///     variables that ARM a hook-driven aux family the port defers
+        ///     entirely (docs/s3k-profiles-and-hooks.md §2.4). Arming adds
+        ///     the family to metadata's aux_schema_extras and emits events
+        ///     the port can never produce.
+        /// (b) The frame-window overrides for aux families the port DOES
+        ///     implement. These are poll-driven families whose emission
+        ///     depends only on the window (never on a hook hit), and the
+        ///     port pins their windows as the Lua defaults in
+        ///     <see cref="S3KAuxEventEngine"/>'s *Window* constants — so a
+        ///     set override yields a genuinely different aux_state.jsonl
+        ///     with hooks off. Applied unconditionally at Lua script load,
+        ///     independent of the hook switch.
+        /// (c) The Lua's two early-stop variables, which finalize the
+        ///     recording before the movie/zone stop and therefore truncate
+        ///     both physics.csv and aux_state.jsonl.
+        ///
+        /// The window/stop overrides for families the port defers (e.g.
+        /// OGGF_S3K_POSITION_WRITE_RANGE, OGGF_S3K_SOLID_CONT_RANGE,
+        /// OGGF_S3K_AIZ_BOUNDARY_RANGE) are deliberately NOT rejected:
+        /// their flush paths are gated on a hook-set `state.seen`/hit
+        /// list, so with the hook switch off — the only mode the port
+        /// targets, and itself a refusal when set — they change no byte of
+        /// the Lua's own output either.
+        ///
+        /// Rejection keys on non-emptiness, not on parseability: the Lua
+        /// warns and ignores a malformed range, but an operator who
+        /// exported one intended to change the capture and must not be
+        /// handed a silently canonical file. Scoped to the S3K trace
+        /// branch only — the S1/S2 pipelines never consumed these
+        /// variables.
+        /// </summary>
+        private static void RejectUnmodeledS3kEnvironment()
+        {
+            if (Environment.GetEnvironmentVariable(
+                "OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS") == "1")
+            {
+                throw new InvalidOperationException(
+                    "OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1 requests the"
+                    + " Lua recorder's M68K exec/memory-write diagnostic"
+                    + " hooks, which the native S3K recorder does not"
+                    + " implement (deferred; see"
+                    + " tools/bizhawk-headless/docs/"
+                    + "s3k-profiles-and-hooks.md section 2.4). Unset it"
+                    + " or capture with the Lua recorder.");
+            }
+            foreach (string[] entry in UnmodeledS3kEnvironmentVariables)
+            {
+                if (!string.IsNullOrEmpty(
+                    Environment.GetEnvironmentVariable(entry[0])))
+                {
+                    throw new InvalidOperationException(
+                        entry[0] + " " + entry[1] + " Unset it or capture"
+                        + " with the Lua recorder.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// {variable name, reason} for every Lua S3K recorder environment
+        /// variable that changes recorder output and that the native port
+        /// does not model. See
+        /// <see cref="RejectUnmodeledS3kEnvironment"/> for the three
+        /// classes and for why the deferred families' own window
+        /// overrides are absent.
+        /// </summary>
+        private static readonly string[][]
+            UnmodeledS3kEnvironmentVariables =
+        {
+            // (a) Arms a hook-driven family the port defers entirely.
+            new[]
+            {
+                "OGGF_S3K_CNZ_EVENT_RAM_RANGE",
+                HookArmingRejectionReason
+            },
+            new[]
+            {
+                "OGGF_S3K_RNG_CALL_RANGE",
+                HookArmingRejectionReason
+            },
+            // (b) Retunes a poll-driven family the port implements with
+            // the Lua's default window baked in.
+            //   s3k_trace_recorder.lua:3730 -> V628_AIZ_FIRE
+            //   (S3KAuxEventEngine.AizFireWindowStart/End).
+            new[]
+            {
+                "OGGF_S3K_AIZ_FIRE_RANGE",
+                PolledWindowRejectionReason
+            },
+            //   :3932 v613_apply_aiz_wall_range -> V613_AIZ_WALL
+            //   (TerrainWallWindowStart/End).
+            new[]
+            {
+                "OGGF_S3K_AIZ_WALL_SENSOR_RANGE",
+                PolledWindowRejectionReason
+            },
+            //   :4186 v615_apply_range -> V615_CRL's end-of-frame poll,
+            //   which emits whenever in_window() regardless of whether
+            //   Touch_Process was hooked (CrlWindowStart/End).
+            new[]
+            {
+                "OGGF_S3K_CRL_RANGE",
+                PolledWindowRejectionReason
+            },
+            //   :2596 -> V67_CNZ.emit_cnz_cylinder_state_per_frame
+            //   (CnzCylinderWindowStart/End).
+            new[]
+            {
+                "OGGF_S3K_CNZ_CYLINDER_RANGE",
+                PolledWindowRejectionReason
+            },
+            //   :3553-3555 -> V69_AIZ.flush_aiz_handoff_terrain_state,
+            //   whose window gate runs before the hook-state check
+            //   (AizHandoffWindowStart/End).
+            new[]
+            {
+                "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START",
+                PolledWindowRejectionReason
+            },
+            new[]
+            {
+                "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_END",
+                PolledWindowRejectionReason
+            },
+            // (c) Truncates the capture (lua :274-275, honored at
+            // :4514-4528).
+            new[]
+            {
+                "OGGF_TRACE_STOP_FRAME",
+                EarlyStopRejectionReason
+            },
+            new[]
+            {
+                "OGGF_BK2_FRAME_COUNT",
+                EarlyStopRejectionReason
+            }
+        };
+
+        private const string HookArmingRejectionReason =
+            "arms a hook-driven aux event family that the native S3K"
+            + " recorder does not implement (deferred; see"
+            + " tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md"
+            + " section 2.4).";
+
+        private const string PolledWindowRejectionReason =
+            "retunes the frame window of a poll-driven aux event family"
+            + " that the native S3K recorder implements with the Lua's"
+            + " default window pinned as a constant, so honoring it would"
+            + " require rebuilding the port rather than re-running it"
+            + " (see tools/bizhawk-headless/docs/s3k-aux-events.md).";
+
+        private const string EarlyStopRejectionReason =
+            "finalizes the Lua recorder's capture before the movie/zone"
+            + " stop and truncates physics.csv and aux_state.jsonl, which"
+            + " the native S3K recorder does not model (see"
+            + " tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md"
+            + " section 3).";
+
+        /// <summary>
+        /// S3K standard trace mode (profiles gameplay_unlock /
+        /// aiz_end_to_end / level_gated_reset_aware): the shared trace
+        /// publication pipeline with the S3K capture runner. Any other
+        /// --trace-profile string is passed through with gameplay_unlock
+        /// semantics and written verbatim into metadata.trace_profile,
+        /// exactly like the Lua's OGGF_S3K_TRACE_PROFILE handling.
+        /// </summary>
+        private static int RunS3kTrace(
+            CommandLineOptions options,
+            BizHawkInstallation installation,
+            string romSha1,
+            Bk2Movie movie,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
+            string traceProfile = options.TraceProfile
+                ?? S3KTraceCaptureRunner.GameplayUnlockProfile;
+            string physicsPath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[0]);
+            string auxStatePath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[1]);
+            string metadataPath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[2]);
+            return RunTraceCapture(
+                options.OutputDirectory,
+                stdout,
+                stderr,
+                () => new NativeStandardOutputSilencer(),
+                () => openHost(
+                    options.RomPath,
+                    movie.SyncSettings),
+                (host, writers) => S3KTraceCaptureRunner.Capture(
+                    movie,
+                    host,
+                    traceProfile,
+                    DateTime.Now.ToString(
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture),
+                    writers[0],
+                    writers[1],
+                    writers[2]),
+                result =>
+                    "BizHawk: " + installation.ManagedVersion + "\n"
+                    + "ROM SHA-1: " + romSha1 + "\n"
+                    + "Movie frames: "
+                    + movie.FrameCount.ToString(
+                        CultureInfo.InvariantCulture)
+                    + "\n"
+                    + "Trace profile: " + traceProfile + "\n"
                     + "BK2 frame offset: "
                     + result.Bk2FrameOffset.ToString(
                         CultureInfo.InvariantCulture)
