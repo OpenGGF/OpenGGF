@@ -379,6 +379,9 @@ public class Sonic3kConstants {
     public static final int ARTTILE_CNZ_PLATFORM = 0x0430;
     public static final int ARTTILE_ICZ_MISC2 = 0x0377;
     public static final int ARTTILE_ICZ_MISC1 = 0x03B6;
+    // ArtTile_ICZIntroSprites (sonic3k.constants.asm:1263) - loaded by PLC_1E_1F (ICZ1).
+    // Base for the breakable-wall break debris (ObjDat3_8A41E: make_art_tile(ArtTile_ICZIntroSprites,2,1)).
+    public static final int ARTTILE_ICZ_INTRO_SPRITES = 0x0347;
     public static final int ARTTILE_LRZ_TENSION_BRIDGE = 0x0113;
     public static final int ARTTILE_LBZ_MISC = 0x03C3;
     public static final int ARTTILE_FBZ_MISC = 0x0379;

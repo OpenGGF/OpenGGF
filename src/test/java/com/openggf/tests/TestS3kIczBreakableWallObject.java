@@ -87,6 +87,19 @@ class TestS3kIczBreakableWallObject {
     }
 
     @Test
+    void breakDebrisUsesIczPlatformsIntroLevelArt() {
+        // ObjDat3_8A41E: Map_ICZPlatforms + make_art_tile(ArtTile_ICZIntroSprites,2,1).
+        Sonic3kPlcArtRegistry.LevelArtEntry entry = Sonic3kPlcArtRegistry.getPlan(0x05, 0).levelArt().stream()
+                .filter(candidate -> Sonic3kObjectArtKeys.ICZ_PLATFORMS_INTRO.equals(candidate.key()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing ICZ intro-sprites break-debris art entry"));
+
+        assertEquals(Sonic3kConstants.MAP_ICZ_PLATFORMS_ADDR, entry.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_ICZ_INTRO_SPRITES, entry.artTileBase());
+        assertEquals(2, entry.palette());
+    }
+
+    @Test
     void pathFollowPlatformInsideRomTriggerBoxBreaksWall() {
         ObjectManager objectManager = mock(ObjectManager.class);
         ObjectSpawn wallSpawn = new ObjectSpawn(

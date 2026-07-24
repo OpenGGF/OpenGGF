@@ -259,6 +259,9 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
 
     public static final class IczBreakableWallDebris extends GravityDebrisChild
             implements SpawnTrailingZeroIntsRewindRecreatable {
+        // ObjDat3_8A41E renders the debris via Map_ICZPlatforms + ArtTile_ICZIntroSprites,
+        // NOT Map_ICZWallAndColumn. Frames $1C-$26 are the shatter animation.
+        private static final String DEBRIS_ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS_INTRO;
         private static final int GRAVITY = 0x70; // MoveSprite gravity.
         private static final int DELETE_TIMER = 0x5F; // loc_8A20C: move.w #$5F,$2E(a0).
         private static final int INITIAL_MAPPING_FRAME = 0x1C; // ObjDat3_8A41E.
@@ -318,7 +321,7 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            PatternSpriteRenderer renderer = getRenderer(ART_KEY);
+            PatternSpriteRenderer renderer = getRenderer(DEBRIS_ART_KEY);
             if (renderer != null) {
                 renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false, 2);
             }
