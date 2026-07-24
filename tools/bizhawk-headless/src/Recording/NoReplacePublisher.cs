@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -189,6 +190,161 @@ namespace OpenGGF.BizHawk.Headless
                     }
                 }
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Opens an incremental staging session for a publication whose
+        /// file set is discovered while capture runs (the multi-segment
+        /// complete-run layout: each finalized segment stages its files as
+        /// the capture streams them, so a 19-segment pass never buffers
+        /// more than one segment's contents). Files staged through the
+        /// session carry the same guarantees as <see cref="StageAll"/>:
+        /// temporaries live next to their finals, nothing lands under a
+        /// final name before the returned set's Publish(), and a partial
+        /// publication failure revokes every already-linked final.
+        /// </summary>
+        internal IncrementalStagingSession OpenSession(
+            string outputDirectory)
+        {
+            if (string.IsNullOrEmpty(outputDirectory))
+            {
+                throw new ArgumentException(
+                    "An output directory is required.",
+                    "outputDirectory");
+            }
+            string fullOutputDirectory =
+                Path.GetFullPath(outputDirectory);
+            Directory.CreateDirectory(fullOutputDirectory);
+            return new IncrementalStagingSession(
+                fullOutputDirectory,
+                linkOperation,
+                deleteFile);
+        }
+
+        internal sealed class IncrementalStagingSession : IDisposable
+        {
+            private readonly string outputDirectory;
+            private readonly ILinkOperation linkOperation;
+            private readonly Action<string> deleteFile;
+            private readonly List<StagedPublication> staged =
+                new List<StagedPublication>();
+            private bool finished;
+
+            internal IncrementalStagingSession(
+                string outputDirectory,
+                ILinkOperation linkOperation,
+                Action<string> deleteFile)
+            {
+                this.outputDirectory = outputDirectory;
+                this.linkOperation = linkOperation;
+                this.deleteFile = deleteFile;
+            }
+
+            /// <summary>
+            /// Stages <paramref name="content"/> under the relative
+            /// <paramref name="fileName"/> (which may carry subdirectory
+            /// components, e.g. "ghz1/physics.csv"). The bytes are written
+            /// verbatim as BOM-free UTF-8 — any line-ending policy is the
+            /// caller's, applied to the content before staging. On a write
+            /// failure the file's temporary is removed and the exception
+            /// propagates; earlier staged files stay staged so the owner's
+            /// Dispose() can discard them together.
+            /// </summary>
+            public void StageFile(string fileName, string content)
+            {
+                if (finished)
+                {
+                    throw new InvalidOperationException(
+                        "The staging session is already finalized.");
+                }
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    throw new ArgumentException(
+                        "An output file name is required.",
+                        "fileName");
+                }
+                if (content == null)
+                {
+                    throw new ArgumentNullException("content");
+                }
+
+                string finalPath = Path.Combine(outputDirectory, fileName);
+                string finalDirectory = Path.GetDirectoryName(finalPath);
+                Directory.CreateDirectory(finalDirectory);
+                string temporaryPath = Path.Combine(
+                    finalDirectory,
+                    CreateTemporaryName(Path.GetFileName(fileName)));
+                try
+                {
+                    using (var stream = new FileStream(
+                        temporaryPath,
+                        FileMode.CreateNew,
+                        FileAccess.Write,
+                        FileShare.None))
+                    {
+                        using (var writer = new StreamWriter(
+                            stream,
+                            new UTF8Encoding(false),
+                            1024,
+                            true))
+                        {
+                            writer.NewLine = "\n";
+                            writer.Write(content);
+                            writer.Flush();
+                        }
+                        stream.Flush(true);
+                    }
+                }
+                catch
+                {
+                    try
+                    {
+                        deleteFile(temporaryPath);
+                    }
+                    catch (Exception)
+                    {
+                        // Preserve the staging failure. A leftover
+                        // temporary file is safer than obscuring why
+                        // capture failed.
+                    }
+                    throw;
+                }
+                staged.Add(new StagedPublication(
+                    temporaryPath,
+                    finalPath,
+                    linkOperation,
+                    deleteFile));
+            }
+
+            /// <summary>
+            /// Finishes staging and hands the accumulated files over as one
+            /// all-or-nothing publication set (possibly empty, whose
+            /// Publish() is then a no-op). After Complete() the session
+            /// itself owns nothing — dispose the returned set instead.
+            /// </summary>
+            public StagedPublicationSet Complete()
+            {
+                if (finished)
+                {
+                    throw new InvalidOperationException(
+                        "The staging session is already finalized.");
+                }
+                finished = true;
+                return new StagedPublicationSet(staged.ToArray());
+            }
+
+            public void Dispose()
+            {
+                if (finished)
+                {
+                    return;
+                }
+                finished = true;
+                foreach (StagedPublication file in staged)
+                {
+                    file.Dispose();
+                }
             }
         }
 

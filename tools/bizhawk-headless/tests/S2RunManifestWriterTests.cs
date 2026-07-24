@@ -30,25 +30,25 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static void ReproducesCanonicalFixtureBytes()
         {
-            var segments = new List<S2RunManifestSegment>
+            var segments = new List<RunManifestSegment>
             {
-                new S2RunManifestSegment(
+                new RunManifestSegment(
                     "seg1_ehz1", "level", "gameplay_unlock",
                     825, 2969, 0, 1, null),
-                new S2RunManifestSegment(
+                new RunManifestSegment(
                     "ss", "special_stage", "s2_special_stage",
                     3795, 5733, 0, 0, 0),
-                new S2RunManifestSegment(
+                new RunManifestSegment(
                     "seg2_ehz1", "level", "gameplay_unlock",
                     9701, 2903, 0, 1, null),
-                new S2RunManifestSegment(
+                new RunManifestSegment(
                     "ss_2", "special_stage", "s2_special_stage",
                     12605, 6381, 0, 0, 1),
-                new S2RunManifestSegment(
+                new RunManifestSegment(
                     "seg3_ehz1", "level", "gameplay_unlock",
                     19159, 3452, 0, 1, null)
             };
-            var starpost1 = new S2RunManifestTransition(
+            var starpost1 = new RunManifestTransition(
                 0, 1, "starpost_special", 3795);
             starpost1.SpecialBonusEntryFlag = 1;
             starpost1.SavedXPos = 3568;
@@ -56,11 +56,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             starpost1.LastStarPostHit = 1;
             starpost1.RingsBefore = 50;
             starpost1.EmeraldsBefore = 0;
-            var exit1 = new S2RunManifestTransition(
+            var exit1 = new RunManifestTransition(
                 1, 2, "stage_exit", 9701);
             exit1.RingsAfter = 0;
             exit1.EmeraldsAfter = 1;
-            var starpost2 = new S2RunManifestTransition(
+            var starpost2 = new RunManifestTransition(
                 2, 3, "starpost_special", 12605);
             starpost2.SpecialBonusEntryFlag = 1;
             starpost2.SavedXPos = 6336;
@@ -68,7 +68,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             starpost2.LastStarPostHit = 2;
             starpost2.RingsBefore = 69;
             starpost2.EmeraldsBefore = 1;
-            var exit2 = new S2RunManifestTransition(
+            var exit2 = new RunManifestTransition(
                 3, 4, "stage_exit", 19159);
             exit2.RingsAfter = 0;
             exit2.EmeraldsAfter = 2;
@@ -77,7 +77,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "s2-ehz-halfpipe-roundtrip",
                 "s2-ehz-halfpipe-roundtrip.bk2",
                 segments,
-                new List<S2RunManifestTransition>
+                new List<RunManifestTransition>
                 {
                     starpost1, exit1, starpost2, exit2
                 });
@@ -101,19 +101,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             // A stage_exit with BOTH recorded values zero must still emit
             // them (Lua truthiness: 0 is truthy), and must not emit any of
             // the starpost_special-side fields.
-            var exit = new S2RunManifestTransition(1, 2, "stage_exit", 500);
+            var exit = new RunManifestTransition(1, 2, "stage_exit", 500);
             exit.RingsAfter = 0;
             exit.EmeraldsAfter = 0;
             string produced = S2RunManifestWriter.Format(
                 "run",
                 "movie.bk2",
-                new List<S2RunManifestSegment>
+                new List<RunManifestSegment>
                 {
-                    new S2RunManifestSegment(
+                    new RunManifestSegment(
                         "seg1_ehz1", "level", "gameplay_unlock",
                         10, 20, 0, 1, null)
                 },
-                new List<S2RunManifestTransition> { exit });
+                new List<RunManifestTransition> { exit });
             AssertEx.Equal(
                 true,
                 produced.Contains(
@@ -133,13 +133,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string produced = S2RunManifestWriter.Format(
                 "run \"quoted\" back\\slash",
                 "movie.bk2",
-                new List<S2RunManifestSegment>
+                new List<RunManifestSegment>
                 {
-                    new S2RunManifestSegment(
+                    new RunManifestSegment(
                         "seg1_ehz1", "level", "gameplay_unlock",
                         10, 20, 0, 1, null)
                 },
-                new List<S2RunManifestTransition>());
+                new List<RunManifestTransition>());
             AssertEx.Equal(
                 true,
                 produced.Contains(

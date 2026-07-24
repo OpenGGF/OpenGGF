@@ -45,6 +45,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             S1TraceMetadataWriterTests.Register(tests);
             S1AuxEventEngineTests.Register(tests);
             S1TraceCaptureRunnerTests.Register(tests);
+            S1CompleteRunMetadataWriterTests.Register(tests);
+            S1RunCaptureRunnerStageFreeTests.Register(tests);
+            S1SpecialStageWriterTests.Register(tests);
+            S1RunManifestWriterTests.Register(tests);
+            S1RunCaptureRunnerTests.Register(tests);
             S2TraceCsvWriterTests.Register(tests);
             S2AuxEventEngineTests.Register(tests);
             S2AuxArmBlockTests.Register(tests);
@@ -58,6 +63,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             TraceCliTests.Register(tests);
             EndToEndTests.Register(tests);
             S1TraceDifferentialTests.Register(tests);
+            S1CompleteRunDifferentialTests.Register(tests);
+            S1RunModeDifferentialTests.Register(tests);
             S2TraceDifferentialTests.Register(tests);
 
             var matched = 0;

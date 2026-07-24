@@ -49,6 +49,11 @@ namespace OpenGGF.BizHawk.Headless
             get { return ((IInputPollable)core).IsLagFrame; }
         }
 
+        public int LagCount
+        {
+            get { return ((IInputPollable)core).LagCount; }
+        }
+
         public string MainRamDomainName
         {
             get { return mainRam.Name; }

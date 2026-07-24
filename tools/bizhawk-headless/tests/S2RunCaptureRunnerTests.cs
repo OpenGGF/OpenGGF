@@ -208,7 +208,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 // reset after the detour cleared the checkpoint dedup.
                 AssertContains(seg2.AuxStateJsonl, "\"gameplay_start\"");
 
-                S2RunManifestTransition starpost = result.Transitions[0];
+                RunManifestTransition starpost = result.Transitions[0];
                 AssertEx.Equal(0, starpost.FromSegment);
                 AssertEx.Equal(1, starpost.ToSegment);
                 AssertEx.Equal("starpost_special", starpost.EntryKind);
@@ -222,7 +222,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(false, starpost.RingsAfter.HasValue);
                 AssertEx.Equal(false, starpost.EmeraldsAfter.HasValue);
 
-                S2RunManifestTransition exit = result.Transitions[1];
+                RunManifestTransition exit = result.Transitions[1];
                 AssertEx.Equal(1, exit.FromSegment);
                 AssertEx.Equal(2, exit.ToSegment);
                 AssertEx.Equal("stage_exit", exit.EntryKind);
@@ -541,7 +541,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertContains(seg2.AuxStateJsonl, "\"gameplay_start\"");
 
                 AssertEx.Equal(1, result.Transitions.Count);
-                S2RunManifestTransition reload = result.Transitions[0];
+                RunManifestTransition reload = result.Transitions[0];
                 AssertEx.Equal(0, reload.FromSegment);
                 AssertEx.Equal(1, reload.ToSegment);
                 AssertEx.Equal("death_restart", reload.EntryKind);
@@ -623,7 +623,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(2, result.Segments[1].ManifestEntry.Act);
 
                 AssertEx.Equal(1, result.Transitions.Count);
-                S2RunManifestTransition reload = result.Transitions[0];
+                RunManifestTransition reload = result.Transitions[0];
                 AssertEx.Equal(0, reload.FromSegment);
                 AssertEx.Equal(1, reload.ToSegment);
                 AssertEx.Equal("level_advance", reload.EntryKind);
@@ -913,6 +913,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public byte[] Ram { get; private set; }
             public int CompletedFrame { get; private set; }
             public bool IsLagged { get; set; }
+            public int LagCount { get; set; }
 
             public void ClearButtons()
             {
