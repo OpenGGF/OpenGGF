@@ -8,15 +8,20 @@ using System.Text.RegularExpressions;
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Differential gate proving the native S2 plain trace capture
-    /// (default profile gameplay_unlock, segment 0) reproduces the Lua
-    /// recorder byte-for-byte against the canonical EHZ1 fixture
-    /// (src/test/resources/traces/s2/ehz1_fullrun/). Runs the trace-mode
-    /// CLI end-to-end through run.sh with only --mode trace (game
+    /// Differential gates proving the native S2 trace capture reproduces
+    /// the Lua recorder byte-for-byte against the canonical fixtures:
+    /// the plain gameplay_unlock profile against
+    /// src/test/resources/traces/s2/ehz1_fullrun/, and
+    /// level_gated_reset_aware segment selection against
+    /// src/test/resources/traces/s2/arz/ (segment 0) and
+    /// src/test/resources/traces/s2/arz2/ (segment 1) — both ARZ fixtures
+    /// were recorded from the same s2-lvl-select-ARZ.bk2 level-select
+    /// movie, so the two cases prove segment skipping as well as capture.
+    /// Each case runs the trace-mode CLI end-to-end through run.sh (game
     /// auto-detected from the S2 ROM) and asserts the canonical
-    /// physics.csv and aux_state.jsonl sha256 hashes (the gzipped fixture
-    /// aux is decompressed to a temp file first; the fixture itself is
-    /// never touched), the detected BK2 frame offset of 899, and
+    /// physics.csv and aux_state.jsonl sha256 hashes (gzipped fixtures are
+    /// decompressed to a temp file first; the fixtures themselves are
+    /// never touched), the exact detected BK2 frame offset, and
     /// metadata.json equality normalized only on the recording_date value
     /// and the fixture's lua_script_version "9.11-s2" being produced as
     /// "9.12-s2" (the v9.12 Lua header declares plain-mode output
@@ -26,13 +31,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// </summary>
     internal static class S2TraceDifferentialTests
     {
-        private const string CanonicalPhysicsSha256 =
-            "efeb90112d36f897317f688881140c042792a2b640cf8313470216db91f57a83";
-        private const string CanonicalAuxStateSha256 =
-            "5522e70caa8134570eb5acdcfc3c188655d929b2e777101ae70785168e122dc2";
-        private const int CanonicalBk2FrameOffset = 899;
-        private const int CanonicalTraceFrameCount = 5852;
-        private const int CanonicalMovieFrameCount = 6778;
         private const int CaptureTimeoutMilliseconds = 600000;
         private const string RecordingDateLinePrefix =
             "  \"recording_date\": \"";
@@ -43,15 +41,126 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string ProducedLuaScriptVersionLine =
             "  \"lua_script_version\": \"9.12-s2\",";
 
+        private static readonly S2DifferentialCase Ehz1Case =
+            new S2DifferentialCase(
+                "ehz1_fullrun",
+                "s2-ehz1.bk2",
+                null,
+                null,
+                "gameplay_unlock",
+                0,
+                899,
+                5852,
+                6778,
+                "efeb90112d36f897317f688881140c042792a2b640cf8313470216db"
+                + "91f57a83",
+                "5522e70caa8134570eb5acdcfc3c188655d929b2e777101ae7078516"
+                + "8e122dc2");
+
+        // Both ARZ segment cases replay the same level-select movie
+        // (checked in under traces/s2/arz/); only --gameplay-segment
+        // differs, so segment 1 also proves the skip-counted-segment path.
+        private static readonly S2DifferentialCase ArzSegment0Case =
+            new S2DifferentialCase(
+                "arz",
+                "s2-lvl-select-ARZ.bk2",
+                "level_gated_reset_aware",
+                0,
+                "level_gated_reset_aware",
+                0,
+                2752,
+                5073,
+                15853,
+                "72c0a49ca19e26248889aee82e68b3cd7a2f503965c1ae80eb1be16e"
+                + "a01578ec",
+                "390dc8862377ffb8c77c72d75938acbe1a06bf72cf94392b2ffdd2dd"
+                + "6929d772");
+
+        private static readonly S2DifferentialCase ArzSegment1Case =
+            new S2DifferentialCase(
+                "arz2",
+                Path.Combine("..", "arz", "s2-lvl-select-ARZ.bk2"),
+                "level_gated_reset_aware",
+                1,
+                "level_gated_reset_aware",
+                1,
+                7998,
+                7809,
+                15853,
+                "83056cfcb9b059165fdd8710d7d510c9db249700a57d287610ce02d5"
+                + "2ac35451",
+                "bae3b1654a7356dbbc6729e56767c0e0718e842163ecc236f1c60c51"
+                + "21b9c1e8");
+
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
                 "S2TraceDifferential native capture matches canonical EHZ1"
                 + " trace",
-                NativeCaptureMatchesCanonicalEhz1Trace));
+                () => NativeCaptureMatchesCanonicalTrace(Ehz1Case)));
+            tests.Add(new TestMain.TestCase(
+                "S2TraceDifferential native segment 0 capture matches"
+                + " canonical ARZ trace",
+                () => NativeCaptureMatchesCanonicalTrace(ArzSegment0Case)));
+            tests.Add(new TestMain.TestCase(
+                "S2TraceDifferential native segment 1 capture matches"
+                + " canonical ARZ2 trace",
+                () => NativeCaptureMatchesCanonicalTrace(ArzSegment1Case)));
         }
 
-        private static void NativeCaptureMatchesCanonicalEhz1Trace()
+        /// <summary>
+        /// One canonical fixture comparison: the fixture directory name
+        /// under src/test/resources/traces/s2/, the movie path relative to
+        /// that directory, the optional --trace-profile /
+        /// --gameplay-segment CLI arguments (null = argument omitted), the
+        /// profile and segment values the CLI must report, the canonical
+        /// BK2 frame offset / trace frame count / movie frame count, and
+        /// the canonical sha256 hashes of the Lua recorder's physics.csv
+        /// and aux_state.jsonl bytes.
+        /// </summary>
+        private sealed class S2DifferentialCase
+        {
+            public S2DifferentialCase(
+                string fixtureDirectoryName,
+                string movieRelativePath,
+                string traceProfileArgument,
+                int? gameplaySegmentArgument,
+                string expectedTraceProfile,
+                int expectedGameplaySegment,
+                int bk2FrameOffset,
+                int traceFrameCount,
+                int movieFrameCount,
+                string physicsSha256,
+                string auxStateSha256)
+            {
+                FixtureDirectoryName = fixtureDirectoryName;
+                MovieRelativePath = movieRelativePath;
+                TraceProfileArgument = traceProfileArgument;
+                GameplaySegmentArgument = gameplaySegmentArgument;
+                ExpectedTraceProfile = expectedTraceProfile;
+                ExpectedGameplaySegment = expectedGameplaySegment;
+                Bk2FrameOffset = bk2FrameOffset;
+                TraceFrameCount = traceFrameCount;
+                MovieFrameCount = movieFrameCount;
+                PhysicsSha256 = physicsSha256;
+                AuxStateSha256 = auxStateSha256;
+            }
+
+            public string FixtureDirectoryName { get; private set; }
+            public string MovieRelativePath { get; private set; }
+            public string TraceProfileArgument { get; private set; }
+            public int? GameplaySegmentArgument { get; private set; }
+            public string ExpectedTraceProfile { get; private set; }
+            public int ExpectedGameplaySegment { get; private set; }
+            public int Bk2FrameOffset { get; private set; }
+            public int TraceFrameCount { get; private set; }
+            public int MovieFrameCount { get; private set; }
+            public string PhysicsSha256 { get; private set; }
+            public string AuxStateSha256 { get; private set; }
+        }
+
+        private static void NativeCaptureMatchesCanonicalTrace(
+            S2DifferentialCase differentialCase)
         {
             S2DifferentialDependencies dependencies =
                 ResolveS2DifferentialDependencies();
@@ -65,10 +174,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "resources",
                 "traces",
                 "s2",
-                "ehz1_fullrun");
-            string moviePath = Path.Combine(
+                differentialCase.FixtureDirectoryName);
+            string moviePath = Path.GetFullPath(Path.Combine(
                 traceDirectory,
-                "s2-ehz1.bk2");
+                differentialCase.MovieRelativePath));
 
             string root = Path.Combine(
                 Path.GetTempPath(),
@@ -77,39 +186,41 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string output = Path.Combine(root, "capture");
             try
             {
-                // The fixture's aux_state.jsonl ships gzipped; decompress
-                // it read-only into the temp root so the canonical hash is
-                // asserted against the exact bytes the Lua recorder wrote.
+                // Canonical fixture bytes may ship plain or gzipped;
+                // gzipped ones are decompressed read-only into the temp
+                // root so the canonical hashes are asserted against the
+                // exact bytes the Lua recorder wrote. The fixtures
+                // themselves are never modified.
                 Directory.CreateDirectory(root);
-                string fixtureAuxPath = Path.Combine(
-                    root,
-                    "fixture-aux_state.jsonl");
-                Gunzip(
-                    Path.Combine(traceDirectory, "aux_state.jsonl.gz"),
-                    fixtureAuxPath);
                 AssertEx.Equal(
-                    CanonicalPhysicsSha256,
-                    EndToEndTests.ComputeSha256(
-                        Path.Combine(traceDirectory, "physics.csv")));
+                    differentialCase.PhysicsSha256,
+                    EndToEndTests.ComputeSha256(MaterializeFixture(
+                        traceDirectory,
+                        "physics.csv",
+                        Path.Combine(root, "fixture-physics.csv"))));
                 AssertEx.Equal(
-                    CanonicalAuxStateSha256,
-                    EndToEndTests.ComputeSha256(fixtureAuxPath));
+                    differentialCase.AuxStateSha256,
+                    EndToEndTests.ComputeSha256(MaterializeFixture(
+                        traceDirectory,
+                        "aux_state.jsonl",
+                        Path.Combine(root, "fixture-aux_state.jsonl"))));
 
                 string stdout = RunTraceCapture(
                     dependencies.RomPath,
                     dependencies.BizHawkHome,
                     moviePath,
-                    output);
+                    output,
+                    differentialCase);
 
                 AssertEx.Equal(
-                    ExpectedStdout(installation, output),
+                    ExpectedStdout(installation, output, differentialCase),
                     stdout);
                 AssertEx.Equal(
-                    CanonicalPhysicsSha256,
+                    differentialCase.PhysicsSha256,
                     EndToEndTests.ComputeSha256(
                         Path.Combine(output, "physics.csv")));
                 AssertEx.Equal(
-                    CanonicalAuxStateSha256,
+                    differentialCase.AuxStateSha256,
                     EndToEndTests.ComputeSha256(
                         Path.Combine(output, "aux_state.jsonl")));
                 AssertNormalizedMetadataEquality(
@@ -123,6 +234,25 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     Directory.Delete(root, true);
                 }
             }
+        }
+
+        /// <summary>
+        /// Returns a readable path holding the canonical bytes of the
+        /// named fixture file: the plain file when it exists, otherwise
+        /// its .gz sibling decompressed to the given scratch path.
+        /// </summary>
+        private static string MaterializeFixture(
+            string traceDirectory,
+            string fileName,
+            string scratchPath)
+        {
+            string plainPath = Path.Combine(traceDirectory, fileName);
+            if (File.Exists(plainPath))
+            {
+                return plainPath;
+            }
+            Gunzip(plainPath + ".gz", scratchPath);
+            return scratchPath;
         }
 
         /// <summary>
@@ -189,18 +319,30 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string romPath,
             string bizHawkHome,
             string moviePath,
-            string output)
+            string output,
+            S2DifferentialCase differentialCase)
         {
+            string arguments =
+                EndToEndTests.Quote(
+                    Path.Combine(EndToEndTests.ToolDirectory, "run.sh"))
+                + " --mode trace"
+                + " --rom " + EndToEndTests.Quote(romPath)
+                + " --movie " + EndToEndTests.Quote(moviePath)
+                + " --output " + EndToEndTests.Quote(output);
+            if (differentialCase.TraceProfileArgument != null)
+            {
+                arguments += " --trace-profile "
+                    + differentialCase.TraceProfileArgument;
+            }
+            if (differentialCase.GameplaySegmentArgument.HasValue)
+            {
+                arguments += " --gameplay-segment "
+                    + differentialCase.GameplaySegmentArgument.Value;
+            }
             var start = new ProcessStartInfo
             {
                 FileName = "/bin/bash",
-                Arguments =
-                    EndToEndTests.Quote(
-                        Path.Combine(EndToEndTests.ToolDirectory, "run.sh"))
-                    + " --mode trace"
-                    + " --rom " + EndToEndTests.Quote(romPath)
-                    + " --movie " + EndToEndTests.Quote(moviePath)
-                    + " --output " + EndToEndTests.Quote(output),
+                Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
@@ -222,16 +364,22 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static string ExpectedStdout(
             BizHawkInstallation installation,
-            string output)
+            string output,
+            S2DifferentialCase differentialCase)
         {
             return
                 "BizHawk: " + installation.ManagedVersion + "\n"
                 + "ROM SHA-1: " + RomIdentity.Sonic2Rev01Sha1 + "\n"
-                + "Movie frames: " + CanonicalMovieFrameCount + "\n"
-                + "Trace profile: gameplay_unlock\n"
-                + "Gameplay segment: 0\n"
-                + "BK2 frame offset: " + CanonicalBk2FrameOffset + "\n"
-                + "Trace frames: " + CanonicalTraceFrameCount + "\n"
+                + "Movie frames: "
+                + differentialCase.MovieFrameCount + "\n"
+                + "Trace profile: "
+                + differentialCase.ExpectedTraceProfile + "\n"
+                + "Gameplay segment: "
+                + differentialCase.ExpectedGameplaySegment + "\n"
+                + "BK2 frame offset: "
+                + differentialCase.Bk2FrameOffset + "\n"
+                + "Trace frames: "
+                + differentialCase.TraceFrameCount + "\n"
                 + "Physics CSV: "
                 + Path.Combine(output, "physics.csv") + "\n"
                 + "Aux state JSONL: "
