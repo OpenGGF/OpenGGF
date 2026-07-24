@@ -9,6 +9,9 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
 public interface AudioBackend {
+    interface PreparedLogicalRestore {
+    }
+
     void init();
 
     void setAudioProfile(GameAudioProfile profile);
@@ -171,6 +174,27 @@ public interface AudioBackend {
             SmpsDriverSnapshot.DependencyResolver resolver,
             boolean preservePresentationQueue) {
         restoreLogicalSnapshot(snapshot, resolver);
+    }
+
+    default PreparedLogicalRestore prepareLogicalRestore(
+            AudioBackendLogicalSnapshot snapshot,
+            SmpsDriverSnapshot.DependencyResolver resolver,
+            boolean preservePresentationQueue) {
+        return new DeferredLogicalRestore(
+                snapshot, resolver, preservePresentationQueue);
+    }
+
+    default void commitLogicalRestore(PreparedLogicalRestore prepared) {
+        DeferredLogicalRestore restore = (DeferredLogicalRestore) prepared;
+        restoreLogicalSnapshot(restore.snapshot(), restore.resolver(),
+                restore.preservePresentationQueue());
+    }
+
+    record DeferredLogicalRestore(
+            AudioBackendLogicalSnapshot snapshot,
+            SmpsDriverSnapshot.DependencyResolver resolver,
+            boolean preservePresentationQueue)
+            implements PreparedLogicalRestore {
     }
 
     default void prepareLogicalMusicSource(AudioSourceDescriptor descriptor) {

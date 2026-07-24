@@ -81,6 +81,7 @@ public class AudioManager implements MusicRestoreSink {
     /** Single selected dual-path restore, committed only at reverse release. */
     private AudioLogicalSnapshot deferredReverseLogicalSnapshot;
     private boolean deferredReverseLogicalPrepared;
+    private AudioBackend.PreparedLogicalRestore deferredBackendRestore;
     private StreamBackedDeterministicAudioRuntime deferredLiveCaptureRuntime;
     private DeterministicAudioRuntime deferredLiveCapturePriorRuntime;
     private AudioPresentationCommandQueue shadowCommands;
@@ -666,41 +667,6 @@ public class AudioManager implements MusicRestoreSink {
         if (command == null) {
             return;
         }
-        switch (command) {
-            case AudioCommand.PlayMusic playMusic -> applyLogicalMusic(playMusic);
-            case AudioCommand.PlaySfx playSfx -> applyLogicalSfx(playSfx);
-            case AudioCommand.StopMusic ignored -> restoreBackendLogicalSnapshot(
-                    new AudioBackendLogicalSnapshot(null, false, false, false, 1, List.of()));
-            case AudioCommand.EndMusicOverride end -> applyLogicalEndMusicOverride(end.musicId());
-            case AudioCommand.RestoreMusic ignored -> applyLogicalRestoreMusic();
-            case AudioCommand.SetSpeedShoes speed -> {
-                AudioBackendLogicalSnapshot current = currentBackendLogicalSnapshot();
-                restoreBackendLogicalSnapshot(new AudioBackendLogicalSnapshot(
-                        current.currentMusic(),
-                        current.sfxBlocked(),
-                        current.pendingRestore(),
-                        speed.enabled(),
-                        current.speedMultiplier(),
-                        current.overrideStack()));
-            }
-            case AudioCommand.SetSpeedMultiplier speed -> {
-                AudioBackendLogicalSnapshot current = currentBackendLogicalSnapshot();
-                restoreBackendLogicalSnapshot(new AudioBackendLogicalSnapshot(
-                        current.currentMusic(),
-                        current.sfxBlocked(),
-                        current.pendingRestore(),
-                        current.speedShoesEnabled(),
-                        speed.multiplier(),
-                        current.overrideStack()));
-            }
-            case AudioCommand.ResetRingAlternation reset -> ringLeft = reset.ringLeft();
-            case AudioCommand.FadeOutMusic ignored -> {
-            }
-            case AudioCommand.StopAllSfx ignored -> {
-            }
-            case AudioCommand.ChangeMusicTempo ignored -> {
-            }
-        }
         stageDeferredPresentationCommand(command);
         refreshDeferredReverseLogicalSnapshot();
     }
@@ -718,6 +684,7 @@ public class AudioManager implements MusicRestoreSink {
         if (deferredReverseLogicalSnapshot == null) {
             shadowResolver.submit(command);
             shadowCommands.applyPending(shadowRegistry::apply);
+            ringLeft = managerRingAfter(ringLeft, command);
             return;
         }
         AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
@@ -768,12 +735,17 @@ public class AudioManager implements MusicRestoreSink {
             }
             stagedCommands.applyPending(stagedRegistry::apply);
             AudioPresentationSnapshot staged = stagedRegistry.snapshot();
+            AudioBackendLogicalSnapshot stagedBackend =
+                    backendSnapshotFromPresentation(
+                            selected.backend(), staged);
+            boolean stagedManagerRingLeft =
+                    managerRingAfter(selected.ringLeft(), command);
             deferredReverseLogicalSnapshot = new AudioLogicalSnapshot(
-                    selected.ringLeft(),
+                    stagedManagerRingLeft,
                     selected.commandTimelineFrame(),
                     selected.commandTimelineNextOrder(),
                     selected.commandEntryCount(),
-                    selected.backend(),
+                    stagedBackend,
                     staged,
                     selected.donorGameIds(),
                     selected.donorBindings());
@@ -783,102 +755,79 @@ public class AudioManager implements MusicRestoreSink {
         }
     }
 
+    private boolean managerRingAfter(
+            boolean current, AudioCommand command) {
+        if (command instanceof AudioCommand.ResetRingAlternation reset) {
+            return reset.ringLeft();
+        }
+        if (command instanceof AudioCommand.PlaySfx sfx
+                && sfx.route() == AudioCommand.SfxRoute.RING_RESOLVED) {
+            if (GameSound.RING_LEFT.name().equals(sfx.sfxName())) {
+                return false;
+            }
+            if (GameSound.RING_RIGHT.name().equals(sfx.sfxName())) {
+                return true;
+            }
+        }
+        return current;
+    }
+
     private void refreshDeferredReverseLogicalSnapshot() {
         if (deferredReverseLogicalSnapshot == null) {
             return;
         }
         AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
         deferredReverseLogicalSnapshot = new AudioLogicalSnapshot(
-                ringLeft,
+                selected.ringLeft(),
                 commandTimeline.currentFrame(),
                 commandTimeline.nextOrder(),
                 selected.commandEntryCount(),
-                backend != null ? backend.captureLogicalSnapshot()
-                        : AudioBackendLogicalSnapshot.empty(),
-                deferredReverseLogicalSnapshot.presentation(),
+                selected.backend(),
+                selected.presentation(),
                 selected.donorGameIds(),
                 selected.donorBindings());
     }
 
-    private void applyLogicalMusic(AudioCommand.PlayMusic command) {
-        AudioSourceDescriptor descriptor = descriptorFor(command);
-        AudioBackendLogicalSnapshot current = currentBackendLogicalSnapshot();
-        List<AudioSourceDescriptor> overrides = new ArrayList<>(current.overrideStack());
-        if (command.override() && current.currentMusic() != null) {
-            overrides.addFirst(current.currentMusic());
-        } else if (!command.override()) {
-            overrides.clear();
-        }
-        restoreBackendLogicalSnapshot(new AudioBackendLogicalSnapshot(
-                descriptor,
-                current.sfxBlocked(),
-                false,
-                current.speedShoesEnabled(),
-                current.speedMultiplier(),
-                overrides));
+    private AudioBackendLogicalSnapshot backendSnapshotFromPresentation(
+            AudioBackendLogicalSnapshot previous,
+            AudioPresentationSnapshot presentation) {
+        SmpsDriverSnapshot musicDriver = driverForVoice(
+                presentation, presentation.activeMusic() == null
+                        ? null : presentation.activeMusic().voiceId());
+        SmpsDriverSnapshot standaloneSfxDriver = driverForVoice(
+                presentation, presentation.standaloneSmpsVoiceId());
+        List<AudioSourceDescriptor> overrides =
+                presentation.overrideStack().stream()
+                        .map(AudioPresentationSnapshot.MusicSlotSnapshot
+                                ::sourceDescriptor)
+                        .toList();
+        return new AudioBackendLogicalSnapshot(
+                presentation.activeMusic() == null
+                        ? null
+                        : presentation.activeMusic().sourceDescriptor(),
+                presentation.sfxBlocked(),
+                presentation.pendingRestore(),
+                presentation.speedShoesEnabled(),
+                presentation.speedMultiplier(),
+                overrides,
+                musicDriver,
+                standaloneSfxDriver,
+                previous.legacyCoordFlagRuntimeState());
     }
 
-    private void applyLogicalSfx(AudioCommand.PlaySfx command) {
-        if (command.route() != AudioCommand.SfxRoute.RING_RESOLVED || command.sfxName() == null) {
-            return;
+    private SmpsDriverSnapshot driverForVoice(
+            AudioPresentationSnapshot presentation, Long voiceId) {
+        if (voiceId == null) {
+            return null;
         }
-        if (GameSound.RING_LEFT.name().equals(command.sfxName())) {
-            ringLeft = false;
-        } else if (GameSound.RING_RIGHT.name().equals(command.sfxName())) {
-            ringLeft = true;
+        for (PresentationVoiceSnapshot voice : presentation.voices()) {
+            if (voice instanceof PresentationVoiceSnapshot.Smps smps
+                    && smps.voiceId() == voiceId) {
+                return smps.driver();
+            }
         }
-    }
-
-    private void applyLogicalRestoreMusic() {
-        AudioBackendLogicalSnapshot current = currentBackendLogicalSnapshot();
-        if (current.overrideStack().isEmpty()) {
-            return;
-        }
-        List<AudioSourceDescriptor> overrides = new ArrayList<>(current.overrideStack());
-        AudioSourceDescriptor restored = overrides.removeFirst();
-        restoreBackendLogicalSnapshot(new AudioBackendLogicalSnapshot(
-                restored,
-                false,
-                false,
-                current.speedShoesEnabled(),
-                current.speedMultiplier(),
-                overrides));
-    }
-
-    private void applyLogicalEndMusicOverride(int musicId) {
-        AudioBackendLogicalSnapshot current = currentBackendLogicalSnapshot();
-        if (current.currentMusic() != null && current.currentMusic().id() == musicId) {
-            applyLogicalRestoreMusic();
-            return;
-        }
-        List<AudioSourceDescriptor> overrides = new ArrayList<>(current.overrideStack());
-        overrides.removeIf(descriptor -> descriptor != null && descriptor.id() == musicId);
-        restoreBackendLogicalSnapshot(new AudioBackendLogicalSnapshot(
-                current.currentMusic(),
-                current.sfxBlocked(),
-                current.pendingRestore(),
-                current.speedShoesEnabled(),
-                current.speedMultiplier(),
-                overrides));
-    }
-
-    private AudioSourceDescriptor descriptorFor(AudioCommand.PlayMusic command) {
-        return switch (command.route()) {
-            case BASE_SMPS -> AudioSourceDescriptor.baseMusic(command.musicId());
-            case DONOR_SMPS -> AudioSourceDescriptor.donorMusic(command.donorGameId(), command.musicId());
-            case FALLBACK_WAV -> AudioSourceDescriptor.fallbackMusic(command.musicId());
-            case SYSTEM_COMMAND -> null;
-        };
-    }
-
-    private AudioBackendLogicalSnapshot currentBackendLogicalSnapshot() {
-        return backend != null ? backend.captureLogicalSnapshot() : AudioBackendLogicalSnapshot.empty();
-    }
-
-    private void restoreBackendLogicalSnapshot(AudioBackendLogicalSnapshot snapshot) {
-        if (backend != null) {
-            backend.restoreLogicalSnapshot(snapshot);
-        }
+        throw new IllegalStateException(
+                "Presentation slot references missing SMPS voice " + voiceId);
     }
 
     private void replayMusic(AudioCommand.PlayMusic command) {
@@ -983,6 +932,7 @@ public class AudioManager implements MusicRestoreSink {
     public void beginReverseAudioPresentation() {
         deferredReverseLogicalSnapshot = null;
         deferredReverseLogicalPrepared = false;
+        deferredBackendRestore = null;
         reverseAudioPresentationActive = true;
         deterministicAudioRuntime.beginReversePresentation();
         if (backend != null) {
@@ -998,19 +948,30 @@ public class AudioManager implements MusicRestoreSink {
 
     public void endReverseAudioPresentation() {
         AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        AudioLogicalSnapshot previous = selected != null
-                ? captureLogicalSnapshot() : null;
         try {
             if (selected != null && !deferredReverseLogicalPrepared) {
-                if (!restoreLogicalSnapshotNow(selected, true)) {
+                if (!commitDeferredReverseLogicalRestore()) {
                     return;
                 }
             }
-            // The presentation registry is the only release step that may
-            // resolve external dependencies. Commit it before either PCM
-            // history cursor so a resolver failure leaves both cursors held.
             if (shadowProducer != null) {
                 shadowProducer.endReverse();
+            }
+            if (deferredBackendRestore != null && backend != null) {
+                backend.commitLogicalRestore(deferredBackendRestore);
+            }
+            if (selected != null) {
+                ringLeft = selected.ringLeft();
+                commandTimeline.restoreCursor(
+                        selected.commandTimelineFrame(),
+                        selected.commandTimelineNextOrder());
+                donorSoundBindings.clear();
+                for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding
+                        : selected.donorBindings()) {
+                    donorSoundBindings.put(binding.sound(),
+                            new DonorSfxBinding(binding.donorGameId(),
+                                    binding.sfxId()));
+                }
             }
             if (backend != null) {
                 backend.endReversePresentation();
@@ -1018,15 +979,9 @@ public class AudioManager implements MusicRestoreSink {
             deterministicAudioRuntime.endReversePresentation();
             deferredReverseLogicalSnapshot = null;
             deferredReverseLogicalPrepared = false;
+            deferredBackendRestore = null;
             reverseAudioPresentationActive = false;
         } catch (RuntimeException failure) {
-            if (previous != null) {
-                try {
-                    restoreLogicalSnapshotNow(previous, true);
-                } catch (RuntimeException rollbackFailure) {
-                    failure.addSuppressed(rollbackFailure);
-                }
-            }
             LOGGER.log(Level.WARNING,
                     "Audio reverse release failed; retained prior dual state",
                     failure);
@@ -1050,9 +1005,29 @@ public class AudioManager implements MusicRestoreSink {
                 || deferredReverseLogicalPrepared) {
             return deferredReverseLogicalPrepared;
         }
-        deferredReverseLogicalPrepared = restoreLogicalSnapshotNow(
-                deferredReverseLogicalSnapshot, true);
-        return deferredReverseLogicalPrepared;
+        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+        try {
+            AudioBackend.PreparedLogicalRestore preparedBackend =
+                    backend != null
+                            ? backend.prepareLogicalRestore(
+                                    selected.backend(),
+                                    createSmpsDependencyResolver(), true)
+                            : null;
+            shadowProducer.restore(
+                    selected.presentation(), shadowFactory, true);
+            shadowProducer.prepareSelectedRestore();
+            deferredBackendRestore = preparedBackend;
+            deferredReverseLogicalPrepared = true;
+            return true;
+        } catch (RuntimeException failure) {
+            deferredBackendRestore = null;
+            deferredReverseLogicalPrepared = false;
+            LOGGER.log(Level.WARNING,
+                    "Audio reverse target preparation failed; retained live "
+                            + "dual state for retry",
+                    failure);
+            return false;
+        }
     }
 
     public void setReversePlaybackRate(double rate) {
@@ -1153,6 +1128,17 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
         return null;
+    }
+
+    AudioPresentationSourceFactory shadowFactoryForTesting() {
+        ensureShadowPresentation();
+        return shadowFactory;
+    }
+
+    void submitShadowRawPcmForTesting(
+            byte[] pcm, int sourceSampleRate) {
+        ensureShadowPresentation();
+        shadowResolver.submitRawPcm(pcm, sourceSampleRate);
     }
 
     public void advancePausedFrameStepAudio() {
@@ -1686,6 +1672,7 @@ public class AudioManager implements MusicRestoreSink {
         this.reverseAudioPresentationActive = false;
         this.deferredReverseLogicalSnapshot = null;
         this.deferredReverseLogicalPrepared = false;
+        this.deferredBackendRestore = null;
         this.deferredLiveCaptureRuntime = null;
         this.deferredLiveCapturePriorRuntime = null;
         this.deterministicAudioRuntime.clearSubmittedCommands();

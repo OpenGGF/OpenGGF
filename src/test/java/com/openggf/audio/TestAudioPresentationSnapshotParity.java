@@ -1,6 +1,7 @@
 package com.openggf.audio;
 
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationDependencyResolver;
 import com.openggf.audio.presentation.AudioPresentationMixer;
@@ -11,11 +12,13 @@ import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
+import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
+import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
@@ -169,6 +174,74 @@ class TestAudioPresentationSnapshotParity {
     }
 
     @Test
+    void heldReplayNeverTouchesLiveSmpsBackendBeforeAtomicRelease() {
+        AudioTestFixtures.StubSmpsLoader loader =
+                new AudioTestFixtures.StubSmpsLoader();
+        for (int id : new int[] {0x80, 0x81, 0x82}) {
+            AudioTestFixtures.StubSmpsData music =
+                    new AudioTestFixtures.StubSmpsData("music-" + id);
+            music.setId(id);
+            loader.musicResults.put(id, music);
+        }
+        AudioTestFixtures.StubSmpsData sfx =
+                new AudioTestFixtures.StubSmpsData("sfx-a0");
+        sfx.setId(0xA0);
+        loader.sfxResults.put(0xA0, sfx);
+        audio.setAudioProfile(configuredProfile(loader));
+        audio.setRom(null);
+        LWJGLAudioBackend liveBackend =
+                new LWJGLAudioBackend(
+                        SonicConfigurationService.getInstance());
+        audio.setBackend(liveBackend);
+        liveBackend.setAudioProfile(audio.getAudioProfile());
+
+        audio.beginCommandTimelineFrame(1);
+        audio.playMusic(0x80);
+        audio.presentShadowFrame(PresentationMode.SILENT);
+        AudioKeyframeStore keyframes = new AudioKeyframeStore();
+        keyframes.capture(1, audio);
+
+        audio.beginCommandTimelineFrame(2);
+        audio.playMusic(0x81);
+        audio.playSfx(0xA0);
+        audio.setSpeedShoes(true);
+        audio.setSpeedMultiplier(3);
+        audio.presentShadowFrame(PresentationMode.SILENT);
+
+        audio.beginCommandTimelineFrame(3);
+        audio.playMusic(0x82);
+        audio.presentShadowFrame(PresentationMode.SILENT);
+        AudioBackendLogicalSnapshot disturbed =
+                liveBackend.captureLogicalSnapshot();
+        com.openggf.audio.driver.SmpsDriver disturbedDriver =
+                liveBackend.musicDriverForTesting();
+
+        audio.beginReverseAudioPresentation();
+        assertEquals(4, keyframes.replayToLogicalState(audio, 2));
+        assertSame(disturbedDriver, liveBackend.musicDriverForTesting());
+        assertStableLiveBackend(disturbed,
+                liveBackend.captureLogicalSnapshot());
+
+        assertTrue(audio.commitDeferredReverseLogicalRestore());
+        assertSame(disturbedDriver, liveBackend.musicDriverForTesting());
+        assertStableLiveBackend(disturbed,
+                liveBackend.captureLogicalSnapshot());
+
+        audio.endReverseAudioPresentation();
+        AudioBackendLogicalSnapshot released =
+                liveBackend.captureLogicalSnapshot();
+        assertEquals(AudioSourceDescriptor.baseMusic(0x81),
+                released.currentMusic());
+        assertNotNull(released.musicDriver());
+        assertNotNull(released.musicDriver().sequencers().stream()
+                .filter(com.openggf.audio.rewind.SmpsDriverSnapshot
+                        .SequencerEntry::sfx)
+                .findFirst().orElse(null));
+        assertTrue(released.speedShoesEnabled());
+        assertEquals(3, released.speedMultiplier());
+    }
+
+    @Test
     void dualSnapshotsRestoreIndependentEqualCoordFlagCounters() {
         LWJGLAudioBackend backend =
                 new LWJGLAudioBackend(SonicConfigurationService.getInstance());
@@ -242,12 +315,47 @@ class TestAudioPresentationSnapshotParity {
     @Test
     void managerProductionProducerKeepsFractionalBoundaryForOneHundredTwentyFrames()
             throws Exception {
+        AudioTestFixtures.StubSmpsLoader loader =
+                new AudioTestFixtures.StubSmpsLoader();
+        for (int id : new int[] {0x81, 0x82}) {
+            AbstractSmpsData music = persistentRestTrack(id);
+            music.setId(id);
+            loader.musicResults.put(id, music);
+        }
+        AbstractSmpsData sfx = persistentRestTrack(0xA0);
+        sfx.setId(0xA0);
+        loader.sfxResults.put(0xA0, sfx);
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader) {
+            @Override
+            public com.openggf.audio.smps.SmpsSequencerConfig
+                    getSequencerConfig() {
+                return new com.openggf.audio.smps.SmpsSequencerConfig.Builder()
+                        .build();
+            }
+
+            @Override
+            public int getInvincibilityMusicId() {
+                return 0x82;
+            }
+        });
+        audio.setRom(null);
+        audio.registerDonorLoader(
+                "parity-donor", loader, loader.loadDacData(),
+                new com.openggf.audio.smps.SmpsSequencerConfig.Builder()
+                        .build());
         audio.setBackend(new NullAudioBackend() {
             @Override
             public int outputSampleRate() {
                 return 44_101;
             }
         });
+        audio.playMusic(0x81);
+        audio.playSfx(0xA0);
+        byte[] rawPcm = new byte[20_000];
+        for (int index = 0; index < rawPcm.length; index++) {
+            rawPcm[index] = (byte) (index * 17);
+        }
+        audio.submitShadowRawPcmForTesting(rawPcm, 8_000);
         try (LiveCaptureAudioHandle capture =
                      audio.attachShadowCaptureForTesting(60)) {
             short[] packet =
@@ -256,6 +364,8 @@ class TestAudioPresentationSnapshotParity {
                 audio.beginCommandTimelineFrame(frame);
                 if (frame == 5) {
                     audio.setSpeedShoes(true);
+                } else if (frame == 11) {
+                    audio.playDonorMusic("parity-donor", 0x82);
                 } else if (frame == 17) {
                     audio.setSpeedMultiplier(3);
                 } else if (frame == 31) {
@@ -279,14 +389,66 @@ class TestAudioPresentationSnapshotParity {
             assertEquals(3, boundary.presentation().speedMultiplier());
             assertEquals(1 << 2, boundary.presentation().fmMuteMask());
             assertEquals(1 << 1, boundary.presentation().psgSoloMask());
+            assertNotNull(boundary.presentation().activeMusic());
+            assertEquals(AudioSourceDescriptor.donorMusic(
+                            "parity-donor", 0x82),
+                    boundary.presentation().activeMusic()
+                            .sourceDescriptor());
+            assertEquals(1,
+                    boundary.presentation().overrideStack().size());
+            assertEquals(AudioSourceDescriptor.baseMusic(0x81),
+                    boundary.presentation().overrideStack().getFirst()
+                            .sourceDescriptor());
+            assertNotNull(boundary.presentation().rawPcmVoiceId());
+            assertTrue(boundary.presentation().voices().stream()
+                    .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
+                    .map(PresentationVoiceSnapshot.Smps.class::cast)
+                    .flatMap(voice -> voice.driver().sequencers().stream())
+                    .anyMatch(
+                            com.openggf.audio.rewind.SmpsDriverSnapshot
+                                    .SequencerEntry::sfx));
 
             long before = capture.totalStereoFrames();
             int[] packetSizes = new int[10];
+            short[][] actualPackets = new short[10][];
+
+            AudioPresentationSourceFactory referenceFactory =
+                    audio.shadowFactoryForTesting();
+            AudioVoiceRegistry reference = new AudioVoiceRegistry(
+                    referenceFactory, referenceFactory,
+                    new SmpsCoordFlagHandlerOwner(
+                            new SmpsCoordFlagRuntimeState()),
+                    warning -> {
+                        throw new AssertionError(warning);
+                    });
+            reference.restore(
+                    boundary.presentation(), referenceFactory);
+            AudioPresentationMixer referenceMixer =
+                    new AudioPresentationMixer(
+                            capture.maxStereoFramesPerPacket());
+            AudioFrameClock referenceClock =
+                    new AudioFrameClock(44_101, 60);
+            for (int frame = 0; frame < 120; frame++) {
+                referenceClock.samplesForNextFrame();
+            }
             for (int frame = 0; frame < 10; frame++) {
                 audio.beginCommandTimelineFrame(120 + frame);
                 audio.presentOuterFrame(PresentationMode.FORWARD);
                 packetSizes[frame] =
                         capture.drainPresentationFrame(packet);
+                actualPackets[frame] = java.util.Arrays.copyOf(
+                        packet, packetSizes[frame] * 2);
+                int referenceFrames =
+                        referenceClock.samplesForNextFrame();
+                assertEquals(referenceFrames, packetSizes[frame]);
+                assertArrayEquals(
+                        java.util.Arrays.copyOf(
+                                referenceMixer.mix(
+                                        reference, referenceFrames),
+                                referenceFrames * 2),
+                        actualPackets[frame],
+                        "manager producer PCM must match independently "
+                                + "reconstructed source-bearing state");
             }
             assertEquals(7_350,
                     capture.totalStereoFrames() - before);
@@ -294,6 +456,9 @@ class TestAudioPresentationSnapshotParity {
                     new int[] {735, 735, 735, 735, 735,
                             735, 735, 735, 735, 735},
                     packetSizes);
+            assertPresentationLogicalEquals(
+                    audio.captureLogicalSnapshot().presentation(),
+                    reference.snapshot());
         }
     }
 
@@ -320,6 +485,35 @@ class TestAudioPresentationSnapshotParity {
                 warning -> {
                     throw new AssertionError(warning);
                 });
+    }
+
+    private static GameAudioProfile configuredProfile(
+            AudioTestFixtures.StubSmpsLoader loader) {
+        return new AudioTestFixtures.StubAudioProfile(loader) {
+            @Override
+            public com.openggf.audio.smps.SmpsSequencerConfig
+                    getSequencerConfig() {
+                return new com.openggf.audio.smps.SmpsSequencerConfig.Builder()
+                        .build();
+            }
+        };
+    }
+
+    private static void assertStableLiveBackend(
+            AudioBackendLogicalSnapshot expected,
+            AudioBackendLogicalSnapshot actual) {
+        assertEquals(expected.currentMusic(), actual.currentMusic());
+        assertEquals(expected.sfxBlocked(), actual.sfxBlocked());
+        assertEquals(expected.pendingRestore(), actual.pendingRestore());
+        assertEquals(expected.speedShoesEnabled(),
+                actual.speedShoesEnabled());
+        assertEquals(expected.speedMultiplier(), actual.speedMultiplier());
+        assertEquals(expected.overrideStack(), actual.overrideStack());
+        assertEquals(expected.musicDriver().sequencers(),
+                actual.musicDriver().sequencers(),
+                "held replay must not erase or replace live sequencers");
+        assertEquals(expected.standaloneSfxDriver(),
+                actual.standaloneSfxDriver());
     }
 
     private static void assertPresentationLogicalEquals(
@@ -394,5 +588,46 @@ class TestAudioPresentationSnapshotParity {
             samples[frame * 2 + 1] = (short) (700 - frame * 7);
         }
         return new DecodedPcm(assetId, 2, sampleRate, samples);
+    }
+
+    private static AbstractSmpsData persistentRestTrack(int id) {
+        byte[] data = new byte[2_049];
+        for (int index = 1; index < data.length; index += 2) {
+            data[index] = (byte) 0x80;
+            data[index + 1] = 0x7F;
+        }
+        return new AbstractSmpsData(data, 0) {
+            {
+                setId(id);
+            }
+
+            @Override
+            protected void parseHeader() {
+                channels = 1;
+                fmPointers = new int[] {1};
+                fmKeyOffsets = new int[] {0};
+                fmVolumeOffsets = new int[] {0};
+            }
+
+            @Override
+            public byte[] getVoice(int voiceId) {
+                return new byte[25];
+            }
+
+            @Override
+            public byte[] getPsgEnvelope(int envelopeId) {
+                return new byte[] {0};
+            }
+
+            @Override
+            public int read16(int offset) {
+                return 0;
+            }
+
+            @Override
+            public int getBaseNoteOffset() {
+                return 0;
+            }
+        };
     }
 }

@@ -225,7 +225,7 @@ class TestHeldRewindAudioRestoreDeferral {
     }
 
     @Test
-    void seekToSupersedesDeferredRestoreWithItsOwnSingleRestore() {
+    void seekToSupersedesDeferredTargetWithoutPublishingBeforeRelease() {
         RewindController controller = newController(scriptedStepper(), 4);
         for (int i = 0; i < 8; i++) {
             controller.step();
@@ -237,10 +237,15 @@ class TestHeldRewindAudioRestoreDeferral {
 
         controller.seekTo(3);
 
-        assertEquals(1, backend.logicalRestores, "seek commit lands exactly one restore");
+        assertEquals(0, backend.logicalRestores,
+                "seek target preparation must remain detached while reverse "
+                        + "presentation is held");
         controller.commitDeferredAudioRestore();
+        assertEquals(0, backend.logicalRestores,
+                "seek must clear the controller deferral without publishing");
+        audio.endReverseAudioPresentation();
         assertEquals(1, backend.logicalRestores,
-                "seek must clear the deferred flag so no second restore can fire");
+                "reverse release publishes the prepared seek target once");
     }
 
     @Test

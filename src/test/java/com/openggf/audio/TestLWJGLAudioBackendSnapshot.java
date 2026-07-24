@@ -26,6 +26,57 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestLWJGLAudioBackendSnapshot {
     @Test
+    void preparedRestoreLeavesLiveDriversUntouchedUntilCommit() {
+        SmpsDriver liveSource = configuredDriver();
+        addSequencer(liveSource);
+        SmpsDriver targetMusic = configuredDriver();
+        addSequencer(targetMusic);
+        SmpsDriver targetSfx = configuredDriver();
+        addSfxSequencer(targetSfx);
+        LWJGLAudioBackend backend =
+                new LWJGLAudioBackend(
+                        SonicConfigurationService.getInstance());
+        backend.restoreLogicalSnapshot(new AudioBackendLogicalSnapshot(
+                AudioSourceDescriptor.baseMusic(0x80), false, false,
+                false, 1, List.of(), liveSource.captureSnapshot(), null));
+        AudioBackendLogicalSnapshot before =
+                backend.captureLogicalSnapshot();
+        SmpsDriver liveDriver = backend.musicDriverForTesting();
+        AudioBackendLogicalSnapshot target =
+                new AudioBackendLogicalSnapshot(
+                        AudioSourceDescriptor.baseMusic(0x81), false, false,
+                        true, 3, List.of(),
+                        targetMusic.captureSnapshot(),
+                        targetSfx.captureSnapshot());
+
+        AudioBackend.PreparedLogicalRestore prepared =
+                backend.prepareLogicalRestore(
+                        target, SmpsDriverSnapshot.liveReferences(), true);
+
+        assertSame(liveDriver, backend.musicDriverForTesting());
+        AudioBackendLogicalSnapshot afterPrepare =
+                backend.captureLogicalSnapshot();
+        assertEquals(before.currentMusic(), afterPrepare.currentMusic());
+        assertEquals(before.speedShoesEnabled(),
+                afterPrepare.speedShoesEnabled());
+        assertEquals(before.speedMultiplier(),
+                afterPrepare.speedMultiplier());
+        assertEquals(before.musicDriver().sequencers(),
+                afterPrepare.musicDriver().sequencers());
+
+        backend.commitLogicalRestore(prepared);
+        assertNotSame(liveDriver, backend.musicDriverForTesting());
+        AudioBackendLogicalSnapshot committed =
+                backend.captureLogicalSnapshot();
+        assertEquals(target.currentMusic(), committed.currentMusic());
+        assertEquals(target.speedShoesEnabled(),
+                committed.speedShoesEnabled());
+        assertEquals(target.speedMultiplier(), committed.speedMultiplier());
+        assertNotNull(committed.musicDriver());
+        assertNotNull(committed.standaloneSfxDriver());
+    }
+
+    @Test
     void restoreLogicalSnapshotPreservesCapturedSmpsDriverSynthState() {
         SmpsDriver source = configuredDriver();
         addSequencer(source);

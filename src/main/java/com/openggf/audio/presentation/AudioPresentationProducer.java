@@ -36,6 +36,8 @@ public final class AudioPresentationProducer {
     private PcmHistoryRing.ReverseCursor reverseCursor;
     private AudioPresentationSnapshot selectedRestore;
     private AudioPresentationDependencyResolver selectedRestoreResolver;
+    private AudioVoiceRegistry.PreparedSnapshotRestore
+            preparedSelectedRestore;
     private int captureCount;
     private int releaseCrossfadeRemaining;
     private short lastReverseLeft;
@@ -173,6 +175,8 @@ public final class AudioPresentationProducer {
 
     public void beginReverse(double rate) {
         assertOwnerBoundary();
+        registry.discardPreparedRestore(preparedSelectedRestore);
+        preparedSelectedRestore = null;
         selectedRestore = null;
         selectedRestoreResolver = null;
         cancelReleaseCrossfade();
@@ -195,7 +199,11 @@ public final class AudioPresentationProducer {
             return;
         }
         if (selectedRestore != null) {
-            registry.restore(selectedRestore, selectedRestoreResolver);
+            if (preparedSelectedRestore == null) {
+                preparedSelectedRestore = registry.prepareSnapshotRestore(
+                        selectedRestore, selectedRestoreResolver);
+            }
+            registry.commitPreparedRestore(preparedSelectedRestore);
         }
         registry.stopTransientVoices();
         history.commitReverseCursor(reverseCursor);
@@ -203,6 +211,7 @@ public final class AudioPresentationProducer {
         reverseActive = false;
         selectedRestore = null;
         selectedRestoreResolver = null;
+        preparedSelectedRestore = null;
         if (hasLastReverseFrame && reverseFrameOutput
                 && crossfadeFrames > 0) {
             releaseCrossfadeRemaining = crossfadeFrames;
@@ -216,6 +225,8 @@ public final class AudioPresentationProducer {
         history.clear();
         selectedRestore = null;
         selectedRestoreResolver = null;
+        registry.discardPreparedRestore(preparedSelectedRestore);
+        preparedSelectedRestore = null;
         cancelReleaseCrossfade();
     }
 
@@ -237,6 +248,8 @@ public final class AudioPresentationProducer {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
         if (preservePresentation && reverseActive) {
+            registry.discardPreparedRestore(preparedSelectedRestore);
+            preparedSelectedRestore = null;
             selectedRestore = snapshot;
             selectedRestoreResolver = resolver;
             return;
@@ -248,8 +261,19 @@ public final class AudioPresentationProducer {
             reverseActive = false;
             selectedRestore = null;
             selectedRestoreResolver = null;
+            registry.discardPreparedRestore(preparedSelectedRestore);
+            preparedSelectedRestore = null;
             cancelReleaseCrossfade();
         }
+    }
+
+    public void prepareSelectedRestore() {
+        assertOwnerBoundary();
+        if (selectedRestore == null || preparedSelectedRestore != null) {
+            return;
+        }
+        preparedSelectedRestore = registry.prepareSnapshotRestore(
+                selectedRestore, selectedRestoreResolver);
     }
 
     public void replaceSink(AudioPresentationSink sink) {

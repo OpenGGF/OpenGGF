@@ -62,6 +62,19 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             SampleBackedVoice[] sampleSfx) {
     }
 
+    public static final class PreparedSnapshotRestore {
+        private final PreparedRestore voices;
+        private final AudioPresentationSnapshot snapshot;
+        private boolean consumed;
+
+        private PreparedSnapshotRestore(
+                PreparedRestore voices,
+                AudioPresentationSnapshot snapshot) {
+            this.voices = voices;
+            this.snapshot = snapshot;
+        }
+    }
+
     private final Thread ownerThread;
     private final SmpsSfxInstantiation sfxInstantiation;
     private final AudioPresentationDependencyResolver dependencyResolver;
@@ -341,6 +354,12 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     public void restore(
             AudioPresentationSnapshot snapshot,
             AudioPresentationDependencyResolver resolver) {
+        commitPreparedRestore(prepareSnapshotRestore(snapshot, resolver));
+    }
+
+    public PreparedSnapshotRestore prepareSnapshotRestore(
+            AudioPresentationSnapshot snapshot,
+            AudioPresentationDependencyResolver resolver) {
         assertOwnerBoundary();
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
@@ -364,10 +383,24 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     voice.stop();
                 }
             }
-            coordFlagHandlers.state().restore(previousCoordState);
             throw failure;
+        } finally {
+            coordFlagHandlers.state().restore(previousCoordState);
         }
+        return new PreparedSnapshotRestore(prepared, snapshot);
+    }
 
+    public void commitPreparedRestore(PreparedSnapshotRestore restore) {
+        assertOwnerBoundary();
+        Objects.requireNonNull(restore, "restore");
+        if (restore.consumed) {
+            throw new IllegalStateException(
+                    "Prepared presentation restore already consumed");
+        }
+        restore.consumed = true;
+        PreparedRestore prepared = restore.voices;
+        AudioPresentationSnapshot snapshot = restore.snapshot;
+        coordFlagHandlers.state().restore(snapshot.coordFlagRuntimeState());
         stopAndRemoveAllVoices();
         activeMusic = prepared.activeMusic();
         overrideCount = prepared.overrides().length;
@@ -390,6 +423,32 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         speedMultiplier = snapshot.speedMultiplier();
         ringLeft = snapshot.ringLeft();
         rebuildOrderedVoices();
+    }
+
+    public void discardPreparedRestore(PreparedSnapshotRestore restore) {
+        assertOwnerBoundary();
+        if (restore == null || restore.consumed) {
+            return;
+        }
+        restore.consumed = true;
+        PreparedRestore prepared = restore.voices;
+        if (prepared.activeMusic() != null) {
+            prepared.activeMusic().voice().stop();
+        }
+        for (MusicSlot slot : prepared.overrides()) {
+            slot.voice().stop();
+        }
+        if (prepared.standaloneSmps() != null) {
+            prepared.standaloneSmps().stop();
+        }
+        if (prepared.rawPcm() != null) {
+            prepared.rawPcm().stop();
+        }
+        for (SampleBackedVoice sample : prepared.sampleSfx()) {
+            if (sample != null) {
+                sample.stop();
+            }
+        }
     }
 
     private void applyPreparedControls(
