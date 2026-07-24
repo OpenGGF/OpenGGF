@@ -125,6 +125,7 @@ class TestHeldRewindAudioStepCost {
         audio.beginCaptureMode(sampleRate, CAPTURE_FPS);
         try {
             short[] drainScratch = new short[(sampleRate / CAPTURE_FPS + 2) * 2];
+            boolean[] audibleForwardPcm = new boolean[1];
             EngineStepper stepper = in -> {
                 if (in.frameIndex() == 1) {
                     audio.playMusic(MUSIC_EHZ);
@@ -134,7 +135,13 @@ class TestHeldRewindAudioStepCost {
                 // suppressed and presentation reads PCM history instead).
                 if (!audio.isRewindReplaySuppressed()) {
                     audio.presentFrame(PresentationMode.FORWARD);
-                    audio.drainCaptureFrame(drainScratch);
+                    int frames = audio.drainCaptureFrame(drainScratch);
+                    for (int sample = 0; sample < frames * 2; sample++) {
+                        if (drainScratch[sample] != 0) {
+                            audibleForwardPcm[0] = true;
+                            break;
+                        }
+                    }
                 }
             };
             RewindController controller = new RewindController(
@@ -150,7 +157,12 @@ class TestHeldRewindAudioStepCost {
             }
             assertTrue(controller.currentFrame() == FORWARD_FRAMES, "forward play must reach frame " + FORWARD_FRAMES);
             assertNotNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
-                    "music voice must be live in the presentation snapshot (real synthesis engaged)");
+                    "music voice must own the music slot in the presentation snapshot");
+            // Occupying the music slot only proves a command resolved; the
+            // harness measures SmpsDriver snapshot/restore cost, so require
+            // audible PCM out of the forward drains (real synthesis engaged).
+            assertTrue(audibleForwardPcm[0],
+                    "forward capture drains must carry non-silent PCM (real synthesis engaged)");
 
             audio.beginReverseAudioPresentation();
 

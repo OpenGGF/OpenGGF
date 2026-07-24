@@ -32,7 +32,7 @@ All optional except `--trace`. Unspecified flags fall back to the `CAPTURE_*` co
 | `--trace <id\|name\|dir>` | (required) | 0-based `TraceCatalog` index, a trace **directory name** (e.g. `cpz`, `ehz1_fullrun`), or a direct path to a trace directory. |
 | `--out-dir <dir>` | `CAPTURE_OUTPUT_DIR` (`target/trace-videos`) | Output directory. |
 | `--scale <n>` | `CAPTURE_SCALE` (`4`) | Integer nearest-neighbor upscale (4× → 1280×896). |
-| `--fps <n>` | `CAPTURE_FPS` (`60`) | Output frame rate. |
+| `--fps <n>` | `CAPTURE_FPS` (`60`) | Output frame rate. Also sets the engine frame rate for the capture process, because the audio producer presents exactly one packet per outer frame at that rate; if the region pins the engine rate (PAL = 50), the tool prints a notice and captures at the pinned rate so audio and video stay in sync. |
 | `--codec <name>` | `CAPTURE_CODEC` (`ffv1`) | Video codec. |
 | `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS` (`true`) | Per-run override to hide / show the desync ghost(s). |
 

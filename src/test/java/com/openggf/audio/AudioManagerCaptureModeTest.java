@@ -162,6 +162,71 @@ class AudioManagerCaptureModeTest {
     }
 
     @Test
+    void drainBeforeTheFirstPresentYieldsClockedSilence() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new RecordingAudioBackend());
+        audio.submitShadowRawPcmForTesting(rampPcm(4_000), 48_000);
+
+        audio.beginCaptureMode(48_000, 60);
+
+        short[] target = new short[800 * 2];
+        java.util.Arrays.fill(target, (short) 0x4321);
+        assertEquals(800, audio.drainCaptureFrame(target),
+                "a drain issued before the first presentation is still one"
+                        + " clocked frame");
+        assertTrue(allZero(target),
+                "nothing has been presented, so the packet is fresh silence");
+
+        audio.endCaptureMode();
+    }
+
+    @Test
+    void beginCaptureRejectsAFrameRateTheProducerIsNotClockedAt() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        SonicConfigurationService.getInstance().resetToDefaults();
+        audio.setBackend(new RecordingAudioBackend());
+        audio.submitShadowRawPcmForTesting(rampPcm(8_000), 48_000);
+        assertEquals(60, audio.presentationFrameRate(),
+                "the default headless producer is clocked at 60 fps");
+
+        AudioPresentationProducer.TransactionFingerprint before =
+                AudioManagerTestDiagnostics.producerFingerprint(audio);
+        assertThrows(IllegalArgumentException.class,
+                () -> audio.beginCaptureMode(48_000, 30),
+                "a slower capture clock than the producer is rejected");
+        assertThrows(IllegalArgumentException.class,
+                () -> audio.beginCaptureMode(48_000, 50),
+                "a faster capture clock than the producer is rejected");
+        AudioPresentationProducer.TransactionFingerprint after =
+                AudioManagerTestDiagnostics.producerFingerprint(audio);
+        assertEquals(before.captureCount(), after.captureCount(),
+                "a rejected lease attaches nothing");
+        assertEquals(before.clock(), after.clock());
+        assertThrows(IllegalStateException.class,
+                () -> audio.drainCaptureFrame(new short[4096]),
+                "no lease is live after a rejected rate");
+
+        // Why the guard exists: the producer presents one packet per outer
+        // frame at ITS rate, so a mismatched capture clock silently corrupts
+        // every packet. Attach the mismatched lease directly on the producer
+        // to pin that corruption.
+        LiveCaptureAudioHandle mismatched =
+                AudioManagerTestDiagnostics.attachPresentationCapture(audio, 30);
+        audio.presentFrame(PresentationMode.FORWARD);
+        short[] packet = new short[1_600 * 2];
+        assertEquals(1_600, mismatched.drainPresentationFrame(packet),
+                "a 30 fps lease asks for twice the producer's 60 fps packet");
+        assertFalse(allZero(java.util.Arrays.copyOfRange(packet, 0, 800 * 2)),
+                "the producer's real packet fills only the first half");
+        assertTrue(allZero(java.util.Arrays.copyOfRange(
+                        packet, 800 * 2, 1_600 * 2)),
+                "the rest is zero-padding, i.e. half the recording is silence");
+        mismatched.close();
+    }
+
+    @Test
     void secondDrainReturnsClockedSilenceRatherThanStalePcm() {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();

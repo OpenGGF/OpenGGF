@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.IntSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -68,7 +69,7 @@ class TraceCaptureSessionTest {
 
     @Test
     void startRejectsDimensionsThatDoNotMatchTheGrabber() {
-        RecordingCaptureRecorder recorder = new RecordingCaptureRecorder();
+        RecordingCaptureRecorder recorder = recorder();
         TraceCaptureSession session = session(recorder);
 
         CaptureException failure = assertThrows(CaptureException.class,
@@ -85,7 +86,7 @@ class TraceCaptureSessionTest {
 
     @Test
     void stepAndCaptureRequiresStart() {
-        TraceCaptureSession session = session(new RecordingCaptureRecorder());
+        TraceCaptureSession session = session(recorder());
 
         CaptureException failure =
                 assertThrows(CaptureException.class, session::stepAndCapture);
@@ -97,13 +98,18 @@ class TraceCaptureSessionTest {
     @Test
     void startTakesTheCaptureLeaseBeforeOpeningTheRecorder() throws Exception {
         int leasesBefore = leaseCount();
-        RecordingCaptureRecorder recorder = new RecordingCaptureRecorder();
+        RecordingCaptureRecorder recorder = recorder();
         TraceCaptureSession session = session(recorder);
 
         session.start(320, 224, SAMPLE_RATE);
 
         assertEquals(leasesBefore + 1, leaseCount());
-        assertEquals(List.of("recorder-start"), recorder.events);
+        // The recorder samples the live lease count as it opens, so this pins
+        // the ORDER, not merely that both calls happened: opening the recorder
+        // first would record "recorder-start(leases=" + leasesBefore + ")".
+        assertEquals(List.of("recorder-start(leases=" + (leasesBefore + 1) + ")"),
+                recorder.events,
+                "the lease must already be attached when the recorder opens");
         assertNotNull(TraceGhostHook.active(),
                 "the ghost hook is installed for the capture run");
         assertEquals(SAMPLE_RATE / FPS,
@@ -117,14 +123,18 @@ class TraceCaptureSessionTest {
     void finishStopsTheRecorderThenReleasesTheLeaseAndGhostHook()
             throws Exception {
         int leasesBefore = leaseCount();
-        RecordingCaptureRecorder recorder = new RecordingCaptureRecorder();
+        RecordingCaptureRecorder recorder = recorder();
         TraceCaptureSession session = session(recorder);
         session.start(320, 224, SAMPLE_RATE);
 
         Path output = session.finish();
 
         assertEquals(recorder.outputFile(), output);
-        assertEquals(List.of("recorder-start", "recorder-stop"), recorder.events);
+        // The stop event carries the lease count observed inside stop(): the
+        // lease is still attached there, i.e. the recorder stops FIRST.
+        assertEquals(List.of("recorder-start(leases=" + (leasesBefore + 1) + ")",
+                        "recorder-stop(leases=" + (leasesBefore + 1) + ")"),
+                recorder.events);
         assertEquals(leasesBefore, leaseCount());
         assertNull(TraceGhostHook.active(),
                 "finish clears the ghost hook it installed");
@@ -135,7 +145,7 @@ class TraceCaptureSessionTest {
     @Test
     void finishReleasesTheLeaseEvenWhenTheRecorderStopFails() {
         int leasesBefore = leaseCount();
-        RecordingCaptureRecorder recorder = new RecordingCaptureRecorder();
+        RecordingCaptureRecorder recorder = recorder();
         recorder.failOnStop = true;
         TraceCaptureSession session = session(recorder);
         assertDoesNotThrowStart(session);
@@ -145,6 +155,49 @@ class TraceCaptureSessionTest {
         assertEquals(leasesBefore, leaseCount(),
                 "a failing recorder stop must still release the lease");
         assertNull(TraceGhostHook.active());
+    }
+
+    @Test
+    void startReleasesTheLeaseWhenTheRecorderFailsToOpen() {
+        int leasesBefore = leaseCount();
+        RecordingCaptureRecorder recorder = recorder();
+        recorder.failOnStart = true;
+        TraceCaptureSession session = session(recorder);
+
+        assertThrows(CaptureException.class,
+                () -> session.start(320, 224, SAMPLE_RATE));
+
+        assertEquals(leasesBefore, leaseCount(),
+                "a recorder that fails to open must not leak the lease");
+        assertNull(TraceGhostHook.active(),
+                "a failed start never installs the ghost hook");
+        assertThrows(IllegalStateException.class,
+                () -> audio.drainCaptureFrame(new short[2048]),
+                "the lease is gone after a failed start");
+        // The leaked-lease symptom: a later capture attempt in the same
+        // process must still be able to take a lease.
+        audio.beginCaptureMode(SAMPLE_RATE, FPS);
+        audio.endCaptureMode();
+    }
+
+    @Test
+    void startRejectsAnFpsThatTheProducerIsNotClockedAt() {
+        int leasesBefore = leaseCount();
+        int mismatchedFps = audio.presentationFrameRate() + 7;
+        RecordingCaptureRecorder recorder = recorder();
+        TraceCaptureSession session = new TraceCaptureSession(
+                mock(GameLoop.class), mock(TraceReplayDriver.class),
+                new FixedGrabber(320, 224), new DrainPcmAudioTap(audio),
+                recorder, mismatchedFps);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> session.start(320, 224, SAMPLE_RATE),
+                "a capture clock the producer is not clocked at would truncate"
+                        + " or zero-pad every packet");
+
+        assertEquals(leasesBefore, leaseCount());
+        assertEquals(List.of(), recorder.events,
+                "a rejected lease never opens the recorder");
     }
 
     private void assertDoesNotThrowStart(TraceCaptureSession session) {
@@ -167,6 +220,10 @@ class TraceCaptureSessionTest {
                 .captureCount();
     }
 
+    private RecordingCaptureRecorder recorder() {
+        return new RecordingCaptureRecorder(this::leaseCount);
+    }
+
     private static final class FixedGrabber implements VideoFrameGrabber {
         private final int width;
         private final int height;
@@ -181,19 +238,31 @@ class TraceCaptureSessionTest {
         @Override public byte[] grab() { return new byte[width * height * 4]; }
     }
 
-    /** Records lifecycle ordering without opening an encoder. */
+    /**
+     * Records lifecycle ordering without opening an encoder. Each event
+     * carries the audio capture-lease count observed <em>inside</em> the
+     * recorder call, so lease-vs-recorder ordering is observable rather than
+     * inferred from post-hoc state.
+     */
     private static final class RecordingCaptureRecorder extends CaptureRecorder {
         private final List<String> events = new ArrayList<>();
+        private final IntSupplier leaseCount;
         private boolean failOnStop;
+        private boolean failOnStart;
 
-        private RecordingCaptureRecorder() {
+        private RecordingCaptureRecorder(IntSupplier leaseCount) {
             super(null, BackpressurePolicy.BLOCK, 1,
                     Path.of("target"), "session-test", "stamp");
+            this.leaseCount = leaseCount;
         }
 
         @Override
-        public void start(int width, int height, int fps, int sampleRate) {
-            events.add("recorder-start");
+        public void start(int width, int height, int fps, int sampleRate)
+                throws CaptureException {
+            if (failOnStart) {
+                throw new CaptureException("injected recorder start failure");
+            }
+            events.add("recorder-start(leases=" + leaseCount.getAsInt() + ")");
         }
 
         @Override
@@ -203,7 +272,7 @@ class TraceCaptureSessionTest {
 
         @Override
         public Path stop() throws CaptureException {
-            events.add("recorder-stop");
+            events.add("recorder-stop(leases=" + leaseCount.getAsInt() + ")");
             if (failOnStop) {
                 throw new CaptureException("injected recorder stop failure");
             }

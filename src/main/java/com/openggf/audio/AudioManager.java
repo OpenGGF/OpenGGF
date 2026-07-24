@@ -96,6 +96,13 @@ public class AudioManager implements MusicRestoreSink {
     private AudioPresentationCommandResolver shadowResolver;
     private AudioVoiceRegistry shadowRegistry;
     private AudioPresentationProducer shadowProducer;
+    /**
+     * Frame rate the live {@link #shadowProducer} was constructed with. The
+     * producer owns the presentation clock, so this is the only rate at which
+     * a packet is presented; capture leases must be clocked to match it or
+     * every packet is truncated (lease slower) or zero-padded (lease faster).
+     */
+    private int shadowFrameRate;
     private AudioPresentationParityProbe shadowParity;
     private boolean shadowRestoreRequested;
     private AudioPresentationTuning shadowTuning;
@@ -249,6 +256,14 @@ public class AudioManager implements MusicRestoreSink {
      * that need a different rate must initialize the headless producer at that
      * rate (via its backend/sink) before admitting sources.
      *
+     * <p>{@code frameRate} must likewise equal the producer's frame rate. The
+     * producer presents one packet of {@code sampleRate / producerFrameRate}
+     * stereo frames per outer frame, while the lease clock decides how many
+     * frames each drain asks for: a slower lease permanently discards the
+     * tail of every packet and a faster one zero-pads it, in both cases
+     * silently. Callers that need a different capture frame rate must realize
+     * the producer at that rate first (see {@link #presentationFrameRate()}).
+     *
      * <p>Presentation itself remains the caller's outer-frame responsibility:
      * drive exactly one {@link #presentFrame(PresentationMode)} per presented
      * outer frame, then {@link #drainCaptureFrame} that packet once.
@@ -273,7 +288,27 @@ public class AudioManager implements MusicRestoreSink {
                             + " does not match the presentation producer rate "
                             + producerSampleRate);
         }
+        if (frameRate != shadowFrameRate) {
+            throw new IllegalArgumentException(
+                    "offline capture frame rate " + frameRate
+                            + " does not match the presentation producer frame"
+                            + " rate " + shadowFrameRate
+                            + "; a mismatched lease would truncate or zero-pad"
+                            + " every presented packet");
+        }
         offlineCaptureHandle = shadowProducer.attachCapture(frameRate);
+    }
+
+    /**
+     * The frame rate the authoritative presentation producer is clocked at,
+     * realizing it if necessary. Offline capture callers must clock both their
+     * lease and their container at this rate: it is the rate at which packets
+     * are actually presented, and it can differ from a requested capture frame
+     * rate (for example a PAL region pins the engine to 50 fps).
+     */
+    public synchronized int presentationFrameRate() {
+        ensureShadowPresentation();
+        return shadowFrameRate;
     }
 
     /**
@@ -2027,6 +2062,7 @@ public class AudioManager implements MusicRestoreSink {
                 Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
                 shadowRegistry, shadowCommands, mixer,
                 sink);
+        shadowFrameRate = frameRate;
         shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
     }
 
@@ -2045,6 +2081,7 @@ public class AudioManager implements MusicRestoreSink {
         }
         presentationSink = null;
         shadowProducer = null;
+        shadowFrameRate = 0;
         shadowResolver = null;
         shadowRegistry = null;
         shadowCommands = null;

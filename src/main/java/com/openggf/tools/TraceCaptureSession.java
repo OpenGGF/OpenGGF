@@ -92,6 +92,11 @@ public final class TraceCaptureSession {
      * non-consuming view, so it neither replaces the producer nor opens an
      * audio device. Must be called once before the first
      * {@link #stepAndCapture()}.
+     *
+     * <p>The session's {@code fps} must be the rate the presentation producer
+     * is clocked at ({@code AudioManager.presentationFrameRate()}); the lease
+     * is rejected otherwise, because a mismatched capture clock truncates or
+     * zero-pads every presented packet.
      */
     public void start(int width, int height, int sampleRate) throws CaptureException {
         if (width != this.width || height != this.height) {
@@ -99,7 +104,15 @@ public final class TraceCaptureSession {
                     + " do not match grabber " + this.width + "x" + this.height);
         }
         GameServices.audio().beginCaptureMode(sampleRate, fps);
-        recorder.start(width, height, fps, sampleRate);
+        try {
+            recorder.start(width, height, fps, sampleRate);
+        } catch (Throwable failedToOpen) {
+            // The recorder never opened, so finish() will never run: release
+            // the lease here or it is leaked onto the producer, which then
+            // rejects every later beginCaptureMode in this process.
+            GameServices.audio().endCaptureMode();
+            throw failedToOpen;
+        }
         TraceGhostHook.set(ghostHook);
         started = true;
     }

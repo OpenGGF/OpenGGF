@@ -181,6 +181,16 @@ public final class TraceCaptureTool {
         GameServices.configuration().setConfigValue(
                 SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, args.showGhosts());
 
+        // Capture fps must be the rate the presentation producer is clocked
+        // at: it presents exactly one packet of sampleRate/frameRate stereo
+        // frames per outer frame, so a container/lease clocked differently
+        // would truncate or zero-pad every packet. Push the requested fps into
+        // the engine frame rate BEFORE boot (the producer is realized from it
+        // and reads it lazily), then capture at whatever rate that actually
+        // resolves to — a PAL region, for instance, pins the engine to 50.
+        GameServices.configuration().setConfigValue(
+                SonicConfiguration.FPS, args.fps());
+
         // --- resolve trace -------------------------------------------------
         TraceEntry entry = resolveTrace(args.trace());
         System.out.println("Capturing trace: " + entry.dir()
@@ -252,11 +262,27 @@ public final class TraceCaptureTool {
         GlReadPixelsGrabber grabber = new GlReadPixelsGrabber(SCREEN_WIDTH, SCREEN_HEIGHT);
         DrainPcmAudioTap audioTap = new DrainPcmAudioTap(GameServices.audio());
         // The offline lease is a non-consuming view of the already-authoritative
-        // presentation producer, so its rate is the producer's rate. Take it
-        // before the recorder opens so the first presented packet is observable.
+        // presentation producer, so both its rate and the container's rate are
+        // the producer's rates. Take it before the recorder opens so the first
+        // presented packet is observable.
         int sampleRate = GameServices.audio().outputSampleRate();
-        GameServices.audio().beginCaptureMode(sampleRate, args.fps());
-        recorder.start(SCREEN_WIDTH, SCREEN_HEIGHT, args.fps(), sampleRate);
+        int frameRate = GameServices.audio().presentationFrameRate();
+        if (frameRate != args.fps()) {
+            System.out.println("capture: requested " + args.fps()
+                    + " fps but the presentation producer is clocked at "
+                    + frameRate + " fps; capturing at " + frameRate
+                    + " so audio and video stay in sync");
+        }
+        GameServices.audio().beginCaptureMode(sampleRate, frameRate);
+        try {
+            recorder.start(SCREEN_WIDTH, SCREEN_HEIGHT, frameRate, sampleRate);
+        } catch (Throwable failedToOpen) {
+            // The recorder never opened, so nothing will stop it and run the
+            // finally below: release the lease here or it is leaked onto the
+            // producer for the rest of the process.
+            GameServices.audio().endCaptureMode();
+            throw failedToOpen;
+        }
         HeadlessOuterAudioFrames audioFrames =
                 new HeadlessOuterAudioFrames(audioTap);
 
@@ -291,10 +317,17 @@ public final class TraceCaptureTool {
      * multiply the audio cadence by the number of steps. Conversely every
      * presented frame must be drained exactly once (captured during the window,
      * discarded outside it) so no stale packet is carried into the clip.
+     *
+     * <p>That contract is enforced here rather than merely documented: present
+     * and drain must strictly alternate. Wiring a present into a per-simulation
+     * -step body (the cadence-multiplying regression) therefore fails loudly on
+     * the first fast-forward frame that runs more than one simulation step,
+     * instead of silently emitting several packets per captured frame.
      */
     static final class HeadlessOuterAudioFrames {
         private final DrainPcmAudioTap audioTap;
         private final short[] discardBuffer = new short[16384];
+        private boolean presentedUndrained;
         private int presentedFrames;
         private int drainedFrames;
 
@@ -304,26 +337,45 @@ public final class TraceCaptureTool {
 
         /** Presents this outer frame's packet. Call once per presented frame. */
         void presentOuterFrame() {
+            if (presentedUndrained) {
+                throw new IllegalStateException(
+                        "the previously presented packet has not been drained:"
+                                + " exactly one presentation and one drain"
+                                + " belong to each presented outer frame");
+            }
             HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+            presentedUndrained = true;
             presentedFrames++;
         }
 
         /** Drains the presented packet into the recorder's PCM buffer. */
         int drainCaptured(short[] target) {
-            drainedFrames++;
+            beginDrain();
             return audioTap.drain(target);
         }
 
         /** Drains and discards the presented packet during fast-forward. */
         int discardPresented() {
-            drainedFrames++;
+            beginDrain();
             return audioTap.drain(discardBuffer);
         }
 
+        private void beginDrain() {
+            if (!presentedUndrained) {
+                throw new IllegalStateException(
+                        "no presented packet to drain: each drain must follow"
+                                + " exactly one presentOuterFrame()");
+            }
+            presentedUndrained = false;
+            drainedFrames++;
+        }
+
+        /** Test observation point: presented outer frames so far. */
         int presentedFrames() {
             return presentedFrames;
         }
 
+        /** Test observation point: drained (captured or discarded) packets. */
         int drainedFrames() {
             return drainedFrames;
         }

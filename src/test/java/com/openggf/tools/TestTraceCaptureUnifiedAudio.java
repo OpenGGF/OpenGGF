@@ -43,6 +43,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.IntSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -101,15 +102,18 @@ class TestTraceCaptureUnifiedAudio {
         Object producerBefore = producer(audio);
         assertNotNull(producerBefore, "the producer must already exist");
 
-        RecordingCaptureRecorder recorder = new RecordingCaptureRecorder();
+        RecordingCaptureRecorder recorder = recorder();
         TraceCaptureSession session = session(recorder);
 
         session.start(320, 224, SAMPLE_RATE);
 
         assertEquals(leasesBefore + 1, leaseCount(),
                 "start attaches exactly one unified capture lease");
-        assertEquals(List.of("recorder-start"), recorder.events,
-                "the lease is taken before the recorder opens");
+        // The recorder samples the live lease count as it opens, so opening
+        // the recorder first would record leases=leasesBefore here.
+        assertEquals(List.of("recorder-start(leases=" + (leasesBefore + 1) + ")"),
+                recorder.events,
+                "the lease is already attached when the recorder opens");
         assertSame(producerBefore, producer(audio),
                 "start must not replace the authoritative producer");
         assertSame(sentinel, deterministicRuntime(audio),
@@ -119,8 +123,11 @@ class TestTraceCaptureUnifiedAudio {
 
         assertEquals(leasesBefore, leaseCount(),
                 "finish detaches exactly the compatibility lease");
-        assertEquals(List.of("recorder-start", "recorder-stop"), recorder.events,
-                "recorder.stop() runs before endCaptureMode()");
+        assertEquals(List.of("recorder-start(leases=" + (leasesBefore + 1) + ")",
+                        "recorder-stop(leases=" + (leasesBefore + 1) + ")"),
+                recorder.events,
+                "recorder.stop() runs before endCaptureMode(), so the lease is"
+                        + " still attached inside stop()");
         assertSame(producerBefore, producer(audio));
         assertSame(sentinel, deterministicRuntime(audio));
     }
@@ -129,14 +136,16 @@ class TestTraceCaptureUnifiedAudio {
     void sessionFailureClosesCaptureHandleAndRecorder() throws Exception {
         audio.setBackend(headlessBackend());
         int leasesBefore = leaseCount();
-        RecordingCaptureRecorder recorder = new RecordingCaptureRecorder();
+        RecordingCaptureRecorder recorder = recorder();
         recorder.failOnStop = true;
         TraceCaptureSession session = session(recorder);
         session.start(320, 224, SAMPLE_RATE);
 
         assertThrows(CaptureException.class, session::finish);
 
-        assertEquals(List.of("recorder-start", "recorder-stop"), recorder.events,
+        assertEquals(List.of("recorder-start(leases=" + (leasesBefore + 1) + ")",
+                        "recorder-stop(leases=" + (leasesBefore + 1) + ")"),
+                recorder.events,
                 "the recorder stop attempt still runs first");
         assertEquals(leasesBefore, leaseCount(),
                 "a failing recorder stop still closes the capture lease");
@@ -159,7 +168,9 @@ class TestTraceCaptureUnifiedAudio {
 
         assertEquals(0, AudioManagerTestDiagnostics
                         .shadowParitySnapshot(audio).presentedFrames(),
-                "GameLoop.step()/stepInternal() must not present audio");
+                "a GameLoop.step() in this mode presents no audio (the"
+                        + " per-mode proof for every GameMode lives in"
+                        + " TestGameLoopAudioPresentationModes)");
 
         HeadlessGameBoot.presentHeadlessOuterAudioFrame();
 
@@ -173,6 +184,20 @@ class TestTraceCaptureUnifiedAudio {
         audio.endCaptureMode();
     }
 
+    /**
+     * The tool's per-outer-frame audio cadence, exercised through the helper
+     * the capture loops delegate to.
+     *
+     * <p>Scope note: this drives
+     * {@link TraceCaptureTool.HeadlessOuterAudioFrames} directly, because
+     * {@code driveClip}/{@code driveAndCapture} need a GL context, a ROM, a
+     * loaded trace, and ffmpeg. Loop-body <em>wiring</em> (which branch calls
+     * which helper method) is therefore not asserted here. What makes the
+     * cadence-multiplying regression non-silent is the helper's own
+     * present/drain alternation guard, pinned at the end of this test: moving
+     * the presentation into the per-simulation-step body throws on the first
+     * fast-forward frame with more than one simulation step.
+     */
     @Test
     void toolFastForwardDrainsOrDiscardsEveryPresentedPacketWithoutBacklog() {
         audio.setBackend(headlessBackend());
@@ -206,6 +231,23 @@ class TestTraceCaptureUnifiedAudio {
         assertEquals(30, frames.drainedFrames());
         assertEquals((long) 30 * FRAME_SAMPLES, lease.totalStereoFrames(),
                 "one clocked packet per presented outer frame, no backlog");
+
+        // Presenting again before the packet is drained is exactly the shape a
+        // per-simulation-step presentation would take. It must be rejected, not
+        // absorbed, so the regression cannot ship as silent extra cadence.
+        frames.presentOuterFrame();
+        assertThrows(IllegalStateException.class, frames::presentOuterFrame,
+                "a second presentation before the drain would multiply the"
+                        + " capture audio cadence");
+        assertEquals(31, frames.presentedFrames(),
+                "the rejected presentation never reached the producer");
+        assertEquals(31, AudioManagerTestDiagnostics
+                        .shadowParitySnapshot(audio).presentedFrames(),
+                "the rejected presentation never reached the producer");
+        assertEquals(FRAME_SAMPLES, frames.discardPresented());
+        assertThrows(IllegalStateException.class, frames::discardPresented,
+                "a drain with nothing presented would emit a stale or silent"
+                        + " packet into the recording");
 
         audio.endCaptureMode();
     }
@@ -314,6 +356,10 @@ class TestTraceCaptureUnifiedAudio {
                 recorder, FPS);
     }
 
+    private RecordingCaptureRecorder recorder() {
+        return new RecordingCaptureRecorder(this::leaseCount);
+    }
+
     private HeadlessSmpsAudioBackend headlessBackend() {
         return new HeadlessSmpsAudioBackend(
                 SonicConfigurationService.getInstance(),
@@ -413,19 +459,26 @@ class TestTraceCaptureUnifiedAudio {
         @Override public byte[] grab() { return new byte[width * height * 4]; }
     }
 
-    /** Records lifecycle ordering without opening an encoder. */
+    /**
+     * Records lifecycle ordering without opening an encoder. Each event
+     * carries the capture-lease count observed <em>inside</em> the recorder
+     * call, so "lease before recorder" is an observed ordering rather than an
+     * inference from state read after {@code start()} returned.
+     */
     private static final class RecordingCaptureRecorder extends CaptureRecorder {
         private final List<String> events = new ArrayList<>();
+        private final IntSupplier leaseCount;
         private boolean failOnStop;
 
-        private RecordingCaptureRecorder() {
+        private RecordingCaptureRecorder(IntSupplier leaseCount) {
             super(null, com.openggf.capture.BackpressurePolicy.BLOCK, 1,
                     Path.of("target"), "test", "stamp");
+            this.leaseCount = leaseCount;
         }
 
         @Override
         public void start(int width, int height, int fps, int sampleRate) {
-            events.add("recorder-start");
+            events.add("recorder-start(leases=" + leaseCount.getAsInt() + ")");
         }
 
         @Override
@@ -435,7 +488,7 @@ class TestTraceCaptureUnifiedAudio {
 
         @Override
         public Path stop() throws CaptureException {
-            events.add("recorder-stop");
+            events.add("recorder-stop(leases=" + leaseCount.getAsInt() + ")");
             if (failOnStop) {
                 throw new CaptureException("injected recorder stop failure");
             }
