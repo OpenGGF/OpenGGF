@@ -173,6 +173,34 @@ class TestAudioPresentationProducer {
     }
 
     @Test
+    void lateCaptureAttachAlignsWithFractionalForwardPackets() {
+        Fixture fixture = fixture(5, 2, rampStereo("late-forward", 16));
+        fixture.submitTone();
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        assertArrayEquals(new short[] {0, 100, 1, 101},
+                fixture.sink.lastPacket(2));
+
+        LiveCaptureAudioHandle capture = fixture.producer.attachCapture(2);
+        assertEquals(new AudioFrameClock.Snapshot(5, 2, 0, 1),
+                capture.clockSnapshot());
+        short[] captured =
+                new short[capture.maxStereoFramesPerPacket() * 2];
+
+        fixture.producer.present(1, PresentationMode.FORWARD);
+        assertEquals(3, capture.drainPresentationFrame(captured));
+        assertArrayEquals(fixture.sink.lastPacket(3), captured);
+        assertEquals(new AudioFrameClock.Snapshot(5, 2, 3, 0),
+                capture.clockSnapshot());
+
+        fixture.producer.present(2, PresentationMode.FORWARD);
+        assertEquals(2, capture.drainPresentationFrame(captured));
+        assertArrayEquals(fixture.sink.lastPacket(2),
+                Arrays.copyOf(captured, 4));
+        assertEquals(new AudioFrameClock.Snapshot(5, 2, 5, 1),
+                capture.clockSnapshot());
+    }
+
+    @Test
     void everyPresentedFrameReusesTheSameSynchronousViewObject() {
         IdentitySink sink = new IdentitySink(48_000);
         AudioPresentationProducer producer = emptyProducer(48_000, 60, sink);

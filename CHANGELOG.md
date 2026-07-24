@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fixed late live-audio capture attachment to inherit producer packet phase without inheriting pre-attachment frame totals, preserving exact fractional cadence during forward and rewind presentation.
 - Centralized final-PCM cadence, silence, history, reverse playback, crossfade, and phase-exact non-consuming capture taps in one producer.
 - Added bounded frame-boundary audio commands and deterministic voice admission without dropping structural state.
 - Preserved SMPS music, SFX arbitration, DAC, and continuous effects as one composite presentation voice.

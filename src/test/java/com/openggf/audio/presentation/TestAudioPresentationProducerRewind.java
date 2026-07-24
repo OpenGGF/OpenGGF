@@ -5,6 +5,7 @@ import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.presentation.AudioPresentationCommand.MusicVoiceEntry;
 import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceMusic;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
@@ -86,6 +87,37 @@ class TestAudioPresentationProducerRewind {
         assertEquals(2, capture.drainPresentationFrame(captured));
         assertArrayEquals(fixture.sink.lastPacket(), captured);
         assertArrayEquals(new short[] {1, 101, 0, 100}, captured);
+    }
+
+    @Test
+    void lateCaptureAttachAlignsWithFractionalHeldReversePackets() {
+        Fixture fixture = fixture(5, 2);
+        fixture.startMusic();
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        fixture.producer.present(1, PresentationMode.FORWARD);
+        fixture.producer.beginReverse(1.0);
+        fixture.producer.present(2, PresentationMode.REVERSE);
+
+        LiveCaptureAudioHandle capture = fixture.producer.attachCapture(2);
+        assertEquals(new AudioFrameClock.Snapshot(5, 2, 0, 1),
+                capture.clockSnapshot());
+        short[] captured =
+                new short[capture.maxStereoFramesPerPacket() * 2];
+
+        fixture.producer.present(3, PresentationMode.REVERSE);
+        assertEquals(3, capture.drainPresentationFrame(captured));
+        assertArrayEquals(fixture.sink.lastPacket(), captured);
+        assertArrayEquals(new short[] {2, 102, 1, 101, 0, 100},
+                captured);
+        assertEquals(new AudioFrameClock.Snapshot(5, 2, 3, 0),
+                capture.clockSnapshot());
+
+        fixture.producer.present(4, PresentationMode.REVERSE);
+        assertEquals(2, capture.drainPresentationFrame(captured));
+        assertArrayEquals(fixture.sink.lastPacket(),
+                Arrays.copyOf(captured, 4));
+        assertEquals(new AudioFrameClock.Snapshot(5, 2, 5, 1),
+                capture.clockSnapshot());
     }
 
     @Test
@@ -263,7 +295,11 @@ class TestAudioPresentationProducerRewind {
     }
 
     private static Fixture fixture() {
-        DecodedPcm pcm = rampStereo(32);
+        return fixture(4, 2);
+    }
+
+    private static Fixture fixture(int sampleRate, int frameRate) {
+        DecodedPcm pcm = rampStereo(32, sampleRate);
         AudioPresentationDependencyResolver resolver =
                 new AudioPresentationDependencyResolver() {
                     @Override
@@ -286,10 +322,13 @@ class TestAudioPresentationProducerRewind {
                 });
         AudioPresentationCommandQueue commands =
                 new AudioPresentationCommandQueue(registry::isRendering);
-        EventSink sink = new EventSink();
+        EventSink sink = new EventSink(
+                sampleRate, (sampleRate + frameRate - 1) / frameRate);
         AudioPresentationProducer producer = new AudioPresentationProducer(
-                4, 2, 32, 2, registry, commands,
-                new AudioPresentationMixer(2, registry::onVoiceFailure),
+                sampleRate, frameRate, 32, 2, registry, commands,
+                new AudioPresentationMixer(
+                        (sampleRate + frameRate - 1) / frameRate,
+                        registry::onVoiceFailure),
                 sink);
         producer.setHistoryArmed(true);
         return new Fixture(
@@ -313,13 +352,14 @@ class TestAudioPresentationProducerRewind {
         };
     }
 
-    private static DecodedPcm rampStereo(int frames) {
+    private static DecodedPcm rampStereo(int frames, int sampleRate) {
         short[] samples = new short[frames * 2];
         for (int frame = 0; frame < frames; frame++) {
             samples[frame * 2] = (short) frame;
             samples[frame * 2 + 1] = (short) (frame + 100);
         }
-        return new DecodedPcm("rewind-music", 2, 4, samples);
+        return new DecodedPcm(
+                "rewind-music", 2, sampleRate, samples);
     }
 
     private record Fixture(
@@ -331,7 +371,8 @@ class TestAudioPresentationProducerRewind {
             DecodedPcm pcm) {
         private void startMusic() {
             SampleBackedVoice music =
-                    SampleBackedVoice.loopingMusic(1, pcm, 4, 1.0f);
+                    SampleBackedVoice.loopingMusic(
+                            1, pcm, pcm.sampleRate(), 1.0f);
             commands.submit(new ReplaceMusic(MusicVoiceEntry.fromVoice(
                             7, AudioSourceDescriptor.baseMusic(7), music)),
                     () -> true, registry::apply);
@@ -345,12 +386,19 @@ class TestAudioPresentationProducerRewind {
 
     private static final class EventSink implements AudioPresentationSink {
         private final List<String> events = new ArrayList<>();
-        private final short[] packet = new short[4];
+        private final int sampleRate;
+        private final short[] packet;
+        private int copiedFrames;
         private boolean expectCrossfade;
+
+        private EventSink(int sampleRate, int maxStereoFrames) {
+            this.sampleRate = sampleRate;
+            packet = new short[maxStereoFrames * 2];
+        }
 
         @Override
         public int sampleRate() {
-            return 4;
+            return sampleRate;
         }
 
         @Override
@@ -364,6 +412,7 @@ class TestAudioPresentationProducerRewind {
                 events.add("forward");
             }
             Arrays.fill(packet, (short) 0);
+            copiedFrames = frame.stereoFrames();
             frame.copyTo(packet, 0);
         }
 
@@ -377,7 +426,7 @@ class TestAudioPresentationProducerRewind {
         }
 
         private short[] lastPacket() {
-            return packet.clone();
+            return Arrays.copyOf(packet, copiedFrames * 2);
         }
     }
 }

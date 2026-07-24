@@ -165,7 +165,8 @@ public final class AudioPresentationProducer {
             throw new IllegalStateException(
                     "audio presentation capture capacity exhausted");
         }
-        CaptureHandle capture = new CaptureHandle(frameRate);
+        CaptureHandle capture =
+                new CaptureHandle(frameRate, clock.captureSnapshot());
         captures[captureCount++] = capture;
         return capture;
     }
@@ -392,12 +393,19 @@ public final class AudioPresentationProducer {
         private boolean fresh;
         private boolean closed;
 
-        private CaptureHandle(int captureFrameRate) {
+        private CaptureHandle(
+                int captureFrameRate,
+                AudioFrameClock.Snapshot producerClockSnapshot) {
             this.captureFrameRate = captureFrameRate;
             captureMaxStereoFrames =
                     (sampleRate + captureFrameRate - 1) / captureFrameRate;
             captureClock = new AudioFrameClock(
                     sampleRate, captureFrameRate);
+            captureClock.restoreSnapshot(new AudioFrameClock.Snapshot(
+                    producerClockSnapshot.sampleRate(),
+                    producerClockSnapshot.frameRate(),
+                    0,
+                    producerClockSnapshot.remainder()));
             pending = new short[
                     Math.max(maxStereoFrames, captureMaxStereoFrames)
                             * CHANNELS];
