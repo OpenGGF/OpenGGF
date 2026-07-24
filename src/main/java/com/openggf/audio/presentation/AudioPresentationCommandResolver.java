@@ -8,7 +8,6 @@ import com.openggf.audio.presentation.AudioPresentationCommand.PushMusicOverride
 import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceMusic;
 import com.openggf.audio.presentation.AudioPresentationCommand.ResetRingAlternation;
 import com.openggf.audio.presentation.AudioPresentationCommand.RestoreMusicOverride;
-import com.openggf.audio.presentation.AudioPresentationCommand.RewindBoundary;
 import com.openggf.audio.presentation.AudioPresentationCommand.SetSpeedMultiplier;
 import com.openggf.audio.presentation.AudioPresentationCommand.SetSpeedShoes;
 import com.openggf.audio.presentation.AudioPresentationCommand.StartSampleSfx;
@@ -22,8 +21,11 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 /**
@@ -61,34 +63,40 @@ public final class AudioPresentationCommandResolver {
         int maxStereoFrames();
     }
 
-    private static final Consumer<AudioPresentationCommand> NO_SYNCHRONOUS_APPLY =
-            ignored -> {
-            };
-
     private final AudioPresentationCommandQueue queue;
     private final AudioPresentationSourceFactory factory;
     private final Sources sources;
     private final Consumer<String> warningConsumer;
+    private final BooleanSupplier ownerThreadBoundary;
+    private final Consumer<AudioPresentationCommand> synchronousApply;
     private long nextVoiceId = 1;
 
     public AudioPresentationCommandResolver(
             AudioPresentationCommandQueue queue,
             AudioPresentationSourceFactory factory,
             Sources sources,
-            Consumer<String> warningConsumer) {
+            Consumer<String> warningConsumer,
+            BooleanSupplier ownerThreadBoundary,
+            Consumer<AudioPresentationCommand> synchronousApply) {
         this.queue = Objects.requireNonNull(queue, "queue");
         this.factory = Objects.requireNonNull(factory, "factory");
         this.sources = Objects.requireNonNull(sources, "sources");
         this.warningConsumer =
                 Objects.requireNonNull(warningConsumer, "warningConsumer");
+        this.ownerThreadBoundary = Objects.requireNonNull(
+                ownerThreadBoundary, "ownerThreadBoundary");
+        this.synchronousApply = Objects.requireNonNull(
+                synchronousApply, "synchronousApply");
     }
 
     public static AudioPresentationCommandResolver controlsOnly(
             AudioPresentationCommandQueue queue,
-            AudioPresentationSourceFactory factory) {
+            AudioPresentationSourceFactory factory,
+            BooleanSupplier ownerThreadBoundary,
+            Consumer<AudioPresentationCommand> synchronousApply) {
         return new AudioPresentationCommandResolver(
                 queue, factory, new EmptySources(), ignored -> {
-                });
+                }, ownerThreadBoundary, synchronousApply);
     }
 
     public void submit(AudioCommand command) {
@@ -120,7 +128,7 @@ public final class AudioPresentationCommandResolver {
     public void submitRawPcm(byte[] pcm, int sourceRate) {
         byte[] source = Objects.requireNonNull(pcm, "pcm").clone();
         String assetId = "sega-pcm:" + sourceRate + ":"
-                + source.length + ":" + Arrays.hashCode(source);
+                + source.length + ":" + sha256(source);
         DecodedPcm registered = factory.registerUnsigned8Mono(
                 assetId, source, sourceRate);
         enqueue(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
@@ -133,9 +141,11 @@ public final class AudioPresentationCommandResolver {
 
     private void submitMusic(AudioCommand.PlayMusic command) {
         if (command.route() == AudioCommand.MusicRoute.SYSTEM_COMMAND) {
-            enqueue(new RewindBoundary());
+            warn("Rejected system music command " + command.musicId()
+                    + ": presentation system-command semantics are unsupported");
             return;
         }
+        AudioPresentationCommand resolved;
         try {
             AudioPresentationCommand.MusicVoiceEntry voice =
                     switch (command.route()) {
@@ -162,14 +172,16 @@ public final class AudioPresentationCommandResolver {
                         case SYSTEM_COMMAND ->
                                 throw new AssertionError("handled above");
                     };
-            enqueue(command.override()
+            resolved = command.override()
                     ? new PushMusicOverride(voice)
-                    : new ReplaceMusic(voice));
+                    : new ReplaceMusic(voice);
         } catch (IOException | RuntimeException failure) {
             warn("Rejected music " + command.musicId()
                     + " via " + command.route() + ": "
                     + failure.getMessage());
+            return;
         }
+        enqueue(resolved);
     }
 
     private AudioPresentationCommand.MusicVoiceEntry resolveSmpsMusic(
@@ -192,9 +204,10 @@ public final class AudioPresentationCommandResolver {
     }
 
     private void submitSfx(AudioCommand.PlaySfx command) {
+        AudioPresentationCommand resolved;
         try {
-            switch (command.route()) {
-                case BASE_SMPS_ID -> submitSmpsSfx(
+            resolved = switch (command.route()) {
+                case BASE_SMPS_ID -> resolveSmpsSfxCommand(
                         sources.baseGameId(),
                         new SmpsAssetKey(
                                 sources.baseGameId(),
@@ -206,7 +219,7 @@ public final class AudioPresentationCommandResolver {
                 case BASE_SMPS_NAME -> {
                     AbstractSmpsData data =
                             sources.loadBaseSfx(command.sfxName());
-                    submitSmpsSfx(
+                    yield resolveSmpsSfxCommand(
                             sources.baseGameId(),
                             new SmpsAssetKey(
                                     sources.baseGameId(),
@@ -216,7 +229,7 @@ public final class AudioPresentationCommandResolver {
                             data,
                             command.pitch());
                 }
-                case DONOR_SMPS -> submitSmpsSfx(
+                case DONOR_SMPS -> resolveSmpsSfxCommand(
                         requireGameId(command.donorGameId()),
                         new SmpsAssetKey(
                                 command.donorGameId(),
@@ -227,21 +240,23 @@ public final class AudioPresentationCommandResolver {
                                 command.donorGameId(), command.sfxId()),
                         command.pitch());
                 case FALLBACK_NAME, RING_RESOLVED ->
-                        enqueue(StartSampleSfx.fromVoice(
+                        StartSampleSfx.fromVoice(
                                 factory.fallbackSfx(
                                         allocateVoiceId(),
                                         command.sfxName(),
                                         0,
-                                        command.pitch())));
-            }
+                                        command.pitch()));
+            };
         } catch (IOException | RuntimeException failure) {
             warn("Rejected SFX " + command.sfxName()
                     + "/" + command.sfxId() + " via "
                     + command.route() + ": " + failure.getMessage());
+            return;
         }
+        enqueue(resolved);
     }
 
-    private void submitSmpsSfx(
+    private AudioPresentationCommand resolveSmpsSfxCommand(
             String gameId,
             SmpsAssetKey key,
             int sfxId,
@@ -256,14 +271,14 @@ public final class AudioPresentationCommandResolver {
                 sources.specialSfx(gameId, sfxId));
         int continuousId =
                 sources.continuousSfx(gameId, sfxId) ? sfxId : 0;
-        enqueue(new AddSmpsSfx(factory.resolveSmpsSfx(
+        return new AddSmpsSfx(factory.resolveSmpsSfx(
                 allocateVoiceId(),
                 key,
                 pitchQ16(pitch),
                 priority,
                 continuousId,
                 data.getChannels() + data.getPsgChannels(),
-                sources.maxStereoFrames())));
+                sources.maxStereoFrames()));
     }
 
     private DacData requireDac(String gameId) {
@@ -279,10 +294,7 @@ public final class AudioPresentationCommandResolver {
     }
 
     private void enqueue(AudioPresentationCommand command) {
-        // A resolver never owns a registry. If the bounded queue reaches a
-        // synchronous-drain boundary, fail deterministically rather than
-        // applying commands from submission.
-        queue.submit(command, () -> false, NO_SYNCHRONOUS_APPLY);
+        queue.submit(command, ownerThreadBoundary, synchronousApply);
     }
 
     private long allocateVoiceId() {
@@ -312,6 +324,15 @@ public final class AudioPresentationCommandResolver {
                     "gameId must not be blank");
         }
         return value;
+    }
+
+    private static String sha256(byte[] source) {
+        try {
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(source));
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new AssertionError("SHA-256 is required by the JVM", impossible);
+        }
     }
 
     private static final class EmptySources implements Sources {

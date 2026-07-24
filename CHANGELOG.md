@@ -3,7 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Unified SMPS, fallback WAV, pitched SFX, and raw SEGA PCM command resolution while retaining audible legacy output during migration.
+- Unified SMPS, fallback WAV, pitched SFX, and collision-safe raw SEGA PCM command resolution while retaining audible legacy output during migration; legacy S3K music and SFX keep one private coordination-counter owner.
 - Fixed late live-audio capture attachment to inherit producer packet phase without inheriting pre-attachment frame totals, preserving exact fractional cadence during forward and rewind presentation.
 - Centralized final-PCM cadence, silence, history, reverse playback, crossfade, and phase-exact non-consuming capture taps in one producer.
 - Added bounded frame-boundary audio commands and deterministic voice admission without dropping structural state.

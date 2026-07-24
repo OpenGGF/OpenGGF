@@ -355,7 +355,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     @Override
     public void playSmps(AbstractSmpsData data, DacData dacData,
                          SmpsSequencerConfig config, boolean forceOverride) {
-        SmpsSequencerConfig effectiveConfig = (config != null) ? config : requireSmpsConfig();
+        SmpsSequencerConfig effectiveConfig = legacySequencerConfig(
+                (config != null) ? config : requireSmpsConfig());
 
         int musicId = data.getId();
         boolean isOverride = forceOverride
@@ -441,7 +442,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             return;
         }
 
-        SmpsSequencerConfig effectiveConfig = (config != null) ? config : requireSmpsConfig();
+        SmpsSequencerConfig effectiveConfig = legacySequencerConfig(
+                (config != null) ? config : requireSmpsConfig());
 
         boolean dacInterpolate = configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE);
         boolean fm6DacOff = configService.getBoolean(SonicConfiguration.FM6_DAC_OFF);
@@ -990,6 +992,28 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             DacData dacData,
             SmpsSequencerConfig sequencerConfig,
             AudioSourceDescriptor descriptor) {
+        AudioPresentationSourceFactory factory = createLegacySourceFactory();
+        String gameId = sequencerConfig.getCoordFlagHandler() != null
+                ? "s3k" : "legacy";
+        return factory.legacyMusicSmps(
+                        gameId,
+                        data.getId(),
+                        0,
+                        data,
+                        dacData,
+                        sequencerConfig,
+                        descriptor,
+                        STREAM_BUFFER_SIZE);
+    }
+
+    private SmpsSequencerConfig legacySequencerConfig(
+            SmpsSequencerConfig config) {
+        String gameId = config.getCoordFlagHandler() != null
+                ? "s3k" : "legacy";
+        return createLegacySourceFactory().legacySequencerConfig(gameId, config);
+    }
+
+    private AudioPresentationSourceFactory createLegacySourceFactory() {
         SmpsSequencer.Region region =
                 "PAL".equalsIgnoreCase(
                         configService.getString(SonicConfiguration.REGION))
@@ -1010,20 +1034,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                         AudioManager.getInstance(),
                         new DecodedPcmCache(),
                         getClass().getClassLoader()::getResourceAsStream);
-        AudioPresentationSourceFactory factory =
-                new AudioPresentationSourceFactory(
-                        () -> true, legacyCoordFlagHandlers, settings);
-        String gameId = sequencerConfig.getCoordFlagHandler() != null
-                ? "s3k" : "legacy";
-        return factory.legacyMusicSmps(
-                        gameId,
-                        data.getId(),
-                        0,
-                        data,
-                        dacData,
-                        sequencerConfig,
-                        descriptor,
-                        STREAM_BUFFER_SIZE);
+        return new AudioPresentationSourceFactory(
+                () -> true, legacyCoordFlagHandlers, settings);
     }
 
     @Override

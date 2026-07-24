@@ -35,8 +35,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -217,6 +219,74 @@ class TestAudioPresentationCommandResolver {
     }
 
     @Test
+    void rawPcmIdentityDoesNotAliasArraysWithTheSameArraysHashCode() {
+        Fixture fixture = fixture();
+
+        fixture.resolver.submitRawPcm(new byte[] {0, 31}, 16_500);
+        fixture.resolver.submitRawPcm(new byte[] {1, 0}, 16_500);
+
+        List<AudioPresentationCommand> commands = drain(fixture.queue);
+        String first = ((ReplaceRawPcm) commands.get(0))
+                .voice().snapshot().assetId();
+        String second = ((ReplaceRawPcm) commands.get(1))
+                .voice().snapshot().assetId();
+        assertNotSame(first, second);
+        assertFalse(first.equals(second));
+    }
+
+    @Test
+    void systemMusicCommandIsExplicitlyRejectedWithoutQueueMutation() {
+        Fixture fixture = fixture();
+
+        fixture.resolver.submit(new AudioCommand.PlayMusic(
+                0xFE, AudioCommand.MusicRoute.SYSTEM_COMMAND, false, null));
+
+        assertEquals(0, fixture.queue.size());
+        assertEquals(1, fixture.warnings.size());
+        assertTrue(fixture.warnings.get(0).contains("system music command"));
+    }
+
+    @Test
+    void structuralOverflowDrainsAtInjectedOwnerBoundary() {
+        Fixture fixture = fixture();
+
+        for (int index = 0;
+             index < AudioPresentationCommandQueue.CAPACITY + 17;
+             index++) {
+            fixture.resolver.submit(
+                    new AudioCommand.EndMusicOverride(index));
+        }
+
+        assertEquals(AudioPresentationCommandQueue.CAPACITY,
+                fixture.synchronouslyApplied.size());
+        assertEquals(17, fixture.queue.size());
+        assertEquals(new AudioPresentationCommand.EndMusicOverride(0),
+                fixture.synchronouslyApplied.get(0));
+    }
+
+    @Test
+    void queueCapacityFailureIsNotMisreportedAsAssetResolutionFailure() {
+        Fixture fixture = fixture();
+        fixture.sources.baseMusic = music(0x81);
+        for (int index = 0;
+             index < AudioPresentationCommandQueue.CAPACITY;
+             index++) {
+            fixture.resolver.submit(
+                    new AudioCommand.EndMusicOverride(index));
+        }
+        fixture.ownerThreadBoundary.set(false);
+
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                () -> fixture.resolver.submit(new AudioCommand.PlayMusic(
+                        0x81, AudioCommand.MusicRoute.BASE_SMPS,
+                        false, null)));
+
+        assertTrue(failure.getMessage().contains("owner boundary"));
+        assertTrue(fixture.warnings.isEmpty());
+    }
+
+    @Test
     void malformedFallbackAssetWarnsAndRejectsOnlyThatVoice() {
         Fixture fixture = fixture();
         fixture.assets.malformed.add("sfx/skid.wav");
@@ -278,12 +348,17 @@ class TestAudioPresentationCommandResolver {
     void mutatingOriginalLoadedObjectsAfterWarmAndQueueDoesNotChangeAppliedSfx() {
         Fixture fixture = fixture();
         MutableSfxData original = sfx(0xA0, (byte) 0xF2);
+        HashSet<Integer> mutableEndFlags = new HashSet<>(List.of(0xEE));
+        fixture.sources.baseConfig = new SmpsSequencerConfig.Builder()
+                .extraTrkEndFlags(mutableEndFlags)
+                .build();
         fixture.sources.baseSfx = original;
         fixture.resolver.submit(new AudioCommand.PlaySfx(
                 0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null));
         AudioPresentationCommand command = drain(fixture.queue).get(0);
 
         original.getData()[0x40] = (byte) 0xE9;
+        mutableEndFlags.clear();
         fixture.sources.baseDac.samples.getOrDefault(1, new byte[0]);
 
         AudioVoiceRegistry registry = fixture.registry();
@@ -294,6 +369,8 @@ class TestAudioPresentationCommandResolver {
         assertEquals((byte) 0xF2,
                 snapshot.sequencers().get(0).smpsData().getData()[0x40]);
         assertNotSame(original, snapshot.sequencers().get(0).smpsData());
+        assertEquals(Set.of(0xEE), snapshot.sequencers().get(0)
+                .config().getExtraTrkEndFlags());
     }
 
     @Test
@@ -546,11 +623,14 @@ class TestAudioPresentationCommandResolver {
         AudioPresentationCommandQueue queue =
                 new AudioPresentationCommandQueue();
         List<String> warnings = new ArrayList<>();
+        List<AudioPresentationCommand> synchronouslyApplied =
+                new ArrayList<>();
         AudioPresentationCommandResolver resolver =
                 new AudioPresentationCommandResolver(
-                        queue, factory, sources, warnings::add);
+                        queue, factory, sources, warnings::add,
+                        owner::get, synchronouslyApplied::add);
         return new Fixture(queue, factory, resolver, sources, assets, handlers,
-                warnings, owner);
+                warnings, owner, synchronouslyApplied);
     }
 
     private record Fixture(
@@ -561,7 +641,8 @@ class TestAudioPresentationCommandResolver {
             FakeAssets assets,
             SmpsCoordFlagHandlerOwner handlers,
             List<String> warnings,
-            AtomicBoolean ownerThreadBoundary) {
+            AtomicBoolean ownerThreadBoundary,
+            List<AudioPresentationCommand> synchronouslyApplied) {
         AudioVoiceRegistry registry() {
             return new AudioVoiceRegistry(
                     factory, factory, handlers, warnings::add);

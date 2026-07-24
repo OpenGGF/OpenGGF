@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 
@@ -166,6 +167,18 @@ public final class AudioPresentationSourceFactory
                 false);
         return buildMusicVoice(
                 musicId, voiceId, descriptor, maxStereoFrames, source);
+    }
+
+    /**
+     * Copies a legacy sequencer profile while replacing its mutable
+     * coordination handler with this backend's private owner.
+     */
+    public SmpsSequencerConfig legacySequencerConfig(
+            String gameId, SmpsSequencerConfig config) {
+        return copyPresentationConfig(
+                requireGameId(gameId),
+                Objects.requireNonNull(config, "config"),
+                config.getCoordFlagHandler() != null);
     }
 
     private SmpsCompositeVoice buildMusicVoice(
@@ -513,7 +526,8 @@ public final class AudioPresentationSourceFactory
                         sourceConfig.getCoordFlagParamOverrides())
                 .applyModOnNote(sourceConfig.isApplyModOnNote())
                 .halveModSteps(sourceConfig.isHalveModSteps())
-                .extraTrkEndFlags(sourceConfig.getExtraTrkEndFlags())
+                .extraTrkEndFlags(Set.copyOf(
+                        sourceConfig.getExtraTrkEndFlags()))
                 .relativePointers(sourceConfig.isRelativePointers())
                 .tempoOnFirstTick(sourceConfig.isTempoOnFirstTick())
                 .volMode(sourceConfig.getVolMode())

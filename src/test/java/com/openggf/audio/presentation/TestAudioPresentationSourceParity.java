@@ -22,6 +22,7 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioPresentationSourceParity {
@@ -309,6 +311,35 @@ class TestAudioPresentationSourceParity {
                     presentation.read(actual, actual.length));
             assertArrayEquals(expected, actual);
         }
+    }
+
+    @Test
+    void legacyS3kMusicAndSfxShareBackendPrivateCoordHandler() {
+        SonicConfigurationService configuration =
+                SonicConfigurationService.createStandalone();
+        NoDeviceBackend legacy = new NoDeviceBackend(configuration);
+        legacy.init();
+        legacy.setAudioProfile(new AudioTestFixtures.StubAudioProfile(
+                new AudioTestFixtures.StubSmpsLoader()) {
+            @Override public SmpsSequencerConfig getSequencerConfig() {
+                return Sonic3kSmpsSequencerConfig.CONFIG;
+            }
+        });
+
+        legacy.playSmps(data("music", 0x81), EMPTY_DAC,
+                Sonic3kSmpsSequencerConfig.CONFIG, false);
+        legacy.playSfxSmps(data("sfx", 0xA0), EMPTY_DAC, 1.0f,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+
+        List<com.openggf.audio.rewind.SmpsDriverSnapshot.SequencerEntry>
+                sequencers =
+                legacy.musicDriverForTesting().captureSnapshot().sequencers();
+        assertEquals(2, sequencers.size());
+        assertSame(sequencers.get(0).config().getCoordFlagHandler(),
+                sequencers.get(1).config().getCoordFlagHandler());
+        assertNotEquals(Sonic3kSmpsSequencerConfig.CONFIG
+                        .getCoordFlagHandler(),
+                sequencers.get(0).config().getCoordFlagHandler());
     }
 
     @Test
