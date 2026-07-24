@@ -87,15 +87,96 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
     }
 
-    private record PreparedSmpsLogicalRestore(
-            AbstractSmpsAudioBackend owner,
-            SmpsDriver musicDriver,
-            SmpsDriver standaloneSfxDriver,
-            Deque<MusicState> overrideStack,
-            AudioBackendLogicalSnapshot snapshot,
-            boolean preservePresentationQueue,
-            LegacyLiveState prior)
+    private enum PreparedRestoreState {
+        PREPARED,
+        COMMITTING,
+        COMMITTED,
+        DISCARDED
+    }
+
+    private static final class PreparedDriverResources {
+        private final List<SmpsDriver> drivers = new ArrayList<>();
+        private final Set<SmpsDriver> identities =
+                Collections.newSetFromMap(new IdentityHashMap<>());
+        private boolean discarded;
+
+        private void track(SmpsDriver driver) {
+            if (identities.add(driver)) {
+                drivers.add(driver);
+            }
+        }
+
+        private List<SmpsDriver> claimForDiscard() {
+            if (discarded) {
+                return List.of();
+            }
+            discarded = true;
+            return List.copyOf(drivers);
+        }
+    }
+
+    private static final class PreparedSmpsLogicalRestore
             implements AudioBackend.PreparedLogicalRestore {
+        private final AbstractSmpsAudioBackend owner;
+        private final SmpsDriver musicDriver;
+        private final SmpsDriver standaloneSfxDriver;
+        private final Deque<MusicState> overrideStack;
+        private final AudioBackendLogicalSnapshot snapshot;
+        private final boolean preservePresentationQueue;
+        private final LegacyLiveState prior;
+        private final PreparedDriverResources resources;
+        private PreparedRestoreState state = PreparedRestoreState.PREPARED;
+
+        private PreparedSmpsLogicalRestore(
+                AbstractSmpsAudioBackend owner,
+                SmpsDriver musicDriver,
+                SmpsDriver standaloneSfxDriver,
+                Deque<MusicState> overrideStack,
+                AudioBackendLogicalSnapshot snapshot,
+                boolean preservePresentationQueue,
+                LegacyLiveState prior,
+                PreparedDriverResources resources) {
+            this.owner = owner;
+            this.musicDriver = musicDriver;
+            this.standaloneSfxDriver = standaloneSfxDriver;
+            this.overrideStack = overrideStack;
+            this.snapshot = snapshot;
+            this.preservePresentationQueue = preservePresentationQueue;
+            this.prior = prior;
+            this.resources = resources;
+        }
+
+        private AbstractSmpsAudioBackend owner() {
+            return owner;
+        }
+
+        private SmpsDriver musicDriver() {
+            return musicDriver;
+        }
+
+        private SmpsDriver standaloneSfxDriver() {
+            return standaloneSfxDriver;
+        }
+
+        private Deque<MusicState> overrideStack() {
+            return overrideStack;
+        }
+
+        private AudioBackendLogicalSnapshot snapshot() {
+            return snapshot;
+        }
+
+        private boolean preservePresentationQueue() {
+            return preservePresentationQueue;
+        }
+
+        private LegacyLiveState prior() {
+            return prior;
+        }
+
+        private PreparedDriverResources resources() {
+            return resources;
+        }
     }
 
     private record LegacyLiveState(
@@ -957,8 +1038,24 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             AudioBackendLogicalSnapshot snapshot,
             SmpsDriverSnapshot.DependencyResolver resolver,
             boolean preservePresentationQueue) {
-        commitLogicalRestore(prepareLogicalRestore(
-                snapshot, resolver, preservePresentationQueue));
+        AudioBackend.PreparedLogicalRestore prepared =
+                prepareLogicalRestore(
+                        snapshot, resolver, preservePresentationQueue);
+        try {
+            commitLogicalRestore(prepared);
+        } catch (RuntimeException failure) {
+            try {
+                rollbackLogicalRestore(prepared);
+            } catch (RuntimeException rollbackFailure) {
+                failure.addSuppressed(rollbackFailure);
+            }
+            try {
+                discardLogicalRestore(prepared);
+            } catch (RuntimeException discardFailure) {
+                failure.addSuppressed(discardFailure);
+            }
+            throw failure;
+        }
     }
 
     @Override
@@ -970,28 +1067,32 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         Objects.requireNonNull(resolver, "resolver");
         synchronized (streamLock) {
             LegacyLiveState prior = captureLiveLogicalState();
+            PreparedDriverResources resources =
+                    new PreparedDriverResources();
             try {
                 SmpsDriver preparedMusic = snapshot.musicDriver() != null
                         ? restoreDriverFromSnapshot(
-                                null, snapshot.musicDriver(), resolver)
+                                null, snapshot.musicDriver(), resolver,
+                                resources)
                         : null;
                 SmpsDriver preparedSfx =
                         snapshot.standaloneSfxDriver() != null
                                 ? restoreDriverFromSnapshot(
                                         null,
                                         snapshot.standaloneSfxDriver(),
-                                        resolver)
+                                        resolver, resources)
                                 : null;
                 Deque<MusicState> preparedOverrides =
                         prepareMusicOverrideStack(
                                 snapshot.overrideStack(),
                                 snapshot.speedShoesEnabled(),
-                                snapshot.speedMultiplier());
+                                snapshot.speedMultiplier(), resources);
                 return new PreparedSmpsLogicalRestore(
                         this, preparedMusic, preparedSfx, preparedOverrides,
                         snapshot, preservePresentationQueue,
-                        prior);
+                        prior, resources);
             } catch (RuntimeException failure) {
+                discardPreparedResources(resources, failure);
                 throw failure;
             }
         }
@@ -1003,6 +1104,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         PreparedSmpsLogicalRestore prepared = requirePreparedRestore(restore);
         AudioBackendLogicalSnapshot snapshot = prepared.snapshot();
         synchronized (streamLock) {
+            if (prepared.state != PreparedRestoreState.PREPARED) {
+                throw new IllegalStateException(
+                        "Prepared restore is not available for commit: "
+                                + prepared.state);
+            }
+            prepared.state = PreparedRestoreState.COMMITTING;
             currentStream = null;
             currentSmps = null;
             smpsDriver = null;
@@ -1045,6 +1152,27 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         if (!prepared.preservePresentationQueue()) {
             hookStopAndClearAllMusicBuffers();
         }
+        synchronized (streamLock) {
+            prepared.state = PreparedRestoreState.COMMITTED;
+        }
+    }
+
+    @Override
+    public void discardLogicalRestore(
+            AudioBackend.PreparedLogicalRestore restore) {
+        PreparedSmpsLogicalRestore prepared = requirePreparedRestore(restore);
+        synchronized (streamLock) {
+            if (prepared.state == PreparedRestoreState.DISCARDED) {
+                return;
+            }
+            if (prepared.state != PreparedRestoreState.PREPARED) {
+                throw new IllegalStateException(
+                        "Only an unpublished prepared restore can be discarded: "
+                                + prepared.state);
+            }
+            prepared.state = PreparedRestoreState.DISCARDED;
+            discardPreparedResources(prepared.resources(), null);
+        }
     }
 
     @Override
@@ -1052,9 +1180,53 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             AudioBackend.PreparedLogicalRestore restore) {
         PreparedSmpsLogicalRestore prepared = requirePreparedRestore(restore);
         synchronized (streamLock) {
+            if (prepared.state != PreparedRestoreState.COMMITTING
+                    && prepared.state != PreparedRestoreState.COMMITTED) {
+                throw new IllegalStateException(
+                        "Restore was not committed and cannot be rolled back: "
+                                + prepared.state);
+            }
             restoreLiveLogicalState(prepared.prior());
             bindRuntimePresentationStreams();
+            // The manager retains this exact token for a lossless retry.
+            // It remains unpublished after rollback and is discarded only if
+            // the manager later abandons the deferred restore.
+            prepared.state = PreparedRestoreState.PREPARED;
         }
+    }
+
+    /**
+     * Releases a driver owned only by an unpublished or rolled-back restore.
+     * Kept as a narrow hook so concrete backends can extend resource cleanup
+     * without exposing prepared-token internals.
+     */
+    protected void discardPreparedDriver(SmpsDriver driver) {
+        driver.stopAll();
+    }
+
+    private void discardPreparedResources(
+            PreparedDriverResources resources,
+            RuntimeException primaryFailure) {
+        RuntimeException cleanupFailure = null;
+        for (SmpsDriver driver : resources.claimForDiscard()) {
+            try {
+                discardPreparedDriver(driver);
+            } catch (RuntimeException failure) {
+                if (cleanupFailure == null) {
+                    cleanupFailure = failure;
+                } else {
+                    cleanupFailure.addSuppressed(failure);
+                }
+            }
+        }
+        if (cleanupFailure == null) {
+            return;
+        }
+        if (primaryFailure != null) {
+            primaryFailure.addSuppressed(cleanupFailure);
+            return;
+        }
+        throw cleanupFailure;
     }
 
     private PreparedSmpsLogicalRestore requirePreparedRestore(
@@ -1129,11 +1301,13 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private Deque<MusicState> prepareMusicOverrideStack(
             List<AudioSourceDescriptor> overrideStack,
             boolean targetSpeedShoes,
-            int targetSpeedMultiplier) {
+            int targetSpeedMultiplier,
+            PreparedDriverResources resources) {
         Deque<MusicState> prepared = new ArrayDeque<>();
         for (AudioSourceDescriptor descriptor : overrideStack) {
             MusicState rebuilt = rebuildOverrideState(
-                    descriptor, targetSpeedShoes, targetSpeedMultiplier);
+                    descriptor, targetSpeedShoes, targetSpeedMultiplier,
+                    resources);
             if (rebuilt != null) {
                 prepared.addLast(rebuilt);
             } else if (descriptor != null) {
@@ -1148,7 +1322,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private MusicState rebuildOverrideState(
             AudioSourceDescriptor descriptor,
             boolean targetSpeedShoes,
-            int targetSpeedMultiplier) {
+            int targetSpeedMultiplier,
+            PreparedDriverResources resources) {
         if (descriptor == null) {
             return null;
         }
@@ -1157,6 +1332,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             return null;
         }
         SmpsDriver driver = newConfiguredSmpsDriver();
+        resources.track(driver);
         if ("PAL".equalsIgnoreCase(configService.getString(SonicConfiguration.REGION))) {
             driver.setRegion(SmpsSequencer.Region.PAL);
         } else {
@@ -1194,7 +1370,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private SmpsDriver restoreDriverFromSnapshot(
             SmpsDriver reusable,
             SmpsDriverSnapshot driverSnapshot,
-            SmpsDriverSnapshot.DependencyResolver resolver) {
+            SmpsDriverSnapshot.DependencyResolver resolver,
+            PreparedDriverResources resources) {
         SmpsDriver driver;
         if (reusable != null && driverSnapshot.synthSnapshot() != null) {
             driver = reusable;
@@ -1202,6 +1379,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         } else {
             driver = newConfiguredSmpsDriver();
         }
+        resources.track(driver);
         driver.restoreSnapshot(driverSnapshot, resolver);
         return driver;
     }

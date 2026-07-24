@@ -862,6 +862,18 @@ public class GameLoop {
         playbackDebugManager.handleInput(inputHandler);
         playbackDebugManager.setObservedMode(currentGameMode);
 
+        TraceSessionLauncher pendingTraceTeardown =
+                TraceSessionLauncher.active();
+        if (pendingTraceTeardown != null
+                && pendingTraceTeardown.retryPendingTeardown()) {
+            inputHandler.update();
+            return;
+        }
+        if (liveRewindManager.retryPendingRelease()) {
+            inputHandler.update();
+            return;
+        }
+
         boolean rewindBlocked = isRewindBlocked();
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() != null

@@ -39,6 +39,9 @@ public final class LiveRewindManager {
     private RewindSpeedController speedController = RewindSpeedController.disabled();
     private InputHandler activeInputHandler;
     private boolean rewinding;
+    private boolean releasePending;
+    private AudioPresentationPolicy pendingReleasePolicy;
+    private RewindBoundary pendingReleaseBoundary;
     private final RewindEffectEnvelope effectEnvelope = new RewindEffectEnvelope();
 
     public LiveRewindManager(SonicConfigurationService config) {
@@ -91,14 +94,15 @@ public final class LiveRewindManager {
     public boolean handleRealtimeRewindInput(GameMode mode, boolean rewindBlocked, InputHandler input) {
         RewindContext context = rewindContextForPublicEntry(mode);
         if (!context.supported() || rewindBlocked || input == null || !enabled()) {
-            activeInputHandler = null;
-            clear();
-            return false;
+            return !clear();
         }
         activeInputHandler = input;
         if (!ensureInstalled(context)) {
             effectEnvelope.frameInactive();
             return false;
+        }
+        if (releasePending) {
+            return retryPendingRelease();
         }
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
         if (input.isKeyDown(rewindKey)) {
@@ -132,7 +136,10 @@ public final class LiveRewindManager {
             // should still be active. See markBoundary handlers below for the
             // boundary cases that DO need the pop (their deferred restore was
             // dropped, not committed).
-            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX);
+            if (!cleanupPresentationAfterRealtimeRewind(
+                    AudioPresentationPolicy.STOP_TRANSIENT_SFX)) {
+                return true;
+            }
         }
         rewinding = false;
         effectEnvelope.frameInactive();
@@ -322,11 +329,13 @@ public final class LiveRewindManager {
             return;
         }
         boolean wasRewinding = rewinding;
+        if (wasRewinding && !releaseForBoundary(
+                RewindBoundary.LEVEL_LOAD,
+                AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC)) {
+            return;
+        }
         inputSource.resetToFrameZero();
         rewindController.resetToFrameZero();
-        if (wasRewinding) {
-            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
-        }
         // The raw PCM rewind-history ring is a fixed-duration buffer that is
         // not gated by the logical rewind reset above: without this, a held
         // rewind that reaches the new level's frame-zero floor can keep
@@ -347,12 +356,14 @@ public final class LiveRewindManager {
             return;
         }
         boolean wasRewinding = rewinding;
+        if (wasRewinding && !releaseForBoundary(
+                RewindBoundary.SEAMLESS_LEVEL_TRANSITION,
+                AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC)) {
+            return;
+        }
         int frame = rewindController.currentFrame();
         inputSource.retainOnlyFrame(frame);
         rewindController.resetBufferAtCurrentFrame();
-        if (wasRewinding) {
-            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
-        }
         rewinding = false;
         effectEnvelope.reset();
     }
@@ -407,14 +418,15 @@ public final class LiveRewindManager {
         inputSource.discardBefore(earliestFrame);
     }
 
-    private void cleanupAudioAfterRealtimeRewind(AudioPresentationPolicy policy) {
+    private boolean cleanupAudioAfterRealtimeRewind(
+            AudioPresentationPolicy policy) {
         if (rewindController == null) {
-            return;
+            return GameServices.audio().endReverseAudioPresentation();
         }
         // Land the single deferred logical restore at the committed frame
         // before the presentation cleanup acts on backend logical state.
         rewindController.commitDeferredAudioRestore();
-        GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
+        return rewindController.afterAudioRestore(policy);
     }
 
     private void beginReverseFadePresentation() {
@@ -424,17 +436,69 @@ public final class LiveRewindManager {
         }
     }
 
-    private void cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy policy) {
-        cleanupAudioAfterRealtimeRewind(policy);
+    private boolean cleanupPresentationAfterRealtimeRewind(
+            AudioPresentationPolicy policy) {
+        if (!cleanupAudioAfterRealtimeRewind(policy)) {
+            releasePending = true;
+            pendingReleasePolicy = policy;
+            return false;
+        }
         FadeManager fadeManager = GameServices.fadeOrNull();
         if (fadeManager != null) {
             fadeManager.endReversePresentation();
         }
+        releasePending = false;
+        pendingReleasePolicy = null;
+        return true;
     }
 
-    private void clear() {
+    /**
+     * Retries a release retained by a mode/boundary path. Called from the
+     * all-mode GameLoop owner before mode-specific rewind dispatch.
+     *
+     * @return true while the frame must remain consumed
+     */
+    public boolean retryPendingRelease() {
+        if (!releasePending) {
+            return false;
+        }
+        RewindBoundary boundary = pendingReleaseBoundary;
+        if (!cleanupPresentationAfterRealtimeRewind(pendingReleasePolicy)) {
+            return true;
+        }
+        pendingReleaseBoundary = null;
+        rewinding = false;
+        if (boundary == RewindBoundary.LEVEL_LOAD) {
+            handleLevelLoadBoundary(rewindContextFromSupplier());
+        } else if (boundary == RewindBoundary.SEAMLESS_LEVEL_TRANSITION) {
+            handleSeamlessLevelTransitionBoundary(rewindContextFromSupplier());
+        } else if (boundary == RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE) {
+            clear();
+        } else {
+            rewinding = false;
+            speedController.reset();
+            effectEnvelope.frameInactive();
+        }
+        return false;
+    }
+
+    private boolean releaseForBoundary(
+            RewindBoundary boundary, AudioPresentationPolicy policy) {
+        if (cleanupPresentationAfterRealtimeRewind(policy)) {
+            return true;
+        }
+        pendingReleaseBoundary = boundary;
+        return false;
+    }
+
+    private boolean clear() {
         if (rewinding && rewindController != null) {
-            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+            if (!cleanupPresentationAfterRealtimeRewind(
+                    AudioPresentationPolicy.STOP_ALL_PRESENTATION)) {
+                pendingReleaseBoundary =
+                        RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE;
+                return false;
+            }
         }
         if (rewindController != null) {
             // Disarm through the outgoing controller's own AudioManager
@@ -451,6 +515,10 @@ public final class LiveRewindManager {
         speedController.reset();
         speedController = RewindSpeedController.disabled();
         rewinding = false;
+        releasePending = false;
+        pendingReleasePolicy = null;
+        pendingReleaseBoundary = null;
         effectEnvelope.reset();
+        return true;
     }
 }

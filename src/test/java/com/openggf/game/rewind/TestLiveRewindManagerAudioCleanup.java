@@ -3,9 +3,12 @@ package com.openggf.game.rewind;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.AudioBackend;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
+import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -90,6 +93,102 @@ class TestLiveRewindManagerAudioCleanup {
         assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
         assertFalse(fadeManager.isReversePresentationActive());
+    }
+
+    @Test
+    void failedReleaseRetainsLiveHostStateAndRetriesBeforeGameplayResumes()
+            throws Exception {
+        FailingCommitBackend failingBackend = new FailingCommitBackend();
+        audio.setBackend(failingBackend);
+        FadeManager fadeManager =
+                TestEnvironment.activeGameplayMode().getFadeManager();
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = new TestControllerBuilder().atFrame(5);
+        installTestController(manager, controller);
+        InputHandler input = new InputHandler();
+        int rewindKey =
+                config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
+        input.handleKeyEvent(rewindKey, GLFW_PRESS);
+        assertTrue(manager.handleRealtimeRewindInput(
+                GameMode.LEVEL, false, input));
+        input.handleKeyEvent(rewindKey, GLFW_RELEASE);
+        failingBackend.failNextCommit = true;
+
+        assertTrue(manager.handleRealtimeRewindInput(
+                        GameMode.LEVEL, false, input),
+                "failed release must consume the frame instead of resuming gameplay");
+        assertTrue(audio.isReverseAudioPresentationActive());
+        assertTrue(fadeManager.isReversePresentationActive());
+        assertTrue((boolean) getField(manager, "rewinding"));
+        assertEquals(1, failingBackend.prepareCalls);
+        assertEquals(1, failingBackend.rollbackCalls);
+
+        assertFalse(manager.handleRealtimeRewindInput(
+                        GameMode.LEVEL, false, input),
+                "a later owner boundary should finish the retained release");
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertFalse(fadeManager.isReversePresentationActive());
+        assertFalse((boolean) getField(manager, "rewinding"));
+        assertEquals(1, failingBackend.prepareCalls,
+                "the previously prepared token must be retained for retry");
+        assertEquals(2, failingBackend.commitCalls);
+        assertEquals(1, failingBackend.rollbackCalls);
+        assertEquals(0, failingBackend.discardCalls);
+    }
+
+    @Test
+    void unsupportedModeReleaseFailureKeepsGameplayFrozenAndRetainsClearOwner()
+            throws Exception {
+        FailingCommitBackend failingBackend = new FailingCommitBackend();
+        audio.setBackend(failingBackend);
+        FadeManager fadeManager =
+                TestEnvironment.activeGameplayMode().getFadeManager();
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = new TestControllerBuilder().atFrame(5);
+        installTestController(manager, controller);
+        LiveRewindInputSource inputSource =
+                (LiveRewindInputSource) getField(manager, "inputSource");
+        InputHandler heldInput = new InputHandler();
+        heldInput.handleKeyEvent(
+                config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+        assertTrue(manager.handleRealtimeRewindInput(
+                GameMode.LEVEL, false, heldInput));
+        failingBackend.failNextCommit = true;
+
+        assertTrue(manager.handleRealtimeRewindInput(
+                        GameMode.TITLE_SCREEN, false, new InputHandler()),
+                "failed unsupported-mode cleanup must not resume gameplay");
+        assertTrue(audio.isReverseAudioPresentationActive());
+        assertTrue(fadeManager.isReversePresentationActive());
+        assertTrue((boolean) getField(manager, "rewinding"));
+        assertEquals(controller, getField(manager, "rewindController"));
+        assertEquals(inputSource, getField(manager, "inputSource"));
+
+        assertFalse(manager.handleRealtimeRewindInput(
+                        GameMode.TITLE_SCREEN, false, new InputHandler()),
+                "the retained clear owner must finish on a later boundary");
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertFalse(fadeManager.isReversePresentationActive());
+        assertFalse((boolean) getField(manager, "rewinding"));
+        assertEquals(null, getField(manager, "rewindController"));
+        assertEquals(1, failingBackend.prepareCalls);
+        assertEquals(2, failingBackend.commitCalls);
+        assertEquals(1, failingBackend.rollbackCalls);
+        assertEquals(0, failingBackend.discardCalls);
+    }
+
+    @Test
+    void failedLevelLoadReleaseDoesNotResetHistoryBeforeRetry()
+            throws Exception {
+        assertBoundaryReleaseFailureIsGated(
+                RewindBoundary.LEVEL_LOAD, 0, 0);
+    }
+
+    @Test
+    void failedSeamlessReleaseDoesNotRerootHistoryBeforeRetry()
+            throws Exception {
+        assertBoundaryReleaseFailureIsGated(
+                RewindBoundary.SEAMLESS_LEVEL_TRANSITION, 4, 4);
     }
 
     @Test
@@ -251,6 +350,56 @@ class TestLiveRewindManagerAudioCleanup {
         return field.get(target);
     }
 
+    private void assertBoundaryReleaseFailureIsGated(
+            RewindBoundary boundary,
+            int expectedRetriedFrame,
+            int expectedRetriedEarliestFrame) throws Exception {
+        FailingCommitBackend failingBackend = new FailingCommitBackend();
+        audio.setBackend(failingBackend);
+        FadeManager fadeManager =
+                TestEnvironment.activeGameplayMode().getFadeManager();
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = new TestControllerBuilder().atFrame(5);
+        installTestController(manager, controller);
+        LiveRewindInputSource inputSource =
+                (LiveRewindInputSource) getField(manager, "inputSource");
+        InputHandler heldInput = new InputHandler();
+        heldInput.handleKeyEvent(
+                config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+        assertTrue(manager.handleRealtimeRewindInput(
+                GameMode.LEVEL, false, heldInput));
+        int frameBefore = controller.currentFrame();
+        int earliestBefore = controller.earliestAvailableFrame();
+        int inputCountBefore = inputSource.frameCount();
+        failingBackend.failNextCommit = true;
+
+        manager.markBoundary(boundary);
+
+        assertTrue(audio.isReverseAudioPresentationActive());
+        assertTrue(fadeManager.isReversePresentationActive());
+        assertTrue((boolean) getField(manager, "rewinding"));
+        assertEquals(frameBefore, controller.currentFrame(),
+                "failed release must not move the controller boundary");
+        assertEquals(earliestBefore, controller.earliestAvailableFrame(),
+                "failed release must not reroot controller history");
+        assertEquals(inputCountBefore, inputSource.frameCount(),
+                "failed release must not reset or trim input history");
+
+        manager.markBoundary(boundary);
+
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertFalse(fadeManager.isReversePresentationActive());
+        assertFalse((boolean) getField(manager, "rewinding"));
+        assertEquals(expectedRetriedFrame, controller.currentFrame());
+        assertEquals(expectedRetriedEarliestFrame,
+                controller.earliestAvailableFrame());
+        assertEquals(1, failingBackend.prepareCalls,
+                "boundary retry must retain the exact prepared token");
+        assertEquals(2, failingBackend.commitCalls);
+        assertEquals(1, failingBackend.rollbackCalls);
+        assertEquals(0, failingBackend.discardCalls);
+    }
+
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -304,6 +453,51 @@ class TestLiveRewindManagerAudioCleanup {
         @Override
         public Bk2FrameInput read(int frame) {
             return new Bk2FrameInput(frame, 0, 0, false, "fake");
+        }
+    }
+
+    private static final class FailingCommitBackend
+            extends NullAudioBackend {
+        private boolean failNextCommit;
+        private int prepareCalls;
+        private int commitCalls;
+        private int rollbackCalls;
+        private int discardCalls;
+
+        @Override
+        public AudioBackend.PreparedLogicalRestore prepareLogicalRestore(
+                AudioBackendLogicalSnapshot snapshot,
+                SmpsDriverSnapshot.DependencyResolver resolver,
+                boolean preservePresentationQueue) {
+            prepareCalls++;
+            return new Prepared(snapshot);
+        }
+
+        @Override
+        public void commitLogicalRestore(
+                AudioBackend.PreparedLogicalRestore prepared) {
+            commitCalls++;
+            if (failNextCommit) {
+                failNextCommit = false;
+                throw new IllegalStateException(
+                        "injected production-host commit failure");
+            }
+        }
+
+        @Override
+        public void rollbackLogicalRestore(
+                AudioBackend.PreparedLogicalRestore prepared) {
+            rollbackCalls++;
+        }
+
+        @Override
+        public void discardLogicalRestore(
+                AudioBackend.PreparedLogicalRestore prepared) {
+            discardCalls++;
+        }
+
+        private record Prepared(AudioBackendLogicalSnapshot snapshot)
+                implements AudioBackend.PreparedLogicalRestore {
         }
     }
 }

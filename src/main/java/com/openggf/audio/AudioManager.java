@@ -370,6 +370,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void setBackend(AudioBackend backend) {
+        discardDeferredBackendRestore();
         closeShadowPresentation();
         destroyBackendQuietly(this.backend, "previous AudioBackend");
         this.backend = backend;
@@ -1053,14 +1054,18 @@ public class AudioManager implements MusicRestoreSink {
         return rewindReplaySuppressionDepth > 0;
     }
 
-    public void afterRewindRestore(int frame, AudioPresentationPolicy policy) {
+    public boolean afterRewindRestore(
+            int frame, AudioPresentationPolicy policy) {
         if (policy == null) {
-            return;
-        }
-        if (policy != AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE) {
-            endReverseAudioPresentation();
+            return true;
         }
         ensureShadowPresentation();
+        if (policy != AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE) {
+            if (!endReverseAudioPresentation()) {
+                return false;
+            }
+            shadowProducer.applyPendingCommandsAtOwnerBoundary();
+        }
         switch (policy) {
             case SUPPRESSED_INTERNAL_RESTORE -> {
             }
@@ -1077,9 +1082,11 @@ public class AudioManager implements MusicRestoreSink {
                 shadowParity.historyBoundary();
             }
         }
+        return true;
     }
 
     public void beginReverseAudioPresentation() {
+        discardDeferredBackendRestore();
         deferredReverseLogicalSnapshot = null;
         deferredReverseLogicalPrepared = false;
         deferredBackendRestore = null;
@@ -1092,26 +1099,20 @@ public class AudioManager implements MusicRestoreSink {
         return reverseAudioPresentationActive;
     }
 
-    public void endReverseAudioPresentation() {
+    public boolean endReverseAudioPresentation() {
         AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+        boolean preparedDuringAttempt = false;
+        boolean backendCommitAttempted = false;
         try {
             if (selected != null && !deferredReverseLogicalPrepared) {
                 if (!commitDeferredReverseLogicalRestore()) {
-                    return;
+                    return false;
                 }
+                preparedDuringAttempt = true;
             }
             if (deferredBackendRestore != null && backend != null) {
-                try {
-                    backend.commitLogicalRestore(deferredBackendRestore);
-                } catch (RuntimeException failure) {
-                    try {
-                        backend.rollbackLogicalRestore(
-                                deferredBackendRestore);
-                    } catch (RuntimeException rollbackFailure) {
-                        failure.addSuppressed(rollbackFailure);
-                    }
-                    throw failure;
-                }
+                backendCommitAttempted = true;
+                backend.commitLogicalRestore(deferredBackendRestore);
             }
             if (shadowProducer != null) {
                 shadowProducer.endReverse();
@@ -1134,10 +1135,35 @@ public class AudioManager implements MusicRestoreSink {
             deferredBackendRestore = null;
             reverseAudioPresentationActive = false;
         } catch (RuntimeException failure) {
+            if (backendCommitAttempted && backend != null
+                    && deferredBackendRestore != null) {
+                try {
+                    backend.rollbackLogicalRestore(deferredBackendRestore);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            if (preparedDuringAttempt) {
+                if (backend != null && deferredBackendRestore != null) {
+                    try {
+                        backend.discardLogicalRestore(
+                                deferredBackendRestore);
+                    } catch (RuntimeException discardFailure) {
+                        failure.addSuppressed(discardFailure);
+                    }
+                }
+                try {
+                    shadowProducer.discardPreparedRestoreSelection();
+                } catch (RuntimeException discardFailure) {
+                    failure.addSuppressed(discardFailure);
+                }
+                deferredReverseLogicalPrepared = false;
+                deferredBackendRestore = null;
+            }
             LOGGER.log(Level.WARNING,
                     "Audio reverse release failed; retained prior dual state",
                     failure);
-            return;
+            return false;
         }
         if (deterministicAudioRuntime == deferredLiveCaptureRuntime) {
             DeterministicAudioRuntime prior = deferredLiveCapturePriorRuntime;
@@ -1145,6 +1171,7 @@ public class AudioManager implements MusicRestoreSink {
             deferredLiveCapturePriorRuntime = null;
             applyDeterministicAudioRuntime(prior);
         }
+        return true;
     }
 
     /**
@@ -1158,20 +1185,26 @@ public class AudioManager implements MusicRestoreSink {
             return deferredReverseLogicalPrepared;
         }
         AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+        AudioBackend.PreparedLogicalRestore preparedBackend = null;
         try {
-            AudioBackend.PreparedLogicalRestore preparedBackend =
-                    backend != null
-                            ? backend.prepareLogicalRestore(
-                                    selected.backend(),
-                                    createSmpsDependencyResolver(), true)
-                            : null;
-            shadowProducer.restore(
-                    selected.presentation(), shadowFactory, true);
-            shadowProducer.prepareSelectedRestore();
+            preparedBackend = backend != null
+                    ? backend.prepareLogicalRestore(
+                            selected.backend(),
+                            createSmpsDependencyResolver(), true)
+                    : null;
+            shadowProducer.prepareRestoreSelection(
+                    selected.presentation(), shadowFactory);
             deferredBackendRestore = preparedBackend;
             deferredReverseLogicalPrepared = true;
             return true;
         } catch (RuntimeException failure) {
+            if (preparedBackend != null && backend != null) {
+                try {
+                    backend.discardLogicalRestore(preparedBackend);
+                } catch (RuntimeException discardFailure) {
+                    failure.addSuppressed(discardFailure);
+                }
+            }
             deferredBackendRestore = null;
             deferredReverseLogicalPrepared = false;
             LOGGER.log(Level.WARNING,
@@ -1179,6 +1212,26 @@ public class AudioManager implements MusicRestoreSink {
                             + "dual state for retry",
                     failure);
             return false;
+        }
+    }
+
+    private void discardDeferredBackendRestore() {
+        AudioBackend.PreparedLogicalRestore prepared =
+                deferredBackendRestore;
+        if (prepared == null) {
+            return;
+        }
+        try {
+            if (backend != null) {
+                backend.discardLogicalRestore(prepared);
+            }
+        } catch (RuntimeException failure) {
+            LOGGER.log(Level.WARNING,
+                    "Failed to discard unpublished backend logical restore",
+                    failure);
+        } finally {
+            deferredBackendRestore = null;
+            deferredReverseLogicalPrepared = false;
         }
     }
 
@@ -1811,6 +1864,7 @@ public class AudioManager implements MusicRestoreSink {
      * (e.g. Sonic 1 SMPS loader contaminating Sonic 2 tests).
      */
     public void resetState() {
+        discardDeferredBackendRestore();
         if (backend != null) {
             backend.stopPlayback();
         }
@@ -2098,6 +2152,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void destroy() {
+        discardDeferredBackendRestore();
         closeShadowPresentation();
         if (backend != null) {
             backend.destroy();

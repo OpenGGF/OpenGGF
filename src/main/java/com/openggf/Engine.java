@@ -1697,9 +1697,8 @@ public class Engine {
 			inputHandler.update();
 		}
 		if (gameLoop != null) {
-			gameLoop.presentOuterFrame(
+			presentOuterAudioFrame(gameLoop,
 					displayShaderPickerHandledInput, frameStepPresentation);
-			GameServices.audio().update();
 		}
 		profiler.endSection("update");
 
@@ -1848,6 +1847,20 @@ public class Engine {
 
 		profiler.endFrame();
 		overlayStateReady = false;
+	}
+
+	/**
+	 * Executable non-GL seam for the one Engine-owned outer audio callback.
+	 * Tests drive the same placement after every simulation/modal branch that
+	 * {@link #display()} uses in production.
+	 */
+	static void presentOuterAudioFrame(
+			GameLoop loop,
+			boolean modalPicker,
+			boolean frameStepRequested) {
+		Objects.requireNonNull(loop, "loop").presentOuterFrame(
+				modalPicker, frameStepRequested);
+		GameServices.audio().update();
 	}
 
 	static LiveCapturePresentationState resolveLiveCapturePresentationState(

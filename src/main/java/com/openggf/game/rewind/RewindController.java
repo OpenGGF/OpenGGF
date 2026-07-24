@@ -519,10 +519,9 @@ public final class RewindController {
         return audioManager.beginRewindReplay(fromFrame, targetFrame, reason);
     }
 
-    private void afterAudioRestore(AudioPresentationPolicy policy) {
-        if (audioManager != null) {
-            audioManager.afterRewindRestore(currentFrame, policy);
-        }
+    boolean afterAudioRestore(AudioPresentationPolicy policy) {
+        return audioManager == null
+                || audioManager.afterRewindRestore(currentFrame, policy);
     }
 
     private void beginAudioFrame(int frame) {

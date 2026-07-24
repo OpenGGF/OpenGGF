@@ -386,6 +386,49 @@ public final class AudioPresentationProducer {
                 selectedRestore, selectedRestoreResolver);
     }
 
+    /**
+     * Prepares and publishes a reverse-release selection atomically. Failed
+     * dependency resolution leaves the prior selection, prepared token,
+     * registry, history, and reverse cursor untouched.
+     */
+    public void prepareRestoreSelection(
+            AudioPresentationSnapshot snapshot,
+            AudioPresentationDependencyResolver resolver) {
+        assertOwnerBoundary();
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(resolver, "resolver");
+        AudioVoiceRegistry.PreparedSnapshotRestore prepared =
+                registry.prepareSnapshotRestore(snapshot, resolver);
+        registry.discardPreparedRestore(preparedSelectedRestore);
+        selectedRestore = snapshot;
+        selectedRestoreResolver = resolver;
+        preparedSelectedRestore = prepared;
+    }
+
+    /**
+     * Discards only the reverse-release selection. This is used when a
+     * manager-owned backend commit fails after this attempt prepared the
+     * producer, restoring the exact pre-attempt transaction fingerprint.
+     */
+    public void discardPreparedRestoreSelection() {
+        assertOwnerBoundary();
+        registry.discardPreparedRestore(preparedSelectedRestore);
+        selectedRestore = null;
+        selectedRestoreResolver = null;
+        preparedSelectedRestore = null;
+    }
+
+    /**
+     * Applies commands queued while reverse output owned the frame boundary.
+     * Cleanup policies call this only after dual release succeeds, at the
+     * producer's owner boundary, so policy mutation observes command order
+     * and no command can survive to resurrect on the next packet.
+     */
+    public void applyPendingCommandsAtOwnerBoundary() {
+        assertOwnerBoundary();
+        commands.applyPending(commandApplier);
+    }
+
     public void replaceSink(AudioPresentationSink sink) {
         assertOwnerBoundary();
         AudioPresentationSink replacement = requireCompatibleSink(sink);
@@ -411,13 +454,22 @@ public final class AudioPresentationProducer {
             }
         }
         captureCount = 0;
+        AudioVoiceRegistry.PreparedSnapshotRestore prepared =
+                preparedSelectedRestore;
+        preparedSelectedRestore = null;
+        selectedRestore = null;
+        selectedRestoreResolver = null;
         try {
-            registry.clear();
+            registry.discardPreparedRestore(prepared);
         } finally {
             try {
-                history.clear();
+                registry.clear();
             } finally {
-                sink.close();
+                try {
+                    history.clear();
+                } finally {
+                    sink.close();
+                }
             }
         }
     }

@@ -85,7 +85,7 @@ class TestGameLoopAudioPresentationModes {
         }
 
         loop.step();
-        loop.presentOuterFrame(false, false);
+        Engine.presentOuterAudioFrame(loop, false, false);
 
         var parity = AudioManagerTestDiagnostics.shadowParitySnapshot(
                 AudioManager.getInstance());
@@ -97,8 +97,8 @@ class TestGameLoopAudioPresentationModes {
 
     @Test
     void modalPickerAndFrameStepDriveRealBoundaryAsSilence() throws Exception {
-        loop.presentOuterFrame(true, false);
-        loop.presentOuterFrame(false, true);
+        Engine.presentOuterAudioFrame(loop, true, false);
+        Engine.presentOuterAudioFrame(loop, false, true);
 
         var parity = AudioManagerTestDiagnostics.shadowParitySnapshot(
                 AudioManager.getInstance());
@@ -124,7 +124,7 @@ class TestGameLoopAudioPresentationModes {
                 AudioManagerTestDiagnostics.attachPresentationCapture(audio, 1);
 
         loop.step();
-        loop.presentOuterFrame(false, false);
+        Engine.presentOuterAudioFrame(loop, false, false);
 
         verify(input, times(9)).refreshLogicalSnapshot();
         short[] actual = new short[12];
@@ -143,7 +143,7 @@ class TestGameLoopAudioPresentationModes {
         AudioManager.getInstance().beginReverseAudioPresentation();
 
         loop.step();
-        loop.presentOuterFrame(false, false);
+        Engine.presentOuterAudioFrame(loop, false, false);
 
         assertEquals(1, AudioManagerTestDiagnostics.shadowParitySnapshot(
                 AudioManager.getInstance()).reverseFrames());
@@ -165,7 +165,7 @@ class TestGameLoopAudioPresentationModes {
         AudioManager.getInstance().beginReverseAudioPresentation();
         try {
             loop.step();
-            loop.presentOuterFrame(false, false);
+            Engine.presentOuterAudioFrame(loop, false, false);
         } finally {
             replaceStaticField(
                     TraceSessionLauncher.class, "activeSession", null);
@@ -195,7 +195,7 @@ class TestGameLoopAudioPresentationModes {
         AudioManager.getInstance().beginReverseAudioPresentation();
 
         loop.step();
-        loop.presentOuterFrame(false, false);
+        Engine.presentOuterAudioFrame(loop, false, false);
 
         assertEquals(java.util.List.of(PresentationMode.REVERSE), modes);
         assertEquals(1, AudioManagerTestDiagnostics.shadowParitySnapshot(

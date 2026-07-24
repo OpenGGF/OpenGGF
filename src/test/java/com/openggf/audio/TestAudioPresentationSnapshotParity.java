@@ -359,7 +359,7 @@ class TestAudioPresentationSnapshotParity {
                 audio.releaseStateForTesting();
 
         backend.failAfterNextPublication();
-        audio.endReverseAudioPresentation();
+        assertFalse(audio.endReverseAudioPresentation());
 
         assertReleaseStateExactly(before, audio.releaseStateForTesting(),
                 "failed backend publication must preserve identities, "
@@ -367,7 +367,7 @@ class TestAudioPresentationSnapshotParity {
         assertNotNull(audio.deferredReverseLogicalSnapshotForTesting(),
                 "selected target must remain available for retry");
 
-        audio.endReverseAudioPresentation();
+        assertTrue(audio.endReverseAudioPresentation());
         assertEquals(AudioSourceDescriptor.baseMusic(0x80),
                 audio.captureLogicalSnapshot().presentation()
                         .activeMusic().sourceDescriptor());

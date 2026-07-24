@@ -13,6 +13,7 @@ import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.Test;
 
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -119,6 +120,80 @@ class TestLWJGLAudioBackendSnapshot {
         assertEquals(target.speedMultiplier(), committed.speedMultiplier());
         assertNotNull(committed.musicDriver());
         assertNotNull(committed.standaloneSfxDriver());
+    }
+
+    @Test
+    void discardingPreparedRestoreStopsEachPreparedDriverExactlyOnce() {
+        SmpsDriver music = configuredDriver();
+        addSequencer(music);
+        SmpsDriver sfx = configuredDriver();
+        addSfxSequencer(sfx);
+        CountingDiscardBackend backend = new CountingDiscardBackend();
+        AudioBackend.PreparedLogicalRestore prepared =
+                backend.prepareLogicalRestore(
+                        new AudioBackendLogicalSnapshot(
+                                AudioSourceDescriptor.baseMusic(0x81),
+                                false, false, false, 1, List.of(),
+                                music.captureSnapshot(),
+                                sfx.captureSnapshot()),
+                        SmpsDriverSnapshot.liveReferences(), true);
+
+        backend.discardLogicalRestore(prepared);
+        backend.discardLogicalRestore(prepared);
+
+        assertEquals(2, backend.discardCounts.size());
+        backend.discardCounts.values().forEach(
+                count -> assertEquals(1, count));
+    }
+
+    @Test
+    void partialPrepareFailureStopsAllDriversConstructedBeforeFailureOnce() {
+        SmpsDriver music = configuredDriver();
+        addSequencer(music);
+        SmpsDriver sfx = configuredDriver();
+        addSfxSequencer(sfx);
+        CountingDiscardBackend backend = new CountingDiscardBackend();
+        AudioBackendLogicalSnapshot target =
+                new AudioBackendLogicalSnapshot(
+                        AudioSourceDescriptor.baseMusic(0x81),
+                        false, false, false, 1, List.of(),
+                        music.captureSnapshot(), sfx.captureSnapshot());
+
+        assertThrows(IllegalStateException.class,
+                () -> backend.prepareLogicalRestore(
+                        target, resolverFailing(entry -> entry.sfx()), true));
+
+        assertEquals(2, backend.discardCounts.size(),
+                "both the completed music driver and failing SFX driver "
+                        + "must be cleaned");
+        backend.discardCounts.values().forEach(
+                count -> assertEquals(1, count));
+    }
+
+    @Test
+    void directRestoreCommitFailureRollsBackAndDiscardsPreparedDriversOnce() {
+        SmpsDriver music = configuredDriver();
+        addSequencer(music);
+        CountingDiscardBackend backend = new CountingDiscardBackend();
+        backend.failNextPublication = true;
+        AudioBackendLogicalSnapshot target =
+                new AudioBackendLogicalSnapshot(
+                        AudioSourceDescriptor.baseMusic(0x81),
+                        false, false, false, 1, List.of(),
+                        music.captureSnapshot(), null);
+
+        assertThrows(IllegalStateException.class,
+                () -> backend.restoreLogicalSnapshot(target));
+
+        assertEquals(1, backend.discardCounts.size());
+        backend.discardCounts.values().forEach(
+                count -> assertEquals(1, count));
+
+        backend.restoreLogicalSnapshot(target);
+        assertEquals(1, backend.discardCounts.size(),
+                "the successful retry publishes its driver instead of discarding it");
+        backend.discardCounts.values().forEach(
+                count -> assertEquals(1, count));
     }
 
     @Test
@@ -461,6 +536,33 @@ class TestLWJGLAudioBackendSnapshot {
         @Override
         public void flushPresentationFifo() {
             flushes++;
+        }
+    }
+
+    private static final class CountingDiscardBackend
+            extends LWJGLAudioBackend {
+        private final IdentityHashMap<SmpsDriver, Integer> discardCounts =
+                new IdentityHashMap<>();
+        private boolean failNextPublication;
+
+        private CountingDiscardBackend() {
+            super(SonicConfigurationService.createStandalone());
+        }
+
+        @Override
+        protected void discardPreparedDriver(SmpsDriver driver) {
+            discardCounts.merge(driver, 1, Integer::sum);
+            super.discardPreparedDriver(driver);
+        }
+
+        @Override
+        protected void hookStopAndClearAllMusicBuffers() {
+            if (failNextPublication) {
+                failNextPublication = false;
+                throw new IllegalStateException(
+                        "injected direct restore commit failure");
+            }
+            super.hookStopAndClearAllMusicBuffers();
         }
     }
 }

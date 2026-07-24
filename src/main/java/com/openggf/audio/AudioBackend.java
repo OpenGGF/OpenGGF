@@ -195,6 +195,16 @@ public interface AudioBackend {
     }
 
     /**
+     * Releases a successfully prepared token that was never passed to
+     * {@link #commitLogicalRestore(PreparedLogicalRestore)}. Implementations
+     * that eagerly allocate drivers or other resources during preparation
+     * must release them here. Repeated discard of the same unpublished token
+     * must be harmless.
+     */
+    default void discardLogicalRestore(PreparedLogicalRestore prepared) {
+    }
+
+    /**
      * Reverts a prepared restore after publication failed. Implementations
      * whose commit can publish mutable state must retain the exact prior
      * object graph in the prepared token so retry does not reconstruct or
