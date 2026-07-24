@@ -1283,6 +1283,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (services().gameState() != null) {
             services().gameState().addScore(1000);
         }
+        // ROM loc_6D60A: jmp (BossDefeated_StopTimer).l (sonic3k.asm:144464).
+        stopLevelTimerOnBossDefeat();
     }
 
     /**

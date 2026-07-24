@@ -494,6 +494,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0);
         services().fadeOutMusic();
         services().gameState().setCurrentBossId(0);
+        // ROM loc_6ACA6: jmp (BossDefeated_StopTimer).l (sonic3k.asm:140649).
+        stopLevelTimerOnBossDefeat();
     }
 
     @Override

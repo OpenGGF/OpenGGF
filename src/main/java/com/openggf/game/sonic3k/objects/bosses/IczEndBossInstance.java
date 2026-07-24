@@ -1026,6 +1026,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if (services().gameState() != null) {
             services().gameState().addScore(1000);
         }
+        // ROM loc_722E6: jmp (BossDefeated_StopTimer).l (sonic3k.asm:151307).
+        stopLevelTimerOnBossDefeat();
     }
 
     private void startRobotnikDefeatExplosions() {

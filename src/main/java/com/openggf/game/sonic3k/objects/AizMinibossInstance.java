@@ -249,6 +249,9 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         state.invulnerabilityTimer = 0;
         loadBossPalette(); // Restore clean boss palette colors on line 1
 
+        // ROM loc_68FE0: jmp (BossDefeated_StopTimer).l (sonic3k.asm:137858).
+        stopLevelTimerOnBossDefeat();
+
         // ROM: loc_46ED4 creates Child6_CreateBossExplosion (sub_52850, subtype 0).
         // CreateBossExp00: timer=$20 (33 explosions), xRange=$20, yRange=$20.
         // sub_52850 plays sfx_Explode each time it spawns an explosion child (every 3 frames).

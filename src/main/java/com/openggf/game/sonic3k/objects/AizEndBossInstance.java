@@ -713,7 +713,8 @@ public class AizEndBossInstance extends AbstractBossInstance
         defeatSignal = true;
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
 
-        // ROM: BossDefeated_StopTimer — timer stop handled by gameState
+        // ROM loc_69C36: jmp (BossDefeated_StopTimer).l (sonic3k.asm:139001).
+        stopLevelTimerOnBossDefeat();
 
         // ROM: The ship child (Obj_RobotnikShip) creates its own explosion controller
         // via Child6_CreateBossExplosion subtype 4 at loc_460DC. In the engine we keep
