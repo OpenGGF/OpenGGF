@@ -75,13 +75,18 @@ namespace OpenGGF.BizHawk.Headless
     /// UNARMED the native port throws instead of reproducing the Lua's
     /// unbounded idle loop.
     ///
-    /// Output is buffered in memory so the discard can throw a partial
-    /// recording away without filesystem interaction. On success the
-    /// buffered physics.csv / aux_state.jsonl bytes and the finalize-time
-    /// metadata.json are written to the injected writers; every output
-    /// line (including the last) is terminated with a single LF and the
-    /// injected writers own the encoding (production uses UTF-8 without
-    /// BOM).
+    /// Only level_gated_reset_aware can throw an armed recording away
+    /// mid-capture, so only that profile buffers its physics.csv /
+    /// aux_state.jsonl streams in memory; the other two profiles stream
+    /// straight to the injected writers like the S1/S2 runners. A failed
+    /// capture never publishes either way — the caller stages the writers
+    /// and only link(2)s them on success — so withholding the bytes buys
+    /// nothing beyond the discard. See <see cref="TraceStreamSink"/> for
+    /// both modes and for why the buffered flush never materialises a
+    /// second contiguous copy of the stream. metadata.json is always
+    /// written at finalize time. Every output line (including the last)
+    /// is terminated with a single LF and the injected writers own the
+    /// encoding (production uses UTF-8 without BOM).
     /// </summary>
     public static class S3KTraceCaptureRunner
     {
@@ -89,6 +94,84 @@ namespace OpenGGF.BizHawk.Headless
         public const string AizEndToEndProfile = "aiz_end_to_end";
         public const string LevelGatedResetAwareProfile =
             "level_gated_reset_aware";
+
+        /// <summary>
+        /// One LF-terminated output stream. A discardable sink (the
+        /// level_gated_reset_aware profile, whose soft-reset path throws
+        /// the whole armed segment away) accumulates into a
+        /// <see cref="StringBuilder"/> and flushes once at finalisation;
+        /// a non-discardable sink writes straight through, so the two
+        /// profiles that can never discard hold no capture in memory at
+        /// all.
+        ///
+        /// The buffered flush copies the builder in fixed-size char
+        /// blocks rather than calling ToString(). ToString() would
+        /// allocate a second contiguous copy of the entire stream on top
+        /// of the builder's own chunks — the CNZ fixture's aux stream is
+        /// 213 MB of ASCII, i.e. ~426 MB of char storage duplicated for
+        /// the duration of a single Write call.
+        /// </summary>
+        private sealed class TraceStreamSink
+        {
+            private const int FlushBlockChars = 64 * 1024;
+
+            private readonly TextWriter writer;
+
+            // Non-null only when the profile can discard.
+            private readonly StringBuilder buffer;
+
+            public TraceStreamSink(TextWriter writer, bool discardable)
+            {
+                this.writer = writer;
+                this.buffer = discardable ? new StringBuilder() : null;
+            }
+
+            public void AppendLine(string line)
+            {
+                if (buffer == null)
+                {
+                    writer.Write(line);
+                    writer.Write('\n');
+                    return;
+                }
+                buffer.Append(line).Append('\n');
+            }
+
+            /// <summary>
+            /// Drops everything appended so far. Only the discardable
+            /// mode can honor this; calling it on a streaming sink is a
+            /// contract violation, not a silent no-op that would ship a
+            /// segment the Lua deleted.
+            /// </summary>
+            public void Discard()
+            {
+                if (buffer == null)
+                {
+                    throw new InvalidOperationException(
+                        "A streaming trace sink cannot discard already"
+                        + " written output; only the"
+                        + " level_gated_reset_aware profile discards.");
+                }
+                buffer.Length = 0;
+            }
+
+            public void Flush()
+            {
+                if (buffer == null)
+                {
+                    return;     // Already written line by line.
+                }
+                var block = new char[FlushBlockChars];
+                int total = buffer.Length;
+                for (int start = 0; start < total; start += FlushBlockChars)
+                {
+                    int count = Math.Min(FlushBlockChars, total - start);
+                    buffer.CopyTo(start, block, 0, count);
+                    writer.Write(block, 0, count);
+                }
+                buffer.Length = 0;
+            }
+        }
 
         public static S3KTraceCaptureResult Capture(
             Bk2Movie movie,
@@ -136,8 +219,10 @@ namespace OpenGGF.BizHawk.Headless
                     ? S3KTraceProfile.LevelGatedResetAware
                     : S3KTraceProfile.GameplayUnlock);
 
-            var physicsBuf = new StringBuilder();
-            var auxBuf = new StringBuilder();
+            // Only the level-gated profile ever discards, so only it pays
+            // for holding the capture in memory.
+            var physicsSink = new TraceStreamSink(physicsCsv, levelGated);
+            var auxSink = new TraceStreamSink(auxStateJsonl, levelGated);
 
             bool started = false;
             bool preTraceSnapshotsWritten = false;
@@ -215,8 +300,8 @@ namespace OpenGGF.BizHawk.Headless
                         startZoneId = 0;
                         startAct = 0;
                         startRngSeed = 0;
-                        physicsBuf.Length = 0;
-                        auxBuf.Length = 0;
+                        physicsSink.Discard();
+                        auxSink.Discard();
                         auxEngine = null;
                         continue;
                     }
@@ -260,9 +345,7 @@ namespace OpenGGF.BizHawk.Headless
                         startZoneId = S3KRam.U8(host, S3KRam.Zone);
                         startAct = S3KRam.U8(host, S3KRam.Act);
                         startRngSeed = S3KRam.U32(host, S3KRam.RngSeed);
-                        physicsBuf
-                            .Append(S3KTraceCsvWriter.Header)
-                            .Append('\n');
+                        physicsSink.AppendLine(S3KTraceCsvWriter.Header);
                         auxEngine = new S3KAuxEventEngine(profile);
                         if (!aiz)
                         {
@@ -302,7 +385,7 @@ namespace OpenGGF.BizHawk.Headless
                         foreach (string line in
                             auxEngine.EmitPreTraceSnapshots(host))
                         {
-                            auxBuf.Append(line).Append('\n');
+                            auxSink.AppendLine(line);
                         }
                         preTraceSnapshotsWritten = true;
                     }
@@ -315,18 +398,17 @@ namespace OpenGGF.BizHawk.Headless
                     // just consumed (`current`, index advanced - 1 ==
                     // offset + N).
                     Bk2Frame inputRow = aiz ? next : current;
-                    physicsBuf.Append(S3KTraceCsvWriter.FormatRow(
+                    physicsSink.AppendLine(S3KTraceCsvWriter.FormatRow(
                         traceFrame,
                         S1InputMask.FromFrame(inputRow),
                         host));
-                    physicsBuf.Append('\n');
 
                     // (8) Aux cascade (step 13) in the engine's fixed
                     // order, then the frame counter (step 14).
                     foreach (string line in
                         auxEngine.ProcessFrame(traceFrame, host))
                     {
-                        auxBuf.Append(line).Append('\n');
+                        auxSink.AppendLine(line);
                     }
                     traceFrame++;
                 }
@@ -334,16 +416,16 @@ namespace OpenGGF.BizHawk.Headless
                 // Finalisation (Lua main loop after finished): the
                 // level-gated gameplay_end checkpoint reads zone/act/mode
                 // at finalize time with frame == the row count (the
-                // engine emits nothing for the other profiles), then the
-                // buffered files flush and the final metadata bytes are
-                // written.
+                // engine emits nothing for the other profiles), then any
+                // buffered stream flushes and the final metadata bytes
+                // are written.
                 foreach (string line in
                     auxEngine.EmitFinalization(traceFrame, host))
                 {
-                    auxBuf.Append(line).Append('\n');
+                    auxSink.AppendLine(line);
                 }
-                physicsCsv.Write(physicsBuf.ToString());
-                auxStateJsonl.Write(auxBuf.ToString());
+                physicsSink.Flush();
+                auxSink.Flush();
                 metadataJson.Write(S3KTraceMetadataWriter.Format(
                     startZoneId,
                     startAct,

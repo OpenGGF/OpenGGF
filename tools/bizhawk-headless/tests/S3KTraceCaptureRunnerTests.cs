@@ -62,6 +62,137 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S3K runner throws clearly when the recorder never arms",
                 ThrowsWhenRecorderNeverArms));
+            tests.Add(new TestMain.TestCase(
+                "S3K runner streams the non-discarding profiles and"
+                + " buffers only the discarding one, byte-identically",
+                StreamsNonDiscardingProfilesAndBuffersOnlyTheDiscardingOne));
+        }
+
+        /// <summary>
+        /// Only level_gated_reset_aware can throw an armed recording away
+        /// mid-capture, so only it may hold the capture in memory: the
+        /// canonical CNZ aux stream is 213 MB of ASCII, and buffering it
+        /// for a profile that can never discard costs that much managed
+        /// memory for nothing. This pins the split observationally —
+        /// mid-capture the gameplay_unlock writer has already received
+        /// rows while the level-gated writer is still empty — and pins
+        /// that the two paths emit the SAME bytes, so the streaming path
+        /// cannot drift from the buffered reference.
+        /// </summary>
+        private static void
+            StreamsNonDiscardingProfilesAndBuffersOnlyTheDiscardingOne()
+        {
+            var rows = new[]
+            {
+                BlankRow, BlankRow, BlankRow, BlankRow,
+                BlankRow, BlankRow, BlankRow
+            };
+            var lengthsMidCapture = new Dictionary<string, int>();
+            var outputs = new Dictionary<string, string>();
+            foreach (string profile in new[]
+            {
+                "gameplay_unlock",
+                "level_gated_reset_aware"
+            })
+            {
+                string key = profile;
+                WithMovie(
+                    rows,
+                    movie =>
+                    {
+                        var physics = new LengthObservingWriter();
+                        var host = new FakeS1Host((h, frame) =>
+                        {
+                            if (frame == 3)
+                            {
+                                h.Ram[0xF600] = 0x0C;
+                                h.Ram[0xFE10] = 0x03;   // CNZ; never left
+                            }
+                            if (frame == 6)
+                            {
+                                // Trace frames 0 and 1 have been emitted
+                                // by the time this advance completes.
+                                lengthsMidCapture[key] = physics.Length;
+                            }
+                        });
+
+                        S3KTraceCaptureResult result =
+                            S3KTraceCaptureRunner.Capture(
+                                movie,
+                                host,
+                                profile,
+                                "2026-07-24",
+                                physics,
+                                new StringWriter(),
+                                new StringWriter());
+
+                        AssertEx.Equal(3, result.Bk2FrameOffset);
+                        AssertEx.Equal(3, result.TraceFrameCount);
+                        outputs[key] = physics.ToString();
+                    });
+            }
+
+            // The streaming profile has already handed the header and the
+            // first rows to its writer...
+            AssertEx.Equal(
+                true, lengthsMidCapture["gameplay_unlock"] > 0);
+            // ...while the discarding profile still holds everything, so
+            // a soft reset can still drop it.
+            AssertEx.Equal(
+                0, lengthsMidCapture["level_gated_reset_aware"]);
+            // Same movie, same arm, same rows: identical bytes either way,
+            // so the buffered flush neither truncates nor duplicates.
+            AssertEx.Equal(
+                outputs["gameplay_unlock"],
+                outputs["level_gated_reset_aware"]);
+            AssertEx.Equal(
+                true,
+                outputs["gameplay_unlock"].StartsWith(
+                    S3KTraceCsvWriter.Header + "\n",
+                    StringComparison.Ordinal));
+            AssertEx.Equal(
+                4,
+                outputs["gameplay_unlock"].Split('\n').Length - 1);
+        }
+
+        /// <summary>
+        /// TextWriter that exposes how much has been written so far, so a
+        /// test can observe streaming versus buffering mid-capture.
+        /// Overrides the three primitives the runner writes through.
+        /// </summary>
+        private sealed class LengthObservingWriter : TextWriter
+        {
+            private readonly StringBuilder text = new StringBuilder();
+
+            public override Encoding Encoding
+            {
+                get { return Encoding.UTF8; }
+            }
+
+            public int Length
+            {
+                get { return text.Length; }
+            }
+
+            public override void Write(char value)
+            {
+                text.Append(value);
+            }
+
+            public override void Write(string value)
+            {
+                text.Append(value);
+            }
+
+            public override void Write(char[] buffer, int index, int count)
+            {
+                text.Append(buffer, index, count);
+            }
+
+            public override string ToString()
+            {
+                return text.ToString();
+            }
         }
 
         /// <summary>
