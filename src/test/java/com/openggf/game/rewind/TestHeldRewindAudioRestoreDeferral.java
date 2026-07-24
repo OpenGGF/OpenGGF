@@ -142,9 +142,23 @@ class TestHeldRewindAudioRestoreDeferral {
         assertEquals(freshState.commandTimelineNextOrder(), deferredState.commandTimelineNextOrder());
         assertEquals(freshState.commandEntryCount(), deferredState.commandEntryCount());
         // The presentation snapshot is the whole restored audio state now.
-        // Compare the voice-bearing components: the snapshot's own ringLeft
-        // mirror is manager state that the deferred path does not republish,
-        // and the manager-level ringLeft equality above already covers it.
+        // Compare the voice-bearing components explicitly rather than the
+        // whole record, because of one known divergence:
+        //
+        // TODO(unified-audio): the deferred release builds the manager-level
+        // ringLeft from managerRingAfter(selected.ringLeft(), command) while
+        // the presentation component carries stagedRegistry.snapshot()'s own
+        // ringLeft (AudioManager.java staged/committed reverse release), so
+        // after a held-rewind release the registry's ring-alternation mirror
+        // can sit one toggle away from the manager's. That mirror is NOT
+        // inert: AudioVoiceRegistry.restore reads it back
+        // (`ringLeft = snapshot.ringLeft()`), so a later capture/restore cycle
+        // propagates the stale value. Pre-existing (the two ring computations
+        // are byte-identical at the split-runtime baseline; the old assertion
+        // simply compared an empty NullAudioBackend record and never saw it).
+        // Decide in a follow-up whether the deferred path should stage the
+        // registry ring from managerRingAfter, then widen this back to a
+        // whole-snapshot comparison.
         assertEquals(freshState.presentation().voices(),
                 deferredState.presentation().voices());
         assertEquals(freshState.presentation().activeMusic(),

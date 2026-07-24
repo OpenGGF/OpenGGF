@@ -1,5 +1,6 @@
 package com.openggf.audio;
 
+import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.configuration.SonicConfiguration;
@@ -124,14 +125,11 @@ class TestRewindHistoryArming {
         config.setConfigValue(
                 SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS, 2);
 
-        assertEquals(48_000 * 2, PcmHistoryRing.capacityFramesFor(
-                        48_000,
-                        config.getString(SonicConfiguration
-                                .REWIND_AUDIO_HISTORY_LIMIT_TYPE),
-                        config.getInt(SonicConfiguration
-                                .REWIND_AUDIO_HISTORY_SECONDS),
-                        config.getInt(SonicConfiguration
-                                .REWIND_AUDIO_HISTORY_SIZE_MB)),
+        AudioPresentationProducer.TransactionFingerprint producer =
+                realizedProducer();
+
+        assertEquals(producer.clock().sampleRate() * 2,
+                producer.history().capacityFrames(),
                 "time-limited history must cover configured seconds at the"
                         + " emitted sample rate");
     }
@@ -144,16 +142,22 @@ class TestRewindHistoryArming {
                 SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB, 1);
 
         assertEquals((1024 * 1024) / (2 * Short.BYTES),
-                PcmHistoryRing.capacityFramesFor(
-                        48_000,
-                        config.getString(SonicConfiguration
-                                .REWIND_AUDIO_HISTORY_LIMIT_TYPE),
-                        config.getInt(SonicConfiguration
-                                .REWIND_AUDIO_HISTORY_SECONDS),
-                        config.getInt(SonicConfiguration
-                                .REWIND_AUDIO_HISTORY_SIZE_MB)),
+                realizedProducer().history().capacityFrames(),
                 "size-limited history must retain its configured stereo PCM"
                         + " byte capacity");
+    }
+
+    /**
+     * Rebuilds the shadow presentation so the ring the producer actually
+     * allocates reflects the configuration set by the calling test, then
+     * returns that live producer's fingerprint. Asserting against the
+     * allocated ring — not {@link PcmHistoryRing#capacityFramesFor} — is what
+     * keeps the config to allocation path covered end to end.
+     */
+    private AudioPresentationProducer.TransactionFingerprint
+            realizedProducer() {
+        audio.setBackend(new NullAudioBackend());
+        return audio.releaseStateForTesting().producer();
     }
 
     private int storedFrames() {

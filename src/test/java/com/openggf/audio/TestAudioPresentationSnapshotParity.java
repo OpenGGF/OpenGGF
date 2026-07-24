@@ -277,6 +277,84 @@ class TestAudioPresentationSnapshotParity {
     @Test
     void reverseReleasePublicationFailureLeavesReleaseExactlyRetryable()
             throws Exception {
+        arrangeSelectedReverseReleaseTarget();
+        // The target was already prepared before the attempt, so the failing
+        // attempt owns nothing: it must retain the pre-existing prepared
+        // token rather than discarding a preparation it did not make.
+        assertTrue(audio.commitDeferredReverseLogicalRestore());
+        AudioManager.ReleaseStateForTesting before =
+                audio.releaseStateForTesting();
+        assertNotEquals(0L,
+                before.producer().preparedSelectedRestoreIdentity().token(),
+                "the target must already be prepared before the attempt");
+        assertNotEquals(0L,
+                before.producer().selectedRestoreIdentity().token(),
+                "the producer must already hold the selected target");
+
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
+        assertFalse(audio.endReverseAudioPresentation());
+
+        assertReleaseStateExactly(before, audio.releaseStateForTesting(),
+                "failed release publication must preserve identities, "
+                        + "registry, history, cursor, selection and crossfade");
+        assertNotNull(audio.deferredReverseLogicalSnapshotForTesting(),
+                "selected target must remain available for retry");
+
+        assertTrue(audio.endReverseAudioPresentation());
+        assertEquals(AudioSourceDescriptor.baseMusic(0x80),
+                audio.captureLogicalSnapshot().presentation()
+                        .activeMusic().sourceDescriptor());
+        assertEquals(null,
+                audio.deferredReverseLogicalSnapshotForTesting());
+    }
+
+    /**
+     * The sibling case where the failing attempt is the one that prepared the
+     * target. Here the release really does mutate producer state before it
+     * fails — {@code prepareRestoreSelection} recreates every voice in the
+     * selected snapshot, discards any prior prepared token, and publishes the
+     * selection — so the rollback has actual work to undo and the exact-state
+     * comparison can genuinely fail if {@code discardPreparedRestoreSelection}
+     * stops running or stops clearing the whole selection.
+     */
+    @Test
+    void reverseReleaseFailureAfterPreparingDuringTheAttemptRollsBackExactly()
+            throws Exception {
+        arrangeSelectedReverseReleaseTarget();
+        AudioManager.ReleaseStateForTesting before =
+                audio.releaseStateForTesting();
+        assertEquals(0L,
+                before.producer().selectedRestoreIdentity().token(),
+                "the producer must hold no selection until the attempt "
+                        + "prepares one");
+        assertEquals(0L,
+                before.producer().preparedSelectedRestoreIdentity().token(),
+                "the producer must hold no prepared token until the attempt "
+                        + "prepares one");
+
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
+        assertFalse(audio.endReverseAudioPresentation());
+
+        assertReleaseStateExactly(before, audio.releaseStateForTesting(),
+                "an attempt that prepared during the failure must discard "
+                        + "exactly what it prepared and nothing else");
+        assertNotNull(audio.deferredReverseLogicalSnapshotForTesting(),
+                "selected target must remain available for retry");
+
+        assertTrue(audio.endReverseAudioPresentation());
+        assertEquals(AudioSourceDescriptor.baseMusic(0x80),
+                audio.captureLogicalSnapshot().presentation()
+                        .activeMusic().sourceDescriptor());
+        assertEquals(null,
+                audio.deferredReverseLogicalSnapshotForTesting());
+    }
+
+    /**
+     * Drives a held rewind up to the point where a pre-boundary logical target
+     * is selected but not yet prepared, leaving the caller to decide whether
+     * the release attempt or an earlier explicit commit owns the preparation.
+     */
+    private void arrangeSelectedReverseReleaseTarget() throws Exception {
         AudioTestFixtures.StubSmpsLoader loader =
                 new AudioTestFixtures.StubSmpsLoader();
         for (int id : new int[] {0x80, 0x81}) {
@@ -337,25 +415,6 @@ class TestAudioPresentationSnapshotParity {
         audio.beginReverseAudioPresentation();
         audio.presentFrame(PresentationMode.REVERSE);
         keyframes.replayToLogicalState(audio, 4);
-        assertTrue(audio.commitDeferredReverseLogicalRestore());
-        AudioManager.ReleaseStateForTesting before =
-                audio.releaseStateForTesting();
-
-        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
-        assertFalse(audio.endReverseAudioPresentation());
-
-        assertReleaseStateExactly(before, audio.releaseStateForTesting(),
-                "failed release publication must preserve identities, "
-                        + "registry, history, cursor, selection and crossfade");
-        assertNotNull(audio.deferredReverseLogicalSnapshotForTesting(),
-                "selected target must remain available for retry");
-
-        assertTrue(audio.endReverseAudioPresentation());
-        assertEquals(AudioSourceDescriptor.baseMusic(0x80),
-                audio.captureLogicalSnapshot().presentation()
-                        .activeMusic().sourceDescriptor());
-        assertEquals(null,
-                audio.deferredReverseLogicalSnapshotForTesting());
     }
 
     @Test

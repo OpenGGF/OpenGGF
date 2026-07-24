@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: tearing down the audio presentation now retires the live recording lease under the audio lock and only after the producer has closed cleanly, so a failed close can no longer leave the engine believing no recording lease is attached while an orphaned one still receives frames.
 - Removed the temporary deterministic-runtime and live-recording lease switches superseded by unified presentation audio.
 - Fix: a refused offline capture release (attempted off the audio producer's owner thread) no longer leaves an orphaned capture lease attached to the producer while the engine believes it holds none, which previously let a later recording attach a second lease instead of rejecting it.
 - Fix: offline trace capture now records at the rate the presentation producer is actually clocked at, so a requested capture frame rate the engine cannot honour (for example a PAL region pinned to 50 fps) no longer truncates or zero-pads every captured audio packet, and a recorder that fails to open no longer leaks the capture lease for the rest of the process.

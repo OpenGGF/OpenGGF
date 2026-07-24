@@ -41,6 +41,15 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     protected final Object streamLock = new Object();
     protected final SonicConfigurationService configService;
+    /**
+     * Currently unread: the {@code audio.music_stream} / {@code audio.sfx_stream}
+     * / {@code audio.upload} profile sections this fed disappeared with the
+     * backend's stream fill, and audio timing is now profiled on the
+     * presentation producer instead. The field and its constructor argument are
+     * deliberately retained so this deletion task does not churn every
+     * backend construction site; nothing in the backend may start profiling
+     * again without owning a section on the producer side.
+     */
     protected final PerformanceProfiler profiler;
 
     protected static final int STREAM_BUFFER_SIZE = 1024;

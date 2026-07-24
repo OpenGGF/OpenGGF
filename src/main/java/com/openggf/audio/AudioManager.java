@@ -956,6 +956,10 @@ public class AudioManager implements MusicRestoreSink {
     public boolean endReverseAudioPresentation() {
         AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
         boolean preparedDuringAttempt = false;
+        // Consumed once per entry, whichever exit this attempt takes, so an
+        // armed injection can never leak into a later unrelated release.
+        boolean injectFailure = failNextReverseRelease;
+        failNextReverseRelease = false;
         try {
             if (selected != null && !deferredReverseLogicalPrepared) {
                 if (!commitDeferredReverseLogicalRestore()) {
@@ -963,8 +967,7 @@ public class AudioManager implements MusicRestoreSink {
                 }
                 preparedDuringAttempt = true;
             }
-            if (failNextReverseRelease) {
-                failNextReverseRelease = false;
+            if (injectFailure) {
                 throw new IllegalStateException(
                         "injected reverse release publication failure");
             }
@@ -1844,16 +1847,16 @@ public class AudioManager implements MusicRestoreSink {
         // underlying lease itself on close, and a detach can only be issued on
         // its owner thread.
         offlineCaptureHandle = null;
-        ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
-        if (live != null) {
-            live.closed = true;
-            activeLiveCaptureAudioHandle = null;
-        }
         if (shadowProducer != null) {
             shadowProducer.close();
         } else if (presentationSink != null) {
             presentationSink.close();
         }
+        // Retired only after the producer close returned normally, and under
+        // the monitor that every other reader of the handle holds, so a failed
+        // close can never leave the manager believing it holds no lease while
+        // an orphaned one is still attached.
+        retireLiveCaptureAudioHandle();
         presentationSink = null;
         shadowProducer = null;
         shadowFrameRate = 0;
@@ -1867,6 +1870,14 @@ public class AudioManager implements MusicRestoreSink {
         shadowRestoreRequested = false;
         presentationCoordFlagHandlers = null;
         presentationCoordHandlerGameIds.clear();
+    }
+
+    private synchronized void retireLiveCaptureAudioHandle() {
+        ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
+        if (live != null) {
+            live.closed = true;
+            activeLiveCaptureAudioHandle = null;
+        }
     }
 
     private void configurePresentationCoordHandlers(GameAudioProfile profile) {

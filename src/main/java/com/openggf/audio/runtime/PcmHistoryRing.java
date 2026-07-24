@@ -22,6 +22,7 @@ public final class PcmHistoryRing {
     }
 
     public record DiagnosticSnapshot(
+            int capacityFrames,
             long nextFrameIndex,
             int storedFrames,
             long epoch,
@@ -125,7 +126,7 @@ public final class PcmHistoryRing {
 
     public DiagnosticSnapshot diagnosticSnapshot() {
         return new DiagnosticSnapshot(
-                nextFrameIndex, storedFrames, epoch, writeSlot,
+                capacityFrames, nextFrameIndex, storedFrames, epoch, writeSlot,
                 readablePcmFingerprint());
     }
 
