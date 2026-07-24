@@ -677,7 +677,7 @@ knockback value) one frame early or late, the cause is usually WHEN the damaging
 object becomes touch-eligible, not its position:
 
 - **ROM `ReactToItem` skips any object whose `obRender` bit 7 is clear**
-  (`tst.b obRender(a1) / bpl .next`, `sub ReactToItem.asm:50-51`). Bit 7 is set by
+  (`tst.b obRender(a1) / bpl .next`, `_incObj/Sonic ReactToItem.asm:50-51`). Bit 7 is set by
   `DisplaySprite` during the object's OWN `ExecuteObjects` pass. So a child spawned
   mid-loop into a slot at or BELOW the spawner's slot does not run/display until
   the next frame → is touch-INELIGIBLE for one extra frame (S1 MZ3 f14132: a lava

@@ -223,7 +223,6 @@ stable-retro ships with savestates for every Sonic 1 zone/act:
 | Shared tracing engine | `tools/retro/trace_core.py` |
 | Dependencies | `tools/retro/requirements.txt` |
 | BizHawk equivalent (Lua) | `tools/bizhawk/s1_trace_recorder.lua` |
-| BizHawk credits (Lua) | `tools/bizhawk/s1_credits_trace_recorder.lua` |
 | GHZ1 test traces | `src/test/resources/traces/s1/ghz1_fullrun/` |
 | MZ1 test traces | `src/test/resources/traces/s1/mz1_fullrun/` |
 | Credits test traces | `src/test/resources/traces/s1/credits_00_ghz1/` through `credits_07_ghz1b/` |

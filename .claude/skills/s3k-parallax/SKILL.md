@@ -866,7 +866,7 @@ From CLAUDE.md: *"Some S3K levels log `maxChunkPatternIndex > patternCount` (dyn
 
 This means the engine doesn't yet replicate the ROM's full runtime PLC (Pattern Load Cue) system for all zones. On real hardware, the VDP loads art progressively during gameplay — initial patterns at level start, then additional art via PLCs during gameplay (boss art, zone transitions, animated tiles). The engine loads an initial batch at level start but may not apply all necessary PLC overlays, causing high pattern IDs in chunk data to reference empty VRAM slots.
 
-**When implementing parallax for a new zone:** always run the zone visually and check for this issue. If the BG shows garbage, the fix is in the level loading pipeline (`Sonic3k.loadLevel()` / `Sonic3kLevelResourcePlans`), not in the scroll handler.
+**When implementing parallax for a new zone:** always run the zone visually and check for this issue. If the BG shows garbage, the fix is in the level loading pipeline (`Sonic3k.loadLevel()` / `Sonic3kLevel`), not in the scroll handler.
 
 Also remember that "BG shows some correct art, some static art, and some garbage" usually means the issue is not the initial level-art load alone. That symptom more often indicates one of these:
 
