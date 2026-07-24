@@ -146,25 +146,18 @@ class TestAudioPresentationSnapshotParity {
         audio.restoreLogicalSnapshot(selected);
         audio.endReverseAudioPresentation();
 
-        AudioBackendLogicalSnapshot restored =
-                backend.captureLogicalSnapshot();
-        assertEquals(1 << 2, restored.fmUserMuteMask());
-        assertEquals(0, restored.fmUserSoloMask());
-        assertEquals(0, restored.psgUserMuteMask());
-        assertEquals(1 << 1, restored.psgUserSoloMask());
-        assertArrayEquals(
-                selected.backend().musicDriver().synthSnapshot()
-                        .ym().mutes(),
-                restored.musicDriver().synthSnapshot().ym().mutes());
-        assertArrayEquals(
-                selected.backend().musicDriver().synthSnapshot()
-                        .psg().mutes(),
-                restored.musicDriver().synthSnapshot().psg().mutes());
+        AudioPresentationSnapshot restored =
+                audio.captureLogicalSnapshot().presentation();
+        assertEquals(1 << 2, restored.fmMuteMask());
+        assertEquals(0, restored.fmSoloMask());
+        assertEquals(0, restored.psgMuteMask());
+        assertEquals(1 << 1, restored.psgSoloMask());
 
         audio.toggleMute(ChannelType.FM, 2);
         audio.toggleSolo(ChannelType.PSG, 1);
-        assertFalse(backend.isMuted(ChannelType.FM, 2));
-        assertFalse(backend.isSoloed(ChannelType.PSG, 1));
+        audio.presentShadowFrame(PresentationMode.SILENT);
+        assertFalse(audio.isMuted(ChannelType.FM, 2));
+        assertFalse(audio.isSoloed(ChannelType.PSG, 1));
     }
 
     @Test
@@ -239,7 +232,7 @@ class TestAudioPresentationSnapshotParity {
     }
 
     @Test
-    void heldReplayNeverTouchesLiveSmpsBackendBeforeAtomicRelease() {
+    void heldReplayUsesPresentationStateWhileCompatibilityBackendStaysIdle() {
         AudioTestFixtures.StubSmpsLoader loader =
                 new AudioTestFixtures.StubSmpsLoader();
         for (int id : new int[] {0x80, 0x81, 0x82}) {
@@ -278,30 +271,24 @@ class TestAudioPresentationSnapshotParity {
         audio.presentShadowFrame(PresentationMode.SILENT);
         AudioBackendLogicalSnapshot disturbed =
                 liveBackend.captureLogicalSnapshot();
-        com.openggf.audio.driver.SmpsDriver disturbedDriver =
-                liveBackend.musicDriverForTesting();
-
         audio.beginReverseAudioPresentation();
         assertEquals(4, keyframes.replayToLogicalState(audio, 2));
-        assertSame(disturbedDriver, liveBackend.musicDriverForTesting());
-        assertStableLiveBackend(disturbed,
-                liveBackend.captureLogicalSnapshot());
+        assertEquals(disturbed, liveBackend.captureLogicalSnapshot());
 
         assertTrue(audio.commitDeferredReverseLogicalRestore());
-        assertSame(disturbedDriver, liveBackend.musicDriverForTesting());
-        assertStableLiveBackend(disturbed,
-                liveBackend.captureLogicalSnapshot());
+        assertEquals(disturbed, liveBackend.captureLogicalSnapshot());
 
         audio.endReverseAudioPresentation();
-        AudioBackendLogicalSnapshot released =
-                liveBackend.captureLogicalSnapshot();
+        AudioPresentationSnapshot released =
+                audio.captureLogicalSnapshot().presentation();
         assertEquals(AudioSourceDescriptor.baseMusic(0x81),
-                released.currentMusic());
-        assertNotNull(released.musicDriver());
-        assertNotNull(released.musicDriver().sequencers().stream()
-                .filter(com.openggf.audio.rewind.SmpsDriverSnapshot
-                        .SequencerEntry::sfx)
-                .findFirst().orElse(null));
+                released.activeMusic().sourceDescriptor());
+        assertFalse(released.voices().stream()
+                .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
+                .map(PresentationVoiceSnapshot.Smps.class::cast)
+                .flatMap(voice -> voice.driver().sequencers().stream())
+                .anyMatch(com.openggf.audio.rewind.SmpsDriverSnapshot
+                        .SequencerEntry::sfx));
         assertTrue(released.speedShoesEnabled());
         assertEquals(3, released.speedMultiplier());
     }
@@ -352,35 +339,17 @@ class TestAudioPresentationSnapshotParity {
         audio.setSpeedMultiplier(3);
         audio.toggleMute(ChannelType.FM, 2);
         audio.toggleSolo(ChannelType.PSG, 1);
-        backend.legacyCoordFlagHandlersForTesting().state()
+        audio.presentationCoordFlagHandlersForTesting().state()
                 .setSpindashRevCounter(23);
         audio.presentOuterFrame(PresentationMode.FORWARD);
         AudioManager.ReleaseStateForTesting disturbedState =
                 audio.releaseStateForTesting();
-        assertNotNull(disturbedState.backend().currentStream());
-        assertNotNull(disturbedState.backend().currentSmps());
-        assertNotNull(disturbedState.backend().musicDriver());
-        assertEquals(2, disturbedState.backend().overrideStack().size());
-        assertTrue(disturbedState.backend().overrideStack().stream()
-                .allMatch(entry -> entry.stream() != null
-                        && entry.sequencer() != null
-                        && entry.driver() != null));
-        assertNotNull(disturbedState.backend().overrideStack().stream()
-                .flatMap(entry -> entry.driverSnapshot().sequencers()
-                        .stream())
-                .filter(com.openggf.audio.rewind.SmpsDriverSnapshot
-                        .SequencerEntry::sfx)
-                .findFirst().orElse(null));
-        assertTrue(disturbedState.backend().sfxBlocked());
-        assertTrue(disturbedState.backend().pendingRestore());
-        assertTrue(disturbedState.backend().speedShoesEnabled());
-        assertEquals(3, disturbedState.backend().speedMultiplier());
-        assertEquals(23, disturbedState.backend().coordState()
-                .spindashRevCounter());
+        assertEquals(0, audio.presentationCoordFlagHandlersForTesting()
+                .state().spindashRevCounter());
         assertEquals(1 << 2,
-                disturbedState.backend().fmUserMuteMask());
+                disturbedState.logical().presentation().fmMuteMask());
         assertEquals(1 << 1,
-                disturbedState.backend().psgUserSoloMask());
+                disturbedState.logical().presentation().psgSoloMask());
 
         audio.beginReverseAudioPresentation();
         audio.presentOuterFrame(PresentationMode.REVERSE);
@@ -400,35 +369,28 @@ class TestAudioPresentationSnapshotParity {
 
         audio.endReverseAudioPresentation();
         assertEquals(AudioSourceDescriptor.baseMusic(0x80),
-                backend.captureLogicalSnapshot().currentMusic());
+                audio.captureLogicalSnapshot().presentation()
+                        .activeMusic().sourceDescriptor());
         assertEquals(null,
                 audio.deferredReverseLogicalSnapshotForTesting());
     }
 
     @Test
-    void dualSnapshotsRestoreIndependentEqualCoordFlagCounters() {
+    void snapshotRestoresTheSolePresentationCoordFlagCounter() {
         LWJGLAudioBackend backend =
                 new LWJGLAudioBackend(SonicConfigurationService.getInstance());
         audio.setBackend(backend);
         audio.captureLogicalSnapshot();
-        backend.legacyCoordFlagHandlersForTesting().state()
-                .setSpindashRevCounter(7);
         audio.presentationCoordFlagHandlersForTesting().state()
                 .setSpindashRevCounter(7);
 
         AudioLogicalSnapshot snapshot = audio.captureLogicalSnapshot();
-        backend.legacyCoordFlagHandlersForTesting().state()
-                .setSpindashRevCounter(99);
         audio.presentationCoordFlagHandlersForTesting().state()
                 .setSpindashRevCounter(55);
         audio.restoreLogicalSnapshot(snapshot);
 
-        assertEquals(7, backend.legacyCoordFlagHandlersForTesting().state()
-                .spindashRevCounter());
         assertEquals(7, audio.presentationCoordFlagHandlersForTesting().state()
                 .spindashRevCounter());
-        assertFalse(backend.legacyCoordFlagHandlersForTesting().state()
-                == audio.presentationCoordFlagHandlersForTesting().state());
     }
 
     @Test
@@ -517,10 +479,6 @@ class TestAudioPresentationSnapshotParity {
                         44_101);
         audio.setBackend(realBackend);
         assertTrue(audio.getBackend() instanceof HeadlessSmpsAudioBackend);
-        assertFalse(realBackend.legacyCoordFlagHandlersForTesting().state()
-                == audio.presentationCoordFlagHandlersForTesting().state());
-        realBackend.legacyCoordFlagHandlersForTesting().state()
-                .setSpindashRevCounter(7);
         audio.presentationCoordFlagHandlersForTesting().state()
                 .setSpindashRevCounter(7);
         audio.playMusic(0x81);
@@ -593,12 +551,9 @@ class TestAudioPresentationSnapshotParity {
             assertFalse(boundary.ringLeft(),
                     "real ring command must alternate left to right");
             assertFalse(boundary.presentation().ringLeft());
-            assertEquals(boundary.backend()
-                            .legacyCoordFlagRuntimeState()
-                            .spindashRevCounter(),
+            assertEquals(0,
                     boundary.presentation().coordFlagRuntimeState()
-                            .spindashRevCounter(),
-                    "real S3K music/SFX owners must reach equal state");
+                            .spindashRevCounter());
             assertTrue(boundary.presentation().speedShoesEnabled());
             assertEquals(3, boundary.presentation().speedMultiplier());
             assertEquals(1 << 2, boundary.presentation().fmMuteMask());
@@ -683,22 +638,13 @@ class TestAudioPresentationSnapshotParity {
                     audio.captureLogicalSnapshot().presentation(),
                     reference.snapshot());
 
-            realBackend.legacyCoordFlagHandlersForTesting().state()
-                    .setSpindashRevCounter(99);
             audio.presentationCoordFlagHandlersForTesting().state()
                     .setSpindashRevCounter(55);
             audio.restoreLogicalSnapshot(boundary);
-            assertEquals(boundary.backend()
-                            .legacyCoordFlagRuntimeState()
-                            .spindashRevCounter(),
-                    realBackend.legacyCoordFlagHandlersForTesting().state()
-                            .spindashRevCounter());
             assertEquals(boundary.presentation().coordFlagRuntimeState()
                             .spindashRevCounter(),
                     audio.presentationCoordFlagHandlersForTesting().state()
                             .spindashRevCounter());
-            assertFalse(realBackend.legacyCoordFlagHandlersForTesting().state()
-                    == audio.presentationCoordFlagHandlersForTesting().state());
         }
     }
 
@@ -845,6 +791,10 @@ class TestAudioPresentationSnapshotParity {
     private static void assertDriverSnapshotExactly(
             com.openggf.audio.rewind.SmpsDriverSnapshot expected,
             com.openggf.audio.rewind.SmpsDriverSnapshot actual) {
+        if (expected == null || actual == null) {
+            assertEquals(expected, actual);
+            return;
+        }
         assertEquals(expected.region(), actual.region());
         assertEquals(expected.readMode(), actual.readMode());
         assertEquals(expected.continuousSfxId(),
@@ -909,7 +859,6 @@ class TestAudioPresentationSnapshotParity {
                 right.speedShoesEnabled(), message);
         assertEquals(left.speedMultiplier(),
                 right.speedMultiplier(), message);
-        assertEquals(left.coordState(), right.coordState(), message);
         assertEquals(left.fmUserMuteMask(),
                 right.fmUserMuteMask(), message);
         assertEquals(left.fmUserSoloMask(),
@@ -1015,8 +964,6 @@ class TestAudioPresentationSnapshotParity {
                 actual.speedMultiplier(), message);
         assertEquals(expected.overrideStack(),
                 actual.overrideStack(), message);
-        assertEquals(expected.legacyCoordFlagRuntimeState(),
-                actual.legacyCoordFlagRuntimeState(), message);
         assertEquals(expected.fmUserMuteMask(),
                 actual.fmUserMuteMask(), message);
         assertEquals(expected.fmUserSoloMask(),

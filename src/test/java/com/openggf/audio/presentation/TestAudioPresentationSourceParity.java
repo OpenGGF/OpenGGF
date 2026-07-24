@@ -315,42 +315,6 @@ class TestAudioPresentationSourceParity {
     }
 
     @Test
-    void legacyS3kMusicAndSfxShareBackendPrivateCoordHandler() {
-        SonicConfigurationService configuration =
-                SonicConfigurationService.createStandalone();
-        NoDeviceBackend legacy = new NoDeviceBackend(configuration);
-        legacy.init();
-        legacy.setAudioProfile(new AudioTestFixtures.StubAudioProfile(
-                new AudioTestFixtures.StubSmpsLoader()) {
-            @Override public SmpsSequencerConfig getSequencerConfig() {
-                return Sonic3kSmpsSequencerConfig.CONFIG;
-            }
-            @Override public String presentationGameId() {
-                return "s3k";
-            }
-            @Override public void configurePresentationCoordFlagHandlers(
-                    SmpsCoordFlagHandlerOwner owner) {
-                owner.register("s3k", Sonic3kCoordFlagHandler::new);
-            }
-        });
-
-        legacy.playSmps(data("music", 0x81), EMPTY_DAC,
-                Sonic3kSmpsSequencerConfig.CONFIG, false);
-        legacy.playSfxSmps(data("sfx", 0xA0), EMPTY_DAC, 1.0f,
-                Sonic3kSmpsSequencerConfig.CONFIG);
-
-        List<com.openggf.audio.rewind.SmpsDriverSnapshot.SequencerEntry>
-                sequencers =
-                legacy.musicDriverForTesting().captureSnapshot().sequencers();
-        assertEquals(2, sequencers.size());
-        assertSame(sequencers.get(0).config().getCoordFlagHandler(),
-                sequencers.get(1).config().getCoordFlagHandler());
-        assertNotEquals(Sonic3kSmpsSequencerConfig.CONFIG
-                        .getCoordFlagHandler(),
-                sequencers.get(0).config().getCoordFlagHandler());
-    }
-
-    @Test
     void legacyAndPresentationRawPcmRenderTheSameCursorSequence() {
         byte[] source = {
                 0, 32, 64, 96, (byte) 128, (byte) 192, (byte) 255

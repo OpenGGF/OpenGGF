@@ -2,6 +2,7 @@ package com.openggf.audio;
 
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
@@ -164,18 +165,20 @@ class TestAudioLogicalSnapshot {
     }
 
     @Test
-    void audioManagerPassesFallbackMusicDescriptorToBackendSnapshot() {
+    void audioManagerRecordsFallbackMusicDescriptorInUnifiedTimeline() {
         DescriptorRecordingBackend backend = new DescriptorRecordingBackend();
         audio.setBackend(backend);
 
         audio.playMusic(0x90);
 
-        assertEquals(AudioSourceDescriptor.fallbackMusic(0x90),
-                audio.captureLogicalSnapshot().backend().currentMusic());
+        AudioCommand.PlayMusic command = (AudioCommand.PlayMusic)
+                audio.commandTimeline().entryAt(0).command();
+        assertEquals(AudioCommand.MusicRoute.FALLBACK_WAV, command.route());
+        assertEquals(0x90, command.musicId());
     }
 
     @Test
-    void audioManagerPassesDonorMusicDescriptorToBackendSnapshot() {
+    void audioManagerRecordsDonorMusicDescriptorInUnifiedTimeline() {
         DescriptorRecordingBackend backend = new DescriptorRecordingBackend();
         audio.setBackend(backend);
         AudioTestFixtures.StubSmpsLoader donor = new AudioTestFixtures.StubSmpsLoader();
@@ -184,8 +187,10 @@ class TestAudioLogicalSnapshot {
 
         audio.playDonorMusic("s3k", 0x2A);
 
-        assertEquals(AudioSourceDescriptor.donorMusic("s3k", 0x2A),
-                audio.captureLogicalSnapshot().backend().currentMusic());
+        AudioCommand.PlayMusic command = (AudioCommand.PlayMusic)
+                audio.commandTimeline().entryAt(0).command();
+        assertEquals(AudioCommand.MusicRoute.DONOR_SMPS, command.route());
+        assertEquals("s3k", command.donorGameId());
     }
 
     @Test

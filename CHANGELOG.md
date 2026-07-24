@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Made OpenAL a bounded final-PCM sink so toggling recording cannot remove music, rings, or effects.
 - Proved unified voice snapshots, FM/PSG user masks across restored music and later standalone SFX lifecycles, complete PCM-history rollback, and rewind cursors with an exact producer-clock reference renderer while legacy output remained uninterrupted.
 - Added a continuously ticked inaudible presentation shadow to prove command order and shared live/headless outer-frame ownership before speaker migration, with legacy-matched region/chip settings, isolated restore callbacks, cross-game donor coordination ownership, and failure-safe command mirroring.
 - Unified SMPS, fallback WAV, pitched SFX, and collision-safe raw SEGA PCM command resolution while retaining audible legacy output during migration; legacy S3K music and SFX keep one private coordination-counter owner.

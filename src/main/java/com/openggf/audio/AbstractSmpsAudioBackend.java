@@ -6,14 +6,10 @@ import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
-import com.openggf.audio.presentation.AudioPresentationSourceFactory;
-import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.smps.DacData;
-import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
-import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
@@ -115,7 +111,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             boolean speedShoesEnabled,
             int speedMultiplier,
             Deque<MusicState> overrideStack,
-            SmpsCoordFlagRuntimeState.Snapshot coordState,
             int fmUserMuteMask,
             int fmUserSoloMask,
             int psgUserMuteMask,
@@ -157,14 +152,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private int speedMultiplier = 1;
     private GameAudioProfile audioProfile;
     private SmpsSequencerConfig smpsConfig;
-    private final SmpsCoordFlagHandlerOwner legacyCoordFlagHandlers =
-            new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
-    private boolean legacyCoordFlagHandlersConfigured;
-
-    SmpsCoordFlagHandlerOwner legacyCoordFlagHandlersForTesting() {
-        return legacyCoordFlagHandlers;
-    }
-
     protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.profiler = profiler;
@@ -272,23 +259,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     public void setAudioProfile(GameAudioProfile profile) {
         this.audioProfile = profile;
         this.smpsConfig = profile != null ? profile.getSequencerConfig() : null;
-        if (profile != null && !legacyCoordFlagHandlersConfigured
-                && "s3k".equals(profile.presentationGameId())) {
-            profile.configurePresentationCoordFlagHandlers(
-                    legacyCoordFlagHandlers);
-            legacyCoordFlagHandlersConfigured = true;
-        }
         musicSourceCache.clear();
     }
 
     @Override
     public void registerAudioProfileCoordHandlers(GameAudioProfile profile) {
-        if (profile != null && !legacyCoordFlagHandlersConfigured
-                && "s3k".equals(profile.presentationGameId())) {
-            profile.configurePresentationCoordFlagHandlers(
-                    legacyCoordFlagHandlers);
-            legacyCoordFlagHandlersConfigured = true;
-        }
+        // Presentation owns the sole session coordination state after cutover.
     }
 
     @Override
@@ -892,7 +868,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     sfxStream instanceof SmpsDriver driver
                             ? driver.sequencersForTesting()
                             : List.of(),
-                    legacyCoordFlagHandlers.state().snapshot(),
                     maskOf(fmUserMutes), maskOf(fmUserSolos),
                     maskOf(psgUserMutes), maskOf(psgUserSolos));
         }
@@ -928,7 +903,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             List<SmpsSequencer> musicSequencers,
             SmpsDriverSnapshot standaloneSfxDriverSnapshot,
             List<SmpsSequencer> standaloneSfxSequencers,
-            SmpsCoordFlagRuntimeState.Snapshot coordState,
             int fmUserMuteMask,
             int fmUserSoloMask,
             int psgUserMuteMask,
@@ -961,7 +935,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     overrides,
                     musicDriverSnapshot,
                     sfxDriverSnapshot,
-                    legacyCoordFlagHandlers.state().snapshot(),
                     maskOf(fmUserMutes), maskOf(fmUserSolos),
                     maskOf(psgUserMutes), maskOf(psgUserSolos));
         }
@@ -997,11 +970,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         Objects.requireNonNull(resolver, "resolver");
         synchronized (streamLock) {
             LegacyLiveState prior = captureLiveLogicalState();
-            SmpsCoordFlagRuntimeState.Snapshot previousCoord =
-                    legacyCoordFlagHandlers.state().snapshot();
             try {
-                legacyCoordFlagHandlers.state().restore(
-                        snapshot.legacyCoordFlagRuntimeState());
                 SmpsDriver preparedMusic = snapshot.musicDriver() != null
                         ? restoreDriverFromSnapshot(
                                 null, snapshot.musicDriver(), resolver)
@@ -1024,8 +993,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                         prior);
             } catch (RuntimeException failure) {
                 throw failure;
-            } finally {
-                legacyCoordFlagHandlers.state().restore(previousCoord);
             }
         }
     }
@@ -1036,8 +1003,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         PreparedSmpsLogicalRestore prepared = requirePreparedRestore(restore);
         AudioBackendLogicalSnapshot snapshot = prepared.snapshot();
         synchronized (streamLock) {
-            legacyCoordFlagHandlers.state().restore(
-                    snapshot.legacyCoordFlagRuntimeState());
             currentStream = null;
             currentSmps = null;
             smpsDriver = null;
@@ -1109,7 +1074,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 pendingMusicDescriptor, sfxBlocked, pendingRestore,
                 speedShoesEnabled, speedMultiplier,
                 new ArrayDeque<>(musicStack),
-                legacyCoordFlagHandlers.state().snapshot(),
                 maskOf(fmUserMutes), maskOf(fmUserSolos),
                 maskOf(psgUserMutes), maskOf(psgUserSolos));
     }
@@ -1128,7 +1092,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         speedMultiplier = state.speedMultiplier();
         musicStack.clear();
         musicStack.addAll(state.overrideStack());
-        legacyCoordFlagHandlers.state().restore(state.coordState());
         restoreUserMasks(state.fmUserMuteMask(), state.fmUserSoloMask(),
                 state.psgUserMuteMask(), state.psgUserSoloMask());
         updateSynthesizerConfig();
@@ -1256,50 +1219,31 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             DacData dacData,
             SmpsSequencerConfig sequencerConfig,
             AudioSourceDescriptor descriptor) {
-        AudioPresentationSourceFactory factory = createLegacySourceFactory();
-        String gameId = sequencerConfig.getCoordFlagHandler() != null
-                ? "s3k" : "legacy";
-        return factory.legacyMusicSmps(
-                        gameId,
-                        data.getId(),
-                        0,
-                        data,
-                        dacData,
-                        sequencerConfig,
-                        descriptor,
-                        STREAM_BUFFER_SIZE);
+        SmpsDriver driver = newConfiguredSmpsDriver();
+        driver.setRegion("PAL".equalsIgnoreCase(
+                configService.getString(SonicConfiguration.REGION))
+                ? SmpsSequencer.Region.PAL
+                : SmpsSequencer.Region.NTSC);
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, dacData, driver, sequencerConfig);
+        sequencer.setSourceDescriptor(
+                describeSmpsSource(descriptor, data, false));
+        sequencer.setSampleRate(driver.getOutputSampleRate());
+        sequencer.setSpeedShoes(speedShoesEnabled);
+        sequencer.setSpeedMultiplier(speedMultiplier);
+        sequencer.setFm6DacOff(configService.getBoolean(
+                SonicConfiguration.FM6_DAC_OFF));
+        sequencer.setFallbackVoiceData(data);
+        driver.addSequencer(sequencer, false);
+        return new SmpsCompositeVoice(
+                0, 0, data.getId(), descriptor,
+                STREAM_BUFFER_SIZE, driver);
     }
 
     private SmpsSequencerConfig legacySequencerConfig(
             SmpsSequencerConfig config) {
-        String gameId = config.getCoordFlagHandler() != null
-                ? "s3k" : "legacy";
-        return createLegacySourceFactory().legacySequencerConfig(gameId, config);
-    }
-
-    private AudioPresentationSourceFactory createLegacySourceFactory() {
-        SmpsSequencer.Region region =
-                "PAL".equalsIgnoreCase(
-                        configService.getString(SonicConfiguration.REGION))
-                        ? SmpsSequencer.Region.PAL
-                        : SmpsSequencer.Region.NTSC;
-        AudioPresentationSourceFactory.Settings settings =
-                new AudioPresentationSourceFactory.Settings(
-                        getSmpsOutputRate(),
-                        region,
-                        configService.getBoolean(
-                                SonicConfiguration.DAC_INTERPOLATE),
-                        configService.getBoolean(
-                                SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
-                        configService.getBoolean(
-                                SonicConfiguration.FM6_DAC_OFF),
-                        speedShoesEnabled,
-                        speedMultiplier,
-                        AudioManager.presentationOwner(),
-                        new DecodedPcmCache(),
-                        getClass().getClassLoader()::getResourceAsStream);
-        return new AudioPresentationSourceFactory(
-                () -> true, legacyCoordFlagHandlers, settings);
+        return AudioManager.presentationOwner()
+                .bindLegacyConfigToPresentationOwner(config);
     }
 
     @Override

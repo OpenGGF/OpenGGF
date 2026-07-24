@@ -13,6 +13,7 @@ import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
 import com.openggf.audio.presentation.SmpsAssetKey;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.data.Rom;
@@ -70,7 +71,8 @@ public class TestDonorAudioRouting {
 
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
 
-        assertEquals("donor-spindash", backend.lastSfxName);
+        assertEquals(AudioCommand.SfxRoute.DONOR_SMPS, lastSfx().route());
+        assertEquals("s2", lastSfx().donorGameId());
     }
 
     @Test
@@ -81,9 +83,8 @@ public class TestDonorAudioRouting {
 
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
 
-        // Should fall through to backend.playSfx(name)
-        assertEquals("SPINDASH_CHARGE", backend.lastFallbackName);
-        assertNull(backend.lastSfxName, "SMPS data should not have been played");
+        assertEquals(AudioCommand.SfxRoute.FALLBACK_NAME, lastSfx().route());
+        assertEquals("SPINDASH_CHARGE", lastSfx().sfxName());
     }
 
     @Test
@@ -110,8 +111,8 @@ public class TestDonorAudioRouting {
 
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
 
-        // Base loader should have handled it
-        assertEquals("base-roll", backend.lastSfxName);
+        assertEquals(AudioCommand.SfxRoute.BASE_SMPS_ID, lastSfx().route());
+        assertEquals(0xA5, lastSfx().sfxId());
     }
 
     @Test
@@ -129,7 +130,7 @@ public class TestDonorAudioRouting {
         Map<GameSound, Integer> baseMap = new EnumMap<>(GameSound.class);
         audioManager.setSoundMap(baseMap);
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
-        assertEquals("SPINDASH_CHARGE", backend.lastFallbackName);
+        assertEquals(AudioCommand.SfxRoute.FALLBACK_NAME, lastSfx().route());
     }
 
     @Test
@@ -152,7 +153,8 @@ public class TestDonorAudioRouting {
 
         // Donor spindash should still work
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
-        assertEquals("donor-spindash", backend.lastSfxName, "Donor spindash must survive setRom()");
+        assertEquals("s2", lastSfx().donorGameId(),
+                "Donor spindash must survive setRom()");
     }
 
     @Test
@@ -175,11 +177,11 @@ public class TestDonorAudioRouting {
 
         // Play spindash â€” should route to S2
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
-        assertEquals("s2-spindash", backend.lastSfxName);
+        assertEquals("s2", lastSfx().donorGameId());
 
         // Play fire shield â€” should route to S3K
         audioManager.playSfx(GameSound.FIRE_SHIELD, 1.0f);
-        assertEquals("s3k-fire-shield", backend.lastSfxName);
+        assertEquals("s3k", lastSfx().donorGameId());
     }
 
     @Test
@@ -198,8 +200,8 @@ public class TestDonorAudioRouting {
 
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
 
-        assertNotNull(backend.lastDonorConfig, "Donor config should be passed to backend");
-        assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW, backend.lastDonorConfig.getTempoMode());
+        assertEquals(AudioCommand.SfxRoute.DONOR_SMPS, lastSfx().route());
+        assertEquals("s3k", lastSfx().donorGameId());
     }
 
     @Test
@@ -263,23 +265,8 @@ public class TestDonorAudioRouting {
         audioManager.playDonorSfx("s3k", 0xA4);
         audioManager.presentOuterFrame(PresentationMode.SILENT);
 
-        var legacyOwner = realBackend.legacyCoordFlagHandlersForTesting();
         var presentationOwner =
                 audioManager.presentationCoordFlagHandlersForTesting();
-        assertNotSame(legacyOwner, presentationOwner,
-                "audible and shadow sessions must not share mutable state");
-        assertNotSame(legacyOwner.state(), presentationOwner.state());
-        var snapshot = realBackend.captureLogicalSnapshot();
-        assertNotNull(snapshot.musicDriver());
-        assertEquals(2, snapshot.musicDriver().sequencers().size(),
-                "donor SFX must join donor music's driver");
-        var musicHandler = snapshot.musicDriver().sequencers().get(0)
-                .config().getCoordFlagHandler();
-        var sfxHandler = snapshot.musicDriver().sequencers().get(1)
-                .config().getCoordFlagHandler();
-        assertSame(legacyOwner.handlerFor("s3k"), musicHandler);
-        assertSame(musicHandler, sfxHandler,
-                "legacy donor music and SFX must share the counter owner");
 
         var shadowDriver =
                 audioManager.shadowSmpsDriverSnapshotForTesting();
@@ -294,22 +281,20 @@ public class TestDonorAudioRouting {
                 shadowMusicHandler);
         assertSame(shadowMusicHandler, shadowSfxHandler,
                 "shadow donor music and SFX must share the counter owner");
-        assertNotSame(musicHandler, shadowMusicHandler,
-                "legacy and shadow sequencers must not share handlers");
-
-        legacyOwner.state().setSpindashRevCounter(17);
         presentationOwner.state().setSpindashRevCounter(29);
-        assertEquals(17, legacyOwner.state().spindashRevCounter());
         assertEquals(29, presentationOwner.state().spindashRevCounter());
         shadowSfxHandler.onSfxStart(0);
         assertEquals(0, presentationOwner.state().spindashRevCounter(),
                 "the configured shadow SFX handler must mutate the shared "
                         + "presentation counter");
-        assertEquals(17, legacyOwner.state().spindashRevCounter(),
-                "shadow counter mutations must not cross into legacy");
     }
 
     // --- Test doubles ---
+
+    private AudioCommand.PlaySfx lastSfx() {
+        var entries = audioManager.commandTimeline().entries();
+        return (AudioCommand.PlaySfx) entries.get(entries.size() - 1).command();
+    }
 
     /** Minimal SmpsData stub that carries a name for assertion. */
     private static class StubSmpsData extends AbstractSmpsData {

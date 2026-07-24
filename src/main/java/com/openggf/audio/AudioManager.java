@@ -40,8 +40,11 @@ import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.output.NoDeviceAudioSink;
+import com.openggf.audio.output.AudioPresentationSink;
+import com.openggf.audio.output.OpenAlPcmSink;
 import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 
@@ -92,7 +95,12 @@ public class AudioManager implements MusicRestoreSink {
     private AudioPresentationParityProbe shadowParity;
     private boolean shadowRestoreRequested;
     private AudioPresentationTuning shadowTuning;
+    private AudioPresentationTuning standaloneTuning;
+    private int standaloneFrameRate;
+    private String standaloneGameId;
+    private long standaloneVoiceId = 1;
     private SmpsCoordFlagHandlerOwner presentationCoordFlagHandlers;
+    private AudioPresentationSink presentationSink;
     private final Set<String> presentationCoordHandlerGameIds =
             new LinkedHashSet<>();
 
@@ -127,6 +135,44 @@ public class AudioManager implements MusicRestoreSink {
         return instance;
     }
 
+    public static AudioManager createStandalonePresentation(
+            String gameId,
+            GameAudioProfile profile,
+            SonicConfigurationService config,
+            com.openggf.debug.PerformanceProfiler profiler,
+            AudioPresentationSink sink,
+            SmpsCoordFlagHandlerOwner coordFlagHandlers) {
+        if (gameId == null || gameId.isBlank()) {
+            throw new IllegalArgumentException("gameId must not be blank");
+        }
+        AudioManager manager = new AudioManager();
+        manager.backend = new NullAudioBackend();
+        manager.backend.init();
+        manager.audioProfile = java.util.Objects.requireNonNull(
+                profile, "profile");
+        manager.presentationSink = java.util.Objects.requireNonNull(
+                sink, "sink");
+        manager.presentationCoordFlagHandlers =
+                java.util.Objects.requireNonNull(
+                        coordFlagHandlers, "coordFlagHandlers");
+        manager.standaloneGameId = gameId;
+        manager.standaloneFrameRate = FrameRateResolver.effective(
+                java.util.Objects.requireNonNull(config, "config"));
+        manager.standaloneTuning = new AudioPresentationTuning(
+                "PAL".equalsIgnoreCase(config.getString(
+                        SonicConfiguration.REGION))
+                        ? SmpsSequencer.Region.PAL
+                        : SmpsSequencer.Region.NTSC,
+                config.getBoolean(SonicConfiguration.DAC_INTERPOLATE),
+                config.getBoolean(
+                        SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
+                config.getBoolean(SonicConfiguration.FM6_DAC_OFF));
+        profile.configurePresentationCoordFlagHandlers(coordFlagHandlers);
+        manager.presentationCoordHandlerGameIds.add(gameId);
+        manager.ensureShadowPresentation();
+        return manager;
+    }
+
     public AudioBackend getBackend() {
         return backend;
     }
@@ -137,7 +183,9 @@ public class AudioManager implements MusicRestoreSink {
      * TestAudioBackendBypassGuard).
      */
     public int outputSampleRate() {
-        return backend.outputSampleRate();
+        return presentationSink != null
+                ? presentationSink.sampleRate()
+                : backend.outputSampleRate();
     }
 
     void setDeterministicAudioRuntime(DeterministicAudioRuntime deterministicAudioRuntime) {
@@ -291,7 +339,10 @@ public class AudioManager implements MusicRestoreSink {
         }
     }
 
-    private static int configuredFrameRate() {
+    private int configuredFrameRate() {
+        if (standaloneFrameRate > 0) {
+            return standaloneFrameRate;
+        }
         var config = configuredServicesOrNull();
         if (config == null) {
             return 60;
@@ -325,6 +376,7 @@ public class AudioManager implements MusicRestoreSink {
         try {
             this.backend.init();
             this.backend.setAudioProfile(audioProfile);
+            installBackendPresentationSink();
             configureDeterministicRuntimeForBackend();
             LOGGER.info("AudioBackend initialized: " + backend.getClass().getSimpleName());
         } catch (Exception e) {
@@ -333,8 +385,40 @@ public class AudioManager implements MusicRestoreSink {
             this.backend = new NullAudioBackend();
             this.backend.init();
             this.backend.setAudioProfile(audioProfile);
+            presentationSink =
+                    new NoDeviceAudioSink(this.backend.outputSampleRate());
             configureDeterministicRuntimeForBackend();
         }
+    }
+
+    private void installBackendPresentationSink() {
+        try {
+            presentationSink = backend.createPresentationSink(
+                    this::handlePresentationSinkFailure,
+                    warning -> LOGGER.warning("Speaker output: " + warning));
+        } catch (Throwable failure) {
+            LOGGER.log(Level.WARNING,
+                    "Speaker device unavailable; continuing without audio output",
+                    failure);
+            presentationSink =
+                    new NoDeviceAudioSink(backend.outputSampleRate());
+        }
+    }
+
+    private void handlePresentationSinkFailure(Throwable failure) {
+        LOGGER.log(Level.WARNING,
+                "Speaker output failed; continuing without audio output",
+                failure);
+        AudioPresentationSink replacement =
+                new NoDeviceAudioSink(outputSampleRate());
+        presentationSink = replacement;
+        if (shadowProducer != null) {
+            shadowProducer.replaceSink(replacement);
+        }
+    }
+
+    public void replaceFailedPresentationSink(Throwable failure) {
+        handlePresentationSinkFailure(failure);
     }
 
     private static void destroyBackendQuietly(AudioBackend backend, String description) {
@@ -533,10 +617,6 @@ public class AudioManager implements MusicRestoreSink {
         }
         try {
             byte[] pcm = rom.readBytes(spec.address(), spec.length());
-            // System PCM is not represented in AudioCommandTimeline. Always
-            // deliver it to the backend; an attached presentation runtime is
-            // rebound by the backend to the resulting PCM stream.
-            backend.playPcmSample(pcm, spec.sampleRate());
             mirrorShadowCommand(() ->
                     shadowResolver.submitRawPcm(pcm, spec.sampleRate()));
         } catch (Exception e) {
@@ -548,8 +628,75 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        backend.stopPcmSample();
         mirrorShadowCommand(() -> shadowResolver.stopRawPcm());
+    }
+
+    public void playStandaloneMusic(
+            AbstractSmpsData data, DacData dac) {
+        ensureStandalonePresentation();
+        int musicId = data.getId();
+        int maxFrames = (outputSampleRate() + configuredFrameRate() - 1)
+                / configuredFrameRate();
+        var music = shadowFactory.musicSmps(
+                standaloneGameId, musicId, standaloneVoiceId++,
+                data, dac, audioProfile.getSequencerConfig(),
+                AudioSourceDescriptor.baseMusic(musicId), maxFrames);
+        shadowCommands.submit(
+                new AudioPresentationCommand.ReplaceMusic(music),
+                () -> true, shadowRegistry::apply);
+    }
+
+    public void playStandaloneSfx(
+            AbstractSmpsData data, DacData dac, float pitch) {
+        ensureStandalonePresentation();
+        int sfxId = data.getId();
+        var key = new com.openggf.audio.presentation.SmpsAssetKey(
+                standaloneGameId,
+                com.openggf.audio.presentation.SmpsAssetKey.Route.BASE_ID,
+                sfxId, null);
+        shadowFactory.warmSmpsSfxAsset(
+                key, data, dac, audioProfile.getSequencerConfig(),
+                audioProfile.isSpecialSfx(sfxId));
+        int continuous = audioProfile.isContinuousSfx(sfxId)
+                ? sfxId : 0;
+        int maxFrames = (outputSampleRate() + configuredFrameRate() - 1)
+                / configuredFrameRate();
+        var source = shadowFactory.resolveSmpsSfx(
+                standaloneVoiceId++, key,
+                Math.max(1, Math.round(pitch * 65_536.0f)),
+                audioProfile.getSfxPriority(sfxId), continuous,
+                data.getChannels() + data.getPsgChannels(), maxFrames);
+        shadowCommands.submit(
+                new AudioPresentationCommand.AddSmpsSfx(source),
+                () -> true, shadowRegistry::apply);
+    }
+
+    public void stopStandalonePlayback() {
+        ensureStandalonePresentation();
+        shadowCommands.submit(new AudioPresentationCommand.StopMusic(),
+                () -> true, shadowRegistry::apply);
+        shadowCommands.submit(new AudioPresentationCommand.StopAllSfx(),
+                () -> true, shadowRegistry::apply);
+        shadowCommands.submit(new AudioPresentationCommand.StopRawPcm(),
+                () -> true, shadowRegistry::apply);
+    }
+
+    SmpsSequencerConfig bindLegacyConfigToPresentationOwner(
+            SmpsSequencerConfig config) {
+        ensureShadowPresentation();
+        String gameId = config.getCoordFlagHandler() == null
+                ? (audioProfile != null
+                ? audioProfile.presentationGameId() : "base")
+                : "s3k";
+        return shadowFactory.legacySequencerConfig(gameId, config);
+    }
+
+    private void ensureStandalonePresentation() {
+        if (standaloneGameId == null) {
+            throw new IllegalStateException(
+                    "not a standalone presentation manager");
+        }
+        ensureShadowPresentation();
     }
 
     private SmpsDriverSnapshot.DependencyResolver createSmpsDependencyResolver() {
@@ -812,7 +959,6 @@ public class AudioManager implements MusicRestoreSink {
                 overrides,
                 musicDriver,
                 standaloneSfxDriver,
-                previous.legacyCoordFlagRuntimeState(),
                 presentation.fmMuteMask(),
                 presentation.fmSoloMask(),
                 presentation.psgMuteMask(),
@@ -1417,22 +1563,18 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void update() {
-        updateBackend(true);
-    }
-
-    /** Pumps the legacy device without advancing a presentation runtime. */
-    public void updateLegacyDevice() {
-        updateBackend(false);
-    }
-
-    private void updateBackend(boolean allowRuntimeFallbackAdvance) {
-        if (!reverseAudioPresentationActive
-                && deterministicAudioRuntime.consumesSubmittedCommands()
-                && !audioFrameAdvanced
-                && allowRuntimeFallbackAdvance) {
-            advanceRuntimeFrame(FrameAudioMode.NORMAL);
+        if (presentationSink instanceof OpenAlPcmSink openAlSink) {
+            openAlSink.updateDevice();
         }
-        backend.update();
+        finishOuterAudioFrame();
+    }
+
+    /** Transitional delegate retained until Task 10 removes simulation pumps. */
+    public void updateLegacyDevice() {
+        finishOuterAudioFrame();
+    }
+
+    private void finishOuterAudioFrame() {
         if (!audioFrameOwnedExternally) {
             commandTimeline.beginFrame(commandTimeline.currentFrame() + 1);
         }
@@ -1745,18 +1887,16 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private boolean sendLiveBackendCommands() {
-        return backend != null && !deterministicAudioRuntime.consumesSubmittedCommands();
+        return false;
     }
 
     public void toggleMute(ChannelType type, int channel) {
-        backend.toggleMute(type, channel);
         mirrorShadowCommand(() -> shadowCommands.submit(
                 new AudioPresentationCommand.ToggleMute(type, channel),
                 () -> true, shadowRegistry::apply));
     }
 
     public void toggleSolo(ChannelType type, int channel) {
-        backend.toggleSolo(type, channel);
         mirrorShadowCommand(() -> shadowCommands.submit(
                 new AudioPresentationCommand.ToggleSolo(type, channel),
                 () -> true, shadowRegistry::apply));
@@ -1776,19 +1916,25 @@ public class AudioManager implements MusicRestoreSink {
         if (shadowProducer != null) {
             return;
         }
-        int sampleRate = Math.max(1, backend != null ? backend.outputSampleRate() : 48_000);
+        int sampleRate = Math.max(1, presentationSink != null
+                ? presentationSink.sampleRate()
+                : backend != null ? backend.outputSampleRate() : 48_000);
         int frameRate = configuredFrameRate();
         int maxFrames = (sampleRate + frameRate - 1) / frameRate;
-        AudioPresentationTuning tuning = backend != null
+        AudioPresentationTuning tuning = standaloneTuning != null
+                ? standaloneTuning : backend != null
                 ? backend.presentationTuning()
                 : AudioPresentationTuning.DEFAULT;
         shadowTuning = tuning;
-        presentationCoordFlagHandlers =
-                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
-        presentationCoordHandlerGameIds.clear();
-        configurePresentationCoordHandlers(audioProfile);
-        donorProfiles.values().forEach(
-                this::configurePresentationCoordHandlers);
+        if (presentationCoordFlagHandlers == null) {
+            presentationCoordFlagHandlers =
+                    new SmpsCoordFlagHandlerOwner(
+                            new SmpsCoordFlagRuntimeState());
+            presentationCoordHandlerGameIds.clear();
+            configurePresentationCoordHandlers(audioProfile);
+            donorProfiles.values().forEach(
+                    this::configurePresentationCoordHandlers);
+        }
         AudioPresentationSourceFactory.Settings settings =
                 new AudioPresentationSourceFactory.Settings(sampleRate,
                         tuning.region(), tuning.dacInterpolate(),
@@ -1807,11 +1953,18 @@ public class AudioManager implements MusicRestoreSink {
                 warning -> LOGGER.warning("Presentation shadow: " + warning),
                 () -> true, shadowRegistry::apply);
         AudioPresentationMixer mixer = new AudioPresentationMixer(maxFrames);
+        AudioPresentationSink sink = presentationSink != null
+                ? presentationSink : new NoDeviceAudioSink(sampleRate);
+        if (sink.sampleRate() != sampleRate) {
+            sink.close();
+            sink = new NoDeviceAudioSink(sampleRate);
+            presentationSink = sink;
+        }
         shadowProducer = new AudioPresentationProducer(sampleRate, frameRate,
                 Math.max(maxFrames, configuredPcmHistoryFrames(sampleRate)),
                 Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
                 shadowRegistry, shadowCommands, mixer,
-                new NoDeviceAudioSink(sampleRate));
+                sink);
         shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
     }
 
@@ -1822,7 +1975,10 @@ public class AudioManager implements MusicRestoreSink {
     private void closeShadowPresentation() {
         if (shadowProducer != null) {
             shadowProducer.close();
+        } else if (presentationSink != null) {
+            presentationSink.close();
         }
+        presentationSink = null;
         shadowProducer = null;
         shadowResolver = null;
         shadowRegistry = null;
@@ -1830,6 +1986,7 @@ public class AudioManager implements MusicRestoreSink {
         shadowFactory = null;
         shadowParity = null;
         shadowTuning = null;
+        standaloneTuning = null;
         shadowRestoreRequested = false;
         presentationCoordFlagHandlers = null;
         presentationCoordHandlerGameIds.clear();
@@ -1963,6 +2120,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void destroy() {
+        closeShadowPresentation();
         if (backend != null) {
             backend.destroy();
         }
@@ -1972,8 +2130,8 @@ public class AudioManager implements MusicRestoreSink {
      * Pauses audio playback. Called when the game window is minimized or loses focus.
      */
     public void pause() {
-        if (backend != null) {
-            backend.pause();
+        if (presentationSink instanceof OpenAlPcmSink openAlSink) {
+            openAlSink.pause();
         }
     }
 
@@ -1981,8 +2139,8 @@ public class AudioManager implements MusicRestoreSink {
      * Resumes audio playback after being paused.
      */
     public void resume() {
-        if (backend != null) {
-            backend.resume();
+        if (presentationSink instanceof OpenAlPcmSink openAlSink) {
+            openAlSink.resume();
         }
     }
 }

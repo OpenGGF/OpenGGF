@@ -4,6 +4,7 @@ import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
@@ -81,7 +82,7 @@ class TestAudioManagerRewindSuppression {
         outer.close();
         assertFalse(audio.isRewindReplaySuppressed());
         audio.playSfx("AUDIBLE");
-        assertEquals(1, backend.totalCalls());
+        assertEquals(1, audio.commandTimeline().entryCount());
     }
 
     @Test
@@ -92,7 +93,7 @@ class TestAudioManagerRewindSuppression {
 
         assertFalse(audio.isRewindReplaySuppressed());
         audio.playSfx("AUDIBLE");
-        assertEquals(1, backend.totalCalls());
+        assertEquals(1, audio.commandTimeline().entryCount());
     }
 
     @Test
@@ -105,8 +106,9 @@ class TestAudioManagerRewindSuppression {
 
         audio.playSfx(GameSound.RING);
 
-        assertEquals(1, backend.totalCalls());
-        assertTrue(backend.calls.get(0).contains("RING_LEFT"),
+        assertEquals(1, audio.commandTimeline().entryCount());
+        assertEquals("RING_LEFT",
+                ((AudioCommand.PlaySfx) audio.commandTimeline().entryAt(0).command()).sfxName(),
                 "first audible ring after suppressed replay must still be left");
     }
 
@@ -125,8 +127,9 @@ class TestAudioManagerRewindSuppression {
 
         audio.playSfx(GameSound.JUMP);
 
-        assertEquals(1, backend.totalCalls());
-        assertTrue(backend.calls.get(0).contains("jump"));
+        assertEquals(1, audio.commandTimeline().entryCount());
+        assertEquals(AudioCommand.SfxRoute.BASE_SMPS_ID,
+                ((AudioCommand.PlaySfx) audio.commandTimeline().entryAt(0).command()).route());
     }
 
     @Test
@@ -191,7 +194,7 @@ class TestAudioManagerRewindSuppression {
 
         assertEquals(0, runtime.advanceCalls,
                 "reverse presentation must drain history only, not append forward PCM into history");
-        assertEquals(java.util.List.of("update"), backend.calls);
+        assertEquals(java.util.List.of(), backend.calls);
     }
 
     @Test

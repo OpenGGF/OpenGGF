@@ -4,9 +4,13 @@ import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
+import com.openggf.audio.output.AudioPresentationSink;
+import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+
+import java.util.function.Consumer;
 
 public interface AudioBackend {
     interface PreparedLogicalRestore {
@@ -250,5 +254,15 @@ public interface AudioBackend {
 
     default int outputSampleRate() {
         return 48_000;
+    }
+
+    /**
+     * Creates the speaker-only final-PCM sink for this backend. Backends no
+     * longer own audible music or SFX sources.
+     */
+    default AudioPresentationSink createPresentationSink(
+            Consumer<Throwable> failureHandler,
+            Consumer<String> warningHandler) {
+        return new NoDeviceAudioSink(outputSampleRate());
     }
 }

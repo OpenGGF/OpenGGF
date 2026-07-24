@@ -2,6 +2,8 @@ package com.openggf;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.runtime.DeterministicAudioRuntime;
+import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -42,6 +44,7 @@ class TestTraceSessionLauncherRewindPresentation {
     private SonicConfigurationService config;
     private AudioManager audio;
     private RecordingReverseAudioBackend backend;
+    private RecordingReverseAudioRuntime runtime;
 
     @BeforeEach
     void setUp() {
@@ -52,6 +55,8 @@ class TestTraceSessionLauncherRewindPresentation {
         audio.resetState();
         backend = new RecordingReverseAudioBackend();
         audio.setBackend(backend);
+        runtime = new RecordingReverseAudioRuntime();
+        setAudioRuntime(audio, runtime);
     }
 
     @AfterEach
@@ -86,14 +91,13 @@ class TestTraceSessionLauncherRewindPresentation {
         assertTrue(launcher.handleRealtimeRewindInput(false, input));
 
         assertTrue(fadeManager.isReversePresentationActive());
-        assertTrue(backend.calls.contains("beginReversePresentation"));
-        assertTrue(backend.calls.contains("update"));
+        assertTrue(runtime.calls.contains("beginReversePresentation"));
 
         input.handleKeyEvent(config.getInt(SonicConfiguration.TRACE_REWIND_KEY), GLFW_RELEASE);
         assertFalse(launcher.handleRealtimeRewindInput(false, input));
 
         assertFalse(fadeManager.isReversePresentationActive());
-        assertTrue(backend.calls.contains("endReversePresentation"));
+        assertTrue(runtime.calls.contains("endReversePresentation"));
     }
 
     /**
@@ -140,7 +144,7 @@ class TestTraceSessionLauncherRewindPresentation {
         assertFalse(fadeManager.isReversePresentationActive(),
                 "a pending non-rewindable transition must tear down the reverse fade "
                         + "presentation, not leave it active while the frame is rejected");
-        assertTrue(backend.calls.contains("endReversePresentation"),
+        assertTrue(runtime.calls.contains("endReversePresentation"),
                 "rejecting on a pending transition must run the same cleanup as a normal "
                         + "release, not silently leave the audio reverse-presentation stuck");
     }
@@ -184,6 +188,19 @@ class TestTraceSessionLauncherRewindPresentation {
         field.set(target, value);
     }
 
+    private static void setAudioRuntime(
+            AudioManager audio, DeterministicAudioRuntime runtime) {
+        try {
+            var method = AudioManager.class.getDeclaredMethod(
+                    "setDeterministicAudioRuntime",
+                    DeterministicAudioRuntime.class);
+            method.setAccessible(true);
+            method.invoke(audio, runtime);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
     private static final class FakeInputSource implements InputSource {
         private final int frames;
 
@@ -213,6 +230,24 @@ class TestTraceSessionLauncherRewindPresentation {
         @Override
         public void update() {
             calls.add("update");
+        }
+
+        @Override
+        public void endReversePresentation() {
+            calls.add("endReversePresentation");
+        }
+    }
+
+    private static final class RecordingReverseAudioRuntime implements DeterministicAudioRuntime {
+        private final List<String> calls = new ArrayList<>();
+
+        @Override
+        public void advanceFrame(long frame, FrameAudioMode mode) {
+        }
+
+        @Override
+        public void beginReversePresentation() {
+            calls.add("beginReversePresentation");
         }
 
         @Override

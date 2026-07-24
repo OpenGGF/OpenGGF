@@ -1699,6 +1699,7 @@ public class Engine {
 		if (gameLoop != null) {
 			gameLoop.presentOuterFrame(
 					displayShaderPickerHandledInput, frameStepPresentation);
+			GameServices.audio().update();
 		}
 		profiler.endSection("update");
 

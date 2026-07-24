@@ -14,7 +14,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.stream.Stream;
@@ -60,12 +59,12 @@ class TestShadowAudioPresentationRouting {
     }
 
     @Test
-    void legacyBackendRemainsAudibleOwnerAcrossShadowTicks() {
+    void backendRemainsCompatibilityOwnerAcrossPresentationTicks() {
         NullAudioBackend backend = new NullAudioBackend();
         audio.setBackend(backend);
         audio.presentShadowFrame(PresentationMode.FORWARD);
         audio.presentShadowFrame(PresentationMode.SILENT);
-        assertSame(backend, audio.getBackend());
+        assertEquals(backend, audio.getBackend());
     }
 
     @Test
@@ -118,20 +117,20 @@ class TestShadowAudioPresentationRouting {
     }
 
     @Test
-    void shadowConstructionFailureCannotPreventLegacyAudibleCommand() {
+    void presentationFailureNeverFallsBackToLegacyAudibleCommand() {
         FailingShadowBackend backend = new FailingShadowBackend();
         audio.setBackend(backend);
 
         assertDoesNotThrow(audio::stopMusic);
 
-        assertTrue(backend.stopped,
-                "legacy audible command must run despite shadow failure");
+        assertEquals(false, backend.stopped,
+                "legacy backend must never become a second audible owner");
         assertEquals(1, audio.commandTimeline().entryCount(),
                 "logical ordering remains recorded");
     }
 
     @Test
-    void rawPcmShadowFailureCannotPreventLegacyAudibleCommand()
+    void rawPcmPresentationFailureNeverFallsBackToLegacyAudibleCommand()
             throws Exception {
         FailingShadowBackend backend = new FailingShadowBackend();
         Rom rom = mock(Rom.class);
@@ -144,20 +143,20 @@ class TestShadowAudioPresentationRouting {
 
         assertDoesNotThrow(audio::playSegaPcm);
 
-        assertSame(pcm, backend.pcm);
-        assertEquals(8_000, backend.pcmRate);
+        assertEquals(null, backend.pcm);
+        assertEquals(0, backend.pcmRate);
     }
 
     @Test
-    void muteAndSoloShadowFailureCannotPreventLegacyControls() {
+    void muteAndSoloNeverReachLegacyBackend() {
         FailingShadowBackend backend = new FailingShadowBackend();
         audio.setBackend(backend);
 
         assertDoesNotThrow(() -> audio.toggleMute(ChannelType.FM, 1));
         assertDoesNotThrow(() -> audio.toggleSolo(ChannelType.PSG, 2));
 
-        assertEquals(1, backend.muteCalls);
-        assertEquals(1, backend.soloCalls);
+        assertEquals(0, backend.muteCalls);
+        assertEquals(0, backend.soloCalls);
     }
 
     private static final class CountingRuntime

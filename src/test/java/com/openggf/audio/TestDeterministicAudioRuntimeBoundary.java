@@ -43,7 +43,7 @@ class TestDeterministicAudioRuntimeBoundary {
         audio.advanceGameplayFrameAudio();
         audio.update();
 
-        assertEquals(List.of("advance:12:NORMAL", "backend:update"), calls);
+        assertEquals(List.of("advance:12:NORMAL"), calls);
     }
 
     @Test
@@ -87,7 +87,7 @@ class TestDeterministicAudioRuntimeBoundary {
     }
 
     @Test
-    void commandConsumingRuntimeDelaysBackendSideEffectsUntilFrameAdvance() {
+    void commandConsumingRuntimeDelaysPresentationConsumptionUntilFrameAdvance() {
         CommandConsumingRuntime consumingRuntime = new CommandConsumingRuntime(calls);
         audio.setDeterministicAudioRuntime(consumingRuntime);
         audio.beginGameplayAudioFrame(15);
@@ -114,13 +114,8 @@ class TestDeterministicAudioRuntimeBoundary {
         audio.playSfx("JUMP");
         audio.update();
 
-        assertEquals(List.of(
-                "submit:0:0",
-                "consume:0:0",
-                "backend:sfx:JUMP:1.0",
-                "advance:0:NORMAL",
-                "backend:update"),
-                calls);
+        assertEquals(List.of("submit:0:0"), calls,
+                "device pumping must not advance the frame-owned runtime");
     }
 
     private static final class RecordingRuntime implements DeterministicAudioRuntime {

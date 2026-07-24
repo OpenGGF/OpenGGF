@@ -8,13 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import com.openggf.audio.AudioBackend;
 import com.openggf.audio.AudioManager;
-import com.openggf.audio.ChannelType;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.NullAudioBackend;
-import com.openggf.audio.smps.AbstractSmpsData;
-import com.openggf.audio.smps.DacData;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.game.GameRng;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
@@ -64,8 +61,6 @@ class TestDrowningControllerMusicSelection {
     @MethodSource("drowningMusicProvider")
     void drowningMusicMatchesProfile(GameAudioProfile profile, int expectedMusicId, String label) {
         AudioManager audioManager = AudioManager.getInstance();
-        CapturingBackend backend = new CapturingBackend();
-        audioManager.setBackend(backend);
         audioManager.setAudioProfile(profile);
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.activeGameplayMode();
@@ -81,9 +76,10 @@ class TestDrowningControllerMusicSelection {
             controller.update();
         }
 
-        assertEquals(1, backend.musicPlayCalls,
+        var musicCommands = musicCommands(audioManager);
+        assertEquals(1, musicCommands.size(),
                 "Drowning music should be triggered exactly once");
-        assertEquals(expectedMusicId, backend.lastMusicId,
+        assertEquals(expectedMusicId, musicCommands.getFirst().musicId(),
                 "Incorrect drowning music ID selected");
         assertTrue(controller.isDrowningMusicPlaying(),
                 "Controller should flag drowning music as active");
@@ -92,8 +88,6 @@ class TestDrowningControllerMusicSelection {
     @Test
     void s3kFixedCountdownAirEventTriggersDrowningMusicWithoutGenericBubbleUpdate() {
         AudioManager audioManager = AudioManager.getInstance();
-        CapturingBackend backend = new CapturingBackend();
-        audioManager.setBackend(backend);
         audioManager.setAudioProfile(new Sonic3kAudioProfile());
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.activeGameplayMode();
@@ -105,9 +99,10 @@ class TestDrowningControllerMusicSelection {
             controller.performFixedCountdownAirEvent(true);
         }
 
-        assertEquals(1, backend.musicPlayCalls,
+        var musicCommands = musicCommands(audioManager);
+        assertEquals(1, musicCommands.size(),
                 "fixed Obj_AirCountdown should still trigger drowning music at air_left=12");
-        assertEquals(Sonic3kMusic.DROWNING.id, backend.lastMusicId);
+        assertEquals(Sonic3kMusic.DROWNING.id, musicCommands.getFirst().musicId());
         assertTrue(controller.isDrowningMusicPlaying());
     }
 
@@ -278,108 +273,11 @@ class TestDrowningControllerMusicSelection {
                 drowningBubble);
     }
 
-    private static final class CapturingBackend implements AudioBackend {
-        int musicPlayCalls = 0;
-        int lastMusicId = -1;
-
-        @Override
-        public void init() {
-        }
-
-        @Override
-        public void setAudioProfile(GameAudioProfile profile) {
-        }
-
-        @Override
-        public void playMusic(int musicId) {
-            musicPlayCalls++;
-            lastMusicId = musicId;
-        }
-
-        @Override
-        public void playSmps(AbstractSmpsData data, DacData dacData) {
-            musicPlayCalls++;
-            if (data != null) {
-                lastMusicId = data.getId();
-            }
-        }
-
-        @Override
-        public void playSfxSmps(AbstractSmpsData data, DacData dacData) {
-        }
-
-        @Override
-        public void playSfxSmps(AbstractSmpsData data, DacData dacData, float pitch) {
-        }
-
-        @Override
-        public void playSfx(String sfxName) {
-        }
-
-        @Override
-        public void playSfx(String sfxName, float pitch) {
-        }
-
-        @Override
-        public void stopPlayback() {
-        }
-
-        @Override
-        public void stopAllSfx() {
-        }
-
-        @Override
-        public void fadeOutMusic(int steps, int delay) {
-        }
-
-        @Override
-        public void toggleMute(ChannelType type, int channel) {
-        }
-
-        @Override
-        public void toggleSolo(ChannelType type, int channel) {
-        }
-
-        @Override
-        public boolean isMuted(ChannelType type, int channel) {
-            return false;
-        }
-
-        @Override
-        public boolean isSoloed(ChannelType type, int channel) {
-            return false;
-        }
-
-        @Override
-        public void setSpeedShoes(boolean enabled) {
-        }
-
-        @Override
-        public void setSpeedMultiplier(int multiplier) {
-        }
-
-        @Override
-        public void restoreMusic() {
-        }
-
-        @Override
-        public void endMusicOverride(int musicId) {
-        }
-
-        @Override
-        public void update() {
-        }
-
-        @Override
-        public void destroy() {
-        }
-
-        @Override
-        public void pause() {
-        }
-
-        @Override
-        public void resume() {
-        }
+    private static java.util.List<AudioCommand.PlayMusic> musicCommands(AudioManager audioManager) {
+        return audioManager.commandTimeline().entries().stream()
+                .map(entry -> entry.command())
+                .filter(AudioCommand.PlayMusic.class::isInstance)
+                .map(AudioCommand.PlayMusic.class::cast)
+                .toList();
     }
 }

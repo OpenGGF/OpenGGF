@@ -1710,9 +1710,6 @@ public class GameLoop {
             return;
         }
         profiler.beginSection("audio");
-        if (!doFrameStep) {
-            audioManager.updateLegacyDevice();
-        }
         audioUpdatedThisStep = true;
         profiler.endSection("audio");
     }
@@ -1733,9 +1730,6 @@ public class GameLoop {
             return;
         }
         profiler.beginSection("audio");
-        if (!doFrameStep) {
-            audioManager.updateLegacyDevice();
-        }
         audioUpdatedThisStep = true;
         profiler.endSection("audio");
     }

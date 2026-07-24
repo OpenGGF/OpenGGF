@@ -244,8 +244,6 @@ class TestLWJGLAudioBackendSnapshot {
                 afterFailure.speedShoesEnabled());
         assertEquals(before.speedMultiplier(),
                 afterFailure.speedMultiplier());
-        assertEquals(before.legacyCoordFlagRuntimeState(),
-                afterFailure.legacyCoordFlagRuntimeState());
 
         backend.restoreLogicalSnapshot(
                 snapshot, SmpsDriverSnapshot.liveReferences(), true);

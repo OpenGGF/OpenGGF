@@ -124,10 +124,10 @@ class TestSegaPcmCommandRouting {
         audio.playMusic(Sonic3kSmpsConstants.CMD_SEGA);
         audio.playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
 
-        assertEquals(1, backend.pcmPlayCalls);
-        assertEquals(Sonic3kSmpsConstants.SEGA_SOUND_SIZE, backend.lastPcmLength);
-        assertEquals(Sonic3kSmpsConstants.SEGA_SOUND_SAMPLE_RATE, backend.lastSampleRate);
-        assertEquals(1, backend.pcmStopCalls);
+        assertEquals(0, backend.pcmPlayCalls,
+                "raw PCM is owned by the unified presentation registry");
+        assertEquals(0, backend.pcmStopCalls,
+                "raw PCM stop is owned by the unified presentation registry");
         assertEquals(0, backend.musicPlayCalls);
     }
 

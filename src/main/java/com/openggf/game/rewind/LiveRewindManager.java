@@ -112,7 +112,6 @@ public final class LiveRewindManager {
             GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
             stepBackward(steps);
             effectEnvelope.frameActive(speedController.currentSpeed());
-            GameServices.audio().update();
             return true;
         }
         int coastSteps = speedController.stepsAfterRelease();
@@ -120,7 +119,6 @@ public final class LiveRewindManager {
             if (stepBackward(coastSteps) > 0) {
                 GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
                 effectEnvelope.frameActive(speedController.currentSpeed());
-                GameServices.audio().update();
                 return true;
             }
             speedController.reset();

@@ -718,7 +718,6 @@ public final class TraceSessionLauncher {
             realtimeRewinding = true;
             rewindPlaybackController.rewind();
             rewindPlaybackController.tick();
-            GameServices.audio().update();
             syncVisualRewindCursors(false);
             if (cameraFocusController != null) {
                 cameraFocusController.syncDefaultCameraToCurrentPosition();
