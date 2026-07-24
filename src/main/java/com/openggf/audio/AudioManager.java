@@ -37,6 +37,7 @@ import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.configuration.FrameRateResolver;
@@ -700,7 +701,86 @@ public class AudioManager implements MusicRestoreSink {
             case AudioCommand.ChangeMusicTempo ignored -> {
             }
         }
+        stageDeferredPresentationCommand(command);
         refreshDeferredReverseLogicalSnapshot();
+    }
+
+    /**
+     * Replays one logical command into a detached presentation registry.
+     * The live shadow and its rewind/history cursor remain untouched until
+     * the manager-owned dual restore commits at the selected target.
+     */
+    private void stageDeferredPresentationCommand(AudioCommand command) {
+        if (command == null) {
+            return;
+        }
+        ensureShadowPresentation();
+        if (deferredReverseLogicalSnapshot == null) {
+            shadowResolver.submit(command);
+            shadowCommands.applyPending(shadowRegistry::apply);
+            return;
+        }
+        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+        SmpsCoordFlagRuntimeState.Snapshot liveCoord =
+                presentationCoordFlagHandlers.state().snapshot();
+        AudioPresentationCommandQueue stagedCommands =
+                new AudioPresentationCommandQueue();
+        AudioVoiceRegistry stagedRegistry = new AudioVoiceRegistry(
+                shadowFactory, shadowFactory, presentationCoordFlagHandlers,
+                warning -> LOGGER.warning(
+                        "Presentation rewind staging: " + warning));
+        try {
+            stagedRegistry.restore(selected.presentation(), shadowFactory);
+            String[] resolutionFailure = new String[1];
+            AudioPresentationCommandResolver stagedResolver =
+                    new AudioPresentationCommandResolver(
+                            stagedCommands, shadowFactory,
+                            new ShadowSources(
+                                    (Math.max(1, backend != null
+                                            ? backend.outputSampleRate()
+                                            : 48_000)
+                                            + configuredFrameRate() - 1)
+                                            / configuredFrameRate()),
+                            warning -> resolutionFailure[0] = warning,
+                            () -> true, stagedRegistry::apply);
+            long nextVoice = selected.presentation().voices().stream()
+                    .mapToLong(voice -> switch (voice) {
+                        case PresentationVoiceSnapshot.Smps smps ->
+                                smps.voiceId();
+                        case PresentationVoiceSnapshot.Sample sample ->
+                                sample.voiceId();
+                    })
+                    .max().orElse(0L) + 1L;
+            nextVoice = Math.max(
+                    nextVoice, selected.presentation().nextVoiceId());
+            stagedResolver.reserveVoiceIdsThrough(nextVoice);
+            stagedResolver.submit(command);
+            boolean optionalFallbackSfx =
+                    command instanceof AudioCommand.PlaySfx sfx
+                            && (sfx.route()
+                            == AudioCommand.SfxRoute.RING_RESOLVED
+                            || sfx.route()
+                            == AudioCommand.SfxRoute.FALLBACK_NAME);
+            if (resolutionFailure[0] != null && !optionalFallbackSfx) {
+                throw new IllegalStateException(
+                        "Presentation rewind command resolution failed: "
+                                + resolutionFailure[0]);
+            }
+            stagedCommands.applyPending(stagedRegistry::apply);
+            AudioPresentationSnapshot staged = stagedRegistry.snapshot();
+            deferredReverseLogicalSnapshot = new AudioLogicalSnapshot(
+                    selected.ringLeft(),
+                    selected.commandTimelineFrame(),
+                    selected.commandTimelineNextOrder(),
+                    selected.commandEntryCount(),
+                    selected.backend(),
+                    staged,
+                    selected.donorGameIds(),
+                    selected.donorBindings());
+        } finally {
+            stagedRegistry.clear();
+            presentationCoordFlagHandlers.state().restore(liveCoord);
+        }
     }
 
     private void refreshDeferredReverseLogicalSnapshot() {
@@ -715,7 +795,7 @@ public class AudioManager implements MusicRestoreSink {
                 selected.commandEntryCount(),
                 backend != null ? backend.captureLogicalSnapshot()
                         : AudioBackendLogicalSnapshot.empty(),
-                selected.presentation(),
+                deferredReverseLogicalSnapshot.presentation(),
                 selected.donorGameIds(),
                 selected.donorBindings());
     }
@@ -1043,6 +1123,15 @@ public class AudioManager implements MusicRestoreSink {
     public AudioPresentationParityProbe.Snapshot shadowParitySnapshotForTesting() {
         ensureShadowPresentation();
         return shadowParity.snapshot();
+    }
+
+    LiveCaptureAudioHandle attachShadowCaptureForTesting(int frameRate) {
+        ensureShadowPresentation();
+        return shadowProducer.attachCapture(frameRate);
+    }
+
+    AudioLogicalSnapshot deferredReverseLogicalSnapshotForTesting() {
+        return deferredReverseLogicalSnapshot;
     }
 
     AudioPresentationTuning shadowTuningForTesting() {

@@ -304,6 +304,18 @@ public final class AudioPresentationCommandResolver {
         return nextVoiceId++;
     }
 
+    /**
+     * Advances this resolver's allocation cursor when reconstructing a
+     * detached logical timeline from an existing registry snapshot.
+     */
+    public void reserveVoiceIdsThrough(long nextAvailableVoiceId) {
+        if (nextAvailableVoiceId < 0) {
+            throw new IllegalArgumentException(
+                    "nextAvailableVoiceId must be non-negative");
+        }
+        nextVoiceId = Math.max(nextVoiceId, nextAvailableVoiceId);
+    }
+
     private void warn(String warning) {
         warningConsumer.accept(warning);
     }

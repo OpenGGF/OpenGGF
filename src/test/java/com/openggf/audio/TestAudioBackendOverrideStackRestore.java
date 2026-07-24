@@ -15,6 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Rewind restores must rebuild the music override stack — the saved zone
@@ -117,6 +119,39 @@ class TestAudioBackendOverrideStackRestore {
 
         assertTrue(backend.captureLogicalSnapshot().sfxBlocked(),
                 "the override-end path owns unblocking when a rebuilt override exists");
+    }
+
+    @Test
+    void failedOverridePreparationPreservesLiveIdentityAndCanRetry() {
+        HeadlessSmpsAudioBackend backend = newBackend();
+        playZoneMusic(backend);
+        com.openggf.audio.driver.SmpsDriver live =
+                backend.musicDriverForTesting();
+        AudioBackendLogicalSnapshot current =
+                backend.captureLogicalSnapshot();
+        AudioBackendLogicalSnapshot target =
+                new AudioBackendLogicalSnapshot(
+                        current.currentMusic(), false, true, false, 1,
+                        List.of(AudioSourceDescriptor.baseMusic(
+                                JINGLE_MUSIC_ID)),
+                        current.musicDriver(), null);
+
+        assertThrows(IllegalStateException.class,
+                () -> backend.restoreLogicalSnapshot(target));
+        assertSame(live, backend.musicDriverForTesting());
+        assertEquals(List.of(),
+                backend.captureLogicalSnapshot().overrideStack());
+
+        AbstractSmpsData jingle =
+                new AudioTestFixtures.StubSmpsData("jingle");
+        jingle.setId(JINGLE_MUSIC_ID);
+        backend.prepareLogicalMusicSource(
+                AudioSourceDescriptor.baseMusic(JINGLE_MUSIC_ID));
+        backend.playSmps(jingle, dacData(), config(), false);
+        backend.restoreLogicalSnapshot(target);
+
+        assertEquals(target.overrideStack(),
+                backend.captureLogicalSnapshot().overrideStack());
     }
 
     private static HeadlessSmpsAudioBackend backendWithZoneMusicUnderJingle() {

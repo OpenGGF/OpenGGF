@@ -21,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestLWJGLAudioBackendSnapshot {
     @Test
@@ -57,7 +59,7 @@ class TestLWJGLAudioBackendSnapshot {
     }
 
     @Test
-    void restoreLogicalSnapshotReusesExistingDriverInstanceBitExactly() {
+    void restoreLogicalSnapshotReconstructsIndependentDriverBitExactly() {
         SmpsDriver source = configuredDriver();
         addSequencer(source);
         primeSynth(source);
@@ -86,7 +88,8 @@ class TestLWJGLAudioBackendSnapshot {
         first.renderFrames(new short[128], 0, 64);
         reuseBackend.restoreLogicalSnapshot(snapshot);
         SmpsDriver reused = reuseBackend.musicDriverForTesting();
-        assertSame(first, reused, "snapshot with synth state must restore into the existing driver");
+        assertNotSame(first, reused,
+                "restore preparation must not mutate the live driver before commit");
 
         perturbSynth(fresh);
         perturbSynth(reused);
@@ -100,7 +103,99 @@ class TestLWJGLAudioBackendSnapshot {
     }
 
     @Test
-    void restoreLogicalSnapshotRebindsRuntimeAndDropsUnrestorableOverridePlaceholders() {
+    void failedMusicPreparationPreservesExactLiveStateAndRetrySucceeds() {
+        SmpsDriver source = configuredDriver();
+        addSequencer(source);
+        primeSynth(source);
+        source.renderFrames(new short[74], 0, 37);
+        AudioBackendLogicalSnapshot snapshot = new AudioBackendLogicalSnapshot(
+                AudioSourceDescriptor.baseMusic(0x81), false, false,
+                true, 3, List.of(), source.captureSnapshot(), null);
+
+        LWJGLAudioBackend backend =
+                new LWJGLAudioBackend(SonicConfigurationService.getInstance());
+        backend.restoreLogicalSnapshot(snapshot);
+        SmpsDriver live = backend.musicDriverForTesting();
+        AudioBackendLogicalSnapshot before = backend.captureLogicalSnapshot();
+
+        SmpsDriverSnapshot.DependencyResolver failure =
+                new SmpsDriverSnapshot.DependencyResolver() {
+                    @Override public AbstractSmpsData resolveSmpsData(
+                            SmpsDriverSnapshot.SequencerEntry entry) {
+                        throw new IllegalStateException("music unavailable");
+                    }
+                    @Override public DacData resolveDacData(
+                            SmpsDriverSnapshot.SequencerEntry entry) {
+                        return entry.dacData();
+                    }
+                    @Override public MusicRestoreSink resolveAudioManager(
+                            SmpsDriverSnapshot.SequencerEntry entry) {
+                        return entry.audioManager();
+                    }
+                    @Override public SmpsSequencerConfig resolveConfig(
+                            SmpsDriverSnapshot.SequencerEntry entry) {
+                        return entry.config();
+                    }
+                };
+
+        assertThrows(IllegalStateException.class,
+                () -> backend.restoreLogicalSnapshot(snapshot, failure, true));
+        assertSame(live, backend.musicDriverForTesting());
+        AudioBackendLogicalSnapshot afterFailure =
+                backend.captureLogicalSnapshot();
+        assertEquals(before.currentMusic(), afterFailure.currentMusic());
+        assertEquals(before.speedShoesEnabled(),
+                afterFailure.speedShoesEnabled());
+        assertEquals(before.speedMultiplier(),
+                afterFailure.speedMultiplier());
+        assertEquals(before.legacyCoordFlagRuntimeState(),
+                afterFailure.legacyCoordFlagRuntimeState());
+
+        backend.restoreLogicalSnapshot(
+                snapshot, SmpsDriverSnapshot.liveReferences(), true);
+        assertNotSame(live, backend.musicDriverForTesting());
+        AudioBackendLogicalSnapshot afterRetry =
+                backend.captureLogicalSnapshot();
+        assertEquals(snapshot.currentMusic(), afterRetry.currentMusic());
+        assertEquals(snapshot.speedShoesEnabled(),
+                afterRetry.speedShoesEnabled());
+        assertEquals(snapshot.speedMultiplier(),
+                afterRetry.speedMultiplier());
+    }
+
+    @Test
+    void failedStandaloneSfxPreparationPreservesMusicIdentityAndRetrySucceeds() {
+        SmpsDriver music = configuredDriver();
+        addSequencer(music);
+        SmpsDriver sfx = configuredDriver();
+        addSfxSequencer(sfx);
+        AudioBackendLogicalSnapshot target = new AudioBackendLogicalSnapshot(
+                AudioSourceDescriptor.baseMusic(0x81), false, false,
+                false, 1, List.of(), music.captureSnapshot(),
+                sfx.captureSnapshot());
+        LWJGLAudioBackend backend =
+                new LWJGLAudioBackend(SonicConfigurationService.getInstance());
+        backend.restoreLogicalSnapshot(new AudioBackendLogicalSnapshot(
+                target.currentMusic(), false, false, false, 1, List.of(),
+                target.musicDriver(), null));
+        SmpsDriver liveMusic = backend.musicDriverForTesting();
+
+        SmpsDriverSnapshot.DependencyResolver failure =
+                resolverFailing(entry -> entry.sfx());
+        assertThrows(IllegalStateException.class,
+                () -> backend.restoreLogicalSnapshot(target, failure, true));
+        assertSame(liveMusic, backend.musicDriverForTesting());
+        assertEquals(null,
+                backend.captureLogicalSnapshot().standaloneSfxDriver());
+
+        backend.restoreLogicalSnapshot(
+                target, SmpsDriverSnapshot.liveReferences(), true);
+        assertNotNull(
+                backend.captureLogicalSnapshot().standaloneSfxDriver());
+    }
+
+    @Test
+    void restoreLogicalSnapshotRejectsUnrestorableOverrideBeforeRuntimeRebind() {
         SmpsDriver source = configuredDriver();
         addSequencer(source);
         RecordingRuntime runtime = new RecordingRuntime();
@@ -116,13 +211,10 @@ class TestLWJGLAudioBackendSnapshot {
 
         LWJGLAudioBackend backend = new LWJGLAudioBackend(SonicConfigurationService.getInstance());
         backend.attachDeterministicAudioRuntime(runtime);
-        backend.restoreLogicalSnapshot(snapshot);
-
-        assertSame(backend.musicDriverForTesting(), runtime.musicStream);
-        assertEquals(1, runtime.flushes);
-        AudioBackendLogicalSnapshot restored = backend.captureLogicalSnapshot();
-        assertEquals(List.of(), restored.overrideStack());
-        assertFalse(restored.pendingRestore());
+        assertThrows(IllegalStateException.class,
+                () -> backend.restoreLogicalSnapshot(snapshot));
+        assertEquals(0, runtime.flushes);
+        assertSame(null, runtime.musicStream);
     }
 
     @Test
@@ -166,6 +258,42 @@ class TestLWJGLAudioBackendSnapshot {
                 AudioManager.getInstance(),
                 new SmpsSequencerConfig.Builder().build());
         driver.addSequencer(sequencer, false);
+    }
+
+    private static void addSfxSequencer(SmpsDriver driver) {
+        AbstractSmpsData data = new AudioTestFixtures.StubSmpsData("sfx");
+        data.setId(0xA0);
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, dacData(), driver, AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder().build());
+        sequencer.setSfxMode(true);
+        driver.addSequencer(sequencer, true);
+    }
+
+    private static SmpsDriverSnapshot.DependencyResolver resolverFailing(
+            java.util.function.Predicate<SmpsDriverSnapshot.SequencerEntry>
+                    predicate) {
+        return new SmpsDriverSnapshot.DependencyResolver() {
+            @Override public AbstractSmpsData resolveSmpsData(
+                    SmpsDriverSnapshot.SequencerEntry entry) {
+                if (predicate.test(entry)) {
+                    throw new IllegalStateException("dependency unavailable");
+                }
+                return entry.smpsData();
+            }
+            @Override public DacData resolveDacData(
+                    SmpsDriverSnapshot.SequencerEntry entry) {
+                return entry.dacData();
+            }
+            @Override public MusicRestoreSink resolveAudioManager(
+                    SmpsDriverSnapshot.SequencerEntry entry) {
+                return entry.audioManager();
+            }
+            @Override public SmpsSequencerConfig resolveConfig(
+                    SmpsDriverSnapshot.SequencerEntry entry) {
+                return entry.config();
+            }
+        };
     }
 
     private static DacData dacData() {

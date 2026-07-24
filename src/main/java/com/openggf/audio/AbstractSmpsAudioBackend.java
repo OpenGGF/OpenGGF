@@ -91,6 +91,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
     }
 
+    private record PreparedLogicalRestore(
+            SmpsDriver musicDriver,
+            SmpsDriver standaloneSfxDriver,
+            Deque<MusicState> overrideStack) {
+    }
+
     private final Deque<MusicState> musicStack = new ArrayDeque<>();
 
     /**
@@ -874,10 +880,35 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
         synchronized (streamLock) {
-            legacyCoordFlagHandlers.state().restore(
-                    snapshot.legacyCoordFlagRuntimeState());
-            SmpsDriver reusableMusicDriver = smpsDriver;
-            SmpsDriver reusableSfxDriver = sfxStream instanceof SmpsDriver previousSfx ? previousSfx : null;
+            SmpsCoordFlagRuntimeState.Snapshot previousCoord =
+                    legacyCoordFlagHandlers.state().snapshot();
+            PreparedLogicalRestore prepared;
+            try {
+                legacyCoordFlagHandlers.state().restore(
+                        snapshot.legacyCoordFlagRuntimeState());
+                SmpsDriver preparedMusic = snapshot.musicDriver() != null
+                        ? restoreDriverFromSnapshot(
+                                null, snapshot.musicDriver(), resolver)
+                        : null;
+                SmpsDriver preparedSfx =
+                        snapshot.standaloneSfxDriver() != null
+                                ? restoreDriverFromSnapshot(
+                                        null,
+                                        snapshot.standaloneSfxDriver(),
+                                        resolver)
+                                : null;
+                Deque<MusicState> preparedOverrides =
+                        prepareMusicOverrideStack(
+                                snapshot.overrideStack(),
+                                snapshot.speedShoesEnabled(),
+                                snapshot.speedMultiplier());
+                prepared = new PreparedLogicalRestore(
+                        preparedMusic, preparedSfx, preparedOverrides);
+            } catch (RuntimeException failure) {
+                legacyCoordFlagHandlers.state().restore(previousCoord);
+                throw failure;
+            }
+
             currentStream = null;
             currentSmps = null;
             smpsDriver = null;
@@ -890,17 +921,17 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             speedMultiplier = snapshot.speedMultiplier();
 
             musicStack.clear();
+            musicStack.addAll(prepared.overrideStack());
 
-            if (snapshot.musicDriver() != null) {
-                smpsDriver = restoreDriverFromSnapshot(reusableMusicDriver, snapshot.musicDriver(), resolver);
+            if (prepared.musicDriver() != null) {
+                smpsDriver = prepared.musicDriver();
                 currentStream = smpsDriver;
                 currentSmps = smpsDriver.firstMusicSequencer();
                 rebindFadeCompleteCallbackIfNeeded();
             }
-            if (snapshot.standaloneSfxDriver() != null) {
-                sfxStream = restoreDriverFromSnapshot(reusableSfxDriver, snapshot.standaloneSfxDriver(), resolver);
+            if (prepared.standaloneSfxDriver() != null) {
+                sfxStream = prepared.standaloneSfxDriver();
             }
-            rebuildMusicOverrideStack(snapshot.overrideStack());
             pendingRestore = snapshot.pendingRestore() && !musicStack.isEmpty();
             if (sfxBlocked && musicStack.isEmpty() && !restoredFadeInActive()) {
                 // No override to fade back into and no fade-in in flight: with
@@ -946,18 +977,29 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
      * Descriptors with no cached source (never played this session) are
      * dropped, matching the previous placeholder behavior.
      */
-    private void rebuildMusicOverrideStack(List<AudioSourceDescriptor> overrideStack) {
+    private Deque<MusicState> prepareMusicOverrideStack(
+            List<AudioSourceDescriptor> overrideStack,
+            boolean targetSpeedShoes,
+            int targetSpeedMultiplier) {
+        Deque<MusicState> prepared = new ArrayDeque<>();
         for (AudioSourceDescriptor descriptor : overrideStack) {
-            MusicState rebuilt = rebuildOverrideState(descriptor);
+            MusicState rebuilt = rebuildOverrideState(
+                    descriptor, targetSpeedShoes, targetSpeedMultiplier);
             if (rebuilt != null) {
-                musicStack.addLast(rebuilt);
+                prepared.addLast(rebuilt);
             } else if (descriptor != null) {
-                LOGGER.warning("Dropping music override with no rebuildable source: " + descriptor);
+                throw new IllegalStateException(
+                        "No rebuildable source for music override "
+                                + descriptor);
             }
         }
+        return prepared;
     }
 
-    private MusicState rebuildOverrideState(AudioSourceDescriptor descriptor) {
+    private MusicState rebuildOverrideState(
+            AudioSourceDescriptor descriptor,
+            boolean targetSpeedShoes,
+            int targetSpeedMultiplier) {
         if (descriptor == null) {
             return null;
         }
@@ -974,8 +1016,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         SmpsSequencer seq = new SmpsSequencer(source.data(), source.dacData(), driver, source.config());
         seq.setSourceDescriptor(describeSmpsSource(descriptor, source.data(), false));
         seq.setSampleRate(driver.getOutputSampleRate());
-        seq.setSpeedShoes(speedShoesEnabled);
-        seq.setSpeedMultiplier(speedMultiplier);
+        seq.setSpeedShoes(targetSpeedShoes);
+        seq.setSpeedMultiplier(targetSpeedMultiplier);
         seq.setFm6DacOff(configService.getBoolean(SonicConfiguration.FM6_DAC_OFF));
         seq.setFallbackVoiceData(source.data());
         driver.addSequencer(seq, false);

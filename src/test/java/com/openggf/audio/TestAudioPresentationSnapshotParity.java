@@ -11,6 +11,7 @@ import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
+import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -97,6 +98,77 @@ class TestAudioPresentationSnapshotParity {
     }
 
     @Test
+    void deferredTargetReplayAdvancesBothLegacyAndPresentationLogicalState() {
+        AudioTestFixtures.StubSmpsLoader loader =
+                new AudioTestFixtures.StubSmpsLoader();
+        AudioTestFixtures.StubSmpsData music =
+                new AudioTestFixtures.StubSmpsData("target-music");
+        music.setId(0x81);
+        AudioTestFixtures.StubSmpsData sfx =
+                new AudioTestFixtures.StubSmpsData("target-sfx");
+        sfx.setId(0xA0);
+        loader.musicResults.put(0x81, music);
+        loader.sfxResults.put(0xA0, sfx);
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader) {
+            @Override
+            public com.openggf.audio.smps.SmpsSequencerConfig
+                    getSequencerConfig() {
+                return new com.openggf.audio.smps.SmpsSequencerConfig.Builder()
+                        .build();
+            }
+        });
+        audio.setRom(null);
+        AudioKeyframeStore keyframes = new AudioKeyframeStore();
+        audio.beginCommandTimelineFrame(10);
+        keyframes.capture(10, audio);
+
+        audio.beginCommandTimelineFrame(11);
+        audio.setSpeedShoes(true);
+        audio.setSpeedMultiplier(3);
+        audio.playMusic(0x81);
+        audio.playSfx(0xA0);
+        audio.resetRingSound();
+        audio.presentShadowFrame(PresentationMode.SILENT);
+        AudioLogicalSnapshot expected = audio.captureLogicalSnapshot();
+
+        audio.beginCommandTimelineFrame(12);
+        audio.setSpeedShoes(false);
+        audio.setSpeedMultiplier(1);
+        audio.playSfx(GameSound.RING);
+        audio.presentShadowFrame(PresentationMode.SILENT);
+        AudioLogicalSnapshot disturbed = audio.captureLogicalSnapshot();
+
+        audio.beginReverseAudioPresentation();
+        assertEquals(5, keyframes.replayToLogicalState(audio, 11));
+        assertPresentationLogicalEquals(
+                disturbed.presentation(),
+                audio.captureLogicalSnapshot().presentation());
+        PresentationVoiceSnapshot.Smps stagedMusic =
+                (PresentationVoiceSnapshot.Smps) audio
+                        .deferredReverseLogicalSnapshotForTesting()
+                        .presentation().voices().getFirst();
+        assertEquals(List.of(
+                        com.openggf.audio.rewind.SmpsSourceDescriptor.Kind
+                                .BASE_MUSIC,
+                        com.openggf.audio.rewind.SmpsSourceDescriptor.Kind
+                                .BASE_SFX_ID),
+                stagedMusic.driver().sequencers().stream()
+                        .map(entry -> entry.source().kind()).toList());
+        assertTrue(audio.commitDeferredReverseLogicalRestore());
+        audio.endReverseAudioPresentation();
+
+        AudioLogicalSnapshot actual = audio.captureLogicalSnapshot();
+        assertEquals(expected.backend(), actual.backend());
+        assertEquals(expected.presentation().activeMusic(),
+                actual.presentation().activeMusic());
+        assertTrue(actual.presentation().speedShoesEnabled());
+        assertEquals(3, actual.presentation().speedMultiplier());
+        assertEquals(1, actual.presentation().voices().size(),
+                "reverse release removes replayed transient SFX");
+        assertEquals(expected.ringLeft(), actual.ringLeft());
+    }
+
+    @Test
     void dualSnapshotsRestoreIndependentEqualCoordFlagCounters() {
         LWJGLAudioBackend backend =
                 new LWJGLAudioBackend(SonicConfigurationService.getInstance());
@@ -167,6 +239,64 @@ class TestAudioPresentationSnapshotParity {
                 "exact packet sizes and durable cursors must remain equal");
     }
 
+    @Test
+    void managerProductionProducerKeepsFractionalBoundaryForOneHundredTwentyFrames()
+            throws Exception {
+        audio.setBackend(new NullAudioBackend() {
+            @Override
+            public int outputSampleRate() {
+                return 44_101;
+            }
+        });
+        try (LiveCaptureAudioHandle capture =
+                     audio.attachShadowCaptureForTesting(60)) {
+            short[] packet =
+                    new short[capture.maxStereoFramesPerPacket() * 2];
+            for (int frame = 0; frame < 120; frame++) {
+                audio.beginCommandTimelineFrame(frame);
+                if (frame == 5) {
+                    audio.setSpeedShoes(true);
+                } else if (frame == 17) {
+                    audio.setSpeedMultiplier(3);
+                } else if (frame == 31) {
+                    audio.toggleMute(ChannelType.FM, 2);
+                } else if (frame == 47) {
+                    audio.toggleSolo(ChannelType.PSG, 1);
+                } else if (frame == 63) {
+                    audio.resetRingSound();
+                }
+                audio.presentOuterFrame(PresentationMode.FORWARD);
+                capture.drainPresentationFrame(packet);
+            }
+
+            AudioLogicalSnapshot boundary = audio.captureLogicalSnapshot();
+            assertEquals(120,
+                    audio.shadowParitySnapshotForTesting().presentedFrames());
+            assertEquals(88_202, capture.totalStereoFrames());
+            assertEquals(88_202,
+                    capture.clockSnapshot().totalSamplesProduced());
+            assertTrue(boundary.presentation().speedShoesEnabled());
+            assertEquals(3, boundary.presentation().speedMultiplier());
+            assertEquals(1 << 2, boundary.presentation().fmMuteMask());
+            assertEquals(1 << 1, boundary.presentation().psgSoloMask());
+
+            long before = capture.totalStereoFrames();
+            int[] packetSizes = new int[10];
+            for (int frame = 0; frame < 10; frame++) {
+                audio.beginCommandTimelineFrame(120 + frame);
+                audio.presentOuterFrame(PresentationMode.FORWARD);
+                packetSizes[frame] =
+                        capture.drainPresentationFrame(packet);
+            }
+            assertEquals(7_350,
+                    capture.totalStereoFrames() - before);
+            assertArrayEquals(
+                    new int[] {735, 735, 735, 735, 735,
+                            735, 735, 735, 735, 735},
+                    packetSizes);
+        }
+    }
+
     private static AudioVoiceRegistry registry(
             AudioPresentationDependencyResolver resolver) {
         return new AudioVoiceRegistry(
@@ -190,6 +320,53 @@ class TestAudioPresentationSnapshotParity {
                 warning -> {
                     throw new AssertionError(warning);
                 });
+    }
+
+    private static void assertPresentationLogicalEquals(
+            AudioPresentationSnapshot expected,
+            AudioPresentationSnapshot actual) {
+        assertEquals(expected.activeMusic(), actual.activeMusic());
+        assertEquals(expected.overrideStack(), actual.overrideStack());
+        assertEquals(expected.standaloneSmpsVoiceId(),
+                actual.standaloneSmpsVoiceId());
+        assertEquals(expected.rawPcmVoiceId(), actual.rawPcmVoiceId());
+        assertEquals(expected.fmMuteMask(), actual.fmMuteMask());
+        assertEquals(expected.fmSoloMask(), actual.fmSoloMask());
+        assertEquals(expected.psgMuteMask(), actual.psgMuteMask());
+        assertEquals(expected.psgSoloMask(), actual.psgSoloMask());
+        assertEquals(expected.sfxBlocked(), actual.sfxBlocked());
+        assertEquals(expected.pendingRestore(), actual.pendingRestore());
+        assertEquals(expected.speedShoesEnabled(),
+                actual.speedShoesEnabled());
+        assertEquals(expected.speedMultiplier(), actual.speedMultiplier());
+        assertEquals(expected.ringLeft(), actual.ringLeft());
+        assertEquals(expected.coordFlagRuntimeState(),
+                actual.coordFlagRuntimeState());
+        assertEquals(expected.voices().size(), actual.voices().size());
+        for (int index = 0; index < expected.voices().size(); index++) {
+            PresentationVoiceSnapshot left = expected.voices().get(index);
+            PresentationVoiceSnapshot right = actual.voices().get(index);
+            assertEquals(left.getClass(), right.getClass());
+            if (left instanceof PresentationVoiceSnapshot.Smps leftSmps
+                    && right instanceof PresentationVoiceSnapshot.Smps
+                            rightSmps) {
+                assertEquals(leftSmps.voiceId(), rightSmps.voiceId());
+                assertEquals(leftSmps.musicId(), rightSmps.musicId());
+                assertEquals(leftSmps.sourceDescriptor(),
+                        rightSmps.sourceDescriptor());
+                assertEquals(leftSmps.driver().continuousSfxId(),
+                        rightSmps.driver().continuousSfxId());
+                assertEquals(leftSmps.driver().sequencers().stream()
+                                .map(entry -> entry.source()).toList(),
+                        rightSmps.driver().sequencers().stream()
+                                .map(entry -> entry.source()).toList());
+            } else if (left instanceof PresentationVoiceSnapshot.Sample
+                    leftSample
+                    && right instanceof PresentationVoiceSnapshot.Sample
+                            rightSample) {
+                assertEquals(leftSample, rightSample);
+            }
+        }
     }
 
     private static AudioPresentationDependencyResolver resolver(
