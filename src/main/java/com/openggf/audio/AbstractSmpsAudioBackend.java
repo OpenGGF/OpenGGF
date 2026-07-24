@@ -130,6 +130,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
     private boolean legacyCoordFlagHandlersConfigured;
 
+    SmpsCoordFlagHandlerOwner legacyCoordFlagHandlersForTesting() {
+        return legacyCoordFlagHandlers;
+    }
+
     protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.profiler = profiler;

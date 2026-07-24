@@ -692,6 +692,17 @@ public class GameLoop {
     }
 
     /**
+     * Shared production outer-frame boundary. Engine display and headless
+     * presentation drivers must enter through AudioManager's complete hook so
+     * deterministic/offline output and the inaudible shadow cannot drift.
+     */
+    public void presentOuterFrame(
+            boolean modalPicker, boolean frameStepRequested) {
+        audioManager.presentOuterFrame(presentationModeForOuterFrame(
+                modalPicker, frameStepRequested));
+    }
+
+    /**
      * @return true if the game loop is currently paused (either by window or user)
      */
     public synchronized boolean isPaused() {

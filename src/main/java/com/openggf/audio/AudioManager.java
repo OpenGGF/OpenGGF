@@ -932,6 +932,11 @@ public class AudioManager implements MusicRestoreSink {
         return shadowTuning;
     }
 
+    SmpsCoordFlagHandlerOwner presentationCoordFlagHandlersForTesting() {
+        ensureShadowPresentation();
+        return presentationCoordFlagHandlers;
+    }
+
     public void advancePausedFrameStepAudio() {
         advanceRuntimeFrame(FrameAudioMode.SILENT_STEP);
     }

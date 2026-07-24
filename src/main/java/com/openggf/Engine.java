@@ -1697,8 +1697,8 @@ public class Engine {
 			inputHandler.update();
 		}
 		if (gameLoop != null) {
-			audioManager.presentOuterFrame(gameLoop.presentationModeForOuterFrame(
-					displayShaderPickerHandledInput, frameStepPresentation));
+			gameLoop.presentOuterFrame(
+					displayShaderPickerHandledInput, frameStepPresentation);
 		}
 		profiler.endSection("update");
 

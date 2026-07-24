@@ -12,10 +12,15 @@ import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
 import com.openggf.audio.presentation.SmpsAssetKey;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Collections;
 import java.util.EnumMap;
@@ -230,6 +235,58 @@ public class TestDonorAudioRouting {
                         .source().donorGameId());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"s1", "s2"})
+    void hostSessionS3kDonorMusicAndSfxUseSharedOwnersOnBothPaths(
+            String hostGameId) {
+        HeadlessSmpsAudioBackend realBackend =
+                new HeadlessSmpsAudioBackend(
+                        SonicConfigurationService.getInstance(), null);
+        audioManager.setBackend(realBackend);
+        audioManager.setAudioProfile(
+                new HostAudioProfile(hostGameId, new StubSmpsLoader()));
+        audioManager.setRom(null);
+
+        StubSmpsLoader donor = new StubSmpsLoader();
+        StubSmpsData music = new StubSmpsData("s3k-donor-music");
+        music.setId(0x21);
+        StubSmpsData sfx = new StubSmpsData("s3k-donor-sfx");
+        sfx.setId(0xA4);
+        donor.musicResults.put(0x21, music);
+        donor.sfxResults.put(0xA4, sfx);
+        Sonic3kAudioProfile donorProfile = new Sonic3kAudioProfile();
+        audioManager.registerDonorLoader(
+                "s3k", donor, EMPTY_DAC,
+                donorProfile.getSequencerConfig(), donorProfile);
+
+        audioManager.playDonorMusic("s3k", 0x21);
+        audioManager.playDonorSfx("s3k", 0xA4);
+        audioManager.presentOuterFrame(PresentationMode.FORWARD);
+
+        var legacyOwner = realBackend.legacyCoordFlagHandlersForTesting();
+        var presentationOwner =
+                audioManager.presentationCoordFlagHandlersForTesting();
+        assertNotSame(legacyOwner, presentationOwner,
+                "audible and shadow sessions must not share mutable state");
+        assertNotSame(legacyOwner.state(), presentationOwner.state());
+        assertSame(legacyOwner.handlerFor("s3k"),
+                legacyOwner.handlerFor("s3k"));
+        assertSame(presentationOwner.handlerFor("s3k"),
+                presentationOwner.handlerFor("s3k"));
+
+        var snapshot = realBackend.captureLogicalSnapshot();
+        assertNotNull(snapshot.musicDriver());
+        assertEquals(2, snapshot.musicDriver().sequencers().size(),
+                "donor SFX must join donor music's driver");
+        var musicHandler = snapshot.musicDriver().sequencers().get(0)
+                .config().getCoordFlagHandler();
+        var sfxHandler = snapshot.musicDriver().sequencers().get(1)
+                .config().getCoordFlagHandler();
+        assertSame(legacyOwner.handlerFor("s3k"), musicHandler);
+        assertSame(musicHandler, sfxHandler,
+                "legacy donor music and SFX must share the counter owner");
+    }
+
     // --- Test doubles ---
 
     /** Minimal SmpsData stub that carries a name for assertion. */
@@ -255,11 +312,12 @@ public class TestDonorAudioRouting {
 
     /** SmpsLoader stub that returns pre-configured results by sfxId. */
     private static class StubSmpsLoader implements SmpsLoader {
+        final Map<Integer, AbstractSmpsData> musicResults = new HashMap<>();
         final Map<Integer, AbstractSmpsData> sfxResults = new HashMap<>();
 
         @Override
         public AbstractSmpsData loadMusic(int musicId) {
-            return null;
+            return musicResults.get(musicId);
         }
 
         @Override
@@ -275,6 +333,25 @@ public class TestDonorAudioRouting {
         @Override
         public DacData loadDacData() {
             return EMPTY_DAC;
+        }
+    }
+
+    private static final class HostAudioProfile extends StubAudioProfile {
+        private final String gameId;
+
+        private HostAudioProfile(String gameId, SmpsLoader loader) {
+            super(loader);
+            this.gameId = gameId;
+        }
+
+        @Override
+        public String presentationGameId() {
+            return gameId;
+        }
+
+        @Override
+        public SmpsSequencerConfig getSequencerConfig() {
+            return new SmpsSequencerConfig.Builder().build();
         }
     }
 
@@ -346,4 +423,3 @@ public class TestDonorAudioRouting {
         }
     }
 }
-
