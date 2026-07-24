@@ -600,6 +600,22 @@ public class LevelTransitionCoordinator {
         return suppressNextMusicChange;
     }
 
+    /**
+     * Reads and clears the suppress-next-music flag.
+     * <p>
+     * The flag is strictly single-use: a caller that sets it but never reaches
+     * the audio init step (preview-capture loads, a load that fails early, an
+     * in-place act transition) must not leave it latched for a later level load,
+     * which would silence that level's music until the next load or a respawn.
+     *
+     * @return true if the caller should skip the level music change
+     */
+    public boolean consumeSuppressNextMusicChange() {
+        boolean suppress = suppressNextMusicChange;
+        suppressNextMusicChange = false;
+        return suppress;
+    }
+
     // ================================================================
     //  Level inactive flag
     // ================================================================

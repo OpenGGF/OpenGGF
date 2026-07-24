@@ -377,4 +377,40 @@ public class TestActTransitionHeadless {
         assertFalse(hasSpawnNearStart, "Active spawns should NOT include objects near level start " +
                 "when camera is at X=5000");
     }
+
+    // ========== Music Suppression Does Not Leak ==========
+
+    @Test
+    public void executeActTransitionDoesNotLatchMusicSuppression() throws Exception {
+        LevelManager lm = GameServices.level();
+        assertFalse(lm.isSuppressNextMusicChange(),
+                "Music suppression should not be latched before the transition");
+
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
+                .builder(TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(ZONE_EHZ, ACT_2)
+                .preserveMusic(true)
+                .build();
+
+        lm.executeActTransition(request);
+
+        // An in-place act transition never runs the level-init profile, so nothing
+        // consumes the suppress flag. Latching it here silenced the next real level
+        // load until a respawn or a further load cleared it.
+        assertFalse(lm.isSuppressNextMusicChange(),
+                "preserveMusic() must not leave music suppression latched for the next level load");
+    }
+
+    @Test
+    public void levelLoadClearsMusicSuppressionForTheFollowingLoad() throws Exception {
+        LevelManager lm = GameServices.level();
+
+        // A caller that suppresses music for one load (bonus/special-stage return,
+        // credits demo) must not affect the load after it.
+        lm.setSuppressNextMusicChange(true);
+        lm.loadZoneAndAct(ZONE_EHZ, ACT_2);
+
+        assertFalse(lm.isSuppressNextMusicChange(),
+                "Music suppression is single-use and must be cleared by the level load that consumed it");
+    }
 }

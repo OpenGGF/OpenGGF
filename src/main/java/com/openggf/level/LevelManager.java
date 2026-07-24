@@ -362,6 +362,11 @@ public class LevelManager {
             }
             LOGGER.log(SEVERE, "Unexpected error while loading level " + levelIndex, e);
             throw new IOException("Failed to load level due to unexpected error.", e);
+        } finally {
+            // The suppress flag belongs to this load only. A load that fails before
+            // InitAudio — or a preview capture, which has no InitAudio step — must not
+            // leave it latched for the next level, which would start that level silent.
+            transitions.setSuppressNextMusicChange(false);
         }
     }
 
@@ -395,10 +400,9 @@ public class LevelManager {
         audioManager.setRom(GameServices.rom().getRom());
         audioManager.setSoundMap(game.getSoundMap());
         audioManager.resetRingSound();
-        if (!transitions.isSuppressNextMusicChange()) {
+        if (!transitions.consumeSuppressNextMusicChange()) {
             audioManager.playMusic(game.getMusicId(levelIndex));
         }
-        transitions.setSuppressNextMusicChange(false);
     }
 
     /**
@@ -3712,6 +3716,9 @@ public class LevelManager {
 
     /** @see LevelTransitionCoordinator#setSuppressNextMusicChange(boolean) */
     public void setSuppressNextMusicChange(boolean suppress) { transitions.setSuppressNextMusicChange(suppress); }
+
+    /** @see LevelTransitionCoordinator#isSuppressNextMusicChange() */
+    public boolean isSuppressNextMusicChange() { return transitions.isSuppressNextMusicChange(); }
 
     /**
      * Finds the offset from a reference position to the first pattern within a tile index range.

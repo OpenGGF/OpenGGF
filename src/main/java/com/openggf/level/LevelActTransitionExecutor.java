@@ -40,9 +40,11 @@ final class LevelActTransitionExecutor {
             gameState.setEndOfLevelFlag(endOfLevelFlag);
         }
 
-        if (request.preserveMusic()) {
-            levelManager.setSuppressNextMusicChange(true);
-        }
+        // NOTE: preserveMusic() needs no action here. An in-place act transition
+        // never runs the level-init profile, so InitAudio — the only consumer of
+        // the suppress-next-music flag — never fires. Setting the flag here left
+        // it latched and silenced the *next* real level load instead (music then
+        // stayed off until a respawn or another load cleared it).
 
         if (GameServices.zoneRuntimeRegistry().current()
                 .advancesOscillationOnSeamlessTransition()) {
