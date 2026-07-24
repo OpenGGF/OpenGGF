@@ -48,6 +48,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             S2TraceCsvWriterTests.Register(tests);
             S2AuxEventEngineTests.Register(tests);
             S2AuxArmBlockTests.Register(tests);
+            S2TraceMetadataWriterTests.Register(tests);
+            S2TraceCaptureRunnerTests.Register(tests);
             SmokeCaptureRunnerTests.Register(tests);
             NoReplacePublisherTests.Register(tests);
             TraceCliTests.Register(tests);
