@@ -22,15 +22,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   bytes are decompressed read-only into the temp root and hashed
     ///   there before the produced files are hashed. The fixtures under
     ///   src/test/resources/traces/ are never written to.
-    /// - metadata.json line-for-line equality except the two deltas
-    ///   pinned by docs/s3k-trace-recorder-behavior.md §6.2: the
-    ///   recording_date value (nondeterministic) and the fixtures'
-    ///   lua_script_version "6.28-s3k" being produced as "6.30-s3k" (the
-    ///   v6.29/v6.30 Lua commits changed nothing else in these fixtures'
-    ///   output, and the physics.csv.gz bytes were regenerated under the
-    ///   v6.30 input rule). Both deltas are asserted as exact literals —
-    ///   never a loose regex over the version, and no other line may
-    ///   differ.
+    /// - metadata.json line-for-line equality except the deltas pinned by
+    ///   docs/s3k-trace-recorder-behavior.md §6.2: the recording_date
+    ///   value (nondeterministic), the fixtures' lua_script_version
+    ///   "6.28-s3k" being produced as "6.30-s3k" (the v6.29/v6.30 Lua
+    ///   commits changed nothing else in these fixtures' output, and the
+    ///   physics.csv.gz bytes were regenerated under the v6.30 input
+    ///   rule), and — for the MGZ fixture ONLY — its leftover
+    ///   "pre_trace_osc_frames": 0 line, which v6.29 removed from
+    ///   write_metadata() and which commit 4393d74c3 hand-removed from the
+    ///   AIZ and CNZ fixtures but not MGZ's. Every delta is asserted as an
+    ///   exact literal at an exact position — never a loose regex over the
+    ///   version, never a "drop unknown keys" normalization — and no other
+    ///   line may differ.
     ///
     /// The cases deliberately cover both terminating profiles:
     ///
@@ -43,7 +47,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   the zone-leave check rather than either movie-end stop (3171 +
     ///   42253 == 45424, short of the movie's 45597 input rows) — so it
     ///   also pins that the zone-leave row is never recorded and that the
-    ///   finalization aux checkpoint lands at frame == the row count.
+    ///   finalization aux checkpoint lands at frame == the row count;
+    /// - mgz / level_gated_reset_aware is the second level-gated fixture
+    ///   and pins the profile's zone-independence: it likewise finalizes
+    ///   on the MGZ->CNZ zone-leave check (2602 + 35912 == 38514, short of
+    ///   the movie's 38818 input rows), it advertises the cnz_cylinder_*
+    ///   aux families in aux_schema_extras despite never starting in CNZ
+    ///   (the advertisement is profile-based, not zone-based), and its aux
+    ///   stream legitimately carries NO gameplay_start and no
+    ///   act-transition checkpoint at all — only gameplay_end — because
+    ///   the level-gated profile's gameplay_start emission is zone-3
+    ///   literal. Byte-equal aux_state.jsonl is what pins that quirk as
+    ///   reproduced rather than generalized away.
     ///
     /// Skips (does not pass) when S3K_ROM_PATH, a BizHawk distribution, or
     /// the fixture directory is absent; fails (does not skip) on any
@@ -64,6 +79,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "  \"lua_script_version\": \"6.28-s3k\",";
         private const string ProducedLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.30-s3k\",";
+
+        // §6.2 pinned MGZ-only delta: v6.29 dropped this line from
+        // write_metadata(), and 4393d74c3 hand-removed it from the AIZ and
+        // CNZ fixtures but missed MGZ's. It survives in the MGZ fixture
+        // immediately after trace_frame_count and must be absent from
+        // fresh output. Pinned as an exact literal at an exact position.
+        private const string MgzFixtureOnlyMetadataLine =
+            "  \"pre_trace_osc_frames\": 0,";
+        private const string TraceFrameCountLinePrefix =
+            "  \"trace_frame_count\": ";
 
         private static readonly S3KDifferentialCase AizEndToEndCase =
             new S3KDifferentialCase(
@@ -91,6 +116,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "661c0b58cf65368dd87f20db146076cf5e2893656648f575aef4a8163"
                 + "0543ce1");
 
+        private static readonly S3KDifferentialCase MgzLevelGatedCase =
+            new S3KDifferentialCase(
+                "mgz",
+                "s3k-mgz-sonic-tails.bk2",
+                "level_gated_reset_aware",
+                2602,
+                35912,
+                38818,
+                "e056a587b2f435e5094ec6cc2c050dfb3e25aaecba5ad93165d6bf06a"
+                + "da9b2da",
+                "2ff344db97ad07f0444eae0296729454f31b50542a9f5d93ff18e3f15"
+                + "c0eedaa",
+                MgzFixtureOnlyMetadataLine);
+
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
@@ -101,6 +140,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3KTraceDifferential native capture matches canonical CNZ"
                 + " level-gated trace",
                 () => NativeCaptureMatchesCanonicalTrace(CnzLevelGatedCase)));
+            tests.Add(new TestMain.TestCase(
+                "S3KTraceDifferential native capture matches canonical MGZ"
+                + " level-gated trace",
+                () => NativeCaptureMatchesCanonicalTrace(MgzLevelGatedCase)));
         }
 
         /// <summary>
@@ -108,8 +151,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// under src/test/resources/traces/s3k/, the movie file name inside
         /// it, the --trace-profile argument (also the value the CLI must
         /// echo), the canonical BK2 frame offset / trace frame count /
-        /// movie frame count, and the canonical sha256 hashes of the Lua
-        /// recorder's physics.csv and aux_state.jsonl bytes.
+        /// movie frame count, the canonical sha256 hashes of the Lua
+        /// recorder's physics.csv and aux_state.jsonl bytes, and the
+        /// single fixture-only metadata.json line this fixture is pinned
+        /// to carry that fresh v6.30 output omits (null for every fixture
+        /// but MGZ).
         /// </summary>
         private sealed class S3KDifferentialCase
         {
@@ -122,7 +168,31 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 int movieFrameCount,
                 string physicsSha256,
                 string auxStateSha256)
+                : this(
+                    fixtureDirectoryName,
+                    movieFileName,
+                    traceProfile,
+                    bk2FrameOffset,
+                    traceFrameCount,
+                    movieFrameCount,
+                    physicsSha256,
+                    auxStateSha256,
+                    null)
             {
+            }
+
+            public S3KDifferentialCase(
+                string fixtureDirectoryName,
+                string movieFileName,
+                string traceProfile,
+                int bk2FrameOffset,
+                int traceFrameCount,
+                int movieFrameCount,
+                string physicsSha256,
+                string auxStateSha256,
+                string fixtureOnlyMetadataLine)
+            {
+                FixtureOnlyMetadataLine = fixtureOnlyMetadataLine;
                 FixtureDirectoryName = fixtureDirectoryName;
                 MovieFileName = movieFileName;
                 TraceProfile = traceProfile;
@@ -141,6 +211,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public int MovieFrameCount { get; private set; }
             public string PhysicsSha256 { get; private set; }
             public string AuxStateSha256 { get; private set; }
+            public string FixtureOnlyMetadataLine { get; private set; }
         }
 
         private static void NativeCaptureMatchesCanonicalTrace(
@@ -207,7 +278,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         Path.Combine(output, "aux_state.jsonl")));
                 AssertPinnedDeltaMetadataEquality(
                     Path.Combine(traceDirectory, "metadata.json"),
-                    Path.Combine(output, "metadata.json"));
+                    Path.Combine(output, "metadata.json"),
+                    differentialCase.FixtureOnlyMetadataLine);
             }
             finally
             {
@@ -383,14 +455,26 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// recording_date value (which must still carry the exact key
         /// formatting and an ISO date value) and the lua_script_version
         /// line, whose fixture and produced forms are both asserted as
-        /// exact literals. Each delta must appear exactly once; every other
-        /// line must match exactly, and the line counts must agree (so a
-        /// stray inserted or dropped line — e.g. MGZ's leftover
-        /// pre_trace_osc_frames — cannot slip through).
+        /// exact literals; plus, when the case pins one, a single
+        /// fixture-only line (MGZ's leftover
+        /// <c>  "pre_trace_osc_frames": 0,</c>) that fresh v6.30 output
+        /// omits.
+        ///
+        /// Every delta must occur exactly the pinned number of times.
+        /// The fixture-only line is matched as an exact literal AND is
+        /// required to sit immediately after the trace_frame_count line —
+        /// the position v6.28's write_metadata() emitted it at — so a
+        /// genuinely stray line elsewhere in the file still fails. Cases
+        /// that pin no fixture-only line require the file to contain none,
+        /// so this allowance can never leak to AIZ/CNZ. Both walks must
+        /// consume their whole array, which keeps the line counts pinned
+        /// (fixture == produced + the pinned allowance) and stops any
+        /// other inserted or dropped line from slipping through.
         /// </summary>
         private static void AssertPinnedDeltaMetadataEquality(
             string fixturePath,
-            string producedPath)
+            string producedPath,
+            string fixtureOnlyMetadataLine)
         {
             string fixtureText = File.ReadAllText(fixturePath);
             string producedText = File.ReadAllText(producedPath);
@@ -401,39 +485,71 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             string[] fixtureLines = fixtureText.Split('\n');
             string[] producedLines = producedText.Split('\n');
-            AssertEx.Equal(fixtureLines.Length, producedLines.Length);
+            int expectedFixtureOnlyLines =
+                fixtureOnlyMetadataLine == null ? 0 : 1;
+            AssertEx.Equal(
+                fixtureLines.Length,
+                producedLines.Length + expectedFixtureOnlyLines);
+
             var recordingDateLines = 0;
             var luaScriptVersionLines = 0;
+            var fixtureOnlyLines = 0;
+            var producedIndex = 0;
             for (var index = 0; index < fixtureLines.Length; index++)
             {
-                if (fixtureLines[index].StartsWith(
+                string fixtureLine = fixtureLines[index];
+                if (fixtureOnlyMetadataLine != null
+                    && fixtureOnlyLines < expectedFixtureOnlyLines
+                    && fixtureLine == fixtureOnlyMetadataLine)
+                {
+                    // Pinned position: v6.28 emitted it between
+                    // trace_frame_count and start_x.
+                    if (index == 0
+                        || !fixtureLines[index - 1].StartsWith(
+                            TraceFrameCountLinePrefix,
+                            StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            "Fixture-only metadata line <"
+                            + fixtureOnlyMetadataLine
+                            + "> is not immediately after the"
+                            + " trace_frame_count line (index " + index
+                            + ").");
+                    }
+                    fixtureOnlyLines++;
+                    continue;
+                }
+
+                string producedLine = producedLines[producedIndex];
+                producedIndex++;
+                if (fixtureLine.StartsWith(
                     RecordingDateLinePrefix,
                     StringComparison.Ordinal))
                 {
                     recordingDateLines++;
-                    if (!RecordingDateLine.IsMatch(producedLines[index]))
+                    if (!RecordingDateLine.IsMatch(producedLine))
                     {
                         throw new InvalidOperationException(
                             "Produced recording_date line is malformed: <"
-                            + producedLines[index] + ">.");
+                            + producedLine + ">.");
                     }
                 }
-                else if (fixtureLines[index] == FixtureLuaScriptVersionLine)
+                else if (fixtureLine == FixtureLuaScriptVersionLine)
                 {
                     luaScriptVersionLines++;
                     AssertEx.Equal(
                         ProducedLuaScriptVersionLine,
-                        producedLines[index]);
+                        producedLine);
                 }
                 else
                 {
-                    AssertEx.Equal(
-                        fixtureLines[index],
-                        producedLines[index]);
+                    AssertEx.Equal(fixtureLine, producedLine);
                 }
             }
+            AssertEx.Equal(producedLines.Length, producedIndex);
             AssertEx.Equal(1, recordingDateLines);
             AssertEx.Equal(1, luaScriptVersionLines);
+            AssertEx.Equal(expectedFixtureOnlyLines, fixtureOnlyLines);
         }
 
         private static void Gunzip(string sourcePath, string destinationPath)
