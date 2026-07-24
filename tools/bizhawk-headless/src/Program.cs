@@ -38,7 +38,8 @@ namespace BizHawk.Headless.Gpgx
             int maxFrames,
             string traceProfile,
             int? gameplaySegment,
-            string runId)
+            string runId,
+            int effectiveMovieLength)
         {
             Mode = mode;
             RomPath = romPath;
@@ -49,6 +50,7 @@ namespace BizHawk.Headless.Gpgx
             TraceProfile = traceProfile;
             GameplaySegment = gameplaySegment;
             RunId = runId;
+            EffectiveMovieLength = effectiveMovieLength;
         }
 
         public CaptureMode Mode { get; private set; }
@@ -72,6 +74,17 @@ namespace BizHawk.Headless.Gpgx
         public string TraceProfile { get; private set; }
         public int? GameplaySegment { get; private set; }
         public string RunId { get; private set; }
+
+        /// <summary>
+        /// --effective-movie-length (run mode only; 0 = absent, use the
+        /// movie's own frame count): the capture session's movie-length
+        /// signal for the run runner's movie-done guard. The canonical
+        /// halfpipe fixture's final level segment was terminated by a
+        /// session signal shorter than the committed BK2's row count
+        /// (s2-run-mode-behavior.md §2 capture-time caveat), so
+        /// byte-identical reproduction must inject that session value.
+        /// </summary>
+        public int EffectiveMovieLength { get; private set; }
 
         public bool HasS2Arguments
         {
@@ -134,6 +147,7 @@ namespace BizHawk.Headless.Gpgx
             RejectInSmokeMode(values, "--trace-profile");
             RejectInSmokeMode(values, "--gameplay-segment");
             RejectInSmokeMode(values, "--run-id");
+            RejectInSmokeMode(values, "--effective-movie-length");
             int offset = ParseInteger(
                 values,
                 "--bk2-frame-offset",
@@ -176,7 +190,8 @@ namespace BizHawk.Headless.Gpgx
                 maxFrames,
                 null,
                 null,
-                null);
+                null,
+                0);
         }
 
         private static CommandLineOptions ParseTrace(
@@ -217,6 +232,27 @@ namespace BizHawk.Headless.Gpgx
                     "Argument --run-id cannot be combined with"
                     + " --gameplay-segment: run mode records every"
                     + " gameplay segment of the movie.");
+            }
+            var effectiveMovieLength = 0;
+            if (values.ContainsKey("--effective-movie-length"))
+            {
+                if (runId == null)
+                {
+                    throw new ArgumentException(
+                        "Argument --effective-movie-length requires"
+                        + " --run-id: only the run runner's movie-done"
+                        + " guard consumes the session movie-length"
+                        + " signal.");
+                }
+                effectiveMovieLength = ParseInteger(
+                    values, "--effective-movie-length", 0);
+                if (effectiveMovieLength < 1)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        "--effective-movie-length",
+                        "Argument --effective-movie-length must be at"
+                        + " least 1.");
+                }
             }
 
             string fullOutputDirectory =
@@ -262,7 +298,8 @@ namespace BizHawk.Headless.Gpgx
                 0,
                 traceProfile,
                 gameplaySegment,
-                runId);
+                runId,
+                effectiveMovieLength);
         }
 
         private static CaptureMode ParseMode(
@@ -317,7 +354,8 @@ namespace BizHawk.Headless.Gpgx
                 || name == "--max-frames"
                 || name == "--trace-profile"
                 || name == "--gameplay-segment"
-                || name == "--run-id";
+                || name == "--run-id"
+                || name == "--effective-movie-length";
         }
 
         private static string Required(
@@ -673,7 +711,7 @@ namespace BizHawk.Headless.Gpgx
                         DateTime.Now.ToString(
                             "yyyy-MM-dd",
                             CultureInfo.InvariantCulture),
-                        0);
+                        options.EffectiveMovieLength);
                 }
 
                 var fileNames = new List<string>();
@@ -712,6 +750,13 @@ namespace BizHawk.Headless.Gpgx
                     .Append(movie.FrameCount.ToString(
                         CultureInfo.InvariantCulture))
                     .Append('\n');
+                if (options.EffectiveMovieLength != 0)
+                {
+                    summary.Append("Effective movie length: ")
+                        .Append(options.EffectiveMovieLength.ToString(
+                            CultureInfo.InvariantCulture))
+                        .Append('\n');
+                }
                 summary.Append("Run ID: ").Append(options.RunId)
                     .Append('\n');
                 summary.Append("Segments: ")

@@ -60,10 +60,13 @@ namespace OpenGGF.BizHawk.Headless
 
     /// <summary>
     /// Native port of the S2 Lua trace recorder's run mode
-    /// (OGGF_TRACE_RUN_ID; tools/bizhawk/s2_trace_recorder.lua v9.12-s2;
-    /// spec tools/bizhawk-headless/docs/s2-run-mode-behavior.md): the
-    /// stage-detour state machine for giant-ring special-stage round trips
-    /// (level -> ss -> level), the minimal special-stage segment writer, and
+    /// (OGGF_TRACE_RUN_ID; tools/bizhawk/s2_trace_recorder.lua v9.13-s2;
+    /// spec tools/bizhawk-headless/docs/s2-run-mode-behavior.md incl. §11):
+    /// the stage-detour state machine for giant-ring special-stage round
+    /// trips (level -> ss -> level), in-level reload survival across the
+    /// Game_Mode $8C title-card family (Block 1.5: death/star-post restarts,
+    /// time overs, act and zone transitions, the ObjB2 SCZ->WFZ->DEZ routes),
+    /// the minimal special-stage segment writer, and
     /// run_manifest.json. Level segments are produced by exactly the plain
     /// gameplay_unlock recorder (same arm gate, CSV v7 writer, aux event
     /// pipeline) with the run-mode metadata additions; run mode never takes
@@ -87,6 +90,16 @@ namespace OpenGGF.BizHawk.Headless
     {
         private const byte LevelGameMode = 0x0C;
         private const byte SpecialStageGameMode = 0x10;
+
+        // v9.13-s2 (§11): Game_Mode $8C = GameModeID_Level with
+        // GameModeFlag_TitleCard (bit 7) set — the in-$0C reload family
+        // (death/star-post restart, time over, act 1->2, zone->zone, ObjB2
+        // SCZ->WFZ->DEZ routes). Every member funnels through
+        // Level_Inactive_flag -> Level: (bset #GameModeFlag_TitleCard,
+        // s2.asm:4758) -> Level_StartGame (bclr, s2.asm:5082); the base mode
+        // never changes across a reload, only bit 7 toggles. Exact-match on
+        // purpose: $88 (Demo|TitleCard) is out of scope.
+        private const byte LevelTitleCardGameMode = 0x8C;
 
         // Detour transition RAM fields (mainmemory addresses).
         private const int AddrBigringFlag = 0xF7CD;
@@ -218,6 +231,27 @@ namespace OpenGGF.BizHawk.Headless
                         state.DetourActive = false;
                     }
 
+                    // Block 1.5 (v9.13-s2, §11.2): in-level reload survival.
+                    // First frame Game_Mode reads $8C while a LEVEL segment
+                    // is armed: finalize that segment exactly like the
+                    // SS-entry sequence, capture a PENDING reload transition
+                    // (pushed only at the completing re-arm, where the
+                    // *_after fields are read), then fall through — $8C
+                    // frames are manifest-only until the next $0C +
+                    // move_lock==0 frame re-arms via the unchanged arm gate
+                    // below. `Started` is false on subsequent $8C frames so
+                    // this fires once per reload. An armed SS segment can
+                    // never reach here ($10 frames are consumed by Block 1;
+                    // the post-SS $8C reload happens unarmed, and a $10->$8C
+                    // jump lands after the ss finalize above with Started
+                    // already false). v9.12 answered this shape by
+                    // truncating the whole run at the first reload.
+                    if (state.Started
+                        && gameMode == LevelTitleCardGameMode)
+                    {
+                        state.HandleReloadBoundary(frameNow, host);
+                    }
+
                     if (!state.Started)
                     {
                         // Level arm gate: game_mode 0x0C and Sonic's
@@ -235,10 +269,14 @@ namespace OpenGGF.BizHawk.Headless
 
                     if (gameMode != LevelGameMode)
                     {
-                        // $10 was intercepted by Block 1, so this is a
-                        // genuinely different non-level mode (results, game
-                        // over, ...): a real stop, funneled through the
-                        // run-end finalize so the manifest still lands.
+                        // $10 was intercepted by Block 1 and $8C (the
+                        // in-level reload family) by Block 1.5, so this is a
+                        // genuinely terminal mode — $20 ending (the graceful
+                        // complete-run end), $14 continue screen, $00 game
+                        // over/sega, $18 2P results, ...: a real stop,
+                        // funneled through the run-end finalize so the
+                        // manifest still lands. A pending reload transition
+                        // is discarded there, never emitted.
                         state.FinalizeRunEnd(host);
                         break;
                     }
@@ -294,6 +332,14 @@ namespace OpenGGF.BizHawk.Headless
             // tracker reset — the Lua only ever sets it).
             private bool recordedSidekickPresent;
 
+            // v9.13-s2 (§11.2): transition record captured at a $8C reload
+            // boundary (Block 1.5) but NOT yet pushed — the completing level
+            // re-arm fills in the *_after fields and pushes it. If the run
+            // terminates first, the pending record is discarded (never
+            // emitted), so run_manifest.json always satisfies
+            // TraceRunManifest.validate (to_segment < segments.size()).
+            private PendingReloadTransition pendingReload;
+
             private bool manifestWritten;
             private string runManifestJson;
 
@@ -347,6 +393,35 @@ namespace OpenGGF.BizHawk.Headless
                     exit.RingsAfter = S2Ram.U16(host, S2Ram.RingCount);
                     exit.EmeraldsAfter = S2Ram.U8(host, AddrEmeralds);
                     transitions.Add(exit);
+                }
+
+                // v9.13-s2 (§11.2): complete + push the pending reload
+                // transition captured at the last $8C boundary (Block 1.5).
+                // Mutually exclusive with the stage_exit push above at any
+                // one arm: the previous finished segment is either the ss
+                // (stage_exit) or a level (pending reload). Indices are
+                // exact here for the same reason stage_exit's are — the
+                // boundary finalize already appended the from-segment, and
+                // this arm has not yet appended the new level segment.
+                // *_after fields are read on this arm frame (same convention
+                // as stage_exit; the ROM zeroes ring tracking on a death
+                // reload — record the truth, 0 included).
+                if (pendingReload != null)
+                {
+                    var reload = new S2RunManifestTransition(
+                        segments.Count - 1,
+                        segments.Count,
+                        pendingReload.EntryKind,
+                        pendingReload.ModeChangeBk2Frame);
+                    reload.SavedXPos = pendingReload.SavedXPos;
+                    reload.SavedYPos = pendingReload.SavedYPos;
+                    reload.LastStarPostHit = pendingReload.LastStarPostHit;
+                    reload.RingsBefore = pendingReload.RingsBefore;
+                    reload.EmeraldsBefore = pendingReload.EmeraldsBefore;
+                    reload.RingsAfter = S2Ram.U16(host, S2Ram.RingCount);
+                    reload.EmeraldsAfter = S2Ram.U8(host, AddrEmeralds);
+                    transitions.Add(reload);
+                    pendingReload = null;
                 }
 
                 physicsBuf.Length = 0;
@@ -413,6 +488,47 @@ namespace OpenGGF.BizHawk.Headless
                 Started = false;
                 traceFrame = 0;
                 auxEngine = null;
+            }
+
+            /// <summary>
+            /// Block 1.5 boundary handling (v9.13-s2, §11.2): finalize the
+            /// armed level segment exactly like the SS-entry sequence, then
+            /// capture the pending reload transition with every boundary
+            /// field read on this first-$8C frame. Kind decision: compare
+            /// the Current_ZoneAndAct word ($FFFE10) on this boundary frame
+            /// against the finished segment's start zone/act — differs ->
+            /// "level_advance" (act->act, zone->zone, ObjB2 routes), equal
+            /// -> "death_restart" (death, star-post respawn, time over).
+            /// Obj3A writes the destination into Current_ZoneAndAct on $0C
+            /// tail frames BEFORE Level_Inactive lands, so comparing against
+            /// the segment-START values keeps those pre-boundary tail frames
+            /// from affecting classification. saved_x/y_pos and
+            /// last_star_post_hit are recorded for death_restart only (the
+            /// LevelOrder path clears Last_star_pole_hit); no
+            /// special_bonus_entry_flag on either kind.
+            /// </summary>
+            internal void HandleReloadBoundary(int frameNow, IGpgxHost host)
+            {
+                FinalizeLevelSegment(host);
+                int finishedZoneAct = (startRomZoneId << 8) | startAct;
+                int boundaryZoneAct = S2Ram.U16(host, S2Ram.Zone);
+                var pending = new PendingReloadTransition();
+                pending.EntryKind = boundaryZoneAct != finishedZoneAct
+                    ? S2RunManifestTransition.LevelAdvanceKind
+                    : S2RunManifestTransition.DeathRestartKind;
+                pending.ModeChangeBk2Frame = frameNow;
+                pending.RingsBefore = S2Ram.U16(host, S2Ram.RingCount);
+                pending.EmeraldsBefore = S2Ram.U8(host, AddrEmeralds);
+                if (pending.EntryKind
+                    == S2RunManifestTransition.DeathRestartKind)
+                {
+                    // The values the reload will consume.
+                    pending.SavedXPos = S2Ram.U16(host, AddrSavedXPos);
+                    pending.SavedYPos = S2Ram.U16(host, AddrSavedYPos);
+                    pending.LastStarPostHit =
+                        S2Ram.U8(host, AddrLastStarPostHit);
+                }
+                pendingReload = pending;
             }
 
             /// <summary>
@@ -521,6 +637,11 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     FinalizeLevelSegment(host);
                 }
+                // A reload transition still pending at run end (the run
+                // terminated mid-reload, before the completing re-arm) is
+                // discarded, never emitted (§11.2): its to_segment index
+                // would point past the last manifest segment.
+                pendingReload = null;
                 if (!manifestWritten)
                 {
                     var manifestSegments =
@@ -550,6 +671,23 @@ namespace OpenGGF.BizHawk.Headless
             {
                 return value.ToString(
                     System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            /// <summary>
+            /// Boundary-frame capture of a $8C reload transition (the Lua's
+            /// pending_reload_transition table): everything except the
+            /// from/to indices and the *_after fields, which the completing
+            /// re-arm supplies.
+            /// </summary>
+            private sealed class PendingReloadTransition
+            {
+                internal string EntryKind;
+                internal int ModeChangeBk2Frame;
+                internal int? SavedXPos;
+                internal int? SavedYPos;
+                internal int? LastStarPostHit;
+                internal int RingsBefore;
+                internal int EmeraldsBefore;
             }
         }
     }

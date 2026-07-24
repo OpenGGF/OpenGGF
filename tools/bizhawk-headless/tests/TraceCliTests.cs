@@ -94,12 +94,27 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             "--gameplay-segment", "one")),
                         "--gameplay-segment must be an integer");
 
+                    // --effective-movie-length models the capture session's
+                    // movie-length signal (run-mode movie-done guard only).
+                    AssertEx.Throws<ArgumentException>(
+                        () => CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--effective-movie-length", "22612")),
+                        "--effective-movie-length requires --run-id");
+                    AssertEx.Throws<ArgumentOutOfRangeException>(
+                        () => CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--run-id", "run",
+                            "--effective-movie-length", "0")),
+                        "--effective-movie-length must be at least 1");
+
                     // The S2 selection arguments are trace-mode only.
                     foreach (string[] pair in new[]
                     {
                         new[] { "--trace-profile", "gameplay_unlock" },
                         new[] { "--gameplay-segment", "1" },
-                        new[] { "--run-id", "run" }
+                        new[] { "--run-id", "run" },
+                        new[] { "--effective-movie-length", "22612" }
                     })
                     {
                         AssertEx.Throws<ArgumentException>(
@@ -127,6 +142,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     AssertEx.Equal("my-run", run.RunId);
                     AssertEx.Equal(null, run.TraceProfile);
                     AssertEx.Equal(false, run.GameplaySegment.HasValue);
+                    AssertEx.Equal(0, run.EffectiveMovieLength);
+
+                    CommandLineOptions sessionRun =
+                        CommandLineOptions.Parse(Append(
+                            TraceArguments(output),
+                            "--run-id", "my-run",
+                            "--effective-movie-length", "22612"));
+                    AssertEx.Equal(22612, sessionRun.EffectiveMovieLength);
                 });
         }
 

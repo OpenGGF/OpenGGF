@@ -132,7 +132,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "  \"bk2_frame_offset\": 3795,\n"
                 + "  \"trace_frame_count\": 5733,\n"
                 + "  \"source_bk2\": \"s2-ehz-halfpipe-roundtrip.bk2\",\n"
-                + "  \"lua_script_version\": \"9.12-s2\",\n"
+                + "  \"lua_script_version\": \"9.13-s2\",\n"
                 + "  \"recording_date\": \"2026-07-19\",\n"
                 + "  \"run_id\": \"s2-ehz-halfpipe-roundtrip\",\n"
                 + "  \"fresh_load\": false,\n"

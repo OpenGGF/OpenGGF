@@ -24,10 +24,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// never touched), the exact detected BK2 frame offset, and
     /// metadata.json equality normalized only on the recording_date value
     /// and the fixture's lua_script_version "9.11-s2" being produced as
-    /// "9.12-s2" (the v9.12 Lua header declares plain-mode output
+    /// "9.13-s2" (the v9.12/v9.13 Lua headers declare plain-mode output
     /// byte-identical to 9.11-s2 except that string). A fourth gate runs
     /// one --run-id capture against
-    /// src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/ and
+    /// src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/ —
+    /// injecting the canonical capture session's movie-length signal via
+    /// --effective-movie-length (see RunEffectiveMovieLength) — and
     /// asserts all five segment directories plus run_manifest.json (see
     /// the run-mode constants below). Skips (does not pass) when
     /// S2_ROM_PATH or a BizHawk distribution is absent; fails (does not
@@ -42,8 +44,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
         private const string FixtureLuaScriptVersionLine =
             "  \"lua_script_version\": \"9.11-s2\",";
-        private const string ProducedLuaScriptVersionLine =
+        // Run fixtures were captured by the v9.12 Lua; the v9.13 header
+        // declares those shapes byte-identical apart from this string.
+        private const string RunFixtureLuaScriptVersionLine =
             "  \"lua_script_version\": \"9.12-s2\",";
+        private const string ProducedLuaScriptVersionLine =
+            "  \"lua_script_version\": \"9.13-s2\",";
 
         private static readonly S2DifferentialCase Ehz1Case =
             new S2DifferentialCase(
@@ -101,14 +107,27 @@ namespace OpenGGF.BizHawk.Headless.Tests
         // must reproduce all five segment directories and the run manifest.
         // The fixture set is stamped lua_script_version 9.12-s2 and carries
         // the canonical capture's Windows text-mode CRLF line endings
-        // (docs/s2-run-mode-behavior.md §9), so physics/aux/manifest bytes
-        // are asserted without any normalization; each segment
-        // metadata.json is normalized on the recording_date value only.
+        // (docs/s2-run-mode-behavior.md §9), so physics/aux bytes are
+        // asserted without any normalization; each segment metadata.json
+        // and run_manifest.json are normalized on the recording_date value
+        // (metadata only) and the 9.12-s2 -> 9.13-s2 version line.
         private const string RunFixtureDirectoryName =
             "s2-ehz-halfpipe-roundtrip";
         private const string RunMovieFileName =
             "s2-ehz-halfpipe-roundtrip.bk2";
         private const int RunMovieFrameCount = 22819;
+
+        // The canonical capture session's movie-length signal
+        // (s2-run-mode-behavior.md §2 capture-time caveat): EmuHawk's
+        // chromeless movie.length() under-reported the committed BK2's
+        // 22819 rows by 207 frames, so the Lua's 4b movie-done guard ended
+        // the run at emu frame 22612 while seg3 was armed — before the
+        // movie's tail act-transition reload ($8C at the same frame) could
+        // be seen. Reproducing the fixture therefore requires injecting the
+        // session value; a v9.13 runner fed the file-derived 22819 would
+        // instead survive the reload and record a sixth segment (seg4_ehz2)
+        // plus a level_advance transition.
+        private const int RunEffectiveMovieLength = 22612;
         private const string RunManifestSha256 =
             "aabe4597821eb8223266728f44730a5a15321bad167ebc56d8569f09d5"
             + "cb0cf1";
@@ -362,12 +381,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             segment.DirToken,
                             "metadata.json"));
                 }
-                AssertSha256(
-                    "run_manifest.json",
-                    RunManifestSha256,
-                    EndToEndTests.ComputeSha256(Path.Combine(
-                        output,
-                        "run_manifest.json")));
+                AssertNormalizedRunManifestEquality(
+                    Path.Combine(runDirectory, "run_manifest.json"),
+                    Path.Combine(output, "run_manifest.json"));
             }
             finally
             {
@@ -594,7 +610,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + " --rom " + EndToEndTests.Quote(romPath)
                 + " --movie " + EndToEndTests.Quote(moviePath)
                 + " --output " + EndToEndTests.Quote(output)
-                + " --run-id " + RunFixtureDirectoryName;
+                + " --run-id " + RunFixtureDirectoryName
+                + " --effective-movie-length " + RunEffectiveMovieLength;
             var start = new ProcessStartInfo
             {
                 FileName = "/bin/bash",
@@ -652,6 +669,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "BizHawk: " + installation.ManagedVersion + "\n"
                 + "ROM SHA-1: " + RomIdentity.Sonic2Rev01Sha1 + "\n"
                 + "Movie frames: " + RunMovieFrameCount + "\n"
+                + "Effective movie length: " + RunEffectiveMovieLength + "\n"
                 + "Run ID: " + RunFixtureDirectoryName + "\n"
                 + "Segments: " + RunSegmentCases.Length + "\n"
                 + "Transitions: " + (RunSegmentCases.Length - 1) + "\n";
@@ -691,7 +709,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// recording_date value (which must still carry the exact key
         /// formatting and an ISO date value), and the fixture's
         /// lua_script_version "9.11-s2" line, which the native port must
-        /// produce as exactly "9.12-s2".
+        /// produce as exactly "9.13-s2".
         /// </summary>
         private static void AssertNormalizedMetadataEquality(
             string fixturePath,
@@ -744,14 +762,36 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// <summary>
         /// Run-mode variant of the metadata comparison: run fixture
         /// metadata.json files carry the canonical capture's Windows
-        /// text-mode CRLF line endings and are already stamped
-        /// lua_script_version 9.12-s2, so the produced file must be
-        /// byte-identical except the recording_date value (which must
-        /// still carry the exact key formatting and an ISO date value).
+        /// text-mode CRLF line endings and are stamped lua_script_version
+        /// 9.12-s2, so the produced file must be byte-identical except the
+        /// recording_date value (which must still carry the exact key
+        /// formatting and an ISO date value) and the version line, which
+        /// the native port must produce as exactly "9.13-s2".
         /// </summary>
         private static void AssertNormalizedRunMetadataEquality(
             string fixturePath,
             string producedPath)
+        {
+            CompareRunLines(fixturePath, producedPath, true);
+        }
+
+        /// <summary>
+        /// run_manifest.json comparison: the fixture manifest carries CRLF
+        /// line endings and the 9.12-s2 stamp; the produced manifest must
+        /// be byte-identical except the version line ("9.13-s2"). There is
+        /// no recording_date in the manifest.
+        /// </summary>
+        private static void AssertNormalizedRunManifestEquality(
+            string fixturePath,
+            string producedPath)
+        {
+            CompareRunLines(fixturePath, producedPath, false);
+        }
+
+        private static void CompareRunLines(
+            string fixturePath,
+            string producedPath,
+            bool expectRecordingDate)
         {
             string fixtureText = File.ReadAllText(fixturePath);
             string producedText = File.ReadAllText(producedPath);
@@ -776,11 +816,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 StringSplitOptions.None);
             AssertEx.Equal(fixtureLines.Length, producedLines.Length);
             var recordingDateLines = 0;
+            var luaScriptVersionLines = 0;
             for (var index = 0; index < fixtureLines.Length; index++)
             {
-                if (fixtureLines[index].StartsWith(
-                    RecordingDateLinePrefix,
-                    StringComparison.Ordinal))
+                if (expectRecordingDate
+                    && fixtureLines[index].StartsWith(
+                        RecordingDateLinePrefix,
+                        StringComparison.Ordinal))
                 {
                     recordingDateLines++;
                     if (!RecordingDateLine.IsMatch(producedLines[index]))
@@ -790,6 +832,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + producedLines[index] + ">.");
                     }
                 }
+                else if (fixtureLines[index]
+                    == RunFixtureLuaScriptVersionLine)
+                {
+                    luaScriptVersionLines++;
+                    AssertEx.Equal(
+                        ProducedLuaScriptVersionLine,
+                        producedLines[index]);
+                }
                 else
                 {
                     AssertEx.Equal(
@@ -797,7 +847,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         producedLines[index]);
                 }
             }
-            AssertEx.Equal(1, recordingDateLines);
+            AssertEx.Equal(expectRecordingDate ? 1 : 0, recordingDateLines);
+            AssertEx.Equal(1, luaScriptVersionLines);
         }
 
         private static void Gunzip(string sourcePath, string destinationPath)

@@ -65,12 +65,17 @@ namespace OpenGGF.BizHawk.Headless
     /// so a sampled 0 (e.g. emeralds_before on the first detour or the
     /// post-reload rings_after) still renders. starpost_special records set
     /// the five *_before-side fields; stage_exit records set only
-    /// rings_after / emeralds_after.
+    /// rings_after / emeralds_after. The v9.13-s2 reload kinds (§11.2) set
+    /// rings/emeralds before+after, and death_restart additionally
+    /// saved_x/y_pos + last_star_post_hit; neither sets
+    /// special_bonus_entry_flag.
     /// </summary>
     public sealed class S2RunManifestTransition
     {
         public const string StarpostSpecialKind = "starpost_special";
         public const string StageExitKind = "stage_exit";
+        public const string DeathRestartKind = "death_restart";
+        public const string LevelAdvanceKind = "level_advance";
 
         public S2RunManifestTransition(
             int fromSegment,
@@ -104,11 +109,11 @@ namespace OpenGGF.BizHawk.Headless
 
     /// <summary>
     /// Byte-exact port of the S2 Lua run-mode run_manifest.json emitter
-    /// (tools/bizhawk/s2_trace_recorder.lua v9.12-s2, write_run_manifest
-    /// L998-1061; spec s2-run-mode-behavior.md §6). Written exactly once at
+    /// (tools/bizhawk/s2_trace_recorder.lua v9.13-s2, write_run_manifest;
+    /// spec s2-run-mode-behavior.md §6, §11). Written exactly once at
     /// run termination to the run root. rom_checksum is the inline literal
     /// "7B905383" (S2 World REV01 CRC32) and lua_script_version the
-    /// "9.12-s2" constant — neither is computed at runtime. String fields
+    /// "9.13-s2" constant — neither is computed at runtime. String fields
     /// that the Lua renders with %q (run_id, dir, kind, trace_profile,
     /// entry_kind) go through the %q-faithful quoting below; source_bk2 goes
     /// through the shared json_escape helper instead.
@@ -146,7 +151,7 @@ namespace OpenGGF.BizHawk.Headless
             json.Append("  \"source_bk2\": \"")
                 .Append(JsonEscape(sourceBk2)).Append("\",\n");
             json.Append("  \"rom_checksum\": \"7B905383\",\n");
-            json.Append("  \"lua_script_version\": \"9.12-s2\",\n");
+            json.Append("  \"lua_script_version\": \"9.13-s2\",\n");
             json.Append("  \"segments\": [\n");
             for (var index = 0; index < segments.Count; index++)
             {
