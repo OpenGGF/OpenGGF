@@ -94,10 +94,12 @@ gate, in this order (placement is load-bearing, L1498-1505):
 
 1. **4b. Top-of-function movie-done guard** (run mode only, L1474-1490):
    if `HEADLESS and movie.isloaded()` and
-   `emu.framecount() >= effective_movie_length` (where
+   (`effective_movie_length > 0 and emu.framecount() >=
+   effective_movie_length` (where
    `effective_movie_length = max(movie.length(), OGGF_BK2_FRAME_COUNT)` —
-   the env value only ever **raises** the length, never lowers it) **or**
-   `movie.mode() == "FINISHED"` → `finalize_run_end()`, `finished = true`,
+   the env value only ever **raises** the length, never lowers it; the
+   `> 0` test keeps a zero-length report from finalizing instantly) **or**
+   `movie.mode() == "FINISHED"`) → `finalize_run_end()`, `finished = true`,
    return. Rationale: the plain BK2-end checks sit *below* the detour
    branch's returns, so without this guard a movie ending mid-`$10` would
    keep writing ss rows until FRAME_CAP.
@@ -182,9 +184,25 @@ After `finished = true`, the main loop's run-mode exit branch only prints and
 breaks — it must **not** re-run the plain finalize block (which would rewrite
 metadata into the last segment dir).
 
-In the fixture, the run ends via the movie-length guards while seg3 is armed
-and still in `$0C` (last row at `bk2_frame_offset 19159 + 3452 rows =
-effective movie length 22611`).
+In the fixture, the run ends via the 4b movie-done guard while seg3 is armed
+and still in `$0C`. The guard fired at emu frame **22612**: seg3's last row
+(frame 3451) was written at emu frame 22611 (`bk2_frame_offset 19159 + 1 +
+3451`), so `bk2_frame_offset + trace_frame_count = 22611` is one **less**
+than the capture-time effective movie length of 22612 (the guard's
+`frame_now >= length` first became true at 22612, before that call could
+write a row — an effective length of 22611 would have fired one call earlier
+and left only 3451 rows).
+
+**Capture-time caveat (load-bearing for byte-identical reproduction):** the
+committed `s2-ehz-halfpipe-roundtrip.bk2` contains **22819** input rows
+(idle from frame 22042 onward). The capture-time effective length of 22612
+is therefore *not* derivable from the committed movie file: at capture the
+env override was evidently not visible to EmuHawk Lua and `movie.length()` /
+`movie.mode()` signaled done at 22612 — 207 frames short of the file-derived
+count (the documented chromeless under-report). A port that terminates seg3
+from a BK2-derived effective length of 22819 would write 3659 rows, not the
+fixture's 3452. Seg3's tail length encodes the capture session's
+movie-length signal, not a property of the committed BK2.
 
 ---
 
@@ -524,11 +542,30 @@ metadata-rewrite (300) cadences, and the same `write_metadata()` (trace_schema
 `physics.csv` and `aux_state.jsonl` bytes for a level segment are produced by
 exactly the code the plain mode uses; the fixture's level segments are
 therefore directly comparable to plain-mode captures modulo the metadata
-deltas above.
+deltas above **and the fixture line endings (§9)**.
 
 ---
 
-## 9. Porting invariants checklist (native harness)
+## 9. File encodings (run fixture)
+
+The run-mode spec is byte-level, so this differs from the plain-mode S2
+fixtures and must not be inherited from the plain spec's §9 ("LF-only"):
+
+- Every non-empty file in the canonical run fixture — `run_manifest.json`,
+  each segment `metadata.json`, each `physics.csv` (level and ss), and each
+  level `aux_state.jsonl` — uses **CRLF** (`\r\n`) line endings, including
+  the final line (last bytes `7d 0d 0a` for `run_manifest.json`). The Lua
+  writes `"\n"` through text-mode `io.open`, and the capture ran on Windows
+  EmuHawk, which expanded every `\n` shown in this spec's templates to
+  `\r\n`. (The committed plain-mode S2 fixtures are LF-only; the run fixture
+  was not normalized.)
+- UTF-8 without BOM (pure ASCII in practice; first bytes of
+  `run_manifest.json` are `7b 0d 0a`).
+- The ss segments' `aux_state.jsonl` files are exactly **0 bytes** (§4).
+
+---
+
+## 10. Porting invariants checklist (native harness)
 
 1. Run mode iff `OGGF_TRACE_RUN_ID` is present; without it, output must stay
    byte-identical to plain mode.
@@ -547,7 +584,13 @@ deltas above.
    the manifest is written exactly once at run end.
 8. `movie.length()` may under-report; the effective length is
    `max(movie.length(), derived BK2 frame count)` — the override only raises.
+   Fixture caveat: the canonical run's seg3 was terminated by a capture-time
+   effective length of 22612, which is 207 frames short of the committed
+   BK2's 22819 input rows (§2) — the fixture's seg3 row count is not
+   reproducible from a file-derived length alone.
 9. Post-SS reset must clear checkpoint/known-object dedup state without
    deleting the finalized ss files.
 10. Segment/metadata `segment_index` = count of previously finished segments
     (level metadata written before its own append).
+11. Fixture comparison: every non-empty run-fixture file is CRLF-terminated
+    (§9) — do not assume the plain-mode fixtures' LF-only convention.
