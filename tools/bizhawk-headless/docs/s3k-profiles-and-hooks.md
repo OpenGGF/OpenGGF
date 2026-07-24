@@ -219,8 +219,9 @@ from the previously emitted tuple (first recorded frame always emits).
 `movie.getinput(bk2_frame_offset + trace_row, 1)` — **no profile-dependent
 adjustment** — and folds to the engine mask (`U=1 D=2 L=4 R=8`, any of
 A/B/C → `0x10`; Start is NOT represented). The RAM fallback
-(`rom_joypad_to_mask(u8[0xF604])`) only applies with no movie loaded — never
-in fixture capture. Because the `aiz_end_to_end` arm frame is recorded as
+(`rom_joypad_to_mask(u8[0xF604])`) only applies with no movie loaded or when
+`movie.getinput` returns nil for the requested row — never in fixture
+capture (every recorded row satisfies `offset + row < movie.length()`). Because the `aiz_end_to_end` arm frame is recorded as
 row 0, that profile's row N `input` is the input consumed by row N+1's
 state (one-ahead); for level-gated profiles it is the input that produced
 row N's state. Replay owns compensating for this; the recorder must not.
@@ -256,7 +257,7 @@ RAM addresses (`0xFF0000 | ram_offset`), with both bytes of each word hooked.
 | `V65` | `0x13DD0`, `0x13EB8`, `0x14A0A`, `0x14B7A` | `loc_13DD0` (26696), `loc_13EB8` (26784), `loc_14A0A` (27802), `loc_14B7A` (27957) — Tails CPU normal-follow / input-accel path | gated `a0 == 0xB04A`; delayed Stat/Pos-table reads at `(Pos_table_index-0x44)&0xFF`, branch classification, pre/post path vel/status | `tails_cpu_normal_step` (single merged per-frame record; only if a hook fired this frame) |
 | `V66` | `0x14F08`, `0x14F4A`, `0x14F56`, `0x14F5C`; `0x1F912`, `0x1F982` | `Tails_Check_Screen_Boundaries` (28407) entry/return/kill/clamp; `AIZTree_SetPlayerPos` (43781) entry / post-y_vel | zone 0 + windows `{[4660,4679],[7549,7560]}` (`OGGF_S3K_AIZ_BOUNDARY_RANGE`); camera min/max X/Y (`0xEE14/16/18/1A`), Tails pre/post snapshots, boundary action | `aiz_boundary_state` (only if `seen`) |
 | `V67_AIZ` | `0x1E2E0`, `0x1E2F4`, `0x1E42E`, `0x1E44C`, `0x1E4A0`, `0x1E4D4` | SolidObjectTop standing-exit/standing/first-check/first-vertical; `RideObject_SetRide` body; return | zone 0 + window `[5408,5438]`; gated a0 == `Obj_AIZTransitionFloor` (object_code `0x0004FE38`, label at 104782), a1 ∈ {P1, P2}; per-player path + d1/d2/d3 | `aiz_transition_floor_solid` (only if `seen`) |
-| `V69_AIZ` | `0x0F7F8`; reuses `0x1E44C`, `0x1E4A0` | `Sonic_CheckFloor` return (19839-19891); SolidObjectTop vertical/landing | zone 0 + window `[5430,5438]`; a0 == P1; floor distance/angle (d1/d3), probe x/y, solid gate pre_y/surface_y/delta | enriches `aiz_handoff_terrain_state` — **which emits per-frame in-window even with no hooks** (§2.4) |
+| `V69_AIZ` | `0x0F7F8`; reuses `0x1E44C`, `0x1E4A0` | `Sonic_CheckFloor` return (19839-19891); SolidObjectTop vertical/landing | zone 0 + window `[5430,5438]`; CheckFloor-return hook gated a0 == P1, the two SolidObjectTop hooks gated a0 == `Obj_AIZTransitionFloor` && a1 == P1; floor distance/angle (d1/d3), probe x/y, solid gate pre_y/surface_y/delta | enriches `aiz_handoff_terrain_state` — **which emits per-frame in-window even with no hooks** (§2.4) |
 | `V67_CNZ` | `0x324C0`, `0x32538`, `0x32594`, `0x32604`, `0x3260A`; `0x1E1CA`, `0x1E1F2` | `sub_324C0` (67990) + cylinder branches; `MvSonicOnPtfm` (41647) pre/return | window `[4490,4512]` (`OGGF_S3K_CNZ_CYLINDER_RANGE`); gated a1 == Tails AND a0's object_code == `0x00032188` (Obj_CNZCylinder); regs d2/d4/d5/d6, per-player slot bytes, Tails pos/subpix/status | `cnz_cylinder_execution` |
 | `V611_SOLID` | `0x1DF90` | `SolidObject_cont` (41399) | windows `{[4788,4792],[7600,7625]}` (`OGGF_S3K_SOLID_CONT_RANGE`); a0/a1/d1/d2, player y_radius + default_y_radius (`+0x16`), player/solid x/y | `solid_object_cont_entry` |
 | `V615_CRL` | `0x10440` | `Touch_Process` (20655) | zone 3 + window `[618,624]` (`OGGF_S3K_CRL_RANGE`); walks `Collision_response_list` (`0xE380`: byte-count word capped `0x7E`, then word OST addrs), Clamer spring-child scan (object_codes `0x890AA/0x890C8/0x890D0`) | `collision_response_list_per_frame` (one per Touch_Process hit) |
@@ -286,10 +287,10 @@ These run every recorded frame in `on_frame_end` regardless of the hook gate
   (`0xFE6E` × `0x42` bytes + `Level_frame_counter`), `object_state`
   (every OST slot 1..109 within 160 px of P1 **or** P2), `interact_state`
   (P1 always, P2 if present), `sidekick_interact_object` (P2 present only),
-  `air_countdown_state` (2/frame: fixed slots 94/95 at `0xBB1C`/`0xBB66` +
+  `air_countdown_state` (2/frame: fixed slots 94/95 at `0xCB2C`/`0xCB76` +
   visible `Obj_AirCountdown` children), `control_lock_state` (on change of
-  `0xF7CA`/`0xF7CB`/`0xF602`/`0xF66A` u16be values, plus forced baseline
-  every 60 frames), `state_snapshot` (every 60 frames + on air-flip and
+  the u8 `0xF7CA`/`0xF7CB` locked bytes or the u16be `0xF602`/`0xF66A`
+  logical latches, plus forced baseline every 60 frames), `state_snapshot` (every 60 frames + on air-flip and
   hurt/death routine change), `mode_change`, `routine_change`,
   `player_mode_set` (on `0xFF08` change), `object_appeared`/`object_removed`/
   `object_near`/`slot_dump` (scan_objects, slots 1..109, proximity to P1
