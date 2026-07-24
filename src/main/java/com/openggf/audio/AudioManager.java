@@ -1198,7 +1198,25 @@ public class AudioManager implements MusicRestoreSink {
         }
         ensureShadowPresentation();
         if (!postBoundaryReverseTarget) {
-            AudioLogicalSnapshot fresh = captureLogicalSnapshot();
+            AudioLogicalSnapshot fresh;
+            try {
+                // A level/seamless transition may initialize presentation
+                // sources after the final frame packet. Publish that ledger at
+                // this owner boundary without advancing PCM cadence/history,
+                // then capture the complete fresh producer state.
+                shadowProducer.applyPendingCommandsAtOwnerBoundary();
+                fresh = captureLogicalSnapshot();
+            } catch (RuntimeException failure) {
+                // Successfully applied predecessors have already left the
+                // ledger; the failing command and successors remain queued.
+                // The stale selected/prepared target is retained until a
+                // complete drain and fresh capture can replace it.
+                LOGGER.log(Level.WARNING,
+                        "Audio post-boundary command publication failed; "
+                                + "retained coherent live state for retry",
+                        failure);
+                return false;
+            }
             discardDeferredBackendRestore();
             shadowProducer.discardPreparedRestoreSelection();
             deferredReverseLogicalSnapshot = fresh;

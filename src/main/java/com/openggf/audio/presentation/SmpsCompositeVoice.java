@@ -83,6 +83,33 @@ public final class SmpsCompositeVoice implements PresentationVoice {
                 maxStereoFrames, driver.captureSnapshot());
     }
 
+    public static final class LiveCommandMutationToken {
+        private final SmpsCompositeVoice owner;
+        private final SmpsDriver.LiveCommandMutationToken driverToken;
+
+        private LiveCommandMutationToken(
+                SmpsCompositeVoice owner,
+                SmpsDriver.LiveCommandMutationToken driverToken) {
+            this.owner = owner;
+            this.driverToken = driverToken;
+        }
+    }
+
+    public LiveCommandMutationToken captureLiveCommandMutation() {
+        return new LiveCommandMutationToken(
+                this, driver.captureLiveCommandMutation());
+    }
+
+    public void rollbackLiveCommandMutation(
+            LiveCommandMutationToken token) {
+        Objects.requireNonNull(token, "token");
+        if (token.owner != this) {
+            throw new IllegalArgumentException(
+                    "live command token belongs to another composite voice");
+        }
+        driver.rollbackLiveCommandMutation(token.driverToken);
+    }
+
     public void restore(PresentationVoiceSnapshot.Smps snapshot,
                         SmpsDriverSnapshot.DependencyResolver resolver) {
         Objects.requireNonNull(snapshot, "snapshot");

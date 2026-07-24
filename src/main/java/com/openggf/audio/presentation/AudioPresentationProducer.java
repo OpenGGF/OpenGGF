@@ -431,10 +431,11 @@ public final class AudioPresentationProducer {
     }
 
     /**
-     * Applies commands queued while reverse output owned the frame boundary.
-     * Cleanup policies call this only after dual release succeeds, at the
-     * producer's owner boundary, so policy mutation observes command order
-     * and no command can survive to resurrect on the next packet.
+     * Fully drains commands queued while reverse output owned the frame
+     * boundary. Successfully applied entries are consumed exactly once; if an
+     * apply fails, the failure and its successors remain queued and this
+     * method throws. Callers must capture boundary state only after this
+     * method returns normally.
      */
     public void applyPendingCommandsAtOwnerBoundary() {
         assertOwnerBoundary();

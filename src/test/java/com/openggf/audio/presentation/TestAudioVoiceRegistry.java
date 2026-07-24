@@ -12,6 +12,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.PushMusicOverride
 import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceMusic;
 import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceRawPcm;
 import com.openggf.audio.presentation.AudioPresentationCommand.RestoreMusicOverride;
+import com.openggf.audio.presentation.AudioPresentationCommand.ResetRingAlternation;
 import com.openggf.audio.presentation.AudioPresentationCommand.SetSpeedMultiplier;
 import com.openggf.audio.presentation.AudioPresentationCommand.SetSpeedShoes;
 import com.openggf.audio.presentation.AudioPresentationCommand.StartSampleSfx;
@@ -21,6 +22,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.ToggleMute;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleSolo;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.CoordFlagContext;
 import com.openggf.audio.smps.CoordFlagHandler;
 import com.openggf.audio.smps.DacData;
@@ -28,6 +30,8 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.synth.VirtualSynthesizer;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -177,8 +181,8 @@ class TestAudioVoiceRegistry {
         assertEquals(originalIds, orderedIds(registry));
         assertFalse(oldest.isComplete(),
                 "failed materialization cannot stop the replacement candidate");
-        assertEquals(1, queue.size(),
-                "commands after the failed start remain pending");
+        assertEquals(2, queue.size(),
+                "the failed start and later commands remain pending");
         assertEquals(List.of("failing"), instantiation.resolvedPcmAssets);
 
         instantiation.failingPcmAsset = null;
@@ -186,9 +190,9 @@ class TestAudioVoiceRegistry {
 
         assertEquals(0, queue.size());
         assertFalse(orderedIds(registry).contains(0L));
-        assertFalse(orderedIds(registry).contains(100L));
+        assertTrue(orderedIds(registry).contains(100L));
         assertTrue(orderedIds(registry).contains(101L));
-        assertEquals(List.of("failing", "continuation"),
+        assertEquals(List.of("failing", "failing", "continuation"),
                 instantiation.resolvedPcmAssets);
     }
 
@@ -515,6 +519,540 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
+    void failedMuteDriverControlLeavesRegistryAndDriverRetryable() {
+        assertFailedToggleIsAtomic(new ToggleMute(ChannelType.FM, 1),
+                snapshot -> snapshot.fmMuteMask());
+    }
+
+    @Test
+    void failedSoloDriverControlLeavesRegistryAndDriverRetryable() {
+        assertFailedToggleIsAtomic(new ToggleSolo(ChannelType.FM, 1),
+                snapshot -> snapshot.fmSoloMask());
+    }
+
+    @Test
+    void failedControlPreservesSequencerIdentityAndFadeCallbackThroughRetry() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        FailingMutationDriver driver = populatedFailingMutationDriver();
+        SmpsSequencer musicSequencer = driver.firstMusicSequencer();
+        AtomicInteger fadeCompletions = new AtomicInteger();
+        musicSequencer.setOnFadeComplete(fadeCompletions::incrementAndGet);
+        musicSequencer.triggerFadeIn(2, 1);
+        instantiation.enqueueMusicDriver(driver);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(1, 0x82, new SmpsDriver()))));
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new ToggleMute(ChannelType.FM, 1),
+                () -> true, registry::apply);
+        driver.failNextControl();
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertSame(musicSequencer, driver.firstMusicSequencer(),
+                "command rollback must retain the live sequencer object");
+        assertTrue(musicSequencer.hasFadeCompleteCallback());
+        assertEquals(1, queue.size());
+
+        queue.applyPending(registry::apply);
+        musicSequencer.advanceBatch(4);
+
+        assertSame(musicSequencer, driver.firstMusicSequencer());
+        assertEquals(1, fadeCompletions.get(),
+                "the original fade callback must remain functional after retry");
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void failedSfxAttachmentPreservesMusicSequencerAndRetriesWithoutResidue() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        FailingMutationDriver driver = populatedFailingMutationDriver();
+        SmpsSequencer musicSequencer = driver.firstMusicSequencer();
+        AtomicInteger fadeCompletions = new AtomicInteger();
+        musicSequencer.setOnFadeComplete(fadeCompletions::incrementAndGet);
+        musicSequencer.triggerFadeIn(2, 1);
+        instantiation.enqueueMusicDriver(driver);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(1, 0x82, new SmpsDriver()))));
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new AddSmpsSfx(source(2, 0xB0)),
+                () -> true, registry::apply);
+        driver.failNextSfxAttachment();
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertEquals(1, driver.sequencersForTesting().size(),
+                "the unpublished failed SFX sequencer must not remain attached");
+        assertSame(musicSequencer, driver.firstMusicSequencer());
+        assertTrue(musicSequencer.hasFadeCompleteCallback());
+        assertEquals(1, queue.size());
+
+        queue.applyPending(registry::apply);
+        musicSequencer.advanceBatch(4);
+
+        assertEquals(2, driver.sequencersForTesting().size(),
+                "retry must attach exactly one SFX sequencer");
+        assertSame(musicSequencer, driver.firstMusicSequencer());
+        assertEquals(1, fadeCompletions.get());
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void failedSfxAttachmentRestoresExactDacBankAndPlaybackBeforeRetry() {
+        DacData musicDac = dacData(
+                new byte[] {0, 24, 64, 127, (byte) 255, (byte) 196, 96, 32});
+        DacData sfxDac = dacData(
+                new byte[] {127, 96, 64, 32, 16, 8, 4, 0});
+        FailingMutationDriver driver =
+                populatedFailingMutationDriver(musicDac);
+        FailingMutationDriver uninterrupted =
+                populatedFailingMutationDriver(musicDac);
+        TransactionalSfxInstantiation instantiation =
+                new TransactionalSfxInstantiation(sfxDac, noOpHandler());
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        instantiation.enqueueMusicDriver(driver);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(1, 0x82, new SmpsDriver()))));
+        primeDacPlayback(driver, musicDac);
+        primeDacPlayback(uninterrupted, musicDac);
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new AddSmpsSfx(source(2, 0xB0)),
+                () -> true, registry::apply);
+        driver.failNextSfxAttachment();
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertSame(musicDac, activeDacData(driver),
+                "rollback must restore the exact pre-command DAC bank");
+        short[] expected = renderFrames(uninterrupted, 128);
+        short[] actual = renderFrames(driver, 128);
+        assertArrayEquals(expected, actual,
+                "rollback must restore in-flight DAC playback against that bank");
+        assertEquals(1, queue.size());
+
+        queue.applyPending(registry::apply);
+
+        assertSame(musicDac, activeDacData(driver),
+                "successful attachment must retain the owning music DAC bank");
+        assertEquals(2, driver.sequencersForTesting().size());
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void failedSfxAttachmentRestoresCoordFlagCounterBeforeRetry() {
+        SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
+        state.setSpindashRevCounter(7);
+        SmpsCoordFlagHandlerOwner owner =
+                new SmpsCoordFlagHandlerOwner(state);
+        owner.register("test", shared -> new CoordFlagHandler() {
+            @Override
+            public void onSfxStart(int sfxId) {
+                shared.setSpindashRevCounter(
+                        shared.spindashRevCounter() + 1);
+            }
+
+            @Override
+            public boolean handleFlag(
+                    CoordFlagContext ctx, SmpsSequencer.Track track,
+                    int command) {
+                return false;
+            }
+
+            @Override
+            public int flagParamLength(int command) {
+                return -1;
+            }
+        });
+        TransactionalSfxInstantiation instantiation =
+                new TransactionalSfxInstantiation(
+                        dacData(), owner.handlerFor("test"));
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                instantiation, instantiation, owner, ignored -> {
+                });
+        FailingMutationDriver driver =
+                populatedFailingMutationDriver();
+        instantiation.enqueueMusicDriver(driver);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(1, 0x82, new SmpsDriver()))));
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new AddSmpsSfx(source(2, 0xB0)),
+                () -> true, registry::apply);
+        driver.failNextSfxAttachment();
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertEquals(7, state.spindashRevCounter(),
+                "failed constructor/start notification must roll back");
+        assertEquals(1, queue.size());
+
+        queue.applyPending(registry::apply);
+
+        assertEquals(8, state.spindashRevCounter(),
+                "retry must apply the start notification exactly once");
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void failedStandaloneSfxAttachmentRestoresPreConstructionCoordStateBeforeRetry() {
+        SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
+        state.setSpindashRevCounter(7);
+        StandaloneCoordMutationInstantiation instantiation =
+                new StandaloneCoordMutationInstantiation(state);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                instantiation, instantiation,
+                new SmpsCoordFlagHandlerOwner(state), ignored -> {
+                });
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new AddSmpsSfx(source(2, 0xB0)),
+                () -> true, registry::apply);
+
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertEquals("injected SFX attachment failure",
+                failure.getMessage());
+        assertEquals(7, state.spindashRevCounter(),
+                "failure must undo state mutated while constructing the standalone owner");
+        assertEquals(1, queue.size());
+        assertEquals(0, registry.orderedVoiceCount());
+
+        queue.applyPending(registry::apply);
+
+        assertEquals(8, state.spindashRevCounter(),
+                "retry must apply standalone construction state exactly once");
+        assertEquals(0, queue.size());
+        assertEquals(1, registry.orderedVoiceCount());
+    }
+
+    @Test
+    void standaloneConstructionMissAndFailureRestoreCoordState() {
+        SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
+        state.setSpindashRevCounter(7);
+        StandaloneConstructionExitInstantiation instantiation =
+                new StandaloneConstructionExitInstantiation(state);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                instantiation, instantiation,
+                new SmpsCoordFlagHandlerOwner(state), ignored -> {
+                });
+
+        registry.apply(new AddSmpsSfx(source(2, 0xB0)));
+        assertEquals(7, state.spindashRevCounter(),
+                "a throwing standalone constructor must restore coord state");
+
+        registry.apply(new AddSmpsSfx(source(3, 0xB1)));
+        assertEquals(7, state.spindashRevCounter(),
+                "a null standalone constructor result must restore coord state");
+        assertEquals(0, registry.orderedVoiceCount());
+    }
+
+    @Test
+    void failedStopAllSfxPreservesSequencerOrderAndFadeCallbackThroughRetry() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        FailingMutationDriver driver = populatedFailingMutationDriver();
+        instantiation.enqueueMusicDriver(driver);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(1, 0x82, new SmpsDriver()))));
+        registry.apply(new AddSmpsSfx(source(2, 0xB0)));
+        List<SmpsSequencer> originalSequencers =
+                driver.sequencersForTesting();
+        SmpsSequencer musicSequencer = originalSequencers.get(0);
+        AtomicInteger fadeCompletions = new AtomicInteger();
+        musicSequencer.setOnFadeComplete(fadeCompletions::incrementAndGet);
+        musicSequencer.triggerFadeIn(2, 1);
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new StopAllSfx(), () -> true, registry::apply);
+        driver.failNextStopAllSfx();
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertSequencerIdentities(originalSequencers,
+                driver.sequencersForTesting());
+        assertTrue(musicSequencer.hasFadeCompleteCallback());
+        assertEquals(1, queue.size());
+
+        queue.applyPending(registry::apply);
+        musicSequencer.advanceBatch(4);
+
+        assertEquals(List.of(musicSequencer),
+                driver.sequencersForTesting());
+        assertEquals(1, fadeCompletions.get());
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void failedMusicOverrideRestorePreservesBothDriversForRetry() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        FailingMutationDriver baseDriver = populatedFailingMutationDriver();
+        FailingMutationDriver overrideDriver = populatedFailingMutationDriver();
+        instantiation.enqueueMusicDriver(baseDriver);
+        instantiation.enqueueMusicDriver(overrideDriver);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(1, 0x82, new SmpsDriver()))));
+        registry.apply(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+                0x83, AudioSourceDescriptor.baseMusic(0x83),
+                composite(2, 0x83, new SmpsDriver()))));
+        SmpsSequencer baseSequencer = baseDriver.firstMusicSequencer();
+        SmpsSequencer overrideSequencer =
+                overrideDriver.firstMusicSequencer();
+        AtomicInteger fadeCompletions = new AtomicInteger();
+        baseSequencer.setOnFadeComplete(fadeCompletions::incrementAndGet);
+        baseSequencer.triggerFadeIn(2, 1);
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new RestoreMusicOverride(), () -> true, registry::apply);
+        overrideDriver.failNextStopAll();
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertSame(baseSequencer, baseDriver.firstMusicSequencer());
+        assertSame(overrideSequencer, overrideDriver.firstMusicSequencer());
+        assertTrue(baseSequencer.hasFadeCompleteCallback());
+        assertEquals(0x83, registry.snapshot().activeMusic().musicId());
+        assertEquals(1, queue.size());
+
+        queue.applyPending(registry::apply);
+        baseSequencer.advanceBatch(4);
+
+        assertSame(baseSequencer, baseDriver.firstMusicSequencer());
+        assertTrue(overrideDriver.sequencersForTesting().isEmpty());
+        assertEquals(0x82, registry.snapshot().activeMusic().musicId());
+        assertEquals(1, fadeCompletions.get());
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void wrongVoiceKindFromSampleStartIsDisposedExactlyOnce() {
+        CountingVoice wrong = new CountingVoice(40, 4);
+        AudioVoiceRegistry registry =
+                registryWithFixedRecreation(wrong);
+
+        assertThrows(IllegalStateException.class,
+                () -> registry.apply(start(sample(40, 4, "sample"))));
+
+        assertEquals(1, wrong.stopCount);
+        assertEquals(0, registry.orderedVoiceCount());
+    }
+
+    @Test
+    void wrongVoiceKindFromRawPcmReplacementIsDisposedExactlyOnce() {
+        CountingVoice wrong = new CountingVoice(41, 0);
+        AudioVoiceRegistry registry =
+                registryWithFixedRecreation(wrong);
+
+        assertThrows(IllegalStateException.class,
+                () -> registry.apply(raw(sample(41, 0, "raw"))));
+
+        assertEquals(1, wrong.stopCount);
+        assertEquals(0, registry.orderedVoiceCount());
+    }
+
+    @Test
+    void wrongVoiceKindFromSampleBackedMusicReplacementIsDisposedExactlyOnce() {
+        CountingVoice wrong = new CountingVoice(42, 0);
+        AudioVoiceRegistry registry =
+                registryWithFixedRecreation(wrong);
+        MusicVoiceEntry entry = music(42, 0x84, "music");
+
+        assertThrows(IllegalStateException.class,
+                () -> registry.apply(new ReplaceMusic(entry)));
+
+        assertEquals(1, wrong.stopCount);
+        assertEquals(0, registry.orderedVoiceCount());
+    }
+
+    @Test
+    void wrongVoiceKindFromSmpsMusicPushIsDisposedExactlyOnce() {
+        CountingVoice wrong = new CountingVoice(43, 0);
+        AudioVoiceRegistry registry =
+                registryWithFixedRecreation(wrong);
+        MusicVoiceEntry entry = MusicVoiceEntry.fromVoice(
+                0x85, AudioSourceDescriptor.baseMusic(0x85),
+                composite(43, 0x85, new SmpsDriver()));
+
+        assertThrows(IllegalStateException.class,
+                () -> registry.apply(new PushMusicOverride(entry)));
+
+        assertEquals(1, wrong.stopCount);
+        assertEquals(0, registry.orderedVoiceCount());
+    }
+
+    @Test
+    void fullOverrideStackRejectsBeforeMaterializationAndRetainsSuccessors() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        registry.apply(new ReplaceMusic(music(1, 0x80, "base")));
+        for (int index = 0;
+             index < AudioPresentationCommandQueue.CAPACITY;
+             index++) {
+            registry.apply(new PushMusicOverride(
+                    music(index + 2L, 0x100 + index,
+                            "override-" + index)));
+        }
+        AudioPresentationSnapshot full = registry.snapshot();
+        instantiation.pcmResolveCount = 0;
+        instantiation.resolvedPcmAssets.clear();
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new PushMusicOverride(
+                        music(1_000, 0x400, "overflow")),
+                () -> true, registry::apply);
+        queue.submit(new ResetRingAlternation(false),
+                () -> true, registry::apply);
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertEquals(full, registry.snapshot());
+        assertEquals(0, instantiation.pcmResolveCount,
+                "capacity must be checked before materializing a voice");
+        assertEquals(2, queue.size(),
+                "the rejected override and its successor remain retryable");
+
+        registry.apply(new RestoreMusicOverride());
+        queue.applyPending(registry::apply);
+
+        AudioPresentationSnapshot retried = registry.snapshot();
+        assertEquals(0x400, retried.activeMusic().musicId());
+        assertEquals(AudioPresentationCommandQueue.CAPACITY,
+                retried.overrideStack().size());
+        assertFalse(retried.ringLeft(),
+                "a successful retry must continue through later commands");
+        assertEquals(1, instantiation.pcmResolveCount);
+        assertEquals(List.of("overflow"), instantiation.resolvedPcmAssets);
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void failedMaterializedOverrideIsDisposedBeforeRetryAndSuccessor() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        registry.apply(new ReplaceMusic(music(1, 0x81, "base")));
+        AudioPresentationSnapshot before = registry.snapshot();
+        FailingControlDriver failing = populatedFailingControlDriver();
+        failing.failNextControl();
+        instantiation.enqueueMusicDriver(failing);
+        instantiation.enqueueMusicDriver(new SmpsDriver());
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+                        0x82, AudioSourceDescriptor.baseMusic(0x82),
+                        composite(2, 0x82, new SmpsDriver()))),
+                () -> true, registry::apply);
+        queue.submit(new ResetRingAlternation(false),
+                () -> true, registry::apply);
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertEquals(before, registry.snapshot(),
+                "a failed push cannot publish its stack or active slot changes");
+        assertTrue(instantiation.lastRecreatedSmps.isComplete(),
+                "the unpublished materialized voice must be disposed");
+        assertEquals(2, queue.size());
+
+        queue.applyPending(registry::apply);
+
+        AudioPresentationSnapshot retried = registry.snapshot();
+        assertEquals(0x82, retried.activeMusic().musicId());
+        assertEquals(1, retried.overrideStack().size());
+        assertFalse(retried.ringLeft());
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void failedMusicReplacementRetainsPrimaryAndSuppressesDisposalFailureThroughRetry() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        registry.apply(new ReplaceMusic(music(1, 0x81, "base")));
+        AudioPresentationSnapshot before = registry.snapshot();
+        instantiation.enqueueMusicDriver(
+                new FailingControlAndStopDriver());
+        instantiation.enqueueMusicDriver(new SmpsDriver());
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                        0x82, AudioSourceDescriptor.baseMusic(0x82),
+                        composite(2, 0x82, new SmpsDriver()))),
+                () -> true, registry::apply);
+        queue.submit(new ResetRingAlternation(false),
+                () -> true, registry::apply);
+
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertPrimaryWithSuppressedDisposal(failure);
+        assertEquals(before, registry.snapshot());
+        assertTrue(instantiation.lastRecreatedSmps.isComplete(),
+                "failed replacement voice must still release its sequencers");
+        assertEquals(2, queue.size());
+
+        queue.applyPending(registry::apply);
+
+        assertEquals(0x82, registry.snapshot().activeMusic().musicId());
+        assertFalse(registry.snapshot().ringLeft());
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void failedMusicOverrideRetainsPrimaryAndSuppressesDisposalFailureThroughRetry() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        registry.apply(new ReplaceMusic(music(1, 0x81, "base")));
+        AudioPresentationSnapshot before = registry.snapshot();
+        instantiation.enqueueMusicDriver(
+                new FailingControlAndStopDriver());
+        instantiation.enqueueMusicDriver(new SmpsDriver());
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+                        0x82, AudioSourceDescriptor.baseMusic(0x82),
+                        composite(2, 0x82, new SmpsDriver()))),
+                () -> true, registry::apply);
+        queue.submit(new ResetRingAlternation(false),
+                () -> true, registry::apply);
+
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertPrimaryWithSuppressedDisposal(failure);
+        assertEquals(before, registry.snapshot());
+        assertTrue(instantiation.lastRecreatedSmps.isComplete(),
+                "failed override voice must still release its sequencers");
+        assertEquals(2, queue.size());
+
+        queue.applyPending(registry::apply);
+
+        assertEquals(0x82, registry.snapshot().activeMusic().musicId());
+        assertEquals(1, registry.snapshot().overrideStack().size());
+        assertFalse(registry.snapshot().ringLeft());
+        assertEquals(0, queue.size());
+    }
+
+    @Test
     void nestedFallbackWavOverridesEndByMusicIdAndRestoreTheirOwnSlotMetadata() {
         AudioVoiceRegistry registry = registry(new RecordingInstantiation(), new ArrayList<>());
         registry.apply(new ReplaceMusic(fallbackMusic(1, 10, "base")));
@@ -770,6 +1308,36 @@ class TestAudioVoiceRegistry {
                 warnings::add);
     }
 
+    private static AudioVoiceRegistry registryWithFixedRecreation(
+            PresentationVoice voice) {
+        AudioPresentationDependencyResolver resolver =
+                new AudioPresentationDependencyResolver() {
+                    @Override
+                    public DecodedPcm resolvePcm(String assetId) {
+                        throw new AssertionError(
+                                "fixed recreation must bypass PCM resolution");
+                    }
+
+                    @Override
+                    public SmpsCompositeVoice recreateSmps(
+                            PresentationVoiceSnapshot.Smps snapshot) {
+                        throw new AssertionError(
+                                "fixed recreation must bypass snapshot restore");
+                    }
+
+                    @Override
+                    public PresentationVoice recreateVoice(
+                            AudioPresentationCommand.VoiceDescriptor descriptor) {
+                        return voice;
+                    }
+                };
+        return new AudioVoiceRegistry(new RecordingInstantiation(), resolver,
+                new SmpsCoordFlagHandlerOwner(
+                        new SmpsCoordFlagRuntimeState()),
+                ignored -> {
+                });
+    }
+
     private static AudioVoiceRegistry fullRegistry(
             RecordingInstantiation instantiation) {
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
@@ -791,6 +1359,78 @@ class TestAudioVoiceRegistry {
             registry.deferRemoval(voice.voiceId());
         }
         return voiceCount;
+    }
+
+    private static void assertFailedToggleIsAtomic(
+            AudioPresentationCommand command,
+            java.util.function.ToIntFunction<AudioPresentationSnapshot>
+                    appliedMask) {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        FailingControlDriver driver = new FailingControlDriver();
+        instantiation.enqueueMusicDriver(driver);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, new SmpsDriver()))));
+        boolean[] fmBefore =
+                driver.captureSynthSnapshot().ym().mutes();
+        boolean[] psgBefore =
+                driver.captureSynthSnapshot().psg().mutes();
+        driver.failNextControl();
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(command, () -> true, registry::apply);
+        queue.submit(new ResetRingAlternation(false),
+                () -> true, registry::apply);
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        AudioPresentationSnapshot failed = registry.snapshot();
+        assertEquals(0, appliedMask.applyAsInt(failed));
+        assertTrue(failed.ringLeft(),
+                "a successor cannot pass a retained failing command");
+        assertArrayEquals(fmBefore,
+                driver.captureSynthSnapshot().ym().mutes());
+        assertArrayEquals(psgBefore,
+                driver.captureSynthSnapshot().psg().mutes());
+        assertEquals(2, queue.size());
+
+        queue.applyPending(registry::apply);
+
+        AudioPresentationSnapshot retried = registry.snapshot();
+        assertEquals(1 << 1, appliedMask.applyAsInt(retried));
+        assertFalse(retried.ringLeft());
+        assertEquals(0, queue.size());
+    }
+
+    private static FailingControlDriver populatedFailingControlDriver() {
+        FailingControlDriver driver = new FailingControlDriver();
+        AudioTestFixtures.StubSmpsData data =
+                new AudioTestFixtures.StubSmpsData("failing-control");
+        data.setId(0x82);
+        driver.addSequencer(new SmpsSequencer(
+                data, dacData(), driver, AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder().build()), false);
+        return driver;
+    }
+
+    private static FailingMutationDriver populatedFailingMutationDriver() {
+        return populatedFailingMutationDriver(dacData());
+    }
+
+    private static FailingMutationDriver populatedFailingMutationDriver(
+            DacData dacData) {
+        FailingMutationDriver driver = new FailingMutationDriver();
+        AudioTestFixtures.StubSmpsData data =
+                new AudioTestFixtures.StubSmpsData("failing-mutation");
+        data.setId(0x82);
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, dacData, driver, AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder().build());
+        sequencer.setSampleRate(60.0);
+        driver.addSequencer(sequencer, false);
+        return driver;
     }
 
     private static MusicVoiceEntry music(long voiceId, int musicId, String asset) {
@@ -838,8 +1478,40 @@ class TestAudioVoiceRegistry {
     }
 
     private static DacData dacData() {
-        return new DacData(Map.of(1, new byte[] {0, 24, 64, 127}),
+        return dacData(new byte[] {0, 24, 64, 127});
+    }
+
+    private static DacData dacData(byte[] samples) {
+        return new DacData(Map.of(1, samples),
                 Map.of(0x81, new DacData.DacEntry(1, 4)), 295);
+    }
+
+    private static void primeDacPlayback(
+            SmpsDriver driver, DacData dacData) {
+        driver.setDacData(dacData);
+        driver.writeFm(driver, 0, 0x2B, 0x80);
+        driver.playDac(driver, 0x81);
+    }
+
+    private static short[] renderFrames(
+            SmpsDriver driver, int frameCount) {
+        short[] samples = new short[frameCount * 2];
+        driver.renderFrames(samples, 0, frameCount);
+        return samples;
+    }
+
+    private static DacData activeDacData(SmpsDriver driver) {
+        try {
+            Field ymField =
+                    VirtualSynthesizer.class.getDeclaredField("ym");
+            ymField.setAccessible(true);
+            Object ym = ymField.get(driver);
+            Field dacField = ym.getClass().getDeclaredField("dacData");
+            dacField.setAccessible(true);
+            return (DacData) dacField.get(ym);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
     }
 
     private static void primeSynth(SmpsDriver driver) {
@@ -883,6 +1555,25 @@ class TestAudioVoiceRegistry {
         return ids;
     }
 
+    private static void assertSequencerIdentities(
+            List<SmpsSequencer> expected,
+            List<SmpsSequencer> actual) {
+        assertEquals(expected.size(), actual.size());
+        for (int index = 0; index < expected.size(); index++) {
+            assertSame(expected.get(index), actual.get(index),
+                    "sequencer identity changed at index " + index);
+        }
+    }
+
+    private static void assertPrimaryWithSuppressedDisposal(
+            IllegalStateException failure) {
+        assertEquals("injected driver control failure",
+                failure.getMessage());
+        assertEquals(1, failure.getSuppressed().length);
+        assertEquals("injected disposal failure",
+                failure.getSuppressed()[0].getMessage());
+    }
+
     private static void mixFrames(AudioVoiceRegistry registry, int frames) {
         AudioPresentationMixer mixer = new AudioPresentationMixer(MAX_STEREO_FRAMES);
         mixer.mix(registry, frames);
@@ -922,7 +1613,7 @@ class TestAudioVoiceRegistry {
         };
     }
 
-    private static final class RecordingInstantiation
+    private static class RecordingInstantiation
             implements SmpsSfxInstantiation, AudioPresentationDependencyResolver {
         private final List<SmpsDriver> musicDrivers = new ArrayList<>();
         private int cachedCalls;
@@ -932,11 +1623,12 @@ class TestAudioVoiceRegistry {
         private int pcmResolveCount;
         private String failingPcmAsset;
         private SmpsDriver lastCachedOwner;
+        private SmpsCompositeVoice lastRecreatedSmps;
         private boolean cacheMiss;
         private boolean failIfCached;
         private boolean standaloneExtends;
 
-        private void enqueueMusicDriver(SmpsDriver driver) {
+        final void enqueueMusicDriver(SmpsDriver driver) {
             musicDrivers.add(driver);
         }
 
@@ -975,10 +1667,11 @@ class TestAudioVoiceRegistry {
                 AudioPresentationCommand.SmpsVoiceDescriptor descriptor) {
             SmpsDriver driver = musicDriverIndex < musicDrivers.size()
                     ? musicDrivers.get(musicDriverIndex++) : new SmpsDriver();
-            return new SmpsCompositeVoice(
+            lastRecreatedSmps = new SmpsCompositeVoice(
                     descriptor.voiceId(), descriptor.priority(),
                     descriptor.musicId(), descriptor.sourceDescriptor(),
                     descriptor.maxStereoFrames(), driver);
+            return lastRecreatedSmps;
         }
 
         @Override
@@ -1002,6 +1695,124 @@ class TestAudioVoiceRegistry {
             RecordingDriver driver = new RecordingDriver(standaloneExtends);
             return new SmpsCompositeVoice(source.standaloneVoiceId(), source.priority(),
                     null, null, source.maxStereoFrames(), driver);
+        }
+    }
+
+    private static final class TransactionalSfxInstantiation
+            extends RecordingInstantiation {
+        private final DacData sfxDac;
+        private final CoordFlagHandler handler;
+
+        private TransactionalSfxInstantiation(
+                DacData sfxDac, CoordFlagHandler handler) {
+            this.sfxDac = sfxDac;
+            this.handler = handler;
+        }
+
+        @Override
+        public SmpsSequencer instantiateCached(
+                ResolvedSmpsSfxSource source,
+                SmpsDriver currentOwner) {
+            SmpsSequencer sequencer = new SmpsSequencer(
+                    new FixtureSfxData(source.assetKey().sfxId()),
+                    sfxDac, currentOwner, AudioManager.getInstance(),
+                    new SmpsSequencerConfig.Builder()
+                            .coordFlagHandler(handler)
+                            .build());
+            sequencer.setSfxPriority(source.priority());
+            return sequencer;
+        }
+    }
+
+    private static final class StandaloneCoordMutationInstantiation
+            extends RecordingInstantiation {
+        private final SmpsCoordFlagRuntimeState state;
+        private boolean failAttachment = true;
+
+        private StandaloneCoordMutationInstantiation(
+                SmpsCoordFlagRuntimeState state) {
+            this.state = state;
+        }
+
+        @Override
+        public SmpsCompositeVoice instantiateStandaloneCached(
+                ResolvedSmpsSfxSource source) {
+            state.setSpindashRevCounter(
+                    state.spindashRevCounter() + 1);
+            FailingMutationDriver driver =
+                    new FailingMutationDriver();
+            if (failAttachment) {
+                driver.failNextSfxAttachment();
+                failAttachment = false;
+            }
+            return new SmpsCompositeVoice(
+                    source.standaloneVoiceId(), source.priority(),
+                    null, null, source.maxStereoFrames(), driver);
+        }
+    }
+
+    private static final class StandaloneConstructionExitInstantiation
+            extends RecordingInstantiation {
+        private final SmpsCoordFlagRuntimeState state;
+        private int calls;
+
+        private StandaloneConstructionExitInstantiation(
+                SmpsCoordFlagRuntimeState state) {
+            this.state = state;
+        }
+
+        @Override
+        public SmpsCompositeVoice instantiateStandaloneCached(
+                ResolvedSmpsSfxSource source) {
+            state.setSpindashRevCounter(
+                    state.spindashRevCounter() + 1);
+            if (calls++ == 0) {
+                throw new IllegalStateException(
+                        "injected standalone construction failure");
+            }
+            return null;
+        }
+    }
+
+    private static final class FixtureSfxData extends AbstractSmpsData
+            implements SmpsSfxData {
+        private FixtureSfxData(int id) {
+            super(new byte[0], 0);
+            setId(id);
+        }
+
+        @Override
+        public int getTickMultiplier() {
+            return 1;
+        }
+
+        @Override
+        public List<? extends SmpsSfxTrack> getTrackEntries() {
+            return List.of();
+        }
+
+        @Override
+        protected void parseHeader() {
+        }
+
+        @Override
+        public byte[] getVoice(int voiceId) {
+            return new byte[0];
+        }
+
+        @Override
+        public byte[] getPsgEnvelope(int id) {
+            return new byte[0];
+        }
+
+        @Override
+        public int read16(int offset) {
+            return 0;
+        }
+
+        @Override
+        public int getBaseNoteOffset() {
+            return 0;
         }
     }
 
@@ -1069,6 +1880,150 @@ class TestAudioVoiceRegistry {
         @Override
         public boolean isComplete() {
             return false;
+        }
+    }
+
+    private static final class FailingControlDriver extends SmpsDriver {
+        private boolean failNextControl;
+
+        private void failNextControl() {
+            failNextControl = true;
+        }
+
+        @Override
+        public void setFmMute(int channel, boolean mute) {
+            super.setFmMute(channel, mute);
+            if (failNextControl && channel == 2) {
+                failNextControl = false;
+                throw new IllegalStateException(
+                        "injected driver control failure");
+            }
+        }
+    }
+
+    private static final class FailingControlAndStopDriver
+            extends SmpsDriver {
+        private boolean failControl = true;
+
+        @Override
+        public void setFmMute(int channel, boolean mute) {
+            super.setFmMute(channel, mute);
+            if (failControl && channel == 2) {
+                failControl = false;
+                throw new IllegalStateException(
+                        "injected driver control failure");
+            }
+        }
+
+        @Override
+        public void stopAll() {
+            super.stopAll();
+            throw new IllegalStateException(
+                    "injected disposal failure");
+        }
+    }
+
+    private static final class FailingMutationDriver extends SmpsDriver {
+        private boolean failNextControl;
+        private boolean failNextSfxAttachment;
+        private boolean failNextStopAll;
+        private boolean failNextStopAllSfx;
+
+        private void failNextControl() {
+            failNextControl = true;
+        }
+
+        private void failNextSfxAttachment() {
+            failNextSfxAttachment = true;
+        }
+
+        private void failNextStopAll() {
+            failNextStopAll = true;
+        }
+
+        private void failNextStopAllSfx() {
+            failNextStopAllSfx = true;
+        }
+
+        @Override
+        public void setFmMute(int channel, boolean mute) {
+            super.setFmMute(channel, mute);
+            if (failNextControl && channel == 2) {
+                failNextControl = false;
+                throw new IllegalStateException(
+                        "injected driver control failure");
+            }
+        }
+
+        @Override
+        public void addSequencer(SmpsSequencer sequencer, boolean sfx) {
+            if (failNextSfxAttachment && sfx) {
+                failNextSfxAttachment = false;
+                throw new IllegalStateException(
+                        "injected SFX attachment failure");
+            }
+            super.addSequencer(sequencer, sfx);
+        }
+
+        @Override
+        public void stopAll() {
+            super.stopAll();
+            if (failNextStopAll) {
+                failNextStopAll = false;
+                throw new IllegalStateException(
+                        "injected stop-all failure");
+            }
+        }
+
+        @Override
+        public void stopAllSfx() {
+            super.stopAllSfx();
+            if (failNextStopAllSfx) {
+                failNextStopAllSfx = false;
+                throw new IllegalStateException(
+                        "injected stop-all-SFX failure");
+            }
+        }
+    }
+
+    private static final class CountingVoice implements PresentationVoice {
+        private final long voiceId;
+        private final int priority;
+        private int stopCount;
+
+        private CountingVoice(long voiceId, int priority) {
+            this.voiceId = voiceId;
+            this.priority = priority;
+        }
+
+        @Override
+        public long voiceId() {
+            return voiceId;
+        }
+
+        @Override
+        public int priority() {
+            return priority;
+        }
+
+        @Override
+        public void mixInto(long[] accumulation, int stereoFrames) {
+        }
+
+        @Override
+        public boolean isComplete() {
+            return stopCount > 0;
+        }
+
+        @Override
+        public void stop() {
+            stopCount++;
+        }
+
+        @Override
+        public PresentationVoiceSnapshot snapshot() {
+            throw new AssertionError(
+                    "wrong-kind voice must never be published");
         }
     }
 

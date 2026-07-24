@@ -128,6 +128,50 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return onFadeComplete != null;
     }
 
+    /**
+     * Identity-preserving state used only to roll back a failed live command.
+     * Rewind snapshots deliberately remain callback-free.
+     */
+    public static final class LiveCommandMutationToken {
+        private final SmpsSequencer owner;
+        private final SmpsSequencerSnapshot snapshot;
+        private final AbstractSmpsData fallbackVoiceData;
+        private final SmpsSourceDescriptor sourceDescriptor;
+        private final Runnable onFadeComplete;
+
+        private LiveCommandMutationToken(
+                SmpsSequencer owner,
+                SmpsSequencerSnapshot snapshot,
+                AbstractSmpsData fallbackVoiceData,
+                SmpsSourceDescriptor sourceDescriptor,
+                Runnable onFadeComplete) {
+            this.owner = owner;
+            this.snapshot = snapshot;
+            this.fallbackVoiceData = fallbackVoiceData;
+            this.sourceDescriptor = sourceDescriptor;
+            this.onFadeComplete = onFadeComplete;
+        }
+    }
+
+    public LiveCommandMutationToken captureLiveCommandMutation() {
+        return new LiveCommandMutationToken(
+                this, captureSnapshot(), fallbackVoiceData,
+                sourceDescriptor, onFadeComplete);
+    }
+
+    public void rollbackLiveCommandMutation(
+            LiveCommandMutationToken token) {
+        Objects.requireNonNull(token, "token");
+        if (token.owner != this) {
+            throw new IllegalArgumentException(
+                    "live command token belongs to another sequencer");
+        }
+        restoreSnapshot(token.snapshot);
+        fallbackVoiceData = token.fallbackVoiceData;
+        sourceDescriptor = token.sourceDescriptor;
+        onFadeComplete = token.onFadeComplete;
+    }
+
     private static class FadeState {
         int steps;
         int delayInit;

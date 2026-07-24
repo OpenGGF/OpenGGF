@@ -775,6 +775,10 @@ public class Ym2612Chip {
         this.dacData = data;
     }
 
+    DacData liveDacDataReference() {
+        return dacData;
+    }
+
     public Snapshot captureSnapshot() {
         ChannelSnapshot[] channelSnapshots = new ChannelSnapshot[channels.length];
         for (int i = 0; i < channels.length; i++) {

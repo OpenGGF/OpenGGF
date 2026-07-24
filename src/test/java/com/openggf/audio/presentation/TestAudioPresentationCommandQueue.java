@@ -180,6 +180,41 @@ class TestAudioPresentationCommandQueue {
     }
 
     @Test
+    void failedApplyRetainsFailingCommandWithoutReplayingAppliedPredecessors() {
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new FadeMusic(1, 1), () -> true, ignored -> {
+        });
+        queue.submit(new FadeMusic(2, 1), () -> true, ignored -> {
+        });
+        queue.submit(new FadeMusic(3, 1), () -> true, ignored -> {
+        });
+        AtomicBoolean failSecond = new AtomicBoolean(true);
+        List<Integer> applied = new ArrayList<>();
+        Consumer<AudioPresentationCommand> flaky = command -> {
+            int steps = ((FadeMusic) command).steps();
+            if (steps == 2 && failSecond.getAndSet(false)) {
+                throw new IllegalStateException("injected apply failure");
+            }
+            applied.add(steps);
+        };
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(flaky));
+
+        assertEquals(List.of(1), applied,
+                "successfully applied commands must not remain queued");
+        assertEquals(2, queue.size(),
+                "the failing command and its successors must remain retryable");
+
+        queue.applyPending(flaky);
+
+        assertEquals(List.of(1, 2, 3), applied,
+                "retry must neither double-apply a predecessor nor lose the failure");
+        assertEquals(0, queue.size());
+    }
+
+    @Test
     void everyAudioCommandVariantHasOneResolvedPresentationCommand() {
         Set<String> resolvedNames = Arrays.stream(AudioPresentationCommand.class.getPermittedSubclasses())
                 .map(Class::getSimpleName)

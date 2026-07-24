@@ -117,12 +117,16 @@ public final class AudioPresentationCommandQueue {
     private void drain(Consumer<AudioPresentationCommand> applier) {
         while (size > 0) {
             AudioPresentationCommand command = entries[0];
+            // Publish before consuming the ledger entry. Registry appliers
+            // resolve/materialize before mutating live state, so a thrown
+            // command remains the first retryable entry while every command
+            // whose apply returned normally is removed exactly once.
+            applier.accept(command);
             int remaining = size - 1;
             if (remaining > 0) {
                 System.arraycopy(entries, 1, entries, 0, remaining);
             }
             entries[--size] = null;
-            applier.accept(command);
         }
     }
 
