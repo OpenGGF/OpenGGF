@@ -58,6 +58,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             S2SpecialStageWriterTests.Register(tests);
             S2RunManifestWriterTests.Register(tests);
             S2RunCaptureRunnerTests.Register(tests);
+            S3KTraceCsvWriterTests.Register(tests);
             SmokeCaptureRunnerTests.Register(tests);
             NoReplacePublisherTests.Register(tests);
             TraceCliTests.Register(tests);

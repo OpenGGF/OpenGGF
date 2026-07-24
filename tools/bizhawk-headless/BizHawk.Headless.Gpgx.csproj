@@ -91,6 +91,8 @@
     <Compile Include="src/Recording/S2TraceCsvWriter.cs" />
     <Compile Include="src/Recording/S2TraceMetadataWriter.cs" />
     <Compile Include="src/Recording/S2Zones.cs" />
+    <Compile Include="src/Recording/S3KRam.cs" />
+    <Compile Include="src/Recording/S3KTraceCsvWriter.cs" />
     <Compile Include="src/Recording/SmokeCaptureRunner.cs" />
   </ItemGroup>
   <ItemGroup>

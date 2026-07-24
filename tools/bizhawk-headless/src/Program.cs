@@ -493,6 +493,19 @@ namespace BizHawk.Headless.Gpgx
                             stderr,
                             openHost);
                     }
+                    if (traceGame != "s2")
+                    {
+                        // Stage-A guard: the S3K locked-on ROM is now
+                        // detected (RomIdentity), but its native trace
+                        // pipeline is not implemented yet. Refuse loudly
+                        // instead of silently running the S2 pipeline
+                        // against S3K RAM.
+                        throw new InvalidOperationException(
+                            "Trace capture for the Sonic 3 & Knuckles"
+                            + " locked-on ROM is not implemented yet;"
+                            + " supported trace ROMs are Sonic 1 World"
+                            + " REV01 and Sonic 2 World REV01.");
+                    }
                     if (options.RunId != null)
                     {
                         return RunS2TraceRun(
