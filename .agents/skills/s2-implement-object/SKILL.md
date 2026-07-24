@@ -47,11 +47,14 @@ Agents should:
    - Search `Sonic2ObjectIds.java` and `Sonic2ObjectRegistryData.java` for ID/name mapping
    - If ambiguous, search the disassembly in `docs/s2disasm/` for object references
 
-2. **Locate disassembly source** - Find the object's ASM file in `docs/s2disasm/_anim/` and `docs/s2disasm/` directories:
+2. **Locate disassembly source** - S2 object code is not split into per-object files; it
+   lives inline in the monolithic `docs/s2disasm/s2.asm`. Jump straight to the label:
    ```bash
-   find docs/s2disasm -name "Obj*.asm" | xargs grep -l "OBJECT_NAME"
+   grep -n '^Obj<XX>:' docs/s2disasm/s2.asm
    ```
-   Common patterns: `ObjXX.asm`, `ObjXX - Name.asm`
+   Mappings and DPLCs are split out under `docs/s2disasm/mappings/`; art under
+   `docs/s2disasm/art/`. (S1 and S3K differ — S1 uses per-object files under
+   `docs/s1disasm/_incObj/`, S3K uses `docs/skdisasm/sonic3k.asm` plus per-zone dirs.)
 
 3. **Analyze the disassembly** to understand:
    - All routines (indexed by `objoff_xx` offsets)

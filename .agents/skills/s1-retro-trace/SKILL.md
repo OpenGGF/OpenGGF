@@ -5,7 +5,13 @@ description: Use when recording Sonic 1 physics traces using stable-retro for tr
 
 # S1 Retro Trace
 
-Record a Sonic 1 physics trace using stable-retro (cross-platform, headless Genesis emulation via Python). Produces identical output to the BizHawk Lua trace recorder: physics.csv, aux_state.jsonl, and metadata.json in the same format consumed by the Java trace replay tests.
+Record a Sonic 1 physics trace using stable-retro (cross-platform, headless Genesis emulation via Python). Produces the same output contract as the BizHawk recorders: physics.csv, aux_state.jsonl, and metadata.json in the format consumed by the Java trace replay tests.
+
+**Scope.** The standard S1 trace and complete-run recorders are BizHawk-based and now run
+through the native harness (`tools/bizhawk-headless/` — see `trace-replay-bug-fixing`).
+Reach for stable-retro when that path doesn't apply: the eight `credits_*` fixtures are
+stable-retro provenance (ROM-internal demo input, no BK2 movie), and it is a useful
+independent cross-check when a BizHawk-side result looks suspect.
 
 ## Inputs
 
@@ -25,46 +31,36 @@ $ARGUMENTS: Zone name, action, or recording mode. Examples:
 
 ### Platform Setup
 
-stable-retro requires a compiled C extension. Pre-built wheels are available for macOS and Linux but **not Windows** — use WSL on Windows.
+stable-retro requires a compiled C extension. Pre-built wheels exist for Linux and macOS but **not Windows**.
 
-#### macOS (native)
+#### Linux / macOS (native)
 
 ```bash
+python3 -m venv ~/retro-env
+source ~/retro-env/bin/activate
 pip install stable-retro numpy
-python -m stable_retro.import /path/to/directory/containing/rom/
+python3 -m stable_retro.import /path/to/directory/containing/rom/
 ```
+
+Then run recorder scripts directly:
+
+```bash
+cd /tmp && source ~/retro-env/bin/activate && \
+    PYTHONPATH="" python3 -u "$(git -C <repo> rev-parse --show-toplevel)/tools/retro/SCRIPT.py" ARGS
+```
+
+**Two traps that cost real time:**
+- Run from a directory *outside* the project. The project root contains
+  `stable-retro-0.9.9/stable_retro/`, which shadows the installed package.
+- Always set `PYTHONPATH=""` for the same reason.
+
+The recorder scripts use `render_mode=None`, so no display server is needed.
 
 #### Windows (via WSL)
 
-stable-retro does not build natively on Windows. Use Ubuntu WSL:
-
-```bash
-# 1. Create a persistent Python venv in WSL
-wsl -d Ubuntu-24.04 -- bash -c 'python3 -m venv ~/retro-env'
-
-# 2. Install stable-retro
-wsl -d Ubuntu-24.04 -- bash -c 'source ~/retro-env/bin/activate && pip install stable-retro numpy'
-
-# 3. Copy the ROM to a WSL-local path (avoids slow /mnt/ I/O)
-wsl -d Ubuntu-24.04 -- bash -c 'mkdir -p /tmp/roms && cp "/mnt/c/Users/farre/IdeaProjects/sonic-engine/Sonic The Hedgehog (W) (REV01) [!].gen" /tmp/roms/'
-
-# 4. Import the ROM
-wsl -d Ubuntu-24.04 -- bash -c 'cd /home && source ~/retro-env/bin/activate && PYTHONPATH="" python3 -m stable_retro.import /tmp/roms'
-```
-
-**Critical WSL notes:**
-- Always `cd /home` (or any non-project dir) before activating the venv. The project root contains `stable-retro-0.9.9/stable_retro/` which shadows the installed package.
-- Always set `PYTHONPATH=""` to prevent the Windows source tree from being picked up.
-- Use `~/retro-env` (not `/tmp/retro-env`) — WSL `/tmp` is volatile.
-- The recorder scripts need `render_mode=None` (already set) since WSL has no display server.
-
-#### Running recorder scripts on Windows (WSL wrapper)
-
-All `python` commands in this skill should be run through WSL on Windows:
-
-```bash
-wsl -d Ubuntu-24.04 -- bash -c 'cd /home && source ~/retro-env/bin/activate && PYTHONPATH="" python3 -u "/mnt/c/Users/farre/IdeaProjects/sonic-engine/tools/retro/SCRIPT.py" ARGS'
-```
+stable-retro does not build natively on Windows — run the commands above inside
+Ubuntu WSL (`wsl -d Ubuntu-24.04 -- bash -c '…'`). Copy the ROM to a WSL-local path first;
+`/mnt/c` I/O is slow. Use `~/retro-env`, not `/tmp/retro-env` — WSL `/tmp` is volatile.
 
 #### ROM SHA-1
 
@@ -126,10 +122,14 @@ python tools/retro/s1_credits_trace_recorder.py \
   --output-dir tools/retro/trace_output/credits_demos/
 ```
 
-**Windows WSL example (all 8):**
+**All 8 in one pass:**
 ```bash
-wsl -d Ubuntu-24.04 -- bash -c 'cd /home && source ~/retro-env/bin/activate && PYTHONPATH="" python3 -u "/mnt/c/Users/farre/IdeaProjects/sonic-engine/tools/retro/s1_credits_trace_recorder.py" --target all --force-mode redirect_level --output-dir /tmp/credits_traces'
+REPO=$(git rev-parse --show-toplevel)
+cd /tmp && source ~/retro-env/bin/activate && PYTHONPATH="" \
+    python3 -u "$REPO/tools/retro/s1_credits_trace_recorder.py" \
+    --target all --force-mode redirect_level --output-dir /tmp/credits_traces
 ```
+On Windows, wrap that in `wsl -d Ubuntu-24.04 -- bash -c '…'`.
 
 ### Verify recording succeeded
 
@@ -155,7 +155,7 @@ DST="src/test/resources/traces/s1/ghz1_fullrun"  # or mz1_fullrun
 cp "$SRC"/{physics.csv,aux_state.jsonl,metadata.json} "$DST/"
 ```
 
-**Credits demos (from WSL output to Windows test resources):**
+**Credits demos:**
 ```bash
 DEST="src/test/resources/traces/s1"
 for pair in \
@@ -169,7 +169,7 @@ for pair in \
   "07_ghz1_credits_demo_2:credits_07_ghz1b"; do
     src_dir="${pair%%:*}"; dest_dir="${pair##*:}"
     mkdir -p "$DEST/$dest_dir"
-    wsl -d Ubuntu-24.04 -- bash -c "cp /tmp/credits_traces/$src_dir/{metadata.json,physics.csv,aux_state.jsonl} '/mnt/c/Users/farre/IdeaProjects/sonic-engine/$DEST/$dest_dir/'"
+    cp /tmp/credits_traces/"$src_dir"/{metadata.json,physics.csv,aux_state.jsonl} "$DEST/$dest_dir/"
 done
 ```
 
@@ -223,7 +223,6 @@ stable-retro ships with savestates for every Sonic 1 zone/act:
 | Shared tracing engine | `tools/retro/trace_core.py` |
 | Dependencies | `tools/retro/requirements.txt` |
 | BizHawk equivalent (Lua) | `tools/bizhawk/s1_trace_recorder.lua` |
-| BizHawk credits (Lua) | `tools/bizhawk/s1_credits_trace_recorder.lua` |
 | GHZ1 test traces | `src/test/resources/traces/s1/ghz1_fullrun/` |
 | MZ1 test traces | `src/test/resources/traces/s1/mz1_fullrun/` |
 | Credits test traces | `src/test/resources/traces/s1/credits_00_ghz1/` through `credits_07_ghz1b/` |
