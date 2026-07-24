@@ -1,7 +1,6 @@
 package com.openggf.audio;
 
 import com.openggf.audio.driver.SmpsDriver;
-import com.openggf.audio.presentation.AudioPresentationCommandQueue;
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
@@ -44,20 +43,24 @@ public final class AudioManagerTestDiagnostics {
     }
 
     /**
-     * Materializes the queued presentation commands at the owner boundary — the
-     * same drain {@code presentFrame(FORWARD)} performs before it renders — then
-     * primes the admitted SMPS composite voice so a stub (data-free) asset
-     * still synthesizes audible FM/PSG/DAC output.
+     * Primes an <em>already admitted</em> SMPS composite voice so a stub
+     * (data-free) asset still synthesizes audible FM/PSG/DAC output.
+     *
+     * <p>This deliberately does <em>not</em> drain the pending presentation
+     * command queue: admission is production behaviour that
+     * {@code presentFrame(...)} performs at the owner boundary, so callers must
+     * present once first. Admitting here instead would make every "the voice
+     * reached the offline registry" assertion self-satisfied. Present
+     * {@code SILENT} for that first drain: it is the same production command
+     * drain, but it does not render, so a data-free stub voice is not swept as
+     * complete before the caller can prime it.
      *
      * @return the primed composite voice, or {@code null} when no SMPS music
-     *         voice was admitted
+     *         voice has been admitted
      */
-    public static SmpsCompositeVoice admitAndPrimeSmpsMusic(AudioManager audio) {
-        AudioPresentationCommandQueue commands =
-                field(audio, "shadowCommands", AudioPresentationCommandQueue.class);
+    public static SmpsCompositeVoice primeAdmittedSmpsMusic(AudioManager audio) {
         AudioVoiceRegistry registry =
                 field(audio, "shadowRegistry", AudioVoiceRegistry.class);
-        commands.applyPending(registry::apply);
         for (int index = 0; index < registry.orderedVoiceCount(); index++) {
             if (registry.orderedVoiceAt(index)
                     instanceof SmpsCompositeVoice composite) {

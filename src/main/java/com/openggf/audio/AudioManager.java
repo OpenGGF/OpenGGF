@@ -329,14 +329,22 @@ public class AudioManager implements MusicRestoreSink {
      * Idempotently closes the offline compatibility lease. Only that lease is
      * detached: the producer, registry, sink, history, rewind state, and any
      * live-recording lease are untouched.
+     *
+     * <p>The handle reference is dropped only after the producer has accepted
+     * the detach. A capture lease can only be released on the producer's owner
+     * thread, so an off-thread call throws with the lease still attached;
+     * clearing the field first would leave this manager believing it holds no
+     * lease while the producer keeps feeding the orphaned one, and would let
+     * the next {@code beginCaptureMode} attach a second lease instead of
+     * rejecting it.
      */
     public synchronized void endCaptureMode() {
         LiveCaptureAudioHandle handle = offlineCaptureHandle;
         if (handle == null) {
             return;
         }
-        offlineCaptureHandle = null;
         handle.close();
+        offlineCaptureHandle = null;
     }
 
     private void configureDeterministicRuntimeForBackend() {

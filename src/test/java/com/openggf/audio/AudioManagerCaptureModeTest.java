@@ -56,6 +56,11 @@ class AudioManagerCaptureModeTest {
     void captureModeProducesPerFramePcmEvenWithNonPresentationBackend() {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();                                 // isolate from other tests
+        // beginCaptureMode now rejects a lease clocked at anything other than
+        // the producer's rate, and that rate comes from the shared
+        // configuration singleton, so pin it rather than inheriting whatever
+        // an earlier class in this JVM fork left behind.
+        SonicConfigurationService.getInstance().resetToDefaults();
         audio.setBackend(new RecordingAudioBackend());      // null backend: no real presentation
 
         audio.beginCaptureMode(48000, 60);
@@ -283,6 +288,60 @@ class AudioManagerCaptureModeTest {
         live.close();
     }
 
+    /**
+     * A capture lease can only be released on the producer's owner thread. A
+     * refused release must leave the manager's view and the producer's lease
+     * list in agreement: dropping the handle reference anyway would orphan a
+     * lease that keeps receiving every presented packet, and would let the next
+     * {@code beginCaptureMode} attach a <em>second</em> lease instead of
+     * rejecting it.
+     */
+    @Test
+    void endCaptureKeepsTheLeaseWhenTheProducerRefusesTheDetach()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        SonicConfigurationService.getInstance().resetToDefaults();
+        audio.setBackend(new RecordingAudioBackend());
+
+        int leasesBefore = AudioManagerTestDiagnostics
+                .producerFingerprint(audio).captureCount();
+        audio.beginCaptureMode(48_000, 60);
+        assertEquals(leasesBefore + 1, AudioManagerTestDiagnostics
+                .producerFingerprint(audio).captureCount());
+
+        Throwable[] offThreadFailure = new Throwable[1];
+        Thread offOwnerThread = new Thread(() -> {
+            try {
+                audio.endCaptureMode();
+            } catch (Throwable failure) {
+                offThreadFailure[0] = failure;
+            }
+        }, "not-the-producer-owner");
+        offOwnerThread.start();
+        offOwnerThread.join();
+
+        assertInstanceOf(IllegalStateException.class, offThreadFailure[0],
+                "the producer refuses an off-owner-thread detach");
+        assertEquals(leasesBefore + 1, AudioManagerTestDiagnostics
+                        .producerFingerprint(audio).captureCount(),
+                "the refused detach left the lease attached to the producer");
+        assertThrows(IllegalStateException.class,
+                () -> audio.beginCaptureMode(48_000, 60),
+                "the manager must still know it holds that lease, so a second"
+                        + " lease is rejected rather than silently attached");
+        assertEquals(800, audio.drainCaptureFrame(new short[800 * 2]),
+                "the still-attached lease is still the manager's lease");
+
+        audio.endCaptureMode();
+
+        assertEquals(leasesBefore, AudioManagerTestDiagnostics
+                        .producerFingerprint(audio).captureCount(),
+                "a retry on the owner thread releases it");
+        assertThrows(IllegalStateException.class,
+                () -> audio.drainCaptureFrame(new short[800 * 2]));
+    }
+
     @Test
     void rejectsSecondLeaseAndRateChangeAfterVoicesHaveBegun() {
         AudioManager audio = AudioManager.getInstance();
@@ -322,6 +381,7 @@ class AudioManagerCaptureModeTest {
         AudioTestFixtures.StubSmpsLoader loader =
                 new AudioTestFixtures.StubSmpsLoader();
         loader.musicResults.put(0x81, smpsData("music", 0x81));
+        loader.musicResults.put(0x82, smpsData("music2", 0x82));
         Rom rom = mock(Rom.class);
         byte[] segaPcm = rampPcm(2_000);
         when(rom.readBytes(0x10, segaPcm.length)).thenReturn(segaPcm);
@@ -335,12 +395,16 @@ class AudioManagerCaptureModeTest {
 
         audio.beginCaptureMode(48_000, 60);
 
-        // 1. SMPS alone must be audible offline. The stub asset carries no
-        //    sequencer data, so prime the admitted composite voice's synthesis
-        //    exactly as the source-parity fixture does before it renders.
+        // 1. SMPS alone must be audible offline. Admission is production work:
+        //    the offline presentation drains the queued command and registers
+        //    the composite voice, and only then is there a voice to prime. A
+        //    SILENT presentation is the production drain that does not also
+        //    render — the stub asset carries no sequencer data, so a FORWARD
+        //    render would sweep the voice as complete before it can be primed.
         audio.playMusic(0x81);
-        assertNotNull(AudioManagerTestDiagnostics.admitAndPrimeSmpsMusic(audio),
-                "SMPS music voice must be admitted offline");
+        audio.presentFrame(PresentationMode.SILENT);
+        assertNotNull(AudioManagerTestDiagnostics.primeAdmittedSmpsMusic(audio),
+                "the offline presentation must admit the SMPS music voice");
         audio.presentFrame(PresentationMode.FORWARD);
         short[] smpsOnly = new short[800 * 2];
         assertEquals(800, audio.drainCaptureFrame(smpsOnly));
@@ -348,12 +412,14 @@ class AudioManagerCaptureModeTest {
                 "SMPS synthesis must reach the offline packet");
 
         // 2. SMPS, fallback WAV SFX, and raw PCM share one registry and one
-        //    final packet.
-        audio.playMusic(0x81);
+        //    final packet. Again the offline presentation is what admits every
+        //    one of them; the test only primes the stub driver's synthesis.
+        audio.playMusic(0x82);
         audio.playSfx("JUMP");
         audio.playSegaPcm();
-        assertNotNull(AudioManagerTestDiagnostics.admitAndPrimeSmpsMusic(audio),
-                "SMPS music voice must be admitted offline");
+        audio.presentFrame(PresentationMode.SILENT);
+        assertNotNull(AudioManagerTestDiagnostics.primeAdmittedSmpsMusic(audio),
+                "the offline presentation must admit the SMPS music voice");
 
         AudioPresentationSnapshot presentation =
                 audio.captureLogicalSnapshot().presentation();

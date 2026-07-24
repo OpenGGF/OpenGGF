@@ -12,6 +12,7 @@ import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.SegaPcmSpec;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.FrameAudioMode;
@@ -39,6 +40,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -252,6 +254,216 @@ class TestTraceCaptureUnifiedAudio {
         audio.endCaptureMode();
     }
 
+    /**
+     * The loop <em>wiring</em> the cadence test above cannot reach.
+     *
+     * <p>{@code driveAndCapture}, {@code driveClip}, and
+     * {@code TraceCaptureSession.stepAndCapture()} all need a GL context, a
+     * ROM, a loaded trace, and (for the tool) ffmpeg, so no test can execute
+     * them. Without this guard, deleting the presentation from a loop body — or
+     * moving it into the per-simulation-step body — leaves every test in this
+     * range green while every captured video goes silent or gains N packets per
+     * frame. This is the same source-structure guard style the repo already
+     * uses for architectural invariants that no runtime test can observe (see
+     * {@code TestAudioPresentationArchitectureGuard},
+     * {@code TestNoDirectMapMutationsInGameplay}).
+     */
+    @Test
+    void captureLoopsWireExactlyOnePresentAndOneDrainPerOuterFrame()
+            throws Exception {
+        // Comments are stripped first so a javadoc {@link ...#present...()}
+        // reference can never stand in for a real call site.
+        String tool = stripComments(Files.readString(Path.of(
+                "src/main/java/com/openggf/tools/TraceCaptureTool.java")));
+        String session = stripComments(Files.readString(Path.of(
+                "src/main/java/com/openggf/tools/TraceCaptureSession.java")));
+
+        // --- the single presentation primitive -----------------------------
+        assertEquals(1, count(tool, "presentHeadlessOuterAudioFrame()"),
+                "the tool presents through exactly one call site");
+        assertTrue(methodBody(tool, "void presentOuterFrame()")
+                        .contains("presentHeadlessOuterAudioFrame()"),
+                "that call site is HeadlessOuterAudioFrames.presentOuterFrame,"
+                        + " which owns the present/drain alternation guard");
+
+        // --- driveAndCapture: present -> render -> grab -> drain -> submit --
+        String driveAndCapture = methodBody(tool, "private long driveAndCapture(");
+        assertEquals(1, count(driveAndCapture, "audioFrames.presentOuterFrame()"),
+                "exactly one presentation per captured outer frame");
+        assertEquals(1, count(driveAndCapture, "audioFrames.drainCaptured("),
+                "exactly one drain of that packet");
+        assertEquals(0, count(driveAndCapture, "audioFrames.discardPresented("));
+        assertOrder(driveAndCapture, "audioFrames.presentOuterFrame()",
+                "grabber.grab()", "audioFrames.drainCaptured(",
+                "recorder.submit(");
+        // Bound to the presented-frame branch, not merely to the loop body: a
+        // presentation hoisted next to driveOneFrame(...) would fire on every
+        // simulation step, including the cursor-only rows that never present.
+        String capturedFrames = blockAfter(driveAndCapture,
+                "shouldCompareGameplayStateForReplay(phase)) {");
+        assertEquals(1, count(capturedFrames, "audioFrames.presentOuterFrame()"),
+                "the presentation belongs to the presented-frame branch");
+        assertEquals(1, count(capturedFrames, "audioFrames.drainCaptured("),
+                "so does its drain");
+
+        // --- driveClip: present once, then drain on BOTH branches ----------
+        String driveClip = methodBody(tool, "private long driveClip(");
+        assertEquals(1, count(driveClip, "audioFrames.presentOuterFrame()"),
+                "one presentation per outer frame the clip treats as presented,"
+                        + " inside or outside the capture window");
+        String presentedFrames = blockAfter(driveClip,
+                "shouldCompareGameplayStateForReplay(phase)) {");
+        assertEquals(1, count(presentedFrames, "audioFrames.presentOuterFrame()"),
+                "the presentation belongs to the presented-frame branch, not to"
+                        + " the per-simulation-step body");
+        assertEquals(1, count(presentedFrames, "audioFrames.drainCaptured("),
+                "the capture window drains that packet exactly once");
+        assertEquals(1, count(presentedFrames, "audioFrames.discardPresented("),
+                "and outside the window it is discarded exactly once, so no"
+                        + " stale packet is carried into the clip");
+        String capturingBranch = blockAfter(driveClip, "if (capturing) {");
+        assertEquals(1, count(capturingBranch, "audioFrames.drainCaptured("),
+                "the capture branch drains the presented packet exactly once");
+        assertEquals(0, count(capturingBranch, "audioFrames.discardPresented("));
+        String fastForwardBranch = driveClip.substring(
+                driveClip.indexOf(capturingBranch) + capturingBranch.length());
+        assertEquals(1, count(fastForwardBranch, "audioFrames.discardPresented("),
+                "the fast-forward branch discards the presented packet exactly"
+                        + " once, so no stale packet reaches the clip start");
+        assertOrder(driveClip, "audioFrames.presentOuterFrame()",
+                "audioFrames.drainCaptured(", "audioFrames.discardPresented(");
+
+        // --- the simulation step itself presents nothing --------------------
+        String driveOneFrame = methodBody(tool, "private boolean driveOneFrame(");
+        for (String forbidden : List.of("audioFrames", "presentOuterFrame",
+                "presentHeadlessOuterAudioFrame", "drainCaptured",
+                "discardPresented")) {
+            assertEquals(0, count(driveOneFrame, forbidden),
+                    "a simulation-only step must not touch audio cadence: "
+                            + forbidden);
+        }
+
+        // --- the session drives the same boundary explicitly ---------------
+        assertEquals(1, count(session, "presentHeadlessOuterAudioFrame()"),
+                "the session presents from exactly one call site");
+        String stepAndCapture =
+                methodBody(session, "public boolean stepAndCapture()");
+        assertEquals(1, count(stepAndCapture,
+                        "HeadlessGameBoot.presentHeadlessOuterAudioFrame()"),
+                "exactly one outer-frame presentation per captured frame");
+        assertEquals(1, count(stepAndCapture, "audioTap.drain("),
+                "exactly one drain of that packet");
+        assertOrder(stepAndCapture, "loop.step()",
+                "HeadlessGameBoot.presentHeadlessOuterAudioFrame()",
+                "grabber.grab()", "audioTap.drain(", "recorder.submit(");
+    }
+
+    private static int count(String source, String needle) {
+        int found = 0;
+        for (int at = source.indexOf(needle); at >= 0;
+                at = source.indexOf(needle, at + needle.length())) {
+            found++;
+        }
+        return found;
+    }
+
+    /** Asserts the needles appear in the given order, each exactly once. */
+    private static void assertOrder(String body, String... needles) {
+        int previous = -1;
+        String previousNeedle = null;
+        for (String needle : needles) {
+            int at = body.indexOf(needle);
+            assertTrue(at >= 0, "missing call: " + needle);
+            assertTrue(at > previous,
+                    needle + " must follow " + previousNeedle);
+            previous = at;
+            previousNeedle = needle;
+        }
+    }
+
+    /** The brace-delimited body of the first declaration matching the head. */
+    private static String methodBody(String source, String declarationHead) {
+        int at = source.indexOf(declarationHead);
+        assertTrue(at >= 0, "declaration not found: " + declarationHead);
+        return blockFrom(source, source.indexOf('{', at));
+    }
+
+    /** The brace-delimited block introduced by the first {@code head}. */
+    private static String blockAfter(String source, String head) {
+        int at = source.indexOf(head);
+        assertTrue(at >= 0, "block not found: " + head);
+        return blockFrom(source, at + head.length() - 1);
+    }
+
+    /**
+     * Brace-matches from {@code openBrace}, skipping braces that appear inside
+     * string/char literals, so the extracted body is the real block rather
+     * than ending at the first stray brace in a message.
+     */
+    private static String blockFrom(String source, int openBrace) {
+        assertTrue(openBrace >= 0 && source.charAt(openBrace) == '{',
+                "expected a block opening brace");
+        int depth = 0;
+        for (int index = openBrace; index < source.length(); index++) {
+            char current = source.charAt(index);
+            if (current == '"' || current == '\'') {
+                index = skipLiteral(source, index, current);
+                continue;
+            }
+            if (current == '{') {
+                depth++;
+            } else if (current == '}' && --depth == 0) {
+                return source.substring(openBrace, index + 1);
+            }
+        }
+        throw new AssertionError("unbalanced block");
+    }
+
+    private static int skipLiteral(String source, int start, char quote) {
+        for (int index = start + 1; index < source.length(); index++) {
+            char current = source.charAt(index);
+            if (current == '\\') {
+                index++;
+            } else if (current == quote) {
+                return index;
+            }
+        }
+        throw new AssertionError("unterminated literal");
+    }
+
+    /** Replaces every comment with a space, leaving literals untouched. */
+    private static String stripComments(String source) {
+        StringBuilder stripped = new StringBuilder(source.length());
+        for (int index = 0; index < source.length(); index++) {
+            char current = source.charAt(index);
+            if (current == '"' || current == '\'') {
+                int end = skipLiteral(source, index, current);
+                stripped.append(source, index, end + 1);
+                index = end;
+                continue;
+            }
+            if (current == '/' && index + 1 < source.length()) {
+                char next = source.charAt(index + 1);
+                if (next == '/') {
+                    int end = source.indexOf('\n', index);
+                    assertTrue(end >= 0, "unterminated line comment");
+                    stripped.append(' ');
+                    index = end - 1;
+                    continue;
+                }
+                if (next == '*') {
+                    int end = source.indexOf("*/", index + 2);
+                    assertTrue(end >= 0, "unterminated block comment");
+                    stripped.append(' ');
+                    index = end + 1;
+                    continue;
+                }
+            }
+            stripped.append(current);
+        }
+        return stripped.toString();
+    }
+
     @Test
     void traceFramesContainFinalSmpsWavAndPcmPackets() throws Exception {
         audio.setBackend(headlessBackend());
@@ -277,8 +489,13 @@ class TestTraceCaptureUnifiedAudio {
         audio.playMusic(0x81);
         audio.playSfx("JUMP");
         audio.playSegaPcm();
-        assertNotNull(AudioManagerTestDiagnostics.admitAndPrimeSmpsMusic(audio),
-                "SMPS music must be admitted into the offline producer");
+        // Admission is production work done by the offline presentation, not
+        // by the test: present once (SILENT drains the command queue without
+        // rendering, so the data-free stub voice is not swept as complete
+        // before it can be primed), then prime the voice it admitted.
+        audio.presentFrame(PresentationMode.SILENT);
+        assertNotNull(AudioManagerTestDiagnostics.primeAdmittedSmpsMusic(audio),
+                "the offline presentation must admit the SMPS music voice");
 
         AudioPresentationSnapshot presentation =
                 audio.captureLogicalSnapshot().presentation();

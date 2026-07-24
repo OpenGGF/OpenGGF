@@ -11,8 +11,10 @@ import com.openggf.audio.SegaPcmSpec;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -28,12 +30,25 @@ class DrainPcmAudioTapTest {
 
     private static final int PCM_ADDRESS = 0x40;
 
+    /**
+     * {@code beginCaptureMode} now rejects a lease whose frame rate is not the
+     * presentation producer's, and the producer takes its rate from the shared
+     * configuration singleton. Surefire reuses forks, so pin the configuration
+     * rather than inheriting whatever an earlier class in this JVM left behind:
+     * these tests hardcode 48 kHz / 60 fps.
+     */
+    @BeforeEach
+    void resetSharedConfiguration() {
+        SonicConfigurationService.getInstance().resetToDefaults();
+    }
+
     @AfterEach
     void tearDown() {
         AudioManager audio = AudioManager.getInstance();
         audio.endCaptureMode();
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
+        SonicConfigurationService.getInstance().resetToDefaults();
     }
 
     @Test

@@ -26,19 +26,24 @@ import static org.lwjgl.opengl.GL11.glFinish;
 /**
  * Ties together a booted {@link GameLoop}, a deterministic {@link TraceReplayDriver},
  * a {@link VideoFrameGrabber}, an {@link AudioFrameTap}, and a {@link CaptureRecorder}
- * into a per-frame capture loop: <em>step → render → grab → submit</em>.
+ * into a per-frame capture loop:
+ * <em>step → present → render → grab → drain → submit</em>.
  *
  * <p>Per frame, {@link #stepAndCapture()}:
  * <ol>
  *   <li>returns {@code false} when {@link TraceReplayDriver#isComplete()} (the
  *       trace has been fully replayed);</li>
- *   <li>advances the game one tick via {@link GameLoop#step()} (audio advances
- *       inside the tick via {@code advanceGameplayAudioFrameForTick});</li>
+ *   <li>advances the game one tick via {@link GameLoop#step()}. A tick only
+ *       enqueues audio commands: {@code GameLoop.step()}/{@code stepInternal()}
+ *       present no audio, so the driver owns the outer-frame audio boundary;</li>
+ *   <li>presents exactly one forward final-PCM packet for this outer
+ *       framebuffer frame via
+ *       {@link HeadlessGameBoot#presentHeadlessOuterAudioFrame()};</li>
  *   <li>renders the LEVEL scene the same way {@code Engine.draw()} does — clear
  *       with the level's background colour, {@code drawWithSpritePriority}, flush,
  *       {@code glFinish};</li>
- *   <li>grabs the back buffer as RGBA, drains the frame's stereo PCM, and submits
- *       a {@link CapturedFrame} to the recorder.</li>
+ *   <li>grabs the back buffer as RGBA, drains that presented packet exactly
+ *       once, and submits a {@link CapturedFrame} to the recorder.</li>
  * </ol>
  *
  * <p>This class assumes a current GL context on the calling thread (the headless
