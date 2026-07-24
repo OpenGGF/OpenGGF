@@ -54,6 +54,14 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             PresentationVoice voice) {
     }
 
+    private record PreparedRestore(
+            MusicSlot activeMusic,
+            MusicSlot[] overrides,
+            SmpsCompositeVoice standaloneSmps,
+            SampleBackedVoice rawPcm,
+            SampleBackedVoice[] sampleSfx) {
+    }
+
     private final Thread ownerThread;
     private final SmpsSfxInstantiation sfxInstantiation;
     private final AudioPresentationDependencyResolver dependencyResolver;
@@ -336,62 +344,39 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         assertOwnerBoundary();
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
-        stopAndRemoveAllVoices();
-
-        coordFlagHandlers.state().restore(snapshot.coordFlagRuntimeState());
+        SmpsCoordFlagRuntimeState.Snapshot previousCoordState =
+                coordFlagHandlers.state().snapshot();
         PresentationVoice[] recreated =
                 new PresentationVoice[snapshot.voices().size()];
-        boolean[] claimed = new boolean[recreated.length];
-        for (int index = 0; index < recreated.length; index++) {
-            PresentationVoiceSnapshot voiceSnapshot = snapshot.voices().get(index);
-            recreated[index] = recreate(voiceSnapshot, resolver);
+        PreparedRestore prepared;
+        try {
+            coordFlagHandlers.state().restore(snapshot.coordFlagRuntimeState());
+            for (int index = 0; index < recreated.length; index++) {
+                PresentationVoiceSnapshot voiceSnapshot =
+                        snapshot.voices().get(index);
+                recreated[index] = recreate(voiceSnapshot, resolver);
+            }
+            prepared = prepareRestore(snapshot, recreated);
+            applyPreparedControls(prepared, snapshot);
+        } catch (RuntimeException failure) {
+            for (PresentationVoice voice : recreated) {
+                if (voice != null) {
+                    voice.stop();
+                }
+            }
+            coordFlagHandlers.state().restore(previousCoordState);
+            throw failure;
         }
 
-        activeMusic = restoreMusicSlot(
-                snapshot.activeMusic(), recreated, claimed);
-        if (snapshot.overrideStack().size() > overrideStack.length) {
-            throw new IllegalArgumentException(
-                    "snapshot override stack exceeds fixed capacity");
-        }
-        for (AudioPresentationSnapshot.MusicSlotSnapshot slot
-                : snapshot.overrideStack()) {
-            overrideStack[overrideCount++] =
-                    restoreMusicSlot(slot, recreated, claimed);
-        }
-
-        if (snapshot.standaloneSmpsVoiceId() != null) {
-            PresentationVoice voice = claimVoice(
-                    snapshot.standaloneSmpsVoiceId(), recreated, claimed);
-            if (!(voice instanceof SmpsCompositeVoice composite)) {
-                throw new IllegalArgumentException(
-                        "standalone SMPS slot does not reference a composite");
-            }
-            standaloneSmps = composite;
-        }
-        if (snapshot.rawPcmVoiceId() != null) {
-            PresentationVoice voice = claimVoice(
-                    snapshot.rawPcmVoiceId(), recreated, claimed);
-            if (!(voice instanceof SampleBackedVoice sample)) {
-                throw new IllegalArgumentException(
-                        "raw PCM slot does not reference a sample voice");
-            }
-            rawPcm = sample;
-        }
-
-        for (int index = 0; index < recreated.length; index++) {
-            if (claimed[index]) {
-                continue;
-            }
-            if (!(recreated[index] instanceof SampleBackedVoice sample)) {
-                throw new IllegalArgumentException(
-                        "unclaimed composite voice in snapshot");
-            }
-            if (sampleSfxCount == sampleSfx.length) {
-                throw new IllegalArgumentException(
-                        "snapshot sample SFX exceeds fixed capacity");
-            }
+        stopAndRemoveAllVoices();
+        activeMusic = prepared.activeMusic();
+        overrideCount = prepared.overrides().length;
+        System.arraycopy(prepared.overrides(), 0, overrideStack, 0,
+                overrideCount);
+        standaloneSmps = prepared.standaloneSmps();
+        rawPcm = prepared.rawPcm();
+        for (SampleBackedVoice sample : prepared.sampleSfx()) {
             insertSampleSorted(sample);
-            claimed[index] = true;
         }
 
         nextVoiceId = snapshot.nextVoiceId();
@@ -404,8 +389,93 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         speedShoesEnabled = snapshot.speedShoesEnabled();
         speedMultiplier = snapshot.speedMultiplier();
         ringLeft = snapshot.ringLeft();
-        applyDriverControls();
         rebuildOrderedVoices();
+    }
+
+    private void applyPreparedControls(
+            PreparedRestore prepared,
+            AudioPresentationSnapshot snapshot) {
+        if (prepared.activeMusic() != null
+                && prepared.activeMusic().voice()
+                instanceof SmpsCompositeVoice composite) {
+            SmpsSequencer sequencer = composite.driver().firstMusicSequencer();
+            if (sequencer != null) {
+                sequencer.setSpeedShoes(snapshot.speedShoesEnabled());
+                sequencer.setSpeedMultiplier(snapshot.speedMultiplier());
+            }
+            applyDriverMasks(composite.driver(), snapshot.fmMuteMask(),
+                    snapshot.fmSoloMask(), snapshot.psgMuteMask(),
+                    snapshot.psgSoloMask());
+        }
+        if (prepared.standaloneSmps() != null) {
+            applyDriverMasks(prepared.standaloneSmps().driver(),
+                    snapshot.fmMuteMask(), snapshot.fmSoloMask(),
+                    snapshot.psgMuteMask(), snapshot.psgSoloMask());
+        }
+    }
+
+    private PreparedRestore prepareRestore(
+            AudioPresentationSnapshot snapshot,
+            PresentationVoice[] recreated) {
+        boolean[] claimed = new boolean[recreated.length];
+        MusicSlot preparedActive = restoreMusicSlot(
+                snapshot.activeMusic(), recreated, claimed);
+        if (snapshot.overrideStack().size() > overrideStack.length) {
+            throw new IllegalArgumentException(
+                    "snapshot override stack exceeds fixed capacity");
+        }
+        MusicSlot[] preparedOverrides =
+                new MusicSlot[snapshot.overrideStack().size()];
+        int preparedOverrideCount = 0;
+        for (AudioPresentationSnapshot.MusicSlotSnapshot slot
+                : snapshot.overrideStack()) {
+            preparedOverrides[preparedOverrideCount++] =
+                    restoreMusicSlot(slot, recreated, claimed);
+        }
+
+        SmpsCompositeVoice preparedStandalone = null;
+        if (snapshot.standaloneSmpsVoiceId() != null) {
+            PresentationVoice voice = claimVoice(
+                    snapshot.standaloneSmpsVoiceId(), recreated, claimed);
+            if (!(voice instanceof SmpsCompositeVoice composite)) {
+                throw new IllegalArgumentException(
+                        "standalone SMPS slot does not reference a composite");
+            }
+            preparedStandalone = composite;
+        }
+        SampleBackedVoice preparedRawPcm = null;
+        if (snapshot.rawPcmVoiceId() != null) {
+            PresentationVoice voice = claimVoice(
+                    snapshot.rawPcmVoiceId(), recreated, claimed);
+            if (!(voice instanceof SampleBackedVoice sample)) {
+                throw new IllegalArgumentException(
+                        "raw PCM slot does not reference a sample voice");
+            }
+            preparedRawPcm = sample;
+        }
+
+        SampleBackedVoice[] preparedSamples =
+                new SampleBackedVoice[recreated.length];
+        int preparedSampleCount = 0;
+        for (int index = 0; index < recreated.length; index++) {
+            if (claimed[index]) {
+                continue;
+            }
+            if (!(recreated[index] instanceof SampleBackedVoice sample)) {
+                throw new IllegalArgumentException(
+                        "unclaimed composite voice in snapshot");
+            }
+            if (preparedSampleCount == sampleSfx.length) {
+                throw new IllegalArgumentException(
+                        "snapshot sample SFX exceeds fixed capacity");
+            }
+            preparedSamples[preparedSampleCount++] = sample;
+            claimed[index] = true;
+        }
+        return new PreparedRestore(
+                preparedActive, preparedOverrides, preparedStandalone,
+                preparedRawPcm,
+                java.util.Arrays.copyOf(preparedSamples, preparedSampleCount));
     }
 
     public void stopTransientVoices() {
@@ -814,6 +884,16 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     private void applyDriverMasks(SmpsDriver driver) {
+        applyDriverMasks(driver, fmMuteMask, fmSoloMask,
+                psgMuteMask, psgSoloMask);
+    }
+
+    private static void applyDriverMasks(
+            SmpsDriver driver,
+            int fmMuteMask,
+            int fmSoloMask,
+            int psgMuteMask,
+            int psgSoloMask) {
         boolean anySolo = fmSoloMask != 0 || psgSoloMask != 0;
         for (int channel = 0; channel < 6; channel++) {
             int bit = 1 << channel;

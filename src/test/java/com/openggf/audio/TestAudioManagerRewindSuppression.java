@@ -211,6 +211,9 @@ class TestAudioManagerRewindSuppression {
         audio.beginReverseAudioPresentation();
         audio.restoreLogicalSnapshot(snapshot);
 
+        assertFalse(preserveBackend.lastPreservePresentationQueue,
+                "held reverse must not partially restore the legacy path");
+        audio.endReverseAudioPresentation();
         assertTrue(preserveBackend.lastPreservePresentationQueue);
     }
 

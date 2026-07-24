@@ -382,6 +382,42 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
+    void failedSnapshotDependencyResolutionDoesNotDestroyLiveRegistry() {
+        AudioVoiceRegistry registry =
+                registry(new RecordingInstantiation(), new ArrayList<>());
+        registry.apply(new ReplaceMusic(music(1, 0x81, "music")));
+        registry.apply(raw(longSample(2, 2, "raw")));
+        mixFrames(registry, 3);
+        AudioPresentationSnapshot before = registry.snapshot();
+        SmpsCoordFlagRuntimeState.Snapshot beforeCoord =
+                before.coordFlagRuntimeState();
+
+        AudioPresentationDependencyResolver failing =
+                new AudioPresentationDependencyResolver() {
+                    @Override
+                    public DecodedPcm resolvePcm(String assetId) {
+                        throw new IllegalStateException("missing " + assetId);
+                    }
+
+                    @Override
+                    public SmpsCompositeVoice recreateSmps(
+                            PresentationVoiceSnapshot.Smps snapshot) {
+                        throw new IllegalStateException("missing SMPS");
+                    }
+                };
+
+        assertThrows(IllegalStateException.class,
+                () -> registry.restore(before, failing));
+        assertEquals(before, registry.snapshot());
+        assertEquals(beforeCoord,
+                registry.snapshot().coordFlagRuntimeState());
+
+        registry.restore(before, new FixtureResolver());
+        assertEquals(before, registry.snapshot(),
+                "a failed restore must leave the prior complete state retryable");
+    }
+
+    @Test
     void snapshotRestoreRecreatesNonEmptySmpsDriverNextPacketsExactly() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry original = registry(instantiation, new ArrayList<>());

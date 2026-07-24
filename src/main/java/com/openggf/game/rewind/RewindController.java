@@ -306,6 +306,9 @@ public final class RewindController {
             dropDeferredAudioRestore();
             restoreAudioLogicalState(currentFrame);
             beginAudioFrame(currentFrame);
+            if (audioManager != null) {
+                audioManager.commitDeferredReverseLogicalRestore();
+            }
             primeStepperAtFrame(currentFrame);
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
         } finally {
@@ -456,6 +459,9 @@ public final class RewindController {
         audioRestoreDeferred = false;
         restoreAudioLogicalState(currentFrame);
         beginAudioFrame(currentFrame);
+        if (audioManager != null) {
+            audioManager.commitDeferredReverseLogicalRestore();
+        }
     }
 
     /**

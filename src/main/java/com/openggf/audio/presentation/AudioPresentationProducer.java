@@ -194,15 +194,15 @@ public final class AudioPresentationProducer {
         if (!reverseActive) {
             return;
         }
+        if (selectedRestore != null) {
+            registry.restore(selectedRestore, selectedRestoreResolver);
+        }
+        registry.stopTransientVoices();
         history.commitReverseCursor(reverseCursor);
         reverseCursor = null;
         reverseActive = false;
-        if (selectedRestore != null) {
-            registry.restore(selectedRestore, selectedRestoreResolver);
-            selectedRestore = null;
-            selectedRestoreResolver = null;
-        }
-        registry.stopTransientVoices();
+        selectedRestore = null;
+        selectedRestoreResolver = null;
         if (hasLastReverseFrame && reverseFrameOutput
                 && crossfadeFrames > 0) {
             releaseCrossfadeRemaining = crossfadeFrames;

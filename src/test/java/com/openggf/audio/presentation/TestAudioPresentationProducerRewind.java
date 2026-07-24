@@ -14,10 +14,12 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestAudioPresentationProducerRewind {
     @Test
@@ -174,6 +176,51 @@ class TestAudioPresentationProducerRewind {
                 "forward", "forward", "reverse-boundary", "reverse",
                 "reverse-boundary", "crossfade", "forward"),
                 fixture.sink.events);
+    }
+
+    @Test
+    void failedReleaseRestoreKeepsCompleteRegistryAndReverseStateForRetry() {
+        Fixture fixture = fixture();
+        fixture.startMusic();
+        fixture.commands.applyPending(fixture.registry::apply);
+        AudioPresentationSnapshot selected = fixture.producer.snapshot();
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        fixture.producer.present(1, PresentationMode.FORWARD);
+        AudioPresentationSnapshot beforeRelease = fixture.producer.snapshot();
+        fixture.producer.beginReverse(1.0);
+        fixture.producer.present(2, PresentationMode.REVERSE);
+
+        AtomicBoolean fail = new AtomicBoolean(true);
+        AudioPresentationDependencyResolver flaky =
+                new AudioPresentationDependencyResolver() {
+                    @Override
+                    public DecodedPcm resolvePcm(String assetId) {
+                        if (fail.getAndSet(false)) {
+                            throw new IllegalStateException("release dependency");
+                        }
+                        return fixture.resolver.resolvePcm(assetId);
+                    }
+
+                    @Override
+                    public SmpsCompositeVoice recreateSmps(
+                            PresentationVoiceSnapshot.Smps snapshot) {
+                        return fixture.resolver.recreateSmps(snapshot);
+                    }
+                };
+        fixture.producer.restore(selected, flaky, true);
+
+        assertThrows(IllegalStateException.class,
+                fixture.producer::endReverse);
+        assertEquals(beforeRelease, fixture.producer.snapshot(),
+                "failed release must leave the complete live registry intact");
+
+        fixture.producer.endReverse();
+        assertEquals(selected, fixture.producer.snapshot(),
+                "the same deferred selection must remain retryable");
+        fixture.producer.present(3, PresentationMode.FORWARD);
+        assertArrayEquals(new short[] {1, 101, 1, 101},
+                fixture.sink.lastPacket(),
+                "history cursor and release crossfade must survive the retry");
     }
 
     @Test
