@@ -682,16 +682,16 @@ namespace BizHawk.Headless.Gpgx
                 {
                     fileNames.Add(segment.DirToken + "/"
                         + CommandLineOptions.TraceOutputFileNames[0]);
-                    contents.Add(segment.PhysicsCsv);
+                    contents.Add(ExpandRunNewlines(segment.PhysicsCsv));
                     fileNames.Add(segment.DirToken + "/"
                         + CommandLineOptions.TraceOutputFileNames[1]);
-                    contents.Add(segment.AuxStateJsonl);
+                    contents.Add(ExpandRunNewlines(segment.AuxStateJsonl));
                     fileNames.Add(segment.DirToken + "/"
                         + CommandLineOptions.TraceOutputFileNames[2]);
-                    contents.Add(segment.MetadataJson);
+                    contents.Add(ExpandRunNewlines(segment.MetadataJson));
                 }
                 fileNames.Add(CommandLineOptions.RunManifestFileName);
-                contents.Add(result.RunManifestJson);
+                contents.Add(ExpandRunNewlines(result.RunManifestJson));
 
                 staged = new NoReplacePublisher().StageAll(
                     options.OutputDirectory,
@@ -756,6 +756,21 @@ namespace BizHawk.Headless.Gpgx
                 ReportFailure(stderr, exception);
                 return 1;
             }
+        }
+
+        /// <summary>
+        /// The canonical run capture ran under Windows EmuHawk, where the
+        /// Lua's text-mode io.open expanded every logical "\n" to "\r\n" in
+        /// every run-mode file it wrote (docs/s2-run-mode-behavior.md §9).
+        /// Run-mode publication reproduces that text-mode encoding so the
+        /// published bytes match the canonical run fixture set; plain trace
+        /// mode remains LF-only per its own canonical fixtures. The empty
+        /// special-stage aux_state.jsonl contains no newlines and passes
+        /// through unchanged.
+        /// </summary>
+        private static string ExpandRunNewlines(string content)
+        {
+            return content.Replace("\n", "\r\n");
         }
 
         internal static int RunTraceCapture<TResult>(

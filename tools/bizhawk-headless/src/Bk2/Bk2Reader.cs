@@ -346,11 +346,16 @@ namespace OpenGGF.BizHawk.Headless
             RequireSyncValue("Region", 0, dto.Region);
             RequireSyncValue("ForceVDP", 0, dto.ForceVDP);
             RequireSyncValue("LoadBIOS", false, dto.LoadBIOS);
-            RequireSyncValue("Overscan", 3, dto.Overscan);
+            // Overscan and Filter are presentation settings (video border
+            // cropping and audio output filtering) that movies legitimately
+            // vary per recording session; they do not affect the emulated
+            // machine state the trace reads. Any value in the core's enum
+            // domain is honored as-is through the sync settings.
+            RequireSyncRange("Overscan", 0, 3, dto.Overscan);
             RequireSyncValue("GGExtra", false, dto.GGExtra);
             RequireSyncValue("SMSFMSoundChip", 1, dto.SMSFMSoundChip);
             RequireSyncValue("GenesisFMSoundChip", 0, dto.GenesisFMSoundChip);
-            RequireSyncValue("Filter", 0, dto.Filter);
+            RequireSyncRange("Filter", 0, 2, dto.Filter);
             RequireSyncValue("LowPassRange", (ushort)26214, dto.LowPassRange);
             RequireSyncValue("LowFreq", (short)880, dto.LowFreq);
             RequireSyncValue("HighFreq", (short)5000, dto.HighFreq);
@@ -535,6 +540,25 @@ namespace OpenGGF.BizHawk.Headless
                 throw new InvalidDataException(
                     "SyncSettings.json is missing "
                     + context + " field " + missing + ".");
+            }
+        }
+
+        private static void RequireSyncRange(
+            string field,
+            int minimum,
+            int maximum,
+            int actual)
+        {
+            if (actual < minimum || actual > maximum)
+            {
+                throw new InvalidDataException(
+                    "SyncSettings.json field " + field + " is "
+                    + actual.ToString(CultureInfo.InvariantCulture)
+                    + "; expected " + minimum.ToString(
+                        CultureInfo.InvariantCulture)
+                    + " to " + maximum.ToString(
+                        CultureInfo.InvariantCulture)
+                    + ".");
             }
         }
 
