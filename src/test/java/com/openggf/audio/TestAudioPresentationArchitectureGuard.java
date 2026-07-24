@@ -1,6 +1,8 @@
 package com.openggf.audio;
 
+import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.runtime.AudioFrameClock;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -17,6 +19,7 @@ import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioPresentationArchitectureGuard {
@@ -54,14 +57,33 @@ class TestAudioPresentationArchitectureGuard {
      * degradation handle continues a detached capture lease at the producer's
      * phase; the parity probe is a read-only presentation-package diagnostic
      * that mirrors — and never drives — that cadence.
+     *
+     * <p>Matched on the repo-relative path, not the bare file name, so a new
+     * production file that merely happens to share one of these names does not
+     * inherit the exemption.
      */
     private static final Set<String> AUDIO_FRAME_CLOCK_OWNERS = Set.of(
-            "AudioPresentationProducer.java",
-            "ClockedSilenceAudioHandle.java",
-            "AudioPresentationParityProbe.java");
+            "audio/presentation/AudioPresentationProducer.java",
+            "audio/ClockedSilenceAudioHandle.java",
+            "audio/presentation/AudioPresentationParityProbe.java");
 
     private static final Set<String> PCM_HISTORY_OWNERS = Set.of(
-            "AudioPresentationProducer.java");
+            "audio/presentation/AudioPresentationProducer.java");
+
+    private static final Set<String> PCM_HISTORY_ITSELF = Set.of(
+            "audio/runtime/PcmHistoryRing.java");
+
+    private static final Set<String> FINAL_PCM_SINK = Set.of(
+            "audio/output/OpenAlPcmSink.java");
+
+    /**
+     * The manager-only reverse-release failure injection. It is consumed on
+     * every reverse release and reset by {@code resetState()}, but a second
+     * production reference could arm it and abort a real held-rewind release,
+     * so exactly one production file may name it.
+     */
+    private static final Set<String> REVERSE_RELEASE_INJECTION_OWNER = Set.of(
+            "audio/AudioManager.java");
 
     private static final List<String> OPENAL_TOKENS = List.of(
             "import org.lwjgl.openal",
@@ -166,12 +188,24 @@ class TestAudioPresentationArchitectureGuard {
                         + "capture handles, and the clocked-silence handle");
         assertEquals(List.of(),
                 productionOffenders("new PcmHistoryRing(",
-                        PCM_HISTORY_OWNERS, Set.of("PcmHistoryRing.java")),
+                        PCM_HISTORY_OWNERS, PCM_HISTORY_ITSELF),
                 "PcmHistoryRing construction outside the producer");
+        // No trailing space: a reintroduced second cursor is at least as likely
+        // to appear as `new PcmHistoryRing.ReverseCursor(...)`, a generic type
+        // argument or a cast as it is as a bare field declaration.
         assertEquals(List.of(),
-                productionOffenders("PcmHistoryRing.ReverseCursor ",
-                        PCM_HISTORY_OWNERS, Set.of("PcmHistoryRing.java")),
+                productionOffenders("PcmHistoryRing.ReverseCursor",
+                        PCM_HISTORY_OWNERS, PCM_HISTORY_ITSELF),
                 "PcmHistoryRing reverse cursor ownership outside the producer");
+
+        // The parity probe is exempted from the clock allow-list only because
+        // it mirrors cadence; bound that exemption by proving its clock never
+        // escapes to drive anything.
+        for (var method : AudioPresentationParityProbe.class.getMethods()) {
+            assertNotEquals(AudioFrameClock.class, method.getReturnType(),
+                    "the parity probe must not hand out its mirror clock: "
+                            + method.getName());
+        }
     }
 
     @Test
@@ -183,6 +217,11 @@ class TestAudioPresentationArchitectureGuard {
         }
         assertEquals(List.of(), offenders.stream().sorted().distinct().toList(),
                 "superseded runtime installation / capture-lease switch tokens");
+
+        assertEquals(List.of(),
+                productionOffenders("failNextReverseRelease",
+                        REVERSE_RELEASE_INJECTION_OWNER, Set.of()),
+                "the reverse-release failure injection is manager-private");
     }
 
     @Test
@@ -219,22 +258,26 @@ class TestAudioPresentationArchitectureGuard {
         List<String> offenders = new ArrayList<>();
         for (String token : OPENAL_TOKENS) {
             offenders.addAll(productionOffenders(
-                    token, Set.of("OpenAlPcmSink.java"), Set.of()));
+                    token, FINAL_PCM_SINK, Set.of()));
         }
         assertEquals(List.of(), offenders.stream().sorted().distinct().toList(),
                 "OpenAL is written to only by the single final-PCM sink");
     }
 
+    /**
+     * @param allowedPaths repo-relative path suffixes (e.g.
+     *                     {@code "audio/presentation/X.java"}) permitted to
+     *                     contain {@code token}; matched on the path so a
+     *                     same-named file elsewhere is not exempted
+     */
     private static List<String> productionOffenders(
-            String token, Set<String> allowedFileNames,
-            Set<String> ignoredFileNames) throws IOException {
+            String token, Set<String> allowedPaths,
+            Set<String> ignoredPaths) throws IOException {
         try (var files = Files.walk(PRODUCTION_ROOT)) {
             return files
                     .filter(path -> path.toString().endsWith(".java"))
-                    .filter(path -> !allowedFileNames.contains(
-                            path.getFileName().toString()))
-                    .filter(path -> !ignoredFileNames.contains(
-                            path.getFileName().toString()))
+                    .filter(path -> !matchesAny(path, allowedPaths))
+                    .filter(path -> !matchesAny(path, ignoredPaths))
                     .filter(path -> {
                         try {
                             return Files.readString(path).contains(token);
@@ -246,6 +289,12 @@ class TestAudioPresentationArchitectureGuard {
                     .sorted()
                     .toList();
         }
+    }
+
+    private static boolean matchesAny(Path path, Set<String> pathSuffixes) {
+        String normalized = path.toString().replace('\\', '/');
+        return pathSuffixes.stream()
+                .anyMatch(suffix -> normalized.endsWith("/" + suffix));
     }
 
     @Test

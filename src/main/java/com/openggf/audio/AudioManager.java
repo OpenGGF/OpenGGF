@@ -1842,21 +1842,40 @@ public class AudioManager implements MusicRestoreSink {
     private void closeShadowPresentation() {
         // Closing the producer closes every lease attached to it, so neither
         // the offline compatibility lease nor the live-recording lease may
-        // outlive its producer. The manager-side live handle is retired here
-        // rather than through closeLiveCaptureAudio: the producer releases the
-        // underlying lease itself on close, and a detach can only be issued on
-        // its owner thread.
-        offlineCaptureHandle = null;
+        // outlive its producer. Both manager-side references are retired here
+        // rather than through closeLiveCaptureAudio/endCaptureMode: the
+        // producer releases the underlying leases itself on close, and a
+        // detach can only be issued on its owner thread.
+        //
+        // Both follow one rule — the reference is dropped exactly when the
+        // producer accepted the detach — because the producer has two distinct
+        // close failure modes:
+        //   * an off-owner-thread close is rejected before anything is
+        //     released, so the manager must keep believing it still holds both
+        //     leases and the caller can retry from the owner thread;
+        //   * a close on the owner thread marks every lease closed and detaches
+        //     it before any teardown step that can throw, so once the producer
+        //     reports itself closed the manager must drop both references even
+        //     if teardown then failed. Keeping a dead handle would refuse every
+        //     later beginCaptureMode/beginLiveCaptureAudio for the rest of the
+        //     process; dropping a live one would let the next lease attach
+        //     twice.
         if (shadowProducer != null) {
-            shadowProducer.close();
-        } else if (presentationSink != null) {
-            presentationSink.close();
+            try {
+                shadowProducer.close();
+            } finally {
+                if (shadowProducer.isClosed()) {
+                    offlineCaptureHandle = null;
+                    retireLiveCaptureAudioHandle();
+                }
+            }
+        } else {
+            offlineCaptureHandle = null;
+            retireLiveCaptureAudioHandle();
+            if (presentationSink != null) {
+                presentationSink.close();
+            }
         }
-        // Retired only after the producer close returned normally, and under
-        // the monitor that every other reader of the handle holds, so a failed
-        // close can never leave the manager believing it holds no lease while
-        // an orphaned one is still attached.
-        retireLiveCaptureAudioHandle();
         presentationSink = null;
         shadowProducer = null;
         shadowFrameRate = 0;

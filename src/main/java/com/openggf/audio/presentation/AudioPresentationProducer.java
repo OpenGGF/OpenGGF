@@ -453,6 +453,16 @@ public final class AudioPresentationProducer {
         previous.close();
     }
 
+    /**
+     * Whether this producer has released its capture leases. {@link #close()}
+     * marks every lease closed and detaches it before any teardown step that
+     * can throw, so an owner may use this to decide whether a failed
+     * {@code close()} still detached the leases it held.
+     */
+    public boolean isClosed() {
+        return closed;
+    }
+
     public void close() {
         assertOwnerThread();
         if (closed) {

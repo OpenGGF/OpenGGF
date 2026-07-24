@@ -7,11 +7,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -20,12 +23,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>There is no runtime to install any more: an {@link AudioBackend} supplies
  * SMPS sources, profile routing and the speaker sink, and the presentation
  * producer owns cadence, final PCM, history and every capture lease.
- * Replacing a backend therefore only replaces the sink (and re-realizes the
- * producer at that sink's rate); the manager-owned logical ledger that decides
- * which voices are played — audio profile, SMPS loader, donor bindings, ring
- * alternation and the command timeline — survives untouched.
+ *
+ * <p>Two different "device swap" paths exist and they are deliberately not
+ * symmetric, so each has its own test here:
+ * <ul>
+ *   <li>{@code setBackend} is a full re-initialization. It closes the producer,
+ *       which tears the voice registry down — sounding voices do <em>not</em>
+ *       survive it. What survives is the manager-owned logical ledger that
+ *       decides which voices get played: donor bindings, ring alternation and
+ *       the command timeline. Both halves are asserted rather than merely
+ *       described, so a future change that starts preserving (or starts
+ *       dropping) either half fails here.</li>
+ *   <li>A speaker device failure mid-session replaces only the sink beneath the
+ *       live producer, so sounding voices must survive it untouched. That is
+ *       the path that would silence live music if it regressed, and it is
+ *       pinned by {@link
+ *       #speakerDeviceFailureReplacesOnlyTheSinkAndPreservesLiveVoices()}.</li>
+ * </ul>
  */
 class TestAudioManagerRuntimeInstallation {
+
+    private static final int MUSIC_ID = 0x81;
 
     @AfterEach
     void tearDown() {
@@ -34,18 +52,25 @@ class TestAudioManagerRuntimeInstallation {
     }
 
     @Test
-    void backendReplacementChangesOnlyTheSinkAndPreservesLogicalVoices()
+    void backendReplacementChangesOnlyTheSinkAndPreservesTheManagerLedger()
             throws Exception {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();
         audio.setBackend(new FixedRateNullBackend(48_000));
+        audio.setAudioProfile(musicProfile());
+        audio.setRom(null);
         audio.registerDonorSound(GameSound.RING, "s3k", 0x2B);
+        audio.playMusic(MUSIC_ID);
         audio.playSfx(GameSound.RING);
-        audio.presentFrame(PresentationMode.FORWARD);
+        audio.presentFrame(PresentationMode.SILENT);
 
         AudioPresentationSink sinkBefore = presentationSink(audio);
         assertEquals(48_000, sinkBefore.sampleRate());
         var logicalBefore = audio.captureLogicalSnapshot();
+        assertFalse(logicalBefore.presentation().voices().isEmpty(),
+                "precondition: a sounding voice exists before the swap");
+        assertNotNull(logicalBefore.presentation().activeMusic(),
+                "precondition: music is playing before the swap");
 
         audio.setBackend(new FixedRateNullBackend(44_100));
 
@@ -68,7 +93,82 @@ class TestAudioManagerRuntimeInstallation {
         assertEquals(logicalBefore.commandTimelineNextOrder(),
                 logicalAfter.commandTimelineNextOrder());
 
+        // The other half of the contract: installing a backend closes the
+        // producer, so the presentation voice registry is rebuilt empty at the
+        // new rate rather than carried over. Pinned explicitly so that a change
+        // which starts carrying voices across a producer rate change (where
+        // their resampling state would no longer match the sink) is caught.
+        assertEquals(List.of(), logicalAfter.presentation().voices(),
+                "closing the producer rebuilds the voice registry empty");
+        assertNull(logicalAfter.presentation().activeMusic(),
+                "no voice survives the producer that owned it");
+
         assertBackendExposesNoPresentationSurface();
+    }
+
+    /**
+     * Losing the speaker device mid-session must swap the sink underneath the
+     * live producer and nothing else — the voices, the active music descriptor
+     * and the manager ledger all keep playing into the replacement sink.
+     */
+    @Test
+    void speakerDeviceFailureReplacesOnlyTheSinkAndPreservesLiveVoices()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new FixedRateNullBackend(48_000));
+        audio.setAudioProfile(musicProfile());
+        audio.setRom(null);
+        audio.registerDonorSound(GameSound.RING, "s3k", 0x2B);
+        audio.playMusic(MUSIC_ID);
+        audio.presentFrame(PresentationMode.SILENT);
+
+        AudioPresentationSink sinkBefore = presentationSink(audio);
+        var before = audio.captureLogicalSnapshot();
+        var producerBefore =
+                AudioManagerTestDiagnostics.producerFingerprint(audio);
+        assertFalse(before.presentation().voices().isEmpty(),
+                "precondition: a sounding voice exists before the failure");
+        assertFalse(producerBefore.voiceIdentities().isEmpty(),
+                "precondition: the producer holds that live voice");
+
+        audio.replaceFailedPresentationSink(
+                new IllegalStateException("speaker device removed"));
+
+        AudioPresentationSink sinkAfter = presentationSink(audio);
+        assertNotSame(sinkBefore, sinkAfter,
+                "a failed speaker is replaced by a fresh sink");
+        assertInstanceOf(NoDeviceAudioSink.class, sinkAfter,
+                "the replacement is the silent no-device sink");
+        assertEquals(48_000, sinkAfter.sampleRate(),
+                "the replacement sink keeps the producer's rate");
+
+        var after = audio.captureLogicalSnapshot();
+        var producerAfter =
+                AudioManagerTestDiagnostics.producerFingerprint(audio);
+        // Identity fingerprints, so this fails if the swap rebuilt, dropped or
+        // reordered even one voice object rather than merely re-pointing the
+        // sink beneath them.
+        assertEquals(producerBefore.voiceIdentities(),
+                producerAfter.voiceIdentities(),
+                "a sink swap must not rebuild, drop or reorder a live voice");
+        assertEquals(producerBefore, producerAfter,
+                "a sink swap must not disturb the producer's clock, history, "
+                        + "capture leases or reverse state");
+        assertEquals(before.presentation().activeMusic(),
+                after.presentation().activeMusic(),
+                "the active music descriptor survives a speaker swap");
+        assertEquals(before.presentation().nextVoiceId(),
+                after.presentation().nextVoiceId());
+        assertEquals(before.donorBindings(), after.donorBindings());
+        assertEquals(before.commandTimelineFrame(),
+                after.commandTimelineFrame());
+
+        // The producer keeps presenting into the replacement sink.
+        audio.presentFrame(PresentationMode.SILENT);
+        assertNotNull(audio.captureLogicalSnapshot().presentation()
+                .activeMusic(),
+                "music keeps playing across a speaker device swap");
     }
 
     @Test
@@ -139,6 +239,28 @@ class TestAudioManagerRuntimeInstallation {
             assertFalse(forbidden.contains(method.getName()),
                     "AudioBackend still exposes " + method.getName());
         }
+    }
+
+    /**
+     * A profile whose SMPS loader resolves {@link #MUSIC_ID}, so the
+     * presentation registry actually holds a sounding music voice and the
+     * voice-preservation claims below are testing something.
+     */
+    private static AudioTestFixtures.StubAudioProfile musicProfile() {
+        AudioTestFixtures.StubSmpsLoader loader =
+                new AudioTestFixtures.StubSmpsLoader();
+        AudioTestFixtures.StubSmpsData music =
+                new AudioTestFixtures.StubSmpsData("backend-swap-music");
+        music.setId(MUSIC_ID);
+        loader.musicResults.put(MUSIC_ID, music);
+        return new AudioTestFixtures.StubAudioProfile(loader) {
+            @Override
+            public com.openggf.audio.smps.SmpsSequencerConfig
+                    getSequencerConfig() {
+                return new com.openggf.audio.smps.SmpsSequencerConfig.Builder()
+                        .build();
+            }
+        };
     }
 
     private static AudioPresentationSink presentationSink(AudioManager audio)

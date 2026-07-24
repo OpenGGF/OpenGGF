@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,6 +38,14 @@ import static org.mockito.Mockito.when;
  * {@code endCaptureMode} attach, read, and detach exactly one non-consuming
  * producer lease; they never replace the producer/registry/sink and never open
  * an audio device.
+ *
+ * <p>"No second history owner" is asserted here against the producer's own
+ * observable history state across each lease operation, not against the
+ * backend's class shape: the structural claim that the retired backend
+ * declares no history ring or reverse cursor at all belongs to {@code
+ * TestAudioPresentationArchitectureGuard
+ * .backendHasNoPresentationHandoffOrReverseCursor}, and a class-shape check
+ * repeated here could not fail as a result of anything these tests do.
  */
 class AudioManagerCaptureModeTest {
 
@@ -119,7 +128,6 @@ class AudioManagerCaptureModeTest {
 
         audio.beginCaptureMode(48_000, 60);
 
-        assertBackendOwnsNoPresentationHistory();
         assertSame(producerBefore, producer(audio),
                 "offline capture must not replace the authoritative producer");
         assertSame(sinkBefore, presentationSink(audio),
@@ -459,14 +467,22 @@ class AudioManagerCaptureModeTest {
         assertInstanceOf(NoDeviceAudioSink.class, sinkBefore,
                 "headless initialization uses the no-device sink");
 
+        PcmHistoryRing.DiagnosticSnapshot historyBefore =
+                AudioManagerTestDiagnostics.producerFingerprint(audio).history();
+
         audio.beginCaptureMode(48_000, 60);
+
+        assertEquals(historyBefore,
+                AudioManagerTestDiagnostics.producerFingerprint(audio).history(),
+                "attaching the offline lease must not allocate or move a "
+                        + "second presentation history");
+
         audio.presentFrame(PresentationMode.FORWARD);
         audio.drainCaptureFrame(new short[800 * 2]);
 
         assertSame(sinkBefore, presentationSink(audio),
                 "offline capture must never open a speaker device");
         assertInstanceOf(NoDeviceAudioSink.class, presentationSink(audio));
-        assertBackendOwnsNoPresentationHistory();
 
         audio.endCaptureMode();
         assertInstanceOf(NoDeviceAudioSink.class, presentationSink(audio));
@@ -484,26 +500,92 @@ class AudioManagerCaptureModeTest {
         try {
             audio.setRewindHistoryArmed(true);
             assertTrue(audio.releaseStateForTesting().producer().historyArmed());
-            assertBackendOwnsNoPresentationHistory();
+            PcmHistoryRing.DiagnosticSnapshot historyBeforeAttach =
+                    AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .history();
 
             audio.beginCaptureMode(48_000, 60);
 
-            assertBackendOwnsNoPresentationHistory();
+            assertEquals(historyBeforeAttach,
+                    AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .history(),
+                    "attaching the offline lease must not replace, resize or "
+                            + "advance the producer's history");
             audio.presentFrame(PresentationMode.FORWARD);
             short[] target = new short[800 * 2];
             assertEquals(800, audio.drainCaptureFrame(target),
                     "48 kHz capture at 60 Hz must produce exactly 800 stereo frames");
 
+            PcmHistoryRing.DiagnosticSnapshot historyBeforeDetach =
+                    AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .history();
             audio.endCaptureMode();
 
             assertTrue(audio.releaseStateForTesting().producer().historyArmed(),
                     "ending offline capture must leave producer history ownership intact");
-            assertBackendOwnsNoPresentationHistory();
+            assertEquals(historyBeforeDetach,
+                    AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .history(),
+                    "detaching the offline lease must not clear or rewind the "
+                            + "producer's history");
         } finally {
             audio.endCaptureMode();
             audio.resetState();
             config.resetToDefaults();
         }
+    }
+
+    /**
+     * The producer rejects a close issued off its owner thread <em>before</em>
+     * it releases anything, so a rejected close must leave both capture leases
+     * held by the manager. Dropping either manager-side reference there would
+     * let the next {@code beginCaptureMode} / {@code beginLiveCaptureAudio}
+     * attach a second lease to a producer that still holds the first, silently
+     * burning the producer's fixed capture slots and leaving an orphaned lease
+     * being fed real packets.
+     */
+    @Test
+    void aRejectedProducerCloseKeepsBothCaptureLeasesHeld() throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        SonicConfigurationService.getInstance().resetToDefaults();
+        // The producer's owner thread is the thread that realizes it, i.e. this
+        // one.
+        audio.setBackend(new RecordingAudioBackend());
+        audio.beginCaptureMode(48_000, 60);
+        LiveCaptureAudioHandle live = audio.beginLiveCaptureAudio(60);
+        int leasesBefore = AudioManagerTestDiagnostics
+                .producerFingerprint(audio).captureCount();
+        assertEquals(2, leasesBefore,
+                "precondition: one offline and one live lease are attached");
+
+        AtomicReference<Throwable> rejection = new AtomicReference<>();
+        Thread offOwner = new Thread(() -> {
+            try {
+                audio.resetState();
+            } catch (Throwable failure) {
+                rejection.set(failure);
+            }
+        }, "off-owner-audio-close");
+        offOwner.start();
+        offOwner.join();
+
+        assertInstanceOf(IllegalStateException.class, rejection.get(),
+                "an off-owner-thread producer close must be rejected");
+        assertEquals(leasesBefore, AudioManagerTestDiagnostics
+                        .producerFingerprint(audio).captureCount(),
+                "a rejected close releases no lease");
+        assertThrows(IllegalStateException.class,
+                () -> audio.beginLiveCaptureAudio(60),
+                "the live lease is still held, so a second attach is refused");
+        assertThrows(IllegalStateException.class,
+                () -> audio.beginCaptureMode(48_000, 60),
+                "the offline lease is still held, so a second attach is "
+                        + "refused");
+
+        // The owner thread can still complete the close afterwards.
+        audio.resetState();
+        live.close();
     }
 
     private static boolean hasSampleAsset(
@@ -561,23 +643,6 @@ class AudioManagerCaptureModeTest {
         Field field = AudioManager.class.getDeclaredField("shadowProducer");
         field.setAccessible(true);
         return field.get(audio);
-    }
-
-    /**
-     * The presentation producer is the only owner of rewind PCM history. The
-     * retired backend must not declare a history ring at all, so offline
-     * capture cannot re-establish a second history owner.
-     */
-    private static void assertBackendOwnsNoPresentationHistory() {
-        for (Field field
-                : AbstractSmpsAudioBackend.class.getDeclaredFields()) {
-            assertFalse(
-                    PcmHistoryRing.class.isAssignableFrom(field.getType())
-                            || PcmHistoryRing.ReverseCursor.class
-                                    .isAssignableFrom(field.getType()),
-                    "backend still declares presentation history field "
-                            + field.getName());
-        }
     }
 
     private record CaptureModeProfile(SmpsLoader loader, SegaPcmSpec spec)
