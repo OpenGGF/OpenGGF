@@ -3,6 +3,7 @@ package com.openggf.game.rewind;
 import com.openggf.audio.AudioBenchmarkMemoryProbe;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
@@ -29,11 +30,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * Measurement harness, not a regression test: quantifies the per-step cost of
  * held-rewind backward stepping with the REAL synth-stack audio backend
- * ({@link HeadlessSmpsAudioBackend} + the capture-pipeline deterministic
- * runtime), which the NullAudioBackend probes cannot measure (no synthesis,
- * no SmpsDriver snapshot/restore cost).
+ * ({@link HeadlessSmpsAudioBackend} + the unified presentation producer and its
+ * offline capture lease), which the NullAudioBackend probes cannot measure (no
+ * synthesis, no SmpsDriver snapshot/restore cost).
  *
- * <p>Scenario per repetition: real backend + capture runtime, ROM-loaded EHZ
+ * <p>Scenario per repetition: real backend + offline capture lease, ROM-loaded EHZ
  * music started on frame 1, 120 forward frames (each synthesizing and
  * draining one 60 fps capture frame), then reverse audio presentation, then
  * 60 timed {@code stepBackward()} calls (wall ns per step + ThreadMXBean
@@ -113,9 +114,9 @@ class TestHeldRewindAudioStepCost {
         audio.resetState();
         audio.setAudioProfile(new Sonic2AudioProfile());
         audio.setRom(rom);
-        // Backend BEFORE beginCaptureMode: setBackend reconfigures the
-        // deterministic runtime, which would otherwise evict the capture
-        // runtime (mirrors the TraceCaptureSession boot order).
+        // Backend BEFORE beginCaptureMode: setBackend rebuilds the
+        // presentation producer, which would otherwise drop the offline
+        // capture lease (mirrors the TraceCaptureSession boot order).
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         audio.setBackend(new HeadlessSmpsAudioBackend(config, PerformanceProfiler.getInstance()));
         assertTrue(audio.getBackend() instanceof HeadlessSmpsAudioBackend,
@@ -132,7 +133,7 @@ class TestHeldRewindAudioStepCost {
                 // only; rewind replay re-steps must stay silent (commands are
                 // suppressed and presentation reads PCM history instead).
                 if (!audio.isRewindReplaySuppressed()) {
-                    audio.advanceGameplayFrameAudio();
+                    audio.presentFrame(PresentationMode.FORWARD);
                     audio.drainCaptureFrame(drainScratch);
                 }
             };
@@ -148,8 +149,8 @@ class TestHeldRewindAudioStepCost {
                 controller.step();
             }
             assertTrue(controller.currentFrame() == FORWARD_FRAMES, "forward play must reach frame " + FORWARD_FRAMES);
-            assertNotNull(audio.captureLogicalSnapshot().backend().musicDriver(),
-                    "music driver must be live in the backend snapshot (real synthesis engaged)");
+            assertNotNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
+                    "music voice must be live in the presentation snapshot (real synthesis engaged)");
 
             audio.beginReverseAudioPresentation();
 

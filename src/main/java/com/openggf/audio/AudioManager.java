@@ -74,8 +74,12 @@ public class AudioManager implements MusicRestoreSink {
     private int rewindReplaySuppressionDepth;
     private final AudioCommandTimeline commandTimeline = new AudioCommandTimeline();
     private DeterministicAudioRuntime deterministicAudioRuntime = NoOpDeterministicAudioRuntime.INSTANCE;
-    private DeterministicAudioRuntime preCaptureRuntime;
-    private StreamBackedDeterministicAudioRuntime captureRuntime;
+    /**
+     * Single offline-capture compatibility lease over the authoritative
+     * producer. It is an ordinary non-consuming capture handle: it never
+     * replaces the producer, registry, sink, or deterministic runtime.
+     */
+    private LiveCaptureAudioHandle offlineCaptureHandle;
     private ManagerLiveCaptureAudioHandle activeLiveCaptureAudioHandle;
     private boolean deterministicRuntimeExplicitlyConfigured;
     private boolean audioFrameOwnedExternally;
@@ -233,50 +237,71 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     /**
-     * Force-installs a deterministic streaming runtime for offline capture,
-     * independent of {@code backend.supportsDeterministicRuntimePresentation()}.
-     * Drive {@link #advanceGameplayFrameAudio()} each frame, then
-     * {@link #drainCaptureFrame}.
+     * Offline-capture compatibility entry point. Attaches exactly one
+     * non-consuming capture lease to the already-authoritative presentation
+     * producer, so headless capture renders the same final SMPS/WAV/raw-PCM
+     * packets the speaker path renders. It never installs a deterministic
+     * runtime, replaces the producer/registry/sink, or opens an audio device.
+     *
+     * <p>{@code sampleRate} must equal the producer's rate: the producer owns
+     * the clock, history, and every voice cursor, so a rate change after
+     * sources have been admitted is rejected rather than migrated. Callers
+     * that need a different rate must initialize the headless producer at that
+     * rate (via its backend/sink) before admitting sources.
+     *
+     * <p>Presentation itself remains the caller's outer-frame responsibility:
+     * drive exactly one {@link #presentFrame(PresentationMode)} per presented
+     * outer frame, then {@link #drainCaptureFrame} that packet once.
      */
-    public void beginCaptureMode(int sampleRate, int frameRate) {
-        preCaptureRuntime = this.deterministicAudioRuntime;
-        int minFrameCapacity = Math.max(1, sampleRate / Math.max(1, frameRate));
-        int fifoFrames = Math.max(minFrameCapacity, sampleRate * OUTPUT_FIFO_SECONDS);
-        int historyFrames = Math.max(minFrameCapacity, configuredPcmHistoryFrames(sampleRate));
-        int crossfadeFrames = Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000);
-        captureRuntime = new StreamBackedDeterministicAudioRuntime(
-                new AudioFrameClock(sampleRate, frameRate),
-                new AudioOutputFifo(fifoFrames),
-                new PcmHistoryRing(historyFrames),
-                crossfadeFrames);
-        applyDeterministicAudioRuntime(captureRuntime);
+    public synchronized void beginCaptureMode(int sampleRate, int frameRate) {
+        if (offlineCaptureHandle != null) {
+            throw new IllegalStateException(
+                    "An offline capture lease is already attached");
+        }
+        if (frameRate <= 0) {
+            throw new IllegalArgumentException("frameRate must be positive");
+        }
+        ensureShadowPresentation();
+        // ensureShadowPresentation guarantees the presentation sink and the
+        // producer share one sample rate (a mismatched sink is replaced before
+        // the producer is built, and replaceSink rejects an incompatible one),
+        // so the sink rate is the producer rate.
+        int producerSampleRate = outputSampleRate();
+        if (sampleRate != producerSampleRate) {
+            throw new IllegalArgumentException(
+                    "offline capture sample rate " + sampleRate
+                            + " does not match the presentation producer rate "
+                            + producerSampleRate);
+        }
+        offlineCaptureHandle = shadowProducer.attachCapture(frameRate);
     }
 
     /**
-     * Drains the current frame's presentation PCM into {@code target} and
-     * returns the stereo-frame count produced by the most recent NORMAL
-     * audio frame (never re-advances the clock).
+     * Copies the most recently presented packet into {@code target} and
+     * returns its clocked stereo-frame count. The lease is non-consuming with
+     * respect to the speaker and any live-recording lease; a second drain
+     * within the same presented frame yields fresh clocked silence rather than
+     * stale PCM.
      */
-    public int drainCaptureFrame(short[] target) {
-        if (captureRuntime == null) {
+    public synchronized int drainCaptureFrame(short[] target) {
+        if (offlineCaptureHandle == null) {
             throw new IllegalStateException("beginCaptureMode() not called");
         }
-        // Drain exactly what the most recent NORMAL advanceFrame produced, and
-        // report the ACTUAL drained count. Returning the requested size would
-        // mask an underrun (FIFO short) or a double-drain (FIFO already empty).
-        int requested = captureRuntime.lastProducedFrames();
-        return captureRuntime.drainPcm(target, requested);
+        return offlineCaptureHandle.drainPresentationFrame(target);
     }
 
-    /** Restores the runtime that was active before {@link #beginCaptureMode}. */
-    public void endCaptureMode() {
-        if (captureRuntime == null) {
+    /**
+     * Idempotently closes the offline compatibility lease. Only that lease is
+     * detached: the producer, registry, sink, history, rewind state, and any
+     * live-recording lease are untouched.
+     */
+    public synchronized void endCaptureMode() {
+        LiveCaptureAudioHandle handle = offlineCaptureHandle;
+        if (handle == null) {
             return;
         }
-        applyDeterministicAudioRuntime(
-                preCaptureRuntime != null ? preCaptureRuntime : NoOpDeterministicAudioRuntime.INSTANCE);
-        captureRuntime = null;
-        preCaptureRuntime = null;
+        offlineCaptureHandle = null;
+        handle.close();
     }
 
     private void configureDeterministicRuntimeForBackend() {
@@ -2010,6 +2035,9 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void closeShadowPresentation() {
+        // Closing the producer closes every lease attached to it, so the
+        // offline compatibility lease must never outlive its producer.
+        offlineCaptureHandle = null;
         if (shadowProducer != null) {
             shadowProducer.close();
         } else if (presentationSink != null) {

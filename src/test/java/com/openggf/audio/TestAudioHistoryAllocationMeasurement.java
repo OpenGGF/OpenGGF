@@ -1,7 +1,6 @@
 package com.openggf.audio;
 
 import com.openggf.audio.runtime.PcmHistoryRing;
-import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.PerformanceProfiler;
@@ -71,9 +70,9 @@ class TestAudioHistoryAllocationMeasurement {
             }
             for (AllocationRun run : captureRuns) {
                 assertEquals(historyCapacityFrames, run.historyCapacityFrames(),
-                        "capture runtime must own the same effective history capacity");
+                        "offline capture must reuse the producer history capacity");
                 assertEquals(structuralPcmBytes, run.structuralPcmBytes(),
-                        "capture runtime must own exactly one equivalent PCM history ring");
+                        "offline capture must reuse exactly one PCM history ring");
             }
 
             System.out.printf(Locale.ROOT,
@@ -139,8 +138,9 @@ class TestAudioHistoryAllocationMeasurement {
                     probe.measureTimedRun(() -> audio.beginCaptureMode(SAMPLE_RATE, FRAME_RATE));
             assertNull(history(backend),
                     "offline capture must not reactivate backend history");
-            PcmHistoryRing captureHistory = captureRuntimeHistory(audio);
-            assertNotNull(captureHistory, "capture runtime must own a PCM history ring");
+            PcmHistoryRing captureHistory = captureLeaseHistory(audio);
+            assertNotNull(captureHistory,
+                    "the presentation producer must own a PCM history ring");
             return allocationRun(measurement, captureHistory);
         } finally {
             cleanupAudio(audio);
@@ -181,16 +181,20 @@ class TestAudioHistoryAllocationMeasurement {
         return (PcmHistoryRing) field.get(backend);
     }
 
-    private static PcmHistoryRing captureRuntimeHistory(AudioManager audio) throws Exception {
-        Field runtimeField = AudioManager.class.getDeclaredField("captureRuntime");
-        runtimeField.setAccessible(true);
-        StreamBackedDeterministicAudioRuntime runtime =
-                (StreamBackedDeterministicAudioRuntime) runtimeField.get(audio);
-        assertNotNull(runtime, "capture runtime must be installed during capture measurement");
+    /**
+     * Offline capture no longer installs its own streaming runtime: it attaches
+     * one non-consuming lease to the authoritative presentation producer, which
+     * already owns the single PCM history ring. Measure that ring.
+     */
+    private static PcmHistoryRing captureLeaseHistory(AudioManager audio) throws Exception {
+        Field producerField = AudioManager.class.getDeclaredField("shadowProducer");
+        producerField.setAccessible(true);
+        Object producer = producerField.get(audio);
+        assertNotNull(producer, "the presentation producer must own capture history");
 
-        Field historyField = StreamBackedDeterministicAudioRuntime.class.getDeclaredField("pcmHistory");
+        Field historyField = producer.getClass().getDeclaredField("history");
         historyField.setAccessible(true);
-        return (PcmHistoryRing) historyField.get(runtime);
+        return (PcmHistoryRing) historyField.get(producer);
     }
 
     private static int capacityFrames(PcmHistoryRing history) throws Exception {

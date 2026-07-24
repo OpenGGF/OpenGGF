@@ -86,8 +86,12 @@ public final class TraceCaptureSession {
     }
 
     /**
-     * Installs deterministic audio capture mode and opens the recorder. Must be
-     * called once before the first {@link #stepAndCapture()}.
+     * Takes the offline audio-capture lease on the unified presentation
+     * producer and opens the recorder. The lease is taken first so the very
+     * first presented outer frame is already observable by the tap; it is a
+     * non-consuming view, so it neither replaces the producer nor opens an
+     * audio device. Must be called once before the first
+     * {@link #stepAndCapture()}.
      */
     public void start(int width, int height, int sampleRate) throws CaptureException {
         if (width != this.width || height != this.height) {
@@ -114,33 +118,44 @@ public final class TraceCaptureSession {
             return false;
         }
 
-        // 1. Advance the game one tick. Audio advances inside the tick via
-        //    GameLoop.advanceGameplayAudioFrameForTick(...).
+        // 1. Advance the game one tick. GameLoop.step()/stepInternal() never
+        //    present audio, so a tick only enqueues audio commands.
         loop.step();
 
-        // 2. Render the LEVEL scene the same way Engine.draw() does for the
+        // 2. Present exactly one final-PCM packet for this outer framebuffer
+        //    frame. This is the only audio cadence in the capture loop.
+        HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+
+        // 3. Render the LEVEL scene the same way Engine.draw() does for the
         //    default (non-debug) LEVEL path.
         renderFrame();
 
-        // 3. Grab the rendered back buffer as RGBA (bottom-up; ffmpeg vflip
+        // 4. Grab the rendered back buffer as RGBA (bottom-up; ffmpeg vflip
         //    corrects orientation downstream).
         byte[] rgba = grabber.grab();
 
-        // 4. Drain this frame's stereo PCM.
+        // 5. Drain that presented packet exactly once, after the grab.
         int sampleCount = audioTap.drain(pcmBuffer);
 
-        // 5. Submit the captured frame.
+        // 6. Submit the captured frame.
         recorder.submit(new CapturedFrame(rgba, width, height,
                 pcmBuffer, sampleCount, frameIndex++));
         return true;
     }
 
-    /** Finalizes the recording and tears down audio capture mode. */
+    /**
+     * Finalizes the recording and releases the offline capture lease. The
+     * recorder is stopped first, then the lease is released unconditionally —
+     * a failing stop must not leak a lease onto the producer.
+     */
     public Path finish() throws CaptureException {
         try {
-            return recorder.stop();
+            try {
+                return recorder.stop();
+            } finally {
+                TraceGhostHook.clear(ghostHook);
+            }
         } finally {
-            TraceGhostHook.clear(ghostHook);
             GameServices.audio().endCaptureMode();
         }
     }

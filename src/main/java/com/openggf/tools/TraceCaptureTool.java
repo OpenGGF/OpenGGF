@@ -251,26 +251,82 @@ public final class TraceCaptureTool {
 
         GlReadPixelsGrabber grabber = new GlReadPixelsGrabber(SCREEN_WIDTH, SCREEN_HEIGHT);
         DrainPcmAudioTap audioTap = new DrainPcmAudioTap(GameServices.audio());
+        // The offline lease is a non-consuming view of the already-authoritative
+        // presentation producer, so its rate is the producer's rate. Take it
+        // before the recorder opens so the first presented packet is observable.
         int sampleRate = GameServices.audio().outputSampleRate();
         GameServices.audio().beginCaptureMode(sampleRate, args.fps());
         recorder.start(SCREEN_WIDTH, SCREEN_HEIGHT, args.fps(), sampleRate);
+        HeadlessOuterAudioFrames audioFrames =
+                new HeadlessOuterAudioFrames(audioTap);
 
         long captured = 0;
         try {
             captured = args.clip() != null
-                    ? driveClip(trace, frameDriver, replayStart, grabber, audioTap,
+                    ? driveClip(trace, frameDriver, replayStart, grabber, audioFrames,
                             recorder, args.clip(), args.tailFrames())
                     : driveAndCapture(trace, meta, frameDriver, replayStart,
-                            loop, grabber, audioTap, recorder);
+                            loop, grabber, audioFrames, recorder);
         } finally {
-            Path out = recorder.stop();
-            GameServices.audio().endCaptureMode();
-            System.out.println("Captured " + captured + " frames -> " + out.toAbsolutePath());
-            if (Files.isRegularFile(out)) {
-                System.out.println("Output size: " + Files.size(out) + " bytes");
+            try {
+                Path out = recorder.stop();
+                System.out.println("Captured " + captured + " frames -> " + out.toAbsolutePath());
+                if (Files.isRegularFile(out)) {
+                    System.out.println("Output size: " + Files.size(out) + " bytes");
+                }
+            } finally {
+                GameServices.audio().endCaptureMode();
             }
         }
         return boot;
+    }
+
+    /**
+     * Owns the headless capture loop's audio cadence: exactly one final-PCM
+     * presentation and exactly one drain of that packet per outer framebuffer
+     * frame the driver treats as presented.
+     *
+     * <p>Simulation-only fast-forward steps must not touch this object — they
+     * may enqueue audio commands, but presenting per simulation step would
+     * multiply the audio cadence by the number of steps. Conversely every
+     * presented frame must be drained exactly once (captured during the window,
+     * discarded outside it) so no stale packet is carried into the clip.
+     */
+    static final class HeadlessOuterAudioFrames {
+        private final DrainPcmAudioTap audioTap;
+        private final short[] discardBuffer = new short[16384];
+        private int presentedFrames;
+        private int drainedFrames;
+
+        HeadlessOuterAudioFrames(DrainPcmAudioTap audioTap) {
+            this.audioTap = audioTap;
+        }
+
+        /** Presents this outer frame's packet. Call once per presented frame. */
+        void presentOuterFrame() {
+            HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+            presentedFrames++;
+        }
+
+        /** Drains the presented packet into the recorder's PCM buffer. */
+        int drainCaptured(short[] target) {
+            drainedFrames++;
+            return audioTap.drain(target);
+        }
+
+        /** Drains and discards the presented packet during fast-forward. */
+        int discardPresented() {
+            drainedFrames++;
+            return audioTap.drain(discardBuffer);
+        }
+
+        int presentedFrames() {
+            return presentedFrames;
+        }
+
+        int drainedFrames() {
+            return drainedFrames;
+        }
     }
 
     /**
@@ -283,7 +339,7 @@ public final class TraceCaptureTool {
                                  TraceReplayBootstrap.ReplayStartState replayStart,
                                  GameLoop loop,
                                  GlReadPixelsGrabber grabber,
-                                 DrainPcmAudioTap audioTap,
+                                 HeadlessOuterAudioFrames audioFrames,
                                  CaptureRecorder recorder) throws Exception {
         short[] pcmBuffer = new short[16384];
         long frameIndex = 0;
@@ -301,9 +357,10 @@ public final class TraceCaptureTool {
             boolean stepped = driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
 
             if (stepped && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+                audioFrames.presentOuterFrame();
                 renderFrame();
                 byte[] rgba = grabber.grab();
-                int sampleCount = audioTap.drain(pcmBuffer);
+                int sampleCount = audioFrames.drainCaptured(pcmBuffer);
                 recorder.submit(new CapturedFrame(rgba, SCREEN_WIDTH, SCREEN_HEIGHT,
                         pcmBuffer, sampleCount, frameIndex++));
             }
@@ -327,7 +384,8 @@ public final class TraceCaptureTool {
      */
     private long driveClip(TraceData trace, RecordingFrameDriver frameDriver,
                            TraceReplayBootstrap.ReplayStartState replayStart,
-                           GlReadPixelsGrabber grabber, DrainPcmAudioTap audioTap,
+                           GlReadPixelsGrabber grabber,
+                           HeadlessOuterAudioFrames audioFrames,
                            CaptureRecorder recorder, String clipName, int tailFrames)
             throws Exception {
         if (!"aiz-battleship-to-boss".equals(clipName)) {
@@ -344,7 +402,6 @@ public final class TraceCaptureTool {
         }
 
         short[] pcmBuffer = new short[16384];
-        short[] discardBuffer = new short[16384];
         long frameIndex = 0;          // captured (submitted) frame count
         boolean capturing = false;
         long fadeBaseline = -1;
@@ -372,10 +429,13 @@ public final class TraceCaptureTool {
                                 + driveFrame.frame());
                     }
                 }
+                // Exactly one presentation per outer frame the clip treats as
+                // presented, whether or not the capture window is open.
+                audioFrames.presentOuterFrame();
                 if (capturing) {
                     renderFrame();
                     byte[] rgba = grabber.grab();
-                    int sampleCount = audioTap.drain(pcmBuffer);
+                    int sampleCount = audioFrames.drainCaptured(pcmBuffer);
                     recorder.submit(new CapturedFrame(rgba, SCREEN_WIDTH, SCREEN_HEIGHT,
                             pcmBuffer, sampleCount, frameIndex++));
                     if (stopAtFrame < 0
@@ -389,9 +449,10 @@ public final class TraceCaptureTool {
                         break;
                     }
                 } else {
-                    // Fast-forward: advance audio synthesis but discard it so the
-                    // capture-mode ring does not overflow before the window opens.
-                    audioTap.drain(discardBuffer);
+                    // Fast-forward: the packet was presented above, so drain and
+                    // discard it. Leaving it undrained would carry a stale
+                    // packet into the first captured frame of the clip.
+                    audioFrames.discardPresented();
                 }
             }
 
