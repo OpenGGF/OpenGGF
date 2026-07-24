@@ -401,16 +401,31 @@ namespace OpenGGF.BizHawk.Headless.Tests
             };
             start.EnvironmentVariables["BIZHAWK_HOME"] = bizHawkHome;
             start.EnvironmentVariables["DISPLAY"] = ":99";
-            // The native port refuses the Lua's diagnostic-hook arming
-            // variables (Program.RejectS3kDiagnosticHookEnvironment); every
-            // gated fixture was captured with them unset, so the gate must
-            // run with them unset too rather than inheriting a stray value.
-            start.EnvironmentVariables[
-                "OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS"] = string.Empty;
-            start.EnvironmentVariables["OGGF_S3K_CNZ_EVENT_RAM_RANGE"] =
-                string.Empty;
-            start.EnvironmentVariables["OGGF_S3K_RNG_CALL_RANGE"] =
-                string.Empty;
+            // The native port refuses every Lua environment variable that
+            // changes recorder output and that it does not model
+            // (Program.RejectUnmodeledS3kEnvironment). Every gated fixture
+            // was captured with all of them unset, so the gate must run
+            // with all of them unset too rather than inheriting a stray
+            // value from the developer's shell — which would otherwise
+            // turn a byte-parity gate into a refusal, or (before the
+            // refusal existed) into a silently non-canonical capture.
+            foreach (string unmodeled in new[]
+            {
+                "OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS",
+                "OGGF_S3K_CNZ_EVENT_RAM_RANGE",
+                "OGGF_S3K_RNG_CALL_RANGE",
+                "OGGF_S3K_AIZ_FIRE_RANGE",
+                "OGGF_S3K_AIZ_WALL_SENSOR_RANGE",
+                "OGGF_S3K_CRL_RANGE",
+                "OGGF_S3K_CNZ_CYLINDER_RANGE",
+                "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START",
+                "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_END",
+                "OGGF_TRACE_STOP_FRAME",
+                "OGGF_BK2_FRAME_COUNT"
+            })
+            {
+                start.EnvironmentVariables[unmodeled] = string.Empty;
+            }
             EndToEndTests.ProcessResult result = EndToEndTests.RunProcess(
                 start,
                 CaptureTimeoutMilliseconds);

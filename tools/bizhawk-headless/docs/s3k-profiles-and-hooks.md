@@ -345,6 +345,14 @@ ever regenerated with `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`, those gates
 fail — the signal that the GpgxHost callback surface must then be built
 instead of deferred.
 
+The CLI refusal is **not** limited to the hook switch. `OGGF_TRACE_STOP_FRAME`
+and `OGGF_BK2_FRAME_COUNT` (§3.1) truncate the capture, and the frame-window
+overrides belonging to the *frame-polled* families the port does implement
+change `aux_state.jsonl` with the hook switch off — the exact mode every
+fixture was captured in. All of those are refused too; the complete list, the
+three classes, and the deliberately-not-refused hook-gated window overrides
+are tabulated in `s3k-aux-events.md` §5.1.
+
 ---
 
 ## 3. Main loop, stop ordering, movie/BK2 handling

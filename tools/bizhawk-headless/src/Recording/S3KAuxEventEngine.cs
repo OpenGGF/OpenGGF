@@ -44,10 +44,17 @@ namespace OpenGGF.BizHawk.Headless
     /// fixture, and the runner must reject the enabling env vars loudly
     /// rather than record a silently-different stream.
     ///
-    /// Frame windows are the Lua defaults (all OGGF_S3K_*_RANGE overrides
-    /// unset during fixture capture). Lines are returned WITHOUT the
-    /// trailing '\n'; the caller terminates every line with a single LF
-    /// and flushes per line.
+    /// Frame windows below are the Lua defaults, pinned as constants
+    /// because every fixture was captured with the overrides unset. The
+    /// Lua applies those overrides at script load INDEPENDENTLY of the
+    /// hook switch, so for these poll-driven families a set override
+    /// changes aux_state.jsonl even in lightweight mode — which is why
+    /// Program.RejectUnmodeledS3kEnvironment refuses them alongside the
+    /// hook-arming variables rather than letting a stale exported window
+    /// silently produce a non-canonical capture.
+    ///
+    /// Lines are returned WITHOUT the trailing '\n'; the caller
+    /// terminates every line with a single LF and flushes per line.
     /// </summary>
     public sealed class S3KAuxEventEngine
     {

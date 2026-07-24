@@ -87,9 +87,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + " ROM",
                 RejectsSegmentAndRunArgumentsWithS3kRom));
             tests.Add(new TestMain.TestCase(
-                "TraceCli S3K trace refuses the diagnostic-hook"
-                + " environment",
-                S3kTraceRefusesDiagnosticHookEnvironment));
+                "TraceCli S3K trace refuses every unmodeled output"
+                + " affecting environment variable",
+                S3kTraceRefusesUnmodeledEnvironment));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S3K trace does not refuse the deferred"
+                + " families' hook-gated window overrides",
+                S3kTraceAcceptsHookGatedWindowEnvironment));
         }
 
         /// <summary>
@@ -246,15 +250,31 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
-        /// The Lua's diagnostic-hook env surface is deferred in the
-        /// native S3K port: honoring it silently would produce output
-        /// whose metadata advertises events that can never occur, so
-        /// the CLI must refuse each arming variable loudly and publish
-        /// nothing.
+        /// The Lua S3K recorder reads its whole diagnostic surface from
+        /// the environment rather than from CLI flags, so "the native CLI
+        /// exposes no such flag" does not stop a variable exported by an
+        /// earlier Lua investigation from changing the capture. The port
+        /// models none of them, so each must be a loud refusal that
+        /// publishes nothing. Covered here:
+        ///
+        /// - the hook switch and the two variables that ARM a deferred
+        ///   hook-driven aux family;
+        /// - the frame-window overrides for the five poll-driven families
+        ///   the port DOES implement with the Lua defaults pinned as
+        ///   constants (aiz_fire_transition, terrain_wall_sensor,
+        ///   collision_response_list_end_of_frame, cnz_cylinder_state,
+        ///   aiz_handoff_terrain_state) — these change aux_state.jsonl
+        ///   with the hook switch off, which is exactly how every gated
+        ///   fixture was captured;
+        /// - the two early-stop variables, which truncate physics.csv and
+        ///   aux_state.jsonl.
+        ///
+        /// Refusal keys on non-emptiness, so a malformed value the Lua
+        /// would have warned about and ignored is refused too rather than
+        /// silently producing a canonical-looking file.
         /// </summary>
-        private static void S3kTraceRefusesDiagnosticHookEnvironment()
+        private static void S3kTraceRefusesUnmodeledEnvironment()
         {
-            S3kTraceCliDependencies dependencies = ResolveS3kDependencies();
             var refusals = new[]
             {
                 new[]
@@ -271,59 +291,173 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 {
                     "OGGF_S3K_RNG_CALL_RANGE", "600-700",
                     "OGGF_S3K_RNG_CALL_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_FIRE_RANGE", "100-200",
+                    "OGGF_S3K_AIZ_FIRE_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_WALL_SENSOR_RANGE", "7000-7100",
+                    "OGGF_S3K_AIZ_WALL_SENSOR_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_CRL_RANGE", "600-700",
+                    "OGGF_S3K_CRL_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_CNZ_CYLINDER_RANGE", "4400-4600",
+                    "OGGF_S3K_CNZ_CYLINDER_RANGE"
+                },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START", "5000",
+                    "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START"
+                },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_END", "5500",
+                    "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_END"
+                },
+                new[]
+                {
+                    "OGGF_TRACE_STOP_FRAME", "120",
+                    "OGGF_TRACE_STOP_FRAME"
+                },
+                new[]
+                {
+                    "OGGF_BK2_FRAME_COUNT", "3",
+                    "OGGF_BK2_FRAME_COUNT"
+                },
+                // A value the Lua would warn about and ignore is still an
+                // operator intent to change the capture: refuse it too.
+                new[]
+                {
+                    "OGGF_S3K_CRL_RANGE", "not-a-range",
+                    "OGGF_S3K_CRL_RANGE"
                 }
             };
             foreach (string[] refusal in refusals)
             {
-                WithSyntheticMovie(
-                    4,
-                    moviePath => WithUnusedOutput(
-                        output =>
+                string stderrText = RunS3kTraceWithEnvironment(
+                    refusal[0],
+                    refusal[1],
+                    1);
+                AssertContains(stderrText, refusal[2]);
+                AssertContains(stderrText, "Lua recorder");
+            }
+        }
+
+        /// <summary>
+        /// The refusal must stay scoped to variables that actually change
+        /// output. The window overrides belonging to families the port
+        /// defers entirely (position_write, solid_object_cont_entry,
+        /// aiz_boundary_state, aiz_transition_floor_solid, ...) only ever
+        /// widen a window whose flush is gated on a hook-populated
+        /// `state.seen`/hit list, so with the hook switch off — itself a
+        /// refusal — they change no byte of the Lua's own output either.
+        /// Refusing them would be a false refusal, so this pins that the
+        /// CLI does not name them.
+        /// </summary>
+        private static void S3kTraceAcceptsHookGatedWindowEnvironment()
+        {
+            var accepted = new[]
+            {
+                new[] { "OGGF_S3K_POSITION_WRITE_RANGE", "4788-4792" },
+                new[] { "OGGF_S3K_VELOCITY_WRITE_RANGE", "3640-3660" },
+                new[] { "OGGF_S3K_SOLID_CONT_RANGE", "7600-7625" },
+                new[] { "OGGF_S3K_AIZ_SHIP_LOOP_RANGE", "16320-16335" },
+                new[] { "OGGF_S3K_AIZ_BOUNDARY_RANGE", "4660-4679" },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_TRANSITION_FLOOR_FRAME_START", "5408"
+                },
+                new[]
+                {
+                    "OGGF_S3K_AIZ_TRANSITION_FLOOR_FRAME_END", "5438"
+                }
+            };
+            foreach (string[] entry in accepted)
+            {
+                // The scripted host never arms, so the capture still
+                // fails (exit 1) — but it must fail on the recording, not
+                // on the variable.
+                string stderrText = RunS3kTraceWithEnvironment(
+                    entry[0],
+                    entry[1],
+                    1);
+                if (stderrText.Contains(entry[0]))
+                {
+                    throw new Exception(
+                        "S3K trace refused " + entry[0] + ", which only"
+                        + " retunes a hook-gated family the port defers"
+                        + " and therefore cannot change output with the"
+                        + " diagnostic hooks off. stderr: " + stderrText);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Runs the S3K trace CLI once with a single environment variable
+        /// set (and restored afterwards), asserting the exit code, an
+        /// empty stdout, and that nothing was published. Returns stderr.
+        /// </summary>
+        private static string RunS3kTraceWithEnvironment(
+            string variable,
+            string value,
+            int expectedExitCode)
+        {
+            S3kTraceCliDependencies dependencies = ResolveS3kDependencies();
+            string captured = null;
+            WithSyntheticMovie(
+                4,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        Environment.SetEnvironmentVariable(
+                            variable, value);
+                        try
+                        {
+                            var stdout = new StringWriter(
+                                CultureInfo.InvariantCulture);
+                            var stderr = new StringWriter(
+                                CultureInfo.InvariantCulture);
+
+                            int exitCode = Program.Run(
+                                new[]
+                                {
+                                    "--mode", "trace",
+                                    "--rom", dependencies.RomPath,
+                                    "--movie", moviePath,
+                                    "--output", output
+                                },
+                                stdout,
+                                stderr,
+                                (romPath, syncSettings) =>
+                                    new ScriptedTraceHost(-1));
+
+                            AssertEx.Equal(expectedExitCode, exitCode);
+                            AssertEx.Equal(
+                                string.Empty, stdout.ToString());
+                            AssertEx.Equal(
+                                false,
+                                Directory.Exists(
+                                    Path.GetFullPath(output))
+                                && Directory.GetFileSystemEntries(
+                                    Path.GetFullPath(output))
+                                    .Length > 0);
+                            captured = stderr.ToString();
+                        }
+                        finally
                         {
                             Environment.SetEnvironmentVariable(
-                                refusal[0], refusal[1]);
-                            try
-                            {
-                                var stdout = new StringWriter(
-                                    CultureInfo.InvariantCulture);
-                                var stderr = new StringWriter(
-                                    CultureInfo.InvariantCulture);
-
-                                int exitCode = Program.Run(
-                                    new[]
-                                    {
-                                        "--mode", "trace",
-                                        "--rom", dependencies.RomPath,
-                                        "--movie", moviePath,
-                                        "--output", output
-                                    },
-                                    stdout,
-                                    stderr,
-                                    (romPath, syncSettings) =>
-                                        new ScriptedTraceHost(-1));
-
-                                AssertEx.Equal(1, exitCode);
-                                AssertEx.Equal(
-                                    string.Empty, stdout.ToString());
-                                AssertContains(
-                                    stderr.ToString(), refusal[2]);
-                                AssertContains(
-                                    stderr.ToString(), "Lua recorder");
-                                AssertEx.Equal(
-                                    false,
-                                    Directory.Exists(
-                                        Path.GetFullPath(output))
-                                    && Directory.GetFileSystemEntries(
-                                        Path.GetFullPath(output))
-                                        .Length > 0);
-                            }
-                            finally
-                            {
-                                Environment.SetEnvironmentVariable(
-                                    refusal[0], null);
-                            }
-                        }));
-            }
+                                variable, null);
+                        }
+                    }));
+            return captured;
         }
 
         private static S3kTraceCliDependencies ResolveS3kDependencies()

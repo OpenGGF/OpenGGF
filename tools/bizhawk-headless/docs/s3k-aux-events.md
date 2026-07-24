@@ -680,10 +680,37 @@ families (`tails_cpu_normal_step`, `aiz_boundary_state`,
 `collision_response_list_per_frame`) and the env-gated `cnz_event_ram` is
 therefore **explicitly deferred**, not silently dropped: if a future capture
 needs them, extend `GpgxHost` with the LibGPGX exec/mem callback surface and
-implement the templates above. The native port should still honour (or at
-minimum reject loudly) `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1` /
-`OGGF_S3K_RNG_CALL_RANGE` / `OGGF_S3K_CNZ_EVENT_RAM_RANGE` rather than
-producing a silently-different stream.
+implement the templates above.
+
+### 5.1 Environment variables the native port must refuse
+
+The Lua reads its entire diagnostic surface from the **environment**, never
+from CLI arguments, so "the native CLI exposes no such flag" is no protection:
+a variable still exported by an earlier Lua investigation changes what the Lua
+would have produced from the same movie, and a native capture that ignores it
+gets committed as canonical with no diagnostic. The native port models none of
+them and therefore refuses each loudly (`Program.RejectUnmodeledS3kEnvironment`,
+pinned by the `TraceCli S3K trace refuses every unmodeled output affecting
+environment variable` test). Three classes:
+
+| Class | Variables | Why it changes output |
+| --- | --- | --- |
+| Hook arming | `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`, `OGGF_S3K_RNG_CALL_RANGE`, `OGGF_S3K_CNZ_EVENT_RAM_RANGE` | Arms a deferred hook-driven family and appends it to `aux_schema_extras`. |
+| Polled-family windows | `OGGF_S3K_AIZ_FIRE_RANGE`, `OGGF_S3K_AIZ_WALL_SENSOR_RANGE`, `OGGF_S3K_CRL_RANGE`, `OGGF_S3K_CNZ_CYLINDER_RANGE`, `OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START/END` | Retunes a family §3 lists as frame-polled, which the port implements with the Lua default window pinned as a constant. These are applied at Lua script load **independently of the hook switch**, so they change `aux_state.jsonl` in exactly the lightweight mode every fixture was captured in. |
+| Early stop | `OGGF_TRACE_STOP_FRAME`, `OGGF_BK2_FRAME_COUNT` | Finalizes before the movie/zone stop, truncating both `physics.csv` and `aux_state.jsonl`. |
+
+Refusal keys on **non-emptiness**, not on parseability: the Lua warns and
+ignores a malformed range, but an operator who exported one meant to change the
+capture and must not be handed a silently canonical file.
+
+The remaining window overrides — `OGGF_S3K_POSITION_WRITE_RANGE`,
+`OGGF_S3K_VELOCITY_WRITE_RANGE`, `OGGF_S3K_SOLID_CONT_RANGE`,
+`OGGF_S3K_AIZ_SHIP_LOOP_RANGE`, `OGGF_S3K_AIZ_BOUNDARY_RANGE` (and its legacy
+`_FRAME_START/END` pair), `OGGF_S3K_AIZ_TRANSITION_FLOOR_FRAME_START/END` —
+are deliberately **not** refused: every flush they touch is additionally gated
+on a hook-populated `state.seen` / hit list, so with the hook switch off (itself
+a refusal) they change no byte of the Lua's own output either. Refusing them
+would be a false refusal; a test pins that the CLI does not name them.
 
 Metadata note (out of scope here but easy to trip over): the fixtures are
 stamped `6.28-s3k` while HEAD stamps `6.30-s3k`, and the MGZ fixture carries a

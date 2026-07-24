@@ -511,7 +511,7 @@ namespace BizHawk.Headless.Gpgx
                                 + " not been migrated to the native"
                                 + " pipeline yet.");
                         }
-                        RejectS3kDiagnosticHookEnvironment();
+                        RejectUnmodeledS3kEnvironment();
                         return RunS3kTrace(
                             options,
                             installation,
@@ -909,16 +909,48 @@ namespace BizHawk.Headless.Gpgx
         }
 
         /// <summary>
-        /// The Lua S3K recorder's diagnostic-hook surface (M68K
-        /// exec/memory-write callbacks) is explicitly deferred in the
-        /// native port (docs/s3k-profiles-and-hooks.md §2.4): zero hook
-        /// events appear in any gated fixture, but silently honoring the
-        /// arming env vars would produce output whose metadata advertises
-        /// events that can never occur. Refuse loudly instead. Scoped to
-        /// the S3K trace branch only — the S1/S2 pipelines never consumed
-        /// these variables.
+        /// The Lua S3K recorder takes its entire diagnostic surface from
+        /// the ENVIRONMENT, never from CLI flags, so "the native CLI does
+        /// not expose that switch" is no protection at all: a variable
+        /// still exported by a frontier-investigation shell silently
+        /// changes what the Lua would have produced from the same movie,
+        /// and the native capture — which models none of it — would be
+        /// committed as canonical with no diagnostic. Every such variable
+        /// is a loud refusal instead. Three classes, all output-affecting:
+        ///
+        /// (a) <c>OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1</c> plus the two
+        ///     variables that ARM a hook-driven aux family the port defers
+        ///     entirely (docs/s3k-profiles-and-hooks.md §2.4). Arming adds
+        ///     the family to metadata's aux_schema_extras and emits events
+        ///     the port can never produce.
+        /// (b) The frame-window overrides for aux families the port DOES
+        ///     implement. These are poll-driven families whose emission
+        ///     depends only on the window (never on a hook hit), and the
+        ///     port pins their windows as the Lua defaults in
+        ///     <see cref="S3KAuxEventEngine"/>'s *Window* constants — so a
+        ///     set override yields a genuinely different aux_state.jsonl
+        ///     with hooks off. Applied unconditionally at Lua script load,
+        ///     independent of the hook switch.
+        /// (c) The Lua's two early-stop variables, which finalize the
+        ///     recording before the movie/zone stop and therefore truncate
+        ///     both physics.csv and aux_state.jsonl.
+        ///
+        /// The window/stop overrides for families the port defers (e.g.
+        /// OGGF_S3K_POSITION_WRITE_RANGE, OGGF_S3K_SOLID_CONT_RANGE,
+        /// OGGF_S3K_AIZ_BOUNDARY_RANGE) are deliberately NOT rejected:
+        /// their flush paths are gated on a hook-set `state.seen`/hit
+        /// list, so with the hook switch off — the only mode the port
+        /// targets, and itself a refusal when set — they change no byte of
+        /// the Lua's own output either.
+        ///
+        /// Rejection keys on non-emptiness, not on parseability: the Lua
+        /// warns and ignores a malformed range, but an operator who
+        /// exported one intended to change the capture and must not be
+        /// handed a silently canonical file. Scoped to the S3K trace
+        /// branch only — the S1/S2 pipelines never consumed these
+        /// variables.
         /// </summary>
-        private static void RejectS3kDiagnosticHookEnvironment()
+        private static void RejectUnmodeledS3kEnvironment()
         {
             if (Environment.GetEnvironmentVariable(
                 "OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS") == "1")
@@ -932,25 +964,117 @@ namespace BizHawk.Headless.Gpgx
                     + "s3k-profiles-and-hooks.md section 2.4). Unset it"
                     + " or capture with the Lua recorder.");
             }
-            foreach (string name in new[]
-            {
-                "OGGF_S3K_CNZ_EVENT_RAM_RANGE",
-                "OGGF_S3K_RNG_CALL_RANGE"
-            })
+            foreach (string[] entry in UnmodeledS3kEnvironmentVariables)
             {
                 if (!string.IsNullOrEmpty(
-                    Environment.GetEnvironmentVariable(name)))
+                    Environment.GetEnvironmentVariable(entry[0])))
                 {
                     throw new InvalidOperationException(
-                        name + " arms a hook-driven aux event family"
-                        + " that the native S3K recorder does not"
-                        + " implement (deferred; see"
-                        + " tools/bizhawk-headless/docs/"
-                        + "s3k-profiles-and-hooks.md section 2.4). Unset"
-                        + " it or capture with the Lua recorder.");
+                        entry[0] + " " + entry[1] + " Unset it or capture"
+                        + " with the Lua recorder.");
                 }
             }
         }
+
+        /// <summary>
+        /// {variable name, reason} for every Lua S3K recorder environment
+        /// variable that changes recorder output and that the native port
+        /// does not model. See
+        /// <see cref="RejectUnmodeledS3kEnvironment"/> for the three
+        /// classes and for why the deferred families' own window
+        /// overrides are absent.
+        /// </summary>
+        private static readonly string[][]
+            UnmodeledS3kEnvironmentVariables =
+        {
+            // (a) Arms a hook-driven family the port defers entirely.
+            new[]
+            {
+                "OGGF_S3K_CNZ_EVENT_RAM_RANGE",
+                HookArmingRejectionReason
+            },
+            new[]
+            {
+                "OGGF_S3K_RNG_CALL_RANGE",
+                HookArmingRejectionReason
+            },
+            // (b) Retunes a poll-driven family the port implements with
+            // the Lua's default window baked in.
+            //   s3k_trace_recorder.lua:3730 -> V628_AIZ_FIRE
+            //   (S3KAuxEventEngine.AizFireWindowStart/End).
+            new[]
+            {
+                "OGGF_S3K_AIZ_FIRE_RANGE",
+                PolledWindowRejectionReason
+            },
+            //   :3932 v613_apply_aiz_wall_range -> V613_AIZ_WALL
+            //   (TerrainWallWindowStart/End).
+            new[]
+            {
+                "OGGF_S3K_AIZ_WALL_SENSOR_RANGE",
+                PolledWindowRejectionReason
+            },
+            //   :4186 v615_apply_range -> V615_CRL's end-of-frame poll,
+            //   which emits whenever in_window() regardless of whether
+            //   Touch_Process was hooked (CrlWindowStart/End).
+            new[]
+            {
+                "OGGF_S3K_CRL_RANGE",
+                PolledWindowRejectionReason
+            },
+            //   :2596 -> V67_CNZ.emit_cnz_cylinder_state_per_frame
+            //   (CnzCylinderWindowStart/End).
+            new[]
+            {
+                "OGGF_S3K_CNZ_CYLINDER_RANGE",
+                PolledWindowRejectionReason
+            },
+            //   :3553-3555 -> V69_AIZ.flush_aiz_handoff_terrain_state,
+            //   whose window gate runs before the hook-state check
+            //   (AizHandoffWindowStart/End).
+            new[]
+            {
+                "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START",
+                PolledWindowRejectionReason
+            },
+            new[]
+            {
+                "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_END",
+                PolledWindowRejectionReason
+            },
+            // (c) Truncates the capture (lua :274-275, honored at
+            // :4514-4528).
+            new[]
+            {
+                "OGGF_TRACE_STOP_FRAME",
+                EarlyStopRejectionReason
+            },
+            new[]
+            {
+                "OGGF_BK2_FRAME_COUNT",
+                EarlyStopRejectionReason
+            }
+        };
+
+        private const string HookArmingRejectionReason =
+            "arms a hook-driven aux event family that the native S3K"
+            + " recorder does not implement (deferred; see"
+            + " tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md"
+            + " section 2.4).";
+
+        private const string PolledWindowRejectionReason =
+            "retunes the frame window of a poll-driven aux event family"
+            + " that the native S3K recorder implements with the Lua's"
+            + " default window pinned as a constant, so honoring it would"
+            + " require rebuilding the port rather than re-running it"
+            + " (see tools/bizhawk-headless/docs/s3k-aux-events.md).";
+
+        private const string EarlyStopRejectionReason =
+            "finalizes the Lua recorder's capture before the movie/zone"
+            + " stop and truncates physics.csv and aux_state.jsonl, which"
+            + " the native S3K recorder does not model (see"
+            + " tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md"
+            + " section 3).";
 
         /// <summary>
         /// S3K standard trace mode (profiles gameplay_unlock /
