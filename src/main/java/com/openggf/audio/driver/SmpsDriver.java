@@ -175,6 +175,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         return hybridChunkCountForTesting;
     }
 
+    public List<SmpsSequencer> sequencersForTesting() {
+        synchronized (sequencersLock) {
+            return List.copyOf(sequencers);
+        }
+    }
+
     public SmpsDriverSnapshot captureSnapshot() {
         synchronized (sequencersLock) {
             IdentityHashMap<SmpsSequencer, Integer> sequencerIds = new IdentityHashMap<>();

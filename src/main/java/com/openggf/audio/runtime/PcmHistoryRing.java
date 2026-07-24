@@ -21,6 +21,13 @@ public final class PcmHistoryRing {
             long epoch) {
     }
 
+    public record StateForTesting(
+            long nextFrameIndex,
+            int storedFrames,
+            long epoch,
+            int writeSlot) {
+    }
+
     public PcmHistoryRing(int capacityFrames) {
         if (capacityFrames <= 0) {
             throw new IllegalArgumentException("capacityFrames must be positive");
@@ -82,6 +89,11 @@ public final class PcmHistoryRing {
         storedFrames = 0;
         writeSlot = 0;
         Arrays.fill(samples, (short) 0);
+    }
+
+    public StateForTesting stateForTesting() {
+        return new StateForTesting(
+                nextFrameIndex, storedFrames, epoch, writeSlot);
     }
 
     private int ringSlot(long frameIndex) {

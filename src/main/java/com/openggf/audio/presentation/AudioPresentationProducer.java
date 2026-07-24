@@ -6,6 +6,7 @@ import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.PcmHistoryRing;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -238,6 +239,58 @@ public final class AudioPresentationProducer {
     public AudioPresentationSnapshot snapshot() {
         assertOwnerBoundary();
         return registry.snapshot();
+    }
+
+    /**
+     * Read-only identity/state fingerprint used by transactional-release
+     * regression tests. Mutable runtime objects are represented by identity
+     * hashes so taking the fingerprint cannot perturb presentation state.
+     */
+    public StateForTesting stateForTesting() {
+        assertOwnerBoundary();
+        PresentationVoice[] voices =
+                new PresentationVoice[registry.orderedVoiceCount()];
+        for (int index = 0; index < registry.orderedVoiceCount(); index++) {
+            voices[index] = registry.orderedVoiceAt(index);
+        }
+        return new StateForTesting(
+                clock.captureSnapshot(),
+                history.stateForTesting(),
+                List.of(voices),
+                reverseCursor != null ? reverseCursor.state() : null,
+                selectedRestore,
+                selectedRestoreResolver,
+                preparedSelectedRestore,
+                releaseCrossfadeRemaining,
+                lastReverseLeft,
+                lastReverseRight,
+                historyArmed,
+                reverseActive,
+                reverseFrameOutput,
+                hasLastReverseFrame,
+                captureCount);
+    }
+
+    public record StateForTesting(
+            AudioFrameClock.Snapshot clock,
+            PcmHistoryRing.StateForTesting history,
+            List<PresentationVoice> voices,
+            PcmHistoryRing.CursorState reverseCursor,
+            AudioPresentationSnapshot selectedRestore,
+            AudioPresentationDependencyResolver selectedRestoreResolver,
+            AudioVoiceRegistry.PreparedSnapshotRestore
+                    preparedSelectedRestore,
+            int releaseCrossfadeRemaining,
+            short lastReverseLeft,
+            short lastReverseRight,
+            boolean historyArmed,
+            boolean reverseActive,
+            boolean reverseFrameOutput,
+            boolean hasLastReverseFrame,
+            int captureCount) {
+        public StateForTesting {
+            voices = List.copyOf(voices);
+        }
     }
 
     public void restore(

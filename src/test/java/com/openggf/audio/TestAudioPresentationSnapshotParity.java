@@ -40,7 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import java.util.ArrayList;
 import java.util.List;
 import java.lang.reflect.Array;
-import java.lang.reflect.Field;
 import java.lang.reflect.RecordComponent;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -261,8 +260,19 @@ class TestAudioPresentationSnapshotParity {
             music.setId(id);
             loader.musicResults.put(id, music);
         }
+        AbstractSmpsData sfx = persistentS3kSfx(0xA0);
+        sfx.setId(0xA0);
+        loader.sfxResults.put(0xA0, sfx);
+        for (int id : new int[] {0x82, 0x83}) {
+            AbstractSmpsData donorOverride = persistentS3kMusic(id);
+            donorOverride.setId(id);
+            loader.musicResults.put(id, donorOverride);
+        }
         audio.setAudioProfile(configuredS3kProfile(loader));
         audio.setRom(null);
+        audio.registerDonorLoader(
+                "s3k", loader, loader.loadDacData(),
+                Sonic3kSmpsSequencerConfig.CONFIG);
         FailingCommitLwjglBackend backend =
                 new FailingCommitLwjglBackend();
         audio.setBackend(backend);
@@ -278,18 +288,49 @@ class TestAudioPresentationSnapshotParity {
         keyframes.capture(4, audio);
         audio.beginCommandTimelineFrame(5);
         audio.playMusic(0x81);
+        audio.playSfx(0xA0);
+        audio.playDonorMusic("s3k", 0x82);
+        audio.playDonorMusic("s3k", 0x83);
+        audio.restoreMusic();
+        audio.setSpeedShoes(true);
+        audio.setSpeedMultiplier(3);
+        backend.legacyCoordFlagHandlersForTesting().state()
+                .setSpindashRevCounter(23);
         audio.presentOuterFrame(PresentationMode.FORWARD);
+        AudioManager.ReleaseStateForTesting disturbedState =
+                audio.releaseStateForTesting();
+        assertNotNull(disturbedState.backend().currentStream());
+        assertNotNull(disturbedState.backend().currentSmps());
+        assertNotNull(disturbedState.backend().musicDriver());
+        assertEquals(2, disturbedState.backend().overrideStack().size());
+        assertTrue(disturbedState.backend().overrideStack().stream()
+                .allMatch(entry -> entry.stream() != null
+                        && entry.sequencer() != null
+                        && entry.driver() != null));
+        assertNotNull(disturbedState.backend().overrideStack().stream()
+                .flatMap(entry -> entry.driverSnapshot().sequencers()
+                        .stream())
+                .filter(com.openggf.audio.rewind.SmpsDriverSnapshot
+                        .SequencerEntry::sfx)
+                .findFirst().orElse(null));
+        assertTrue(disturbedState.backend().sfxBlocked());
+        assertTrue(disturbedState.backend().pendingRestore());
+        assertTrue(disturbedState.backend().speedShoesEnabled());
+        assertEquals(3, disturbedState.backend().speedMultiplier());
+        assertEquals(23, disturbedState.backend().coordState()
+                .spindashRevCounter());
 
         audio.beginReverseAudioPresentation();
         audio.presentOuterFrame(PresentationMode.REVERSE);
         keyframes.replayToLogicalState(audio, 4);
         assertTrue(audio.commitDeferredReverseLogicalRestore());
-        ReleaseFingerprint before = releaseFingerprint(audio, backend);
+        AudioManager.ReleaseStateForTesting before =
+                audio.releaseStateForTesting();
 
         backend.failAfterNextPublication();
         audio.endReverseAudioPresentation();
 
-        assertEquals(before, releaseFingerprint(audio, backend),
+        assertReleaseStateExactly(before, audio.releaseStateForTesting(),
                 "failed backend publication must preserve identities, "
                         + "registry, history, cursor, selection and crossfade");
         assertNotNull(audio.deferredReverseLogicalSnapshotForTesting(),
@@ -410,7 +451,8 @@ class TestAudioPresentationSnapshotParity {
         HeadlessSmpsAudioBackend realBackend =
                 new HeadlessSmpsAudioBackend(
                         SonicConfigurationService.createStandalone(),
-                        PerformanceProfiler.getInstance());
+                        PerformanceProfiler.getInstance(),
+                        44_101);
         audio.setBackend(realBackend);
         assertTrue(audio.getBackend() instanceof HeadlessSmpsAudioBackend);
         assertFalse(realBackend.legacyCoordFlagHandlersForTesting().state()
@@ -430,6 +472,8 @@ class TestAudioPresentationSnapshotParity {
                      audio.attachShadowCaptureForTesting(60)) {
             short[] packet =
                     new short[capture.maxStereoFramesPerPacket() * 2];
+            int packets735 = 0;
+            int packets736 = 0;
             for (int frame = 0; frame < 120; frame++) {
                 audio.beginCommandTimelineFrame(frame);
                 if (frame == 5) {
@@ -447,7 +491,13 @@ class TestAudioPresentationSnapshotParity {
                     audio.playSfx(GameSound.RING);
                 }
                 audio.presentOuterFrame(PresentationMode.FORWARD);
-                capture.drainPresentationFrame(packet);
+                int packetFrames =
+                        capture.drainPresentationFrame(packet);
+                if (packetFrames == 735) {
+                    packets735++;
+                } else if (packetFrames == 736) {
+                    packets736++;
+                }
                 if (frame == 11) {
                     assertEquals(AudioSourceDescriptor.donorMusic(
                                     "s3k", 0x82),
@@ -461,9 +511,12 @@ class TestAudioPresentationSnapshotParity {
             AudioLogicalSnapshot boundary = audio.captureLogicalSnapshot();
             assertEquals(120,
                     audio.shadowParitySnapshotForTesting().presentedFrames());
-            assertEquals(96_000, capture.totalStereoFrames());
-            assertEquals(96_000,
+            assertEquals(88_202, capture.totalStereoFrames());
+            assertEquals(88_202,
                     capture.clockSnapshot().totalSamplesProduced());
+            assertEquals(0, capture.clockSnapshot().remainder());
+            assertEquals(118, packets735);
+            assertEquals(2, packets736);
             assertFalse(boundary.ringLeft(),
                     "real ring command must alternate left to right");
             assertFalse(boundary.presentation().ringLeft());
@@ -517,7 +570,7 @@ class TestAudioPresentationSnapshotParity {
                     new AudioPresentationMixer(
                             capture.maxStereoFramesPerPacket());
             AudioFrameClock referenceClock =
-                    new AudioFrameClock(48_000, 60);
+                    new AudioFrameClock(44_101, 60);
             for (int frame = 0; frame < 120; frame++) {
                 referenceClock.samplesForNextFrame();
             }
@@ -540,12 +593,13 @@ class TestAudioPresentationSnapshotParity {
                         "manager producer PCM must match independently "
                                 + "reconstructed source-bearing state");
             }
-            assertEquals(8_000,
+            assertEquals(7_350,
                     capture.totalStereoFrames() - before);
             assertArrayEquals(
-                    new int[] {800, 800, 800, 800, 800,
-                            800, 800, 800, 800, 800},
+                    new int[] {735, 735, 735, 735, 735,
+                            735, 735, 735, 735, 735},
                     packetSizes);
+            assertEquals(10, capture.clockSnapshot().remainder());
             assertPresentationSnapshotExactly(
                     audio.captureLogicalSnapshot().presentation(),
                     reference.snapshot());
@@ -615,6 +669,12 @@ class TestAudioPresentationSnapshotParity {
             }
             @Override public String presentationGameId() {
                 return "s3k";
+            }
+            @Override public boolean isMusicOverride(int musicId) {
+                return musicId == 0x82 || musicId == 0x83;
+            }
+            @Override public boolean isSfxBlockingMusic(int musicId) {
+                return musicId == 0x83;
             }
             @Override public void configurePresentationCoordFlagHandlers(
                     SmpsCoordFlagHandlerOwner owner) {
@@ -733,6 +793,157 @@ class TestAudioPresentationSnapshotParity {
                 actual.synthSnapshot());
     }
 
+    private static void assertReleaseStateExactly(
+            AudioManager.ReleaseStateForTesting expected,
+            AudioManager.ReleaseStateForTesting actual,
+            String message) {
+        assertEquals(expected.logical().ringLeft(),
+                actual.logical().ringLeft(), message);
+        assertEquals(expected.logical().commandTimelineFrame(),
+                actual.logical().commandTimelineFrame(), message);
+        assertEquals(expected.logical().commandTimelineNextOrder(),
+                actual.logical().commandTimelineNextOrder(), message);
+        assertEquals(expected.logical().commandEntryCount(),
+                actual.logical().commandEntryCount(), message);
+        assertBackendLogicalExactly(
+                expected.logical().backend(),
+                actual.logical().backend(),
+                message);
+        assertPresentationSnapshotExactly(
+                expected.logical().presentation(),
+                actual.logical().presentation());
+
+        AbstractSmpsAudioBackend.StateForTesting left =
+                expected.backend();
+        AbstractSmpsAudioBackend.StateForTesting right =
+                actual.backend();
+        assertSame(left.currentStream(), right.currentStream(), message);
+        assertSame(left.sfxStream(), right.sfxStream(), message);
+        assertSame(left.currentSmps(), right.currentSmps(), message);
+        assertSame(left.musicDriver(), right.musicDriver(), message);
+        assertEquals(left.currentMusic(), right.currentMusic(), message);
+        assertEquals(left.currentMusicId(), right.currentMusicId(), message);
+        assertEquals(left.pendingMusic(), right.pendingMusic(), message);
+        assertEquals(left.sfxBlocked(), right.sfxBlocked(), message);
+        assertEquals(left.pendingRestore(), right.pendingRestore(), message);
+        assertEquals(left.speedShoesEnabled(),
+                right.speedShoesEnabled(), message);
+        assertEquals(left.speedMultiplier(),
+                right.speedMultiplier(), message);
+        assertEquals(left.coordState(), right.coordState(), message);
+        assertEquals(left.overrideStack().size(),
+                right.overrideStack().size(), message);
+        for (int index = 0; index < left.overrideStack().size(); index++) {
+            var leftOverride = left.overrideStack().get(index);
+            var rightOverride = right.overrideStack().get(index);
+            assertSame(leftOverride.stream(),
+                    rightOverride.stream(), message);
+            assertSame(leftOverride.sequencer(),
+                    rightOverride.sequencer(), message);
+            assertSame(leftOverride.driver(),
+                    rightOverride.driver(), message);
+            assertEquals(leftOverride.musicId(),
+                    rightOverride.musicId(), message);
+            assertEquals(leftOverride.descriptor(),
+                    rightOverride.descriptor(), message);
+            assertDriverSnapshotExactly(
+                    leftOverride.driverSnapshot(),
+                    rightOverride.driverSnapshot());
+            assertSameElements(leftOverride.sequencers(),
+                    rightOverride.sequencers(), message);
+        }
+        assertDriverSnapshotExactly(
+                left.musicDriverSnapshot(),
+                right.musicDriverSnapshot());
+        assertSameElements(left.musicSequencers(),
+                right.musicSequencers(), message);
+        if (left.standaloneSfxDriverSnapshot() == null) {
+            assertEquals(null, right.standaloneSfxDriverSnapshot(), message);
+        } else {
+            assertDriverSnapshotExactly(
+                    left.standaloneSfxDriverSnapshot(),
+                    right.standaloneSfxDriverSnapshot());
+        }
+        assertSameElements(left.standaloneSfxSequencers(),
+                right.standaloneSfxSequencers(), message);
+        assertProducerStateExactly(
+                expected.producer(), actual.producer(), message);
+    }
+
+    private static void assertProducerStateExactly(
+            com.openggf.audio.presentation.AudioPresentationProducer
+                    .StateForTesting expected,
+            com.openggf.audio.presentation.AudioPresentationProducer
+                    .StateForTesting actual,
+            String message) {
+        assertEquals(expected.clock(), actual.clock(), message);
+        assertEquals(expected.history(), actual.history(), message);
+        assertSameElements(expected.voices(), actual.voices(), message);
+        assertEquals(expected.reverseCursor(),
+                actual.reverseCursor(), message);
+        assertSame(expected.selectedRestore(),
+                actual.selectedRestore(), message);
+        assertSame(expected.selectedRestoreResolver(),
+                actual.selectedRestoreResolver(), message);
+        assertSame(expected.preparedSelectedRestore(),
+                actual.preparedSelectedRestore(), message);
+        assertEquals(expected.releaseCrossfadeRemaining(),
+                actual.releaseCrossfadeRemaining(), message);
+        assertEquals(expected.lastReverseLeft(),
+                actual.lastReverseLeft(), message);
+        assertEquals(expected.lastReverseRight(),
+                actual.lastReverseRight(), message);
+        assertEquals(expected.historyArmed(),
+                actual.historyArmed(), message);
+        assertEquals(expected.reverseActive(),
+                actual.reverseActive(), message);
+        assertEquals(expected.reverseFrameOutput(),
+                actual.reverseFrameOutput(), message);
+        assertEquals(expected.hasLastReverseFrame(),
+                actual.hasLastReverseFrame(), message);
+        assertEquals(expected.captureCount(),
+                actual.captureCount(), message);
+    }
+
+    private static void assertSameElements(
+            List<?> expected, List<?> actual, String message) {
+        assertEquals(expected.size(), actual.size(), message);
+        for (int index = 0; index < expected.size(); index++) {
+            assertSame(expected.get(index), actual.get(index), message);
+        }
+    }
+
+    private static void assertBackendLogicalExactly(
+            AudioBackendLogicalSnapshot expected,
+            AudioBackendLogicalSnapshot actual,
+            String message) {
+        assertEquals(expected.currentMusic(), actual.currentMusic(), message);
+        assertEquals(expected.sfxBlocked(), actual.sfxBlocked(), message);
+        assertEquals(expected.pendingRestore(),
+                actual.pendingRestore(), message);
+        assertEquals(expected.speedShoesEnabled(),
+                actual.speedShoesEnabled(), message);
+        assertEquals(expected.speedMultiplier(),
+                actual.speedMultiplier(), message);
+        assertEquals(expected.overrideStack(),
+                actual.overrideStack(), message);
+        assertEquals(expected.legacyCoordFlagRuntimeState(),
+                actual.legacyCoordFlagRuntimeState(), message);
+        if (expected.musicDriver() == null) {
+            assertEquals(null, actual.musicDriver(), message);
+        } else {
+            assertDriverSnapshotExactly(
+                    expected.musicDriver(), actual.musicDriver());
+        }
+        if (expected.standaloneSfxDriver() == null) {
+            assertEquals(null, actual.standaloneSfxDriver(), message);
+        } else {
+            assertDriverSnapshotExactly(
+                    expected.standaloneSfxDriver(),
+                    actual.standaloneSfxDriver());
+        }
+    }
+
     private static void assertDeepSnapshotEquals(Object expected,
             Object actual) {
         assertDeepSnapshotEquals(expected, actual,
@@ -781,109 +992,6 @@ class TestAudioPresentationSnapshotParity {
                 throw new AssertionError(failure);
             }
         }
-    }
-
-    private static ReleaseFingerprint releaseFingerprint(
-            AudioManager manager, AbstractSmpsAudioBackend backend)
-            throws Exception {
-        Object producer = field(AudioManager.class, "shadowProducer")
-                .get(manager);
-        Object history = field(producer.getClass(), "history").get(producer);
-        Object registry = field(producer.getClass(), "registry").get(producer);
-        int voiceCount = (int) registry.getClass()
-                .getMethod("orderedVoiceCount").invoke(registry);
-        List<Integer> voiceIdentities = new ArrayList<>();
-        for (int index = 0; index < voiceCount; index++) {
-            Object voice = registry.getClass()
-                    .getMethod("orderedVoiceAt", int.class)
-                    .invoke(registry, index);
-            voiceIdentities.add(System.identityHashCode(voice));
-        }
-        AudioLogicalSnapshot logical = manager.captureLogicalSnapshot();
-        return new ReleaseFingerprint(
-                System.identityHashCode(backend.musicDriverForTesting()),
-                System.identityHashCode(field(
-                        AbstractSmpsAudioBackend.class, "sfxStream")
-                        .get(backend)),
-                logical.ringLeft(),
-                logical.commandTimelineFrame(),
-                logical.commandTimelineNextOrder(),
-                logical.backend().currentMusic(),
-                logical.backend().speedShoesEnabled(),
-                logical.backend().speedMultiplier(),
-                logical.presentation().activeMusic(),
-                logical.presentation().overrideStack(),
-                logical.presentation().fmMuteMask(),
-                logical.presentation().fmSoloMask(),
-                logical.presentation().psgMuteMask(),
-                logical.presentation().psgSoloMask(),
-                logical.presentation().speedShoesEnabled(),
-                logical.presentation().speedMultiplier(),
-                logical.presentation().ringLeft(),
-                voiceIdentities,
-                System.identityHashCode(field(
-                        producer.getClass(), "reverseCursor").get(producer)),
-                System.identityHashCode(field(
-                        producer.getClass(), "selectedRestore").get(producer)),
-                System.identityHashCode(field(
-                        producer.getClass(), "preparedSelectedRestore")
-                        .get(producer)),
-                field(history.getClass(), "nextFrameIndex").getLong(history),
-                field(history.getClass(), "storedFrames").getInt(history),
-                field(history.getClass(), "epoch").getLong(history),
-                field(producer.getClass(), "releaseCrossfadeRemaining")
-                        .getInt(producer),
-                field(producer.getClass(), "lastReverseLeft")
-                        .getShort(producer),
-                field(producer.getClass(), "lastReverseRight")
-                        .getShort(producer),
-                field(producer.getClass(), "reverseActive")
-                        .getBoolean(producer),
-                field(producer.getClass(), "reverseFrameOutput")
-                        .getBoolean(producer),
-                field(producer.getClass(), "hasLastReverseFrame")
-                        .getBoolean(producer));
-    }
-
-    private static Field field(Class<?> owner, String name)
-            throws NoSuchFieldException {
-        Field field = owner.getDeclaredField(name);
-        field.setAccessible(true);
-        return field;
-    }
-
-    private record ReleaseFingerprint(
-            int musicDriverIdentity,
-            int sfxDriverIdentity,
-            boolean managerRingLeft,
-            long timelineFrame,
-            int timelineOrder,
-            AudioSourceDescriptor backendMusic,
-            boolean backendSpeedShoes,
-            int backendSpeedMultiplier,
-            AudioPresentationSnapshot.MusicSlotSnapshot presentationMusic,
-            List<AudioPresentationSnapshot.MusicSlotSnapshot>
-                    presentationOverrides,
-            int fmMuteMask,
-            int fmSoloMask,
-            int psgMuteMask,
-            int psgSoloMask,
-            boolean presentationSpeedShoes,
-            int presentationSpeedMultiplier,
-            boolean presentationRingLeft,
-            List<Integer> voiceIdentities,
-            int reverseCursorIdentity,
-            int selectedRestoreIdentity,
-            int preparedRestoreIdentity,
-            long historyNextFrame,
-            int historyStoredFrames,
-            long historyEpoch,
-            int crossfadeRemaining,
-            short lastReverseLeft,
-            short lastReverseRight,
-            boolean reverseActive,
-            boolean reverseFrameOutput,
-            boolean hasLastReverseFrame) {
     }
 
     private static final class FailingCommitLwjglBackend

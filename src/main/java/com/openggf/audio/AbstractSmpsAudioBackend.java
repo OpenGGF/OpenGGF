@@ -857,6 +857,78 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
     }
 
+    StateForTesting stateForTesting() {
+        synchronized (streamLock) {
+            List<OverrideStateForTesting> overrides =
+                    new ArrayList<>(musicStack.size());
+            for (MusicState state : musicStack) {
+                overrides.add(new OverrideStateForTesting(
+                        state.stream, state.smps, state.driver,
+                        state.musicId, state.descriptor,
+                        state.driver != null
+                                ? state.driver.captureSnapshot() : null,
+                        state.driver != null
+                                ? state.driver
+                                        .sequencersForTesting()
+                                : List.of()));
+            }
+            return new StateForTesting(
+                    currentStream, sfxStream, currentSmps, smpsDriver,
+                    currentMusicDescriptor, currentMusicId,
+                    pendingMusicDescriptor, sfxBlocked, pendingRestore,
+                    speedShoesEnabled, speedMultiplier, overrides,
+                    smpsDriver != null ? smpsDriver.captureSnapshot() : null,
+                    smpsDriver != null
+                            ? smpsDriver.sequencersForTesting()
+                            : List.of(),
+                    sfxStream instanceof SmpsDriver driver
+                            ? driver.captureSnapshot() : null,
+                    sfxStream instanceof SmpsDriver driver
+                            ? driver.sequencersForTesting()
+                            : List.of(),
+                    legacyCoordFlagHandlers.state().snapshot());
+        }
+    }
+
+    record OverrideStateForTesting(
+            AudioStream stream,
+            SmpsSequencer sequencer,
+            SmpsDriver driver,
+            int musicId,
+            AudioSourceDescriptor descriptor,
+            SmpsDriverSnapshot driverSnapshot,
+            List<SmpsSequencer> sequencers) {
+        OverrideStateForTesting {
+            sequencers = List.copyOf(sequencers);
+        }
+    }
+
+    record StateForTesting(
+            AudioStream currentStream,
+            AudioStream sfxStream,
+            SmpsSequencer currentSmps,
+            SmpsDriver musicDriver,
+            AudioSourceDescriptor currentMusic,
+            int currentMusicId,
+            AudioSourceDescriptor pendingMusic,
+            boolean sfxBlocked,
+            boolean pendingRestore,
+            boolean speedShoesEnabled,
+            int speedMultiplier,
+            List<OverrideStateForTesting> overrideStack,
+            SmpsDriverSnapshot musicDriverSnapshot,
+            List<SmpsSequencer> musicSequencers,
+            SmpsDriverSnapshot standaloneSfxDriverSnapshot,
+            List<SmpsSequencer> standaloneSfxSequencers,
+            SmpsCoordFlagRuntimeState.Snapshot coordState) {
+        StateForTesting {
+            overrideStack = List.copyOf(overrideStack);
+            musicSequencers = List.copyOf(musicSequencers);
+            standaloneSfxSequencers =
+                    List.copyOf(standaloneSfxSequencers);
+        }
+    }
+
     @Override
     public AudioBackendLogicalSnapshot captureLogicalSnapshot() {
         synchronized (streamLock) {

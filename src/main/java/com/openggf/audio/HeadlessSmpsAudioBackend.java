@@ -15,21 +15,35 @@ import com.openggf.debug.PerformanceProfiler;
  * upload hooks must do nothing — pumping here would steal samples from the
  * capture tap.
  *
- * <p>The device-facing fallback rate is a deterministic 48000 Hz, with no
- * OpenAL negotiation. Internal-rate output still uses the synthesizer's
- * effective rate.
+ * <p>The device-facing fallback rate defaults to a deterministic 48000 Hz,
+ * with no OpenAL negotiation. Tests may supply another positive rate to prove
+ * fractional presentation-clock behavior. Internal-rate output still uses
+ * the synthesizer's effective rate.
  */
 public final class HeadlessSmpsAudioBackend extends AbstractSmpsAudioBackend {
 
     private static final int HEADLESS_SAMPLE_RATE = 48_000;
+    private final int sampleRate;
 
     public HeadlessSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
+        this(configService, profiler, HEADLESS_SAMPLE_RATE);
+    }
+
+    HeadlessSmpsAudioBackend(
+            SonicConfigurationService configService,
+            PerformanceProfiler profiler,
+            int sampleRate) {
         super(configService, profiler);
+        if (sampleRate <= 0) {
+            throw new IllegalArgumentException(
+                    "sampleRate must be positive");
+        }
+        this.sampleRate = sampleRate;
     }
 
     @Override
     protected int getDeviceSampleRate() {
-        return HEADLESS_SAMPLE_RATE;
+        return sampleRate;
     }
 
     @Override

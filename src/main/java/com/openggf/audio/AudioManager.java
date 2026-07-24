@@ -1145,6 +1145,23 @@ public class AudioManager implements MusicRestoreSink {
         return shadowFactory;
     }
 
+    ReleaseStateForTesting releaseStateForTesting() {
+        ensureShadowPresentation();
+        AbstractSmpsAudioBackend.StateForTesting backendState =
+                backend instanceof AbstractSmpsAudioBackend smpsBackend
+                        ? smpsBackend.stateForTesting() : null;
+        return new ReleaseStateForTesting(
+                captureLogicalSnapshot(),
+                backendState,
+                shadowProducer.stateForTesting());
+    }
+
+    record ReleaseStateForTesting(
+            AudioLogicalSnapshot logical,
+            AbstractSmpsAudioBackend.StateForTesting backend,
+            AudioPresentationProducer.StateForTesting producer) {
+    }
+
     void submitShadowRawPcmForTesting(
             byte[] pcm, int sourceSampleRate) {
         ensureShadowPresentation();
