@@ -107,9 +107,11 @@ in the pre-created set (e.g. `ss_2`, `ghz1_2`, `unknown_XX1`).
 
 `on_frame_end()` (L1333) evaluates in this order; placement is load-bearing:
 
-1. **Top-of-function stop guard** (L1342-1352): `stop_reached = S1_STOP_AT_FRAME
-   > 0 and emu.framecount() >= it`; `movie_done = (movie.length() > 0 and
-   emu.framecount() >= movie.length()) or movie.mode() == "FINISHED"`. Either
+1. **Top-of-function stop guard** (L1342-1352): `stop_reached = stop_at > 0
+   and frame_now >= stop_at` (with `stop_at` = env `S1_STOP_AT_FRAME`,
+   `frame_now` = `emu.framecount()`); `movie_len = movie.isloaded() and
+   movie.length() or 0`; `movie_done = (movie_len > 0 and frame_now >=
+   movie_len) or (movie.isloaded() and movie.mode() == "FINISHED")`. Either
    → `finalize_run_end()`, `finished = true`, return. NOT gated on `started`,
    so a movie ending mid-`$10` (or before gameplay ever starts) still
    finalizes correctly. **No `OGGF_BK2_FRAME_COUNT`-style max-override exists
@@ -277,7 +279,7 @@ Row format string (L687): `"%d,%x,%d,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n"` —
 | Column | Source |
 |---|---|
 | `frame` | `trace_frame` (0-based; incremented after the write) |
-| `input` | `bk2_input_mask(raw v_jpadhold1 $FFF604, trace_frame)` — the SAME shared helper as level rows (`lib/oggf_trace_common.lua`): BK2 `movie.getinput(bk2_frame_offset + trace_frame, 1)`, directions bits 0-3, A\|B\|C collapsed to JUMP `0x10`, **no Start bit** (S2 SS delta), RAM fallback only if no movie loaded |
+| `input` | `bk2_input_mask(raw v_jpadhold1 $FFF604, trace_frame)` — the SAME shared helper as level rows (`lib/oggf_trace_common.lua`): BK2 `movie.getinput(bk2_frame_offset + trace_frame, 1)`, directions bits 0-3, A\|B\|C collapsed to JUMP `0x10`, **no Start bit** (S2 SS delta), RAM fallback when no movie is loaded OR `movie.getinput` returns nil |
 | `lag` | `emu.islagged() and 1 or 0` |
 | `x_pos` | u32be `$FFD008` (x word ++ x-sub word, e.g. `25ab0300`) |
 | `y_pos` | u32be `$FFD00C` |
