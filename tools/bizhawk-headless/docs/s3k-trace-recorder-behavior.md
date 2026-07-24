@@ -494,3 +494,46 @@ Different (S3K-specific — never copy S1/S2 values):
   Player-1-only legacy scan (`object_near`).
 - Metadata: hardcoded characters/sidekicks, `trace_schema` 6,
   `aux_schema_extras`, `capture_mode`, constant `rom_checksum`.
+
+---
+
+## 8. Native differential gate results (post-implementation addendum)
+
+All three ROM-backed gates in `tests/S3KTraceDifferentialTests.cs` — AIZ
+`aiz_end_to_end`, CNZ `level_gated_reset_aware`, MGZ
+`level_gated_reset_aware` — passed on the first native-capture attempt
+against this document's §0/§6.2 predictions with **zero production code
+changes**: the derived `bk2_frame_offset`/`trace_frame_count` pairs, the
+`physics.csv`/`aux_state.jsonl` sha256 hashes, and the pinned metadata
+deltas all matched exactly as specified. The spec-first approach (write the
+byte-level contract from the Lua before porting, then gate against the
+canonical fixtures) held for the CORE capture path with no divergence to
+record here. Full native suite at that point: 275 PASS / 0 FAIL / 0 SKIP
+(commit `1cf5df7f7`), rising to 277 PASS / 0 FAIL / 0 SKIP once the
+adversarial-review env-variable and memory fixes below landed.
+
+Two adversarial-review fixes followed the three gates (both output-neutral —
+no fixture bytes changed):
+
+- **Environment-variable refusal was incomplete at first cut.** The initial
+  `Program.RejectUnmodeledS3kEnvironment()` covered only the hook-arming
+  trio (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS`, `OGGF_S3K_RNG_CALL_RANGE`,
+  `OGGF_S3K_CNZ_EVENT_RAM_RANGE`). A direct re-audit against
+  `tools/bizhawk/s3k_trace_recorder.lua` found eight more variables that
+  silently change output the port does not model — five polled-family
+  window overrides and the two early-stop variables — now refused too. See
+  `s3k-aux-events.md` §5.1 and `s3k-profiles-and-hooks.md` §2.4/§3.8 for the
+  complete, corrected list.
+- **Capture-runner memory footprint was not part of this spec's scope but
+  turned out to matter operationally.** The canonical fixtures' full
+  `aux_state.jsonl` streams are large (AIZ 125,528,736 bytes; MGZ
+  185,001,526; CNZ 213,296,906), and the first capture-runner
+  implementation buffered every profile's entire output in two
+  `StringBuilder`s and then materialized each again via `ToString()` before
+  a single `Write` — roughly 4x the aux stream size in peak managed memory.
+  Fixed by streaming `aiz_end_to_end`/`gameplay_unlock` straight to the
+  injected writers (only `level_gated_reset_aware` can discard a
+  mid-capture recording via the pause+A soft-reset path, so only it still
+  buffers) and flushing the remaining buffered case in fixed-size `CopyTo`
+  blocks instead of `ToString()`. No physics.csv/aux_state.jsonl byte
+  changed; see `s3k-profiles-and-hooks.md` §5 for the implementation split.

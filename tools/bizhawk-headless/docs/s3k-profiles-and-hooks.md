@@ -586,3 +586,39 @@ knob, `pre_trace_osc_frames`, for exactly this reason.)
     written to aux **before** row 0's CSV row and aux cascade, and
     `start_gameplay_frame_counter` is recaptured at that instant (harmless
     to metadata since v6.29, but the read order is part of the loop).
+
+---
+
+## 5. Native capture-runner memory behavior (post-gate addendum)
+
+Not part of the Lua's own behavior — an implementation fact the native
+`S3KTraceCaptureRunner` port had to get right to be usable on the canonical
+fixtures without excessive memory, discovered running the three differential
+gates in `tests/S3KTraceDifferentialTests.cs` for real: the full
+`aux_state.jsonl` streams are large (AIZ 125,528,736 bytes; MGZ 185,001,526;
+CNZ 213,296,906). A first cut buffered every profile's whole output in two
+`StringBuilder`s and then materialized each again via `ToString()` for a
+single `Write` — roughly 4x the aux stream size in peak managed memory.
+
+The fix (`TraceStreamSink`, one per output stream) only buffers the profile
+that can actually need to throw output away mid-capture:
+
+- `aiz_end_to_end` and `gameplay_unlock` can never discard a partial
+  recording, so they stream straight to the injected writers — the same
+  form `S1TraceCaptureRunner` already uses. Buffering bought them nothing:
+  `RunTraceCapture` stages writers and only publishes (`link(2)`s) them on
+  success, so a failed capture ships nothing regardless of profile.
+- `level_gated_reset_aware` is the only profile that can discard an armed
+  recording mid-capture (the pause+A soft-reset path, §1.4), so it alone
+  still buffers — but the buffered flush now copies the builder in
+  fixed-size `char[]` blocks via `CopyTo` instead of calling `ToString()`,
+  removing the second full-size contiguous copy.
+- `Discard()` throws on a streaming sink instead of silently no-opping,
+  which would otherwise ship a segment the Lua would have deleted.
+
+No `physics.csv` / `aux_state.jsonl` byte changed for any of the three
+canonical fixtures; this is a memory-footprint fix only, verified by a
+runner test that observes the streaming/buffered split directly (mid-capture
+the `gameplay_unlock` writer already holds the header and rows while the
+`level_gated_reset_aware` writer is still empty) rather than trusting a
+comment.
