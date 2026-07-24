@@ -38,12 +38,16 @@ namespace OpenGGF.BizHawk.Headless
     /// counting — and discard-and-re-arm an in-progress recording whose
     /// start zone was "ehz" when the level mode is left).
     ///
-    /// The frame-alignment model is exactly the S1 runner's: post-advance
+    /// The frame-alignment model is the S1 runner's: post-advance
     /// inspection, bk2_frame_offset := completed frame count at detection,
     /// detection frame not recorded, trace row N = state after applying BK2
-    /// input row (offset + N), and the folded pre-advance movie-end
-    /// predicate offset + N + 1 >= FrameCount (the movie's final input row
-    /// is never consumed or recorded — Lua FINISHED parity).
+    /// input row (offset + N). Stop conditions run post-advance in the
+    /// Lua's on_frame_end source order (spec §3.5): (1) game_mode leaves
+    /// 0x0C — reset-aware EHZ discard or finalize, (2) BK2-end guard,
+    /// (3) movie FINISHED. The frame fed by the movie's final input row IS
+    /// emulated — the mode-exit check and the finalize-time live sidekick
+    /// read both observe its RAM state — but is never recorded, and the
+    /// pre-arm FINISHED check fires before the arm predicate.
     ///
     /// Output is buffered in memory so the reset-aware discard can throw a
     /// partial recording away without filesystem interaction (the Lua
@@ -147,17 +151,6 @@ namespace OpenGGF.BizHawk.Headless
                 int rowsConsumed = 0;
                 while (true)
                 {
-                    // Folded movie-end predicate (Lua stop parity, S1 §2.4):
-                    // the movie is flagged FINISHED on the frame that
-                    // consumes its final input row and the Lua finalizes on
-                    // FINISHED without recording it, so the last recordable
-                    // trace row is the one fed by input row (FrameCount - 2).
-                    if (started
-                        && (long)offset + traceFrame + 1 >= movie.FrameCount)
-                    {
-                        break;      // Movie end; row N is not recorded.
-                    }
-
                     if (!frames.MoveNext())
                     {
                         if (started)
@@ -209,6 +202,24 @@ namespace OpenGGF.BizHawk.Headless
 
                     if (!started)
                     {
+                        // Pre-arm FINISHED check (§3.5, Lua on_frame_end
+                        // order): the movie is flagged FINISHED on the
+                        // frame that consumed its final input row, and the
+                        // Lua evaluates that check BEFORE the arm
+                        // predicate — a movie whose final row's frame is
+                        // the first armable frame still ends without ever
+                        // becoming recordable.
+                        if (rowsConsumed >= movie.FrameCount)
+                        {
+                            throw new InvalidDataException(
+                                "Target gameplay segment "
+                                + targetGameplaySegment
+                                + " never became recordable: the movie"
+                                + " finished after " + rowsConsumed
+                                + " input rows with gameplay_segment_index "
+                                + gameplaySegmentIndex + ".");
+                        }
+
                         // Arm predicate (§3.1): game_mode 0x0C AND Sonic's
                         // move_lock word (0xB02E — the S2 offset, not S1's
                         // +0x3E) is 0.
@@ -272,6 +283,27 @@ namespace OpenGGF.BizHawk.Headless
                             continue;
                         }
                         break;      // Left level gameplay; no partial row.
+                    }
+
+                    // Movie-end stops (§3.5 conditions 2+3), evaluated
+                    // AFTER the mode-exit check above, exactly the Lua
+                    // source order — the frame fed by the movie's final
+                    // input row is emulated (so the mode-exit branch and
+                    // the finalize-time live sidekick read observe it) but
+                    // never recorded. Condition 2 (BK2-end guard): the
+                    // just-consumed input row is offset + traceFrame;
+                    // finalize without recording when it sits at or past
+                    // the movie length. Natively unreachable — the frame
+                    // stream never yields rows past the movie — but kept
+                    // in Lua shape. Condition 3 (FINISHED): fires on the
+                    // frame that consumed the final input row.
+                    if ((long)offset + traceFrame >= movie.FrameCount)
+                    {
+                        break;      // BK2 end; row N is not recorded.
+                    }
+                    if (rowsConsumed >= movie.FrameCount)
+                    {
+                        break;      // Movie FINISHED; row N is not recorded.
                     }
 
                     // Recorded row (§7 order): zone_act_state/checkpoint

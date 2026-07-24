@@ -189,9 +189,11 @@ death.
 The frame-loop model — post-advance inspection, `bk2_frame_offset :=
 emu.framecount()` at detection, detection frame not recorded, trace row N =
 state after applying BK2 row `offset + N` — is exactly S1 §2.1–§2.3. The
-native pre-advance movie-end folding (S1 §2.3(a)/§2.4: finish before
-applying row `offset+N` when `offset + N + 1 >= <BK2 row count>`; the final
-input row is never consumed or recorded) applies unchanged.
+native movie-end handling does NOT use S1's pre-advance folding: it
+evaluates the stop conditions post-advance in the Lua's source order
+(§3.5), so the frame fed by the movie's final input row IS emulated but
+never recorded — the last recorded trace row is still the one fed by input
+row `<BK2 row count> - 2`.
 
 ### 3.1 Arm predicate (both profiles)
 
@@ -317,10 +319,19 @@ recordable, finalize with no trace rows (no files were opened; no output).
 The `FRAME_CAP` backstop (`effective length + 64`, else 2,000,000) and
 `MOVIE_FRAME_SAFETY_MARGIN` (declared, unused) are Lua-lifecycle only.
 
-The native port folds 2+3 into the single pre-advance predicate
-`offset + N + 1 >= <BK2 row count>` exactly as S1 §2.3(a)/§2.4 — the
-FINISHED signal fires on the `on_frame_end` after the advance that consumed
-the movie's last input row, so that row is never recorded; the effective
+The native port evaluates conditions 1–3 post-advance in exactly this
+source order: the frame fed by the movie's final input row is emulated, the
+mode-exit check (condition 1, including the reset-aware EHZ discard) runs
+on its resulting RAM state, and only then do the movie-end stops fire.
+Condition 2 maps to `offset + N >= <BK2 row count>` on the just-consumed
+row (natively unreachable, since the native frame stream never yields rows
+past the movie); condition 3 fires when the consumed-row count reaches the
+BK2 row count — that row's frame is never recorded, matching the Lua's
+FINISHED signal firing on the `on_frame_end` after the advance that
+consumed the last input row. The finalize-time live sidekick read therefore
+samples RAM after that final emulated frame, and the pre-arm FINISHED check
+runs before the arm predicate (a movie whose final row's frame is the first
+armable frame still ends "never became recordable"). The effective
 `movie_length` (with the `OGGF_BK2_FRAME_COUNT` override) equals the BK2 row
 count the native harness reads directly. All three level fixtures ended via
 condition 1 (`game_mode` left `0x0C` before movie end: 899+5852+1=6752 <
@@ -809,7 +820,7 @@ against all three fixtures.
 Byte-for-byte shared with the S1 port (reuse, do not fork):
 
 - Frame-alignment model, detection-frame skip, `bk2_frame_offset`
-  convention, native pre-advance movie-end folding (S1 §2).
+  convention (S1 §2).
 - CSV v7 header text, 42-field format string, uhex, ground_mode thresholds.
 - Input-mask derivation incl. Start exclusion and the never-taken RAM
   fallback.
@@ -840,6 +851,9 @@ Genuinely different in S2 (the S2-only surface):
 - Segment selection: profiles, `gameplay_segment_index` counting, EHZ
   bootstrap skip/discard semantics, `OGGF_BK2_FRAME_COUNT` effective movie
   length.
+- Movie-end handling: post-advance stop checks in Lua source order
+  (mode-exit before BK2-end/FINISHED, §3.5) instead of S1's pre-advance
+  fold — the final input row's frame is emulated but never recorded.
 - metadata: schema 9 with `rom_zone_id`, `gameplay_segment`,
   `rng_seed`, `trace_profile`, `bizhawk_version`, `genesis_core`, `route`,
   `source_bk2`, `aux_schema_extras`; MTZ apparent-act adjustment; sidekick

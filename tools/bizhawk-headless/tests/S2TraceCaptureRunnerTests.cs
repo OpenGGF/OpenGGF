@@ -50,6 +50,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S2TraceCaptureRunner finishes on movie exhaustion with CNZ gate armed",
                 FinishesOnMovieExhaustionWithCnzGateArmed));
+            tests.Add(new TestMain.TestCase(
+                "S2TraceCaptureRunner discards EHZ bootstrap leaving level mode on final movie frame",
+                DiscardsEhzBootstrapLeavingLevelModeOnFinalMovieFrame));
+            tests.Add(new TestMain.TestCase(
+                "S2TraceCaptureRunner sees sidekick appearing on final unrecorded frame",
+                SeesSidekickAppearingOnFinalUnrecordedFrame));
+            tests.Add(new TestMain.TestCase(
+                "S2TraceCaptureRunner does not arm on the movie's final frame",
+                DoesNotArmOnMoviesFinalFrame));
         }
 
         private static void CapturesByteExactGameplayUnlockOutput()
@@ -63,8 +72,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "|..|...R....|........|",
                     "|..|.D...B..|........|",
                     BlankRow,
-                    // Final input row: never consumed or recorded (Lua
-                    // FINISHED parity).
+                    // Final input row: consumed and emulated, but its
+                    // frame is never recorded (Lua FINISHED parity).
                     BlankRow
                 },
                 movie =>
@@ -102,7 +111,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     AssertEx.Equal(3, result.Bk2FrameOffset);
                     AssertEx.Equal(3, result.TraceFrameCount);
                     AssertEx.Equal(0, result.GameplaySegment);
-                    AssertEx.Equal(6, host.AdvanceCount);
+                    AssertEx.Equal(7, host.AdvanceCount);
 
                     string playerTail =
                         ",0000,0000,0000,00,0,0,0,0000,0000,00,00,00,00,00,"
@@ -543,11 +552,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         metadata);
 
                     // Lua FINISHED parity: with offset 1 and 5 input rows,
-                    // the final input row is never consumed; trace rows 0-2
-                    // are recorded.
+                    // the final input row IS consumed and its frame
+                    // emulated, but never recorded; trace rows 0-2 are
+                    // recorded.
                     AssertEx.Equal(1, result.Bk2FrameOffset);
                     AssertEx.Equal(3, result.TraceFrameCount);
-                    AssertEx.Equal(4, host.AdvanceCount);
+                    AssertEx.Equal(5, host.AdvanceCount);
 
                     // Arming in CNZ (start_rom_zone_id 0x0C) turns on the
                     // per-frame slot machine diagnostic.
@@ -561,6 +571,150 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         true,
                         metadata.ToString().Contains(
                             "  \"trace_frame_count\": 3,\n"));
+                });
+        }
+
+        /// <summary>
+        /// Lua stop-condition ordering (§3.5): the frame fed by the movie's
+        /// FINAL input row is emulated, and the mode-exit check runs on its
+        /// state BEFORE the FINISHED stop. If that frame takes game_mode off
+        /// 0x0C during an armed reset-aware EHZ recording, the recording is
+        /// DISCARDED (the Lua deletes the files and the run ends "never
+        /// became recordable") — it must NOT be published.
+        /// </summary>
+        private static void DiscardsEhzBootstrapLeavingLevelModeOnFinalMovieFrame()
+        {
+            WithMovie(
+                Rows(6),
+                movie =>
+                {
+                    var host = new ScriptedHost((ram, completedFrame) =>
+                    {
+                        if (completedFrame == 1)
+                        {
+                            ram.SetByte(0xF600, 0x0C);  // Zone 0 = EHZ.
+                        }
+                        if (completedFrame == 6)
+                        {
+                            // Level mode is left exactly on the frame fed
+                            // by the movie's final input row.
+                            ram.SetByte(0xF600, 0x00);
+                        }
+                    });
+
+                    var physics = new StringWriter();
+                    var aux = new StringWriter();
+                    var metadata = new StringWriter();
+                    AssertEx.Throws<InvalidDataException>(
+                        () => S2TraceCaptureRunner.Capture(
+                            movie,
+                            host,
+                            "level_gated_reset_aware",
+                            0,
+                            "synthetic.bk2",
+                            "2026-07-13",
+                            physics,
+                            aux,
+                            metadata),
+                        "Target gameplay segment 0 never became recordable");
+                    AssertEx.Equal(6, host.AdvanceCount);
+                    AssertEx.Equal(string.Empty, physics.ToString());
+                    AssertEx.Equal(string.Empty, aux.ToString());
+                    AssertEx.Equal(string.Empty, metadata.ToString());
+                });
+        }
+
+        /// <summary>
+        /// The finalize-time live sidekick read happens AFTER the frame fed
+        /// by the movie's final input row was emulated (Lua write_metadata
+        /// runs post-advance), so a sidekick id byte first becoming nonzero
+        /// on that final unrecorded frame is still reflected in metadata.
+        /// </summary>
+        private static void SeesSidekickAppearingOnFinalUnrecordedFrame()
+        {
+            WithMovie(
+                Rows(5),
+                movie =>
+                {
+                    var host = new ScriptedHost((ram, completedFrame) =>
+                    {
+                        if (completedFrame == 1)
+                        {
+                            ram.SetByte(0xF600, 0x0C);
+                            ram.SetByte(0xFE10, 0x0F);  // ARZ
+                        }
+                        if (completedFrame == 5)
+                        {
+                            // Sidekick appears only on the final,
+                            // unrecorded frame.
+                            ram.SetByte(0xB040, 0x02);
+                        }
+                    });
+
+                    var metadata = new StringWriter();
+                    S2TraceCaptureResult result = S2TraceCaptureRunner.Capture(
+                        movie,
+                        host,
+                        "gameplay_unlock",
+                        0,
+                        "synthetic.bk2",
+                        "2026-07-13",
+                        new StringWriter(),
+                        new StringWriter(),
+                        metadata);
+
+                    AssertEx.Equal(1, result.Bk2FrameOffset);
+                    AssertEx.Equal(3, result.TraceFrameCount);
+                    AssertEx.Equal(5, host.AdvanceCount);
+                    AssertEx.Equal(
+                        true,
+                        metadata.ToString().Contains(
+                            "  \"characters\": [\"sonic\", \"tails\"],\n"));
+                    AssertEx.Equal(
+                        true,
+                        metadata.ToString().Contains(
+                            "  \"sidekicks\": [\"tails\"],\n"));
+                });
+        }
+
+        /// <summary>
+        /// The Lua's pre-arm FINISHED check runs BEFORE the arm predicate,
+        /// so a movie whose final input row's frame is the first armable
+        /// frame ends "never became recordable" — it must not arm and then
+        /// publish an empty trace.
+        /// </summary>
+        private static void DoesNotArmOnMoviesFinalFrame()
+        {
+            WithMovie(
+                Rows(4),
+                movie =>
+                {
+                    var host = new ScriptedHost((ram, completedFrame) =>
+                    {
+                        if (completedFrame == 4)
+                        {
+                            ram.SetByte(0xF600, 0x0C);
+                            ram.SetByte(0xFE10, 0x0F);  // ARZ
+                        }
+                    });
+
+                    var physics = new StringWriter();
+                    var metadata = new StringWriter();
+                    AssertEx.Throws<InvalidDataException>(
+                        () => S2TraceCaptureRunner.Capture(
+                            movie,
+                            host,
+                            "gameplay_unlock",
+                            0,
+                            "synthetic.bk2",
+                            "2026-07-13",
+                            physics,
+                            new StringWriter(),
+                            metadata),
+                        "Target gameplay segment 0 never became recordable");
+                    AssertEx.Equal(4, host.AdvanceCount);
+                    AssertEx.Equal(string.Empty, physics.ToString());
+                    AssertEx.Equal(string.Empty, metadata.ToString());
                 });
         }
 
