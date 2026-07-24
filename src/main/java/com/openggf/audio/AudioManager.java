@@ -36,6 +36,7 @@ import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.SonicConfiguration;
@@ -935,6 +936,17 @@ public class AudioManager implements MusicRestoreSink {
     SmpsCoordFlagHandlerOwner presentationCoordFlagHandlersForTesting() {
         ensureShadowPresentation();
         return presentationCoordFlagHandlers;
+    }
+
+    SmpsDriverSnapshot shadowSmpsDriverSnapshotForTesting() {
+        ensureShadowPresentation();
+        for (int index = 0; index < shadowRegistry.orderedVoiceCount(); index++) {
+            if (shadowRegistry.orderedVoiceAt(index)
+                    instanceof SmpsCompositeVoice composite) {
+                return composite.driver().captureSnapshot();
+            }
+        }
+        return null;
     }
 
     public void advancePausedFrameStepAudio() {

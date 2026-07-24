@@ -261,7 +261,7 @@ public class TestDonorAudioRouting {
 
         audioManager.playDonorMusic("s3k", 0x21);
         audioManager.playDonorSfx("s3k", 0xA4);
-        audioManager.presentOuterFrame(PresentationMode.FORWARD);
+        audioManager.presentOuterFrame(PresentationMode.SILENT);
 
         var legacyOwner = realBackend.legacyCoordFlagHandlersForTesting();
         var presentationOwner =
@@ -269,11 +269,6 @@ public class TestDonorAudioRouting {
         assertNotSame(legacyOwner, presentationOwner,
                 "audible and shadow sessions must not share mutable state");
         assertNotSame(legacyOwner.state(), presentationOwner.state());
-        assertSame(legacyOwner.handlerFor("s3k"),
-                legacyOwner.handlerFor("s3k"));
-        assertSame(presentationOwner.handlerFor("s3k"),
-                presentationOwner.handlerFor("s3k"));
-
         var snapshot = realBackend.captureLogicalSnapshot();
         assertNotNull(snapshot.musicDriver());
         assertEquals(2, snapshot.musicDriver().sequencers().size(),
@@ -285,6 +280,33 @@ public class TestDonorAudioRouting {
         assertSame(legacyOwner.handlerFor("s3k"), musicHandler);
         assertSame(musicHandler, sfxHandler,
                 "legacy donor music and SFX must share the counter owner");
+
+        var shadowDriver =
+                audioManager.shadowSmpsDriverSnapshotForTesting();
+        assertNotNull(shadowDriver);
+        assertEquals(2, shadowDriver.sequencers().size(),
+                "shadow donor SFX must join shadow donor music's driver");
+        var shadowMusicHandler = shadowDriver.sequencers().get(0)
+                .config().getCoordFlagHandler();
+        var shadowSfxHandler = shadowDriver.sequencers().get(1)
+                .config().getCoordFlagHandler();
+        assertSame(presentationOwner.handlerFor("s3k"),
+                shadowMusicHandler);
+        assertSame(shadowMusicHandler, shadowSfxHandler,
+                "shadow donor music and SFX must share the counter owner");
+        assertNotSame(musicHandler, shadowMusicHandler,
+                "legacy and shadow sequencers must not share handlers");
+
+        legacyOwner.state().setSpindashRevCounter(17);
+        presentationOwner.state().setSpindashRevCounter(29);
+        assertEquals(17, legacyOwner.state().spindashRevCounter());
+        assertEquals(29, presentationOwner.state().spindashRevCounter());
+        shadowSfxHandler.onSfxStart(0);
+        assertEquals(0, presentationOwner.state().spindashRevCounter(),
+                "the configured shadow SFX handler must mutate the shared "
+                        + "presentation counter");
+        assertEquals(17, legacyOwner.state().spindashRevCounter(),
+                "shadow counter mutations must not cross into legacy");
     }
 
     // --- Test doubles ---
