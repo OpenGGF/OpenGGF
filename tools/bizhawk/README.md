@@ -11,6 +11,11 @@ Use this folder for the recorder scripts and local BizHawk assets:
   diagnostics and one-off probes
 - `record_trace.bat` launches S1 recording through the reusable no-audio/no-render launcher
 - `s1_trace_recorder.lua` captures the ROM-side trace data using schema v3
+- `s1_complete_run_recorder.lua` records per-level segments (plus special-stage
+  segments and `run_manifest.json` in run mode) from a single Sonic 1 BK2
+  playthrough — natively superseded on Linux by the headless harness's
+  `--trace-profile complete_run` / `--run-id` modes below; the Lua remains the
+  reference implementation and the non-Linux recording path
 - `record_s2_trace.bat` launches the Sonic 2 recorder through the reusable no-audio/no-render launcher
 - `record_s2_level_select_traces.ps1` records the Sonic 2 level-select BK2 set into test resources
 - `s2_trace_recorder.lua` captures Sonic 2 ROM-side trace data using schema v8, including
@@ -58,10 +63,10 @@ selected when running the trace tools.
 The Linux-only native GPGX harness (`tools/bizhawk-headless/`) runs the
 BizHawk 2.11 core through Mono without starting EmuHawk and without requiring
 `DISPLAY`. It records **full canonical Sonic 1 and Sonic 2 traces** and is the
-supported replacement for `s1_trace_recorder.lua` and `s2_trace_recorder.lua`
-when recording on Linux. `--mode trace` auto-detects the game from the
-supplied ROM (S1 World REV01 or S2 World REV01) and selects the matching
-recorder pipeline.
+supported replacement for `s1_trace_recorder.lua`,
+`s1_complete_run_recorder.lua`, and `s2_trace_recorder.lua` when recording on
+Linux. `--mode trace` auto-detects the game from the supplied ROM (S1 World
+REV01 or S2 World REV01) and selects the matching recorder pipeline.
 
 ### Sonic 1 trace mode
 
@@ -97,6 +102,93 @@ crash-resilience rewrites; stdout progress/diagnostic text is different; and
 `lua_script_version` stays `"3.5"` as a schema-compatibility marker even
 though no Lua runs. The byte-level porting contract lives in
 `tools/bizhawk-headless/docs/s1-trace-recorder-behavior.md`.
+
+### Sonic 1 complete-run and run mode
+
+With an S1 World REV01 ROM, `--mode trace` also replaces
+`s1_complete_run_recorder.lua` on Linux. Two flags select the complete-run
+recorder pipeline (both route through the same engine, whose giant-ring
+special-stage detour machine is always on, exactly like the Lua):
+
+- **`--trace-profile complete_run`** — one movie pass over an entire
+  playthrough BK2 emits a separate per-level segment directory
+  (`physics.csv`, `aux_state.jsonl`, `metadata.json`) for every level the
+  movie clears, using the recorder's ROM-derived directory tokens (so SBZ3
+  lands in `lz4/` and Final Zone in `sbz3/` — the ROM encodes them as LZ act
+  4 and SBZ act 3). `run_manifest.json` is emitted only if the movie takes a
+  giant-ring detour (Lua gate); a stage-free pass publishes exactly the
+  per-level directories.
+- **`--run-id <id>`** (mirroring `OGGF_TRACE_RUN_ID`; mutually exclusive
+  with `--trace-profile`) — forces `run_manifest.json` emission with that
+  `run_id`, records any giant-ring special-stage detour as a dedicated `ss`
+  segment (`trace_profile s1_special_stage`), and stamps run/source metadata
+  fields. As in S2 run mode, output is staged fully and published as one
+  all-or-nothing no-replace set with the manifest linked last.
+
+Verified capture commands (BK2 frame offsets are auto-detected per segment):
+
+```bash
+# Complete run: 19 level segments from the canonical full-playthrough movie
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S1_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s1/_movies/s1-complete-run.bk2" \
+  --output "$PWD/target/bizhawk-headless-s1-completerun" \
+  --trace-profile complete_run
+
+# Run mode: level -> giant-ring special stage -> level round trip
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S1_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s1/runs/s1-ghz-maze-roundtrip/s1-ghz-maze-roundtrip.bk2" \
+  --output "$PWD/target/bizhawk-headless-s1-run" \
+  --run-id s1-ghz-maze-roundtrip
+```
+
+**Byte-parity guarantee vs the Lua recorder:** three ROM-backed differential
+gates in `tools/bizhawk-headless/test.sh` prove the port end to end:
+
+- **19 complete-run segments** — one `--trace-profile complete_run` pass of
+  `_movies/s1-complete-run.bk2` (195,493 input rows) reproduces all 19
+  `src/test/resources/traces/s1/*_completerun` fixture directories:
+  `physics.csv` and `aux_state.jsonl` byte-identical (LF line endings, like
+  the fixtures), exactly the 19 segment directories and no
+  `run_manifest.json`.
+- **Maze round trip** — one `--run-id` pass of
+  `runs/s1-ghz-maze-roundtrip/s1-ghz-maze-roundtrip.bk2` reproduces the
+  `ghz1`/`ss`/`ghz2` segments' `physics.csv` and `aux_state.jsonl`
+  byte-identically with **no normalization** (the fixture set carries the
+  canonical Windows capture's CRLF line endings, which run-mode publication
+  reproduces), plus `run_manifest.json` and each `metadata.json` under the
+  normalization policy below.
+- **Standalone special stage** — `src/test/resources/traces/s1/special_stage/`
+  is a published copy of the same run capture's `ss/` segment (there was
+  never a separate standalone invocation); the gate compares the produced
+  `ss/` bytes against it.
+
+**Normalization policy (metadata/manifest only):** exactly two things may
+differ from the committed fixtures — the `recording_date` value, and one
+pinned `lua_script_version` line. The native port stamps the current Lua's
+version `"3.17"`; the complete-run fixtures are stamped `"3.14"` and the
+run/standalone fixtures `"3.15"` (captured by an interim script). The
+handed-down rule to verify the version-marker deltas before allowing them was
+carried out against the Lua's own version-bump commit diffs
+(`docs/s1-complete-run-behavior.md` §2 and `docs/s1-run-mode-behavior.md`
+§10): for these fixtures' code paths the 3.14→3.17 and 3.15→3.17
+output-affecting deltas are exactly the version strings, so the gates
+substitute exactly that one line per file (fixture line must be the fixture
+stamp, produced line must be `"3.17"`) and every other byte must match. The
+8 `credits_*` fixture dirs are **not** produced by this recorder — they come
+from a separate stable-retro credits pipeline and stay out of scope.
+
+The byte-level porting contracts live in
+`tools/bizhawk-headless/docs/s1-complete-run-behavior.md` (level-segment
+state machine, per-segment offsets, encodings) and
+`tools/bizhawk-headless/docs/s1-run-mode-behavior.md` (detour machine,
+special-stage writer, manifest, version-stamp provenance); where any spec
+text and the Lua disagree, the Lua wins.
 
 ### Sonic 2 trace mode (all three recorder modes)
 
@@ -157,10 +249,12 @@ spec text and the Lua disagree, the Lua wins.
 
 ### Limitations and smoke mode
 
-**Limitations:** Linux/Mono only, and single-game S1/S2 recorders only — the
-S3K recorders and the S1/S3K complete-run recorders remain Lua scripts, and
-`s1_trace_recorder.lua` / `s2_trace_recorder.lua` remain the reference
-implementations and the recording path on non-Linux platforms. The harness
+**Limitations:** Linux/Mono only, and S1/S2 recorders only — the S3K
+recorders (`s3k_trace_recorder.lua`, `s3k_complete_run_recorder.lua`) and
+the S2 special-stage-only recorder (`s2_ss_trace_recorder.lua`) remain Lua
+scripts, and `s1_trace_recorder.lua` / `s1_complete_run_recorder.lua` /
+`s2_trace_recorder.lua` remain the reference implementations and the
+recording path on non-Linux platforms. The harness
 needs the BizHawk 2.11 Linux x64 assemblies (`BIZHAWK_HOME` must point at an
 absolute install, default `docs/BizHawk-2.11-linux-x64`), Mono, and a
 verified Sonic 1 or Sonic 2 World REV01 ROM (`S1_ROM_PATH` / `S2_ROM_PATH`

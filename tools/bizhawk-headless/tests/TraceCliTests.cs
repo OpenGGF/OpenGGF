@@ -59,6 +59,577 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "TraceCli S2 run mode failure leaves no partial outputs",
                 S2RunModeFailureLeavesNoPartialOutputs));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli rejects S2-only arguments with the Sonic 1 ROM",
+                RejectsS2OnlyArgumentsWithSonic1Rom));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S1 complete run publishes level segments with LF",
+                S1CompleteRunPublishesLevelSegmentsWithLf));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S1 run mode publishes segments and manifest with"
+                + " CRLF",
+                S1RunModePublishesSegmentsAndManifestWithCrlf));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S1 complete run emits the manifest for a detour"
+                + " without a run id",
+                S1CompleteRunEmitsManifestForDetourWithoutRunId));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S1 complete run refuses an existing run manifest",
+                S1CompleteRunRefusesExistingRunManifest));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli S1 run mode failure leaves no partial outputs",
+                S1RunModeFailureLeavesNoPartialOutputs));
+        }
+
+        /// <summary>
+        /// The Sonic 1 ROM accepts --run-id and --trace-profile
+        /// complete_run (the complete-run recorder) but keeps rejecting
+        /// the S2-only selection arguments: --gameplay-segment and any
+        /// other profile string.
+        /// </summary>
+        private static void RejectsS2OnlyArgumentsWithSonic1Rom()
+        {
+            TraceCliDependencies dependencies = ResolveDependencies();
+            foreach (string[] pair in new[]
+            {
+                new[] { "--gameplay-segment", "1" },
+                new[] { "--trace-profile", "level_gated_reset_aware" }
+            })
+            {
+                WithSyntheticMovie(
+                    4,
+                    moviePath => WithUnusedOutput(
+                        output =>
+                        {
+                            var stdout = new StringWriter(
+                                CultureInfo.InvariantCulture);
+                            var stderr = new StringWriter(
+                                CultureInfo.InvariantCulture);
+
+                            int exitCode = Program.Run(
+                                new[]
+                                {
+                                    "--mode", "trace",
+                                    "--rom", dependencies.RomPath,
+                                    "--movie", moviePath,
+                                    "--output", output,
+                                    pair[0], pair[1]
+                                },
+                                stdout,
+                                stderr,
+                                (romPath, syncSettings) =>
+                                    new ScriptedTraceHost(-1));
+
+                            AssertEx.Equal(1, exitCode);
+                            AssertEx.Equal(
+                                string.Empty, stdout.ToString());
+                            AssertContains(
+                                stderr.ToString(),
+                                "only supported with the Sonic 2 ROM");
+                            AssertEx.Equal(
+                                false,
+                                Directory.Exists(Path.GetFullPath(output))
+                                && Directory.GetFileSystemEntries(
+                                    Path.GetFullPath(output)).Length > 0);
+                        }));
+            }
+        }
+
+        /// <summary>
+        /// Stage-free complete-run schedule for a 14-row movie: arm at F=3
+        /// (GHZ act raw 0), rows F=4-6, mode exit 0x8C at F=7, re-arm at
+        /// F=9 (act raw 1), rows F=10-13, movie-done guard at F=14. Two
+        /// level segments ghz1 (offset 3, 3 rows) and ghz2 (offset 9,
+        /// 4 rows), no detour, no manifest.
+        /// </summary>
+        private static void CompleteRunSchedule(
+            FakeS1Host host,
+            int frame)
+        {
+            if (frame == 3)
+            {
+                host.Ram[0xF600] = 0x0C;
+                host.Ram[0xFE10] = 0x00;
+                host.Ram[0xFE11] = 0x00;
+                host.SetU16(0xD008, 0x0100);
+                host.SetU16(0xD00C, 0x0300);
+            }
+            if (frame == 7)
+            {
+                host.Ram[0xF600] = 0x8C;
+            }
+            if (frame == 9)
+            {
+                host.Ram[0xF600] = 0x0C;
+                host.Ram[0xFE11] = 0x01;
+            }
+        }
+
+        private static void S1CompleteRunPublishesLevelSegmentsWithLf()
+        {
+            TraceCliDependencies dependencies = ResolveDependencies();
+            WithSyntheticMovie(
+                14,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        var host =
+                            new FakeS1Host(
+                                CompleteRunSchedule);
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output,
+                                "--trace-profile", "complete_run"
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) => host);
+
+                        AssertEx.Equal(string.Empty, stderr.ToString());
+                        AssertEx.Equal(0, exitCode);
+
+                        AssertEx.Equal(
+                            "BizHawk: "
+                            + dependencies.ManagedVersion
+                            + "\n"
+                            + "ROM SHA-1: "
+                            + RomIdentity.Sonic1Rev01Sha1
+                            + "\n"
+                            + "Movie frames: 14\n"
+                            + "Trace profile: complete_run\n"
+                            + "Segments: 2\n"
+                            + "Transitions: 0\n"
+                            + "Segment ghz1: kind=level,"
+                            + " BK2 frame offset=3, trace frames=3\n"
+                            + "Segment ghz2: kind=level,"
+                            + " BK2 frame offset=9, trace frames=4\n",
+                            stdout.ToString());
+
+                        string fullOutput = Path.GetFullPath(output);
+                        string[] files = Directory.GetFiles(
+                                fullOutput,
+                                "*",
+                                SearchOption.AllDirectories)
+                            .Select(path =>
+                                path.Substring(fullOutput.Length + 1))
+                            .OrderBy(
+                                name => name,
+                                StringComparer.Ordinal)
+                            .ToArray();
+                        AssertEx.Equal(
+                            "ghz1/aux_state.jsonl,"
+                            + "ghz1/metadata.json,"
+                            + "ghz1/physics.csv,"
+                            + "ghz2/aux_state.jsonl,"
+                            + "ghz2/metadata.json,"
+                            + "ghz2/physics.csv",
+                            string.Join(",", files));
+
+                        // The complete-run fixture set is LF-only (spec
+                        // s1-complete-run-behavior.md section 8): no CRLF
+                        // expansion anywhere in this layout.
+                        foreach (string file in files)
+                        {
+                            byte[] bytes = File.ReadAllBytes(
+                                Path.Combine(fullOutput, file));
+                            AssertEx.Equal(
+                                false,
+                                bytes.Contains((byte)'\r'));
+                        }
+
+                        string metadata = File.ReadAllText(Path.Combine(
+                            fullOutput, "ghz2", "metadata.json"));
+                        AssertContains(
+                            metadata,
+                            "  \"zone\": \"ghz\",\n  \"zone_id\": 0,\n"
+                            + "  \"act\": 2,\n"
+                            + "  \"bk2_frame_offset\": 9,\n"
+                            + "  \"trace_frame_count\": 4,\n");
+                        AssertContains(
+                            metadata,
+                            "  \"lua_script_version\": \""
+                            + S1CompleteRunMetadataWriter.LuaScriptVersion
+                            + "\",\n");
+                        AssertContains(
+                            metadata,
+                            "  \"source_bk2\": \"synthetic.bk2\"\n}\n");
+                        string physics = File.ReadAllText(Path.Combine(
+                            fullOutput, "ghz1", "physics.csv"));
+                        AssertEx.Equal(
+                            true,
+                            physics.StartsWith(
+                                S1TraceCsvWriter.Header + "\n0000,"));
+                    }));
+        }
+
+        /// <summary>
+        /// Detour round-trip schedule for a 12-row movie: level arm at F=3,
+        /// rows F=4-5; giant-ring entry at F=6 (rings 7, emeralds 0,
+        /// v_lastspecial 1), ss rows F=7-8; exit + same-frame re-arm at F=9
+        /// (act raw 1, carried rings 5, emerald collected), rows F=10-11;
+        /// movie-done guard at F=12. Segments ghz1/ss/ghz2 with offsets
+        /// 3/6/9 and 2 rows each, transitions giant_ring + stage_exit.
+        /// </summary>
+        private static void S1RoundTripSchedule(
+            FakeS1Host host,
+            int frame)
+        {
+            if (frame == 3)
+            {
+                host.Ram[0xF600] = 0x0C;
+                host.Ram[0xFE10] = 0x00;
+                host.Ram[0xFE11] = 0x00;
+            }
+            if (frame == 6)
+            {
+                host.Ram[0xF600] = 0x10;
+                host.SetU16(0xFE20, 7);
+                host.Ram[0xFE57] = 0;
+                host.Ram[0xFE16] = 1;
+            }
+            if (frame == 9)
+            {
+                host.Ram[0xF600] = 0x0C;
+                host.Ram[0xFE11] = 0x01;
+                host.SetU16(0xFE20, 5);
+                host.Ram[0xFE57] = 1;
+            }
+        }
+
+        private static void S1RunModePublishesSegmentsAndManifestWithCrlf()
+        {
+            TraceCliDependencies dependencies = ResolveDependencies();
+            WithSyntheticMovie(
+                12,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        var host =
+                            new FakeS1Host(
+                                S1RoundTripSchedule);
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output,
+                                "--run-id", "cli-s1-run"
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) => host);
+
+                        AssertEx.Equal(string.Empty, stderr.ToString());
+                        AssertEx.Equal(0, exitCode);
+
+                        string fullOutput = Path.GetFullPath(output);
+                        AssertEx.Equal(
+                            "BizHawk: "
+                            + dependencies.ManagedVersion
+                            + "\n"
+                            + "ROM SHA-1: "
+                            + RomIdentity.Sonic1Rev01Sha1
+                            + "\n"
+                            + "Movie frames: 12\n"
+                            + "Run ID: cli-s1-run\n"
+                            + "Segments: 3\n"
+                            + "Transitions: 2\n"
+                            + "Segment ghz1: kind=level,"
+                            + " BK2 frame offset=3, trace frames=2\n"
+                            + "Segment ss: kind=special_stage,"
+                            + " BK2 frame offset=6, trace frames=2\n"
+                            + "Segment ghz2: kind=level,"
+                            + " BK2 frame offset=9, trace frames=2\n"
+                            + "Run manifest: "
+                            + Path.Combine(fullOutput, "run_manifest.json")
+                            + "\n",
+                            stdout.ToString());
+
+                        string[] files = Directory.GetFiles(
+                                fullOutput,
+                                "*",
+                                SearchOption.AllDirectories)
+                            .Select(path =>
+                                path.Substring(fullOutput.Length + 1))
+                            .OrderBy(
+                                name => name,
+                                StringComparer.Ordinal)
+                            .ToArray();
+                        AssertEx.Equal(
+                            "ghz1/aux_state.jsonl,"
+                            + "ghz1/metadata.json,"
+                            + "ghz1/physics.csv,"
+                            + "ghz2/aux_state.jsonl,"
+                            + "ghz2/metadata.json,"
+                            + "ghz2/physics.csv,"
+                            + "run_manifest.json,"
+                            + "ss/aux_state.jsonl,"
+                            + "ss/metadata.json,"
+                            + "ss/physics.csv",
+                            string.Join(",", files));
+
+                        // The ss aux file exists and is byte-empty; CRLF
+                        // expansion of empty content stays empty.
+                        AssertEx.Equal(
+                            0L,
+                            new FileInfo(Path.Combine(
+                                fullOutput,
+                                "ss",
+                                "aux_state.jsonl")).Length);
+                        // Run-mode files carry the canonical capture's
+                        // Windows text-mode CRLF line endings
+                        // (docs/s1-run-mode-behavior.md section 9).
+                        string manifest = File.ReadAllText(Path.Combine(
+                            fullOutput,
+                            "run_manifest.json"));
+                        AssertContains(
+                            manifest,
+                            "  \"run_id\": \"cli-s1-run\",\r\n");
+                        AssertContains(
+                            manifest,
+                            "  \"rom_checksum\": \"AFE05EEE\",\r\n");
+                        AssertContains(
+                            manifest,
+                            "\"entry_kind\": \"giant_ring\","
+                            + " \"mode_change_bk2_frame\": 6,"
+                            + " \"rings_before\": 7,"
+                            + " \"emeralds_before\": 0}");
+                        // S1 level metadata is byte-identical in and out
+                        // of run context: no run_id / segment_index lines
+                        // (docs/s1-run-mode-behavior.md section 7).
+                        string levelMetadata = File.ReadAllText(
+                            Path.Combine(
+                                fullOutput,
+                                "ghz2",
+                                "metadata.json"));
+                        AssertContains(
+                            levelMetadata,
+                            "  \"bk2_frame_offset\": 9,\r\n");
+                        AssertEx.Equal(
+                            false,
+                            levelMetadata.Contains("run_id"));
+                        string ssMetadata = File.ReadAllText(Path.Combine(
+                            fullOutput,
+                            "ss",
+                            "metadata.json"));
+                        AssertContains(
+                            ssMetadata,
+                            "  \"special_stage_index\": 1,\r\n");
+                        AssertContains(
+                            ssMetadata,
+                            "  \"run_id\": \"cli-s1-run\",\r\n");
+                        AssertContains(
+                            ssMetadata,
+                            "  \"segment_index\": 1\r\n}\r\n");
+                    }));
+        }
+
+        /// <summary>
+        /// The S1 detour machine is always on (docs/s1-run-mode-behavior.md
+        /// section 1): a complete_run capture whose movie enters a special
+        /// stage produces the ss segment and run_manifest.json even
+        /// without --run-id — only the run_id lines are absent — and the
+        /// complete_run invocation keeps its LF-only encoding.
+        /// </summary>
+        private static void S1CompleteRunEmitsManifestForDetourWithoutRunId()
+        {
+            TraceCliDependencies dependencies = ResolveDependencies();
+            WithSyntheticMovie(
+                12,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        var host =
+                            new FakeS1Host(
+                                S1RoundTripSchedule);
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output,
+                                "--trace-profile", "complete_run"
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) => host);
+
+                        AssertEx.Equal(string.Empty, stderr.ToString());
+                        AssertEx.Equal(0, exitCode);
+
+                        string fullOutput = Path.GetFullPath(output);
+                        AssertContains(
+                            stdout.ToString(),
+                            "Trace profile: complete_run\n"
+                            + "Segments: 3\n"
+                            + "Transitions: 2\n");
+                        AssertContains(
+                            stdout.ToString(),
+                            "Run manifest: "
+                            + Path.Combine(fullOutput, "run_manifest.json")
+                            + "\n");
+
+                        byte[] manifestBytes = File.ReadAllBytes(
+                            Path.Combine(fullOutput, "run_manifest.json"));
+                        AssertEx.Equal(
+                            false,
+                            manifestBytes.Contains((byte)'\r'));
+                        string manifest = Encoding.UTF8.GetString(
+                            manifestBytes);
+                        AssertEx.Equal(
+                            false,
+                            manifest.Contains("run_id"));
+                        AssertContains(
+                            manifest,
+                            "  \"rom_checksum\": \"AFE05EEE\",\n");
+                        string ssMetadata = File.ReadAllText(Path.Combine(
+                            fullOutput,
+                            "ss",
+                            "metadata.json"));
+                        AssertEx.Equal(
+                            false,
+                            ssMetadata.Contains("run_id"));
+                    }));
+        }
+
+        private static void S1CompleteRunRefusesExistingRunManifest()
+        {
+            TraceCliDependencies dependencies = ResolveDependencies();
+            WithSyntheticMovie(
+                14,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        Directory.CreateDirectory(output);
+                        string manifestPath = Path.Combine(
+                            output,
+                            "run_manifest.json");
+                        File.WriteAllText(
+                            manifestPath,
+                            "{}\n",
+                            new UTF8Encoding(false));
+
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output,
+                                "--trace-profile", "complete_run"
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) =>
+                                new FakeS1Host(CompleteRunSchedule));
+
+                        AssertEx.Equal(1, exitCode);
+                        AssertEx.Equal(string.Empty, stdout.ToString());
+                        AssertContains(
+                            stderr.ToString(),
+                            "already exists and will not be replaced: "
+                            + Path.Combine(
+                                Path.GetFullPath(output),
+                                "run_manifest.json"));
+
+                        string[] files = Directory.GetFiles(
+                            Path.GetFullPath(output),
+                            "*",
+                            SearchOption.AllDirectories);
+                        AssertEx.Equal(1, files.Length);
+                        AssertEx.Equal(
+                            "{}\n",
+                            File.ReadAllText(files[0]));
+                    }));
+        }
+
+        private static void S1RunModeFailureLeavesNoPartialOutputs()
+        {
+            TraceCliDependencies dependencies = ResolveDependencies();
+            WithSyntheticMovie(
+                12,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        // A competing final inside the first segment
+                        // directory makes the multi-file publication fail;
+                        // no staged file may survive as a final.
+                        Directory.CreateDirectory(
+                            Path.Combine(output, "ghz1"));
+                        string competingPath = Path.Combine(
+                            output,
+                            "ghz1",
+                            "physics.csv");
+                        File.WriteAllText(
+                            competingPath,
+                            "competing ghz1 capture\n",
+                            new UTF8Encoding(false));
+
+                        var host =
+                            new FakeS1Host(
+                                S1RoundTripSchedule);
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output,
+                                "--run-id", "cli-s1-run"
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) => host);
+
+                        AssertEx.Equal(1, exitCode);
+                        AssertContains(
+                            stderr.ToString(),
+                            "already exists and will not be replaced");
+
+                        string fullOutput = Path.GetFullPath(output);
+                        string[] files = Directory.GetFiles(
+                            fullOutput,
+                            "*",
+                            SearchOption.AllDirectories);
+                        AssertEx.Equal(1, files.Length);
+                        AssertEx.Equal(
+                            Path.GetFullPath(competingPath),
+                            Path.GetFullPath(files[0]));
+                        AssertEx.Equal(
+                            "competing ghz1 capture\n",
+                            File.ReadAllText(files[0]));
+                    }));
         }
 
         private static void ValidatesS2TraceArguments()
@@ -1008,6 +1579,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public bool IsLagged
             {
                 get { return false; }
+            }
+
+            public int LagCount
+            {
+                get { return 0; }
             }
 
             public void ClearButtons()

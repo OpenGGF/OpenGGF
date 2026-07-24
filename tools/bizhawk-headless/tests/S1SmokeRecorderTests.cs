@@ -51,6 +51,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 get { return false; }
             }
 
+            public int LagCount
+            {
+                get { return 0; }
+            }
+
             public void ClearButtons()
             {
             }

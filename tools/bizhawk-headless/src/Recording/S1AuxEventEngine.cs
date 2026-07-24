@@ -7,16 +7,29 @@ namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
     /// Byte-exact port of the Lua trace recorder's per-frame aux_state.jsonl
-    /// event generation (tools/bizhawk/s1_trace_recorder.lua). One instance
-    /// carries all persistent tracker state across the recording; call
-    /// <see cref="ProcessFrame"/> once per recorded trace row, AFTER the CSV
-    /// row has been formatted for that frame. Lines are returned WITHOUT the
-    /// trailing '\n'; the caller terminates every line with a single LF.
+    /// event generation (tools/bizhawk/s1_trace_recorder.lua and, in the
+    /// complete-run profile, tools/bizhawk/s1_complete_run_recorder.lua). One
+    /// instance carries all persistent tracker state across the recording —
+    /// the complete-run recorder shares that single instance across every
+    /// level segment (its trackers are never reset between arms); call
+    /// <see cref="ProcessFrame(int, IGpgxHost)"/> (standard profile) or
+    /// <see cref="ProcessFrame(int, IGpgxHost, bool, int)"/> (complete-run
+    /// profile) once per recorded trace row, AFTER the CSV row has been
+    /// formatted for that frame. Lines are returned WITHOUT the trailing
+    /// '\n'; the caller terminates every line with a single LF.
+    ///
+    /// The complete-run profile differs from the standard recorder in exactly
+    /// two ways (tools/bizhawk-headless/docs/s1-complete-run-behavior.md
+    /// section 6): object_near carries seven extra per-object fields, and four
+    /// per-frame diagnostic events (v_objstate, camera_boundary, v_oscillate,
+    /// lag_state) are emitted after the object scan and before cursor_state.
     /// </summary>
     public sealed class S1AuxEventEngine
     {
         private const int ObjectProximity = 160;
         private const int SnapshotInterval = 60;
+
+        private readonly bool completeRunProfile;
 
         private int prevStatus;               // starts 0
         private int prevRoutine;              // starts 0
@@ -24,13 +37,56 @@ namespace OpenGGF.BizHawk.Headless
         private int prevOplScreen = -1;       // -1 so the first frame always fires
         private readonly byte[] knownObjects = new byte[S1Ram.TotalObjectSlots];
 
+        public S1AuxEventEngine()
+            : this(false)
+        {
+        }
+
+        public S1AuxEventEngine(bool completeRunProfile)
+        {
+            this.completeRunProfile = completeRunProfile;
+        }
+
         /// <summary>
-        /// Emits all aux events for trace row <paramref name="traceFrame"/>
-        /// in the recorder's exact order: mode changes + routine change,
-        /// periodic snapshot, object scan (appeared/removed/obj64/near +
-        /// slot_dump), then cursor_state.
+        /// Standard-profile entry point: emits all aux events for trace row
+        /// <paramref name="traceFrame"/> in the recorder's exact order: mode
+        /// changes + routine change, periodic snapshot, object scan
+        /// (appeared/removed/obj64/near + slot_dump), then cursor_state.
+        /// Rejects complete-run engines, whose lag_state event needs the
+        /// emulator lag inputs of the overload below.
         /// </summary>
         public IList<string> ProcessFrame(int traceFrame, IGpgxHost host)
+        {
+            if (completeRunProfile)
+            {
+                throw new InvalidOperationException(
+                    "A complete-run aux engine requires the lag-state"
+                    + " overload of ProcessFrame.");
+            }
+            return ProcessFrameCore(traceFrame, host, false, -1);
+        }
+
+        /// <summary>
+        /// Complete-run entry point. <paramref name="lagged"/> and
+        /// <paramref name="lagCount"/> are the emulator's authoritative
+        /// per-frame lag flag and cumulative-since-boot lag count
+        /// (emu.islagged() / emu.lagcount()) consumed by the per-frame
+        /// lag_state event.
+        /// </summary>
+        public IList<string> ProcessFrame(
+            int traceFrame, IGpgxHost host, bool lagged, int lagCount)
+        {
+            if (!completeRunProfile)
+            {
+                throw new InvalidOperationException(
+                    "The lag-state overload of ProcessFrame is only valid"
+                    + " for a complete-run aux engine.");
+            }
+            return ProcessFrameCore(traceFrame, host, lagged, lagCount);
+        }
+
+        private IList<string> ProcessFrameCore(
+            int traceFrame, IGpgxHost host, bool lagged, int lagCount)
         {
             if (host == null)
             {
@@ -53,6 +109,18 @@ namespace OpenGGF.BizHawk.Headless
             }
 
             ScanObjects(lines, traceFrame, vfc, playerX, playerY, host);
+            if (completeRunProfile)
+            {
+                // Complete-run per-frame diagnostics, in the Lua's exact
+                // order: after scan_objects, before cursor_state. (The
+                // env-gated rng_call flush sits between lag_state and
+                // cursor_state in the Lua; the diagnostic mode is not
+                // ported, so it emits nothing here.)
+                lines.Add(FormatVObjState(traceFrame, host));
+                lines.Add(FormatCameraBoundary(traceFrame, host));
+                lines.Add(FormatVOscillate(traceFrame, host));
+                lines.Add(FormatLagState(traceFrame, lagged, lagCount));
+            }
             CheckCursorState(lines, traceFrame, vfc, host);
             return lines;
         }
@@ -241,7 +309,8 @@ namespace OpenGGF.BizHawk.Headless
                     if (Math.Abs(objX - playerX) <= ObjectProximity
                         && Math.Abs(objY - playerY) <= ObjectProximity)
                     {
-                        lines.Add("{\"frame\":" + Dec(traceFrame)
+                        string objectNear =
+                            "{\"frame\":" + Dec(traceFrame)
                             + ",\"vfc\":" + Dec(vfc)
                             + ",\"event\":\"object_near\",\"slot\":" + Dec(slot)
                             + ",\"type\":\"0x" + Hex2(objId)
@@ -250,8 +319,31 @@ namespace OpenGGF.BizHawk.Headless
                             + "\",\"routine\":\"0x"
                             + Hex2(S1Ram.U8(host, addr + S1Ram.OffRoutine))
                             + "\",\"status\":\"0x"
-                            + Hex2(S1Ram.U8(host, addr + S1Ram.OffStatus))
-                            + "\"}");
+                            + Hex2(S1Ram.U8(host, addr + S1Ram.OffStatus));
+                        if (completeRunProfile)
+                        {
+                            // Extended template (complete-run only). Key
+                            // order is the Lua's: objoff_3c precedes
+                            // objoff_32.
+                            objectNear +=
+                                "\",\"obj_frame\":\"0x"
+                                + Hex2(S1Ram.U8(
+                                    host, addr + S1Ram.OffMappingFrame))
+                                + "\",\"routine2\":\"0x"
+                                + Hex2(S1Ram.U8(
+                                    host, addr + S1Ram.OffRoutine2))
+                                + "\",\"objoff_3c\":\"0x"
+                                + Hex8(S1Ram.U32(host, addr + 0x3C))
+                                + "\",\"objoff_32\":\"0x"
+                                + Hex4(S1Ram.U16(host, addr + 0x32))
+                                + "\",\"objoff_34\":\"0x"
+                                + Hex4(S1Ram.U16(host, addr + 0x34))
+                                + "\",\"objoff_36\":\"0x"
+                                + Hex4(S1Ram.U16(host, addr + 0x36))
+                                + "\",\"objoff_38\":\"0x"
+                                + Hex4(S1Ram.U16(host, addr + 0x38));
+                        }
+                        lines.Add(objectNear + "\"}");
                     }
                 }
 
@@ -316,6 +408,73 @@ namespace OpenGGF.BizHawk.Headless
                     .Append(",\"0x").Append(Hex2(objId)).Append("\"]");
             }
             return dump.Append(']').ToString();
+        }
+
+        /// <summary>
+        /// v_objstate: the full 192-byte object respawn-state array
+        /// (0xFC00..0xFCBF) as 384 uppercase hex characters. No vfc field.
+        /// </summary>
+        private static string FormatVObjState(int traceFrame, IGpgxHost host)
+        {
+            return "{\"frame\":" + Dec(traceFrame)
+                + ",\"event\":\"v_objstate\",\"bytes\":\""
+                + HexBytes(host, S1Ram.ObjState, S1Ram.ObjStateSize)
+                + "\"}";
+        }
+
+        /// <summary>
+        /// camera_boundary: v_limitbtm1/v_limitbtm2/v_lookshift/
+        /// f_bgscrollvert. No vfc field.
+        /// </summary>
+        private static string FormatCameraBoundary(
+            int traceFrame, IGpgxHost host)
+        {
+            return "{\"frame\":" + Dec(traceFrame)
+                + ",\"event\":\"camera_boundary\",\"limitbtm1\":\"0x"
+                + Hex4(S1Ram.U16(host, S1Ram.Limitbtm1))
+                + "\",\"limitbtm2\":\"0x"
+                + Hex4(S1Ram.U16(host, S1Ram.Limitbtm2))
+                + "\",\"lookshift\":\"0x"
+                + Hex4(S1Ram.U16(host, S1Ram.Lookshift))
+                + "\",\"bgscrollvert\":\"0x"
+                + Hex2(S1Ram.U8(host, S1Ram.BgScrollVert))
+                + "\"}";
+        }
+
+        /// <summary>
+        /// v_oscillate: the direction-bitfield word plus the 0x40-byte
+        /// oscillating-values array (0xFE5E..0xFE9F) as 132 uppercase hex
+        /// characters. No vfc field.
+        /// </summary>
+        private static string FormatVOscillate(int traceFrame, IGpgxHost host)
+        {
+            return "{\"frame\":" + Dec(traceFrame)
+                + ",\"event\":\"v_oscillate\",\"bytes\":\""
+                + HexBytes(host, S1Ram.Oscillate, S1Ram.OscillateSize)
+                + "\"}";
+        }
+
+        /// <summary>
+        /// lag_state: the emulator's authoritative per-frame lag flag and
+        /// cumulative lag count (bare true/false; decimal count). No vfc
+        /// field.
+        /// </summary>
+        private static string FormatLagState(
+            int traceFrame, bool lagged, int lagCount)
+        {
+            return "{\"frame\":" + Dec(traceFrame)
+                + ",\"event\":\"lag_state\",\"lagged\":" + Bool(lagged)
+                + ",\"lagcount\":" + Dec(lagCount) + "}";
+        }
+
+        private static string HexBytes(IGpgxHost host, int address, int count)
+        {
+            var bytes = new StringBuilder(count * 2);
+            for (int index = 0; index < count; index++)
+            {
+                bytes.Append(Hex2(S1Ram.U8(host, address + index)));
+            }
+            return bytes.ToString();
         }
 
         private void CheckCursorState(

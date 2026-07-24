@@ -59,29 +59,22 @@ namespace BizHawk.Headless.Gpgx
         public int MaxFrames { get; private set; }
 
         /// <summary>
-        /// S2 trace-mode arguments, mirroring the Lua recorder's env inputs
-        /// (null = argument not supplied): --trace-profile
-        /// (OGGF_S2_TRACE_PROFILE, default "gameplay_unlock"),
-        /// --gameplay-segment (OGGF_TRACE_GAMEPLAY_SEGMENT, default 0), and
-        /// --run-id (OGGF_TRACE_RUN_ID; absent = plain mode). --run-id is
-        /// mutually exclusive with the other two: the Lua run capture
-        /// procedure never sets the profile/segment env vars, so run mode
-        /// always records gameplay_unlock level segments with no segment
-        /// skipping.
+        /// Recorder-selection trace-mode arguments, mirroring the Lua
+        /// recorders' env inputs (null = argument not supplied). With the
+        /// Sonic 2 ROM: --trace-profile (OGGF_S2_TRACE_PROFILE, default
+        /// "gameplay_unlock"), --gameplay-segment
+        /// (OGGF_TRACE_GAMEPLAY_SEGMENT, default 0), and --run-id
+        /// (OGGF_TRACE_RUN_ID; absent = plain mode). With the Sonic 1 ROM:
+        /// --trace-profile "complete_run" or --run-id select the
+        /// complete-run recorder (s1_complete_run_recorder.lua, whose
+        /// detour machine is always on; --run-id maps to OGGF_TRACE_RUN_ID)
+        /// while --gameplay-segment stays S2-only. --run-id is mutually
+        /// exclusive with the other two in both games: the Lua run capture
+        /// procedures never set the profile/segment env vars.
         /// </summary>
         public string TraceProfile { get; private set; }
         public int? GameplaySegment { get; private set; }
         public string RunId { get; private set; }
-
-        public bool HasS2Arguments
-        {
-            get
-            {
-                return TraceProfile != null
-                    || GameplaySegment.HasValue
-                    || RunId != null;
-            }
-        }
 
         public static CommandLineOptions Parse(string[] args)
         {
@@ -423,12 +416,35 @@ namespace BizHawk.Headless.Gpgx
                 {
                     if (traceGame == "s1")
                     {
-                        if (options.HasS2Arguments)
+                        if (options.GameplaySegment.HasValue)
                         {
                             throw new ArgumentException(
-                                "Arguments --trace-profile,"
-                                + " --gameplay-segment and --run-id are"
-                                + " only supported with the Sonic 2 ROM.");
+                                "Argument --gameplay-segment is only"
+                                + " supported with the Sonic 2 ROM.");
+                        }
+                        if (options.TraceProfile != null
+                            && options.TraceProfile
+                                != S1RunCaptureRunner.LevelTraceProfile)
+                        {
+                            throw new ArgumentException(
+                                "Trace profile \"" + options.TraceProfile
+                                + "\" is only supported with the Sonic 2"
+                                + " ROM; the Sonic 1 ROM supports only"
+                                + " --trace-profile \""
+                                + S1RunCaptureRunner.LevelTraceProfile
+                                + "\".");
+                        }
+                        if (options.TraceProfile != null
+                            || options.RunId != null)
+                        {
+                            return RunS1CompleteRun(
+                                options,
+                                installation,
+                                romSha1,
+                                movie,
+                                stdout,
+                                stderr,
+                                openHost);
                         }
                         return RunTrace(
                             options,
@@ -566,6 +582,191 @@ namespace BizHawk.Headless.Gpgx
                     + "Aux state JSONL: " + auxStatePath + "\n"
                     + "Metadata JSON: " + metadataPath + "\n",
                 new NoReplacePublisher());
+        }
+
+        /// <summary>
+        /// S1 complete-run capture (--trace-profile complete_run or
+        /// --run-id): one movie pass through S1RunCaptureRunner — the full
+        /// recorder whose giant-ring detour machine is always on, exactly
+        /// like the Lua — publishing every discovered segment directory
+        /// plus (when emitted) run_manifest.json as one all-or-nothing
+        /// no-replace set. Segments stage incrementally as the capture
+        /// streams them, so a 19-segment pass never buffers more than one
+        /// segment's contents; the manifest stages last, so it can never
+        /// exist without its segment files. run_manifest.json is emitted
+        /// iff any special-stage transition occurred OR --run-id was
+        /// supplied (Lua gate) — a stage-free pass without --run-id
+        /// publishes exactly the per-level directories.
+        ///
+        /// Line-ending policy follows the canonical fixture set each
+        /// invocation reproduces (per-fixture-set, see
+        /// docs/s1-complete-run-behavior.md section 8 and
+        /// docs/s1-run-mode-behavior.md section 9): --run-id captures get
+        /// the Windows text-mode CRLF expansion of the canonical
+        /// runs/s1-ghz-maze-roundtrip capture; --trace-profile complete_run
+        /// captures stay LF like the 19 *_completerun fixtures. The
+        /// session's version stamp is the current Lua's
+        /// (S1CompleteRunMetadataWriter.LuaScriptVersion); the Lua's
+        /// OGGF_TRACE_SOURCE_BK2 env input is derived from the movie file
+        /// itself.
+        /// </summary>
+        private static int RunS1CompleteRun(
+            CommandLineOptions options,
+            BizHawkInstallation installation,
+            string romSha1,
+            Bk2Movie movie,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
+            bool expandNewlines = options.RunId != null;
+            NoReplacePublisher.IncrementalStagingSession session = null;
+            NoReplacePublisher.StagedPublicationSet staged = null;
+            try
+            {
+                string manifestPath = Path.Combine(
+                    options.OutputDirectory,
+                    CommandLineOptions.RunManifestFileName);
+                if (options.RunId == null
+                    && LinuxPathEntry.Exists(manifestPath))
+                {
+                    // Parse() preflights the manifest for --run-id; the
+                    // complete_run profile reaches here without that check,
+                    // yet may still emit the manifest when the movie takes
+                    // a giant-ring detour — and even a manifest-free fresh
+                    // capture next to a stale manifest would corrupt the
+                    // run layout the stale manifest describes.
+                    throw new IOException(
+                        "Final output already exists and will not be"
+                        + " replaced: " + manifestPath);
+                }
+
+                S1RunCaptureResult result;
+                session = new NoReplacePublisher().OpenSession(
+                    options.OutputDirectory);
+                NoReplacePublisher.IncrementalStagingSession sink = session;
+                using (new NativeStandardOutputSilencer())
+                using (IGpgxHost host = openHost(
+                    options.RomPath,
+                    movie.SyncSettings))
+                {
+                    result = S1RunCaptureRunner.Capture(
+                        movie,
+                        host,
+                        options.RunId,
+                        Path.GetFileName(options.MoviePath),
+                        DateTime.Now.ToString(
+                            "yyyy-MM-dd",
+                            CultureInfo.InvariantCulture),
+                        S1CompleteRunMetadataWriter.LuaScriptVersion,
+                        0,
+                        segment =>
+                        {
+                            sink.StageFile(
+                                segment.DirToken + "/"
+                                + CommandLineOptions.TraceOutputFileNames[0],
+                                ExpandNewlinesIf(
+                                    expandNewlines,
+                                    segment.PhysicsCsv));
+                            sink.StageFile(
+                                segment.DirToken + "/"
+                                + CommandLineOptions.TraceOutputFileNames[1],
+                                ExpandNewlinesIf(
+                                    expandNewlines,
+                                    segment.AuxStateJsonl));
+                            sink.StageFile(
+                                segment.DirToken + "/"
+                                + CommandLineOptions.TraceOutputFileNames[2],
+                                ExpandNewlinesIf(
+                                    expandNewlines,
+                                    segment.MetadataJson));
+                        });
+                }
+                if (result.RunManifestJson != null)
+                {
+                    session.StageFile(
+                        CommandLineOptions.RunManifestFileName,
+                        ExpandNewlinesIf(
+                            expandNewlines,
+                            result.RunManifestJson));
+                }
+                staged = session.Complete();
+                session = null;
+
+                var summary = new StringBuilder();
+                summary.Append("BizHawk: ")
+                    .Append(installation.ManagedVersion).Append('\n');
+                summary.Append("ROM SHA-1: ").Append(romSha1).Append('\n');
+                summary.Append("Movie frames: ")
+                    .Append(movie.FrameCount.ToString(
+                        CultureInfo.InvariantCulture))
+                    .Append('\n');
+                if (options.RunId != null)
+                {
+                    summary.Append("Run ID: ").Append(options.RunId)
+                        .Append('\n');
+                }
+                else
+                {
+                    summary.Append("Trace profile: ")
+                        .Append(S1RunCaptureRunner.LevelTraceProfile)
+                        .Append('\n');
+                }
+                summary.Append("Segments: ")
+                    .Append(result.Segments.Count.ToString(
+                        CultureInfo.InvariantCulture))
+                    .Append('\n');
+                summary.Append("Transitions: ")
+                    .Append(result.Transitions.Count.ToString(
+                        CultureInfo.InvariantCulture))
+                    .Append('\n');
+                foreach (RunManifestSegment entry in result.Segments)
+                {
+                    summary.Append("Segment ").Append(entry.Dir)
+                        .Append(": kind=").Append(entry.Kind)
+                        .Append(", BK2 frame offset=")
+                        .Append(entry.Bk2FrameOffset.ToString(
+                            CultureInfo.InvariantCulture))
+                        .Append(", trace frames=")
+                        .Append(entry.TraceFrameCount.ToString(
+                            CultureInfo.InvariantCulture))
+                        .Append('\n');
+                }
+                if (result.RunManifestJson != null)
+                {
+                    summary.Append("Run manifest: ")
+                        .Append(manifestPath)
+                        .Append('\n');
+                }
+                stdout.Write(summary.ToString());
+                stdout.Flush();
+
+                staged.Publish();
+                staged = null;
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                if (session != null)
+                {
+                    session.Dispose();
+                }
+                if (staged != null)
+                {
+                    staged.Dispose();
+                }
+                ReportFailure(stderr, exception);
+                return 1;
+            }
+        }
+
+        /// <summary>
+        /// Applies the per-fixture-set line-ending policy: identity for
+        /// LF-only fixture sets, ExpandRunNewlines for the CRLF ones.
+        /// </summary>
+        private static string ExpandNewlinesIf(bool expand, string content)
+        {
+            return expand ? ExpandRunNewlines(content) : content;
         }
 
         /// <summary>
@@ -724,7 +925,7 @@ namespace BizHawk.Headless.Gpgx
                     .Append('\n');
                 foreach (S2RunSegmentOutput segment in result.Segments)
                 {
-                    S2RunManifestSegment entry = segment.ManifestEntry;
+                    RunManifestSegment entry = segment.ManifestEntry;
                     summary.Append("Segment ").Append(entry.Dir)
                         .Append(": kind=").Append(entry.Kind)
                         .Append(", BK2 frame offset=")
@@ -759,14 +960,16 @@ namespace BizHawk.Headless.Gpgx
         }
 
         /// <summary>
-        /// The canonical run capture ran under Windows EmuHawk, where the
+        /// The canonical run captures (S2 halfpipe and S1
+        /// s1-ghz-maze-roundtrip) ran under Windows EmuHawk, where the
         /// Lua's text-mode io.open expanded every logical "\n" to "\r\n" in
-        /// every run-mode file it wrote (docs/s2-run-mode-behavior.md §9).
-        /// Run-mode publication reproduces that text-mode encoding so the
-        /// published bytes match the canonical run fixture set; plain trace
-        /// mode remains LF-only per its own canonical fixtures. The empty
-        /// special-stage aux_state.jsonl contains no newlines and passes
-        /// through unchanged.
+        /// every run-mode file it wrote (docs/s2-run-mode-behavior.md §9,
+        /// docs/s1-run-mode-behavior.md §9). Run-mode publication
+        /// reproduces that text-mode encoding so the published bytes match
+        /// the canonical run fixture sets; plain trace mode and the S1
+        /// complete-run profile remain LF-only per their own canonical
+        /// fixtures. The empty special-stage aux_state.jsonl contains no
+        /// newlines and passes through unchanged.
         /// </summary>
         private static string ExpandRunNewlines(string content)
         {

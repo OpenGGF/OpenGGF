@@ -1,0 +1,633 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Text;
+using System.Text.RegularExpressions;
+
+namespace OpenGGF.BizHawk.Headless.Tests
+{
+    /// <summary>
+    /// Differential gates proving one native S1 run-mode capture
+    /// (--run-id) of the canonical GHZ maze round-trip movie
+    /// (src/test/resources/traces/s1/runs/s1-ghz-maze-roundtrip/
+    /// s1-ghz-maze-roundtrip.bk2, level -> giant-ring special stage ->
+    /// level) reproduces the Lua recorder byte-for-byte.
+    ///
+    /// Gate 1 asserts the full run layout: the ghz1/ss/ghz2 segment
+    /// directories' physics.csv and aux_state.jsonl sha256 against the
+    /// canonical (gunzipped) fixture bytes with no normalization — the
+    /// fixture set carries the canonical capture's Windows text-mode CRLF
+    /// line endings (docs/s1-run-mode-behavior.md section 9), reproduced
+    /// by run-mode publication — plus run_manifest.json and each
+    /// metadata.json compared line-by-line with exactly the permitted
+    /// normalizations: the recording_date value (metadata only; the
+    /// manifest has no date) and the fixture's lua_script_version "3.15"
+    /// lines, which the native port must produce as the current recorder
+    /// version "3.17". The runs/ and special_stage/ fixtures were captured
+    /// by an interim script stamped 3.15; docs/s1-run-mode-behavior.md
+    /// section 10 establishes (verified against the Lua version-bump
+    /// commit diffs, 203e647b8 -> b1a810536) that with only the
+    /// run/source/output env inputs set and no repeated zone+act, the
+    /// 3.15 -> 3.17 output delta is exactly the three version strings.
+    ///
+    /// Gate 2 asserts the standalone special-stage fixture
+    /// (src/test/resources/traces/s1/special_stage/): per
+    /// docs/s1-run-mode-behavior.md section 11 there was never a separate
+    /// standalone invocation or profile — the standalone fixture is a
+    /// published copy of the same run capture's ss/ segment. The gate
+    /// therefore runs the same --run-id invocation and compares the
+    /// produced ss/ segment bytes against the standalone fixture's.
+    ///
+    /// Skips (does not pass) when S1_ROM_PATH or a BizHawk distribution
+    /// is absent; fails (does not skip) on any mismatch.
+    /// </summary>
+    internal static class S1RunModeDifferentialTests
+    {
+        private const int CaptureTimeoutMilliseconds = 600000;
+        private const string RunFixtureDirectoryName =
+            "s1-ghz-maze-roundtrip";
+        private const string RunMovieFileName =
+            "s1-ghz-maze-roundtrip.bk2";
+        private const int RunMovieFrameCount = 9093;
+        private const string StandaloneFixtureDirectoryName =
+            "special_stage";
+        private const string RecordingDateLinePrefix =
+            "  \"recording_date\": \"";
+        private static readonly Regex RecordingDateLine = new Regex(
+            "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
+        private const string FixtureLuaScriptVersionLine =
+            "  \"lua_script_version\": \"3.15\",";
+        private const string ProducedLuaScriptVersionLine =
+            "  \"lua_script_version\": \"3.17\",";
+
+        // The fixture manifest's sha256 is a self-check pin only: the
+        // produced manifest is compared line-by-line (it stamps 3.17
+        // where the fixture stamps 3.15), so a raw-byte pin of the
+        // produced file would be wrong by design.
+        private const string RunManifestSha256 =
+            "79a62fbd3dcb962bcdac25b35189f22ffe4fe2100c36a043ad5218b444"
+            + "7edae0";
+
+        private static readonly S1RunSegmentCase[] RunSegmentCases =
+        {
+            new S1RunSegmentCase(
+                "ghz1",
+                "level",
+                774,
+                4182,
+                "ba92b77976ef3541c1bf15ac8e789159ec93e6c2cc031c3a31da1a85"
+                + "5595b239",
+                "24745e5d1c33bdcb55c8cf36def0a42c2a02c0927377531a525310db"
+                + "092441ab"),
+            new S1RunSegmentCase(
+                "ss",
+                "special_stage",
+                4957,
+                3091,
+                "45b58e1a9705397084698a53e121971cc4923545621454888"
+                + "2c8b4687f1bd55e",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b"
+                + "7852b855"),
+            new S1RunSegmentCase(
+                "ghz2",
+                "level",
+                8049,
+                812,
+                "4614be0f39c0310ccaffbb9a0ac9f610fac58e13705dac8baa6c2570"
+                + "4cbfb6e3",
+                "07a84197ee0d1e44cb0d6ac74a0d22cb79af7742bf13636e336891de"
+                + "cbac4eee")
+        };
+
+        public static void Register(ICollection<TestMain.TestCase> tests)
+        {
+            tests.Add(new TestMain.TestCase(
+                "S1RunModeDifferential native run mode capture matches"
+                + " canonical maze round trip",
+                NativeRunModeCaptureMatchesCanonicalRun));
+            tests.Add(new TestMain.TestCase(
+                "S1RunModeDifferential native run mode ss segment matches"
+                + " standalone special-stage fixture",
+                NativeRunModeSsSegmentMatchesStandaloneFixture));
+        }
+
+        /// <summary>
+        /// One run-mode segment expectation: the segment directory token
+        /// under the run output root, the manifest kind the CLI reports
+        /// for it on stdout, the canonical BK2 frame offset and trace
+        /// frame count, and the canonical sha256 hashes of the segment's
+        /// physics.csv and aux_state.jsonl bytes (CRLF line endings
+        /// included; the special-stage aux hash is the empty file's —
+        /// the S1 SS writer opens the aux file but never writes it).
+        /// </summary>
+        private sealed class S1RunSegmentCase
+        {
+            public S1RunSegmentCase(
+                string dirToken,
+                string kind,
+                int bk2FrameOffset,
+                int traceFrameCount,
+                string physicsSha256,
+                string auxStateSha256)
+            {
+                DirToken = dirToken;
+                Kind = kind;
+                Bk2FrameOffset = bk2FrameOffset;
+                TraceFrameCount = traceFrameCount;
+                PhysicsSha256 = physicsSha256;
+                AuxStateSha256 = auxStateSha256;
+            }
+
+            public string DirToken { get; private set; }
+            public string Kind { get; private set; }
+            public int Bk2FrameOffset { get; private set; }
+            public int TraceFrameCount { get; private set; }
+            public string PhysicsSha256 { get; private set; }
+            public string AuxStateSha256 { get; private set; }
+        }
+
+        private static void NativeRunModeCaptureMatchesCanonicalRun()
+        {
+            EndToEndTests.EndToEndDependencies dependencies =
+                ResolveS1RunDependencies();
+            BizHawkInstallation installation =
+                BizHawkInstallation.Validate(dependencies.BizHawkHome);
+            string runDirectory = RunFixtureDirectory();
+            string moviePath = Path.Combine(runDirectory, RunMovieFileName);
+
+            string root = Path.Combine(
+                Path.GetTempPath(),
+                "openggf-s1-run-differential-"
+                + Guid.NewGuid().ToString("N"));
+            string output = Path.Combine(root, "capture");
+            try
+            {
+                // Self-check the canonical fixture bytes first so a hash
+                // mismatch reports whether the fixture or the capture
+                // diverged. Gzipped fixtures are decompressed read-only
+                // into the temp root; the fixtures are never modified.
+                Directory.CreateDirectory(root);
+                foreach (S1RunSegmentCase segment in RunSegmentCases)
+                {
+                    AssertFixtureSegmentHashes(
+                        Path.Combine(runDirectory, segment.DirToken),
+                        Path.Combine(root, "fixture-" + segment.DirToken),
+                        segment,
+                        segment.DirToken);
+                }
+                AssertSha256(
+                    "run_manifest.json (fixture)",
+                    RunManifestSha256,
+                    EndToEndTests.ComputeSha256(Path.Combine(
+                        runDirectory,
+                        "run_manifest.json")));
+
+                string stdout = RunRunModeCapture(
+                    dependencies.RomPath,
+                    dependencies.BizHawkHome,
+                    moviePath,
+                    output);
+
+                AssertEx.Equal(
+                    ExpectedRunStdout(installation, output),
+                    stdout);
+                foreach (S1RunSegmentCase segment in RunSegmentCases)
+                {
+                    AssertSha256(
+                        segment.DirToken + "/physics.csv",
+                        segment.PhysicsSha256,
+                        EndToEndTests.ComputeSha256(Path.Combine(
+                            output,
+                            segment.DirToken,
+                            "physics.csv")));
+                    AssertSha256(
+                        segment.DirToken + "/aux_state.jsonl",
+                        segment.AuxStateSha256,
+                        EndToEndTests.ComputeSha256(Path.Combine(
+                            output,
+                            segment.DirToken,
+                            "aux_state.jsonl")));
+                    AssertNormalizedRunFileEquality(
+                        Path.Combine(
+                            runDirectory,
+                            segment.DirToken,
+                            "metadata.json"),
+                        Path.Combine(
+                            output,
+                            segment.DirToken,
+                            "metadata.json"),
+                        1);
+                }
+                // The manifest carries the version stamp but no
+                // recording_date line.
+                AssertNormalizedRunFileEquality(
+                    Path.Combine(runDirectory, "run_manifest.json"),
+                    Path.Combine(output, "run_manifest.json"),
+                    0);
+                AssertOutputLayoutIsExactlyTheRun(output);
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The standalone special_stage/ fixture gate: same movie, same
+        /// --run-id invocation (docs/s1-run-mode-behavior.md section 11 —
+        /// no separate standalone invocation ever existed; the standalone
+        /// fixture is a published copy of the run's ss/ segment, so its
+        /// metadata still carries the run_id and segment_index lines).
+        /// The produced ss/ segment must match the standalone fixture's
+        /// bytes with the same two normalizations as the run gate.
+        /// </summary>
+        private static void NativeRunModeSsSegmentMatchesStandaloneFixture()
+        {
+            EndToEndTests.EndToEndDependencies dependencies =
+                ResolveS1RunDependencies();
+            string runDirectory = RunFixtureDirectory();
+            string moviePath = Path.Combine(runDirectory, RunMovieFileName);
+            string standaloneDirectory = Path.Combine(
+                S1TracesRoot(),
+                StandaloneFixtureDirectoryName);
+            S1RunSegmentCase ssSegment = null;
+            foreach (S1RunSegmentCase segment in RunSegmentCases)
+            {
+                if (segment.DirToken == "ss")
+                {
+                    ssSegment = segment;
+                }
+            }
+
+            string root = Path.Combine(
+                Path.GetTempPath(),
+                "openggf-s1-ss-differential-"
+                + Guid.NewGuid().ToString("N"));
+            string output = Path.Combine(root, "capture");
+            try
+            {
+                // Self-check: the standalone fixture holds the same
+                // canonical ss bytes as the run fixture's ss/ segment.
+                Directory.CreateDirectory(root);
+                AssertFixtureSegmentHashes(
+                    standaloneDirectory,
+                    Path.Combine(root, "fixture-standalone"),
+                    ssSegment,
+                    StandaloneFixtureDirectoryName);
+
+                RunRunModeCapture(
+                    dependencies.RomPath,
+                    dependencies.BizHawkHome,
+                    moviePath,
+                    output);
+
+                AssertSha256(
+                    "ss/physics.csv vs standalone fixture",
+                    ssSegment.PhysicsSha256,
+                    EndToEndTests.ComputeSha256(Path.Combine(
+                        output,
+                        "ss",
+                        "physics.csv")));
+                AssertSha256(
+                    "ss/aux_state.jsonl vs standalone fixture",
+                    ssSegment.AuxStateSha256,
+                    EndToEndTests.ComputeSha256(Path.Combine(
+                        output,
+                        "ss",
+                        "aux_state.jsonl")));
+                AssertNormalizedRunFileEquality(
+                    Path.Combine(standaloneDirectory, "metadata.json"),
+                    Path.Combine(output, "ss", "metadata.json"),
+                    1);
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Resolves the S1 ROM and BizHawk installation with the shared
+        /// end-to-end semantics: absent inputs skip, present-but-invalid
+        /// inputs fail.
+        /// </summary>
+        private static EndToEndTests.EndToEndDependencies
+            ResolveS1RunDependencies()
+        {
+            return EndToEndTests.ResolveEndToEndDependencies(
+                Environment.GetEnvironmentVariable("S1_ROM_PATH"),
+                Environment.GetEnvironmentVariable("BIZHAWK_HOME"),
+                Path.Combine(
+                    EndToEndTests.RepositoryRoot,
+                    "docs",
+                    "BizHawk-2.11-linux-x64"),
+                path => RomIdentity.ValidateSonic1Rev01(
+                    File.ReadAllBytes(path)),
+                path => BizHawkInstallation.Validate(path));
+        }
+
+        private static string S1TracesRoot()
+        {
+            return Path.Combine(
+                EndToEndTests.RepositoryRoot,
+                "src",
+                "test",
+                "resources",
+                "traces",
+                "s1");
+        }
+
+        private static string RunFixtureDirectory()
+        {
+            return Path.Combine(
+                S1TracesRoot(),
+                "runs",
+                RunFixtureDirectoryName);
+        }
+
+        /// <summary>
+        /// Self-checks one fixture directory's physics.csv and
+        /// aux_state.jsonl canonical hashes (gunzipped read-only into the
+        /// scratch directory when only the .gz sibling is committed).
+        /// </summary>
+        private static void AssertFixtureSegmentHashes(
+            string fixtureDirectory,
+            string scratchDirectory,
+            S1RunSegmentCase segment,
+            string context)
+        {
+            Directory.CreateDirectory(scratchDirectory);
+            AssertSha256(
+                context + "/physics.csv (fixture)",
+                segment.PhysicsSha256,
+                EndToEndTests.ComputeSha256(MaterializeFixture(
+                    fixtureDirectory,
+                    "physics.csv",
+                    Path.Combine(scratchDirectory, "physics.csv"))));
+            AssertSha256(
+                context + "/aux_state.jsonl (fixture)",
+                segment.AuxStateSha256,
+                EndToEndTests.ComputeSha256(MaterializeFixture(
+                    fixtureDirectory,
+                    "aux_state.jsonl",
+                    Path.Combine(scratchDirectory, "aux_state.jsonl"))));
+        }
+
+        /// <summary>
+        /// The run capture must publish exactly the three segment
+        /// directories (three files each) plus run_manifest.json at the
+        /// root and nothing else.
+        /// </summary>
+        private static void AssertOutputLayoutIsExactlyTheRun(
+            string output)
+        {
+            var rootFiles = new List<string>();
+            foreach (string path in Directory.GetFiles(output))
+            {
+                rootFiles.Add(Path.GetFileName(path));
+            }
+            rootFiles.Sort(StringComparer.Ordinal);
+            AssertEx.Equal(
+                "run_manifest.json",
+                string.Join("\n", rootFiles.ToArray()));
+
+            var expectedDirectories = new List<string>();
+            foreach (S1RunSegmentCase segment in RunSegmentCases)
+            {
+                expectedDirectories.Add(segment.DirToken);
+            }
+            expectedDirectories.Sort(StringComparer.Ordinal);
+
+            var actualDirectories = new List<string>();
+            foreach (string path in Directory.GetDirectories(output))
+            {
+                actualDirectories.Add(Path.GetFileName(path));
+            }
+            actualDirectories.Sort(StringComparer.Ordinal);
+            AssertEx.Equal(
+                string.Join("\n", expectedDirectories.ToArray()),
+                string.Join("\n", actualDirectories.ToArray()));
+
+            foreach (string dirToken in actualDirectories)
+            {
+                var actualFiles = new List<string>();
+                foreach (string path in Directory.GetFiles(
+                    Path.Combine(output, dirToken)))
+                {
+                    actualFiles.Add(Path.GetFileName(path));
+                }
+                actualFiles.Sort(StringComparer.Ordinal);
+                AssertEx.Equal(
+                    "aux_state.jsonl\nmetadata.json\nphysics.csv",
+                    string.Join("\n", actualFiles.ToArray()));
+                AssertEx.Equal(
+                    0,
+                    Directory.GetDirectories(
+                        Path.Combine(output, dirToken)).Length);
+            }
+        }
+
+        /// <summary>
+        /// Returns a readable path holding the canonical bytes of the
+        /// named fixture file: the plain file when it exists, otherwise
+        /// its .gz sibling decompressed to the given scratch path.
+        /// </summary>
+        private static string MaterializeFixture(
+            string traceDirectory,
+            string fileName,
+            string scratchPath)
+        {
+            string plainPath = Path.Combine(traceDirectory, fileName);
+            if (File.Exists(plainPath))
+            {
+                return plainPath;
+            }
+            Gunzip(plainPath + ".gz", scratchPath);
+            return scratchPath;
+        }
+
+        private static string RunRunModeCapture(
+            string romPath,
+            string bizHawkHome,
+            string moviePath,
+            string output)
+        {
+            string arguments =
+                EndToEndTests.Quote(
+                    Path.Combine(EndToEndTests.ToolDirectory, "run.sh"))
+                + " --mode trace"
+                + " --rom " + EndToEndTests.Quote(romPath)
+                + " --movie " + EndToEndTests.Quote(moviePath)
+                + " --output " + EndToEndTests.Quote(output)
+                + " --run-id " + RunFixtureDirectoryName;
+            var start = new ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            start.EnvironmentVariables["BIZHAWK_HOME"] = bizHawkHome;
+            start.EnvironmentVariables["DISPLAY"] = ":99";
+            EndToEndTests.ProcessResult result = EndToEndTests.RunProcess(
+                start,
+                CaptureTimeoutMilliseconds);
+            if (result.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    "Run capture exited " + result.ExitCode + ". stderr: "
+                    + result.StandardError);
+            }
+            AssertEx.Equal(string.Empty, result.StandardError);
+            return result.StandardOutput;
+        }
+
+        private static string ExpectedRunStdout(
+            BizHawkInstallation installation,
+            string output)
+        {
+            var expected = new StringBuilder();
+            expected.Append("BizHawk: ")
+                .Append(installation.ManagedVersion).Append('\n');
+            expected.Append("ROM SHA-1: ")
+                .Append(RomIdentity.Sonic1Rev01Sha1).Append('\n');
+            expected.Append("Movie frames: ")
+                .Append(RunMovieFrameCount).Append('\n');
+            expected.Append("Run ID: ")
+                .Append(RunFixtureDirectoryName).Append('\n');
+            expected.Append("Segments: ")
+                .Append(RunSegmentCases.Length).Append('\n');
+            expected.Append("Transitions: ")
+                .Append(RunSegmentCases.Length - 1).Append('\n');
+            foreach (S1RunSegmentCase segment in RunSegmentCases)
+            {
+                expected.Append("Segment ").Append(segment.DirToken)
+                    .Append(": kind=").Append(segment.Kind)
+                    .Append(", BK2 frame offset=")
+                    .Append(segment.Bk2FrameOffset)
+                    .Append(", trace frames=")
+                    .Append(segment.TraceFrameCount)
+                    .Append('\n');
+            }
+            expected.Append("Run manifest: ")
+                .Append(Path.Combine(output, "run_manifest.json"))
+                .Append('\n');
+            return expected.ToString();
+        }
+
+        /// <summary>
+        /// First-divergence hash assertion: names the diverging file so a
+        /// gate failure reports which of the canonical byte sets broke
+        /// first.
+        /// </summary>
+        private static void AssertSha256(
+            string context,
+            string expected,
+            string actual)
+        {
+            if (expected != actual)
+            {
+                throw new InvalidOperationException(
+                    "First divergence at " + context + ": expected sha256 <"
+                    + expected + "> but was <" + actual + ">.");
+            }
+        }
+
+        /// <summary>
+        /// Asserts a produced run-published JSON file (segment
+        /// metadata.json or run_manifest.json) is byte-identical to the
+        /// fixture's except for the two permitted normalizations: the
+        /// recording_date value (exactly expectedRecordingDateLines
+        /// occurrences — 1 for metadata, 0 for the manifest — each still
+        /// carrying the exact key formatting and an ISO date value), and
+        /// the fixture's lua_script_version "3.15" line, which the native
+        /// port must produce as exactly "3.17" (see the class doc for the
+        /// verified 3.15 -> 3.17 byte-compat provenance). Both files must
+        /// be CRLF-only, matching the canonical capture's Windows
+        /// text-mode encoding (docs/s1-run-mode-behavior.md section 9).
+        /// </summary>
+        private static void AssertNormalizedRunFileEquality(
+            string fixturePath,
+            string producedPath,
+            int expectedRecordingDateLines)
+        {
+            string fixtureText = File.ReadAllText(fixturePath);
+            string producedText = File.ReadAllText(producedPath);
+            // CRLF-only: no lone LF or CR may remain once CRLF pairs are
+            // removed, and both files end with a CRLF-terminated line.
+            AssertEx.Equal(
+                false,
+                fixtureText.Replace("\r\n", "").IndexOfAny(
+                    new[] { '\r', '\n' }) >= 0);
+            AssertEx.Equal(
+                false,
+                producedText.Replace("\r\n", "").IndexOfAny(
+                    new[] { '\r', '\n' }) >= 0);
+            AssertEx.Equal(true, fixtureText.EndsWith("\r\n"));
+            AssertEx.Equal(true, producedText.EndsWith("\r\n"));
+
+            string[] fixtureLines = fixtureText.Split(
+                new[] { "\r\n" },
+                StringSplitOptions.None);
+            string[] producedLines = producedText.Split(
+                new[] { "\r\n" },
+                StringSplitOptions.None);
+            AssertEx.Equal(fixtureLines.Length, producedLines.Length);
+            var recordingDateLines = 0;
+            var luaScriptVersionLines = 0;
+            for (var index = 0; index < fixtureLines.Length; index++)
+            {
+                if (fixtureLines[index].StartsWith(
+                    RecordingDateLinePrefix,
+                    StringComparison.Ordinal))
+                {
+                    recordingDateLines++;
+                    if (!RecordingDateLine.IsMatch(producedLines[index]))
+                    {
+                        throw new InvalidOperationException(
+                            "Produced recording_date line is malformed: <"
+                            + producedLines[index] + ">.");
+                    }
+                }
+                else if (fixtureLines[index] == FixtureLuaScriptVersionLine)
+                {
+                    luaScriptVersionLines++;
+                    AssertEx.Equal(
+                        ProducedLuaScriptVersionLine,
+                        producedLines[index]);
+                }
+                else
+                {
+                    AssertEx.Equal(
+                        fixtureLines[index],
+                        producedLines[index]);
+                }
+            }
+            AssertEx.Equal(
+                expectedRecordingDateLines,
+                recordingDateLines);
+            AssertEx.Equal(1, luaScriptVersionLines);
+        }
+
+        private static void Gunzip(string sourcePath, string destinationPath)
+        {
+            using (FileStream source = File.OpenRead(sourcePath))
+            using (var gzip = new GZipStream(
+                source,
+                CompressionMode.Decompress))
+            using (FileStream destination = File.Create(destinationPath))
+            {
+                gzip.CopyTo(destination);
+            }
+        }
+    }
+}

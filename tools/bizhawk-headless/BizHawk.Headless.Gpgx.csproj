@@ -67,10 +67,16 @@
     <Compile Include="src/Core/RomAsset.cs" />
     <Compile Include="src/Program.cs" />
     <Compile Include="src/Recording/NoReplacePublisher.cs" />
+    <Compile Include="src/Recording/RunManifestWriter.cs" />
     <Compile Include="src/Recording/S1AuxEventEngine.cs" />
+    <Compile Include="src/Recording/S1CompleteRunMetadataWriter.cs" />
     <Compile Include="src/Recording/S1InputMask.cs" />
     <Compile Include="src/Recording/S1Ram.cs" />
+    <Compile Include="src/Recording/S1RunCaptureRunner.cs" />
+    <Compile Include="src/Recording/S1RunManifestWriter.cs" />
     <Compile Include="src/Recording/S1SmokeRecorder.cs" />
+    <Compile Include="src/Recording/S1SpecialStageCsvWriter.cs" />
+    <Compile Include="src/Recording/S1SpecialStageMetadataWriter.cs" />
     <Compile Include="src/Recording/S1TraceCaptureRunner.cs" />
     <Compile Include="src/Recording/S1TraceCsvWriter.cs" />
     <Compile Include="src/Recording/S1TraceMetadataWriter.cs" />
