@@ -377,17 +377,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                                 fullOutput,
                                 "ss",
                                 "aux_state.jsonl")).Length);
+                        // Run-mode files carry the canonical capture's
+                        // Windows text-mode CRLF line endings
+                        // (docs/s2-run-mode-behavior.md §9).
                         AssertContains(
                             File.ReadAllText(Path.Combine(
                                 fullOutput,
                                 "run_manifest.json")),
-                            "  \"run_id\": \"cli-run\",\n");
+                            "  \"run_id\": \"cli-run\",\r\n");
                         AssertContains(
                             File.ReadAllText(Path.Combine(
                                 fullOutput,
                                 "seg2_ehz1",
                                 "metadata.json")),
-                            "  \"segment_index\": 2,\n");
+                            "  \"segment_index\": 2,\r\n");
                     }));
         }
 

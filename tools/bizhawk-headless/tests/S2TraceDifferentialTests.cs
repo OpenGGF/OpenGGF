@@ -25,9 +25,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// metadata.json equality normalized only on the recording_date value
     /// and the fixture's lua_script_version "9.11-s2" being produced as
     /// "9.12-s2" (the v9.12 Lua header declares plain-mode output
-    /// byte-identical to 9.11-s2 except that string). Skips (does not
-    /// pass) when S2_ROM_PATH or a BizHawk distribution is absent; fails
-    /// (does not skip) on any hash mismatch.
+    /// byte-identical to 9.11-s2 except that string). A fourth gate runs
+    /// one --run-id capture against
+    /// src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/ and
+    /// asserts all five segment directories plus run_manifest.json (see
+    /// the run-mode constants below). Skips (does not pass) when
+    /// S2_ROM_PATH or a BizHawk distribution is absent; fails (does not
+    /// skip) on any hash mismatch.
     /// </summary>
     internal static class S2TraceDifferentialTests
     {
@@ -92,6 +96,72 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "bae3b1654a7356dbbc6729e56767c0e0718e842163ecc236f1c60c51"
                 + "21b9c1e8");
 
+        // Run-mode gate: one native --run-id capture of the canonical EHZ
+        // halfpipe round-trip movie (level -> ss -> level -> ss -> level)
+        // must reproduce all five segment directories and the run manifest.
+        // The fixture set is stamped lua_script_version 9.12-s2 and carries
+        // the canonical capture's Windows text-mode CRLF line endings
+        // (docs/s2-run-mode-behavior.md §9), so physics/aux/manifest bytes
+        // are asserted without any normalization; each segment
+        // metadata.json is normalized on the recording_date value only.
+        private const string RunFixtureDirectoryName =
+            "s2-ehz-halfpipe-roundtrip";
+        private const string RunMovieFileName =
+            "s2-ehz-halfpipe-roundtrip.bk2";
+        private const int RunMovieFrameCount = 22819;
+        private const string RunManifestSha256 =
+            "aabe4597821eb8223266728f44730a5a15321bad167ebc56d8569f09d5"
+            + "cb0cf1";
+
+        private static readonly S2RunSegmentCase[] RunSegmentCases =
+        {
+            new S2RunSegmentCase(
+                "seg1_ehz1",
+                "level",
+                825,
+                2969,
+                "19f1712ccd56f95724c50256efefb49e3b65531bea864cada32a3178"
+                + "d4da7320",
+                "bfb475c238449f8844aec22612b25f6ac5c131db25aec98244bf6de4"
+                + "5f2c3d55"),
+            new S2RunSegmentCase(
+                "ss",
+                "special_stage",
+                3795,
+                5733,
+                "9c2ed10bf732f76398b20e1763ddfbb5ed3df0b66394e68a78f8ec53"
+                + "00129d1b",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b"
+                + "7852b855"),
+            new S2RunSegmentCase(
+                "seg2_ehz1",
+                "level",
+                9701,
+                2903,
+                "6e373f9cb786391813f8d50dff5bfbd57575cf525c5f272e2aca510a"
+                + "70725c45",
+                "307aa3380304204e02576b85b6c6886fda9b772f1b1d39a2ee90d8cf"
+                + "f734d05b"),
+            new S2RunSegmentCase(
+                "ss_2",
+                "special_stage",
+                12605,
+                6381,
+                "13c6ea30eae9361bfb9e7c03b2cfb50bb3193d2a7a5809df780d8cd3"
+                + "e5bd84ab",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b"
+                + "7852b855"),
+            new S2RunSegmentCase(
+                "seg3_ehz1",
+                "level",
+                19159,
+                3452,
+                "7632445f5ef5cdc1c429db3b375f95c4c34198c2abd2a86f81a49b69"
+                + "3a50aea6",
+                "6538660383c358770246b1a628ba89bd83969a61bca7059077a855e0"
+                + "f5cd5259")
+        };
+
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
@@ -106,6 +176,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S2TraceDifferential native segment 1 capture matches"
                 + " canonical ARZ2 trace",
                 () => NativeCaptureMatchesCanonicalTrace(ArzSegment1Case)));
+            tests.Add(new TestMain.TestCase(
+                "S2TraceDifferential native run mode capture matches"
+                + " canonical halfpipe round trip",
+                NativeRunModeCaptureMatchesCanonicalRun));
         }
 
         /// <summary>
@@ -157,6 +231,151 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public int MovieFrameCount { get; private set; }
             public string PhysicsSha256 { get; private set; }
             public string AuxStateSha256 { get; private set; }
+        }
+
+        /// <summary>
+        /// One run-mode segment expectation: the segment directory token
+        /// under the run output root, the manifest kind the CLI reports
+        /// for it on stdout, the canonical BK2 frame offset and trace
+        /// frame count, and the canonical sha256 hashes of the segment's
+        /// physics.csv and aux_state.jsonl bytes (CRLF line endings
+        /// included; the special-stage aux hash is the empty file's).
+        /// </summary>
+        private sealed class S2RunSegmentCase
+        {
+            public S2RunSegmentCase(
+                string dirToken,
+                string kind,
+                int bk2FrameOffset,
+                int traceFrameCount,
+                string physicsSha256,
+                string auxStateSha256)
+            {
+                DirToken = dirToken;
+                Kind = kind;
+                Bk2FrameOffset = bk2FrameOffset;
+                TraceFrameCount = traceFrameCount;
+                PhysicsSha256 = physicsSha256;
+                AuxStateSha256 = auxStateSha256;
+            }
+
+            public string DirToken { get; private set; }
+            public string Kind { get; private set; }
+            public int Bk2FrameOffset { get; private set; }
+            public int TraceFrameCount { get; private set; }
+            public string PhysicsSha256 { get; private set; }
+            public string AuxStateSha256 { get; private set; }
+        }
+
+        private static void NativeRunModeCaptureMatchesCanonicalRun()
+        {
+            S2DifferentialDependencies dependencies =
+                ResolveS2DifferentialDependencies();
+            BizHawkInstallation installation =
+                BizHawkInstallation.Validate(dependencies.BizHawkHome);
+
+            string runDirectory = Path.Combine(
+                EndToEndTests.RepositoryRoot,
+                "src",
+                "test",
+                "resources",
+                "traces",
+                "s2",
+                "runs",
+                RunFixtureDirectoryName);
+            string moviePath = Path.GetFullPath(Path.Combine(
+                runDirectory,
+                RunMovieFileName));
+
+            string root = Path.Combine(
+                Path.GetTempPath(),
+                "openggf-s2-run-differential-"
+                + Guid.NewGuid().ToString("N"));
+            string output = Path.Combine(root, "capture");
+            try
+            {
+                // Self-check the canonical fixture bytes first so a hash
+                // mismatch reports whether the fixture or the capture
+                // diverged. Gzipped fixtures are decompressed read-only
+                // into the temp root; the fixtures are never modified.
+                Directory.CreateDirectory(root);
+                foreach (S2RunSegmentCase segment in RunSegmentCases)
+                {
+                    string scratch = Path.Combine(
+                        root,
+                        "fixture-" + segment.DirToken);
+                    Directory.CreateDirectory(scratch);
+                    AssertSha256(
+                        segment.DirToken + "/physics.csv (fixture)",
+                        segment.PhysicsSha256,
+                        EndToEndTests.ComputeSha256(MaterializeFixture(
+                            Path.Combine(runDirectory, segment.DirToken),
+                            "physics.csv",
+                            Path.Combine(scratch, "physics.csv"))));
+                    AssertSha256(
+                        segment.DirToken + "/aux_state.jsonl (fixture)",
+                        segment.AuxStateSha256,
+                        EndToEndTests.ComputeSha256(MaterializeFixture(
+                            Path.Combine(runDirectory, segment.DirToken),
+                            "aux_state.jsonl",
+                            Path.Combine(scratch, "aux_state.jsonl"))));
+                }
+                AssertSha256(
+                    "run_manifest.json (fixture)",
+                    RunManifestSha256,
+                    EndToEndTests.ComputeSha256(Path.Combine(
+                        runDirectory,
+                        "run_manifest.json")));
+
+                string stdout = RunRunModeCapture(
+                    dependencies.RomPath,
+                    dependencies.BizHawkHome,
+                    moviePath,
+                    output);
+
+                AssertEx.Equal(
+                    ExpectedRunStdout(installation, output),
+                    stdout);
+                foreach (S2RunSegmentCase segment in RunSegmentCases)
+                {
+                    AssertSha256(
+                        segment.DirToken + "/physics.csv",
+                        segment.PhysicsSha256,
+                        EndToEndTests.ComputeSha256(Path.Combine(
+                            output,
+                            segment.DirToken,
+                            "physics.csv")));
+                    AssertSha256(
+                        segment.DirToken + "/aux_state.jsonl",
+                        segment.AuxStateSha256,
+                        EndToEndTests.ComputeSha256(Path.Combine(
+                            output,
+                            segment.DirToken,
+                            "aux_state.jsonl")));
+                    AssertNormalizedRunMetadataEquality(
+                        Path.Combine(
+                            runDirectory,
+                            segment.DirToken,
+                            "metadata.json"),
+                        Path.Combine(
+                            output,
+                            segment.DirToken,
+                            "metadata.json"));
+                }
+                AssertSha256(
+                    "run_manifest.json",
+                    RunManifestSha256,
+                    EndToEndTests.ComputeSha256(Path.Combine(
+                        output,
+                        "run_manifest.json")));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
         }
 
         private static void NativeCaptureMatchesCanonicalTrace(
@@ -362,6 +581,43 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return result.StandardOutput;
         }
 
+        private static string RunRunModeCapture(
+            string romPath,
+            string bizHawkHome,
+            string moviePath,
+            string output)
+        {
+            string arguments =
+                EndToEndTests.Quote(
+                    Path.Combine(EndToEndTests.ToolDirectory, "run.sh"))
+                + " --mode trace"
+                + " --rom " + EndToEndTests.Quote(romPath)
+                + " --movie " + EndToEndTests.Quote(moviePath)
+                + " --output " + EndToEndTests.Quote(output)
+                + " --run-id " + RunFixtureDirectoryName;
+            var start = new ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            start.EnvironmentVariables["BIZHAWK_HOME"] = bizHawkHome;
+            start.EnvironmentVariables["DISPLAY"] = ":99";
+            EndToEndTests.ProcessResult result = EndToEndTests.RunProcess(
+                start,
+                CaptureTimeoutMilliseconds);
+            if (result.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    "Run capture exited " + result.ExitCode + ". stderr: "
+                    + result.StandardError);
+            }
+            AssertEx.Equal(string.Empty, result.StandardError);
+            return result.StandardOutput;
+        }
+
         private static string ExpectedStdout(
             BizHawkInstallation installation,
             string output,
@@ -386,6 +642,47 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + Path.Combine(output, "aux_state.jsonl") + "\n"
                 + "Metadata JSON: "
                 + Path.Combine(output, "metadata.json") + "\n";
+        }
+
+        private static string ExpectedRunStdout(
+            BizHawkInstallation installation,
+            string output)
+        {
+            string expected =
+                "BizHawk: " + installation.ManagedVersion + "\n"
+                + "ROM SHA-1: " + RomIdentity.Sonic2Rev01Sha1 + "\n"
+                + "Movie frames: " + RunMovieFrameCount + "\n"
+                + "Run ID: " + RunFixtureDirectoryName + "\n"
+                + "Segments: " + RunSegmentCases.Length + "\n"
+                + "Transitions: " + (RunSegmentCases.Length - 1) + "\n";
+            foreach (S2RunSegmentCase segment in RunSegmentCases)
+            {
+                expected += "Segment " + segment.DirToken
+                    + ": kind=" + segment.Kind
+                    + ", BK2 frame offset=" + segment.Bk2FrameOffset
+                    + ", trace frames=" + segment.TraceFrameCount + "\n";
+            }
+            expected += "Run manifest: "
+                + Path.Combine(output, "run_manifest.json") + "\n";
+            return expected;
+        }
+
+        /// <summary>
+        /// First-divergence hash assertion: names the diverging file so a
+        /// run-gate failure reports which of the eleven canonical byte
+        /// sets broke first.
+        /// </summary>
+        private static void AssertSha256(
+            string context,
+            string expected,
+            string actual)
+        {
+            if (expected != actual)
+            {
+                throw new InvalidOperationException(
+                    "First divergence at " + context + ": expected sha256 <"
+                    + expected + "> but was <" + actual + ">.");
+            }
         }
 
         /// <summary>
@@ -442,6 +739,65 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             AssertEx.Equal(1, recordingDateLines);
             AssertEx.Equal(1, luaScriptVersionLines);
+        }
+
+        /// <summary>
+        /// Run-mode variant of the metadata comparison: run fixture
+        /// metadata.json files carry the canonical capture's Windows
+        /// text-mode CRLF line endings and are already stamped
+        /// lua_script_version 9.12-s2, so the produced file must be
+        /// byte-identical except the recording_date value (which must
+        /// still carry the exact key formatting and an ISO date value).
+        /// </summary>
+        private static void AssertNormalizedRunMetadataEquality(
+            string fixturePath,
+            string producedPath)
+        {
+            string fixtureText = File.ReadAllText(fixturePath);
+            string producedText = File.ReadAllText(producedPath);
+            // CRLF-only: no lone LF or CR may remain once CRLF pairs are
+            // removed, and both files end with a CRLF-terminated line.
+            AssertEx.Equal(
+                false,
+                fixtureText.Replace("\r\n", "").IndexOfAny(
+                    new[] { '\r', '\n' }) >= 0);
+            AssertEx.Equal(
+                false,
+                producedText.Replace("\r\n", "").IndexOfAny(
+                    new[] { '\r', '\n' }) >= 0);
+            AssertEx.Equal(true, fixtureText.EndsWith("\r\n"));
+            AssertEx.Equal(true, producedText.EndsWith("\r\n"));
+
+            string[] fixtureLines = fixtureText.Split(
+                new[] { "\r\n" },
+                StringSplitOptions.None);
+            string[] producedLines = producedText.Split(
+                new[] { "\r\n" },
+                StringSplitOptions.None);
+            AssertEx.Equal(fixtureLines.Length, producedLines.Length);
+            var recordingDateLines = 0;
+            for (var index = 0; index < fixtureLines.Length; index++)
+            {
+                if (fixtureLines[index].StartsWith(
+                    RecordingDateLinePrefix,
+                    StringComparison.Ordinal))
+                {
+                    recordingDateLines++;
+                    if (!RecordingDateLine.IsMatch(producedLines[index]))
+                    {
+                        throw new InvalidOperationException(
+                            "Produced recording_date line is malformed: <"
+                            + producedLines[index] + ">.");
+                    }
+                }
+                else
+                {
+                    AssertEx.Equal(
+                        fixtureLines[index],
+                        producedLines[index]);
+                }
+            }
+            AssertEx.Equal(1, recordingDateLines);
         }
 
         private static void Gunzip(string sourcePath, string destinationPath)
