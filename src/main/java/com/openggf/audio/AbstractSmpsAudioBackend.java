@@ -22,7 +22,6 @@ import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.PerformanceProfiler;
-import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 
 import java.util.*;
 import java.util.Objects;
@@ -129,12 +128,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private SmpsSequencerConfig smpsConfig;
     private final SmpsCoordFlagHandlerOwner legacyCoordFlagHandlers =
             new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
+    private boolean legacyCoordFlagHandlersConfigured;
 
     protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.profiler = profiler;
-        legacyCoordFlagHandlers.register(
-                "s3k", Sonic3kCoordFlagHandler::new);
         // Initialize fallback mappings
         // SFX
         sfxFallback.put("JUMP", "sfx/jump.wav");
@@ -239,6 +237,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     public void setAudioProfile(GameAudioProfile profile) {
         this.audioProfile = profile;
         this.smpsConfig = profile != null ? profile.getSequencerConfig() : null;
+        if (profile != null && !legacyCoordFlagHandlersConfigured
+                && "s3k".equals(profile.presentationGameId())) {
+            profile.configurePresentationCoordFlagHandlers(
+                    legacyCoordFlagHandlers);
+            legacyCoordFlagHandlersConfigured = true;
+        }
         musicSourceCache.clear();
     }
 
@@ -1031,7 +1035,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                                 SonicConfiguration.FM6_DAC_OFF),
                         speedShoesEnabled,
                         speedMultiplier,
-                        AudioManager.getInstance(),
+                        AudioManager.presentationOwner(),
                         new DecodedPcmCache(),
                         getClass().getClassLoader()::getResourceAsStream);
         return new AudioPresentationSourceFactory(

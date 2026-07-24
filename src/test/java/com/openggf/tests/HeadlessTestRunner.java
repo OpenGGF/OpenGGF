@@ -4,6 +4,8 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.RecordingFrameDriver;
+import com.openggf.game.GameServices;
+import com.openggf.audio.presentation.PresentationMode;
 
 /**
  * Headless test runner that simulates the full game loop update cycle.
@@ -48,6 +50,7 @@ public class HeadlessTestRunner {
      */
     public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump) {
         driver.stepFrame(up, down, left, right, jump);
+        presentOuterFrame();
     }
 
     /**
@@ -57,6 +60,7 @@ public class HeadlessTestRunner {
     public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
                           boolean p1Start) {
         driver.stepFrame(up, down, left, right, jump, p1Start);
+        presentOuterFrame();
     }
 
     /**
@@ -65,6 +69,7 @@ public class HeadlessTestRunner {
     public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
                           int p2Mask, boolean p2Start) {
         driver.stepFrame(up, down, left, right, jump, p2Mask, p2Start);
+        presentOuterFrame();
     }
 
     /**
@@ -74,6 +79,7 @@ public class HeadlessTestRunner {
     public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
                           int p2Mask, boolean p2Start, boolean p1Start) {
         driver.stepFrame(up, down, left, right, jump, p2Mask, p2Start, p1Start);
+        presentOuterFrame();
     }
 
     /**
@@ -88,7 +94,9 @@ public class HeadlessTestRunner {
      * Steps multiple frames with no input (idle).
      */
     public void stepIdleFrames(int frames) {
-        driver.stepIdleFrames(frames);
+        for (int frame = 0; frame < frames; frame++) {
+            stepFrame(false, false, false, false, false);
+        }
     }
 
     /** Gets the current frame counter. */
@@ -120,7 +128,9 @@ public class HeadlessTestRunner {
      * @return The raw input mask used (for trace input validation)
      */
     public int stepFrameFromRecording() {
-        return driver.stepFrameFromRecording();
+        int input = driver.stepFrameFromRecording();
+        presentOuterFrame();
+        return input;
     }
 
     /**
@@ -128,7 +138,9 @@ public class HeadlessTestRunner {
      * previous BK2 row.
      */
     public int stepFrameFromRecordingUsingPreviousInput() {
-        return driver.stepFrameFromRecordingUsingPreviousInput();
+        int input = driver.stepFrameFromRecordingUsingPreviousInput();
+        presentOuterFrame();
+        return input;
     }
 
     static boolean hasNewP1ActionPressForLogicalInput(Bk2Movie movie, int bk2Index, boolean controlLocked) {
@@ -183,5 +195,9 @@ public class HeadlessTestRunner {
      */
     public void advanceRecordingCursor(int frameCount) {
         driver.advanceRecordingCursor(frameCount);
+    }
+
+    private static void presentOuterFrame() {
+        GameServices.audio().presentShadowFrame(PresentationMode.FORWARD);
     }
 }

@@ -23,6 +23,20 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
+import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.presentation.AudioPresentationCommand;
+import com.openggf.audio.presentation.AudioPresentationCommandQueue;
+import com.openggf.audio.presentation.AudioPresentationCommandResolver;
+import com.openggf.audio.presentation.AudioPresentationMixer;
+import com.openggf.audio.presentation.AudioPresentationParityProbe;
+import com.openggf.audio.presentation.AudioPresentationProducer;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.AudioVoiceRegistry;
+import com.openggf.audio.presentation.DecodedPcmCache;
+import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
@@ -63,11 +77,21 @@ public class AudioManager {
     private boolean reverseAudioPresentationActive;
     private StreamBackedDeterministicAudioRuntime deferredLiveCaptureRuntime;
     private DeterministicAudioRuntime deferredLiveCapturePriorRuntime;
+    private AudioPresentationCommandQueue shadowCommands;
+    private AudioPresentationSourceFactory shadowFactory;
+    private AudioPresentationCommandResolver shadowResolver;
+    private AudioVoiceRegistry shadowRegistry;
+    private AudioPresentationProducer shadowProducer;
+    private AudioPresentationParityProbe shadowParity;
+    private SmpsCoordFlagHandlerOwner presentationCoordFlagHandlers;
+    private final Set<String> presentationCoordHandlerGameIds =
+            new LinkedHashSet<>();
 
     // Donor audio overlay: secondary SFX path for cross-game feature donation
     private final Map<String, SmpsLoader> donorLoaders = new HashMap<>();
     private final Map<String, DacData> donorDacData = new HashMap<>();
     private final Map<String, SmpsSequencerConfig> donorConfigs = new HashMap<>();
+    private final Map<String, GameAudioProfile> donorProfiles = new HashMap<>();
     private final Map<GameSound, DonorSfxBinding> donorSoundBindings = new EnumMap<>(GameSound.class);
     private final Map<String, Map<GameMusic, Integer>> donorMusicBindings = new HashMap<>();
     private final Map<SmpsSourceDescriptor, AbstractSmpsData> restoreSmpsResolveCache = new HashMap<>();
@@ -80,6 +104,14 @@ public class AudioManager {
     }
 
     public static synchronized AudioManager getInstance() {
+        if (instance == null) {
+            instance = new AudioManager();
+        }
+        return instance;
+    }
+
+    /** Transitional dependency hook for presentation factories pending cutover. */
+    public static synchronized AudioManager presentationOwner() {
         if (instance == null) {
             instance = new AudioManager();
         }
@@ -278,6 +310,7 @@ public class AudioManager {
     }
 
     public void setBackend(AudioBackend backend) {
+        closeShadowPresentation();
         destroyBackendQuietly(this.backend, "previous AudioBackend");
         this.backend = backend;
         try {
@@ -440,6 +473,9 @@ public class AudioManager {
         }
         try {
             byte[] pcm = rom.readBytes(spec.address(), spec.length());
+            ensureShadowPresentation();
+            shadowResolver.submitRawPcm(pcm, spec.sampleRate());
+            shadowParity.commandSubmitted();
             // System PCM is not represented in AudioCommandTimeline. Always
             // deliver it to the backend; an attached presentation runtime is
             // rebound by the backend to the resulting PCM stream.
@@ -454,6 +490,9 @@ public class AudioManager {
             return;
         }
         backend.stopPcmSample();
+        ensureShadowPresentation();
+        shadowResolver.stopRawPcm();
+        shadowParity.commandSubmitted();
     }
 
     private SmpsDriverSnapshot.DependencyResolver createSmpsDependencyResolver() {
@@ -794,6 +833,8 @@ public class AudioManager {
         if (backend != null) {
             backend.beginReversePresentation();
         }
+        ensureShadowPresentation();
+        shadowProducer.beginReverse(1.0);
     }
 
     public boolean isReverseAudioPresentationActive() {
@@ -805,6 +846,9 @@ public class AudioManager {
         deterministicAudioRuntime.endReversePresentation();
         if (backend != null) {
             backend.endReversePresentation();
+        }
+        if (shadowProducer != null) {
+            shadowProducer.endReverse();
         }
         if (deterministicAudioRuntime == deferredLiveCaptureRuntime) {
             DeterministicAudioRuntime prior = deferredLiveCapturePriorRuntime;
@@ -819,6 +863,9 @@ public class AudioManager {
         if (backend != null) {
             backend.setReversePlaybackRate(rate);
         }
+        if (shadowProducer != null) {
+            shadowProducer.setReverseRate(rate);
+        }
     }
 
     /**
@@ -831,6 +878,10 @@ public class AudioManager {
      */
     public void clearPcmHistory() {
         deterministicAudioRuntime.clearPcmHistory();
+        if (shadowProducer != null) {
+            shadowProducer.clearHistory();
+            shadowParity.historyBoundary();
+        }
     }
 
     /**
@@ -846,6 +897,19 @@ public class AudioManager {
         if (backend != null) {
             backend.setRewindHistoryArmed(armed);
         }
+        ensureShadowPresentation();
+        shadowProducer.setHistoryArmed(armed);
+    }
+
+    public void presentShadowFrame(PresentationMode mode) {
+        ensureShadowPresentation();
+        shadowProducer.present(commandTimeline.currentFrame(), mode);
+        shadowParity.presented(mode);
+    }
+
+    public AudioPresentationParityProbe.Snapshot shadowParitySnapshotForTesting() {
+        ensureShadowPresentation();
+        return shadowParity.snapshot();
     }
 
     public void advancePausedFrameStepAudio() {
@@ -1298,12 +1362,23 @@ public class AudioManager {
      */
     public void registerDonorLoader(String gameId, SmpsLoader loader, DacData dacData,
                                     SmpsSequencerConfig config) {
+        registerDonorLoader(gameId, loader, dacData, config, null);
+    }
+
+    public void registerDonorLoader(String gameId, SmpsLoader loader,
+                                    DacData dacData,
+                                    SmpsSequencerConfig config,
+                                    GameAudioProfile donorProfile) {
         clearRestoreSmpsResolveCache();
         donorLoaders.put(gameId, loader);
         this.donorDacData.put(gameId, dacData);
         if (config != null) {
             donorConfigs.put(gameId, config);
         }
+        if (donorProfile != null) {
+            donorProfiles.put(gameId, donorProfile);
+        }
+        configurePresentationCoordHandlers(donorProfile);
     }
 
     public void registerDonorMusicMap(String gameId, Map<GameMusic, Integer> musicMap) {
@@ -1329,6 +1404,7 @@ public class AudioManager {
         donorLoaders.clear();
         donorDacData.clear();
         donorConfigs.clear();
+        donorProfiles.clear();
         donorSoundBindings.clear();
         donorMusicBindings.clear();
     }
@@ -1357,6 +1433,7 @@ public class AudioManager {
         this.deterministicAudioRuntime.clearSubmittedCommands();
         this.deterministicAudioRuntime.clearPcmHistory();
         this.commandTimeline.clear();
+        closeShadowPresentation();
         clearDonorAudio();
         this.deterministicRuntimeExplicitlyConfigured = false;
         configureDeterministicRuntimeForBackend();
@@ -1366,6 +1443,9 @@ public class AudioManager {
         if (!suppressingRewindReplay()) {
             AudioTimelineEntry entry = commandTimeline.record(command);
             deterministicAudioRuntime.submit(entry);
+            ensureShadowPresentation();
+            shadowResolver.submit(command);
+            shadowParity.commandSubmitted();
             return entry;
         }
         return null;
@@ -1373,6 +1453,147 @@ public class AudioManager {
 
     private boolean sendLiveBackendCommands() {
         return backend != null && !deterministicAudioRuntime.consumesSubmittedCommands();
+    }
+
+    public void toggleMute(ChannelType type, int channel) {
+        backend.toggleMute(type, channel);
+        ensureShadowPresentation();
+        shadowCommands.submit(new AudioPresentationCommand.ToggleMute(type, channel),
+                () -> true, shadowRegistry::apply);
+        shadowParity.commandSubmitted();
+    }
+
+    public void toggleSolo(ChannelType type, int channel) {
+        backend.toggleSolo(type, channel);
+        ensureShadowPresentation();
+        shadowCommands.submit(new AudioPresentationCommand.ToggleSolo(type, channel),
+                () -> true, shadowRegistry::apply);
+        shadowParity.commandSubmitted();
+    }
+
+    public boolean isMuted(ChannelType type, int channel) {
+        ensureShadowPresentation();
+        return shadowRegistry.isMuted(type, channel);
+    }
+
+    public boolean isSoloed(ChannelType type, int channel) {
+        ensureShadowPresentation();
+        return shadowRegistry.isSoloed(type, channel);
+    }
+
+    private void ensureShadowPresentation() {
+        if (shadowProducer != null) {
+            return;
+        }
+        int sampleRate = Math.max(1, backend != null ? backend.outputSampleRate() : 48_000);
+        int frameRate = configuredFrameRate();
+        int maxFrames = (sampleRate + frameRate - 1) / frameRate;
+        presentationCoordFlagHandlers =
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
+        presentationCoordHandlerGameIds.clear();
+        configurePresentationCoordHandlers(audioProfile);
+        donorProfiles.values().forEach(
+                this::configurePresentationCoordHandlers);
+        AudioPresentationSourceFactory.Settings settings =
+                new AudioPresentationSourceFactory.Settings(sampleRate,
+                        SmpsSequencer.Region.NTSC, false, false, false,
+                        false, 1, this, new DecodedPcmCache(),
+                        AudioManager.class.getClassLoader()::getResourceAsStream);
+        shadowFactory = new AudioPresentationSourceFactory(
+                () -> true, presentationCoordFlagHandlers, settings);
+        shadowCommands = new AudioPresentationCommandQueue();
+        shadowRegistry = new AudioVoiceRegistry(shadowFactory, shadowFactory,
+                presentationCoordFlagHandlers,
+                warning -> LOGGER.warning("Presentation shadow: " + warning));
+        shadowResolver = new AudioPresentationCommandResolver(shadowCommands,
+                shadowFactory, new ShadowSources(maxFrames),
+                warning -> LOGGER.warning("Presentation shadow: " + warning),
+                () -> true, shadowRegistry::apply);
+        AudioPresentationMixer mixer = new AudioPresentationMixer(maxFrames);
+        shadowProducer = new AudioPresentationProducer(sampleRate, frameRate,
+                Math.max(maxFrames, configuredPcmHistoryFrames(sampleRate)),
+                Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
+                shadowRegistry, shadowCommands, mixer,
+                new NoDeviceAudioSink(sampleRate));
+        shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
+    }
+
+    private void closeShadowPresentation() {
+        if (shadowProducer != null) {
+            shadowProducer.close();
+        }
+        shadowProducer = null;
+        shadowResolver = null;
+        shadowRegistry = null;
+        shadowCommands = null;
+        shadowFactory = null;
+        shadowParity = null;
+        presentationCoordFlagHandlers = null;
+        presentationCoordHandlerGameIds.clear();
+    }
+
+    private void configurePresentationCoordHandlers(GameAudioProfile profile) {
+        if (profile != null && presentationCoordFlagHandlers != null
+                && presentationCoordHandlerGameIds.add(
+                        profile.presentationGameId())) {
+            profile.configurePresentationCoordFlagHandlers(
+                    presentationCoordFlagHandlers);
+        }
+    }
+
+    private final class ShadowSources implements AudioPresentationCommandResolver.Sources {
+        private final int maxFrames;
+
+        private ShadowSources(int maxFrames) {
+            this.maxFrames = maxFrames;
+        }
+
+        @Override public String baseGameId() {
+            try {
+                return audioProfile != null
+                        ? audioProfile.presentationGameId() : "base";
+            } catch (RuntimeException unavailable) { return "base"; }
+        }
+        @Override public AbstractSmpsData loadBaseMusic(int id) {
+            return smpsLoader != null ? smpsLoader.loadMusic(id) : null;
+        }
+        @Override public AbstractSmpsData loadDonorMusic(String gameId, int id) {
+            SmpsLoader loader = donorLoaders.get(gameId);
+            return loader != null ? loader.loadMusic(id) : null;
+        }
+        @Override public AbstractSmpsData loadBaseSfx(int id) {
+            return smpsLoader != null ? smpsLoader.loadSfx(id) : null;
+        }
+        @Override public AbstractSmpsData loadBaseSfx(String name) {
+            return smpsLoader != null ? smpsLoader.loadSfx(name) : null;
+        }
+        @Override public AbstractSmpsData loadDonorSfx(String gameId, int id) {
+            SmpsLoader loader = donorLoaders.get(gameId);
+            return loader != null ? loader.loadSfx(id) : null;
+        }
+        @Override public DacData dacFor(String gameId) {
+            return gameId.equals(baseGameId()) ? dacData : donorDacData.get(gameId);
+        }
+        @Override public SmpsSequencerConfig configFor(String gameId) {
+            return gameId.equals(baseGameId())
+                    ? (audioProfile != null ? audioProfile.getSequencerConfig() : null)
+                    : donorConfigs.get(gameId);
+        }
+        @Override public int sfxPriority(String gameId, int id) {
+            return gameId.equals(baseGameId()) && audioProfile != null
+                    ? audioProfile.getSfxPriority(id) : 0x70;
+        }
+        @Override public boolean specialSfx(String gameId, int id) {
+            return gameId.equals(baseGameId()) && audioProfile != null
+                    && audioProfile.isSpecialSfx(id);
+        }
+        @Override public boolean continuousSfx(String gameId, int id) {
+            return gameId.equals(baseGameId()) && audioProfile != null
+                    && audioProfile.isContinuousSfx(id);
+        }
+        @Override public int maxStereoFrames() {
+            return maxFrames;
+        }
     }
 
     private final class ManagerLiveCaptureAudioHandle implements LiveCaptureAudioHandle {

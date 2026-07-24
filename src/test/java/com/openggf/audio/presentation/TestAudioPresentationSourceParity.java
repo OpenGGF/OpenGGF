@@ -17,6 +17,7 @@ import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -323,6 +324,13 @@ class TestAudioPresentationSourceParity {
                 new AudioTestFixtures.StubSmpsLoader()) {
             @Override public SmpsSequencerConfig getSequencerConfig() {
                 return Sonic3kSmpsSequencerConfig.CONFIG;
+            }
+            @Override public String presentationGameId() {
+                return "s3k";
+            }
+            @Override public void configurePresentationCoordFlagHandlers(
+                    SmpsCoordFlagHandlerOwner owner) {
+                owner.register("s3k", Sonic3kCoordFlagHandler::new);
             }
         });
 

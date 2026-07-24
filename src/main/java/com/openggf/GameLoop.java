@@ -10,6 +10,7 @@ import com.openggf.game.*;
 
 import com.openggf.control.InputHandler;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -680,6 +681,14 @@ public class GameLoop {
      */
     public boolean isUserPaused() {
         return userPaused;
+    }
+
+    public PresentationMode presentationModeForOuterFrame(
+            boolean modalPicker, boolean frameStepRequested) {
+        return modalPicker || isPaused() || frameStepRequested
+                ? PresentationMode.SILENT
+                : audioManager.isReverseAudioPresentationActive()
+                ? PresentationMode.REVERSE : PresentationMode.FORWARD;
     }
 
     /**

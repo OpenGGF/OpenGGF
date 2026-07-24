@@ -320,7 +320,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
 
             AudioManager am = GameServices.audio();
             am.registerDonorLoader(donorGameId.code(), donorSmpsLoader, donorDacData,
-                    donorProfile.getSequencerConfig());
+                    donorProfile.getSequencerConfig(), donorProfile);
             Map<GameMusic, Integer> donorMusic = donorProfile.getMusicMap();
             am.registerDonorMusicMap(donorGameId.code(), donorMusic);
 

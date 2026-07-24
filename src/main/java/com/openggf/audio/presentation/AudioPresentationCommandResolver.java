@@ -21,8 +21,6 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
@@ -128,7 +126,7 @@ public final class AudioPresentationCommandResolver {
     public void submitRawPcm(byte[] pcm, int sourceRate) {
         byte[] source = Objects.requireNonNull(pcm, "pcm").clone();
         String assetId = "sega-pcm:" + sourceRate + ":"
-                + source.length + ":" + sha256(source);
+                + source.length + ":" + HexFormat.of().formatHex(source);
         DecodedPcm registered = factory.registerUnsigned8Mono(
                 assetId, source, sourceRate);
         enqueue(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
@@ -324,15 +322,6 @@ public final class AudioPresentationCommandResolver {
                     "gameId must not be blank");
         }
         return value;
-    }
-
-    private static String sha256(byte[] source) {
-        try {
-            return HexFormat.of().formatHex(
-                    MessageDigest.getInstance("SHA-256").digest(source));
-        } catch (NoSuchAlgorithmException impossible) {
-            throw new AssertionError("SHA-256 is required by the JVM", impossible);
-        }
     }
 
     private static final class EmptySources implements Sources {

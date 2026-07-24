@@ -73,7 +73,7 @@ public final class AudioPresentationSourceFactory
                     false,
                     false,
                     1,
-                    AudioManager.getInstance(),
+                    AudioManager.presentationOwner(),
                     new DecodedPcmCache(),
                     loader::getResourceAsStream);
         }

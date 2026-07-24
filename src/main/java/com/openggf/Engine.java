@@ -1696,6 +1696,10 @@ public class Engine {
 			// Modal picker frames skip GameLoop.step(), so advance key edges here.
 			inputHandler.update();
 		}
+		if (gameLoop != null) {
+			audioManager.presentShadowFrame(gameLoop.presentationModeForOuterFrame(
+					displayShaderPickerHandledInput, frameStepPresentation));
+		}
 		profiler.endSection("update");
 
 		boolean userRecordingSceneSuppressed = gameLoop != null

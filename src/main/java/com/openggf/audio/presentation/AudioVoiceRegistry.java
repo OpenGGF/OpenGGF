@@ -208,6 +208,20 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         return nextVoiceId++;
     }
 
+    public boolean isMuted(ChannelType type, int channel) {
+        int bit = channelBit(type, channel);
+        return type == ChannelType.PSG
+                ? (psgMuteMask & bit) != 0
+                : (fmMuteMask & bit) != 0;
+    }
+
+    public boolean isSoloed(ChannelType type, int channel) {
+        int bit = channelBit(type, channel);
+        return type == ChannelType.PSG
+                ? (psgSoloMask & bit) != 0
+                : (fmSoloMask & bit) != 0;
+    }
+
     public void beginRendering() {
         assertOwnerThread();
         if (rendering) {
