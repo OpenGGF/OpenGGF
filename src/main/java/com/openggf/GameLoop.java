@@ -695,8 +695,8 @@ public class GameLoop {
 
     /**
      * Shared production outer-frame boundary. Engine display and headless
-     * presentation drivers must enter through AudioManager's complete hook so
-     * deterministic/offline output and the inaudible shadow cannot drift.
+     * presentation drivers must enter through AudioManager's authoritative
+     * producer hook so speaker, history, and capture cannot drift.
      */
     public void presentOuterFrame(
             boolean modalPicker, boolean frameStepRequested) {

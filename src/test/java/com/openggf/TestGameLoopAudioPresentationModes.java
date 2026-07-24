@@ -10,6 +10,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
+import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -38,7 +39,10 @@ class TestGameLoopAudioPresentationModes {
     void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
-        loop = new GameLoop(mock(InputHandler.class));
+        InputHandler input = mock(InputHandler.class);
+        when(input.logical()).thenReturn(
+                com.openggf.control.LogicalInputSnapshot.neutral());
+        loop = new GameLoop(input);
     }
 
     @AfterEach
@@ -73,8 +77,14 @@ class TestGameLoopAudioPresentationModes {
             throws Exception {
         var presented = new ArrayList<PresentationMode>();
         loop.setAudioPresentationProbe(presented::add);
-        loop.setGameMode(mode);
+        replaceField(loop, "currentGameMode", mode);
+        if (mode == GameMode.LEVEL || mode == GameMode.TITLE_CARD) {
+            replaceField(loop, "specialStageTransitionPending", true);
+        } else if (mode == GameMode.BONUS_STAGE) {
+            replaceField(loop, "bonusStageTransitionPending", true);
+        }
 
+        loop.step();
         loop.presentOuterFrame(false, false);
 
         var parity = AudioManagerTestDiagnostics.shadowParitySnapshot(
@@ -129,12 +139,71 @@ class TestGameLoopAudioPresentationModes {
 
     @Test
     void heldRewindDrivesReverseThroughRealBoundary() throws Exception {
+        replaceField(loop, "currentGameMode", GameMode.LEGAL_DISCLAIMER);
         AudioManager.getInstance().beginReverseAudioPresentation();
 
+        loop.step();
         loop.presentOuterFrame(false, false);
 
         assertEquals(1, AudioManagerTestDiagnostics.shadowParitySnapshot(
                 AudioManager.getInstance()).reverseFrames());
+    }
+
+    @Test
+    void heldTraceRewindEarlyReturnStillPresentsReverseExactlyOnce()
+            throws Exception {
+        TraceSessionLauncher launcher = mock(TraceSessionLauncher.class);
+        when(launcher.handleRealtimeRewindInput(
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.any(InputHandler.class)))
+                .thenReturn(true);
+        replaceStaticField(
+                TraceSessionLauncher.class, "activeSession", launcher);
+        replaceField(loop, "currentGameMode", GameMode.LEVEL);
+        var modes = new ArrayList<PresentationMode>();
+        loop.setAudioPresentationProbe(modes::add);
+        AudioManager.getInstance().beginReverseAudioPresentation();
+        try {
+            loop.step();
+            loop.presentOuterFrame(false, false);
+        } finally {
+            replaceStaticField(
+                    TraceSessionLauncher.class, "activeSession", null);
+        }
+
+        assertEquals(java.util.List.of(PresentationMode.REVERSE), modes);
+        assertEquals(1, AudioManagerTestDiagnostics.shadowParitySnapshot(
+                AudioManager.getInstance()).reverseFrames());
+        verify(launcher).handleRealtimeRewindInput(
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.any(InputHandler.class));
+    }
+
+    @Test
+    void heldLiveRewindEarlyReturnStillPresentsReverseExactlyOnce()
+            throws Exception {
+        LiveRewindManager live = mock(LiveRewindManager.class);
+        when(live.handleRealtimeRewindInput(
+                org.mockito.ArgumentMatchers.any(GameMode.class),
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.any(InputHandler.class)))
+                .thenReturn(true);
+        replaceField(loop, "liveRewindManager", live);
+        replaceField(loop, "currentGameMode", GameMode.LEVEL);
+        var modes = new ArrayList<PresentationMode>();
+        loop.setAudioPresentationProbe(modes::add);
+        AudioManager.getInstance().beginReverseAudioPresentation();
+
+        loop.step();
+        loop.presentOuterFrame(false, false);
+
+        assertEquals(java.util.List.of(PresentationMode.REVERSE), modes);
+        assertEquals(1, AudioManagerTestDiagnostics.shadowParitySnapshot(
+                AudioManager.getInstance()).reverseFrames());
+        verify(live).handleRealtimeRewindInput(
+                org.mockito.ArgumentMatchers.eq(GameMode.LEVEL),
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.any(InputHandler.class));
     }
 
     private static void replaceField(
@@ -142,6 +211,13 @@ class TestGameLoopAudioPresentationModes {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private static void replaceStaticField(
+            Class<?> owner, String name, Object value) throws Exception {
+        Field field = owner.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(null, value);
     }
 
     private static final class SixHertzBackend extends NullAudioBackend {

@@ -2,6 +2,16 @@ package com.openggf.audio;
 
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.AudioPresentationCommand;
+import com.openggf.audio.presentation.DecodedPcm;
+import com.openggf.audio.presentation.SampleBackedVoice;
+import com.openggf.audio.output.AudioPresentationSink;
+import com.openggf.audio.presentation.AudioPresentationFrameView;
+import com.openggf.audio.presentation.AudioPresentationProducer;
+import com.openggf.audio.presentation.AudioVoiceRegistry;
+import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.rewind.AudioPresentationPolicy;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.tests.TestEnvironment;
@@ -9,9 +19,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioManagerPresentationModes {
@@ -30,11 +43,16 @@ class TestAudioManagerPresentationModes {
         audio.presentFrame(PresentationMode.FORWARD);
         long presented = AudioManagerTestDiagnostics
                 .shadowParitySnapshot(audio).presentedFrames();
+        long producerSamples = AudioManagerTestDiagnostics
+                .producerFingerprint(audio).clock().totalSamplesProduced();
         audio.update();
 
         assertEquals(1, presented);
         assertEquals(presented, AudioManagerTestDiagnostics
                 .shadowParitySnapshot(audio).presentedFrames());
+        assertEquals(producerSamples, AudioManagerTestDiagnostics
+                .producerFingerprint(audio).clock().totalSamplesProduced(),
+                "device pumping must not advance the authoritative clock");
         assertEquals(0, obsoleteRuntime.advances,
                 "the promoted producer is the sole presentation clock");
     }
@@ -116,6 +134,104 @@ class TestAudioManagerPresentationModes {
         assertEquals(0, obsoleteRuntime.presentationControlCalls);
     }
 
+    @Test
+    void ordinaryExceptionStillClosesTapRegistryHistoryThenSink()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        InspectingSink sink = new InspectingSink(audio);
+        audio.setBackend(new InspectingBackend(sink));
+        audio.setRewindHistoryArmed(true);
+        audio.submitShadowRawPcmForTesting(new byte[4_000], 48_000);
+        audio.presentFrame(PresentationMode.FORWARD);
+        sink.capture = audio.attachShadowCaptureForTesting(60);
+
+        try {
+            throw new IllegalStateException("ordinary engine failure");
+        } catch (IllegalStateException expected) {
+            audio.destroy();
+        }
+
+        assertTrue(sink.closed);
+        assertTrue(sink.tapClosedBeforeSink);
+        assertTrue(sink.registryEmptyBeforeSink);
+        assertTrue(sink.historyEmptyBeforeSink);
+    }
+
+    @Test
+    void resyncCleanupPopsARealOverrideAndPreservesBaseMusic()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        AudioVoiceRegistry registry = registry(audio);
+        registry.apply(new AudioPresentationCommand.ReplaceMusic(
+                music(audio, 1, 0x81, "base")));
+        registry.apply(new AudioPresentationCommand.PushMusicOverride(
+                music(audio, 2, 0x82, "override")));
+        registry.apply(AudioPresentationCommand.StartSampleSfx.fromVoice(
+                SampleBackedVoice.oneShot(3, 1,
+                        registeredPcm(audio, "sample"),
+                        48_000, 1.0f, 1.0f)));
+        registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
+                SampleBackedVoice.oneShot(4, 0,
+                        registeredPcm(audio, "raw"),
+                        48_000, 1.0f, 1.0f)));
+        audio.beginReverseAudioPresentation();
+
+        audio.afterRewindRestore(7,
+                AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+
+        var snapshot = audio.captureLogicalSnapshot().presentation();
+        assertEquals(0x81, snapshot.activeMusic().musicId());
+        assertTrue(snapshot.overrideStack().isEmpty());
+        assertNull(snapshot.rawPcmVoiceId());
+        assertEquals(1, snapshot.voices().size(),
+                "all transient sample/raw voices must be removed");
+    }
+
+    @Test
+    void resyncCleanupWithoutOverridePreservesDurableMusic()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        registry(audio).apply(new AudioPresentationCommand.ReplaceMusic(
+                music(audio, 1, 0x81, "base")));
+        audio.beginReverseAudioPresentation();
+
+        audio.afterRewindRestore(7,
+                AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+
+        assertEquals(0x81, audio.captureLogicalSnapshot().presentation()
+                .activeMusic().musicId());
+    }
+
+    @Test
+    void suppressedAndStopAllPoliciesMutateRealProducerStateExactly()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        AudioVoiceRegistry registry = registry(audio);
+        registry.apply(new AudioPresentationCommand.ReplaceMusic(
+                music(audio, 1, 0x81, "base")));
+        audio.setRewindHistoryArmed(true);
+        audio.presentFrame(PresentationMode.FORWARD);
+        audio.beginReverseAudioPresentation();
+        long populatedEpoch = AudioManagerTestDiagnostics
+                .producerFingerprint(audio).history().epoch();
+
+        audio.afterRewindRestore(7,
+                AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
+        assertTrue(audio.isReverseAudioPresentationActive());
+        assertEquals(1, audio.captureLogicalSnapshot().presentation()
+                .voices().size());
+
+        audio.afterRewindRestore(7,
+                AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+        var fingerprint =
+                AudioManagerTestDiagnostics.producerFingerprint(audio);
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertTrue(audio.captureLogicalSnapshot().presentation()
+                .voices().isEmpty());
+        assertTrue(fingerprint.history().epoch() > populatedEpoch);
+        assertEquals(0, fingerprint.history().storedFrames());
+    }
+
     private static long rawPcmCursor(AudioManager audio) {
         Long rawId = audio.captureLogicalSnapshot().presentation()
                 .rawPcmVoiceId();
@@ -126,6 +242,30 @@ class TestAudioManagerPresentationModes {
                 .findFirst()
                 .orElseThrow()
                 .sourcePositionQ32();
+    }
+
+    private static AudioVoiceRegistry registry(AudioManager audio)
+            throws Exception {
+        audio.captureLogicalSnapshot();
+        return (AudioVoiceRegistry) field(
+                AudioManager.class, "shadowRegistry").get(audio);
+    }
+
+    private static AudioPresentationCommand.MusicVoiceEntry music(
+            AudioManager audio, long voiceId, int musicId, String assetId) {
+        return AudioPresentationCommand.MusicVoiceEntry.fromVoice(
+                musicId, AudioSourceDescriptor.fallbackMusic(musicId),
+                SampleBackedVoice.loopingMusic(
+                        voiceId, registeredPcm(audio, assetId),
+                        48_000, 1.0f));
+    }
+
+    private static DecodedPcm registeredPcm(
+            AudioManager audio, String assetId) {
+        byte[] samples = new byte[2_000];
+        java.util.Arrays.fill(samples, (byte) 132);
+        return audio.shadowFactoryForTesting().registerUnsigned8Mono(
+                assetId, samples, 48_000);
     }
 
     private static void installRuntime(
@@ -167,5 +307,84 @@ class TestAudioManagerPresentationModes {
         public void clearPcmHistory() {
             presentationControlCalls++;
         }
+    }
+
+    private static final class InspectingBackend extends NullAudioBackend {
+        private final InspectingSink sink;
+
+        private InspectingBackend(InspectingSink sink) {
+            this.sink = sink;
+        }
+
+        @Override
+        public AudioPresentationSink createPresentationSink(
+                java.util.function.Consumer<Throwable> failureHandler,
+                java.util.function.Consumer<String> warningHandler) {
+            return sink;
+        }
+    }
+
+    private static final class InspectingSink
+            implements AudioPresentationSink {
+        private final AudioManager owner;
+        private LiveCaptureAudioHandle capture;
+        private boolean tapClosedBeforeSink;
+        private boolean registryEmptyBeforeSink;
+        private boolean historyEmptyBeforeSink;
+        private boolean closed;
+
+        private InspectingSink(AudioManager owner) {
+            this.owner = owner;
+        }
+
+        @Override
+        public int sampleRate() {
+            return 48_000;
+        }
+
+        @Override
+        public void accept(AudioPresentationFrameView frame) {
+        }
+
+        @Override
+        public void onReverseBoundary() {
+        }
+
+        @Override
+        public void close() {
+            try {
+                AudioPresentationProducer producer =
+                        (AudioPresentationProducer) field(
+                                AudioManager.class, "shadowProducer")
+                                .get(owner);
+                AudioVoiceRegistry registry =
+                        (AudioVoiceRegistry) field(
+                                AudioPresentationProducer.class, "registry")
+                                .get(producer);
+                PcmHistoryRing history =
+                        (PcmHistoryRing) field(
+                                AudioPresentationProducer.class, "history")
+                                .get(producer);
+                tapClosedBeforeSink = assertThrows(
+                        IllegalStateException.class,
+                        () -> capture.drainPresentationFrame(
+                                new short[capture.maxStereoFramesPerPacket()
+                                        * 2])) != null;
+                registryEmptyBeforeSink = registry.orderedVoiceCount() == 0;
+                historyEmptyBeforeSink =
+                        history.diagnosticSnapshot().storedFrames() == 0;
+                closed = true;
+            } catch (ReflectiveOperationException failure) {
+                throw new AssertionError(failure);
+            }
+        }
+
+    }
+
+    private static Field field(Class<?> owner, String name)
+            throws NoSuchFieldException {
+        Field field = owner.getDeclaredField(name);
+        field.setAccessible(true);
+        return field;
     }
 }

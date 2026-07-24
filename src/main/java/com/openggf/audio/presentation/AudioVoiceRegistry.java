@@ -632,14 +632,15 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     private void restoreMusicOverride() {
+        if (overrideCount == 0) {
+            pendingRestore = false;
+            return;
+        }
         if (activeMusic != null) {
             activeMusic.voice().stop();
         }
-        activeMusic =
-                overrideCount == 0 ? null : overrideStack[--overrideCount];
-        if (overrideCount >= 0) {
-            overrideStack[overrideCount] = null;
-        }
+        activeMusic = overrideStack[--overrideCount];
+        overrideStack[overrideCount] = null;
         pendingRestore = false;
         applyActiveMusicControls();
     }

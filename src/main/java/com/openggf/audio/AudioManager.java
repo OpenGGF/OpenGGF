@@ -1202,8 +1202,9 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     /**
-     * Arms or disarms continuous PCM rewind-history recording on the current
-     * backend. Callers that own a rewind consumer's lifecycle (held-key live
+     * Arms or disarms continuous PCM rewind-history recording on the
+     * authoritative producer. Callers that own a rewind consumer's lifecycle
+     * (held-key live
      * rewind, Trace Test Mode) should arm this only while that consumer is
      * actually able to be used, and disarm it the moment it no longer is —
      * recording unconditionally wastes a buffer copy every audio callback for
@@ -1294,10 +1295,14 @@ public class AudioManager implements MusicRestoreSink {
         shadowResolver.submitRawPcm(pcm, sourceSampleRate);
     }
 
+    /** @deprecated Task 10 presentation uses {@link #presentFrame}. */
+    @Deprecated
     public void advancePausedFrameStepAudio() {
         advanceRuntimeFrame(FrameAudioMode.SILENT_STEP);
     }
 
+    /** @deprecated Task 10 presentation uses {@link #presentFrame}. */
+    @Deprecated
     public void advanceGameplayFrameAudio() {
         advanceRuntimeFrame(FrameAudioMode.NORMAL);
     }

@@ -605,6 +605,18 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
+    void restoreWithoutAnOverridePreservesDurableMusic() {
+        AudioVoiceRegistry registry =
+                registry(new RecordingInstantiation(), new ArrayList<>());
+        registry.apply(new ReplaceMusic(fallbackMusic(1, 10, "base")));
+
+        registry.apply(new RestoreMusicOverride());
+
+        assertEquals(1, registry.snapshot().activeMusic().musicId());
+        assertTrue(registry.snapshot().overrideStack().isEmpty());
+    }
+
+    @Test
     void cacheMissRejectsOnlyThatSfxStartDeterministicallyWithoutIo() {
         List<String> warnings = new ArrayList<>();
         RecordingInstantiation instantiation = new RecordingInstantiation();
