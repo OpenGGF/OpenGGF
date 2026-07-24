@@ -65,6 +65,7 @@
     <Compile Include="tests/S2TraceDifferentialTests.cs" />
     <Compile Include="tests/S2TraceCsvWriterTests.cs" />
     <Compile Include="tests/S2TraceMetadataWriterTests.cs" />
+    <Compile Include="tests/S3KAuxEventEngineTests.cs" />
     <Compile Include="tests/S3KTraceCsvWriterTests.cs" />
     <Compile Include="tests/SmokeCaptureRunnerTests.cs" />
     <Compile Include="tests/TestMain.cs" />
