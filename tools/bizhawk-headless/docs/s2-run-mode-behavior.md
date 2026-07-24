@@ -594,3 +594,246 @@ fixtures and must not be inherited from the plain spec's §9 ("LF-only"):
     (level metadata written before its own append).
 11. Fixture comparison: every non-empty run-fixture file is CRLF-terminated
     (§9) — do not assume the plain-mode fixtures' LF-only convention.
+
+---
+
+## 11. v9.13-s2 design: complete-run extension (title-card reloads + SS aux)
+
+Status: DESIGN for the `9.13-s2` recorder revision. §§1-10 above remain the
+v9.12 byte authority; this section specifies the only behavioral deltas.
+Motivating capture (this session, `sonic-2-sonic-tails-complete-emeralds.bk2`,
+259,590 rows): the run stopped at emu frame ~32,760 after 7 segments because a
+death restart reloads the level with the title-card bit set — `Game_Mode`
+(`$FFF600`) reads `$8C`, not `$0C` — and the armed non-level branch (§2 item
+"Left level gameplay") finalized the whole run. The BK2's input gap at rows
+32777-32922 (~146 idle frames = `restart_countdown` + title-card reload)
+corroborates the death at that frame.
+
+### 11.1 Disasm-verified `Game_Mode` sequences (docs/s2disasm/s2.asm)
+
+Mode constants (`s2.constants.asm:465-477`): SegaScreen `$00`, TitleScreen
+`$04`, Demo `$08`, Level `$0C`, SpecialStage `$10`, ContinueScreen `$14`,
+2PResults `$18`, 2PLevelSelect `$1C`, EndingSequence `$20`, OptionsMenu `$24`,
+LevelSelect `$28`; `GameModeFlag_TitleCard` = bit 7 (`GameModeID_TitleCard`
+mask `$80`).
+
+**The reload family.** Every in-`$0C` reload funnels through
+`Level_Inactive_flag`: `Level_MainLoop` tests it and branches back to `Level`
+(`tst.w (Level_Inactive_flag).w / bne.w Level`, s2.asm:5096-5097); `Level:`
+(loc_3EC4) immediately does `bset #GameModeFlag_TitleCard,(Game_Mode).w`
+(s2.asm:4758, "add $80 to screen mode") → **`$8C`** for the whole
+title-card/reload sequence; `Level_StartGame` (loc_435A) does the `bclr`
+(s2.asm:5082) → back to `$0C`. The base mode value never changes across a
+reload; only bit 7 toggles. Members of the family:
+
+| Trigger | Disasm site | `Current_ZoneAndAct` (`$FFFE10` word) |
+|---|---|---|
+| Death / star-post restart | `Obj01_Gone` (loc_1B31C, s2.asm:~38346-38352): `restart_countdown` expiry → `move.w #1,(Level_Inactive_flag).w` (Tails: `Obj02_Gone`, loc_1CD90) | unchanged |
+| Time over (lives remain) | `Obj39_TimeOver` (loc_14034, s2.asm:27748-27751): `clr.l (Saved_Timer).w`, `Level_Inactive_flag = 1` | unchanged |
+| Act 1 → act 2 | Results `Obj3A` loc_14270→loc_1429C (s2.asm:27979-28005): `LevelOrder` (word_142F8) lookup → `move.w d0,(Current_ZoneAndAct).w`, `clr.b (Last_star_pole_hit).w`, `Level_Inactive_flag = 1`. **Act transitions are NOT seamless at the `Game_Mode` level** — same `$0C → $8C → $0C` shape | next act |
+| Zone → next zone | Same `Obj3A` code path (`LevelOrder` maps act 2 → next zone act 1); negative entry → SegaScreen (s2.asm:27994-27995) | next zone act 1 |
+| SCZ → WFZ | ObjB2 route: `move.w #wing_fortress_zone_act_1,(Current_ZoneAndAct).w` (s2.asm:78875) then `Level_Inactive` | WFZ1 |
+| WFZ → DEZ | `ObjB2_Start_DEZ` (loc_3AC40, s2.asm:79196-79201): `Current_ZoneAndAct = DEZ1`, `ObjB2_Deactivate_level` sets `Level_Inactive`, clears star posts | DEZ1 |
+| Continue accepted | `ContinueScreen` (s2.asm:10319) exit: `move.b #GameModeID_Level` (s2.asm:10410), `Life_count = 3`, rings/timer cleared → then `Level:` reload | act 1 of current zone |
+| Post-SS return | GameMode_SpecialStage results epilogue (s2.asm:~6804-6813): `Level_Inactive` then `move.b #GameModeID_Level` → `$0C`, then GameMode_Level re-entry → `$8C` → `$0C` (recorder is unarmed here; §2 already handles it) | unchanged |
+
+**Non-reload terminal modes (direct writes from `$0C`, no `$8C`):**
+
+- Game over: `Obj39_Dismiss` (loc_14014, s2.asm:27735-27746) writes
+  ContinueScreen `$14`, then overwrites with SegaScreen `$00` when
+  `Continue_count` is 0. Continue-screen timeout → SegaScreen `$00`
+  (s2.asm:10406).
+- SS entry: `Obj79_Star` (loc_1F536, s2.asm:44873-44878): `f_bigring = 1`,
+  `Game_Mode = $10` — direct `$0C → $10` (already Block 1).
+- Ending: ObjC7 (DEZ final boss) defeat path writes EndingSequence `$20`
+  (s2.asm:83098) — direct `$0C → $20`. Credits end → SegaScreen
+  (s2.asm:13266-13267), long after the recorder finalized.
+
+### 11.2 Segmentation semantics: surviving `$8C` while armed
+
+New **Block 1.5** in `on_frame_end`, placed after Block 2's fall-through and
+before the `if not started` arm gate, gated
+`run_id ~= nil and started and game_mode == GAMEMODE_LEVEL_TITLECARD` (new
+constant `0x8C`, exact-match — `$88` Demo|TitleCard is out of scope):
+
+1. Finalize the armed level segment exactly like the SS-entry sequence (§2):
+   flush → `write_metadata()` → `append_level_segment_done(trace_frame)` →
+   `close_files()` → `started = false`, `trace_frame = 0`.
+2. Capture a **pending reload transition** (global
+   `pending_reload_transition`, NOT yet pushed to `transitions_done`), with
+   all boundary fields read on this first-`$8C` frame (see field table).
+3. `reset_recording_state_keep_files()` and fall through (mirrors Block 2):
+   `$8C` frames are manifest-only; the next `$0C` + `move_lock == 0` frame
+   re-arms via the unchanged arm gate, producing the next numbered
+   `seg<N>_<zone><act>` level segment (`level_segment_count` keeps counting
+   level arms across zones/deaths, so directory names stay unique:
+   `seg1_ehz1 … seg5_ehz1` after an EHZ1 death).
+4. At that re-arm, the arm branch completes the pending record with the
+   `*_after` fields (read on the arm frame, same convention as `stage_exit`)
+   and pushes it — `from_segment = #segments_done - 1`,
+   `to_segment = #segments_done`, exact for the same reason `stage_exit`'s
+   indices are (§3). The `stage_exit` push and the pending-reload push are
+   mutually exclusive at one arm (previous finished segment is either the ss
+   or a level).
+
+**Kind decision** (at the `$8C` boundary frame): compare the
+`Current_ZoneAndAct` word (`$FFFE10`) against the finished segment's
+`(start_rom_zone_id << 8) | start_act`:
+
+- differs → `entry_kind = "level_advance"` (act→act, zone→zone, ObjB2 routes,
+  continue-accepted restarts to act 1 of the zone the player died in act 2 of);
+- equal → `entry_kind = "death_restart"` (death, star-post respawn, time
+  over — time over deliberately classifies as `death_restart`).
+
+Robustness note: `Obj3A` writes the destination into `Current_ZoneAndAct`
+one-or-more `$0C` frames *before* `Level_Inactive` lands (the existing
+`act_transition_to_*` checkpoint fires on those tail frames). Classification
+compares the boundary value against the segment-**start** values, so those
+pre-boundary tail frames do not affect it.
+
+**Transition record fields** (manifest optional-field emission order in
+`write_run_manifest` is unchanged; presence keyed by kind, never value —
+Lua `0` is truthy):
+
+| Field | `death_restart` | `level_advance` | RAM / when read |
+|---|---|---|---|
+| `mode_change_bk2_frame` | yes | yes | `emu.framecount()` on the first `$8C` frame |
+| `saved_x_pos` / `saved_y_pos` | yes | — | `$FFFE32` / `$FFFE34` u16be, boundary frame (values the reload will consume) |
+| `last_star_post_hit` | yes | — | `$FFFE30` u8, boundary frame (`LevelOrder` path clears it, hence omitted for `level_advance`) |
+| `rings_before` | yes | yes | `$FFFE20` u16be, boundary frame (pre-zeroing truth) |
+| `emeralds_before` | yes | yes | `$FFFFB1` u8, boundary frame |
+| `rings_after` | yes | yes | `$FFFE20` u16be, re-arm frame (0 after death; truth recorded) |
+| `emeralds_after` | yes | yes | `$FFFFB1` u8, re-arm frame |
+
+No `special_bonus_entry_flag` on either kind. Rendered order per §6's fixed
+optional-field order: `saved_x_pos, saved_y_pos, last_star_post_hit,
+rings_before, rings_after, emeralds_before, emeralds_after` (death_restart)
+and `rings_before, rings_after, emeralds_before, emeralds_after`
+(level_advance).
+
+**Pending-transition lifecycle:** pushed only at the completing arm; if the
+run terminates first (movie exhausted mid-reload via the 4b guard or the
+pre-arm FINISHED site), the pending record is **discarded** — never emitted —
+so `run_manifest.json` always satisfies `TraceRunManifest.validate`
+(`to_segment < segments.size()`). `finalize_run_end` needs no change for
+this: only `transitions_done` is written.
+
+**Run termination:** unchanged funnels. With Block 1.5 intercepting `$8C`,
+the armed non-level branch now fires only for genuinely terminal modes:
+`$20` ending (the graceful complete-run end for this movie), `$14` continue
+screen, `$00` game over/sega, `$18` 2P results, etc. No manifest record marks
+the run end; the last segment entry + this spec carry that semantics.
+(A future movie that continues past game over would need a
+`continue_restart` kind for the `$14 → $0C → $8C` chain; out of scope here —
+this movie never game-overs.)
+
+**Engine extension required:** `TraceRunManifest.ENTRY_KINDS` is strict
+(`validate` throws on unknown `entry_kind`), so the implementation commit
+must add `"death_restart"` and `"level_advance"` to the set in
+`src/main/java/com/openggf/trace/TraceRunManifest.java` — an engine change:
+stage `CHANGELOG.md`, `Changelog: updated`. `SEGMENT_KINDS` needs no change
+(all new segments are `"level"`).
+
+**Segment naming across all S2 zones:** the existing
+`seg%d_%s%d` + `ZONE_NAMES` + `apparent_act_for` machinery already covers the
+full route — ehz `0x00`, cpz `0x0D`, arz `0x0F`, cnz `0x0C`, htz `0x07`,
+mcz `0x0B`, ooz `0x0A`, mtz `0x04` (acts 1-2) / `0x05` (+2 apparent-act →
+`mtz3`), scz `0x10` (`scz1`), wfz `0x06` (`wfz1`), dez `0x0E` (`dez1`) — and
+`level_segment_count` guarantees unique directory tokens for repeated
+zone/act visits. No naming change.
+
+### 11.3 SS-aux merge: run-mode SS segments gain the standalone event stream
+
+Run-mode ss segments' `aux_state.jsonl` (currently 0 bytes, §4) gains the
+**hook-free** aux event surface of `s2_ss_trace_recorder.lua` v1.4-s2ss (the
+byte authority for templates; canonical fixture
+`src/test/resources/traces/s2/special_stage/` — 4,580 events: 2,991
+`run_objects_end` + 1,589 hook-free). All events are `"type"`-keyed (never
+`"event"`) and use the standalone's lowercase-hex formats verbatim.
+
+Ported events (templates are the standalone's exact `string.format` strings):
+
+1. **`state_snapshot` (frame -1)** — `write_pretrace_snapshot`
+   (standalone L431-441):
+   `'{"frame":-1,"type":"state_snapshot","ring_requirement":"0x%04x","current_level_layout":"0x%08x","initial_speed_factor":"0x%04x","perfect_rings_left":"0x%04x"}'`
+   — RAM `$DB8C` u16be, `$DB8E` u32be, `$DB16` u16be, `$DB9A` u16be.
+   Emitted once per ss segment in `start_ss_segment()`, after
+   `write_ss_metadata()` (standalone order: metadata → pretrace snapshot),
+   i.e. sampled on the `$10` entry frame. (The fixture's all-zero values are
+   correct: SS init has not populated these at entry.)
+2. **`control_state`** — `check_control_state` (L496-505):
+   `'{"frame":%d,"type":"control_state","started":%d}'` — `$DB23`
+   `SpecialStage_Started` (`~= 0 and 1 or 0`); emitted on change **or** on
+   the first row (`prev == nil` seed).
+3. **`checkpoint`** — `check_checkpoint` (L459-477):
+   `'{"frame":%d,"type":"checkpoint","check_rings_flag":"0x%02x"}'` on the
+   0→nonzero edge of `SS_Check_Rings_flag`.
+4. **`stage_finished`** — same function:
+   `'{"frame":%d,"observed_frame":%d,"type":"stage_finished","check_rings_flag":"0x%02x"}'`
+   — `frame` = `last_nonlag_trace_frame`, `observed_frame` = current
+   `trace_frame`. Ported **without** `publish_pending_finish_pass` and
+   without its `error()` assertions (both are `run_objects_end`-machinery).
+   `last_nonlag_trace_frame` is maintained hook-free: in `write_ss_row`,
+   when `lag == 0`, set it to `trace_frame` immediately after computing
+   `lag` and before the row write (matches `record_frame` L617-621).
+5. **`message_state`** — `check_message_state` (L479-494):
+   `'{"frame":%d,"type":"message_state","hide_rings_to_go":"0x%02x","trigger_rings_to_go":"0x%02x","no_rings_togo_lifetime":"0x%04x"}'`
+   on any change of `$DBA6`/`$DBA7`(u8)/`$DBA2`(u16be).
+6. **`results_started`** — `check_results_started` (L447-457):
+   `'{"frame":%d,"type":"results_started","slot":%d}'` on first sighting of
+   `ObjID_SSResults` (`$6F`) in the 128-slot SST scan; emitted at most once
+   per ss segment.
+
+**Not ported:** `run_objects_end` — it requires the standalone's two
+`event.onmemoryexecute` hooks, and the run port's hard rule (§4) is no
+execute hooks. The run-mode ss aux stream is therefore a documented
+**subset** of the standalone's surface (all state-sampled events; no
+per-pass records). At the finish frame the standalone's order is checkpoint
+→ terminal `run_objects_end` → `stage_finished`; the port emits checkpoint →
+`stage_finished` directly.
+
+**Emission points:** in `write_ss_row`, after the physics row write and the
+existing flush(60)/metadata(300) cadence checks, before the `trace_frame`
+increment, in the standalone's order: `check_control_state()` →
+`check_checkpoint(state.check_rings_flag)` → `check_message_state()` →
+`check_results_started()`.
+
+**Frame indexing:** aux `frame` is the run-mode ss `trace_frame` — the same
+base as the segment's `physics.csv` rows, i.e. one emu frame later than the
+interior recorder's convention because the run port skips the `$10` entry
+frame (§4 frame-0 alignment). Frame `-1` = pre-row-0, sampled at the
+entry/arm frame.
+
+**Per-detour state:** `prev_check_rings_flag` / `prev_hide_rings_to_go` /
+`prev_trigger_rings_to_go` / `prev_no_rings_togo_lifetime` are seeded from
+RAM in `start_ss_segment()` (standalone seeds at arm, L676-679);
+`prev_special_stage_started = nil`, `stage_finished_emitted = false`,
+`results_started_emitted = false`, `last_nonlag_trace_frame = -1` — all
+reset per detour so `ss_2`+ segments re-emit their own frame -1 snapshot and
+first-row `control_state`.
+
+**File lifecycle & metadata:** unchanged — aux opened at arm, closed at
+finalize; the run-mode ss `metadata.json` keeps its §4 shape
+(`run_id`/`fresh_load`/`segment_index`), NOT the standalone's
+(`bizhawk_version`/`genesis_core`) shape. `s2_ss_trace_recorder.lua` and
+`lib/oggf_trace_common.lua` are not modified.
+
+### 11.4 Byte-compatibility claim for 9.13-s2
+
+- `LUA_SCRIPT_VERSION` bumps to `"9.13-s2"`; the header version-history block
+  documents that 9.13 output is byte-identical to 9.12 for all
+  previously-capturable shapes.
+- **Plain mode** (no `OGGF_TRACE_RUN_ID`): byte-identical to 9.12 modulo
+  `recording_date` and the version string.
+- **Run mode on movies confined to modes `{$0C, $10}`** (the canonical
+  halfpipe round trip): every output file byte-identical to 9.12 (modulo
+  `recording_date` + version strings) with exactly ONE exception — ss-family
+  segments' `aux_state.jsonl` changes from 0 bytes to the §11.3 event stream
+  (a pure superset). SS `physics.csv` and `metadata.json`, all level-segment
+  files, and `run_manifest.json` structure stay byte-identical. Block 1.5
+  and the new transition kinds cannot fire on such movies (`$8C` never
+  occurs while armed: SS entry is a direct `$0C → $10` write and the post-SS
+  `$8C` reload happens unarmed).
+- The new code paths activate only on previously-**fatal** shapes (`$8C`
+  observed while a level segment is armed), which v9.12 answered by
+  truncating the run at the first reload.
