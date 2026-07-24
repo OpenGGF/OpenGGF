@@ -37,7 +37,7 @@ If no failing list is supplied, run one discovery sweep from the main checkout.
 
 ## Constants
 
-- Repo root: `C:\Users\farre\IdeaProjects\sonic-engine`
+- Repo root: the current checkout — resolve it with `git rev-parse --show-toplevel`, never a hardcoded path
 - Worktree: `.worktrees/trace-<game>-<zone>`
 - Branch: `bugfix/ai-trace-<game>-<zone>`
 - Max parallel traces when explicitly authorized: 4
@@ -188,8 +188,8 @@ Rerun the targeted trace and same-game green guard. Apply the genuineness gate. 
 
 If the caller supplied `failing`, use it. Otherwise run one sweep from the repo root:
 
-```powershell
-cmd /c "mvn.cmd -q -Dmse=relaxed ""-Ds1.rom.path=%S1_ROM%"" ""-Ds2.rom.path=%S2_ROM%"" ""-Ds3k.rom.path=%S3K_ROM%"" ""-Dtest=*TraceReplay"" test"
+```bash
+mvn -q -Dmse=relaxed "-Ds1.rom.path=$S1_ROM" "-Ds2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" "-Dtest=*TraceReplay" test
 ```
 
 Then read `target/surefire-reports/*TraceReplay*.txt`.
@@ -210,7 +210,7 @@ For each failing item:
 
 1. Create or reuse a persistent worktree from `develop`:
 
-   ```powershell
+   ```bash
    git worktree add -b bugfix/ai-trace-<game>-<zone> .worktrees/trace-<game>-<zone> develop
    ```
 
@@ -218,14 +218,14 @@ For each failing item:
 
 2. In the worktree, rerun the targeted trace:
 
-   ```powershell
-   cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-D<romProp>=C:\Users\farre\IdeaProjects\sonic-engine\<rom>.gen"" ""-Dtest=<testClass>#replayMatchesTrace"" test"
+   ```bash
+   mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-D<romProp>=<discovered rom path>" "-Dtest=<testClass>#replayMatchesTrace" test
    ```
 
 3. Run the triage tool:
 
-   ```powershell
-   cmd /c "mvn.cmd -q -Dmse=relaxed exec:java ""-Dexec.mainClass=com.openggf.tools.TraceTriageTool"" ""-Dexec.args=<game> <zone>"""
+   ```bash
+   mvn -q -Dmse=relaxed exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=<game> <zone>"
    ```
 
 4. Read the relevant disassembly around the diverging field/routine:
@@ -288,8 +288,8 @@ Verification must be independent of the fix attempt.
 1. Rerun the targeted trace in the worktree.
 2. Run the same-game green regression guard if available:
 
-   ```powershell
-   cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-D<romProp>=C:\Users\farre\IdeaProjects\sonic-engine\<rom>.gen"" ""-Dtest=<comma-separated-green-classes>"" test"
+   ```bash
+   mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-D<romProp>=<discovered rom path>" "-Dtest=<comma-separated-green-classes>" test
    ```
 
 3. Ignore environmental flakes only after confirming they are not real parity divergences.
