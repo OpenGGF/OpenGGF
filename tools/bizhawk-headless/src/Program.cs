@@ -493,18 +493,33 @@ namespace BizHawk.Headless.Gpgx
                             stderr,
                             openHost);
                     }
-                    if (traceGame != "s2")
+                    if (traceGame == "s3k")
                     {
-                        // Stage-A guard: the S3K locked-on ROM is now
-                        // detected (RomIdentity), but its native trace
-                        // pipeline is not implemented yet. Refuse loudly
-                        // instead of silently running the S2 pipeline
-                        // against S3K RAM.
-                        throw new InvalidOperationException(
-                            "Trace capture for the Sonic 3 & Knuckles"
-                            + " locked-on ROM is not implemented yet;"
-                            + " supported trace ROMs are Sonic 1 World"
-                            + " REV01 and Sonic 2 World REV01.");
+                        if (options.GameplaySegment.HasValue)
+                        {
+                            throw new ArgumentException(
+                                "Argument --gameplay-segment is only"
+                                + " supported with the Sonic 2 ROM.");
+                        }
+                        if (options.RunId != null)
+                        {
+                            throw new ArgumentException(
+                                "Argument --run-id is not supported with"
+                                + " the Sonic 3 & Knuckles ROM: the S3K"
+                                + " complete-run recorder"
+                                + " (s3k_complete_run_recorder.lua) has"
+                                + " not been migrated to the native"
+                                + " pipeline yet.");
+                        }
+                        RejectS3kDiagnosticHookEnvironment();
+                        return RunS3kTrace(
+                            options,
+                            installation,
+                            romSha1,
+                            movie,
+                            stdout,
+                            stderr,
+                            openHost);
                     }
                     if (options.RunId != null)
                     {
@@ -879,6 +894,118 @@ namespace BizHawk.Headless.Gpgx
                     + result.GameplaySegment.ToString(
                         CultureInfo.InvariantCulture)
                     + "\n"
+                    + "BK2 frame offset: "
+                    + result.Bk2FrameOffset.ToString(
+                        CultureInfo.InvariantCulture)
+                    + "\n"
+                    + "Trace frames: "
+                    + result.TraceFrameCount.ToString(
+                        CultureInfo.InvariantCulture)
+                    + "\n"
+                    + "Physics CSV: " + physicsPath + "\n"
+                    + "Aux state JSONL: " + auxStatePath + "\n"
+                    + "Metadata JSON: " + metadataPath + "\n",
+                new NoReplacePublisher());
+        }
+
+        /// <summary>
+        /// The Lua S3K recorder's diagnostic-hook surface (M68K
+        /// exec/memory-write callbacks) is explicitly deferred in the
+        /// native port (docs/s3k-profiles-and-hooks.md §2.4): zero hook
+        /// events appear in any gated fixture, but silently honoring the
+        /// arming env vars would produce output whose metadata advertises
+        /// events that can never occur. Refuse loudly instead. Scoped to
+        /// the S3K trace branch only — the S1/S2 pipelines never consumed
+        /// these variables.
+        /// </summary>
+        private static void RejectS3kDiagnosticHookEnvironment()
+        {
+            if (Environment.GetEnvironmentVariable(
+                "OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS") == "1")
+            {
+                throw new InvalidOperationException(
+                    "OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1 requests the"
+                    + " Lua recorder's M68K exec/memory-write diagnostic"
+                    + " hooks, which the native S3K recorder does not"
+                    + " implement (deferred; see"
+                    + " tools/bizhawk-headless/docs/"
+                    + "s3k-profiles-and-hooks.md section 2.4). Unset it"
+                    + " or capture with the Lua recorder.");
+            }
+            foreach (string name in new[]
+            {
+                "OGGF_S3K_CNZ_EVENT_RAM_RANGE",
+                "OGGF_S3K_RNG_CALL_RANGE"
+            })
+            {
+                if (!string.IsNullOrEmpty(
+                    Environment.GetEnvironmentVariable(name)))
+                {
+                    throw new InvalidOperationException(
+                        name + " arms a hook-driven aux event family"
+                        + " that the native S3K recorder does not"
+                        + " implement (deferred; see"
+                        + " tools/bizhawk-headless/docs/"
+                        + "s3k-profiles-and-hooks.md section 2.4). Unset"
+                        + " it or capture with the Lua recorder.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// S3K standard trace mode (profiles gameplay_unlock /
+        /// aiz_end_to_end / level_gated_reset_aware): the shared trace
+        /// publication pipeline with the S3K capture runner. Any other
+        /// --trace-profile string is passed through with gameplay_unlock
+        /// semantics and written verbatim into metadata.trace_profile,
+        /// exactly like the Lua's OGGF_S3K_TRACE_PROFILE handling.
+        /// </summary>
+        private static int RunS3kTrace(
+            CommandLineOptions options,
+            BizHawkInstallation installation,
+            string romSha1,
+            Bk2Movie movie,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
+            string traceProfile = options.TraceProfile
+                ?? S3KTraceCaptureRunner.GameplayUnlockProfile;
+            string physicsPath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[0]);
+            string auxStatePath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[1]);
+            string metadataPath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[2]);
+            return RunTraceCapture(
+                options.OutputDirectory,
+                stdout,
+                stderr,
+                () => new NativeStandardOutputSilencer(),
+                () => openHost(
+                    options.RomPath,
+                    movie.SyncSettings),
+                (host, writers) => S3KTraceCaptureRunner.Capture(
+                    movie,
+                    host,
+                    traceProfile,
+                    DateTime.Now.ToString(
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture),
+                    writers[0],
+                    writers[1],
+                    writers[2]),
+                result =>
+                    "BizHawk: " + installation.ManagedVersion + "\n"
+                    + "ROM SHA-1: " + romSha1 + "\n"
+                    + "Movie frames: "
+                    + movie.FrameCount.ToString(
+                        CultureInfo.InvariantCulture)
+                    + "\n"
+                    + "Trace profile: " + traceProfile + "\n"
                     + "BK2 frame offset: "
                     + result.Bk2FrameOffset.ToString(
                         CultureInfo.InvariantCulture)

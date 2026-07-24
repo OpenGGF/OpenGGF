@@ -93,6 +93,8 @@
     <Compile Include="src/Recording/S2Zones.cs" />
     <Compile Include="src/Recording/S3KAuxEventEngine.cs" />
     <Compile Include="src/Recording/S3KRam.cs" />
+    <Compile Include="src/Recording/S3KTraceCaptureRunner.cs" />
+    <Compile Include="src/Recording/S3KTraceMetadataWriter.cs" />
     <Compile Include="src/Recording/S3KTraceCsvWriter.cs" />
     <Compile Include="src/Recording/SmokeCaptureRunner.cs" />
   </ItemGroup>
