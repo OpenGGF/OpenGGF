@@ -332,6 +332,19 @@ gate exercises it. The native CLI should refuse (or loudly no-op) a request
 for diagnostic hooks rather than silently produce hook-less output that
 claims otherwise.
 
+**Stage C decision (implemented):** native exec/memwrite hook capture is a
+documented no-op. The unit gates in `tests/S3KHookAbsenceTests.cs` pin this
+decision to the fixture bytes: per gated fixture they assert zero aux lines
+whose `event` value is any of the 13 deferred families (§2.2 plus
+`cnz_event_ram`), anchor non-vacuously on the per-frame poll counts
+(`cpu_state`/`oscillation_state` == row count, one `cpu_state_snapshot`),
+verify the 9 AIZ `aiz_handoff_terrain_state` skeletons keep
+`sonic_floor_seen:false` / `solid_vertical_seen:false`, and require the
+lightweight `capture_mode` line in each `metadata.json`. If a fixture is
+ever regenerated with `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`, those gates
+fail — the signal that the GpgxHost callback surface must then be built
+instead of deferred.
+
 ---
 
 ## 3. Main loop, stop ordering, movie/BK2 handling
