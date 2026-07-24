@@ -8,7 +8,8 @@ namespace OpenGGF.BizHawk.Headless
     /// One finished run segment with its buffered output file contents.
     /// DirToken is the per-segment output subdirectory name (seg1_ehz1,
     /// ss, ss_2, ...); the manifest entry carries the run_manifest.json
-    /// fields. Special-stage segments always have a byte-empty aux file.
+    /// fields. Special-stage segments carry the v9.13-s2 hook-free SS aux
+    /// event stream (spec §11.3; byte-empty before that revision).
     /// </summary>
     public sealed class S2RunSegmentOutput
     {
@@ -66,7 +67,8 @@ namespace OpenGGF.BizHawk.Headless
     /// trips (level -> ss -> level), in-level reload survival across the
     /// Game_Mode $8C title-card family (Block 1.5: death/star-post restarts,
     /// time overs, act and zone transitions, the ObjB2 SCZ->WFZ->DEZ routes),
-    /// the minimal special-stage segment writer, and
+    /// the minimal special-stage segment writer with the §11.3 hook-free SS
+    /// aux event stream, and
     /// run_manifest.json. Level segments are produced by exactly the plain
     /// gameplay_unlock recorder (same arm gate, CSV v7 writer, aux event
     /// pipeline) with the run-mode metadata additions; run mode never takes
@@ -319,9 +321,13 @@ namespace OpenGGF.BizHawk.Headless
             private int startY;
             private uint startRngSeed;
 
-            // SS-segment arm context.
+            // SS-segment arm context. The aux engine is per-detour
+            // (v9.13-s2 §11.3): constructed at ss arm so ss_2+ segments
+            // re-emit their own frame -1 snapshot and first-row
+            // control_state.
             private int currentSsIndex;
             private bool ssArmed;
+            private S2SpecialStageAuxEventEngine ssAuxEngine;
 
             // Run counters. Level tokens number by level arms only; the ss
             // token is bare "ss" for the first detour, "ss_2"+ afterwards.
@@ -565,20 +571,35 @@ namespace OpenGGF.BizHawk.Headless
                 traceFrame = 0;
                 currentSsIndex = S2Ram.U8(host, AddrSpecialStageIndex);
                 physicsBuf.Length = 0;
-                auxBuf.Length = 0;    // The ss aux file stays byte-empty.
+                auxBuf.Length = 0;
                 physicsBuf.Append(S2SpecialStageCsvWriter.Header)
+                    .Append('\n');
+                // v9.13-s2 (§11.3): seed the per-detour aux trackers from
+                // RAM and emit the frame -1 pre-trace snapshot, sampled on
+                // the $10 entry frame (frame -1 = pre-row-0).
+                ssAuxEngine = new S2SpecialStageAuxEventEngine(host);
+                auxBuf.Append(ssAuxEngine.FormatPretraceSnapshot(host))
                     .Append('\n');
             }
 
             internal void WriteSsRow(Bk2Frame frame, IGpgxHost host)
             {
+                bool lagged = host.IsLagged;
                 physicsBuf.Append(S2SpecialStageCsvWriter.FormatRow(
                     traceFrame,
                     S2SpecialStageCsvWriter.InputMask(frame),
                     0,
-                    host.IsLagged,
+                    lagged,
                     host));
                 physicsBuf.Append('\n');
+                // v9.13-s2 (§11.3): SS aux events after the physics row and
+                // before the trace_frame increment, in the standalone's
+                // record_frame order.
+                foreach (string line in ssAuxEngine.EmitRowEvents(
+                    traceFrame, lagged, host))
+                {
+                    auxBuf.Append(line).Append('\n');
+                }
                 traceFrame++;
             }
 
@@ -617,6 +638,7 @@ namespace OpenGGF.BizHawk.Headless
                 Started = false;
                 ssArmed = false;
                 traceFrame = 0;
+                ssAuxEngine = null;
             }
 
             /// <summary>

@@ -44,10 +44,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
         private const string FixtureLuaScriptVersionLine =
             "  \"lua_script_version\": \"9.11-s2\",";
-        // Run fixtures were captured by the v9.12 Lua; the v9.13 header
-        // declares those shapes byte-identical apart from this string.
+        // Run fixtures were regenerated from a verified native 9.13-s2
+        // capture (SS-aux enrichment, §11.3), so fixture and produced
+        // version lines coincide.
         private const string RunFixtureLuaScriptVersionLine =
-            "  \"lua_script_version\": \"9.12-s2\",";
+            "  \"lua_script_version\": \"9.13-s2\",";
         private const string ProducedLuaScriptVersionLine =
             "  \"lua_script_version\": \"9.13-s2\",";
 
@@ -105,12 +106,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
         // Run-mode gate: one native --run-id capture of the canonical EHZ
         // halfpipe round-trip movie (level -> ss -> level -> ss -> level)
         // must reproduce all five segment directories and the run manifest.
-        // The fixture set is stamped lua_script_version 9.12-s2 and carries
-        // the canonical capture's Windows text-mode CRLF line endings
-        // (docs/s2-run-mode-behavior.md §9), so physics/aux bytes are
-        // asserted without any normalization; each segment metadata.json
-        // and run_manifest.json are normalized on the recording_date value
-        // (metadata only) and the 9.12-s2 -> 9.13-s2 version line.
+        // The fixture set was regenerated from a verified native 9.13-s2
+        // capture (SS-aux enrichment, §11.3; Lua-parity-proven against a
+        // Lua 9.13 capture of the same movie) and keeps the run
+        // convention's CRLF line endings (docs/s2-run-mode-behavior.md §9),
+        // so physics/aux bytes are asserted without any normalization;
+        // each segment metadata.json and run_manifest.json are normalized
+        // on the recording_date value (metadata only) and the version
+        // line.
         private const string RunFixtureDirectoryName =
             "s2-ehz-halfpipe-roundtrip";
         private const string RunMovieFileName =
@@ -129,8 +132,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         // plus a level_advance transition.
         private const int RunEffectiveMovieLength = 22612;
         private const string RunManifestSha256 =
-            "aabe4597821eb8223266728f44730a5a15321bad167ebc56d8569f09d5"
-            + "cb0cf1";
+            "8981a13f893d0d31ce51145c4e1aff5aa51c4c59c924d75e5e7f750c38"
+            + "036cd3";
 
         private static readonly S2RunSegmentCase[] RunSegmentCases =
         {
@@ -150,8 +153,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 5733,
                 "9c2ed10bf732f76398b20e1763ddfbb5ed3df0b66394e68a78f8ec53"
                 + "00129d1b",
-                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b"
-                + "7852b855"),
+                "c095cf82185c326404a735b7c97b515c74cc1e6f1efd98c8be823629"
+                + "ed1e906c"),
             new S2RunSegmentCase(
                 "seg2_ehz1",
                 "level",
@@ -168,8 +171,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 6381,
                 "13c6ea30eae9361bfb9e7c03b2cfb50bb3193d2a7a5809df780d8cd3"
                 + "e5bd84ab",
-                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b"
-                + "7852b855"),
+                "f1451857d9102382ccfe2ea5dedd177eb5659d38cc249c7d91ecf91f"
+                + "70cfe89a"),
             new S2RunSegmentCase(
                 "seg3_ehz1",
                 "level",
@@ -258,7 +261,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// for it on stdout, the canonical BK2 frame offset and trace
         /// frame count, and the canonical sha256 hashes of the segment's
         /// physics.csv and aux_state.jsonl bytes (CRLF line endings
-        /// included; the special-stage aux hash is the empty file's).
+        /// included; special-stage aux carries the §11.3 event stream).
         /// </summary>
         private sealed class S2RunSegmentCase
         {
@@ -761,12 +764,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         /// <summary>
         /// Run-mode variant of the metadata comparison: run fixture
-        /// metadata.json files carry the canonical capture's Windows
-        /// text-mode CRLF line endings and are stamped lua_script_version
-        /// 9.12-s2, so the produced file must be byte-identical except the
-        /// recording_date value (which must still carry the exact key
-        /// formatting and an ISO date value) and the version line, which
-        /// the native port must produce as exactly "9.13-s2".
+        /// metadata.json files carry the run convention's CRLF line
+        /// endings and are stamped lua_script_version 9.13-s2, so the
+        /// produced file must be byte-identical except the recording_date
+        /// value (which must still carry the exact key formatting and an
+        /// ISO date value); the version line must remain exactly
+        /// "9.13-s2".
         /// </summary>
         private static void AssertNormalizedRunMetadataEquality(
             string fixturePath,
@@ -777,9 +780,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         /// <summary>
         /// run_manifest.json comparison: the fixture manifest carries CRLF
-        /// line endings and the 9.12-s2 stamp; the produced manifest must
-        /// be byte-identical except the version line ("9.13-s2"). There is
-        /// no recording_date in the manifest.
+        /// line endings and the 9.13-s2 stamp; the produced manifest must
+        /// be byte-identical including the version line. There is no
+        /// recording_date in the manifest.
         /// </summary>
         private static void AssertNormalizedRunManifestEquality(
             string fixturePath,

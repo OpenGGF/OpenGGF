@@ -809,9 +809,9 @@ namespace BizHawk.Headless.Gpgx
         /// every run-mode file it wrote (docs/s2-run-mode-behavior.md §9).
         /// Run-mode publication reproduces that text-mode encoding so the
         /// published bytes match the canonical run fixture set; plain trace
-        /// mode remains LF-only per its own canonical fixtures. The empty
-        /// special-stage aux_state.jsonl contains no newlines and passes
-        /// through unchanged.
+        /// mode remains LF-only per its own canonical fixtures. Since
+        /// v9.13-s2 the special-stage aux_state.jsonl carries the §11.3
+        /// event stream and is expanded like every other run-mode file.
         /// </summary>
         private static string ExpandRunNewlines(string content)
         {

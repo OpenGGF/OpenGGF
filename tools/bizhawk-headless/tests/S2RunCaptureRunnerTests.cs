@@ -57,6 +57,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S2RunCaptureRunner ends the run on the continue screen while armed",
                 EndsRunOnContinueScreenWhileArmed));
+            tests.Add(new TestMain.TestCase(
+                "S2RunCaptureRunner emits the special-stage aux event stream",
+                EmitsSpecialStageAuxEventStream));
         }
 
         /// <summary>
@@ -156,7 +159,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(0, ss.ManifestEntry.ZoneId);
                 AssertEx.Equal(0, ss.ManifestEntry.Act);
                 AssertEx.Equal(2, ss.ManifestEntry.SpecialStageIndex ?? -1);
-                AssertEx.Equal(string.Empty, ss.AuxStateJsonl);
+                // v9.13-s2 §11.3: the ss aux stream carries the frame -1
+                // pre-trace snapshot (all-zero here: nothing populated the
+                // SS parameter RAM) and the first-row control_state from
+                // the null seed; no further events fire because no tracked
+                // state changes across the 5 rows.
+                AssertEx.Equal(
+                    "{\"frame\":-1,\"type\":\"state_snapshot\","
+                    + "\"ring_requirement\":\"0x0000\","
+                    + "\"current_level_layout\":\"0x00000000\","
+                    + "\"initial_speed_factor\":\"0x0000\","
+                    + "\"perfect_rings_left\":\"0x0000\"}\n"
+                    + "{\"frame\":0,\"type\":\"control_state\","
+                    + "\"started\":0}\n",
+                    ss.AuxStateJsonl);
                 string[] ssLines = ss.PhysicsCsv.Split('\n');
                 AssertEx.Equal(7, ssLines.Length);      // header+5+empty
                 AssertEx.Equal(S2SpecialStageCsvWriter.Header, ssLines[0]);
@@ -305,6 +321,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "starpost_special", result.Transitions[2].EntryKind);
                 AssertEx.Equal(
                     "stage_exit", result.Transitions[3].EntryKind);
+
+                // v9.13-s2 §11.3: the per-detour aux state resets at each
+                // ss arm, so ss_2 re-emits its own frame -1 snapshot and
+                // first-row control_state.
+                foreach (int ssIndex in new[] { 1, 3 })
+                {
+                    AssertContains(
+                        result.Segments[ssIndex].AuxStateJsonl,
+                        "{\"frame\":-1,\"type\":\"state_snapshot\",");
+                    AssertContains(
+                        result.Segments[ssIndex].AuxStateJsonl,
+                        "{\"frame\":0,\"type\":\"control_state\","
+                        + "\"started\":0}");
+                }
             });
         }
 
@@ -688,6 +718,91 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(0, result.Transitions.Count);
                 AssertContains(result.RunManifestJson,
                     "  \"run_id\": \"continue\",\n");
+            });
+        }
+
+        /// <summary>
+        /// v9.13-s2 §11.3 SS aux surface, full-event pass: arm at F=3; ss
+        /// entry at F=8 with populated SS parameter RAM (pre-trace snapshot
+        /// sampled on the entry frame); row 0 at F=9 (control_state from
+        /// the null seed, started 0); row 1 at F=10 flips
+        /// SpecialStage_Started and a message-state byte (control_state
+        /// then message_state, standalone order); rows 2-3 at F=11-12 are
+        /// lag frames so last_nonlag holds at 1; F=12 also raises
+        /// SS_Check_Rings_flag and spawns ObjID_SSResults in slot 2 —
+        /// checkpoint (frame 3), stage_finished (frame=last non-lag 1,
+        /// observed_frame 3), then results_started (slot 2). Exit at F=13
+        /// re-arms the return level segment.
+        /// </summary>
+        private static void EmitsSpecialStageAuxEventStream()
+        {
+            WithMovie(Rows(18), movie =>
+            {
+                var host = new FakeRunHost((h, frame) =>
+                {
+                    if (frame == 3)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 8)
+                    {
+                        h.Ram[0xF600] = 0x10;
+                        h.SetU16(0xDB8C, 0x0032);       // ring requirement
+                        h.SetU32(0xDB8E, 0x12345678u);  // level layout
+                        h.SetU16(0xDB16, 0x0400);       // speed factor
+                        h.SetU16(0xDB9A, 0x0032);       // perfect rings
+                    }
+                    if (frame == 10)
+                    {
+                        h.Ram[0xDB23] = 1;              // SS started
+                        h.Ram[0xDBA7] = 0x0A;           // trigger rings
+                    }
+                    if (frame == 11)
+                    {
+                        h.IsLagged = true;
+                    }
+                    if (frame == 12)
+                    {
+                        h.Ram[0xDB86] = 0x01;           // check rings flag
+                        h.Ram[0xB000 + 2 * 0x40] = 0x6F; // SS results obj
+                    }
+                    if (frame == 13)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                        h.IsLagged = false;
+                    }
+                });
+
+                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                    movie, host, "ss-aux", "synthetic.bk2",
+                    "2026-07-24", 0);
+
+                AssertEx.Equal(3, result.Segments.Count);
+                S2RunSegmentOutput ss = result.Segments[1];
+                AssertEx.Equal("ss", ss.DirToken);
+                AssertEx.Equal(4, ss.ManifestEntry.TraceFrameCount);
+                AssertEx.Equal(
+                    "{\"frame\":-1,\"type\":\"state_snapshot\","
+                    + "\"ring_requirement\":\"0x0032\","
+                    + "\"current_level_layout\":\"0x12345678\","
+                    + "\"initial_speed_factor\":\"0x0400\","
+                    + "\"perfect_rings_left\":\"0x0032\"}\n"
+                    + "{\"frame\":0,\"type\":\"control_state\","
+                    + "\"started\":0}\n"
+                    + "{\"frame\":1,\"type\":\"control_state\","
+                    + "\"started\":1}\n"
+                    + "{\"frame\":1,\"type\":\"message_state\","
+                    + "\"hide_rings_to_go\":\"0x00\","
+                    + "\"trigger_rings_to_go\":\"0x0a\","
+                    + "\"no_rings_togo_lifetime\":\"0x0000\"}\n"
+                    + "{\"frame\":3,\"type\":\"checkpoint\","
+                    + "\"check_rings_flag\":\"0x01\"}\n"
+                    + "{\"frame\":1,\"observed_frame\":3,"
+                    + "\"type\":\"stage_finished\","
+                    + "\"check_rings_flag\":\"0x01\"}\n"
+                    + "{\"frame\":3,\"type\":\"results_started\","
+                    + "\"slot\":2}\n",
+                    ss.AuxStateJsonl);
             });
         }
 
