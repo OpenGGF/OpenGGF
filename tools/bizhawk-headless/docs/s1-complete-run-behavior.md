@@ -141,6 +141,9 @@ diffing the actual version-bump commits**:
   byte-compat claim that exists in the file.)
 - **"3.16" was never stamped in this file** (`git log -S'"3.16"'` finds
   nothing).
+- `08424b744` (between the 3.15 and 3.17 stamps, no version bump) added only
+  the `pcall(client.SetSoundOn, false)` fast-headless launcher-guard snippet —
+  stdout/toggle only, zero output bytes.
 - `b1a810536` (`feat: replay Sonic 1 100% movie through credits`) jumped
   **3.15 → "3.17"**. Level-path deltas, all output-neutral under default env:
   (a) `BASE_OUTPUT_DIR` now honors `OGGF_TRACE_OUTPUT_DIR` (layout only);
@@ -338,7 +341,8 @@ frame 0 of every segment after the first. Verified consequences in fixtures:
   sees the "every occupied slot appears" pattern of STD §5.4.
 - **`cursor_state` on frame 0 of later segments compares against the previous
   segment's last `opl_screen`** and can emit `"dir":"L"` (GHZ2 frame 0:
-  `opl_screen 0x0000` < GHZ1's final ~0x24BF → `"L"`); a fresh tracker
+  `opl_screen 0x0000` < GHZ1's final `0x2480` → `"L"`; GHZ1's last
+  `cursor_state` is frame 4862, `opl_screen "0x2480"`); a fresh tracker
   (`prev = -1`) would have said `"R"`. It also does NOT fire at all if the
   new segment's first `opl_screen` equals the previous segment's last.
 - `prev_status` / `prev_ctrl_lock` carry-over suppresses spurious
@@ -495,7 +499,8 @@ mkdir strategy), plus complete-run specifics with no output-byte impact: the
 `precreate_segment_dirs` probe/mkdir dance, `ensure_segment_dir`,
 `client.exit()` retry/pause tail, the stale "v3.7 loaded" banner, the
 `segments_done` in-memory accumulation (unobservable without a manifest), and
-the dead declarations `MOVIE_FRAME_SAFETY_MARGIN`, `ADDR_CTRL1_DUP`,
+the dead declarations `MOVIE_FRAME_SAFETY_MARGIN`, `ADDR_CTRL1`
+(the `0xF604` reads use the literal, not the constant), `ADDR_CTRL1_DUP`,
 `ADDR_OPL_ROUTINE`, `OFF_ANIM_FRAME`, `OFF_ANIM_TIMER`, `OFF_STICK_CONVEX`
 (byte at `+0x38`; the `object_near` WORD `objoff_38` at the same offset IS
 read), and the RAM-input fallback `rom_joypad_to_mask` (never triggers with a
