@@ -4,13 +4,18 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.AudioBackend;
+import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
+import com.openggf.audio.LWJGLAudioBackend;
 import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
+import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -189,6 +194,20 @@ class TestLiveRewindManagerAudioCleanup {
             throws Exception {
         assertBoundaryReleaseFailureIsGated(
                 RewindBoundary.SEAMLESS_LEVEL_TRANSITION, 4, 4);
+    }
+
+    @Test
+    void levelLoadBoundaryRetriesFreshSourceBearingAudioBeforeFrameZeroReroot()
+            throws Exception {
+        assertFreshBoundaryAudioRelease(
+                RewindBoundary.LEVEL_LOAD, 0);
+    }
+
+    @Test
+    void seamlessBoundaryRetriesFreshSourceBearingAudioBeforeCurrentFrameReroot()
+            throws Exception {
+        assertFreshBoundaryAudioRelease(
+                RewindBoundary.SEAMLESS_LEVEL_TRANSITION, 4);
     }
 
     @Test
@@ -400,6 +419,221 @@ class TestLiveRewindManagerAudioCleanup {
         assertEquals(0, failingBackend.discardCalls);
     }
 
+    private void assertFreshBoundaryAudioRelease(
+            RewindBoundary boundary, int expectedRootFrame) throws Exception {
+        final int oldMusic = 0x80;
+        final int oldSfx = 0xA0;
+        final int freshMusic = 0x81;
+        final int freshSfx = 0xA1;
+        AudioTestFixtures.StubSmpsLoader loader =
+                new AudioTestFixtures.StubSmpsLoader();
+        for (int musicId : new int[] {
+                oldMusic, freshMusic}) {
+            loader.musicResults.put(
+                    musicId, persistentSource(musicId));
+        }
+        for (int sfxId : new int[] {
+                oldSfx, freshSfx}) {
+            loader.sfxResults.put(
+                    sfxId, persistentSource(sfxId));
+        }
+        GameAudioProfile profile =
+                new AudioTestFixtures.StubAudioProfile(loader) {
+                    @Override
+                    public SmpsSequencerConfig getSequencerConfig() {
+                        return smpsConfig();
+                    }
+                };
+        audio.setAudioProfile(profile);
+        audio.setRom(null);
+        FailingSourceBearingBackend sourceBackend =
+                new FailingSourceBearingBackend();
+        audio.setBackend(sourceBackend);
+        installDeterministicAudioRuntime(
+                audio, NoOpDeterministicAudioRuntime.INSTANCE);
+        applySourcePair(
+                sourceBackend, loader, oldMusic, oldSfx);
+
+        TestEnvironment.activeGameplayMode();
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller =
+                new TestControllerBuilder().atFrame(5);
+        installTestController(manager, controller);
+        LiveRewindInputSource inputSource =
+                (LiveRewindInputSource) getField(manager, "inputSource");
+        InputHandler heldInput = new InputHandler();
+        heldInput.handleKeyEvent(
+                config.getInt(SonicConfiguration.LIVE_REWIND_KEY),
+                GLFW_PRESS);
+        assertTrue(manager.handleRealtimeRewindInput(
+                GameMode.LEVEL, false, heldInput));
+
+        controller.commitDeferredAudioRestore();
+        assertEquals(1, sourceBackend.prepareCalls);
+        applySourcePair(
+                sourceBackend, loader, freshMusic, freshSfx);
+        assertSourcePair(
+                audio.captureLogicalSnapshot(), freshMusic, freshSfx);
+        int frameBefore = controller.currentFrame();
+        int earliestBefore = controller.earliestAvailableFrame();
+        int inputCountBefore = inputSource.frameCount();
+        sourceBackend.failAfterNextPublication();
+
+        manager.markBoundary(boundary);
+
+        assertTrue(audio.isReverseAudioPresentationActive());
+        assertTrue((boolean) getField(manager, "rewinding"));
+        assertEquals(frameBefore, controller.currentFrame(),
+                "failed fresh release must not move the controller boundary");
+        assertEquals(earliestBefore, controller.earliestAvailableFrame(),
+                "failed fresh release must not reroot controller history");
+        assertEquals(inputCountBefore, inputSource.frameCount(),
+                "failed fresh release must not trim input history");
+        assertSourcePair(
+                audio.captureLogicalSnapshot(), freshMusic, freshSfx);
+        assertEquals(2, sourceBackend.prepareCalls,
+                "boundary must prepare one fresh replacement token");
+        assertEquals(1, sourceBackend.discardCalls,
+                "the prepared old rewind target must be disposed");
+        assertEquals(1, sourceBackend.commitCalls);
+        assertEquals(1, sourceBackend.rollbackCalls);
+
+        assertFalse(manager.retryPendingRelease(),
+                "retry should finish the retained boundary release");
+
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertFalse((boolean) getField(manager, "rewinding"));
+        assertEquals(expectedRootFrame, controller.currentFrame());
+        assertEquals(expectedRootFrame,
+                controller.earliestAvailableFrame());
+        assertSourcePair(
+                audio.captureLogicalSnapshot(), freshMusic, freshSfx);
+        assertEquals(2, sourceBackend.prepareCalls,
+                "retry must reuse the exact fresh prepared token");
+        assertEquals(2, sourceBackend.commitCalls);
+        assertEquals(1, sourceBackend.rollbackCalls);
+        assertEquals(1, sourceBackend.discardCalls);
+
+        assertTrue(controller.recordExternalStep());
+        audio.beginReverseAudioPresentation();
+        assertTrue(controller.stepBackward());
+        controller.commitDeferredAudioRestore();
+        AudioLogicalSnapshot selectedRoot =
+                (AudioLogicalSnapshot) getField(
+                        audio, "deferredReverseLogicalSnapshot");
+        assertSourcePair(selectedRoot, freshMusic, freshSfx);
+        audio.endReverseAudioPresentation();
+    }
+
+    private void applySourcePair(
+            FailingSourceBearingBackend sourceBackend,
+            AudioTestFixtures.StubSmpsLoader loader,
+            int musicId, int sfxId) {
+        AbstractSmpsData music = loader.loadMusic(musicId);
+        AbstractSmpsData sfx = loader.loadSfx(sfxId);
+        sourceBackend.prepareLogicalMusicSource(
+                AudioSourceDescriptor.baseMusic(musicId));
+        sourceBackend.playSmps(
+                music, AudioTestFixtures.EMPTY_DAC,
+                smpsConfig(), false);
+        sourceBackend.playSfxSmps(
+                sfx, AudioTestFixtures.EMPTY_DAC, 1.0f);
+        audio.playMusic(musicId);
+        assertTrue(audio.playSfx(sfxId));
+        audio.presentFrame(PresentationMode.SILENT);
+    }
+
+    private static void assertSourcePair(
+            AudioLogicalSnapshot snapshot,
+            int musicId, int sfxId) {
+        assertEquals(AudioSourceDescriptor.baseMusic(musicId),
+                snapshot.backend().currentMusic());
+        assertTrue(hasSfxSource(
+                        snapshot.backend().musicDriver(), sfxId)
+                        || hasSfxSource(
+                        snapshot.backend().standaloneSfxDriver(), sfxId),
+                "backend snapshot must retain source-bearing SFX "
+                        + Integer.toHexString(sfxId) + ": music="
+                        + sourcesOf(snapshot.backend().musicDriver())
+                        + ", standalone="
+                        + sourcesOf(
+                        snapshot.backend().standaloneSfxDriver()));
+        assertEquals(AudioSourceDescriptor.baseMusic(musicId),
+                snapshot.presentation().activeMusic()
+                        .sourceDescriptor());
+        assertTrue(snapshot.presentation().voices().stream()
+                        .filter(com.openggf.audio.presentation
+                                .PresentationVoiceSnapshot.Smps.class
+                                ::isInstance)
+                        .map(com.openggf.audio.presentation
+                                .PresentationVoiceSnapshot.Smps.class
+                                ::cast)
+                        .anyMatch(voice -> hasSfxSource(
+                                voice.driver(), sfxId)),
+                "producer snapshot must retain source-bearing SFX "
+                        + Integer.toHexString(sfxId));
+    }
+
+    private static boolean hasSfxSource(
+            SmpsDriverSnapshot driver, int sfxId) {
+        return driver != null
+                && driver.sequencers().stream()
+                .anyMatch(entry -> entry.sfx()
+                        && entry.source().id() == sfxId);
+    }
+
+    private static java.util.List<String> sourcesOf(
+            SmpsDriverSnapshot driver) {
+        return driver == null ? java.util.List.of()
+                : driver.sequencers().stream()
+                .map(entry -> entry.sfx() + ":"
+                        + entry.source().kind() + ":"
+                        + Integer.toHexString(entry.source().id()))
+                .toList();
+    }
+
+    private static AbstractSmpsData persistentSource(int id) {
+        int sourceId = id;
+        byte[] data = new byte[2_049];
+        for (int index = 1; index < data.length; index += 2) {
+            data[index] = (byte) 0x80;
+            data[index + 1] = 0x7F;
+        }
+        return new AbstractSmpsData(data, 0) {
+            {
+                setId(sourceId);
+            }
+
+            @Override
+            protected void parseHeader() {
+                channels = 1;
+                fmPointers = new int[] {1};
+                fmKeyOffsets = new int[] {0};
+                fmVolumeOffsets = new int[] {0};
+            }
+
+            @Override
+            public byte[] getVoice(int voiceId) {
+                return new byte[25];
+            }
+
+            @Override
+            public byte[] getPsgEnvelope(int envelopeId) {
+                return new byte[] {0};
+            }
+
+            @Override
+            public int read16(int offset) {
+                return 0;
+            }
+
+            @Override
+            public int getBaseNoteOffset() {
+                return 0;
+            }
+        };
+    }
+
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -498,6 +732,92 @@ class TestLiveRewindManagerAudioCleanup {
 
         private record Prepared(AudioBackendLogicalSnapshot snapshot)
                 implements AudioBackend.PreparedLogicalRestore {
+        }
+    }
+
+    private static final class FailingSourceBearingBackend
+            extends LWJGLAudioBackend {
+        private boolean failAfterPublication;
+        private int prepareCalls;
+        private int commitCalls;
+        private int rollbackCalls;
+        private int discardCalls;
+
+        private FailingSourceBearingBackend() {
+            super(SonicConfigurationService.createStandalone());
+        }
+
+        void failAfterNextPublication() {
+            failAfterPublication = true;
+        }
+
+        @Override
+        public AudioBackend.PreparedLogicalRestore prepareLogicalRestore(
+                AudioBackendLogicalSnapshot snapshot,
+                SmpsDriverSnapshot.DependencyResolver resolver,
+                boolean preservePresentationQueue) {
+            prepareCalls++;
+            return super.prepareLogicalRestore(
+                    snapshot, resolver, preservePresentationQueue);
+        }
+
+        @Override
+        public void commitLogicalRestore(
+                AudioBackend.PreparedLogicalRestore prepared) {
+            commitCalls++;
+            super.commitLogicalRestore(prepared);
+            if (failAfterPublication) {
+                failAfterPublication = false;
+                throw new IllegalStateException(
+                        "injected post-publication boundary failure");
+            }
+        }
+
+        @Override
+        public void rollbackLogicalRestore(
+                AudioBackend.PreparedLogicalRestore prepared) {
+            rollbackCalls++;
+            super.rollbackLogicalRestore(prepared);
+        }
+
+        @Override
+        public void discardLogicalRestore(
+                AudioBackend.PreparedLogicalRestore prepared) {
+            discardCalls++;
+            super.discardLogicalRestore(prepared);
+        }
+
+        @Override protected void hookInitDevice() {
+        }
+        @Override protected void hookDestroyDevice() {
+        }
+        @Override protected void hookStartStream() {
+        }
+        @Override protected void hookStopStreamSource() {
+        }
+        @Override protected void hookUpdateStream() {
+        }
+        @Override protected void hookStopAndClearMusicSource() {
+        }
+        @Override protected void hookStopAndUnqueueAllMusicBuffers() {
+        }
+        @Override protected void hookStopAndClearAllMusicBuffers() {
+        }
+        @Override protected void hookRestartStreamIfDry() {
+        }
+        @Override protected void hookUploadStreamBuffer(
+                int bufferId, short[] pcm, int sampleRate) {
+        }
+        @Override protected void hookPlayWavSfx(
+                String sfxName, float pitch) {
+        }
+        @Override protected void hookStopAndDeleteWavSfxSources() {
+        }
+        @Override protected void hookCleanupStoppedWavSfx() {
+        }
+        @Override protected void hookPause() {
+        }
+        @Override protected void hookResume() {
         }
     }
 }

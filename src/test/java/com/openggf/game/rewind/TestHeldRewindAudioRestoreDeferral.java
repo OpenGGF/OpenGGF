@@ -305,10 +305,10 @@ class TestHeldRewindAudioRestoreDeferral {
 
             manager.markBoundary(RewindBoundary.LEVEL_LOAD);
 
-            assertEquals(0, backend.logicalRestores,
-                    "level-load boundary must drop stale deferred restore before cleanup");
-            assertTrue(backend.calls.isEmpty(),
-                    "boundary cleanup must stay on the sole presentation producer");
+            assertEquals(1, backend.logicalRestores,
+                    "level-load boundary must publish the fresh boundary state exactly once");
+            assertEquals(java.util.List.of("restoreLogicalSnapshot"), backend.calls,
+                    "the stale rewind target must be replaced before transactional publication");
             assertFalse(audio.isReverseAudioPresentationActive(),
                     "boundary cleanup must end reverse audio presentation");
             assertTrue(audio.captureLogicalSnapshot().ringLeft(),
@@ -407,10 +407,10 @@ class TestHeldRewindAudioRestoreDeferral {
 
             manager.markBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
 
-            assertEquals(0, backend.logicalRestores,
-                    "seamless boundary must drop stale deferred restore before cleanup");
-            assertTrue(backend.calls.isEmpty(),
-                    "boundary cleanup must stay on the sole presentation producer");
+            assertEquals(1, backend.logicalRestores,
+                    "seamless boundary must publish the fresh boundary state exactly once");
+            assertEquals(java.util.List.of("restoreLogicalSnapshot"), backend.calls,
+                    "the stale rewind target must be replaced before transactional publication");
             assertFalse(audio.isReverseAudioPresentationActive(),
                     "boundary cleanup must end reverse audio presentation");
             assertTrue(audio.captureLogicalSnapshot().ringLeft(),

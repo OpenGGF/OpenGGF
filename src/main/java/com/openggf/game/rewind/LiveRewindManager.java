@@ -463,6 +463,13 @@ public final class LiveRewindManager {
             return false;
         }
         RewindBoundary boundary = pendingReleaseBoundary;
+        if ((boundary == RewindBoundary.LEVEL_LOAD
+                || boundary
+                == RewindBoundary.SEAMLESS_LEVEL_TRANSITION)
+                && rewindController != null
+                && !rewindController.preparePostBoundaryAudioRelease()) {
+            return true;
+        }
         if (!cleanupPresentationAfterRealtimeRewind(pendingReleasePolicy)) {
             return true;
         }
@@ -484,6 +491,13 @@ public final class LiveRewindManager {
 
     private boolean releaseForBoundary(
             RewindBoundary boundary, AudioPresentationPolicy policy) {
+        if (rewindController != null
+                && !rewindController.preparePostBoundaryAudioRelease()) {
+            releasePending = true;
+            pendingReleasePolicy = policy;
+            pendingReleaseBoundary = boundary;
+            return false;
+        }
         if (cleanupPresentationAfterRealtimeRewind(policy)) {
             return true;
         }

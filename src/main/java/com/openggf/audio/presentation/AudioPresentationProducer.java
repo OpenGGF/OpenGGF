@@ -199,6 +199,16 @@ public final class AudioPresentationProducer {
     }
 
     public void endReverse() {
+        endReverse(true);
+    }
+
+    /**
+     * Commits the selected reverse target. Fresh level-boundary targets may
+     * retain their newly initialized SFX because they were created after the
+     * rewindable segment ended, rather than being transient voices restored
+     * from the selected pre-boundary frame.
+     */
+    public void endReverse(boolean stopTransientVoices) {
         assertOwnerBoundary();
         if (!reverseActive) {
             return;
@@ -210,7 +220,9 @@ public final class AudioPresentationProducer {
             }
             registry.commitPreparedRestore(preparedSelectedRestore);
         }
-        registry.stopTransientVoices();
+        if (stopTransientVoices) {
+            registry.stopTransientVoices();
+        }
         history.commitReverseCursor(reverseCursor);
         reverseCursor = null;
         reverseActive = false;

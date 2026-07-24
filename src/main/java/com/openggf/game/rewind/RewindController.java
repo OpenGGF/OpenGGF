@@ -487,6 +487,17 @@ public final class RewindController {
     }
 
     /**
+     * Severs a held rewind's pre-boundary logical restore and prepares the
+     * already initialized post-boundary dual audio state for transactional
+     * reverse release. Repeated calls retry the exact fresh prepared token.
+     */
+    boolean preparePostBoundaryAudioRelease() {
+        audioRestoreDeferred = false;
+        return audioManager == null
+                || audioManager.preparePostBoundaryReverseRelease();
+    }
+
+    /**
      * Discards a pending deferred restore without applying it. Buffer re-roots
      * follow a committed level/act boundary whose load path has already
      * reinitialized audio for the new level ({@code LevelManager.loadLevel}

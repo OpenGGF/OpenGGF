@@ -85,6 +85,8 @@ public class AudioManager implements MusicRestoreSink {
     private AudioLogicalSnapshot deferredReverseLogicalSnapshot;
     private boolean deferredReverseLogicalPrepared;
     private AudioBackend.PreparedLogicalRestore deferredBackendRestore;
+    /** True once a boundary has replaced the stale rewind target with fresh live state. */
+    private boolean postBoundaryReverseTarget;
     private StreamBackedDeterministicAudioRuntime deferredLiveCaptureRuntime;
     private DeterministicAudioRuntime deferredLiveCapturePriorRuntime;
     private AudioPresentationCommandQueue shadowCommands;
@@ -1060,11 +1062,16 @@ public class AudioManager implements MusicRestoreSink {
             return true;
         }
         ensureShadowPresentation();
+        boolean preservePostBoundarySources =
+                postBoundaryReverseTarget;
         if (policy != AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE) {
             if (!endReverseAudioPresentation()) {
                 return false;
             }
             shadowProducer.applyPendingCommandsAtOwnerBoundary();
+        }
+        if (preservePostBoundarySources) {
+            return true;
         }
         switch (policy) {
             case SUPPRESSED_INTERNAL_RESTORE -> {
@@ -1090,6 +1097,7 @@ public class AudioManager implements MusicRestoreSink {
         deferredReverseLogicalSnapshot = null;
         deferredReverseLogicalPrepared = false;
         deferredBackendRestore = null;
+        postBoundaryReverseTarget = false;
         reverseAudioPresentationActive = true;
         ensureShadowPresentation();
         shadowProducer.beginReverse(1.0);
@@ -1115,7 +1123,8 @@ public class AudioManager implements MusicRestoreSink {
                 backend.commitLogicalRestore(deferredBackendRestore);
             }
             if (shadowProducer != null) {
-                shadowProducer.endReverse();
+                shadowProducer.endReverse(
+                        !postBoundaryReverseTarget);
             }
             if (selected != null) {
                 ringLeft = selected.ringLeft();
@@ -1134,6 +1143,7 @@ public class AudioManager implements MusicRestoreSink {
             deferredReverseLogicalPrepared = false;
             deferredBackendRestore = null;
             reverseAudioPresentationActive = false;
+            postBoundaryReverseTarget = false;
         } catch (RuntimeException failure) {
             if (backendCommitAttempted && backend != null
                     && deferredBackendRestore != null) {
@@ -1172,6 +1182,30 @@ public class AudioManager implements MusicRestoreSink {
             applyDeterministicAudioRuntime(prior);
         }
         return true;
+    }
+
+    /**
+     * Replaces any selected/prepared pre-boundary rewind target with a capture
+     * of the already initialized post-boundary backend and producer state.
+     *
+     * <p>The first call owns replacement and preparation. Later calls are
+     * retries: they retain the exact fresh prepared token after a failed
+     * publication instead of recapturing or rebuilding it.
+     */
+    public boolean preparePostBoundaryReverseRelease() {
+        if (!reverseAudioPresentationActive) {
+            return true;
+        }
+        ensureShadowPresentation();
+        if (!postBoundaryReverseTarget) {
+            AudioLogicalSnapshot fresh = captureLogicalSnapshot();
+            discardDeferredBackendRestore();
+            shadowProducer.discardPreparedRestoreSelection();
+            deferredReverseLogicalSnapshot = fresh;
+            deferredReverseLogicalPrepared = false;
+            postBoundaryReverseTarget = true;
+        }
+        return commitDeferredReverseLogicalRestore();
     }
 
     /**
@@ -1881,6 +1915,7 @@ public class AudioManager implements MusicRestoreSink {
         this.deferredReverseLogicalSnapshot = null;
         this.deferredReverseLogicalPrepared = false;
         this.deferredBackendRestore = null;
+        this.postBoundaryReverseTarget = false;
         this.deferredLiveCaptureRuntime = null;
         this.deferredLiveCapturePriorRuntime = null;
         this.deterministicAudioRuntime.clearSubmittedCommands();
