@@ -48,6 +48,7 @@
     <Compile Include="tests/S1TraceDifferentialTests.cs" />
     <Compile Include="tests/S1TraceCsvWriterTests.cs" />
     <Compile Include="tests/S1TraceMetadataWriterTests.cs" />
+    <Compile Include="tests/S2AuxArmBlockTests.cs" />
     <Compile Include="tests/S2AuxEventEngineTests.cs" />
     <Compile Include="tests/S2TraceCsvWriterTests.cs" />
     <Compile Include="tests/SmokeCaptureRunnerTests.cs" />

@@ -115,7 +115,8 @@ Emitted every frame **only when `start_rom_zone_id == 0x0C`** (CNZ), §7.10.
 | `0xFF5E` | u8 | `slot3_speed` |
 | `0xFF5F` | u8 | `slot3_routine` |
 
-(Note the gap: there is no read at `0xFF50` or `0xFF53`.)
+(Note the gap: there is no read at `0xFF50`. `0xFF53` IS read — it is the
+low byte of the u16be `reward` word at `0xFF52`.)
 
 ### 1.6 Character object blocks (SST slots 0 and 1)
 

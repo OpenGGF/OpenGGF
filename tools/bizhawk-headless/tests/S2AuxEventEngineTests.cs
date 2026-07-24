@@ -37,19 +37,31 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S2AuxEventEngine emits cursor_state on change with direction rule",
                 EmitsCursorStateOnChangeWithDirectionRule));
+            tests.Add(new TestMain.TestCase(
+                "S2AuxEventEngine wraps the delayed cpu_state history index",
+                WrapsDelayedCpuStateHistoryIndex));
         }
 
         /// <summary>
         /// RAM state reproducing the trace-frame-0 recorder inputs of
         /// src/test/resources/traces/s2/ehz1_fullrun (aux_state.jsonl frame-0
-        /// block minus the zone/checkpoint/cpu_state events owned by later
-        /// stages).
+        /// block minus the step-1 zone_act_state/checkpoint events, which
+        /// ride ProcessFrameStart — see S2AuxArmBlockTests).
         /// </summary>
         private static RamBackedHost BuildEhz1FrameZeroHost()
         {
             RamBackedHost host = S2TraceCsvWriterTests.BuildEhz1RowZeroHost();
             host.Ram[S2Ram.Ctrl1Raw] = 0x08;
             host.Ram[S2Ram.Ctrl1Logical] = 0x08;
+            // Tails CPU state feeding the per-frame cpu_state event.
+            host.Ram[S2Ram.TailsInteractId] = 0x01;
+            host.SetWord(S2Ram.TailsCpuRoutine, 6);
+            host.Ram[S2Ram.Ctrl2Held] = 0x08;
+            host.Ram[S2Ram.Ctrl2Pressed] = 0x08;
+            host.SetWord(S2Ram.SonicPosRecordIndex, 0x6C);
+            // Delayed history entry at raw byte offset 0x6C - 68 = 0x28.
+            host.SetWord(S2Ram.SonicPosRecordBuf + 0x28, 0x0060);
+            host.SetWord(S2Ram.SonicPosRecordBuf + 0x2A, 0x0290);
             // state_snapshot extras.
             host.Ram[S2Ram.PlayerBase + S2Ram.OffRadiusY] = 19;
             host.Ram[S2Ram.PlayerBase + S2Ram.OffRadiusX] = 9;
@@ -84,12 +96,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             // LITERAL frame-0 lines of the gunzipped
             // src/test/resources/traces/s2/ehz1_fullrun/aux_state.jsonl.gz,
-            // in recorder order (cpu_state, zone_act_state, and checkpoint
-            // are owned by later stages).
+            // in recorder order (zone_act_state/checkpoint are step-1
+            // events riding ProcessFrameStart — see S2AuxArmBlockTests).
             string[] expected =
             {
                 "{\"frame\":0,\"vfc\":1,\"event\":\"routine_change\",\"character\":\"sonic\",\"from\":\"0x00\",\"to\":\"0x02\",\"x\":\"0x0060\",\"y\":\"0x0290\",\"x_vel\":12,\"y_vel\":0,\"inertia\":12,\"status\":\"0x00\",\"stand_on_obj\":0}",
                 "{\"frame\":0,\"vfc\":1,\"event\":\"routine_change\",\"character\":\"tails\",\"from\":\"0x00\",\"to\":\"0x02\",\"x\":\"0x004D\",\"y\":\"0x0294\",\"x_vel\":132,\"y_vel\":0,\"inertia\":132,\"status\":\"0x00\",\"stand_on_obj\":0}",
+                "{\"frame\":0,\"vfc\":1,\"event\":\"cpu_state\",\"character\":\"tails\",\"interact\":\"0x0001\",\"idle_timer\":0,\"flight_timer\":0,\"cpu_routine\":6,\"target_x\":\"0x0000\",\"target_y\":\"0x0000\",\"auto_fly_timer\":0,\"auto_jump_flag\":0,\"ctrl2_held\":\"0x08\",\"ctrl2_pressed\":\"0x08\",\"ctrl2_raw_held\":\"0x00\",\"ctrl1_logical\":\"0x0800\",\"pos_table_index\":\"0x6C\",\"delayed_index\":\"0x28\",\"delayed_x\":\"0x0060\",\"delayed_y\":\"0x0290\",\"delayed_input\":\"0x0000\",\"delayed_status\":\"0x00\",\"tails_status\":\"0x00\",\"tails_interact\":\"0x00\",\"tails_inertia\":\"0x0084\"}",
                 "{\"frame\":0,\"vfc\":1,\"event\":\"state_snapshot\",\"character\":\"sonic\",\"control_locked\":false,\"move_lock\":\"0x0000\",\"anim_id\":0,\"status_byte\":\"0x00\",\"routine\":\"0x02\",\"y_radius\":19,\"x_radius\":9,\"top_solid_bit\":\"0x39\",\"lrb_solid_bit\":\"0xE2\",\"raw_input\":\"0x08\",\"raw_input_mask\":\"0x08\",\"logical_input\":\"0x08\",\"logical_input_mask\":\"0x08\",\"on_object\":false,\"pushing\":false,\"underwater\":false,\"roll_jumping\":false}",
                 "{\"frame\":0,\"vfc\":1,\"event\":\"state_snapshot\",\"character\":\"tails\",\"control_locked\":false,\"move_lock\":\"0x0000\",\"anim_id\":0,\"status_byte\":\"0x00\",\"routine\":\"0x02\",\"y_radius\":15,\"x_radius\":9,\"top_solid_bit\":\"0x47\",\"lrb_solid_bit\":\"0xBA\",\"raw_input\":\"0x08\",\"raw_input_mask\":\"0x08\",\"logical_input\":\"0x08\",\"logical_input_mask\":\"0x08\",\"on_object\":false,\"pushing\":false,\"underwater\":false,\"roll_jumping\":false}",
                 "{\"frame\":0,\"vfc\":1,\"event\":\"object_appeared\",\"slot\":1,\"object_type\":\"0x02\",\"x\":\"0x004D\",\"y\":\"0x0294\"}",
@@ -166,17 +179,30 @@ namespace OpenGGF.BizHawk.Headless.Tests
             host.Ram[S2Ram.SidekickBase + S2Ram.OffRadiusX] = 9;
             host.Ram[S2Ram.Ctrl1Raw] = 0x18;
             host.Ram[S2Ram.Ctrl1Logical] = 0x18;
+            // Tails CPU state feeding the frame-799 cpu_state event.
+            host.Ram[S2Ram.TailsInteractId] = 0x8C;
+            host.SetWord(S2Ram.TailsCpuRoutine, 6);
+            host.Ram[S2Ram.TailsCpuJumping] = 0x01;
+            host.Ram[S2Ram.Ctrl2Held] = 0x78;
+            host.SetWord(S2Ram.SonicPosRecordIndex, 0xAC);
+            // Delayed history entry at raw byte offset 0xAC - 68 = 0x68.
+            host.SetWord(S2Ram.SonicPosRecordBuf + 0x68, 0x088B);
+            host.SetWord(S2Ram.SonicPosRecordBuf + 0x6A, 0x04D5);
+            host.SetWord(S2Ram.SonicStatRecordBuf + 0x68, 0x1800);
+            host.Ram[S2Ram.SonicStatRecordBuf + 0x6A] = 0x06;
             IList<string> lines = engine.ProcessFrame(799, host);
 
             // LITERAL frame-799 lines of the gunzipped
             // src/test/resources/traces/s2/arz2/aux_state.jsonl.gz: rolling
             // clears, then the hurt routine_change with the stand-object
-            // context, then the immediate hurt snapshot.
+            // context, the immediate hurt snapshot, then the per-frame
+            // cpu_state.
             string[] expected =
             {
                 "{\"frame\":799,\"vfc\":785,\"event\":\"mode_change\",\"character\":\"tails\",\"field\":\"rolling\",\"from\":1,\"to\":0}",
                 "{\"frame\":799,\"vfc\":785,\"event\":\"routine_change\",\"character\":\"tails\",\"from\":\"0x02\",\"to\":\"0x04\",\"x\":\"0x0891\",\"y\":\"0x0503\",\"x_vel\":-512,\"y_vel\":-1024,\"inertia\":0,\"status\":\"0x02\",\"stand_on_obj\":27,\"stand_obj_slot\":27,\"stand_obj_type\":\"0x8C\",\"stand_obj_x\":\"0x08E2\",\"stand_obj_y\":\"0x02B4\",\"stand_obj_routine\":\"0x02\"}",
-                "{\"frame\":799,\"vfc\":785,\"event\":\"state_snapshot\",\"character\":\"tails\",\"control_locked\":false,\"move_lock\":\"0x0000\",\"anim_id\":26,\"status_byte\":\"0x02\",\"routine\":\"0x04\",\"y_radius\":15,\"x_radius\":9,\"top_solid_bit\":\"0x00\",\"lrb_solid_bit\":\"0x00\",\"raw_input\":\"0x18\",\"raw_input_mask\":\"0x18\",\"logical_input\":\"0x18\",\"logical_input_mask\":\"0x18\",\"on_object\":false,\"pushing\":false,\"underwater\":false,\"roll_jumping\":false}"
+                "{\"frame\":799,\"vfc\":785,\"event\":\"state_snapshot\",\"character\":\"tails\",\"control_locked\":false,\"move_lock\":\"0x0000\",\"anim_id\":26,\"status_byte\":\"0x02\",\"routine\":\"0x04\",\"y_radius\":15,\"x_radius\":9,\"top_solid_bit\":\"0x00\",\"lrb_solid_bit\":\"0x00\",\"raw_input\":\"0x18\",\"raw_input_mask\":\"0x18\",\"logical_input\":\"0x18\",\"logical_input_mask\":\"0x18\",\"on_object\":false,\"pushing\":false,\"underwater\":false,\"roll_jumping\":false}",
+                "{\"frame\":799,\"vfc\":785,\"event\":\"cpu_state\",\"character\":\"tails\",\"interact\":\"0x008C\",\"idle_timer\":0,\"flight_timer\":0,\"cpu_routine\":6,\"target_x\":\"0x0000\",\"target_y\":\"0x0000\",\"auto_fly_timer\":0,\"auto_jump_flag\":1,\"ctrl2_held\":\"0x78\",\"ctrl2_pressed\":\"0x00\",\"ctrl2_raw_held\":\"0x00\",\"ctrl1_logical\":\"0x1800\",\"pos_table_index\":\"0xAC\",\"delayed_index\":\"0x68\",\"delayed_x\":\"0x088B\",\"delayed_y\":\"0x04D5\",\"delayed_input\":\"0x1800\",\"delayed_status\":\"0x06\",\"tails_status\":\"0x02\",\"tails_interact\":\"0x1B\",\"tails_inertia\":\"0x0000\"}"
             };
             AssertEx.Equal(
                 string.Join("\n", expected), string.Join("\n", lines));
@@ -225,11 +251,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(1, CountContaining(
                 lines, "\"routine_change\",\"character\":\"tails\""));
 
-            // Sidekick despawns: no tails-scoped events at all, only the
-            // slot-1 object_removed from the scan.
+            // Sidekick despawns: no tails-scoped tracker events, only the
+            // slot-1 object_removed from the scan plus the unconditional
+            // per-frame cpu_state (which reads the empty slot bytes).
             host.Ram[S2Ram.SidekickBase + S2Ram.OffId] = 0x00;
             lines = engine.ProcessFrame(1, host);
-            AssertEx.Equal(0, CountContaining(lines, "\"character\":\"tails\""));
+            AssertEx.Equal(1, CountContaining(lines, "\"character\":\"tails\""));
+            AssertEx.Equal(1, CountContaining(
+                lines, "\"event\":\"cpu_state\",\"character\":\"tails\""));
             AssertEx.Equal(true, lines.Contains(
                 "{\"frame\":1,\"vfc\":0,\"event\":\"object_removed\",\"slot\":1,\"object_type\":\"0x02\"}"));
 
@@ -380,6 +409,31 @@ namespace OpenGGF.BizHawk.Headless.Tests
             lines = engine.ProcessFrame(2, host);
             AssertEx.Equal(true, lines.Contains(
                 "{\"frame\":2,\"vfc\":0,\"event\":\"cursor_state\",\"opl_screen\":\"0x0000\",\"fwd_ptr\":\"0x000E6850\",\"bwd_ptr\":\"0x000E684A\",\"fwd_ctr\":2,\"bwd_ctr\":1,\"dir\":\"L\"}"));
+        }
+
+        private static void WrapsDelayedCpuStateHistoryIndex()
+        {
+            var engine = new S2AuxEventEngine();
+            var host = new RamBackedHost();
+            // arz frame 37: pos_table_index 0x00 wraps to delayed index
+            // (0x00 - 68) & 0xFF = 0xBC, used as a raw byte offset into the
+            // history buffers.
+            host.SetWord(S2Ram.FrameCount, 38);
+            host.Ram[S2Ram.TailsInteractId] = 0x01;
+            host.SetWord(S2Ram.TailsCpuRoutine, 6);
+            host.Ram[S2Ram.Ctrl2Held] = 0x08;
+            host.Ram[S2Ram.Ctrl1Logical] = 0x08;
+            host.SetWord(S2Ram.SonicPosRecordBuf + 0xBC, 0x006D);
+            host.SetWord(S2Ram.SonicPosRecordBuf + 0xBE, 0x037D);
+            host.SetWord(S2Ram.SonicStatRecordBuf + 0xBC, 0x0800);
+            host.Ram[S2Ram.SidekickBase + S2Ram.OffId] = 0x02;
+            host.SetWord(S2Ram.SidekickBase + S2Ram.OffInertia, 0x012D);
+
+            IList<string> lines = engine.ProcessFrame(37, host);
+            // LITERAL frame-37 cpu_state line of the gunzipped
+            // src/test/resources/traces/s2/arz/aux_state.jsonl.gz.
+            AssertEx.Equal(true, lines.Contains(
+                "{\"frame\":37,\"vfc\":38,\"event\":\"cpu_state\",\"character\":\"tails\",\"interact\":\"0x0001\",\"idle_timer\":0,\"flight_timer\":0,\"cpu_routine\":6,\"target_x\":\"0x0000\",\"target_y\":\"0x0000\",\"auto_fly_timer\":0,\"auto_jump_flag\":0,\"ctrl2_held\":\"0x08\",\"ctrl2_pressed\":\"0x00\",\"ctrl2_raw_held\":\"0x00\",\"ctrl1_logical\":\"0x0800\",\"pos_table_index\":\"0x00\",\"delayed_index\":\"0xBC\",\"delayed_x\":\"0x006D\",\"delayed_y\":\"0x037D\",\"delayed_input\":\"0x0800\",\"delayed_status\":\"0x00\",\"tails_status\":\"0x00\",\"tails_interact\":\"0x00\",\"tails_inertia\":\"0x012D\"}"));
         }
 
         private static int CountContaining(IList<string> lines, string fragment)

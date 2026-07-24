@@ -49,7 +49,8 @@ namespace OpenGGF.BizHawk.Headless
         public const int ObjStateBackwardCounter = 0xFC01; // u8 v_objstate[1]
 
         // CNZ slot machine state (start_rom_zone_id == 0x0C recordings only).
-        // Note the gaps: nothing is read at 0xFF50 or 0xFF53.
+        // Note the gap: nothing is read at 0xFF50 (0xFF53 IS read, as the
+        // low byte of the u16be reward word at 0xFF52).
         public const int SlotMachineInUse = 0xFF4C;      // u16be
         public const int SlotMachineRoutine = 0xFF4E;    // u8
         public const int SlotMachineTimer = 0xFF4F;      // u8
