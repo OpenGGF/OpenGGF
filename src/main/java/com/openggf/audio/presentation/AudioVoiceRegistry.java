@@ -326,6 +326,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 pendingRestore,
                 speedShoesEnabled,
                 speedMultiplier,
+                ringLeft,
                 coordFlagHandlers.state().snapshot());
     }
 
@@ -402,6 +403,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         pendingRestore = snapshot.pendingRestore();
         speedShoesEnabled = snapshot.speedShoesEnabled();
         speedMultiplier = snapshot.speedMultiplier();
+        ringLeft = snapshot.ringLeft();
         applyDriverControls();
         rebuildOrderedVoices();
     }

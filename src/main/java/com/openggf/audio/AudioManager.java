@@ -32,6 +32,7 @@ import com.openggf.audio.presentation.AudioPresentationCommandResolver;
 import com.openggf.audio.presentation.AudioPresentationMixer;
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationProducer;
+import com.openggf.audio.presentation.AudioPresentationSnapshot;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcmCache;
@@ -424,6 +425,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public AudioLogicalSnapshot captureLogicalSnapshot() {
+        ensureShadowPresentation();
         Set<String> donorGameIds = new LinkedHashSet<>();
         donorGameIds.addAll(donorLoaders.keySet());
         donorGameIds.addAll(donorDacData.keySet());
@@ -442,6 +444,7 @@ public class AudioManager implements MusicRestoreSink {
                 commandTimeline.nextOrder(),
                 commandTimeline.entryCount(),
                 backend != null ? backend.captureLogicalSnapshot() : AudioBackendLogicalSnapshot.empty(),
+                shadowProducer.snapshot(),
                 donorGameIds,
                 donorBindings);
     }
@@ -450,19 +453,56 @@ public class AudioManager implements MusicRestoreSink {
         if (snapshot == null) {
             return;
         }
-        ringLeft = snapshot.ringLeft();
-        commandTimeline.restoreCursor(snapshot.commandTimelineFrame(), snapshot.commandTimelineNextOrder());
-
-        donorSoundBindings.clear();
-        for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding : snapshot.donorBindings()) {
-            donorSoundBindings.put(binding.sound(), new DonorSfxBinding(binding.donorGameId(), binding.sfxId()));
-        }
-
-        if (backend != null) {
-            backend.restoreLogicalSnapshot(
-                    snapshot.backend(),
-                    createSmpsDependencyResolver(),
+        ensureShadowPresentation();
+        AudioBackendLogicalSnapshot previousBackend = backend != null
+                ? backend.captureLogicalSnapshot()
+                : AudioBackendLogicalSnapshot.empty();
+        AudioPresentationSnapshot previousPresentation =
+                shadowProducer.snapshot();
+        boolean previousRingLeft = ringLeft;
+        long previousTimelineFrame = commandTimeline.currentFrame();
+        int previousTimelineOrder = commandTimeline.nextOrder();
+        Map<GameSound, DonorSfxBinding> previousBindings =
+                new EnumMap<>(donorSoundBindings);
+        try {
+            if (backend != null) {
+                backend.restoreLogicalSnapshot(
+                        snapshot.backend(),
+                        createSmpsDependencyResolver(),
+                        reverseAudioPresentationActive);
+            }
+            shadowProducer.restore(snapshot.presentation(), shadowFactory,
                     reverseAudioPresentationActive);
+            ringLeft = snapshot.ringLeft();
+            commandTimeline.restoreCursor(snapshot.commandTimelineFrame(),
+                    snapshot.commandTimelineNextOrder());
+            donorSoundBindings.clear();
+            for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding
+                    : snapshot.donorBindings()) {
+                donorSoundBindings.put(binding.sound(),
+                        new DonorSfxBinding(binding.donorGameId(),
+                                binding.sfxId()));
+            }
+        } catch (RuntimeException failure) {
+            ringLeft = previousRingLeft;
+            commandTimeline.restoreCursor(previousTimelineFrame,
+                    previousTimelineOrder);
+            donorSoundBindings.clear();
+            donorSoundBindings.putAll(previousBindings);
+            try {
+                if (backend != null) {
+                    backend.restoreLogicalSnapshot(previousBackend,
+                            createSmpsDependencyResolver(),
+                            reverseAudioPresentationActive);
+                }
+                shadowProducer.restore(previousPresentation, shadowFactory,
+                        reverseAudioPresentationActive);
+            } catch (RuntimeException rollbackFailure) {
+                failure.addSuppressed(rollbackFailure);
+            }
+            LOGGER.log(Level.WARNING,
+                    "Audio snapshot restore failed; retained prior state",
+                    failure);
         }
     }
 

@@ -849,7 +849,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     speedMultiplier,
                     overrides,
                     musicDriverSnapshot,
-                    sfxDriverSnapshot);
+                    sfxDriverSnapshot,
+                    legacyCoordFlagHandlers.state().snapshot());
         }
     }
 
@@ -873,6 +874,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
         synchronized (streamLock) {
+            legacyCoordFlagHandlers.state().restore(
+                    snapshot.legacyCoordFlagRuntimeState());
             SmpsDriver reusableMusicDriver = smpsDriver;
             SmpsDriver reusableSfxDriver = sfxStream instanceof SmpsDriver previousSfx ? previousSfx : null;
             currentStream = null;

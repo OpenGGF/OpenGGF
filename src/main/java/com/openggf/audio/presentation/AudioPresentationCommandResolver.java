@@ -1,5 +1,6 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.GameSound;
 import com.openggf.audio.presentation.AudioPresentationCommand.AddSmpsSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.ChangeMusicTempo;
 import com.openggf.audio.presentation.AudioPresentationCommand.EndMusicOverride;
@@ -202,6 +203,10 @@ public final class AudioPresentationCommandResolver {
     }
 
     private void submitSfx(AudioCommand.PlaySfx command) {
+        if (command.route() == AudioCommand.SfxRoute.RING_RESOLVED) {
+            enqueue(new ResetRingAlternation(
+                    !GameSound.RING_LEFT.name().equals(command.sfxName())));
+        }
         AudioPresentationCommand resolved;
         try {
             resolved = switch (command.route()) {

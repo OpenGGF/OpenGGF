@@ -109,7 +109,7 @@ class TestAudioPresentationCommandResolver {
                 -1, "RING_RIGHT", AudioCommand.SfxRoute.RING_RESOLVED, 1.0f, null));
 
         List<AudioPresentationCommand> commands = drain(fixture.queue);
-        assertEquals(6, commands.size());
+        assertEquals(8, commands.size());
         assertEquals(SmpsAssetKey.Route.BASE_ID,
                 ((AddSmpsSfx) commands.get(0)).source().assetKey().route());
         assertEquals(SmpsAssetKey.Route.BASE_NAME,
@@ -117,8 +117,12 @@ class TestAudioPresentationCommandResolver {
         assertEquals(SmpsAssetKey.Route.DONOR_ID,
                 ((AddSmpsSfx) commands.get(2)).source().assetKey().route());
         assertInstanceOf(StartSampleSfx.class, commands.get(3));
-        assertInstanceOf(StartSampleSfx.class, commands.get(4));
+        assertEquals(new AudioPresentationCommand.ResetRingAlternation(false),
+                commands.get(4));
         assertInstanceOf(StartSampleSfx.class, commands.get(5));
+        assertEquals(new AudioPresentationCommand.ResetRingAlternation(true),
+                commands.get(6));
+        assertInstanceOf(StartSampleSfx.class, commands.get(7));
     }
 
     @Test

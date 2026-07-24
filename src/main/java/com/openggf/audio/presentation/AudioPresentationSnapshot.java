@@ -21,13 +21,23 @@ public record AudioPresentationSnapshot(
         boolean pendingRestore,
         boolean speedShoesEnabled,
         int speedMultiplier,
+        boolean ringLeft,
         SmpsCoordFlagRuntimeState.Snapshot coordFlagRuntimeState) {
+
+    private static final AudioPresentationSnapshot EMPTY =
+            new AudioPresentationSnapshot(0, List.of(), null, List.of(),
+                    null, null, 0, 0, 0, 0, false, false, false, 1, true,
+                    new SmpsCoordFlagRuntimeState.Snapshot(0));
 
     public AudioPresentationSnapshot {
         voices = List.copyOf(Objects.requireNonNull(voices, "voices"));
         overrideStack =
                 List.copyOf(Objects.requireNonNull(overrideStack, "overrideStack"));
         Objects.requireNonNull(coordFlagRuntimeState, "coordFlagRuntimeState");
+    }
+
+    public static AudioPresentationSnapshot empty() {
+        return EMPTY;
     }
 
     public record MusicSlotSnapshot(
