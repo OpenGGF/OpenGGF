@@ -256,11 +256,14 @@ SS_OBJID_SS_RESULTS             = 0x6F    -- ObjID_SSResults
 
 -- v9.13-s2: Game_Mode $8C = GameModeID_Level with GameModeFlag_TitleCard
 -- (bit 7) set -- the in-$0C reload family (death/star-post restart, time
--- over, act 1->2, zone->zone, ObjB2 SCZ->WFZ->DEZ routes, continue-accepted
--- restart). Every member funnels through Level_Inactive_flag -> Level:
+-- over, act 1->2, zone->zone, ObjB2 SCZ->WFZ->DEZ routes). Every member
+-- funnels through Level_Inactive_flag -> Level:
 -- (bset #GameModeFlag_TitleCard, s2.asm:4758) -> Level_StartGame (bclr,
 -- s2.asm:5082); the base mode never changes across a reload, only bit 7
 -- toggles. Exact-match on purpose: $88 (Demo|TitleCard) is out of scope.
+-- A continue-accepted restart also reloads through $8C, but Block 1.5 can
+-- never observe it while armed: the run already finalized at the terminal
+-- $14 continue screen, so that $8C only ever occurs after `finished`.
 GAMEMODE_LEVEL_TITLECARD        = 0x8C
 
 -- Detour transition RAM fields (contract item 3/4; VERIFY-ON-FIRST-CAPTURE).
@@ -948,8 +951,10 @@ function ss_check_control_state()
 end
 
 -- 0->nonzero edge of SS_Check_Rings_flag (standalone: check_checkpoint,
--- L459-477), ported WITHOUT publish_pending_finish_pass and WITHOUT its
--- error() assertions (both are run_objects_end machinery).
+-- L459-477), ported WITHOUT publish_pending_finish_pass and WITHOUT the
+-- error() assertions inside it (run_objects_end machinery). The
+-- standalone's own `last_nonlag_trace_frame < 0` error() guard IS kept:
+-- it validates the stage_finished frame source, not the per-pass records.
 -- stage_finished's `frame` is the last non-lag trace_frame (maintained
 -- hook-free in write_ss_row), `observed_frame` the current trace_frame.
 function ss_check_checkpoint(check_rings_flag)
@@ -958,6 +963,9 @@ function ss_check_checkpoint(check_rings_flag)
             '{"frame":%d,"type":"checkpoint","check_rings_flag":"0x%02x"}',
             trace_frame, check_rings_flag))
         if not ss_aux_stage_finished_emitted then
+            if ss_aux_last_nonlag_trace_frame < 0 then
+                error("final checkpoint resolved before any logical observation")
+            end
             write_aux(string.format(
                 '{"frame":%d,"observed_frame":%d,"type":"stage_finished",'
                 .. '"check_rings_flag":"0x%02x"}',
@@ -1772,8 +1780,8 @@ local function on_frame_end()
         trace_frame = 0
         -- Kind decision: compare Current_ZoneAndAct ($FFFE10 word) on this
         -- boundary frame against the finished segment's start zone/act.
-        -- Differs -> "level_advance" (act->act, zone->zone, ObjB2 routes,
-        -- continue-accepted); equal -> "death_restart" (death, star-post
+        -- Differs -> "level_advance" (act->act, zone->zone, ObjB2 routes);
+        -- equal -> "death_restart" (death, star-post
         -- respawn, time over). Obj3A writes the destination into
         -- Current_ZoneAndAct on $0C tail frames BEFORE Level_Inactive lands,
         -- so comparing against the segment-START values keeps those
