@@ -87,8 +87,6 @@ public class AudioManager implements MusicRestoreSink {
     private AudioBackend.PreparedLogicalRestore deferredBackendRestore;
     /** True once a boundary has replaced the stale rewind target with fresh live state. */
     private boolean postBoundaryReverseTarget;
-    private StreamBackedDeterministicAudioRuntime deferredLiveCaptureRuntime;
-    private DeterministicAudioRuntime deferredLiveCapturePriorRuntime;
     private AudioPresentationCommandQueue shadowCommands;
     private AudioPresentationSourceFactory shadowFactory;
     private AudioPresentationCommandResolver shadowResolver;
@@ -212,42 +210,12 @@ public class AudioManager implements MusicRestoreSink {
         if (activeLiveCaptureAudioHandle != null) {
             throw new IllegalStateException("A live capture audio handle is already attached");
         }
-        DeterministicAudioRuntime priorRuntime = null;
-        boolean ownsRuntime = false;
-        if (!(deterministicAudioRuntime instanceof StreamBackedDeterministicAudioRuntime)) {
-            if (backend == null || !backend.supportsLiveCapturePresentation()) {
-                throw new IllegalStateException("The active audio runtime does not support live capture");
-            }
-            priorRuntime = deterministicAudioRuntime;
-            int sampleRate = Math.max(1, backend.outputSampleRate());
-            int minFrameCapacity = Math.max(1, sampleRate / Math.max(1, frameRate));
-            int fifoFrames = Math.max(minFrameCapacity, sampleRate * OUTPUT_FIFO_SECONDS);
-            int historyFrames = Math.max(minFrameCapacity, configuredPcmHistoryFrames(sampleRate));
-            int crossfadeFrames = Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000);
-            applyDeterministicAudioRuntime(new StreamBackedDeterministicAudioRuntime(
-                    new AudioFrameClock(sampleRate, frameRate),
-                    new AudioOutputFifo(fifoFrames),
-                    new PcmHistoryRing(historyFrames),
-                    crossfadeFrames));
-            ownsRuntime = true;
-        }
-        if (!(deterministicAudioRuntime instanceof StreamBackedDeterministicAudioRuntime attachedRuntime)) {
-            throw new IllegalStateException("The active audio runtime does not support live capture");
-        }
-        try {
-            int sampleRate = Math.max(1, backend.outputSampleRate());
-            PresentationAudioCapture capture =
-                    attachedRuntime.openPresentationAudioCapture(sampleRate, frameRate);
-            ManagerLiveCaptureAudioHandle handle =
-                    new ManagerLiveCaptureAudioHandle(attachedRuntime, capture, priorRuntime, ownsRuntime);
-            activeLiveCaptureAudioHandle = handle;
-            return handle;
-        } catch (RuntimeException | Error failure) {
-            if (ownsRuntime && deterministicAudioRuntime == attachedRuntime) {
-                applyDeterministicAudioRuntime(priorRuntime);
-            }
-            throw failure;
-        }
+        ensureShadowPresentation();
+        LiveCaptureAudioHandle capture = shadowProducer.attachCapture(frameRate);
+        ManagerLiveCaptureAudioHandle handle =
+                new ManagerLiveCaptureAudioHandle(capture);
+        activeLiveCaptureAudioHandle = handle;
+        return handle;
     }
 
     private synchronized void closeLiveCaptureAudio(ManagerLiveCaptureAudioHandle handle) {
@@ -260,14 +228,6 @@ public class AudioManager implements MusicRestoreSink {
         } finally {
             if (activeLiveCaptureAudioHandle == handle) {
                 activeLiveCaptureAudioHandle = null;
-            }
-            if (handle.ownsRuntime && deterministicAudioRuntime == handle.attachedRuntime) {
-                if (reverseAudioPresentationActive) {
-                    deferredLiveCaptureRuntime = handle.attachedRuntime;
-                    deferredLiveCapturePriorRuntime = handle.priorRuntime;
-                } else {
-                    applyDeterministicAudioRuntime(handle.priorRuntime);
-                }
             }
         }
     }
@@ -1175,12 +1135,6 @@ public class AudioManager implements MusicRestoreSink {
                     failure);
             return false;
         }
-        if (deterministicAudioRuntime == deferredLiveCaptureRuntime) {
-            DeterministicAudioRuntime prior = deferredLiveCapturePriorRuntime;
-            deferredLiveCaptureRuntime = null;
-            deferredLiveCapturePriorRuntime = null;
-            applyDeterministicAudioRuntime(prior);
-        }
         return true;
     }
 
@@ -1934,8 +1888,6 @@ public class AudioManager implements MusicRestoreSink {
         this.deferredReverseLogicalPrepared = false;
         this.deferredBackendRestore = null;
         this.postBoundaryReverseTarget = false;
-        this.deferredLiveCaptureRuntime = null;
-        this.deferredLiveCapturePriorRuntime = null;
         this.deterministicAudioRuntime.clearSubmittedCommands();
         this.deterministicAudioRuntime.clearPcmHistory();
         this.commandTimeline.clear();
@@ -2142,21 +2094,11 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private final class ManagerLiveCaptureAudioHandle implements LiveCaptureAudioHandle {
-        private final StreamBackedDeterministicAudioRuntime attachedRuntime;
-        private final PresentationAudioCapture capture;
-        private final DeterministicAudioRuntime priorRuntime;
-        private final boolean ownsRuntime;
+        private final LiveCaptureAudioHandle capture;
         private boolean closed;
 
-        private ManagerLiveCaptureAudioHandle(
-                StreamBackedDeterministicAudioRuntime attachedRuntime,
-                PresentationAudioCapture capture,
-                DeterministicAudioRuntime priorRuntime,
-                boolean ownsRuntime) {
-            this.attachedRuntime = attachedRuntime;
+        private ManagerLiveCaptureAudioHandle(LiveCaptureAudioHandle capture) {
             this.capture = capture;
-            this.priorRuntime = priorRuntime;
-            this.ownsRuntime = ownsRuntime;
         }
 
         @Override
@@ -2177,7 +2119,7 @@ public class AudioManager implements MusicRestoreSink {
         @Override
         public int drainPresentationFrame(short[] target) {
             synchronized (AudioManager.this) {
-                if (closed || deterministicAudioRuntime != attachedRuntime) {
+                if (closed) {
                     throw new IllegalStateException("Live capture audio handle is no longer attached");
                 }
                 return capture.drainPresentationFrame(target);

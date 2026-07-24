@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Live recording now continues with phase-correct stereo silence when its audio tap is unavailable or fails.
 - Made every presented frame choose one explicit forward, silent, or reverse audio mode.
 - Preserved durable music when rewind cleanup finds no stale override to pop.
 - Made OpenAL a bounded final-PCM sink so toggling recording cannot remove music, rings, or effects.

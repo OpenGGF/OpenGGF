@@ -22,6 +22,29 @@ import static org.mockito.Mockito.*;
 
 class TestEngineLiveCapturePresentation {
     @Test
+    void debugAudioFailurePropertyUsesSafeDisabledDefaultAndExactNonNegativeValue() {
+        String key = "openggf.debug.liveCaptureAudioFailAfterFrames";
+        String prior = System.getProperty(key);
+        try {
+            System.clearProperty(key);
+            assertEquals(-1, Engine.resolveLiveCaptureAudioFailAfterFrames());
+            System.setProperty(key, "-1");
+            assertEquals(-1, Engine.resolveLiveCaptureAudioFailAfterFrames());
+            System.setProperty(key, "0");
+            assertEquals(0, Engine.resolveLiveCaptureAudioFailAfterFrames());
+            System.setProperty(key, "17");
+            assertEquals(17, Engine.resolveLiveCaptureAudioFailAfterFrames());
+            System.setProperty(key, "-2");
+            assertEquals(-1, Engine.resolveLiveCaptureAudioFailAfterFrames());
+            System.setProperty(key, "not-a-number");
+            assertEquals(-1, Engine.resolveLiveCaptureAudioFailAfterFrames());
+        } finally {
+            if (prior == null) System.clearProperty(key);
+            else System.setProperty(key, prior);
+        }
+    }
+
+    @Test
     void immediateLiveCaptureFailureWarnsExactlyOnceAndRetryCanWarnAgain() {
         LiveCaptureController controller = mock(LiveCaptureController.class);
         Throwable failure = new IllegalStateException("tap open failed");

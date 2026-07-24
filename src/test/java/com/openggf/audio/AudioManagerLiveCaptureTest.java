@@ -6,12 +6,13 @@ import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
 import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
+import com.openggf.audio.presentation.PresentationMode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AudioManagerLiveCaptureTest {
@@ -31,36 +32,44 @@ class AudioManagerLiveCaptureTest {
     }
 
     @Test
-    void beginsDrainsAndIdempotentlyClosesLiveHandle() {
-        StreamBackedDeterministicAudioRuntime runtime = runtimeWithSamples(1, 10, 2, 20);
-        audio.setDeterministicAudioRuntime(runtime);
+    void beginsDrainsAndIdempotentlyClosesAuthoritativeProducerHandle() {
+        var producerBefore = AudioManagerTestDiagnostics.producerFingerprint(audio);
 
         LiveCaptureAudioHandle handle = audio.beginLiveCaptureAudio(1);
-        audio.advanceGameplayFrameAudio();
+        audio.presentFrame(PresentationMode.FORWARD);
 
         assertEquals(2, handle.sampleRate());
         assertEquals(1, handle.frameRate());
         assertEquals(2, handle.maxStereoFramesPerPacket());
         short[] captured = new short[4];
         assertEquals(2, handle.drainPresentationFrame(captured));
-        assertArrayEquals(new short[] {1, 10, 2, 20}, captured);
+        assertEquals(0, captured[0]);
+        assertEquals(0, captured[1]);
+        assertEquals(0, captured[2]);
+        assertEquals(0, captured[3]);
         assertEquals(2, handle.totalStereoFrames());
         assertEquals(new AudioFrameClock.Snapshot(2, 1, 2, 0),
                 handle.clockSnapshot());
 
         handle.close();
         handle.close();
+        var producerAfter = AudioManagerTestDiagnostics.producerFingerprint(audio);
+        assertEquals(producerBefore.voiceIdentities(), producerAfter.voiceIdentities(),
+                "attach/detach must preserve registry identity and state");
+        assertNotEquals(producerBefore.clock(), producerAfter.clock(),
+                "only the explicitly presented frame advances producer time");
 
         audio.beginLiveCaptureAudio(1).close();
     }
 
     @Test
-    void rejectsNoOpOrUnsupportedRuntime() {
+    void attachesRegardlessOfLegacyRuntimeCapabilityWithoutReplacingIt() {
         audio.setDeterministicAudioRuntime(NoOpDeterministicAudioRuntime.INSTANCE);
-        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(1));
+        audio.beginLiveCaptureAudio(1).close();
 
-        audio.setDeterministicAudioRuntime(new UnsupportedRuntime());
-        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(1));
+        UnsupportedRuntime unsupported = new UnsupportedRuntime();
+        audio.setDeterministicAudioRuntime(unsupported);
+        audio.beginLiveCaptureAudio(1).close();
     }
 
     @Test

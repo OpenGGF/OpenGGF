@@ -42,7 +42,7 @@ class TestAudioManagerRuntimeInstallation {
     }
 
     @Test
-    void lwjglBackendKeepsLegacyPresentationUntilLiveCaptureStarts() {
+    void liveCaptureNeverSwitchesLegacyRuntimeOrTouchesBackendStreams() {
         TestLwjglBackend backend = new TestLwjglBackend();
         AudioManager audio = AudioManager.getInstance();
         audio.setBackend(backend);
@@ -53,47 +53,50 @@ class TestAudioManagerRuntimeInstallation {
         assertSame(NoOpDeterministicAudioRuntime.INSTANCE, backend.attachedRuntime);
 
         LiveCaptureAudioHandle capture = audio.beginLiveCaptureAudio(60);
-        assertInstanceOf(StreamBackedDeterministicAudioRuntime.class, backend.attachedRuntime);
-
-        audio.advanceGameplayFrameAudio();
+        assertSame(NoOpDeterministicAudioRuntime.INSTANCE, backend.attachedRuntime);
         backend.pumpSpeaker();
-        short[] captured = new short[4];
+        assertArrayEquals(new short[] {1035, 1035}, backend.firstSpeakerFrames(1),
+                "attaching capture must not rebind or advance backend streams");
 
-        assertArrayEquals(new short[] {1035, 1035, 1036, 1036}, backend.firstSpeakerFrames(2));
-        assertEquals(2, capture.drainPresentationFrame(captured));
-        assertArrayEquals(new short[] {1035, 1035, 1036, 1036}, captured,
-                "speaker draining must not consume the capture-owned PCM");
-        assertEquals(2, capture.totalStereoFrames());
-        assertEquals(new AudioFrameClock.Snapshot(120, 60, 2, 0),
-                capture.clockSnapshot());
+        audio.presentFrame(com.openggf.audio.presentation.PresentationMode.FORWARD);
+        short[] captured = new short[capture.maxStereoFramesPerPacket() * 2];
 
-        audio.advanceGameplayFrameAudio();
+        int capturedFrames = capture.drainPresentationFrame(captured);
+        assertEquals(capture.sampleRate() / 60, capturedFrames);
+        for (int i = 0; i < capturedFrames * 2; i++) {
+            assertEquals(0, captured[i]);
+        }
+        assertEquals(capturedFrames, capture.totalStereoFrames());
+        assertEquals(capturedFrames, capture.clockSnapshot().totalSamplesProduced());
+
         capture.close();
         assertSame(NoOpDeterministicAudioRuntime.INSTANCE, backend.attachedRuntime);
         backend.pumpSpeaker();
-        assertArrayEquals(new short[] {
-                1037, 1037, 1038, 1038, 1039, 1039
-        }, backend.firstSpeakerFrames(3), "stop must bridge queued runtime PCM into legacy playback");
+        assertArrayEquals(new short[] {2059, 2059}, backend.firstSpeakerFrames(1),
+                "detaching capture must not flush or migrate backend streams");
     }
 
     @Test
-    void stoppingCaptureDuringRewindDefersLegacyRestoreUntilReverseEnds() {
+    void stoppingCaptureDuringRewindLeavesProducerReverseOwnershipUntouched() {
         TestLwjglBackend backend = new TestLwjglBackend();
         AudioManager audio = AudioManager.getInstance();
         audio.setBackend(backend);
         backend.installLegacyStreams(new CountingStereoStream(1), null);
 
         LiveCaptureAudioHandle capture = audio.beginLiveCaptureAudio(60);
-        audio.advanceGameplayFrameAudio();
         audio.beginReverseAudioPresentation();
         capture.close();
 
-        assertInstanceOf(StreamBackedDeterministicAudioRuntime.class, backend.attachedRuntime,
-                "the rewind cursor owner must remain attached until reverse presentation ends");
+        assertSame(NoOpDeterministicAudioRuntime.INSTANCE, backend.attachedRuntime);
+        org.junit.jupiter.api.Assertions.assertTrue(
+                AudioManagerTestDiagnostics.producerFingerprint(audio).reverseActive(),
+                "detaching capture must not end held reverse presentation");
 
         audio.endReverseAudioPresentation();
 
         assertSame(NoOpDeterministicAudioRuntime.INSTANCE, backend.attachedRuntime);
+        org.junit.jupiter.api.Assertions.assertFalse(
+                AudioManagerTestDiagnostics.producerFingerprint(audio).reverseActive());
     }
 
     private static class CapturingNullBackend extends NullAudioBackend {

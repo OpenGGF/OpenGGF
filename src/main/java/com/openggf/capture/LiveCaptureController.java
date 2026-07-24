@@ -1,24 +1,34 @@
 package com.openggf.capture;
 
+import com.openggf.audio.ClockedSilenceAudioHandle;
 import com.openggf.audio.LiveCaptureAudioHandle;
+import com.openggf.audio.runtime.AudioFrameClock;
 
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntSupplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public final class LiveCaptureController implements AutoCloseable {
+    private static final Logger LOGGER =
+            Logger.getLogger(LiveCaptureController.class.getName());
+
     public enum State { INACTIVE, STARTING, ACTIVE, STOPPING, FAILED }
     public enum StopReason { USER, VIEWPORT_CHANGED, CAPTURE_ERROR, SHUTDOWN }
     public interface AudioHandleFactory { LiveCaptureAudioHandle open(int frameRate); }
     public interface FrameGrabberFactory { VideoFrameGrabber create(CaptureViewport viewport); }
     public interface RecorderFactory { CaptureRecorder create(CaptureViewport viewport, int frameRate); }
-    public record Dependencies(AudioHandleFactory audio, FrameGrabberFactory grabber,
+    public record Dependencies(AudioHandleFactory audio, IntSupplier audioSampleRate,
+                               FrameGrabberFactory grabber,
                                RecorderFactory recorder, ExecutorService finalizer,
                                Duration shutdownTimeout) {
         public Dependencies {
             Objects.requireNonNull(audio);
+            Objects.requireNonNull(audioSampleRate);
             Objects.requireNonNull(grabber);
             Objects.requireNonNull(recorder);
             Objects.requireNonNull(finalizer);
@@ -36,6 +46,8 @@ public final class LiveCaptureController implements AutoCloseable {
     private short[] pcm;
     private long frameIndex;
     private Future<?> finalization;
+    private boolean audioWarningLogged;
+    private AudioFrameClock.Snapshot nextAudioPhase;
 
     public LiveCaptureController(Dependencies deps) {
         this.deps = deps;
@@ -45,9 +57,23 @@ public final class LiveCaptureController implements AutoCloseable {
         if (state == State.ACTIVE || state == State.STARTING || state == State.STOPPING) return;
         state = State.STARTING;
         lastFailure = null;
+        audioWarningLogged = false;
         try {
-            audio = deps.audio.open(frameRate);
-            pcm = new short[Math.multiplyExact(audio.maxStereoFramesPerPacket(), 2)];
+            try {
+                audio = deps.audio.open(frameRate);
+                nextAudioPhase = audio.clockSnapshot();
+                pcm = new short[Math.multiplyExact(
+                        audio.maxStereoFramesPerPacket(), 2)];
+            } catch (Throwable audioFailure) {
+                Throwable closeFailure = closeAudioOnCaller();
+                if (closeFailure != null) audioFailure.addSuppressed(closeFailure);
+                warnAudioOnce(audioFailure);
+                audio = new ClockedSilenceAudioHandle(
+                        Math.max(1, deps.audioSampleRate.getAsInt()), frameRate);
+                nextAudioPhase = audio.clockSnapshot();
+                pcm = new short[Math.multiplyExact(
+                        audio.maxStereoFramesPerPacket(), 2)];
+            }
             grabber = deps.grabber.create(viewport);
             recorder = deps.recorder.create(viewport, frameRate);
             recorder.start(viewport.width(), viewport.height(), frameRate, audio.sampleRate());
@@ -67,7 +93,7 @@ public final class LiveCaptureController implements AutoCloseable {
         }
         try {
             byte[] rgba = grabber.grab();
-            int samples = audio.drainPresentationFrame(pcm);
+            int samples = drainAudioOrSilence();
             recorder.submit(new CapturedFrame(rgba, viewport.width(), viewport.height(),
                     pcm, samples, frameIndex++));
         } catch (Throwable failure) {
@@ -80,11 +106,7 @@ public final class LiveCaptureController implements AutoCloseable {
         state = State.STOPPING;
         Throwable audioCloseFailure = closeAudioOnCaller();
         if (audioCloseFailure != null) {
-            if (recorder != null) recorder.abort();
-            lastFailure = audioCloseFailure;
-            state = State.FAILED;
-            clearResources();
-            return;
+            warnAudioOnce(audioCloseFailure);
         }
         CaptureRecorder stoppingRecorder = recorder;
         finalization = deps.finalizer.submit(() -> {
@@ -144,7 +166,10 @@ public final class LiveCaptureController implements AutoCloseable {
     }
 
     private void failAndAbort(Throwable failure) {
-        closeAudioOnCaller();
+        Throwable closeFailure = closeAudioOnCaller();
+        if (closeFailure != null && closeFailure != failure) {
+            failure.addSuppressed(closeFailure);
+        }
         if (recorder != null) recorder.abort();
         lastFailure = failure;
         state = State.FAILED;
@@ -156,7 +181,6 @@ public final class LiveCaptureController implements AutoCloseable {
             try {
                 audio.close();
             } catch (Throwable closeFailure) {
-                if (lastFailure == null) lastFailure = closeFailure;
                 return closeFailure;
             } finally {
                 audio = null;
@@ -165,10 +189,42 @@ public final class LiveCaptureController implements AutoCloseable {
         return null;
     }
 
+    private int drainAudioOrSilence() {
+        AudioFrameClock.Snapshot phaseBeforeDrain = nextAudioPhase;
+        try {
+            phaseBeforeDrain = audio.clockSnapshot();
+            int frames = audio.drainPresentationFrame(pcm);
+            nextAudioPhase = audio.clockSnapshot();
+            return frames;
+        } catch (Throwable audioFailure) {
+            Throwable closeFailure = closeAudioOnCaller();
+            if (closeFailure != null) audioFailure.addSuppressed(closeFailure);
+            warnAudioOnce(audioFailure);
+            audio = ClockedSilenceAudioHandle.atPhase(phaseBeforeDrain);
+            if (pcm.length < audio.maxStereoFramesPerPacket() * 2) {
+                pcm = new short[audio.maxStereoFramesPerPacket() * 2];
+            }
+            int frames = audio.drainPresentationFrame(pcm);
+            nextAudioPhase = audio.clockSnapshot();
+            return frames;
+        }
+    }
+
+    private void warnAudioOnce(Throwable failure) {
+        if (!audioWarningLogged) {
+            audioWarningLogged = true;
+            lastFailure = failure;
+            LOGGER.log(Level.WARNING,
+                    "Live viewport recording audio failed; continuing with stereo silence",
+                    failure);
+        }
+    }
+
     private void clearResources() {
         viewport = null;
         grabber = null;
         recorder = null;
         pcm = null;
+        nextAudioPhase = null;
     }
 }

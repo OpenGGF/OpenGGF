@@ -602,9 +602,10 @@ public final class AudioPresentationProducer {
                     sampleRate, captureFrameRate);
             captureClock.restoreSnapshot(new AudioFrameClock.Snapshot(
                     producerClockSnapshot.sampleRate(),
-                    producerClockSnapshot.frameRate(),
+                    captureFrameRate,
                     0,
-                    producerClockSnapshot.remainder()));
+                    producerClockSnapshot.frameRate() == captureFrameRate
+                            ? producerClockSnapshot.remainder() : 0));
             pending = new short[
                     Math.max(maxStereoFrames, captureMaxStereoFrames)
                             * CHANNELS];

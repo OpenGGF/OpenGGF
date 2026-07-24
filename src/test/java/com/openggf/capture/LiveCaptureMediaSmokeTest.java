@@ -13,6 +13,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.time.Duration;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -96,6 +101,85 @@ class LiveCaptureMediaSmokeTest {
                             + expectedDuration + " by more than one sample");
         } finally {
             recorder.abort();
+            try (var files = Files.list(directory)) {
+                files.forEach(path -> {
+                    try {
+                        Files.deleteIfExists(path);
+                    } catch (IOException ignored) {
+                    }
+                });
+            }
+            Files.deleteIfExists(directory);
+        }
+    }
+
+    @Test
+    void forcedAudioAttachmentFailureStillProducesStereoTrackAndCompleteVideo() throws Exception {
+        Optional<Path> ffmpeg = FfmpegEncoder.findFfmpeg();
+        Optional<Path> ffprobe = findFfprobe();
+        Assumptions.assumeTrue(ffmpeg.isPresent() && ffprobe.isPresent(),
+                "ffmpeg and ffprobe must both be on PATH");
+
+        Path directory = Files.createTempDirectory("live-capture-silent-media-");
+        AtomicReference<Path> output = new AtomicReference<>();
+        CaptureRecorder recorder = new CaptureRecorder(
+                new FfmpegEncoder(ffmpeg.orElseThrow().toString(), 1),
+                BackpressurePolicy.BLOCK, 8, directory, "live", "silent") {
+            @Override public Path stop() throws CaptureException {
+                Path finished = super.stop();
+                output.set(finished);
+                return finished;
+            }
+        };
+        ExecutorService finalizer = Executors.newSingleThreadExecutor();
+        LiveCaptureController controller = new LiveCaptureController(
+                new LiveCaptureController.Dependencies(
+                        rate -> { throw new IllegalStateException("forced audio attach failure"); },
+                        () -> SAMPLE_RATE,
+                        viewport -> new VideoFrameGrabber() {
+                            private int frame;
+                            @Override public int width() { return viewport.width(); }
+                            @Override public int height() { return viewport.height(); }
+                            @Override public byte[] grab() { return viewportFrame(frame++); }
+                        },
+                        (viewport, rate) -> recorder,
+                        finalizer,
+                        Duration.ofSeconds(10)));
+        try {
+            CaptureViewport viewport = new CaptureViewport(0, 0, WIDTH, HEIGHT);
+            controller.start(viewport, FRAME_RATE);
+            assertEquals(LiveCaptureController.State.ACTIVE, controller.state());
+            for (int frame = 0; frame < FRAME_COUNT; frame++) {
+                controller.capturePresentedFrame(viewport);
+            }
+            controller.requestStop(LiveCaptureController.StopReason.USER);
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (controller.state() == LiveCaptureController.State.STOPPING
+                    && System.nanoTime() < deadline) {
+                Thread.sleep(5);
+            }
+            assertEquals(LiveCaptureController.State.INACTIVE, controller.state());
+            assertTrue(output.get() != null && Files.exists(output.get()));
+
+            JsonNode probe = new ObjectMapper().readTree(run(ffprobe.orElseThrow().toString(),
+                    "-v", "error", "-count_frames", "-show_streams", "-show_format",
+                    "-of", "json", output.get().toString()));
+            JsonNode video = stream(probe, "video");
+            JsonNode audio = stream(probe, "audio");
+            assertEquals(2, audio.path("channels").asInt());
+            assertEquals(FRAME_COUNT, video.path("nb_read_frames").asInt());
+            assertTrue(Math.abs(mediaDurationSeconds(audio, probe.path("format"))
+                    - FRAME_COUNT / (double) FRAME_RATE) <= 1.0 / SAMPLE_RATE);
+
+            byte[] decoded = run(ffmpeg.orElseThrow().toString(), "-v", "error",
+                    "-i", output.get().toString(), "-map", "0:a:0", "-f", "s16le",
+                    "-acodec", "pcm_s16le", "-ac", "2", "-ar",
+                    Integer.toString(SAMPLE_RATE), "pipe:1");
+            for (byte sample : decoded) assertEquals(0, sample);
+            assertEquals(FRAME_COUNT * STEREO_FRAMES_PER_VIDEO_FRAME * 4,
+                    decoded.length);
+        } finally {
+            controller.close();
             try (var files = Files.list(directory)) {
                 files.forEach(path -> {
                     try {

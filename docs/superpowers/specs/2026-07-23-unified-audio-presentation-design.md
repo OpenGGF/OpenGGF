@@ -314,6 +314,15 @@ The MKV retains a stereo audio track even when capture audio is unavailable.
 Silence length is derived from the capture-owned clock so A/V duration remains
 correct.
 
+The sole manual audio-tap failure hook is the development-only JVM property
+`openggf.debug.liveCaptureAudioFailAfterFrames=N`. It is disabled when absent
+or set to `-1`. A non-negative `N` fails before drain `N + 1`, after exactly
+`N` successful recording-handle drains, without changing the producer,
+speaker sink, voices, or video path. Malformed values and values below `-1`
+warn and use the disabled behavior. Real attachment, drain, and close failures
+must follow the same clocked-silence degradation path; the hook does not weaken
+that requirement.
+
 ## Concurrency and Real-Time Constraints
 
 - Audio commands enter a bounded frame-boundary queue with reserved structural

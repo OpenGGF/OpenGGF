@@ -99,7 +99,8 @@ class LiveCapturePresentationCoordinatorTest {
                     .thenAnswer(ignored -> audioClock.captureSnapshot());
             when(grabber.grab()).thenReturn(new byte[viewport.rgbaByteSize()]);
             controller = new LiveCaptureController(new LiveCaptureController.Dependencies(
-                    rate -> audio, ignored -> grabber, (ignored, rate) -> recorder,
+                    rate -> audio, () -> 48_000,
+                    ignored -> grabber, (ignored, rate) -> recorder,
                     Executors.newSingleThreadExecutor(), Duration.ofSeconds(1)));
         }
     }
@@ -123,6 +124,7 @@ class LiveCapturePresentationCoordinatorTest {
                     }
                     public void close() {}
                 },
+                () -> 48_000,
                 viewport -> new VideoFrameGrabber() {
                     public int width() { return viewport.width(); }
                     public int height() { return viewport.height(); }

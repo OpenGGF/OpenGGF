@@ -287,6 +287,15 @@ Both paths require `ffmpeg` on `PATH`; live media verification and inspection
 also use `ffprobe`. Live recording is distinct from the Shift+F9
 `debug.recording.recordKey` input/movie recorder.
 
+Live recording treats an unavailable or failed audio tap as an audio-only
+failure: video continues and the MKV retains a phase-correct stereo-silence
+track. Encoder, output-file, and mux failures still stop the whole recording.
+For development validation only, launch the JVM with
+`-Dopenggf.debug.liveCaptureAudioFailAfterFrames=N` to inject a tap failure
+before drain `N + 1`, after exactly `N` successful audio-frame drains. The
+property is not stored in `config.yaml`; it is disabled when absent or set to
+`-1`. Invalid values and values below `-1` warn and disable injection.
+
 These keys set the code defaults; trace CLI flags override the trace-specific
 ones. The bundled `config.yaml` supplies the live toggle default.
 

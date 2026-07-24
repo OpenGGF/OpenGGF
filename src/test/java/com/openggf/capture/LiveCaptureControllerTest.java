@@ -1,6 +1,7 @@
 package com.openggf.capture;
 
 import com.openggf.audio.LiveCaptureAudioHandle;
+import com.openggf.audio.DebugFailAfterFramesAudioHandle;
 import com.openggf.audio.runtime.AudioFrameClock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -67,34 +68,100 @@ class LiveCaptureControllerTest {
         assertEquals(LiveCaptureController.State.ACTIVE, c.state());
     }
 
-    @Test void frameFailuresAbortAndEnterFailed() {
+    @Test void audioDrainFailureClosesTapOnceAndContinuesCurrentFrameWithSilence() {
         Harness h = new Harness();
         LiveCaptureController c = h.controller();
         c.start(h.viewport, 60);
+        c.capturePresentedFrame(h.viewport);
         h.failDrain = true;
         c.capturePresentedFrame(h.viewport);
-        assertEquals(LiveCaptureController.State.FAILED, c.state());
-        assertTrue(h.recorder.aborted);
-        assertFalse(c.indicatorVisible());
+        h.failDrain = false;
+        c.capturePresentedFrame(h.viewport);
+        assertEquals(LiveCaptureController.State.ACTIVE, c.state());
+        assertFalse(h.recorder.aborted);
+        assertEquals(List.of(0L, 1L, 2L), h.recorder.indexes);
+        assertEquals(List.of(800, 800, 800), h.recorder.frames.stream()
+                .map(CapturedFrame::sampleCount).toList());
+        assertSilent(h.recorder.frames.get(1));
+        assertSilent(h.recorder.frames.get(2));
+        assertEquals(1, h.audioCloseCalls);
     }
 
-    @Test void audioCloseFailureAbortsAndEntersFailed() {
+    @Test void replacementSilenceContinuesFailedHandlesExactClockPhase() {
+        Harness h = new Harness();
+        h.sampleRate = 5;
+        h.advanceThenFailDrain = true;
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 2);
+        c.capturePresentedFrame(h.viewport);
+        h.failDrain = true;
+        c.capturePresentedFrame(h.viewport);
+        c.capturePresentedFrame(h.viewport);
+        assertEquals(List.of(2, 3, 2), h.recorder.frames.stream()
+                .map(CapturedFrame::sampleCount).toList(),
+                "fallback resumes from the pre-failure phase, ignoring a mutated failed clock");
+        assertEquals(List.of(0L, 1L, 2L), h.recorder.indexes);
+    }
+
+    @Test void debugWrapperFailureUsesTheSameClockedSilenceDegradationPath() {
+        Harness h = new Harness();
+        h.debugFailAfterFrames = 1;
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+        c.capturePresentedFrame(h.viewport);
+        c.capturePresentedFrame(h.viewport);
+        c.capturePresentedFrame(h.viewport);
+        assertEquals(LiveCaptureController.State.ACTIVE, c.state());
+        assertEquals(List.of(0L, 1L, 2L), h.recorder.indexes);
+        assertFalse(isSilent(h.recorder.frames.get(0)));
+        assertTrue(isSilent(h.recorder.frames.get(1)));
+        assertTrue(isSilent(h.recorder.frames.get(2)));
+        assertEquals(1, h.audioCloseCalls);
+    }
+
+    @Test void audioFailureIsReportedOnceAndNextRecordingGetsFreshAudioState() throws Exception {
+        Harness h = new Harness();
+        h.debugFailAfterFrames = 0;
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+        c.capturePresentedFrame(h.viewport);
+        Throwable firstFailure = c.lastFailure();
+        c.capturePresentedFrame(h.viewport);
+        assertSame(firstFailure, c.lastFailure(), "remaining silent frames do not re-report");
+        c.requestStop(LiveCaptureController.StopReason.USER);
+        awaitNotStopping(c);
+
+        h.debugFailAfterFrames = -1;
+        c.start(h.viewport, 60);
+        assertNull(c.lastFailure());
+        c.capturePresentedFrame(h.viewport);
+        assertFalse(isSilent(h.recorder.frames.get(h.recorder.frames.size() - 1)));
+    }
+
+    @Test void audioCloseFailureDuringStopDoesNotAbortValidVideo() throws Exception {
         Harness h = new Harness();
         h.failAudioClose = true;
         LiveCaptureController c = h.controller();
         c.start(h.viewport, 60);
+        c.capturePresentedFrame(h.viewport);
         c.requestStop(LiveCaptureController.StopReason.USER);
-        assertEquals(LiveCaptureController.State.FAILED, c.state());
-        assertTrue(h.recorder.aborted);
+        awaitNotStopping(c);
+        assertEquals(LiveCaptureController.State.INACTIVE, c.state());
+        assertFalse(h.recorder.aborted);
+        assertEquals(List.of("audio-close", "recorder-stop"), h.events);
     }
 
-    @Test void audioAcquireFailureIsReported() {
+    @Test void audioAttachFailureStartsActiveVideoWithSilentStereoTrack() {
         Harness h = new Harness();
         h.failAudio = true;
         LiveCaptureController c = h.controller();
         c.start(h.viewport, 60);
-        assertEquals(LiveCaptureController.State.FAILED, c.state());
-        assertNotNull(c.lastFailure());
+        assertEquals(LiveCaptureController.State.ACTIVE, c.state());
+        c.capturePresentedFrame(h.viewport);
+        assertEquals(List.of(0L), h.recorder.indexes);
+        assertEquals(800, h.recorder.frames.get(0).sampleCount());
+        assertSilent(h.recorder.frames.get(0));
+        assertFalse(h.recorder.aborted);
     }
 
     @Test void recorderOpenFailureAbortsRecorderAndClosesAudio() {
@@ -176,6 +243,7 @@ class LiveCaptureControllerTest {
         executors.add(finalizer);
         LiveCaptureController controller = new LiveCaptureController(
                 new LiveCaptureController.Dependencies(rate -> quietAudio(rate),
+                        () -> 48_000,
                         v -> zeroGrabber(v), (v, rate) -> actualRecorder,
                         finalizer, Duration.ofMillis(300)));
         controller.start(new CaptureViewport(0, 0, 1, 1), 60);
@@ -264,7 +332,11 @@ class LiveCaptureControllerTest {
         final CaptureViewport viewport = new CaptureViewport(0, 0, 320, 224);
         final FakeRecorder recorder = new FakeRecorder();
         final List<String> events = new ArrayList<>();
-        boolean failAudio, failRecorderCreate, failDrain, failGrab, failAudioClose, audioClosed;
+        boolean failAudio, failRecorderCreate, failDrain, advanceThenFailDrain,
+                failGrab, failAudioClose, audioClosed;
+        int sampleRate = 48_000;
+        int debugFailAfterFrames = -1;
+        int audioCloseCalls;
         int grabs;
 
         LiveCaptureController controller() {
@@ -273,15 +345,22 @@ class LiveCaptureControllerTest {
             return new LiveCaptureController(new LiveCaptureController.Dependencies(
                     rate -> {
                         if (failAudio) throw new IllegalStateException("audio");
-                        return new LiveCaptureAudioHandle() {
+                        LiveCaptureAudioHandle raw = new LiveCaptureAudioHandle() {
                             private final AudioFrameClock clock =
-                                    new AudioFrameClock(48_000, rate);
-                            public int sampleRate() { return 48000; }
+                                    new AudioFrameClock(sampleRate, rate);
+                            public int sampleRate() { return sampleRate; }
                             public int frameRate() { return rate; }
-                            public int maxStereoFramesPerPacket() { return 801; }
+                            public int maxStereoFramesPerPacket() {
+                                return Math.floorDiv(sampleRate + rate - 1, rate);
+                            }
                             public int drainPresentationFrame(short[] target) {
-                                if (failDrain) throw new IllegalStateException("drain");
-                                return clock.samplesForNextFrame();
+                                if (failDrain) {
+                                    if (advanceThenFailDrain) clock.samplesForNextFrame();
+                                    throw new IllegalStateException("drain");
+                                }
+                                int frames = clock.samplesForNextFrame();
+                                java.util.Arrays.fill(target, 0, frames * 2, (short) 31);
+                                return frames;
                             }
                             public long totalStereoFrames() {
                                 return clock.totalSamplesProduced();
@@ -291,11 +370,15 @@ class LiveCaptureControllerTest {
                             }
                             public void close() {
                                 audioClosed = true;
+                                audioCloseCalls++;
                                 events.add("audio-close");
                                 if (failAudioClose) throw new IllegalStateException("audio close");
                             }
                         };
+                        return DebugFailAfterFramesAudioHandle.maybeWrap(
+                                raw, debugFailAfterFrames);
                     },
+                    () -> sampleRate,
                     v -> new VideoFrameGrabber() {
                         public int width() { return v.width(); }
                         public int height() { return v.height(); }
@@ -313,6 +396,7 @@ class LiveCaptureControllerTest {
 
         final class FakeRecorder extends CaptureRecorder {
             final List<Long> indexes = new ArrayList<>();
+            final List<CapturedFrame> frames = new ArrayList<>();
             boolean aborted, failStart, failSubmit, failStop;
             java.util.concurrent.CountDownLatch stopGate;
 
@@ -330,6 +414,7 @@ class LiveCaptureControllerTest {
             @Override public void submit(CapturedFrame frame) throws CaptureException {
                 if (failSubmit) throw new CaptureException("submit");
                 indexes.add(frame.frameIndex());
+                frames.add(frame);
             }
             @Override public Path stop() throws CaptureException {
                 if (stopGate != null) try { stopGate.await(); } catch (InterruptedException e) {
@@ -341,5 +426,16 @@ class LiveCaptureControllerTest {
             }
             @Override public void abort() { aborted = true; events.add("recorder-abort"); }
         }
+    }
+
+    private static void assertSilent(CapturedFrame frame) {
+        assertTrue(isSilent(frame));
+    }
+
+    private static boolean isSilent(CapturedFrame frame) {
+        for (int i = 0; i < frame.sampleCount() * 2; i++) {
+            if (frame.pcm()[i] != 0) return false;
+        }
+        return true;
     }
 }

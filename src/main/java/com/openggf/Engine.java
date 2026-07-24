@@ -18,6 +18,7 @@ import com.openggf.editor.LevelEditorController;
 import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.editor.render.EditorOverlayRenderer;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.DebugFailAfterFramesAudioHandle;
 import com.openggf.audio.LWJGLAudioBackend;
 import com.openggf.capture.*;
 import com.openggf.camera.Camera;
@@ -361,12 +362,29 @@ public class Engine {
 			return thread;
 		});
 		return new LiveCaptureController(new LiveCaptureController.Dependencies(
-				audioManager::beginLiveCaptureAudio,
+				frameRate -> DebugFailAfterFramesAudioHandle.maybeWrap(
+						audioManager.beginLiveCaptureAudio(frameRate),
+						resolveLiveCaptureAudioFailAfterFrames()),
+				audioManager::outputSampleRate,
 				viewport -> new GlReadPixelsGrabber(
 						viewport.x(), viewport.y(), viewport.width(), viewport.height()),
 				recorderFactory::create,
 				finalizer,
 				Duration.ofSeconds(10)));
+	}
+
+	static int resolveLiveCaptureAudioFailAfterFrames() {
+		String raw = System.getProperty(
+				"openggf.debug.liveCaptureAudioFailAfterFrames", "-1");
+		try {
+			int value = Integer.parseInt(raw);
+			if (value >= -1) return value;
+		} catch (NumberFormatException ignored) {
+			// Warn below using the same safe-disabled behavior.
+		}
+		LOGGER.warning("Invalid openggf.debug.liveCaptureAudioFailAfterFrames='"
+				+ raw + "'; failure injection is disabled");
+		return -1;
 	}
 
 	static String buildWindowTitle() {
