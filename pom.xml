@@ -23,6 +23,9 @@
         <test.slf4j.verbosity>ERROR</test.slf4j.verbosity>
         <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
         <surefire.forkCount>4</surefire.forkCount>
+        <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
+             verify-build-jdk execution. -->
+        <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
         <native.macos.package.skip>true</native.macos.package.skip>
     </properties>
 
@@ -608,6 +611,44 @@
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>3.1.0</version>
                 <executions>
+                    <!-- Fail fast when the build JVM is not the JDK the project targets.
+                         Surefire forks inherit Maven's JVM, not whatever `java` is on PATH,
+                         so a newer JDK silently reaches the tests: Mockito/ByteBuddy then
+                         misbehave and the suite reports hundreds of phantom failures that
+                         look like real regressions. Cheaper to stop here with an
+                         actionable message. -->
+                    <execution>
+                        <id>verify-build-jdk</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <condition property="openggf.jdk.ok">
+                                    <or>
+                                        <matches string="${java.version}" pattern="^21\."/>
+                                        <istrue value="${openggf.jdk.check.skip}"/>
+                                    </or>
+                                </condition>
+                                <fail unless="openggf.jdk.ok">
+Wrong build JDK: Maven is running on Java ${java.version} (${java.home}).
+
+OpenGGF targets Java 21, and CI and the release workflow both build and test on
+temurin 21. Surefire forks inherit Maven's JVM rather than the `java` on PATH, so
+on a newer JDK the test suite reports large numbers of phantom failures (Mockito
+stubbing errors leaking across classes, ROM fixtures failing to load) that have
+nothing to do with your change.
+
+Fix: point JAVA_HOME at a JDK 21 before building, e.g.
+  export JAVA_HOME=/path/to/jdk-21    # macOS: $(/usr/libexec/java_home -v 21)
+Verify with `mvn -v` — it must report "Java version: 21".
+
+To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
+                                </fail>
+                            </target>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>capture-git-build-identity</id>
                         <phase>initialize</phase>
