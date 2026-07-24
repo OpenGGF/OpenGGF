@@ -43,6 +43,8 @@
     <Compile Include="tests/NoReplacePublisherTests.cs" />
     <Compile Include="tests/EndToEndTests.cs" />
     <Compile Include="tests/S1AuxEventEngineTests.cs" />
+    <Compile Include="tests/S1CompleteRunCaptureRunnerTests.cs" />
+    <Compile Include="tests/S1CompleteRunMetadataWriterTests.cs" />
     <Compile Include="tests/S1SmokeRecorderTests.cs" />
     <Compile Include="tests/S1TraceCaptureRunnerTests.cs" />
     <Compile Include="tests/S1TraceDifferentialTests.cs" />

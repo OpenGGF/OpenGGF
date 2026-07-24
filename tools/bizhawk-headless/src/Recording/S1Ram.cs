@@ -28,6 +28,16 @@ namespace OpenGGF.BizHawk.Headless
         public const int ObjStateForwardCounter = 0xFC00;  // u8 v_objstate[0]
         public const int ObjStateBackwardCounter = 0xFC01; // u8 v_objstate[1]
 
+        // Complete-run per-frame diagnostic state (s1_complete_run_recorder.lua).
+        public const int ObjState = 0xFC00;              // byte[0xC0] v_objstate respawn-bit array
+        public const int ObjStateSize = 0xC0;            // ds.b $C0 (FFFC00..FFFCC0)
+        public const int Limitbtm1 = 0xF726;             // u16be v_limitbtm1
+        public const int Limitbtm2 = 0xF72E;             // u16be v_limitbtm2
+        public const int Lookshift = 0xF73E;             // u16be v_lookshift
+        public const int BgScrollVert = 0xF75C;          // u8 f_bgscrollvert
+        public const int Oscillate = 0xFE5E;             // u16be v_oscillate + byte[0x40] values
+        public const int OscillateSize = 0x42;           // $2 bitfield word + $40 values array
+
         // Object table (SST): 128 slots of 0x40 bytes; slot 0 is the player.
         public const int PlayerBase = 0xD000;
         public const int ObjectSlotSize = 0x40;
@@ -49,6 +59,7 @@ namespace OpenGGF.BizHawk.Headless
         public const int OffAnimId = 0x1C;               // u8 animation ID
         public const int OffStatus = 0x22;               // u8 status flags
         public const int OffRoutine = 0x24;              // u8 obRoutine
+        public const int OffRoutine2 = 0x25;             // u8 ob2ndRout (secondary routine)
         public const int OffAngle = 0x26;                // u8 terrain angle
         public const int OffSubtype = 0x28;              // u8 subtype
         public const int OffStandOnObj = 0x3D;           // u8 standonobject (SST index)

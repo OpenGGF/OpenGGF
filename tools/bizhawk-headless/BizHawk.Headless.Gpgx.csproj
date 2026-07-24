@@ -68,6 +68,8 @@
     <Compile Include="src/Program.cs" />
     <Compile Include="src/Recording/NoReplacePublisher.cs" />
     <Compile Include="src/Recording/S1AuxEventEngine.cs" />
+    <Compile Include="src/Recording/S1CompleteRunCaptureRunner.cs" />
+    <Compile Include="src/Recording/S1CompleteRunMetadataWriter.cs" />
     <Compile Include="src/Recording/S1InputMask.cs" />
     <Compile Include="src/Recording/S1Ram.cs" />
     <Compile Include="src/Recording/S1SmokeRecorder.cs" />

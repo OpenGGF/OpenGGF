@@ -539,6 +539,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public byte[] Ram { get; private set; }
             public int CompletedFrame { get; private set; }
             public bool IsLagged { get; set; }
+            public int LagCount { get; set; }
 
             public void ClearButtons()
             {
