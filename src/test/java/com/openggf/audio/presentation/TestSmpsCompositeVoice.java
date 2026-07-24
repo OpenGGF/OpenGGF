@@ -263,7 +263,6 @@ class TestSmpsCompositeVoice {
         @Override protected void hookStopAndClearAllMusicBuffers() { }
         @Override protected void hookRestartStreamIfDry() { }
         @Override protected void hookStopAndDeleteWavSfxSources() { }
-        @Override protected void hookUploadStreamBuffer(int bufferId, short[] pcm, int sampleRate) { }
         @Override protected void hookPlayWavSfx(String sfxName, float pitch) { }
         @Override protected void hookCleanupStoppedWavSfx() { }
         @Override protected void hookPause() { }

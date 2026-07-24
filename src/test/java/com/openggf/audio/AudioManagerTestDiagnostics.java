@@ -31,6 +31,29 @@ public final class AudioManagerTestDiagnostics {
     }
 
     /**
+     * Number of logical audio restores actually published to the presentation
+     * producer. Held rewind must defer every per-frame restore and publish
+     * exactly one at release.
+     */
+    public static int logicalRestorePublications(AudioManager audio) {
+        return audio.logicalRestorePublicationsForTesting();
+    }
+
+    public static void resetLogicalRestorePublications(AudioManager audio) {
+        audio.resetLogicalRestorePublicationsForTesting();
+    }
+
+    /**
+     * Makes the next reverse-release publication throw exactly once. The
+     * producer is the only restore owner, so a test backend can no longer fail
+     * the publication step; this keeps the retained-and-retried release
+     * contract testable from a production host.
+     */
+    public static void failNextReverseRelease(AudioManager audio) {
+        audio.failNextReverseReleaseForTesting();
+    }
+
+    /**
      * Pre-decodes a fallback WAV SFX asset into the presentation source
      * factory's cache so {@code playSfx(name)} resolves a sample voice without
      * a packaged classpath asset.

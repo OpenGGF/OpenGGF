@@ -19,11 +19,7 @@ import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
-import com.openggf.audio.rewind.SmpsDriverSnapshot;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.tests.TestEnvironment;
@@ -32,7 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -54,8 +49,6 @@ class TestAudioManagerPresentationModes {
     @Test
     void updatePumpsSinkButNeverPresentsAnotherPacket() throws Exception {
         AudioManager audio = AudioManager.getInstance();
-        CountingRuntime obsoleteRuntime = new CountingRuntime();
-        installRuntime(audio, obsoleteRuntime);
 
         audio.presentFrame(PresentationMode.FORWARD);
         long presented = AudioManagerTestDiagnostics
@@ -70,8 +63,6 @@ class TestAudioManagerPresentationModes {
         assertEquals(producerSamples, AudioManagerTestDiagnostics
                 .producerFingerprint(audio).clock().totalSamplesProduced(),
                 "device pumping must not advance the authoritative clock");
-        assertEquals(0, obsoleteRuntime.advances,
-                "the promoted producer is the sole presentation clock");
     }
 
     @Test
@@ -131,15 +122,13 @@ class TestAudioManagerPresentationModes {
     }
 
     @Test
-    void rewindPresentationControlsNeverReachRetiredRuntimeOrBackend()
+    void rewindPresentationControlsNeverReachTheBackend()
             throws Exception {
         AudioManager audio = AudioManager.getInstance();
         AudioTestFixtures.RecordingAudioBackend backend =
                 new AudioTestFixtures.RecordingAudioBackend();
         audio.setBackend(backend);
         backend.clear();
-        CountingRuntime obsoleteRuntime = new CountingRuntime();
-        installRuntime(audio, obsoleteRuntime);
 
         audio.setRewindHistoryArmed(true);
         audio.clearPcmHistory();
@@ -148,7 +137,6 @@ class TestAudioManagerPresentationModes {
         audio.endReverseAudioPresentation();
 
         assertEquals(0, backend.totalCalls());
-        assertEquals(0, obsoleteRuntime.presentationControlCalls);
     }
 
     @Test
@@ -252,9 +240,8 @@ class TestAudioManagerPresentationModes {
     @Test
     void reverseReleaseReportsPrepareFailureWithoutMutatingFullStateAndRetries()
             throws Exception {
-        FailingReleaseBackend backend = new FailingReleaseBackend();
         AudioManager audio = AudioManager.getInstance();
-        audio.setBackend(backend);
+        audio.setBackend(new AudioTestFixtures.RecordingAudioBackend());
         populateReleaseState(audio);
         var selected = audio.captureLogicalSnapshot();
         audio.beginReverseAudioPresentation();
@@ -262,7 +249,9 @@ class TestAudioManagerPresentationModes {
         audio.restoreLogicalSnapshot(selected);
         var before = audio.releaseStateForTesting();
         var deferred = audio.deferredReverseLogicalSnapshotForTesting();
-        backend.failNextPrepare = true;
+        // The producer is the only restore owner left, so the injectable
+        // preparation failure is an unresolvable presentation dependency.
+        presentationPcmCache(audio).clear();
 
         assertFalse(audio.endReverseAudioPresentation());
 
@@ -273,17 +262,20 @@ class TestAudioManagerPresentationModes {
                 audio.deferredReverseLogicalSnapshotForTesting());
         assertTrue(audio.isReverseAudioPresentationActive());
 
+        registeredPcm(audio, "base");
+        registeredPcm(audio, "override");
+        registeredPcm(audio, "sample");
+        registeredPcm(audio, "raw");
         assertTrue(audio.endReverseAudioPresentation());
         assertFalse(audio.isReverseAudioPresentationActive());
         assertNull(audio.deferredReverseLogicalSnapshotForTesting());
     }
 
     @Test
-    void producerPrepareFailureDiscardsBackendTokenAndPreservesPriorSelectionForRetry()
+    void producerPrepareFailurePreservesPriorSelectionForRetry()
             throws Exception {
-        FailingReleaseBackend backend = new FailingReleaseBackend();
         AudioManager audio = AudioManager.getInstance();
-        audio.setBackend(backend);
+        audio.setBackend(new AudioTestFixtures.RecordingAudioBackend());
         populateReleaseState(audio);
         var selected = audio.captureLogicalSnapshot();
         audio.beginReverseAudioPresentation();
@@ -303,12 +295,6 @@ class TestAudioManagerPresentationModes {
 
         assertFalse(audio.endReverseAudioPresentation());
 
-        assertEquals(1, backend.prepareCalls);
-        assertEquals(1, backend.discardCalls,
-                "an unpublished backend token must be discarded");
-        assertEquals(0, backend.commitCalls);
-        assertEquals(0, backend.rollbackCalls,
-                "rollback is reserved for a commit attempt");
         assertEquals(before.logical(), audio.releaseStateForTesting().logical());
         assertEquals(before.producer(),
                 audio.releaseStateForTesting().producer(),
@@ -323,10 +309,6 @@ class TestAudioManagerPresentationModes {
         registeredPcm(audio, "raw");
         assertTrue(audio.endReverseAudioPresentation());
 
-        assertEquals(2, backend.prepareCalls);
-        assertEquals(1, backend.discardCalls);
-        assertEquals(1, backend.commitCalls);
-        assertEquals(0, backend.rollbackCalls);
         assertFalse(audio.isReverseAudioPresentationActive());
         assertNull(audio.deferredReverseLogicalSnapshotForTesting());
     }
@@ -339,9 +321,8 @@ class TestAudioManagerPresentationModes {
     })
     void mutatingPoliciesWaitForSuccessfulTransactionalReleaseAndRetry(
             AudioPresentationPolicy policy) throws Exception {
-        FailingReleaseBackend backend = new FailingReleaseBackend();
         AudioManager audio = AudioManager.getInstance();
-        audio.setBackend(backend);
+        audio.setBackend(new AudioTestFixtures.RecordingAudioBackend());
         populateReleaseState(audio);
         var selected = audio.captureLogicalSnapshot();
         audio.beginReverseAudioPresentation();
@@ -349,7 +330,7 @@ class TestAudioManagerPresentationModes {
         audio.restoreLogicalSnapshot(selected);
         var before = audio.releaseStateForTesting();
         var deferred = audio.deferredReverseLogicalSnapshotForTesting();
-        backend.failNextCommit = true;
+        presentationPcmCache(audio).clear();
 
         audio.afterRewindRestore(7, policy);
 
@@ -361,21 +342,16 @@ class TestAudioManagerPresentationModes {
                 audio.deferredReverseLogicalSnapshotForTesting(),
                 policy.name());
         assertTrue(audio.isReverseAudioPresentationActive(), policy.name());
-        assertEquals(1, backend.prepareCalls, policy.name());
-        assertEquals(1, backend.commitCalls, policy.name());
-        assertEquals(1, backend.rollbackCalls, policy.name());
-        assertEquals(1, backend.discardCalls,
-                "a token prepared and rolled back in this attempt is abandoned");
 
+        registeredPcm(audio, "base");
+        registeredPcm(audio, "override");
+        registeredPcm(audio, "sample");
+        registeredPcm(audio, "raw");
         audio.afterRewindRestore(7, policy);
 
         assertFalse(audio.isReverseAudioPresentationActive(), policy.name());
         assertNull(audio.deferredReverseLogicalSnapshotForTesting(),
                 policy.name());
-        assertEquals(2, backend.prepareCalls, policy.name());
-        assertEquals(2, backend.commitCalls, policy.name());
-        assertEquals(1, backend.rollbackCalls, policy.name());
-        assertEquals(1, backend.discardCalls, policy.name());
         var presentation = audio.captureLogicalSnapshot().presentation();
         switch (policy) {
             case STOP_TRANSIENT_SFX_RESYNC_MUSIC -> {
@@ -581,16 +557,6 @@ class TestAudioManagerPresentationModes {
                 assetId, samples, 48_000);
     }
 
-    private static void installRuntime(
-            AudioManager audio, DeterministicAudioRuntime runtime)
-            throws Exception {
-        Method setter = AudioManager.class.getDeclaredMethod(
-                "setDeterministicAudioRuntime",
-                DeterministicAudioRuntime.class);
-        setter.setAccessible(true);
-        setter.invoke(audio, runtime);
-    }
-
     private static AudioPresentationProducer shadowProducer(
             AudioManager audio) throws Exception {
         audio.captureLogicalSnapshot();
@@ -652,85 +618,6 @@ class TestAudioManagerPresentationModes {
                         AudioPresentationSourceFactory.class, "settings")
                         .get(factory);
         return settings.pcmCache();
-    }
-
-    private static final class CountingRuntime
-            implements DeterministicAudioRuntime {
-        int advances;
-        int presentationControlCalls;
-
-        @Override
-        public void advanceFrame(long frame, FrameAudioMode mode) {
-            advances++;
-        }
-
-        @Override
-        public void beginReversePresentation() {
-            presentationControlCalls++;
-        }
-
-        @Override
-        public void endReversePresentation() {
-            presentationControlCalls++;
-        }
-
-        @Override
-        public void setReversePlaybackRate(double rate) {
-            presentationControlCalls++;
-        }
-
-        @Override
-        public void clearPcmHistory() {
-            presentationControlCalls++;
-        }
-    }
-
-    private static final class FailingReleaseBackend
-            extends NullAudioBackend {
-        private boolean failNextPrepare;
-        private boolean failNextCommit;
-        private int prepareCalls;
-        private int commitCalls;
-        private int discardCalls;
-        private int rollbackCalls;
-
-        @Override
-        public PreparedLogicalRestore prepareLogicalRestore(
-                AudioBackendLogicalSnapshot snapshot,
-                SmpsDriverSnapshot.DependencyResolver resolver,
-                boolean preservePresentationQueue) {
-            prepareCalls++;
-            if (failNextPrepare) {
-                failNextPrepare = false;
-                throw new IllegalStateException(
-                        "injected release prepare failure");
-            }
-            return new Prepared(snapshot);
-        }
-
-        @Override
-        public void commitLogicalRestore(PreparedLogicalRestore prepared) {
-            commitCalls++;
-            if (failNextCommit) {
-                failNextCommit = false;
-                throw new IllegalStateException(
-                        "injected release commit failure");
-            }
-        }
-
-        @Override
-        public void rollbackLogicalRestore(PreparedLogicalRestore prepared) {
-            rollbackCalls++;
-        }
-
-        @Override
-        public void discardLogicalRestore(PreparedLogicalRestore prepared) {
-            discardCalls++;
-        }
-
-        private record Prepared(AudioBackendLogicalSnapshot snapshot)
-                implements PreparedLogicalRestore {
-        }
     }
 
     private static final class CountingSmpsDriver extends SmpsDriver {

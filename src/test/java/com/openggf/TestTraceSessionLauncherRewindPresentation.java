@@ -2,12 +2,7 @@ package com.openggf;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioManagerTestDiagnostics;
-import com.openggf.audio.AudioBackend;
 import com.openggf.audio.NullAudioBackend;
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
-import com.openggf.audio.rewind.SmpsDriverSnapshot;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -49,7 +44,6 @@ class TestTraceSessionLauncherRewindPresentation {
     private SonicConfigurationService config;
     private AudioManager audio;
     private RecordingReverseAudioBackend backend;
-    private RecordingReverseAudioRuntime runtime;
 
     @BeforeEach
     void setUp() {
@@ -60,8 +54,6 @@ class TestTraceSessionLauncherRewindPresentation {
         audio.resetState();
         backend = new RecordingReverseAudioBackend();
         audio.setBackend(backend);
-        runtime = new RecordingReverseAudioRuntime();
-        setAudioRuntime(audio, runtime);
     }
 
     @AfterEach
@@ -138,7 +130,7 @@ class TestTraceSessionLauncherRewindPresentation {
         input.handleKeyEvent(rewindKey, GLFW_PRESS);
         assertTrue(launcher.handleRealtimeRewindInput(false, input));
         input.handleKeyEvent(rewindKey, GLFW_RELEASE);
-        backend.failNextCommit = true;
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
 
         assertTrue(launcher.handleRealtimeRewindInput(false, input),
                 "failed release must keep Trace gameplay frozen");
@@ -147,8 +139,6 @@ class TestTraceSessionLauncherRewindPresentation {
         assertEquals(PlaybackController.State.REWINDING,
                 playbackController.state());
         assertTrue((boolean) getField(launcher, "realtimeRewinding"));
-        assertEquals(1, backend.prepareCalls);
-        assertEquals(1, backend.rollbackCalls);
 
         assertFalse(launcher.handleRealtimeRewindInput(false, input));
         assertFalse(audio.isReverseAudioPresentationActive());
@@ -156,11 +146,8 @@ class TestTraceSessionLauncherRewindPresentation {
         assertEquals(PlaybackController.State.PLAYING,
                 playbackController.state());
         assertFalse((boolean) getField(launcher, "realtimeRewinding"));
-        assertEquals(1, backend.prepareCalls,
-                "the retained prepared token must be retried in place");
-        assertEquals(2, backend.commitCalls);
-        assertEquals(1, backend.rollbackCalls);
-        assertEquals(0, backend.discardCalls);
+        assertEquals(0, backend.totalCalls(),
+                "the release is producer-owned; the backend sees nothing");
     }
 
     @Test
@@ -185,7 +172,7 @@ class TestTraceSessionLauncherRewindPresentation {
         audio.beginReverseAudioPresentation();
         audio.restoreLogicalSnapshot(audio.captureLogicalSnapshot());
         assertTrue(audio.commitDeferredReverseLogicalRestore());
-        backend.failNextCommit = true;
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
 
         invokeTeardown(launcher);
 
@@ -198,11 +185,8 @@ class TestTraceSessionLauncherRewindPresentation {
 
         assertEquals(null, TraceSessionLauncher.active());
         assertFalse(audio.isReverseAudioPresentationActive());
-        assertEquals(1, backend.prepareCalls,
-                "teardown retry must retain the exact prepared token");
-        assertEquals(2, backend.commitCalls);
-        assertEquals(1, backend.rollbackCalls);
-        assertEquals(0, backend.discardCalls);
+        assertEquals(0, backend.totalCalls(),
+                "the release is producer-owned; the backend sees nothing");
     }
 
     /**
@@ -314,19 +298,6 @@ class TestTraceSessionLauncherRewindPresentation {
         return field.get(target);
     }
 
-    private static void setAudioRuntime(
-            AudioManager audio, DeterministicAudioRuntime runtime) {
-        try {
-            var method = AudioManager.class.getDeclaredMethod(
-                    "setDeterministicAudioRuntime",
-                    DeterministicAudioRuntime.class);
-            method.setAccessible(true);
-            method.invoke(audio, runtime);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError(failure);
-        }
-    }
-
     private static final class FakeInputSource implements InputSource {
         private final int frames;
 
@@ -345,17 +316,16 @@ class TestTraceSessionLauncherRewindPresentation {
         }
     }
 
+    /**
+     * The backend is a pure source-construction collaborator now: reverse
+     * presentation, history and release are producer-owned, so a Trace host
+     * release must leave it untouched.
+     */
     private static final class RecordingReverseAudioBackend extends NullAudioBackend {
         private final List<String> calls = new ArrayList<>();
-        private boolean failNextCommit;
-        private int prepareCalls;
-        private int commitCalls;
-        private int rollbackCalls;
-        private int discardCalls;
 
-        @Override
-        public void beginReversePresentation() {
-            calls.add("beginReversePresentation");
+        int totalCalls() {
+            return calls.size();
         }
 
         @Override
@@ -364,62 +334,18 @@ class TestTraceSessionLauncherRewindPresentation {
         }
 
         @Override
-        public void endReversePresentation() {
-            calls.add("endReversePresentation");
+        public void stopPlayback() {
+            calls.add("stopPlayback");
         }
 
         @Override
-        public AudioBackend.PreparedLogicalRestore prepareLogicalRestore(
-                AudioBackendLogicalSnapshot snapshot,
-                SmpsDriverSnapshot.DependencyResolver resolver,
-                boolean preservePresentationQueue) {
-            prepareCalls++;
-            return new Prepared(snapshot);
+        public void stopAllSfx() {
+            calls.add("stopAllSfx");
         }
 
         @Override
-        public void commitLogicalRestore(
-                AudioBackend.PreparedLogicalRestore prepared) {
-            commitCalls++;
-            if (failNextCommit) {
-                failNextCommit = false;
-                throw new IllegalStateException(
-                        "injected Trace host commit failure");
-            }
-        }
-
-        @Override
-        public void rollbackLogicalRestore(
-                AudioBackend.PreparedLogicalRestore prepared) {
-            rollbackCalls++;
-        }
-
-        @Override
-        public void discardLogicalRestore(
-                AudioBackend.PreparedLogicalRestore prepared) {
-            discardCalls++;
-        }
-
-        private record Prepared(AudioBackendLogicalSnapshot snapshot)
-                implements AudioBackend.PreparedLogicalRestore {
-        }
-    }
-
-    private static final class RecordingReverseAudioRuntime implements DeterministicAudioRuntime {
-        private final List<String> calls = new ArrayList<>();
-
-        @Override
-        public void advanceFrame(long frame, FrameAudioMode mode) {
-        }
-
-        @Override
-        public void beginReversePresentation() {
-            calls.add("beginReversePresentation");
-        }
-
-        @Override
-        public void endReversePresentation() {
-            calls.add("endReversePresentation");
+        public void restoreMusic() {
+            calls.add("restoreMusic");
         }
     }
 }

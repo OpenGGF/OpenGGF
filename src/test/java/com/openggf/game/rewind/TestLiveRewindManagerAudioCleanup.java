@@ -3,20 +3,15 @@ package com.openggf.game.rewind;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.AudioTestFixtures;
-import com.openggf.audio.AudioBackend;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
-import com.openggf.audio.LWJGLAudioBackend;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.presentation.AudioPresentationCommandQueue;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.PresentationMode;
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfiguration;
@@ -42,7 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestLiveRewindManagerAudioCleanup {
@@ -108,8 +102,7 @@ class TestLiveRewindManagerAudioCleanup {
     @Test
     void failedReleaseRetainsLiveHostStateAndRetriesBeforeGameplayResumes()
             throws Exception {
-        FailingCommitBackend failingBackend = new FailingCommitBackend();
-        audio.setBackend(failingBackend);
+        audio.setBackend(new NullAudioBackend());
         FadeManager fadeManager =
                 TestEnvironment.activeGameplayMode().getFadeManager();
         LiveRewindManager manager = new LiveRewindManager(config);
@@ -122,7 +115,7 @@ class TestLiveRewindManagerAudioCleanup {
         assertTrue(manager.handleRealtimeRewindInput(
                 GameMode.LEVEL, false, input));
         input.handleKeyEvent(rewindKey, GLFW_RELEASE);
-        failingBackend.failNextCommit = true;
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
 
         assertTrue(manager.handleRealtimeRewindInput(
                         GameMode.LEVEL, false, input),
@@ -130,8 +123,6 @@ class TestLiveRewindManagerAudioCleanup {
         assertTrue(audio.isReverseAudioPresentationActive());
         assertTrue(fadeManager.isReversePresentationActive());
         assertTrue((boolean) getField(manager, "rewinding"));
-        assertEquals(1, failingBackend.prepareCalls);
-        assertEquals(1, failingBackend.rollbackCalls);
 
         assertFalse(manager.handleRealtimeRewindInput(
                         GameMode.LEVEL, false, input),
@@ -139,18 +130,12 @@ class TestLiveRewindManagerAudioCleanup {
         assertFalse(audio.isReverseAudioPresentationActive());
         assertFalse(fadeManager.isReversePresentationActive());
         assertFalse((boolean) getField(manager, "rewinding"));
-        assertEquals(1, failingBackend.prepareCalls,
-                "the previously prepared token must be retained for retry");
-        assertEquals(2, failingBackend.commitCalls);
-        assertEquals(1, failingBackend.rollbackCalls);
-        assertEquals(0, failingBackend.discardCalls);
     }
 
     @Test
     void unsupportedModeReleaseFailureKeepsGameplayFrozenAndRetainsClearOwner()
             throws Exception {
-        FailingCommitBackend failingBackend = new FailingCommitBackend();
-        audio.setBackend(failingBackend);
+        audio.setBackend(new NullAudioBackend());
         FadeManager fadeManager =
                 TestEnvironment.activeGameplayMode().getFadeManager();
         LiveRewindManager manager = new LiveRewindManager(config);
@@ -163,7 +148,7 @@ class TestLiveRewindManagerAudioCleanup {
                 config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
         assertTrue(manager.handleRealtimeRewindInput(
                 GameMode.LEVEL, false, heldInput));
-        failingBackend.failNextCommit = true;
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
 
         assertTrue(manager.handleRealtimeRewindInput(
                         GameMode.TITLE_SCREEN, false, new InputHandler()),
@@ -181,10 +166,6 @@ class TestLiveRewindManagerAudioCleanup {
         assertFalse(fadeManager.isReversePresentationActive());
         assertFalse((boolean) getField(manager, "rewinding"));
         assertEquals(null, getField(manager, "rewindController"));
-        assertEquals(1, failingBackend.prepareCalls);
-        assertEquals(2, failingBackend.commitCalls);
-        assertEquals(1, failingBackend.rollbackCalls);
-        assertEquals(0, failingBackend.discardCalls);
     }
 
     @Test
@@ -254,26 +235,32 @@ class TestLiveRewindManagerAudioCleanup {
         HeadlessSmpsAudioBackend realBackend = new HeadlessSmpsAudioBackend(config, null);
         realBackend.init();
         audio.setBackend(realBackend);
-        // setBackend() auto-installs a real StreamBackedDeterministicAudioRuntime
-        // for backends that support presentation PCM (HeadlessSmpsAudioBackend
-        // does, for PCM rewind-history capture). That runtime pumps its own
-        // submitted-command queue independently of this test's frame script and
-        // is unrelated to what this test exercises (the STOP_TRANSIENT_SFX
-        // policy's music-override-stack behavior); force it back to a no-op so
-        // only RewindController/AudioManager's own logical-restore path runs.
-        installDeterministicAudioRuntime(audio, NoOpDeterministicAudioRuntime.INSTANCE);
         try {
             int zoneMusicId = 0x82;
             int invincibilityMusicId = 0x2A;
-            AudioTestFixtures.StubSmpsData zone = new AudioTestFixtures.StubSmpsData("zone");
-            zone.setId(zoneMusicId);
-            realBackend.prepareLogicalMusicSource(AudioSourceDescriptor.baseMusic(zoneMusicId));
-            realBackend.playSmps(zone, AudioTestFixtures.EMPTY_DAC, smpsConfig(), false);
-
-            AudioTestFixtures.StubSmpsData invincibility = new AudioTestFixtures.StubSmpsData("invincibility");
-            invincibility.setId(invincibilityMusicId);
-            realBackend.prepareLogicalMusicSource(AudioSourceDescriptor.baseMusic(invincibilityMusicId));
-            realBackend.playSmps(invincibility, AudioTestFixtures.EMPTY_DAC, smpsConfig(), true);
+            AudioTestFixtures.StubSmpsLoader loader =
+                    new AudioTestFixtures.StubSmpsLoader();
+            loader.musicResults.put(zoneMusicId, persistentSource(zoneMusicId));
+            AudioTestFixtures.StubSmpsLoader donorLoader =
+                    new AudioTestFixtures.StubSmpsLoader();
+            donorLoader.musicResults.put(
+                    invincibilityMusicId, persistentSource(invincibilityMusicId));
+            audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader) {
+                @Override public SmpsSequencerConfig getSequencerConfig() {
+                    return smpsConfig();
+                }
+                @Override public int getInvincibilityMusicId() {
+                    return invincibilityMusicId;
+                }
+            });
+            audio.setRom(null);
+            audio.registerDonorLoader("s3k", donorLoader,
+                    AudioTestFixtures.EMPTY_DAC, smpsConfig());
+            audio.playMusic(zoneMusicId);
+            // The override route is what saves the zone music underneath the
+            // still-active invincibility track.
+            audio.playDonorMusic("s3k", invincibilityMusicId);
+            audio.presentFrame(PresentationMode.SILENT);
 
             TestEnvironment.activeGameplayMode();
             LiveRewindManager manager = new LiveRewindManager(config);
@@ -288,32 +275,25 @@ class TestLiveRewindManagerAudioCleanup {
             input.handleKeyEvent(rewindKey, GLFW_RELEASE);
             assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
-            AudioBackendLogicalSnapshot after = realBackend.captureLogicalSnapshot();
-            assertEquals(invincibilityMusicId, after.currentMusic().id(),
+            var after = audio.captureLogicalSnapshot().presentation();
+            assertEquals(invincibilityMusicId,
+                    after.activeMusic().sourceDescriptor().id(),
                     "releasing a held rewind while still invincible must not end the invincibility override");
             assertFalse(after.overrideStack().isEmpty(),
                     "the saved zone music must remain on the override stack while the override is still active");
-            // restoreMusic() only queues a deferred pop (doRestoreMusic() applies
-            // it on the backend's own next real update() cycle); the bug is
-            // calling restoreMusic() at all here, which this observes directly
-            // rather than depending on when that next cycle happens to run.
+            // A restore request only queues a deferred pop; the bug is issuing
+            // it at all here, which this observes directly rather than
+            // depending on when the next drain happens to run.
             assertFalse(after.pendingRestore(),
                     "release cleanup must not queue a music-stack pop while the override is still legitimately active");
         } finally {
+            audio.setAudioProfile(null);
             audio.setBackend(backend);
         }
     }
 
     private static SmpsSequencerConfig smpsConfig() {
         return new SmpsSequencerConfig.Builder().build();
-    }
-
-    /** setDeterministicAudioRuntime is package-private on AudioManager (com.openggf.audio). */
-    private static void installDeterministicAudioRuntime(AudioManager audio, DeterministicAudioRuntime runtime)
-            throws Exception {
-        Method method = AudioManager.class.getDeclaredMethod("setDeterministicAudioRuntime", DeterministicAudioRuntime.class);
-        method.setAccessible(true);
-        method.invoke(audio, runtime);
     }
 
     @Test
@@ -378,8 +358,7 @@ class TestLiveRewindManagerAudioCleanup {
             RewindBoundary boundary,
             int expectedRetriedFrame,
             int expectedRetriedEarliestFrame) throws Exception {
-        FailingCommitBackend failingBackend = new FailingCommitBackend();
-        audio.setBackend(failingBackend);
+        audio.setBackend(new NullAudioBackend());
         FadeManager fadeManager =
                 TestEnvironment.activeGameplayMode().getFadeManager();
         LiveRewindManager manager = new LiveRewindManager(config);
@@ -395,7 +374,7 @@ class TestLiveRewindManagerAudioCleanup {
         int frameBefore = controller.currentFrame();
         int earliestBefore = controller.earliestAvailableFrame();
         int inputCountBefore = inputSource.frameCount();
-        failingBackend.failNextCommit = true;
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
 
         manager.markBoundary(boundary);
 
@@ -417,11 +396,6 @@ class TestLiveRewindManagerAudioCleanup {
         assertEquals(expectedRetriedFrame, controller.currentFrame());
         assertEquals(expectedRetriedEarliestFrame,
                 controller.earliestAvailableFrame());
-        assertEquals(1, failingBackend.prepareCalls,
-                "boundary retry must retain the exact prepared token");
-        assertEquals(2, failingBackend.commitCalls);
-        assertEquals(1, failingBackend.rollbackCalls);
-        assertEquals(0, failingBackend.discardCalls);
     }
 
     private void assertFreshBoundaryAudioRelease(
@@ -451,13 +425,8 @@ class TestLiveRewindManagerAudioCleanup {
                 };
         audio.setAudioProfile(profile);
         audio.setRom(null);
-        FailingSourceBearingBackend sourceBackend =
-                new FailingSourceBearingBackend();
-        audio.setBackend(sourceBackend);
-        installDeterministicAudioRuntime(
-                audio, NoOpDeterministicAudioRuntime.INSTANCE);
-        applyAndPresentSourcePair(
-                sourceBackend, loader, oldMusic, oldSfx);
+        audio.setBackend(new HeadlessSmpsAudioBackend(config, null));
+        applyAndPresentSourcePair(oldMusic, oldSfx);
 
         TestEnvironment.activeGameplayMode();
         LiveRewindManager manager = new LiveRewindManager(config);
@@ -474,16 +443,11 @@ class TestLiveRewindManagerAudioCleanup {
                 GameMode.LEVEL, false, heldInput));
 
         controller.commitDeferredAudioRestore();
-        assertEquals(1, sourceBackend.prepareCalls);
-        applyBackendSourcePair(
-                sourceBackend, loader, freshMusic, freshSfx);
         audio.playMusic(freshMusic);
         assertTrue(audio.playSfx(freshSfx));
         submitRawPcm(audio, new byte[] {0, 31, 0, 31}, 48_000);
         AudioLogicalSnapshot beforeBoundary =
                 audio.captureLogicalSnapshot();
-        assertBackendSourcePair(
-                beforeBoundary, freshMusic, freshSfx);
         assertPresentationSourcePair(
                 beforeBoundary, oldMusic, oldSfx);
         assertNull(beforeBoundary.presentation().rawPcmVoiceId(),
@@ -496,7 +460,7 @@ class TestLiveRewindManagerAudioCleanup {
         int frameBefore = controller.currentFrame();
         int earliestBefore = controller.earliestAvailableFrame();
         int inputCountBefore = inputSource.frameCount();
-        sourceBackend.failAfterNextPublication();
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
 
         manager.markBoundary(boundary);
 
@@ -530,20 +494,12 @@ class TestLiveRewindManagerAudioCleanup {
         assertTrue(producerAfterFailure
                         .preparedSelectedRestoreIdentity().token() != 0,
                 "failed publication must retain the fresh producer token");
-        assertEquals(2, sourceBackend.prepareCalls,
-                "boundary must prepare one fresh replacement token");
-        assertEquals(1, sourceBackend.discardCalls,
-                "the prepared old rewind target must be disposed");
-        assertEquals(1, sourceBackend.commitCalls);
-        assertEquals(1, sourceBackend.rollbackCalls);
 
         assertTrue(audio.preparePostBoundaryReverseRelease(),
                 "a preparation retry must reuse the retained fresh token");
         assertEquals(producerAfterFailure.preparedSelectedRestoreIdentity(),
                 AudioManagerTestDiagnostics.producerFingerprint(audio)
                         .preparedSelectedRestoreIdentity());
-        assertEquals(2, sourceBackend.prepareCalls,
-                "retrying preparation must not allocate another backend token");
 
         assertFalse(manager.retryPendingRelease(),
                 "retry should finish the retained boundary release");
@@ -557,17 +513,6 @@ class TestLiveRewindManagerAudioCleanup {
                 audio.captureLogicalSnapshot(), freshMusic, freshSfx);
         assertRawPcmSource(audio.captureLogicalSnapshot());
         assertEquals(0, pendingPresentationCommands());
-        assertEquals(2, sourceBackend.prepareCalls,
-                "retry must reuse the exact fresh prepared token");
-        assertEquals(2, sourceBackend.commitCalls);
-        assertEquals(1, sourceBackend.rollbackCalls);
-        assertEquals(1, sourceBackend.discardCalls);
-        assertSame(sourceBackend.preparedTokens.get(1),
-                sourceBackend.committedTokens.get(0),
-                "the failed commit must use the fresh replacement token");
-        assertSame(sourceBackend.preparedTokens.get(1),
-                sourceBackend.committedTokens.get(1),
-                "retry must reuse that exact fresh token");
 
         AudioLogicalSnapshot beforeNextFrame =
                 audio.captureLogicalSnapshot();
@@ -598,54 +543,16 @@ class TestLiveRewindManagerAudioCleanup {
         audio.endReverseAudioPresentation();
     }
 
-    private void applyAndPresentSourcePair(
-            FailingSourceBearingBackend sourceBackend,
-            AudioTestFixtures.StubSmpsLoader loader,
-            int musicId, int sfxId) {
-        applyBackendSourcePair(
-                sourceBackend, loader, musicId, sfxId);
+    private void applyAndPresentSourcePair(int musicId, int sfxId) {
         audio.playMusic(musicId);
         assertTrue(audio.playSfx(sfxId));
         audio.presentFrame(PresentationMode.SILENT);
     }
 
-    private static void applyBackendSourcePair(
-            FailingSourceBearingBackend sourceBackend,
-            AudioTestFixtures.StubSmpsLoader loader,
-            int musicId, int sfxId) {
-        AbstractSmpsData music = loader.loadMusic(musicId);
-        AbstractSmpsData sfx = loader.loadSfx(sfxId);
-        sourceBackend.prepareLogicalMusicSource(
-                AudioSourceDescriptor.baseMusic(musicId));
-        sourceBackend.playSmps(
-                music, AudioTestFixtures.EMPTY_DAC,
-                smpsConfig(), false);
-        sourceBackend.playSfxSmps(
-                sfx, AudioTestFixtures.EMPTY_DAC, 1.0f);
-    }
-
     private static void assertSourcePair(
             AudioLogicalSnapshot snapshot,
             int musicId, int sfxId) {
-        assertBackendSourcePair(snapshot, musicId, sfxId);
         assertPresentationSourcePair(snapshot, musicId, sfxId);
-    }
-
-    private static void assertBackendSourcePair(
-            AudioLogicalSnapshot snapshot,
-            int musicId, int sfxId) {
-        assertEquals(AudioSourceDescriptor.baseMusic(musicId),
-                snapshot.backend().currentMusic());
-        assertTrue(hasSfxSource(
-                        snapshot.backend().musicDriver(), sfxId)
-                        || hasSfxSource(
-                        snapshot.backend().standaloneSfxDriver(), sfxId),
-                "backend snapshot must retain source-bearing SFX "
-                        + Integer.toHexString(sfxId) + ": music="
-                        + sourcesOf(snapshot.backend().musicDriver())
-                        + ", standalone="
-                        + sourcesOf(
-                        snapshot.backend().standaloneSfxDriver()));
     }
 
     private static void assertPresentationSourcePair(
@@ -815,142 +722,4 @@ class TestLiveRewindManagerAudioCleanup {
         }
     }
 
-    private static final class FailingCommitBackend
-            extends NullAudioBackend {
-        private boolean failNextCommit;
-        private int prepareCalls;
-        private int commitCalls;
-        private int rollbackCalls;
-        private int discardCalls;
-
-        @Override
-        public AudioBackend.PreparedLogicalRestore prepareLogicalRestore(
-                AudioBackendLogicalSnapshot snapshot,
-                SmpsDriverSnapshot.DependencyResolver resolver,
-                boolean preservePresentationQueue) {
-            prepareCalls++;
-            return new Prepared(snapshot);
-        }
-
-        @Override
-        public void commitLogicalRestore(
-                AudioBackend.PreparedLogicalRestore prepared) {
-            commitCalls++;
-            if (failNextCommit) {
-                failNextCommit = false;
-                throw new IllegalStateException(
-                        "injected production-host commit failure");
-            }
-        }
-
-        @Override
-        public void rollbackLogicalRestore(
-                AudioBackend.PreparedLogicalRestore prepared) {
-            rollbackCalls++;
-        }
-
-        @Override
-        public void discardLogicalRestore(
-                AudioBackend.PreparedLogicalRestore prepared) {
-            discardCalls++;
-        }
-
-        private record Prepared(AudioBackendLogicalSnapshot snapshot)
-                implements AudioBackend.PreparedLogicalRestore {
-        }
-    }
-
-    private static final class FailingSourceBearingBackend
-            extends LWJGLAudioBackend {
-        private boolean failAfterPublication;
-        private int prepareCalls;
-        private int commitCalls;
-        private int rollbackCalls;
-        private int discardCalls;
-        private final java.util.List<AudioBackend.PreparedLogicalRestore>
-                preparedTokens = new java.util.ArrayList<>();
-        private final java.util.List<AudioBackend.PreparedLogicalRestore>
-                committedTokens = new java.util.ArrayList<>();
-
-        private FailingSourceBearingBackend() {
-            super(SonicConfigurationService.createStandalone());
-        }
-
-        void failAfterNextPublication() {
-            failAfterPublication = true;
-        }
-
-        @Override
-        public AudioBackend.PreparedLogicalRestore prepareLogicalRestore(
-                AudioBackendLogicalSnapshot snapshot,
-                SmpsDriverSnapshot.DependencyResolver resolver,
-                boolean preservePresentationQueue) {
-            prepareCalls++;
-            AudioBackend.PreparedLogicalRestore prepared =
-                    super.prepareLogicalRestore(
-                    snapshot, resolver, preservePresentationQueue);
-            preparedTokens.add(prepared);
-            return prepared;
-        }
-
-        @Override
-        public void commitLogicalRestore(
-                AudioBackend.PreparedLogicalRestore prepared) {
-            commitCalls++;
-            committedTokens.add(prepared);
-            super.commitLogicalRestore(prepared);
-            if (failAfterPublication) {
-                failAfterPublication = false;
-                throw new IllegalStateException(
-                        "injected post-publication boundary failure");
-            }
-        }
-
-        @Override
-        public void rollbackLogicalRestore(
-                AudioBackend.PreparedLogicalRestore prepared) {
-            rollbackCalls++;
-            super.rollbackLogicalRestore(prepared);
-        }
-
-        @Override
-        public void discardLogicalRestore(
-                AudioBackend.PreparedLogicalRestore prepared) {
-            discardCalls++;
-            super.discardLogicalRestore(prepared);
-        }
-
-        @Override protected void hookInitDevice() {
-        }
-        @Override protected void hookDestroyDevice() {
-        }
-        @Override protected void hookStartStream() {
-        }
-        @Override protected void hookStopStreamSource() {
-        }
-        @Override protected void hookUpdateStream() {
-        }
-        @Override protected void hookStopAndClearMusicSource() {
-        }
-        @Override protected void hookStopAndUnqueueAllMusicBuffers() {
-        }
-        @Override protected void hookStopAndClearAllMusicBuffers() {
-        }
-        @Override protected void hookRestartStreamIfDry() {
-        }
-        @Override protected void hookUploadStreamBuffer(
-                int bufferId, short[] pcm, int sampleRate) {
-        }
-        @Override protected void hookPlayWavSfx(
-                String sfxName, float pitch) {
-        }
-        @Override protected void hookStopAndDeleteWavSfxSources() {
-        }
-        @Override protected void hookCleanupStoppedWavSfx() {
-        }
-        @Override protected void hookPause() {
-        }
-        @Override protected void hookResume() {
-        }
-    }
 }

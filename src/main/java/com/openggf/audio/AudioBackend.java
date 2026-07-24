@@ -1,9 +1,6 @@
 package com.openggf.audio;
 
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
-import com.openggf.audio.rewind.SmpsDriverSnapshot;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -12,9 +9,14 @@ import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.util.function.Consumer;
 
+/**
+ * SMPS source construction, profile routing, and logical music-source
+ * descriptors for one game. The backend is <strong>not</strong> a presentation
+ * owner: {@code AudioPresentationProducer} owns the presentation clock, final
+ * PCM, history, reverse cursor, and every capture lease, and
+ * {@code OpenAlPcmSink} is the only writer of a real audio device.
+ */
 public interface AudioBackend {
-    interface PreparedLogicalRestore {
-    }
 
     void init();
 
@@ -72,18 +74,6 @@ public interface AudioBackend {
     void playSfx(String sfxName);
 
     void playSfx(String sfxName, float pitch);
-
-    /**
-     * Plays a raw unsigned 8-bit mono PCM sample from ROM.
-     */
-    default void playPcmSample(byte[] pcm, int sourceSampleRate) {
-    }
-
-    /**
-     * Stops a raw PCM sample that was started through {@link #playPcmSample(byte[], int)}.
-     */
-    default void stopPcmSample() {
-    }
 
     /**
      * Stops any active music/streaming playback.
@@ -160,106 +150,7 @@ public interface AudioBackend {
      */
     void resume();
 
-    default AudioBackendLogicalSnapshot captureLogicalSnapshot() {
-        return AudioBackendLogicalSnapshot.empty();
-    }
-
-    default void restoreLogicalSnapshot(AudioBackendLogicalSnapshot snapshot) {
-    }
-
-    default void restoreLogicalSnapshot(
-            AudioBackendLogicalSnapshot snapshot,
-            SmpsDriverSnapshot.DependencyResolver resolver) {
-        restoreLogicalSnapshot(snapshot);
-    }
-
-    default void restoreLogicalSnapshot(
-            AudioBackendLogicalSnapshot snapshot,
-            SmpsDriverSnapshot.DependencyResolver resolver,
-            boolean preservePresentationQueue) {
-        restoreLogicalSnapshot(snapshot, resolver);
-    }
-
-    default PreparedLogicalRestore prepareLogicalRestore(
-            AudioBackendLogicalSnapshot snapshot,
-            SmpsDriverSnapshot.DependencyResolver resolver,
-            boolean preservePresentationQueue) {
-        return new DeferredLogicalRestore(
-                snapshot, resolver, preservePresentationQueue);
-    }
-
-    default void commitLogicalRestore(PreparedLogicalRestore prepared) {
-        DeferredLogicalRestore restore = (DeferredLogicalRestore) prepared;
-        restoreLogicalSnapshot(restore.snapshot(), restore.resolver(),
-                restore.preservePresentationQueue());
-    }
-
-    /**
-     * Releases a successfully prepared token that was never passed to
-     * {@link #commitLogicalRestore(PreparedLogicalRestore)}. Implementations
-     * that eagerly allocate drivers or other resources during preparation
-     * must release them here. Repeated discard of the same unpublished token
-     * must be harmless.
-     */
-    default void discardLogicalRestore(PreparedLogicalRestore prepared) {
-    }
-
-    /**
-     * Reverts a prepared restore after publication failed. Implementations
-     * whose commit can publish mutable state must retain the exact prior
-     * object graph in the prepared token so retry does not reconstruct or
-     * advance either timeline.
-     */
-    default void rollbackLogicalRestore(PreparedLogicalRestore prepared) {
-    }
-
-    record DeferredLogicalRestore(
-            AudioBackendLogicalSnapshot snapshot,
-            SmpsDriverSnapshot.DependencyResolver resolver,
-            boolean preservePresentationQueue)
-            implements PreparedLogicalRestore {
-    }
-
     default void prepareLogicalMusicSource(AudioSourceDescriptor descriptor) {
-    }
-
-    default void attachDeterministicAudioRuntime(DeterministicAudioRuntime runtime) {
-    }
-
-    default void beginReversePresentation() {
-    }
-
-    default void endReversePresentation() {
-    }
-
-    /**
-     * Sets the playback rate while reverse presentation is active. A value of
-     * 1.0 walks the PCM history one stored frame per output frame (normal
-     * tape-rewind speed). Values above 1.0 pitch the rewound audio up; values
-     * between 0 and 1.0 produce a slow-motion rewind. Implementations that
-     * do not resample reverse PCM are free to ignore this.
-     */
-    default void setReversePlaybackRate(double rate) {
-    }
-
-    /**
-     * Arms or disarms continuous PCM rewind-history recording. Implementations
-     * that maintain a raw-PCM rewind ring (for reverse audio presentation)
-     * should only pay the per-buffer copy cost while a rewind consumer is
-     * actually armed (e.g. live rewind enabled and in a rewindable game mode,
-     * or an active Trace Test Mode session) — recording unconditionally wastes
-     * the copy when nothing can ever read it back, and leaves stale history
-     * around to be accidentally rewound into across a boundary.
-     */
-    default void setRewindHistoryArmed(boolean armed) {
-    }
-
-    default boolean supportsDeterministicRuntimePresentation() {
-        return false;
-    }
-
-    default boolean supportsLiveCapturePresentation() {
-        return false;
     }
 
     default int outputSampleRate() {

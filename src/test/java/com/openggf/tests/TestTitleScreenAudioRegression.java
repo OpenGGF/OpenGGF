@@ -38,7 +38,6 @@ public class TestTitleScreenAudioRegression {
     private static final class CountingBackend implements AudioBackend {
         int musicPlayCalls = 0;
         int sparkleSfxCalls = 0;
-        int stopPcmCalls = 0;
 
         @Override
         public void init() {
@@ -80,11 +79,6 @@ public class TestTitleScreenAudioRegression {
 
         @Override
         public void stopPlayback() {
-        }
-
-        @Override
-        public void stopPcmSample() {
-            stopPcmCalls++;
         }
 
         @Override
@@ -162,8 +156,6 @@ public class TestTitleScreenAudioRegression {
         assertEquals(null, audioManager.captureLogicalSnapshot()
                         .presentation().rawPcmVoiceId(),
                 "Reset must stop any active SEGA PCM before returning to another title/game");
-        assertEquals(0, backend.stopPcmCalls,
-                "cutover must not emit a second backend stop");
     }
 
     @Test

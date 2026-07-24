@@ -2,9 +2,6 @@ package com.openggf.audio;
 
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
-import com.openggf.audio.runtime.AudioFrameClock;
-import com.openggf.audio.runtime.AudioOutputFifo;
-import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
 import com.openggf.audio.presentation.DecodedPcm;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
@@ -25,8 +22,12 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import com.openggf.audio.presentation.PresentationMode;
+
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSegaPcmCommandRouting {
@@ -46,16 +47,6 @@ class TestSegaPcmCommandRouting {
         assertEquals(0xFE, Sonic3kSmpsConstants.CMD_STOP_SEGA);
         assertEquals(0xFF, Sonic3kSmpsConstants.CMD_SEGA);
         assertEquals(0xE1, Sonic1SmpsConstants.CMD_SEGA);
-    }
-
-    @Test
-    void pcmStreamUsesYmDacOutputScale() {
-        PcmSampleStream stream = new PcmSampleStream(new byte[] {0, (byte) 0x80, (byte) 0xFF}, 48_000, 48_000);
-        short[] buffer = new short[6];
-
-        assertEquals(6, stream.read(buffer));
-
-        assertArrayEquals(new short[] {-8192, -8192, 0, 0, 8128, 8128}, buffer);
     }
 
     @Test
@@ -118,25 +109,25 @@ class TestSegaPcmCommandRouting {
         audio.setBackend(backend);
         audio.setAudioProfile(new Sonic3kAudioProfile());
         audio.setRom(rom);
-        audio.setDeterministicAudioRuntime(new StreamBackedDeterministicAudioRuntime(
-                new AudioFrameClock(48_000, 60), new AudioOutputFifo(48_000)));
 
         audio.playMusic(Sonic3kSmpsConstants.CMD_SEGA);
-        audio.playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
-
-        assertEquals(0, backend.pcmPlayCalls,
+        audio.presentFrame(PresentationMode.SILENT);
+        assertNotNull(audio.captureLogicalSnapshot().presentation()
+                        .rawPcmVoiceId(),
                 "raw PCM is owned by the unified presentation registry");
-        assertEquals(0, backend.pcmStopCalls,
+
+        audio.playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertNull(audio.captureLogicalSnapshot().presentation()
+                        .rawPcmVoiceId(),
                 "raw PCM stop is owned by the unified presentation registry");
-        assertEquals(0, backend.musicPlayCalls);
+
+        assertEquals(0, backend.musicPlayCalls,
+                "the SEGA chant never reaches the source-construction backend");
     }
 
     private static final class RecordingBackend extends NullAudioBackend {
         int musicPlayCalls;
-        int pcmPlayCalls;
-        int pcmStopCalls;
-        int lastPcmLength;
-        int lastSampleRate;
 
         @Override
         public void playMusic(int musicId) {
@@ -146,18 +137,6 @@ class TestSegaPcmCommandRouting {
         @Override
         public void playSmps(AbstractSmpsData data, DacData dacData) {
             musicPlayCalls++;
-        }
-
-        @Override
-        public void playPcmSample(byte[] pcm, int sourceSampleRate) {
-            pcmPlayCalls++;
-            lastPcmLength = pcm.length;
-            lastSampleRate = sourceSampleRate;
-        }
-
-        @Override
-        public void stopPcmSample() {
-            pcmStopCalls++;
         }
     }
 }

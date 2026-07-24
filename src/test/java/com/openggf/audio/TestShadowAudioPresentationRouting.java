@@ -1,8 +1,6 @@
 package com.openggf.audio;
 
 import com.openggf.audio.presentation.PresentationMode;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -14,7 +12,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.stream.Stream;
 import java.util.Map;
@@ -79,18 +76,16 @@ class TestShadowAudioPresentationRouting {
 
     @Test
     void nineSimulationDevicePumpsProduceOneOuterPresentationPacket() {
-        CountingRuntime runtime = new CountingRuntime();
         audio.setBackend(new NullAudioBackend());
-        audio.setDeterministicAudioRuntime(runtime);
 
         for (int simulationStep = 0; simulationStep < 9; simulationStep++) {
             audio.updateLegacyDevice();
         }
-        assertEquals(0, runtime.advances);
+        assertEquals(0,
+                audio.shadowParitySnapshot().presentedFrames(),
+                "simulation-only pumps must not present a packet");
 
         audio.presentFrame(PresentationMode.FORWARD);
-        assertEquals(0, runtime.advances,
-                "the retired runtime must never advance presentation");
         assertEquals(1,
                 audio.shadowParitySnapshot().presentedFrames());
     }
@@ -143,8 +138,8 @@ class TestShadowAudioPresentationRouting {
 
         assertDoesNotThrow(audio::playSegaPcm);
 
-        assertEquals(null, backend.pcm);
-        assertEquals(0, backend.pcmRate);
+        assertEquals(0, backend.totalCalls(),
+                "a failed presentation must not fall back to the backend");
     }
 
     @Test
@@ -157,18 +152,6 @@ class TestShadowAudioPresentationRouting {
 
         assertEquals(0, backend.muteCalls);
         assertEquals(0, backend.soloCalls);
-    }
-
-    private static final class CountingRuntime
-            implements DeterministicAudioRuntime {
-        int advances;
-        FrameAudioMode lastMode;
-
-        @Override
-        public void advanceFrame(long frame, FrameAudioMode mode) {
-            advances++;
-            lastMode = mode;
-        }
     }
 
     private static class TuningBackend extends NullAudioBackend {
@@ -187,10 +170,12 @@ class TestShadowAudioPresentationRouting {
     private static final class FailingShadowBackend
             extends NullAudioBackend {
         boolean stopped;
-        byte[] pcm;
-        int pcmRate;
         int muteCalls;
         int soloCalls;
+
+        int totalCalls() {
+            return muteCalls + soloCalls + (stopped ? 1 : 0);
+        }
 
         @Override
         public AudioPresentationTuning presentationTuning() {
@@ -200,12 +185,6 @@ class TestShadowAudioPresentationRouting {
         @Override
         public void stopPlayback() {
             stopped = true;
-        }
-
-        @Override
-        public void playPcmSample(byte[] pcm, int sampleRate) {
-            this.pcm = pcm;
-            this.pcmRate = sampleRate;
         }
 
         @Override

@@ -7,8 +7,6 @@ import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -27,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,8 +35,8 @@ import static org.mockito.Mockito.when;
  * Offline capture compatibility API over the single authoritative
  * presentation producer. {@code beginCaptureMode} / {@code drainCaptureFrame} /
  * {@code endCaptureMode} attach, read, and detach exactly one non-consuming
- * producer lease; they never install a deterministic runtime, replace the
- * producer/registry/sink, or open an audio device.
+ * producer lease; they never replace the producer/registry/sink and never open
+ * an audio device.
  */
 class AudioManagerCaptureModeTest {
 
@@ -106,9 +103,12 @@ class AudioManagerCaptureModeTest {
             throws Exception {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();
+        // beginCaptureMode rejects a lease clocked at anything other than the
+        // producer's rate, and that rate comes from the shared configuration
+        // singleton, so pin it rather than inheriting whatever an earlier class
+        // in this JVM fork left behind.
+        SonicConfigurationService.getInstance().resetToDefaults();
         audio.setBackend(new RecordingAudioBackend());
-        SentinelRuntime sentinel = new SentinelRuntime();
-        audio.setDeterministicAudioRuntime(sentinel);
         audio.submitShadowRawPcmForTesting(rampPcm(4_000), 48_000);
         audio.presentFrame(PresentationMode.FORWARD);
 
@@ -119,8 +119,7 @@ class AudioManagerCaptureModeTest {
 
         audio.beginCaptureMode(48_000, 60);
 
-        assertSame(sentinel, deterministicRuntime(audio),
-                "offline capture must not install a deterministic runtime");
+        assertBackendOwnsNoPresentationHistory();
         assertSame(producerBefore, producer(audio),
                 "offline capture must not replace the authoritative producer");
         assertSame(sinkBefore, presentationSink(audio),
@@ -135,8 +134,6 @@ class AudioManagerCaptureModeTest {
                 "attaching the compatibility lease must not move history");
         assertEquals(before.captureCount() + 1, after.captureCount(),
                 "exactly one compatibility lease is attached");
-        assertEquals(0, sentinel.advances,
-                "the retired runtime must never advance offline presentation");
 
         audio.endCaptureMode();
     }
@@ -346,6 +343,7 @@ class AudioManagerCaptureModeTest {
     void rejectsSecondLeaseAndRateChangeAfterVoicesHaveBegun() {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();
+        SonicConfigurationService.getInstance().resetToDefaults();
         audio.setBackend(new RecordingAudioBackend());
         audio.submitShadowRawPcmForTesting(rampPcm(4_000), 48_000);
         audio.presentFrame(PresentationMode.FORWARD);
@@ -454,9 +452,8 @@ class AudioManagerCaptureModeTest {
         audio.resetState();
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
-        HeadlessSmpsAudioBackend backend = new HeadlessSmpsAudioBackend(
-                config, PerformanceProfiler.getInstance());
-        audio.setBackend(backend);
+        audio.setBackend(new HeadlessSmpsAudioBackend(
+                config, PerformanceProfiler.getInstance()));
 
         AudioPresentationSink sinkBefore = presentationSink(audio);
         assertInstanceOf(NoDeviceAudioSink.class, sinkBefore,
@@ -469,8 +466,7 @@ class AudioManagerCaptureModeTest {
         assertSame(sinkBefore, presentationSink(audio),
                 "offline capture must never open a speaker device");
         assertInstanceOf(NoDeviceAudioSink.class, presentationSink(audio));
-        assertNull(pcmHistoryRing(backend),
-                "offline capture must not reactivate backend history");
+        assertBackendOwnsNoPresentationHistory();
 
         audio.endCaptureMode();
         assertInstanceOf(NoDeviceAudioSink.class, presentationSink(audio));
@@ -483,19 +479,16 @@ class AudioManagerCaptureModeTest {
         audio.resetState();
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
-        HeadlessSmpsAudioBackend backend =
-                new HeadlessSmpsAudioBackend(config, PerformanceProfiler.getInstance());
-        audio.setBackend(backend);
+        audio.setBackend(new HeadlessSmpsAudioBackend(
+                config, PerformanceProfiler.getInstance()));
         try {
             audio.setRewindHistoryArmed(true);
             assertTrue(audio.releaseStateForTesting().producer().historyArmed());
-            assertNull(pcmHistoryRing(backend),
-                    "retired backend must never own presentation history");
+            assertBackendOwnsNoPresentationHistory();
 
             audio.beginCaptureMode(48_000, 60);
 
-            assertNull(pcmHistoryRing(backend),
-                    "offline capture must not reactivate backend history");
+            assertBackendOwnsNoPresentationHistory();
             audio.presentFrame(PresentationMode.FORWARD);
             short[] target = new short[800 * 2];
             assertEquals(800, audio.drainCaptureFrame(target),
@@ -505,7 +498,7 @@ class AudioManagerCaptureModeTest {
 
             assertTrue(audio.releaseStateForTesting().producer().historyArmed(),
                     "ending offline capture must leave producer history ownership intact");
-            assertNull(pcmHistoryRing(backend));
+            assertBackendOwnsNoPresentationHistory();
         } finally {
             audio.endCaptureMode();
             audio.resetState();
@@ -557,14 +550,6 @@ class AudioManagerCaptureModeTest {
         return data;
     }
 
-    private static DeterministicAudioRuntime deterministicRuntime(
-            AudioManager audio) throws Exception {
-        Field field =
-                AudioManager.class.getDeclaredField("deterministicAudioRuntime");
-        field.setAccessible(true);
-        return (DeterministicAudioRuntime) field.get(audio);
-    }
-
     private static AudioPresentationSink presentationSink(AudioManager audio)
             throws Exception {
         Field field = AudioManager.class.getDeclaredField("presentationSink");
@@ -578,19 +563,20 @@ class AudioManagerCaptureModeTest {
         return field.get(audio);
     }
 
-    private static PcmHistoryRing pcmHistoryRing(AbstractSmpsAudioBackend backend) throws Exception {
-        Field field = AbstractSmpsAudioBackend.class.getDeclaredField("pcmHistory");
-        field.setAccessible(true);
-        return (PcmHistoryRing) field.get(backend);
-    }
-
-    private static final class SentinelRuntime
-            implements DeterministicAudioRuntime {
-        private int advances;
-
-        @Override
-        public void advanceFrame(long frame, FrameAudioMode mode) {
-            advances++;
+    /**
+     * The presentation producer is the only owner of rewind PCM history. The
+     * retired backend must not declare a history ring at all, so offline
+     * capture cannot re-establish a second history owner.
+     */
+    private static void assertBackendOwnsNoPresentationHistory() {
+        for (Field field
+                : AbstractSmpsAudioBackend.class.getDeclaredFields()) {
+            assertFalse(
+                    PcmHistoryRing.class.isAssignableFrom(field.getType())
+                            || PcmHistoryRing.ReverseCursor.class
+                                    .isAssignableFrom(field.getType()),
+                    "backend still declares presentation history field "
+                            + field.getName());
         }
     }
 

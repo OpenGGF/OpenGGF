@@ -1,14 +1,10 @@
 package com.openggf.audio;
 
 import com.openggf.audio.smps.AbstractSmpsData;
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
-import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -25,24 +21,20 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Device-agnostic base for the SMPS synthesis audio backend.
+ * Device-agnostic base for the SMPS source-construction backend.
  *
- * <p>This class owns ALL SMPS synthesis, the sequencer / music-stack / SFX
- * lifecycle, speed/tempo state, logical snapshot capture/restore, the
- * PCM-history rewind ring, and deterministic-runtime binding. It contains
- * <strong>zero</strong> OpenAL ({@code al*}/{@code alc*}) calls and no
- * {@code org.lwjgl.openal.*} imports. Every point where synthesis output must
- * touch a real device goes through a {@code protected abstract} hook method,
- * which concrete subclasses implement:
+ * <p>This class owns SMPS sequencer/driver construction, the music-stack and
+ * SFX lifecycle, speed/tempo state, and logical music-source descriptors. It
+ * owns <strong>no</strong> presentation state: the presentation clock, final
+ * PCM, rewind history, reverse cursor, and capture leases all belong to
+ * {@code AudioPresentationProducer}, and the only writer of a real audio
+ * device is {@code OpenAlPcmSink}. It contains <strong>zero</strong> OpenAL
+ * calls and no {@code org.lwjgl.openal} imports.
  *
- * <ul>
- *   <li>{@link LWJGLAudioBackend} relocates the original OpenAL device code
- *       verbatim into each hook (live audio).</li>
- *   <li>{@link HeadlessSmpsAudioBackend} implements every hook as a no-op
- *       (except device init, which fixes the device-facing fallback rate to 48000).
- *       The deterministic capture runtime
- *       is the sole consumer of synthesized PCM in that mode.</li>
- * </ul>
+ * <p>The remaining device lifecycle hooks are {@code protected abstract} and
+ * implemented as no-ops by both concrete subclasses
+ * ({@link LWJGLAudioBackend}, {@link HeadlessSmpsAudioBackend}); the headless
+ * backend additionally fixes the device-facing fallback rate to 48000.
  */
 public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private static final Logger LOGGER = Logger.getLogger(AbstractSmpsAudioBackend.class.getName());
@@ -52,23 +44,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     protected final PerformanceProfiler profiler;
 
     protected static final int STREAM_BUFFER_SIZE = 1024;
-    // Pre-allocated buffers for fillBuffer() to avoid per-call allocations (~43 times/sec)
-    protected final short[] streamData = new short[STREAM_BUFFER_SIZE * 2];
-    protected final short[] sfxStreamData = new short[STREAM_BUFFER_SIZE * 2];
-    private final short[] handoffMusicData = new short[STREAM_BUFFER_SIZE * 2];
-    private final short[] handoffSfxData = new short[STREAM_BUFFER_SIZE * 2];
-    private short[] presentationHandoff = new short[0];
-    private int presentationHandoffFrame;
 
     protected AudioStream currentStream;
     protected AudioStream sfxStream;
     private SmpsSequencer currentSmps;
     private SmpsDriver smpsDriver;
-    private DeterministicAudioRuntime deterministicAudioRuntime;
-    private PcmHistoryRing pcmHistory;
-    private PcmHistoryRing.ReverseCursor reverseCursor;
-    private double pendingReverseRate = 1.0;
-    private boolean rewindHistoryArmed = false;
 
     private static class MusicState {
         final AudioStream stream;
@@ -87,132 +67,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
     }
 
-    private enum PreparedRestoreState {
-        PREPARED,
-        COMMITTING,
-        COMMITTED,
-        DISCARDED
-    }
-
-    private static final class PreparedDriverResources {
-        private final List<SmpsDriver> drivers = new ArrayList<>();
-        private final Set<SmpsDriver> identities =
-                Collections.newSetFromMap(new IdentityHashMap<>());
-        private boolean discarded;
-
-        private void track(SmpsDriver driver) {
-            if (identities.add(driver)) {
-                drivers.add(driver);
-            }
-        }
-
-        private List<SmpsDriver> claimForDiscard() {
-            if (discarded) {
-                return List.of();
-            }
-            discarded = true;
-            return List.copyOf(drivers);
-        }
-    }
-
-    private static final class PreparedSmpsLogicalRestore
-            implements AudioBackend.PreparedLogicalRestore {
-        private final AbstractSmpsAudioBackend owner;
-        private final SmpsDriver musicDriver;
-        private final SmpsDriver standaloneSfxDriver;
-        private final Deque<MusicState> overrideStack;
-        private final AudioBackendLogicalSnapshot snapshot;
-        private final boolean preservePresentationQueue;
-        private final LegacyLiveState prior;
-        private final PreparedDriverResources resources;
-        private PreparedRestoreState state = PreparedRestoreState.PREPARED;
-
-        private PreparedSmpsLogicalRestore(
-                AbstractSmpsAudioBackend owner,
-                SmpsDriver musicDriver,
-                SmpsDriver standaloneSfxDriver,
-                Deque<MusicState> overrideStack,
-                AudioBackendLogicalSnapshot snapshot,
-                boolean preservePresentationQueue,
-                LegacyLiveState prior,
-                PreparedDriverResources resources) {
-            this.owner = owner;
-            this.musicDriver = musicDriver;
-            this.standaloneSfxDriver = standaloneSfxDriver;
-            this.overrideStack = overrideStack;
-            this.snapshot = snapshot;
-            this.preservePresentationQueue = preservePresentationQueue;
-            this.prior = prior;
-            this.resources = resources;
-        }
-
-        private AbstractSmpsAudioBackend owner() {
-            return owner;
-        }
-
-        private SmpsDriver musicDriver() {
-            return musicDriver;
-        }
-
-        private SmpsDriver standaloneSfxDriver() {
-            return standaloneSfxDriver;
-        }
-
-        private Deque<MusicState> overrideStack() {
-            return overrideStack;
-        }
-
-        private AudioBackendLogicalSnapshot snapshot() {
-            return snapshot;
-        }
-
-        private boolean preservePresentationQueue() {
-            return preservePresentationQueue;
-        }
-
-        private LegacyLiveState prior() {
-            return prior;
-        }
-
-        private PreparedDriverResources resources() {
-            return resources;
-        }
-    }
-
-    private record LegacyLiveState(
-            AudioStream currentStream,
-            AudioStream sfxStream,
-            SmpsSequencer currentSmps,
-            SmpsDriver smpsDriver,
-            AudioSourceDescriptor currentMusicDescriptor,
-            int currentMusicId,
-            AudioSourceDescriptor pendingMusicDescriptor,
-            boolean sfxBlocked,
-            boolean pendingRestore,
-            boolean speedShoesEnabled,
-            int speedMultiplier,
-            Deque<MusicState> overrideStack,
-            int fmUserMuteMask,
-            int fmUserSoloMask,
-            int psgUserMuteMask,
-            int psgUserSoloMask) {
-    }
-
     private final Deque<MusicState> musicStack = new ArrayDeque<>();
 
-    /**
-     * Source data for every SMPS music started this session, keyed by logical
-     * descriptor. Lets {@link #restoreLogicalSnapshot} rebuild the override
-     * stack (saved zone music under a 1-up/invincibility jingle) as
-     * restart-from-beginning states; without it, rewinding through an override
-     * window dropped the saved music, so the jingle's end found an empty stack
-     * and zone music never resumed. Cleared on {@link #setAudioProfile} since
-     * base music ids are only unique within one game.
-     */
-    private record CachedMusicSource(AbstractSmpsData data, DacData dacData, SmpsSequencerConfig config) {
-    }
-
-    private final Map<AudioSourceDescriptor, CachedMusicSource> musicSourceCache = new HashMap<>();
     private int currentMusicId = -1;
     private AudioSourceDescriptor currentMusicDescriptor;
     private AudioSourceDescriptor pendingMusicDescriptor;
@@ -259,60 +115,49 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     protected abstract void hookDestroyDevice();
 
     /**
-     * Begins streaming: fills and queues the initial stream buffers and starts
-     * playback. Headless: no-op.
+     * Begins a source lifecycle transition into "playing". No presentation
+     * output is attached to the backend; both subclasses are no-ops.
      */
     protected abstract void hookStartStream();
 
     /**
-     * Stops streaming and unqueues/clears the music source's buffers (the body
-     * of the old {@code stopStream()} device section). Guarded internally on a
-     * valid music source. Headless: no-op.
+     * Ends a source lifecycle transition out of "playing" for the music slot.
+     * Both subclasses are no-ops.
      */
     protected abstract void hookStopStreamSource();
 
     /**
-     * Pumps the device stream: unqueues processed buffers, refills them via
-     * {@link #fillBuffer(int)}, re-queues, and re-starts playback if stalled.
-     * Headless: no-op (the capture runtime reads synthesis directly).
+     * Per-{@link #update()} device pump. No presentation output is attached to
+     * the backend; both subclasses are no-ops.
      */
     protected abstract void hookUpdateStream();
 
     /**
-     * Stops the music source and detaches its current buffer
-     * ({@code alSourceStop} + {@code alSourcei(AL_BUFFER, 0)}), without
-     * unqueueing streamed buffers. Used by the override-swap paths in
-     * {@code playSmps}. Headless: no-op.
+     * Detaches the music slot without ending queued output. Used by the
+     * override-swap paths in {@code playSmps}. Both subclasses are no-ops.
      */
     protected abstract void hookStopAndClearMusicSource();
 
     /**
-     * Stops the music source and unqueues ALL queued buffers (no final
-     * {@code alSourcei(AL_BUFFER,0)}). Used by {@code doRestoreMusic}.
-     * Headless: no-op.
+     * Ends all queued music output. Used by {@code doRestoreMusic}. Both
+     * subclasses are no-ops.
      */
     protected abstract void hookStopAndUnqueueAllMusicBuffers();
 
     /**
-     * Stops the music source, unqueues ALL queued buffers, and detaches the
-     * current buffer. Used by {@code restoreLogicalSnapshot} and
-     * {@code stopPlayback}. Guarded internally on a valid music source.
-     * Headless: no-op.
+     * Ends all queued music output and detaches the music slot. Used by
+     * {@code stopPlayback}. Both subclasses are no-ops.
      */
     protected abstract void hookStopAndClearAllMusicBuffers();
 
     /**
-     * Restarts the device stream if the music source has run dry (no queued
-     * buffers): the {@code playSfxSmps} "ensure stream is running" tail.
-     * Headless: no-op.
+     * Restarts a dry music slot: the {@code playSfxSmps} "ensure stream is
+     * running" tail. Both subclasses are no-ops.
      */
     protected abstract void hookRestartStreamIfDry();
 
-    /** Stops and deletes any WAV-based SFX sources. Headless: no-op. */
+    /** Stops and deletes any WAV-based SFX sources. Both subclasses: no-op. */
     protected abstract void hookStopAndDeleteWavSfxSources();
-
-    /** Uploads one stream buffer's worth of PCM to the device. Headless: no-op. */
-    protected abstract void hookUploadStreamBuffer(int bufferId, short[] pcm, int sampleRate);
 
     /** Plays a named WAV SFX through the device. Headless: no-op. */
     protected abstract void hookPlayWavSfx(String sfxName, float pitch);
@@ -340,7 +185,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     public void setAudioProfile(GameAudioProfile profile) {
         this.audioProfile = profile;
         this.smpsConfig = profile != null ? profile.getSequencerConfig() : null;
-        musicSourceCache.clear();
     }
 
     @Override
@@ -414,9 +258,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                         sfxDriver.stopAll();
                     }
                     sfxStream = null;
-                    if (runtimeProvidesPresentationPcm()) {
-                        deterministicAudioRuntime.clearSfxStream();
-                    }
                 }
                 sfxBlocked = true;
             }
@@ -441,20 +282,16 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             clearMusicStack();
             // Clean up standalone SFX stream - stopStream() only handles currentStream/smpsDriver,
             // but SFX played before any music was active use a separate sfxStream SmpsDriver.
-            // Without this, the sfxStream persists and keeps rendering into fillBuffer() indefinitely.
+            // Without this, the sfxStream persists indefinitely.
             synchronized (streamLock) {
                 if (sfxStream instanceof SmpsDriver sfxDriver) {
                     sfxDriver.stopAll();
                 }
                 sfxStream = null;
-                if (runtimeProvidesPresentationPcm()) {
-                    deterministicAudioRuntime.clearSfxStream();
-                }
             }
         }
 
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
-        cacheMusicSource(musicDescriptor, data, dacData, requireSmpsConfig());
         SmpsCompositeVoice legacyMusic = createLegacyMusic(
                 data, dacData, requireSmpsConfig(), musicDescriptor);
         smpsDriver = legacyMusic.driver();
@@ -465,9 +302,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
         updateSynthesizerConfig();
         synchronized (streamLock) {
-            if (runtimeProvidesPresentationPcm()) {
-                deterministicAudioRuntime.setMusicStream(smpsDriver);
-            }
             currentStream = smpsDriver;
         }
         startStream();
@@ -495,9 +329,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                         sfxDriver.stopAll();
                     }
                     sfxStream = null;
-                    if (runtimeProvidesPresentationPcm()) {
-                        deterministicAudioRuntime.clearSfxStream();
-                    }
                 }
                 sfxBlocked = true;
             }
@@ -519,14 +350,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     sfxDriver.stopAll();
                 }
                 sfxStream = null;
-                if (runtimeProvidesPresentationPcm()) {
-                    deterministicAudioRuntime.clearSfxStream();
-                }
             }
         }
 
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
-        cacheMusicSource(musicDescriptor, data, dacData, effectiveConfig);
         SmpsCompositeVoice legacyMusic = createLegacyMusic(
                 data, dacData, effectiveConfig, musicDescriptor);
         smpsDriver = legacyMusic.driver();
@@ -537,9 +364,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
         updateSynthesizerConfig();
         synchronized (streamLock) {
-            if (runtimeProvidesPresentationPcm()) {
-                deterministicAudioRuntime.setMusicStream(smpsDriver);
-            }
             currentStream = smpsDriver;
         }
         startStream();
@@ -594,7 +418,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             }
         }
 
-        if (smpsDriver != null && (currentStream == smpsDriver || runtimeProvidesPresentationPcm())) {
+        if (smpsDriver != null && currentStream == smpsDriver) {
             // Mix into current driver
             if (isContinuous) {
                 smpsDriver.startContinuousSfx(data.getId(), contTrackCount);
@@ -640,40 +464,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     seq.setFallbackVoiceData(currentSmps.getSmpsData());
                 }
                 sfxDriver.addSequencer(seq, true);
-                if (runtimeProvidesPresentationPcm()) {
-                    deterministicAudioRuntime.setSfxStream(sfxDriver);
-                }
             }
         }
 
         // Ensure stream is running
         hookRestartStreamIfDry();
-    }
-
-    @Override
-    public void playPcmSample(byte[] pcm, int sourceSampleRate) {
-        if (pcm == null || pcm.length == 0 || sfxBlocked) {
-            return;
-        }
-        synchronized (streamLock) {
-            sfxStream = new PcmSampleStream(pcm, sourceSampleRate, outputSampleRate());
-            if (runtimeProvidesPresentationPcm()) {
-                deterministicAudioRuntime.setSfxStream(sfxStream);
-            }
-        }
-        hookRestartStreamIfDry();
-    }
-
-    @Override
-    public void stopPcmSample() {
-        synchronized (streamLock) {
-            if (sfxStream instanceof PcmSampleStream) {
-                sfxStream = null;
-                if (runtimeProvidesPresentationPcm()) {
-                    deterministicAudioRuntime.clearSfxStream();
-                }
-            }
-        }
     }
 
     protected void startStream() {
@@ -685,10 +480,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
         currentStream = null;
         currentSmps = null;
-        if (runtimeProvidesPresentationPcm()) {
-            deterministicAudioRuntime.clearMusicStream();
-            deterministicAudioRuntime.flushPresentationFifo();
-        }
         if (smpsDriver != null) {
             smpsDriver.stopAll();
             smpsDriver = null;
@@ -713,8 +504,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             return;
         }
 
-        // Stop the current (invincibility/extra-life) music stream and
-        // unqueue ALL buffers (both processed and queued) to avoid OpenAL errors
+        // Release any queued output for the current (invincibility/extra-life)
+        // music slot before the saved state is reinstated.
         hookStopAndUnqueueAllMusicBuffers();
 
         // Stop the current (non-saved) smps driver
@@ -730,7 +521,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             currentMusicId = savedState.musicId;
             currentMusicDescriptor = savedState.descriptor;
             updateSynthesizerConfig();
-            bindRuntimePresentationStreams();
         }
 
         if (currentSmps != null) {
@@ -753,127 +543,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         startStream();
     }
 
-    /**
-     * Renders one stream buffer's worth of PCM (music + SFX mix + pcmHistory
-     * write) and uploads it to the device via {@link #hookUploadStreamBuffer}.
-     * The synthesis/mix/history portion is shared; only the upload is the hook.
-     */
-    protected void fillBuffer(int bufferId) {
-        // Profiler sections inside fillBuffer. Names describe what is actually wrapped,
-        // not a clean SMPS/synth/resample split — SmpsDriver.read() interleaves the
-        // sequencer, YM2612/PSG synthesis, and the blip resampler at sample granularity,
-        // so those three phases cannot be separated at this seam.
-        //   - audio.music_stream: music AudioStream read() (SMPS + synth + resample,
-        //     interleaved).
-        //   - audio.sfx_stream:   separate-SFX stream read() plus the music/SFX mix loop.
-        //   - audio.upload:       DirectBuffer fill and OpenAL upload.
-        // Sections do not nest (see PerformanceProfiler.beginSection), so starting any of
-        // these inside the outer "audio" section in GameLoop will truncate that section
-        // — that's expected. Called potentially multiple times per audio tick (once per
-        // processed buffer in updateStream); PerformanceProfiler accumulates section time.
-        int sampleRate;
-        synchronized (streamLock) {
-            boolean runtimePresentation = runtimeProvidesPresentationPcm();
-            boolean handoffPresentation = !runtimePresentation && presentationHandoffFrames() > 0;
-            beginProfileSection("audio.music_stream");
-            try {
-                // Clear and reuse pre-allocated buffer
-                Arrays.fill(streamData, (short) 0);
-                if (reverseCursor != null) {
-                    reverseCursor.readPrevious(streamData, STREAM_BUFFER_SIZE);
-                } else if (runtimePresentation) {
-                    deterministicAudioRuntime.drainPcm(streamData, STREAM_BUFFER_SIZE);
-                    clearCompletedRuntimeSfxIfNeeded();
-                } else if (handoffPresentation) {
-                    int copiedFrames = copyPresentationHandoff(streamData, STREAM_BUFFER_SIZE);
-                    readLegacyPresentationTail(copiedFrames, STREAM_BUFFER_SIZE - copiedFrames);
-                } else if (currentStream != null) {
-                    currentStream.read(streamData);
-                }
-            } finally {
-                endProfileSection("audio.music_stream");
-            }
-
-            beginProfileSection("audio.sfx_stream");
-            try {
-                if (!runtimePresentation && !handoffPresentation && sfxStream != null) {
-                    Arrays.fill(sfxStreamData, (short) 0);
-                    sfxStream.read(sfxStreamData);
-
-                    for (int i = 0; i < streamData.length; i++) {
-                        int mixed = streamData[i] + sfxStreamData[i];
-                        if (mixed > Short.MAX_VALUE)
-                            mixed = Short.MAX_VALUE;
-                        if (mixed < Short.MIN_VALUE)
-                            mixed = Short.MIN_VALUE;
-                        streamData[i] = (short) mixed;
-                    }
-
-                    if (sfxStream.isComplete()) {
-                        sfxStream = null;
-                    }
-                }
-                if (!runtimePresentation && rewindHistoryArmed
-                        && reverseCursor == null && pcmHistory != null) {
-                    pcmHistory.write(streamData, STREAM_BUFFER_SIZE);
-                }
-
-                sampleRate = (int) Math.round(getStreamSampleRate());
-            } finally {
-                endProfileSection("audio.sfx_stream");
-            }
-        }
-
-        // Keep DirectBuffer/OpenAL operations outside lock to minimize contention
-        beginProfileSection("audio.upload");
-        try {
-            hookUploadStreamBuffer(bufferId, streamData, sampleRate);
-        } finally {
-            endProfileSection("audio.upload");
-        }
-    }
-
-    protected void beginProfileSection(String section) {
-        if (profiler != null) {
-            profiler.beginSection(section);
-        }
-    }
-
-    protected void endProfileSection(String section) {
-        if (profiler != null) {
-            profiler.endSection(section);
-        }
-    }
-
-    protected boolean runtimeProvidesPresentationPcm() {
-        return deterministicAudioRuntime != null && deterministicAudioRuntime.providesPresentationPcm();
-    }
-
-    protected void bindRuntimePresentationStreams() {
-        if (!runtimeProvidesPresentationPcm()) {
-            return;
-        }
-        deterministicAudioRuntime.setMusicStream(currentStream);
-        if (sfxStream != null) {
-            deterministicAudioRuntime.setSfxStream(sfxStream);
-        } else {
-            deterministicAudioRuntime.clearSfxStream();
-        }
-    }
-
-    private void clearRuntimeSfxStream() {
-        if (runtimeProvidesPresentationPcm()) {
-            deterministicAudioRuntime.clearSfxStream();
-        }
-    }
-
-    private void clearCompletedRuntimeSfxIfNeeded() {
-        if (sfxStream != null && sfxStream.isComplete()) {
-            sfxStream = null;
-            clearRuntimeSfxStream();
-        }
-    }
-
     protected double getSmpsOutputRate() {
         boolean internalRate = configService.getBoolean(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT);
         // Use device's native sample rate to avoid OpenAL resampling - our BlipResampler handles it
@@ -883,26 +552,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     protected void applyPsgNoiseConfig(SmpsDriver driver) {
         boolean everyToggle = configService.getBoolean(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE);
         driver.setPsgNoiseShiftOnEveryToggle(everyToggle);
-    }
-
-    protected double getStreamSampleRate() {
-        double rate = getDeviceSampleRate();  // Use device rate as fallback to match getSmpsOutputRate()
-        synchronized (streamLock) {
-            SmpsDriver musicDriver = (currentStream instanceof SmpsDriver driver) ? driver : null;
-            SmpsDriver sfxDriver = (sfxStream instanceof SmpsDriver driver) ? driver : null;
-            if (musicDriver != null) {
-                rate = musicDriver.getOutputSampleRate();
-            } else if (sfxDriver != null) {
-                rate = sfxDriver.getOutputSampleRate();
-            }
-            if (musicDriver != null && sfxDriver != null) {
-                double sfxRate = sfxDriver.getOutputSampleRate();
-                if (Math.abs(rate - sfxRate) > 1e-6) {
-                    LOGGER.warning("Audio stream sample rate mismatch: music=" + rate + " sfx=" + sfxRate);
-                }
-            }
-        }
-        return rate;
     }
 
     /**
@@ -996,394 +645,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
     }
 
-    @Override
-    public AudioBackendLogicalSnapshot captureLogicalSnapshot() {
-        synchronized (streamLock) {
-            List<AudioSourceDescriptor> overrides = new ArrayList<>(musicStack.size());
-            for (MusicState state : musicStack) {
-                overrides.add(state.descriptor);
-            }
-            SmpsDriverSnapshot musicDriverSnapshot = smpsDriver != null ? smpsDriver.captureSnapshot() : null;
-            SmpsDriverSnapshot sfxDriverSnapshot = sfxStream instanceof SmpsDriver sfxDriver
-                    ? sfxDriver.captureSnapshot()
-                    : null;
-            return new AudioBackendLogicalSnapshot(
-                    currentMusicDescriptor,
-                    sfxBlocked,
-                    pendingRestore,
-                    speedShoesEnabled,
-                    speedMultiplier,
-                    overrides,
-                    musicDriverSnapshot,
-                    sfxDriverSnapshot,
-                    maskOf(fmUserMutes), maskOf(fmUserSolos),
-                    maskOf(psgUserMutes), maskOf(psgUserSolos));
-        }
-    }
-
-    @Override
-    public void restoreLogicalSnapshot(AudioBackendLogicalSnapshot snapshot) {
-        restoreLogicalSnapshot(snapshot, SmpsDriverSnapshot.liveReferences());
-    }
-
-    @Override
-    public void restoreLogicalSnapshot(
-            AudioBackendLogicalSnapshot snapshot,
-            SmpsDriverSnapshot.DependencyResolver resolver) {
-        restoreLogicalSnapshot(snapshot, resolver, false);
-    }
-
-    @Override
-    public void restoreLogicalSnapshot(
-            AudioBackendLogicalSnapshot snapshot,
-            SmpsDriverSnapshot.DependencyResolver resolver,
-            boolean preservePresentationQueue) {
-        AudioBackend.PreparedLogicalRestore prepared =
-                prepareLogicalRestore(
-                        snapshot, resolver, preservePresentationQueue);
-        try {
-            commitLogicalRestore(prepared);
-        } catch (RuntimeException failure) {
-            try {
-                rollbackLogicalRestore(prepared);
-            } catch (RuntimeException rollbackFailure) {
-                failure.addSuppressed(rollbackFailure);
-            }
-            try {
-                discardLogicalRestore(prepared);
-            } catch (RuntimeException discardFailure) {
-                failure.addSuppressed(discardFailure);
-            }
-            throw failure;
-        }
-    }
-
-    @Override
-    public AudioBackend.PreparedLogicalRestore prepareLogicalRestore(
-            AudioBackendLogicalSnapshot snapshot,
-            SmpsDriverSnapshot.DependencyResolver resolver,
-            boolean preservePresentationQueue) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        Objects.requireNonNull(resolver, "resolver");
-        synchronized (streamLock) {
-            LegacyLiveState prior = captureLiveLogicalState();
-            PreparedDriverResources resources =
-                    new PreparedDriverResources();
-            try {
-                SmpsDriver preparedMusic = snapshot.musicDriver() != null
-                        ? restoreDriverFromSnapshot(
-                                null, snapshot.musicDriver(), resolver,
-                                resources)
-                        : null;
-                SmpsDriver preparedSfx =
-                        snapshot.standaloneSfxDriver() != null
-                                ? restoreDriverFromSnapshot(
-                                        null,
-                                        snapshot.standaloneSfxDriver(),
-                                        resolver, resources)
-                                : null;
-                Deque<MusicState> preparedOverrides =
-                        prepareMusicOverrideStack(
-                                snapshot.overrideStack(),
-                                snapshot.speedShoesEnabled(),
-                                snapshot.speedMultiplier(), resources);
-                return new PreparedSmpsLogicalRestore(
-                        this, preparedMusic, preparedSfx, preparedOverrides,
-                        snapshot, preservePresentationQueue,
-                        prior, resources);
-            } catch (RuntimeException failure) {
-                discardPreparedResources(resources, failure);
-                throw failure;
-            }
-        }
-    }
-
-    @Override
-    public void commitLogicalRestore(
-            AudioBackend.PreparedLogicalRestore restore) {
-        PreparedSmpsLogicalRestore prepared = requirePreparedRestore(restore);
-        AudioBackendLogicalSnapshot snapshot = prepared.snapshot();
-        synchronized (streamLock) {
-            if (prepared.state != PreparedRestoreState.PREPARED) {
-                throw new IllegalStateException(
-                        "Prepared restore is not available for commit: "
-                                + prepared.state);
-            }
-            prepared.state = PreparedRestoreState.COMMITTING;
-            currentStream = null;
-            currentSmps = null;
-            smpsDriver = null;
-            sfxStream = null;
-            currentMusicDescriptor = snapshot.currentMusic();
-            currentMusicId = snapshot.currentMusic() != null ? snapshot.currentMusic().id() : -1;
-            pendingMusicDescriptor = null;
-            sfxBlocked = snapshot.sfxBlocked();
-            speedShoesEnabled = snapshot.speedShoesEnabled();
-            speedMultiplier = snapshot.speedMultiplier();
-            restoreUserMasks(snapshot.fmUserMuteMask(),
-                    snapshot.fmUserSoloMask(), snapshot.psgUserMuteMask(),
-                    snapshot.psgUserSoloMask());
-
-            musicStack.clear();
-            musicStack.addAll(prepared.overrideStack());
-
-            if (prepared.musicDriver() != null) {
-                smpsDriver = prepared.musicDriver();
-                currentStream = smpsDriver;
-                currentSmps = smpsDriver.firstMusicSequencer();
-                rebindFadeCompleteCallbackIfNeeded();
-            }
-            if (prepared.standaloneSfxDriver() != null) {
-                sfxStream = prepared.standaloneSfxDriver();
-            }
-            updateSynthesizerConfig();
-            pendingRestore = snapshot.pendingRestore() && !musicStack.isEmpty();
-            if (sfxBlocked && musicStack.isEmpty() && !restoredFadeInActive()) {
-                // No override to fade back into and no fade-in in flight: with
-                // the latch left set, nothing would ever unblock SFX again.
-                sfxBlocked = false;
-            }
-            bindRuntimePresentationStreams();
-            if (runtimeProvidesPresentationPcm()
-                    && !prepared.preservePresentationQueue()) {
-                deterministicAudioRuntime.flushPresentationFifo();
-            }
-        }
-        if (!prepared.preservePresentationQueue()) {
-            hookStopAndClearAllMusicBuffers();
-        }
-        synchronized (streamLock) {
-            prepared.state = PreparedRestoreState.COMMITTED;
-        }
-    }
-
-    @Override
-    public void discardLogicalRestore(
-            AudioBackend.PreparedLogicalRestore restore) {
-        PreparedSmpsLogicalRestore prepared = requirePreparedRestore(restore);
-        synchronized (streamLock) {
-            if (prepared.state == PreparedRestoreState.DISCARDED) {
-                return;
-            }
-            if (prepared.state != PreparedRestoreState.PREPARED) {
-                throw new IllegalStateException(
-                        "Only an unpublished prepared restore can be discarded: "
-                                + prepared.state);
-            }
-            prepared.state = PreparedRestoreState.DISCARDED;
-            discardPreparedResources(prepared.resources(), null);
-        }
-    }
-
-    @Override
-    public void rollbackLogicalRestore(
-            AudioBackend.PreparedLogicalRestore restore) {
-        PreparedSmpsLogicalRestore prepared = requirePreparedRestore(restore);
-        synchronized (streamLock) {
-            if (prepared.state != PreparedRestoreState.COMMITTING
-                    && prepared.state != PreparedRestoreState.COMMITTED) {
-                throw new IllegalStateException(
-                        "Restore was not committed and cannot be rolled back: "
-                                + prepared.state);
-            }
-            restoreLiveLogicalState(prepared.prior());
-            bindRuntimePresentationStreams();
-            // The manager retains this exact token for a lossless retry.
-            // It remains unpublished after rollback and is discarded only if
-            // the manager later abandons the deferred restore.
-            prepared.state = PreparedRestoreState.PREPARED;
-        }
-    }
-
-    /**
-     * Releases a driver owned only by an unpublished or rolled-back restore.
-     * Kept as a narrow hook so concrete backends can extend resource cleanup
-     * without exposing prepared-token internals.
-     */
-    protected void discardPreparedDriver(SmpsDriver driver) {
-        driver.stopAll();
-    }
-
-    private void discardPreparedResources(
-            PreparedDriverResources resources,
-            RuntimeException primaryFailure) {
-        RuntimeException cleanupFailure = null;
-        for (SmpsDriver driver : resources.claimForDiscard()) {
-            try {
-                discardPreparedDriver(driver);
-            } catch (RuntimeException failure) {
-                if (cleanupFailure == null) {
-                    cleanupFailure = failure;
-                } else {
-                    cleanupFailure.addSuppressed(failure);
-                }
-            }
-        }
-        if (cleanupFailure == null) {
-            return;
-        }
-        if (primaryFailure != null) {
-            primaryFailure.addSuppressed(cleanupFailure);
-            return;
-        }
-        throw cleanupFailure;
-    }
-
-    private PreparedSmpsLogicalRestore requirePreparedRestore(
-            AudioBackend.PreparedLogicalRestore restore) {
-        if (!(restore instanceof PreparedSmpsLogicalRestore prepared)
-                || prepared.owner() != this) {
-            throw new IllegalArgumentException(
-                    "Prepared restore belongs to a different backend");
-        }
-        return prepared;
-    }
-
-    private LegacyLiveState captureLiveLogicalState() {
-        return new LegacyLiveState(
-                currentStream, sfxStream, currentSmps, smpsDriver,
-                currentMusicDescriptor, currentMusicId,
-                pendingMusicDescriptor, sfxBlocked, pendingRestore,
-                speedShoesEnabled, speedMultiplier,
-                new ArrayDeque<>(musicStack),
-                maskOf(fmUserMutes), maskOf(fmUserSolos),
-                maskOf(psgUserMutes), maskOf(psgUserSolos));
-    }
-
-    private void restoreLiveLogicalState(LegacyLiveState state) {
-        currentStream = state.currentStream();
-        sfxStream = state.sfxStream();
-        currentSmps = state.currentSmps();
-        smpsDriver = state.smpsDriver();
-        currentMusicDescriptor = state.currentMusicDescriptor();
-        currentMusicId = state.currentMusicId();
-        pendingMusicDescriptor = state.pendingMusicDescriptor();
-        sfxBlocked = state.sfxBlocked();
-        pendingRestore = state.pendingRestore();
-        speedShoesEnabled = state.speedShoesEnabled();
-        speedMultiplier = state.speedMultiplier();
-        musicStack.clear();
-        musicStack.addAll(state.overrideStack());
-        restoreUserMasks(state.fmUserMuteMask(), state.fmUserSoloMask(),
-                state.psgUserMuteMask(), state.psgUserSoloMask());
-        updateSynthesizerConfig();
-    }
-
-    private void rebindFadeCompleteCallbackIfNeeded() {
-        if (sfxBlocked && restoredFadeInActive()) {
-            smpsDriver.bindMusicFadeCompleteCallback(() -> sfxBlocked = false);
-        }
-    }
-
-    private boolean restoredFadeInActive() {
-        if (smpsDriver == null || currentSmps == null) {
-            return false;
-        }
-        SmpsSequencerSnapshot snapshot = currentSmps.captureSnapshot();
-        return snapshot.fade().active() && !snapshot.fade().fadeOut();
-    }
-
-    private void cacheMusicSource(AudioSourceDescriptor descriptor, AbstractSmpsData data,
-                                  DacData dacData, SmpsSequencerConfig config) {
-        if (descriptor != null && data != null && config != null) {
-            musicSourceCache.put(descriptor, new CachedMusicSource(data, dacData, config));
-        }
-    }
-
-    /**
-     * Rebuilds the saved-music override stack from logical descriptors,
-     * preserving order (head = most recently pushed). Each rebuilt state
-     * restarts its music from the beginning when the override ends — the ROM
-     * also restarts the restored track rather than resuming mid-note.
-     * Descriptors with no cached source (never played this session) are
-     * dropped, matching the previous placeholder behavior.
-     */
-    private Deque<MusicState> prepareMusicOverrideStack(
-            List<AudioSourceDescriptor> overrideStack,
-            boolean targetSpeedShoes,
-            int targetSpeedMultiplier,
-            PreparedDriverResources resources) {
-        Deque<MusicState> prepared = new ArrayDeque<>();
-        for (AudioSourceDescriptor descriptor : overrideStack) {
-            MusicState rebuilt = rebuildOverrideState(
-                    descriptor, targetSpeedShoes, targetSpeedMultiplier,
-                    resources);
-            if (rebuilt != null) {
-                prepared.addLast(rebuilt);
-            } else if (descriptor != null) {
-                throw new IllegalStateException(
-                        "No rebuildable source for music override "
-                                + descriptor);
-            }
-        }
-        return prepared;
-    }
-
-    private MusicState rebuildOverrideState(
-            AudioSourceDescriptor descriptor,
-            boolean targetSpeedShoes,
-            int targetSpeedMultiplier,
-            PreparedDriverResources resources) {
-        if (descriptor == null) {
-            return null;
-        }
-        CachedMusicSource source = musicSourceCache.get(descriptor);
-        if (source == null) {
-            return null;
-        }
-        SmpsDriver driver = newConfiguredSmpsDriver();
-        resources.track(driver);
-        if ("PAL".equalsIgnoreCase(configService.getString(SonicConfiguration.REGION))) {
-            driver.setRegion(SmpsSequencer.Region.PAL);
-        } else {
-            driver.setRegion(SmpsSequencer.Region.NTSC);
-        }
-        SmpsSequencer seq = new SmpsSequencer(source.data(), source.dacData(), driver, source.config());
-        seq.setSourceDescriptor(describeSmpsSource(descriptor, source.data(), false));
-        seq.setSampleRate(driver.getOutputSampleRate());
-        seq.setSpeedShoes(targetSpeedShoes);
-        seq.setSpeedMultiplier(targetSpeedMultiplier);
-        seq.setFm6DacOff(configService.getBoolean(SonicConfiguration.FM6_DAC_OFF));
-        seq.setFallbackVoiceData(source.data());
-        driver.addSequencer(seq, false);
-        int musicId = descriptor.id() != null ? descriptor.id() : source.data().getId();
-        return new MusicState(driver, seq, driver, musicId, descriptor);
-    }
-
-    /**
-     * Restores a driver snapshot into the previous same-role driver instance
-     * when possible, avoiding a full SmpsDriver/VirtualSynthesizer/Ym2612Chip/
-     * PsgChip/BlipResampler rebuild per restore (hot during held rewind).
-     *
-     * <p>Reuse boundary: {@code SmpsDriver.restoreSnapshot} clears and rebuilds
-     * every sequencer, lock, latch, and continuous-SFX field, and — when the
-     * snapshot carries a synth snapshot — {@code restoreSynthSnapshot} fully
-     * overwrites the YM2612, PSG, and blip-buffer state (including output
-     * rates, DAC interpolation, and noise-shift mode, so the
-     * {@code newConfiguredSmpsDriver()} config calls are subsumed). The only
-     * construction-time state not covered by the snapshot is the synth's DAC
-     * bank reference, which is nulled here to match a freshly constructed
-     * driver before the sequencer rebuild re-resolves it. Snapshots without a
-     * synth snapshot fall back to {@code silenceAll()}, whose result depends on
-     * pre-existing chip register state — those keep the recreate path.
-     */
-    private SmpsDriver restoreDriverFromSnapshot(
-            SmpsDriver reusable,
-            SmpsDriverSnapshot driverSnapshot,
-            SmpsDriverSnapshot.DependencyResolver resolver,
-            PreparedDriverResources resources) {
-        SmpsDriver driver;
-        if (reusable != null && driverSnapshot.synthSnapshot() != null) {
-            driver = reusable;
-            driver.setDacData(null);
-        } else {
-            driver = newConfiguredSmpsDriver();
-        }
-        resources.track(driver);
-        driver.restoreSnapshot(driverSnapshot, resolver);
-        return driver;
-    }
-
     private SmpsDriver newConfiguredSmpsDriver() {
         SmpsDriver driver = new SmpsDriver(getSmpsOutputRate());
         driver.setDacInterpolate(configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE));
@@ -1430,142 +691,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     }
 
     @Override
-    public void attachDeterministicAudioRuntime(DeterministicAudioRuntime runtime) {
-        synchronized (streamLock) {
-            preservePresentationTail(deterministicAudioRuntime, runtime);
-            deterministicAudioRuntime = runtime;
-            bindRuntimePresentationStreams();
-            reconcilePcmHistoryOwnershipLocked();
-        }
-    }
-
-    private void preservePresentationTail(
-            DeterministicAudioRuntime previous,
-            DeterministicAudioRuntime replacement) {
-        if (previous == null || replacement == null
-                || !previous.providesPresentationPcm()
-                || replacement.providesPresentationPcm()) {
-            return;
-        }
-        int frames = previous.availablePresentationFrames();
-        presentationHandoff = new short[Math.max(0, frames) * 2];
-        presentationHandoffFrame = 0;
-        if (frames > 0) {
-            previous.drainPcm(presentationHandoff, frames);
-        }
-    }
-
-    private int presentationHandoffFrames() {
-        return presentationHandoff.length / 2 - presentationHandoffFrame;
-    }
-
-    private int copyPresentationHandoff(short[] target, int requestedFrames) {
-        int frames = Math.min(requestedFrames, presentationHandoffFrames());
-        System.arraycopy(presentationHandoff, presentationHandoffFrame * 2, target, 0, frames * 2);
-        presentationHandoffFrame += frames;
-        if (presentationHandoffFrames() == 0) {
-            presentationHandoff = new short[0];
-            presentationHandoffFrame = 0;
-        }
-        return frames;
-    }
-
-    private void readLegacyPresentationTail(int offsetFrames, int frames) {
-        if (frames <= 0) {
-            return;
-        }
-        int samples = frames * 2;
-        Arrays.fill(handoffMusicData, 0, samples, (short) 0);
-        Arrays.fill(handoffSfxData, 0, samples, (short) 0);
-        if (currentStream != null) {
-            currentStream.read(handoffMusicData, samples);
-        }
-        if (sfxStream != null) {
-            sfxStream.read(handoffSfxData, samples);
-        }
-        for (int i = 0; i < samples; i++) {
-            int mixed = handoffMusicData[i] + handoffSfxData[i];
-            streamData[offsetFrames * 2 + i] =
-                    (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, mixed));
-        }
-        if (sfxStream != null && sfxStream.isComplete()) {
-            sfxStream = null;
-        }
-    }
-
-    @Override
-    public boolean supportsDeterministicRuntimePresentation() {
-        return false;
-    }
-
-    @Override
     public int outputSampleRate() {
         return (int) Math.round(getSmpsOutputRate());
-    }
-
-    @Override
-    public void beginReversePresentation() {
-        synchronized (streamLock) {
-            reverseCursor = pcmHistory != null ? pcmHistory.createReverseCursor() : null;
-            if (reverseCursor != null) {
-                reverseCursor.setRate(pendingReverseRate);
-            }
-        }
-    }
-
-    @Override
-    public void endReversePresentation() {
-        synchronized (streamLock) {
-            if (pcmHistory != null) {
-                pcmHistory.commitReverseCursor(reverseCursor);
-            }
-            reverseCursor = null;
-            pendingReverseRate = 1.0;
-        }
-    }
-
-    @Override
-    public void setReversePlaybackRate(double rate) {
-        double safeRate = (Double.isNaN(rate) || rate <= 0.0) ? 1.0 : rate;
-        synchronized (streamLock) {
-            pendingReverseRate = safeRate;
-            if (reverseCursor != null) {
-                reverseCursor.setRate(safeRate);
-            }
-        }
-    }
-
-    @Override
-    public void setRewindHistoryArmed(boolean armed) {
-        synchronized (streamLock) {
-            rewindHistoryArmed = armed;
-            reconcilePcmHistoryOwnershipLocked();
-        }
-    }
-
-    private void reconcilePcmHistoryOwnershipLocked() {
-        if (!rewindHistoryArmed || runtimeProvidesPresentationPcm()) {
-            reverseCursor = null;
-            pcmHistory = null;
-            return;
-        }
-        if (pcmHistory == null) {
-            reverseCursor = null;
-            ensurePcmHistoryLocked();
-        }
-    }
-
-    private void ensurePcmHistoryLocked() {
-        if (pcmHistory != null) {
-            return;
-        }
-        int sampleRate = Math.max(1, outputSampleRate());
-        int capacityFrames = PcmHistoryRing.capacityFramesFor(
-                sampleRate,
-                configService.getString(SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE),
-                configService.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS),
-                configService.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB));
-        pcmHistory = new PcmHistoryRing(Math.max(STREAM_BUFFER_SIZE, capacityFrames));
     }
 
     @Override
@@ -1598,7 +725,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 sfxDriver.stopAll();
             }
             sfxStream = null;
-            clearRuntimeSfxStream();
         }
         // Stop and cleanup WAV-based SFX sources
         hookStopAndDeleteWavSfxSources();
@@ -1848,10 +974,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     @Override
     public void destroy() {
-        synchronized (streamLock) {
-            reverseCursor = null;
-            pcmHistory = null;
-        }
         hookDestroyDevice();
     }
 
@@ -1867,9 +989,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 sfxDriver.stopAll();
             }
             sfxStream = null;
-            if (runtimeProvidesPresentationPcm()) {
-                deterministicAudioRuntime.clearSfxStream();
-            }
         }
     }
 

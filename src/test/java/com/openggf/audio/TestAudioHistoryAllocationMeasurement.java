@@ -13,7 +13,6 @@ import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag("performance-measurement")
@@ -24,7 +23,7 @@ class TestAudioHistoryAllocationMeasurement {
     private static final int MEASUREMENT_ITERATIONS = 5;
 
     @Test
-    void reportsLazyAndCaptureHistoryOwnership() throws Exception {
+    void reportsProducerAndCaptureLeaseHistoryOwnership() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         AudioManager audio = AudioManager.getInstance();
         try {
@@ -35,38 +34,39 @@ class TestAudioHistoryAllocationMeasurement {
 
             // Discard equivalent first-touch work (class loading, MXBean setup,
             // JIT compilation) before collecting fresh-instance samples.
-            measureArmAllocation(config, probe);
-            measureCaptureRuntimeAllocation(config, audio, probe);
+            measureProducerHistoryAllocation(config, audio, probe);
+            measureCaptureLeaseAllocation(config, audio, probe);
 
-            AllocationRun[] armRuns = new AllocationRun[MEASUREMENT_ITERATIONS];
+            AllocationRun[] producerRuns = new AllocationRun[MEASUREMENT_ITERATIONS];
             AllocationRun[] captureRuns = new AllocationRun[MEASUREMENT_ITERATIONS];
             for (int i = 0; i < MEASUREMENT_ITERATIONS; i++) {
-                armRuns[i] = measureArmAllocation(config, probe);
-                captureRuns[i] = measureCaptureRuntimeAllocation(config, audio, probe);
+                producerRuns[i] = measureProducerHistoryAllocation(config, audio, probe);
+                captureRuns[i] = measureCaptureLeaseAllocation(config, audio, probe);
             }
 
-            long[] armBytes = allocatedBytes(armRuns);
-            long[] captureRuntimeBytes = allocatedBytes(captureRuns);
-            boolean allocatedSupported = allocationSupported(armRuns)
+            long[] producerBytes = allocatedBytes(producerRuns);
+            long[] captureLeaseBytes = allocatedBytes(captureRuns);
+            boolean allocatedSupported = allocationSupported(producerRuns)
                     && allocationSupported(captureRuns);
-            long armMedianBytes = allocatedSupported ? median(armBytes.clone()) : -1L;
-            long captureRuntimeMedianBytes = allocatedSupported
-                    ? median(captureRuntimeBytes.clone())
+            long producerMedianBytes =
+                    allocatedSupported ? median(producerBytes.clone()) : -1L;
+            long captureLeaseMedianBytes = allocatedSupported
+                    ? median(captureLeaseBytes.clone())
                     : -1L;
             if (allocatedSupported) {
-                assertTrue(armMedianBytes >= 0,
-                        "arm allocation median must be non-negative when supported");
-                assertTrue(captureRuntimeMedianBytes >= 0,
-                        "capture-runtime allocation median must be non-negative when supported");
+                assertTrue(producerMedianBytes >= 0,
+                        "producer history allocation median must be non-negative when supported");
+                assertTrue(captureLeaseMedianBytes >= 0,
+                        "capture-lease allocation median must be non-negative when supported");
             }
 
-            int historyCapacityFrames = armRuns[0].historyCapacityFrames();
-            long structuralPcmBytes = armRuns[0].structuralPcmBytes();
-            for (AllocationRun run : armRuns) {
+            int historyCapacityFrames = producerRuns[0].historyCapacityFrames();
+            long structuralPcmBytes = producerRuns[0].structuralPcmBytes();
+            for (AllocationRun run : producerRuns) {
                 assertEquals(historyCapacityFrames, run.historyCapacityFrames(),
-                        "fresh armed backends must use the same effective history capacity");
+                        "fresh producers must use the same effective history capacity");
                 assertEquals(structuralPcmBytes, run.structuralPcmBytes(),
-                        "fresh armed backends must allocate the same structural PCM storage");
+                        "fresh producers must allocate the same structural PCM storage");
             }
             for (AllocationRun run : captureRuns) {
                 assertEquals(historyCapacityFrames, run.historyCapacityFrames(),
@@ -76,12 +76,12 @@ class TestAudioHistoryAllocationMeasurement {
             }
 
             System.out.printf(Locale.ROOT,
-                    "AUDIO_HISTORY_ALLOCATION armMedianBytes=%d captureRuntimeMedianBytes=%d "
-                            + "allocatedSupported=%s iterations=%d armBytes=%s captureRuntimeBytes=%s "
+                    "AUDIO_HISTORY_ALLOCATION producerMedianBytes=%d captureLeaseMedianBytes=%d "
+                            + "allocatedSupported=%s iterations=%d producerBytes=%s captureLeaseBytes=%s "
                             + "historyLimitType=%s historySeconds=%d historySizeMb=%d sampleRate=%d "
                             + "historyCapacityFrames=%d structuralPcmBytes=%d%n",
-                    armMedianBytes, captureRuntimeMedianBytes, allocatedSupported,
-                    MEASUREMENT_ITERATIONS, formatList(armBytes), formatList(captureRuntimeBytes),
+                    producerMedianBytes, captureLeaseMedianBytes, allocatedSupported,
+                    MEASUREMENT_ITERATIONS, formatList(producerBytes), formatList(captureLeaseBytes),
                     config.getString(SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE),
                     config.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS),
                     config.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB),
@@ -95,52 +95,48 @@ class TestAudioHistoryAllocationMeasurement {
         }
     }
 
-    private static AllocationRun measureArmAllocation(
-            SonicConfigurationService config,
-            AudioBenchmarkMemoryProbe probe) throws Exception {
-        HeadlessSmpsAudioBackend backend =
-                new HeadlessSmpsAudioBackend(config, PerformanceProfiler.getInstance());
-        try {
-            backend.init();
-            assertNull(history(backend),
-                    "headless backend initialization must leave rewind history unallocated");
-
-            AudioBenchmarkMemoryProbe.RunResult measurement =
-                    probe.measureTimedRun(() -> backend.setRewindHistoryArmed(true));
-            PcmHistoryRing history = history(backend);
-            assertNotNull(history, "arming must allocate backend PCM history");
-            return allocationRun(measurement, history);
-        } finally {
-            try {
-                backend.setRewindHistoryArmed(false);
-            } finally {
-                backend.destroy();
-            }
-        }
-    }
-
-    private static AllocationRun measureCaptureRuntimeAllocation(
+    /**
+     * The producer owns the single PCM history ring and realizes it lazily on
+     * first presentation use. Measure that realization.
+     */
+    private static AllocationRun measureProducerHistoryAllocation(
             SonicConfigurationService config,
             AudioManager audio,
             AudioBenchmarkMemoryProbe probe) throws Exception {
-        HeadlessSmpsAudioBackend backend =
-                new HeadlessSmpsAudioBackend(config, PerformanceProfiler.getInstance());
         try {
-            audio.setBackend(backend);
-            assertNull(history(backend),
-                    "freshly initialized capture backend must leave history unallocated");
-            audio.setRewindHistoryArmed(true);
-            assertNull(history(backend),
-                    "retired backend must never own presentation history");
+            audio.setBackend(new HeadlessSmpsAudioBackend(
+                    config, PerformanceProfiler.getInstance()));
+
+            AudioBenchmarkMemoryProbe.RunResult measurement =
+                    probe.measureTimedRun(() -> audio.setRewindHistoryArmed(true));
             assertTrue(audio.releaseStateForTesting().producer().historyArmed());
+            PcmHistoryRing history = producerHistory(audio);
+            assertNotNull(history,
+                    "the presentation producer must own a PCM history ring");
+            return allocationRun(measurement, history);
+        } finally {
+            cleanupAudio(audio);
+        }
+    }
+
+    private static AllocationRun measureCaptureLeaseAllocation(
+            SonicConfigurationService config,
+            AudioManager audio,
+            AudioBenchmarkMemoryProbe probe) throws Exception {
+        try {
+            audio.setBackend(new HeadlessSmpsAudioBackend(
+                    config, PerformanceProfiler.getInstance()));
+            audio.setRewindHistoryArmed(true);
+            assertTrue(audio.releaseStateForTesting().producer().historyArmed());
+            PcmHistoryRing before = producerHistory(audio);
 
             AudioBenchmarkMemoryProbe.RunResult measurement =
                     probe.measureTimedRun(() -> audio.beginCaptureMode(SAMPLE_RATE, FRAME_RATE));
-            assertNull(history(backend),
-                    "offline capture must not reactivate backend history");
-            PcmHistoryRing captureHistory = captureLeaseHistory(audio);
+            PcmHistoryRing captureHistory = producerHistory(audio);
             assertNotNull(captureHistory,
                     "the presentation producer must own a PCM history ring");
+            assertEquals(before, captureHistory,
+                    "attaching an offline lease must not allocate a second ring");
             return allocationRun(measurement, captureHistory);
         } finally {
             cleanupAudio(audio);
@@ -159,8 +155,6 @@ class TestAudioHistoryAllocationMeasurement {
 
     private static void cleanupAudio(AudioManager audio) {
         try {
-            // Disarm while capture still provides presentation PCM. Reversing
-            // these calls would recreate a throwaway backend history ring.
             audio.setRewindHistoryArmed(false);
         } finally {
             try {
@@ -175,18 +169,12 @@ class TestAudioHistoryAllocationMeasurement {
         }
     }
 
-    private static PcmHistoryRing history(AbstractSmpsAudioBackend backend) throws Exception {
-        Field field = AbstractSmpsAudioBackend.class.getDeclaredField("pcmHistory");
-        field.setAccessible(true);
-        return (PcmHistoryRing) field.get(backend);
-    }
-
     /**
-     * Offline capture no longer installs its own streaming runtime: it attaches
-     * one non-consuming lease to the authoritative presentation producer, which
-     * already owns the single PCM history ring. Measure that ring.
+     * Offline capture attaches one non-consuming lease to the authoritative
+     * presentation producer, which already owns the single PCM history ring.
+     * Measure that ring.
      */
-    private static PcmHistoryRing captureLeaseHistory(AudioManager audio) throws Exception {
+    private static PcmHistoryRing producerHistory(AudioManager audio) throws Exception {
         Field producerField = AudioManager.class.getDeclaredField("shadowProducer");
         producerField.setAccessible(true);
         Object producer = producerField.get(audio);

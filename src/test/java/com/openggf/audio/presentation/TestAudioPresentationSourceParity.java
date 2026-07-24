@@ -17,22 +17,18 @@ import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
-import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -40,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioPresentationSourceParity {
@@ -315,32 +310,6 @@ class TestAudioPresentationSourceParity {
     }
 
     @Test
-    void legacyAndPresentationRawPcmRenderTheSameCursorSequence() {
-        byte[] source = {
-                0, 32, 64, 96, (byte) 128, (byte) 192, (byte) 255
-        };
-        PcmSampleStream legacy =
-                new PcmSampleStream(source, SAMPLE_RATE, SAMPLE_RATE);
-        SampleBackedVoice presentation =
-                SampleBackedVoice.unsigned8Mono(
-                        1, 0, "sega", source,
-                        SAMPLE_RATE, SAMPLE_RATE, 0.25f);
-
-        for (int frames : new int[] {1, 2, 3, 5, 8, 13}) {
-            short[] expected = new short[frames * 2];
-            long[] actualWide = new long[frames * 2];
-            legacy.read(expected, expected.length);
-            presentation.mixInto(actualWide, frames);
-            short[] actual = new short[actualWide.length];
-            for (int index = 0; index < actual.length; index++) {
-                actual[index] = (short) actualWide[index];
-            }
-            assertArrayEquals(expected, actual);
-            assertEquals(legacy.isComplete(), presentation.isComplete());
-        }
-    }
-
-    @Test
     void legacyFallbackWavMetadataMatchesDecodedPresentationAsset()
             throws Exception {
         byte[] wav = wav(new short[] {100, -100, 300, -300},
@@ -499,8 +468,6 @@ class TestAudioPresentationSourceParity {
         @Override protected void hookStopAndClearAllMusicBuffers() { }
         @Override protected void hookRestartStreamIfDry() { }
         @Override protected void hookStopAndDeleteWavSfxSources() { }
-        @Override protected void hookUploadStreamBuffer(
-                int bufferId, short[] pcm, int sampleRate) { }
         @Override protected void hookPlayWavSfx(
                 String sfxName, float pitch) { }
         @Override protected void hookCleanupStoppedWavSfx() { }

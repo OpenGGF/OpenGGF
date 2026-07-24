@@ -1,11 +1,6 @@
 package com.openggf.audio;
 
 import com.openggf.audio.runtime.AudioFrameClock;
-import com.openggf.audio.runtime.AudioOutputFifo;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.FrameAudioMode;
-import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
-import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
 import com.openggf.audio.presentation.PresentationMode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/**
+ * Live-recording attachment over the single authoritative presentation
+ * producer. There is no second runtime to switch to: {@code
+ * beginLiveCaptureAudio} only attaches a non-consuming lease to the producer
+ * that already owns the speaker packet.
+ */
 class AudioManagerLiveCaptureTest {
     private AudioManager audio;
 
@@ -63,18 +64,29 @@ class AudioManagerLiveCaptureTest {
     }
 
     @Test
-    void attachesRegardlessOfLegacyRuntimeCapabilityWithoutReplacingIt() {
-        audio.setDeterministicAudioRuntime(NoOpDeterministicAudioRuntime.INSTANCE);
-        audio.beginLiveCaptureAudio(1).close();
+    void repeatedAttachAndDetachNeverReplacesTheProducerOrItsVoices() {
+        var before = AudioManagerTestDiagnostics.producerFingerprint(audio);
 
-        UnsupportedRuntime unsupported = new UnsupportedRuntime();
-        audio.setDeterministicAudioRuntime(unsupported);
-        audio.beginLiveCaptureAudio(1).close();
+        for (int attempt = 0; attempt < 3; attempt++) {
+            LiveCaptureAudioHandle handle = audio.beginLiveCaptureAudio(1);
+            var attached = AudioManagerTestDiagnostics.producerFingerprint(audio);
+            assertEquals(before.captureCount() + 1, attached.captureCount(),
+                    "exactly one live lease is attached");
+            assertEquals(before.voiceIdentities(), attached.voiceIdentities(),
+                    "attaching a live lease must not rebind voices");
+            assertEquals(before.clock(), attached.clock(),
+                    "attaching a live lease must not move the producer clock");
+            handle.close();
+            var detached = AudioManagerTestDiagnostics.producerFingerprint(audio);
+            assertEquals(before.captureCount(), detached.captureCount());
+            assertEquals(before.voiceIdentities(), detached.voiceIdentities());
+            assertEquals(before.clock(), detached.clock(),
+                    "detaching a live lease must not flush or move the clock");
+        }
     }
 
     @Test
     void rejectsSecondSimultaneousHandle() {
-        audio.setDeterministicAudioRuntime(runtimeWithSamples());
         LiveCaptureAudioHandle first = audio.beginLiveCaptureAudio(1);
 
         assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(1));
@@ -84,7 +96,6 @@ class AudioManagerLiveCaptureTest {
 
     @Test
     void handleRejectsDrainAfterClose() {
-        audio.setDeterministicAudioRuntime(runtimeWithSamples());
         LiveCaptureAudioHandle handle = audio.beginLiveCaptureAudio(1);
         handle.close();
 
@@ -93,29 +104,20 @@ class AudioManagerLiveCaptureTest {
     }
 
     @Test
-    void handleRejectsDrainAfterRuntimeReplacement() {
-        StreamBackedDeterministicAudioRuntime replacedRuntime = runtimeWithSamples();
-        audio.setDeterministicAudioRuntime(replacedRuntime);
+    void handleRejectsDrainAfterTheProducerItLeasedIsReplaced() {
         LiveCaptureAudioHandle replacedHandle = audio.beginLiveCaptureAudio(1);
 
-        audio.setDeterministicAudioRuntime(runtimeWithSamples());
+        // Installing a backend rebuilds the presentation producer, which owns
+        // every lease attached to it.
+        audio.setBackend(new FixedRateNullBackend(2));
 
         assertThrows(IllegalStateException.class,
                 () -> replacedHandle.drainPresentationFrame(new short[4]));
-        replacedRuntime.openPresentationAudioCapture(2, 1).close();
 
         LiveCaptureAudioHandle replacementHandle = audio.beginLiveCaptureAudio(1);
         replacedHandle.close();
         assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(1));
         replacementHandle.close();
-    }
-
-    private static StreamBackedDeterministicAudioRuntime runtimeWithSamples(int... samples) {
-        StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
-                new AudioFrameClock(2, 1),
-                new AudioOutputFifo(8));
-        runtime.setMusicStream(new SequenceStream(samples));
-        return runtime;
     }
 
     private static final class FixedRateNullBackend extends NullAudioBackend {
@@ -128,32 +130,6 @@ class AudioManagerLiveCaptureTest {
         @Override
         public int outputSampleRate() {
             return outputSampleRate;
-        }
-    }
-
-    private static final class UnsupportedRuntime implements DeterministicAudioRuntime {
-        @Override
-        public void advanceFrame(long frame, FrameAudioMode mode) {
-        }
-    }
-
-    private static final class SequenceStream implements AudioStream {
-        private final short[] samples;
-        private int cursor;
-
-        private SequenceStream(int... samples) {
-            this.samples = new short[samples.length];
-            for (int i = 0; i < samples.length; i++) {
-                this.samples[i] = (short) samples[i];
-            }
-        }
-
-        @Override
-        public int read(short[] buffer) {
-            int count = Math.min(buffer.length, samples.length - cursor);
-            System.arraycopy(samples, cursor, buffer, 0, count);
-            cursor += count;
-            return count;
         }
     }
 }

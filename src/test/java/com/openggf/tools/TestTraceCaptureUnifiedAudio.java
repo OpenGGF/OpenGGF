@@ -14,8 +14,6 @@ import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -99,7 +97,6 @@ class TestTraceCaptureUnifiedAudio {
     @Test
     void sessionStartAndFinishAttachAndDetachOneUnifiedHandle() throws Exception {
         audio.setBackend(headlessBackend());
-        SentinelRuntime sentinel = installSentinelRuntime();
         int leasesBefore = leaseCount();     // also realizes the lazy producer
         Object producerBefore = producer(audio);
         assertNotNull(producerBefore, "the producer must already exist");
@@ -118,8 +115,6 @@ class TestTraceCaptureUnifiedAudio {
                 "the lease is already attached when the recorder opens");
         assertSame(producerBefore, producer(audio),
                 "start must not replace the authoritative producer");
-        assertSame(sentinel, deterministicRuntime(audio),
-                "start must not install a deterministic runtime");
 
         session.finish();
 
@@ -130,8 +125,8 @@ class TestTraceCaptureUnifiedAudio {
                 recorder.events,
                 "recorder.stop() runs before endCaptureMode(), so the lease is"
                         + " still attached inside stop()");
-        assertSame(producerBefore, producer(audio));
-        assertSame(sentinel, deterministicRuntime(audio));
+        assertSame(producerBefore, producer(audio),
+                "finish must not replace the authoritative producer");
     }
 
     @Test
@@ -600,29 +595,10 @@ class TestTraceCaptureUnifiedAudio {
         return fingerprint.captureCount();
     }
 
-    private SentinelRuntime installSentinelRuntime() throws Exception {
-        SentinelRuntime sentinel = new SentinelRuntime();
-        java.lang.reflect.Method setter =
-                AudioManager.class.getDeclaredMethod(
-                        "setDeterministicAudioRuntime",
-                        DeterministicAudioRuntime.class);
-        setter.setAccessible(true);
-        setter.invoke(audio, sentinel);
-        return sentinel;
-    }
-
     private static Object producer(AudioManager audio) throws Exception {
         Field field = AudioManager.class.getDeclaredField("shadowProducer");
         field.setAccessible(true);
         return field.get(audio);
-    }
-
-    private static DeterministicAudioRuntime deterministicRuntime(
-            AudioManager audio) throws Exception {
-        Field field =
-                AudioManager.class.getDeclaredField("deterministicAudioRuntime");
-        field.setAccessible(true);
-        return (DeterministicAudioRuntime) field.get(audio);
     }
 
     private static boolean hasSampleAsset(
@@ -651,15 +627,6 @@ class TestTraceCaptureUnifiedAudio {
             }
         }
         return true;
-    }
-
-    private static final class SentinelRuntime
-            implements DeterministicAudioRuntime {
-        @Override
-        public void advanceFrame(long frame, FrameAudioMode mode) {
-            throw new AssertionError(
-                    "offline capture must never advance a retired runtime");
-        }
     }
 
     private static final class FixedGrabber implements VideoFrameGrabber {

@@ -6,14 +6,11 @@ import com.openggf.debug.PerformanceProfiler;
 /**
  * No-device SMPS audio backend for headless capture/replay.
  *
- * <p>This subclass runs the full {@link AbstractSmpsAudioBackend} synthesis,
- * sequencer, music-stack, SFX-lifecycle, snapshot and rewind machinery but
- * never touches an audio device: every device-output hook is a no-op. The
- * deterministic capture runtime (installed via
- * {@code attachDeterministicAudioRuntime}) reads the synthesized SMPS streams
- * directly and is the sole consumer of PCM, so the stream pump and buffer
- * upload hooks must do nothing — pumping here would steal samples from the
- * capture tap.
+ * <p>This subclass runs the {@link AbstractSmpsAudioBackend} sequencer,
+ * music-stack and SFX-lifecycle machinery but never touches an audio device:
+ * every device hook is a no-op. Presentation PCM comes solely from
+ * {@code AudioPresentationProducer}, which offline capture leases through
+ * {@code AudioManager.beginCaptureMode}.
  *
  * <p>The device-facing fallback rate defaults to a deterministic 48000 Hz,
  * with no OpenAL negotiation. Tests may supply another positive rate to prove
@@ -48,8 +45,7 @@ public final class HeadlessSmpsAudioBackend extends AbstractSmpsAudioBackend {
 
     @Override
     protected void hookInitDevice() {
-        // No device. The fallback sample rate is fixed by getDeviceSampleRate();
-        // the base allocates rewind history lazily only while it owns history.
+        // No device. The fallback sample rate is fixed by getDeviceSampleRate().
     }
 
     @Override
@@ -59,7 +55,7 @@ public final class HeadlessSmpsAudioBackend extends AbstractSmpsAudioBackend {
 
     @Override
     protected void hookStartStream() {
-        // No device: the capture runtime consumes synthesis directly.
+        // No device: the presentation producer owns all audible output.
     }
 
     @Override
@@ -69,8 +65,7 @@ public final class HeadlessSmpsAudioBackend extends AbstractSmpsAudioBackend {
 
     @Override
     protected void hookUpdateStream() {
-        // No device: skipping the stream pump leaves the full per-frame PCM
-        // for the deterministic capture tap (keeps audio in sync).
+        // No device.
     }
 
     @Override
@@ -90,11 +85,6 @@ public final class HeadlessSmpsAudioBackend extends AbstractSmpsAudioBackend {
 
     @Override
     protected void hookRestartStreamIfDry() {
-        // No device.
-    }
-
-    @Override
-    protected void hookUploadStreamBuffer(int bufferId, short[] pcm, int sampleRate) {
         // No device.
     }
 

@@ -31,11 +31,6 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
     }
 
     @Override
-    public boolean supportsLiveCapturePresentation() {
-        return true;
-    }
-
-    @Override
     public AudioPresentationSink createPresentationSink(
             Consumer<Throwable> failureHandler,
             Consumer<String> warningHandler) {
@@ -78,11 +73,6 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
     }
 
     @Override protected void hookStopAndDeleteWavSfxSources() {
-    }
-
-    @Override
-    protected void hookUploadStreamBuffer(
-            int bufferId, short[] pcm, int sampleRate) {
     }
 
     @Override protected void hookPlayWavSfx(String sfxName, float pitch) {

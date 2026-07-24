@@ -11,9 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Equivalence proofs for the cursor/arraycopy rewrites of {@link PcmHistoryRing}
- * and {@link AudioOutputFifo}. The reference classes are verbatim copies of the
- * per-frame modulo implementations; randomized operation sequences plus directed
+ * Equivalence proofs for the cursor/arraycopy rewrite of {@link PcmHistoryRing}.
+ * The reference class is a verbatim copy of the per-frame modulo
+ * implementation; randomized operation sequences plus directed
  * wrap/exact-capacity cases must produce identical outputs, return values, and
  * counters. PcmHistoryRing is exercised through its only read path — reverse
  * cursors (held-rewind presentation reads) — including fractional rates and
@@ -141,89 +141,6 @@ class TestAudioRingBuffers {
         assertArrayEquals(refOut, prodOut, "retained history diverged " + context);
     }
 
-    // ---------------------------------------------------------------------
-    // AudioOutputFifo
-    // ---------------------------------------------------------------------
-
-    @ParameterizedTest
-    @ValueSource(ints = {1, 2, 7, 64, 1024})
-    void audioOutputFifoFuzzMatchesReference(int capacity) {
-        for (long seed = 1; seed <= 3; seed++) {
-            AudioOutputFifo production = new AudioOutputFifo(capacity);
-            ReferenceAudioOutputFifo reference = new ReferenceAudioOutputFifo(capacity);
-            Random random = new Random(seed * 2000 + capacity);
-            short next = 0;
-
-            for (int op = 0; op < 800; op++) {
-                if (random.nextBoolean()) {
-                    int frames = random.nextInt(2) == 0
-                            ? capacity + random.nextInt(capacity + 4)
-                            : random.nextInt(capacity + 2);
-                    short[] data = new short[frames * 2];
-                    for (int i = 0; i < data.length; i++) {
-                        data[i] = next++;
-                    }
-                    assertEquals(reference.write(data, frames), production.write(data, frames),
-                            "write return diverged at op " + op);
-                } else if (random.nextInt(12) == 0) {
-                    production.flush();
-                    reference.flush();
-                } else {
-                    int frames = random.nextInt(capacity + 4);
-                    short[] prodOut = new short[frames * 2];
-                    short[] refOut = new short[frames * 2];
-                    assertEquals(reference.drain(refOut, frames), production.drain(prodOut, frames),
-                            "drain return diverged at op " + op);
-                    assertArrayEquals(refOut, prodOut, "drained PCM diverged at op " + op);
-                }
-                assertEquals(reference.availableFrames(), production.availableFrames(),
-                        "availableFrames diverged at op " + op);
-                assertEquals(reference.underruns(), production.underruns(),
-                        "underruns diverged at op " + op);
-                assertEquals(reference.overruns(), production.overruns(),
-                        "overruns diverged at op " + op);
-            }
-        }
-    }
-
-    @Test
-    void audioOutputFifoExactCapacityWrapAndUnderrun() {
-        int capacity = 8;
-        AudioOutputFifo production = new AudioOutputFifo(capacity);
-        ReferenceAudioOutputFifo reference = new ReferenceAudioOutputFifo(capacity);
-        short next = 0;
-
-        // exact-capacity fill, overrun write, partial drain, wrapping write, full
-        // drain, then drain-on-empty underrun.
-        int[][] script = {{1, capacity}, {1, 3}, {0, 5}, {1, 4}, {0, capacity}, {0, 2}};
-        for (int[] step : script) {
-            int frames = step[1];
-            if (step[0] == 1) {
-                short[] data = new short[frames * 2];
-                for (int i = 0; i < data.length; i++) {
-                    data[i] = next++;
-                }
-                assertEquals(reference.write(data, frames), production.write(data, frames));
-            } else {
-                short[] prodOut = new short[frames * 2];
-                short[] refOut = new short[frames * 2];
-                assertEquals(reference.drain(refOut, frames), production.drain(prodOut, frames));
-                assertArrayEquals(refOut, prodOut);
-            }
-            assertEquals(reference.availableFrames(), production.availableFrames());
-            assertEquals(reference.underruns(), production.underruns());
-            assertEquals(reference.overruns(), production.overruns());
-        }
-    }
-
-    // ---------------------------------------------------------------------
-    // Verbatim reference copies of the pre-optimization implementations
-    // ---------------------------------------------------------------------
-
-    /**
-     * FROZEN: verbatim copy of the pre-optimization PcmHistoryRing (per-frame
-     * floorMod writes) — do not modify; it is the equivalence reference.
-     */
     private static final class ReferencePcmHistoryRing {
         private static final int CHANNELS = 2;
 
@@ -313,79 +230,6 @@ class TestAudioRingBuffers {
             long committedNextFrameIndex() {
                 return (long) Math.floor(sourceFrame + 0.5) + 1;
             }
-        }
-    }
-
-    /**
-     * FROZEN: verbatim copy of the pre-optimization AudioOutputFifo (per-frame
-     * modulo write/drain) — do not modify; it is the equivalence reference.
-     */
-    private static final class ReferenceAudioOutputFifo {
-        private static final int CHANNELS = 2;
-
-        private final short[] samples;
-        private final int capacityFrames;
-        private int readFrame;
-        private int writeFrame;
-        private int availableFrames;
-        private long underruns;
-        private long overruns;
-
-        ReferenceAudioOutputFifo(int capacityFrames) {
-            this.capacityFrames = capacityFrames;
-            this.samples = new short[capacityFrames * CHANNELS];
-        }
-
-        int write(short[] source, int frames) {
-            int writable = Math.min(frames, capacityFrames - availableFrames);
-            if (writable < frames) {
-                overruns++;
-            }
-            for (int frame = 0; frame < writable; frame++) {
-                int sourceIndex = frame * CHANNELS;
-                int targetIndex = writeFrame * CHANNELS;
-                samples[targetIndex] = source[sourceIndex];
-                samples[targetIndex + 1] = source[sourceIndex + 1];
-                writeFrame = (writeFrame + 1) % capacityFrames;
-            }
-            availableFrames += writable;
-            return writable;
-        }
-
-        int drain(short[] target, int frames) {
-            int readable = Math.min(frames, availableFrames);
-            for (int frame = 0; frame < readable; frame++) {
-                int sourceIndex = readFrame * CHANNELS;
-                int targetIndex = frame * CHANNELS;
-                target[targetIndex] = samples[sourceIndex];
-                target[targetIndex + 1] = samples[sourceIndex + 1];
-                readFrame = (readFrame + 1) % capacityFrames;
-            }
-            availableFrames -= readable;
-
-            if (readable < frames) {
-                Arrays.fill(target, readable * CHANNELS, frames * CHANNELS, (short) 0);
-                underruns++;
-            }
-            return readable;
-        }
-
-        void flush() {
-            readFrame = 0;
-            writeFrame = 0;
-            availableFrames = 0;
-        }
-
-        int availableFrames() {
-            return availableFrames;
-        }
-
-        long underruns() {
-            return underruns;
-        }
-
-        long overruns() {
-            return overruns;
         }
     }
 }

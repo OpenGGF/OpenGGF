@@ -1,207 +1,180 @@
 package com.openggf.audio;
 
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.debug.PerformanceProfiler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Continuous PCM rewind-history recording must stay disarmed until a rewind
- * consumer (held-key live rewind, Trace Test Mode) actually arms it —
- * otherwise every audio buffer pays a copy into a ring that nothing can ever
- * read back, and stale samples can survive to leak across a later boundary.
+ * consumer (held-key live rewind, Trace Test Mode) actually arms it — otherwise
+ * every presented packet pays a copy into a ring that nothing can ever read
+ * back, and stale samples can survive to leak across a later boundary.
+ *
+ * <p>History is owned solely by the presentation producer; the backend has no
+ * ring, no reverse cursor and no arming hook at all.
  */
 class TestRewindHistoryArming {
 
     private SonicConfigurationService config;
-    private HeadlessSmpsAudioBackend backend;
+    private AudioManager audio;
 
     @BeforeEach
     void setUp() {
         config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
-        backend = new HeadlessSmpsAudioBackend(config, PerformanceProfiler.getInstance());
-        backend.init();
+        audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new NullAudioBackend());
     }
 
     @AfterEach
     void tearDown() {
-        backend.destroy();
+        audio.resetState();
+        audio.setBackend(new NullAudioBackend());
         config.resetToDefaults();
     }
 
     @Test
-    void unusedBackendDoesNotAllocateHistoryBeforeOrAfterFill() throws Exception {
-        assertNull(pcmHistoryRing(backend),
-                "backend history must remain unallocated until a rewind consumer arms it");
-
-        backend.fillBuffer(0);
-
-        assertNull(pcmHistoryRing(backend),
-                "ordinary buffer fills must not allocate unused rewind history");
-    }
-
-    @Test
     void audioManagerRoutesArmingOnlyToTheProducer() {
-        AudioManager audio = AudioManager.getInstance();
-        audio.resetState();
-        RecordingArmBackend recordingBackend = new RecordingArmBackend();
-        audio.setBackend(recordingBackend);
-        try {
-            audio.setRewindHistoryArmed(true);
-            assertTrue(audio.releaseStateForTesting().producer().historyArmed());
-            assertEquals(java.util.List.of(), recordingBackend.armCalls);
+        audio.setRewindHistoryArmed(true);
+        assertTrue(audio.releaseStateForTesting().producer().historyArmed());
 
-            audio.setRewindHistoryArmed(false);
-            assertFalse(audio.releaseStateForTesting().producer().historyArmed());
-            assertEquals(java.util.List.of(), recordingBackend.armCalls);
-        } finally {
-            audio.resetState();
+        audio.setRewindHistoryArmed(false);
+        assertFalse(audio.releaseStateForTesting().producer().historyArmed());
+
+        for (var method : AudioBackend.class.getMethods()) {
+            assertFalse("setRewindHistoryArmed".equals(method.getName()),
+                    "the backend must expose no rewind-history arming hook");
         }
     }
 
     @Test
-    void armingAllocatesHistoryAndRecordsPcm() throws Exception {
-        backend.setRewindHistoryArmed(true);
-        PcmHistoryRing ring = pcmHistoryRing(backend);
-        assertNotNull(ring, "arming must allocate backend-owned PCM history");
-        assertEquals(0, storedFrames(ring), "newly armed history must start empty");
+    void armingRecordsPresentedPcmAndDisarmingStopsRecording() {
+        audio.submitShadowRawPcmForTesting(rampPcm(8_000), 48_000);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(0, storedFrames(),
+                "an unarmed producer must not pay a history copy");
 
-        backend.fillBuffer(0);
+        audio.setRewindHistoryArmed(true);
+        audio.presentFrame(PresentationMode.FORWARD);
+        int armed = storedFrames();
+        assertTrue(armed > 0, "arming must enable PCM history recording");
 
-        assertTrue(storedFrames(ring) > 0, "arming must enable PCM history recording");
+        audio.setRewindHistoryArmed(false);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(armed, storedFrames(),
+                "disarming must stop recording immediately");
     }
 
     @Test
-    void disarmingReleasesHistoryAndRearmingCreatesAnEmptyRing() throws Exception {
-        backend.setRewindHistoryArmed(true);
-        PcmHistoryRing firstRing = pcmHistoryRing(backend);
-        backend.fillBuffer(0);
-        assertTrue(storedFrames(firstRing) > 0, "precondition: first ring contains PCM");
+    void clearingHistoryIsAHardBoundaryThatDropsStoredPcm() {
+        audio.setRewindHistoryArmed(true);
+        audio.submitShadowRawPcmForTesting(rampPcm(8_000), 48_000);
+        audio.presentFrame(PresentationMode.FORWARD);
+        long epochBefore = audio.releaseStateForTesting().producer()
+                .history().epoch();
+        assertTrue(storedFrames() > 0);
 
-        backend.setRewindHistoryArmed(false);
-        assertNull(pcmHistoryRing(backend), "disarming is a hard boundary that releases history");
-        backend.fillBuffer(0);
-        assertNull(pcmHistoryRing(backend), "fills while disarmed must not recreate history");
+        audio.clearPcmHistory();
 
-        backend.setRewindHistoryArmed(true);
-        PcmHistoryRing secondRing = pcmHistoryRing(backend);
-        assertNotNull(secondRing, "rearming must allocate history again");
-        assertNotSame(firstRing, secondRing, "rearming must not retain samples from the released ring");
-        assertEquals(0, storedFrames(secondRing), "rearmed history must start empty");
+        assertEquals(0, storedFrames(),
+                "a hard boundary must drop every pre-boundary sample");
+        assertTrue(audio.releaseStateForTesting().producer().history().epoch()
+                        > epochBefore,
+                "clearing history must advance the history epoch");
     }
 
     @Test
-    void repeatedArmingDoesNotInterruptReversePlayback() throws Exception {
-        backend.setRewindHistoryArmed(true);
-        PcmHistoryRing ring = pcmHistoryRing(backend);
-        short[] recorded = new short[AbstractSmpsAudioBackend.STREAM_BUFFER_SIZE * 2];
-        int lastFrame = (AbstractSmpsAudioBackend.STREAM_BUFFER_SIZE - 1) * 2;
-        recorded[lastFrame] = 1_234;
-        recorded[lastFrame + 1] = -1_234;
-        ring.write(recorded, AbstractSmpsAudioBackend.STREAM_BUFFER_SIZE);
+    void repeatedArmingDuringHeldRewindPreservesTheReverseCursor() {
+        audio.setRewindHistoryArmed(true);
+        audio.submitShadowRawPcmForTesting(rampPcm(8_000), 48_000);
+        audio.presentFrame(PresentationMode.FORWARD);
+        LiveCaptureAudioHandle capture =
+                AudioManagerTestDiagnostics.attachPresentationCapture(audio, 60);
 
-        backend.beginReversePresentation();
-        backend.setRewindHistoryArmed(true);
-        backend.setRewindHistoryArmed(true);
-        backend.fillBuffer(0);
+        audio.beginReverseAudioPresentation();
+        audio.setRewindHistoryArmed(true);
+        audio.setRewindHistoryArmed(true);
+        audio.presentFrame(PresentationMode.REVERSE);
 
-        assertEquals(1_234, backend.streamData[0],
+        short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
+        int frames = capture.drainPresentationFrame(packet);
+        assertEquals(800, frames);
+        assertFalse(allZero(packet),
                 "idempotent arming must preserve the active reverse cursor");
-        assertEquals(-1_234, backend.streamData[1],
+        assertEquals(packet[0], packet[1],
                 "reverse playback must remain stereo after repeated arming");
+
+        capture.close();
+        audio.endReverseAudioPresentation();
     }
 
     @Test
-    void timeLimitedHistoryUsesEffectiveInternalOutputRate() throws Exception {
-        config.setConfigValue(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, true);
-        config.setConfigValue(SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE, "time");
-        config.setConfigValue(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS, 2);
+    void timeLimitedHistoryCoversConfiguredSecondsAtTheOutputRate() {
+        config.setConfigValue(
+                SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE, "time");
+        config.setConfigValue(
+                SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS, 2);
 
-        backend.setRewindHistoryArmed(true);
-
-        int effectiveOutputRate = (int) Math.round(backend.getSmpsOutputRate());
-        assertEquals(effectiveOutputRate * 2, capacityFrames(pcmHistoryRing(backend)),
-                "time-limited history must cover configured seconds at the emitted sample rate");
+        assertEquals(48_000 * 2, PcmHistoryRing.capacityFramesFor(
+                        48_000,
+                        config.getString(SonicConfiguration
+                                .REWIND_AUDIO_HISTORY_LIMIT_TYPE),
+                        config.getInt(SonicConfiguration
+                                .REWIND_AUDIO_HISTORY_SECONDS),
+                        config.getInt(SonicConfiguration
+                                .REWIND_AUDIO_HISTORY_SIZE_MB)),
+                "time-limited history must cover configured seconds at the"
+                        + " emitted sample rate");
     }
 
     @Test
-    void sizeLimitedHistoryKeepsConfiguredByteCapacityAtInternalOutputRate() throws Exception {
-        config.setConfigValue(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, true);
-        config.setConfigValue(SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE, "size");
-        config.setConfigValue(SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB, 1);
+    void sizeLimitedHistoryKeepsConfiguredByteCapacity() {
+        config.setConfigValue(
+                SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE, "size");
+        config.setConfigValue(
+                SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB, 1);
 
-        backend.setRewindHistoryArmed(true);
-
-        assertEquals((1024 * 1024) / (2 * Short.BYTES), capacityFrames(pcmHistoryRing(backend)),
-                "size-limited history must retain its configured stereo PCM byte capacity");
+        assertEquals((1024 * 1024) / (2 * Short.BYTES),
+                PcmHistoryRing.capacityFramesFor(
+                        48_000,
+                        config.getString(SonicConfiguration
+                                .REWIND_AUDIO_HISTORY_LIMIT_TYPE),
+                        config.getInt(SonicConfiguration
+                                .REWIND_AUDIO_HISTORY_SECONDS),
+                        config.getInt(SonicConfiguration
+                                .REWIND_AUDIO_HISTORY_SIZE_MB)),
+                "size-limited history must retain its configured stereo PCM"
+                        + " byte capacity");
     }
 
-    @Test
-    void destroyAndReinitCannotRetainStaleHistoryOrReverseCursor() throws Exception {
-        backend.setRewindHistoryArmed(true);
-        PcmHistoryRing firstRing = pcmHistoryRing(backend);
-        short[] recorded = new short[AbstractSmpsAudioBackend.STREAM_BUFFER_SIZE * 2];
-        recorded[recorded.length - 2] = 321;
-        firstRing.write(recorded, AbstractSmpsAudioBackend.STREAM_BUFFER_SIZE);
-        backend.beginReversePresentation();
-        assertNotNull(reverseCursor(backend), "precondition: reverse presentation owns a cursor");
-
-        backend.destroy();
-
-        assertNull(pcmHistoryRing(backend), "destroy must release backend PCM history");
-        assertNull(reverseCursor(backend), "destroy must cancel reverse presentation");
-
-        backend.init();
-        backend.setRewindHistoryArmed(true);
-        PcmHistoryRing reinitializedRing = pcmHistoryRing(backend);
-        assertNotNull(reinitializedRing, "reinitialized backend must support arming again");
-        assertNotSame(firstRing, reinitializedRing, "re-init must not recover the destroyed history ring");
-        assertEquals(0, storedFrames(reinitializedRing), "stale PCM must not survive destroy/re-init");
+    private int storedFrames() {
+        return audio.releaseStateForTesting().producer().history()
+                .storedFrames();
     }
 
-    private static PcmHistoryRing pcmHistoryRing(AbstractSmpsAudioBackend backend) throws Exception {
-        Field field = AbstractSmpsAudioBackend.class.getDeclaredField("pcmHistory");
-        field.setAccessible(true);
-        return (PcmHistoryRing) field.get(backend);
-    }
-
-    private static int storedFrames(PcmHistoryRing ring) throws Exception {
-        Field field = PcmHistoryRing.class.getDeclaredField("storedFrames");
-        field.setAccessible(true);
-        return field.getInt(ring);
-    }
-
-    private static int capacityFrames(PcmHistoryRing ring) throws Exception {
-        Field field = PcmHistoryRing.class.getDeclaredField("capacityFrames");
-        field.setAccessible(true);
-        return field.getInt(ring);
-    }
-
-    private static PcmHistoryRing.ReverseCursor reverseCursor(AbstractSmpsAudioBackend backend) throws Exception {
-        Field field = AbstractSmpsAudioBackend.class.getDeclaredField("reverseCursor");
-        field.setAccessible(true);
-        return (PcmHistoryRing.ReverseCursor) field.get(backend);
-    }
-
-    private static final class RecordingArmBackend extends NullAudioBackend {
-        final java.util.List<Boolean> armCalls = new java.util.ArrayList<>();
-
-        @Override
-        public void setRewindHistoryArmed(boolean armed) {
-            armCalls.add(armed);
+    private static byte[] rampPcm(int length) {
+        byte[] pcm = new byte[length];
+        for (int index = 0; index < length; index++) {
+            pcm[index] = (byte) (index % 251);
         }
+        return pcm;
+    }
+
+    private static boolean allZero(short[] samples) {
+        for (short sample : samples) {
+            if (sample != 0) {
+                return false;
+            }
+        }
+        return true;
     }
 }
