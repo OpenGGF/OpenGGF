@@ -43,6 +43,128 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "Publisher set rolls back published finals on later link race",
                 SetRollsBackPublishedFinalsOnLaterLinkRace));
+            tests.Add(new TestMain.TestCase(
+                "Publisher set stages and publishes subdirectory finals",
+                SetStagesAndPublishesSubdirectoryFinals));
+            tests.Add(new TestMain.TestCase(
+                "Publisher set revokes subdirectory finals on partial failure",
+                SetRevokesSubdirectoryFinalsOnPartialFailure));
+        }
+
+        private static readonly string[] RunFileNames =
+        {
+            "seg1_ehz1/physics.csv",
+            "seg1_ehz1/metadata.json",
+            "ss/physics.csv",
+            "run_manifest.json"
+        };
+
+        private static NoReplacePublisher.StagedPublicationSet StageRunSet(
+            NoReplacePublisher publisher,
+            string output)
+        {
+            return publisher.StageAll(
+                output,
+                RunFileNames,
+                writers =>
+                {
+                    writers[0].WriteLine("level physics");
+                    writers[1].WriteLine("level metadata");
+                    writers[2].WriteLine("ss physics");
+                    writers[3].WriteLine("manifest");
+                });
+        }
+
+        /// <summary>
+        /// Run-mode publication set: names carry relative subdirectory
+        /// paths, each parent directory is created at staging time, every
+        /// temporary lives next to its final, and nothing lands under a
+        /// final name until Publish() links the whole set.
+        /// </summary>
+        private static void SetStagesAndPublishesSubdirectoryFinals()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "run");
+                    NoReplacePublisher.StagedPublicationSet staged =
+                        StageRunSet(new NoReplacePublisher(), output);
+
+                    foreach (string name in RunFileNames)
+                    {
+                        AssertEx.Equal(
+                            false,
+                            File.Exists(Path.Combine(output, name)));
+                    }
+                    // Temporaries are staged inside their final's directory
+                    // so the link(2) publication never crosses directories.
+                    AssertEx.Equal(
+                        2,
+                        Directory.GetFiles(
+                            Path.Combine(output, "seg1_ehz1")).Length);
+
+                    staged.Publish();
+
+                    string[] files = Directory.GetFiles(
+                            output,
+                            "*",
+                            SearchOption.AllDirectories)
+                        .Select(path => path.Substring(output.Length + 1))
+                        .OrderBy(name => name, StringComparer.Ordinal)
+                        .ToArray();
+                    AssertEx.Equal(
+                        "run_manifest.json,seg1_ehz1/metadata.json,"
+                        + "seg1_ehz1/physics.csv,ss/physics.csv",
+                        string.Join(",", files));
+                    AssertEx.Equal(
+                        "level metadata\n",
+                        File.ReadAllText(Path.Combine(
+                            output, "seg1_ehz1", "metadata.json")));
+                    AssertEx.Equal(
+                        "manifest\n",
+                        File.ReadAllText(Path.Combine(
+                            output, "run_manifest.json")));
+                });
+        }
+
+        /// <summary>
+        /// No partial finals across directories: when a later link loses to
+        /// an existing final (here the run manifest, linked last), every
+        /// already-published segment file is revoked and only the competing
+        /// writer's file survives.
+        /// </summary>
+        private static void SetRevokesSubdirectoryFinalsOnPartialFailure()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "run-partial");
+                    byte[] competing = Encoding.UTF8.GetBytes(
+                        "competing-manifest\n");
+                    Directory.CreateDirectory(output);
+                    string manifestPath = Path.Combine(
+                        output,
+                        "run_manifest.json");
+                    File.WriteAllBytes(manifestPath, competing);
+
+                    NoReplacePublisher.StagedPublicationSet staged =
+                        StageRunSet(new NoReplacePublisher(), output);
+                    AssertEx.Throws<IOException>(
+                        () => staged.Publish(),
+                        "already exists");
+
+                    string[] files = Directory.GetFiles(
+                        output,
+                        "*",
+                        SearchOption.AllDirectories);
+                    AssertEx.Equal(1, files.Length);
+                    AssertEx.Equal(
+                        Path.GetFullPath(manifestPath),
+                        Path.GetFullPath(files[0]));
+                    AssertBytesEqual(
+                        competing,
+                        File.ReadAllBytes(manifestPath));
+                });
         }
 
         private static readonly string[] TraceFileNames =

@@ -20,6 +20,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             get { return 0; }
         }
 
+        public bool IsLagged
+        {
+            get { return false; }
+        }
+
         public void SetWord(int address, int value)
         {
             Ram[address] = (byte)((value >> 8) & 0xFF);

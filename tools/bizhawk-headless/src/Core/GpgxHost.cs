@@ -44,6 +44,11 @@ namespace OpenGGF.BizHawk.Headless
             get { return core.Frame; }
         }
 
+        public bool IsLagged
+        {
+            get { return ((IInputPollable)core).IsLagFrame; }
+        }
+
         public string MainRamDomainName
         {
             get { return mainRam.Name; }
@@ -68,10 +73,15 @@ namespace OpenGGF.BizHawk.Headless
             }
 
             byte[] romBytes = File.ReadAllBytes(romPath);
-            string romSha1 = RomIdentity.ValidateSonic1Rev01(romBytes);
+            // DetectGame validates the ROM is one of the supported trace
+            // ROMs (S1/S2 World REV01) and picks the GameInfo name.
+            string traceGame = RomIdentity.DetectGame(romBytes);
+            string romSha1 = RomIdentity.ComputeSha1(romBytes);
             var game = new GameInfo
             {
-                Name = "Sonic The Hedgehog",
+                Name = traceGame == "s2"
+                    ? "Sonic The Hedgehog 2"
+                    : "Sonic The Hedgehog",
                 System = VSystemID.Raw.GEN,
                 Hash = romSha1
             };

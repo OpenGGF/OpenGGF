@@ -24,6 +24,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "ROM identity skips only when S1_ROM_PATH is absent",
                 SkipsOnlyWhenSonic1RomPathIsAbsent));
+            tests.Add(new TestMain.TestCase(
+                "ROM identity accepts Sonic 2 REV01",
+                AcceptsSonic2Rev01));
+            tests.Add(new TestMain.TestCase(
+                "ROM identity reports mutated Sonic 2 SHA-1",
+                ReportsMutatedSonic2Sha1));
+            tests.Add(new TestMain.TestCase(
+                "ROM identity detects supported games by SHA-1",
+                DetectsSupportedGamesBySha1));
+            tests.Add(new TestMain.TestCase(
+                "ROM identity rejects unknown ROM in game detection",
+                RejectsUnknownRomInGameDetection));
         }
 
         private static void AcceptsPinnedDistribution()
@@ -97,6 +109,57 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 Environment.SetEnvironmentVariable("S1_ROM_PATH", original);
             }
+        }
+
+        private static void AcceptsSonic2Rev01()
+        {
+            byte[] rom = ReadSonic2Rom();
+            AssertEx.Equal(
+                "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9",
+                RomIdentity.ValidateSonic2Rev01(rom));
+        }
+
+        private static void ReportsMutatedSonic2Sha1()
+        {
+            byte[] rom = ReadSonic2Rom();
+            rom[rom.Length / 2] ^= 0x01;
+            string actualSha1 = RomIdentity.ComputeSha1(rom);
+            AssertEx.Throws<InvalidOperationException>(
+                () => RomIdentity.ValidateSonic2Rev01(rom),
+                actualSha1);
+        }
+
+        private static void DetectsSupportedGamesBySha1()
+        {
+            AssertEx.Equal("s2", RomIdentity.DetectGame(ReadSonic2Rom()));
+            AssertEx.Equal("s1", RomIdentity.DetectGame(ReadSonic1Rom()));
+        }
+
+        private static void RejectsUnknownRomInGameDetection()
+        {
+            byte[] unknown = new byte[] { 0x01, 0x02, 0x03, 0x04 };
+            AssertEx.Throws<InvalidOperationException>(
+                () => RomIdentity.DetectGame(unknown),
+                "not a supported trace ROM");
+            AssertEx.Throws<InvalidOperationException>(
+                () => RomIdentity.DetectGame(unknown),
+                RomIdentity.ComputeSha1(unknown));
+        }
+
+        private static byte[] ReadSonic2Rom()
+        {
+            string romPath = Environment.GetEnvironmentVariable("S2_ROM_PATH");
+            if (string.IsNullOrEmpty(romPath))
+            {
+                throw new TestMain.SkipTestException(
+                    "S2_ROM_PATH is not set.");
+            }
+            if (!File.Exists(romPath))
+            {
+                throw new InvalidOperationException(
+                    "Supplied S2_ROM_PATH does not exist: " + romPath + ".");
+            }
+            return File.ReadAllBytes(romPath);
         }
 
         private static byte[] ReadSonic1Rom()

@@ -46,6 +46,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 get { return 0; }
             }
 
+            public bool IsLagged
+            {
+                get { return false; }
+            }
+
             public void ClearButtons()
             {
             }

@@ -74,6 +74,16 @@
     <Compile Include="src/Recording/S1TraceCaptureRunner.cs" />
     <Compile Include="src/Recording/S1TraceCsvWriter.cs" />
     <Compile Include="src/Recording/S1TraceMetadataWriter.cs" />
+    <Compile Include="src/Recording/S2AuxEventEngine.cs" />
+    <Compile Include="src/Recording/S2Ram.cs" />
+    <Compile Include="src/Recording/S2RunCaptureRunner.cs" />
+    <Compile Include="src/Recording/S2RunManifestWriter.cs" />
+    <Compile Include="src/Recording/S2SpecialStageCsvWriter.cs" />
+    <Compile Include="src/Recording/S2SpecialStageMetadataWriter.cs" />
+    <Compile Include="src/Recording/S2TraceCaptureRunner.cs" />
+    <Compile Include="src/Recording/S2TraceCsvWriter.cs" />
+    <Compile Include="src/Recording/S2TraceMetadataWriter.cs" />
+    <Compile Include="src/Recording/S2Zones.cs" />
     <Compile Include="src/Recording/SmokeCaptureRunner.cs" />
   </ItemGroup>
   <ItemGroup>
