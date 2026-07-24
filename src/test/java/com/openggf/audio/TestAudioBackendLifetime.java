@@ -31,7 +31,7 @@ class TestAudioBackendLifetime {
         SinkFailingBackend candidate = new SinkFailingBackend();
 
         AudioManager.getInstance().setBackend(candidate);
-        AudioManager.getInstance().presentShadowFrame(
+        AudioManager.getInstance().presentFrame(
                 com.openggf.audio.presentation.PresentationMode.SILENT);
 
         assertSame(candidate, AudioManager.getInstance().getBackend());

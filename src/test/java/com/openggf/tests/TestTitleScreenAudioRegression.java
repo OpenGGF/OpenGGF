@@ -150,13 +150,13 @@ public class TestTitleScreenAudioRegression {
         audioManager.setAudioProfile(new Sonic2AudioProfile());
         audioManager.setRom(GameServices.rom().getRom());
         audioManager.playSegaPcm();
-        audioManager.presentShadowFrame(
+        audioManager.presentFrame(
                 com.openggf.audio.presentation.PresentationMode.SILENT);
         assertNotNull(audioManager.captureLogicalSnapshot()
                 .presentation().rawPcmVoiceId());
 
         TitleScreenManager.getInstance().reset();
-        audioManager.presentShadowFrame(
+        audioManager.presentFrame(
                 com.openggf.audio.presentation.PresentationMode.SILENT);
 
         assertEquals(null, audioManager.captureLogicalSnapshot()

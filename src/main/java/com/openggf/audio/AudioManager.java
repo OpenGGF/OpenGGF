@@ -1059,22 +1059,22 @@ public class AudioManager implements MusicRestoreSink {
         }
         if (policy != AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE) {
             endReverseAudioPresentation();
-            deterministicAudioRuntime.flushPresentationFifo();
         }
-        if (backend == null) {
-            return;
-        }
+        ensureShadowPresentation();
         switch (policy) {
             case SUPPRESSED_INTERNAL_RESTORE -> {
             }
             case STOP_TRANSIENT_SFX_RESYNC_MUSIC -> {
-                backend.stopAllSfx();
-                backend.restoreMusic();
+                shadowRegistry.stopTransientVoices();
+                shadowRegistry.apply(
+                        new AudioPresentationCommand.RestoreMusicOverride());
             }
-            case STOP_TRANSIENT_SFX -> backend.stopAllSfx();
+            case STOP_TRANSIENT_SFX ->
+                    shadowRegistry.stopTransientVoices();
             case STOP_ALL_PRESENTATION -> {
-                backend.stopAllSfx();
-                backend.stopPlayback();
+                shadowRegistry.clear();
+                shadowProducer.clearHistory();
+                shadowParity.historyBoundary();
             }
         }
     }
@@ -1084,10 +1084,6 @@ public class AudioManager implements MusicRestoreSink {
         deferredReverseLogicalPrepared = false;
         deferredBackendRestore = null;
         reverseAudioPresentationActive = true;
-        deterministicAudioRuntime.beginReversePresentation();
-        if (backend != null) {
-            backend.beginReversePresentation();
-        }
         ensureShadowPresentation();
         shadowProducer.beginReverse(1.0);
     }
@@ -1133,10 +1129,6 @@ public class AudioManager implements MusicRestoreSink {
                                     binding.sfxId()));
                 }
             }
-            if (backend != null) {
-                backend.endReversePresentation();
-            }
-            deterministicAudioRuntime.endReversePresentation();
             deferredReverseLogicalSnapshot = null;
             deferredReverseLogicalPrepared = false;
             deferredBackendRestore = null;
@@ -1191,13 +1183,8 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void setReversePlaybackRate(double rate) {
-        deterministicAudioRuntime.setReversePlaybackRate(rate);
-        if (backend != null) {
-            backend.setReversePlaybackRate(rate);
-        }
-        if (shadowProducer != null) {
-            shadowProducer.setReverseRate(rate);
-        }
+        ensureShadowPresentation();
+        shadowProducer.setReverseRate(rate);
     }
 
     /**
@@ -1209,11 +1196,9 @@ public class AudioManager implements MusicRestoreSink {
      * explicitly.
      */
     public void clearPcmHistory() {
-        deterministicAudioRuntime.clearPcmHistory();
-        if (shadowProducer != null) {
-            shadowProducer.clearHistory();
-            shadowParity.historyBoundary();
-        }
+        ensureShadowPresentation();
+        shadowProducer.clearHistory();
+        shadowParity.historyBoundary();
     }
 
     /**
@@ -1226,16 +1211,14 @@ public class AudioManager implements MusicRestoreSink {
      * a later boundary.
      */
     public void setRewindHistoryArmed(boolean armed) {
-        if (backend != null) {
-            backend.setRewindHistoryArmed(armed);
-        }
         ensureShadowPresentation();
         shadowProducer.setHistoryArmed(armed);
     }
 
-    public void presentShadowFrame(PresentationMode mode) {
+    public void presentFrame(PresentationMode mode) {
         ensureShadowPresentation();
         shadowProducer.present(commandTimeline.currentFrame(), mode);
+        audioFrameAdvanced = true;
         shadowParity.presented(mode);
         if (shadowRestoreRequested) {
             shadowRestoreRequested = false;
@@ -1243,16 +1226,6 @@ public class AudioManager implements MusicRestoreSink {
                     new AudioPresentationCommand.RestoreMusicOverride(),
                     () -> false, command -> { }));
         }
-    }
-
-    /** Advances all presentation consumers once for one displayed outer frame. */
-    public void presentOuterFrame(PresentationMode mode) {
-        FrameAudioMode runtimeMode = mode == PresentationMode.SILENT
-                ? FrameAudioMode.SILENT_STEP : FrameAudioMode.NORMAL;
-        if (mode != PresentationMode.REVERSE) {
-            advanceRuntimeFrame(runtimeMode);
-        }
-        presentShadowFrame(mode);
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.openggf;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.FrameAudioMode;
@@ -91,13 +92,17 @@ class TestTraceSessionLauncherRewindPresentation {
         assertTrue(launcher.handleRealtimeRewindInput(false, input));
 
         assertTrue(fadeManager.isReversePresentationActive());
-        assertTrue(runtime.calls.contains("beginReversePresentation"));
+        assertTrue(audio.isReverseAudioPresentationActive());
+        assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                .reverseActive());
 
         input.handleKeyEvent(config.getInt(SonicConfiguration.TRACE_REWIND_KEY), GLFW_RELEASE);
         assertFalse(launcher.handleRealtimeRewindInput(false, input));
 
         assertFalse(fadeManager.isReversePresentationActive());
-        assertTrue(runtime.calls.contains("endReversePresentation"));
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertFalse(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                .reverseActive());
     }
 
     /**
@@ -144,7 +149,7 @@ class TestTraceSessionLauncherRewindPresentation {
         assertFalse(fadeManager.isReversePresentationActive(),
                 "a pending non-rewindable transition must tear down the reverse fade "
                         + "presentation, not leave it active while the frame is rejected");
-        assertTrue(runtime.calls.contains("endReversePresentation"),
+        assertFalse(audio.isReverseAudioPresentationActive(),
                 "rejecting on a pending transition must run the same cleanup as a normal "
                         + "release, not silently leave the audio reverse-presentation stuck");
     }

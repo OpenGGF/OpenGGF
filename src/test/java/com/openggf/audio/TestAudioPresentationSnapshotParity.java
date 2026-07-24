@@ -67,7 +67,7 @@ class TestAudioPresentationSnapshotParity {
         audio.setSpeedShoes(true);
         audio.setSpeedMultiplier(3);
         audio.playSfx(GameSound.RING);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
 
         AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
         AudioPresentationSnapshot expected = selected.presentation();
@@ -80,7 +80,7 @@ class TestAudioPresentationSnapshotParity {
         audio.setSpeedShoes(false);
         audio.setSpeedMultiplier(1);
         audio.resetRingSound();
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         assertNotEquals(expected, audio.captureLogicalSnapshot().presentation());
 
         audio.restoreLogicalSnapshot(selected);
@@ -93,11 +93,11 @@ class TestAudioPresentationSnapshotParity {
     @Test
     void heldReverseDefersPresentationRestoreUntilRelease() {
         audio.toggleMute(ChannelType.FM, 0);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
 
         audio.toggleMute(ChannelType.FM, 1);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         AudioPresentationSnapshot disturbed =
                 audio.captureLogicalSnapshot().presentation();
 
@@ -133,14 +133,14 @@ class TestAudioPresentationSnapshotParity {
 
         audio.toggleMute(ChannelType.FM, 2);
         audio.toggleSolo(ChannelType.PSG, 1);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
 
         audio.toggleMute(ChannelType.FM, 2);
         audio.toggleSolo(ChannelType.PSG, 1);
         audio.toggleSolo(ChannelType.FM, 4);
         audio.toggleMute(ChannelType.PSG, 3);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
 
         audio.beginReverseAudioPresentation();
         audio.restoreLogicalSnapshot(selected);
@@ -155,7 +155,7 @@ class TestAudioPresentationSnapshotParity {
 
         audio.toggleMute(ChannelType.FM, 2);
         audio.toggleSolo(ChannelType.PSG, 1);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         assertFalse(audio.isMuted(ChannelType.FM, 2));
         assertFalse(audio.isSoloed(ChannelType.PSG, 1));
     }
@@ -191,14 +191,14 @@ class TestAudioPresentationSnapshotParity {
         audio.playMusic(0x81);
         audio.playSfx(0xA0);
         audio.resetRingSound();
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot expected = audio.captureLogicalSnapshot();
 
         audio.beginCommandTimelineFrame(12);
         audio.setSpeedShoes(false);
         audio.setSpeedMultiplier(1);
         audio.playSfx(GameSound.RING);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot disturbed = audio.captureLogicalSnapshot();
 
         audio.beginReverseAudioPresentation();
@@ -255,7 +255,7 @@ class TestAudioPresentationSnapshotParity {
 
         audio.beginCommandTimelineFrame(1);
         audio.playMusic(0x80);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         AudioKeyframeStore keyframes = new AudioKeyframeStore();
         keyframes.capture(1, audio);
 
@@ -264,11 +264,11 @@ class TestAudioPresentationSnapshotParity {
         audio.playSfx(0xA0);
         audio.setSpeedShoes(true);
         audio.setSpeedMultiplier(3);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
 
         audio.beginCommandTimelineFrame(3);
         audio.playMusic(0x82);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         AudioBackendLogicalSnapshot disturbed =
                 liveBackend.captureLogicalSnapshot();
         audio.beginReverseAudioPresentation();
@@ -324,7 +324,7 @@ class TestAudioPresentationSnapshotParity {
         audio.setRewindHistoryArmed(true);
         for (int frame = 0; frame < 4; frame++) {
             audio.beginCommandTimelineFrame(frame);
-            audio.presentOuterFrame(PresentationMode.FORWARD);
+            audio.presentFrame(PresentationMode.FORWARD);
         }
         audio.beginCommandTimelineFrame(4);
         AudioKeyframeStore keyframes = new AudioKeyframeStore();
@@ -341,7 +341,7 @@ class TestAudioPresentationSnapshotParity {
         audio.toggleSolo(ChannelType.PSG, 1);
         audio.presentationCoordFlagHandlersForTesting().state()
                 .setSpindashRevCounter(23);
-        audio.presentOuterFrame(PresentationMode.FORWARD);
+        audio.presentFrame(PresentationMode.FORWARD);
         AudioManager.ReleaseStateForTesting disturbedState =
                 audio.releaseStateForTesting();
         assertEquals(0, audio.presentationCoordFlagHandlersForTesting()
@@ -352,7 +352,7 @@ class TestAudioPresentationSnapshotParity {
                 disturbedState.logical().presentation().psgSoloMask());
 
         audio.beginReverseAudioPresentation();
-        audio.presentOuterFrame(PresentationMode.REVERSE);
+        audio.presentFrame(PresentationMode.REVERSE);
         keyframes.replayToLogicalState(audio, 4);
         assertTrue(audio.commitDeferredReverseLogicalRestore());
         AudioManager.ReleaseStateForTesting before =
@@ -512,7 +512,7 @@ class TestAudioPresentationSnapshotParity {
                     assertTrue(audio.captureLogicalSnapshot().ringLeft());
                     audio.playSfx(GameSound.RING);
                 }
-                audio.presentOuterFrame(PresentationMode.FORWARD);
+                audio.presentFrame(PresentationMode.FORWARD);
                 long producerTotal = audio.releaseStateForTesting()
                         .producer().clock().totalSamplesProduced();
                 int packetFrames = Math.toIntExact(
@@ -604,7 +604,7 @@ class TestAudioPresentationSnapshotParity {
             }
             for (int frame = 0; frame < 10; frame++) {
                 audio.beginCommandTimelineFrame(120 + frame);
-                audio.presentOuterFrame(PresentationMode.FORWARD);
+                audio.presentFrame(PresentationMode.FORWARD);
                 long producerTotal = audio.releaseStateForTesting()
                         .producer().clock().totalSamplesProduced();
                 packetSizes[frame] = Math.toIntExact(

@@ -63,7 +63,8 @@ class AudioManagerCaptureModeTest {
     }
 
     @Test
-    void captureRuntimeTemporarilyBecomesTheOnlyPcmHistoryOwner() throws Exception {
+    void offlineCaptureRuntimeDoesNotReplacePresentationHistoryOwner()
+            throws Exception {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();
         SonicConfigurationService config = SonicConfigurationService.getInstance();
@@ -73,13 +74,14 @@ class AudioManagerCaptureModeTest {
         audio.setBackend(backend);
         try {
             audio.setRewindHistoryArmed(true);
-            PcmHistoryRing preCaptureRing = pcmHistoryRing(backend);
-            assertNotNull(preCaptureRing, "armed presentation backend must own history before capture");
+            assertTrue(audio.releaseStateForTesting().producer().historyArmed());
+            assertNull(pcmHistoryRing(backend),
+                    "retired backend must never own presentation history");
 
             audio.beginCaptureMode(48_000, 60);
 
             assertNull(pcmHistoryRing(backend),
-                    "capture runtime must be the only PCM history owner while capture is active");
+                    "offline capture must not reactivate backend history");
             audio.advanceGameplayFrameAudio();
             short[] target = new short[800 * 2];
             assertEquals(800, audio.drainCaptureFrame(target),
@@ -87,12 +89,9 @@ class AudioManagerCaptureModeTest {
 
             audio.endCaptureMode();
 
-            PcmHistoryRing restoredRing = pcmHistoryRing(backend);
-            assertNotNull(restoredRing, "ending capture must restore armed backend history ownership");
-            assertNotSame(preCaptureRing, restoredRing,
-                    "capture handoff must remain a hard history boundary");
-            assertEquals(0, storedFrames(restoredRing),
-                    "restored backend history must not contain pre-capture or capture PCM");
+            assertTrue(audio.releaseStateForTesting().producer().historyArmed(),
+                    "ending offline capture must leave producer history ownership intact");
+            assertNull(pcmHistoryRing(backend));
         } finally {
             audio.endCaptureMode();
             audio.resetState();

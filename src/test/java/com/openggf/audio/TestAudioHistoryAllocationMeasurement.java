@@ -131,13 +131,14 @@ class TestAudioHistoryAllocationMeasurement {
             assertNull(history(backend),
                     "freshly initialized capture backend must leave history unallocated");
             audio.setRewindHistoryArmed(true);
-            assertNotNull(history(backend),
-                    "pre-capture backend must own history while rewind is armed");
+            assertNull(history(backend),
+                    "retired backend must never own presentation history");
+            assertTrue(audio.releaseStateForTesting().producer().historyArmed());
 
             AudioBenchmarkMemoryProbe.RunResult measurement =
                     probe.measureTimedRun(() -> audio.beginCaptureMode(SAMPLE_RATE, FRAME_RATE));
             assertNull(history(backend),
-                    "capture runtime must become the only PCM history owner");
+                    "offline capture must not reactivate backend history");
             PcmHistoryRing captureHistory = captureRuntimeHistory(audio);
             assertNotNull(captureHistory, "capture runtime must own a PCM history ring");
             return allocationRun(measurement, captureHistory);

@@ -35,7 +35,7 @@ class TestShadowAudioPresentationRouting {
     void sixtyPresentedFramesTickShadowExactlySixtyTimes() {
         audio.setBackend(new NullAudioBackend());
         for (int frame = 0; frame < 60; frame++) {
-            audio.presentShadowFrame(PresentationMode.FORWARD);
+            audio.presentFrame(PresentationMode.FORWARD);
         }
         var snapshot = audio.shadowParitySnapshot();
         assertEquals(60, snapshot.presentedFrames());
@@ -53,7 +53,7 @@ class TestShadowAudioPresentationRouting {
         audio.stopAllSfx();
         audio.stopMusic();
         audio.restoreMusic();
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         assertEquals(6,
                 audio.shadowParitySnapshot().commandCount());
     }
@@ -62,8 +62,8 @@ class TestShadowAudioPresentationRouting {
     void backendRemainsCompatibilityOwnerAcrossPresentationTicks() {
         NullAudioBackend backend = new NullAudioBackend();
         audio.setBackend(backend);
-        audio.presentShadowFrame(PresentationMode.FORWARD);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.FORWARD);
+        audio.presentFrame(PresentationMode.SILENT);
         assertEquals(backend, audio.getBackend());
     }
 
@@ -72,7 +72,7 @@ class TestShadowAudioPresentationRouting {
         audio.setBackend(new NullAudioBackend());
         audio.toggleMute(ChannelType.FM, 2);
         audio.toggleSolo(ChannelType.PSG, 1);
-        audio.presentShadowFrame(PresentationMode.SILENT);
+        audio.presentFrame(PresentationMode.SILENT);
         assertEquals(true, audio.isMuted(ChannelType.FM, 2));
         assertEquals(true, audio.isSoloed(ChannelType.PSG, 1));
     }
@@ -88,9 +88,9 @@ class TestShadowAudioPresentationRouting {
         }
         assertEquals(0, runtime.advances);
 
-        audio.presentOuterFrame(PresentationMode.FORWARD);
-        assertEquals(1, runtime.advances);
-        assertEquals(FrameAudioMode.NORMAL, runtime.lastMode);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(0, runtime.advances,
+                "the retired runtime must never advance presentation");
         assertEquals(1,
                 audio.shadowParitySnapshot().presentedFrames());
     }

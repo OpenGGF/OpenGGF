@@ -198,6 +198,6 @@ public class HeadlessTestRunner {
     }
 
     private static void presentOuterFrame() {
-        GameServices.audio().presentOuterFrame(PresentationMode.FORWARD);
+        GameServices.audio().presentFrame(PresentationMode.FORWARD);
     }
 }

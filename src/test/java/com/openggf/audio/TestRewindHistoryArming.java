@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -53,17 +54,19 @@ class TestRewindHistoryArming {
     }
 
     @Test
-    void audioManagerForwardsArmingToTheBackend() {
+    void audioManagerRoutesArmingOnlyToTheProducer() {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();
         RecordingArmBackend recordingBackend = new RecordingArmBackend();
         audio.setBackend(recordingBackend);
         try {
             audio.setRewindHistoryArmed(true);
-            assertEquals(java.util.List.of(true), recordingBackend.armCalls);
+            assertTrue(audio.releaseStateForTesting().producer().historyArmed());
+            assertEquals(java.util.List.of(), recordingBackend.armCalls);
 
             audio.setRewindHistoryArmed(false);
-            assertEquals(java.util.List.of(true, false), recordingBackend.armCalls);
+            assertFalse(audio.releaseStateForTesting().producer().historyArmed());
+            assertEquals(java.util.List.of(), recordingBackend.armCalls);
         } finally {
             audio.resetState();
         }

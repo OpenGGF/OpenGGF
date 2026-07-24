@@ -138,11 +138,11 @@ class TestAudioManagerRewindSuppression {
         assertEquals(0, backend.totalCalls());
 
         audio.afterRewindRestore(7, AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
-        assertEquals(java.util.List.of("stopAllSfx", "restoreMusic"), backend.calls);
+        assertEquals(java.util.List.of(), backend.calls);
 
-        backend.clear();
         audio.afterRewindRestore(7, AudioPresentationPolicy.STOP_ALL_PRESENTATION);
-        assertEquals(java.util.List.of("stopAllSfx", "stopPlayback"), backend.calls);
+        assertEquals(java.util.List.of(), backend.calls,
+                "cleanup must remain on the sole presentation producer");
     }
 
     @Test
@@ -154,7 +154,7 @@ class TestAudioManagerRewindSuppression {
         // restoreMusic() here would end an override (e.g. invincibility) that
         // is legitimately still active per that just-restored state.
         audio.afterRewindRestore(7, AudioPresentationPolicy.STOP_TRANSIENT_SFX);
-        assertEquals(java.util.List.of("stopAllSfx"), backend.calls);
+        assertEquals(java.util.List.of(), backend.calls);
     }
 
     @Test
@@ -172,16 +172,18 @@ class TestAudioManagerRewindSuppression {
         audio.beginReverseAudioPresentation();
         audio.afterRewindRestore(7, AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
 
-        assertEquals(1, runtime.beginReverseCalls);
+        assertTrue(audio.isReverseAudioPresentationActive());
+        assertEquals(0, runtime.beginReverseCalls);
         assertEquals(0, runtime.endReverseCalls,
                 "internal step-back restores must not cancel held reverse presentation");
         assertEquals(0, runtime.flushCalls);
 
         audio.afterRewindRestore(7, AudioPresentationPolicy.STOP_ALL_PRESENTATION);
 
-        assertEquals(1, runtime.beginReverseCalls);
-        assertEquals(1, runtime.endReverseCalls);
-        assertEquals(1, runtime.flushCalls);
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertEquals(0, runtime.beginReverseCalls);
+        assertEquals(0, runtime.endReverseCalls);
+        assertEquals(0, runtime.flushCalls);
     }
 
     @Test
@@ -221,15 +223,15 @@ class TestAudioManagerRewindSuppression {
     }
 
     @Test
-    void reversePresentationLifecycleIsForwardedToBackend() {
+    void reversePresentationLifecycleIsOwnedOnlyByProducer() {
         PreserveFlagBackend preserveBackend = new PreserveFlagBackend();
         audio.setBackend(preserveBackend);
 
         audio.beginReverseAudioPresentation();
         audio.endReverseAudioPresentation();
 
-        assertEquals(1, preserveBackend.beginReverseCalls);
-        assertEquals(1, preserveBackend.endReverseCalls);
+        assertEquals(0, preserveBackend.beginReverseCalls);
+        assertEquals(0, preserveBackend.endReverseCalls);
     }
 
     private static final class ReverseTrackingRuntime implements DeterministicAudioRuntime {

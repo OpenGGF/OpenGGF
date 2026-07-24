@@ -113,6 +113,7 @@ import java.util.logging.Logger;
  * and call {@link #step()} to advance one frame.
  */
 public class GameLoop {
+    @FunctionalInterface interface AudioPresentationProbe { void presented(PresentationMode mode); }
     static final int STATUS_FIRE_SHIELD_BIT = 4;
     static final int STATUS_LIGHTNING_SHIELD_BIT = 5;
     static final int STATUS_BUBBLE_SHIELD_BIT = 6;
@@ -126,6 +127,7 @@ public class GameLoop {
     private final EngineContext engineServices;
     private final SonicConfigurationService configService;
     private final AudioManager audioManager;
+    private AudioPresentationProbe audioPresentationProbe = ignored -> {};
     private final RomManager romManager;
     private final DebugOverlayManager debugOverlayManager;
     private SpriteManager spriteManager;
@@ -698,9 +700,13 @@ public class GameLoop {
      */
     public void presentOuterFrame(
             boolean modalPicker, boolean frameStepRequested) {
-        audioManager.presentOuterFrame(presentationModeForOuterFrame(
-                modalPicker, frameStepRequested));
+        PresentationMode mode = presentationModeForOuterFrame(
+                modalPicker, frameStepRequested);
+        audioManager.presentFrame(mode);
+        audioPresentationProbe.presented(mode);
     }
+
+    void setAudioPresentationProbe(AudioPresentationProbe probe) { audioPresentationProbe = java.util.Objects.requireNonNull(probe); }
 
     /**
      * @return true if the game loop is currently paused (either by window or user)

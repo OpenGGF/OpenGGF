@@ -1,13 +1,12 @@
 package com.openggf.game.rewind;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -276,10 +275,11 @@ class TestHeldRewindAudioRestoreDeferral {
 
             assertEquals(1, backend.logicalRestores,
                     "live rewind release must land exactly one committed logical restore");
-            int restoreIndex = backend.calls.indexOf("restoreLogicalSnapshot");
-            int stopSfxIndex = backend.calls.indexOf("stopAllSfx");
-            assertTrue(restoreIndex >= 0 && stopSfxIndex > restoreIndex,
-                    "committed restore must precede presentation cleanup, calls=" + backend.calls);
+            assertEquals(java.util.List.of("restoreLogicalSnapshot"),
+                    backend.calls,
+                    "only logical compatibility restore may reach the retired backend presenter");
+            assertFalse(audio.isReverseAudioPresentationActive(),
+                    "producer cleanup must follow the committed restore");
         } finally {
             config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
             SessionManager.clear();
@@ -307,10 +307,8 @@ class TestHeldRewindAudioRestoreDeferral {
 
             assertEquals(0, backend.logicalRestores,
                     "level-load boundary must drop stale deferred restore before cleanup");
-            assertTrue(backend.calls.contains("stopAllSfx"),
-                    "boundary must still clean transient reverse SFX presentation");
-            assertTrue(backend.calls.contains("restoreMusic"),
-                    "boundary must still resync music after reverse presentation");
+            assertTrue(backend.calls.isEmpty(),
+                    "boundary cleanup must stay on the sole presentation producer");
             assertFalse(audio.isReverseAudioPresentationActive(),
                     "boundary cleanup must end reverse audio presentation");
             assertTrue(audio.captureLogicalSnapshot().ringLeft(),
@@ -335,12 +333,13 @@ class TestHeldRewindAudioRestoreDeferral {
         try {
             TestEnvironment.activeGameplayMode();
             LiveRewindManager manager = liveManagerWithControllerAtFrame(config, 8);
-            CountingClearRuntime runtime = new CountingClearRuntime();
-            installDeterministicAudioRuntime(audio, runtime);
+            long epochBefore = AudioManagerTestDiagnostics
+                    .producerFingerprint(audio).history().epoch();
 
             manager.markBoundary(RewindBoundary.LEVEL_LOAD);
 
-            assertEquals(1, runtime.clearPcmHistoryCalls,
+            assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .history().epoch() > epochBefore,
                     "level-load boundary must clear the raw PCM rewind-history ring so held "
                             + "rewind audio cannot play samples recorded before this level started");
         } finally {
@@ -364,20 +363,24 @@ class TestHeldRewindAudioRestoreDeferral {
             InputHandler input = new InputHandler();
 
             manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
-            assertEquals(Boolean.TRUE, backend.lastRewindHistoryArmed,
+            assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .historyArmed(),
                     "a usable held-rewind session must arm PCM history recording");
 
             manager.handleRealtimeRewindInput(GameMode.TITLE_SCREEN, false, input);
-            assertEquals(Boolean.FALSE, backend.lastRewindHistoryArmed,
+            assertFalse(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .historyArmed(),
                     "leaving GameMode.LEVEL must disarm PCM history recording");
 
             manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
-            assertEquals(Boolean.TRUE, backend.lastRewindHistoryArmed,
+            assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .historyArmed(),
                     "re-entering GameMode.LEVEL must re-arm PCM history recording");
 
             config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
             manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
-            assertEquals(Boolean.FALSE, backend.lastRewindHistoryArmed,
+            assertFalse(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .historyArmed(),
                     "disabling live rewind must disarm PCM history recording even in GameMode.LEVEL");
         } finally {
             config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
@@ -406,10 +409,8 @@ class TestHeldRewindAudioRestoreDeferral {
 
             assertEquals(0, backend.logicalRestores,
                     "seamless boundary must drop stale deferred restore before cleanup");
-            assertTrue(backend.calls.contains("stopAllSfx"),
-                    "boundary must still clean transient reverse SFX presentation");
-            assertTrue(backend.calls.contains("restoreMusic"),
-                    "boundary must still resync music after reverse presentation");
+            assertTrue(backend.calls.isEmpty(),
+                    "boundary cleanup must stay on the sole presentation producer");
             assertFalse(audio.isReverseAudioPresentationActive(),
                     "boundary cleanup must end reverse audio presentation");
             assertTrue(audio.captureLogicalSnapshot().ringLeft(),
@@ -478,27 +479,6 @@ class TestHeldRewindAudioRestoreDeferral {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
-    }
-
-    private static void installDeterministicAudioRuntime(AudioManager audio, DeterministicAudioRuntime runtime)
-            throws Exception {
-        Method method = AudioManager.class.getDeclaredMethod(
-                "setDeterministicAudioRuntime", DeterministicAudioRuntime.class);
-        method.setAccessible(true);
-        method.invoke(audio, runtime);
-    }
-
-    private static final class CountingClearRuntime implements DeterministicAudioRuntime {
-        int clearPcmHistoryCalls;
-
-        @Override
-        public void advanceFrame(long frame, FrameAudioMode mode) {
-        }
-
-        @Override
-        public void clearPcmHistory() {
-            clearPcmHistoryCalls++;
-        }
     }
 
     private static final class CountingRestoreBackend extends NullAudioBackend {

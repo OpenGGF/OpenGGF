@@ -263,7 +263,7 @@ public class TestDonorAudioRouting {
 
         audioManager.playDonorMusic("s3k", 0x21);
         audioManager.playDonorSfx("s3k", 0xA4);
-        audioManager.presentOuterFrame(PresentationMode.SILENT);
+        audioManager.presentFrame(PresentationMode.SILENT);
 
         var presentationOwner =
                 audioManager.presentationCoordFlagHandlersForTesting();

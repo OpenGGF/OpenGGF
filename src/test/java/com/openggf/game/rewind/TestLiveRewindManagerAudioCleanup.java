@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
@@ -106,17 +107,16 @@ class TestLiveRewindManagerAudioCleanup {
         input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
         assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
-        backend.clear();
         input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_RELEASE);
 
         assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
-        assertFalse(backend.calls.contains("stopAllSfx"),
+        assertTrue(audio.isReverseAudioPresentationActive(),
                 "release should keep reverse presentation active while coast still has rewind steps");
 
         while (manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input)) {
             // drain coast
         }
-        assertTrue(backend.calls.contains("stopAllSfx"),
+        assertFalse(audio.isReverseAudioPresentationActive(),
                 "transient cleanup should run after the coast has fully ended");
     }
 
@@ -205,10 +205,15 @@ class TestLiveRewindManagerAudioCleanup {
                 audio);
         setField(manager, "rewindController", controller);
         setField(manager, "rewinding", true);
+        audio.beginReverseAudioPresentation();
 
         manager.handleRealtimeRewindInput(GameMode.TITLE_SCREEN, false, new InputHandler());
 
-        assertEquals(java.util.List.of("stopAllSfx", "stopPlayback"), backend.calls);
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                .voiceIdentities().isEmpty());
+        assertEquals(java.util.List.of(), backend.calls,
+                "cleanup must not dispatch to the retired backend presenter");
     }
 
     @Test
@@ -223,6 +228,7 @@ class TestLiveRewindManagerAudioCleanup {
                 audio);
         setField(manager, "rewindController", controller);
         setField(manager, "rewinding", true);
+        audio.beginReverseAudioPresentation();
 
         // currentGameMode is still LEVEL (e.g. a special-stage entry fade is in
         // flight) but the composite freeze predicate the GameLoop caller computes
@@ -231,7 +237,11 @@ class TestLiveRewindManagerAudioCleanup {
         boolean engaged = manager.handleRealtimeRewindInput(GameMode.LEVEL, true, new InputHandler());
 
         assertFalse(engaged, "engagement must be rejected while a transition is pending");
-        assertEquals(java.util.List.of("stopAllSfx", "stopPlayback"), backend.calls);
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                .voiceIdentities().isEmpty());
+        assertEquals(java.util.List.of(), backend.calls,
+                "cleanup must not dispatch to the retired backend presenter");
         assertFalse((boolean) getField(manager, "rewinding"));
     }
 

@@ -142,7 +142,7 @@ public final class StandaloneAudioPresentationHost
 
     public void presentFrame() {
         assertOpen();
-        manager.presentShadowFrame(PresentationMode.FORWARD);
+        manager.presentFrame(PresentationMode.FORWARD);
         manager.update();
     }
 
