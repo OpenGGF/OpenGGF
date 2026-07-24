@@ -241,4 +241,14 @@ public class Sonic3kWaterDataProvider implements WaterDataProvider {
 
         return null;
     }
+
+    @Override
+    public int getUnderwaterSuperPaletteCycleAddress(int zoneId, int actId) {
+        // SuperHyper_PalCycle_SonicApply (sonic3k.asm:4671-4677): AIZ and ICZ use the
+        // green-tinted underwater table, every other water zone the blue-tinted one.
+        if (zoneId == Sonic3kZoneIds.ZONE_AIZ || zoneId == Sonic3kZoneIds.ZONE_ICZ) {
+            return Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_UNDERWATER_AIZ_ICZ_ADDR;
+        }
+        return Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_UNDERWATER_HCZ_CNZ_LBZ_ADDR;
+    }
 }

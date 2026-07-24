@@ -522,6 +522,13 @@ public class Sonic3kConstants {
     public static final int PAL_CYCLE_SUPER_SONIC_ENTRY_COUNT = 10;
     public static final int PAL_CYCLE_SUPER_SONIC_ENTRY_SIZE = 6; // 3 words
 
+    // PalCycle_SuperSonicUnderwaterAIZICZ / PalCycle_SuperSonicUnderwaterHCZCNZLBZ
+    // (sonic3k.asm:4867 / 4879) - same layout as PalCycle_SuperSonic, written to the
+    // water palette while Water_flag is set. SuperHyper_PalCycle_SonicApply picks the
+    // AIZ/ICZ table for those two zones and the HCZ/CNZ/LBZ table otherwise.
+    public static final int PAL_CYCLE_SUPER_SONIC_UNDERWATER_AIZ_ICZ_ADDR = 0x0039CA;
+    public static final int PAL_CYCLE_SUPER_SONIC_UNDERWATER_HCZ_CNZ_LBZ_ADDR = 0x003A06;
+
     // --- VRAM art tile destinations ---
     // VDP tile indices where art is loaded in VRAM during the intro
     public static final int ARTTILE_AIZ_INTRO_SPRITES = 0x03D1;  // ArtTile_AIZIntroSprites

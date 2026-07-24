@@ -58,4 +58,21 @@ public interface WaterDataProvider {
     default int getVisualWaterLevelOffset(int zoneId, int actId) {
         return 0;
     }
+
+    /**
+     * Returns the ROM address of the Super/Hyper palette-cycle table that should
+     * be written to the underwater palette for the given zone/act, or 0 when the
+     * game has no separate underwater table (the normal cycle data is mirrored
+     * into the water palette instead).
+     * <p>
+     * ROM: {@code SuperHyper_PalCycle_SonicApply} (sonic3k.asm:4666-4681) writes
+     * the cycle frame to {@code Water_palette+$04} whenever {@code Water_flag} is
+     * set, choosing between {@code PalCycle_SuperSonicUnderwaterAIZICZ} and
+     * {@code PalCycle_SuperSonicUnderwaterHCZCNZLBZ} by {@code Current_zone}.
+     *
+     * @return ROM address of the underwater cycle table, or 0 for none
+     */
+    default int getUnderwaterSuperPaletteCycleAddress(int zoneId, int actId) {
+        return 0;
+    }
 }

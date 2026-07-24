@@ -17,6 +17,12 @@ import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
+import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
+import com.openggf.level.WaterSystem;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -48,6 +54,11 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     /** Raw ROM palette data (60 bytes: 10 frames x 3 colors x 2 bytes). */
     private byte[] paletteData;
+
+    /** Retained for lazy loads of the zone's underwater cycle table. */
+    private RomByteReader romReader;
+    /** Underwater cycle tables, keyed by ROM address. */
+    private final Map<Integer, byte[]> underwaterPaletteData = new HashMap<>();
 
     /** Super Sonic animation set (loaded from ROM). */
     private SpriteAnimationSet superAnimSet;
@@ -114,6 +125,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
             return;
         }
         paletteData = reader.slice(addr, len);
+        romReader = reader;
+        underwaterPaletteData.clear();
         LOGGER.fine("Loaded S3K Super Sonic palette data: " + len + " bytes from ROM 0x"
                 + Integer.toHexString(addr));
 
@@ -406,11 +419,14 @@ public class Sonic3kSuperStateController extends SuperStateController {
         PaletteTarget target = resolvePaletteTarget(SONIC_PALETTE_INDEX);
         if (target == null) return;
 
+        LevelManager levelManager = GameServices.levelOrNull();
+        Level level = levelManager != null ? levelManager.getCurrentLevel() : null;
+
         byte[] patch = new byte[BYTES_PER_FRAME];
         System.arraycopy(paletteData, frameOffset, patch, 0, patch.length);
         S3kPaletteWriteSupport.applyContiguousPatchToPalette(
                 GameServices.paletteOwnershipRegistryOrNull(),
-                GameServices.levelOrNull() != null ? GameServices.levelOrNull().getCurrentLevel() : null,
+                level,
                 GameServices.graphics(),
                 target.palette(),
                 target.gpuLine(),
@@ -418,5 +434,72 @@ public class Sonic3kSuperStateController extends SuperStateController {
                 S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
                 FIRST_COLOR_INDEX,
                 patch);
+
+        applyUnderwaterPaletteFrame(frameOffset, target.gpuLine(), levelManager, level);
+    }
+
+    /**
+     * Mirrors the cycle frame into the water palette so Super Sonic stays gold
+     * below the surface.
+     *
+     * <p>ROM: {@code SuperHyper_PalCycle_SonicApply} (sonic3k.asm:4666-4681)
+     * writes {@code Water_palette+$04} from a zone-specific underwater table
+     * whenever {@code Water_flag} is set.
+     */
+    private void applyUnderwaterPaletteFrame(int frameOffset, int gpuLine,
+                                             LevelManager levelManager, Level level) {
+        // The donor palette in cross-game mode lives above the four level lines and
+        // has no underwater counterpart.
+        if (gpuLine != SONIC_PALETTE_INDEX || levelManager == null || level == null) {
+            return;
+        }
+        WaterSystem water = GameServices.waterOrNull();
+        if (water == null) {
+            return;
+        }
+        int zone = level.getZoneIndex();
+        int act = levelManager.getCurrentAct();
+        if (!water.hasWater(zone, act)) {
+            return;
+        }
+        byte[] underwaterData = underwaterPaletteTable(zone, act);
+        if (underwaterData == null || frameOffset + BYTES_PER_FRAME > underwaterData.length) {
+            return;
+        }
+        byte[] patch = new byte[BYTES_PER_FRAME];
+        System.arraycopy(underwaterData, frameOffset, patch, 0, patch.length);
+        S3kPaletteWriteSupport.applyUnderwaterContiguousPatch(
+                GameServices.paletteOwnershipRegistryOrNull(),
+                level,
+                GameServices.graphics(),
+                S3kPaletteOwners.SUPER_PALETTE,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                SONIC_PALETTE_INDEX,
+                FIRST_COLOR_INDEX,
+                patch);
+    }
+
+    /**
+     * Returns the underwater cycle table for the zone/act, falling back to the
+     * surface table when the zone declares no underwater variant.
+     */
+    private byte[] underwaterPaletteTable(int zone, int act) {
+        var waterData = GameServices.module().getWaterDataProvider();
+        int addr = waterData != null
+                ? waterData.getUnderwaterSuperPaletteCycleAddress(zone, act)
+                : 0;
+        if (addr <= 0 || romReader == null) {
+            return paletteData;
+        }
+        return underwaterPaletteData.computeIfAbsent(addr, address -> {
+            int len = Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_ENTRY_COUNT
+                    * Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_ENTRY_SIZE;
+            if (address + len > romReader.size()) {
+                LOGGER.warning("S3K underwater Super Sonic palette data not available at ROM address 0x"
+                        + Integer.toHexString(address));
+                return paletteData;
+            }
+            return romReader.slice(address, len);
+        });
     }
 }

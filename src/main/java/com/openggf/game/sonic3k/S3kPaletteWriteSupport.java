@@ -110,6 +110,43 @@ public final class S3kPaletteWriteSupport {
         }
     }
 
+    /**
+     * Writes a contiguous run of colors into the underwater palette, mirroring
+     * {@link #applyContiguousPatch} for the water surface. Used by effects whose
+     * ROM code writes both {@code Normal_palette} and {@code Water_palette}.
+     */
+    public static void applyUnderwaterContiguousPatch(PaletteOwnershipRegistry registry,
+                                                      Level level,
+                                                      GraphicsManager graphics,
+                                                      String ownerId,
+                                                      int priority,
+                                                      int paletteIndex,
+                                                      int startColor,
+                                                      byte[] segaData) {
+        if (segaData == null) {
+            return;
+        }
+        if (registry != null) {
+            registry.submit(PaletteWrite.underwater(ownerId, priority, paletteIndex, startColor, segaData.clone()));
+            return;
+        }
+        Palette[] underwaterPalettes = resolveUnderwaterPalettes(level);
+        if (underwaterPalettes == null || paletteIndex < 0 || paletteIndex >= underwaterPalettes.length) {
+            return;
+        }
+        Palette palette = underwaterPalettes[paletteIndex];
+        if (palette == null) {
+            palette = new Palette();
+            underwaterPalettes[paletteIndex] = palette;
+        }
+        for (int i = 0; i < segaData.length / 2; i++) {
+            palette.getColor(startColor + i).fromSegaFormat(segaData, i * 2);
+        }
+        if (graphics != null && graphics.isGlInitialized() && level != null) {
+            graphics.cacheUnderwaterPaletteTexture(underwaterPalettes, level.getPalette(0));
+        }
+    }
+
     public static void applyContiguousPatch(PaletteOwnershipRegistry registry,
                                             Level level,
                                             GraphicsManager graphics,
