@@ -494,9 +494,11 @@ Per-frame emission order for recorded row N (after the §3.5 checks):
    trace_frame <= 5106` or `5995 <= trace_frame <= 6005`** →
    `state_snapshot` for sonic, then tails (each skipped if that character's
    id byte is 0). The two hardcoded frame windows are debugging leftovers
-   baked into v9.6+ and present in all three fixtures' byte streams —
-   **reproduce them verbatim** (they are part of the recorder's byte
-   contract, not a replay carve-out).
+   baked into v9.6+ — **reproduce them verbatim** (they are part of the
+   recorder's byte contract, not a replay carve-out). Fixture coverage:
+   only `arz2` (7809 rows) exercises both windows; `ehz1_fullrun` (5852
+   rows) exercises only 5104–5106; `arz` (5073 rows) ends before either
+   window fires, so the `% 60` gate is its only snapshot cadence.
 8. `scan_objects` (§7.8) with subjects
    `[{sonic, slot 0, present=1, CSV x/y}, {tails, slot 1,
    present=sidekick.present, sidekick CSV x/y}]`.
