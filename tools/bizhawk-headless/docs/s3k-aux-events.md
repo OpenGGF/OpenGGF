@@ -21,7 +21,9 @@ Scope: the STANDARD recorder only. `s3k_complete_run_recorder.lua`
   decimal vs hex per field.
 - `frame` is the recorder's `trace_frame` (0-based recorded row index; `-1` for
   the two pre-trace snapshot families). `vfc` is `mainmemory.read_u16_be(0xFE08)`
-  (ROM `Level_frame_counter`), read fresh at each emission point. Two families
+  (skdisasm `Debug_placement_mode` — NOT `Level_frame_counter`, which is `$FE04`
+  and never read; see core spec §1.1 — constant `0` in every fixture), read
+  fresh at each emission point. Two families
   (`zone_act_state`, `checkpoint`) have **no** `vfc` field.
 - `json_int_or_null(v)` renders `null` when nil, else `tostring(v)` (in
   practice always an integer here).

@@ -74,7 +74,7 @@ not the label**.
 |---|---|---|---|
 | `0xF600` | u8 | `Game_mode` | Arm/reset/end detection; `zone_act_state.game_mode`; `checkpoint.game_mode`. Level family = `(mode & 0x0F) == 0x0C` (accepts `$0C`/`$4C`/`$8C`) |
 | `0xF602` | u16be | `Ctrl_1_logical` (held+pressed bytes) | `control_lock_state.ctrl1_logical` |
-| `0xF604` | u8 | `Ctrl_1_held` (raw) | CSV-input **fallback arg only** (never used while a movie is loaded, §5) |
+| `0xF604` | u8 | `Ctrl_1_held` (raw) | CSV-input **fallback arg only** (never used while a movie is loaded, §4) |
 | `0xF7CA` | u8 | `Ctrl_1_locked` | Default/level-gated arm gate; checkpoint gates; `control_lock_state.ctrl1_locked` |
 | `0xF7CB` | u8 | `Ctrl_2_locked` | `control_lock_state.ctrl2_locked` |
 | `0xF66A` | u16be | `Ctrl_2_logical` (word read) | `control_lock_state.ctrl2_logical` |
@@ -133,8 +133,8 @@ side; no S2-style player history buffers in lightweight mode.
 S3K OST: base `0xB000` (`Player_1`), slot size **`0x4A`**, **110 slots**
 (`0xB000`–`0xCFCC`). `SIDEKICK_BASE = 0xB04A` (`Player_2`). Dynamic
 objects at slots 3..92 (`OBJ_DYNAMIC_START = 3`, `OBJ_DYNAMIC_COUNT =
-90`). Fixed `Breathing_bubbles` = slot 94 = `0xCAF8`,
-`Breathing_bubbles_P2` = slot 95 = `0xCB42`. Positions are 32-bit: high
+90`). Fixed `Breathing_bubbles` = slot 94 = `0xCB2C`,
+`Breathing_bubbles_P2` = slot 95 = `0xCB76`. Positions are 32-bit: high
 word pixel, low word subpixel. **Do NOT assume S2 offsets** (S2 stride is
 `$40`; S2 status is `+0x22`):
 
