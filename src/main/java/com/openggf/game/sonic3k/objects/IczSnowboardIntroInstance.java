@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.events.S3kIczEventWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -105,6 +106,15 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         SCRIPTED_SLOPE,
         CRASHED
     }
+
+    // ROM loc_39586/loc_3984E crash-release constants (the timed screen shake,
+    // the board fling velocities and the board's downward reposition).
+    private static final int CRASH_SCREEN_SHAKE_FRAMES = 0x14;
+    private static final int BOARD_FLY_AWAY_Y_DROP = 0x14;
+    private static final int BOARD_FLY_AWAY_X_SPEED = -0x0200;
+    private static final int BOARD_FLY_AWAY_Y_SPEED = -0x0400;
+    private static final int BOARD_FLY_AWAY_MAX_MAPPING_FRAME = 9;
+    private static final int BOARD_ON_SCREEN_HALF_EXTENT = 0x10;
 
     private State state = State.STARTUP_LOCK;
     private final SubpixelMotion.State boardMotion = new SubpixelMotion.State(
@@ -401,18 +411,38 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     }
 
     private void crash(AbstractPlayableSprite player) {
+        // ROM loc_39586: the Sonic-snowboard overlay releases the player (anim
+        // $19, crash velocities), sets a #$14 timed screen shake, plays sfx_Crash
+        // and deletes itself. In the ROM the separate board object (loc_3984E ->
+        // loc_398A6) then flings the snowboard away; here that becomes an
+        // independent child so this controller keeps its original crash lifetime.
         state = State.CRASHED;
         player.setAir(true);
         player.setXSpeed((short) POST_CRASH_X_SPEED);
         player.setYSpeed((short) POST_CRASH_Y_SPEED);
-        // ROM: Obj_LevelIntroICZ1 writes anim(a2) = #$19 on the crash release.
         player.setAnimationId(0x19);
         releasePlayerLocks(player);
         releaseDormantSidekicksForCrashHandoff();
-        services().gameState().setScreenShakeActive(true);
+        S3kIczEventWriteSupport.triggerScreenShake(services(), CRASH_SCREEN_SHAKE_FRAMES);
         services().playSfx(Sonic3kSfx.CRASH.id);
+        spawnBoardFlyAway(player);
         setDestroyed(true);
     }
+
+    /**
+     * ROM loc_3984E -> loc_398A6: once the player releases object control, the
+     * snowboard object drops #$14 pixels, is flung up and to the left, and spins
+     * through its mapping frames until it scrolls off screen (loc_398B2 deletes
+     * it when render_flags loses the on-screen bit). Spawned as a standalone
+     * child so it outlives this controller's crash-frame destruction.
+     */
+    private void spawnBoardFlyAway(AbstractPlayableSprite player) {
+        int startX = player.getCentreX();
+        int startY = player.getCentreY() + BOARD_FLY_AWAY_Y_DROP;
+        ObjectSpawn spawn = buildSpawnAt(startX, startY);
+        spawnChild(() -> new SnowboardFlyAwayInstance(spawn, startX, startY));
+    }
+
 
     private void releaseDormantSidekicksForCrashHandoff() {
         for (PlayableEntity sidekickEntity : services().playerQuery().playersFor(
@@ -599,6 +629,63 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             return 0;
         }
         return Math.min(frame, frameCount - 1);
+    }
+
+    /**
+     * ROM Obj_LevelIntroICZ1 loc_398A6/loc_398B2: the discarded snowboard flung
+     * away after the crash. It spins through mapping frames 1..8, moves via
+     * MoveSprite2 under gravity, and deletes once it leaves the render bounds
+     * (the ROM's {@code render_flags} on-screen bit check).
+     */
+    private static final class SnowboardFlyAwayInstance extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
+        private final SubpixelMotion.State motion;
+        private int mappingFrame = 1;
+        private int frameTimer = 1;
+
+        private SnowboardFlyAwayInstance(ObjectSpawn spawn, int startX, int startY) {
+            this(spawn);
+            motion.x = startX;
+            motion.y = startY;
+            updateDynamicSpawn(startX, startY);
+        }
+
+        private SnowboardFlyAwayInstance(ObjectSpawn spawn) {
+            super(spawn, "ICZSnowboardFlyAway");
+            motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0,
+                    BOARD_FLY_AWAY_X_SPEED, BOARD_FLY_AWAY_Y_SPEED);
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            if (--frameTimer < 0) {
+                frameTimer = 1;
+                if (++mappingFrame >= BOARD_FLY_AWAY_MAX_MAPPING_FRAME) {
+                    mappingFrame = 1;
+                }
+            }
+            SubpixelMotion.moveSprite2(motion);
+            motion.yVel += SNOWBOARD_OBJECT_GRAVITY;
+            updateDynamicSpawn(motion.x, motion.y);
+            if (!isWithinRenderSpriteBounds(BOARD_ON_SCREEN_HALF_EXTENT, BOARD_ON_SCREEN_HALF_EXTENT)) {
+                setDestroyed(true);
+            }
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            PatternSpriteRenderer renderer = IczSnowboardArtLoader.snowboardRenderer(services());
+            if (renderer != null && renderer.isReady()) {
+                int frameCount = Sonic3kConstants.MAP_SNOWBOARD_FRAMES;
+                int frame = frameCount > 0 ? Math.min(mappingFrame, frameCount - 1) : 0;
+                renderer.drawFrameIndex(frame, motion.x, motion.y);
+            }
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            return false;
+        }
     }
 
     private static final class SnowboardDustInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {

@@ -98,6 +98,31 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             0x0A40, 0x0820, 0x0620, 0x0200, 0x0600
     };
 
+    /**
+     * ROM: {@code ScreenShakeArray} (sonic3k.asm:104262) — signed byte Y offsets
+     * indexed by the positive {@code Screen_shake_flag} countdown. Amplitude
+     * tapers from ±5 down to ±1 as the timer runs out. Shared with AIZ/CNZ.
+     */
+    private static final int[] SCREEN_SHAKE_ARRAY = {
+            1, -1, 1, -1, 2, -2, 2, -2, 3, -3, 3, -3, 4, -4, 4, -4, 5, -5, 5, -5
+    };
+
+    /**
+     * ROM: {@code ScreenShakeArray2} (sonic3k.asm:104265) — 64-byte pseudo-random
+     * offsets (0–3px) indexed by {@code Level_frame_counter & $3F}. Drives the
+     * constant/negative {@code Screen_shake_flag} mode, used while the ICZ1 big
+     * snow pile is dropping (ICZ1_BigSnowFall sets the flag with {@code st}).
+     */
+    private static final int[] SCREEN_SHAKE_ARRAY_CONSTANT = {
+            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
+            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
+            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
+            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
+    };
+
+    /** ROM: the ICZ1_BigSnowFall settle shake set once the pile lands. */
+    private static final int SNOW_PILE_LAND_SHAKE_FRAMES = 4;
+
     private boolean eventsFg5;
     private boolean introSpawned;
     private boolean indoorPaletteCyclingActive;
@@ -116,6 +141,12 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     @RewindTransient(
             reason = "live snowboard intro object reference; object lifetime/state is captured by ObjectManager rewind")
     private IczSnowboardIntroInstance snowboardIntro;
+    // ROM Screen_shake_flag: 0 = off, positive = timed countdown (ScreenShakeArray),
+    // negative = constant jitter (ScreenShakeArray2). The snowboard crash writes
+    // #$14 (sonic3k.asm:76896); the snow pile drop writes it via ICZ1_BigSnowFall.
+    private int screenShakeFlag;
+    private int screenShakeOffsetY;
+    private int screenShakeAppliedOffsetY;
 
     @Override
     public void init(int act) {
@@ -135,6 +166,9 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
+        screenShakeFlag = 0;
+        screenShakeOffsetY = 0;
+        screenShakeAppliedOffsetY = 0;
         indoorPaletteCyclingActive = initialIndoorPaletteCycleState(act);
         applyInitialBackgroundPalette(act);
         if (act == 0 && hasSonicSnowboardIntroPlayerMode()) {
@@ -144,6 +178,11 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        // ROM LevelLoop runs ShakeScreen_Setup after the sprites; the scroll
+        // handler consumes the previously published sample this frame while the
+        // countdown produces the next one (matching the AIZ/CNZ shake ordering).
+        screenShakeAppliedOffsetY = screenShakeOffsetY;
+        tickScreenShake(frameCounter);
         if (act == 0) {
             updateAct1Resize();
             updateAct1ScreenEvent();
@@ -152,6 +191,46 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             updateAct2Resize();
         }
         updateIndoorPaletteCycleGate(act);
+    }
+
+    /**
+     * ROM: {@code move.w #frames,(Screen_shake_flag).w} — start a timed screen
+     * shake. The snowboard-crash release (sonic3k.asm:76896) writes {@code #$14}.
+     */
+    public void triggerScreenShake(int frames) {
+        screenShakeFlag = frames;
+    }
+
+    /**
+     * Current vertical shake offset (ROM {@code Screen_shake_offset}). Read by
+     * {@link com.openggf.game.sonic3k.runtime.IczZoneRuntimeState} so the ICZ
+     * scroll handler folds it into the background and the shared
+     * {@code ParallaxManager} -> {@code Camera} propagation shakes the foreground
+     * tiles and sprites together.
+     */
+    public int getScreenShakeOffsetY() {
+        return screenShakeAppliedOffsetY;
+    }
+
+    /**
+     * ROM {@code ShakeScreen_Setup} (sonic3k.asm:104219): a zero flag produces no
+     * offset, a negative flag is a constant jitter driven by {@code ScreenShakeArray2}
+     * indexed by the frame counter, and a positive flag is a timed countdown that
+     * tapers through {@code ScreenShakeArray}.
+     */
+    private void tickScreenShake(int frameCounter) {
+        if (screenShakeFlag == 0) {
+            screenShakeOffsetY = 0;
+            return;
+        }
+        if (screenShakeFlag < 0) {
+            screenShakeOffsetY = SCREEN_SHAKE_ARRAY_CONSTANT[frameCounter & 0x3F];
+            return;
+        }
+        screenShakeFlag--;
+        screenShakeOffsetY = screenShakeFlag < SCREEN_SHAKE_ARRAY.length
+                ? SCREEN_SHAKE_ARRAY[screenShakeFlag]
+                : 0;
     }
 
     public boolean isEventsFg5() {
@@ -574,6 +653,9 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private void updateBigSnowFall(int frameCounter) {
         if (bigSnowOffset > ICZ1_BIG_SNOW_FINAL_OFFSET) {
             gameState().setScreenShakeActive(true);
+            // ROM ICZ1_BigSnowFall: st (Screen_shake_flag) — constant jitter
+            // while the pile is still dropping onto Sonic.
+            screenShakeFlag = -1;
             bigSnowVelocity += ICZ1_BIG_SNOW_ACCELERATION;
             bigSnowOffsetSubpixels -= bigSnowVelocity;
             bigSnowOffset = bigSnowOffsetSubpixels >> 16;
@@ -584,6 +666,12 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
         if (bigSnowOffset <= ICZ1_BIG_SNOW_FINAL_OFFSET) {
             gameState().setScreenShakeActive(true);
+            // ROM: once landed, convert the still-constant shake into a short
+            // timed settle (tst/bpl skip; move.w #4). A positive flag already set
+            // by the wall-crash release is left to finish its own countdown.
+            if (screenShakeFlag < 0) {
+                screenShakeFlag = SNOW_PILE_LAND_SHAKE_FRAMES;
+            }
             bigSnowOffset = ICZ1_BIG_SNOW_FINAL_OFFSET;
             bigSnowOffsetSubpixels = ICZ1_BIG_SNOW_FINAL_OFFSET << 16;
         }

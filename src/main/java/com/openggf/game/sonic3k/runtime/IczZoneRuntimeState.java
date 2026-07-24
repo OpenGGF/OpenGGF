@@ -47,6 +47,11 @@ public final class IczZoneRuntimeState implements S3kZoneRuntimeState {
         return events.getIcz1BigSnowOffset();
     }
 
+    /** Current ICZ timed screen-shake vertical offset (ROM {@code Screen_shake_flag}). */
+    public int screenShakeOffsetY() {
+        return events.getScreenShakeOffsetY();
+    }
+
     public boolean isAct2TransitionRequested() {
         return events.isAct2TransitionRequested();
     }

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.scroll;
 
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.runtime.IczZoneRuntimeState;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
@@ -56,6 +58,11 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
     private boolean introAutoBaseFrameSet;
     private boolean act2Indoor;
     private int lastBgCameraX = Integer.MIN_VALUE;
+    // Foreground plane-A vertical scroll, published to the renderer with the
+    // screen-shake offset folded in so the level tiles shake with the sprites
+    // and background (ROM ShakeScreen_Setup adds Screen_shake_offset to
+    // Camera_Y_pos_copy, the vscroll source for both planes and the sprites).
+    private short foregroundVscroll;
 
     @Override
     public void init(int actId, int cameraX, int cameraY) {
@@ -74,6 +81,10 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
 
         composer.reset();
         short fgScroll = negWord(cameraX);
+        // Fold the shake into the foreground vscroll on every path; the offset is
+        // 0 outside the snowboard crash, so this equals the default camera Y and
+        // is a no-op there.
+        foregroundVscroll = (short) (cameraY + resolveShakeOffsetY());
 
         if (actId == 0) {
             if (((short) cameraX & 0xFFFF) >= ICZ1_INDOOR_X_THRESHOLD) {
@@ -100,6 +111,33 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
         return lastBgCameraX;
     }
 
+    @Override
+    public int getShakeOffsetY() {
+        return resolveShakeOffsetY();
+    }
+
+    @Override
+    public short getVscrollFactorFG() {
+        return foregroundVscroll;
+    }
+
+    /**
+     * ICZ vertical screen-shake offset (ROM {@code Screen_shake_offset}). Sourced
+     * from the ICZ event layer so the BG fold-in here and the shared
+     * {@code ParallaxManager} -> {@code Camera} propagation (foreground + sprites)
+     * stay in sync. The ICZ event {@code update()} ticks the shake before
+     * rendering, so reading it multiple times in one frame is stable.
+     */
+    private int resolveShakeOffsetY() {
+        if (!GameServices.hasRuntime()) {
+            return 0;
+        }
+        return GameServices.zoneRuntimeRegistry()
+                .currentAs(IczZoneRuntimeState.class)
+                .map(IczZoneRuntimeState::screenShakeOffsetY)
+                .orElse(0);
+    }
+
     private void resetActState(int actId, int cameraX, int cameraY) {
         lastActId = actId;
         introPreviousCameraY = (short) cameraY;
@@ -115,7 +153,10 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
 
     private void updateAct1Intro(int cameraX, int cameraY, short fgScroll, int frameCounter) {
         adjustIntroBgDuringLoop(cameraY);
-        int bgY = asrWord(introBgCameraYSource, 7);
+        // ROM ShakeScreen_Setup folds Screen_shake_offset into Camera_Y_pos_copy
+        // before ICZ1_Deform samples it, so the background shakes with the
+        // foreground and sprites during the snowboard crash.
+        int bgY = asrWord(introBgCameraYSource, 7) + resolveShakeOffsetY();
         composer.setVscrollFactorBG((short) bgY);
         buildIcz1IntroTable(cameraX, frameCounter);
         DeformationPlan.applyTableBands(
