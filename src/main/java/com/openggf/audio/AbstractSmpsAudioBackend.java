@@ -6,9 +6,14 @@ import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.DecodedPcmCache;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
@@ -17,6 +22,7 @@ import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.PerformanceProfiler;
+import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 
 import java.util.*;
 import java.util.Objects;
@@ -121,10 +127,14 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private int speedMultiplier = 1;
     private GameAudioProfile audioProfile;
     private SmpsSequencerConfig smpsConfig;
+    private final SmpsCoordFlagHandlerOwner legacyCoordFlagHandlers =
+            new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
 
     protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.profiler = profiler;
+        legacyCoordFlagHandlers.register(
+                "s3k", Sonic3kCoordFlagHandler::new);
         // Initialize fallback mappings
         // SFX
         sfxFallback.put("JUMP", "sfx/jump.wav");
@@ -322,34 +332,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             }
         }
 
-        smpsDriver = new SmpsDriver(getSmpsOutputRate());
-
-        // Configure Region
-        String regionStr = configService.getString(SonicConfiguration.REGION);
-        if ("PAL".equalsIgnoreCase(regionStr)) {
-            smpsDriver.setRegion(SmpsSequencer.Region.PAL);
-        } else {
-            smpsDriver.setRegion(SmpsSequencer.Region.NTSC);
-        }
-
-        boolean dacInterpolate = configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE);
-        smpsDriver.setDacInterpolate(dacInterpolate);
-        smpsDriver.setOutputSampleRate(getSmpsOutputRate());
-        applyPsgNoiseConfig(smpsDriver);
-
-        boolean fm6DacOff = configService.getBoolean(SonicConfiguration.FM6_DAC_OFF);
-
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
         cacheMusicSource(musicDescriptor, data, dacData, requireSmpsConfig());
-        SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, requireSmpsConfig());
-        seq.setSourceDescriptor(describeSmpsSource(musicDescriptor, data, false));
-        seq.setSampleRate(smpsDriver.getOutputSampleRate());
-        seq.setSpeedShoes(speedShoesEnabled);
-        seq.setSpeedMultiplier(speedMultiplier);
-        seq.setFm6DacOff(fm6DacOff);
-        // Music is the primary voice source for SFX fallback
-        seq.setFallbackVoiceData(data);
-        smpsDriver.addSequencer(seq, false);
+        SmpsCompositeVoice legacyMusic = createLegacyMusic(
+                data, dacData, requireSmpsConfig(), musicDescriptor);
+        smpsDriver = legacyMusic.driver();
+        SmpsSequencer seq = smpsDriver.firstMusicSequencer();
         currentSmps = seq;
         currentMusicId = musicId;
         currentMusicDescriptor = musicDescriptor;
@@ -415,32 +403,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             }
         }
 
-        smpsDriver = new SmpsDriver(getSmpsOutputRate());
-
-        String regionStr = configService.getString(SonicConfiguration.REGION);
-        if ("PAL".equalsIgnoreCase(regionStr)) {
-            smpsDriver.setRegion(SmpsSequencer.Region.PAL);
-        } else {
-            smpsDriver.setRegion(SmpsSequencer.Region.NTSC);
-        }
-
-        boolean dacInterpolate = configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE);
-        smpsDriver.setDacInterpolate(dacInterpolate);
-        smpsDriver.setOutputSampleRate(getSmpsOutputRate());
-        applyPsgNoiseConfig(smpsDriver);
-
-        boolean fm6DacOff = configService.getBoolean(SonicConfiguration.FM6_DAC_OFF);
-
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
         cacheMusicSource(musicDescriptor, data, dacData, effectiveConfig);
-        SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, effectiveConfig);
-        seq.setSourceDescriptor(describeSmpsSource(musicDescriptor, data, false));
-        seq.setSampleRate(smpsDriver.getOutputSampleRate());
-        seq.setSpeedShoes(speedShoesEnabled);
-        seq.setSpeedMultiplier(speedMultiplier);
-        seq.setFm6DacOff(fm6DacOff);
-        seq.setFallbackVoiceData(data);
-        smpsDriver.addSequencer(seq, false);
+        SmpsCompositeVoice legacyMusic = createLegacyMusic(
+                data, dacData, effectiveConfig, musicDescriptor);
+        smpsDriver = legacyMusic.driver();
+        SmpsSequencer seq = smpsDriver.firstMusicSequencer();
         currentSmps = seq;
         currentMusicId = musicId;
         currentMusicDescriptor = musicDescriptor;
@@ -1015,6 +983,47 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         driver.setOutputSampleRate(getSmpsOutputRate());
         applyPsgNoiseConfig(driver);
         return driver;
+    }
+
+    private SmpsCompositeVoice createLegacyMusic(
+            AbstractSmpsData data,
+            DacData dacData,
+            SmpsSequencerConfig sequencerConfig,
+            AudioSourceDescriptor descriptor) {
+        SmpsSequencer.Region region =
+                "PAL".equalsIgnoreCase(
+                        configService.getString(SonicConfiguration.REGION))
+                        ? SmpsSequencer.Region.PAL
+                        : SmpsSequencer.Region.NTSC;
+        AudioPresentationSourceFactory.Settings settings =
+                new AudioPresentationSourceFactory.Settings(
+                        getSmpsOutputRate(),
+                        region,
+                        configService.getBoolean(
+                                SonicConfiguration.DAC_INTERPOLATE),
+                        configService.getBoolean(
+                                SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
+                        configService.getBoolean(
+                                SonicConfiguration.FM6_DAC_OFF),
+                        speedShoesEnabled,
+                        speedMultiplier,
+                        AudioManager.getInstance(),
+                        new DecodedPcmCache(),
+                        getClass().getClassLoader()::getResourceAsStream);
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(
+                        () -> true, legacyCoordFlagHandlers, settings);
+        String gameId = sequencerConfig.getCoordFlagHandler() != null
+                ? "s3k" : "legacy";
+        return factory.legacyMusicSmps(
+                        gameId,
+                        data.getId(),
+                        0,
+                        data,
+                        dacData,
+                        sequencerConfig,
+                        descriptor,
+                        STREAM_BUFFER_SIZE);
     }
 
     @Override

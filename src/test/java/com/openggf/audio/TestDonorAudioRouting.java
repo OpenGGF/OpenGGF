@@ -2,8 +2,16 @@ package com.openggf.audio;
 
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.presentation.AudioPresentationCommand;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.AudioVoiceRegistry;
+import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
+import com.openggf.audio.presentation.SmpsAssetKey;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -189,6 +197,39 @@ public class TestDonorAudioRouting {
         assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW, backend.lastDonorConfig.getTempoMode());
     }
 
+    @Test
+    public void presentationFactoryPreservesDonorRouteAndSequencerConfig() {
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(() -> true, handlers);
+        SmpsSequencerConfig donorConfig =
+                new SmpsSequencerConfig.Builder()
+                        .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                        .build();
+        SmpsAssetKey key = new SmpsAssetKey(
+                "s2", SmpsAssetKey.Route.DONOR_ID, 0xE0, null);
+        factory.warmSmpsSfxAsset(
+                key, new StubSmpsData("donor-spindash"),
+                EMPTY_DAC, donorConfig);
+        ResolvedSmpsSfxSource source = factory.resolveSmpsSfx(
+                1, key, 1 << 16, 0x70, 0, 0, 2_048);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> {
+                });
+
+        registry.apply(new AudioPresentationCommand.AddSmpsSfx(source));
+
+        SmpsCompositeVoice voice =
+                (SmpsCompositeVoice) registry.orderedVoiceAt(0);
+        assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW,
+                voice.driver().captureSnapshot().sequencers().get(0)
+                        .config().getTempoMode());
+        assertEquals("s2",
+                voice.driver().captureSnapshot().sequencers().get(0)
+                        .source().donorGameId());
+    }
+
     // --- Test doubles ---
 
     /** Minimal SmpsData stub that carries a name for assertion. */
@@ -305,5 +346,4 @@ public class TestDonorAudioRouting {
         }
     }
 }
-
 

@@ -7,8 +7,11 @@ import com.openggf.audio.runtime.AudioOutputFifo;
 import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
 import com.openggf.audio.presentation.DecodedPcm;
 import com.openggf.audio.presentation.DecodedPcmCache;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
@@ -64,6 +67,30 @@ class TestSegaPcmCommandRouting {
         voice.mixInto(accumulation, 3);
 
         assertArrayEquals(new long[] {-8192, -8192, 0, 0, 8128, 8128}, accumulation);
+    }
+
+    @Test
+    void presentationFactorySegaPcmMatchesLegacyYmDacOutputScale() {
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(
+                        () -> true,
+                        new SmpsCoordFlagHandlerOwner(
+                                new SmpsCoordFlagRuntimeState()));
+        DecodedPcm pcm = factory.registerUnsigned8Mono(
+                "sega/factory",
+                new byte[] {0, (byte) 0x80, (byte) 0xFF},
+                48_000);
+        SampleBackedVoice voice = factory.segaPcm(1, pcm);
+        long[] accumulation = new long[6];
+
+        voice.mixInto(accumulation, 3);
+
+        assertArrayEquals(
+                new long[] {-8192, -8192, 0, 0, 8128, 8128},
+                accumulation);
+        assertEquals("sega/factory",
+                ((PresentationVoiceSnapshot.Sample) voice.snapshot())
+                        .assetId());
     }
 
     @Test
