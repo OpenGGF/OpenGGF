@@ -29,12 +29,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// arm-sampled v_int_run_count, the manifest, and LF publication — in
     /// about five seconds.
     ///
-    /// What it does NOT cover, and what remains for the full gate: the
-    /// seven identity-(A) *_completerun dirs and the remaining three
-    /// identity-(C) dirs (bonus_slots, bonus_pachinko, special_stage).
-    /// Those need a full 466k-frame pass producing ~1.4 GB of
-    /// aux_state.jsonl and are hours of wall clock, so they belong in a
-    /// separately-invoked gate rather than the default suite.
+    /// What it does NOT cover: the seven identity-(A) *_completerun dirs
+    /// are gated by <see cref="S3KCompleteRunSegmentsDifferentialTests"/>,
+    /// which turned out to cost about six minutes rather than the hours
+    /// estimated here and so runs in the default suite too. The remaining
+    /// three identity-(C) dirs (bonus_slots, bonus_pachinko,
+    /// special_stage) would each need their own long pass over THIS movie
+    /// and remain uncovered.
     ///
     /// Only two things may differ from the fixture, both pinned as exact
     /// literals: the recording_date VALUE (nondeterministic), and the

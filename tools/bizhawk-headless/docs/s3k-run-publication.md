@@ -1091,21 +1091,65 @@ Landed:
   counts, per-kind file sets and metadata shapes, the empty SS aux file,
   input-column alignment, finalize-time sampling, the manifest gate in
   all three states, LF everywhere, and no final path before `Publish()`.
-- One ROM-backed byte gate, `S3KCompleteRunDifferentialTests`: a
-  `--effective-movie-length 7001` pass over
-  `s3-knux-multibonus-ss.bk2` reproduces the whole `bonus_gumball`
-  segment — `physics.csv` and `aux_state.jsonl` by sha256 with zero
-  normalization, `metadata.json` modulo the `recording_date` value —
-  in about five seconds.
+- One ROM-backed byte gate over identity (C),
+  `S3KCompleteRunDifferentialTests`: a `--effective-movie-length 7001`
+  pass over `s3-knux-multibonus-ss.bk2` reproduces the whole
+  `bonus_gumball` segment — `physics.csv` and `aux_state.jsonl` by
+  sha256 with zero normalization, `metadata.json` modulo the
+  `recording_date` value — in about five seconds.
+- **The full identity-(A) byte gate,
+  `S3KCompleteRunSegmentsDifferentialTests`** (§10.6).
 
-Left for a separately-invoked gate (a full 466k-frame pass producing
-~1.4 GB of `aux_state.jsonl` is hours of wall clock): the seven
-identity-(A) `*_completerun` dirs and the remaining three identity-(C)
-dirs. Those were verified **manually** during Stage C and are known
-good at HEAD:
+Left uncovered: the remaining three identity-(C) dirs
+(`bonus_slots`, `bonus_pachinko`, `special_stage`), each of which needs
+its own long pass over `s3-knux-multibonus-ss.bk2`. They were verified
+**manually** during Stage C and are known good at HEAD:
 
 | Verified | How |
 |---|---|
-| `aiz_completerun` first 2058 rows | `--run-id sanity --effective-movie-length 3000` over `s3k-complete-sonic-tails.bk2`: offset 941, `physics.csv` prefix and all 36 982 `aux_state.jsonl` lines byte-identical |
-| `bonus_gumball` (whole segment) | `--run-id s3k-multibonus --effective-movie-length 7001`: physics, aux and metadata-minus-date byte-identical |
 | `bonus_slots`, `special_stage` (whole segments) | `--run-id s3k-multibonus --effective-movie-length 52805`: physics, aux and metadata-minus-date byte-identical; the 13 segment records and 11 transition records produced match the (B) manifest's own records exactly |
+
+### 10.6 The identity-(A) gate
+
+`S3KCompleteRunSegmentsDifferentialTests` runs **one untruncated**
+`--trace-profile complete_run` pass (no `--run-id`) over the full
+466,334-row `s3k-complete-sonic-tails.bk2` and reproduces all seven
+`*_completerun` dirs byte for byte. It passed on the first attempt: no
+production change was needed, and every permitted delta is the one §7.4
+already predicted.
+
+Measured, not estimated: **5m57s wall, 235 MB peak RSS, 2.84 GB of
+output.** The earlier "hours of wall clock" note in this section was
+wrong by two orders of magnitude — the streaming `S3KStagedSegmentSink`
+holds no segment in memory, so a 266 MB `lbz` aux stream costs one OS
+write buffer. Because 2.84 GB is well beyond a RAM-backed `/tmp`, this
+gate stages under `tools/bizhawk-headless/.scratch/` (beside the
+existing `bin/` and `obj/`, covered by the repo's `tools/*` ignore
+rule) rather than `Path.GetTempPath()`, and deletes it in a `finally`.
+
+Three deliberate strength choices:
+
+1. **No truncation.** Stopping at MHZ would satisfy the seven fixtures
+   by construction. Running to DDZ and asserting the whole fifteen-line
+   segment summary proves `mhz` ends at 28,156 rows *because* `fbz`
+   arms at BK2 frame 237,913 — the post-advance arm ordering of §1.5 —
+   and not because the capture ran out of movie. It also pins the eight
+   post-MHZ segments (`fbz`, `soz`, `lrz`, `hpz22`, `hpz`, `ssz`,
+   `dez23`, `ddz`) for which no fixture was ever committed.
+2. **No version normalization.** Unlike the S1 complete-run gate, which
+   must tolerate a `3.14`→`3.17` stamp change, identity (A) was
+   captured at 6.32 — the stamp this port emits. The gate pins
+   `"lua_script_version": "6.32-s3k-completerun"` as an exact literal on
+   *both* sides and requires exactly one such line, so a drift in either
+   direction fails rather than being absorbed.
+3. **`run_id` absence asserted directly.** Line-count equality alone
+   would let a stray `run_id` line pass if it displaced another key, so
+   both files are probed for a `"run_id":` line explicitly. That absence
+   plus the absent `run_manifest.json` is what makes this identity (A)
+   and not (B)/(C).
+
+Byte lengths are asserted before sha256 on every stream: a length
+mismatch localises a truncated or over-long file, where a hash mismatch
+only says "different". Fixture `.gz` bytes are streamed through SHA256
+rather than materialised, which keeps the gate's footprint at the
+capture's own 2.84 GB instead of 4.3 GB.

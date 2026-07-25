@@ -76,6 +76,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             S2TraceDifferentialTests.Register(tests);
             S3KTraceDifferentialTests.Register(tests);
             S3KCompleteRunDifferentialTests.Register(tests);
+            S3KCompleteRunSegmentsDifferentialTests.Register(tests);
 
             var matched = 0;
             var failed = 0;
