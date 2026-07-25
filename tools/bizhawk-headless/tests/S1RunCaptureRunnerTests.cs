@@ -122,7 +122,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> outputs;
+                IList<RunSegmentOutput> outputs;
                 S1RunCaptureResult result = Capture(
                     movie, host, "test-run", 0, out outputs);
 
@@ -130,7 +130,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(3, outputs.Count);
                 AssertEx.Equal(2, result.Transitions.Count);
 
-                S1RunSegmentOutput seg1 = outputs[0];
+                RunSegmentOutput seg1 = outputs[0];
                 AssertEx.Equal("ghz1", seg1.DirToken);
                 AssertEx.Equal("level", seg1.ManifestEntry.Kind);
                 AssertEx.Equal(
@@ -155,7 +155,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(
                     false, seg1.MetadataJson.Contains("segment_index"));
 
-                S1RunSegmentOutput ss = outputs[1];
+                RunSegmentOutput ss = outputs[1];
                 AssertEx.Equal("ss", ss.DirToken);
                 AssertEx.Equal("special_stage", ss.ManifestEntry.Kind);
                 AssertEx.Equal(
@@ -190,7 +190,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + "  \"fresh_load\": false,\n"
                     + "  \"segment_index\": 1\n");
 
-                S1RunSegmentOutput seg2 = outputs[2];
+                RunSegmentOutput seg2 = outputs[2];
                 AssertEx.Equal("ghz2", seg2.DirToken);
                 AssertEx.Equal(22, seg2.ManifestEntry.Bk2FrameOffset);
                 AssertEx.Equal(5, seg2.ManifestEntry.TraceFrameCount);
@@ -290,7 +290,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> outputs;
+                IList<RunSegmentOutput> outputs;
                 S1RunCaptureResult result = Capture(
                     movie, host, null, 0, out outputs);
 
@@ -359,7 +359,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> outputs;
+                IList<RunSegmentOutput> outputs;
                 S1RunCaptureResult result = Capture(
                     movie, host, null, 0, out outputs);
 
@@ -403,7 +403,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> outputs;
+                IList<RunSegmentOutput> outputs;
                 S1RunCaptureResult result = Capture(
                     movie, host, null, 0, out outputs);
 
@@ -446,7 +446,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> outputs;
+                IList<RunSegmentOutput> outputs;
                 S1RunCaptureResult result = Capture(
                     movie, host, null, 0, out outputs);
 
@@ -490,7 +490,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> outputs;
+                IList<RunSegmentOutput> outputs;
                 S1RunCaptureResult result = Capture(
                     movie, host, "forced", 0, out outputs);
 
@@ -530,7 +530,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> outputs;
+                IList<RunSegmentOutput> outputs;
                 S1RunCaptureResult result = Capture(
                     movie, host, null, 12, out outputs);
 
@@ -549,9 +549,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             IGpgxHost host,
             string runId,
             int stopAtFrame,
-            out List<S1RunSegmentOutput> outputs)
+            out IList<RunSegmentOutput> outputs)
         {
-            var collected = new List<S1RunSegmentOutput>();
+            var collector = new RunSegmentCollector();
             S1RunCaptureResult result = S1RunCaptureRunner.Capture(
                 movie,
                 host,
@@ -560,8 +560,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "2026-07-24",
                 S1CompleteRunMetadataWriter.LuaScriptVersion,
                 stopAtFrame,
-                collected.Add);
-            outputs = collected;
+                collector);
+            outputs = collector.Segments;
             return result;
         }
 
