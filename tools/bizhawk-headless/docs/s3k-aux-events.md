@@ -1,7 +1,7 @@
 # S3K Standard Recorder — Authoritative AUX Event Spec
 
 Source of truth: `tools/bizhawk/s3k_trace_recorder.lua` (metadata stamp
-`6.30-s3k` at HEAD, `trace_schema` 6, `csv_version` 7) plus
+`6.31-s3k` at HEAD, `trace_schema` 6, `csv_version` 7) plus
 `tools/bizhawk/lib/oggf_trace_common.lua`. This document is a byte-level
 transcription of the aux surface for the native (C#) port. **The Lua is the
 behavioral authority**; where this document and the Lua disagree, the Lua wins
@@ -598,7 +598,7 @@ Entry/spring-child sub-templates identical to §3.21.
 
 ## 4. Per-fixture event-family presence (empirical, gunzipped fixture aux streams)
 
-All three fixtures: `lua_script_version` `6.28-s3k`, `trace_schema` 6,
+All three fixtures: `lua_script_version` `6.31-s3k`, `trace_schema` 6,
 `csv_version` 7, `capture_mode` `physics_animation_aux_without_diagnostic_hooks`
 (lightweight — no diagnostic hooks; no `OGGF_S3K_RNG_CALL_RANGE` /
 `OGGF_S3K_CNZ_EVENT_RAM_RANGE`). Counts are exact line counts per
@@ -714,9 +714,9 @@ on a hook-populated `state.seen` / hit list, so with the hook switch off (itself
 a refusal) they change no byte of the Lua's own output either. Refusing them
 would be a false refusal; a test pins that the CLI does not name them.
 
-Metadata note (out of scope here but easy to trip over): the fixtures are
-stamped `6.28-s3k` while HEAD stamps `6.30-s3k`, and the MGZ fixture carries a
-hand-normalized extra key `"pre_trace_osc_frames": 0` that HEAD's
-`write_metadata` does not emit. The exact permitted metadata delta must be
-pinned separately; `physics.csv` and `aux_state.jsonl` allow **zero**
+Metadata note (out of scope here but easy to trip over): as of the v6.31-s3k
+regeneration the fixtures and HEAD both stamp `6.31-s3k` and neither carries
+`pre_trace_osc_frames` (retired since v6.29; the MGZ fixture's leftover key
+was dropped in the regeneration too), so the only permitted `metadata.json`
+delta is `recording_date`. `physics.csv` and `aux_state.jsonl` allow **zero**
 normalization.
