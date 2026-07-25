@@ -60,7 +60,16 @@ config pipeline.
 - Trace fixes and behaviour gates must not add zone/route/frame carve-outs. Nothing
   in this plan is allowed to branch on game, zone, or trace identity.
 - Before each task, `git status --short --untracked-files=no` must be empty.
-- Each task is independently shippable and leaves the build green.
+- Each task is independently shippable and leaves the build green. "Green" means a
+  full `mvn -Dmse=off test` for any task that changes engine behaviour — Tasks 3, 4
+  and 5. A focused selector plus `-DskipTests package` establishes only that the tree
+  compiles and that the named classes pass; it cannot see a behavioural change in a
+  caller that still compiles, which is exactly the shape of Task 3's `isAltDown()`
+  switch and Task 4's `resolveInt` rewrite. Tasks 1, 2 and 6 are scoped narrowly
+  enough that their focused runs plus the guard suffice — Task 1 has no consumer yet,
+  Task 2's new `|| isSuperDown()` term is false unless a Super key is physically held
+  and its `clearKeyState()` is only reached from the Engine focus callback, and Task 6
+  touches no `src/` path.
 - Honesty: exact commands, exact counts. NOT RUN is never a pass. Never weaken,
   delete, or `@Disabled` an assertion to make a gate green.
 
@@ -83,7 +92,8 @@ config pipeline.
 | `debug/playback/RecordedInputSnapshots.java` | Passes all four columns through to the snapshot |
 | `game/rewind/LiveRewindInputSource.java` | Records all four live modifier states per rewind frame |
 | `capture/LiveCaptureChord.java` | Rising-edge detector over a `KeyChord`, no hardcoded modifier |
-| `Engine.java` | Reads `capture.toggleKey` as a chord; focus callback clears key state |
+| `Engine.java` | Reads `capture.toggleKey` as a chord through the package-private `shouldToggleLiveCapture` seam, guarding on `isBound()` before `isKeyDown`; focus callback clears key state |
+| `GameLoop.java` | Unchanged, but a behavioural reader of `isAltDown()` — `resolveBonusStageDebugShortcut` takes the logical Alt from Task 3 onwards |
 | `debug/DebugOverlayManager.java` | Debug overlay toggles stop firing while a modifier is held (resolves the Shift+O overlap) |
 | `CHANGELOG.md` | User-visible chord syntax, the Shift+O migration, and the customised-value behaviour change |
 | `CONFIGURATION.md` | Chord syntax, aliases, exactness rule, plus-key escape, BK2 limit, three-state per-binding support table |
@@ -152,6 +162,14 @@ public boolean migrateDeprecatedCaptureToggleKey(Map<String, Object> config);
  *  fires. Replaces the 4-arg form whose Shift requirement was hardcoded. */
 public boolean update(KeyChord chord, boolean keyDown, boolean shiftDown,
                       boolean controlDown, boolean altDown, boolean superDown);
+
+// com.openggf.Engine — Task 5. Package-private static, beside the two seams that
+// already exist (resolveLiveCapturePresentationState, startLiveCaptureAttempt), so
+// TestEngineLiveCapturePresentation can drive it with a real InputHandler.
+/** True on the frame the chord becomes satisfied. Returns false for an unbound
+ *  chord WITHOUT calling isKeyDown -- isKeyDown(-1) is not false. */
+static boolean shouldToggleLiveCapture(KeyChord chord, LiveCaptureChord detector,
+                                       InputHandler input);
 ```
 
 ---
@@ -454,12 +472,14 @@ void aLatchedSuperKeyStopsTheMenuUntilFocusLossClearsIt() {
 mvn -Dmse=off -Dtest=com.openggf.tests.TestInputHandler,com.openggf.game.recording.menu.TestUserRecordingMenu test
 ```
 
-Confirm the Surefire summary names **both** classes. If `TestUserRecordingMenu` is
-absent from the run, the selector is wrong — do not proceed on a green that skipped it.
-
-Expected RED: compilation fails —
+Expected RED: **`maven-compiler-plugin:testCompile` fails** —
 `cannot find symbol: method isSuperDown()` and
 `cannot find symbol: method clearKeyState()` in `InputHandler`.
+
+`testCompile` runs before `surefire:test`, so this RED produces **no Surefire summary
+at all** — not an empty one, none. Do not look for the two class names here and do not
+record "0 tests run" as a result. The both-classes check belongs to Step 4, where the
+build actually reaches Surefire; it is written there.
 
 - [ ] **Step 3: Implement Super, the aggregate, and the clear**
 
@@ -516,6 +536,12 @@ Expected: all five classes appear in the Surefire summary and all pass, includin
 181 lines, extract the focus/iconify callbacks into a private method rather than
 raising the ratchet.
 
+This is the first run in this task that reaches Surefire, so it is where the selector
+is checked: confirm the summary names **both** `TestInputHandler` and
+`TestUserRecordingMenu`. If `TestUserRecordingMenu` is absent, the selector is wrong —
+`failIfNoSpecifiedTests` does not trip when the other classes in the list match, so the
+build reports success with that class never executed. Do not accept the green.
+
 - [ ] **Step 5: Update changelog and commit exact files**
 
 Add under `## Unreleased` in `CHANGELOG.md`:
@@ -566,7 +592,10 @@ Ctrl would be.
 
 This is a record change, not an `InputHandler` edit, which is why it is its own task.
 
-Blast radius is **two questions, not one**. Naming a component is the smaller one:
+Blast radius is **three questions, not two**. The first two are about what stops
+compiling; the third is about what silently changes behaviour and is the one an
+earlier draft of this task missed entirely — see "Behavioural readers" below. Naming a
+component is the smaller compile question:
 `debugShiftDown`/`debugControlDown` appear in six files outside their declaring
 record. Calling a canonical constructor is the larger one and breaks on arity alone,
 naming nothing — a whole-tree scan of `new Bk2FrameInput(` (64 call sites) finds
@@ -590,6 +619,38 @@ four modifiers. That is the documented limit recorded in Task 6, not a defect fi
 here. The two record *types* appear in 77 files, but the rest read components rather
 than calling a canonical constructor. Confirm with a compile, not with this table.
 
+#### Behavioural readers — what the compile cannot see
+
+Changing `isAltDown()` from live hardware to `logicalOverride` changes what every
+existing caller reads while an override is installed, and none of them fail to compile.
+Enumerate them, do not assume:
+
+```bash
+grep -rn "isAltDown()" src/main
+```
+
+At the branch base that is **three** consumers besides the declaration and
+`isAnyModifierDown()`:
+
+| Consumer | Effect of this task |
+| --- | --- |
+| `Engine.java:1954` (`handleLiveCaptureShortcut`) | Intended — this is the point of the task |
+| `game/rewind/LiveRewindInputSource.java:47` | Intended — it is the recorder, edited here |
+| **`GameLoop.java:1885` (`resolveBonusStageDebugShortcut`)** | **Not previously recorded.** Counts exactly-one-of Shift/Ctrl/Alt to pick GUMBALL / GLOWING_SPHERE / SLOT_MACHINE for the hardcoded `B` shortcut. Under live rewind its Alt now comes from the recorded frame instead of the keyboard |
+
+**Decision: `resolveBonusStageDebugShortcut` takes the logical Alt.** Two of its three
+modifiers — `isShiftDown()` and `isControlDown()` — already consult the override, so
+leaving Alt alone would keep the defect this task exists to remove: which bonus stage
+`B` selects under live rewind would depend on *which* modifier you hold. This is the
+opposite call from the spec's `SpriteManager` decision (spec `:173-178`), and
+deliberately so — `SpriteManager` bypasses `isShiftDown()`/`isControlDown()` entirely
+and reads raw keys for all of its modifiers, so it is internally consistent today and
+routing it through the override would be a new behaviour change rather than the removal
+of an inconsistency. `GameLoop` is already half-converted; this finishes it.
+
+The change is recorded here, tested in Step 1, and named in the changelog. It is not a
+side effect.
+
 **Files:**
 - Modify: `src/main/java/com/openggf/control/LogicalInputSnapshot.java`
 - Modify: `src/main/java/com/openggf/control/InputHandler.java`
@@ -600,6 +661,7 @@ than calling a canonical constructor. Confirm with a compile, not with this tabl
 - Modify: `src/test/java/com/openggf/control/TestInputHandlerLogicalSnapshot.java`
 - Modify: `src/test/java/com/openggf/game/rewind/TestLiveRewindInputSource.java`
 - Modify: `src/test/java/com/openggf/game/rewind/TestLiveRewindLogicalInput.java`
+- Modify: `src/test/java/com/openggf/TestGameLoop.java` (behavioural reader, not arity)
 - Modify: `CHANGELOG.md`
 
 **Interfaces:**
@@ -672,15 +734,61 @@ Pass two more `true` before `rawLine` and assert `input.isAltDown()` /
 assertions — it is the natural place to prove the new columns reach the override.
 The `previous` frame at `:50` uses the 8-arg convenience constructor and is unchanged.
 
+In `TestGameLoop` (package `com.openggf`, so the package-private static is reachable —
+the five existing `resolveBonusStageDebugShortcut` cases at `:938-981` are the model),
+pin the behavioural decision recorded above. Its five existing cases install no
+override and stay green untouched, which is the evidence that live-keyboard behaviour
+is unchanged:
+
+```java
+/**
+ * Shift and Ctrl already answered from the logical override here, so under live
+ * rewind the bonus stage a recorded B selected depended on which modifier was
+ * held. Alt now answers from the same source.
+ */
+@Test
+public void testResolveBonusStageDebugShortcutReadsAltFromTheLogicalOverride() {
+    InputHandler handler = new InputHandler();
+    handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+    handler.setLogicalOverride(LogicalInputSnapshot.neutral()
+            .withDebugInput(false, false, false, true, false));
+
+    assertEquals(BonusStageType.SLOT_MACHINE, GameLoop.resolveBonusStageDebugShortcut(handler));
+}
+
+@Test
+public void testResolveBonusStageDebugShortcutIgnoresLiveAltWhileAnOverrideIsInstalled() {
+    InputHandler handler = new InputHandler();
+    handler.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
+    handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+    handler.setLogicalOverride(LogicalInputSnapshot.neutral()
+            .withDebugInput(false, false, false, false, false));
+
+    assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+}
+```
+
+`GLFW_KEY_B` is not the debug-mode key (`putDefaultKey(DEBUG_MODE_KEY, GLFW_KEY_D)`,
+`SonicConfigurationService:673`) nor the frame-step key (`GLFW_KEY_Q`, `:681`), so
+`isKeyPressed(GLFW_KEY_B)` takes the plain `isRawKeyPressed` path and an installed
+override does not suppress the B press itself. Add the `LogicalInputSnapshot` import if
+absent.
+
 - [ ] **Step 2: Run the focused tests and verify RED**
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.control.TestInputHandlerLogicalSnapshot,com.openggf.control.TestPlayerInputState,com.openggf.game.rewind.TestLiveRewindInputSource,com.openggf.game.rewind.TestLiveRewindLogicalInput test
+mvn -Dmse=off -Dtest=com.openggf.control.TestInputHandlerLogicalSnapshot,com.openggf.control.TestPlayerInputState,com.openggf.game.rewind.TestLiveRewindInputSource,com.openggf.game.rewind.TestLiveRewindLogicalInput,com.openggf.TestGameLoop test
 ```
 
-Expected RED: compilation fails —
+Expected RED: **`testCompile` fails** —
 `method withDebugInput in record LogicalInputSnapshot cannot be applied to given types; required: boolean,boolean,boolean found: boolean,boolean,boolean,boolean,boolean`
 and `cannot find symbol: method debugAltDown()`.
+
+Every case added in Step 1 — including the two `TestGameLoop` ones — needs the 5-arg
+`withDebugInput`, which does not exist yet, so a compile RED is the only honest RED
+this task can produce: there is no way to set a logical Alt today, which is the defect.
+The build stops before `surefire:test`, so **no Surefire summary is produced**; do not
+check for class names or test counts here. That check is in Step 4.
 
 - [ ] **Step 3: Widen the two records and the three producers**
 
@@ -725,17 +833,32 @@ constructor, and add it to the Step 5 `git add` — an edited-but-unstaged file 
 Task 4's empty-`git status` precondition.
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.control.TestInputHandlerLogicalSnapshot,com.openggf.control.TestPlayerInputState,com.openggf.game.rewind.TestLiveRewindInputSource,com.openggf.game.rewind.TestLiveRewindLogicalInput,com.openggf.tests.TestInputHandler test
+mvn -Dmse=off -Dtest=com.openggf.control.TestInputHandlerLogicalSnapshot,com.openggf.control.TestPlayerInputState,com.openggf.game.rewind.TestLiveRewindInputSource,com.openggf.game.rewind.TestLiveRewindLogicalInput,com.openggf.tests.TestInputHandler,com.openggf.TestGameLoop test
 ```
 
-Expected: all pass.
+Expected: all six classes appear in the Surefire summary and all pass — including the
+five untouched `resolveBonusStageDebugShortcut` cases, which are the evidence that the
+live-keyboard path is unchanged.
+
+Then the full suite. `-DskipTests package` proves only that the tree still compiles;
+this task changes what three existing callers *read* while an override is installed,
+and a compile cannot see that. The plan's Global Constraint that each task leaves the
+build green is otherwise asserted rather than established:
+
+```bash
+mvn -Dmse=off test
+git checkout -- docs/rewind/real-gaps.md
+```
+
+Expected: `BUILD SUCCESS`. Record the exact `Tests run` totals. Restore
+`real-gaps.md` before staging — the full run regenerates it.
 
 - [ ] **Step 5: Update changelog and commit exact files**
 
 Add under `## Unreleased`:
 
 ```markdown
-- Fix: rewind and movie playback now reproduce the Alt and Super/Command keys the same way they already reproduced Shift and Ctrl. Alt was read from live hardware even while recorded input was driving the engine, so a shortcut using Alt behaved differently on replay than the identical shortcut using Ctrl. BK2 movies record no modifier column at all, so all four read as released under BK2 playback.
+- Fix: rewind and movie playback now reproduce the Alt and Super/Command keys the same way they already reproduced Shift and Ctrl. Alt was read from live hardware even while recorded input was driving the engine, so a shortcut using Alt behaved differently on replay than the identical shortcut using Ctrl. This also settles the bonus-stage debug shortcut, which picks a stage from whichever one of Shift/Ctrl/Alt is held: Shift and Ctrl already came from the recorded input while Alt came from the keyboard, so during a rewind the same recorded `B` could select a different stage. BK2 movies record no modifier column at all, so all four read as released under BK2 playback.
 ```
 
 ```bash
@@ -748,7 +871,8 @@ git add CHANGELOG.md \
   src/test/java/com/openggf/control/TestPlayerInputState.java \
   src/test/java/com/openggf/control/TestInputHandlerLogicalSnapshot.java \
   src/test/java/com/openggf/game/rewind/TestLiveRewindInputSource.java \
-  src/test/java/com/openggf/game/rewind/TestLiveRewindLogicalInput.java
+  src/test/java/com/openggf/game/rewind/TestLiveRewindLogicalInput.java \
+  src/test/java/com/openggf/TestGameLoop.java
 git commit -m "fix(input): reproduce Alt and Super from recorded input
 
 isShiftDown and isControlDown consulted the logical override so rewind and
@@ -760,6 +884,12 @@ Both modifier columns now live in LogicalInputSnapshot and Bk2FrameInput,
 live rewind records all four, and all four queries read the override. BK2
 movies carry no modifier column, so their convenience constructors supply
 false -- the same as Shift and Ctrl already did there.
+
+GameLoop.resolveBonusStageDebugShortcut is the one behavioural reader this
+reaches that is not part of the capture work. It picks a bonus stage from
+whichever one of Shift/Ctrl/Alt is held; two of the three already answered
+from the override, so it now answers consistently rather than reading two
+modifiers from the recording and the third from the keyboard.
 
 Changelog: updated
 Guide: n/a
@@ -887,6 +1017,24 @@ void anExplicitlyEmptyValueStaysUnboundThroughBothAccessors() {
     assertFalse(configService.getKeyChord(SonicConfiguration.FRAME_STEP_KEY).isBound());
 }
 
+/**
+ * The other half of the same gate, and the one that catches "improving" on
+ * resolveInt. getString does not trim (:320-327) and resolveInt's gate is
+ * `!str.isEmpty()` on that untrimmed value (:265), so a whitespace-only value
+ * is NOT the unbind form -- it is an unresolvable non-empty value, and both
+ * accessors must fall back to the registered default. A `trim().isEmpty()`
+ * gate in getKeyChord reports it unbound and the two accessors disagree again,
+ * silently, because "" and " " look the same in a review.
+ */
+@Test
+void aWhitespaceOnlyValueFallsBackToTheDefaultThroughBothAccessors() {
+    configService.setConfigValue(SonicConfiguration.FRAME_STEP_KEY, "   ");
+
+    assertEquals(GLFW_KEY_Q, configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
+    assertEquals(KeyChord.of(GLFW_KEY_Q),
+            configService.getKeyChord(SonicConfiguration.FRAME_STEP_KEY));
+}
+
 @Test
 void aSessionOverrideWinsOverThePersistedValue() {
     configService.setConfigValue(SonicConfiguration.FRAME_STEP_KEY, "O");
@@ -983,17 +1131,39 @@ private KeyChord resolveKeyChord(SonicConfiguration binding) {
     // gate belongs here or a player who writes `capture.toggleKey: ""` to unbind
     // the shortcut gets getInt == -1 and getKeyChord == SHIFT+O, and the
     // shortcut keeps firing because Engine reads the chord.
-    if (value == null || value.toString().trim().isEmpty()) {
+    // isEmpty(), NOT trim().isEmpty(): resolveInt's gate is `!str.isEmpty()` on
+    // an untrimmed getString(), so a whitespace-only value takes the
+    // fall-back-to-default path there and must take it here too.
+    if (value == null || value.toString().isEmpty()) {
         return chord;
     }
     return KeyChord.parse(defaults.get(binding.name()));
 }
 ```
 
+**The gate must be `isEmpty()`, not `trim().isEmpty()`.** Verified: `getString`
+(`:320-327`) returns `value.toString()` without trimming, and `resolveInt`'s gate is
+`if (!str.isEmpty())` (`:265`). So for `FRAME_STEP_KEY: "   "`, `getInt` finds the
+string non-empty, warns, and returns the registered default `GLFW_KEY_Q` (81,
+`putDefaultKey` at `:681`) — while a `trim()`-ing chord gate returns unbound. That is
+precisely the accessor divergence criterion 12 exists to pin, in the one form no other
+test covers (`anExplicitlyEmptyValueStaysUnboundThroughBothAccessors` uses `""`, where
+both paths agree). The spec forbids it by name: *"The gate is `isEmpty()`, not
+`isBlank()`, so a whitespace-only value takes the second path; `getKeyChord` must draw
+the line in the same place rather than 'improving' on it, or the two accessors disagree
+again."* `KeyChord.parse` trims internally, which is correct and unrelated — the
+question here is only which of `resolveInt`'s two unresolvable paths a value takes.
+
+> **The landed implementation has this defect.** `93d47c802` shipped
+> `resolveKeyChord` with `value.toString().trim().isEmpty()` verbatim
+> (`SonicConfigurationService.java`, the `resolveKeyChord` gate). Whoever works this
+> task against an already-landed Task 4 must correct that line and add the
+> whitespace-only case below rather than treating the task as done.
+
 The gate is load-bearing for acceptance criterion 12 and is **not** covered by
 `anUnboundDefaultReportsAsUnbound` — `PLAYBACK_TOGGLE_KEY`'s registered default is
-itself `""`, so that test passes either way and hides the divergence. The explicit
-test below is the one that pins it.
+itself `""`, so that test passes either way and hides the divergence. The two explicit
+tests below are the ones that pin it.
 
 Add one private invalidator and use it at **all seven** existing `intCache.clear()`
 sites — verified at lines `372, 396, 401, 406, 508, 536, 554`:
@@ -1013,10 +1183,23 @@ private void invalidateResolvedCaches() {
 mvn -Dmse=off -Dtest=com.openggf.configuration.TestConfigKeyChordResolution,com.openggf.configuration.TestConfigKeyNameResolution,com.openggf.configuration.TestPlaybackKeyDefaultsUnbound,com.openggf.configuration.TestKeyChord,com.openggf.configuration.CaptureConfigDefaultsTest,com.openggf.configuration.TestSonicConfigurationSessionOverrides,com.openggf.configuration.TestConfigServiceYamlRoundTrip test
 ```
 
-Expected: all pass. `TestConfigKeyNameResolution` and
-`TestPlaybackKeyDefaultsUnbound` passing **unmodified** is the evidence that
-`getInt`'s contract is preserved for every existing value form, including the digit
-rule and the unbound `PLAYBACK_*` defaults.
+Expected: all seven classes appear in the Surefire summary and all pass.
+`TestConfigKeyNameResolution` and `TestPlaybackKeyDefaultsUnbound` passing
+**unmodified** is the evidence that `getInt`'s contract is preserved for every
+existing value form, including the digit rule and the unbound `PLAYBACK_*` defaults.
+
+Then the full suite. This task rewrites `resolveInt`'s `ConfigType.KEY` branch and
+`resolveKeyCode`, which together are the resolution path for **all 53** `KEY` bindings
+and every registered key default — seven config test classes do not cover that blast
+radius, and every consumer of a key binding in the engine sits downstream of it:
+
+```bash
+mvn -Dmse=off test
+git checkout -- docs/rewind/real-gaps.md
+```
+
+Expected: `BUILD SUCCESS`. Record the exact `Tests run` totals. Restore
+`real-gaps.md` before staging — the full run regenerates it.
 
 - [ ] **Step 5: Update changelog and commit exact files**
 
@@ -1128,15 +1311,134 @@ would silently rewrite a value the player chose. The changelog says so.
 - Modify: `src/test/java/com/openggf/configuration/TestConfigMigrationService.java`
 - Modify: `src/test/java/com/openggf/configuration/TestConfigYamlWriter.java`
 - Modify: `src/test/java/com/openggf/debug/TestDebugOverlayManagerReset.java`
+- Modify: `src/test/java/com/openggf/TestEngineLiveCapturePresentation.java`
 - Modify: `CONFIGURATION.md`
 - Modify: `CHANGELOG.md`
 
 **Interfaces:**
 - Consumes: Task 4 `getKeyChord`, Task 2 `isSuperDown`.
-- Produces: `ConfigMigrationService.migrateDeprecatedCaptureToggleKey` and the
-  chord-driven `LiveCaptureChord.update` from the ledger.
+- Produces: `ConfigMigrationService.migrateDeprecatedCaptureToggleKey`, the
+  chord-driven `LiveCaptureChord.update` from the ledger, and the package-private
+  `Engine.shouldToggleLiveCapture` seam below.
 
-- [ ] **Step 1: Write the failing chord-detector, migration, and default tests**
+**The `Engine` seam is not optional.** The spec's test plan requires *"`Engine` chord
+evaluation via the existing non-GL seam pattern — default Shift+O, an unmodified
+bare-key chord, a Ctrl+Shift chord, and an unbound chord that must not fire"* (spec
+`:683-685`), and without it nothing joins the two halves of criteria 8 and 13:
+
+- `handleLiveCaptureShortcut` passes six adjacent booleans into `update`, four of which
+  are forwarded into `matchesModifiers(shift, ctrl, alt, meta)` (`KeyChord:121`).
+  Transposing `altDown`/`superDown`, or `shiftDown`/`controlDown`, compiles and passes
+  every `LiveCaptureChordTest` case, because all of those pass literal booleans
+  straight into `update`. `TestInputHandler.testRightSuperCountsAsSuper` proves
+  `isSuperDown()` works and `aSuperBindingMatchesARealSuperPress` proves `update`
+  honours a literal `true`; neither proves `Engine` wires the first to the second.
+- Criterion 13's real hazard is `InputHandler.isKeyDown(-1)` falling through to
+  `keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld()`
+  (`InputHandler:102-106`). `anUnboundBindingNeverFires` passes `keyDown = true` as a
+  literal, so it never reaches `isKeyDown` at all and cannot see that path. An
+  implementer who omits the `if (!chord.isBound()) return;` guard passes every other
+  gate in this plan.
+
+`Engine.handleLiveCaptureShortcut` is `private`, so the evaluation is extracted into a
+package-private static beside the two that already exist (`resolveLiveCapturePresentationState`
+at `:1897`, `startLiveCaptureAttempt` at `:1933`), which is the pattern
+`TestEngineLiveCapturePresentation` (package `com.openggf`) already tests through.
+`engineDoesNotGainNewLargeMethods` caps methods at 100+ lines, so a short static is
+free; `handleLiveCaptureShortcut` keeps its name and call site for
+`engineLiveCaptureOrderingStaysAtThePresentationBoundary`.
+
+**Two RED observations, not one.** The overlay-collision cases compile against today's
+API and fail at runtime; everything else needs signatures that do not exist yet and
+fails at `testCompile`. A single run cannot show both — `testCompile` aborts the build
+before `surefire:test`, so the moment `LiveCaptureChordTest` is rewritten there is no
+Surefire summary and the overlay cases never execute. So the overlay tests are written
+and run first, on their own.
+
+- [ ] **Step 1: Write the failing overlay-collision regressions**
+
+Add these to `TestDebugOverlayManagerReset` (package `com.openggf.debug`; it already
+imports `InputHandler` and `GLFW`). This is acceptance criterion 14 and is the only
+evidence that the collision is actually closed — the `DebugOverlayManager` edit is
+otherwise untested. `DebugOverlayManager` is a singleton, so call `resetState()` first,
+as the existing cases in this file do. Every symbol used here exists today
+(`updateInput(InputHandler, boolean)`, `isEnabled`, `resetState`,
+`DebugOverlayToggle.OBJECT_DEBUG`/`PLAYER_PANEL`/`PERFORMANCE`), which is what makes a
+runtime RED possible:
+
+```java
+/**
+ * OBJECT_DEBUG is GLFW_KEY_O and the toggles fired on a bare isKeyPressed, so the
+ * new SHIFT+O capture default toggled object debug on the same keystroke that
+ * started a recording.
+ */
+@Test
+public void aModifiedKeystrokeDoesNotToggleAnOverlay() {
+    DebugOverlayManager manager = DebugOverlayManager.getInstance();
+    manager.resetState();
+    boolean before = manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG);
+    InputHandler handler = new InputHandler();
+    handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_PRESS);
+    handler.handleKeyEvent(GLFW.GLFW_KEY_O, GLFW.GLFW_PRESS);
+
+    manager.updateInput(handler, true);
+
+    assertEquals(before, manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG));
+}
+
+@Test
+public void anUnmodifiedKeystrokeStillTogglesAnOverlay() {
+    DebugOverlayManager manager = DebugOverlayManager.getInstance();
+    manager.resetState();
+    boolean before = manager.isEnabled(DebugOverlayToggle.PLAYER_PANEL);
+    InputHandler handler = new InputHandler();
+    handler.handleKeyEvent(GLFW.GLFW_KEY_F3, GLFW.GLFW_PRESS);
+
+    manager.updateInput(handler, true);
+
+    assertNotEquals(before, manager.isEnabled(DebugOverlayToggle.PLAYER_PANEL));
+}
+
+/**
+ * PERFORMANCE is dispatched above the debugShortcutsEnabled gate, so it needs the
+ * same treatment separately. Ctrl+P is the clipboard-copy chord and must not also
+ * toggle the overlay -- a pre-existing double-fire.
+ */
+@Test
+public void ctrlPCopiesStatsWithoutAlsoTogglingThePerformanceOverlay() {
+    DebugOverlayManager manager = DebugOverlayManager.getInstance();
+    manager.resetState();
+    boolean before = manager.isEnabled(DebugOverlayToggle.PERFORMANCE);
+    InputHandler handler = new InputHandler();
+    handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_PRESS);
+    handler.handleKeyEvent(GLFW.GLFW_KEY_P, GLFW.GLFW_PRESS);
+
+    manager.updateInput(handler, true);
+
+    assertEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE));
+}
+```
+
+Add the `assertNotEquals` import. If `copyPerformanceStatsToClipboard()` cannot run
+headless (it reaches `GameServices.profiler()` and the AWT clipboard), do **not** delete
+the third case — narrow it to assert the toggle state only, and if the copy path itself
+throws headlessly, that is a real finding to report rather than route around.
+
+- [ ] **Step 2: Run the overlay regressions and verify the runtime RED**
+
+```bash
+mvn -Dmse=off -Dtest=com.openggf.debug.TestDebugOverlayManagerReset test
+```
+
+Expected RED: the build reaches Surefire and `TestDebugOverlayManagerReset` appears in
+the summary with two failures — `aModifiedKeystrokeDoesNotToggleAnOverlay` and
+`ctrlPCopiesStatsWithoutAlsoTogglingThePerformanceOverlay`, both
+`expected: <false> but was: <true>` (each toggle starts disabled and the bare
+`isKeyPressed` dispatch flips it). `anUnmodifiedKeystrokeStillTogglesAnOverlay` passes
+already and is the control: it is what proves the Step 5 fix does not simply disable
+the toggles. Record the exact failure text.
+
+- [ ] **Step 3: Write the failing chord-detector, migration, default, and Engine tests**
 
 Rewrite `LiveCaptureChordTest` against the chord-driven signature, preserving every
 edge-detection case it already covers and adding the ones the hardcoded Shift made
@@ -1304,86 +1606,139 @@ void aChordedKeyValueIsWrittenInCanonicalForm() {
 }
 ```
 
-Add the overlay-collision regression to `TestDebugOverlayManagerReset` (package
-`com.openggf.debug`; it already imports `InputHandler` and `GLFW`). This is acceptance
-criterion 14 and is the only evidence that the collision is actually closed — the
-`DebugOverlayManager` edit is otherwise untested. `DebugOverlayManager` is a singleton,
-so call `resetState()` first, as the existing cases in this file do:
+Finally, the `Engine` seam cases the spec requires, in
+`TestEngineLiveCapturePresentation` (package `com.openggf`, so both the seam and
+`InputBindingFactory` — which lives at `src/main/java/com/openggf/InputBindingFactory.java`
+— are reachable without import):
 
 ```java
-/**
- * OBJECT_DEBUG is GLFW_KEY_O and the toggles fired on a bare isKeyPressed, so the
- * new SHIFT+O capture default toggled object debug on the same keystroke that
- * started a recording.
- */
+private static boolean toggles(SonicConfigurationService config, InputHandler input) {
+    return Engine.shouldToggleLiveCapture(
+            config.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
+            new LiveCaptureChord(), input);
+}
+
+/** Criterion 7's fresh-install half, at the call site rather than in the config. */
 @Test
-public void aModifiedKeystrokeDoesNotToggleAnOverlay() {
-    DebugOverlayManager manager = DebugOverlayManager.getInstance();
-    manager.resetState();
-    boolean before = manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG);
-    InputHandler handler = new InputHandler();
-    handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_PRESS);
-    handler.handleKeyEvent(GLFW.GLFW_KEY_O, GLFW.GLFW_PRESS);
+void theDefaultBindingTogglesOnARealShiftO() {
+    SonicConfigurationService config = SonicConfigurationService.createStandalone();
+    InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+    input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+    input.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
 
-    manager.updateInput(handler, true);
-
-    assertEquals(before, manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG));
+    assertTrue(toggles(config, input));
 }
 
 @Test
-public void anUnmodifiedKeystrokeStillTogglesAnOverlay() {
-    DebugOverlayManager manager = DebugOverlayManager.getInstance();
-    manager.resetState();
-    boolean before = manager.isEnabled(DebugOverlayToggle.PLAYER_PANEL);
-    InputHandler handler = new InputHandler();
-    handler.handleKeyEvent(GLFW.GLFW_KEY_F3, GLFW.GLFW_PRESS);
+void aBareKeyBindingTogglesUnmodifiedAndNotWhileShiftIsHeld() {
+    SonicConfigurationService config = SonicConfigurationService.createStandalone();
+    config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "P");
+    InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+    input.handleKeyEvent(GLFW_KEY_P, GLFW_PRESS);
+    assertTrue(toggles(config, input));
 
-    manager.updateInput(handler, true);
+    InputHandler shifted = new InputHandler(InputBindingFactory.supplier(config));
+    shifted.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+    shifted.handleKeyEvent(GLFW_KEY_P, GLFW_PRESS);
+    assertFalse(toggles(config, shifted));
+}
 
-    assertNotEquals(before, manager.isEnabled(DebugOverlayToggle.PLAYER_PANEL));
+@Test
+void aCtrlShiftBindingNeedsBothModifiersHeld() {
+    SonicConfigurationService config = SonicConfigurationService.createStandalone();
+    config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "CTRL+SHIFT+O");
+    InputHandler shiftOnly = new InputHandler(InputBindingFactory.supplier(config));
+    shiftOnly.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+    shiftOnly.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
+    assertFalse(toggles(config, shiftOnly));
+
+    InputHandler both = new InputHandler(InputBindingFactory.supplier(config));
+    both.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
+    both.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+    both.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
+    assertTrue(toggles(config, both));
 }
 
 /**
- * PERFORMANCE is dispatched above the debugShortcutsEnabled gate, so it needs the
- * same treatment separately. Ctrl+P is the clipboard-copy chord and must not also
- * toggle the overlay -- a pre-existing double-fire.
+ * Criterion 8, joined up. update() takes six adjacent booleans and forwards four
+ * into matchesModifiers(shift, ctrl, alt, meta); a transposed pair compiles and
+ * passes every literal-boolean test in LiveCaptureChordTest. Only a real key
+ * press distinguishes Super from Alt.
  */
 @Test
-public void ctrlPCopiesStatsWithoutAlsoTogglingThePerformanceOverlay() {
-    DebugOverlayManager manager = DebugOverlayManager.getInstance();
-    manager.resetState();
-    boolean before = manager.isEnabled(DebugOverlayToggle.PERFORMANCE);
-    InputHandler handler = new InputHandler();
-    handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_PRESS);
-    handler.handleKeyEvent(GLFW.GLFW_KEY_P, GLFW.GLFW_PRESS);
+void aMetaBindingFiresOnARealSuperPressAndNotOnARealAltPress() {
+    SonicConfigurationService config = SonicConfigurationService.createStandalone();
+    config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "META+O");
+    InputHandler withSuper = new InputHandler(InputBindingFactory.supplier(config));
+    withSuper.handleKeyEvent(GLFW_KEY_LEFT_SUPER, GLFW_PRESS);
+    withSuper.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
+    assertTrue(toggles(config, withSuper));
 
-    manager.updateInput(handler, true);
+    InputHandler withAlt = new InputHandler(InputBindingFactory.supplier(config));
+    withAlt.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
+    withAlt.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
+    assertFalse(toggles(config, withAlt));
+}
 
-    assertEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE));
+/**
+ * Criterion 13, for real. isKeyDown(-1) is not false: it falls through to
+ * `keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld()`
+ * (InputHandler:102-106), and an unbound LIVE_REWIND_KEY is -1 too. So an
+ * unbound capture binding fires from a held pad bumper unless the call site
+ * guards on isBound() first. Passing keyDown=true into update() as a literal
+ * cannot reach this path at all.
+ */
+@Test
+void anUnboundBindingDoesNotFireFromAHeldGamepadRewindButton() {
+    SonicConfigurationService config = SonicConfigurationService.createStandalone();
+    config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "");
+    config.setConfigValue(SonicConfiguration.LIVE_REWIND_KEY, "");
+    config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+    config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+    config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+    FakePad pad = new FakePad(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER);
+    InputHandler input = new InputHandler(InputBindingFactory.supplier(config), pad);
+    input.refreshLogicalSnapshot();
+
+    assertEquals(-1, config.getInt(SonicConfiguration.LIVE_REWIND_KEY),
+            "precondition: rewind unbound, so isKeyDown(-1) reaches the pad branch");
+    assertTrue(input.isKeyDown(-1), "precondition: the hazard this guard exists for");
+    assertFalse(toggles(config, input));
 }
 ```
 
-Add the `assertNotEquals` import. If `copyPerformanceStatsToClipboard()` cannot run
-headless (it reaches `GameServices.profiler()` and the AWT clipboard), do **not** delete
-the third case — narrow it to assert the toggle state only, and if the copy path itself
-throws headlessly, that is a real finding to report rather than route around.
+`FakePad` is a three-line `GamepadStateSource` returning one connected
+`DeviceState` with the left bumper held —
+`TestInputHandlerLogicalSnapshot:191-204` (`gamepadLeftBumperHoldsRewindKeyDown`) is
+the working model, including its `connectedPad`/`buttons` helpers; copy the shape
+rather than reinventing it. `InputHandler(Supplier<InputBindings>, GamepadStateSource)`
+(`InputHandler:48`) is public and exists for exactly this. If the `assertTrue(input.isKeyDown(-1))`
+precondition does **not** hold, stop and report it: the guard may be unnecessary and
+criterion 13 would need restating, which is a finding, not a licence to delete the case.
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+Add the imports this file does not have yet — `com.openggf.capture.LiveCaptureChord`,
+`com.openggf.control.InputHandler`, `com.openggf.control.GamepadStateSource`, and the
+static `org.lwjgl.glfw.GLFW.*` key/action constants. `SonicConfigurationService.createStandalone()`
+writes no file (`CaptureConfigDefaultsTest` already uses it without `@TempDir`), so
+these cases stay clear of `TestNoLeakedTemporaryFiles`.
+
+- [ ] **Step 4: Run the remaining focused tests and verify the compile RED**
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.capture.LiveCaptureChordTest,com.openggf.configuration.TestConfigMigrationService,com.openggf.configuration.CaptureConfigDefaultsTest,com.openggf.configuration.TestConfigYamlWriter,com.openggf.debug.TestDebugOverlayManagerReset test
+mvn -Dmse=off -Dtest=com.openggf.capture.LiveCaptureChordTest,com.openggf.configuration.TestConfigMigrationService,com.openggf.configuration.CaptureConfigDefaultsTest,com.openggf.configuration.TestConfigYamlWriter,com.openggf.TestEngineLiveCapturePresentation test
 ```
 
-Expected RED: compilation fails —
-`method update in class LiveCaptureChord cannot be applied to given types` and
-`cannot find symbol: method migrateDeprecatedCaptureToggleKey(Map<String,Object>)`.
-`TestDebugOverlayManagerReset` compiles, so its two collision cases fail at runtime
-instead: `aModifiedKeystrokeDoesNotToggleAnOverlay` and
-`ctrlPCopiesStatsWithoutAlsoTogglingThePerformanceOverlay` both report
-`expected: <false> but was: <true>`. Confirm all five classes appear in the Surefire
-summary.
+Expected RED: **`testCompile` fails** —
+`method update in class LiveCaptureChord cannot be applied to given types`,
+`cannot find symbol: method migrateDeprecatedCaptureToggleKey(Map<String,Object>)`,
+and `cannot find symbol: method shouldToggleLiveCapture(...)` in `Engine`.
 
-- [ ] **Step 3: Move the modifier into the binding**
+The build stops before `surefire:test`, so **no Surefire summary is produced** and no
+test executes — including `TestDebugOverlayManagerReset`, which is why its RED was
+taken separately in Step 2. Record the compiler output as the RED; do not record a
+test count. The per-class summary check happens in Step 6.
+
+- [ ] **Step 5: Move the modifier into the binding**
 
 `LiveCaptureChord.update` takes the ledger signature:
 
@@ -1402,22 +1757,46 @@ Delete the 4-arg form; leaving it would leave a hardcoded-Shift path in the tree
 
 `Engine.handleLiveCaptureShortcut` (`:1938-1954`) keeps its name and call site — the
 architecture guard asserts the literal `handleLiveCaptureShortcut();` string — and
-becomes:
+delegates the whole evaluation to a package-private static, so it is reachable from
+`TestEngineLiveCapturePresentation` the way `resolveLiveCapturePresentationState` and
+`startLiveCaptureAttempt` already are:
 
 ```java
-KeyChord chord = configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY);
-if (!chord.isBound()) {
-    return;
+/**
+ * True on the frame the configured capture chord becomes satisfied.
+ *
+ * <p>The isBound() guard is load-bearing and must precede isKeyDown:
+ * InputHandler.isKeyDown(-1) is not false, it falls through to
+ * `keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld()`,
+ * and rewindKey() is -1 too when live rewind is unbound -- so an unbound
+ * binding would fire from a held pad bumper.
+ */
+static boolean shouldToggleLiveCapture(KeyChord chord, LiveCaptureChord detector,
+        InputHandler input) {
+    if (chord == null || !chord.isBound()) {
+        return false;
+    }
+    return detector.update(chord, input.isKeyDown(chord.keyCode()),
+            input.isShiftDown(), input.isControlDown(),
+            input.isAltDown(), input.isSuperDown());
 }
-if (!liveCaptureChord.update(chord, inputHandler.isKeyDown(chord.keyCode()),
-        inputHandler.isShiftDown(), inputHandler.isControlDown(),
-        inputHandler.isAltDown(), inputHandler.isSuperDown())) {
-    return;
+
+private void handleLiveCaptureShortcut() {
+    if (inputHandler == null) {
+        return;
+    }
+    if (!shouldToggleLiveCapture(
+            configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
+            liveCaptureChord, inputHandler)) {
+        return;
+    }
+    // ... existing state switch, unchanged
 }
 ```
 
-The `isBound()` guard is load-bearing: `InputHandler.isKeyDown(-1)` falls through to
-`keyCode == inputBindings.rewindKey()`, which is also `-1` when rewind is unbound.
+The argument order into `update` is what the Step 3 `META+O` case exists to pin: four
+of these six booleans are forwarded into `matchesModifiers(shift, ctrl, alt, meta)`,
+and a transposed pair compiles cleanly.
 
 `SonicConfigurationService:646` becomes `putDefault(SonicConfiguration.CAPTURE_TOGGLE_KEY, "SHIFT+O")`
 (not `putDefaultKey`, which renders a single key code).
@@ -1425,11 +1804,26 @@ The `isBound()` guard is load-bearing: `InputHandler.isKeyDown(-1)` falls throug
 `src/main/resources/config.yaml:172` becomes:
 
 ```yaml
-  toggleKey: SHIFT+O   # Toggles live viewport audio/video recording. Modifiers go in the value: CTRL+SHIFT+O, or plain O for no modifier.
+  toggleKey: SHIFT+O   # Toggles live viewport audio/video recording. Modifiers go in the value: CTRL+SHIFT+O, or a bare key such as P for no modifier. A bare O is reserved -- the compatibility migration rewrites it back to SHIFT+O on every launch.
 ```
 
+**It must not say "plain `O` for no modifier".** That is the one value this same task's
+migration rewrites: `migrateDeprecatedCaptureToggleKey` matches on the value, runs
+unconditionally in `loadConfig` before `applyDefaults`, and sets `configChanged = true`,
+so a player who follows that advice watches the engine edit their config file back on
+the next launch. This resource is also published verbatim as `config.yaml.example` by
+`publishBundledConfigExample()`, so the advice reaches users who have not yet run the
+engine. The changelog entry in Step 7 and the reserved-value decision above already say
+`O` is unavailable; a shipped comment contradicting a shipped changelog is the single
+most likely bug report this feature can generate.
+
 `ConfigCatalog:265-266` description becomes
-`"Live viewport recording toggle. Modifiers belong in the value (e.g. SHIFT+O, CTRL+SHIFT+O)"`.
+`"Live viewport recording toggle. Modifiers belong in the value (e.g. SHIFT+O, CTRL+SHIFT+O). A bare O is reserved and is migrated back to SHIFT+O"`.
+
+Three surfaces now describe this binding — the bundled `config.yaml` comment, the
+`ConfigCatalog` description that `ConfigYamlWriter` emits as the comment into every
+*saved* config, and the changelog. Read all three side by side before committing and
+confirm none of them advertises a bare `O`.
 
 `ConfigYamlWriter.formatKey` (`:115-133`): when the resolve/parse pair both fail,
 try `KeyChord.parse(s)` and emit `chord.format()` when it `isBound()`, before falling
@@ -1468,15 +1862,18 @@ performance overlay as well as copying the stats. Leave the Ctrl+P clipboard cho
 `README.md:271` names only the concrete default `Shift+O` with no
 `<capture.toggleKey>` parenthetical, so it stays correct and is not staged.
 
-- [ ] **Step 4: Run the focused tests, the capture suites, and the guard**
+- [ ] **Step 6: Run the focused tests, the capture suites, and the guard**
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.capture.LiveCaptureChordTest,com.openggf.configuration.TestConfigMigrationService,com.openggf.configuration.CaptureConfigDefaultsTest,com.openggf.configuration.TestConfigYamlWriter,com.openggf.debug.TestDebugOverlayManagerReset,com.openggf.configuration.TestBundledConfigResource,com.openggf.configuration.TestBundledConfigExamplePublication,com.openggf.configuration.TestConfigServiceYamlRoundTrip,com.openggf.configuration.TestConfigCatalog,com.openggf.configuration.TestLegacyConfigMigration,com.openggf.tests.TestArchitecturalSourceGuard test
+mvn -Dmse=off -Dtest=com.openggf.capture.LiveCaptureChordTest,com.openggf.configuration.TestConfigMigrationService,com.openggf.configuration.CaptureConfigDefaultsTest,com.openggf.configuration.TestConfigYamlWriter,com.openggf.debug.TestDebugOverlayManagerReset,com.openggf.TestEngineLiveCapturePresentation,com.openggf.configuration.TestBundledConfigResource,com.openggf.configuration.TestBundledConfigExamplePublication,com.openggf.configuration.TestConfigServiceYamlRoundTrip,com.openggf.configuration.TestConfigCatalog,com.openggf.configuration.TestLegacyConfigMigration,com.openggf.tests.TestArchitecturalSourceGuard test
 ```
 
 Expected: all pass, including
-`engineLiveCaptureOrderingStaysAtThePresentationBoundary` and the `Engine#display`
-method budget.
+`engineLiveCaptureOrderingStaysAtThePresentationBoundary`, the `Engine#display`
+method budget, and `engineDoesNotGainNewLargeMethods` after the seam extraction.
+This is the first run in this task that reaches Surefire with every class present, so
+it is where the selector is checked: confirm all **twelve** class names appear in the
+summary before treating the green as evidence.
 
 Then the full suite, since this is the commit that changes shipped behaviour:
 
@@ -1488,7 +1885,7 @@ git checkout -- docs/rewind/real-gaps.md
 Expected: `BUILD SUCCESS`. Record the exact `Tests run` totals. Restore
 `real-gaps.md` before staging — the full run regenerates it.
 
-- [ ] **Step 5: Update changelog and commit exact files**
+- [ ] **Step 7: Update changelog and commit exact files**
 
 Add under `## Unreleased`:
 
@@ -1513,7 +1910,8 @@ git add CHANGELOG.md CONFIGURATION.md \
   src/test/java/com/openggf/configuration/CaptureConfigDefaultsTest.java \
   src/test/java/com/openggf/configuration/TestConfigMigrationService.java \
   src/test/java/com/openggf/configuration/TestConfigYamlWriter.java \
-  src/test/java/com/openggf/debug/TestDebugOverlayManagerReset.java
+  src/test/java/com/openggf/debug/TestDebugOverlayManagerReset.java \
+  src/test/java/com/openggf/TestEngineLiveCapturePresentation.java
 git commit -m "feat(config): put the capture toggle's modifiers in its binding
 
 capture.toggleKey defaults to SHIFT+O and Engine no longer hardcodes the
@@ -1771,20 +2169,29 @@ decision: its own binding, or "the record chord without its modifiers".
    **and** on an existing install carrying a persisted `toggleKey: O`, the latter via
    the Task 5 migration — proved end-to-end through `loadConfig`, not only by calling
    the migration function on a hand-built map.
-8. Meta chords match real Super presses (Tasks 2, 5).
+8. Meta chords match real Super presses — evidenced end to end by Task 5's
+   `aMetaBindingFiresOnARealSuperPressAndNotOnARealAltPress`, which drives a real
+   `GLFW_KEY_LEFT_SUPER` event through `Engine.shouldToggleLiveCapture`. Task 2's
+   `isSuperDown` cases and Task 5's literal-boolean `aSuperBindingMatchesARealSuperPress`
+   are each half of this and neither is sufficient alone: a transposed
+   `altDown`/`superDown` argument passes both (Tasks 2, 5).
 9. Alt and Meta chords are reproducible under trace playback on the same terms as
    Shift and Ctrl, and the BK2 no-modifier-column limit is documented (Tasks 3, 6).
 10. A latched modifier does not survive window focus loss (Task 2).
 11. Full suite green; the `capture.toggleKey` conversion carries changelog entries
     covering both the visible-Shift change and the customised-value case (Task 5).
 12. `getKeyChord` and `getInt` agree on the key code for every form — digits, chords,
-    `DERIVED` bindings, values that fall back to their default, and an explicitly
-    empty value that falls back to neither and stays unbound — and a converted and
-    unconverted binding coexist in one `config.yaml` (Task 4).
+    `DERIVED` bindings, values that fall back to their default, an explicitly empty
+    value that falls back to neither and stays unbound, **and a whitespace-only value,
+    which is not the unbind form and must fall back to the default through both** —
+    and a converted and unconverted binding coexist in one `config.yaml` (Task 4).
 13. An unbound chord never fires, including while a gamepad rewind button is held and
-    `LIVE_REWIND_KEY` is itself unbound — the case where `isKeyDown(-1)` is not false
-    (Task 4's `isBound()` guard rule, Task 5's `anUnboundBindingNeverFires` and the
-    `Engine` call-site guard).
+    `LIVE_REWIND_KEY` is itself unbound — the case where `isKeyDown(-1)` is not false.
+    The evidence is Task 5's `anUnboundBindingDoesNotFireFromAHeldGamepadRewindButton`,
+    which asserts `isKeyDown(-1)` is true as a precondition and then that no toggle
+    results. `anUnboundBindingNeverFires` passes `keyDown` as a literal and covers only
+    `LiveCaptureChord`'s own guard; Task 4's `isBound()` rule is prose. Neither
+    discharges this criterion (Task 5).
 14. `Shift+O` starts a capture without also toggling the `OBJECT_DEBUG` overlay when
     debug shortcuts are enabled, a bare F-key overlay toggle still works, and `Ctrl+P`
     copies the performance stats without also toggling the performance overlay
@@ -1796,8 +2203,11 @@ decision: its own binding, or "the record chord without its modifiers".
     and `docs/guide/playing/controls.md` — describe chords, and the first no longer
     claims that every invalid value falls back to the default (Task 6).
 17. `O` is documented as a reserved value for `capture.toggleKey`, with the reason
-    (a value-based migration that re-runs every launch) rather than only the rule
-    (Tasks 5, 6).
+    (a value-based migration that re-runs every launch) rather than only the rule —
+    and **no shipped surface advertises a bare `O` as a way to drop the modifier**:
+    not the bundled `config.yaml` comment (which is also published as
+    `config.yaml.example`), not the `ConfigCatalog` description emitted into every
+    saved config, not the changelog, not `CONFIGURATION.md` (Tasks 5, 6).
 
 ## Task execution and review protocol
 
@@ -1806,13 +2216,22 @@ decision: its own binding, or "the record chord without its modifiers".
 - Before starting a task, `git status --short --untracked-files=no` must be empty.
 - Run the RED command before writing production code and record the exact failure
   text. NOT RUN is never a pass.
+- **A compile RED and a runtime RED cannot be observed in the same run.**
+  `maven-compiler-plugin:testCompile` runs before `surefire:test`, so a test file that
+  references a signature which does not exist yet aborts the build for *every* test —
+  no Surefire summary is produced and no other new case executes, however well it
+  compiles. Where a task has both kinds, write and run the runtime-RED cases first, on
+  their own (Task 5 Steps 1–2), then add the rest (Task 5 Steps 3–4). Never record a
+  predicted runtime failure that the run could not have reached, and never record
+  "0 tests run" from an aborted compile as a RED observation.
 - A `-Dtest` selector is a **package** name, not a directory path, and at least one
   test file in this tree deliberately disagrees with its directory
   (`src/test/java/com/openggf/recording/menu/TestUserRecordingMenu.java` declares
   `package com.openggf.game.recording.menu;`). Surefire's `failIfNoSpecifiedTests`
   only trips when *nothing* in the comma list matches, so one bad name in a list
   silently drops that class while the build reports success. Check every class you
-  selected appears in the Surefire summary before treating a green as evidence.
+  selected appears in the Surefire summary before treating a green as evidence — in
+  the run that actually reaches Surefire, which is never a compile-RED run.
 - Never weaken, delete, or `@Disabled` an assertion to make a gate green. If a claim
   in this plan is wrong, say so with the evidence rather than working around it.
 - `CaptureConfigDefaultsTest:21`, `TestConfigKeyNameResolution`,
