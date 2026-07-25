@@ -978,7 +978,7 @@ public class GameLoop {
 
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
-        debugOverlayManager.updateInput(inputHandler, debugShortcutsEnabled);
+        debugOverlayManager.updateInput(inputHandler, debugShortcutsEnabled, configService);
         if (debugShortcutsEnabled) {
             debugOverlayManager.getObjectArtViewer().updateInput(inputHandler);
         }

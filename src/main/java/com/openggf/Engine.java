@@ -23,6 +23,7 @@ import com.openggf.audio.LWJGLAudioBackend;
 import com.openggf.capture.*;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.FrameRateResolver;
+import com.openggf.configuration.KeyChord;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugOption;
@@ -492,26 +493,12 @@ public class Engine {
 		});
 
 		// Setup window focus callback
-		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
-			if (focused) {
-				paused = false;
-				gameLoop.resume();
-			} else {
-				paused = true;
-				gameLoop.pause();
-			}
-		});
+		glfwSetWindowFocusCallback(window, (windowHandle, focused) ->
+				paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume));
 
 		// Setup window iconify callback
-		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) -> {
-			if (iconified) {
-				paused = true;
-				gameLoop.pause();
-			} else {
-				paused = false;
-				gameLoop.resume();
-			}
-		});
+		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) ->
+				paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume));
 
 		// Get the thread stack and push a new frame
 		try (MemoryStack stack = stackPush()) {
@@ -1926,6 +1913,35 @@ public class Engine {
 		presentationSeam.run();
 	}
 
+	/**
+	 * Gates the loop on the window becoming active or inactive, and drops held
+	 * key state either way. Focus and iconify deliver the same event through two
+	 * callbacks, so they share one body rather than drifting apart.
+	 *
+	 * <p>The clear runs on both edges. A key is otherwise forgotten only when its
+	 * release arrives, and the release for a window-switch modifier goes to the
+	 * window that took focus -- so a latched Super would disable every
+	 * {@code isKeyPressedWithoutModifiers} shortcut for the rest of the process.
+	 * Clearing on the way back in as well means whatever swallowed the release --
+	 * a minimise that delivered no focus event, a window-manager grab on a Super
+	 * combo -- is recovered from the next time the window is activated, instead
+	 * of only when the loss edge happened to fire.
+	 *
+	 * @return the engine's new paused state
+	 */
+	static boolean applyWindowActivation(boolean active, InputHandler inputHandler,
+			Runnable pause, Runnable resume) {
+		if (inputHandler != null) {
+			inputHandler.clearKeyState();
+		}
+		if (active) {
+			resume.run();
+		} else {
+			pause.run();
+		}
+		return !active;
+	}
+
 	static void startLiveCaptureAttempt(
 			LiveCaptureController controller,
 			LiveCaptureFailureTransitionReporter failureReporter,
@@ -1935,13 +1951,36 @@ public class Engine {
 		controller.start(viewport, frameRate);
 	}
 
+	/**
+	 * True on the frame the configured capture chord becomes satisfied.
+	 *
+	 * <p>An unbound chord cannot fire, and no longer needs a guard here to say
+	 * so: its key code is negative, which
+	 * {@link com.openggf.control.InputHandler#isKeyDown(int)} reports as not
+	 * down, and {@link LiveCaptureChord#update} requires {@code isBound()} of
+	 * its own accord. It used to need one, because {@code isKeyDown(-1)} fell
+	 * through to the pad-rewind substitution and {@code rewindKey()} is -1 too
+	 * when live rewind is unbound; that hole is closed in {@code InputHandler}
+	 * for both {@code isKeyDown} and {@code isKeyPressed}, so every call site
+	 * gets it rather than this one.
+	 */
+	static boolean shouldToggleLiveCapture(KeyChord chord, LiveCaptureChord detector,
+			InputHandler input) {
+		if (chord == null) {
+			return false;
+		}
+		return detector.update(chord, input.isKeyDown(chord.keyCode()),
+				input.isShiftDown(), input.isControlDown(),
+				input.isAltDown(), input.isSuperDown());
+	}
+
 	private void handleLiveCaptureShortcut() {
 		if (inputHandler == null) {
 			return;
 		}
-		int key = configService.getInt(SonicConfiguration.CAPTURE_TOGGLE_KEY);
-		if (!liveCaptureChord.update(inputHandler.isKeyDown(key), inputHandler.isShiftDown(),
-				inputHandler.isControlDown(), inputHandler.isAltDown())) {
+		if (!shouldToggleLiveCapture(
+				configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
+				liveCaptureChord, inputHandler)) {
 			return;
 		}
 		switch (liveCaptureController.state()) {

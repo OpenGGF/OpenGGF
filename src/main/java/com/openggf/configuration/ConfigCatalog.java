@@ -263,7 +263,9 @@ public final class ConfigCatalog {
                         + " encode pass output is published as-is and the"
                         + " recording has NO AUDIO"));
         put(CAPTURE_TOGGLE_KEY, of("capture", "toggleKey", KEY,
-                "Shift+key toggles live viewport audio/video recording"));
+                "Live viewport recording toggle. Modifiers belong in the value"
+                        + " (e.g. SHIFT+O, CTRL+SHIFT+O). A bare O is reserved and"
+                        + " is migrated back to SHIFT+O"));
 
         // ───────────────── DEBUG BLOCK ─────────────────
 

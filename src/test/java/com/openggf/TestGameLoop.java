@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import com.openggf.control.GamepadInputManager;
 import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -976,6 +977,39 @@ public class TestGameLoop {
     public void testResolveBonusStageDebugShortcutIgnoresPlainB() {
         InputHandler handler = new InputHandler();
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+
+        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+    }
+
+    /**
+     * Shift and Ctrl already answered from the logical override here; Alt now
+     * answers from the same source, so the shortcut cannot pick a stage from a
+     * mixture of recorded and live modifiers.
+     *
+     * <p>No production caller evaluates this with an override installed today --
+     * {@code stepInternal:994} reaches it before any override window opens, and
+     * every window (LiveRewindStepper, RecordingFrameDriver, TraceSessionLauncher)
+     * both opens and closes later in the same frame. So this pins the contract,
+     * not a reachable defect. The reachable reader of the same override is
+     * {@code updateSpecialStageInput()}, inside TraceSessionLauncher's window.
+     */
+    @Test
+    public void testResolveBonusStageDebugShortcutReadsAltFromTheLogicalOverride() {
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+        handler.setLogicalOverride(LogicalInputSnapshot.neutral()
+                .withDebugInput(false, false, false, true, false));
+
+        assertEquals(BonusStageType.SLOT_MACHINE, GameLoop.resolveBonusStageDebugShortcut(handler));
+    }
+
+    @Test
+    public void testResolveBonusStageDebugShortcutIgnoresLiveAltWhileAnOverrideIsInstalled() {
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
+        handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+        handler.setLogicalOverride(LogicalInputSnapshot.neutral()
+                .withDebugInput(false, false, false, false, false));
 
         assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
     }

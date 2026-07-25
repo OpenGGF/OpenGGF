@@ -276,8 +276,9 @@ Allowed launch profile enums:
 
 OpenGGF has two separate recording systems:
 
-- **Live viewport recording:** press `Shift+O` (or `Shift+<capture.toggleKey>`)
-  during normal windowed execution to start and press it again to stop. This
+- **Live viewport recording:** press `Shift+O` — or whatever `capture.toggleKey`
+  is set to, since the modifiers are part of the value — during normal windowed
+  execution to start and press it again to stop. This
   writes `capture-live-<UTC timestamp>.mkv` under `capture.outputDir` using
   lossless FFV1 video and stereo FLAC audio. It captures only the physical game
   viewport—not window borders or letterbox/pillarbox bars—and automatically
@@ -430,7 +431,7 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `CAPTURE_OUTPUT_DIR` | `capture.outputDir` | string | `"target/trace-videos"` | Output directory for live and trace capture videos. |
-| `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `O` | Complete-chord live viewport recording toggle (`Shift` + this key, with Ctrl/Alt released). |
+| `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `SHIFT+O` | Live viewport recording toggle. The modifiers live in the value (`CTRL+SHIFT+O`, `META+O`, or a bare key such as `SCROLL_LOCK` for none) and are matched exactly. A bare `O` is reserved — the compatibility migration rewrites it back to `SHIFT+O` on every launch. |
 | `CAPTURE_SCALE` | `capture.scale` | int | `4` | Trace capture only: integer nearest-neighbor upscale factor applied to captured frames; live viewport recording always uses scale 1. |
 | `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
@@ -539,8 +540,86 @@ Key bindings accept any of the following formats:
 | Named key | `"SPACE"`, `"ENTER"`, `"F9"` | Special keys by name |
 | Modifier key | `"LEFT_SHIFT"`, `"RIGHT_CONTROL"` | Modifier keys |
 | GLFW prefix | `"GLFW_KEY_Q"` | Full GLFW constant name (prefix stripped) |
+| Chord | `"SHIFT+O"`, `"CTRL+SHIFT+O"`, `"META+LEFT_BRACKET"` | Key qualified by modifiers — acted on by the bindings listed under *Modifier support per binding* below |
 
 Invalid key names log a warning and fall back to the default binding for that key.
+
+#### Chord syntax
+
+- **Modifier aliases** (case-insensitive): `CTRL`/`CONTROL`, `SHIFT`,
+  `ALT`/`OPTION`, and `META`/`SUPER`/`CMD`/`COMMAND`/`WIN`. Whitespace around
+  `+` is tolerated, so `"Shift + O"` and `"shift+o"` are the same value.
+- **Canonical order is `CTRL, SHIFT, ALT, META`.** That is the spelling the
+  engine writes back when it saves the config, whatever order you typed.
+- **Matching is exact.** A binding fires only when its declared modifiers are
+  held *and* the others are released, so a plain `"O"` does not fire while any
+  modifier is down.
+- **Binding the plus key:** `+` is the separator, so write `EQUAL` (or `KP_ADD`
+  for the numpad). A value of only separators (`"+"`, `"++"`) names no key, so
+  it is an unresolvable value under the next bullet and falls back to the
+  binding's registered default — it does **not** unbind. `capture.toggleKey:
+  "+"` leaves recording live on `SHIFT+O`. Only `""` unbinds.
+- **Unresolvable values.** A **non-empty** value that resolves to no key —
+  `"NOT_A_KEY"`, `"CTRL+"`, an unknown modifier — logs a warning and falls back
+  to that binding's registered default. An **explicitly empty** value (`""`) is
+  unbound outright: no default is substituted. That asymmetry is how a shortcut
+  is deliberately switched off.
+- **`O` is reserved for `capture.toggleKey`.** The migration that carries
+  existing installs onto the `SHIFT+O` default matches on the value rather than
+  on a schema version, so it re-runs on every launch and rewrites every value
+  that resolves to an unmodified `O` — `O`, `GLFW_KEY_O`, `KEY_O`, `79` and the
+  quoted `"79"` — back to `SHIFT+O`. Binding *this one action* to a bare `O` is
+  not possible; pick another key.
+
+#### Modifier support per binding
+
+Modifiers parse everywhere, but only some bindings act on them. There are three
+states, and the third is invisible from the config file:
+
+| State | Meaning | Bindings |
+|-------|---------|----------|
+| Chord honoured | Read as a chord and matched exactly | `CAPTURE_TOGGLE_KEY` |
+| Modifiers ignored | Read as a bare key code; a chord resolves to its key and the modifiers are dropped, so `"CTRL+P"` fires on plain `P` | every binding not named in the other two rows |
+| Chord permanently dead | Read through a "no modifier held" check, so the modifier you must hold to type the chord is exactly what blocks the shortcut. The modifiers are still dropped, so `debug.playback.toggleKey: "CTRL+P"` binds plain `P`: the chord as written never fires, and an unmodified `P` does | the nine `PLAYBACK_*` keys; `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`, `SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`, `SPECIAL_STAGE_PLANE_DEBUG_KEY`, `NEXT_ACT`, `NEXT_ZONE`, `DEBUG_LAST_CHECKPOINT_KEY`, `LEVEL_SELECT_KEY`, `CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY` |
+
+`UP`/`DOWN`/`LEFT`/`RIGHT` and `DEBUG_MODE_KEY` are in **two** states at once.
+Modifiers are ignored for `UP`/`DOWN`/`LEFT`/`RIGHT` on the gameplay path, and
+the chord is dead on the special-stage sprite-debug path, which reads them
+through the same unmodified-debug-key check. `DEBUG_MODE_KEY`'s chord is dead in
+`GameLoop` (both reads go through that check), but `SpriteManager`'s debug-mode
+toggle and the live-rewind input recorder read it with a plain key-pressed
+check, so `debug.keys.debugMode: "CTRL+D"` still toggles sprite debug mode on a
+plain `D` with the Ctrl neither required nor checked.
+
+Some shortcuts are hardcoded and consume a keystroke whatever a binding says:
+Shift/Ctrl/Alt+`B` (bonus-stage debug, exactly one modifier), Shift+`Tab`, left
+Ctrl+`P` (copy performance stats — debug-only, see below), the editor's
+`Tab`-without-Shift and Ctrl+`Z`/`S`/`Y`, and the display shader picker's confirm
+key. The sixteen debug-overlay toggles
+(`F1`-`F8`, `F10`-`F12`, `K`, `` ` ``, `=`, `P`, `O`) are hardcoded too. They fire
+on their bare key with any modifier held — a modifier is usually held for an
+unrelated reason, and player two's jump defaults to right Shift — but stand aside
+for the frame a chord bound to the *same* key is satisfied, which is what stops
+the `SHIFT+O` capture default toggling the object-debug overlay. Binding
+`capture.toggleKey` to one of these keys with no modifier makes both fire on the
+same keystroke.
+
+A toggle only stands aside for an action that can actually run, so `P` gives way
+to the stats copy only while `DEBUG_VIEW_ENABLED` is on. With debug shortcuts
+off — the shipped default — Ctrl+`P` toggles the performance overlay and copies
+nothing, so no install has a keystroke that silently overwrites the OS clipboard.
+The stats copy also needs the **left** Ctrl specifically: `CTRL` in a configured
+chord means either Ctrl, but right Ctrl is player two's default Start, so
+matching either would let player two's Start turn player one's `P` into a
+clipboard write. `RECORDING_RECORD_KEY` is a
+configurable binding whose Shift is still hardcoded at its call sites (the
+runtime recording controls and the master title screen), so its modifier cannot
+be moved into the value yet.
+
+**Under playback:** live rewind records and reproduces real Shift, Ctrl, Alt and
+Super states, so a chord behaves the same on replay as it did live. BK2 movies
+carry no modifier column at all, so all four read as released under BK2
+playback and any chord requiring a modifier does not fire there.
 
 The tables below list each key's name, default code, and the human-readable key name for the default.
 

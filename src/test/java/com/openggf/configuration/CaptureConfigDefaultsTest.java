@@ -6,6 +6,7 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.InputStream;
 import java.util.Map;
 
+import static com.openggf.configuration.KeyChord.Modifier.SHIFT;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_O;
 
@@ -27,9 +28,23 @@ class CaptureConfigDefaultsTest {
             assertNotNull(in);
             Map<String, Object> yaml = new Yaml().load(in);
             ConfigFlattener.Result flattened = ConfigFlattener.flatten(yaml);
-            assertEquals("O", flattened.flat().get(SonicConfiguration.CAPTURE_TOGGLE_KEY.name()));
+            assertEquals("SHIFT+O",
+                    flattened.flat().get(SonicConfiguration.CAPTURE_TOGGLE_KEY.name()));
         } catch (Exception e) {
             fail(e);
         }
+    }
+
+    /**
+     * The shortcut a fresh install answers to. {@code captureDefaults} above
+     * asserts the same binding still yields its bare key through getInt, which
+     * is what keeps the unconverted bindings' contract intact.
+     */
+    @Test
+    void theDefaultBindingIsShiftO() {
+        SonicConfigurationService c = SonicConfigurationService.createStandalone();
+
+        assertEquals(KeyChord.of(GLFW_KEY_O, SHIFT),
+                c.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY));
     }
 }

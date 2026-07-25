@@ -50,12 +50,14 @@ class TestLiveRewindLogicalInput {
         Bk2FrameInput previous = new Bk2FrameInput(0, 0, 0, false, 0, 0, false, "previous");
         Bk2FrameInput current = new Bk2FrameInput(
                 1, 0, 0, false, 0, 0, false,
-                true, true, true, "current");
+                true, true, true, true, true, "current");
 
         input.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
 
         assertTrue(input.isShiftDown());
         assertTrue(input.isControlDown());
+        assertTrue(input.isAltDown());
+        assertTrue(input.isSuperDown());
         assertTrue(input.isKeyPressed(config.getInt(SonicConfiguration.DEBUG_MODE_KEY)));
     }
 

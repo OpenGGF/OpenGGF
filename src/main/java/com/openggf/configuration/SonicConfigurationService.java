@@ -39,6 +39,7 @@ public class SonicConfigurationService {
 	// Derived (non-persisted) display values; read before `config`, never saved.
 	private final Map<String, Object> transientResolved = new HashMap<>();
 	private final Map<SonicConfiguration, Integer> intCache = new EnumMap<>(SonicConfiguration.class);
+	private final Map<SonicConfiguration, KeyChord> keyChordCache = new EnumMap<>(SonicConfiguration.class);
 
 	private SonicConfigurationService() {
 		this(null, null);
@@ -131,6 +132,9 @@ public class SonicConfigurationService {
 		if (migrationService.migrateDeprecatedDisplayColorProfileToggleKey(config)) {
 			configChanged = true;
 		}
+		if (migrationService.migrateDeprecatedCaptureToggleKey(config)) {
+			configChanged = true;
+		}
 		if (normalizeDisplayShaderSelection(config)) {
 			configChanged = true;
 		}
@@ -167,6 +171,84 @@ public class SonicConfigurationService {
 		return resolved;
 	}
 
+	/**
+	 * Reads a KEY binding as a chord, so the modifiers a shortcut requires live
+	 * in its configured value rather than being hardcoded at its call site.
+	 *
+	 * <p>Honours everything {@link #getInt} honours: session overrides and the
+	 * transient overlay, the DERIVED fallback that sends JUMP to P1_A when unset,
+	 * and the fall-back-to-registered-default rule for an unresolvable value.
+	 * Returns an unbound chord when the value is explicitly empty — which is how
+	 * a shortcut is deliberately unbound — or when the default is itself unbound.
+	 */
+	public KeyChord getKeyChord(SonicConfiguration sonicConfiguration) {
+		KeyChord cached = keyChordCache.get(sonicConfiguration);
+		if (cached != null) {
+			return cached;
+		}
+		KeyChord resolved = resolveKeyChord(sonicConfiguration);
+		keyChordCache.put(sonicConfiguration, resolved);
+		return resolved;
+	}
+
+	/**
+	 * Drops both resolved-value caches. They must be dropped together, or a
+	 * rebind is fresh through one accessor and stale through the other.
+	 */
+	private void invalidateResolvedCaches() {
+		intCache.clear();
+		keyChordCache.clear();
+	}
+
+	private KeyChord resolveKeyChord(SonicConfiguration sonicConfiguration) {
+		if (sonicConfiguration == SonicConfiguration.JUMP && !hasExplicitValue(SonicConfiguration.JUMP)) {
+			return getKeyChord(SonicConfiguration.P1_A);
+		}
+		if (sonicConfiguration == SonicConfiguration.P2_JUMP && !hasExplicitValue(SonicConfiguration.P2_JUMP)) {
+			return getKeyChord(SonicConfiguration.P2_A);
+		}
+		Object value = getConfigValue(sonicConfiguration);
+		KeyChord chord = KeyChord.parse(value);
+		if (chord.isBound()) {
+			return chord;
+		}
+		// resolveInt falls back to the registered default rather than reporting
+		// unbound -- but only for a NON-EMPTY value. An explicitly empty value
+		// returns -1 with no default lookup, so the same gate belongs here or a
+		// player who writes `toggleKey: ""` to unbind a shortcut gets -1 from
+		// getInt and the default chord from here, and the shortcut keeps firing.
+		// isEmpty(), NOT trim().isEmpty(): resolveInt's gate is `!str.isEmpty()`
+		// on an untrimmed getString(), so a whitespace-only value takes the
+		// fall-back-to-default path there and must take it here too.
+		if (value == null || value.toString().isEmpty()) {
+			return chord;
+		}
+		// The other spelling of the same intent, and the one the shipped config
+		// uses: P1_B, P1_C, P2_B and P2_C default to -1. resolveInt returns it
+		// verbatim -- an Integer goes straight through sanitizeIntValue and the
+		// string form parses to -1 before the default lookup -- so falling back
+		// here would report a binding the player switched off as still bound.
+		if (isExplicitlyUnbound(value)) {
+			return chord;
+		}
+		return KeyChord.parse(defaults.get(sonicConfiguration.name()));
+	}
+
+	/** True for a value resolveInt reads as the literal key code -1. */
+	private static boolean isExplicitlyUnbound(Object value) {
+		if (value instanceof Number number) {
+			return number.intValue() == KeyChord.NO_KEY;
+		}
+		try {
+			// Untrimmed, exactly as resolveInt parses getString()'s result: a
+			// padded " -1 " throws there and falls back to the default, so it
+			// must fall back here too.
+			return Integer.parseInt(value.toString()) == KeyChord.NO_KEY;
+		} catch (NumberFormatException ignored) {
+			return false;
+		}
+	}
+
 	private int resolveInt(SonicConfiguration sonicConfiguration) {
 		if (sonicConfiguration == SonicConfiguration.JUMP && !hasExplicitValue(SonicConfiguration.JUMP)) {
 			return getInt(SonicConfiguration.P1_A);
@@ -182,10 +264,14 @@ public class SonicConfigurationService {
 
 			// KEY values such as "1" are GLFW key names first, not raw integer
 			// codes. Numeric raw codes remain supported when no key name matches.
+			// KeyChord applies exactly that order and additionally understands a
+			// value carrying modifiers, which is otherwise neither a name nor an
+			// integer; getInt returns its bare key so unconverted bindings that
+			// read a key code are unaffected by the modifiers.
 			if (ConfigCatalog.meta(sonicConfiguration).type() == ConfigType.KEY) {
-				OptionalInt resolved = GlfwKeyNameResolver.resolve(str);
-				if (resolved.isPresent()) {
-					return resolved.getAsInt();
+				KeyChord chord = KeyChord.parse(str);
+				if (chord.isBound()) {
+					return chord.keyCode();
 				}
 			}
 
@@ -369,7 +455,7 @@ public class SonicConfigurationService {
 						+ "x224 (window preserved).");
 			}
 		}
-		intCache.clear();
+		invalidateResolvedCaches();
 	}
 
 	/** Reads an int from the persisted {@code config} map only, bypassing the transient overlay. */
@@ -393,17 +479,17 @@ public class SonicConfigurationService {
 			config = new HashMap<>();
 		}
 		config.put(key.name(), value);
-		intCache.clear();
+		invalidateResolvedCaches();
 	}
 
 	public void setSessionOverride(SonicConfiguration key, Object value) {
 		sessionOverrides.put(key.name(), value);
-		intCache.clear();
+		invalidateResolvedCaches();
 	}
 
 	public void clearSessionOverrides() {
 		sessionOverrides.clear();
-		intCache.clear();
+		invalidateResolvedCaches();
 	}
 
 	public boolean hasSessionOverride(SonicConfiguration key) {
@@ -505,7 +591,7 @@ public class SonicConfigurationService {
 		config = new HashMap<>();
 		defaults = new HashMap<>();
 		sessionOverrides.clear();
-		intCache.clear();
+		invalidateResolvedCaches();
 		applyDefaults();
 		// Re-derive SCREEN_WIDTH_PIXELS (and related) from the freshly-set
 		// DISPLAY_ASPECT=NATIVE_4_3 default so any widescreen value left in
@@ -533,7 +619,7 @@ public class SonicConfigurationService {
 						+ "; allowed " + meta.allowedValues() + ". Defaulting to '" + fallback + "'.");
 				if (fallback != null) {
 					config.put(key.name(), fallback);
-					intCache.clear();
+					invalidateResolvedCaches();
 				}
 			}
 		}
@@ -551,7 +637,7 @@ public class SonicConfigurationService {
 			return false;
 		}
 		config.put(key, "OFF");
-		intCache.clear();
+		invalidateResolvedCaches();
 		return true;
 	}
 
@@ -643,7 +729,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CAPTURE_CONTAINER, "mkv");
 		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS, "default");
 		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS, "default");
-		putDefaultKey(SonicConfiguration.CAPTURE_TOGGLE_KEY, GLFW_KEY_O);
+		// putDefault, not putDefaultKey: the default carries its own modifier.
+		putDefault(SonicConfiguration.CAPTURE_TOGGLE_KEY, "SHIFT+O");
 		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, false);
 		putDefault(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_R);
@@ -850,21 +937,12 @@ public class SonicConfigurationService {
 		Map<String, Object> read(File file) throws IOException;
 	}
 
+	/**
+	 * Bare key code of a registered default, which may itself carry modifiers
+	 * (e.g. {@code "SHIFT+O"}). KeyChord handles the Number, name and raw-code
+	 * forms, so a chorded default resolves to its key rather than to unbound.
+	 */
 	private static int resolveKeyCode(Object value) {
-		if (value instanceof Number number) {
-			return number.intValue();
-		}
-		if (value != null) {
-			String str = value.toString();
-			try {
-				return Integer.parseInt(str);
-			} catch (NumberFormatException ignored) {
-			}
-			OptionalInt resolved = GlfwKeyNameResolver.resolve(str);
-			if (resolved.isPresent()) {
-				return resolved.getAsInt();
-			}
-		}
-		return -1;
+		return KeyChord.parse(value).keyCode();
 	}
 }
