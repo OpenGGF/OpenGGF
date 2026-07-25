@@ -1,0 +1,86 @@
+package com.openggf.capture;
+
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * ffmpeg encoder arguments for the configured capture codecs.
+ *
+ * <h2>Why the H.264 and H.265 settings look unusual</h2>
+ *
+ * <p>{@code -crf 0} and {@code -x265-params lossless=1} make the <em>codec</em>
+ * mathematically lossless, but that is not the same as reproducing the frames
+ * the engine handed over. The recorder submits RGBA, and encoding it as YUV —
+ * even 4:4:4, which loses no chroma resolution — round-trips through a colour
+ * conversion that does not return the original bytes. Measured on random pixel
+ * data at 64x48x12 frames, decoding back to RGB:
+ *
+ * <pre>
+ *   ffv1                                        byte-exact
+ *   libx264rgb -crf 0 -pix_fmt rgb24            byte-exact
+ *   libx264    -crf 0 -pix_fmt yuv444p          43,896 bytes differ
+ *   libx264    -crf 0 -pix_fmt yuv420p         109,697 bytes differ
+ *   libx265 lossless=1 -pix_fmt gbrp            byte-exact
+ *   libx265 lossless=1 -pix_fmt yuv444p         43,896 bytes differ
+ * </pre>
+ *
+ * <p>So H.264 uses the RGB-native {@code libx264rgb} encoder and H.265 uses
+ * planar RGB ({@code gbrp}). {@code TestCaptureCodecLosslessness} re-measures
+ * this rather than trusting the flags.
+ *
+ * <p>The trade-off is player compatibility: RGB H.264/H.265 is legal but less
+ * widely supported than the YUV forms. FFV1 remains the default for that
+ * reason as much as for size.
+ */
+public final class CaptureCodecs {
+
+    /** Encoder arguments and whether the result reproduces the submitted frames. */
+    public record Codec(String name, List<String> arguments, boolean lossless) {
+        public Codec {
+            arguments = List.copyOf(arguments);
+        }
+    }
+
+    private CaptureCodecs() {
+    }
+
+    /**
+     * @param name {@code ffv1}, {@code h264} or {@code h265}, case-insensitive
+     * @throws IllegalArgumentException on an unknown name, so a typo in
+     *         {@code config.yaml} fails at capture start rather than producing
+     *         a recording in a codec the user did not ask for
+     */
+    public static Codec video(String name) {
+        return switch (normalize(name)) {
+            case "ffv1" -> new Codec("ffv1", List.of("-c:v", "ffv1"), true);
+            // RGB-native H.264: the only libx264 form that returns the exact
+            // submitted pixels. See the class javadoc.
+            case "h264" -> new Codec("h264",
+                    List.of("-c:v", "libx264rgb", "-crf", "0", "-pix_fmt", "rgb24"), true);
+            // Planar RGB H.265, for the same reason.
+            case "h265" -> new Codec("h265",
+                    List.of("-c:v", "libx265", "-x265-params", "lossless=1",
+                            "-pix_fmt", "gbrp"), true);
+            default -> throw new IllegalArgumentException(
+                    "unknown capture video codec '" + name + "'; expected ffv1, h264 or h265");
+        };
+    }
+
+    /**
+     * @param name {@code flac}, {@code aac} or {@code mp3}, case-insensitive
+     * @throws IllegalArgumentException on an unknown name
+     */
+    public static Codec audio(String name) {
+        return switch (normalize(name)) {
+            case "flac" -> new Codec("flac", List.of("-c:a", "flac"), true);
+            case "aac" -> new Codec("aac", List.of("-c:a", "aac"), false);
+            case "mp3" -> new Codec("mp3", List.of("-c:a", "libmp3lame"), false);
+            default -> throw new IllegalArgumentException(
+                    "unknown capture audio codec '" + name + "'; expected flac, aac or mp3");
+        };
+    }
+
+    private static String normalize(String name) {
+        return name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
+    }
+}

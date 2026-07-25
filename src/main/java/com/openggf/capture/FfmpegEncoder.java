@@ -57,6 +57,29 @@ public final class FfmpegEncoder implements CaptureEncoder {
     private static final int DIAGNOSTICS_LIMIT = 4096;
     private final StringBuilder diagnostics = new StringBuilder();
 
+    private CaptureCodecs.Codec videoCodec = CaptureCodecs.video("ffv1");
+    private CaptureCodecs.Codec audioCodec = CaptureCodecs.audio("flac");
+
+    /**
+     * Selects the encoders for subsequent recordings. Defaults are FFV1 and
+     * FLAC, which reproduce the submitted frames and samples exactly.
+     *
+     * @throws IllegalArgumentException on an unknown codec name, so a typo in
+     *         configuration fails before a recording starts
+     */
+    public void setCodecs(String video, String audio) {
+        this.videoCodec = CaptureCodecs.video(video);
+        this.audioCodec = CaptureCodecs.audio(audio);
+    }
+
+    public CaptureCodecs.Codec videoCodec() {
+        return videoCodec;
+    }
+
+    public CaptureCodecs.Codec audioCodec() {
+        return audioCodec;
+    }
+
     /** @param ffmpeg path/name of the ffmpeg executable; @param scale integer upscale factor */
     public FfmpegEncoder(String ffmpeg, int scale) {
         this(ffmpeg, scale, command -> new ProcessBuilder(command).redirectErrorStream(false).start(),
@@ -81,6 +104,13 @@ public final class FfmpegEncoder implements CaptureEncoder {
 
     static List<String> phase1Command(String ffmpeg, Path videoOut,
                                       int width, int height, int fps, int scale) {
+        return phase1Command(ffmpeg, videoOut, width, height, fps, scale,
+                CaptureCodecs.video("ffv1"));
+    }
+
+    static List<String> phase1Command(String ffmpeg, Path videoOut,
+                                      int width, int height, int fps, int scale,
+                                      CaptureCodecs.Codec video) {
         List<String> c = new ArrayList<>();
         c.add(ffmpeg);
         c.add("-y");
@@ -91,7 +121,7 @@ public final class FfmpegEncoder implements CaptureEncoder {
         c.add("-i"); c.add("pipe:0");
         c.add("-vf"); c.add("vflip,scale=" + (width * scale) + ":" + (height * scale)
                 + ":flags=neighbor");
-        c.add("-c:v"); c.add("ffv1");
+        c.addAll(video.arguments());
         c.add("-an");
         c.add(videoOut.toAbsolutePath().toString());
         return c;
@@ -99,6 +129,13 @@ public final class FfmpegEncoder implements CaptureEncoder {
 
     static List<String> phase2MuxCommand(String ffmpeg, Path videoMkv, Path audioRaw,
                                          int sampleRate, Path finalOut) {
+        return phase2MuxCommand(ffmpeg, videoMkv, audioRaw, sampleRate, finalOut,
+                CaptureCodecs.audio("flac"));
+    }
+
+    static List<String> phase2MuxCommand(String ffmpeg, Path videoMkv, Path audioRaw,
+                                         int sampleRate, Path finalOut,
+                                         CaptureCodecs.Codec audio) {
         List<String> c = new ArrayList<>();
         c.add(ffmpeg);
         c.add("-y");
@@ -108,7 +145,7 @@ public final class FfmpegEncoder implements CaptureEncoder {
         c.add("-ac"); c.add("2");
         c.add("-i"); c.add(audioRaw.toAbsolutePath().toString());
         c.add("-c:v"); c.add("copy");
-        c.add("-c:a"); c.add("flac");
+        c.addAll(audio.arguments());
         c.add(finalOut.toAbsolutePath().toString());
         return c;
     }
@@ -156,7 +193,8 @@ public final class FfmpegEncoder implements CaptureEncoder {
             this.tempVideo = Files.createTempFile(workingDir, "capture-", ".video.mkv");
             this.tempAudio = Files.createTempFile(workingDir, "capture-", ".audio.raw");
             this.videoProc = launcher.start(
-                    phase1Command(ffmpeg, tempVideo, width, height, fps, scale));
+                    phase1Command(ffmpeg, tempVideo, width, height, fps, scale,
+                            videoCodec));
             this.videoStdin = videoProc.getOutputStream();
             this.audioOut = Files.newOutputStream(tempAudio);
             this.stderrDrain = drainAsync(videoProc);
@@ -204,7 +242,8 @@ public final class FfmpegEncoder implements CaptureEncoder {
             if (vexit != 0) throw new CaptureException("ffmpeg video exited " + vexit);
             // phase 2 mux
             Process launchedMux = launcher.start(
-                    phase2MuxCommand(ffmpeg, tempVideo, tempAudio, sampleRate, finalOut));
+                    phase2MuxCommand(ffmpeg, tempVideo, tempAudio, sampleRate,
+                            finalOut, audioCodec));
             lifecycleSeam.beforeMuxPublication(launchedMux);
             synchronized (lifecycleLock) {
                 if (aborted) {
