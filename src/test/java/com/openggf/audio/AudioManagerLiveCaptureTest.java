@@ -105,20 +105,40 @@ class AudioManagerLiveCaptureTest {
     }
 
     @Test
-    void handleRejectsDrainAfterTheProducerItLeasedIsReplaced() {
-        LiveCaptureAudioHandle replacedHandle = audio.beginLiveCaptureAudio(1);
+    void aLeaseIsCarriedAcrossAProducerRebuildRatherThanRetired() {
+        LiveCaptureAudioHandle handle = audio.beginLiveCaptureAudio(1);
 
-        // Installing a backend rebuilds the presentation producer, which owns
-        // every lease attached to it.
+        // Installing a backend rebuilds the presentation producer. It replaces
+        // the output device, which is not a reason to end a recording of what
+        // the engine is playing: entering gameplay does exactly this, and
+        // retiring the lease here left a recording started on the master title
+        // screen silent from the moment the player started a game.
         audio.setBackend(new FixedRateNullBackend(2));
+        audio.presentFrame(PresentationMode.FORWARD);
+
+        assertEquals(2, handle.drainPresentationFrame(new short[4]),
+                "the carried lease keeps receiving packets from the new producer");
+        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(1),
+                "the manager still knows it holds that lease, so a second"
+                        + " attach is refused rather than silently added");
+
+        handle.close();
+        audio.beginLiveCaptureAudio(1).close();
+    }
+
+    /**
+     * The lease is carried only where a rebuild is in flight. A handle whose
+     * producer went away for any other reason must still refuse to read from
+     * it, rather than quietly returning packets from a dead producer.
+     */
+    @Test
+    void aLeaseRetiredByTeardownStillRejectsDrains() {
+        LiveCaptureAudioHandle handle = audio.beginLiveCaptureAudio(1);
+
+        audio.resetState();
 
         assertThrows(IllegalStateException.class,
-                () -> replacedHandle.drainPresentationFrame(new short[4]));
-
-        LiveCaptureAudioHandle replacementHandle = audio.beginLiveCaptureAudio(1);
-        replacedHandle.close();
-        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(1));
-        replacementHandle.close();
+                () -> handle.drainPresentationFrame(new short[4]));
     }
 
     /**
