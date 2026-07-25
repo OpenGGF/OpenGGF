@@ -442,9 +442,9 @@ tools/bizhawk-headless/run.sh \
   --output "$PWD/target/bizhawk-headless-s3k-run-c" \
   --run-id s3k-multibonus
 
-# Run mode, identity (B): the same movie under the run_id the legacy
-# runs/s3-knux-multibonus-ss/ tree was captured under (structural match only
-# — see the byte-parity note below)
+# Run mode, identity (B): the same movie under the run_id the
+# runs/s3-knux-multibonus-ss/ tree carries (byte-exact since that set was
+# regenerated at 6.32 — see the byte-parity note below)
 BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
 tools/bizhawk-headless/run.sh \
   --mode trace \
@@ -497,14 +497,24 @@ distinct capture identities (`docs/s3k-run-publication.md` §0):
   direction, to pin that those four (B) segments keep their exact hook-event
   counts — so the absence gate can never silently widen to cover them.
 
-**Pinned metadata delta (no loose normalization):** identity (A) and (C)
-fixtures were captured by the same `6.32-s3k-completerun` Lua build this port
-targets, so `metadata.json` differs from them **only** in `recording_date` —
-there is no version-line delta to normalize, unlike the S1/S2 complete-run
-ports. Identity (B) is gated structurally, not byte-for-byte, so no metadata
-normalization rule applies to it; its three independent deltas from a fresh
-6.32 capture (CRLF, `ADDR_FRAMECOUNT`, hook events) are documented and pinned
-individually above rather than reconciled into one normalization rule.
+**Pinned metadata delta (no loose normalization):** all three identities were
+captured by the same `6.32-s3k-completerun` Lua build this port targets, so
+`metadata.json` differs from every committed fixture **only** in
+`recording_date` — there is no version-line delta to normalize, unlike the
+S1/S2 complete-run ports.
+
+Identity (B) reached that state by regeneration rather than by normalization.
+The committed `runs/s3-knux-multibonus-ss/` set was a 2026-07-19 Windows
+capture from a Lua build three versions behind, and differed from any fresh
+6.32 capture three independent ways — CRLF line endings, the pre-`6564667eb`
+`ADDR_FRAMECOUNT` `0xFE08` (`Debug_placement_mode`, dead-zero) counter, and
+real hook events on four segments from an armed-hooks run. No current
+recorder, Lua or native, could reproduce it, so the gate could only assert
+structure. It was recaptured at 6.32 with hooks unset (segmentation provably
+unchanged: identical offsets and row counts for all 25 segments, every
+physics cell outside the counter column byte-identical), and the gate now
+asserts all 25 segments plus `run_manifest.json` byte-for-byte with zero
+normalization.
 
 The byte-level porting contracts live in
 `tools/bizhawk-headless/docs/s3k-complete-run-behavior.md` (segmentation
@@ -517,14 +527,16 @@ full environment-variable surface); where any spec text and the Lua
 disagree, the Lua wins.
 
 **Deferred: hook-driven aux families (same deferral as the STANDARD
-recorder).** Every identity-(A)/(C) fixture was captured with the Lua's
-M68K exec/memory-write diagnostic hooks unset, so the port implements none of
-the 14 hook/env-armed families for this recorder either; only identity (B) —
-gated structurally, not byte-exactly — carries real hook events, and
-implementing a native LibGPGX exec/mem callback surface would not make it (or
-any other committed fixture) reproducible, since (B) is already
-non-byte-reproducible for the two other reasons above. See
-`s3k-completerun-profiles.md` §11.2 for the full rationale.
+recorder).** Every committed fixture across all three identities is now
+captured with the Lua's M68K exec/memory-write diagnostic hooks unset, so the
+port implements none of the 14 hook/env-armed families for this recorder
+either. The four identity-(B) segments that used to carry real hook events
+(hcz_2, hcz_6, mgz, mgz_3) lost them in the 6.32 recapture, and
+`S3KHookAbsenceTests` now pins their absence to the fixture bytes alongside
+the rest — so regenerating any fixture with hooks armed fails the gate, which
+is the designed signal that a native LibGPGX exec/mem callback surface must
+then actually be built. See `s3k-completerun-profiles.md` §11.2 for the full
+rationale.
 
 **Environment variables that now refuse loudly instead of silently
 diverging.** The complete-run recorder reads its own, distinct environment

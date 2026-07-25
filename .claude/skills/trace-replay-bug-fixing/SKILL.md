@@ -104,7 +104,7 @@ the recorder is unchanged. Pick by game:
 | S1 standard + complete-run | **native** (`tools/bizhawk-headless/`) | Migrated and gated |
 | S2 all modes + complete-run | **native** | Migrated and gated |
 | S3K standard | **native** | Migrated and gated (AIZ end-to-end, CNZ, MGZ). Hook-driven aux families are deferred, and the CLI refuses every unmodeled `OGGF_*` recorder variable rather than diverging silently |
-| S3K complete-run | **native** | Migrated and gated — `--trace-profile complete_run` / `--run-id` on the S3K ROM, everything stamped `6.32-s3k-completerun` (`runs/`, `special_stage/`, `bonus_*`, `*_completerun`). Same hook-driven-aux deferral and `OGGF_*` refusal policy as S3K standard; the legacy `runs/s3-knux-multibonus-ss/` fixture is gated structurally only (not byte-exact — three pinned deltas, see the README) |
+| S3K complete-run | **native** | Migrated and gated — `--trace-profile complete_run` / `--run-id` on the S3K ROM, everything stamped `6.32-s3k-completerun` (`runs/`, `special_stage/`, `bonus_*`, `*_completerun`). Same hook-driven-aux deferral and `OGGF_*` refusal policy as S3K standard. All three capture identities gate byte-exactly, including `runs/s3-knux-multibonus-ss/`, which was regenerated at 6.32 to make it reproducible |
 
 The entire Lua recorder fleet (S1, S2, S3K standard, S3K complete-run) now has a
 byte-parity-gated native port. `s3k_trace_recorder.lua` /
@@ -424,9 +424,11 @@ necessarily refused on the other — check `tools/bizhawk/README.md`'s per-branc
 before assuming a refusal carries over.
 
 **S3K via Lua** — still required for the 14 hook-driven aux families both native S3K
-ports defer (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`), and for byte-reproducing the legacy
-pre-6.32 `runs/s3-knux-multibonus-ss/` fixture set (gated only structurally by the native
-port — see the README). Lua captures do work on Linux; the old "Windows only" README note
+ports defer (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`). No longer needed for
+`runs/s3-knux-multibonus-ss/`: that set was a 2026-07-19 Windows capture from a Lua build
+three versions behind and could not be reproduced by any current recorder, so it was
+regenerated at 6.32 and the native gate now asserts it byte-for-byte. Lua captures do work
+on Linux; the old "Windows only" README note
 is stale. Clear the scratch dir first, since the recorder appends into it (swap in
 `s3k_complete_run_recorder.lua` for complete-run captures):
 

@@ -1151,10 +1151,12 @@ ROM-backed differential gates rather than left as open risks:
   ordering), §10.2 (arm frame owned by no segment), §10.9 (the `+1`
   succession identity), and §10.8 (`zone_token_for` directory naming).
 - `S3KCompleteRunDifferentialTests` and `S3KRunModeDifferentialTests`
-  reproduce identity (C) byte-exact and identity (B) structurally,
-  covering §10.3–§10.7 and §10.11 (shared/cleared segment state across
-  level/SS/bonus kinds, live-zone-gated aux windows, hook-family absence
-  in (A)/(C) vs presence in (B), and the truncated-SS finalize path).
+  reproduce identities (C) and (B) byte-exact — (B) since `63eccd290`
+  re-captured that legacy set at 6.32; before then it could only be gated
+  structurally. Together they cover §10.3–§10.7 and §10.11 (shared/cleared
+  segment state across level/SS/bonus kinds, live-zone-gated aux windows,
+  hook-family absence across all three identities, and the truncated-SS
+  finalize path).
 - §10.10 (`pre_trace_osc_frames` / `ADDR_FRAMECOUNT` are two independent,
   unbumped deltas) and §10.12 (the 25-name env-var surface and its
   refusal-table extension) are pinned by dedicated assertions in
