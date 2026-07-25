@@ -6,15 +6,19 @@ namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
     /// Byte-exact port of the S3K Lua trace recorder's physics.csv v7 row
-    /// formatting (tools/bizhawk/s3k_trace_recorder.lua v6.31-s3k). The
+    /// formatting (tools/bizhawk/s3k_trace_recorder.lua v6.32-s3k). The
     /// header text, 42-field format shape, uhex two's-complement
     /// rendering, and ground-mode thresholds are byte-shared with the
     /// S1/S2 ports; the S3K deltas are the RAM sources: player/sidekick
     /// blocks at 0xB000/0xB04A with 0x4A stride and S3K field offsets
     /// (status +0x2A), stand_on_obj resolved from the u16be interact
     /// address at +0x42, lag_counter as a REAL read of Lag_frame_count
-    /// (0xF628), gameplay_frame_counter from Level_frame_counter (0xFE04)
-    /// and vblank_counter from the Life_count word 0xFE12 (see
+    /// (0xF628), and gameplay_frame_counter from Level_frame_counter
+    /// (0xFE04). vblank_counter is now a REAL V-int counter too: it reads
+    /// 0xFE0E, the low word of V_int_run_count, and ticks every frame. Up
+    /// to Lua v6.31-s3k it read 0xFE12 = Life_count, so the column held
+    /// lives &lt;&lt; 8 and changed only on a 1UP; v6.32-s3k corrected the
+    /// address and every S3K fixture was regenerated (see
     /// <see cref="S3KRam"/>). The player block is read UNCONDITIONALLY
     /// with player_present as the literal 1 (the AIZ prefix/tail rows
     /// render all-zero player fields with present=1); the sidekick block
