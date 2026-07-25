@@ -104,7 +104,7 @@ checkpoint vocabulary, metadata `notes`, and the `aux_schema_extras` list.
 | `0xF711` | u8 | level-started flag | `gameplay_start` checkpoints |
 | `0xEEC6` | u16be | `Events_fg_5` | `aiz1_intro_refresh_begin` checkpoint |
 | `0xF636` | u32be | RNG seed | metadata `rng_seed` (captured at arm) |
-| `0xFE08` | u16be | `Level_frame_counter` | CSV `gameplay_frame_counter`; aux `vfc` |
+| `0xFE04` | u16be | `Level_frame_counter` | CSV `gameplay_frame_counter`; aux `vfc`. Was `0xFE08` (`Debug_placement_mode`, dead-zero) before v6.31-s3k — the label in this row was always `Level_frame_counter`, the address was not |
 | `0xFE12` | u16be | VBlank word | CSV `vblank_counter` |
 | `0xF628` | u16be | lag frame count | CSV `lag_counter` (S3K reads a real counter, unlike S2's constant 0) |
 
@@ -398,7 +398,7 @@ fires on**):
 8. *(not started)* arm check (§1.2-1.4). On arm: `offset :=
    emu.framecount()`; capture `start_x/y` (`0xB010`/`0xB014` u16be),
    `start_zone_id/act`, `start_rng_seed` (u32be `0xF636`),
-   `start_gameplay_frame_counter` (`0xFE08`), zone name; `open_files()`
+   `start_gameplay_frame_counter` (`0xFE04`), zone name; `open_files()`
    (CSV header written + flushed); `write_metadata()` (first of many —
    rewritten every 300 frames and at finalize; only the final rewrite's
    bytes ship). Then: `aiz_end_to_end` **falls through** (arm frame = row
@@ -417,7 +417,7 @@ fires on**):
     recorded** — the same movie-end stop-ordering bug found independently in
     both prior ports; do not reintroduce it.
 11. First recorded frame only: pre-trace snapshots (§2.3) and a **recapture**
-    of `start_gameplay_frame_counter` from `0xFE08` (unifies the
+    of `start_gameplay_frame_counter` from `0xFE04` (unifies the
     arm-frame-recorded vs arm-frame-dropped profiles; since v6.29 this value
     no longer reaches metadata but the recapture still happens).
 12. Write CSV row `trace_frame` (§3.3), flush every 60 rows, rewrite
@@ -433,7 +433,8 @@ level-gated, emit `gameplay_end` (§1.4); flush CSV; final
 
 Header and 42-column row format are byte-identical to the S1/S2 CSV v7
 surface (S1 §3.1). S3K-specific sources: `gameplay_frame_counter` ←
-`0xFE08`, `vblank_counter` ← `0xFE12`, `lag_counter` ← `0xF628` (a real
+`0xFE04` (`Level_frame_counter`; `0xFE08` before v6.31-s3k),
+`vblank_counter` ← `0xFE12`, `lag_counter` ← `0xF628` (a real
 counter — MUST be read, not pinned 0), `stand_on_obj` ← u16be at
 `base+0x42` mapped to an OST slot index (0 unless the address is exactly
 `0xB000 + slot*0x4A`, slot < 110), sidekick block from `0xB04A` with

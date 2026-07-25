@@ -91,9 +91,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             // LITERAL data row 0 of the gunzipped AIZ fixture physics.csv:
             // lag_counter 0064 is a REAL 0xF628 read, vblank_counter 0300
-            // is the Life_count word, gameplay_frame_counter 0000 is the
-            // dead 0xFE08 read, and the sidekick block is live (present=1,
-            // x=0x00F0, y=0x0140).
+            // is the Life_count word, gameplay_frame_counter 0000 is a LIVE
+            // Level_frame_counter (0xFE04) read that genuinely reads 0 on
+            // the pre-level arm frame — it first ticks at row 0x0063 — and
+            // the sidekick block is live (present=1, x=0x00F0, y=0x0140).
             AssertEx.Equal(
                 "0000,0000,0000,0000,0000,0000,0300,0064,1,0120,00D4,0000,FFA5,"
                 + "0000,00,0,0,0,0000,0000,00,00,00,00,00,1,00F0,0140,0000,0000,"
@@ -105,12 +106,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             // LITERAL row 0x00A1 of the gunzipped AIZ fixture physics.csv -
             // the first ADVANCE_ONLY-classified prefix row: its BK2-derived
-            // input flips 0000 -> 0004 while every sampled state field and
-            // all three counters are byte-identical to row 0x00A0
-            // (vfc 0000, vblank 0300, lag 0085). The recorder derives the
-            // input column from the BK2 (never RAM) and records counters
-            // verbatim; the replay's phase classifier depends on it.
+            // input flips 0000 -> 0004 while every sampled state field is
+            // byte-identical to row 0x00A0. Of the three counters, vblank
+            // 0300 and lag 0085 are unchanged from 0x00A0 while
+            // gameplay_frame_counter steps 003E -> 003F, because it is a
+            // live Level_frame_counter read (0xFE04) rather than the
+            // dead-zero Debug_placement_mode read the recorder used before
+            // Lua v6.31-s3k. The recorder derives the input column from the
+            // BK2 (never RAM) and records counters verbatim; the replay's
+            // phase classifier depends on it.
             var host = new RamBackedHost();
+            host.SetWord(S3KRam.LevelFrameCounter, 0x003F);
             host.SetWord(S3KRam.VblankWord, 0x0300);
             host.SetWord(S3KRam.LagFrameCount, 0x0085);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffXPos, 0x0120);
@@ -125,7 +131,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             host.Ram[S3KRam.SidekickBase + S3KRam.OffMappingFrame] = 0x01;
 
             AssertEx.Equal(
-                "00A1,0004,0000,0000,0000,0000,0300,0085,1,0120,014C,0000,0000,"
+                "00A1,0004,0000,0000,0000,003F,0300,0085,1,0120,014C,0000,0000,"
                 + "0000,00,0,0,0,0120,0000,00,00,00,00,03,1,0110,00E2,0000,0000,"
                 + "0000,00,0,0,0,0110,0000,00,00,00,00,01",
                 S3KTraceCsvWriter.FormatRow(0x00A1, 0x0004, host));

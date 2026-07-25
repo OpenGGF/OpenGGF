@@ -20,10 +20,12 @@ Scope: the STANDARD recorder only. `s3k_complete_run_recorder.lua`
   hex-case (`%04X` upper), `0x` prefixes, booleans as bare `true`/`false`,
   decimal vs hex per field.
 - `frame` is the recorder's `trace_frame` (0-based recorded row index; `-1` for
-  the two pre-trace snapshot families). `vfc` is `mainmemory.read_u16_be(0xFE08)`
-  (skdisasm `Debug_placement_mode` — NOT `Level_frame_counter`, which is `$FE04`
-  and never read; see core spec §1.1 — constant `0` in every fixture), read
-  fresh at each emission point. Two families
+  the two pre-trace snapshot families). `vfc` is `mainmemory.read_u16_be(0xFE04)`
+  (skdisasm `Level_frame_counter`; see core spec §1.1 — live, and equal to the
+  same frame's CSV `gameplay_frame_counter`), read fresh at each emission point.
+  Before v6.31-s3k this read was `0xFE08` (`Debug_placement_mode`, dead-zero), so
+  every pre-v6.31 fixture shows a constant `"vfc":0`; the three canonical
+  fixtures were regenerated on `0xFE04`. Two families
   (`zone_act_state`, `checkpoint`) have **no** `vfc` field.
 - `json_int_or_null(v)` renders `null` when nil, else `tostring(v)` (in
   practice always an integer here).
@@ -225,7 +227,7 @@ Reads `$F700..$F70F` block, `$F66A/$F66B`, `$EE26`.
 {"frame":%d,"vfc":%d,"event":"oscillation_state","level_frame_counter":%d,"osc_table":"%s"}
 ```
 
-`vfc` and `level_frame_counter` are **the same read** (u16 at `$FE08`, twice).
+`vfc` and `level_frame_counter` are **the same read** (u16 at `$FE04`, twice).
 `osc_table` = 0x42 bytes at `$FE6E` as concatenated `%02X` (132 hex chars).
 
 ### 3.9 `object_state` — poll, always (proximity-gated), both players

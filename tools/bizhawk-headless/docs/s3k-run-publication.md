@@ -772,11 +772,15 @@ cpu_state_snapshot.vfc 1 player_mode_set.vfc 1    mode_change.vfc 1
 routine_change.vfc 1
 ```
 
-**The complete-run recorder reads `0xFE04`; the standard S3K recorder
-(`s3k_trace_recorder.lua:375`) still reads `0xFE08`.** The two native
-recorders must therefore differ here. `s3k-trace-recorder-behavior.md`
-§7's instruction to "reproduce the dead read" applies to the STANDARD
-recorder only and must not be carried into the complete-run port.
+**Both S3K recorders now read `0xFE04`.** The standard recorder
+(`s3k_trace_recorder.lua`) read `0xFE08` until v6.31-s3k, which is why
+this section existed; that fix landed and the standard recorder's three
+canonical fixtures were regenerated on the live counter. The native port
+therefore carries NO recorder-identity fork for this address — the
+`FrameCounterAddressFor` seam and the 4-argument `FormatRow` overload
+were deleted (s3k-completerun-profiles.md §11.1), and
+`s3k-trace-recorder-behavior.md` no longer instructs anyone to reproduce
+a dead read.
 
 **(ii) `LIGHTWEIGHT_REGEN` inverted (commit `192d9c976`).** Before:
 `LIGHTWEIGHT_REGEN = os.getenv("OGGF_TRACE_LIGHTWEIGHT") == "1"` —
@@ -1024,8 +1028,8 @@ collected delegate is the classic interop crash).
 
 1. Publish LF for every file, in every mode. Never call
    `ExpandRunNewlines` on an S3K path (§6).
-2. `ADDR_FRAMECOUNT = 0xFE04` for the complete-run recorder; the
-   standard recorder keeps `0xFE08` (§7.3 i).
+2. `ADDR_FRAMECOUNT = 0xFE04` for BOTH recorders (§7.3 i). The standard
+   recorder read `0xFE08` until Lua v6.31-s3k; there is no fork left.
 3. Emit `capture_mode:
    "physics_animation_aux_without_diagnostic_hooks"` in level and bonus
    metadata; never in special-stage metadata (§3.3).
