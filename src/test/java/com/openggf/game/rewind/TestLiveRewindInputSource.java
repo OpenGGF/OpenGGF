@@ -15,8 +15,10 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SUPER;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
@@ -115,12 +117,16 @@ class TestLiveRewindInputSource {
         input.handleKeyEvent(config.getInt(SonicConfiguration.DEBUG_MODE_KEY), GLFW_PRESS);
         input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
         input.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_LEFT_SUPER, GLFW_PRESS);
         source.appendFrame(input, config);
 
         Bk2FrameInput first = source.read(1);
         assertTrue(first.debugModeTogglePressed());
         assertTrue(first.debugShiftDown());
         assertTrue(first.debugControlDown());
+        assertTrue(first.debugAltDown());
+        assertTrue(first.debugSuperDown());
 
         input.update();
         source.appendFrame(input, config);
@@ -129,6 +135,8 @@ class TestLiveRewindInputSource {
         assertFalse(held.debugModeTogglePressed());
         assertTrue(held.debugShiftDown());
         assertTrue(held.debugControlDown());
+        assertTrue(held.debugAltDown());
+        assertTrue(held.debugSuperDown());
     }
 
     @Test

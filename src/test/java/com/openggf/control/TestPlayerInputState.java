@@ -100,6 +100,8 @@ class TestPlayerInputState {
         assertFalse(snapshot.debugModeTogglePressed());
         assertFalse(snapshot.debugShiftDown());
         assertFalse(snapshot.debugControlDown());
+        assertFalse(snapshot.debugAltDown());
+        assertFalse(snapshot.debugSuperDown());
     }
 
     @Test
@@ -108,7 +110,7 @@ class TestPlayerInputState {
                         PlayerInputState.neutral(),
                         PlayerInputState.of(0, 0, 0, InputActionMasks.ACTION_A, false, false))
                 .withMenuPolicy(true, true)
-                .withDebugInput(true, true, true);
+                .withDebugInput(true, true, true, true, true);
 
         assertTrue(snapshot.menuAccept());
         assertTrue(snapshot.menuBack());
@@ -116,6 +118,8 @@ class TestPlayerInputState {
         assertTrue(snapshot.debugModeTogglePressed());
         assertTrue(snapshot.debugShiftDown());
         assertTrue(snapshot.debugControlDown());
+        assertTrue(snapshot.debugAltDown());
+        assertTrue(snapshot.debugSuperDown());
         assertEquals(PlayerInputState.neutral(), snapshot.player1());
         assertEquals(InputActionMasks.ACTION_A, snapshot.player2().actionPressedMask());
     }

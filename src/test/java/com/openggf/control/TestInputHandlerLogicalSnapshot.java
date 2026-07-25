@@ -21,6 +21,8 @@ import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_X;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_Y;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F1;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SUPER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
@@ -63,7 +65,8 @@ class TestInputHandlerLogicalSnapshot {
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
         int debugModeKey = config.getInt(SonicConfiguration.DEBUG_MODE_KEY);
-        input.setLogicalOverride(LogicalInputSnapshot.neutral().withDebugInput(true, true, true));
+        input.setLogicalOverride(
+                LogicalInputSnapshot.neutral().withDebugInput(true, true, true, true, true));
 
         assertTrue(input.isShiftDown());
         assertTrue(input.isControlDown());
@@ -73,6 +76,41 @@ class TestInputHandlerLogicalSnapshot {
 
         assertFalse(input.isShiftDown());
         assertFalse(input.isControlDown());
+    }
+
+    /**
+     * All four modifier queries must answer from the same source. Shift and Ctrl
+     * already consulted the logical override; Alt read live hardware, so an Alt
+     * chord was not reproducible under playback while the same chord on Ctrl was.
+     */
+    @Test
+    void allFourModifierQueriesAnswerFromTheLogicalOverride() {
+        InputHandler input = new InputHandler();
+        input.setLogicalOverride(LogicalInputSnapshot.neutral()
+                .withDebugInput(false, true, true, true, true));
+
+        assertTrue(input.isShiftDown());
+        assertTrue(input.isControlDown());
+        assertTrue(input.isAltDown());
+        assertTrue(input.isSuperDown());
+    }
+
+    @Test
+    void aLogicalOverrideHidesLiveModifierHardware() {
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_LEFT_SUPER, GLFW_PRESS);
+
+        input.setLogicalOverride(LogicalInputSnapshot.neutral()
+                .withDebugInput(false, false, false, false, false));
+
+        assertFalse(input.isAltDown());
+        assertFalse(input.isSuperDown());
+
+        input.clearLogicalOverride();
+
+        assertTrue(input.isAltDown());
+        assertTrue(input.isSuperDown());
     }
 
     @Test

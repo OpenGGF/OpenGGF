@@ -185,10 +185,16 @@ public class InputHandler {
 	}
 
 	public boolean isAltDown() {
+		if (logicalOverride != null) {
+			return logicalOverride.debugAltDown();
+		}
 		return isKeyDown(GLFW_KEY_LEFT_ALT) || isKeyDown(GLFW_KEY_RIGHT_ALT);
 	}
 
 	public boolean isSuperDown() {
+		if (logicalOverride != null) {
+			return logicalOverride.debugSuperDown();
+		}
 		return isKeyDown(GLFW_KEY_LEFT_SUPER) || isKeyDown(GLFW_KEY_RIGHT_SUPER);
 	}
 

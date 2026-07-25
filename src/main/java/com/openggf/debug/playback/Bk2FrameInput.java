@@ -18,6 +18,8 @@ package com.openggf.debug.playback;
  * @param debugModeTogglePressed whether the level debug-mode toggle key was pressed
  * @param debugShiftDown whether a debug-movement speed-up modifier was held
  * @param debugControlDown whether a debug-movement slow modifier was held
+ * @param debugAltDown   whether the Alt modifier was held
+ * @param debugSuperDown whether the Super/Command modifier was held
  * @param rawLine        original input-log line for diagnostics
  */
 public record Bk2FrameInput(
@@ -31,13 +33,19 @@ public record Bk2FrameInput(
         boolean debugModeTogglePressed,
         boolean debugShiftDown,
         boolean debugControlDown,
+        boolean debugAltDown,
+        boolean debugSuperDown,
         String rawLine) {
 
+    /**
+     * BK2 movies carry no modifier column, so every modifier reads as released
+     * for frames built through this constructor.
+     */
     public Bk2FrameInput(int frameIndex, int p1InputMask, int p1ActionMask, boolean p1StartPressed,
                          int p2InputMask, int p2ActionMask, boolean p2StartPressed, String rawLine) {
         this(frameIndex, p1InputMask, p1ActionMask, p1StartPressed,
                 p2InputMask, p2ActionMask, p2StartPressed,
-                false, false, false, rawLine);
+                false, false, false, false, false, rawLine);
     }
 
     /**
@@ -47,6 +55,6 @@ public record Bk2FrameInput(
      */
     public Bk2FrameInput(int frameIndex, int p1InputMask, int p1ActionMask, boolean p1StartPressed, String rawLine) {
         this(frameIndex, p1InputMask, p1ActionMask, p1StartPressed,
-                0, 0, false, false, false, false, rawLine);
+                0, 0, false, false, false, false, false, false, rawLine);
     }
 }
