@@ -3,6 +3,7 @@ package com.openggf.capture;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -52,6 +53,9 @@ public final class FfmpegEncoder implements CaptureEncoder {
     private int sampleRate;
     private boolean terminal;
     private boolean aborted;
+    /** Tail of ffmpeg's stderr, bounded so a chatty encoder cannot grow it. */
+    private static final int DIAGNOSTICS_LIMIT = 4096;
+    private final StringBuilder diagnostics = new StringBuilder();
 
     /** @param ffmpeg path/name of the ffmpeg executable; @param scale integer upscale factor */
     public FfmpegEncoder(String ffmpeg, int scale) {
@@ -142,16 +146,25 @@ public final class FfmpegEncoder implements CaptureEncoder {
         this.sampleRate = sampleRate;
         try {
             Files.createDirectories(output.toAbsolutePath().getParent());
-            this.tempVideo = Files.createTempFile("trace-capture-", ".video.mkv");
-            this.tempAudio = Files.createTempFile("trace-capture-", ".audio.raw");
+            // Beside the final file, not java.io.tmpdir. The phase-1 video is
+            // lossless FFV1 and the raw audio is uncompressed, so together they
+            // are the same order of magnitude as the finished recording -- on
+            // Linux /tmp is routinely a RAM-backed tmpfs a fraction of the disk
+            // size, where a long capture dies partway with ENOSPC. The output
+            // directory is the one the user chose to receive a file this big.
+            Path workingDir = output.toAbsolutePath().getParent();
+            this.tempVideo = Files.createTempFile(workingDir, "capture-", ".video.mkv");
+            this.tempAudio = Files.createTempFile(workingDir, "capture-", ".audio.raw");
             this.videoProc = launcher.start(
                     phase1Command(ffmpeg, tempVideo, width, height, fps, scale));
             this.videoStdin = videoProc.getOutputStream();
             this.audioOut = Files.newOutputStream(tempAudio);
             this.stderrDrain = drainAsync(videoProc);
         } catch (IOException e) {
+            String detail = ffmpegDiagnostics();
             abort();
-            throw new CaptureException("failed to start ffmpeg video process", e);
+            throw new CaptureException(
+                    "failed to start ffmpeg video process" + detail, e);
         }
     }
 
@@ -170,8 +183,9 @@ public final class FfmpegEncoder implements CaptureEncoder {
             }
             audioOut.write(bytes);
         } catch (IOException e) {
+            String detail = ffmpegDiagnostics();
             abort();
-            throw new CaptureException("ffmpeg write failed", e);
+            throw new CaptureException("ffmpeg write failed" + detail, e);
         }
     }
 
@@ -288,12 +302,47 @@ public final class FfmpegEncoder implements CaptureEncoder {
         }
     }
 
-    private static Thread drainAsync(Process p) {
+    private void retainDiagnostics(String chunk) {
+        synchronized (diagnostics) {
+            diagnostics.append(chunk);
+            int excess = diagnostics.length() - DIAGNOSTICS_LIMIT;
+            if (excess > 0) {
+                diagnostics.delete(0, excess);
+            }
+        }
+    }
+
+    /**
+     * The last of ffmpeg's own output, for attaching to a failure. ffmpeg
+     * reports why it stopped on stderr and then exits; the write that fails
+     * afterwards only knows the pipe is gone.
+     */
+    private String ffmpegDiagnostics() {
+        synchronized (diagnostics) {
+            String tail = diagnostics.toString().strip();
+            return tail.isEmpty() ? "" : "; ffmpeg said: " + lastLines(tail, 3);
+        }
+    }
+
+    private static String lastLines(String text, int count) {
+        String[] lines = text.split("\\R");
+        int from = Math.max(0, lines.length - count);
+        return String.join(" | ", java.util.Arrays.copyOfRange(lines, from, lines.length));
+    }
+
+    private Thread drainAsync(Process p) {
         Thread t = new Thread(() -> {
             try (var in = p.getErrorStream()) {
                 byte[] buf = new byte[4096];
-                while (in.read(buf) >= 0) {
-                    // discard ffmpeg diagnostics; just keep the pipe drained
+                int read;
+                while ((read = in.read(buf)) >= 0) {
+                    // Keep the pipe drained, but retain the tail: when ffmpeg
+                    // exits, its stdin becomes a NullOutputStream and every
+                    // later write fails with a bare "Stream closed". Without
+                    // these lines the actual cause -- "No space left on
+                    // device", an unsupported pixel format, a bad argument --
+                    // is lost and the caller is left with a symptom.
+                    retainDiagnostics(new String(buf, 0, read, StandardCharsets.UTF_8));
                 }
             } catch (IOException ignored) {
             }
