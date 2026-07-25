@@ -19,7 +19,9 @@ config pipeline.
 
 ## Global Constraints
 
-- Authoritative design: `docs/superpowers/specs/2026-07-25-configurable-key-modifiers-design.md`.
+- Authoritative design: `docs/superpowers/specs/2026-07-25-configurable-key-modifiers-design.md`,
+  as revised by `cce3bed1b`. Where this plan and the spec disagree, the spec wins and the
+  plan is the defect — say so rather than following the plan.
 - Work only in the worktree `/home/farrell/code/projects/OpenGGF-key-modifiers`
   on `feature/ai-key-modifiers`. Base commit for this plan: `0fdc873ec`.
 - Step 0 of the spec is landed as `9ecb0fb56` (`KeyChord` + `TestKeyChord`, 13 tests).
@@ -772,8 +774,13 @@ Skills: n/a"
 
 ### Task 4: Add the getKeyChord accessor and make getInt chord-tolerant
 
-`getInt(KEY)` must keep returning the bare key code so the other 50 bindings are
-untouched. **That requires two edits, not zero.** Today a chorded string is neither a
+`getInt(KEY)` must keep returning the bare key code so the other 52 bindings are
+untouched. (`ConfigCatalog` declares **53** `KEY`-typed entries: 52 name `KEY` on the
+same line as their `put(`, and `CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY` names it
+on the continuation line `:359`. The two `derived(KEY, …)` entries — `JUMP` at `:95` and
+`P2_JUMP` at `:106` — are `KEY`-typed and counted. Do not transcribe this number; it is
+`grep -oE '(\(|, )KEY,' ConfigCatalog.java | wc -l`.)
+**That requires two edits, not zero.** Today a chorded string is neither a
 name nor an integer, so `resolveInt` (`:183-217`) warns and falls back to the
 *default*'s key code — and once Task 5 makes the default itself `"SHIFT+O"`, the
 fallback calls `resolveKeyCode("SHIFT+O")` (`:853-869`), which is chord-blind, yields
@@ -815,7 +822,7 @@ void anUnmodifiedBindingReadsTheSameThroughBothAccessors(String configured) {
             configService.getKeyChord(SonicConfiguration.FRAME_STEP_KEY));
 }
 
-/** getInt keeps returning the bare key so the 50 unconverted bindings are untouched. */
+/** getInt keeps returning the bare key so the 52 unconverted bindings are untouched. */
 @Test
 void aChordedBindingKeepsItsBareKeyCodeForGetInt() {
     configService.setConfigValue(SonicConfiguration.FRAME_STEP_KEY, "CTRL+SHIFT+O");
@@ -1077,12 +1084,30 @@ stray `O` starts a recording.
 A verified overlap must be resolved here too. `DebugOverlayToggle.OBJECT_DEBUG` is
 `GLFW_KEY_O` and `DebugOverlayManager.updateInput:58-65` fires every toggle on a bare
 `isKeyPressed` with no modifier filter, so Shift+O toggles object debug *and* live
-capture whenever debug shortcuts are enabled. **Decision: make the toggle loop use
+capture whenever debug shortcuts are enabled. **Decision: every toggle dispatch uses
 `isKeyPressedWithoutModifiers`.** These are hardcoded single keys with no chord, so
 requiring no modifier is the correct reading of the exactness rule, and it is a
 smaller change than moving a default that `README.md:271` and `CONFIGURATION.md:279`
-already document as Shift+O. Leave the `PERFORMANCE` toggle (outside the
-debug-shortcuts gate) and the explicit Ctrl+P clipboard chord as they are.
+already document as Shift+O.
+
+**That includes `PERFORMANCE`, which is dispatched *before* the `debugShortcutsEnabled`
+gate and is easy to miss.** Verified in `updateInput` (`:47`): `PERFORMANCE`
+(`GLFW_KEY_P`) fires on a bare `handler.isKeyPressed(...)` at `:51`, above the
+`debugShortcutsEnabled` return at `:55`; the loop at `:58` `continue`s past it and
+dispatches the other 15 at `:62`; and `:68` fires `copyPerformanceStatsToClipboard()` on
+`isKeyDown(GLFW_KEY_LEFT_CONTROL) && isKeyPressed(GLFW_KEY_P)`. So **Ctrl+P today both
+toggles the performance overlay and copies the stats** — a pre-existing double-fire that
+giving `PERFORMANCE` the same modifier-exclusive treatment incidentally fixes. Leave the
+Ctrl+P clipboard chord itself alone: it is a deliberate chord and is the half that should
+survive.
+
+All 16 toggles therefore stop responding while *any* modifier is held, and after Task 2
+that includes Super. The focus-loss clear from Task 2 is what keeps that from latching —
+which is why this bullet cannot ship before it.
+
+Severity without the fix is developer-facing, not player-facing: the bundled
+`config.yaml` ships `debugView: false`, so the `OBJECT_DEBUG` collision needs debug
+shortcuts turned on. That is why it rides in this task rather than blocking Task 1.
 
 **Decision on customised values:** a player who set `toggleKey: P` is left alone.
 Their binding becomes a bare `P` chord — Shift is no longer required — which is the
@@ -1102,6 +1127,7 @@ would silently rewrite a value the player chose. The changelog says so.
 - Modify: `src/test/java/com/openggf/configuration/CaptureConfigDefaultsTest.java`
 - Modify: `src/test/java/com/openggf/configuration/TestConfigMigrationService.java`
 - Modify: `src/test/java/com/openggf/configuration/TestConfigYamlWriter.java`
+- Modify: `src/test/java/com/openggf/debug/TestDebugOverlayManagerReset.java`
 - Modify: `CONFIGURATION.md`
 - Modify: `CHANGELOG.md`
 
@@ -1221,9 +1247,28 @@ void anExistingInstallCarryingTheSupersededDefaultIsMigratedOnLoad(@TempDir Path
     assertEquals(KeyChord.of(GLFW_KEY_O, SHIFT),
             service.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY));
     assertTrue(Files.readString(tempDir.resolve("config.yaml")).contains("toggleKey: SHIFT+O"),
-            "the migration must be persisted, not re-applied on every launch");
+            "the migration must be persisted, not recomputed on every read");
 }
 ```
+
+**The migration is value-based, so it re-runs, and that makes bare `O` a reserved value
+for this binding.** The migration block in `loadConfig` runs unconditionally on every
+load, before `applyDefaults`, and `configChanged` forces a `saveConfig()`. There is no
+config schema or version marker anywhere in `src/main` to hang a one-shot guard on. So a
+player who deliberately writes `toggleKey: O` to drop the Shift gets it rewritten to
+`SHIFT+O` on the next launch — and so does `GLFW_KEY_O`, `KEY_O` and `79`, since the
+match set covers every spelling.
+
+Accepted, not mitigated. This is the established shape in this file:
+`migrateDeprecatedDisplayColorProfileToggleKey` has exactly the same property for
+`#`/`WORLD_1`. Introducing a `configVersion` marker to make this one migration one-shot
+would touch `ConfigFlattener`, `ConfigYamlWriter.emitOrder`, `TestBundledConfigResource`
+and every other migration — disproportionate to a config-syntax feature, and better done
+as its own change if the pattern keeps biting.
+
+Two consequences that must not be lost: the changelog entry may **not** claim a plain `O`
+works as written, and Task 6 must document `O` as reserved for `capture.toggleKey`. A
+player who wants a bare unmodified key must choose a different one.
 
 `@TempDir` keeps this leak-free for `TestNoLeakedTemporaryFiles`. If
 `TestConfigMigrationService` has no `@TempDir`/`SonicConfigurationService` imports
@@ -1259,15 +1304,84 @@ void aChordedKeyValueIsWrittenInCanonicalForm() {
 }
 ```
 
+Add the overlay-collision regression to `TestDebugOverlayManagerReset` (package
+`com.openggf.debug`; it already imports `InputHandler` and `GLFW`). This is acceptance
+criterion 14 and is the only evidence that the collision is actually closed — the
+`DebugOverlayManager` edit is otherwise untested. `DebugOverlayManager` is a singleton,
+so call `resetState()` first, as the existing cases in this file do:
+
+```java
+/**
+ * OBJECT_DEBUG is GLFW_KEY_O and the toggles fired on a bare isKeyPressed, so the
+ * new SHIFT+O capture default toggled object debug on the same keystroke that
+ * started a recording.
+ */
+@Test
+public void aModifiedKeystrokeDoesNotToggleAnOverlay() {
+    DebugOverlayManager manager = DebugOverlayManager.getInstance();
+    manager.resetState();
+    boolean before = manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG);
+    InputHandler handler = new InputHandler();
+    handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_PRESS);
+    handler.handleKeyEvent(GLFW.GLFW_KEY_O, GLFW.GLFW_PRESS);
+
+    manager.updateInput(handler, true);
+
+    assertEquals(before, manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG));
+}
+
+@Test
+public void anUnmodifiedKeystrokeStillTogglesAnOverlay() {
+    DebugOverlayManager manager = DebugOverlayManager.getInstance();
+    manager.resetState();
+    boolean before = manager.isEnabled(DebugOverlayToggle.PLAYER_PANEL);
+    InputHandler handler = new InputHandler();
+    handler.handleKeyEvent(GLFW.GLFW_KEY_F3, GLFW.GLFW_PRESS);
+
+    manager.updateInput(handler, true);
+
+    assertNotEquals(before, manager.isEnabled(DebugOverlayToggle.PLAYER_PANEL));
+}
+
+/**
+ * PERFORMANCE is dispatched above the debugShortcutsEnabled gate, so it needs the
+ * same treatment separately. Ctrl+P is the clipboard-copy chord and must not also
+ * toggle the overlay -- a pre-existing double-fire.
+ */
+@Test
+public void ctrlPCopiesStatsWithoutAlsoTogglingThePerformanceOverlay() {
+    DebugOverlayManager manager = DebugOverlayManager.getInstance();
+    manager.resetState();
+    boolean before = manager.isEnabled(DebugOverlayToggle.PERFORMANCE);
+    InputHandler handler = new InputHandler();
+    handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_PRESS);
+    handler.handleKeyEvent(GLFW.GLFW_KEY_P, GLFW.GLFW_PRESS);
+
+    manager.updateInput(handler, true);
+
+    assertEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE));
+}
+```
+
+Add the `assertNotEquals` import. If `copyPerformanceStatsToClipboard()` cannot run
+headless (it reaches `GameServices.profiler()` and the AWT clipboard), do **not** delete
+the third case — narrow it to assert the toggle state only, and if the copy path itself
+throws headlessly, that is a real finding to report rather than route around.
+
 - [ ] **Step 2: Run the focused tests and verify RED**
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.capture.LiveCaptureChordTest,com.openggf.configuration.TestConfigMigrationService,com.openggf.configuration.CaptureConfigDefaultsTest,com.openggf.configuration.TestConfigYamlWriter test
+mvn -Dmse=off -Dtest=com.openggf.capture.LiveCaptureChordTest,com.openggf.configuration.TestConfigMigrationService,com.openggf.configuration.CaptureConfigDefaultsTest,com.openggf.configuration.TestConfigYamlWriter,com.openggf.debug.TestDebugOverlayManagerReset test
 ```
 
 Expected RED: compilation fails —
 `method update in class LiveCaptureChord cannot be applied to given types` and
 `cannot find symbol: method migrateDeprecatedCaptureToggleKey(Map<String,Object>)`.
+`TestDebugOverlayManagerReset` compiles, so its two collision cases fail at runtime
+instead: `aModifiedKeystrokeDoesNotToggleAnOverlay` and
+`ctrlPCopiesStatsWithoutAlsoTogglingThePerformanceOverlay` both report
+`expected: <false> but was: <true>`. Confirm all five classes appear in the Surefire
+summary.
 
 - [ ] **Step 3: Move the modifier into the binding**
 
@@ -1331,10 +1445,12 @@ its sibling. Wire it into the migration block in `loadConfig` (after
 `migrateDeprecatedDisplayColorProfileToggleKey`, before `applyDefaults()`), setting
 `configChanged = true`.
 
-`DebugOverlayManager.updateInput`: change the toggle loop's
-`handler.isKeyPressed(toggle.keyCode())` to
-`handler.isKeyPressedWithoutModifiers(toggle.keyCode())`. Do not touch the
-`PERFORMANCE` check above the gate or the Ctrl+P clipboard chord below it.
+`DebugOverlayManager.updateInput`: change **both** dispatch sites from
+`handler.isKeyPressed(...)` to `handler.isKeyPressedWithoutModifiers(...)` — the
+`PERFORMANCE` check at `:51` above the `debugShortcutsEnabled` gate, and
+`toggle.keyCode()` in the loop at `:62`. Missing the first one leaves Ctrl+P toggling the
+performance overlay as well as copying the stats. Leave the Ctrl+P clipboard chord at
+`:68` exactly as it is.
 
 `CONFIGURATION.md` needs **two** edits, not one:
 
@@ -1355,7 +1471,7 @@ its sibling. Wire it into the migration block in `loadConfig` (after
 - [ ] **Step 4: Run the focused tests, the capture suites, and the guard**
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.capture.LiveCaptureChordTest,com.openggf.configuration.TestConfigMigrationService,com.openggf.configuration.CaptureConfigDefaultsTest,com.openggf.configuration.TestConfigYamlWriter,com.openggf.configuration.TestBundledConfigResource,com.openggf.configuration.TestBundledConfigExamplePublication,com.openggf.configuration.TestConfigServiceYamlRoundTrip,com.openggf.configuration.TestConfigCatalog,com.openggf.configuration.TestLegacyConfigMigration,com.openggf.tests.TestArchitecturalSourceGuard test
+mvn -Dmse=off -Dtest=com.openggf.capture.LiveCaptureChordTest,com.openggf.configuration.TestConfigMigrationService,com.openggf.configuration.CaptureConfigDefaultsTest,com.openggf.configuration.TestConfigYamlWriter,com.openggf.debug.TestDebugOverlayManagerReset,com.openggf.configuration.TestBundledConfigResource,com.openggf.configuration.TestBundledConfigExamplePublication,com.openggf.configuration.TestConfigServiceYamlRoundTrip,com.openggf.configuration.TestConfigCatalog,com.openggf.configuration.TestLegacyConfigMigration,com.openggf.tests.TestArchitecturalSourceGuard test
 ```
 
 Expected: all pass, including
@@ -1377,9 +1493,10 @@ Expected: `BUILD SUCCESS`. Record the exact `Tests run` totals. Restore
 Add under `## Unreleased`:
 
 ```markdown
-- Feature: `capture.toggleKey` now carries its own modifiers. It defaults to `SHIFT+O`, and writing `CTRL+SHIFT+O`, `META+O` or a plain `O` works as written — the Shift used to be hardcoded in the engine, so the binding claimed to be "the key" while the shortcut was really Shift plus that key, and there was no way to change or remove the Shift. Modifiers are matched exactly: a binding with no modifier does not fire while one is held. An existing `capture.toggleKey: O` is migrated to `SHIFT+O` automatically, so Shift+O keeps working with no user action.
+- Feature: `capture.toggleKey` now carries its own modifiers. It defaults to `SHIFT+O`, and writing `CTRL+SHIFT+O`, `META+O` or a plain `P` works as written — the Shift used to be hardcoded in the engine, so the binding claimed to be "the key" while the shortcut was really Shift plus that key, and there was no way to change or remove the Shift. Modifiers are matched exactly: a binding with no modifier does not fire while one is held. An existing `capture.toggleKey: O` is migrated to `SHIFT+O` automatically, so Shift+O keeps working with no user action.
 - Change: if you had customised `capture.toggleKey` to something other than `O`, it is deliberately left as you wrote it and now fires **without** Shift, because guessing that you meant `SHIFT+<your key>` would silently rewrite a value you chose. Add `SHIFT+` yourself to restore the old behaviour.
-- Fix: the debug overlay toggles no longer fire while a modifier is held, so `Shift+O` starts a recording without also toggling the object-debug overlay.
+- Known limitation: a bare `O` is a reserved value for `capture.toggleKey`. The migration that rescues existing installs matches on the value rather than on a schema version, so it re-runs on every launch and rewrites `O` (and `GLFW_KEY_O`, `KEY_O`, `79`) back to `SHIFT+O`. To bind the toggle to a single unmodified key, pick a different key.
+- Fix: the debug overlay toggles no longer fire while a modifier is held, so `Shift+O` starts a recording without also toggling the object-debug overlay. This also stops `Ctrl+P` toggling the performance overlay as well as copying the performance stats to the clipboard.
 ```
 
 ```bash
@@ -1395,7 +1512,8 @@ git add CHANGELOG.md CONFIGURATION.md \
   src/test/java/com/openggf/capture/LiveCaptureChordTest.java \
   src/test/java/com/openggf/configuration/CaptureConfigDefaultsTest.java \
   src/test/java/com/openggf/configuration/TestConfigMigrationService.java \
-  src/test/java/com/openggf/configuration/TestConfigYamlWriter.java
+  src/test/java/com/openggf/configuration/TestConfigYamlWriter.java \
+  src/test/java/com/openggf/debug/TestDebugOverlayManagerReset.java
 git commit -m "feat(config): put the capture toggle's modifiers in its binding
 
 capture.toggleKey defaults to SHIFT+O and Engine no longer hardcodes the
@@ -1413,12 +1531,18 @@ which changing the default would not reach: their bare O wins, exact
 matching rejects the held Shift, and a stray O starts a recording. A
 migration rewrites it, but only while it is still the superseded default.
 A customised value is left as the player wrote it and now fires without
-Shift; inferring SHIFT+<their key> would rewrite a choice they made.
+Shift; inferring SHIFT+<their key> would rewrite a choice they made. The
+match is on the value rather than a schema version, so it re-runs every
+launch and bare O cannot be bound to this action -- the same property the
+two existing key migrations already have. Documented as reserved.
 
 Also fixes an overlap this exposes. DebugOverlayToggle.OBJECT_DEBUG is O
 and fired on a bare isKeyPressed, so Shift+O toggled object debug as well
 as recording. The toggles are hardcoded single keys, so they now require
 no modifier held, which is the same exactness rule the bindings follow.
+That covers PERFORMANCE too, which is dispatched above the debug-shortcuts
+gate -- incidentally fixing a double-fire where Ctrl+P both toggled the
+performance overlay and copied the stats to the clipboard.
 
 Changelog: updated
 Guide: n/a
@@ -1457,9 +1581,25 @@ hardcoded.
 **Files:**
 - Modify: `CONFIGURATION.md`
 - Modify: `docs/guide/playing/configuration.md`
+- Modify: `docs/guide/playing/controls.md`
 
 **Interfaces:** none — documentation only. This task touches no `src/` path, so the
 changelog-justification rule does not apply and the commit is `docs:`.
+
+**Both guide pages are in scope, not just one.** Each states the two-format claim that
+this work makes wrong, and each is the front door to a different reference:
+
+- `docs/guide/playing/configuration.md:108-121` is the page that *defines* the syntax
+  ("Key bindings accept either GLFW key codes (integers) or human-readable names. The
+  following formats all work:"), and its "Invalid names log a warning and fall back to
+  the default binding" sentence is the one that does not hold for an empty value.
+- `docs/guide/playing/controls.md:3-6` repeats the claim verbatim — "using either GLFW
+  integer codes or human-readable key names such as `"SPACE"` and `"F9"`" — as the
+  opening of the controls reference. Verified present at the branch base.
+
+Because `Guide` maps to the `docs/guide/` prefix, this makes `Guide: updated` mandatory
+on this commit. A `Guide: n/a` here would be wrong and the hook will reject it once these
+files are staged.
 
 - [ ] **Step 1: Extend the CONFIGURATION.md key-binding format section**
 
@@ -1473,25 +1613,65 @@ In the `## Key Bindings` format table (`:532-543`), add a `Chord` row
 - **exact matching**: a binding fires only with exactly its modifiers, so a plain
   binding does not fire while any modifier is held;
 - **binding the plus key itself**: `+` is the separator, so use `EQUAL` or `KP_ADD`;
-- separator-only or unrecognised input is unbound, and an unresolvable value falls
-  back to that binding's registered default with a logged warning.
+- separator-only or unrecognised input is unbound, and a **non-empty** unresolvable value
+  falls back to that binding's registered default with a logged warning — while an
+  **explicitly empty** value is unbound outright, with no default substituted and no
+  warning. That asymmetry is how a shortcut is deliberately switched off, and it is the
+  sentence `docs/guide/playing/configuration.md` currently gets wrong;
+- **`O` is reserved for `capture.toggleKey`.** The migration that rescues existing
+  installs matches on the value rather than a schema version, so it re-runs on every
+  launch and rewrites `O`/`GLFW_KEY_O`/`KEY_O`/`79` back to `SHIFT+O`. Say plainly that
+  binding this one action to a bare `O` is not possible and to pick another key —
+  a reader who tries it and watches their config file change under them will otherwise
+  file it as a bug.
 
 - [ ] **Step 2: Add the three-state support table and the playback limit**
 
-Add the three-state table above, naming the bindings in each state. Then add the
-playback note: rewind supplies real Shift/Ctrl/Alt/Super values, but BK2 movies carry
+**Generate the dead set from the call sites; do not transcribe the table above.** It is
+the set of bindings read through `isKeyPressedWithoutModifiers` or
+`GameLoop.isUnmodifiedDebugKeyPressed`, and it will drift the moment either gains a
+caller. Regenerate it and reconcile against the table before writing:
+
+```bash
+grep -rn "isKeyPressedWithoutModifiers" src/main | grep -v "control/InputHandler.java"
+grep -rn "isUnmodifiedDebugKeyPressed" src/main
+```
+
+At the branch base the first yields **31** call sites across four files —
+`GameLoop.java` (1), `debug/playback/PlaybackDebugManager.java` (9),
+`game/recording/menu/UserRecordingMenuState.java` (12), and
+`testmode/TestModeTracePicker.java` (9) — and Task 5 adds `debug/DebugOverlayManager.java`
+(2, both hardcoded keys rather than bindings, so they do not enter the table). If a
+`SonicConfiguration` binding appears in the grep output and is missing from the table,
+the table is wrong, not the grep.
+
+Note that a binding can be in **two** states on different paths, and the table must say
+so rather than picking one: `UP`/`DOWN`/`LEFT`/`RIGHT` are "modifiers ignored" on the
+gameplay path and "chord permanently dead" on the special-stage sprite-debug path at
+`GameLoop:1135-1146`.
+
+Then add the playback note: rewind supplies real Shift/Ctrl/Alt/Super values, but BK2 movies carry
 no modifier column at all — `Bk2MovieLoader:162-166` builds every frame through the
 convenience constructor — so all four read as released under BK2 playback and any
 chord requiring a modifier does not fire there. Update the per-binding table's
 `CAPTURE_TOGGLE_KEY` row to point at the "chord honoured" state.
 
-- [ ] **Step 3: Mirror the player-facing subset into the guide**
+- [ ] **Step 3: Mirror the player-facing subset into both guide pages**
 
 In `docs/guide/playing/configuration.md:108-121`, add `"SHIFT+O"` and
 `"CTRL+SHIFT+O"` to the accepted-formats list with the alias list, one sentence on
 exact matching, one on binding the plus key, and one sentence naming which shortcuts
 actually honour a chord today with a pointer to `CONFIGURATION.md` for the full table.
 Keep it short — the guide is a player document, not the reference.
+
+Correct the fallback sentence in the same section: "Invalid names log a warning and fall
+back to the default binding for that action" is true only for a non-empty value. Add that
+leaving a binding empty (`""`) switches the shortcut off and no default is substituted.
+
+In `docs/guide/playing/controls.md:3-6`, extend the same two-format sentence to mention
+modifiers and point at `configuration.md` for the syntax. One clause is enough — this page
+is a key/action table, not a syntax reference — but leaving it claiming only two formats
+contradicts the page it links to.
 
 - [ ] **Step 4: Verify the documented behaviour against the suite**
 
@@ -1506,7 +1686,9 @@ has no test, add the test rather than the sentence.
 - [ ] **Step 5: Commit exact files**
 
 ```bash
-git add CONFIGURATION.md docs/guide/playing/configuration.md
+git add CONFIGURATION.md \
+  docs/guide/playing/configuration.md \
+  docs/guide/playing/controls.md
 git commit -m "docs: describe key chords and which bindings honour them
 
 Documents the chord syntax, the modifier aliases KeyChord accepts, the
@@ -1521,8 +1703,15 @@ shortcut, so debug.playback.toggleKey: 'CTRL+P' resolves to a live key
 code and still never fires.
 
 Also records that BK2 movies carry no modifier column, so every chord
-requiring a modifier is inert under BK2 playback, and lists the hardcoded
-non-config shortcuts that swallow a keystroke whatever a binding says.
+requiring a modifier is inert under BK2 playback, that O is a reserved
+value for capture.toggleKey because its migration matches on the value and
+re-runs every launch, and the hardcoded non-config shortcuts that swallow a
+keystroke whatever a binding says.
+
+Both guide pages claimed bindings accept only integers or key names, and
+configuration.md additionally claimed an invalid value always falls back to
+the default -- which is not true of an empty value, the one form that
+switches a shortcut off.
 
 Changelog: n/a: documentation only, no engine change.
 Guide: updated
@@ -1539,7 +1728,7 @@ Skills: n/a"
 
 Spec steps 6 and 7. Both are recorded here so the boundary is explicit, not forgotten.
 
-**Rolling out to the remaining 50 bindings** is not mechanical and must not be done
+**Rolling out to the remaining 52 bindings** is not mechanical and must not be done
 in bulk:
 
 - **Bindings whose key *is* a modifier key cannot use exact matching as-is.**
@@ -1592,6 +1781,23 @@ decision: its own binding, or "the record chord without its modifiers".
     `DERIVED` bindings, values that fall back to their default, and an explicitly
     empty value that falls back to neither and stays unbound — and a converted and
     unconverted binding coexist in one `config.yaml` (Task 4).
+13. An unbound chord never fires, including while a gamepad rewind button is held and
+    `LIVE_REWIND_KEY` is itself unbound — the case where `isKeyDown(-1)` is not false
+    (Task 4's `isBound()` guard rule, Task 5's `anUnboundBindingNeverFires` and the
+    `Engine` call-site guard).
+14. `Shift+O` starts a capture without also toggling the `OBJECT_DEBUG` overlay when
+    debug shortcuts are enabled, a bare F-key overlay toggle still works, and `Ctrl+P`
+    copies the performance stats without also toggling the performance overlay
+    (Task 5, `TestDebugOverlayManagerReset`).
+15. A chord saved in a non-canonical spelling (`shift+o`, `Shift + O`) is rewritten to
+    its canonical form by `saveConfig()` rather than persisted verbatim through
+    `ConfigYamlWriter.formatKey`'s fall-through branch (Task 5).
+16. Both guide pages that define binding syntax — `docs/guide/playing/configuration.md`
+    and `docs/guide/playing/controls.md` — describe chords, and the first no longer
+    claims that every invalid value falls back to the default (Task 6).
+17. `O` is documented as a reserved value for `capture.toggleKey`, with the reason
+    (a value-based migration that re-runs every launch) rather than only the rule
+    (Tasks 5, 6).
 
 ## Task execution and review protocol
 
