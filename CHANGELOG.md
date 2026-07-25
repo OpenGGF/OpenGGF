@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: an interrupted live recording now says so. A recording that ends for a reason the player did not ask for — the window being resized, or a capture failure — replaces the red-dot/`REC` indicator with a red `REC STOPPED: RESIZED` or `REC STOPPED: ERROR` notice in the same corner for three seconds. Previously the indicator simply vanished, which was indistinguishable from pressing the toggle, and a capture failure reached only a log line. Stopping the recording yourself, and ordinary shutdown, stay silent. The notice is window-only on the same terms as the indicator: neither the MKV nor an F12 screenshot contains it.
 - Proved zero-allocation warmed presentation and clock-continuous mixed/silent FLAC media.
 - Added final-PCM integration and ROM-backed source/toggle/rewind parity coverage.
 - Fix: the live-recording controller no longer discards its audio handle when a release is refused for being issued off the audio producer's owner thread. The engine deliberately keeps the lease so a later stop can complete the release, but the controller threw away the only reference able to retry it — so the producer kept copying every presented packet into an orphaned lease and every subsequent recording in the process was refused and degraded to silence.

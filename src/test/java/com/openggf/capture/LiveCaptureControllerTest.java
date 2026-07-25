@@ -46,6 +46,92 @@ class LiveCaptureControllerTest {
         assertFalse(c.indicatorVisible());
     }
 
+    // ---------------------------------------------------------------
+    // Why a recording ended, for the on-screen notice
+    // ---------------------------------------------------------------
+
+    @Test void resizeStopIsReportedAsAnInterruption() throws Exception {
+        Harness h = new Harness();
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+
+        c.requestStop(LiveCaptureController.StopReason.VIEWPORT_CHANGED);
+        awaitNotStopping(c);
+
+        assertEquals(java.util.Optional.of(
+                        LiveCaptureController.Interruption.WINDOW_RESIZED),
+                c.consumeInterruption());
+    }
+
+    /**
+     * The player pressed the key, so the indicator disappearing is exactly what
+     * they asked for. Reporting it would train them to ignore the notice.
+     */
+    @Test void userStopIsNotAnInterruption() throws Exception {
+        Harness h = new Harness();
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+
+        c.requestStop(LiveCaptureController.StopReason.USER);
+        awaitNotStopping(c);
+
+        assertEquals(java.util.Optional.empty(), c.consumeInterruption());
+    }
+
+    @Test void shutdownStopIsNotAnInterruption() throws Exception {
+        Harness h = new Harness();
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+
+        c.requestStop(LiveCaptureController.StopReason.SHUTDOWN);
+        awaitNotStopping(c);
+
+        assertEquals(java.util.Optional.empty(), c.consumeInterruption());
+    }
+
+    /**
+     * A recording that dies from a grab or encoder fault currently only reaches
+     * a log line, which is exactly as invisible as the silent resize stop was.
+     */
+    @Test void captureFailureIsReportedAsAnInterruption() {
+        Harness h = new Harness();
+        h.failGrab = true;
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+
+        c.capturePresentedFrame(h.viewport);
+
+        assertEquals(LiveCaptureController.State.FAILED, c.state());
+        assertEquals(java.util.Optional.of(
+                        LiveCaptureController.Interruption.CAPTURE_ERROR),
+                c.consumeInterruption());
+    }
+
+    /**
+     * The renderer polls every frame, so a non-consuming read would re-arm the
+     * notice forever and it would never time out.
+     */
+    @Test void consumingAnInterruptionClearsIt() throws Exception {
+        Harness h = new Harness();
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+        c.requestStop(LiveCaptureController.StopReason.VIEWPORT_CHANGED);
+        awaitNotStopping(c);
+
+        assertTrue(c.consumeInterruption().isPresent());
+        assertEquals(java.util.Optional.empty(), c.consumeInterruption(),
+                "a second poll must not re-arm the notice");
+    }
+
+    @Test void aQuietRecordingReportsNoInterruption() {
+        Harness h = new Harness();
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+        c.capturePresentedFrame(h.viewport);
+
+        assertEquals(java.util.Optional.empty(), c.consumeInterruption());
+    }
+
     @Test void viewportMismatchStopsBeforeGrabOrSubmit() throws Exception {
         Harness h = new Harness();
         LiveCaptureController c = h.controller();

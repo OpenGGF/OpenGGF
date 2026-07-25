@@ -223,6 +223,49 @@ class TestEngineLiveCapturePresentation {
         assertTrue(capture >= 0 && capture < audio && capture < graphics);
     }
 
+    // ---------------------------------------------------------------
+    // Recording-interrupted notice
+    // ---------------------------------------------------------------
+
+    @Test
+    void aLatchedNoticeStaysUntilItExpires() {
+        long expiry = 1_000L;
+        assertFalse(Engine.liveCaptureNoticeFinished(false, 0L, expiry));
+        assertFalse(Engine.liveCaptureNoticeFinished(false, expiry - 1, expiry));
+        assertTrue(Engine.liveCaptureNoticeFinished(false, expiry, expiry));
+        assertTrue(Engine.liveCaptureNoticeFinished(false, expiry + 1, expiry));
+    }
+
+    /** Starting a new recording makes the previous stop's notice stale. */
+    @Test
+    void aNewRecordingSupersedesAnUnexpiredNotice() {
+        assertTrue(Engine.liveCaptureNoticeFinished(true, 0L, 1_000L));
+    }
+
+    /**
+     * Elapsed nanos are compared, not the instants, so a System.nanoTime()
+     * wrap cannot strand a notice on screen forever.
+     */
+    @Test
+    void noticeExpirySurvivesANanoTimeWrap() {
+        long expiry = Long.MIN_VALUE + 100L;
+        long beforeWrap = Long.MAX_VALUE - 100L;
+        assertFalse(Engine.liveCaptureNoticeFinished(false, beforeWrap, expiry),
+                "a notice armed just before the wrap has not expired yet");
+        assertTrue(Engine.liveCaptureNoticeFinished(false, expiry, expiry));
+    }
+
+    @Test
+    void everyInterruptionHasDistinctNoticeText() {
+        var texts = new java.util.HashSet<String>();
+        for (LiveCaptureController.Interruption interruption
+                : LiveCaptureController.Interruption.values()) {
+            String text = Engine.liveCaptureNoticeText(interruption);
+            assertFalse(text.isBlank(), interruption + " needs notice text");
+            assertTrue(texts.add(text), "duplicate notice text: " + text);
+        }
+    }
+
     private static int occurrences(String source, String needle) {
         return (source.length() - source.replace(needle, "").length()) / needle.length();
     }

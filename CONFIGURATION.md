@@ -279,7 +279,11 @@ OpenGGF has two separate recording systems:
   stops if the viewport moves or changes size. Forward play, pause/frame-step
   silence, and held-rewind/release audio are synchronized with the displayed
   frames. The red-dot/white-`REC` indicator is window-only: both the MKV and F12
-  screenshots exclude it.
+  screenshots exclude it. If a recording ends for a reason you did not ask for,
+  a red `REC STOPPED: RESIZED` or `REC STOPPED: ERROR` notice replaces the
+  indicator in the same corner for three seconds, so an interrupted recording
+  is distinguishable from one you stopped yourself. Pressing the toggle again
+  clears the notice. It is window-only on the same terms as the indicator.
 - **Trace capture:** the headless `TraceCaptureTool` renders a chosen trace.
   Its scale, frame-rate, and codec settings remain trace-tool options.
 
