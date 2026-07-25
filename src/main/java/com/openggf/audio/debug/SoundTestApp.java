@@ -1,10 +1,7 @@
 package com.openggf.audio.debug;
 
-import com.openggf.audio.AudioBackend;
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.GameAudioProfile;
-import com.openggf.audio.LWJGLAudioBackend;
-import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -106,21 +103,23 @@ public final class SoundTestApp {
         TreeSet<Integer> validSfx = probeValidSfx(loader, catalog.getSfxIdBase(), catalog.getSfxIdMax());
         System.out.println("Found " + validSfx.size() + " valid SFX.");
 
-        AudioBackend backend = options.nullAudio ? new NullAudioBackend() : new LWJGLAudioBackend();
-        backend.init();
-        backend.setAudioProfile(profile);
+        StandaloneAudioPresentationHost host =
+                StandaloneAudioPresentationHost.open(
+                        options.gameId,
+                        SonicConfigurationService.createStandalone(),
+                        null, options.nullAudio);
         // Abnormal-exit safety net only; removed on the normal path below so
         // backend.destroy() runs exactly once.
-        Thread destroyOnExit = new Thread(backend::destroy);
+        Thread destroyOnExit = new Thread(host::close);
         Runtime.getRuntime().addShutdownHook(destroyOnExit);
 
         int startSongId = options.songId >= 0 ? options.songId : catalog.getDefaultSongId();
 
         try {
             if (options.interactiveWindow) {
-                runInteractiveWindow(options, loader, dacData, backend, catalog, seqConfig, validSfx, startSongId);
+                runInteractiveWindow(options, loader, dacData, host, catalog, seqConfig, validSfx, startSongId);
             } else {
-                runConsole(options, loader, dacData, backend, catalog, startSongId);
+                runConsole(options, loader, dacData, host, catalog, startSongId);
             }
         } finally {
             try {
@@ -128,11 +127,11 @@ public final class SoundTestApp {
             } catch (IllegalStateException ignored) {
                 // JVM already shutting down; the hook performs the destroy instead.
             }
-            backend.destroy();
+            host.close();
         }
     }
 
-    private static GameAudioProfile createProfileForGame(String gameId) {
+    static GameAudioProfile createProfileForGame(String gameId) {
         return switch (gameId) {
             case "s1" -> new Sonic1AudioProfile();
             case "s3k" -> new Sonic3kAudioProfile();
@@ -159,17 +158,17 @@ public final class SoundTestApp {
     }
 
     private static void runInteractiveWindow(Options options, SmpsLoader loader, DacData dacData,
-            AudioBackend backend, SoundTestCatalog catalog, SmpsSequencerConfig seqConfig,
+            StandaloneAudioPresentationHost host, SoundTestCatalog catalog, SmpsSequencerConfig seqConfig,
             TreeSet<Integer> validSfx, int startSongId) throws Exception {
         // All backend mutation is funneled onto this single thread: it drives
         // the 16ms stream update and executes the Swing handlers' play/stop/
         // mute commands, so the EDT never swaps the SMPS driver or touches
         // OpenAL sources while update() is mid-stream.
         ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
-        InteractiveState state = new InteractiveState(startSongId, loader, dacData, backend,
+        InteractiveState state = new InteractiveState(startSongId, loader, dacData, host,
                 catalog, seqConfig, validSfx, exec);
         SwingUtilities.invokeAndWait(() -> state.show(options.nullAudio, options.romPath));
-        exec.scheduleAtFixedRate(backend::update, 0, 16, TimeUnit.MILLISECONDS);
+        exec.scheduleAtFixedRate(host::presentFrame, 0, 16, TimeUnit.MILLISECONDS);
         state.awaitClose();
         // Orderly shutdown: queued commands (e.g. the close-time stopPlayback)
         // still run, and no update() can be in flight when destroy() follows.
@@ -179,16 +178,17 @@ public final class SoundTestApp {
         }
     }
 
-    private static void runConsole(Options options, SmpsLoader loader, DacData dacData, AudioBackend backend,
+    private static void runConsole(Options options, SmpsLoader loader, DacData dacData,
+            StandaloneAudioPresentationHost host,
             SoundTestCatalog catalog, int startSongId) throws Exception {
         System.out.println("Sound test ready. [" + catalog.getGameName() + "]");
         System.out.println("ROM: " + options.romPath);
-        System.out.println("Backend: " + backend.getClass().getSimpleName() + (options.nullAudio ? " (silent)" : ""));
+        System.out.println("Output: unified PCM presentation" + (options.nullAudio ? " (silent)" : ""));
         printControls(startSongId);
 
         int currentSong = startSongId;
         boolean speedShoes = false;
-        playSong(loader, dacData, backend, currentSong, catalog);
+        playSong(loader, dacData, host, currentSong, catalog);
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         boolean running = true;
@@ -207,26 +207,26 @@ public final class SoundTestApp {
                         running = false;
                         break;
                     case "r":
-                        playSong(loader, dacData, backend, currentSong, catalog);
+                        playSong(loader, dacData, host, currentSong, catalog);
                         break;
                     case "s":
                         speedShoes = !speedShoes;
-                        backend.setSpeedShoes(speedShoes);
+                        host.setSpeedShoes(speedShoes);
                         System.out.println("Speed shoes: " + (speedShoes ? "ON" : "OFF"));
                         break;
                     case "n":
                         currentSong = getNextValidSong(currentSong, catalog);
-                        playSong(loader, dacData, backend, currentSong, catalog);
+                        playSong(loader, dacData, host, currentSong, catalog);
                         break;
                     case "p":
                         currentSong = getPreviousValidSong(currentSong, catalog);
-                        playSong(loader, dacData, backend, currentSong, catalog);
+                        playSong(loader, dacData, host, currentSong, catalog);
                         break;
                     default:
                         int parsed = parseSongId(line);
                         if (parsed >= 0) {
                             currentSong = parsed;
-                            playSong(loader, dacData, backend, currentSong, catalog);
+                            playSong(loader, dacData, host, currentSong, catalog);
                         } else {
                             System.out.println("Unrecognised command: " + line);
                             printControls(currentSong);
@@ -234,13 +234,14 @@ public final class SoundTestApp {
                         break;
                 }
             }
-            backend.update();
+            host.presentFrame();
             Thread.sleep(16L);
         }
         System.out.println("Sound test exited.");
     }
 
-    private static void playSong(SmpsLoader loader, DacData dacData, AudioBackend backend,
+    private static void playSong(SmpsLoader loader, DacData dacData,
+            StandaloneAudioPresentationHost host,
             int songId, SoundTestCatalog catalog) {
         int offset = loader.findMusicOffset(songId);
         AbstractSmpsData data = loader.loadMusic(songId);
@@ -264,7 +265,7 @@ public final class SoundTestApp {
                 toHex(data.getVoicePtr()), toHex(data.getDacPointer()),
                 data.getChannels(), data.getPsgChannels(),
                 data.getTempo(), data.getDividingTiming()));
-        backend.playSmps(data, dacData);
+        host.playMusic(data, dacData);
     }
 
     private static void printControls(int currentSong) {
@@ -292,7 +293,7 @@ public final class SoundTestApp {
     private static class InteractiveState {
         private final SmpsLoader loader;
         private final DacData dacData;
-        private final AudioBackend backend;
+        private final StandaloneAudioPresentationHost host;
         private final SoundTestCatalog catalog;
         private final SmpsSequencerConfig seqConfig;
         private int songId;
@@ -313,14 +314,15 @@ public final class SoundTestApp {
         private final Map<Integer, String> sfxNames;
         private final ScheduledExecutorService audioExec;
 
-        InteractiveState(int songId, SmpsLoader loader, DacData dacData, AudioBackend backend,
+        InteractiveState(int songId, SmpsLoader loader, DacData dacData,
+                StandaloneAudioPresentationHost host,
                 SoundTestCatalog catalog, SmpsSequencerConfig seqConfig, TreeSet<Integer> validSfx,
                 ScheduledExecutorService audioExec) {
             this.audioExec = audioExec;
             this.songId = songId;
             this.loader = loader;
             this.dacData = dacData;
-            this.backend = backend;
+            this.host = host;
             this.catalog = catalog;
             this.seqConfig = seqConfig;
             this.sfxNames = catalog.getSfxNames();
@@ -357,7 +359,7 @@ public final class SoundTestApp {
             frame.getContentPane().add(tracksPanel, BorderLayout.CENTER);
             JLabel info = new JLabel(String.format(
                     "[%s] ROM: %s | Backend: %s%s | Tab: Music/SFX | Up/Down change | Enter play | S Speed | Ctrl+E export WAV | Esc quit",
-                    catalog.getGameName(), romPath, backend.getClass().getSimpleName(), nullAudio ? " (silent)" : ""),
+                    catalog.getGameName(), romPath, "unified PCM", nullAudio ? " (silent)" : ""),
                     SwingConstants.CENTER);
             info.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
             frame.getContentPane().add(info, BorderLayout.SOUTH);
@@ -372,9 +374,9 @@ public final class SoundTestApp {
                     if (code >= KeyEvent.VK_F1 && code <= KeyEvent.VK_F5) {
                         int ch = code - KeyEvent.VK_F1;
                         if (shift)
-                            onAudioThread(() -> backend.toggleSolo(ChannelType.FM, ch));
+                            onAudioThread(() -> host.toggleSolo(ChannelType.FM, ch));
                         else
-                            onAudioThread(() -> backend.toggleMute(ChannelType.FM, ch));
+                            onAudioThread(() -> host.toggleMute(ChannelType.FM, ch));
                         return;
                     }
 
@@ -382,9 +384,9 @@ public final class SoundTestApp {
                     if (code >= KeyEvent.VK_1 && code <= KeyEvent.VK_4) {
                         int ch = code - KeyEvent.VK_1;
                         if (shift)
-                            onAudioThread(() -> backend.toggleSolo(ChannelType.PSG, ch));
+                            onAudioThread(() -> host.toggleSolo(ChannelType.PSG, ch));
                         else
-                            onAudioThread(() -> backend.toggleMute(ChannelType.PSG, ch));
+                            onAudioThread(() -> host.toggleMute(ChannelType.PSG, ch));
                         return;
                     }
 
@@ -413,14 +415,14 @@ public final class SoundTestApp {
                             if (sfxMode) {
                                 playCurrentSfx();
                             } else {
-                                onAudioThread(backend::stopPlayback);
+                                onAudioThread(host::stopPlayback);
                                 playing = false;
                                 playingSongId = null;
                                 playCurrent();
                             }
                             break;
                         case KeyEvent.VK_SPACE:
-                            onAudioThread(backend::stopPlayback);
+                            onAudioThread(host::stopPlayback);
                             playing = false;
                             playingSongId = null;
                             break;
@@ -430,14 +432,14 @@ public final class SoundTestApp {
                         case KeyEvent.VK_D:
                             // DAC (FM5 / Channel 5)
                             if (shift)
-                                onAudioThread(() -> backend.toggleSolo(ChannelType.DAC, 5));
+                                onAudioThread(() -> host.toggleSolo(ChannelType.DAC, 5));
                             else
-                                onAudioThread(() -> backend.toggleMute(ChannelType.DAC, 5));
+                                onAudioThread(() -> host.toggleMute(ChannelType.DAC, 5));
                             break;
                         case KeyEvent.VK_S:
                             speedShoes = !speedShoes;
                             boolean speedShoesNow = speedShoes;
-                            onAudioThread(() -> backend.setSpeedShoes(speedShoesNow));
+                            onAudioThread(() -> host.setSpeedShoes(speedShoesNow));
                             updateLabel();
                             break;
                         case KeyEvent.VK_E:
@@ -477,7 +479,7 @@ public final class SoundTestApp {
 
         /**
          * Runs a backend command on the audio executor that also drives
-         * {@code backend.update()}, keeping all sequencer/OpenAL mutation on
+         * {@code host.presentFrame()}, keeping all presentation mutation on
          * one thread. Commands arriving after shutdown are moot and dropped.
          */
         private void onAudioThread(Runnable command) {
@@ -491,7 +493,7 @@ public final class SoundTestApp {
         private void playCurrent() {
             AbstractSmpsData data = loader.loadMusic(songId);
             if (data != null) {
-                onAudioThread(() -> backend.playSmps(data, dacData));
+                onAudioThread(() -> host.playMusic(data, dacData));
                 playing = true;
                 playingSongId = songId;
             }
@@ -504,7 +506,7 @@ public final class SoundTestApp {
                 System.out.println(String.format("Playing SFX %s (Size: %d) | FM: %d PSG: %d Tempo: %d Div: %d",
                         toHex(sfxId), data.getData().length,
                         data.getChannels(), data.getPsgChannels(), data.getTempo(), data.getDividingTiming()));
-                onAudioThread(() -> backend.playSfxSmps(data, dacData));
+                onAudioThread(() -> host.playSfx(data, dacData, 1.0f));
             } else {
                 System.out.println("Failed to load SFX " + toHex(sfxId));
             }
@@ -584,63 +586,7 @@ public final class SoundTestApp {
         private void updateDetails() {
             if (tracksPanel == null)
                 return;
-            if (backend instanceof LWJGLAudioBackend joal) {
-                var dbg = joal.getDebugState();
-                Set<String> touched = new HashSet<>();
-                if (dbg != null) {
-                    heading.setText(String.format("Channels (Tempo %d Div %d)", dbg.tempoWeight, dbg.dividingTiming));
-                    for (var t : dbg.tracks) {
-                        String key = t.type + "-" + t.channelId;
-                        touched.add(key);
-                        JLabel l = trackLabels.computeIfAbsent(key, k -> {
-                            JLabel nl = new JLabel();
-                            nl.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-                            nl.setAlignmentX(JLabel.LEFT_ALIGNMENT);
-                            tracksPanel.add(nl);
-                            tracksPanel.revalidate();
-                            return nl;
-                        });
-                        ChannelType ct = switch (t.type) {
-                            case FM -> ChannelType.FM;
-                            case PSG -> ChannelType.PSG;
-                            case DAC -> ChannelType.DAC;
-                        };
-                        boolean muted = backend.isMuted(ct, t.channelId);
-                        boolean soloed = backend.isSoloed(ct, t.channelId);
-
-                        String statusMarker = "";
-                        if (muted)
-                            statusMarker += "[M]";
-                        if (soloed)
-                            statusMarker += "[S]";
-
-                        String txt = String.format(
-                                "%-4s%s %-3s%1d %s note=%s v=%02X dur=%03d vol=%d key=%d pan=%02X mod=%s",
-                                statusMarker,
-                                "", // spacer
-                                t.type, t.channelId + 1,
-                                t.active ? "ON " : "off",
-                                t.note == 0 ? "--" : toHex(t.note),
-                                t.voiceId,
-                                t.duration,
-                                t.volumeOffset,
-                                t.keyOffset,
-                                t.pan,
-                                t.modEnabled ? "Y" : "N");
-                        l.setText(txt);
-                    }
-                } else {
-                    heading.setText("Channels (no SMPS debug)");
-                }
-                // Mark untouched labels as idle
-                for (Map.Entry<String, JLabel> e : trackLabels.entrySet()) {
-                    if (!touched.contains(e.getKey())) {
-                        e.getValue().setText(e.getKey() + " idle");
-                    }
-                }
-            } else {
-                heading.setText("Channels (debug unavailable)");
-            }
+            heading.setText("Channels (unified presentation)");
         }
 
         private void close() {
@@ -649,7 +595,7 @@ public final class SoundTestApp {
             }
             // Queue the stop before raising the closed flag: awaitClose() then
             // shuts the executor down with shutdown(), which still drains this.
-            onAudioThread(backend::stopPlayback);
+            onAudioThread(host::stopPlayback);
             closed = true;
             playing = false;
             playingSongId = null;

@@ -7,6 +7,8 @@ import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsLoader;
 
@@ -26,6 +28,16 @@ import java.util.Map;
  * </ul>
  */
 public class Sonic3kAudioProfile extends AbstractAudioProfile {
+    @Override
+    public String presentationGameId() {
+        return "s3k";
+    }
+
+    @Override
+    public void configurePresentationCoordFlagHandlers(
+            SmpsCoordFlagHandlerOwner owner) {
+        owner.register("s3k", Sonic3kCoordFlagHandler::new);
+    }
 
     private static final Map<GameSound, Integer> SOUND_MAP;
     private static final Map<GameMusic, Integer> MUSIC_MAP;

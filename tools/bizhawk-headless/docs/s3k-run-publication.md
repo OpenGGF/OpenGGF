@@ -10,7 +10,7 @@ surface.
 Behavioral authority order:
 
 1. `tools/bizhawk/s3k_complete_run_recorder.lua` (5918 lines,
-   `LUA_SCRIPT_VERSION = "6.32-s3k-completerun"` at L357) plus
+   `LUA_SCRIPT_VERSION = "6.33-s3k-completerun"` at L357) plus
    `tools/bizhawk/lib/oggf_trace_common.lua`. **Do not modify either.**
 2. The canonical fixtures under `src/test/resources/traces/s3k/`
    (read-only; gunzip to a temp dir to inspect).
@@ -34,7 +34,7 @@ The S3K complete-run recorder has produced **three** committed fixture
 sets from **two** movies. They are not interchangeable and they publish
 different shapes, so establishing which is which remains the single most
 important prerequisite for the native port. All three now share one
-recorder identity — Lua `6.32-s3k-completerun`, Linux, diagnostic hooks
+recorder identity — Lua `6.33-s3k-completerun`, Linux, diagnostic hooks
 off — and **all three are byte-reproducible**. That was not true of (B)
 until commit `63eccd290` re-captured it; the legacy (B) analysis is kept
 below because it is the whole reason the port's normalization rules
@@ -49,7 +49,7 @@ route).
 
 Seven published dirs directly under `src/test/resources/traces/s3k/`,
 all `trace_profile: complete_run`, `lua_script_version:
-6.32-s3k-completerun`, `recording_date: 2026-07-23`,
+6.33-s3k-completerun`, `recording_date: 2026-07-25`,
 `capture_mode: physics_animation_aux_without_diagnostic_hooks`,
 **no `run_id` key**, `pre_trace_osc_frames: 1`.
 `source_bk2: s3k-complete-sonic-tails.bk2`. **No `run_manifest.json`**
@@ -57,13 +57,13 @@ all `trace_profile: complete_run`, `lua_script_version:
 
 | Dir | `segment_index` | zone/act | `bk2_frame_offset` | rows | physics.csv sha256 / bytes | aux_state.jsonl sha256 / bytes |
 |---|---|---|---|---|---|---|
-| `aiz_completerun/` | 0 | aiz(0)/1 | 941 | 26228 | `b791a57430224adb3042a478f76cfd5deaa985a979f6dc85a632508816475e6c` / 4249570 | `d55efb44c7fadc022591c56054964e002c8ade868867a8965a0efbe820f2d210` / 172380688 |
-| `hcz_completerun/` | 1 | hcz(1)/1 | 27170 | 31482 | `d051d6c2621170a6e64dca8c5d9152ec3898b46dd99ba408defb948507aeb001` / 5100718 | `9fa13b138dd4e22749bdf0cfb66c71cd28e0e72568372b683efbc0255208077f` / 210920712 |
-| `mgz_completerun/` | 2 | mgz(2)/1 | 58653 | 39398 | `10c1fd138b596d4325020c0151afb01f58e0764f1765d5a2cd15b285770d1530` / 6383110 | `1b3faa5204d83883a8877c0c3873ba7831aefde4a07abff942e119dc3a8038eb` / 208896738 |
-| `cnz_completerun/` | 3 | cnz(3)/1 | 98052 | 40064 | `1d2061d93e92be8d9cc85ec0691b3fcddfe1a8b2213d2e76984f2d6727dc8b49` / 6491002 | `1134664398b8b911f0ed0024376c71d1aa546598785cd3008e04ed91ffbd3406` / 211836043 |
-| `icz_completerun/` | 4 | icz(5)/1 | 138117 | 25393 | `d1b8e36b4716af52c467e7a7b14a36e124257a6530eba07c935e1cff6a0f0bd7` / 4114300 | `0e21af4b895ab47ceca79ea74301208bd8ab1a44899cab921c566d75608efaa9` / 173735703 |
-| `lbz_completerun/` | 5 | lbz(6)/1 | 163511 | 46244 | `49b48f7bca47fa3e3b9ece6bf033e78c1a4f365e24602adad71cf25bf84e536d` / 7492162 | `d89419f674e653686a80482954eb6cb309dfbf17016c6962e9f53f830ed1b8b5` / 266307785 |
-| `mhz_completerun/` | 6 | mhz(7)/1 | 209756 | 28156 | `8ba0ca5c90f8eee765f704588acae7b19261fe556d81a586441fc79ff1af71db` / 4561906 | `0260219e935d5ec5b0873d8f59422fabe1ad8a6be8b8d2d9f505428e220764d6` / 184254918 |
+| `aiz_completerun/` | 0 | aiz(0)/1 | 941 | 26228 | `2f8d3d0c2f5a4b3f30b7784ed28fa37071951f6d8d538f08573b4631fa33f872` / 4249570 | `d55efb44c7fadc022591c56054964e002c8ade868867a8965a0efbe820f2d210` / 172380688 |
+| `hcz_completerun/` | 1 | hcz(1)/1 | 27170 | 31482 | `5d829f35729bb9254f272283dd078d3c6b259c771ca3d57eea3fb249d7ed73c7` / 5100718 | `9fa13b138dd4e22749bdf0cfb66c71cd28e0e72568372b683efbc0255208077f` / 210920712 |
+| `mgz_completerun/` | 2 | mgz(2)/1 | 58653 | 39398 | `ddfcc9851a6c6b100e9366ebe9fccfecd9a99745639a8192f0f93e241879ae52` / 6383110 | `1b3faa5204d83883a8877c0c3873ba7831aefde4a07abff942e119dc3a8038eb` / 208896738 |
+| `cnz_completerun/` | 3 | cnz(3)/1 | 98052 | 40064 | `2d1ba19a27d614c25ceb8962f7506552cc8b038cc3a36a00b08f4337d329d404` / 6491002 | `1134664398b8b911f0ed0024376c71d1aa546598785cd3008e04ed91ffbd3406` / 211836043 |
+| `icz_completerun/` | 4 | icz(5)/1 | 138117 | 25393 | `386cf6e8e62b61c8cd03c252668db47d3511fc1fd6c43399830e6655086d0c99` / 4114300 | `0e21af4b895ab47ceca79ea74301208bd8ab1a44899cab921c566d75608efaa9` / 173735703 |
+| `lbz_completerun/` | 5 | lbz(6)/1 | 163511 | 46244 | `dba472735a28d1bb3235a4fe79ab6734202456f97bca6ca00cac2f5d64c8a139` / 7492162 | `d89419f674e653686a80482954eb6cb309dfbf17016c6962e9f53f830ed1b8b5` / 266307785 |
+| `mhz_completerun/` | 6 | mhz(7)/1 | 209756 | 28156 | `d502ee1305f363c448d5507aae54b732d851433713f809fdd79ce8ccc21c9c03` / 4561906 | `0260219e935d5ec5b0873d8f59422fabe1ad8a6be8b8d2d9f505428e220764d6` / 184254918 |
 
 `segment_index` runs 0..6 with **no gaps**: the Sonic route skips FBZ
 (zone 4) entirely and took no bonus/special detour through MHZ, so
@@ -78,8 +78,8 @@ differential gate must therefore compare **the seven named dirs**, not
 `src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/`: 25 segment
 dirs + `run_manifest.json` + a curation copy of the movie. **Re-captured
 2026-07-25 on Linux** by commit `63eccd290` with Lua
-`6.32-s3k-completerun` and the diagnostic hooks off, so all 25
-`metadata.json` stamp `6.32-s3k-completerun` and `recording_date:
+`6.33-s3k-completerun` and the diagnostic hooks off, so all 25
+`metadata.json` stamp `6.33-s3k-completerun` and `recording_date:
 2026-07-25`, the 22 level/bonus segments carry `capture_mode:
 physics_animation_aux_without_diagnostic_hooks` and
 `pre_trace_osc_frames: 1`, every published file is LF, the
@@ -87,8 +87,8 @@ physics_animation_aux_without_diagnostic_hooks` and
 `aiz`'s 4654 rows), and **no segment carries a hook-driven aux line**.
 
 `run_manifest.json` is sha256
-`76d22f09a8fa6e145f2f068bdb263c982ec633fd2e1f24b497a5b9986fe01048`,
-8740 bytes, and stamps `6.32-s3k-completerun` in agreement with every
+`a36ad5e75daaa0ad8924b4ed624d765f42b14516b0ef985ad2a1f99efb209705`,
+8740 bytes, and stamps `6.33-s3k-completerun` in agreement with every
 segment. This set is byte-reproducible; §0.2.1 records what it used to
 be, because that history is what §6 and §7.3's rules were derived from.
 
@@ -156,7 +156,9 @@ The four published standalone dirs
 `src/test/resources/traces/s3k/{bonus_gumball,bonus_pachinko,bonus_slots,special_stage}/`
 are the (B) movie re-captured on **2026-07-23** under `run_id:
 s3k-multibonus`, then lifted out of the run tree into standalone fixture
-dirs. Same `bk2_frame_offset` and `trace_frame_count` as their (B)
+dirs. (That is the original capture date; every committed S3K fixture was
+last regenerated by `eb87d681b` and now stamps `recording_date:
+2026-07-25`.) Same `bk2_frame_offset` and `trace_frame_count` as their (B)
 counterparts, and — since (B) was re-captured under the same recorder
 identity by `63eccd290` — the same `physics.csv` and `aux_state.jsonl`
 bytes too. Only `metadata.json` still separates them, by `run_id`. The
@@ -165,10 +167,10 @@ either is caught rather than cancelling out.
 
 | Dir | (B) counterpart | `segment_index` | offset | rows | physics.csv sha256 / bytes | aux_state.jsonl sha256 / bytes |
 |---|---|---|---|---|---|---|
-| `bonus_gumball/` | `gumball` | 1 | 5570 | 1430 | `7faeb1e2b1804ac75b98daf97810e2c6be9818b8baee8417b56faff036cbe917` / 232294 | `842fbad87a91effb9749bcd7b95f61d558d1cb9929e35cf5ca9ac328743460e7` / 8408680 |
-| `bonus_slots/` | `slots` | 3 | 9142 | 1200 | `4e037ce8ee31835333c04f72fbd953f4b14aab85bacbaea1f643ed9a7c810dcb` / 195034 | `afe43538f38435bb28ef09defe765ff8fabeae6b4e9d1253485bc4f79c682249` / 2360965 |
+| `bonus_gumball/` | `gumball` | 1 | 5570 | 1430 | `8d6e3e3004e811a124c516ac224fe9e9dd5476cce1d6c3097b3b7c65c2526dd6` / 232294 | `842fbad87a91effb9749bcd7b95f61d558d1cb9929e35cf5ca9ac328743460e7` / 8408680 |
+| `bonus_slots/` | `slots` | 3 | 9142 | 1200 | `7fe7de5bb8dd97bf98ef595e46899097bb0b9e01a999aeff0d9953e63504809b` / 195034 | `afe43538f38435bb28ef09defe765ff8fabeae6b4e9d1253485bc4f79c682249` / 2360965 |
 | `special_stage/` | `ss` | 12 | 48174 | 4630 | `b6afb3f5f9708f974bf71d5fcfb973aced8e60d81e51f64e01a88012996fa5a1` / 272711 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` / **0** |
-| `bonus_pachinko/` | `pachinko` | 21 | 92963 | 3051 | `61a25ceed47298965838c3c4bb3847dbab3702065a16e1581acfed1107d3fc67` / 494896 | `129c19c636f1df05783f72d19af3f8aa1936bc44c63501d3825f1e8d35c6acc3` / 10733394 |
+| `bonus_pachinko/` | `pachinko` | 21 | 92963 | 3051 | `86c2c655d41153bde45ab762d2f382c51b59d1b7063b2e8b1c7b42a2cc13308b` / 494896 | `129c19c636f1df05783f72d19af3f8aa1936bc44c63501d3825f1e8d35c6acc3` / 10733394 |
 
 `special_stage/` additionally contains a curation copy of
 `s3-knux-multibonus-ss.bk2` (not recorder output — see §2.4).
@@ -373,7 +375,7 @@ on the last field. Values are emitted by the Lua's own formatters:
   "sidekicks": [...],
   "rng_seed": "0xHHHHHHHH",
   "recording_date": "YYYY-MM-DD",
-  "lua_script_version": "6.32-s3k-completerun",
+  "lua_script_version": "6.33-s3k-completerun",
   "trace_schema": 6,
   "csv_version": 7,
   "capture_mode": "physics_animation_aux_without_diagnostic_hooks",   ← iff LIGHTWEIGHT_REGEN
@@ -466,7 +468,7 @@ A **different key set and order**, not a superset of §3.1:
   "bk2_frame_offset": <decimal>,
   "trace_frame_count": <decimal>,
   "source_bk2": "<%q>",
-  "lua_script_version": "6.32-s3k-completerun",
+  "lua_script_version": "6.33-s3k-completerun",
   "recording_date": "YYYY-MM-DD",
   "bizhawk_version": "2.11",
   "genesis_core": "Genplus-gx",
@@ -546,7 +548,7 @@ it must not turn the warning into a failure.
   "run_id": "<%q>",                  ← iff run_id ~= nil
   "source_bk2": "<%q>",
   "rom_checksum": "C5B1C655C19F462ADE0AC4E17A844D10",
-  "lua_script_version": "6.32-s3k-completerun",
+  "lua_script_version": "6.33-s3k-completerun",
   "segments": [
     {"dir": …, "kind": …, "trace_profile": …, "bk2_frame_offset": …, "trace_frame_count": …, "zone_id": …, "act": …<, extra>},
     …last entry has no trailing comma…
@@ -714,6 +716,7 @@ none.
 | `9e3ccdb41` | 2026-07-20 | `6.32-s3k-completerun` | **+`v_int_run_count`** metadata line (bonus segments only) |
 | `6564667eb` | 2026-07-21 | `6.32-s3k-completerun` (**no bump**) | `ADDR_FRAMECOUNT` `0xFE08` → `0xFE04` |
 | `192d9c976` | 2026-07-23 | `6.32-s3k-completerun` (**no bump**) | `LIGHTWEIGHT_REGEN` inverted to default-on; `capture_mode` string changed; pre-trace snapshots always emitted |
+| `f71b5ea44` | 2026-07-25 | `6.33-s3k-completerun` | `ADDR_VBLA_WORD` `0xFE12` (`Life_count`) → `0xFE0E` (low word of `V_int_run_count`) — physics.csv `vblank_counter` only; all 39 S3K fixture dirs regenerated in `eb87d681b` |
 
 ### 7.2 The 6.31 → 6.32 metadata delta (exact, and it is *only* metadata)
 
@@ -772,11 +775,15 @@ cpu_state_snapshot.vfc 1 player_mode_set.vfc 1    mode_change.vfc 1
 routine_change.vfc 1
 ```
 
-**The complete-run recorder reads `0xFE04`; the standard S3K recorder
-(`s3k_trace_recorder.lua:375`) still reads `0xFE08`.** The two native
-recorders must therefore differ here. `s3k-trace-recorder-behavior.md`
-§7's instruction to "reproduce the dead read" applies to the STANDARD
-recorder only and must not be carried into the complete-run port.
+**Both S3K recorders now read `0xFE04`.** The standard recorder
+(`s3k_trace_recorder.lua`) read `0xFE08` until v6.31-s3k, which is why
+this section existed; that fix landed and the standard recorder's three
+canonical fixtures were regenerated on the live counter. The native port
+therefore carries NO recorder-identity fork for this address — the
+`FrameCounterAddressFor` seam and the 4-argument `FormatRow` overload
+were deleted (s3k-completerun-profiles.md §11.1), and
+`s3k-trace-recorder-behavior.md` no longer instructs anyone to reproduce
+a dead read.
 
 **(ii) `LIGHTWEIGHT_REGEN` inverted (commit `192d9c976`).** Before:
 `LIGHTWEIGHT_REGEN = os.getenv("OGGF_TRACE_LIGHTWEIGHT") == "1"` —
@@ -820,7 +827,7 @@ lines below.
 thirty-six dirs in total, full-file sha256 on `physics.csv` and
 `aux_state.jsonl`, `run_manifest.json` raw, and a `metadata.json`
 comparison that permits **only** the `recording_date` value line with
-`lua_script_version` pinned as the exact `6.32-s3k-completerun` literal
+`lua_script_version` pinned as the exact `6.33-s3k-completerun` literal
 on both sides.
 
 This is a tightening. Until `63eccd290` re-captured it, (B) could only
@@ -1024,8 +1031,8 @@ collected delegate is the classic interop crash).
 
 1. Publish LF for every file, in every mode. Never call
    `ExpandRunNewlines` on an S3K path (§6).
-2. `ADDR_FRAMECOUNT = 0xFE04` for the complete-run recorder; the
-   standard recorder keeps `0xFE08` (§7.3 i).
+2. `ADDR_FRAMECOUNT = 0xFE04` for BOTH recorders (§7.3 i). The standard
+   recorder read `0xFE08` until Lua v6.31-s3k; there is no fork left.
 3. Emit `capture_mode:
    "physics_animation_aux_without_diagnostic_hooks"` in level and bonus
    metadata; never in special-stage metadata (§3.3).
@@ -1203,7 +1210,7 @@ Three deliberate strength choices:
 2. **No version normalization.** Unlike the S1 complete-run gate, which
    must tolerate a `3.14`→`3.17` stamp change, identity (A) was
    captured at 6.32 — the stamp this port emits. The gate pins
-   `"lua_script_version": "6.32-s3k-completerun"` as an exact literal on
+   `"lua_script_version": "6.33-s3k-completerun"` as an exact literal on
    *both* sides and requires exactly one such line, so a drift in either
    direction fails rather than being absorbed.
 3. **`run_id` absence asserted directly.** Line-count equality alone
@@ -1245,7 +1252,7 @@ terms as case 1: `physics.csv` and `aux_state.jsonl` by raw length
 **and** sha256 with zero normalization, `run_manifest.json`
 byte-identical, and `metadata.json` line for line with only the
 `recording_date` value free and `lua_script_version` pinned as the exact
-`6.32-s3k-completerun` literal on both sides. The three SS segments'
+`6.33-s3k-completerun` literal on both sides. The three SS segments'
 `aux_state.jsonl` are gated as the 0-byte files they are. The pass must
 publish exactly the 25 segment dirs, three files each, plus
 `run_manifest.json` and nothing else.

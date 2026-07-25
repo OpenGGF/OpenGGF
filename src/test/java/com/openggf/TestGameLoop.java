@@ -10,6 +10,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.configuration.FrameRateResolver;
 import com.openggf.game.DataSelectProvider;
 import com.openggf.game.dataselect.DataSelectAction;
 import com.openggf.game.dataselect.DataSelectActionType;
@@ -70,6 +71,14 @@ import static org.lwjgl.glfw.GLFW.*;
  * without requiring an OpenGL context.
  */
 public class TestGameLoop {
+
+    @Test
+    void palFrameCadenceUsesFiftyHz() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.REGION, "PAL");
+        config.setConfigValue(SonicConfiguration.FPS, 60);
+        assertEquals(50, FrameRateResolver.effective(config));
+    }
 
     private GameLoop gameLoop;
     private InputHandler mockInputHandler;

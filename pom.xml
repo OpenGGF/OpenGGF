@@ -654,6 +654,9 @@
                                     <arg value="core.hooksPath"/>
                                     <arg value=".githooks"/>
                                 </exec>
+                                <!-- java.io.tmpdir for surefire forks; the JVM
+                                     requires it to exist before it starts. -->
+                                <mkdir dir="${project.build.directory}/test-tmp"/>
                             </target>
                         </configuration>
                     </execution>
@@ -675,7 +678,20 @@
                 <version>3.2.5</version>
                 <configuration>
                     <!-- LWJGL/GLFW on macOS requires -XstartOnFirstThread (set via profile) -->
-                    <argLine>${surefire.argLine}</argLine>
+                    <!-- java.io.tmpdir must be set on the command line, not via
+                         systemPropertyVariables: java.nio.file.TempFileHelper caches it
+                         in a static initialiser that surefire's own early temp-file use
+                         can trigger before those properties are applied.
+
+                         Tests create temp files and directories in many places and not
+                         all of them clean up. Pointed at the system temp directory that
+                         accumulated ~1,800 stale directories and, where /tmp is a
+                         RAM-backed tmpfs, eventually filled it and broke unrelated
+                         features that legitimately need temporary space. Here the mess
+                         is bounded, invisible to the rest of the machine, and removed by
+                         `mvn clean`. Tests should still clean up after themselves; this
+                         makes forgetting harmless rather than cumulative. -->
+                    <argLine>${surefire.argLine} -Djava.io.tmpdir=${project.build.directory}/test-tmp</argLine>
                     <!-- Run test classes in parallel forked JVMs.
                          Thread-level parallelism is unsafe due to singleton state,
                          but process-level forks each get isolated singletons.

@@ -3,6 +3,7 @@ package com.openggf.tools;
 import com.openggf.Engine;
 import com.openggf.GameLoop;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
 import com.openggf.game.GameMode;
@@ -194,16 +195,20 @@ public final class HeadlessGameBoot implements AutoCloseable {
         GameModuleRegistry.setCurrent(module);
 
         // --- audio backend (real SMPS synthesis) ------------------------
-        // Must precede any music (loadZoneAndAct below) so the deterministic
-        // capture runtime installed later by AudioManager.beginCaptureMode()
-        // binds a real SMPS music stream. The default NullAudioBackend
-        // synthesizes nothing, which is what made captured audio silent.
+        // Must precede any music (loadZoneAndAct below) so the presentation
+        // producer this backend installs is the one that admits the level's
+        // music/SFX voices. The default NullAudioBackend synthesizes nothing,
+        // which is what made captured audio silent.
         // Mirrors Engine.initializeGlobalGameplayServices (Engine.java:676);
         // setBackend() falls back to NullAudioBackend if OpenAL init fails.
         SonicConfigurationService audioConfig = services.configuration();
         if (audioConfig.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
-            // Headless backend: synthesize SMPS for the capture tap but never
-            // touch a sound device (no OpenAL).
+            // Headless backend: it builds the normal presentation producer
+            // over a NoDeviceAudioSink (AudioBackend.createPresentationSink),
+            // so the same SMPS/WAV/raw-PCM voice registry renders offline
+            // without ever opening an audio device. AudioManager's offline
+            // capture lease is a non-consuming view of that producer, not a
+            // replacement for it.
             services.audio().setBackend(
                     new HeadlessSmpsAudioBackend(audioConfig, services.profiler()));
         }
@@ -237,6 +242,22 @@ public final class HeadlessGameBoot implements AutoCloseable {
         GameServices.camera().updatePosition(true);
 
         return loop;
+    }
+
+    /**
+     * The single headless outer-frame audio boundary. Headless capture drivers
+     * (the trace-capture tool and {@link TraceCaptureSession}) call this exactly
+     * once for each outer framebuffer frame they treat as presented, then drain
+     * that packet exactly once after the framebuffer grab.
+     *
+     * <p>{@code GameLoop.step()} / {@code stepInternal()} deliberately do not
+     * present, so fast-forward simulation steps may enqueue audio commands
+     * without multiplying the audio cadence. The mode is always
+     * {@link PresentationMode#FORWARD}: a headless capture run has no modal
+     * picker, pause, frame-step, or held rewind.
+     */
+    public static void presentHeadlessOuterAudioFrame() {
+        GameServices.audio().presentFrame(PresentationMode.FORWARD);
     }
 
     @Override

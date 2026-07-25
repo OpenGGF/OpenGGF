@@ -6,18 +6,32 @@ namespace OpenGGF.BizHawk.Headless
     /// <summary>
     /// Sonic 3 &amp; Knuckles (locked-on combined image) 68K work-RAM
     /// address map used by the S3K trace recorder port
-    /// (tools/bizhawk/s3k_trace_recorder.lua v6.30-s3k). Addresses are the
+    /// (tools/bizhawk/s3k_trace_recorder.lua v6.32-s3k). Addresses are the
     /// mainmemory-domain form: the $FF0000 base is stripped, so 0xF600
     /// here is $FFF600 on hardware. Typed big-endian reads delegate to
     /// the game-independent helpers on <see cref="S1Ram"/>.
     ///
-    /// Two historically mislabeled reads are reproduced VERBATIM (the Lua
-    /// is the behavioral authority - reproduce the read, not the label):
-    /// the CSV gameplay_frame_counter reads 0xFE08 (skdisasm
-    /// Debug_placement_mode, constant 0 outside debug mode; NOT the real
-    /// Level_frame_counter at 0xFE04, which is never read), and the CSV
-    /// vblank_counter reads 0xFE12 (skdisasm Life_count, value
-    /// lives &lt;&lt; 8; not a VBlank counter).
+    /// Both of the mislabeled reads this class used to carry are gone,
+    /// fixed at the source in the Lua rather than mirrored here.
+    ///
+    /// The first was ADDR_FRAMECOUNT, on which the two S3K recorders used
+    /// to disagree - the standard recorder read 0xFE08
+    /// (Debug_placement_mode, dead-zero outside debug mode) while the
+    /// complete-run recorder read 0xFE04 - so this class carried both
+    /// addresses and the writers forked on recorder identity. Lua
+    /// v6.31-s3k moved the standard recorder to 0xFE04 as well, so
+    /// <see cref="LevelFrameCounter"/> is now the single ADDR_FRAMECOUNT
+    /// for every S3K profile and the fork is deleted.
+    ///
+    /// The second was ADDR_VBLA_WORD, which both recorders pointed at
+    /// 0xFE12 = skdisasm Life_count, so the CSV vblank_counter column
+    /// carried lives &lt;&lt; 8 - a value that changes only on a 1UP, not a
+    /// V-int counter at all. Lua v6.32-s3k / v6.33-s3k-completerun moved it
+    /// to <see cref="VblankWord"/> 0xFE0E, the low word of the ds.l
+    /// V_int_run_count at 0xFE0C, which is the same address S1Ram and
+    /// S2Ram have always read. Every S3K fixture was regenerated against
+    /// the corrected read, so nothing here is reproduced verbatim-wrong any
+    /// more.
     /// </summary>
     public static class S3KRam
     {
@@ -51,8 +65,8 @@ namespace OpenGGF.BizHawk.Headless
         public const int EventsBg02 = 0xEED4;            // u16be Events_bg+$02
         public const int BackgroundCollisionFlag = 0xF664; // u8 (cnz_event_ram only)
         public const int LevelStartedFlag = 0xF711;      // u8 level-started flag
-        public const int FrameCount = 0xFE08;            // u16be Debug_placement_mode - CSV gameplay_frame_counter (constant 0; see class doc)
-        public const int VblankWord = 0xFE12;            // u16be Life_count word - CSV vblank_counter (lives << 8; see class doc)
+        public const int LevelFrameCounter = 0xFE04;     // u16be Level_frame_counter - ADDR_FRAMECOUNT for BOTH S3K recorders: CSV gameplay_frame_counter, every aux "vfc", oscillation_state.level_frame_counter
+        public const int VblankWord = 0xFE0E;            // u16be low word of V_int_run_count (the ds.l at 0xFE0C) - CSV vblank_counter; was 0xFE12 = Life_count until Lua v6.32-s3k (see class doc)
         public const int LagFrameCount = 0xF628;         // u16be Lag_frame_count - CSV lag_counter (a REAL read, unlike S2's constant 0)
         public const int RngSeed = 0xF636;               // u32be RNG_seed
         public const int OscTable = 0xFE6E;              // Oscillating_table: control word + 16 (value,delta) pairs
@@ -163,17 +177,10 @@ namespace OpenGGF.BizHawk.Headless
 
         // Complete-run recorder additions (s3k_complete_run_recorder.lua
         // v6.32; spec docs/s3k-complete-run-behavior.md §5). The STANDARD
-        // recorder reads none of these.
-        //
-        // LevelFrameCounter is that recorder's ADDR_FRAMECOUNT. It is NOT
-        // the same address as FrameCount above: commit 6564667eb moved it
-        // 0xFE08 -> 0xFE04 (Debug_placement_mode, dead-zero since
-        // inception, -> the real Level_frame_counter) WITHOUT bumping
-        // LUA_SCRIPT_VERSION, so 6.32-stamped fixtures exist on both sides
-        // of the change and the address must never be keyed off the
-        // version string (spec §8.3 / §10.10).
-        public const int LevelFrameCounter = 0xFE04;     // u16be Level_frame_counter (complete-run ADDR_FRAMECOUNT)
-        public const int VIntRunCount = 0xFE0C;          // u32be free-running V-int counter; bonus-segment metadata only
+        // recorder reads none of these. ADDR_FRAMECOUNT is NOT among them
+        // any more: it is LevelFrameCounter (0xFE04) in the global block
+        // above and is now shared by both recorders.
+        public const int VIntRunCount = 0xFE0C;          // u32be free-running V-int counter; bonus-segment metadata only. VblankWord (0xFE0E) is this longword's LOW WORD
         public const int CurrentSpecialStage = 0xFE16;   // u8 Current_special_stage -> special_stage_index
 
         // Game_paused is declared ds.w 1 (sonic3k.constants.asm:564) and

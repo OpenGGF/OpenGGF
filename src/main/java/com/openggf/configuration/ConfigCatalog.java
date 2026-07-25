@@ -231,7 +231,39 @@ public final class ConfigCatalog {
         put(CAPTURE_SCALE, of("capture", "scale", INT,
                 "Integer nearest-neighbor upscale factor for capture output"));
         put(CAPTURE_FPS, of("capture", "fps", INT, "Output frame rate for trace capture"));
-        put(CAPTURE_CODEC, of("capture", "codec", STRING, "Capture video codec (e.g. ffv1)"));
+        put(CAPTURE_CODEC, of("capture", "codec", STRING,
+                "Capture video codec: ffv1, h264 or h265. All three are lossless"
+                        + " (h264/h265 encode RGB directly; the usual yuv444p"
+                        + " 'lossless' settings are not byte-exact for RGB input)."
+                        + " ffv1 is the most widely playable; h264/h265 produce"
+                        + " smaller files but in an RGB form some players reject"));
+        put(CAPTURE_AUDIO_CODEC, of("capture", "audioCodec", STRING,
+                "Capture audio codec: flac, aac or mp3. WARNING: aac and mp3 are"
+                        + " LOSSY - the recorded audio will not match what the"
+                        + " engine produced. flac is lossless and is the default"));
+        put(CAPTURE_CONTAINER, of("capture", "container", STRING,
+                "Recording file extension, e.g. mkv or mp4. ffmpeg picks its"
+                        + " muxer from this. Recent ffmpeg will write every codec"
+                        + " here into either container, but player support is much"
+                        + " narrower: mkv plays everything, while mp4 is portable"
+                        + " only with h264/h265 + aac. mp4 holding ffv1 or flac is"
+                        + " a valid file most players will refuse"));
+        put(CAPTURE_FFMPEG_PASS1_ARGS, of("capture", "ffmpegPass1Args", STRING,
+                "ADVANCED. Full ffmpeg argument list for the encode pass."
+                        + " 'default' uses the engine's command. Placeholders:"
+                        + " {width} {height} {fps} {scale} {scaledWidth}"
+                        + " {scaledHeight} {videoCodecArgs} {videoOut}."
+                        + " Frames always arrive as rawvideo/rgba on pipe:0."
+                        + " Cannot be empty: this pass encodes the frames"));
+        put(CAPTURE_FFMPEG_PASS2_ARGS, of("capture", "ffmpegPass2Args", STRING,
+                "ADVANCED. Full ffmpeg argument list for the mux pass."
+                        + " 'default' uses the engine's command. Placeholders:"
+                        + " {videoIn} {audioIn} {sampleRate} {audioCodecArgs}"
+                        + " {output}. Leave EMPTY to skip muxing entirely: the"
+                        + " encode pass output is published as-is and the"
+                        + " recording has NO AUDIO"));
+        put(CAPTURE_TOGGLE_KEY, of("capture", "toggleKey", KEY,
+                "Shift+key toggles live viewport audio/video recording"));
 
         // ───────────────── DEBUG BLOCK ─────────────────
 

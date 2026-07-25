@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.game.session.SessionManager;
 import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -371,8 +372,7 @@ class TestS3kCnzAct1EventFlow {
 
     @Test
     void lowerRouteTunnelModeAt3000DoesNotArmRomArenaGateUntil31E0() {
-        RecordingAudioBackend audio = new RecordingAudioBackend();
-        GameServices.audio().setBackend(audio);
+        GameServices.audio().commandTimeline().clear();
 
         Sonic3kCNZEvents events = initCnzEvents(0);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x3000, (short) 0x0650);
@@ -405,9 +405,9 @@ class TestS3kCnzAct1EventFlow {
                 "Camera X $3000 should apply the ROM tunnel minimum Y");
         assertEquals(0x1000, GameServices.camera().getMaxYTarget() & 0xFFFF,
                 "Camera X $3000 must not set the arena target max Y");
-        assertEquals(0, audio.fadeOutCount,
+        assertEquals(0, commandsOfType(AudioCommand.FadeOutMusic.class).size(),
                 "Camera X $3000 must not fade music for the arena gate");
-        assertTrue(audio.playedMusic.isEmpty(),
+        assertTrue(commandsOfType(AudioCommand.PlayMusic.class).isEmpty(),
                 "Camera X $3000 must not start miniboss music");
 
         GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
@@ -418,39 +418,40 @@ class TestS3kCnzAct1EventFlow {
         assertEquals(Sonic3kConstants.CNZ_MINIBOSS_ARENA_MAX_X, GameServices.camera().getMaxX() & 0xFFFF);
         assertEquals(Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y, GameServices.camera().getMinY() & 0xFFFF);
         assertEquals(Sonic3kConstants.CNZ_MINIBOSS_ARENA_MAX_Y, GameServices.camera().getMaxYTarget() & 0xFFFF);
-        assertEquals(1, audio.fadeOutCount,
+        assertEquals(1, commandsOfType(AudioCommand.FadeOutMusic.class).size(),
                 "The real arena gate fades current music before the 120-frame wait");
-        assertTrue(audio.playedMusic.isEmpty(),
+        assertTrue(commandsOfType(AudioCommand.PlayMusic.class).isEmpty(),
                 "Miniboss music must wait for the outer 120-frame release timer");
     }
 
     @Test
     void arenaGateReleasesMinibossMusicOnceAfter120FrameWait() {
-        RecordingAudioBackend audio = new RecordingAudioBackend();
-        GameServices.audio().setBackend(audio);
+        GameServices.audio().commandTimeline().clear();
 
         Sonic3kCNZEvents events = initCnzEvents(0);
         GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
 
         events.update(0, 0);
 
-        assertEquals(1, audio.fadeOutCount,
+        assertEquals(1, commandsOfType(AudioCommand.FadeOutMusic.class).size(),
                 "Arena gate should issue the ROM fade-out immediately");
-        assertTrue(audio.playedMusic.isEmpty(),
+        assertTrue(commandsOfType(AudioCommand.PlayMusic.class).isEmpty(),
                 "Miniboss music should not start on the gate frame");
 
         for (int frame = 1; frame <= 120; frame++) {
             events.update(0, frame);
         }
 
-        assertEquals(List.of(Sonic3kMusic.MINIBOSS.id), audio.playedMusic,
+        assertEquals(List.of(Sonic3kMusic.MINIBOSS.id), commandsOfType(AudioCommand.PlayMusic.class)
+                        .stream().map(AudioCommand.PlayMusic::musicId).toList(),
                 "The outer gate releases mus_Miniboss after the 120-frame wait");
 
         for (int frame = 120; frame < 180; frame++) {
             events.update(0, frame);
         }
 
-        assertEquals(List.of(Sonic3kMusic.MINIBOSS.id), audio.playedMusic,
+        assertEquals(List.of(Sonic3kMusic.MINIBOSS.id), commandsOfType(AudioCommand.PlayMusic.class)
+                        .stream().map(AudioCommand.PlayMusic::musicId).toList(),
                 "The release timer must not replay miniboss music after it fires once");
     }
 
@@ -525,19 +526,12 @@ class TestS3kCnzAct1EventFlow {
         }
     }
 
-    private static final class RecordingAudioBackend extends NullAudioBackend {
-        private int fadeOutCount;
-        private final List<Integer> playedMusic = new ArrayList<>();
-
-        @Override
-        public void playMusic(int musicId) {
-            playedMusic.add(musicId);
-        }
-
-        @Override
-        public void fadeOutMusic(int steps, int delay) {
-            fadeOutCount++;
-        }
+    private <T extends AudioCommand> List<T> commandsOfType(Class<T> type) {
+        return GameServices.audio().commandTimeline().entries().stream()
+                .map(entry -> entry.command())
+                .filter(type::isInstance)
+                .map(type::cast)
+                .toList();
     }
 
     private static final class CapturingCnzEvents extends Sonic3kCNZEvents {

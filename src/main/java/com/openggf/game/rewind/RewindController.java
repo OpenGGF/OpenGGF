@@ -306,6 +306,9 @@ public final class RewindController {
             dropDeferredAudioRestore();
             restoreAudioLogicalState(currentFrame);
             beginAudioFrame(currentFrame);
+            if (audioManager != null) {
+                audioManager.commitDeferredReverseLogicalRestore();
+            }
             primeStepperAtFrame(currentFrame);
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
         } finally {
@@ -456,6 +459,9 @@ public final class RewindController {
         audioRestoreDeferred = false;
         restoreAudioLogicalState(currentFrame);
         beginAudioFrame(currentFrame);
+        if (audioManager != null) {
+            audioManager.commitDeferredReverseLogicalRestore();
+        }
     }
 
     /**
@@ -478,6 +484,17 @@ public final class RewindController {
         if (audioManager != null) {
             audioManager.clearPcmHistory();
         }
+    }
+
+    /**
+     * Severs a held rewind's pre-boundary logical restore and prepares the
+     * already initialized post-boundary dual audio state for transactional
+     * reverse release. Repeated calls retry the exact fresh prepared token.
+     */
+    boolean preparePostBoundaryAudioRelease() {
+        audioRestoreDeferred = false;
+        return audioManager == null
+                || audioManager.preparePostBoundaryReverseRelease();
     }
 
     /**
@@ -513,10 +530,9 @@ public final class RewindController {
         return audioManager.beginRewindReplay(fromFrame, targetFrame, reason);
     }
 
-    private void afterAudioRestore(AudioPresentationPolicy policy) {
-        if (audioManager != null) {
-            audioManager.afterRewindRestore(currentFrame, policy);
-        }
+    boolean afterAudioRestore(AudioPresentationPolicy policy) {
+        return audioManager == null
+                || audioManager.afterRewindRestore(currentFrame, policy);
     }
 
     private void beginAudioFrame(int frame) {

@@ -189,7 +189,10 @@ function Validate-FileSizePolicyForFiles([string[]]$Files, [scriptblock]$SizeRes
         if ((($fileName -like "aux_state*.jsonl") -or ($fileName -like "physics*.csv")) -and
                 $size -ge $script:TraceCompressionThresholdBytes) {
             $message = ("``$path`` is an uncompressed trace payload ({0} bytes). " +
-                    "Run ``tools/traces/compress-traces.ps1`` and commit the ``.gz`` file instead.") -f $size
+                    "Commit the ``.gz`` instead: the native harness " +
+                    "(tools/bizhawk-headless) compresses at capture time by default, " +
+                    "and ``tools/traces/compress-traces.ps1`` does it for a Lua " +
+                    "capture directory.") -f $size
             Add-ValidationError $message
         }
         if ($size -ge $script:GithubFileSizeLimitBytes) {

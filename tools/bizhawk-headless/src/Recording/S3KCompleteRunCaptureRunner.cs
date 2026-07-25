@@ -84,17 +84,17 @@ namespace OpenGGF.BizHawk.Headless
 
     /// <summary>
     /// Native port of the S3K complete-run recorder's DRIVER
-    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.32-s3k-completerun
+    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.33-s3k-completerun
     /// main loop L5850-5900; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It owns only
     /// the loop and the wiring; every decision it makes is delegated:
     ///
     /// - segmentation (arm / finalize / stop, dir tokens, transitions) to
     ///   <see cref="S3KCompleteRunSegmenter"/>,
-    /// - the 42-column level/bonus row to <see cref="S3KTraceCsvWriter"/>
-    ///   with the complete-run ADDR_FRAMECOUNT
-    ///   (<see cref="S3KRam.LevelFrameCounter"/>, 0xFE04 — NOT the standard
-    ///   recorder's dead-zero 0xFE08),
+    /// - the 42-column level/bonus row to <see cref="S3KTraceCsvWriter"/>,
+    ///   whose gameplay_frame_counter is the shared ADDR_FRAMECOUNT
+    ///   (<see cref="S3KRam.LevelFrameCounter"/>, 0xFE04) that the standard
+    ///   recorder also reads since Lua v6.31-s3k,
     /// - the aux cascade to <see cref="S3KAuxEventEngine"/> under
     ///   <see cref="S3KTraceProfile.CompleteRun"/>,
     /// - the 20-column special-stage row to
@@ -404,8 +404,7 @@ namespace OpenGGF.BizHawk.Headless
                 WriteLine(physics, S3KTraceCsvWriter.FormatRow(
                     rowIndex,
                     S1InputMask.FromFrame(inputRow),
-                    host,
-                    S3KRam.LevelFrameCounter));
+                    host));
                 foreach (string line in auxEngine.ProcessFrame(rowIndex, host))
                 {
                     WriteLine(aux, line);

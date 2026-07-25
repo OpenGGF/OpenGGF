@@ -1238,6 +1238,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
+        /// <summary>
+        /// Every ROM-backed gate captures into a temp directory and compares
+        /// RAW payload bytes against a fixture, so it opts out of the
+        /// publish-time compression default. That default exists for
+        /// captures that get INSTALLED as fixtures and therefore committed —
+        /// a full complete-run aux stream is past GitHub's per-file limit
+        /// uncompressed — and gate output is never committed, so nothing
+        /// here depends on it.
+        /// </summary>
+        internal const string NoCompressArgument = " --no-compress";
+
         internal static string Quote(string value)
         {
             return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"")

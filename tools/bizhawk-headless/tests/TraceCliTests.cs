@@ -42,6 +42,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "TraceCli trace run failure leaves no partial outputs",
                 TraceRunFailureLeavesNoPartialOutputs));
             tests.Add(new TestMain.TestCase(
+                "TraceCli trace run compresses payloads by default and"
+                + " honors --no-compress",
+                TraceRunPublishesCompressedPayloads));
+            tests.Add(new TestMain.TestCase(
                 "TraceCli validates the S2 trace arguments",
                 ValidatesS2TraceArguments));
             tests.Add(new TestMain.TestCase(
@@ -194,7 +198,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "  \"zone\": \"cnz\",\n");
                         AssertContains(
                             metadata,
-                            "  \"lua_script_version\": \"6.30-s3k\",\n");
+                            "  \"lua_script_version\": \"6.32-s3k\",\n");
                         AssertContains(
                             metadata,
                             "  \"trace_profile\": \"gameplay_unlock\",\n");
@@ -2028,6 +2032,141 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         CommandLineOptions.Parse(SmokeArguments(output));
                     AssertEx.Equal(CaptureMode.Smoke, smoke.Mode);
                 });
+        }
+
+        /// <summary>
+        /// Compression end to end. First: a default capture with the
+        /// threshold pinned to 0 publishes both payloads as verified gzips
+        /// (metadata.json is never a payload and stays plain), the
+        /// uncompressed names are gone, and the report printed after
+        /// publication names what landed compressed. Then --no-compress over
+        /// the same capture publishes the plain names and reports nothing —
+        /// the opt-out every ROM-backed gate relies on. A synthetic
+        /// three-row capture is far below the 1 MiB default, which is why
+        /// the threshold has to be pinned for the first half.
+        /// </summary>
+        private static void TraceRunPublishesCompressedPayloads()
+        {
+            TraceCliDependencies dependencies = ResolveDependencies();
+            WithSyntheticMovie(
+                7,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output,
+                                "--compress-threshold", "0"
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) =>
+                                new ScriptedTraceHost(3));
+
+                        AssertEx.Equal(string.Empty, stderr.ToString());
+                        AssertEx.Equal(0, exitCode);
+
+                        string fullOutput = Path.GetFullPath(output);
+                        AssertEx.Equal(
+                            "aux_state.jsonl.gz,metadata.json,"
+                            + "physics.csv.gz",
+                            PublishedNames(fullOutput));
+
+                        string physics = DecompressText(Path.Combine(
+                            fullOutput, "physics.csv.gz"));
+                        AssertEx.Equal(
+                            true,
+                            physics.StartsWith(
+                                S1TraceCsvWriter.Header + "\n0000,"));
+                        AssertContains(
+                            DecompressText(Path.Combine(
+                                fullOutput, "aux_state.jsonl.gz")),
+                            "\"event\":\"state_snapshot\"");
+                        AssertContains(
+                            stdout.ToString(),
+                            "Compressed "
+                            + Path.Combine(fullOutput, "physics.csv")
+                            + " -> "
+                            + Path.Combine(fullOutput, "physics.csv.gz")
+                            + " (");
+                        AssertContains(
+                            stdout.ToString(),
+                            "Compressed "
+                            + Path.Combine(fullOutput, "aux_state.jsonl")
+                            + " -> ");
+                    }));
+
+            // --no-compress publishes the plain names and reports nothing:
+            // the gates capture into a temp directory, compare raw bytes and
+            // never commit them.
+            WithSyntheticMovie(
+                7,
+                moviePath => WithUnusedOutput(
+                    output =>
+                    {
+                        var stdout = new StringWriter(
+                            CultureInfo.InvariantCulture);
+                        var stderr = new StringWriter(
+                            CultureInfo.InvariantCulture);
+
+                        int exitCode = Program.Run(
+                            new[]
+                            {
+                                "--mode", "trace",
+                                "--rom", dependencies.RomPath,
+                                "--movie", moviePath,
+                                "--output", output,
+                                "--no-compress"
+                            },
+                            stdout,
+                            stderr,
+                            (romPath, syncSettings) =>
+                                new ScriptedTraceHost(3));
+
+                        AssertEx.Equal(string.Empty, stderr.ToString());
+                        AssertEx.Equal(0, exitCode);
+
+                        string fullOutput = Path.GetFullPath(output);
+                        AssertEx.Equal(
+                            "aux_state.jsonl,metadata.json,physics.csv",
+                            PublishedNames(fullOutput));
+                        AssertEx.Equal(
+                            false,
+                            stdout.ToString().Contains("Compressed "));
+                    }));
+        }
+
+        private static string PublishedNames(string directory)
+        {
+            return string.Join(
+                ",",
+                Directory.GetFileSystemEntries(directory)
+                    .Select(Path.GetFileName)
+                    .OrderBy(name => name, StringComparer.Ordinal)
+                    .ToArray());
+        }
+
+        private static string DecompressText(string path)
+        {
+            using (FileStream stream = File.OpenRead(path))
+            using (var gzip = new GZipStream(
+                stream,
+                CompressionMode.Decompress))
+            using (var reader = new StreamReader(
+                gzip,
+                new UTF8Encoding(false)))
+            {
+                return reader.ReadToEnd();
+            }
         }
 
         private static void TraceRunPublishesThreeFilesWithLabeledStdout()

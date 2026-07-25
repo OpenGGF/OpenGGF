@@ -77,6 +77,11 @@ class TestEngine {
 
     @AfterEach
     void tearDown() {
+        // Constructing an Engine publishes it into a process-global static.
+        // Surefire reuses forks, so leaving it set lets an unrelated later test
+        // reach Engine.currentGameLoop() and drive a GL shader compile with no
+        // context, which aborts the JVM rather than failing a test.
+        Engine.clearGlobalInstance();
         SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
@@ -416,8 +421,7 @@ class TestEngine {
     }
 
     @Test
-    void createDataSelectSaveContext_preservesClearSaveStateFromPayload() throws Exception {
-        Path saveRoot = Files.createTempDirectory("engine-dataselect-save");
+    void createDataSelectSaveContext_preservesClearSaveStateFromPayload(@TempDir Path saveRoot) throws Exception {
         SaveManager saveManager = new SaveManager(saveRoot);
         saveManager.writeSlot("s3k", 1, Map.of(
                 "zone", 6,
@@ -453,8 +457,7 @@ class TestEngine {
     }
 
     @Test
-    void createDataSelectSaveContext_ignoresNonLoadableSavePayload() throws Exception {
-        Path saveRoot = Files.createTempDirectory("engine-dataselect-save-nonloadable");
+    void createDataSelectSaveContext_ignoresNonLoadableSavePayload(@TempDir Path saveRoot) throws Exception {
         SaveManager saveManager = new SaveManager(saveRoot);
         saveManager.writeSlot("s3k", 1, Map.of(
                 "zone", 6,

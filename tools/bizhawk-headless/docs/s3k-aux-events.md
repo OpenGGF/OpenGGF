@@ -1,14 +1,14 @@
 # S3K Standard Recorder — Authoritative AUX Event Spec
 
 Source of truth: `tools/bizhawk/s3k_trace_recorder.lua` (metadata stamp
-`6.30-s3k` at HEAD, `trace_schema` 6, `csv_version` 7) plus
+`6.32-s3k` at HEAD, `trace_schema` 6, `csv_version` 7) plus
 `tools/bizhawk/lib/oggf_trace_common.lua`. This document is a byte-level
 transcription of the aux surface for the native (C#) port. **The Lua is the
 behavioral authority**; where this document and the Lua disagree, the Lua wins
 and this document must be fixed.
 
 Scope: the STANDARD recorder only. `s3k_complete_run_recorder.lua`
-(`6.32-s3k-completerun`) is a separate later migration and is not covered here.
+(`6.33-s3k-completerun`) is a separate later migration and is not covered here.
 
 ## 0. Emission mechanics
 
@@ -20,10 +20,12 @@ Scope: the STANDARD recorder only. `s3k_complete_run_recorder.lua`
   hex-case (`%04X` upper), `0x` prefixes, booleans as bare `true`/`false`,
   decimal vs hex per field.
 - `frame` is the recorder's `trace_frame` (0-based recorded row index; `-1` for
-  the two pre-trace snapshot families). `vfc` is `mainmemory.read_u16_be(0xFE08)`
-  (skdisasm `Debug_placement_mode` — NOT `Level_frame_counter`, which is `$FE04`
-  and never read; see core spec §1.1 — constant `0` in every fixture), read
-  fresh at each emission point. Two families
+  the two pre-trace snapshot families). `vfc` is `mainmemory.read_u16_be(0xFE04)`
+  (skdisasm `Level_frame_counter`; see core spec §1.1 — live, and equal to the
+  same frame's CSV `gameplay_frame_counter`), read fresh at each emission point.
+  Before v6.31-s3k this read was `0xFE08` (`Debug_placement_mode`, dead-zero), so
+  every pre-v6.31 fixture shows a constant `"vfc":0`; the three canonical
+  fixtures were regenerated on `0xFE04`. Two families
   (`zone_act_state`, `checkpoint`) have **no** `vfc` field.
 - `json_int_or_null(v)` renders `null` when nil, else `tostring(v)` (in
   practice always an integer here).
@@ -225,7 +227,7 @@ Reads `$F700..$F70F` block, `$F66A/$F66B`, `$EE26`.
 {"frame":%d,"vfc":%d,"event":"oscillation_state","level_frame_counter":%d,"osc_table":"%s"}
 ```
 
-`vfc` and `level_frame_counter` are **the same read** (u16 at `$FE08`, twice).
+`vfc` and `level_frame_counter` are **the same read** (u16 at `$FE04`, twice).
 `osc_table` = 0x42 bytes at `$FE6E` as concatenated `%02X` (132 hex chars).
 
 ### 3.9 `object_state` — poll, always (proximity-gated), both players
@@ -596,7 +598,7 @@ Entry/spring-child sub-templates identical to §3.21.
 
 ## 4. Per-fixture event-family presence (empirical, gunzipped fixture aux streams)
 
-All three fixtures: `lua_script_version` `6.28-s3k`, `trace_schema` 6,
+All three fixtures: `lua_script_version` `6.32-s3k`, `trace_schema` 6,
 `csv_version` 7, `capture_mode` `physics_animation_aux_without_diagnostic_hooks`
 (lightweight — no diagnostic hooks; no `OGGF_S3K_RNG_CALL_RANGE` /
 `OGGF_S3K_CNZ_EVENT_RAM_RANGE`). Counts are exact line counts per
@@ -712,9 +714,9 @@ on a hook-populated `state.seen` / hit list, so with the hook switch off (itself
 a refusal) they change no byte of the Lua's own output either. Refusing them
 would be a false refusal; a test pins that the CLI does not name them.
 
-Metadata note (out of scope here but easy to trip over): the fixtures are
-stamped `6.28-s3k` while HEAD stamps `6.30-s3k`, and the MGZ fixture carries a
-hand-normalized extra key `"pre_trace_osc_frames": 0` that HEAD's
-`write_metadata` does not emit. The exact permitted metadata delta must be
-pinned separately; `physics.csv` and `aux_state.jsonl` allow **zero**
+Metadata note (out of scope here but easy to trip over): as of the v6.32-s3k
+regeneration the fixtures and HEAD both stamp `6.32-s3k` and neither carries
+`pre_trace_osc_frames` (retired since v6.29; the MGZ fixture's leftover key
+was dropped in the regeneration too), so the only permitted `metadata.json`
+delta is `recording_date`. `physics.csv` and `aux_state.jsonl` allow **zero**
 normalization.

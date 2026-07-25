@@ -1,6 +1,7 @@
 package com.openggf.capture;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +26,9 @@ public final class EncoderSink implements FrameSink {
     private Thread worker;
     private volatile CaptureException workerFailure;
     private volatile Path output;
+    private final Object lifecycleLock = new Object();
+    private volatile boolean terminal;
+    private volatile boolean abortRequested;
 
     public EncoderSink(CaptureEncoder encoder, BackpressurePolicy policy, int capacity) {
         this(encoder, policy, capacity, DEFAULT_STOP_JOIN_TIMEOUT_MILLIS);
@@ -91,6 +95,12 @@ public final class EncoderSink implements FrameSink {
 
     @Override
     public Path stop() throws CaptureException {
+        synchronized (lifecycleLock) {
+            if (terminal) {
+                if (abortRequested) throw new CaptureException("capture aborted", workerFailure);
+                return output;
+            }
+        }
         try {
             // Deliver the poison pill without hanging: if the worker has already
             // died (e.g. encoder failure) the queue may be full and a blocking
@@ -103,20 +113,54 @@ public final class EncoderSink implements FrameSink {
             }
             worker.join(stopJoinTimeoutMillis);
             if (worker.isAlive()) {
-                encoder.abort();
-                worker.join(250);
+                abort();
                 throw new CaptureException("encoder thread did not stop within "
                         + stopJoinTimeoutMillis + " ms");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            encoder.abort();
+            abort();
             throw new CaptureException("interrupted while stopping", e);
         }
+        if (abortRequested) {
+            terminal = true;
+            throw new CaptureException("capture aborted", workerFailure);
+        }
         if (workerFailure != null) {
+            terminal = true;
             throw new CaptureException("encoder thread failed", workerFailure);
         }
+        terminal = true;
         return output;
+    }
+
+    public void abort() {
+        abort(Duration.ofMillis(stopJoinTimeoutMillis));
+    }
+
+    void abort(Duration timeout) {
+        long timeoutNanos = Math.max(0, timeout.toNanos());
+        long deadline = System.nanoTime() + timeoutNanos;
+        synchronized (lifecycleLock) {
+            if (terminal || abortRequested) return;
+            abortRequested = true;
+        }
+        if (encoder instanceof FfmpegEncoder ffmpegEncoder) {
+            ffmpegEncoder.abortUntil(deadline);
+        } else {
+            encoder.abort();
+        }
+        queue.clear();
+        if (worker != null && worker != Thread.currentThread()) {
+            worker.interrupt();
+            try {
+                long remaining = Math.max(0, deadline - System.nanoTime());
+                TimeUnit.NANOSECONDS.timedJoin(worker, remaining);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        terminal = true;
     }
 
     public long droppedCount() {
@@ -136,10 +180,10 @@ public final class EncoderSink implements FrameSink {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             workerFailure = new CaptureException("encoder thread interrupted", e);
-            encoder.abort();
+            abort();
         } catch (CaptureException e) {
             workerFailure = e;
-            encoder.abort();
+            abort();
         }
     }
 }

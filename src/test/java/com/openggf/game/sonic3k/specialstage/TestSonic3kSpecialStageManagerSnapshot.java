@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.specialstage;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
@@ -46,15 +47,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 class TestSonic3kSpecialStageManagerSnapshot {
-    private AudioTestFixtures.RecordingAudioBackend audioBackend;
     private GameStateManager gameState;
 
     @BeforeEach
     void configureServices() {
         TestEnvironment.resetAll();
         AudioManager.getInstance().resetState();
-        audioBackend = new AudioTestFixtures.RecordingAudioBackend();
-        AudioManager.getInstance().setBackend(audioBackend);
+        AudioManager.getInstance().setBackend(new AudioTestFixtures.RecordingAudioBackend());
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
@@ -134,10 +133,10 @@ class TestSonic3kSpecialStageManagerSnapshot {
         set(manager, "musicSpedUp", false);
         Sonic3kSpecialStageSnapshot normalSpeed = manager.captureRewindSnapshot();
         manager.restoreRewindSnapshot(normalSpeed);
-        assertTrue(audioBackend.calls.contains("setSpeedMultiplier:1"));
+        assertTrue(hasSpeedMultiplier(1));
         assertOnlyAudioSpeedRestoreCalls();
 
-        audioBackend.clear();
+        AudioManager.getInstance().commandTimeline().clear();
         set(manager.getPlayer(), "rate", 0x1800);
         set(manager, "musicSpedUp", true);
         Sonic3kSpecialStageSnapshot spedUp = manager.captureRewindSnapshot();
@@ -145,7 +144,7 @@ class TestSonic3kSpecialStageManagerSnapshot {
         set(manager, "musicSpedUp", false);
         manager.restoreRewindSnapshot(spedUp);
 
-        assertTrue(audioBackend.calls.contains("setSpeedMultiplier:24"));
+        assertTrue(hasSpeedMultiplier(24));
         assertOnlyAudioSpeedRestoreCalls();
     }
 
@@ -162,7 +161,7 @@ class TestSonic3kSpecialStageManagerSnapshot {
         Sonic3kSpecialStageSnapshot snapshot = manager.captureRewindSnapshot();
 
         palette.getPalette(0).getColor(0).r = (byte) 99;
-        audioBackend.clear();
+        AudioManager.getInstance().commandTimeline().clear();
         manager.restoreRewindSnapshot(snapshot);
 
         verify(graphics).cachePaletteTexture(any(Palette.class), eq(0));
@@ -170,7 +169,7 @@ class TestSonic3kSpecialStageManagerSnapshot {
         verify(graphics).cachePaletteTexture(any(Palette.class), eq(2));
         verify(graphics).cachePaletteTexture(any(Palette.class), eq(3));
         assertEquals(16, palette.getPalette(0).getColor(0).r & 0xFF);
-        assertEquals("setSpeedMultiplier:1", audioBackend.calls.getFirst());
+        assertTrue(hasSpeedMultiplier(1));
         assertOnlyAudioSpeedRestoreCalls();
     }
 
@@ -352,9 +351,17 @@ class TestSonic3kSpecialStageManagerSnapshot {
     }
 
     private void assertOnlyAudioSpeedRestoreCalls() {
-        assertFalse(audioBackend.calls.isEmpty());
-        assertTrue(audioBackend.calls.stream().allMatch(call -> call.startsWith("setSpeedMultiplier:")),
-                () -> "Unexpected audio replay/fade calls: " + audioBackend.calls);
+        var commands = AudioManager.getInstance().commandTimeline().entries().stream()
+                .map(entry -> entry.command()).toList();
+        assertFalse(commands.isEmpty());
+        assertTrue(commands.stream().allMatch(AudioCommand.SetSpeedMultiplier.class::isInstance),
+                () -> "Unexpected audio replay/fade commands: " + commands);
+    }
+
+    private boolean hasSpeedMultiplier(int multiplier) {
+        return AudioManager.getInstance().commandTimeline().entries().stream()
+                .map(entry -> entry.command())
+                .anyMatch(command -> command.equals(new AudioCommand.SetSpeedMultiplier(multiplier)));
     }
 
     private static Object get(Object target, String field) {

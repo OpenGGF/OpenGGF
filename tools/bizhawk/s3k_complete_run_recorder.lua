@@ -290,6 +290,14 @@
 -- Slots_CycleOptions's recorded reel outcomes become reproducible instead of
 -- approximated by the engine's per-session vblaCounter. Field omitted for
 -- level segments (start_v_int_run_count stays nil). CSV schema unchanged.
+--
+-- v6.33-s3k-completerun: points ADDR_VBLA_WORD at the low word of
+-- V_int_run_count (0xFE0E) instead of Life_count (0xFE12). Fixes the
+-- physics.csv vblank_counter column, which was recording the lives counter --
+-- constant except on 1UPs -- rather than the ROM's free-running V-int counter.
+-- Matches the S1 and S2 recorders, which already read 0xFE0E, and is the low
+-- word of the same ADDR_V_INT_RUN_COUNT long (0xFE0C) that v6.32 added above.
+-- Existing captures carry the wrong column and need recapture.
 ------------------------------------------------------------------------------
 
 ------------------
@@ -354,7 +362,7 @@ end
 BIZHAWK_VERSION = "2.11"
 GENESIS_CORE = "Genplus-gx"
 S3K_ROM_CHECKSUM = "C5B1C655C19F462ADE0AC4E17A844D10"
-LUA_SCRIPT_VERSION = "6.32-s3k-completerun"   -- no "v" prefix (existing convention)
+LUA_SCRIPT_VERSION = "6.33-s3k-completerun"   -- no "v" prefix (existing convention)
 -- Overridable so non-default movies (e.g. the Knuckles multi-bonus route)
 -- get truthful source_bk2 metadata instead of the complete-run default.
 SOURCE_BK2_NAME = os.getenv("OGGF_BK2_BASENAME") or "s3k-complete-sonic-tails.bk2"
@@ -552,7 +560,7 @@ local ADDR_FRAMECOUNT       = 0xFE04  -- Level_frame_counter (was 0xFE08 = Debug
 -- $FFFF0000 -> CrossResetRAM at $FFFFFE00 -> Oscillating_table at offset $6E.
 local ADDR_OSC_TABLE        = 0xFE6E
 local OSC_TABLE_SIZE        = 0x42
-local ADDR_VBLA_WORD        = 0xFE12
+local ADDR_VBLA_WORD        = 0xFE0E  -- V_int_run_count low word (was 0xFE12 = Life_count, constant except on 1UPs; matches S1/S2 recorders and ADDR_V_INT_RUN_COUNT 0xFE0C+2)
 local ADDR_LAG_FRAME_COUNT  = 0xF628
 local ADDR_RNG_SEED         = 0xF636
 -- Game_paused ($FFFFF63A -> lua addr 0xF63A). ROM Pause_Loop
@@ -5806,8 +5814,11 @@ end
 
 WAIT_DESC = "first level entry (Game_Mode=0x0C). Auto-segmenting per ROM zone."
 print(string.format(
-    "S3K Complete-Run Recorder v6.28-s3k-completerun loaded. Profile=%s. Base output=%s. Waiting for %s",
-    TRACE_PROFILE, BASE_OUTPUT_DIR, WAIT_DESC))
+    -- Sourced from LUA_SCRIPT_VERSION (as the three metadata emitters already
+    -- do) rather than a literal; the literal had drifted to v6.28 while the
+    -- script was at v6.32.
+    "S3K Complete-Run Recorder v%s loaded. Profile=%s. Base output=%s. Waiting for %s",
+    LUA_SCRIPT_VERSION, TRACE_PROFILE, BASE_OUTPUT_DIR, WAIT_DESC))
 
 -- Register the CNZ wire cage execution hooks. Done once at script load
 -- before the main loop runs so the memoryexecute callbacks are armed for

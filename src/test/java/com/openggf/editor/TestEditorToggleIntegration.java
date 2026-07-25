@@ -1,5 +1,6 @@
 package com.openggf.editor;
 
+import com.openggf.tests.TestTempFiles;
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -134,6 +135,8 @@ class TestEditorToggleIntegration {
 
     @AfterEach
     void tearDown() {
+        // See TestEngine.tearDown: a leaked Engine static poisons the fork.
+        com.openggf.Engine.clearGlobalInstance();
         SonicConfigurationService.getInstance().resetToDefaults();
         SessionManager.clear();
         GameModuleRegistry.reset();
@@ -947,7 +950,7 @@ class TestEditorToggleIntegration {
     }
 
     private static void injectLeakedGarbageRom() throws IOException {
-        Path romPath = Files.createTempFile("editor-toggle-garbage-rom", ".bin");
+        Path romPath = TestTempFiles.createTempFile("editor-toggle-garbage-rom", ".bin");
         Files.write(romPath, new byte[512 * 1024]);
         romPath.toFile().deleteOnExit();
         Rom rom = new Rom();
