@@ -2,6 +2,7 @@ package com.openggf.capture;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.AudioTestFixtures;
@@ -45,6 +46,7 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -57,9 +59,21 @@ class LiveCaptureMediaSmokeTest {
     private static final int FRAME_COUNT = 6;
     private static final int STEREO_FRAMES_PER_VIDEO_FRAME = SAMPLE_RATE / FRAME_RATE;
 
-    /** Frames recorded by the mixed-source media fixture. */
+    /**
+     * Frames recorded by the mixed-source media fixture.
+     *
+     * <p>Matroska timestamps are millisecond-quantized, so the probed audio
+     * duration is rounded to whole milliseconds while the video side is exact.
+     * The A/V tolerance is one sample (1/48000 s = 20.8 us), so this count must
+     * make {@code frames / presentationFrameRate} a whole number of
+     * milliseconds. 12 frames at 60 fps is 0.200 s exactly.
+     */
     private static final int MIXED_FRAME_COUNT = 12;
-    /** Frames recorded by the mid-session tap-failure media fixture. */
+    /**
+     * Frames recorded by the mid-session tap-failure media fixture. Same
+     * whole-millisecond constraint as {@link #MIXED_FRAME_COUNT}: 24 frames at
+     * 60 fps is 0.400 s exactly.
+     */
     private static final int FAILURE_FRAME_COUNT = 24;
     /**
      * Task 11's development-only injection hook. {@code N} means the tap fails
@@ -362,8 +376,6 @@ class LiveCaptureMediaSmokeTest {
         admitMixedSources();
 
         String priorProperty = System.getProperty(AUDIO_FAIL_PROPERTY);
-        System.setProperty(AUDIO_FAIL_PROPERTY,
-                Integer.toString(TAP_FAIL_AFTER_FRAMES));
         Path directory =
                 Files.createTempDirectory("live-capture-tap-failure-media-");
         AtomicReference<Path> output = new AtomicReference<>();
@@ -402,6 +414,12 @@ class LiveCaptureMediaSmokeTest {
                         finalizer,
                         Duration.ofSeconds(10)));
         try {
+            // Set inside the try the finally restores: a throw during fixture
+            // setup must never leak the injection hook into the rest of this
+            // reused surefire fork. The handle factory above reads the
+            // property lazily, when controller.start() invokes it.
+            System.setProperty(AUDIO_FAIL_PROPERTY,
+                    Integer.toString(TAP_FAIL_AFTER_FRAMES));
             CaptureViewport viewport = new CaptureViewport(0, 0, WIDTH, HEIGHT);
             controller.start(viewport, frameRate);
             assertEquals(LiveCaptureController.State.ACTIVE, controller.state());
@@ -480,6 +498,9 @@ class LiveCaptureMediaSmokeTest {
             }
         } finally {
             controller.close();
+            // close() only awaits the pending finalizer future; an externally
+            // supplied executor stays alive unless the owner shuts it down.
+            finalizer.shutdownNow();
             if (priorProperty == null) {
                 System.clearProperty(AUDIO_FAIL_PROPERTY);
             } else {
@@ -487,6 +508,45 @@ class LiveCaptureMediaSmokeTest {
             }
             deleteRecursively(directory);
         }
+    }
+
+    // ---------------------------------------------------------------
+    // The A/V-alignment check must read the container, not the request
+    // ---------------------------------------------------------------
+
+    /**
+     * Guards the media assertions themselves: {@link #videoDurationSeconds}
+     * must fail when the container's video frame rate is not the rate the
+     * recorder was started with. Without this the A/V comparison degenerates
+     * into a check on the audio stream alone.
+     */
+    @Test
+    void videoDurationRejectsAContainerTaggedAtTheWrongFrameRate() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode requested = mapper.createObjectNode();
+        requested.put("nb_read_frames", FAILURE_FRAME_COUNT);
+        requested.put("avg_frame_rate", "60/1");
+        requested.put("r_frame_rate", "60/1");
+        assertEquals(FAILURE_FRAME_COUNT / 60.0,
+                videoDurationSeconds(requested, 60), 1.0e-12);
+
+        ObjectNode halved = mapper.createObjectNode();
+        halved.put("nb_read_frames", FAILURE_FRAME_COUNT);
+        halved.put("avg_frame_rate", "30/1");
+        halved.put("r_frame_rate", "30/1");
+        assertThrows(AssertionError.class,
+                () -> videoDurationSeconds(halved, 60),
+                "a video stream tagged at half the requested rate is a 2x A/V "
+                        + "desync and must fail the alignment assertion");
+
+        ObjectNode missing = mapper.createObjectNode();
+        missing.put("nb_read_frames", FAILURE_FRAME_COUNT);
+        missing.put("avg_frame_rate", "0/0");
+        missing.put("r_frame_rate", "N/A");
+        assertThrows(AssertionError.class,
+                () -> videoDurationSeconds(missing, 60),
+                "a container with no usable frame rate must not be treated as "
+                        + "aligned");
     }
 
     // ---------------------------------------------------------------
@@ -591,20 +651,63 @@ class LiveCaptureMediaSmokeTest {
 
     /**
      * The video stream's real duration, derived from the frames ffprobe
-     * actually decoded.
+     * actually decoded and the frame rate the container itself carries.
      *
      * <p>Matroska stores a video stream's {@code duration} as the last frame's
      * presentation timestamp, so the container reports one frame period less
      * than the played duration (0.199 s for 12 frames at 60 fps). The audio
      * stream duration, by contrast, is exact. Comparing the two raw container
      * fields would therefore always be one frame period apart regardless of
-     * whether A/V are actually aligned, so the video side is reconstructed
-     * from the probed frame count instead.
+     * whether A/V are actually aligned, so the frame count supplies the video
+     * side instead.
+     *
+     * <p>The divisor must still come from the file, not from the caller: if it
+     * were the rate the test asked for, a regression that pushed the wrong fps
+     * down {@code LiveCaptureController.start} ->
+     * {@code CaptureRecorder.start} -> {@code FfmpegEncoder.phase1Command}'s
+     * {@code -r} flag would tag the stream at, say, 30 fps while the FLAC track
+     * still ran at 60 fps — a real 2x desync in the delivered file — and the
+     * comparison would still pass. So the probed rate is asserted against the
+     * requested rate first and then used as the divisor.
      */
-    private static double videoDurationSeconds(JsonNode video, int frameRate) {
+    private static double videoDurationSeconds(
+            JsonNode video, int requestedFrameRate) {
         int frames = video.path("nb_read_frames").asInt();
         assertTrue(frames > 0, "ffprobe decoded no video frames");
-        return frames / (double) frameRate;
+        double containerFrameRate = containerFrameRate(video);
+        assertEquals(requestedFrameRate, containerFrameRate, 1.0e-9,
+                "the container's video frame rate must be the rate the "
+                        + "recorder was started with");
+        return frames / containerFrameRate;
+    }
+
+    /** The frame rate ffmpeg actually wrote into the video stream. */
+    private static double containerFrameRate(JsonNode video) {
+        double average = rationalRate(video.path("avg_frame_rate").asText());
+        double real = rationalRate(video.path("r_frame_rate").asText());
+        assertTrue(average > 0 || real > 0,
+                "ffprobe reported no usable video frame rate: " + video);
+        if (average > 0 && real > 0) {
+            assertEquals(real, average, 1.0e-9,
+                    "the container's average and base frame rates disagree");
+        }
+        return average > 0 ? average : real;
+    }
+
+    /** Parses an ffprobe {@code num/den} rate; 0 when unusable. */
+    private static double rationalRate(String value) {
+        if (value == null || value.isBlank() || "N/A".equals(value)) {
+            return 0;
+        }
+        int slash = value.indexOf('/');
+        if (slash < 0) {
+            return Double.parseDouble(value);
+        }
+        double denominator = Double.parseDouble(value.substring(slash + 1));
+        if (denominator == 0) {
+            return 0;
+        }
+        return Double.parseDouble(value.substring(0, slash)) / denominator;
     }
 
     private static JsonNode probeMedia(Path ffprobe, Path media)

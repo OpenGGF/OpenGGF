@@ -121,8 +121,17 @@ class TestAudioPresentationAllocationBudget {
         assertNoStructuralGrowth(before, after);
         assertEquals(5, fixture.registry.orderedVoiceCount(),
                 "looping voices survive the measured run");
+        // Prove the drain claim rather than asserting an empty queue nothing
+        // ever filled. Submitted outside the measured window so the drain can
+        // never be mistaken for measured allocation.
+        fixture.submit(new ResetRingAlternation(true));
+        assertEquals(1, fixture.commands.size(),
+                "a submitted command waits for a forward boundary");
+        fixture.producer.present(
+                measuredFrame + MEASURED_FRAMES, PresentationMode.FORWARD);
         assertEquals(0, fixture.commands.size(),
-                "no command is left pending after a forward boundary");
+                "a forward boundary drains every pending command");
+        fixture.producer.close();
 
         Assumptions.assumeTrue(result.allocatedBytesSupported(),
                 "this JVM cannot report per-thread allocated bytes");
@@ -189,10 +198,21 @@ class TestAudioPresentationAllocationBudget {
         assertTrue(maxOrderedVoices
                         <= AudioVoiceRegistry.MAX_SAMPLE_SFX_VOICES + 3,
                 "ordered voices peaked at " + maxOrderedVoices);
-        assertTrue(maxQueueSize <= AudioPresentationCommandQueue.CAPACITY,
-                "command queue peaked at " + maxQueueSize);
-        assertTrue(queuedAfterReverse
-                        <= AudioPresentationCommandQueue.CAPACITY,
+        // Bound the queue below its droppable-admission ceiling, not at its
+        // array length: a producer that stopped draining would pin the queue
+        // at NORMAL_CAPACITY (droppable starts are then silently refused), so
+        // this is the bound a real regression would break.
+        int normalCapacity = AudioPresentationCommandQueue.CAPACITY
+                - AudioPresentationCommandQueue.STRUCTURAL_RESERVE;
+        assertTrue(maxQueueSize > 0,
+                "the run must actually queue commands");
+        assertTrue(maxQueueSize < normalCapacity,
+                "command queue peaked at " + maxQueueSize
+                        + ", at or past its droppable-admission ceiling "
+                        + normalCapacity);
+        assertTrue(queuedAfterReverse > 0,
+                "held rewind must defer the commands submitted inside it");
+        assertTrue(queuedAfterReverse < normalCapacity,
                 "held rewind left " + queuedAfterReverse + " queued commands");
         assertEquals(0, fixture.commands.size(),
                 "one forward boundary drains everything held rewind deferred");
@@ -202,6 +222,7 @@ class TestAudioPresentationAllocationBudget {
                 "history never exceeds its ring capacity");
         assertEquals(1, captureCount(fixture.producer),
                 "an undrained capture lease neither multiplies nor leaks");
+        fixture.producer.close();
     }
 
     // ---------------------------------------------------------------
@@ -236,6 +257,9 @@ class TestAudioPresentationAllocationBudget {
                     "a stalled device consumes nothing");
             assertTrue(sink.droppedStereoFrames() > 0,
                     "speaker-only PCM is discarded rather than backpressured");
+            assertTrue(sink.queuedStereoFrames() > SAMPLE_RATE,
+                    "the stalled FIFO must genuinely saturate, not idle at "
+                            + sink.queuedStereoFrames() + " frames");
             assertTrue(sink.queuedStereoFrames() <= SAMPLE_RATE * 2,
                     "the speaker FIFO stays inside its two-second bound");
             assertSame(tapPending, tapPending(fixture.producer, 0),

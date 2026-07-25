@@ -1,5 +1,6 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.AudioBenchmarkMemoryProbe;
 import com.openggf.audio.LiveCaptureAudioHandle;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.NoDeviceAudioSink;
@@ -12,9 +13,9 @@ import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
-import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +30,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class TestAudioPresentationProducer {
+    /** Frames presented before anything is measured. */
+    private static final int WARM_FRAMES = 10_000;
+    /** Frames measured once the shape is compiled. */
+    private static final int MEASURED_FRAMES = 10_000;
+    /** Warm frames driven through the probe call site itself. */
+    private static final int PROBE_WARM_FRAMES = 1_000;
+    /** Frames per warm invocation of the measured method. */
+    private static final int WARM_CHUNK_FRAMES = 100;
+
     @Test
     void sixtyNtscPacketsAt48000ContainExactly48000StereoFrames() {
         RecordingSink sink = new RecordingSink(48_000, 801);
@@ -292,6 +302,23 @@ class TestAudioPresentationProducer {
         assertEquals(PresentationMode.SILENT, retained.mode());
     }
 
+    /**
+     * The one measured shape for the warmed-allocation check. The warm-up and
+     * the measured run both call this method, so the JVM compiles it at method
+     * entry instead of OSR-compiling — and later deoptimizing — a loop inside
+     * the measured window. A deoptimization materializes scalar-replaced
+     * objects onto the heap and the per-thread allocation counter charges those
+     * bytes to the measuring thread, which is what made the older inline
+     * 2,000-frame loop report 80 or 176 bytes under full-suite ordering while
+     * passing in isolation.
+     */
+    private static void presentForwardFrames(
+            AudioPresentationProducer producer, long startFrame, int frames) {
+        for (int index = 0; index < frames; index++) {
+            producer.present(startFrame + index, PresentationMode.FORWARD);
+        }
+    }
+
     @Test
     void warmedProducerAllocatesNoFramePacketOrConsumerArray() {
         AudioPresentationProducer producer =
@@ -299,26 +326,31 @@ class TestAudioPresentationProducer {
         producer.setHistoryArmed(true);
         producer.attachCapture(60);
         producer.attachCapture(60);
-        for (int frame = 0; frame < 2_000; frame++) {
-            producer.present(frame, PresentationMode.FORWARD);
-        }
 
-        java.lang.management.ThreadMXBean rawBean = ManagementFactory.getThreadMXBean();
-        if (!(rawBean instanceof com.sun.management.ThreadMXBean bean)
-                || !bean.isThreadAllocatedMemorySupported()) {
-            return;
+        long frame = 0;
+        for (int chunk = 0;
+                chunk < (WARM_FRAMES - PROBE_WARM_FRAMES) / WARM_CHUNK_FRAMES;
+                chunk++) {
+            presentForwardFrames(producer, frame, WARM_CHUNK_FRAMES);
+            frame += WARM_CHUNK_FRAMES;
         }
-        if (!bean.isThreadAllocatedMemoryEnabled()) {
-            bean.setThreadAllocatedMemoryEnabled(true);
-        }
-        long threadId = Thread.currentThread().getId();
-        long before = bean.getThreadAllocatedBytes(threadId);
-        for (int frame = 0; frame < 2_000; frame++) {
-            producer.present(frame, PresentationMode.FORWARD);
-        }
-        long allocated = bean.getThreadAllocatedBytes(threadId) - before;
+        // Warm the probe call site itself with a discarded measured run.
+        AudioBenchmarkMemoryProbe probe = AudioBenchmarkMemoryProbe.create();
+        long probeWarmFrame = frame;
+        probe.measureTimedRun(() -> presentForwardFrames(
+                producer, probeWarmFrame, PROBE_WARM_FRAMES));
+        frame += PROBE_WARM_FRAMES;
+        assertEquals(WARM_FRAMES, frame, "the warm phase presents 10,000 frames");
 
-        assertEquals(0, allocated,
+        long measuredFrame = frame;
+        AudioBenchmarkMemoryProbe.RunResult result = probe.measureTimedRun(
+                () -> presentForwardFrames(
+                        producer, measuredFrame, MEASURED_FRAMES));
+
+        producer.close();
+        Assumptions.assumeTrue(result.allocatedBytesSupported(),
+                "this JVM cannot report per-thread allocated bytes");
+        assertEquals(0L, result.allocatedBytes(),
                 "warmed present must reuse its frame view, PCM, and consumer storage");
     }
 
