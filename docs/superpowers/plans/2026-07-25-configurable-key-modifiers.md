@@ -1267,11 +1267,18 @@ stray `O` starts a recording.
 A verified overlap must be resolved here too. `DebugOverlayToggle.OBJECT_DEBUG` is
 `GLFW_KEY_O` and `DebugOverlayManager.updateInput:58-65` fires every toggle on a bare
 `isKeyPressed` with no modifier filter, so Shift+O toggles object debug *and* live
-capture whenever debug shortcuts are enabled. **Decision: every toggle dispatch uses
-`isKeyPressedWithoutModifiers`.** These are hardcoded single keys with no chord, so
-requiring no modifier is the correct reading of the exactness rule, and it is a
-smaller change than moving a default that `README.md:271` and `CONFIGURATION.md:279`
-already document as Shift+O.
+capture whenever debug shortcuts are enabled. **Decision (revised after review): a
+toggle stands down only for the frame a modified chord bound to the same key code is
+satisfied.** `updateInput` takes the configured `capture.toggleKey` chord from
+`GameLoop`, so the reservation follows the binding instead of a hardcoded Shift, and
+it is a smaller change than moving a default that `README.md:271` and
+`CONFIGURATION.md:279` already document as Shift+O.
+
+The first form of this decision was `isKeyPressedWithoutModifiers` on every toggle.
+That was rejected on review as far wider than the collision it fixes: `isShiftDown()`
+cannot tell left Shift from right and `P2_A` defaults to `GLFW_KEY_RIGHT_SHIFT`, so a
+blanket rule switches all 16 toggles off for as long as player two holds jump, and
+likewise for the Shift held for debug fast movement.
 
 **That includes `PERFORMANCE`, which is dispatched *before* the `debugShortcutsEnabled`
 gate and is easy to miss.** Verified in `updateInput` (`:47`): `PERFORMANCE`
@@ -1284,9 +1291,9 @@ giving `PERFORMANCE` the same modifier-exclusive treatment incidentally fixes. L
 Ctrl+P clipboard chord itself alone: it is a deliberate chord and is the half that should
 survive.
 
-All 16 toggles therefore stop responding while *any* modifier is held, and after Task 2
-that includes Super. The focus-loss clear from Task 2 is what keeps that from latching —
-which is why this bullet cannot ship before it.
+Only `O` (while the capture chord matches) and `P` (while Ctrl and nothing else is
+held) are affected; the other 14 toggles and every other modifier combination behave
+exactly as before.
 
 Severity without the fix is developer-facing, not player-facing: the bundled
 `config.yaml` ships `debugView: false`, so the `OBJECT_DEBUG` collision needs debug
@@ -1295,7 +1302,10 @@ shortcuts turned on. That is why it rides in this task rather than blocking Task
 **Decision on customised values:** a player who set `toggleKey: P` is left alone.
 Their binding becomes a bare `P` chord — Shift is no longer required — which is the
 same one-time change the migration spares default users, and inferring `SHIFT+P`
-would silently rewrite a value the player chose. The changelog says so.
+would silently rewrite a value the player chose. The changelog says so. `P` is a poor
+example to *recommend*, though: it is `DebugOverlayToggle.PERFORMANCE`, and an
+unmodified capture binding reserves nothing, so the documented bare-key example names
+a key no `DebugOverlayToggle` claims.
 
 **Files:**
 - Modify: `src/main/java/com/openggf/configuration/SonicConfigurationService.java`
@@ -1804,7 +1814,7 @@ and a transposed pair compiles cleanly.
 `src/main/resources/config.yaml:172` becomes:
 
 ```yaml
-  toggleKey: SHIFT+O   # Toggles live viewport audio/video recording. Modifiers go in the value: CTRL+SHIFT+O, or a bare key such as P for no modifier. A bare O is reserved -- the compatibility migration rewrites it back to SHIFT+O on every launch.
+  toggleKey: SHIFT+O   # Toggles live viewport audio/video recording. Modifiers go in the value: CTRL+SHIFT+O, or a bare key such as SCROLL_LOCK for no modifier (P, O, K, backtick, = and the F-keys are hardcoded debug-overlay toggles). A bare O is reserved -- the compatibility migration rewrites it back to SHIFT+O on every launch.
 ```
 
 **It must not say "plain `O` for no modifier".** That is the one value this same task's
@@ -1839,12 +1849,17 @@ its sibling. Wire it into the migration block in `loadConfig` (after
 `migrateDeprecatedDisplayColorProfileToggleKey`, before `applyDefaults()`), setting
 `configChanged = true`.
 
-`DebugOverlayManager.updateInput`: change **both** dispatch sites from
-`handler.isKeyPressed(...)` to `handler.isKeyPressedWithoutModifiers(...)` — the
-`PERFORMANCE` check at `:51` above the `debugShortcutsEnabled` gate, and
-`toggle.keyCode()` in the loop at `:62`. Missing the first one leaves Ctrl+P toggling the
-performance overlay as well as copying the stats. Leave the Ctrl+P clipboard chord at
-`:68` exactly as it is.
+`DebugOverlayManager.updateInput`: take a third parameter — `GameLoop` passes its
+`configService`, from which the manager reads `capture.toggleKey`; a `KeyChord`
+overload alongside it keeps the collaborator directly testable — and route **both**
+dispatch sites — the `PERFORMANCE` check at `:51` above the `debugShortcutsEnabled` gate, and
+`toggle.keyCode()` in the loop at `:62` — through a helper that is
+`handler.isKeyPressed(keyCode)` unless a modified chord on that same key code matches
+the modifiers held this frame. The two claiming chords are the capture binding and the
+hardcoded Ctrl+P stats copy. Missing the first dispatch site leaves Ctrl+P toggling the
+performance overlay as well as copying the stats. Do **not** use
+`isKeyPressedWithoutModifiers` here: it disables all 16 toggles while any modifier is
+held, including the right Shift that is player two's default jump.
 
 `CONFIGURATION.md` needs **two** edits, not one:
 
@@ -1958,8 +1973,8 @@ Skills: n/a"
 Both `CONFIGURATION.md` and `docs/guide/playing/configuration.md` list every key
 binding, so the per-binding support table must be **three-state**, not two. The third
 state is the one a user would file a bug about and it is invisible from the config
-file: `debug.playback.toggleKey: "CTRL+P"` gives `getInt` a live key code and still
-never fires.
+file: `debug.playback.toggleKey: "CTRL+P"` gives `getInt` the chord's *bare* key, so
+Ctrl+P never fires the shortcut and an unmodified `P` does.
 
 | State | Meaning | Bindings |
 | --- | --- | --- |

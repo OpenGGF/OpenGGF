@@ -1,5 +1,8 @@
 package com.openggf.debug;
 
+import com.openggf.configuration.KeyChord;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
 
@@ -13,6 +16,10 @@ import static org.lwjgl.glfw.GLFW.*;
 public class DebugOverlayManager {
     private static final Logger LOGGER = Logger.getLogger(DebugOverlayManager.class.getName());
     private static DebugOverlayManager debugOverlayManager;
+
+    /** Ctrl+P copies the performance stats; it must not also toggle the panel. */
+    static final KeyChord PERFORMANCE_STATS_COPY =
+            KeyChord.of(GLFW_KEY_P, KeyChord.Modifier.CTRL);
 
     private final EnumMap<DebugOverlayToggle, Boolean> states = new EnumMap<>(DebugOverlayToggle.class);
 
@@ -44,15 +51,33 @@ public class DebugOverlayManager {
         updateInput(handler, true);
     }
 
+    /** For callers with no configuration in play; prefer the three-argument form. */
     public void updateInput(InputHandler handler, boolean debugShortcutsEnabled) {
+        updateInput(handler, debugShortcutsEnabled, (SonicConfigurationService) null);
+    }
+
+    /**
+     * @param configService read for {@code capture.toggleKey}, the one configured
+     *        chord that can land on an overlay toggle's key; {@code null} when
+     *        there is no configuration to consult.
+     */
+    public void updateInput(InputHandler handler, boolean debugShortcutsEnabled,
+            SonicConfigurationService configService) {
+        updateInput(handler, debugShortcutsEnabled, configService == null ? null
+                : configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY));
+    }
+
+    /**
+     * @param captureToggle the configured {@code capture.toggleKey} chord, or
+     *        {@code null} when there is none. Only chords bound to the same key
+     *        as a toggle can block it.
+     */
+    public void updateInput(InputHandler handler, boolean debugShortcutsEnabled,
+            KeyChord captureToggle) {
         if (handler == null) {
             return;
         }
-        // These are hardcoded single keys with no chord, so requiring no modifier
-        // held is the same exactness rule the bindings follow. It is what stops
-        // OBJECT_DEBUG (O) firing on the Shift+O that toggles live recording, and
-        // here it stops Ctrl+P toggling this panel as well as copying the stats.
-        if (handler.isKeyPressedWithoutModifiers(DebugOverlayToggle.PERFORMANCE.keyCode())) {
+        if (togglePressed(handler, DebugOverlayToggle.PERFORMANCE.keyCode(), captureToggle)) {
             setEnabled(DebugOverlayToggle.PERFORMANCE,
                     !isEnabled(DebugOverlayToggle.PERFORMANCE));
         }
@@ -63,15 +88,50 @@ public class DebugOverlayManager {
             if (toggle == DebugOverlayToggle.PERFORMANCE) {
                 continue;
             }
-            if (handler.isKeyPressedWithoutModifiers(toggle.keyCode())) {
+            if (togglePressed(handler, toggle.keyCode(), captureToggle)) {
                 setEnabled(toggle, !isEnabled(toggle));
             }
         }
 
-        // Ctrl+P copies performance stats to clipboard
-        if (handler.isKeyDown(GLFW_KEY_LEFT_CONTROL) && handler.isKeyPressed(GLFW_KEY_P)) {
+        // Ctrl+P copies performance stats to clipboard. Read as the chord the
+        // toggles are checked against, so the two agree about which keystroke
+        // belongs to which action; isControlDown() also honours right Ctrl,
+        // which the previous isKeyDown(GLFW_KEY_LEFT_CONTROL) did not.
+        if (handler.isKeyPressed(PERFORMANCE_STATS_COPY.keyCode())
+                && modifiersMatch(handler, PERFORMANCE_STATS_COPY)) {
             copyPerformanceStatsToClipboard();
         }
+    }
+
+    /**
+     * A hardcoded overlay toggle fires on its bare key, but must not consume a
+     * keystroke a chord has already claimed — OBJECT_DEBUG (O) would otherwise
+     * fire on the {@code SHIFT+O} that starts a recording, and PERFORMANCE (P)
+     * on the Ctrl+P that copies the stats.
+     *
+     * <p>Only those exact chords block it. A blanket "no modifier held" rule
+     * would disable all sixteen toggles for as long as any modifier is down —
+     * and P2's jump defaults to RIGHT_SHIFT, so in a two-player session P2
+     * holding jump would silently switch every debug overlay shortcut off, as
+     * would the Shift a developer holds for debug fast movement.
+     */
+    private static boolean togglePressed(InputHandler handler, int keyCode, KeyChord captureToggle) {
+        if (!handler.isKeyPressed(keyCode)) {
+            return false;
+        }
+        return !claims(handler, PERFORMANCE_STATS_COPY, keyCode)
+                && !claims(handler, captureToggle, keyCode);
+    }
+
+    /** True when {@code chord} is a modified chord on {@code keyCode} and is satisfied now. */
+    private static boolean claims(InputHandler handler, KeyChord chord, int keyCode) {
+        return chord != null && chord.isBound() && chord.keyCode() == keyCode
+                && !chord.modifiers().isEmpty() && modifiersMatch(handler, chord);
+    }
+
+    private static boolean modifiersMatch(InputHandler handler, KeyChord chord) {
+        return chord.matchesModifiers(handler.isShiftDown(), handler.isControlDown(),
+                handler.isAltDown(), handler.isSuperDown());
     }
 
     private void copyPerformanceStatsToClipboard() {

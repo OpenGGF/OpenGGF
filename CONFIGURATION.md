@@ -431,7 +431,7 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `CAPTURE_OUTPUT_DIR` | `capture.outputDir` | string | `"target/trace-videos"` | Output directory for live and trace capture videos. |
-| `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `SHIFT+O` | Live viewport recording toggle. The modifiers live in the value (`CTRL+SHIFT+O`, `META+O`, or a bare key such as `P` for none) and are matched exactly. A bare `O` is reserved — the compatibility migration rewrites it back to `SHIFT+O` on every launch. |
+| `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `SHIFT+O` | Live viewport recording toggle. The modifiers live in the value (`CTRL+SHIFT+O`, `META+O`, or a bare key such as `SCROLL_LOCK` for none) and are matched exactly. A bare `O` is reserved — the compatibility migration rewrites it back to `SHIFT+O` on every launch. |
 | `CAPTURE_SCALE` | `capture.scale` | int | `4` | Trace capture only: integer nearest-neighbor upscale factor applied to captured frames; live viewport recording always uses scale 1. |
 | `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
@@ -577,7 +577,7 @@ states, and the third is invisible from the config file:
 |-------|---------|----------|
 | Chord honoured | Read as a chord and matched exactly | `CAPTURE_TOGGLE_KEY` |
 | Modifiers ignored | Read as a bare key code; a chord resolves to its key and the modifiers are dropped, so `"CTRL+P"` fires on plain `P` | every binding not named in the other two rows |
-| Chord permanently dead | Read through a "no modifier held" check, so the modifier you must hold to type the chord is exactly what blocks the shortcut. `debug.playback.toggleKey: "CTRL+P"` resolves to a live key code and still never fires | the nine `PLAYBACK_*` keys; `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`, `SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`, `SPECIAL_STAGE_PLANE_DEBUG_KEY`, `NEXT_ACT`, `NEXT_ZONE`, `DEBUG_LAST_CHECKPOINT_KEY`, `LEVEL_SELECT_KEY` |
+| Chord permanently dead | Read through a "no modifier held" check, so the modifier you must hold to type the chord is exactly what blocks the shortcut. The modifiers are still dropped, so `debug.playback.toggleKey: "CTRL+P"` binds plain `P`: the chord as written never fires, and an unmodified `P` does | the nine `PLAYBACK_*` keys; `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`, `SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`, `SPECIAL_STAGE_PLANE_DEBUG_KEY`, `NEXT_ACT`, `NEXT_ZONE`, `DEBUG_LAST_CHECKPOINT_KEY`, `LEVEL_SELECT_KEY` |
 
 `UP`/`DOWN`/`LEFT`/`RIGHT` and `DEBUG_MODE_KEY` are in **two** states at once.
 Modifiers are ignored for `UP`/`DOWN`/`LEFT`/`RIGHT` on the gameplay path, and
@@ -591,7 +591,14 @@ plain `D` with the Ctrl neither required nor checked.
 Some shortcuts are hardcoded and consume a keystroke whatever a binding says:
 Shift/Ctrl/Alt+`B` (bonus-stage debug, exactly one modifier), Shift+`Tab`, Ctrl+`P`
 (copy performance stats), the editor's `Tab`-without-Shift and Ctrl+`Z`/`S`/`Y`,
-and the display shader picker's confirm key. `RECORDING_RECORD_KEY` is a
+and the display shader picker's confirm key. The sixteen debug-overlay toggles
+(`F1`-`F8`, `F10`-`F12`, `K`, `` ` ``, `=`, `P`, `O`) are hardcoded too. They fire
+on their bare key with any modifier held — a modifier is usually held for an
+unrelated reason, and player two's jump defaults to right Shift — but stand aside
+for the frame a chord bound to the *same* key is satisfied, which is what stops
+the `SHIFT+O` capture default toggling the object-debug overlay and Ctrl+`P`
+toggling the performance overlay. Binding `capture.toggleKey` to one of these
+keys with no modifier makes both fire on the same keystroke. `RECORDING_RECORD_KEY` is a
 configurable binding whose Shift is still hardcoded at its call sites (the
 runtime recording controls and the master title screen), so its modifier cannot
 be moved into the value yet.

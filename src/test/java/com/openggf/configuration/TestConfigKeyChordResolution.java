@@ -92,6 +92,47 @@ class TestConfigKeyChordResolution {
     }
 
     /**
+     * The same step-3 fallback, but on the one binding whose registered default
+     * is itself a chord. {@code anUnresolvableValueFallsBackToTheRegisteredDefault}
+     * above cannot see the difference: FRAME_STEP_KEY's default is {@code "Q"},
+     * which resolves to 81 whether resolveKeyCode tries the name table or
+     * {@code parseInt} first. CAPTURE_TOGGLE_KEY's default is {@code "SHIFT+O"},
+     * which the pre-change body could not read at all -- getInt reported the
+     * shortcut unbound while getKeyChord still returned a live Shift+O, so the
+     * two accessors disagreed about whether recording was switched on.
+     */
+    @Test
+    void anUnresolvableValueOnAChordedDefaultAgreesThroughBothAccessors() {
+        configService.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "NOT_A_KEY");
+
+        assertEquals(GLFW_KEY_O, configService.getInt(SonicConfiguration.CAPTURE_TOGGLE_KEY));
+        assertEquals(KeyChord.of(GLFW_KEY_O, SHIFT),
+                configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY));
+    }
+
+    /**
+     * The general form, so a future default of either shape resolveKeyCode used
+     * to get wrong -- a chord, or a digit name such as {@code "1"} that the old
+     * {@code parseInt}-first body read as raw code 1 rather than the number-row
+     * key -- is caught wherever it is registered. Poisoning the value forces
+     * every KEY binding down the step-3 fallback at once.
+     */
+    @Test
+    void everyKeyBindingsRegisteredDefaultReadsTheSameThroughBothAccessors() {
+        for (SonicConfiguration key : SonicConfiguration.values()) {
+            ConfigKeyMeta meta = ConfigCatalog.meta(key);
+            if (meta == null || meta.type() != ConfigType.KEY) {
+                continue;
+            }
+            configService.setConfigValue(key, "NOT_A_KEY");
+
+            assertEquals(configService.getKeyChord(key).keyCode(), configService.getInt(key),
+                    key.name() + "'s registered default resolves differently through the two "
+                            + "accessors, so the shortcut is bound through one and not the other");
+        }
+    }
+
+    /**
      * A default that is itself unbound stays unbound rather than resolving to -1
      * as a live key code. All nine PLAYBACK_* keys ship this way.
      */

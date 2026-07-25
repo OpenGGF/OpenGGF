@@ -125,9 +125,11 @@ fire while Shift is held. Because `+` is the separator, bind the plus key as
 `"EQUAL"` or `"KP_ADD"`.
 
 Today `capture.toggleKey` (live viewport recording, default `"SHIFT+O"`) is the
-one shortcut that acts on a chord — elsewhere the modifiers are parsed and then
-dropped, and a few shortcuts can never fire with one. The full per-binding table
-is in [CONFIGURATION.md](../../../CONFIGURATION.md).
+one shortcut that acts on a chord. Elsewhere the modifiers are parsed and then
+dropped, so the binding ends up on the bare key the chord names: writing
+`"CTRL+P"` binds plain `P`, and for a few shortcuts that only ever fire with no
+modifier held, the chord as written can never fire at all. The full per-binding
+table is in [CONFIGURATION.md](../../../CONFIGURATION.md).
 
 Invalid names log a warning and fall back to the default binding for that action.
 Leaving a binding empty (`""`) is different: it switches that shortcut off, and no

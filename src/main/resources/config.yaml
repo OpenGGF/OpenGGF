@@ -169,7 +169,7 @@ capture:
   # Full reference: CONFIGURATION.md "Overriding the ffmpeg commands".
   ffmpegPass1Args: "default"
   ffmpegPass2Args: "default"
-  toggleKey: SHIFT+O   # Toggles live viewport audio/video recording. Modifiers go in the value: CTRL+SHIFT+O, or a bare key such as P for no modifier. A bare O is reserved -- the compatibility migration rewrites it back to SHIFT+O on every launch.
+  toggleKey: SHIFT+O   # Toggles live viewport audio/video recording. Modifiers go in the value: CTRL+SHIFT+O, or a bare key such as SCROLL_LOCK for no modifier (P, O, K, backtick, = and the F-keys are hardcoded debug-overlay toggles). A bare O is reserved -- the compatibility migration rewrites it back to SHIFT+O on every launch.
   codec: "ffv1"   # Capture video codec (e.g. ffv1)
 
 # ════════════════════════════════════════════

@@ -27,7 +27,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SUPER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_O;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_P;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_SCROLL_LOCK;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -302,14 +302,14 @@ class TestEngineLiveCapturePresentation {
     @Test
     void aBareKeyBindingTogglesUnmodifiedAndNotWhileShiftIsHeld() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
-        config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "P");
+        config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "SCROLL_LOCK");
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
-        input.handleKeyEvent(GLFW_KEY_P, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_SCROLL_LOCK, GLFW_PRESS);
         assertTrue(toggles(config, input));
 
         InputHandler shifted = new InputHandler(InputBindingFactory.supplier(config));
         shifted.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        shifted.handleKeyEvent(GLFW_KEY_P, GLFW_PRESS);
+        shifted.handleKeyEvent(GLFW_KEY_SCROLL_LOCK, GLFW_PRESS);
         assertFalse(toggles(config, shifted));
     }
 

@@ -1,10 +1,14 @@
 package com.openggf.debug;
 
 import com.openggf.control.InputHandler;
+import com.openggf.configuration.KeyChord;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.lwjgl.glfw.GLFW;
+
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -14,6 +18,15 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDebugOverlayManagerReset {
+
+    @TempDir
+    Path configDir;
+
+    /** The shipped capture chord, exactly as GameLoop hands it to updateInput. */
+    private KeyChord captureToggle() {
+        return SonicConfigurationService.createStandalone(configDir)
+                .getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY);
+    }
 
     @Test
     public void testResetStateRestoresToggleDefaults() {
@@ -98,9 +111,88 @@ public class TestDebugOverlayManagerReset {
         handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_PRESS);
         handler.handleKeyEvent(GLFW.GLFW_KEY_O, GLFW.GLFW_PRESS);
 
-        manager.updateInput(handler, true);
+        manager.updateInput(handler, true, captureToggle());
 
         assertEquals(before, manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG));
+        manager.resetState();
+    }
+
+    /**
+     * The blast radius of the fix above. Only the chord bound to the SAME key
+     * may swallow a toggle; a modifier held for an unrelated reason must not.
+     * P2's jump defaults to RIGHT_SHIFT, so a "no modifier held" rule switches
+     * every debug overlay shortcut off for as long as player two holds jump --
+     * and does the same for the Shift a developer holds for debug fast movement.
+     */
+    @Test
+    public void player2HoldingJumpDoesNotDisableTheOverlayShortcuts() {
+        assertEquals(GLFW.GLFW_KEY_RIGHT_SHIFT,
+                SonicConfigurationService.createStandalone(configDir).getInt(SonicConfiguration.P2_A),
+                "this guard is about P2's jump defaulting to a Shift key; re-point it");
+
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        boolean before = manager.isEnabled(DebugOverlayToggle.PLAYER_PANEL);
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW.GLFW_KEY_RIGHT_SHIFT, GLFW.GLFW_PRESS);
+        handler.handleKeyEvent(GLFW.GLFW_KEY_F3, GLFW.GLFW_PRESS);
+
+        manager.updateInput(handler, true, captureToggle());
+
+        assertNotEquals(before, manager.isEnabled(DebugOverlayToggle.PLAYER_PANEL),
+                "F3 must still toggle the player panel while P2 holds jump");
+        manager.resetState();
+    }
+
+    /**
+     * The same rule one key over: O is only claimed while the capture chord is
+     * actually satisfied. Ctrl+Shift+O does not start a recording (matching is
+     * exact), so it must keep reaching the overlay toggle.
+     */
+    @Test
+    public void aModifierTheCaptureChordDoesNotDeclareStillTogglesObjectDebug() {
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        boolean before = manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG);
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_PRESS);
+        handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_PRESS);
+        handler.handleKeyEvent(GLFW.GLFW_KEY_O, GLFW.GLFW_PRESS);
+
+        manager.updateInput(handler, true, captureToggle());
+
+        assertNotEquals(before, manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG));
+        manager.resetState();
+    }
+
+    /**
+     * The claim follows the binding rather than a hardcoded Shift: rebind the
+     * capture toggle to ALT+F5 and Alt+F5 must stop toggling object labels,
+     * while Shift+O goes back to toggling object debug.
+     */
+    @Test
+    public void theClaimFollowsTheConfiguredCaptureBinding() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(configDir);
+        config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "ALT+F5");
+        KeyChord chord = config.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY);
+
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        boolean labelsBefore = manager.isEnabled(DebugOverlayToggle.OBJECT_LABELS);
+        InputHandler altF5 = new InputHandler();
+        altF5.handleKeyEvent(GLFW.GLFW_KEY_LEFT_ALT, GLFW.GLFW_PRESS);
+        altF5.handleKeyEvent(GLFW.GLFW_KEY_F5, GLFW.GLFW_PRESS);
+        manager.updateInput(altF5, true, chord);
+        assertEquals(labelsBefore, manager.isEnabled(DebugOverlayToggle.OBJECT_LABELS),
+                "Alt+F5 is the capture chord now, so it must not toggle object labels");
+
+        boolean debugBefore = manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG);
+        InputHandler shiftO = new InputHandler();
+        shiftO.handleKeyEvent(GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_PRESS);
+        shiftO.handleKeyEvent(GLFW.GLFW_KEY_O, GLFW.GLFW_PRESS);
+        manager.updateInput(shiftO, true, chord);
+        assertNotEquals(debugBefore, manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG),
+                "Shift+O no longer records, so it goes back to toggling object debug");
         manager.resetState();
     }
 

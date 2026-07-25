@@ -483,17 +483,32 @@ deferred this to step 4; here it is). `DebugOverlayManager.updateInput:58-65`
 fires every toggle on a bare `handler.isKeyPressed(toggle.keyCode())` with no
 modifier filter, and `OBJECT_DEBUG` is `GLFW_KEY_O` (`DebugOverlayToggle:21`), so
 the new `SHIFT+O` default would toggle the object-debug overlay on the same
-keystroke that starts a capture. **The dispatch becomes modifier-exclusive** —
-`isKeyPressedWithoutModifiers` — rather than moving the capture default off `O`,
-because moving it would break acceptance criterion 7 (Shift+O keeps working with
-no user action) for every existing user.
+keystroke that starts a capture. **The dispatch stands a toggle down only for the
+frame a chord bound to the same key is satisfied**, rather than moving the capture
+default off `O` — moving it would break acceptance criterion 7 (Shift+O keeps
+working with no user action) for every existing user.
+
+*Revised after review.* The first form of this decision was
+`isKeyPressedWithoutModifiers` for all 16 toggles, i.e. no toggle fires while
+*any* modifier is held. That is far wider than the collision it fixes and was
+replaced: `DebugOverlayManager.updateInput` now takes the configured
+`capture.toggleKey` chord, and a toggle is suppressed only when a modified chord
+on the *same* key code matches the modifiers held this frame.
 
 Scope that as its own bullet, because it is not a consequence-free one-liner:
 
-- All 16 `DebugOverlayToggle` entries stop responding while *any* modifier is
-  held, and after step 1 that includes Super — the window-switch modifier this
-  spec spends a paragraph on in step 1. The focus-loss clear from step 1 is what
-  keeps that from latching.
+- The collisions that exist are exactly two: `OBJECT_DEBUG` (`O`) versus the
+  `SHIFT+O` capture default, and `PERFORMANCE` (`P`) versus the hardcoded Ctrl+P
+  stats copy. Nothing else is touched — an F-key toggle keeps working with a
+  modifier held, which matters because `P2_A` defaults to `GLFW_KEY_RIGHT_SHIFT`
+  and `isShiftDown()` cannot tell left Shift from right: a blanket
+  "no modifier held" rule switches all 16 toggles off for as long as player two
+  holds jump, and likewise for the Shift held for debug fast movement.
+- The suppression follows the *binding*, not a hardcoded Shift. Rebinding
+  `capture.toggleKey` to `ALT+F5` moves the reserved keystroke to Alt+F5 and
+  hands `SHIFT+O` back to `OBJECT_DEBUG`. A bare (unmodified) capture binding
+  reserves nothing, which is why the documented bare-key example must not name a
+  key `DebugOverlayToggle` already claims.
 - `PERFORMANCE` is dispatched at `:51`, *before* the `debugShortcutsEnabled`
   gate, and must get the same treatment. That incidentally fixes a pre-existing
   double-fire: today Ctrl+P both toggles the performance overlay and copies the
@@ -504,8 +519,9 @@ Scope that as its own bullet, because it is not a consequence-free one-liner:
   step 0b.
 
 **Done when (this bullet):** Shift+O starts a capture without toggling
-`OBJECT_DEBUG`; a bare F-key toggle still works; and a regression test covers
-both.
+`OBJECT_DEBUG`; a bare F-key toggle still works, including while an unrelated
+modifier such as player two's right-Shift jump is held; and a regression test
+covers all three.
 
 `CaptureConfigDefaultsTest` **must** be updated as part of this step, contrary to
 the earlier draft's test plan:
@@ -651,7 +667,8 @@ modifiers".
     and `LIVE_REWIND_KEY` is itself unbound.
 14. Shift+O starts a capture without also toggling the `OBJECT_DEBUG` overlay
     when debug shortcuts are enabled, and bare-key debug overlay toggles still
-    work.
+    work — including while an unrelated modifier is held, such as the right
+    Shift that is player two's default jump.
 15. A chord saved in a non-canonical spelling (`shift+o`, `Shift + O`) is
     rewritten to its canonical form by `saveConfig()`.
 16. The guide pages that define binding syntax
@@ -665,9 +682,9 @@ modifiers".
 | An existing `toggleKey: "O"` starts firing without Shift | Step 4 migration rewrites the untouched default; a customised value is deliberately left alone and called out in the changelog |
 | The step-4 migration re-runs every launch, so bare `O` can never be bound to this action | Accepted, not mitigated: `O` is a reserved value for `capture.toggleKey`. Same property as the two existing key migrations. Documented in step 5; a one-shot guard would need a config schema marker that does not exist |
 | Plain bindings shadowing chords on the same key | `matchesModifiers` is exact — **but only between bindings that route through `KeyChord`**, which after step 4 is one binding |
-| Hardcoded keys shadowing a chord | `DebugOverlayToggle.OBJECT_DEBUG` is `GLFW_KEY_O` and `DebugOverlayManager:58-65` fires it on a bare `isKeyPressed` with no modifier filter. **Decided in step 4:** the toggle dispatch becomes modifier-exclusive, which makes all 16 overlays unresponsive while any modifier is held |
+| Hardcoded keys shadowing a chord | `DebugOverlayToggle.OBJECT_DEBUG` is `GLFW_KEY_O` and `DebugOverlayManager:58-65` fires it on a bare `isKeyPressed` with no modifier filter. **Decided in step 4, revised after review:** a toggle stands down only for the frame a modified chord bound to the *same* key is satisfied, so the other 14 toggles — and `O` itself under any other modifier combination — are untouched |
 | An unbound chord firing anyway | `isKeyDown(-1)` falls through to the gamepad rewind comparison; every `getKeyChord` consumer guards on `isBound()` first (step 3) |
-| Adding Super to `isAnyModifierDown` disables ~30 shortcuts while Cmd is held — plus the 16 debug overlay toggles, once step 4 moves them onto `isKeyPressedWithoutModifiers` | Step 1 pairs it with the focus-loss clear and a menu regression test |
+| Adding Super to `isAnyModifierDown` disables ~30 shortcuts while Cmd is held | Step 1 pairs it with the focus-loss clear and a menu regression test. The 16 debug overlay toggles are **not** in this set — step 4's revised form leaves them on `isKeyPressed` |
 | Alt chords not reproducible under trace playback | Step 2 decision; blocking for advertising Alt |
 | Debug-movement speed modifiers stay on raw hardware | Out of scope by decision; recorded under the logical-input finding so it is not mistaken for something step 2 fixed |
 | Partial rollout confusing users | Step 5's three-state per-binding table |
