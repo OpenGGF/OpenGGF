@@ -108,6 +108,31 @@ hooked ROM addresses, the routine and disassembly line it sits on, its gating co
 frame windows, and the aux family it feeds; §2.4 records the native port's deferral verdict
 and the exact trigger for revisiting it.
 
+**The AIZ/CNZ precedent, and where its record lives.** This rule exists because it was
+litigated once already, and the outcome is written down — read it before re-opening the
+argument:
+
+- `d5eb5d2ef` (2026-06-09, *"replace legacy AIZ trace bootstrap policy"*) retired
+  seed-at-`gameplay_start` in favour of the frame-0 comparison-only policy, and removed the
+  S3K/AIZ/act/checkpoint identity predicate in favour of generic capability metadata. The
+  recorded `gameplay_start` checkpoint survived **only** to terminate the prefix phase
+  classifier — never to seed state.
+- `2b4b075be` (2026-07-02) realigned the AIZ probe to that policy: it deleted seven tests
+  that existed solely to pin the superseded seed-at-anchor and hydrated-anchor semantics,
+  retired the legacy diagnostic fixture with its 289 suppressed oscillator frames, and
+  documented the two-row intro-handoff skew as parity-neutral (rows 1384-1427 are recorded
+  fully idle).
+- The 2026-07-23 structural work went further still: S3K stopped consuming the metadata
+  capability at all and now recognises a pre-level prefix from the recorded `zone_act_state`
+  mode transition, so it infers phase from no fixture name, start position, velocity,
+  animation or oscillator value.
+
+`docs/KNOWN_DISCREPANCIES.md` → *Legacy Pre-Level Intro Prefix Trace Bootstrap Contract*
+holds the current boundary (S1/S2 fixture compatibility only), its rationale — *"the engine
+must execute its own production lifecycle; trace rows and auxiliary events are
+comparison-only evidence"* — and its removal condition. The direction of travel across all
+three steps is the same: each one removed a trace-derived driver rather than adding one.
+
 ## Pipeline Overview
 
 ```
