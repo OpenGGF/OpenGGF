@@ -327,14 +327,15 @@ class LiveCaptureMediaSmokeTest {
                     "every submitted video frame must reach the container");
             double audioDuration =
                     mediaDurationSeconds(audioStream, probe.path("format"));
-            double videoDuration = videoDurationSeconds(video, frameRate);
+            Map<Integer, Double> lastPts = lastPacketPtsByStream(
+                    ffprobe.orElseThrow().toString(), output);
+            double videoDuration = videoDurationSeconds(video, frameRate,
+                    lastPts.getOrDefault(video.path("index").asInt(), -1.0));
             assertTrue(Math.abs(audioDuration - videoDuration)
                             <= 1.0 / SAMPLE_RATE,
                     () -> "audio duration " + audioDuration
                             + " differs from video duration " + videoDuration
                             + " by more than one sample");
-            assertMonotonicPacketTimestamps(
-                    ffprobe.orElseThrow().toString(), output);
 
             byte[] decodedAudioBytes = run(ffmpeg.orElseThrow().toString(),
                     "-v", "error", "-i", output.toString(), "-map", "0:a:0",
@@ -455,14 +456,15 @@ class LiveCaptureMediaSmokeTest {
                     "video frames must continue past the audio failure");
             double audioDuration =
                     mediaDurationSeconds(audioStream, probe.path("format"));
-            double videoDuration = videoDurationSeconds(video, frameRate);
+            Map<Integer, Double> lastPts = lastPacketPtsByStream(
+                    ffprobe.orElseThrow().toString(), output.get());
+            double videoDuration = videoDurationSeconds(video, frameRate,
+                    lastPts.getOrDefault(video.path("index").asInt(), -1.0));
             assertTrue(Math.abs(audioDuration - videoDuration)
                             <= 1.0 / SAMPLE_RATE,
                     () -> "audio duration " + audioDuration
                             + " differs from video duration " + videoDuration
                             + " by more than one sample");
-            assertMonotonicPacketTimestamps(
-                    ffprobe.orElseThrow().toString(), output.get());
 
             short[] decoded = littleEndianShorts(run(
                     ffmpeg.orElseThrow().toString(), "-v", "error",
@@ -526,19 +528,21 @@ class LiveCaptureMediaSmokeTest {
     @Test
     void videoDurationRejectsAContainerTaggedAtTheWrongFrameRate() {
         ObjectMapper mapper = new ObjectMapper();
+        // A well-formed stream: 24 frames at 60fps, last packet at 23/60.
+        double alignedLastPts = (FAILURE_FRAME_COUNT - 1) / 60.0;
         ObjectNode requested = mapper.createObjectNode();
         requested.put("nb_read_frames", FAILURE_FRAME_COUNT);
         requested.put("avg_frame_rate", "60/1");
         requested.put("r_frame_rate", "60/1");
         assertEquals(FAILURE_FRAME_COUNT / 60.0,
-                videoDurationSeconds(requested, 60), 1.0e-12);
+                videoDurationSeconds(requested, 60, alignedLastPts), 1.0e-12);
 
         ObjectNode halved = mapper.createObjectNode();
         halved.put("nb_read_frames", FAILURE_FRAME_COUNT);
         halved.put("avg_frame_rate", "30/1");
         halved.put("r_frame_rate", "30/1");
         assertThrows(AssertionError.class,
-                () -> videoDurationSeconds(halved, 60),
+                () -> videoDurationSeconds(halved, 60, alignedLastPts),
                 "a video stream tagged at half the requested rate is a 2x A/V "
                         + "desync and must fail the alignment assertion");
 
@@ -547,9 +551,38 @@ class LiveCaptureMediaSmokeTest {
         missing.put("avg_frame_rate", "0/0");
         missing.put("r_frame_rate", "N/A");
         assertThrows(AssertionError.class,
-                () -> videoDurationSeconds(missing, 60),
+                () -> videoDurationSeconds(missing, 60, alignedLastPts),
                 "a container with no usable frame rate must not be treated as "
                         + "aligned");
+    }
+
+    /**
+     * The case the frame-count form of this helper structurally could not
+     * catch: a container with the right frame count and the right rate tag,
+     * whose packets are actually written at twice that spacing. Both operands
+     * of {@code nb_read_frames / containerFrameRate} are unchanged by such a
+     * desync, so the old form returned the nominal duration and passed.
+     */
+    @Test
+    void videoDurationRejectsPacketSpacingThatDisagreesWithTheRateTag() {
+        ObjectNode desynced = new ObjectMapper().createObjectNode();
+        desynced.put("nb_read_frames", FAILURE_FRAME_COUNT);
+        desynced.put("avg_frame_rate", "60/1");
+        desynced.put("r_frame_rate", "60/1");
+
+        // 24 frames tagged 60fps but written at 30fps spacing: the frame count
+        // and the rate tag are both exactly what a correct file would carry.
+        double desyncedLastPts = (FAILURE_FRAME_COUNT - 1) / 30.0;
+        assertThrows(AssertionError.class,
+                () -> videoDurationSeconds(desynced, 60, desyncedLastPts),
+                "packets spanning twice their tagged duration are a 2x A/V "
+                        + "desync and must fail the alignment assertion");
+
+        double missingPts = -1.0;
+        assertThrows(AssertionError.class,
+                () -> videoDurationSeconds(desynced, 60, missingPts),
+                "a video stream with no usable packet timestamp must not be "
+                        + "treated as aligned");
     }
 
     // ---------------------------------------------------------------
@@ -673,15 +706,47 @@ class LiveCaptureMediaSmokeTest {
      * comparison would still pass. So the probed rate is asserted against the
      * requested rate first and then used as the divisor.
      */
+    /**
+     * The video stream's own timeline: the last frame's presentation time plus
+     * the frame it occupies.
+     *
+     * <p>Returning {@code nb_read_frames / containerFrameRate} on its own would
+     * make the caller's A/V alignment assertion unfalsifiable: both operands
+     * are separately pinned to constants by the callers (frame count against
+     * the number submitted, rate against the rate the recorder was started
+     * with), so the quotient could not vary and the comparison degenerated
+     * into a check on the audio stream alone. A container whose packets were
+     * written at twice their tagged spacing — a real 2x A/V desync — kept the
+     * same frame count and the same rate tag, and passed.
+     *
+     * <p>So the container's real timeline is measured here, from
+     * {@code lastVideoPts}, and a disagreement with the tagged span fails
+     * <em>inside</em> this helper. The measured value is not itself returned
+     * as the duration because Matroska quantizes timestamps to milliseconds:
+     * the last of 12 frames at 60fps is stored as 0.183s rather than
+     * 11/60 = 0.18333s, a 0.33ms rounding error that is an order of magnitude
+     * larger than the caller's one-sample (1/48000s ≈ 21µs) tolerance. The
+     * tolerance below is half a frame — tight enough that any real desync
+     * fails by a wide margin, loose enough to absorb millisecond quantization.
+     */
     private static double videoDurationSeconds(
-            JsonNode video, int requestedFrameRate) {
+            JsonNode video, int requestedFrameRate, double lastVideoPts) {
         int frames = video.path("nb_read_frames").asInt();
         assertTrue(frames > 0, "ffprobe decoded no video frames");
         double containerFrameRate = containerFrameRate(video);
         assertEquals(requestedFrameRate, containerFrameRate, 1.0e-9,
                 "the container's video frame rate must be the rate the "
                         + "recorder was started with");
-        return frames / containerFrameRate;
+        assertTrue(lastVideoPts >= 0,
+                "the video stream carried no usable packet timestamp");
+        double taggedSpan = frames / containerFrameRate;
+        double measuredSpan = lastVideoPts + 1.0 / containerFrameRate;
+        assertEquals(taggedSpan, measuredSpan, 0.5 / containerFrameRate,
+                () -> "the video packets span " + measuredSpan + "s but the "
+                        + frames + " frames tagged at " + containerFrameRate
+                        + "fps should span " + taggedSpan
+                        + "s: packet spacing disagrees with the rate tag");
+        return taggedSpan;
     }
 
     /** The frame rate ffmpeg actually wrote into the video stream. */
@@ -720,7 +785,13 @@ class LiveCaptureMediaSmokeTest {
                 "-of", "json", media.toString()));
     }
 
-    private static void assertMonotonicPacketTimestamps(
+    /**
+     * Asserts per-stream timestamp monotonicity and returns the last
+     * presentation time seen on each stream, keyed by stream index. The
+     * returned values feed {@link #videoDurationSeconds}, so the A/V alignment
+     * check is made against the container's real timeline.
+     */
+    private static Map<Integer, Double> lastPacketPtsByStream(
             String ffprobe, Path media) throws Exception {
         JsonNode probe = new ObjectMapper().readTree(run(ffprobe,
                 "-v", "error", "-show_packets", "-of", "json",
@@ -741,6 +812,12 @@ class LiveCaptureMediaSmokeTest {
         }
         assertEquals(2, lastByStream.size(),
                 "both streams must carry timestamped packets");
+        return lastByStream;
+    }
+
+    private static void assertMonotonicPacketTimestamps(
+            String ffprobe, Path media) throws Exception {
+        lastPacketPtsByStream(ffprobe, media);
     }
 
     private static void deleteRecursively(Path directory) throws IOException {
