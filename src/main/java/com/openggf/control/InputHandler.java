@@ -188,12 +188,31 @@ public class InputHandler {
 		return isKeyDown(GLFW_KEY_LEFT_ALT) || isKeyDown(GLFW_KEY_RIGHT_ALT);
 	}
 
+	public boolean isSuperDown() {
+		return isKeyDown(GLFW_KEY_LEFT_SUPER) || isKeyDown(GLFW_KEY_RIGHT_SUPER);
+	}
+
 	public boolean isAnyModifierDown() {
-		return isShiftDown() || isControlDown() || isAltDown();
+		return isShiftDown() || isControlDown() || isAltDown() || isSuperDown();
 	}
 
 	public boolean isKeyPressedWithoutModifiers(int keyCode) {
 		return isKeyPressed(keyCode) && !isAnyModifierDown();
+	}
+
+	/**
+	 * Drops all key state. A key is otherwise cleared only by an observed
+	 * GLFW_RELEASE, and the release for a window-switch modifier goes to the
+	 * window that took focus, so the modifier would latch for the rest of the
+	 * process and disable every shortcut requiring no modifier held.
+	 *
+	 * <p>{@code previousKeys} is cleared too, or the first press after the clear
+	 * is not seen as a rising edge. Mouse state is untouched — a focus change
+	 * does not strand a mouse button the way it strands a modifier.
+	 */
+	public void clearKeyState() {
+		java.util.Arrays.fill(keys, false);
+		java.util.Arrays.fill(previousKeys, false);
 	}
 
 	public double getMouseX() {

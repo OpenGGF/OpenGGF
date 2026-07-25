@@ -499,6 +499,9 @@ public class Engine {
 			} else {
 				paused = true;
 				gameLoop.pause();
+				if (inputHandler != null) {
+					inputHandler.clearKeyState();
+				}
 			}
 		});
 
