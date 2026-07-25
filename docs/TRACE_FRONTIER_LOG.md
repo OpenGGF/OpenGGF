@@ -1,5 +1,148 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- S3K release slice on the live-counter fixtures: all three frontiers HOLD; 14 AIZ scenario assertions go green on a scenario-harness fix
+
+Command (worktree `.worktrees/bizhawk-headless-poc`, branch
+`bugfix/ai-s3k-standard-recorder-framecount`, on top of `ba882f967`), run
+once per class so no two classes share a surefire fork:
+
+```
+mvn -q test -Dtest=TestS3kAizTraceReplay \
+    -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen \
+    '-Dsurefire.argLine=-Xshare:off -Xmx4g' -Dsurefire.forkCount=1 -DfailIfNoTests=false
+```
+
+**Use `mvn test`, NOT `mvn surefire:test`** -- `surefire:test` does not compile, and a
+stale `target/classes` in this tree previously reported 3 AIZ failures where a clean
+compile reports 14. Any measurement taken with `surefire:test` is void. Run these
+classes ONE PER INVOCATION: `forkCount=1` + `reuseForks=true` shares singletons across
+classes in a batch, and a combined `-Dtest=Aiz,Cnz,Mgz` run reported CNZ at 9,144
+errors where the isolated run reports 9,115. Every number below is isolated.
+
+WHAT THIS MEASURES. `95c36166c` pointed `s3k_trace_recorder.lua:381` at
+`Level_frame_counter` (`0xFE04`, `sonic3k.constants.asm:782`) instead of the dead
+`Debug_placement_mode` (`0xFE08`, `:785`) and bumped `LUA_SCRIPT_VERSION`
+6.30-s3k -> 6.31-s3k; `3eebb13bf` regenerated the three canonical standard fixtures
+on it, so `gameplay_frame_counter` and aux `vfc` / `level_frame_counter` are live for
+the first time on the primary release slice. This entry is the before/after.
+
+| class | before (dead-zero counter) | after fixtures only | after fixtures + harness fix |
+|---|---|---|---|
+| `TestS3kAizTraceReplay` | 16 run / **14 failed**; 3,244 errors; f2696 `x_speed` 0x0000 vs 0x01A6 | 16 / **15 failed**; 3,256 errors; f2696 `x_speed` 0x0000 vs 0x01A6 | 16 / **1 failed**; 3,256 errors; f2696 `x_speed` 0x0000 vs 0x01A6 |
+| `TestS3kCnzTraceReplay` | 17 / 12 failed; 8,847 errors; f185 `y_speed` 0x0370 vs -0700 | 17 / 12 failed; 9,115 errors; f185 `y_speed` 0x0370 vs -0700 | 17 / 12 failed; 9,115 errors; f185 `y_speed` 0x0370 vs -0700 |
+| `TestS3kMgzTraceReplay` | 1 / 1 failed; 11,855 errors; f5164 `air` 0 vs 1 | 1 / 1 failed; 10,768 errors; f5164 `air` 0 vs 1 | 1 / 1 failed; 10,768 errors; f5164 `air` 0 vs 1 |
+
+DID THE FRONTIER MOVE? **No -- all three first-divergence frames are byte-identical
+before and after, and `min(start_frame)` over every error in each report confirms
+there is no earlier error hiding behind a camera field.** AIZ +12 and CNZ +268 are
+downstream noise inside 3.2k- and 8.8k-error segments; MGZ -1,087 is a real reduction
+in error volume but the frontier is still f5164 `air`, so it is NOT a frontier move
+either. Report it as "held", not "improved".
+
+WHAT DID CHANGE, AND WHY IT IS THE INTERESTING RESULT. `rhinobotDoesNotDespawnOneFrameBeforeRomContact`
+flipped pass -> fail on the fixtures-only step. That was isolated with a controlled
+A/B -- the SAME compiled engine run against the pre-`3eebb13bf` fixture (extracted to a
+scratch shadow tree, the committed fixture never touched) gives 2 passed / 14 failed;
+against the regenerated fixture, 1 passed / 15 failed. Engine bytes identical; only the
+counter column differs. So this was never an engine regression.
+
+ROOT CAUSE (test infrastructure, not the engine).
+`TraceReplayBootstrap.isPreLevelPrefixInputLatchRow` (`TraceReplayBootstrap.java:983-992`)
+classifies a pre-level-prefix row as `ADVANCE_ONLY` -- consume the controller edge,
+run no gameplay and no clock -- only when the input changed while
+`gameplay_frame_counter`, `vblank_counter` and `lag_counter` all stood still. With the
+counter dead-zero, the `gameplayFrameCounter()` clause was **vacuously true on every
+row**, so AIZ rows 161 and 201 were misclassified: both are ordinary running frames
+whose `Level_frame_counter` genuinely advanced (0x3E->0x3F and 0x66->0x67; ROM
+`addq.w #1,(Level_frame_counter).w`, `sonic3k.asm:7889`) and which merely happen to
+carry a controller edge (0x0000->0x0004, 0x0000->0x0010). On the live fixture only row
+211 -- a genuine plateau, counter pinned at 0x68 across rows 210/211/212 -- still
+qualifies. Measured over rows 0..2529: `{FULL_LEVEL_FRAME=2240, ADVANCE_ONLY=3,
+VBLANK_ONLY=287}` before vs `{FULL_LEVEL_FRAME=2240, ADVANCE_ONLY=1, VBLANK_ONLY=289}`
+after.
+
+That reclassification is correct, and `replayMatchesTrace` consumed it correctly,
+because the whole-trace loop drives through `TraceReplayFrameClosureDriver.driveS3k`,
+which maps `ADVANCE_ONLY` to `consumeRecordingFrameInputOnly` (the behaviour the
+CHANGELOG entry "S3K trace `ADVANCE_ONLY` rows now consistently suppress gameplay"
+already established). **The focused scenario tests did not.** `TestS3kAizTraceReplay`
+carried its own private `stepReplayFrame` that special-cased only `VBLANK_ONLY` and let
+everything else fall through to a full level tick -- so every `ADVANCE_ONLY` row became
+a non-ROM level tick that advanced the object/VBlank/oscillator clock on a frame the ROM
+never ran. Three such spurious ticks under the old fixture, one under the new. Because
+those ticks land in the AIZ plane-intro prefix, they shift the entire 20k-frame AIZ1
+object phase, and every frame-exact scenario assertion downstream inherits the shift.
+
+FIX (test-only): `AbstractTraceReplayTest.driveScenarioReplayFrame` routes scenario
+frames through the same `TraceReplayFrameClosureDriver.driveS3k` the comparison loop
+uses, and `TestS3kAizTraceReplay.stepReplayFrame` delegates to it. Result: 14 AIZ
+scenario assertions go green -- `giantRideVineGrabsPlayerOnRomFrameAfterPlatformCarry`,
+`sidekickAutoJumpsOnRomFrameAfterGiantRideVineHandoff`,
+`playerMatchesTraceThroughFirstGiantRideVineWindow`,
+`aizIntroSidekickStaysAtCatchUpMarkerUntilRomGate`,
+`hollowTreeCameraLockBecomesVisibleOnRomFrameAfterCapture`,
+`hollowTreeSidekickUsesRomVisibleAutoJumpCadenceOnReleaseFrame`,
+`hollowTreeRideAppliesRomVerticalCameraMinimum`, `aiz2ReloadResumeAppliesRomCameraLock`,
+`aiz2FireRevealReleasesReloadCameraLockOnRomFrame`,
+`aiz2ReloadSidekickUsesRomVisiblePushAutoJumpCadence`,
+`aiz2ReloadSidekickCatchUpGateUsesRomVisibleCounter`,
+`aiz2ReloadSidekickFallthroughAutoJumpUsesRomVisibleCounter`,
+`aiz2MinibossResultsHandoffKeepsArenaCameraLocked`, and
+`rhinobotDoesNotDespawnOneFrameBeforeRomContact`. **This is harness fidelity, not engine
+progress: `replayMatchesTrace` is unchanged at 3,256 errors / f2696, because it was
+already driving correctly.** Do not read the 14 greens as a frontier advance.
+
+CNZ is unaffected by the harness fix by construction -- its trace classifies
+`{FULL_LEVEL_FRAME=42244, VBLANK_ONLY=9}` with zero `ADVANCE_ONLY` rows -- and the
+isolated post-fix run reproduces 9,115 errors / f185 exactly. AIZ over its full length
+is `{FULL_LEVEL_FRAME=20463, ADVANCE_ONLY=1, VBLANK_ONLY=334}`.
+
+STILL OPEN.
+- AIZ f2696 `x_speed` 0x0000 vs 0x01A6 (the Giant Ride Vine grab frame; ROM zeroes
+  speed on `object_control` 0x00 -> 0x03, `sonic3k.asm:46714-46748`).
+- CNZ f185 `y_speed` 0x0370 vs -0700.
+- MGZ f5164 `air` 0 vs 1.
+- **THREE RED POLICY ASSERTIONS IN `TestTraceReplayStartPositionPolicy` (25 run / 3
+  failed), caused by `3eebb13bf` and DELIBERATELY NOT FIXED HERE.** Verified as not
+  caused by the harness fix in this commit: stashing this commit's two Java edits
+  reproduces exactly the same three failures. All three assert on hardcoded
+  `aiz1_to_hcz_fullrun` row indices whose premise was true only while the counter was
+  fabricated:
+  - `aizLevelTransitionStartsNativePrefixExecutionAfterItsBoundaryRow:142` --
+    asserts rows 289 and 290 share a `gameplay_frame_counter`; truthfully it goes
+    0x0000 -> 0x0001 (and `lag_counter` 0x15 -> 0x0000) because that is ROM's FIRST
+    `LevelLoop` increment across the setup boundary. The test's own message
+    ("even while the sampled execution counters remain pinned") is now the false half.
+    The truthful, strictly stronger assertion is that the counter takes exactly its
+    first increment there while the phase stays `FULL_LEVEL_FRAME`.
+  - `preLevelPrefixInputEdgeWithStateAdvanceStillTicksGameplay:172` -- its helper
+    `firstStateAdvancingInputLatchRow` (`:707`) searches for a row with an input edge,
+    ADVANCING state, and all three counters pinned. **No such row exists in the
+    truthful fixture**; the shape was an artifact of the dead counter.
+  - `unchangedStateInputEdgeAfterGameplayStartUsesNormalExecutionPhase:197` -- rows
+    1822/1823 no longer share a counter (0x05FD -> 0x05FE). Worse, a scan of the whole
+    post-gameplay-start trace finds **zero** rows with an input edge and all three
+    counters pinned, so there is no replacement row pair to re-point it at.
+  Two of the three therefore have no subject left in truthful data. Deciding what the
+  input-latch policy tests should assert now (delete, assert-absence, or build a
+  synthetic fixture) is a design question of the same weight as their original
+  authoring, not a re-derivation of row indices, so it is left as its own change
+  rather than forced into this one.
+- NOT caused by this branch: `TestTraceExecutionModel.sonic3kMissingCpuExecutionHookMarksMovingDuplicateAsLag:172`
+  (expected `VBLANK_ONLY`, got `FULL_LEVEL_FRAME`) reads `traces/s3k/cnz_completerun`,
+  which `git diff 054eff4c6..HEAD -- src/test/resources/traces/` shows is untouched
+  here, and this branch changes zero files under `src/main`. It is red at the branch
+  point.
+- Other focused replay tests still carry hand-rolled steppers with the same
+  `ADVANCE_ONLY` gap (`TestS3kCnzTraceReplay`, `TestS3kHczCompleteRunTraceReplay`,
+  `TestS3kMgzF498AirRollPhysics`, `TestS1Mz1BatbrainEncounterRegression`, the
+  `Debug*Probe` classes). Only AIZ is migrated here, because only its trace currently
+  contains an `ADVANCE_ONLY` row; the rest should move to
+  `driveScenarioReplayFrame` before their fixtures gain one.
+- `ADDR_VBLA_WORD = 0xFE12` still reads `Life_count` in BOTH S3K recorders -- see the
+  SCOPE CORRECTION block further down for the evidence and the correct `0xFE0E`.
+  Deliberately NOT fixed here so this counter fix's movement stays attributable.
+
 ### 2026-07-25 -- S3K mega-run chain: fixture recapture exposes a bootstrap counter off-by-one; frontier returns to seg2
 
 Command (worktree `.worktrees/bizhawk-headless-poc`, branch
@@ -421,33 +564,51 @@ instead of 0xFE04). Fixed on develop 6564667eb (0xFE08->0xFE04, matching the S1/
 recorders); the re-merge carries it. Existing recordings cannot be healed without
 recapture.
 
-> **SCOPE CORRECTION (2026-07-25).** The sentence above overstates the fix and
-> should not be read as "S3K captures are now sound". `6564667eb` changed exactly
-> one file, `s3k_complete_run_recorder.lua`. Its sibling `s3k_trace_recorder.lua`
-> -- the S3K **standard** recorder -- still declares `ADDR_FRAMECOUNT = 0xFE08`
-> (line 375) and reads it at 10+ sites feeding both the CSV counter column and
-> every aux `vfc` field. Verified consequence: all three canonical standard
-> fixtures (`aiz1_to_hcz_fullrun`, `cnz`, `mgz`) still carry a dead-zero counter
-> column, so the AIZ->HCZ / CNZ / MGZ replay frontiers -- the primary release
-> slice -- are still being validated against a constant the ROM never produces.
-> The native harness now mirrors the split faithfully for byte-parity (a passing
-> test asserts the standard profiles read `Debug_placement_mode` while complete-run
-> reads `Level_frame_counter`), which means the defect is reproduced in two
-> implementations until the standard recorder is fixed and its three fixtures are
-> recaptured. Root cause of the miss: the six recorders each carry their own copy
-> of these constants, so a fix in one does not propagate -- the duplication that
-> `tools/bizhawk/SHARED_MODULE_HANDOFF.md` catalogues and `fd3a74291` only
-> partially addressed (leaf helpers were extracted; per-recorder ROM address
-> constants deliberately were not).
+> **SCOPE CORRECTION (2026-07-25, superseded 2026-07-26 -- see below).** The
+> sentence above overstates `6564667eb`, which changed exactly one file,
+> `s3k_complete_run_recorder.lua`. Its sibling `s3k_trace_recorder.lua` -- the
+> S3K **standard** recorder -- kept `ADDR_FRAMECOUNT = 0xFE08` and read it at
+> 10+ sites feeding both the CSV counter column and every aux `vfc` field, so
+> all three canonical standard fixtures (`aiz1_to_hcz_fullrun`, `cnz`, `mgz`)
+> carried a dead-zero counter column and the AIZ->HCZ / CNZ / MGZ replay
+> frontiers -- the primary release slice -- were being validated against a
+> constant the ROM never produces. Root cause of the miss: the six recorders
+> each carry their own copy of these constants, so a fix in one does not
+> propagate -- the duplication `tools/bizhawk/SHARED_MODULE_HANDOFF.md`
+> catalogues and `fd3a74291` only partially addressed (leaf helpers were
+> extracted; per-recorder ROM address constants deliberately were not).
 >
-> What a recapture costs is now measured, on the run fixtures rather than the
-> release slice: regenerating `runs/s3-knux-multibonus-ss/` with a live counter
-> (`63eccd290`) moved that chain from the seg2 exit boundary back to seg0 (21 ->
-> 22,216 errors, first non-camera divergence f1766 `y_speed`) because
-> `TraceReplaySessionBootstrap` seeds the engine's level/sprite frame counters
-> from this column and branches on it being > 0. Expect a comparable, currently
-> un-measured shift on AIZ/CNZ/MGZ when their fixtures are recaptured. That work
-> is deliberately queued behind the current fix rather than bundled with it.
+> **STATUS UPDATE (2026-07-26). The standard recorder IS fixed.** `95c36166c`
+> moved `s3k_trace_recorder.lua:381` to `ADDR_FRAMECOUNT = 0xFE04`
+> (`Level_frame_counter`, `sonic3k.constants.asm:782`) and bumped
+> `LUA_SCRIPT_VERSION` 6.30-s3k -> 6.31-s3k; `3eebb13bf` regenerated the three
+> canonical standard fixtures with it (user-approved, offsets and row counts
+> unchanged, everything outside the counter byte-identical); `ba882f967` flipped
+> the native C# port off the dead read, deleted the recorder-identity fork, and
+> retightened the differential gate. Both implementations now read
+> `Level_frame_counter` for S3K standard captures. What that recapture actually
+> cost on the release slice is measured in the 2026-07-26 entry at the top of
+> this file -- all three first-divergence frames held.
+>
+> **REMAINING OPEN INSTANCE OF THE SAME CLASS: `ADDR_VBLA_WORD = 0xFE12`.**
+> Both S3K recorders (`s3k_trace_recorder.lua:389` and its complete-run sibling)
+> sample `0xFE12` for the `vblank_counter` column. `0xFE12` is `Life_count`
+> (`docs/skdisasm/sonic3k.constants.asm:794`), not a VBlank counter. The value
+> the column is supposed to carry is the low word of `V_int_run_count`, a
+> `ds.l 1` at `0xFE0C` (`sonic3k.constants.asm:790`, incremented by
+> `addq.l #1,(V_int_run_count).w` at `sonic3k.asm:543`), so the correct address
+> is **`0xFE0E`** -- exactly what the S1/S2 recorders already use.
+> Evidence from the freshly regenerated fixtures: `vblank_counter` takes 3, 4
+> and 2 distinct values across the *whole* of `aiz1_to_hcz_fullrun` (20,798
+> rows), `cnz` (42,253) and `mgz` (35,912) respectively, and every value has the
+> form `0xNN00` -- the life count in the high byte and the adjacent unused byte
+> at `0xFE13` in the low byte. It steps only when the player gains a life. This
+> matters because `TraceExecutionModel.deriveSonic3kPhase` and four
+> `TraceReplayBootstrap` row classifiers consume `vblankCounter()` as a lag/
+> frozen-frame discriminator; with a constant column those tests are vacuous in
+> exactly the way `gameplay_frame_counter` was. Fixing it is queued as its own
+> change so its frontier movement stays attributable, the same discipline the
+> frame-counter fix followed.
 
 ### 2026-07-21 -- S3K mega-run chain: Option B return-attach + seg2 (aiz_2) blocker classified as landing-fidelity, NOT exit-hold
 
