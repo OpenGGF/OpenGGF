@@ -349,6 +349,12 @@ public enum SonicConfiguration {
 	CAPTURE_FPS,
 	/** Trace capture video codec (e.g. "ffv1"). */
 	CAPTURE_CODEC,
+	/** Capture audio codec: flac (lossless), aac or mp3 (both lossy). */
+	CAPTURE_AUDIO_CODEC,
+	/** Advanced: full argument list for the first ffmpeg pass. */
+	CAPTURE_FFMPEG_PASS1_ARGS,
+	/** Advanced: full argument list for the second ffmpeg pass; empty skips it. */
+	CAPTURE_FFMPEG_PASS2_ARGS,
 	/** Key used with Shift to toggle live viewport audio/video recording. */
 	CAPTURE_TOGGLE_KEY,
 

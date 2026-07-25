@@ -126,6 +126,19 @@ capture:
   outputDir: "target/trace-videos"   # Output directory for trace capture videos
   scale: 4   # Integer nearest-neighbor upscale factor for capture output
   fps: 60   # Output frame rate for trace capture
+  codec: "ffv1"   # Video codec: ffv1, h264 or h265 (all lossless)
+  audioCodec: "flac"   # Audio codec: flac (lossless), or aac / mp3 (LOSSY)
+  ffmpegPass1Args: "default"   # ADVANCED: full ffmpeg args for the encode pass
+  ffmpegPass2Args: "default"   # ADVANCED: full ffmpeg args for the mux pass; empty skips it (no audio)
+  # Placeholders pass 1: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight}
+  #                     {videoCodecArgs} {videoOut}
+  # Placeholders pass 2: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}
+  # For a small, portable, LOSSY recording (CRF 24 h264 + aac) set audioCodec
+  # to "aac" and ffmpegPass1Args to:
+  #   -y -f rawvideo -pix_fmt rgba -s {width}x{height} -r {fps} -i pipe:0
+  #   -vf vflip,scale={scaledWidth}:{scaledHeight}:flags=neighbor
+  #   -c:v libx264 -crf 24 -preset veryfast -pix_fmt yuv420p -an {videoOut}
+  # See CONFIGURATION.md "Overriding the ffmpeg commands" for the full reference.
   toggleKey: O   # Shift+key toggles live viewport audio/video recording
   codec: "ffv1"   # Capture video codec (e.g. ffv1)
 
