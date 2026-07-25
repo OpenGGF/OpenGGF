@@ -17,7 +17,7 @@
 -- prepare_bizhawk_fast_lua.ps1 and MUST stay inline per recorder.
 --
 -- Two helpers take former file-scope upvalues as parameters so they stay pure:
---   bk2_input_mask(fallback_raw, trace_row, bk2_frame_offset)  -- reads offset
+--   bk2_input_mask(fallback_raw, trace_row, bk2_frame_offset, frame_adjustment)
 --   write_aux(aux_file, json_str)                              -- was aux_file
 -- Both also call BizHawk globals (mainmemory/movie/emu) which are present in
 -- this module's environment when loaded from a recorder.
@@ -64,7 +64,8 @@ M.rom_joypad_to_mask = rom_joypad_to_mask
 --
 -- bk2_frame_offset is the recorder's own upvalue passed in to keep this pure:
 -- replay metadata defines trace row N as BK2 frame (bk2_frame_offset + N).
-local function bk2_input_mask(fallback_raw, trace_row, bk2_frame_offset)
+local function bk2_input_mask(
+        fallback_raw, trace_row, bk2_frame_offset, frame_adjustment)
     if not movie.isloaded() then
         return rom_joypad_to_mask(fallback_raw)
     end
@@ -73,7 +74,7 @@ local function bk2_input_mask(fallback_raw, trace_row, bk2_frame_offset)
     -- emu.framecount() is one frame ahead in this recorder loop.
     local frame_index = bk2_frame_offset ~= nil
         and trace_row ~= nil
-        and (bk2_frame_offset + trace_row)
+        and (bk2_frame_offset + trace_row + (frame_adjustment or 0))
         or emu.framecount()
     local jp = movie.getinput(frame_index, 1)
     if jp == nil then

@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Guards the normal-gameplay recorder side of the CSV v7 animation contract. */
@@ -57,10 +59,50 @@ class TestTraceAnimationRecorderContract {
         for (String name : List.of(
                 "s3k_trace_recorder.lua", "s3k_complete_run_recorder.lua")) {
             String script = Files.readString(TOOLS.resolve(name));
-            assertTrue(script.contains("OGGF_TRACE_LIGHTWEIGHT"), name);
-            assertTrue(script.contains("physics_animation_only"), name);
+            assertTrue(script.contains("OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS"), name);
+            assertTrue(script.contains(
+                    "physics_animation_aux_without_diagnostic_hooks"), name);
             assertTrue(script.contains("if not LIGHTWEIGHT_REGEN then"), name);
         }
+    }
+
+    @Test
+    void s3kRecorderMetadataOmitsRetiredReplayPhaseControls() throws IOException {
+        String script = Files.readString(TOOLS.resolve("s3k_trace_recorder.lua"));
+
+        assertFalse(script.contains("pre_level_intro_prefix"));
+        assertFalse(script.contains("sidekick_seed_frame_prelude"));
+        assertFalse(script.contains("pre_trace_osc_frames"));
+
+        assertTrue(script.contains("\"trace_profile\""));
+        assertTrue(script.contains("\"bk2_frame_offset\""));
+        assertTrue(script.contains("\"trace_schema\": 6"));
+        assertTrue(script.contains("\"csv_version\": 7"));
+        assertTrue(script.contains("OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS"));
+        assertTrue(script.contains("OGGF_TRACE_QUIET"));
+        assertTrue(script.contains("if not LIGHTWEIGHT_REGEN then"));
+    }
+
+    @Test
+    void s3kRecorderUsesCanonicalBk2OffsetForEveryProfile() throws IOException {
+        String script = Files.readString(TOOLS.resolve("s3k_trace_recorder.lua"));
+        assertCanonicalS3kInputWrapper(script);
+    }
+
+    @Test
+    void s3kRecorderCanonicalInputGuardRejectsAnAlternateAdjustedCall() throws IOException {
+        String script = Files.readString(TOOLS.resolve("s3k_trace_recorder.lua"));
+        String bypass = script.replace(
+                "    return C.bk2_input_mask(\n"
+                        + "        fallback_raw, trace_row, bk2_frame_offset, 0)\n",
+                "    local shifted = C.bk2_input_mask(\n"
+                        + "        fallback_raw, trace_row, bk2_frame_offset, -1)\n"
+                        + "    return C.bk2_input_mask(\n"
+                        + "        fallback_raw, trace_row, bk2_frame_offset, 0)\n");
+
+        assertFalse(script.equals(bypass), "the adversarial recorder mutation must be applied");
+        assertThrows(AssertionError.class, () -> assertCanonicalS3kInputWrapper(bypass),
+                "a second nonzero-adjustment call must fail the canonical wrapper contract");
     }
 
     @Test
@@ -122,7 +164,7 @@ class TestTraceAnimationRecorderContract {
 
     @Test
     void allCommittedGameplayFixturesCarryV7AnimationCsv() throws IOException {
-        Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 10);
+        Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 13);
         for (Map.Entry<String, Integer> entry : expectedCounts.entrySet()) {
             Path gameRoot = Path.of("src/test/resources/traces", entry.getKey());
             List<Path> fixtures;
@@ -156,5 +198,23 @@ class TestTraceAnimationRecorderContract {
                         new InputStreamReader(input, StandardCharsets.UTF_8))) {
             return reader.readLine();
         }
+    }
+
+    private static void assertCanonicalS3kInputWrapper(String script) {
+        int wrapperStart = script.indexOf("local function bk2_input_mask(");
+        int wrapperEnd = script.indexOf("local function write_aux(", wrapperStart);
+        assertTrue(wrapperStart >= 0 && wrapperEnd > wrapperStart,
+                "s3k recorder must retain the shared BK2 input wrapper");
+
+        String canonicalWrapper = """
+                local function bk2_input_mask(fallback_raw, trace_row)
+                    return C.bk2_input_mask(
+                        fallback_raw, trace_row, bk2_frame_offset, 0)
+                end
+                """;
+        String actualWrapper = script.substring(wrapperStart, wrapperEnd);
+        assertEquals(canonicalWrapper.replaceAll("\\s+", ""),
+                actualWrapper.replaceAll("\\s+", ""),
+                "the input wrapper must contain exactly one canonical zero-adjustment call");
     }
 }

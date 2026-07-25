@@ -1483,7 +1483,7 @@ public class GameLoop {
                 int heldVblank = levelManager.getObjectManager() != null
                         ? levelManager.getObjectManager().getVblaCounter()
                         : 0;
-                LevelFrameStep.executeWithPause(LevelFrameContext.from(gameplayMode),
+                boolean gameplayExecuted = LevelFrameStep.executeWithPause(LevelFrameContext.from(gameplayMode),
                         levelManager, camera, () -> spriteManager.update(inputHandler),
                         startEdge,
                         (name, step) -> {
@@ -1491,6 +1491,9 @@ public class GameLoop {
                             step.run();
                             profiler.endSection(name);
                         });
+                if (gameplayExecuted) {
+                    playbackDebugManager.onCurrentGameplayTickExecuted();
+                }
                 if (holdVblankForPendingLoad
                         && playbackDebugManager.shouldHoldVblankForPendingLevelLoad()
                         && levelManager.getObjectManager() != null) {
@@ -1637,6 +1640,7 @@ public class GameLoop {
                     step.run();
                     profiler.endSection(name);
                 });
+                playbackDebugManager.onCurrentGameplayTickExecuted();
 
                 // ROM lines 127411-127412: player art_tile priority bit stays HIGH throughout
                 // the bonus stage. Must be set AFTER the sprite update (which runs inside

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{43769F4C-E25B-4734-8B85-1F1186431148}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>OpenGGF.BizHawk.Headless.Tests</RootNamespace>
+    <AssemblyName>BizHawk.Headless.Gpgx.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <OutputPath>bin/Debug/</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin/Release/</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="netstandard" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="BizHawk.Emulation.Cores">
+      <HintPath>$(BizHawkDllDir)/BizHawk.Emulation.Cores.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(BizHawkDllDir)/Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="tests/AssertEx.cs" />
+    <Compile Include="tests/Bk2ReaderTests.cs" />
+    <Compile Include="tests/BootstrapTests.cs" />
+    <Compile Include="tests/GpgxHostTests.cs" />
+    <Compile Include="tests/NoReplacePublisherTests.cs" />
+    <Compile Include="tests/EndToEndTests.cs" />
+    <Compile Include="tests/S1AuxEventEngineTests.cs" />
+    <Compile Include="tests/FakeS1Host.cs" />
+    <Compile Include="tests/S1CompleteRunDifferentialTests.cs" />
+    <Compile Include="tests/S1CompleteRunMetadataWriterTests.cs" />
+    <Compile Include="tests/S1RunCaptureRunnerTests.cs" />
+    <Compile Include="tests/S1RunCaptureRunnerStageFreeTests.cs" />
+    <Compile Include="tests/S1RunManifestWriterTests.cs" />
+    <Compile Include="tests/S1RunModeDifferentialTests.cs" />
+    <Compile Include="tests/S1SmokeRecorderTests.cs" />
+    <Compile Include="tests/S1SpecialStageWriterTests.cs" />
+    <Compile Include="tests/S1TraceCaptureRunnerTests.cs" />
+    <Compile Include="tests/S1TraceDifferentialTests.cs" />
+    <Compile Include="tests/S1TraceCsvWriterTests.cs" />
+    <Compile Include="tests/S1TraceMetadataWriterTests.cs" />
+    <Compile Include="tests/S2AuxArmBlockTests.cs" />
+    <Compile Include="tests/S2AuxEventEngineTests.cs" />
+    <Compile Include="tests/S2RunCaptureRunnerTests.cs" />
+    <Compile Include="tests/S2RunManifestWriterTests.cs" />
+    <Compile Include="tests/S2SpecialStageWriterTests.cs" />
+    <Compile Include="tests/S2TraceCaptureRunnerTests.cs" />
+    <Compile Include="tests/S2TraceDifferentialTests.cs" />
+    <Compile Include="tests/S2TraceCsvWriterTests.cs" />
+    <Compile Include="tests/S2TraceMetadataWriterTests.cs" />
+    <Compile Include="tests/S3KAuxEventEngineTests.cs" />
+    <Compile Include="tests/S3KHookAbsenceTests.cs" />
+    <Compile Include="tests/S3KTraceCaptureRunnerTests.cs" />
+    <Compile Include="tests/S3KTraceCsvWriterTests.cs" />
+    <Compile Include="tests/S3KTraceDifferentialTests.cs" />
+    <Compile Include="tests/S3KTraceMetadataWriterTests.cs" />
+    <Compile Include="tests/SmokeCaptureRunnerTests.cs" />
+    <Compile Include="tests/TestMain.cs" />
+    <Compile Include="tests/TraceCliTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="fixtures/*.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="fixtures/*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="BizHawk.Headless.Gpgx.csproj">
+      <Project>{A56E5B42-F158-4D25-A82D-3343884B4E46}</Project>
+      <Name>BizHawk.Headless.Gpgx</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)/Microsoft.CSharp.targets" />
+</Project>

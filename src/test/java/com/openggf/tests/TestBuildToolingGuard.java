@@ -38,12 +38,18 @@ class TestBuildToolingGuard {
             "\\.\\s*set(?:CentreX|CentreY|XSpeed|YSpeed|GSpeed|Angle|Air|Rolling|SubpixelRaw)\\s*\\("
                     + ".*\\b(?:current|previous|firstFrame|expected|traceFrame|frame)\\s*\\.\\s*"
                     + "(?:x|y|xSpeed|ySpeed|gSpeed|angle|air|rolling|xSub|ySub)\\s*\\(");
+    private static final List<Pattern> FIRST_ROW_REPLAY_SCHEDULING_SIGNALS = List.of(
+            Pattern.compile("\\btrace\\s*\\.\\s*getFrame\\s*\\(\\s*0\\s*\\)\\s*\\.\\s*"
+                    + "(?:x|y|xSub|ySub|xSpeed|ySpeed|gSpeed|animationId|mappingFrame|sidekick)\\s*\\("),
+            Pattern.compile("\\b(?:firstFrame|firstRow|seedFrame)\\s*\\.\\s*"
+                    + "(?:x|y|xSub|ySub|xSpeed|ySpeed|gSpeed|animationId|mappingFrame|sidekick)\\s*\\("),
+            Pattern.compile("\\btrace\\s*\\.\\s*(?:oscillationStateForFrame|vOscillateForFrame)"
+                    + "\\s*\\(\\s*0\\s*\\)"));
     private static final Set<String> ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS = Set.of(
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (!meta.hasPerFrameSlotMachineState()) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && \"level_gated_reset_aware\".equals(metadata.traceProfile())",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() < firstLevelFrame) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() == firstLevelFrame) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() <= firstLevelFrame) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (previous != null || current.frame() != 0) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
@@ -1023,7 +1029,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void traceReplayBootstrapContractsShouldBeDocumentedAndNotLegacy() throws Exception {
+    void traceReplayBootstrapContractsShouldBeDocumentedAndOutcomeFree() throws Exception {
         String bootstrap = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
         String discrepancies = Files.readString(Path.of("docs/KNOWN_DISCREPANCIES.md"));
         String roadmap = Files.readString(Path.of("docs/RELEASE_READINESS_ROADMAP.md"));
@@ -1040,8 +1046,11 @@ class TestBuildToolingGuard {
                 || roadmap.contains("Accepted Phase 1 release debt: legacy S3K AIZ intro trace bootstrap")) {
             violations.add("legacy S3K AIZ trace bootstrap debt should be removed, not documented as accepted");
         }
-        if (!bootstrap.contains("hasPreLevelIntroPrefix()")) {
-            violations.add("TraceReplayBootstrap should use generic pre-level-prefix fixture metadata");
+        if (!bootstrap.contains("hasRecordedPreLevelPrefix(TraceData trace)")) {
+            violations.add("TraceReplayBootstrap should classify recorded pre-level prefixes structurally");
+        }
+        if (bootstrap.contains("hasPreLevelIntroPrefix()")) {
+            violations.add("TraceReplayBootstrap must not schedule replay from legacy pre-level-prefix metadata");
         }
         if (!discrepancies.contains("Pre-Level Intro Prefix Trace Bootstrap Contract")) {
             violations.add("docs/KNOWN_DISCREPANCIES.md does not document the pre-level prefix bootstrap contract");
@@ -1052,8 +1061,23 @@ class TestBuildToolingGuard {
         if (!discrepancies.contains("S2 CNZ Slot-Machine Trace Bootstrap Contract")) {
             violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S2 CNZ slot-machine trace bootstrap contract");
         }
-        if (!discrepancies.contains("S3K Sidekick Seed-Frame Trace Bootstrap Debt")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S3K sidekick seed-frame trace bootstrap debt");
+        for (String relative : List.of(
+                "src/main/java/com/openggf/trace/TraceReplayBootstrap.java",
+                "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java")) {
+            String source = stripComments(Files.readString(Path.of(relative)));
+            for (String retiredAccessor : List.of(
+                    "hasSidekickSeedFramePrelude()",
+                    "hasPreLevelIntroPrefix()",
+                    "preTraceOscillationFrames()")) {
+                if (source.contains(retiredAccessor)) {
+                    violations.add(relative + " schedules replay from retired metadata "
+                            + retiredAccessor);
+                }
+            }
+            violations.addAll(firstRowReplaySchedulingSignals(relative, source));
+            if (relative.endsWith("/TraceReplayBootstrap.java")) {
+                violations.addAll(completeRunOutcomePhaseSchedulingSignals(relative, source));
+            }
         }
         if (!discrepancies.contains("S3K Complete-Run Segment Start-Position Bootstrap Debt")) {
             violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S3K complete-run start-position bootstrap debt");
@@ -1194,15 +1218,78 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void s3kSidekickSeedReplayBootstrapUsesExplicitFixtureCapability() throws Exception {
-        String bootstrap = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
-
-        if (!bootstrap.contains("hasSidekickSeedFramePrelude()")) {
-            fail("TraceReplayBootstrap should use explicit sidekick seed-frame fixture capability metadata.");
+    void s3kReplaySchedulingIgnoresLegacyPhaseControlMetadata() throws Exception {
+        List<String> violations = new ArrayList<>();
+        for (String relative : List.of(
+                "src/main/java/com/openggf/trace/TraceReplayBootstrap.java",
+                "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java")) {
+            String source = stripComments(Files.readString(Path.of(relative)));
+            for (String accessor : List.of(
+                    "hasSidekickSeedFramePrelude()",
+                    "hasPreLevelIntroPrefix()",
+                    "preTraceOscillationFrames()")) {
+                if (source.contains(accessor)) {
+                    violations.add(relative + " schedules S3K replay from " + accessor);
+                }
+            }
         }
-        if (bootstrap.contains("firstFramePrimaryMovementAdvanced(")) {
-            fail("TraceReplayBootstrap must not infer S3K sidekick seed-frame prelude from "
-                    + "first-frame player movement shape.");
+
+        if (!violations.isEmpty()) {
+            fail("S3K replay scheduling must ignore legacy phase-control metadata:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    void traceReplaySchedulingDoesNotInferPhaseFromFirstRowOutcomeValues() throws Exception {
+        List<String> violations = new ArrayList<>();
+        for (String relative : List.of(
+                "src/main/java/com/openggf/trace/TraceReplayBootstrap.java",
+                "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java")) {
+            String source = Files.readString(Path.of(relative));
+            violations.addAll(firstRowReplaySchedulingSignals(relative, source));
+            if (relative.endsWith("/TraceReplayBootstrap.java")) {
+                violations.addAll(completeRunOutcomePhaseSchedulingSignals(relative, source));
+            }
+        }
+        if (!violations.isEmpty()) {
+            fail("trace replay scheduling must not infer execution phase from frame-zero "
+                    + "player/sidekick/oscillator outcome values:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    void s3kOscillatorPreludeDoesNotCallFrameZeroOutcomeHelpers() throws Exception {
+        String source = stripComments(Files.readString(
+                Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java")));
+        int methodStart = source.indexOf(
+                "public static int preTraceOscillationFramesForTraceReplay(");
+        int methodEnd = source.indexOf(
+                "public static int initialOscillationSuppressionFramesForTraceReplay(",
+                methodStart);
+        if (methodStart < 0 || methodEnd < 0) {
+            fail("Could not locate the pre-trace oscillator scheduling method.");
+        }
+
+        String schedulingMethod = source.substring(methodStart, methodEnd);
+        List<String> violations = List.of(
+                        "trace.getFrame(0)",
+                        "isS3kCompleteRunInitialHandoffRow(",
+                        "isS3kCompleteRunVisibleVelocityHoldRow(",
+                        "hasNativeInitialVelocity(",
+                        ".stateEquals(",
+                        ".xSpeed(",
+                        ".ySpeed(",
+                        ".gSpeed(")
+                .stream()
+                .filter(schedulingMethod::contains)
+                .toList();
+
+        if (!violations.isEmpty()) {
+            fail("S3K oscillator prelude scheduling must not call frame-zero outcome helpers "
+                    + "or inspect frame-zero player outcomes:\n  "
+                    + String.join("\n  ", violations));
         }
     }
 
@@ -1243,6 +1330,26 @@ class TestBuildToolingGuard {
 
         assertEquals(List.of(
                 "sample/TraceReplaySessionBootstrap.java:7 - player.setXSpeed(current.xSpeed());"),
+                signals);
+    }
+
+    @Test
+    void sampleScannerDetectsFirstRowOutcomeSchedulingButIgnoresComments() {
+        List<String> signals = firstRowReplaySchedulingSignals(
+                "sample/TraceReplayBootstrap.java", """
+                class TraceReplayBootstrap {
+                    // TraceFrame firstFrame = trace.getFrame(0); firstFrame.xSpeed();
+                    void bad(TraceData trace) {
+                        TraceFrame firstFrame = trace.getFrame(0);
+                        if (firstFrame.sidekick().mappingFrame() == 0) {
+                            schedulePrelude();
+                        }
+                    }
+                }
+                """);
+
+        assertEquals(List.of(
+                "sample/TraceReplayBootstrap.java:5 - if (firstFrame.sidekick().mappingFrame() == 0) {"),
                 signals);
     }
 
@@ -1333,6 +1440,49 @@ class TestBuildToolingGuard {
             }
             if (TRACE_ROW_PLAYER_SETTER_HYDRATION.matcher(line).find()) {
                 signals.add(relative + ":" + (i + 1) + " - " + line.replaceAll("\\s+", " "));
+            }
+        }
+        return signals;
+    }
+
+    private static List<String> firstRowReplaySchedulingSignals(String relative, String source) {
+        String stripped = stripComments(source);
+        List<String> signals = new ArrayList<>();
+        String[] lines = stripped.split("\\R", -1);
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].strip();
+            if (line.isEmpty()) {
+                continue;
+            }
+            for (Pattern pattern : FIRST_ROW_REPLAY_SCHEDULING_SIGNALS) {
+                if (pattern.matcher(line).find()) {
+                    signals.add(relative + ":" + (i + 1) + " - " + line.replaceAll("\\s+", " "));
+                    break;
+                }
+            }
+        }
+        return signals;
+    }
+
+    private static List<String> completeRunOutcomePhaseSchedulingSignals(
+            String relative, String source) {
+        String stripped = stripComments(source);
+        int methodStart = stripped.indexOf("public static TraceExecutionPhase phaseForReplay(");
+        int methodEnd = stripped.indexOf(
+                "private static boolean isSidekickAnimationHeldAfterRawTransition(",
+                methodStart);
+        if (methodStart < 0 || methodEnd < 0) {
+            return List.of(relative + " - could not locate phaseForReplay");
+        }
+
+        Pattern outcomeHelper = Pattern.compile(
+                "\\b(?:isS3kCompleteRun\\w*|hasNativeInitialVelocity)\\s*\\(");
+        List<String> signals = new ArrayList<>();
+        String[] lines = stripped.substring(methodStart, methodEnd).split("\\R", -1);
+        for (String rawLine : lines) {
+            String line = rawLine.strip();
+            if (outcomeHelper.matcher(line).find()) {
+                signals.add(relative + " phaseForReplay - " + line.replaceAll("\\s+", " "));
             }
         }
         return signals;

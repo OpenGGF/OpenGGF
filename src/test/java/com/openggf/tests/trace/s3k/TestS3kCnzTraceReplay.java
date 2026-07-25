@@ -34,6 +34,7 @@ import java.util.List;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -77,6 +78,55 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
     @Override
     protected Path traceDirectory() {
         return TRACE_DIR;
+    }
+
+    /**
+     * CNZ starts Sonic on the right edge of the opening platform. ROM frame 0
+     * therefore runs the ordinary grounded routine-2 path: it selects Wait
+     * before {@code Player_AnglePos} detaches Sonic, then animation dispatch
+     * publishes Wait's first {@code $BA} mapping without applying air gravity
+     * ({@code sonic3k.asm:24740-24771};
+     * {@code General/Sprites/Sonic/Anim - Sonic S3.asm:AniSonic05}).
+     */
+    @Test
+    void freshCnzStartRunsGroundedWalkOffBeforeCarryInit() throws Exception {
+        try (BootstrappedCnzReplay replay = bootstrappedCnzReplay()) {
+            assertEquals(0, replay.replayStart().startingTraceIndex(),
+                    "CNZ lifecycle regression requires the fresh frame-0 start");
+
+            replay.fixture().stepFrameFromRecording();
+
+            AbstractPlayableSprite sonic = replay.fixture().sprite();
+            AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
+            SidekickCpuController tailsCpu = tails.getCpuController();
+
+            assertTrue(sonic.getAir(), "frame 0 terrain walk-off must mark Sonic airborne");
+            assertEquals((short) 0x0000, sonic.getYSpeed(),
+                    "frame 0 grounded dispatch must not apply air gravity");
+            assertEquals(0x05, sonic.getAnimationId(),
+                    "frame 0 grounded idle selection must choose Wait");
+            assertEquals(0xBA, sonic.getMappingFrame(),
+                    "frame 0 Wait dispatch must publish its first mapping");
+            assertEquals(SidekickCpuController.State.CARRY_INIT, tailsCpu.getState(),
+                    "frame 0 must publish native Tails CPU carry-init routine $0C");
+            assertEquals((short) 0x0038, tails.getYSpeed(),
+                    "frame 0 carry-init arm still runs ordinary Tails air gravity");
+            assertFalse(tailsCpu.isFlyingCarrying(),
+                    "frame 0 routine $0C is armed but has not entered the carry body");
+
+            replay.fixture().stepFrameFromRecording();
+
+            assertEquals(0x22, sonic.getAnimationId(),
+                    "frame 1 carry body must select the carried animation");
+            assertEquals(0x91, sonic.getMappingFrame(),
+                    "frame 1 carry body must publish the carried mapping");
+            assertTrue(sonic.isObjectControlled(),
+                    "frame 1 native object_control=$03 must own Sonic");
+            assertTrue(sonic.isObjectControlAllowsCpu(),
+                    "frame 1 native object_control=$03 must retain bit-1 CPU allowance");
+            assertTrue(sonic.isObjectControlSuppressesMovement(),
+                    "frame 1 native object_control=$03 must suppress normal movement");
+        }
     }
 
     @Override
@@ -1088,6 +1138,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                 .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
                 .startPosition(trace.metadata().startX(), trace.metadata().startY())
                 .startPositionIsCentre()
+                .withFreshLevelStartLifecycle()
                 .build();
 
         TraceReplaySessionBootstrap.BootstrapResult boot =

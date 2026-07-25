@@ -21,7 +21,7 @@ Use these to get oriented on a divergence before you start editing engine code. 
 ## Core Mission Rules (apply to all trace work)
 
 1. **No hacks or dirty fixes.** Every behaviour change must be backed by the disassembly for the relevant game. Cite ROM file and line numbers in commits and code comments.
-2. **You may regenerate a trace** when the recorded data is genuinely insufficient for diagnosis (missing per-frame data, broken setup, recorder schema changed). Use the `tools/bizhawk/record_*_trace.bat` launcher with the matching `.lua` recorder. Regeneration is part of the loop — don't avoid it. **But** do not regenerate just to "make the test match"; regenerate to gain visibility.
+2. **You may regenerate a trace** when the recorded data is genuinely insufficient for diagnosis (missing per-frame data, broken setup, recorder schema changed). Use the native harness (`tools/bizhawk-headless/run.sh`, S1/S2) or the Lua launcher (`tools/bizhawk/run_bizhawk_lua.sh`, S3K) — see [Trace Regeneration](#trace-regeneration). Regeneration is part of the loop — don't avoid it. **But** do not regenerate just to "make the test match"; regenerate to gain visibility.
 3. **If the engine architecture is missing or fundamentally broken**, or game objects/functionality aren't yet implemented, **plan and delegate**. Use review agents and parallel subagent execution for large-scope work. Don't try to land everything in one pass.
 4. **Cross-game parity is non-negotiable.** The engine supports three games (Sonic 1, Sonic 2, Sonic 3 & Knuckles). Before changing any shared/root code (physics, collision, sidekick AI, oscillation, rendering, audio, shared object base classes, shared object helpers, etc.), check the disassemblies for **all three games** to confirm whether the change is a universal correction or a per-game divergence. Per-game divergences must use the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`: a typed `GameRules` record for game-wide shared runtime gates, or an existing provider/profile/registry/object hook for narrower behavior. **Never** branch on `if (gameId == GameId.S3K) ...`.
 5. **No zone/route/frame carve-outs for trace fixes.** A trace failure in AIZ, CNZ, MGZ, or any other zone must be fixed by modelling the ROM state, object routine, physics profile, event flag, or data-driven object/profile condition that caused it. Do not add behaviour branches whose only predicate is a zone id/name, trace route, frame number, or "known failing trace" exception. "Use ROM-default behaviour except in AIZ" is still a zone-specific carve-out and is not acceptable. Zone/event/object providers may expose ROM state at the owning boundary, but shared physics/sidekick/object behaviour must consume semantic predicates such as object id/routine/control bits/status bits/frame-counter visibility, not "this zone".
@@ -68,10 +68,11 @@ Do not commit trace-to-engine hydration switches or writeback binders. If a boot
 
 ```
 +------------------------+     +------------------------+     +------------------------+
-| BK2 movie (Bizhawk)   | --> | Lua recorder (.lua)    | --> | Trace files            |
-| - P1 controller frames |     | - reads RAM each frame |     | - metadata.json        |
-|                        |     | - writes physics.csv   |     | - physics.csv          |
-|                        |     | - writes aux_state.jsonl|    | - aux_state.jsonl      |
+| BK2 movie (Bizhawk)   | --> | Recorder (native C#    | --> | Trace files            |
+| - P1 controller frames |     |   or Lua)              |     | - metadata.json        |
+|                        |     | - reads RAM each frame |     | - physics.csv          |
+|                        |     | - writes physics.csv   |     | - aux_state.jsonl      |
+|                        |     | - writes aux_state.jsonl|    |                        |
 +------------------------+     +------------------------+     +------------------------+
                                                                        |
                                                                        v
@@ -91,11 +92,77 @@ The arrow from `TraceData` into the engine simulation goes ONLY into `compareFra
 
 ## File Layout
 
-### Recorder (`tools/bizhawk/`)
+### Recorders — two implementations, one output contract
 
-- `<game>_trace_recorder.lua` — per-game lua scripts launched inside Bizhawk-2.11 with `--lua <recorder>` and `--movie <bk2>`. Each frame the script reads RAM, classifies the frame phase, and emits one CSV row plus zero-or-more aux JSONL events.
-- `record_<game>_trace.bat` — Windows launcher wrapping Bizhawk's headless mode.
-- `trace_output/` — scratch directory the recorder writes to. Outputs are *manually copied* into the test resources tree.
+A **native C#/Mono harness is replacing the Lua recorders**, gated by byte-identical
+differential comparison against the committed fixtures. Both emit the same
+`metadata.json` / `physics.csv` / `aux_state.jsonl` contract, so everything downstream of
+the recorder is unchanged. Pick by game:
+
+| Game | Current recorder | Notes |
+|---|---|---|
+| S1 standard + complete-run | **native** (`tools/bizhawk-headless/`) | Migrated and gated |
+| S2 all modes + complete-run | **native** | Migrated and gated |
+| S3K standard | **native** | Migrated and gated (AIZ end-to-end, CNZ, MGZ). Hook-driven aux families are deferred, and the CLI refuses every unmodeled `OGGF_*` recorder variable rather than diverging silently |
+| S3K complete-run | Lua (`s3k_complete_run_recorder.lua`) | Not yet migrated — everything stamped `6.32-s3k-completerun` (`runs/`, `special_stage/`, `bonus_*`, `*_completerun`) |
+
+**Native harness (`tools/bizhawk-headless/`)** — Linux/Mono, no display required, ~1240-2790
+fps vs ~840 fps for Lua-on-Linux.
+
+- `run.sh` — wrapper that builds if needed and execs the harness under Mono with
+  `DISPLAY` unset. Args: `--rom`, `--movie`, `--output` (must **not** already exist),
+  `--mode smoke|trace`, plus `--trace-profile`, `--gameplay-segment` (S2 only), `--run-id`
+  (run mode; mutually exclusive with the other two), `--effective-movie-length` (run mode
+  only). `--bk2-frame-offset` / `--max-frames` are smoke-mode only.
+- `test.sh [--filter <substr>]` — the differential suite (~4 min; the complete-emeralds
+  gate is most of it, so `--filter` when iterating). Skips cleanly when the BizHawk
+  distribution or a ROM env var is absent.
+- `common-env.sh` — resolves `BIZHAWK_HOME` (defaults to
+  `docs/BizHawk-2.11-linux-x64`) and validates the required BizHawk DLLs. Needs Mono 6.12
+  + xbuild. **C# 7.x only**, non-SDK csproj: every new `.cs` file must be hand-added to
+  **both** `BizHawk.Headless.Gpgx.csproj` and `...Tests.csproj`. Tests are a
+  dependency-free console runner (`tests/TestMain.cs` registry + `AssertEx`), not NUnit.
+- Behaviour specs live in `tools/bizhawk-headless/docs/` (`s1-trace-recorder-behavior.md`,
+  `s1-complete-run-behavior.md`, `s1-run-mode-behavior.md`, `s2-trace-recorder-behavior.md`,
+  `s2-run-mode-behavior.md`). Read the spec for the mode you're touching.
+
+**Lua recorders (`tools/bizhawk/`)** — still authoritative for S3K, and the behavioural
+reference the native ports are validated against.
+
+- `<game>_trace_recorder.lua` — launched inside BizHawk-2.11 with `--lua <recorder>` and
+  `--movie <bk2>`. Each frame reads RAM, classifies the frame phase, and emits one CSV row
+  plus zero-or-more aux JSONL events.
+- `run_bizhawk_lua.sh <lua> <bk2> <rom>` — **the Linux launcher; use this one here.** Needs
+  the repo-local BizHawk build, hardware GL, and `DISPLAY=:0`, with `OGGF_TRACE_RUN_ID` /
+  `OGGF_BK2_FRAME_COUNT` / `OGGF_BK2_BASENAME` in the environment. Lua `print()` never
+  reaches stdout — judge success by output files. Run one EmuHawk at a time.
+- `run_bizhawk_lua.bat`, `record_<game>_trace.bat` — Windows equivalents. Ignore them on
+  Linux.
+- `trace_output/` — scratch directory the recorder writes to (CWD-relative to the script).
+  Outputs are *manually copied* into the test resources tree.
+
+**Fixtures under `src/test/resources/traces/` are read-only ground truth.** On a recorder
+mismatch, fix the recorder — never the fixture, never looser normalization.
+`physics.csv` / `aux_state.jsonl` / `run_manifest.json` must be byte-identical with zero
+normalization; only `metadata.json`'s `recording_date` and an exactly-pinned version-line
+delta may differ. Run-mode published files are CRLF; plain mode and S1 complete-run are LF
+(Lua-on-Linux writes LF — environmental).
+
+#### Porting a recorder to the native harness
+
+The Lua recorder is the behavioural authority; the written spec is second; the disassembly
+resolves RAM questions. Lessons already paid for on the S1 and S2 ports:
+
+- **Evaluate stop conditions POST-advance, in the Lua's `on_frame_end` source order.** This
+  exact bug was found independently in both ports. Don't reintroduce it.
+- **Pin version drift empirically.** When fixture and HEAD recorder versions differ, derive
+  the permitted metadata delta from the Lua git history plus a real capture diff, and assert
+  it exactly in the gate. Never widen normalization to make a diff pass.
+- **Hook-driven aux families are the hard part.** Families like `rng_call_per_frame` and
+  `sonic_record_pos_per_frame` use `event.onmemoryexecute`, which the native `GpgxHost` does
+  not support yet. Determine which families actually appear in the gated fixtures; port
+  those, and document deferral for env-gated-off ones rather than dropping them silently.
+- **Never commit ROMs, BizHawk binaries, or capture outputs.**
 
 Lua-side schema versioning:
 - `local TRACE_SCHEMA_VERSION = 5` — bumped only when CSV columns change.
@@ -312,19 +379,53 @@ same frame's `ObjectMoveAndFall` from the marker (`docs/s2disasm/s2.asm:40736-40
 
 ## Trace Regeneration
 
-When you need new diagnostic data, regenerate the trace. The proven Windows PowerShell pattern:
+When you need new diagnostic data, regenerate the trace.
 
-```powershell
-$env:OGGF_<GAME>_TRACE_PROFILE = "<profile>"
-Set-Location <repo or worktree root>
-if (Test-Path "tools\bizhawk\trace_output") { Remove-Item -Recurse -Force "tools\bizhawk\trace_output" }
-& "tools\bizhawk\record_<game>_trace.bat" `
-    "C:\path\to\<rom file>.gen" `
-    "src\test\resources\traces\<game>\<zone>\<bk2 file>.bk2" `
-    "<profile>"
+**S1 / S2 / S3K standard — native harness (preferred).** No display, no EmuHawk process to
+babysit, and it fails loudly instead of silently writing nothing:
+
+```bash
+tools/bizhawk-headless/run.sh \
+    --rom "$S1_ROM_PATH" \
+    --movie src/test/resources/traces/<game>/<zone>/<movie>.bk2 \
+    --output /tmp/regen-<zone> \
+    --mode trace \
+    --trace-profile <profile>
+```
+
+`--output` must not already exist. Use `--run-id <id>` instead of `--trace-profile` for
+run-mode/complete-run captures, and add `--gameplay-segment <n>` for S2 segment captures.
+ROM paths come from `S1_ROM_PATH` / `S2_ROM_PATH` / `S3K_ROM_PATH`, following the
+SKIP-when-absent convention.
+
+For S3K the profile is `aiz_end_to_end`, `level_gated_reset_aware`, or `gameplay_unlock`
+(passed as `--trace-profile`, not the Lua's `OGGF_S3K_TRACE_PROFILE` env var). The S3K CLI
+**refuses** to run if any unmodeled `OGGF_*` recorder variable is set — hook-arming,
+`*_RANGE` window overrides, or `OGGF_TRACE_STOP_FRAME` / `OGGF_BK2_FRAME_COUNT` — so clear
+them from your shell rather than working around the error, since honoring them silently
+would produce non-canonical output.
+
+**S3K via Lua** — still required for the complete-run recorder
+(`s3k_complete_run_recorder.lua`, everything stamped `6.32-s3k-completerun`), and for the
+hook-driven aux families the native port defers. Lua captures do work on Linux; the old
+"Windows only" README note is stale. Clear the scratch dir first, since the recorder
+appends into it (swap in `s3k_complete_run_recorder.lua` for complete-run captures):
+
+```bash
+rm -rf tools/bizhawk/trace_output
+OGGF_S3K_TRACE_PROFILE=<profile> DISPLAY=:0 \
+    tools/bizhawk/run_bizhawk_lua.sh \
+        tools/bizhawk/s3k_trace_recorder.lua \
+        src/test/resources/traces/s3k/<zone>/<movie>.bk2 \
+        "$S3K_ROM_PATH"
 ```
 
 Output lands in `tools/bizhawk/trace_output/`. Copy `metadata.json`, `physics.csv`, `aux_state.jsonl` into the test resources tree (the `.bk2` is unchanged) and commit the regen as a separate logical change from any recorder schema change.
+
+**Before regenerating, confirm which recorder produced the target trace** — read its
+`metadata.json` `profile` / `lua_script_version`. A trace stamped e.g. `6.32-s3k-completerun`
+came from the complete-run recorder, not the standard one, and regenerating with the wrong
+recorder produces a plausible-looking but wrong fixture.
 
 Profiles are declared inside the lua via `is_*_profile()` predicates — check the recorder for the available list. Common ones: gameplay-unlock starts at controls-active, level-gated-reset-aware starts at gameplay and discards on soft-reset, end-to-end starts at BK2 frame 0.
 
@@ -332,7 +433,14 @@ Profiles are declared inside the lua via `is_*_profile()` predicates — check t
 
 When a divergence can't be pinpointed without more ROM-side state:
 
-1. **Lua side.** Add a helper function (e.g. `write_<feature>_per_frame()`) that reads the RAM block of interest and emits a JSONL line with a new `event` type. Call it from the per-frame entry. Bump `LUA_SCRIPT_VERSION`. Add an opt-in key to `aux_schema_extras` (e.g. `"<feature>_per_frame"`).
+1. **Recorder side.** Emit a JSONL line with a new `event` type from the per-frame entry,
+   reading the RAM block of interest. Bump the recorder version and add an opt-in key to
+   `aux_schema_extras` (e.g. `"<feature>_per_frame"`). On the **native** harness (S1/S2, and
+   S3K standard) that means extending the relevant `*AuxEventEngine` and its writer, with a
+   test in `tools/bizhawk-headless/tests/`; on **Lua** (S3K complete-run) add a helper
+   function (e.g. `write_<feature>_per_frame()`) and bump `LUA_SCRIPT_VERSION`. If a native recorder gains
+   a field the Lua one lacks, the differential gate will fail — extend both, or extend the
+   Lua one first since it is the behavioural authority.
    If a focused frontier only needs a few extra fields on an existing generic diagnostic such as `state_snapshot`, add the fields there and force snapshots for a narrow frame window instead of creating a new event type. Typical S1/S2 movement-input questions need both BK2/CSV input and ROM-side `Ctrl_1_Held_Logical` plus `move_lock`, because `Sonic_Move` consumes the logical RAM byte after `ReadJoypads` runs from V-int (`docs/s2disasm/s2.asm:701,1361-1387,36253-36260`).
 2. **Java parser.** Add a new sealed-record type to `TraceEvent` (e.g. `TraceEvent.<Feature>State`). Parse the new JSON event in `TraceEvent.parseJsonLine`. Add `TraceMetadata.hasPerFrame<Feature>()` and `TraceData.<feature>StateForFrame(frame)`. Keep parsers tolerant — old traces without the new key must still load.
 3. **Diagnostic use.** Wire the new data into `DivergenceReport.getContextWindow` rendering, or into a dedicated probe class for targeted bug investigation. **Do not** wire it into engine state mutation in the per-frame test loop.
@@ -342,7 +450,12 @@ When a divergence can't be pinpointed without more ROM-side state:
 
 The single highest-leverage method for frontiers labelled "RAM-gated" / "BizHawk-gated": **extend the recorder to log the exact gated value, regen headless locally, decode against ground truth.** This loop cracked the deepest frontiers in practice (the camera-pipeline reorder, the S3K AIZ fire-transition fix, GHZ3 red→green). It is RUNNABLE in this environment — you do not have to defer it to the user.
 
-- **Run the recorder headless yourself.** The *complete-run* recorders are NOT driven by `record_<game>_trace.bat` (that launches the single-segment recorder). Invoke EmuHawk directly, in the background, and let it self-exit at movie end (~3.5 min for a full S1 run):
+- **Run the recorder headless yourself.** For S1/S2, use the native harness with
+  `--run-id` (complete-run / run mode) — it needs no display and self-terminates. For S3K,
+  the *complete-run* recorders are NOT driven by the single-segment launcher; invoke
+  EmuHawk directly in the background via `run_bizhawk_lua.sh` and let it self-exit at movie
+  end (~3.5 min for a full S1 run; the S2 complete-emeralds run is 259,590 frames ≈ 3.5 min
+  native, ~1.5 GB peak RSS, 375 MB output). The Windows equivalent is:
   ```
   EmuHawk.exe --chromeless --lua=tools/bizhawk/<game>_complete_run_recorder.lua \
       --movie=<the complete-run bk2> "Sonic The Hedgehog (W) (REV01) [!].gen"
@@ -368,18 +481,18 @@ Separate from the recorder (which produces full trace files), you often need a *
 
 **Use the canonical template — do NOT hand-roll.** Copy `tools/bizhawk/diag_template_fast.lua` and fill only its two USER sections (PC hooks via `event.onmemoryexecute`, and per-frame `mainmemory` reads). It bakes in the non-negotiables below. Run it through the reusable launcher:
 
-```bat
-set OGGF_START=<firstFrame>
-set OGGF_STOP=<lastFrame>
-set OGGF_OUT=C:\tmp\<name>.txt
-tools\bizhawk\run_bizhawk_lua.bat tools\bizhawk\<your_copy>.lua <bk2> <rom>.gen
+```bash
+OGGF_START=<firstFrame> OGGF_STOP=<lastFrame> OGGF_OUT=/tmp/<name>.txt DISPLAY=:0 \
+    tools/bizhawk/run_bizhawk_lua.sh tools/bizhawk/<your_copy>.lua <bk2> "$ROM_PATH"
 ```
+
+On Windows the equivalent is `run_bizhawk_lua.bat` with `set OGGF_*` variables.
 
 BizHawk frame for trace frame `F` = `bk2_frame_offset` (from `metadata.json`) + `F`.
 
 **ROM arg: discover the actual root-level `.gen` file.** Search the repository root, select the appropriate ROM using its filename and hash, and pass its quoted absolute path to EmuHawk. Do not assume an alias or rename, copy, delete, or symlink a ROM to fit an example command. Filenames containing spaces, parentheses, or `[!]` must be quoted correctly; otherwise EmuHawk can launch with **no ROM** and hang (~316 MB resident, never writing output while `emu.framecount()` stays 0). This looks like the timeout case below but is distinct: here EmuHawk never advances a frame; there it advances but is killed mid-seek. (The trace-replay Maven tests are unaffected — this only bites the EmuHawk invocation.)
 
-**1. Fast headless is the reusable launcher plus Lua toggles, not the `--chromeless` flag.** Run `tools/bizhawk/run_bizhawk_lua.bat` so EmuHawk starts with the generated no-audio diagnostic config and a generated wrapper that runs the fast-headless calls before your diagnostic. The launcher also verifies the copied diagnostic still has executable fast-headless calls before its main loop, so commented-out template text does not pass the guard. Keep these Lua toggles at the top, before the loop:
+**1. Fast headless is the reusable launcher plus Lua toggles, not the `--chromeless` flag.** Run `tools/bizhawk/run_bizhawk_lua.sh` (`.bat` on Windows) so EmuHawk starts with the generated no-audio diagnostic config and a generated wrapper that runs the fast-headless calls before your diagnostic. The launcher also verifies the copied diagnostic still has executable fast-headless calls before its main loop, so commented-out template text does not pass the guard. Keep these Lua toggles at the top, before the loop:
 
 ```lua
 emu.limitframerate(false)        -- remove the 60fps cap
@@ -390,7 +503,7 @@ if client.SetSoundOn then pcall(client.SetSoundOn, false) end
 
 `--chromeless` only hides window chrome. Without these calls a long seek (e.g. to BizHawk frame ~190000) runs at real-time (~50 min) while EmuHawk renders, piling up to multiple GB. `invisibleemulation(true)` is the memory fix (captures drop from ~3.4 GB to ~475 MB). The generated config and `SetSoundOn(false)` keep probes silent even when BizHawk's remembered config has audio enabled. Set `BIZHAWK_ALLOW_SLOW_LUA=1` only when deliberately running a visible/interactive diagnostic.
 
-**2. The script MUST self-exit, or EmuHawk lingers as a multi-GB zombie.** End the capture window with `client.exit()` (flush/close the outfile first). Both of these LEAK the process: a `while true do emu.frameadvance() end` loop with no exit, and a `...; client.pause()` tail. The robust pattern (what the production recorder uses) is: detect `movie.mode() == "FINISHED"` (or `emu.framecount() > STOP`) → flush → `client.exit()`. Always check `tasklist | grep -i emuhawk` is empty before each run and kill any stray instance after — `client.exit()` is not 100% reliable in every BizHawk build.
+**2. The script MUST self-exit, or EmuHawk lingers as a multi-GB zombie.** End the capture window with `client.exit()` (flush/close the outfile first). Both of these LEAK the process: a `while true do emu.frameadvance() end` loop with no exit, and a `...; client.pause()` tail. The robust pattern (what the production recorder uses) is: detect `movie.mode() == "FINISHED"` (or `emu.framecount() > STOP`) → flush → `client.exit()`. Always check for a stray EmuHawk before each run (`pgrep -fi emuhawk` on Linux, `tasklist | grep -i emuhawk` on Windows) and kill any leftover after — `client.exit()` is not 100% reliable in every BizHawk build. The native harness has no equivalent failure mode; prefer it where the game is migrated.
 
 **3. NLua silently dies on heavy per-frame reads at turbo.** A diag doing more than ~12–16 `mainmemory.read_*` calls/frame while `speedmode(6400)` is active can make EmuHawk exit at "start" (core loads, no frames, exit code 0, no lua error). Workarounds, in order: (a) keep 6400% for the long SEEK, then `client.speedmode(100)` for ONLY the small capture window (a few frames at normal speed costs nothing); (b) buffer into an in-memory table and write once at exit, never `io.open` per frame; (c) split a multi-slot object scan across runs (e.g. slots 0x11–0x16, then 0x17–0x1C). **Prefer the recorder** for full-movie / object-position needs — regenerating with the recorder lua (which already emits `object_appeared`/`object_near` aux and exits robustly) beats a hand-rolled multi-object live capture.
 
@@ -574,7 +687,7 @@ knockback value) one frame early or late, the cause is usually WHEN the damaging
 object becomes touch-eligible, not its position:
 
 - **ROM `ReactToItem` skips any object whose `obRender` bit 7 is clear**
-  (`tst.b obRender(a1) / bpl .next`, `sub ReactToItem.asm:50-51`). Bit 7 is set by
+  (`tst.b obRender(a1) / bpl .next`, `_incObj/Sonic ReactToItem.asm:50-51`). Bit 7 is set by
   `DisplaySprite` during the object's OWN `ExecuteObjects` pass. So a child spawned
   mid-loop into a slot at or BELOW the spawner's slot does not run/display until
   the next frame → is touch-INELIGIBLE for one extra frame (S1 MZ3 f14132: a lava

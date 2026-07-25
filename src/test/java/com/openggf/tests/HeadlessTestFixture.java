@@ -144,6 +144,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         private int bk2FrameOffset;
         private boolean startPositionIsCentre;
         private boolean customStartPositionProvided;
+        private boolean freshLevelStartLifecycle;
 
         private Builder() {}
 
@@ -182,6 +183,17 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
 
         public Builder withRecordingStartFrame(int bk2FrameOffset) {
             this.bk2FrameOffset = bk2FrameOffset;
+            return this;
+        }
+
+        /**
+         * Marks this fixture as representing the first ordinary dispatch after
+         * a fresh level start. The active {@link com.openggf.game.LevelInitProfile}
+         * decides whether that lifecycle permits the fixture's synthetic
+         * pre-frame terrain snap.
+         */
+        public Builder withFreshLevelStartLifecycle() {
+            this.freshLevelStartLifecycle = true;
             return this;
         }
 
@@ -331,8 +343,13 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // to establish ground attachment. Uses threshold=14 (S1 always uses
             // 14; S2/S3K at speed=0 would use min(0+4,14)=4, but 14 is safe for
             // a static snap at spawn).
-            GameServices.collision().resolveGroundAttachment(
-                    sprite, 14, () -> false);
+            boolean preserveFreshGroundedStatus = freshLevelStartLifecycle
+                    && GameServices.module().getLevelInitProfile()
+                            .preserveFreshGroundedStatusUntilFirstDispatch();
+            if (!preserveFreshGroundedStatus) {
+                GameServices.collision().resolveGroundAttachment(
+                        sprite, 14, () -> false);
+            }
 
             // 13. Resolve the active session context and create runner
             GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();

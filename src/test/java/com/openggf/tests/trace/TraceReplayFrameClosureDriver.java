@@ -36,9 +36,13 @@ final class TraceReplayFrameClosureDriver {
             IntSupplier step,
             IntSupplier stepUsingPreviousInput,
             IntSupplier skip,
+            IntSupplier consumeInputOnly,
             Runnable advancePlayableAnimations,
             Runnable suppressFirstSidekickAnimation,
             Runnable validateAfterStep) {
+        if (phase == TraceExecutionPhase.ADVANCE_ONLY) {
+            return consumeInputOnly.getAsInt();
+        }
         if (phase == TraceExecutionPhase.VBLANK_ONLY
                 || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
             int input = skip.getAsInt();
