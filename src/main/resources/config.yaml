@@ -128,6 +128,7 @@ capture:
   fps: 60   # Output frame rate for trace capture
   codec: "ffv1"   # Video codec: ffv1, h264 or h265 (all lossless)
   audioCodec: "flac"   # Audio codec: flac (lossless), or aac / mp3 (LOSSY)
+  container: "mkv"   # Recording file extension; mp4 is portable only with h264/h265 + aac
   ffmpegPass1Args: "default"   # ADVANCED: full ffmpeg args for the encode pass
   ffmpegPass2Args: "default"   # ADVANCED: full ffmpeg args for the mux pass; empty skips it (no audio)
   # Placeholders pass 1: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight}

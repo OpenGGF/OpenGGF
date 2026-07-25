@@ -638,6 +638,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CAPTURE_FPS, 60);
 		putDefault(SonicConfiguration.CAPTURE_CODEC, "ffv1");
 		putDefault(SonicConfiguration.CAPTURE_AUDIO_CODEC, "flac");
+		putDefault(SonicConfiguration.CAPTURE_CONTAINER, "mkv");
 		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS, "default");
 		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS, "default");
 		putDefaultKey(SonicConfiguration.CAPTURE_TOGGLE_KEY, GLFW_KEY_O);

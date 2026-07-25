@@ -351,6 +351,8 @@ public enum SonicConfiguration {
 	CAPTURE_CODEC,
 	/** Capture audio codec: flac (lossless), aac or mp3 (both lossy). */
 	CAPTURE_AUDIO_CODEC,
+	/** Output container extension for recordings, e.g. mkv or mp4. */
+	CAPTURE_CONTAINER,
 	/** Advanced: full argument list for the first ffmpeg pass. */
 	CAPTURE_FFMPEG_PASS1_ARGS,
 	/** Advanced: full argument list for the second ffmpeg pass; empty skips it. */

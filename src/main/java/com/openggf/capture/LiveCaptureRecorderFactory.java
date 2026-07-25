@@ -30,6 +30,7 @@ public final class LiveCaptureRecorderFactory {
                 config.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS));
         return new CaptureRecorder(encoder, BackpressurePolicy.BLOCK, 8,
                 Path.of(config.getString(SonicConfiguration.CAPTURE_OUTPUT_DIR)),
-                "live", TIMESTAMP.format(clock.instant()));
+                "live", TIMESTAMP.format(clock.instant()),
+                config.getString(SonicConfiguration.CAPTURE_CONTAINER));
     }
 }

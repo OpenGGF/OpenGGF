@@ -90,6 +90,42 @@ class TestFfmpegCommandTemplate {
     }
 
     @Test
+    void theContainerSetsTheRecordingExtension() {
+        var recorder = new CaptureRecorder(new FfmpegEncoder("ffmpeg", 1),
+                BackpressurePolicy.BLOCK, 8, java.nio.file.Path.of("out"),
+                "live", "20260725-120000-000", "mp4");
+        assertTrue(recorder.outputFile().getFileName().toString().endsWith(".mp4"),
+                recorder.outputFile().toString());
+    }
+
+    @Test
+    void theContainerDefaultsToMkvAndToleratesALeadingDotOrCase() {
+        assertTrue(recorderWith(null, "mkv").endsWith(".mkv"));
+        assertTrue(recorderWith(".MP4", "x").endsWith(".mp4"),
+                "a leading dot and upper case are the obvious ways to write this");
+    }
+
+    /** A bad extension would otherwise become part of the filename. */
+    @Test
+    void anInvalidContainerIsRejectedBeforeRecordingStarts() {
+        assertThrows(IllegalArgumentException.class, () -> recorderWith("", "x"));
+        assertThrows(IllegalArgumentException.class, () -> recorderWith("  ", "x"));
+        assertThrows(IllegalArgumentException.class, () -> recorderWith("../evil", "x"));
+        assertThrows(IllegalArgumentException.class, () -> recorderWith("mp4 -y", "x"));
+    }
+
+    private static String recorderWith(String container, String unused) {
+        var recorder = container == null
+                ? new CaptureRecorder(new FfmpegEncoder("ffmpeg", 1),
+                        BackpressurePolicy.BLOCK, 8, java.nio.file.Path.of("out"),
+                        "live", "t")
+                : new CaptureRecorder(new FfmpegEncoder("ffmpeg", 1),
+                        BackpressurePolicy.BLOCK, 8, java.nio.file.Path.of("out"),
+                        "live", "t", container);
+        return recorder.outputFile().getFileName().toString();
+    }
+
+    @Test
     void selectedCodecsReachTheBuiltInCommands() {
         assertTrue(FfmpegEncoder.phase1Command("ffmpeg", java.nio.file.Path.of("v.mkv"),
                         320, 224, 60, 1, CaptureCodecs.video("h264"))

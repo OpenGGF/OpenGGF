@@ -311,6 +311,25 @@ Choosing `aac` or `mp3` means the recording is no longer a faithful capture of
 the engine's audio. That is a legitimate choice for sharing a clip; it is not
 appropriate for comparing audio against reference material.
 
+### Containers
+
+`capture.container` sets the recording's file extension, and ffmpeg picks its
+muxer from it. Recent ffmpeg will write any of the codecs above into either
+container — FFV1 and FLAC in MP4 both produce valid files — but *player*
+support is far narrower than what ffmpeg will write:
+
+| Container | Plays reliably with |
+|---|---|
+| `mkv` (default) | Everything here. The safe choice. |
+| `mp4` | `h264` or `h265` video with `aac` audio. An MP4 holding FFV1 or FLAC is a valid file that most players will refuse. |
+
+So MP4 is worth choosing when the recording is going somewhere that expects
+it, paired with the lossy example below. For anything else, keep `mkv`.
+
+`-movflags +faststart` — the usual "web-optimised" flag — is an MP4 feature
+and only takes effect when the container is MP4. Add it through
+`capture.ffmpegPass2Args`.
+
 ### Overriding the ffmpeg commands
 
 Recording runs ffmpeg twice: the first pass encodes frames arriving on
@@ -372,12 +391,16 @@ small file that plays anywhere, and it is no longer a faithful capture.
 There is no large lossless intermediate either, since the encode pass
 compresses directly and the mux pass only copies the video stream.
 
-Recordings are always named `.mkv`. `-movflags +faststart`, the usual
-"web-optimised" flag, is an MP4 feature and does nothing here; if you need
-progressive-download MP4, remux the finished file afterwards:
+For a web-ready file, set `capture.container` to `mp4` as well and add
+`-movflags +faststart` to the mux pass:
 
-```bash
-ffmpeg -i capture-live-....mkv -c copy -movflags +faststart out.mp4
+```yaml
+capture:
+  container: "mp4"
+  audioCodec: "aac"
+  ffmpegPass2Args: >-
+    -y -i {videoIn} -f s16le -ar {sampleRate} -ac 2 -i {audioIn}
+    -c:v copy {audioCodecArgs} -movflags +faststart {output}
 ```
 
 - **Trace capture:** the headless `TraceCaptureTool` renders a chosen trace.
@@ -406,6 +429,7 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | `CAPTURE_SCALE` | `capture.scale` | int | `4` | Trace capture only: integer nearest-neighbor upscale factor applied to captured frames; live viewport recording always uses scale 1. |
 | `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
+| `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this — see "Containers" below. |
 | `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: `flac`, `aac` or `mp3`. **`aac` and `mp3` are lossy**: the recorded audio will not match what the engine produced. `flac` is lossless. |
 | `CAPTURE_FFMPEG_PASS1_ARGS` | `capture.ffmpegPass1Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the encode pass. See "Overriding the ffmpeg commands" below. |
 | `CAPTURE_FFMPEG_PASS2_ARGS` | `capture.ffmpegPass2Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the mux pass; leave empty to skip it and record video only. |

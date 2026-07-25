@@ -241,6 +241,13 @@ public final class ConfigCatalog {
                 "Capture audio codec: flac, aac or mp3. WARNING: aac and mp3 are"
                         + " LOSSY - the recorded audio will not match what the"
                         + " engine produced. flac is lossless and is the default"));
+        put(CAPTURE_CONTAINER, of("capture", "container", STRING,
+                "Recording file extension, e.g. mkv or mp4. ffmpeg picks its"
+                        + " muxer from this. Recent ffmpeg will write every codec"
+                        + " here into either container, but player support is much"
+                        + " narrower: mkv plays everything, while mp4 is portable"
+                        + " only with h264/h265 + aac. mp4 holding ffv1 or flac is"
+                        + " a valid file most players will refuse"));
         put(CAPTURE_FFMPEG_PASS1_ARGS, of("capture", "ffmpegPass1Args", STRING,
                 "ADVANCED. Full ffmpeg argument list for the encode pass."
                         + " 'default' uses the engine's command. Placeholders:"
