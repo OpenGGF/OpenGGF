@@ -76,6 +76,33 @@ The method that has worked three times, in order:
    in `docs/TRACE_FRONTIER_LOG.md`. Every instance of this so far has un-masked a
    latent bug elsewhere; expect one and look for it.
 
+## Diagnostic hooks are deliberately not ported
+
+The S3K Lua recorders carry ~61 `event.onmemoryexecute` / `onmemorywrite` registrations
+each, behind `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS`. This harness implements **none** of
+them, and that is a decision rather than a gap — `docs/s3k-profiles-and-hooks.md` §2.4
+records the reasoning, and `tests/S3KHookAbsenceTests.cs` pins it to the fixture bytes.
+
+Do not "helpfully" add M68K exec/memory-write callback support. Nothing gates it: no
+fixture contains hook output, so it would be the only significant surface here with no
+differential coverage, in a harness whose entire value is proven byte-parity. It would also
+mean Mono delegate GC-pinning (a collected delegate while registered is the classic interop
+crash), and hook-enabled captures are what has previously breached git's file-size limits.
+
+If a frontier genuinely needs hook-derived data, use a **one-off throwaway Lua script** on
+the Lua route and delete it afterwards. The division is: **this harness validates, the Lua
+recorders diagnose.**
+
+**A hook must never decide when a trace syncs.** Hook-derived per-level sync points were
+used for AIZ and CNZ (S3) and rejected as hydration in another guise — the sync point is the
+beginning of the level load, and a trace that only lines up because a per-level hook says so
+is hiding an engine bug, not proving its absence.
+
+Re-enabling hooks for a fixture capture invalidates fixtures: the gates assert both the
+absence of the deferred families and the unpopulated shape of hook-enriched records (the 9
+AIZ `aiz_handoff_terrain_state` skeletons must keep `sonic_floor_seen:false`). That failure
+is the designed signal to build the callback surface — not something to work around.
+
 ## Things that have bitten people here
 
 - **A recorder reading a dead RAM address silently props up a trace frontier.**
