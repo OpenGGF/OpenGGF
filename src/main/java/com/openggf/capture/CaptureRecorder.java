@@ -1,6 +1,7 @@
 package com.openggf.capture;
 
 import java.nio.file.Path;
+import java.time.Duration;
 
 /**
  * Driver-agnostic recording façade. A driver calls {@link #start} once,
@@ -10,10 +11,11 @@ import java.nio.file.Path;
  * <p>The timestamp string is injected so callers control formatting/clock and
  * tests stay deterministic.
  */
-public final class CaptureRecorder {
+public class CaptureRecorder {
 
     private final EncoderSink sink;
     private final Path outputFile;
+    private boolean aborted;
 
     public CaptureRecorder(CaptureEncoder encoder, BackpressurePolicy policy, int queueCapacity,
                            Path outputDir, String label, String timestamp) {
@@ -36,6 +38,17 @@ public final class CaptureRecorder {
     /** Drains and finalizes; returns the encoder's written file. */
     public Path stop() throws CaptureException {
         return sink.stop();
+    }
+
+    public synchronized void abort() {
+        abort(Duration.ofSeconds(30));
+    }
+
+    synchronized void abort(Duration timeout) {
+        if (!aborted) {
+            aborted = true;
+            sink.abort(timeout);
+        }
     }
 
     public long droppedCount() {

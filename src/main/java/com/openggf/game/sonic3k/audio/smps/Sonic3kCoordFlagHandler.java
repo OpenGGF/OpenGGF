@@ -2,10 +2,12 @@ package com.openggf.game.sonic3k.audio.smps;
 
 import com.openggf.audio.smps.CoordFlagContext;
 import com.openggf.audio.smps.CoordFlagHandler;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
 import java.util.logging.Logger;
+import java.util.Objects;
 import com.openggf.game.GameServices;
 
 /**
@@ -27,12 +29,20 @@ import com.openggf.game.GameServices;
 public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kCoordFlagHandler.class.getName());
 
-    private int spindashRevCounter = 0;
+    private final SmpsCoordFlagRuntimeState runtimeState;
+
+    public Sonic3kCoordFlagHandler() {
+        this(new SmpsCoordFlagRuntimeState());
+    }
+
+    public Sonic3kCoordFlagHandler(SmpsCoordFlagRuntimeState runtimeState) {
+        this.runtimeState = Objects.requireNonNull(runtimeState, "runtimeState");
+    }
 
     @Override
     public void onSfxStart(int sfxId) {
         if (sfxId != Sonic3kSfx.SPINDASH.id && sfxId < Sonic3kSfx.SLIDE_SKID_LOUD.id) {
-            spindashRevCounter = 0;
+            runtimeState.setSpindashRevCounter(0);
         }
     }
 
@@ -131,10 +141,12 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 return true;
 
             case 0xE9: // SPINDASH_REV (SDREV_INC) - no params in S3K!
+                int spindashRevCounter = runtimeState.spindashRevCounter();
                 int updatedTranspose = (t.keyOffset + spindashRevCounter) & 0xFF;
                 t.keyOffset = (byte) updatedTranspose;
                 if (updatedTranspose != 0x10) {
-                    spindashRevCounter = (spindashRevCounter + 1) & 0xFF;
+                    runtimeState.setSpindashRevCounter(
+                            (spindashRevCounter + 1) & 0xFF);
                 }
                 return true;
 
@@ -600,7 +612,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 break;
 
             case 0x07: // SPINDASH_REV_RESET (SDREV_RESET) - reset spindash counter
-                spindashRevCounter = 0;
+                runtimeState.setSpindashRevCounter(0);
                 break;
 
             default:

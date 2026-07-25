@@ -134,6 +134,8 @@ class TestEditorToggleIntegration {
 
     @AfterEach
     void tearDown() {
+        // See TestEngine.tearDown: a leaked Engine static poisons the fork.
+        com.openggf.Engine.clearGlobalInstance();
         SonicConfigurationService.getInstance().resetToDefaults();
         SessionManager.clear();
         GameModuleRegistry.reset();

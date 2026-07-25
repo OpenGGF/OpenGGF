@@ -228,6 +228,31 @@ Highlights:
 - **Native headless GPGX S1 trace recorder (2026-07-24):** a Linux/Mono C# harness (`tools/bizhawk-headless/`) now drives BizHawk 2.11's GPGX core directly — no EmuHawk, X11, or Lua — and records full canonical Sonic 1 traces (`--mode trace`: physics.csv v7, aux_state.jsonl, metadata.json trace_schema 4) with auto-detected BK2 frame offset. Output is byte-identical to the Lua `s1_trace_recorder.lua` on the canonical GHZ1 fixture (only `recording_date` differs), gated by a permanent ROM-backed differential test; adversarial review also fixed a movie-exhaustion end-path off-by-one the fixture could not exercise. The Lua recorder remains the reference implementation and the non-Linux capture path.
 - **S3K structural trace replay bootstrap (2026-07-23):** S3K replay no longer relies on `pre_level_intro_prefix`, `sidekick_seed_frame_prelude`, or `pre_trace_osc_frames` metadata, nor on frame-zero motion-shape heuristics. Fresh level starts preserve the ROM's grounded first-dispatch lifecycle, AIZ pre-level input-only rows no longer tick the resident level across headless/capture/live/rewind playback, and the regenerated AIZ CSV input column now follows the canonical BK2 offset contract. The standalone AIZ and CNZ traces clear their fixture/input/bootstrap regressions and reach later true parity frontiers at AIZ f2707 and CNZ f185; the broader remaining S3K fleet debt stays explicit in the frontier log.
 - **S3K universal CSV v7 fixtures regenerated (2026-07-23):** standalone, complete-run, bonus, and special-stage recordings now install physics, aux, and metadata from the same BizHawk 2.11 capture instead of mixing v7 CSV/metadata with stale v5 aux. S3K recorder execution hooks are opt-in for focused diagnostics, Linux captures suppress Mono Lua-console repaint churn by default, and replay input sampling follows each profile's physical BK2-row convention. The consistent fixtures expose new AIZ/CNZ comparison frontiers for follow-up rather than failing at the former input-alignment guard.
+- **Unified audio presentation (2026-07-25):** every audible source — SMPS music
+  and SFX, fallback WAV, pitched SFX, and raw SEGA PCM — is now mixed by one
+  allocation-free presentation producer that owns cadence, final PCM, history,
+  rewind, and capture taps. Each presented frame chooses exactly one forward,
+  silent, or reverse audio mode, and OpenAL became a bounded sink for that one
+  final packet rather than a set of independent sources. The speaker and any
+  recording receive independent views of the same producer-selected packet, so
+  toggling a recording can no longer remove music, rings, or effects, and a
+  recording started mid-rewind picks up the next audible reverse packet. The
+  temporary deterministic-runtime and recording-lease switches this replaced
+  are removed, and offline trace capture now records the same final packets as
+  live recording. ROM-backed tests assert non-zero final PCM for Sonic 1, 2 and
+  3&K across title, gameplay, ring and special-stage routes.
+- **Lossless live viewport recording (2026-07-23):** press `Shift+O` to toggle a
+  viewport-only MKV recording during normal play. OpenGGF writes synchronized
+  FFV1 video and stereo FLAC audio—including pause/frame-step silence and
+  rewind presentation—to `capture.outputDir`; `ffmpeg` must be available on
+  `PATH`. A red-dot/white-`REC` indicator appears in the window while active
+  but is excluded from both the recording and F12 screenshots. Changing the
+  viewport or framebuffer size stops and finalizes the current file. If the
+  audio tap fails mid-recording the video continues with phase-correct stereo
+  silence rather than aborting the file. This is independent of the Shift+F9
+  input/movie recorder; see
+  [CONFIGURATION.md](CONFIGURATION.md#capture) for configuration and output
+  details.
 - **CPZ2 and DEZ trace regressions restored (2026-07-23):** Sonic 2 automatic Tails recovery flight now clamps its delayed Y target to the gameplay waterline using the effective ROM feature-zone key, matching `TailsCPU_Flying_Part2` and closing CPZ2's f7206 CPU-target mismatch. DEZ's title-card bootstrap now selects Tornado ordering only when a live ROM-loaded ObjB2 exists, preserving the native level-start anchor without hydrating trace snapshots; both complete level-select traces and the focused S2 bootstrap suite are green.
 - **Sonic 2 sidekick trace regression cleanup (2026-07-23):** trace replay now respects the recorded per-frame sidekick-presence bit when SCZ/WFZ suppress the configured Tails sprite, while dormant CPU RAM remains available for diagnostics. The S2 fresh-render-entry counter delay is also constrained to its native lower-boundary state, restoring CNZ2, MCZ2, and OOZ1 without regressing OOZ2 and advancing CPZ2 to its later independent CPU target frontier.
 - **ICZ replay frontier completed (2026-07-22):** the ICZ trace-fidelity lane closes its recorded replay frontier with ROM-state-driven corrections across the boss, frozen-block and freezer lifecycle, moving and tension platforms, snow/steam scheduling, terrain handoffs, and end-of-act ownership. The accompanying rewind lifecycle correction drops a freezer parent's detached capture-cloud identity when its slot unloads, preventing stale child references from being restored.

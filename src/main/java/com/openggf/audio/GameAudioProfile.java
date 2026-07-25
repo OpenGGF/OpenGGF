@@ -2,11 +2,19 @@ package com.openggf.audio;
 
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.data.Rom;
 
 import java.util.Map;
 
 public interface GameAudioProfile {
+    default String presentationGameId() {
+        return "base";
+    }
+
+    default void configurePresentationCoordFlagHandlers(
+            SmpsCoordFlagHandlerOwner owner) {
+    }
 
     /** How speed shoes affect music playback. */
     enum SpeedMode {

@@ -7,6 +7,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestPcmHistoryRing {
     @Test
+    void diagnosticFingerprintCopiesAllReadablePcmInWrapOrder() {
+        PcmHistoryRing history = new PcmHistoryRing(3);
+        history.write(new short[] {1, 10, 2, 20}, 2);
+        history.write(new short[] {3, 30, 4, 40}, 2);
+
+        PcmHistoryRing.DiagnosticSnapshot fingerprint =
+                history.diagnosticSnapshot();
+        assertArrayEquals(new short[] {2, 20, 3, 30, 4, 40},
+                fingerprint.readablePcm().samples());
+
+        short[] escaped = fingerprint.readablePcm().samples();
+        escaped[0] = 99;
+        assertArrayEquals(new short[] {2, 20, 3, 30, 4, 40},
+                fingerprint.readablePcm().samples(),
+                "diagnostic state must not expose the live/captured array");
+        assertEquals(fingerprint, history.diagnosticSnapshot());
+    }
+
+    @Test
     void reverseCursorReadsNewestFramesFirst() {
         PcmHistoryRing history = new PcmHistoryRing(4);
         history.write(new short[] {1, 10, 2, 20, 3, 30}, 3);
@@ -117,6 +136,48 @@ class TestPcmHistoryRing {
         short[] target = new short[2];
         assertEquals(0, history.createReverseCursor().readPrevious(target, 1));
         assertArrayEquals(new short[] {0, 0}, target);
+    }
+
+    @Test
+    void forkCopiesExactSourcePositionRateAndOldestBound() {
+        PcmHistoryRing history = new PcmHistoryRing(6);
+        history.write(new short[] {1, 10, 2, 20, 3, 30, 4, 40, 5, 50, 6, 60}, 6);
+        PcmHistoryRing.ReverseCursor cursor = history.createReverseCursor();
+        cursor.setRate(2.0);
+        short[] first = new short[2];
+        assertEquals(1, cursor.readPrevious(first, 1));
+        assertArrayEquals(new short[] {6, 60}, first);
+
+        PcmHistoryRing.ReverseCursor fork = cursor.fork();
+        short[] originalRemainder = new short[6];
+        short[] forkedRemainder = new short[6];
+
+        assertEquals(2, cursor.readPrevious(originalRemainder, 3));
+        assertEquals(2, fork.readPrevious(forkedRemainder, 3));
+        assertArrayEquals(new short[] {4, 40, 2, 20, 0, 0}, originalRemainder);
+        assertArrayEquals(originalRemainder, forkedRemainder);
+    }
+
+    @Test
+    void clearInvalidatesExistingCursorEpochBeforeNewHistoryIsWritten() {
+        PcmHistoryRing history = new PcmHistoryRing(4);
+        history.write(new short[] {1, 10, 2, 20}, 2);
+        PcmHistoryRing.ReverseCursor stale = history.createReverseCursor();
+        PcmHistoryRing.ReverseCursor staleFork = stale.fork();
+
+        history.clear();
+        history.write(new short[] {9, 90, 8, 80}, 2);
+
+        short[] staleTarget = new short[] {-1, -1, -1, -1};
+        short[] staleForkTarget = new short[] {-1, -1, -1, -1};
+        assertEquals(0, stale.readPrevious(staleTarget, 2));
+        assertEquals(0, staleFork.readPrevious(staleForkTarget, 2));
+        assertArrayEquals(new short[] {0, 0, 0, 0}, staleTarget);
+        assertArrayEquals(new short[] {0, 0, 0, 0}, staleForkTarget);
+
+        short[] freshTarget = new short[2];
+        assertEquals(1, history.createReverseCursor().readPrevious(freshTarget, 1));
+        assertArrayEquals(new short[] {8, 80}, freshTarget);
     }
 
     @Test

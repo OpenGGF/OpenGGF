@@ -232,6 +232,8 @@ public final class ConfigCatalog {
                 "Integer nearest-neighbor upscale factor for capture output"));
         put(CAPTURE_FPS, of("capture", "fps", INT, "Output frame rate for trace capture"));
         put(CAPTURE_CODEC, of("capture", "codec", STRING, "Capture video codec (e.g. ffv1)"));
+        put(CAPTURE_TOGGLE_KEY, of("capture", "toggleKey", KEY,
+                "Shift+key toggles live viewport audio/video recording"));
 
         // ───────────────── DEBUG BLOCK ─────────────────
 

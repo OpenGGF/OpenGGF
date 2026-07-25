@@ -349,6 +349,8 @@ public enum SonicConfiguration {
 	CAPTURE_FPS,
 	/** Trace capture video codec (e.g. "ffv1"). */
 	CAPTURE_CODEC,
+	/** Key used with Shift to toggle live viewport audio/video recording. */
+	CAPTURE_TOGGLE_KEY,
 
 	/**
 	 * Whether held-key rewind is enabled during ordinary live level play.

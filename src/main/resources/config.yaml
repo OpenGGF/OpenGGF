@@ -126,6 +126,7 @@ capture:
   outputDir: "target/trace-videos"   # Output directory for trace capture videos
   scale: 4   # Integer nearest-neighbor upscale factor for capture output
   fps: 60   # Output frame rate for trace capture
+  toggleKey: O   # Shift+key toggles live viewport audio/video recording
   codec: "ffv1"   # Capture video codec (e.g. ffv1)
 
 # ════════════════════════════════════════════

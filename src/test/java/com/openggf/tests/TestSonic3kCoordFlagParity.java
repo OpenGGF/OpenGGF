@@ -1,11 +1,23 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
+import com.openggf.audio.presentation.AudioPresentationCommand;
+import com.openggf.audio.presentation.AudioPresentationMixer;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.AudioVoiceRegistry;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.SmpsAssetKey;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsData;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSfxData;
 
@@ -17,6 +29,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSonic3kCoordFlagParity {
@@ -263,76 +276,117 @@ public class TestSonic3kCoordFlagParity {
 
     @Test
     public void normalSfxStartResetsPersistentS3kSpindashRevCounter() {
-        resetS3kSpindashRevCounterByNormalSfx();
+        PresentationFixture fixture = presentationFixture();
+        fixture.addSfx(createSfxData(
+                Sonic3kSfx.SPINDASH.id,
+                new byte[] {(byte) 0xE9, (byte) 0xE9, (byte) 0xF2}),
+                0);
+        fixture.mix();
+        assertEquals(2, fixture.state.spindashRevCounter());
 
-        SmpsSequencer firstSpindash = new SmpsSequencer(
-                createSfxData(Sonic3kSfx.SPINDASH.id, new byte[] {
-                        (byte) 0xE9,
-                        (byte) 0xE9,
-                        (byte) 0xF2
-                }),
-                EMPTY_DAC,
-                new CaptureSynth(),
-                Sonic3kSmpsSequencerConfig.CONFIG);
-        firstSpindash.read(new short[20000]);
-        assertEquals(1, findTrack(firstSpindash, SmpsSequencer.TrackType.FM).keyOffset,
-                "Sanity check: second E9 should leave the persistent rev counter at 2");
+        fixture.addSfx(createSfxData(
+                Sonic3kSfx.DASH.id, new byte[] {(byte) 0xF2}), 0);
+        assertEquals(0, fixture.state.spindashRevCounter(),
+                "Ordered apply of a normal SFX resets the session counter");
+        fixture.addSfx(createSfxData(
+                Sonic3kSfx.SPINDASH.id,
+                new byte[] {(byte) 0xE9, (byte) 0xF2}), 0);
+        fixture.mix();
 
-        SmpsSequencer normalSfx = new SmpsSequencer(
-                createSfxData(Sonic3kSfx.DASH.id, new byte[] { (byte) 0xF2 }),
-                EMPTY_DAC,
-                new CaptureSynth(),
-                Sonic3kSmpsSequencerConfig.CONFIG);
-        normalSfx.read(new short[20000]);
-
-        SmpsSequencer nextSpindash = new SmpsSequencer(
-                createSfxData(Sonic3kSfx.SPINDASH.id, new byte[] {
-                        (byte) 0xE9,
-                        (byte) 0xF2
-                }),
-                EMPTY_DAC,
-                new CaptureSynth(),
-                Sonic3kSmpsSequencerConfig.CONFIG);
-        nextSpindash.read(new short[20000]);
-
-        assertEquals(0, findTrack(nextSpindash, SmpsSequencer.TrackType.FM).keyOffset,
-                "A normal non-continuous SFX start should reset the shared S3K spindash rev counter");
+        assertEquals(1, fixture.state.spindashRevCounter(),
+                "The next presentation-owned spindash starts from reset");
     }
 
     @Test
     public void continuousSfxStartDoesNotResetPersistentS3kSpindashRevCounter() {
-        resetS3kSpindashRevCounterByNormalSfx();
-
-        SmpsSequencer firstSpindash = new SmpsSequencer(
-                createSfxData(Sonic3kSfx.SPINDASH.id, new byte[] {
-                        (byte) 0xE9,
-                        (byte) 0xE9,
+        PresentationFixture fixture = presentationFixture();
+        fixture.state.setSpindashRevCounter(2);
+        Sonic3kSfxData continuous = createSfxData(
+                Sonic3kSfx.SLIDE_SKID_LOUD.id,
+                new byte[] {
+                        (byte) 0xFC, 0x40, 0x00,
                         (byte) 0xF2
-                }),
-                EMPTY_DAC,
-                new CaptureSynth(),
-                Sonic3kSmpsSequencerConfig.CONFIG);
-        firstSpindash.read(new short[20000]);
+                });
 
-        SmpsSequencer continuousSfx = new SmpsSequencer(
-                createSfxData(Sonic3kSfx.SLIDE_SKID_LOUD.id, new byte[] { (byte) 0xF2 }),
-                EMPTY_DAC,
-                new CaptureSynth(),
-                Sonic3kSmpsSequencerConfig.CONFIG);
-        continuousSfx.read(new short[20000]);
+        fixture.addSfx(continuous, Sonic3kSfx.SLIDE_SKID_LOUD.id);
+        fixture.addSfx(continuous, Sonic3kSfx.SLIDE_SKID_LOUD.id);
 
-        SmpsSequencer nextSpindash = new SmpsSequencer(
-                createSfxData(Sonic3kSfx.SPINDASH.id, new byte[] {
-                        (byte) 0xE9,
-                        (byte) 0xF2
-                }),
-                EMPTY_DAC,
-                new CaptureSynth(),
-                Sonic3kSmpsSequencerConfig.CONFIG);
-        nextSpindash.read(new short[20000]);
+        SmpsCompositeVoice voice =
+                (SmpsCompositeVoice) fixture.registry.orderedVoiceAt(0);
+        assertEquals(1,
+                voice.driver().captureSnapshot().sequencers().size());
+        assertTrue(voice.driver().isContinuousSfxFlagSet());
+        assertEquals(2, fixture.state.spindashRevCounter(),
+                "Continuous retrigger does not construct a resetting handler");
+    }
 
-        assertEquals(2, findTrack(nextSpindash, SmpsSequencer.TrackType.FM).keyOffset,
-                "Continuous SFX starts should preserve the shared S3K spindash rev counter");
+    @Test
+    public void musicMutationAndResetThenSfxSharePresentationCounter() {
+        PresentationFixture fixture = presentationFixture();
+        fixture.replaceMusic(createMusicData(
+                2, 0,
+                new byte[] {
+                        (byte) 0xE9, (byte) 0xE9, (byte) 0xF2
+                },
+                null, null), 0x81);
+        fixture.mix();
+        assertEquals(2, fixture.state.spindashRevCounter());
+
+        fixture.addSfx(createSfxData(
+                Sonic3kSfx.DASH.id, new byte[] {(byte) 0xF2}), 0);
+        assertEquals(0, fixture.state.spindashRevCounter());
+        fixture.addSfx(createSfxData(
+                Sonic3kSfx.SPINDASH.id,
+                new byte[] {(byte) 0xE9, (byte) 0xF2}), 0);
+        fixture.mix();
+
+        assertEquals(1, fixture.state.spindashRevCounter());
+    }
+
+    @Test
+    public void sfxThenMusicAndOverrideSharePresentationCounter() {
+        PresentationFixture fixture = presentationFixture();
+        fixture.addSfx(createSfxData(
+                Sonic3kSfx.SPINDASH.id,
+                new byte[] {(byte) 0xE9, (byte) 0xE9, (byte) 0xF2}), 0);
+        fixture.mix();
+        assertEquals(2, fixture.state.spindashRevCounter());
+
+        fixture.replaceMusic(createMusicData(
+                2, 0,
+                new byte[] {(byte) 0xE9, (byte) 0xF2},
+                null, null), 0x81);
+        fixture.mix();
+        assertEquals(3, fixture.state.spindashRevCounter());
+
+        fixture.pushMusic(createMusicData(
+                2, 0,
+                new byte[] {(byte) 0xE9, (byte) 0xF2},
+                null, null), 0x91);
+        fixture.mix();
+        assertEquals(4, fixture.state.spindashRevCounter());
+    }
+
+    @Test
+    public void snapshotRecreationUsesPresentationSessionHandlerOwner() {
+        PresentationFixture fixture = presentationFixture();
+        fixture.replaceMusic(createMusicData(
+                2, 0,
+                new byte[] {(byte) 0xE9, (byte) 0xF2},
+                null, null), 0x81);
+        SmpsCompositeVoice original =
+                (SmpsCompositeVoice) fixture.registry.orderedVoiceAt(0);
+        PresentationVoiceSnapshot.Smps snapshot =
+                (PresentationVoiceSnapshot.Smps) original.snapshot();
+
+        SmpsCompositeVoice restored = fixture.factory.recreateSmps(
+                snapshot, SmpsDriverSnapshot.liveReferences());
+
+        assertSame(fixture.handlers.handlerFor("s3k"),
+                restored.driver().captureSnapshot().sequencers().get(0)
+                        .config().getCoordFlagHandler());
+        restored.mixInto(new long[20_000], 10_000);
+        assertEquals(1, fixture.state.spindashRevCounter());
     }
 
     @Test
@@ -629,13 +683,84 @@ public class TestSonic3kCoordFlagParity {
         return smps;
     }
 
-    private static void resetS3kSpindashRevCounterByNormalSfx() {
-        SmpsSequencer reset = new SmpsSequencer(
-                createSfxData(Sonic3kSfx.DASH.id, new byte[] { (byte) 0xF2 }),
-                EMPTY_DAC,
-                new CaptureSynth(),
-                Sonic3kSmpsSequencerConfig.CONFIG);
-        reset.read(new short[20000]);
+    private static PresentationFixture presentationFixture() {
+        SmpsCoordFlagRuntimeState state =
+                new SmpsCoordFlagRuntimeState();
+        SmpsCoordFlagHandlerOwner handlers =
+                new SmpsCoordFlagHandlerOwner(state);
+        handlers.register("s3k", Sonic3kCoordFlagHandler::new);
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(() -> true, handlers);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> {
+                });
+        return new PresentationFixture(
+                state, handlers, factory, registry);
+    }
+
+    private static final class PresentationFixture {
+        private static final int MAX_STEREO_FRAMES = 10_000;
+
+        final SmpsCoordFlagRuntimeState state;
+        final SmpsCoordFlagHandlerOwner handlers;
+        final AudioPresentationSourceFactory factory;
+        final AudioVoiceRegistry registry;
+        private long nextVoiceId = 1;
+
+        PresentationFixture(
+                SmpsCoordFlagRuntimeState state,
+                SmpsCoordFlagHandlerOwner handlers,
+                AudioPresentationSourceFactory factory,
+                AudioVoiceRegistry registry) {
+            this.state = state;
+            this.handlers = handlers;
+            this.factory = factory;
+            this.registry = registry;
+        }
+
+        void replaceMusic(Sonic3kSmpsData data, int musicId) {
+            AudioPresentationCommand.MusicVoiceEntry music =
+                    factory.musicSmps(
+                            "s3k", musicId, nextVoiceId++,
+                            data, EMPTY_DAC,
+                            Sonic3kSmpsSequencerConfig.CONFIG,
+                            AudioSourceDescriptor.baseMusic(musicId),
+                            MAX_STEREO_FRAMES);
+            registry.apply(
+                    new AudioPresentationCommand.ReplaceMusic(music));
+        }
+
+        void pushMusic(Sonic3kSmpsData data, int musicId) {
+            AudioPresentationCommand.MusicVoiceEntry music =
+                    factory.musicSmps(
+                            "s3k", musicId, nextVoiceId++,
+                            data, EMPTY_DAC,
+                            Sonic3kSmpsSequencerConfig.CONFIG,
+                            AudioSourceDescriptor.baseMusic(musicId),
+                            MAX_STEREO_FRAMES);
+            registry.apply(
+                    new AudioPresentationCommand.PushMusicOverride(music));
+        }
+
+        void addSfx(Sonic3kSfxData data, int continuousSfxId) {
+            SmpsAssetKey key = new SmpsAssetKey(
+                    "s3k", SmpsAssetKey.Route.BASE_ID,
+                    data.getId(), null);
+            factory.warmSmpsSfxAsset(
+                    key, data, EMPTY_DAC,
+                    Sonic3kSmpsSequencerConfig.CONFIG);
+            registry.apply(new AudioPresentationCommand.AddSmpsSfx(
+                    factory.resolveSmpsSfx(
+                            nextVoiceId++, key, 1 << 16, 0x70,
+                            continuousSfxId,
+                            data.getTrackEntries().size(),
+                            MAX_STEREO_FRAMES)));
+        }
+
+        void mix() {
+            new AudioPresentationMixer(MAX_STEREO_FRAMES)
+                    .mix(registry, MAX_STEREO_FRAMES);
+        }
     }
 
     private static Sonic3kSfxData createSfxData(int id, byte[] fmTrack) {
@@ -692,5 +817,3 @@ public class TestSonic3kCoordFlagParity {
         data[offset + 1] = (byte) ((value >> 8) & 0xFF);
     }
 }
-
-

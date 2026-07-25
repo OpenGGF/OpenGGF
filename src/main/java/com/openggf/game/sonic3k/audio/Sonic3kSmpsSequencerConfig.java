@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.audio;
 
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.CoordFlagHandler;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 
 import java.util.Collections;
@@ -41,7 +42,11 @@ public final class Sonic3kSmpsSequencerConfig {
     public static final SmpsSequencerConfig CONFIG;
 
     static {
-        CONFIG = new SmpsSequencerConfig.Builder()
+        CONFIG = create(new Sonic3kCoordFlagHandler());
+    }
+
+    public static SmpsSequencerConfig create(CoordFlagHandler coordFlagHandler) {
+        return new SmpsSequencerConfig.Builder()
                 .speedUpTempos(Collections.emptyMap())
                 .tempoModBase(TEMPO_MOD_BASE)
                 .fmChannelOrder(FM_CHANNEL_ORDER)
@@ -55,7 +60,7 @@ public final class Sonic3kSmpsSequencerConfig {
                 .psgEnvCmd80(SmpsSequencerConfig.PsgEnvCmd80.RESET)
                 .noteOnPrevent(SmpsSequencerConfig.NoteOnPrevent.HOLD)
                 .delayFreq(SmpsSequencerConfig.DelayFreq.KEEP)
-                .coordFlagHandler(new Sonic3kCoordFlagHandler())
+                .coordFlagHandler(coordFlagHandler)
                 .modAlgo(SmpsSequencerConfig.ModAlgo.MOD_Z80)
                 .fadeOutDelay(6)            // FadeOutDelay = 6
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h

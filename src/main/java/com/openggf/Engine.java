@@ -18,8 +18,11 @@ import com.openggf.editor.LevelEditorController;
 import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.editor.render.EditorOverlayRenderer;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.DebugFailAfterFramesAudioHandle;
 import com.openggf.audio.LWJGLAudioBackend;
+import com.openggf.capture.*;
 import com.openggf.camera.Camera;
+import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugOption;
@@ -65,14 +68,22 @@ import com.openggf.render.EngineRenderDispatcher;
 import com.openggf.util.RetroArchGlslShaderPackDownloader;
 
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Duration;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.Callbacks.*;
@@ -120,6 +131,8 @@ public class Engine {
 	private final PixelFontTextRenderer traceHudTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private final PixelFontTextRenderer pauseTextRenderer =
+		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	private final PixelFontTextRenderer liveCaptureTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private static final String USER_PAUSE_INDICATOR_TEXT = "PAUSED";
 	private static final int USER_PAUSE_INDICATOR_MARGIN = 8;
@@ -177,6 +190,45 @@ public class Engine {
 	record PauseIndicatorPlacement(int x, int y) {
 	}
 
+	enum LiveCapturePresentationState {
+		NORMAL,
+		MODAL_SHADER_PICKER,
+		PAUSED,
+		FRAME_STEP,
+		REWIND
+	}
+
+	static final class LiveCaptureFailureTransitionReporter {
+		private static final Throwable UNKNOWN_FAILURE =
+				new IllegalStateException("Live capture entered FAILED without a cause");
+		private final Consumer<Throwable> warningSink;
+		private final Set<Throwable> reported =
+				Collections.newSetFromMap(new IdentityHashMap<>());
+
+		LiveCaptureFailureTransitionReporter(Consumer<Throwable> warningSink) {
+			this.warningSink = Objects.requireNonNull(warningSink, "warningSink");
+		}
+
+		void beginAttempt() {
+			reported.clear();
+		}
+
+		void observe(LiveCaptureController controller) {
+			Objects.requireNonNull(controller, "controller");
+			if (controller.state() != LiveCaptureController.State.FAILED) {
+				reported.clear();
+				return;
+			}
+			Throwable failure = controller.lastFailure();
+			if (failure == null) {
+				failure = UNKNOWN_FAILURE;
+			}
+			if (reported.add(failure)) {
+				warningSink.accept(failure);
+			}
+		}
+	}
+
 	private boolean overlayStateReady = false;
 
 	// Input handler for keyboard input
@@ -209,6 +261,14 @@ public class Engine {
 
 	// Frame timing
 	private int targetFps;
+	private final LiveCaptureChord liveCaptureChord = new LiveCaptureChord();
+	private final LiveCaptureController liveCaptureController;
+	private final LiveCapturePresentationCoordinator liveCapturePresentation;
+	private final LiveCaptureIndicatorRenderer liveCaptureIndicator;
+	private final LiveCaptureFailureTransitionReporter liveCaptureFailureReporter =
+			new LiveCaptureFailureTransitionReporter(failure ->
+					LOGGER.log(java.util.logging.Level.WARNING,
+							"Live viewport recording failed", failure));
 	private long lastFrameTime;
 	private boolean paused = false;
 	private long userPauseIndicatorHiddenUntilNanos;
@@ -254,7 +314,25 @@ public class Engine {
 		this.debugViewEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
 		this.windowWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH);
 		this.windowHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT);
-		this.targetFps = configService.getInt(SonicConfiguration.FPS);
+		this.targetFps = resolveTargetFps(configService);
+		this.liveCaptureController = createLiveCaptureController();
+		this.liveCapturePresentation = new LiveCapturePresentationCoordinator(liveCaptureController);
+		this.liveCaptureIndicator = new LiveCaptureIndicatorRenderer(
+				this::drawLiveCaptureDot,
+				(text, x, y, red, green, blue, alpha, fontScale) ->
+						liveCaptureTextRenderer.drawShadowedText(
+								text, x, y, DebugColor.WHITE, fontScale),
+				new LiveCaptureIndicatorRenderer.TextMeasurer() {
+					@Override
+					public int width(String text, float fontScale) {
+						return liveCaptureTextRenderer.measureWidth(text, fontScale);
+					}
+
+					@Override
+					public int height(float fontScale) {
+						return liveCaptureTextRenderer.lineHeight(fontScale);
+					}
+				});
 		this.editorInputHandler = new EditorInputHandler(
 				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel);
 
@@ -268,6 +346,45 @@ public class Engine {
 		gameLoop.setEditorFreshStartHandler(this::startGameplayFromBeginning);
 
 		instance = this;
+	}
+
+	static int resolveTargetFps(SonicConfigurationService config) {
+		return FrameRateResolver.effective(config);
+	}
+
+	private LiveCaptureController createLiveCaptureController() {
+		String ffmpeg = FfmpegEncoder.findFfmpeg().map(Path::toString).orElse("ffmpeg");
+		LiveCaptureRecorderFactory recorderFactory =
+				new LiveCaptureRecorderFactory(configService, Clock.systemUTC(), ffmpeg);
+		ExecutorService finalizer = Executors.newSingleThreadExecutor(runnable -> {
+			Thread thread = new Thread(runnable, "live-capture-finalizer");
+			thread.setDaemon(true);
+			return thread;
+		});
+		return new LiveCaptureController(new LiveCaptureController.Dependencies(
+				frameRate -> DebugFailAfterFramesAudioHandle.maybeWrap(
+						audioManager.beginLiveCaptureAudio(frameRate),
+						resolveLiveCaptureAudioFailAfterFrames()),
+				audioManager::outputSampleRate,
+				viewport -> new GlReadPixelsGrabber(
+						viewport.x(), viewport.y(), viewport.width(), viewport.height()),
+				recorderFactory::create,
+				finalizer,
+				Duration.ofSeconds(10)));
+	}
+
+	static int resolveLiveCaptureAudioFailAfterFrames() {
+		String raw = System.getProperty(
+				"openggf.debug.liveCaptureAudioFailAfterFrames", "-1");
+		try {
+			int value = Integer.parseInt(raw);
+			if (value >= -1) return value;
+		} catch (NumberFormatException ignored) {
+			// Warn below using the same safe-disabled behavior.
+		}
+		LOGGER.warning("Invalid openggf.debug.liveCaptureAudioFailAfterFrames='"
+				+ raw + "'; failure injection is disabled");
+		return -1;
 	}
 
 	static String buildWindowTitle() {
@@ -351,6 +468,7 @@ public class Engine {
 
 		// Setup window resize callback
 		glfwSetFramebufferSizeCallback(window, (windowHandle, width, height) -> {
+			liveCaptureController.requestStop(LiveCaptureController.StopReason.VIEWPORT_CHANGED);
 			this.windowWidth = width;
 			this.windowHeight = height;
 			// Only reshape if GL context is initialized (avoids crash during window setup)
@@ -1577,6 +1695,12 @@ public class Engine {
 
 		profiler.beginSection("update");
 		processDisplayShaderPackRescan();
+		handleLiveCaptureShortcut();
+		liveCaptureFailureReporter.observe(liveCaptureController);
+		boolean frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
+				&& inputHandler != null
+				&& inputHandler.isKeyPressed(
+						configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
 		boolean displayShaderPickerHandledInput = updateDisplayShaderInput();
 		if (displayColorProfileController != null && !displayShaderPickerHandledInput) {
 			displayColorProfileController.update(inputHandler);
@@ -1589,6 +1713,10 @@ public class Engine {
 		} else if (inputHandler != null) {
 			// Modal picker frames skip GameLoop.step(), so advance key edges here.
 			inputHandler.update();
+		}
+		if (gameLoop != null) {
+			presentOuterAudioFrame(gameLoop,
+					displayShaderPickerHandledInput, frameStepPresentation);
 		}
 		profiler.endSection("update");
 
@@ -1724,22 +1852,137 @@ public class Engine {
 
 		renderDisplayShaderPickerOverlay();
 		applyDisplayShaderPhase(ShaderPhase.FINAL);
-
-		// F12 screenshot capture (after all rendering is complete)
-		if (inputHandler != null && inputHandler.isKeyPressed(GLFW_KEY_F12)) {
-			try {
-				String timestamp = java.time.LocalDateTime.now()
-						.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-				java.nio.file.Path path = java.nio.file.Path.of("screenshot_" + timestamp + ".png");
-				ScreenshotCapture.captureAndSavePNG(viewportWidth, viewportHeight, path);
-				LOGGER.info("Screenshot saved: " + path);
-			} catch (Exception e) {
-				LOGGER.warning("Screenshot failed: " + e.getMessage());
-			}
-		}
+		// F12 screenshot capture (after all rendering is complete) is the middle
+		// callback: capture pixels first, then screenshot, then window-only REC.
+		LiveCapturePresentationState presentationState = resolveLiveCapturePresentationState(
+				displayShaderPickerHandledInput, userPaused, frameStepPresentation,
+				gameLoop != null && gameLoop.liveRewindEffectIntensity() > 0.0f);
+		presentLiveCaptureFrame(getCurrentGameMode(), presentationState,
+				() -> liveCapturePresentation.present(currentCaptureViewport(),
+						this::captureScreenshotIfRequested,
+						this::renderLiveCaptureIndicatorIfActive));
+		liveCaptureFailureReporter.observe(liveCaptureController);
 
 		profiler.endFrame();
 		overlayStateReady = false;
+	}
+
+	/**
+	 * Executable non-GL seam for the one Engine-owned outer audio callback.
+	 * Tests drive the same placement after every simulation/modal branch that
+	 * {@link #display()} uses in production.
+	 */
+	static void presentOuterAudioFrame(
+			GameLoop loop,
+			boolean modalPicker,
+			boolean frameStepRequested) {
+		Objects.requireNonNull(loop, "loop").presentOuterFrame(
+				modalPicker, frameStepRequested);
+		GameServices.audio().update();
+	}
+
+	static LiveCapturePresentationState resolveLiveCapturePresentationState(
+			boolean modalShaderPicker, boolean paused, boolean frameStep, boolean rewind) {
+		if (modalShaderPicker) {
+			return LiveCapturePresentationState.MODAL_SHADER_PICKER;
+		}
+		if (rewind) {
+			return LiveCapturePresentationState.REWIND;
+		}
+		if (frameStep) {
+			return LiveCapturePresentationState.FRAME_STEP;
+		}
+		if (paused) {
+			return LiveCapturePresentationState.PAUSED;
+		}
+		return LiveCapturePresentationState.NORMAL;
+	}
+
+	static void presentLiveCaptureFrame(GameMode mode,
+									 LiveCapturePresentationState state,
+									 Runnable presentationSeam) {
+		Objects.requireNonNull(presentationSeam, "presentationSeam");
+		boolean renderedMode = switch (Objects.requireNonNull(mode, "mode")) {
+			case LEVEL, TITLE_CARD, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS,
+					TITLE_SCREEN, DATA_SELECT, LEVEL_SELECT, EDITOR, CREDITS_TEXT,
+					CREDITS_DEMO, MASTER_TITLE_SCREEN, LEGAL_DISCLAIMER, TRY_AGAIN_END,
+					ENDING_CUTSCENE, BONUS_STAGE -> true;
+		};
+		boolean renderedState = switch (Objects.requireNonNull(state, "state")) {
+			case NORMAL, MODAL_SHADER_PICKER, PAUSED, FRAME_STEP, REWIND -> true;
+		};
+		if (!renderedMode || !renderedState) {
+			throw new IllegalStateException("Unsupported rendered presentation");
+		}
+		presentationSeam.run();
+	}
+
+	static void startLiveCaptureAttempt(
+			LiveCaptureController controller,
+			LiveCaptureFailureTransitionReporter failureReporter,
+			CaptureViewport viewport,
+			int frameRate) {
+		failureReporter.beginAttempt();
+		controller.start(viewport, frameRate);
+	}
+
+	private void handleLiveCaptureShortcut() {
+		if (inputHandler == null) {
+			return;
+		}
+		int key = configService.getInt(SonicConfiguration.CAPTURE_TOGGLE_KEY);
+		if (!liveCaptureChord.update(inputHandler.isKeyDown(key), inputHandler.isShiftDown(),
+				inputHandler.isControlDown(), inputHandler.isAltDown())) {
+			return;
+		}
+		switch (liveCaptureController.state()) {
+			case ACTIVE -> liveCaptureController.requestStop(LiveCaptureController.StopReason.USER);
+			case INACTIVE, FAILED -> startLiveCaptureAttempt(
+					liveCaptureController, liveCaptureFailureReporter,
+					currentCaptureViewport(), targetFps);
+			case STARTING, STOPPING -> { }
+		}
+	}
+
+	private CaptureViewport currentCaptureViewport() {
+		return new CaptureViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+	}
+
+	private void captureScreenshotIfRequested() {
+		if (inputHandler == null || !inputHandler.isKeyPressed(GLFW_KEY_F12)) {
+			return;
+		}
+		try {
+			String timestamp = java.time.LocalDateTime.now()
+					.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+			Path path = Path.of("screenshot_" + timestamp + ".png");
+			ScreenshotCapture.captureAndSavePNG(viewportWidth, viewportHeight, path);
+			LOGGER.info("Screenshot saved: " + path);
+		} catch (Exception e) {
+			LOGGER.warning("Screenshot failed: " + e.getMessage());
+		}
+	}
+
+	private void renderLiveCaptureIndicatorIfActive() {
+		if (!liveCaptureController.indicatorVisible()) {
+			return;
+		}
+		prepareOverlayState();
+		liveCaptureTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		liveCaptureIndicator.render((int) projectionWidth, (int) realHeight);
+	}
+
+	private void drawLiveCaptureDot(int x, int y, int diameter,
+									float red, float green, float blue, float alpha) {
+		int radius = diameter / 2;
+		for (int row = 0; row < diameter; row++) {
+			double dy = row + 0.5 - radius;
+			int halfWidth = (int) Math.floor(Math.sqrt(radius * radius - dy * dy));
+			new GLCommand(GLCommand.CommandType.RECTI, GL_TRIANGLE_FAN,
+					GLCommand.BlendType.SOLID, red, green, blue, alpha,
+					x + radius - halfWidth, y + row,
+					x + radius + halfWidth, y + row + 1).execute(0, 0, 0, 0);
+		}
 	}
 
 	private void applySpecialStageClearColor() {
@@ -2167,6 +2410,32 @@ public class Engine {
 		return instance != null ? instance.gameLoop : null;
 	}
 
+	/**
+	 * Drops the process-global reference behind {@link #currentGameLoop()}.
+	 *
+	 * <p>The constructor publishes {@code this} into a static, and nothing used
+	 * to take it back. That matters because {@code currentGameLoop()} is a
+	 * static back door: {@link TraceSessionLauncher#retryPendingTeardown()} and
+	 * {@link RewindReleaseRetryCoordinator} call it and then drive
+	 * {@code GameLoop.returnToMasterTitle()}, which unconditionally runs
+	 * {@code MasterTitleScreen.initialize()} -&gt; {@code glCreateShader}. With no
+	 * GL context that is not a catchable exception — LWJGL raises it through
+	 * {@code JNIEnv::FatalError}, which calls {@code abort()} and takes the
+	 * whole JVM down (exit 134).
+	 *
+	 * <p>So a headless test that constructs an {@code Engine} would otherwise
+	 * poison its surefire fork (forks are reused): any later test in that fork
+	 * reaching one of those retry paths crashes the JVM, and which fork a class
+	 * lands in is nondeterministic. Shutdown and every such test must therefore
+	 * release the reference.
+	 *
+	 * <p>Unconditional: only one {@code Engine} is ever live in a real process,
+	 * and a test that constructed one has no handle on any earlier one.
+	 */
+	public static void clearGlobalInstance() {
+		instance = null;
+	}
+
 	public void draw() {
 		renderDispatcher.draw(getCurrentGameMode(), debugViewEnabled, debugState, drawActions);
 	}
@@ -2375,6 +2644,7 @@ public class Engine {
 	}
 
 	private void cleanup() {
+		cleanupStep("live capture", liveCaptureController::close);
 		cleanupStep("session state", SessionManager::clear);
 		cleanupStep("donor audio", audioManager::clearDonorAudio);
 		cleanupStep("cross-game features", crossGameFeatureProvider::resetState);
@@ -2387,6 +2657,7 @@ public class Engine {
 		});
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
 		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
+		cleanupStep("live capture text renderer", liveCaptureTextRenderer::cleanup);
 		cleanupStep("VHS rewind effect", () -> {
 			if (rewindVhsEffectPass != null) {
 				rewindVhsEffectPass.dispose();
@@ -2415,6 +2686,7 @@ public class Engine {
 				callback.free();
 			}
 		});
+		cleanupStep("global engine instance", Engine::clearGlobalInstance);
 	}
 
 	private void cleanupStep(String description, Runnable cleanup) {

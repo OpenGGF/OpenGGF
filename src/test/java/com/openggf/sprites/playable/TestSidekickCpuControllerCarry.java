@@ -2,6 +2,7 @@ package com.openggf.sprites.playable;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -434,22 +435,21 @@ class TestSidekickCpuControllerCarry {
         sonic.setYSpeed((short) 0);
 
         // ROM loc_14542 plays sfx_Grab on a successful regrab; capture SFX output.
-        RecordingSfxBackend audio = new RecordingSfxBackend();
-        GameServices.audio().setBackend(audio);
+        GameServices.audio().commandTimeline().clear();
 
         boolean regrabbed = false;
         int sfxFiredOnRegrabFrame = -1;
         for (int f = 4; f < 4 + 80 && !regrabbed; f++) {
             sonic.setAir(true);  // keep Sonic airborne (no physics in this unit test)
-            int sfxBefore = audio.sfxCount;
+            int sfxBefore = sfxCount();
             controller.update(f);
             assertEquals(SidekickCpuController.State.CARRYING, controller.getState(),
                     "Carrier must remain in the carry routine throughout the cooldown");
             if (sonic.isObjectControlled()) {
                 regrabbed = true;
-                sfxFiredOnRegrabFrame = audio.sfxCount - sfxBefore;
+                sfxFiredOnRegrabFrame = sfxCount() - sfxBefore;
             } else {
-                assertEquals(sfxBefore, audio.sfxCount,
+                assertEquals(sfxBefore, sfxCount(),
                         "No SFX should play while the carrier is still waiting to regrab");
             }
         }
@@ -459,15 +459,11 @@ class TestSidekickCpuControllerCarry {
                 "ROM loc_14542 plays sfx_Grab exactly once on the regrab");
     }
 
-    /** Counts SFX dispatched to the backend (mapped GameSound -> playSfxSmps). */
-    private static final class RecordingSfxBackend extends com.openggf.audio.NullAudioBackend {
-        private int sfxCount;
-
-        @Override
-        public void playSfxSmps(com.openggf.audio.smps.AbstractSmpsData data,
-                                com.openggf.audio.smps.DacData dacData, float pitch) {
-            sfxCount++;
-        }
+    private static int sfxCount() {
+        return (int) GameServices.audio().commandTimeline().entries().stream()
+                .map(entry -> entry.command())
+                .filter(AudioCommand.PlaySfx.class::isInstance)
+                .count();
     }
 
     @Test
