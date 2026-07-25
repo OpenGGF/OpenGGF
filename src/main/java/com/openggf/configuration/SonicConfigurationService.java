@@ -223,7 +223,30 @@ public class SonicConfigurationService {
 		if (value == null || value.toString().isEmpty()) {
 			return chord;
 		}
+		// The other spelling of the same intent, and the one the shipped config
+		// uses: P1_B, P1_C, P2_B and P2_C default to -1. resolveInt returns it
+		// verbatim -- an Integer goes straight through sanitizeIntValue and the
+		// string form parses to -1 before the default lookup -- so falling back
+		// here would report a binding the player switched off as still bound.
+		if (isExplicitlyUnbound(value)) {
+			return chord;
+		}
 		return KeyChord.parse(defaults.get(sonicConfiguration.name()));
+	}
+
+	/** True for a value resolveInt reads as the literal key code -1. */
+	private static boolean isExplicitlyUnbound(Object value) {
+		if (value instanceof Number number) {
+			return number.intValue() == KeyChord.NO_KEY;
+		}
+		try {
+			// Untrimmed, exactly as resolveInt parses getString()'s result: a
+			// padded " -1 " throws there and falls back to the default, so it
+			// must fall back here too.
+			return Integer.parseInt(value.toString()) == KeyChord.NO_KEY;
+		} catch (NumberFormatException ignored) {
+			return false;
+		}
 	}
 
 	private int resolveInt(SonicConfiguration sonicConfiguration) {

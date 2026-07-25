@@ -124,7 +124,10 @@ class TestConfigMigrationService {
         ConfigMigrationService service = new ConfigMigrationService();
         String key = SonicConfiguration.CAPTURE_TOGGLE_KEY.name();
 
-        for (Object superseded : new Object[] {"O", "GLFW_KEY_O", "KEY_O", GLFW_KEY_O}) {
+        // "79" is the quoted-integer form CONFIGURATION.md documents as a valid
+        // binding spelling; it resolves to a bare O exactly as the unquoted 79
+        // does, so leaving it unmigrated leaves the reserved key bound.
+        for (Object superseded : new Object[] {"O", "GLFW_KEY_O", "KEY_O", GLFW_KEY_O, "79", " o "}) {
             Map<String, Object> config = new HashMap<>();
             config.put(key, superseded);
 
@@ -167,5 +170,22 @@ class TestConfigMigrationService {
                 service.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY));
         assertTrue(Files.readString(tempDir.resolve("config.yaml")).contains("toggleKey: SHIFT+O"),
                 "the migration must be persisted, not re-applied on every launch");
+    }
+
+    /**
+     * The quoted raw code is a documented binding form, so an install can carry
+     * the superseded default spelled that way. Unmigrated it stays a bare O:
+     * the reserved key the whole feature exists to keep free, and the key
+     * {@code DebugOverlayToggle.OBJECT_DEBUG} also answers to unmodified.
+     */
+    @Test
+    void anInstallSpellingTheSupersededDefaultAsAQuotedRawCodeIsMigratedOnLoad(
+            @TempDir Path tempDir) throws IOException {
+        Files.writeString(tempDir.resolve("config.yaml"), "capture:\n  toggleKey: \"79\"\n");
+
+        SonicConfigurationService service = SonicConfigurationService.createStandalone(tempDir);
+
+        assertEquals(KeyChord.of(GLFW_KEY_O, SHIFT),
+                service.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY));
     }
 }

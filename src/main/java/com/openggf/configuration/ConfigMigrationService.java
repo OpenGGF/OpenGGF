@@ -217,6 +217,11 @@ public class ConfigMigrationService {
      * left exactly as written, because inferring {@code SHIFT+<their key>} would
      * silently rewrite a value they chose.
      *
+     * <p>The value is matched through {@link KeyChord#parse}, not against a list
+     * of spellings: every documented binding form that resolves to an unmodified
+     * O — {@code O}, {@code KEY_O}, {@code GLFW_KEY_O}, {@code 79} and the quoted
+     * {@code "79"} — is the reserved key, and one missed spelling leaves it bound.
+     *
      * @param config The config map to migrate (modified in place)
      * @return true if the key binding was updated
      */
@@ -233,10 +238,8 @@ public class ConfigMigrationService {
             return true;
         }
         if (value instanceof String text) {
-            String normalized = text.trim().toUpperCase();
-            if (!normalized.equals("O")
-                    && !normalized.equals("KEY_O")
-                    && !normalized.equals("GLFW_KEY_O")) {
+            KeyChord chord = KeyChord.parse(text);
+            if (chord.keyCode() != GLFW_KEY_O || !chord.modifiers().isEmpty()) {
                 return false;
             }
             config.put(key, "SHIFT+O");

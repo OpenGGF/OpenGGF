@@ -136,6 +136,26 @@ class TestConfigKeyChordResolution {
                 configService.getKeyChord(SonicConfiguration.FRAME_STEP_KEY));
     }
 
+    /**
+     * {@code -1} is the other spelling of "deliberately unbound", and the one
+     * the shipped config actually uses: CONFIGURATION.md documents it as the
+     * default for P1_B, P1_C, P2_B and P2_C. resolveInt returns it verbatim --
+     * an Integer goes straight through sanitizeIntValue, and the string form
+     * parses to -1 at step 1, before the default lookup is ever reached -- so
+     * getKeyChord must report unbound too. Substituting the registered default
+     * here means a player who writes {@code capture.toggleKey: -1} has getInt
+     * report the shortcut off while SHIFT+O keeps starting recordings.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"string", "integer"})
+    void anExplicitMinusOneStaysUnboundThroughBothAccessors(String form) {
+        configService.setConfigValue(SonicConfiguration.FRAME_STEP_KEY,
+                "integer".equals(form) ? Integer.valueOf(-1) : "-1");
+
+        assertEquals(-1, configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
+        assertFalse(configService.getKeyChord(SonicConfiguration.FRAME_STEP_KEY).isBound());
+    }
+
     @Test
     void aSessionOverrideWinsOverThePersistedValue() {
         configService.setConfigValue(SonicConfiguration.FRAME_STEP_KEY, "O");
