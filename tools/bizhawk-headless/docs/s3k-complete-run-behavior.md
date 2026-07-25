@@ -637,9 +637,11 @@ Let a segment arm at BK2 frame `F`:
 
 - `bk2_frame_offset = F`.
 - Frame `F` writes **no** row (arm-and-return).
-- Row `N` is written while observing the end of BK2 frame `F + 1 + N`.
+- Row `N` is written while observing the end of BK2 frame `F + 1 + N`
+  **only while the segment records every frame** — see the skip caveat
+  below.
 - `trace_frame_count` = number of rows = `trace_frame` at finalize.
-- The last recorded BK2 frame is `F + trace_frame_count`.
+- The last recorded BK2 frame is `F + trace_frame_count` (same proviso).
 - `physics.csv` has `trace_frame_count + 1` lines (header + rows).
 
 The replay convention is nevertheless **row `N` ⇔ BK2 input frame
@@ -648,6 +650,25 @@ The replay convention is nevertheless **row `N` ⇔ BK2 input frame
 deliberate: BizHawk applies the input recorded at frame `k` *during* the
 advance from `k` to `k+1`, so the input at `F + N` is exactly the input
 that produced the state observed at `F + N + 1`, which is row `N`.
+
+**Skip caveat.** `trace_frame` counts ROWS, not frames. Step 10's hard
+mode guard suppresses the row on a non-level-family `Game_mode`
+(`$00`/`$04`/`$08`) *without closing the segment*, and the step-8 arm
+gate is one-time per zone (`zone_id ~= current_segment_zone`), so a
+game-over/continue, a pause+A soft reset back to the title, or an
+ending/credits excursion that returns to the SAME zone resumes into the
+already-open segment. Across such an excursion of length `k`, the row
+written after it is observed at frame `F + 1 + N + k`, so the
+`F + 1 + N` identity breaks — but the input index does **not**: it stays
+`bk2_frame_offset + trace_row`, i.e. `F + N`, because
+`bk2_input_mask` is indexed by the ROW counter. A port must therefore
+index the BK2 stream by row (`S3KCompleteRunCaptureRunner.InputRow`) and
+must **not** reuse "the row consumed by the immediately preceding
+advance", which is the same value only in the contiguous case. Every
+published (A)/(B)/(C) segment happens to be frame-contiguous, so no
+fixture exercises this; the synthetic gate
+`S3KCompleteRunCaptureRunner indexes the input column by BK2 row across
+a mid-segment excursion` does.
 
 **The succession identity.** For any boundary where the terminating
 frame is *the same frame* that opens the next segment — i.e. every level

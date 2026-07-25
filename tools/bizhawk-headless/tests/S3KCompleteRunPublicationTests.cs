@@ -97,6 +97,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + " with BK2 row bk2_frame_offset + N",
                 AlignsInputColumns));
             tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunCaptureRunner indexes the input column by"
+                + " BK2 row across a mid-segment excursion",
+                AlignsInputColumnsAcrossMidSegmentExcursion));
+            tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunCaptureRunner omits the manifest for a"
                 + " detour-free pass without a run id",
                 OmitsManifestForDetourFreeUnnamedPass));
@@ -998,6 +1002,104 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         }
                     }
                 }
+            });
+        }
+
+        /// <summary>
+        /// The same invariant where "row N" and "the previous advance" are
+        /// NOT the same BK2 row. Segmenter step (10) suppresses the row on
+        /// a non-level-family Game_mode while leaving the segment armed
+        /// (game-over/continue, a pause+A soft reset to the title, an
+        /// ending/credits excursion), and the arm gate is one-time per
+        /// zone, so returning to the SAME zone resumes into the already
+        /// open segment. From that point on the last-applied BK2 row runs
+        /// ahead of bk2_frame_offset + N by the excursion length, and the
+        /// Lua's index — movie.getinput(bk2_frame_offset + trace_row, 1) —
+        /// is the authority. No canonical fixture segment skips a frame, so
+        /// only a synthetic plan can pin this.
+        /// </summary>
+        private static void AlignsInputColumnsAcrossMidSegmentExcursion()
+        {
+            WithMovie(MaskRows(40), movie =>
+            {
+                var sink = new RecordingSink();
+                S3KCompleteRunCaptureResult result =
+                    S3KCompleteRunCaptureRunner.Capture(
+                        movie,
+                        ExcursionHost(),
+                        null,
+                        "synthetic.bk2",
+                        "2026-07-24",
+                        0,
+                        sink);
+
+                // One segment, armed at frame 4 and never closed by the
+                // 0x08 excursion at frames 10-14: rows are frames 5-9 and
+                // 15-39, so 30 rows rather than the 35 a contiguous run
+                // would have produced.
+                AssertEx.Equal(1, result.Segments.Count);
+                RunManifestSegment entry = result.Segments[0];
+                AssertEx.Equal("aiz", entry.Dir);
+                AssertEx.Equal(4, entry.Bk2FrameOffset);
+                AssertEx.Equal(30, entry.TraceFrameCount);
+
+                string[] lines = sink.Physics[0]
+                    .Split(new[] { '\n' }, StringSplitOptions.None);
+                for (var row = 0; row < entry.TraceFrameCount; row++)
+                {
+                    string[] columns = lines[row + 1].Split(',');
+                    int expected = MaskForRow(entry.Bk2FrameOffset + row);
+                    int actual = int.Parse(
+                        columns[1],
+                        NumberStyles.HexNumber,
+                        CultureInfo.InvariantCulture);
+                    if (actual != expected)
+                    {
+                        throw new InvalidOperationException(
+                            "Row " + row + " input column was 0x"
+                            + actual.ToString("X") + "; expected BK2 row "
+                            + (entry.Bk2FrameOffset + row) + "'s 0x"
+                            + expected.ToString("X")
+                            + " (indexing by last-applied frame would give"
+                            + " 0x"
+                            + MaskForRow(row < 5 ? row + 4 : row + 9)
+                                .ToString("X") + ").");
+                    }
+                }
+            });
+        }
+
+        /// <summary>
+        /// AIZ arms at frame 4 (rows 0-4 at frames 5-9), a five-frame
+        /// attract-mode 0x08 excursion at frames 10-14 skips rows without
+        /// closing the segment, then AIZ — the SAME zone, so the one-time
+        /// arm gate cannot re-fire — records rows 5-29 at frames 15-39.
+        /// </summary>
+        private static FakeS1Host ExcursionHost()
+        {
+            return new FakeS1Host((host, frame) =>
+            {
+                byte mode = 0;
+                if (frame >= 4 && frame <= 9)
+                {
+                    mode = (byte)S3KRam.GameModeLevel;
+                }
+                else if (frame >= 10 && frame <= 14)
+                {
+                    // 0x08: attract-mode demo, deliberately NOT
+                    // level-family for recording purposes.
+                    mode = 0x08;
+                }
+                else if (frame >= 15)
+                {
+                    mode = (byte)S3KRam.GameModeLevel;
+                }
+                host.Ram[S3KRam.GameMode] = mode;
+                host.Ram[S3KRam.Zone] = 0;
+                host.Ram[S3KRam.Act] = 0;
+                host.SetU16(S3KRam.PlayerBase + S3KRam.OffMoveLock, 0);
+                host.Ram[S3KRam.Ctrl1Locked] = 0;
+                host.SetU16(S3KRam.PlayerMode, 0);
             });
         }
 

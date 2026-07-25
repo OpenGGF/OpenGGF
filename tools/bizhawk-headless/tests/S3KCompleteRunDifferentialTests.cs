@@ -289,24 +289,26 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 start.EnvironmentVariables[unmodeled] = null;
             }
 
-            using (Process process = Process.Start(start))
+            // Drain both pipes CONCURRENTLY via the shared helper every
+            // other differential gate uses. Reading stdout to EOF first and
+            // stderr only afterwards deadlocks whenever the child fills the
+            // ~64 KB stderr pipe buffer while stdout is still open — the
+            // child blocks in write(2), stdout never reaches EOF, and the
+            // blocking ReadToEnd() is never left, so the timeout and the
+            // Kill() below it become dead code. That is a live risk here:
+            // the capture runs BizHawk's native GPGX core under run.sh,
+            // whose stderr NativeStandardOutputSilencer does not cover, and
+            // a mono/native fault can emit a large trace.
+            EndToEndTests.ProcessResult result =
+                EndToEndTests.RunProcess(start, CaptureTimeoutMilliseconds);
+            if (result.ExitCode != 0)
             {
-                string stdout = process.StandardOutput.ReadToEnd();
-                string stderr = process.StandardError.ReadToEnd();
-                if (!process.WaitForExit(CaptureTimeoutMilliseconds))
-                {
-                    process.Kill();
-                    throw new InvalidOperationException(
-                        "S3K complete-run capture timed out.");
-                }
-                if (process.ExitCode != 0)
-                {
-                    throw new InvalidOperationException(
-                        "S3K complete-run capture failed with exit code "
-                        + process.ExitCode + ". stderr: " + stderr);
-                }
-                return stdout;
+                throw new InvalidOperationException(
+                    "S3K complete-run capture failed with exit code "
+                    + result.ExitCode + ". stderr: "
+                    + result.StandardError);
             }
+            return result.StandardOutput;
         }
 
         private static Dependencies Resolve(

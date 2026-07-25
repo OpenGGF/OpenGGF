@@ -109,12 +109,36 @@ namespace OpenGGF.BizHawk.Headless
     /// armed and the arm gate needs Game_mode 0x0C. Reordering any of this
     /// is the bug class both the S1 and S2 ports independently hit.
     ///
-    /// Frame alignment (spec §5.6 of the segmentation spec): a row is
-    /// WRITTEN while observing BK2 framecount bk2_frame_offset + 1 + N, but
-    /// its input column is BK2 input row bk2_frame_offset + N — which is
-    /// precisely the row consumed by the immediately preceding advance.
-    /// Hence <c>lastApplied</c>, never a lookahead: BizHawk applies the
-    /// input recorded at frame k during the advance from k to k+1.
+    /// Frame alignment (spec §5.6 of the segmentation spec): the `input`
+    /// column of row N is BK2 input ROW <c>bk2_frame_offset + N</c>, full
+    /// stop. That is what the Lua indexes —
+    /// <c>bk2_input_mask(raw_input, trace_frame)</c> (L5573) forwards to
+    /// the shared helper with the recorder's own <c>bk2_frame_offset</c>
+    /// upvalue (L988) and calls
+    /// <c>movie.getinput(bk2_frame_offset + trace_row, 1)</c>
+    /// (lib/oggf_trace_common.lua L67-79); <c>ss_input_mask</c> (L5079)
+    /// does the same for both players. The index is the ROW index, never
+    /// the emulator frame.
+    ///
+    /// In a frame-CONTIGUOUS segment row N happens to be written while
+    /// observing framecount bk2_frame_offset + 1 + N, so the row consumed
+    /// by the immediately preceding advance is also
+    /// bk2_frame_offset + N — and every canonical fixture segment is
+    /// contiguous, so the two agree there. They diverge the moment an
+    /// armed segment SKIPS a frame, which segmenter step (10) exists to
+    /// allow: a non-level-family Game_mode (0x00/0x04/0x08 — game-over /
+    /// continue, a pause+A soft reset back to the title, an
+    /// ending/credits excursion) suppresses the row WITHOUT closing the
+    /// segment, and the one-time-per-zone arm gate re-enters the SAME
+    /// open segment afterwards. From there on "the last applied row" is
+    /// ahead of "row bk2_frame_offset + N" by the excursion length, for
+    /// every remaining row of that segment. So the runner indexes the BK2
+    /// stream by row, keeping every applied row in <c>appliedRows</c>
+    /// (index i == BK2 row i); <c>lastApplied</c> now only feeds the
+    /// emulator. The buffer is bounded by the movie length — ~466k rows
+    /// for the complete S3K movie, tens of MB, negligible next to the
+    /// per-segment stream buffers <see cref="IS3KCompleteRunSegmentSink"/>
+    /// exists to avoid.
     ///
     /// There is no finalization aux event.
     /// <see cref="S3KAuxEventEngine.EmitFinalization"/> emits the
@@ -193,6 +217,10 @@ namespace OpenGGF.BizHawk.Headless
             {
                 Bk2Frame next = frames.MoveNext() ? frames.Current : null;
                 Bk2Frame lastApplied = null;
+                // BK2 row i lives at appliedRows[i]. Rows are applied in
+                // order from row 0, so the list index IS the BK2 frame
+                // index, which is what the Lua's movie.getinput() takes.
+                var appliedRows = new List<Bk2Frame>();
                 var advanced = 0;
                 while (true)
                 {
@@ -202,13 +230,14 @@ namespace OpenGGF.BizHawk.Headless
                         state.WriteLevelRow(
                             segmenter.RowIndex,
                             segmenter.EmittedPreTraceSnapshots,
-                            lastApplied);
+                            InputRow(appliedRows, segmenter));
                     }
                     else if (action
                         == S3KCompleteRunFrameAction.SpecialStageRow)
                     {
                         state.WriteSpecialStageRow(
-                            segmenter.RowIndex, lastApplied);
+                            segmenter.RowIndex,
+                            InputRow(appliedRows, segmenter));
                     }
 
                     // The Lua's runaway backstop, evaluated by the main loop
@@ -234,6 +263,7 @@ namespace OpenGGF.BizHawk.Headless
                     }
                     lastApplied = next;
                     next = frames.MoveNext() ? frames.Current : null;
+                    appliedRows.Add(lastApplied);
                     S1TraceCaptureRunner.ApplyFrame(lastApplied, host);
                     host.Advance();
                     advanced++;
@@ -263,6 +293,32 @@ namespace OpenGGF.BizHawk.Headless
                 state.ManifestSegments,
                 segmenter.Transitions,
                 manifestJson);
+        }
+
+        /// <summary>
+        /// The BK2 input row the Lua would read for the row the segmenter
+        /// just asked for: <c>bk2_frame_offset + trace_row</c>.
+        ///
+        /// The index can never run past what has been applied. Row N is
+        /// written at framecount C; the arm frame F == Bk2FrameOffset is
+        /// itself recorded by no segment, so rows occupy frames F+1..C and
+        /// N &lt;= C - F - 1, i.e. F + N &lt;= C - 1 == appliedRows.Count - 1.
+        /// Equality is the contiguous case; a strict inequality is exactly
+        /// the skipped-frame case this indexing exists to get right.
+        /// </summary>
+        private static Bk2Frame InputRow(
+            IList<Bk2Frame> appliedRows, S3KCompleteRunSegmenter segmenter)
+        {
+            int index = segmenter.Bk2FrameOffset + segmenter.RowIndex;
+            if (index < 0 || index >= appliedRows.Count)
+            {
+                throw new InvalidOperationException(
+                    "BK2 input row " + index + " (bk2_frame_offset "
+                    + segmenter.Bk2FrameOffset + " + trace row "
+                    + segmenter.RowIndex + ") has not been applied yet;"
+                    + " only " + appliedRows.Count + " rows have.");
+            }
+            return appliedRows[index];
         }
 
         /// <summary>
