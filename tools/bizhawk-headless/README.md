@@ -76,6 +76,12 @@ Output is published all-or-nothing: files are staged and only linked into
 `--output` once the whole capture succeeds, so a failed run never leaves a
 half-written trace behind.
 
+The two payloads **stream** into their staging files as the capture produces
+them, for every run-mode capture (S1, S2 and S3K) — nothing holds a segment,
+let alone a run, in memory. Plain trace mode still buffers, because the
+`level_gated_reset_aware` profile can throw an armed recording away and has to
+be able to.
+
 ### Output contract
 
 - `physics.csv` — per-frame physics rows
@@ -89,12 +95,25 @@ half-written trace behind.
 matching the committed fixture layout. Below the threshold a payload keeps its
 plain name.
 
-Compression happens *inside* the same all-or-nothing publication: each payload is
-gzipped to its own staging file, decompressed again and compared against the
-source by SHA-256 **and** length, and only then adopted with the uncompressed
-staging file discarded. A verification failure publishes nothing at all — no
-final is linked, not even for a payload that compressed cleanly. Each compressed
-payload is reported on stdout after publication commits.
+Compression happens *inside* the same all-or-nothing publication, and for a
+streamed payload it happens *during* it: the bytes are written **through** a
+gzip stream into a `.gz` staging file, so the uncompressed form never exists on
+disk at all. A complete-run capture that used to stage 2.84 GB now stages
+roughly a tenth of that.
+
+The verify-before-destroy guarantee is preserved exactly rather than traded
+away for the streaming. The plaintext is SHA-256'd and counted on its way into
+the compressor; when the file closes, the finished gzip is decompressed and
+compared against those values by hash **and** length before it joins the
+publication set. A payload that turns out to be below the threshold is expanded
+back to its plain name by that same verifying decompression, so the threshold
+rule is unchanged. A buffered payload (plain trace mode) takes the original
+route: gzip to a second staging file, decompress, compare against the source,
+then discard the source.
+
+Either way a verification failure publishes nothing at all — no final is
+linked, not even for a payload that compressed cleanly. Each compressed payload
+is reported on stdout after publication commits.
 
 The default is on because the risk is a **commit**, not disk space. A full
 complete-run `aux_state.jsonl` measures ~254 MB raw against ~12 MB gzipped
@@ -108,8 +127,11 @@ whatever produced the file.
 
 Output is deterministic: the gzip carries no timestamp (`gzip -n` equivalent), so
 the same capture compresses to the same bytes and a fixture commit shows no noise
-diff. Container bytes could not affect the gates in any case; they hash
-decompressed content.
+diff. Streaming does not weaken that — a streamed payload's `.gz` is
+byte-identical to the bulk-compressed one for the same content, pinned by a test,
+because nothing is flushed through the deflater mid-stream and the container
+therefore cannot depend on the caller's write pattern. Container bytes could not
+affect the gates in any case; they hash decompressed content.
 
 **`--no-compress`** opts out, for consumers that read a capture by its plain name
 and never commit it. Every ROM-backed differential gate here passes it: they

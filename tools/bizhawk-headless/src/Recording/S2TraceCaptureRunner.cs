@@ -122,8 +122,16 @@ namespace OpenGGF.BizHawk.Headless
             // into metadata.trace_profile.
             bool resetAware = traceProfile == LevelGatedResetAwareProfile;
 
+            // Plain trace mode keeps its two output streams in memory
+            // because the reset-aware profile genuinely discards an armed
+            // recording (the EHZ bootstrap segment below); the run-mode
+            // runners, which never discard, stream instead. The writers are
+            // views over the builders, so the shared row appender can be
+            // stream-shaped for both.
             var physicsBuf = new StringBuilder();
             var auxBuf = new StringBuilder();
+            var physicsBufWriter = new StringWriter(physicsBuf);
+            var auxBufWriter = new StringWriter(auxBuf);
 
             // Segment bookkeeping (spec §3.2). gameplay_segment_index
             // increments ONLY when a skipped segment ends and is counted;
@@ -309,8 +317,8 @@ namespace OpenGGF.BizHawk.Headless
                     // Recorded row (§7 order): zone_act_state/checkpoint
                     // before the CSV row, then the frame-shared aux events.
                     AppendRecordedRow(
-                        physicsBuf, auxBuf, auxEngine, traceFrame, frame,
-                        host);
+                        physicsBufWriter, auxBufWriter, auxEngine,
+                        traceFrame, frame, host);
                     if (S2Ram.U8(host, S2Ram.SidekickBase + S2Ram.OffId) != 0)
                     {
                         recordedSidekickPresent = true;
@@ -353,8 +361,8 @@ namespace OpenGGF.BizHawk.Headless
         /// code (s2-run-mode-behavior.md §8).
         /// </summary>
         internal static void AppendRecordedRow(
-            StringBuilder physicsBuf,
-            StringBuilder auxBuf,
+            TextWriter physicsCsv,
+            TextWriter auxStateJsonl,
             S2AuxEventEngine auxEngine,
             int traceFrame,
             Bk2Frame frame,
@@ -363,17 +371,24 @@ namespace OpenGGF.BizHawk.Headless
             foreach (string line in
                 auxEngine.ProcessFrameStart(traceFrame, host))
             {
-                auxBuf.Append(line).Append('\n');
+                WriteLine(auxStateJsonl, line);
             }
-            physicsBuf.Append(S2TraceCsvWriter.FormatRow(
-                traceFrame,
-                S1InputMask.FromFrame(frame),
-                host));
-            physicsBuf.Append('\n');
+            WriteLine(
+                physicsCsv,
+                S2TraceCsvWriter.FormatRow(
+                    traceFrame,
+                    S1InputMask.FromFrame(frame),
+                    host));
             foreach (string line in auxEngine.ProcessFrame(traceFrame, host))
             {
-                auxBuf.Append(line).Append('\n');
+                WriteLine(auxStateJsonl, line);
             }
+        }
+
+        private static void WriteLine(TextWriter writer, string line)
+        {
+            writer.Write(line);
+            writer.Write('\n');
         }
     }
 }
