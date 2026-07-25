@@ -104,7 +104,7 @@ the recorder is unchanged. Pick by game:
 | S1 standard + complete-run | **native** (`tools/bizhawk-headless/`) | Migrated and gated |
 | S2 all modes + complete-run | **native** | Migrated and gated |
 | S3K standard | **native** | Migrated and gated (AIZ end-to-end, CNZ, MGZ). Hook-driven aux families are deferred, and the CLI refuses every unmodeled `OGGF_*` recorder variable rather than diverging silently |
-| S3K complete-run | **native** | Migrated and gated — `--trace-profile complete_run` / `--run-id` on the S3K ROM, everything stamped `6.32-s3k-completerun` (`runs/`, `special_stage/`, `bonus_*`, `*_completerun`). Same hook-driven-aux deferral and `OGGF_*` refusal policy as S3K standard. All three capture identities gate byte-exactly, including `runs/s3-knux-multibonus-ss/`, which was regenerated at 6.32 to make it reproducible |
+| S3K complete-run | **native** | Migrated and gated — `--trace-profile complete_run` / `--run-id` on the S3K ROM, everything stamped `6.33-s3k-completerun` (`runs/`, `special_stage/`, `bonus_*`, `*_completerun`; bumped from `6.32-s3k-completerun` when `ADDR_VBLA_WORD` moved off `Life_count` — see below). Same hook-driven-aux deferral and `OGGF_*` refusal policy as S3K standard. All three capture identities gate byte-exactly, including `runs/s3-knux-multibonus-ss/`, which was regenerated at 6.33 to make it reproducible |
 
 The entire Lua recorder fleet (S1, S2, S3K standard, S3K complete-run) now has a
 byte-parity-gated native port. `s3k_trace_recorder.lua` /
