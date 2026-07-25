@@ -72,6 +72,7 @@
     <Compile Include="tests/S3KCompleteRunSegmenterTests.cs" />
     <Compile Include="tests/S3KCompleteRunSegmentsDifferentialTests.cs" />
     <Compile Include="tests/S3KHookAbsenceTests.cs" />
+    <Compile Include="tests/S3KRunModeDifferentialTests.cs" />
     <Compile Include="tests/S3KTraceCaptureRunnerTests.cs" />
     <Compile Include="tests/S3KTraceCsvWriterTests.cs" />
     <Compile Include="tests/S3KTraceDifferentialTests.cs" />

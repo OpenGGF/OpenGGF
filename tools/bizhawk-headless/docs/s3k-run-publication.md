@@ -1099,15 +1099,11 @@ Landed:
   `recording_date` value — in about five seconds.
 - **The full identity-(A) byte gate,
   `S3KCompleteRunSegmentsDifferentialTests`** (§10.6).
+- **The full run-mode gate, `S3KRunModeDifferentialTests`** (§10.7),
+  which closes the three formerly hand-verified identity-(C) dirs and
+  raises the (B) manifest check from formatter level to recorder level.
 
-Left uncovered: the remaining three identity-(C) dirs
-(`bonus_slots`, `bonus_pachinko`, `special_stage`), each of which needs
-its own long pass over `s3-knux-multibonus-ss.bk2`. They were verified
-**manually** during Stage C and are known good at HEAD:
-
-| Verified | How |
-|---|---|
-| `bonus_slots`, `special_stage` (whole segments) | `--run-id s3k-multibonus --effective-movie-length 52805`: physics, aux and metadata-minus-date byte-identical; the 13 segment records and 11 transition records produced match the (B) manifest's own records exactly |
+Nothing in the publication contract is now left to manual verification.
 
 ### 10.6 The identity-(A) gate
 
@@ -1153,3 +1149,81 @@ mismatch localises a truncated or over-long file, where a hash mismatch
 only says "different". Fixture `.gz` bytes are streamed through SHA256
 rather than materialised, which keeps the gate's footprint at the
 capture's own 2.84 GB instead of 4.3 GB.
+
+---
+
+### 10.7 The run-mode gate (identities (C) and (B))
+
+`S3KRunModeDifferentialTests` runs **two untruncated `--run-id` passes**
+over the 114,622-row `s3-knux-multibonus-ss.bk2`, one per capture
+identity. It passed on the first attempt: **no production change was
+needed**, and every observed delta is one §7.4 already predicted.
+
+**Case 1 — identity (C), byte-exact.** `--run-id s3k-multibonus`
+reproduces all four committed (C) dirs. `physics.csv` and
+`aux_state.jsonl` match by length **and** sha256 with zero
+normalization; `metadata.json` matches line for line with only the
+`recording_date` value free. This closes `bonus_slots`,
+`bonus_pachinko` and `special_stage`, which §10.5 previously listed as
+hand-verified only. `special_stage`'s `aux_state.jsonl` is gated as the
+0-byte file it is.
+
+**Case 2 — identity (B), recorder-level.** `--run-id
+s3-knux-multibonus-ss` reproduces the 25-segment run tree. (B) is a
+2026-07-19 **Windows** EmuHawk capture by Lua **6.31**, three builds
+behind HEAD, and is not byte-reproducible for three independent
+reasons — all three re-verified from the fixture bytes before the gate
+was written, not taken on faith from this document:
+
+| Reason | Verified how | Scope of its effect, measured |
+|---|---|---|
+| CRLF (host text mode) | all 25 dirs + manifest contain `\r\n` | every file |
+| `ADDR_FRAMECOUNT` `0xFE08`→`0xFE04` | Lua L547 reads `0xFE04` at HEAD; every (B) `physics.csv` column 5 cell is the constant `0000` and every (B) aux `vfc` / `level_frame_counter` is the constant `0` | `physics.csv` **column 5 only** — all 41 other columns of all rows are byte-identical; aux counter fields only |
+| diagnostic hooks armed (pre-`192d9c976`) | hook-driven families present in exactly 4 of 25 segments | `hcz_2` +95 aux lines, `hcz_6` +48, `mgz` +69, `mgz_3` +69; line counts subtract exactly |
+
+There is **no unexplained residue**: after accounting for those three,
+every remaining byte matches. So the gate pins each one as an exact
+literal rather than normalizing:
+
+- **`run_manifest.json`** — the fixture, after CRLF→LF and the
+  substitution of its **single** 6.31 version line (both asserted
+  present before being applied), must equal the produced manifest
+  **exactly**: 8,740 bytes, all 25 segment records and all 22 transition
+  records with their sampled RAM. `S3KCompleteRunPublicationTests`
+  already gates the *formatter* given the right data; this gates the
+  **recorder rediscovering that data from the movie** — every
+  `bk2_frame_offset`, `trace_frame_count`, dir token, `saved_x_pos`,
+  `rings_before`/`_after`, `emeralds_*` and `last_star_post_hit`.
+- **`physics.csv`** — same row count, and the set of differing column
+  indices must be exactly `{5}` for level/bonus segments and **empty**
+  for the three SS segments, whose 20-column schema has no counter. The
+  fixture's column 5 must additionally be the constant `0000`, so a
+  regenerated fixture carrying live values fails instead of being
+  absorbed.
+- **`aux_state.jsonl`** — the fixture's hook-driven line count must equal
+  the pinned per-segment literal and the capture's must be `0`; after
+  dropping exactly those lines the streams must be equal line for line
+  and in order, with only `vfc` / `level_frame_counter` masked, and the
+  fixture's masked values separately required to be `0`.
+- **`metadata.json`** — the set of differing **keys** must equal the
+  pinned per-kind literal (`capture_mode` + `lua_script_version` +
+  `pre_trace_osc_frames` for level; `capture_mode` +
+  `pre_trace_osc_frames` for bonus, whose `lua_script_version` and
+  `v_int_run_count` must **match** because `9e3ccdb41` hand-edited
+  exactly those eight files; `lua_script_version` alone for SS), key
+  order must be identical, and every other key must match byte for byte.
+
+The counter column is not left ungated by any of this: it is byte-gated
+on the four (C) dirs in case 1 — cut from this same movie — and on the
+seven (A) dirs in §10.6.
+
+Measured: **2m20s wall, 235 MB peak RSS**, 370 MB of output per pass.
+The passes run sequentially and each output tree is deleted before the
+next, so peak scratch is one pass, under `tools/bizhawk-headless/.scratch/`
+for the same tmpfs reason as §10.6. Both aux streams are compared a
+line at a time, so neither side is materialised.
+
+**(B) must never be made to pass byte-exactly.** Emitting CRLF,
+reverting `ADDR_FRAMECOUNT`, or arming the hooks would each break the
+identity-(A) gate and case 1 of this same file, which are byte-exact
+against captures made by the current Lua.
