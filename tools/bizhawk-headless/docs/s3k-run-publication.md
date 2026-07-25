@@ -1227,3 +1227,16 @@ line at a time, so neither side is materialised.
 reverting `ADDR_FRAMECOUNT`, or arming the hooks would each break the
 identity-(A) gate and case 1 of this same file, which are byte-exact
 against captures made by the current Lua.
+
+### 10.8 Migration status
+
+With §10.6 and §10.7 landed alongside `S3KCompleteRunDifferentialTests`
+(the fast, truncated smoke gate over identity (C)), all three named
+capture identities have a ROM-backed differential gate, and the S3K complete-run
+migration is complete: every Lua recorder in the fleet — S1, S2, S3K
+standard, and now S3K complete-run — has a byte-parity-gated native
+port. `tools/bizhawk/README.md`'s "Sonic 3 & Knuckles complete-run and
+run mode" section carries the verified capture commands, the final gate
+list, and the pinned metadata-delta policy for operator-facing use; this
+document remains the byte-level authority those commands and gates
+implement.

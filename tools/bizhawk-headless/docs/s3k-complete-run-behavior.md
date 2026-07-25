@@ -1138,3 +1138,32 @@ they are not modeled, and must **stop refusing** `OGGF_S3K_TRACE_PROFILE`
 for this subcommand since the recorder does not read it. Pin the
 deliberately-not-refused set in a test so the guard cannot degrade into a
 blanket `OGGF_*` ban.
+
+## 11. Gate coverage as landed
+
+All twelve invariants above are covered by the landed port and its three
+ROM-backed differential gates rather than left as open risks:
+
+- `S3KCompleteRunSegmentsDifferentialTests` reproduces identity (A) (all
+  seven `*_completerun` fixtures) byte-exact from one untruncated pass
+  and additionally asserts the full 15-segment `segments_done` summary
+  through DDZ, which is the concrete proof for §10.1 (post-advance
+  ordering), §10.2 (arm frame owned by no segment), §10.9 (the `+1`
+  succession identity), and §10.8 (`zone_token_for` directory naming).
+- `S3KCompleteRunDifferentialTests` and `S3KRunModeDifferentialTests`
+  reproduce identity (C) byte-exact and identity (B) structurally,
+  covering §10.3–§10.7 and §10.11 (shared/cleared segment state across
+  level/SS/bonus kinds, live-zone-gated aux windows, hook-family absence
+  in (A)/(C) vs presence in (B), and the truncated-SS finalize path).
+- §10.10 (`pre_trace_osc_frames` / `ADDR_FRAMECOUNT` are two independent,
+  unbumped deltas) and §10.12 (the 25-name env-var surface and its
+  refusal-table extension) are pinned by dedicated assertions in
+  `S3KRunModeDifferentialTests` and `TraceCliTests` respectively, not
+  inferred from the byte gates alone.
+
+See `s3k-run-publication.md` §10 for the class map and exact gate
+mechanics, and `tools/bizhawk/README.md`'s "Sonic 3 & Knuckles
+complete-run and run mode" section for the verified capture commands and
+measured cost. This closes the S3K complete-run migration: every Lua
+recorder in the fleet (S1, S2, S3K standard, S3K complete-run) now has a
+byte-parity-gated native port.

@@ -746,3 +746,20 @@ shared `RunManifestWriter` does not yet emit), the CLI subcommand and its
 env-var refusal-table extension, publication via `NoReplacePublisher`,
 the per-fixture newline convention (§2.3), and the ROM-backed
 differential gate.
+
+## 12. Port status — Stage C landed (migration complete)
+
+Every gap listed in §11.3 has since been closed by
+`S3KCompleteRunSegmenter` (segmentation), `S3KRunManifestWriter` +
+`RunManifestWriter` (`run_manifest.json`, incl. `bonus_stage_type`), the
+`--trace-profile complete_run` / `--run-id` CLI branch in `Program.cs`
+and its dedicated env-var refusal table
+(`RejectUnmodeledS3kCompleteRunEnvironment`), `NoReplacePublisher`
+publication via `S3KStagedSegmentSink`, and three ROM-backed differential
+gates — see `s3k-run-publication.md` §10 for the full "as built" class
+map and gate coverage, and `tools/bizhawk/README.md`'s "Sonic 3 & Knuckles
+complete-run and run mode" section for the verified capture commands and
+final byte-parity results. §11.2's hook decision stands unchanged: no
+`GpgxHost` exec/memwrite callback surface was added, since neither the
+byte-exact identity-(A)/(C) targets nor the structurally-gated legacy
+identity-(B) fixture would become reproducible by adding it.
