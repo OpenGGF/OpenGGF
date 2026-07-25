@@ -998,3 +998,114 @@ collected delegate is the classic interop crash).
     segment, not the run.
 13. Fix production code on divergence. Never fixtures, never looser
     normalization, never a zone/route/frame carve-out.
+
+---
+
+## 10. Native port — as built (Stage C)
+
+The publication layer landed as five new classes plus three seams in
+existing shared code. Everything the complete-run recorder shares with
+the already-migrated pieces is delegated; this section records only what
+is genuinely new and why.
+
+### 10.1 Class map
+
+| Class | Owns |
+|---|---|
+| `S3KCompleteRunMetadataWriter` | All three `metadata.json` shapes (§3) and `character_metadata_json` |
+| `S3KRunManifestWriter` | The S3K front-end literals over the shared writer, plus the §4.1 emission gate as `ShouldEmit` |
+| `S3KCompleteRunCaptureRunner` | The Lua main loop (§1.5 ordering), row/aux dispatch, and the manifest decision |
+| `S3KStagedSegmentSink` | Production sink: streams each segment into the staging session |
+| `NoReplacePublisher.StagedStream` | Incremental staged-file writing (invariant 12) |
+
+The runner delegates segmentation to `S3KCompleteRunSegmenter`, the
+42-column row to `S3KTraceCsvWriter.FormatRow(..., S3KRam.LevelFrameCounter)`,
+the aux cascade to `S3KAuxEventEngine(S3KTraceProfile.CompleteRun)` and
+the 20-column SS row to `S3KSpecialStageCsvWriter`. It never calls
+`EmitFinalization`: that emits the `gameplay_end` checkpoint for
+`level_gated_reset_aware` only, and this recorder's `TRACE_PROFILE` is
+hard-pinned to `complete_run`.
+
+### 10.2 Three seams in shared code
+
+1. **`RunManifestSegment.BonusStageType` + the `bonus_stage` branch in
+   `RunManifestWriter.Format`.** Additive, not a fork: the extras stay
+   mutually exclusive by kind, and S1/S2 never produce
+   `BonusStageKind`, so their manifests are byte-unaffected. The 8-arg
+   constructor still exists and delegates.
+2. **`NoReplacePublisher.IncrementalStagingSession.OpenFile` →
+   `StagedStream`.** `StageFile(name, string)` would hold a 266 MB
+   segment as a .NET string (2 bytes per ASCII char) and then copy it;
+   the streamed form writes into the staged temporary as the capture
+   produces it. Same no-replace guarantees: the temporary lives next to
+   its final, nothing lands under a final name before the completed
+   set's `Publish()`, and an abandoned stream removes its temporary. A
+   session that still has an open stream at `Complete()` throws rather
+   than half-publishing.
+3. **`--effective-movie-length` reaches the S3K path.** It is the
+   modeled equivalent of the refused `OGGF_BK2_FRAME_COUNT` and feeds
+   the segmenter's unconditional movie-input-end guard. The existing
+   CLI rule (it requires `--run-id`) is unchanged.
+
+### 10.3 CLI surface
+
+`--run-id <id>` OR `--trace-profile complete_run` with the S3K
+locked-on ROM selects the complete-run recorder; both were previously
+rejected with a "not migrated yet" error. `--trace-profile` with any
+other string still reaches the STANDARD recorder verbatim, and
+`--gameplay-segment` is still S2-only. S1, S2 and S3K-standard CLI
+behavior and stdout bytes are unchanged.
+
+stdout follows the S1 complete-run shape: `BizHawk` / `ROM SHA-1` /
+`Movie frames` / (`Effective movie length` when set) / `Run ID` or
+`Trace profile` / `Segments` / `Transitions` / one `Segment <dir>:` line
+per segment / `Run manifest` when one was emitted.
+
+### 10.4 Environment refusal is a SEPARATE table
+
+`RejectUnmodeledS3kCompleteRunEnvironment` is not the standard
+recorder's `RejectUnmodeledS3kEnvironment`. The standard table refuses
+`OGGF_S3K_AIZ_FIRE_RANGE` and `OGGF_S3K_RNG_CALL_RANGE`; under the
+complete-run script's hard-pinned `TRACE_PROFILE` both emitters are
+unreachable, so refusing them would be a false refusal (§8.1). The
+complete-run table refuses the eight entries of invariant 11 and
+nothing else, and `TraceCli S3K complete-run does not refuse the
+variables that cannot change its output` pins thirteen non-refusals —
+including `OGGF_TRACE_QUIET` and the removed `OGGF_TRACE_LIGHTWEIGHT` —
+so the guard cannot degrade into a blanket `OGGF_*` ban.
+
+### 10.5 Gate coverage as landed, and what is left
+
+Landed:
+
+- `metadata.json` reproduced **byte for byte** against six committed
+  fixtures — `aiz_completerun`, `hcz_completerun`, `bonus_gumball`,
+  `bonus_slots`, `bonus_pachinko`, `special_stage` — each fed its own
+  `recording_date`, so these are full-file equality assertions covering
+  both the (A) shape and the (C) shape.
+- `run_manifest.json` reproduced against the (B) manifest with its two
+  enumerated deltas pinned as literals (CRLF, the 6.31 stamp) and
+  asserted to be the only differences — gating all 25 segment entries,
+  all 22 transition records and every optional-field presence rule.
+- The driver, sink and staging over synthetic movies: dir tokens, row
+  counts, per-kind file sets and metadata shapes, the empty SS aux file,
+  input-column alignment, finalize-time sampling, the manifest gate in
+  all three states, LF everywhere, and no final path before `Publish()`.
+- One ROM-backed byte gate, `S3KCompleteRunDifferentialTests`: a
+  `--effective-movie-length 7001` pass over
+  `s3-knux-multibonus-ss.bk2` reproduces the whole `bonus_gumball`
+  segment — `physics.csv` and `aux_state.jsonl` by sha256 with zero
+  normalization, `metadata.json` modulo the `recording_date` value —
+  in about five seconds.
+
+Left for a separately-invoked gate (a full 466k-frame pass producing
+~1.4 GB of `aux_state.jsonl` is hours of wall clock): the seven
+identity-(A) `*_completerun` dirs and the remaining three identity-(C)
+dirs. Those were verified **manually** during Stage C and are known
+good at HEAD:
+
+| Verified | How |
+|---|---|
+| `aiz_completerun` first 2058 rows | `--run-id sanity --effective-movie-length 3000` over `s3k-complete-sonic-tails.bk2`: offset 941, `physics.csv` prefix and all 36 982 `aux_state.jsonl` lines byte-identical |
+| `bonus_gumball` (whole segment) | `--run-id s3k-multibonus --effective-movie-length 7001`: physics, aux and metadata-minus-date byte-identical |
+| `bonus_slots`, `special_stage` (whole segments) | `--run-id s3k-multibonus --effective-movie-length 52805`: physics, aux and metadata-minus-date byte-identical; the 13 segment records and 11 transition records produced match the (B) manifest's own records exactly |

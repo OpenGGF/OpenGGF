@@ -36,6 +36,37 @@ namespace OpenGGF.BizHawk.Headless
             int zoneId,
             int act,
             int? specialStageIndex)
+            : this(
+                dir,
+                kind,
+                traceProfile,
+                bk2FrameOffset,
+                traceFrameCount,
+                zoneId,
+                act,
+                specialStageIndex,
+                null)
+        {
+        }
+
+        /// <summary>
+        /// S3K overload carrying the bonus_stage_type extra. The optional
+        /// extras stay mutually exclusive by kind — a bonus_stage entry
+        /// renders bonus_stage_type, a special_stage entry renders
+        /// special_stage_index, a level entry renders neither — so the S1
+        /// and S2 emitters, which never produce
+        /// <see cref="BonusStageKind"/>, are byte-unaffected.
+        /// </summary>
+        public RunManifestSegment(
+            string dir,
+            string kind,
+            string traceProfile,
+            int bk2FrameOffset,
+            int traceFrameCount,
+            int zoneId,
+            int act,
+            int? specialStageIndex,
+            string bonusStageType)
         {
             if (dir == null)
             {
@@ -57,6 +88,7 @@ namespace OpenGGF.BizHawk.Headless
             ZoneId = zoneId;
             Act = act;
             SpecialStageIndex = specialStageIndex;
+            BonusStageType = bonusStageType;
         }
 
         public string Dir { get; private set; }
@@ -67,6 +99,13 @@ namespace OpenGGF.BizHawk.Headless
         public int ZoneId { get; private set; }
         public int Act { get; private set; }
         public int? SpecialStageIndex { get; private set; }
+
+        /// <summary>
+        /// gumball / pachinko / slots for a <see cref="BonusStageKind"/>
+        /// entry; null everywhere else. Emitted in the same trailing slot
+        /// as <see cref="SpecialStageIndex"/>.
+        /// </summary>
+        public string BonusStageType { get; private set; }
     }
 
     /// <summary>
@@ -217,7 +256,16 @@ namespace OpenGGF.BizHawk.Headless
                     .Append(Dec(segment.TraceFrameCount));
                 json.Append(", \"zone_id\": ").Append(Dec(segment.ZoneId));
                 json.Append(", \"act\": ").Append(Dec(segment.Act));
-                if (segment.Kind == RunManifestSegment.SpecialStageKind)
+                // Lua write_run_manifest's if/elseif on s.kind (S3K L1494,
+                // S1/S2 special-stage-only): exactly one optional extra,
+                // appended last, chosen by kind and never by which field
+                // happens to be populated.
+                if (segment.Kind == RunManifestSegment.BonusStageKind)
+                {
+                    json.Append(", \"bonus_stage_type\": ")
+                        .Append(LuaQ(segment.BonusStageType ?? string.Empty));
+                }
+                else if (segment.Kind == RunManifestSegment.SpecialStageKind)
                 {
                     json.Append(", \"special_stage_index\": ")
                         .Append(Dec(segment.SpecialStageIndex ?? 0));
