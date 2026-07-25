@@ -228,6 +228,20 @@ Highlights:
 - **Native headless GPGX S1 trace recorder (2026-07-24):** a Linux/Mono C# harness (`tools/bizhawk-headless/`) now drives BizHawk 2.11's GPGX core directly — no EmuHawk, X11, or Lua — and records full canonical Sonic 1 traces (`--mode trace`: physics.csv v7, aux_state.jsonl, metadata.json trace_schema 4) with auto-detected BK2 frame offset. Output is byte-identical to the Lua `s1_trace_recorder.lua` on the canonical GHZ1 fixture (only `recording_date` differs), gated by a permanent ROM-backed differential test; adversarial review also fixed a movie-exhaustion end-path off-by-one the fixture could not exercise. The Lua recorder remains the reference implementation and the non-Linux capture path.
 - **S3K structural trace replay bootstrap (2026-07-23):** S3K replay no longer relies on `pre_level_intro_prefix`, `sidekick_seed_frame_prelude`, or `pre_trace_osc_frames` metadata, nor on frame-zero motion-shape heuristics. Fresh level starts preserve the ROM's grounded first-dispatch lifecycle, AIZ pre-level input-only rows no longer tick the resident level across headless/capture/live/rewind playback, and the regenerated AIZ CSV input column now follows the canonical BK2 offset contract. The standalone AIZ and CNZ traces clear their fixture/input/bootstrap regressions and reach later true parity frontiers at AIZ f2707 and CNZ f185; the broader remaining S3K fleet debt stays explicit in the frontier log.
 - **S3K universal CSV v7 fixtures regenerated (2026-07-23):** standalone, complete-run, bonus, and special-stage recordings now install physics, aux, and metadata from the same BizHawk 2.11 capture instead of mixing v7 CSV/metadata with stale v5 aux. S3K recorder execution hooks are opt-in for focused diagnostics, Linux captures suppress Mono Lua-console repaint churn by default, and replay input sampling follows each profile's physical BK2-row convention. The consistent fixtures expose new AIZ/CNZ comparison frontiers for follow-up rather than failing at the former input-alignment guard.
+- **Configurable recording codecs, container and ffmpeg commands (2026-07-25):**
+  `capture.codec` selects `ffv1` (default), `h264` or `h265` — all three
+  lossless — and `capture.audioCodec` selects `flac` (default) or the lossy
+  `aac` / `mp3`, marked as lossy where they are configured. `capture.container`
+  sets the file extension so MP4 can be written directly. For anything the
+  codec keys do not cover, `capture.ffmpegPass1Args` and
+  `capture.ffmpegPass2Args` replace either ffmpeg pass outright; emptying the
+  second skips muxing and records video only. H.264 and H.265 encode RGB
+  directly rather than the conventional `yuv444p`, which is lossless in the
+  codec's own colour space but does not return the submitted pixels — a
+  measured round trip guards that. The bundled configuration template is now
+  also written to `config.yaml.example` on every run, so its comments and
+  worked ffmpeg recipes stay visible next to a `config.yaml` that has already
+  been written.
 - **Recording tells you when it stops, and stops filling `/tmp` (2026-07-25):** a
   recording that ends for a reason you did not ask for — the window being
   resized, or a capture failure — now replaces the red-dot/`REC` indicator with
