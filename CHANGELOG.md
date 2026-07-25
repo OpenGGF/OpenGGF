@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Proved zero-allocation warmed presentation and clock-continuous mixed/silent FLAC media.
 - Added final-PCM integration and ROM-backed source/toggle/rewind parity coverage.
 - Fix: the live-recording controller no longer discards its audio handle when a release is refused for being issued off the audio producer's owner thread. The engine deliberately keeps the lease so a later stop can complete the release, but the controller threw away the only reference able to retry it — so the producer kept copying every presented packet into an orphaned lease and every subsequent recording in the process was refused and degraded to silence.
 - Fix: a live-recording release refused because it was issued off the audio producer's owner thread no longer retires the engine's view of the lease. Previously the refusal still cleared it, so the producer kept copying every presented packet into an orphaned lease, the next recording attached a second one instead of being rejected, and a retry from the correct thread was a silent no-op — repeated start/stop cycles eventually exhausted the capture capacity. Live recording now follows the same rule offline capture already did.
