@@ -59,6 +59,28 @@ public final class FfmpegEncoder implements CaptureEncoder {
 
     private CaptureCodecs.Codec videoCodec = CaptureCodecs.video("ffv1");
     private CaptureCodecs.Codec audioCodec = CaptureCodecs.audio("flac");
+    private String pass1Override = FfmpegCommandTemplate.DEFAULT;
+    private String pass2Override = FfmpegCommandTemplate.DEFAULT;
+
+    /**
+     * Replaces the argument list of either ffmpeg pass. {@code "default"} keeps
+     * the engine's command; an empty second pass skips muxing entirely and
+     * publishes the first pass's output, so the recording has no audio track.
+     * An empty first pass is rejected: that is where frames are encoded.
+     */
+    public void setCommandOverrides(String pass1, String pass2) {
+        if (FfmpegCommandTemplate.skipsPass(pass1)) {
+            throw new IllegalArgumentException(
+                    "the first ffmpeg pass encodes the submitted frames and cannot"
+                            + " be skipped; use \"default\" for the engine's command");
+        }
+        this.pass1Override = pass1;
+        this.pass2Override = pass2;
+    }
+
+    private boolean skipsMux() {
+        return FfmpegCommandTemplate.skipsPass(pass2Override);
+    }
 
     /**
      * Selects the encoders for subsequent recordings. Defaults are FFV1 and
@@ -192,9 +214,17 @@ public final class FfmpegEncoder implements CaptureEncoder {
             Path workingDir = output.toAbsolutePath().getParent();
             this.tempVideo = Files.createTempFile(workingDir, "capture-", ".video.mkv");
             this.tempAudio = Files.createTempFile(workingDir, "capture-", ".audio.raw");
-            this.videoProc = launcher.start(
-                    phase1Command(ffmpeg, tempVideo, width, height, fps, scale,
-                            videoCodec));
+            this.videoProc = launcher.start(FfmpegCommandTemplate.usesBuiltIn(pass1Override)
+                    ? phase1Command(ffmpeg, tempVideo, width, height, fps, scale, videoCodec)
+                    : prefixed(FfmpegCommandTemplate.expand(pass1Override, java.util.Map.of(
+                            "width", Integer.toString(width),
+                            "height", Integer.toString(height),
+                            "fps", Integer.toString(fps),
+                            "scale", Integer.toString(this.scale),
+                            "scaledWidth", Integer.toString(width * this.scale),
+                            "scaledHeight", Integer.toString(height * this.scale),
+                            "videoCodecArgs", String.join(" ", videoCodec.arguments()),
+                            "videoOut", tempVideo.toAbsolutePath().toString()))));
             this.videoStdin = videoProc.getOutputStream();
             this.audioOut = Files.newOutputStream(tempAudio);
             this.stderrDrain = drainAsync(videoProc);
@@ -240,10 +270,36 @@ public final class FfmpegEncoder implements CaptureEncoder {
             if (stderrDrain != null) stderrDrain.join(2000);
             closeAudioOut();
             if (vexit != 0) throw new CaptureException("ffmpeg video exited " + vexit);
+            if (skipsMux()) {
+                // Publish the first pass's output as-is. The raw audio is
+                // discarded with the other temporaries: there is no second pass
+                // to mux it in, so the recording is video-only by request.
+                Files.createDirectories(finalOut.toAbsolutePath().getParent());
+                Files.move(tempVideo, finalOut,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                lifecycleSeam.beforeSuccessPublication();
+                synchronized (lifecycleLock) {
+                    if (aborted) {
+                        throw new CaptureException(
+                                "ffmpeg capture aborted before success publication");
+                    }
+                    terminal = true;
+                    success = true;
+                }
+                return finalOut;
+            }
             // phase 2 mux
             Process launchedMux = launcher.start(
-                    phase2MuxCommand(ffmpeg, tempVideo, tempAudio, sampleRate,
-                            finalOut, audioCodec));
+                    FfmpegCommandTemplate.usesBuiltIn(pass2Override)
+                            ? phase2MuxCommand(ffmpeg, tempVideo, tempAudio, sampleRate,
+                                    finalOut, audioCodec)
+                            : prefixed(FfmpegCommandTemplate.expand(pass2Override,
+                                    java.util.Map.of(
+                                            "videoIn", tempVideo.toAbsolutePath().toString(),
+                                            "audioIn", tempAudio.toAbsolutePath().toString(),
+                                            "sampleRate", Integer.toString(sampleRate),
+                                            "audioCodecArgs", String.join(" ", audioCodec.arguments()),
+                                            "output", finalOut.toAbsolutePath().toString()))));
             lifecycleSeam.beforeMuxPublication(launchedMux);
             synchronized (lifecycleLock) {
                 if (aborted) {
@@ -339,6 +395,13 @@ public final class FfmpegEncoder implements CaptureEncoder {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    private List<String> prefixed(List<String> arguments) {
+        List<String> command = new ArrayList<>(arguments.size() + 1);
+        command.add(ffmpeg);
+        command.addAll(arguments);
+        return command;
     }
 
     private void retainDiagnostics(String chunk) {
