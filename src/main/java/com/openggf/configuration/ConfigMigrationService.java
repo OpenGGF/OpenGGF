@@ -6,6 +6,7 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_APOSTROPHE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F8;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_O;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_V;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_WORLD_1;
 
@@ -200,6 +201,46 @@ public class ConfigMigrationService {
             config.put(key, "V");
             LOGGER.info("[ConfigMigration] Migrated DISPLAY_COLOR_PROFILE_TOGGLE_KEY: "
                     + text + " -> V");
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Migrates the live-capture toggle onto the chord that spells out the Shift
+     * the engine used to hardcode. Every install that has launched the engine has
+     * a literal {@code capture.toggleKey: O} persisted, and that bare O wins over
+     * the new default — exact modifier matching would then reject the held Shift,
+     * so Shift+O would stop working and a stray O would start a recording.
+     *
+     * <p>Only the superseded default is rewritten. A binding the player chose is
+     * left exactly as written, because inferring {@code SHIFT+<their key>} would
+     * silently rewrite a value they chose.
+     *
+     * @param config The config map to migrate (modified in place)
+     * @return true if the key binding was updated
+     */
+    public boolean migrateDeprecatedCaptureToggleKey(Map<String, Object> config) {
+        String key = SonicConfiguration.CAPTURE_TOGGLE_KEY.name();
+        Object value = config.get(key);
+        if (value instanceof Number number) {
+            if (number.intValue() != GLFW_KEY_O) {
+                return false;
+            }
+            config.put(key, "SHIFT+O");
+            LOGGER.info("[ConfigMigration] Migrated CAPTURE_TOGGLE_KEY: "
+                    + number.intValue() + " -> SHIFT+O");
+            return true;
+        }
+        if (value instanceof String text) {
+            String normalized = text.trim().toUpperCase();
+            if (!normalized.equals("O")
+                    && !normalized.equals("KEY_O")
+                    && !normalized.equals("GLFW_KEY_O")) {
+                return false;
+            }
+            config.put(key, "SHIFT+O");
+            LOGGER.info("[ConfigMigration] Migrated CAPTURE_TOGGLE_KEY: " + text + " -> SHIFT+O");
             return true;
         }
         return false;

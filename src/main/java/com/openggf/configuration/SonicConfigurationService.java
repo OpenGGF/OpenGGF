@@ -132,6 +132,9 @@ public class SonicConfigurationService {
 		if (migrationService.migrateDeprecatedDisplayColorProfileToggleKey(config)) {
 			configChanged = true;
 		}
+		if (migrationService.migrateDeprecatedCaptureToggleKey(config)) {
+			configChanged = true;
+		}
 		if (normalizeDisplayShaderSelection(config)) {
 			configChanged = true;
 		}
@@ -703,7 +706,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CAPTURE_CONTAINER, "mkv");
 		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS, "default");
 		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS, "default");
-		putDefaultKey(SonicConfiguration.CAPTURE_TOGGLE_KEY, GLFW_KEY_O);
+		// putDefault, not putDefaultKey: the default carries its own modifier.
+		putDefault(SonicConfiguration.CAPTURE_TOGGLE_KEY, "SHIFT+O");
 		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, false);
 		putDefault(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_R);

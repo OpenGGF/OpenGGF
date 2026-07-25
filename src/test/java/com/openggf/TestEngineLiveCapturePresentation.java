@@ -1,11 +1,14 @@
 package com.openggf;
 
 import com.openggf.capture.CaptureViewport;
+import com.openggf.capture.LiveCaptureChord;
 import com.openggf.capture.LiveCaptureController;
 import com.openggf.capture.LiveCapturePresentationCoordinator;
 import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.GamepadStateSource;
+import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +20,15 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LEFT_BUMPER;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SUPER;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_O;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_P;
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -263,6 +275,118 @@ class TestEngineLiveCapturePresentation {
             String text = Engine.liveCaptureNoticeText(interruption);
             assertFalse(text.isBlank(), interruption + " needs notice text");
             assertTrue(texts.add(text), "duplicate notice text: " + text);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Capture toggle chord, evaluated through the real InputHandler
+    // ---------------------------------------------------------------
+
+    private static boolean toggles(SonicConfigurationService config, InputHandler input) {
+        return Engine.shouldToggleLiveCapture(
+                config.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
+                new LiveCaptureChord(), input);
+    }
+
+    /** The shortcut a fresh install answers to, at the call site rather than in the config. */
+    @Test
+    void theDefaultBindingTogglesOnARealShiftO() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
+
+        assertTrue(toggles(config, input));
+    }
+
+    @Test
+    void aBareKeyBindingTogglesUnmodifiedAndNotWhileShiftIsHeld() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "P");
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        input.handleKeyEvent(GLFW_KEY_P, GLFW_PRESS);
+        assertTrue(toggles(config, input));
+
+        InputHandler shifted = new InputHandler(InputBindingFactory.supplier(config));
+        shifted.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+        shifted.handleKeyEvent(GLFW_KEY_P, GLFW_PRESS);
+        assertFalse(toggles(config, shifted));
+    }
+
+    @Test
+    void aCtrlShiftBindingNeedsBothModifiersHeld() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "CTRL+SHIFT+O");
+        InputHandler shiftOnly = new InputHandler(InputBindingFactory.supplier(config));
+        shiftOnly.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+        shiftOnly.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
+        assertFalse(toggles(config, shiftOnly));
+
+        InputHandler both = new InputHandler(InputBindingFactory.supplier(config));
+        both.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
+        both.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+        both.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
+        assertTrue(toggles(config, both));
+    }
+
+    /**
+     * update() takes six adjacent booleans and forwards four into
+     * matchesModifiers(shift, ctrl, alt, meta); a transposed pair compiles and
+     * passes every literal-boolean case in LiveCaptureChordTest. Only a real key
+     * press distinguishes Super from Alt.
+     */
+    @Test
+    void aMetaBindingFiresOnARealSuperPressAndNotOnARealAltPress() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "META+O");
+        InputHandler withSuper = new InputHandler(InputBindingFactory.supplier(config));
+        withSuper.handleKeyEvent(GLFW_KEY_LEFT_SUPER, GLFW_PRESS);
+        withSuper.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
+        assertTrue(toggles(config, withSuper));
+
+        InputHandler withAlt = new InputHandler(InputBindingFactory.supplier(config));
+        withAlt.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
+        withAlt.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
+        assertFalse(toggles(config, withAlt));
+    }
+
+    /**
+     * isKeyDown(-1) is not false: it falls through to
+     * {@code keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld()},
+     * and an unbound LIVE_REWIND_KEY is -1 too. So an unbound capture binding
+     * fires from a held pad bumper unless the call site guards on isBound() first.
+     */
+    @Test
+    void anUnboundBindingDoesNotFireFromAHeldGamepadRewindButton() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "");
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_KEY, "");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config),
+                new FakePad(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER));
+        input.refreshLogicalSnapshot();
+
+        assertEquals(-1, config.getInt(SonicConfiguration.LIVE_REWIND_KEY),
+                "precondition: rewind unbound, so isKeyDown(-1) reaches the pad branch");
+        assertTrue(input.isKeyDown(-1), "precondition: the hazard this guard exists for");
+        assertFalse(toggles(config, input));
+    }
+
+    /** One connected pad with the given buttons held. */
+    private static final class FakePad implements GamepadStateSource {
+        private final boolean[] buttons = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];
+
+        FakePad(int... pressedButtons) {
+            for (int button : pressedButtons) {
+                buttons[button] = true;
+            }
+        }
+
+        @Override
+        public List<DeviceState> pollDevices() {
+            return List.of(DeviceState.connected(0, "pad-0", buttons, 0.0f, 0.0f));
         }
     }
 

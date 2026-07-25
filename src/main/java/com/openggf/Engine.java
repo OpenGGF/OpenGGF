@@ -23,6 +23,7 @@ import com.openggf.audio.LWJGLAudioBackend;
 import com.openggf.capture.*;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.FrameRateResolver;
+import com.openggf.configuration.KeyChord;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugOption;
@@ -1938,13 +1939,33 @@ public class Engine {
 		controller.start(viewport, frameRate);
 	}
 
+	/**
+	 * True on the frame the configured capture chord becomes satisfied.
+	 *
+	 * <p>The {@code isBound()} guard is load-bearing and must precede
+	 * {@code isKeyDown}: {@link com.openggf.control.InputHandler#isKeyDown(int)}
+	 * with -1 is not false, it falls through to
+	 * {@code keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld()},
+	 * and {@code rewindKey()} is -1 too when live rewind is unbound -- so an
+	 * unbound binding would fire from a held pad bumper.
+	 */
+	static boolean shouldToggleLiveCapture(KeyChord chord, LiveCaptureChord detector,
+			InputHandler input) {
+		if (chord == null || !chord.isBound()) {
+			return false;
+		}
+		return detector.update(chord, input.isKeyDown(chord.keyCode()),
+				input.isShiftDown(), input.isControlDown(),
+				input.isAltDown(), input.isSuperDown());
+	}
+
 	private void handleLiveCaptureShortcut() {
 		if (inputHandler == null) {
 			return;
 		}
-		int key = configService.getInt(SonicConfiguration.CAPTURE_TOGGLE_KEY);
-		if (!liveCaptureChord.update(inputHandler.isKeyDown(key), inputHandler.isShiftDown(),
-				inputHandler.isControlDown(), inputHandler.isAltDown())) {
+		if (!shouldToggleLiveCapture(
+				configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
+				liveCaptureChord, inputHandler)) {
 			return;
 		}
 		switch (liveCaptureController.state()) {

@@ -8,6 +8,7 @@ import org.lwjgl.glfw.GLFW;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -80,6 +81,60 @@ public class TestDebugOverlayManagerReset {
 
         assertTrue(manager.isEnabled(DebugOverlayToggle.PERFORMANCE),
                 "P must toggle the performance panel even when normal debug shortcuts are disabled");
+        manager.resetState();
+    }
+
+    /**
+     * OBJECT_DEBUG is GLFW_KEY_O and the toggles fired on a bare isKeyPressed, so
+     * the SHIFT+O capture default toggled object debug on the same keystroke that
+     * started a recording.
+     */
+    @Test
+    public void aModifiedKeystrokeDoesNotToggleAnOverlay() {
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        boolean before = manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG);
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_PRESS);
+        handler.handleKeyEvent(GLFW.GLFW_KEY_O, GLFW.GLFW_PRESS);
+
+        manager.updateInput(handler, true);
+
+        assertEquals(before, manager.isEnabled(DebugOverlayToggle.OBJECT_DEBUG));
+        manager.resetState();
+    }
+
+    @Test
+    public void anUnmodifiedKeystrokeStillTogglesAnOverlay() {
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        boolean before = manager.isEnabled(DebugOverlayToggle.PLAYER_PANEL);
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW.GLFW_KEY_F3, GLFW.GLFW_PRESS);
+
+        manager.updateInput(handler, true);
+
+        assertNotEquals(before, manager.isEnabled(DebugOverlayToggle.PLAYER_PANEL));
+        manager.resetState();
+    }
+
+    /**
+     * PERFORMANCE is dispatched above the debugShortcutsEnabled gate, so it needs
+     * the same treatment separately. Ctrl+P is the clipboard-copy chord and must
+     * not also toggle the overlay -- a pre-existing double-fire.
+     */
+    @Test
+    public void ctrlPCopiesStatsWithoutAlsoTogglingThePerformanceOverlay() {
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        boolean before = manager.isEnabled(DebugOverlayToggle.PERFORMANCE);
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_PRESS);
+        handler.handleKeyEvent(GLFW.GLFW_KEY_P, GLFW.GLFW_PRESS);
+
+        manager.updateInput(handler, true);
+
+        assertEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE));
         manager.resetState();
     }
 

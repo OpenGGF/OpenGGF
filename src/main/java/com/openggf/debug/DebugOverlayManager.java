@@ -48,7 +48,11 @@ public class DebugOverlayManager {
         if (handler == null) {
             return;
         }
-        if (handler.isKeyPressed(DebugOverlayToggle.PERFORMANCE.keyCode())) {
+        // These are hardcoded single keys with no chord, so requiring no modifier
+        // held is the same exactness rule the bindings follow. It is what stops
+        // OBJECT_DEBUG (O) firing on the Shift+O that toggles live recording, and
+        // here it stops Ctrl+P toggling this panel as well as copying the stats.
+        if (handler.isKeyPressedWithoutModifiers(DebugOverlayToggle.PERFORMANCE.keyCode())) {
             setEnabled(DebugOverlayToggle.PERFORMANCE,
                     !isEnabled(DebugOverlayToggle.PERFORMANCE));
         }
@@ -59,7 +63,7 @@ public class DebugOverlayManager {
             if (toggle == DebugOverlayToggle.PERFORMANCE) {
                 continue;
             }
-            if (handler.isKeyPressed(toggle.keyCode())) {
+            if (handler.isKeyPressedWithoutModifiers(toggle.keyCode())) {
                 setEnabled(toggle, !isEnabled(toggle));
             }
         }

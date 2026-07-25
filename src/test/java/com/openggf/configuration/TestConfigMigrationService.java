@@ -1,16 +1,22 @@
 package com.openggf.configuration;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.openggf.configuration.KeyChord.Modifier.SHIFT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_APOSTROPHE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F8;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_O;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_V;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_WORLD_1;
@@ -111,5 +117,55 @@ class TestConfigMigrationService {
 
         assertFalse(service.migrateDeprecatedDisplayColorProfileToggleKey(config));
         assertEquals("G", config.get(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name()));
+    }
+
+    @Test
+    void migrateDeprecatedCaptureToggleKey_rewritesEverySpellingOfTheSupersededDefault() {
+        ConfigMigrationService service = new ConfigMigrationService();
+        String key = SonicConfiguration.CAPTURE_TOGGLE_KEY.name();
+
+        for (Object superseded : new Object[] {"O", "GLFW_KEY_O", "KEY_O", GLFW_KEY_O}) {
+            Map<String, Object> config = new HashMap<>();
+            config.put(key, superseded);
+
+            assertTrue(service.migrateDeprecatedCaptureToggleKey(config), String.valueOf(superseded));
+            assertEquals("SHIFT+O", config.get(key));
+        }
+    }
+
+    @Test
+    void migrateDeprecatedCaptureToggleKey_leavesACustomisedBindingAlone() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(SonicConfiguration.CAPTURE_TOGGLE_KEY.name(), "P");
+
+        assertFalse(new ConfigMigrationService().migrateDeprecatedCaptureToggleKey(config));
+        assertEquals("P", config.get(SonicConfiguration.CAPTURE_TOGGLE_KEY.name()));
+    }
+
+    @Test
+    void migrateDeprecatedCaptureToggleKey_isIdempotent() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(SonicConfiguration.CAPTURE_TOGGLE_KEY.name(), "SHIFT+O");
+
+        assertFalse(new ConfigMigrationService().migrateDeprecatedCaptureToggleKey(config));
+    }
+
+    /**
+     * The three cases above test the migration function; this one tests that
+     * loadConfig actually calls it, which is the part a user would notice.
+     * Without the wiring every existing install keeps its bare O, exact matching
+     * rejects the held Shift, and Shift+O stops working with the suite green.
+     */
+    @Test
+    void anExistingInstallCarryingTheSupersededDefaultIsMigratedOnLoad(@TempDir Path tempDir)
+            throws IOException {
+        Files.writeString(tempDir.resolve("config.yaml"), "capture:\n  toggleKey: O\n");
+
+        SonicConfigurationService service = SonicConfigurationService.createStandalone(tempDir);
+
+        assertEquals(KeyChord.of(GLFW_KEY_O, SHIFT),
+                service.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY));
+        assertTrue(Files.readString(tempDir.resolve("config.yaml")).contains("toggleKey: SHIFT+O"),
+                "the migration must be persisted, not re-applied on every launch");
     }
 }

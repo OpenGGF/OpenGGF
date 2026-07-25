@@ -276,8 +276,9 @@ Allowed launch profile enums:
 
 OpenGGF has two separate recording systems:
 
-- **Live viewport recording:** press `Shift+O` (or `Shift+<capture.toggleKey>`)
-  during normal windowed execution to start and press it again to stop. This
+- **Live viewport recording:** press `Shift+O` — or whatever `capture.toggleKey`
+  is set to, since the modifiers are part of the value — during normal windowed
+  execution to start and press it again to stop. This
   writes `capture-live-<UTC timestamp>.mkv` under `capture.outputDir` using
   lossless FFV1 video and stereo FLAC audio. It captures only the physical game
   viewport—not window borders or letterbox/pillarbox bars—and automatically
@@ -430,7 +431,7 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `CAPTURE_OUTPUT_DIR` | `capture.outputDir` | string | `"target/trace-videos"` | Output directory for live and trace capture videos. |
-| `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `O` | Complete-chord live viewport recording toggle (`Shift` + this key, with Ctrl/Alt released). |
+| `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `SHIFT+O` | Live viewport recording toggle. The modifiers live in the value (`CTRL+SHIFT+O`, `META+O`, or a bare key such as `P` for none) and are matched exactly. A bare `O` is reserved — the compatibility migration rewrites it back to `SHIFT+O` on every launch. |
 | `CAPTURE_SCALE` | `capture.scale` | int | `4` | Trace capture only: integer nearest-neighbor upscale factor applied to captured frames; live viewport recording always uses scale 1. |
 | `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
