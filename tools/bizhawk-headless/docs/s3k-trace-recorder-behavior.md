@@ -1,14 +1,15 @@
 # S3K Trace Recorder — Byte-Level CORE Specification (RAM map, physics.csv, metadata)
 
 Authoritative CORE specification for porting
-`tools/bizhawk/s3k_trace_recorder.lua` (v6.30-s3k, 4957 lines, using
+`tools/bizhawk/s3k_trace_recorder.lua` (v6.31-s3k, using
 `tools/bizhawk/lib/oggf_trace_common.lua`) to the C# headless harness
 (`tools/bizhawk-headless/`). This document owns: the S3K RAM address map,
 the `physics.csv` row format and its input-column derivation
 (incl. `ADVANCE_ONLY` row semantics), file encodings, and the
 `metadata.json` trace_schema-6 byte layout including the empirically
-pinned 6.28-fixture vs 6.30-HEAD delta. Two sibling documents own the
-rest of the surface and are normative for their scope:
+pinned fixture-vs-HEAD delta (now `recording_date` only). Two sibling
+documents own the rest of the surface and are normative for their
+scope:
 
 - [s3k-aux-events.md](s3k-aux-events.md) — every `aux_state.jsonl` event
   template (verbatim), per-frame emission order, per-fixture event census.
@@ -64,7 +65,7 @@ stripped; Lua `0xB000` = M68K `$FFFFB000`). Multi-byte values are
 big-endian, assembled from consecutive byte reads in the native port.
 Widths: `u8`, `s8`, `u16be`, `s16be`, `u32be`. "skdisasm name" is the
 label the address actually resolves to in
-`docs/skdisasm/sonic3k.constants.asm` — three of the Lua's own constant
+`docs/skdisasm/sonic3k.constants.asm` — some of the Lua's own constant
 names are historically mislabeled (flagged below); **reproduce the read,
 not the label**.
 
@@ -97,7 +98,7 @@ not the label**.
 | `0xEED2` / `0xEED4` | u16be | `Events_bg+$00` / `+$02` | `aiz_fire_transition.events_bg_00_word/_02_word` |
 | `0xF664` | u8 | `Background_collision_flag` | `cnz_event_ram` only |
 | `0xF711` | u8 | level-started flag | `gameplay_start` checkpoint gates |
-| `0xFE08` | u16be | **`Debug_placement_mode`** (routine byte + type byte) — the Lua calls it `ADDR_FRAMECOUNT` | CSV `gameplay_frame_counter`; every aux `vfc`; `oscillation_state.level_frame_counter`. **Constant `0` outside debug mode — `0000` / `"vfc":0` across all three fixtures.** S3K's real `Level_frame_counter` is `$FE04` and is NEVER read; reproduce the `0xFE08` read verbatim, do not "fix" it |
+| `0xFE04` | u16be | **`Level_frame_counter`** — the Lua calls it `ADDR_FRAMECOUNT` | CSV `gameplay_frame_counter`; every aux `vfc`; `oscillation_state.level_frame_counter`. **Live**: it starts at `0` on the pre-level prefix rows and ticks once per level frame thereafter. Until v6.31-s3k this read was `0xFE08` (`Debug_placement_mode`, dead-zero outside debug mode), so every pre-v6.31 fixture carried the constant `0000` / `"vfc":0` in these fields; the three canonical fixtures were regenerated on `0xFE04` and no dead read remains |
 | `0xFE12` | u16be | **`Life_count`** (byte) + unused byte — the Lua calls it `ADDR_VBLA_WORD` | CSV `vblank_counter`. Value is `lives << 8` (`0300`–`0600` observed: 3–6 lives). NOT a VBlank counter; record verbatim |
 | `0xF628` | u16be | `Lag_frame_count` (times V-int routine 0 ran) | CSV `lag_counter`. A REAL RAM read (AIZ arms at `0064` = 100 pre-arm lag frames), unlike S2's constant `0` |
 | `0xF636` | u32be | `RNG_seed` | metadata `rng_seed` (captured at arm); `air_countdown_state.rng_seed` (per frame) |
@@ -249,7 +250,7 @@ Arguments in order (all end-of-frame reads):
 | 3 | `camera_x` | u16be `0xEE78` |
 | 4 | `camera_y` | u16be `0xEE7C` |
 | 5 | `rings` | u16be `0xFE20` |
-| 6 | `gameplay_frame_counter` | u16be `0xFE08` (`Debug_placement_mode` — constant `0000`, §1.1) |
+| 6 | `gameplay_frame_counter` | u16be `0xFE04` (`Level_frame_counter` — live, §1.1) |
 | 7 | `vblank_counter` | u16be `0xFE12` (`Life_count << 8`, §1.1) |
 | 8 | `lag_counter` | u16be `0xF628` (`Lag_frame_count`) |
 | 9 | `player_present` | **literal `1`**, never derived (the AIZ tail rows show all-zero player fields with `present=1`) |
@@ -328,8 +329,9 @@ are normative in [s3k-aux-events.md](s3k-aux-events.md). Core facts that
 bind this document's files together:
 
 - One JSON object per line; every line flushed on write. `vfc` on
-  (almost) every event is a fresh u16be `0xFE08` read — always `0` in
-  fixtures. `zone_act_state` and `checkpoint` have no `vfc`.
+  (almost) every event is a fresh u16be `0xFE04` read — live, and equal
+  to that frame's `gameplay_frame_counter` column. `zone_act_state` and
+  `checkpoint` have no `vfc`.
 - Pre-trace one-shots (`cpu_state_snapshot`, `object_state_snapshot`
   with the full `0x4A`-byte `"off_%02X"` dump) are written at the start
   of the row-0 iteration, so they are the first aux lines.
@@ -371,7 +373,7 @@ bind this document's files together:
   "sidekicks": ["tails"],
   "rng_seed": "0x<hex8>",
   "recording_date": "<YYYY-MM-DD>",
-  "lua_script_version": "6.30-s3k",
+  "lua_script_version": "6.31-s3k",
   "trace_schema": 6,
   "csv_version": 7,
   "capture_mode": "physics_animation_aux_without_diagnostic_hooks",
@@ -423,34 +425,36 @@ The file is (re)written at arm, on every row where `N % 300 == 0`, and
 at finalisation — only the final write survives; a native port may write
 it once at the end.
 
-### 6.2 Pinned fixture delta (6.28-stamped fixtures vs 6.30 output)
+### 6.2 Pinned fixture delta (6.31-stamped fixtures vs 6.31 output)
 
-Established from `git log -p` on the Lua and the fixture bytes:
-
-- **v6.28 → v6.29** (commit `2a688288f` "fix(trace): remove S3K replay
-  phase recorder metadata"): removed the single line
-  `  "pre_trace_osc_frames": <start_gameplay_frame_counter>,` (formerly
-  between `trace_frame_count` and `start_x`); version string bump.
-  Nothing else.
-- **v6.29 → v6.30** (commit `4393d74c3` "fix(trace): align fresh roster
-  and AIZ inputs"): removed the `aiz_end_to_end` `-1` input-index
-  adjustment (§4); version string bump. The same commit regenerated the
-  AIZ fixture's `physics.csv.gz` to the new input convention and
-  **hand-removed** the `pre_trace_osc_frames` line from the AIZ and CNZ
-  fixture `metadata.json` — but NOT from MGZ.
-
-Exact permitted per-fixture metadata delta for a fresh v6.30
-lightweight capture:
+The three canonical fixtures were regenerated by v6.31-s3k (the
+`ADDR_FRAMECOUNT` `0xFE08` → `0xFE04` fix), so the historical allowances
+are gone at the source rather than tolerated in the gate:
 
 | Fixture | Allowed differences vs fresh capture |
 |---|---|
-| `aiz1_to_hcz_fullrun` | `lua_script_version` `"6.28-s3k"` ↔ `"6.30-s3k"`; `recording_date` value |
-| `cnz` | same two |
-| `mgz` | same two, PLUS the fixture contains the extra line `  "pre_trace_osc_frames": 0,` after `trace_frame_count` which fresh output omits |
+| `aiz1_to_hcz_fullrun` | `recording_date` value |
+| `cnz` | `recording_date` value |
+| `mgz` | `recording_date` value |
 
 Nothing else — key order, indentation, `", "` joining inside
-`aux_schema_extras`, and every other value must match byte-for-byte. Pin
-these deltas exactly in the gates; no loose normalization.
+`aux_schema_extras`, and every other value must match byte-for-byte,
+`lua_script_version` `"6.31-s3k"` included (pinned as an exact literal on
+BOTH sides). No loose normalization.
+
+Superseded allowances, for history only — do NOT reintroduce them:
+
+- **v6.28 → v6.29** (commit `2a688288f`) removed the line
+  `  "pre_trace_osc_frames": <start_gameplay_frame_counter>,` (formerly
+  between `trace_frame_count` and `start_x`). Commit `4393d74c3`
+  hand-removed it from the AIZ and CNZ fixtures but missed MGZ's, so the
+  gate carried an MGZ-only fixture-extra-line allowance until the v6.31
+  regeneration dropped the key.
+- **v6.29 → v6.30** (commit `4393d74c3`) removed the `aiz_end_to_end`
+  `-1` input-index adjustment (§4) and regenerated the AIZ fixture's
+  `physics.csv.gz` to the new input convention. The version-string
+  allowance `"6.28-s3k"` ↔ `"6.30-s3k"` that followed is likewise gone:
+  fixture and port both stamp `6.31-s3k`.
 
 ---
 
@@ -476,9 +480,11 @@ Different (S3K-specific — never copy S1/S2 values):
   `+0x22`); interact at `+0x42`; move-lock at `+0x32`; 110 slots.
 - `lag_counter` is a real RAM read (`0xF628` `Lag_frame_count`), unlike
   S2's constant `0`.
-- `gameplay_frame_counter` reads `0xFE08` = `Debug_placement_mode`
-  (constant 0), NOT the live `Level_frame_counter` that S2 reads at its
-  `0xFE04` — reproduce the dead read.
+- `gameplay_frame_counter` reads `0xFE04` = `Level_frame_counter`,
+  which is the same *semantic* read S1/S2 make (S2's own
+  `Level_frame_counter` is also at `0xFE04`). This used to be an S3K
+  divergence — the recorder read `0xFE08` = `Debug_placement_mode`,
+  constant 0 — and v6.31-s3k removed it.
 - `vblank_counter` reads `0xFE12` = `Life_count` word, not a V-int
   counter (S2 reads its `Vint_runcount` low word).
 - JSON strings via `json_quote` (S1/S2 use `json_escape` + manual

@@ -440,6 +440,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void RoutineChangeWithStandContext()
         {
             var host = NewHost();
+            // Fixture ADDR_FRAMECOUNT (Level_frame_counter, 0xFE04)
+            // at that instant; the recorder reads it live since Lua
+            // v6.31-s3k.
+            host.SetU16(0xFE04, 15130);
             host.Ram[0xF600] = 0x0C;
             host.Ram[0xFE10] = 0x03;
             // CNZ fixture F15129: hurt transition while standing on slot 4.
@@ -461,7 +465,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             List<string> routineChanges = Of(lines, "routine_change");
             AssertEx.Equal(1, routineChanges.Count);
             AssertEx.Equal(
-                "{\"frame\":15129,\"vfc\":0,\"event\":\"routine_change\","
+                "{\"frame\":15129,\"vfc\":15130,\"event\":\"routine_change\","
                 + "\"from\":\"0x02\",\"to\":\"0x04\","
                 + "\"sonic_x\":\"0x3280\",\"sonic_y\":\"0x02C8\","
                 + "\"x_vel\":-512,\"y_vel\":-1024,\"inertia\":0,"
@@ -672,6 +676,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void AirCountdownWithChildren()
         {
             var host = NewHost();
+            // Fixture ADDR_FRAMECOUNT (Level_frame_counter, 0xFE04)
+            // at that instant; the recorder reads it live since Lua
+            // v6.31-s3k.
+            host.SetU16(0xFE04, 17822);
             host.SetU32(0xF636, 0xF3F7AD13);
             // Fixed slot 94: Obj_AirCountdown controller owned by P1.
             int addr = Slot(94);
@@ -699,7 +707,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "air_countdown_state");
             AssertEx.Equal(2, lines.Count);
             AssertEx.Equal(
-                "{\"frame\":17824,\"vfc\":0,\"event\":\"air_countdown_state\","
+                "{\"frame\":17824,\"vfc\":17822,\"event\":\"air_countdown_state\","
                 + "\"owner\":\"p1\",\"fixed_slot\":94,"
                 + "\"object_code\":\"0x00018164\",\"routine\":\"0x0A\","
                 + "\"subtype\":\"0x81\",\"obj30\":\"0x0000\","
@@ -726,6 +734,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void CageState()
         {
             var host = NewHost();
+            // Fixture ADDR_FRAMECOUNT (Level_frame_counter, 0xFE04)
+            // at that instant; the recorder reads it live since Lua
+            // v6.31-s3k.
+            host.SetU16(0xFE04, 1650);
             int addr = Slot(4);
             host.SetU32(addr, 0x0003385E);
             host.SetU16(addr + 0x10, 0x1300);
@@ -738,7 +750,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "cage_state");
             AssertEx.Equal(1, lines.Count);
             AssertEx.Equal(
-                "{\"frame\":1649,\"vfc\":0,\"event\":\"cage_state\","
+                "{\"frame\":1649,\"vfc\":1650,\"event\":\"cage_state\","
                 + "\"slot\":4,\"x\":\"0x1300\",\"y\":\"0x07C0\","
                 + "\"subtype\":\"0x28\",\"status\":\"0x01\","
                 + "\"p1_phase\":\"0x00\",\"p1_state\":\"0x00\","
@@ -749,6 +761,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void CnzCylinderState()
         {
             var host = NewHost();
+            // Fixture ADDR_FRAMECOUNT (Level_frame_counter, 0xFE04)
+            // at that instant; the recorder reads it live since Lua
+            // v6.31-s3k.
+            host.SetU16(0xFE04, 4491);
             int addr = Slot(9);
             host.SetU32(addr, 0x00032188);
             host.SetU16(addr + 0x10, 0x1BB6);
@@ -766,7 +782,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "cnz_cylinder_state");
             AssertEx.Equal(1, lines.Count);
             AssertEx.Equal(
-                "{\"frame\":4490,\"vfc\":0,\"event\":\"cnz_cylinder_state\","
+                "{\"frame\":4490,\"vfc\":4491,\"event\":\"cnz_cylinder_state\","
                 + "\"slot\":9,\"x\":\"0x1BB6\",\"y\":\"0x07E0\","
                 + "\"subtype\":\"0x41\",\"status\":\"0x11\","
                 + "\"routine\":\"0x00\",\"render_flags\":\"0x84\","
@@ -782,6 +798,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void CollisionResponseListEndOfFrame()
         {
             var host = NewHost();
+            // Fixture ADDR_FRAMECOUNT (Level_frame_counter, 0xFE04)
+            // at that instant; the recorder reads it live since Lua
+            // v6.31-s3k.
+            host.SetU16(0xFE04, 619);
             host.Ram[0xFE10] = 0x03;
             host.SetU16(0xE380, 6);
             host.SetU16(0xE382, (ushort)Slot(4));
@@ -808,7 +828,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "collision_response_list_end_of_frame");
             AssertEx.Equal(1, lines.Count);
             AssertEx.Equal(
-                "{\"frame\":618,\"vfc\":0,"
+                "{\"frame\":618,\"vfc\":619,"
                 + "\"event\":\"collision_response_list_end_of_frame\","
                 + "\"list_count\":6,\"list_entries\":["
                 + "{\"slot\":4,\"ost_lo\":\"0xB128\","
@@ -843,6 +863,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void AizFireTransition()
         {
             var host = NewHost();
+            // Fixture ADDR_FRAMECOUNT (Level_frame_counter, 0xFE04)
+            // at that instant; the recorder reads it live since Lua
+            // v6.31-s3k.
+            host.SetU16(0xFE04, 4911);
             host.Ram[0xFE10] = 0x00;
             host.SetU32(0xEE90, 0x01700000);
             host.SetU16(0xEE96, 0x0170);
@@ -857,7 +881,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "aiz_fire_transition");
             AssertEx.Equal(1, lines.Count);
             AssertEx.Equal(
-                "{\"frame\":5200,\"vfc\":0,\"event\":\"aiz_fire_transition\","
+                "{\"frame\":5200,\"vfc\":4911,\"event\":\"aiz_fire_transition\","
                 + "\"camera_y_bg_copy\":\"0x01700000\","
                 + "\"camera_y_bg_rounded\":\"0x0170\","
                 + "\"events_bg_00_word\":\"0xFFFF\","
@@ -878,6 +902,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void TerrainWallSensor()
         {
             var host = NewHost();
+            // Fixture ADDR_FRAMECOUNT (Level_frame_counter, 0xFE04)
+            // at that instant; the recorder reads it live since Lua
+            // v6.31-s3k.
+            host.SetU16(0xFE04, 7250);
             host.Ram[0xFE10] = 0x00;
             // Sonic (AIZ F7549): airborne + rolling against the wall clamp.
             host.SetU16(0xB010, 0x11F4);
@@ -909,7 +937,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "terrain_wall_sensor");
             AssertEx.Equal(1, lines.Count);
             AssertEx.Equal(
-                "{\"frame\":7549,\"vfc\":0,\"event\":\"terrain_wall_sensor\","
+                "{\"frame\":7549,\"vfc\":7250,\"event\":\"terrain_wall_sensor\","
                 + "\"sonic\":{\"x_pos\":\"0x11F4\",\"x_sub\":\"0x0200\","
                 + "\"y_pos\":\"0x032F\",\"y_sub\":\"0xC800\","
                 + "\"x_vel\":\"0xFE41\",\"y_vel\":\"0x04C0\","
@@ -937,6 +965,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void AizHandoffTerrainState()
         {
             var host = NewHost();
+            // Fixture ADDR_FRAMECOUNT (Level_frame_counter, 0xFE04)
+            // at that instant; the recorder reads it live since Lua
+            // v6.31-s3k.
+            host.SetU16(0xFE04, 5141);
             host.Ram[0xFE10] = 0x00;
             host.Ram[0xFE11] = 0x00;
             host.SetU16(0xEEC2, 0x0014);
@@ -957,7 +989,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "aiz_handoff_terrain_state");
             AssertEx.Equal(1, lines.Count);
             AssertEx.Equal(
-                "{\"frame\":5430,\"vfc\":0,"
+                "{\"frame\":5430,\"vfc\":5141,"
                 + "\"event\":\"aiz_handoff_terrain_state\","
                 + "\"events_bg\":\"0x0014\",\"draw_pos\":\"0xFFF0\","
                 + "\"draw_rows\":\"0xFFFF\",\"kos_modules_left\":\"0x00\","
@@ -1049,7 +1081,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(0, Of(second, "slot_dump").Count);
 
             // Balloon proximity carries the extra on object_near too
-            // (CNZ fixture F146 literal, balloon risen to y 0x0679).
+            // (CNZ fixture F146 literal, balloon risen to y 0x0679). Only
+            // this block replays a real fixture line, so only it stages the
+            // fixture's ADDR_FRAMECOUNT (Level_frame_counter, 0xFE04 — read
+            // live since Lua v6.31-s3k); the frame-2613/2614 assertions
+            // above are composed staging and leave it 0.
+            host.SetU16(0xFE04, 147);
             host.SetU16(Slot(4) + 0x10, 0x0180);
             host.SetU16(Slot(4) + 0x14, 0x0679);
             host.Ram[Slot(4) + 0x26] = 0xA4;
@@ -1066,7 +1103,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
             }
             AssertEx.Equal(
-                "{\"frame\":146,\"vfc\":0,\"event\":\"object_near\","
+                "{\"frame\":146,\"vfc\":147,\"event\":\"object_near\","
                 + "\"slot\":4,\"type\":\"0x00031754\",\"x\":\"0x0180\","
                 + "\"y\":\"0x0679\",\"routine\":\"0x00\",\"status\":\"0x00\","
                 + "\"angle\":\"0xA4\",\"base_y\":\"0x0680\"}",

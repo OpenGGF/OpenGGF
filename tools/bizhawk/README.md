@@ -288,7 +288,7 @@ Lua wins.
 ### Sonic 3 & Knuckles trace mode (STANDARD recorder, all three profiles)
 
 With the S3&K locked-on ROM, `--mode trace` replaces `s3k_trace_recorder.lua`
-(v6.30-s3k) on Linux across its three STANDARD-recorder profiles, selected
+(v6.31-s3k) on Linux across its three STANDARD-recorder profiles, selected
 with `--trace-profile` (mirroring the Lua's `OGGF_S3K_TRACE_PROFILE`):
 
 - **`gameplay_unlock`** — the default; no extra flags.
@@ -347,13 +347,22 @@ normalization on `physics.csv` / `aux_state.jsonl`:
   `gameplay_start`/act-transition checkpoint — only `gameplay_end`).
 
 **Pinned metadata delta (no loose normalization):** `metadata.json` differs
-from these three fixtures only in `recording_date`; the fixtures' stamped
-`lua_script_version` `"6.28-s3k"` is produced as `"6.30-s3k"` (the v6.29/
-v6.30 Lua commits changed nothing else in these fixtures' output); and, for
-the MGZ fixture only, its leftover `"pre_trace_osc_frames": 0,` line
-(dropped from `write_metadata()` in v6.29, hand-removed from the AIZ/CNZ
-fixtures but not MGZ's). Every delta is asserted as an exact literal at an
-exact position, never a loose regex or a "drop unknown keys" normalization.
+from these three fixtures only in `recording_date` — both sides stamp the
+literal `lua_script_version` `"6.31-s3k"`, so there is no version-line delta
+to normalize. This is a regeneration, not a widened allowance: the fixtures
+previously in tree were captured before `95c36166c` fixed
+`s3k_trace_recorder.lua`'s `ADDR_FRAMECOUNT` from `0xFE08`
+(`Debug_placement_mode`, dead-zero in normal gameplay) to `0xFE04`
+(`Level_frame_counter`), so `physics.csv`'s `gameplay_frame_counter` column
+and every aux `vfc` / `oscillation_state.level_frame_counter` read a constant
+`0`/`0000` across all three fixtures' entire length. All three were
+recaptured on the fixed recorder (`3eebb13bf`) and now carry a live,
+ROM-plausible counter (monotonic apart from documented lag-frame stalls and
+level re-init clears); the MGZ fixture's leftover `"pre_trace_osc_frames": 0,`
+line (retired from `write_metadata()` in v6.29, already dropped from the
+AIZ/CNZ fixtures) is dropped here too. Every delta is asserted as an exact
+literal at an exact position, never a loose regex or a "drop unknown keys"
+normalization.
 The byte-level porting contract lives in
 `tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md` (RAM map,
 physics.csv, metadata) and `tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md`
@@ -520,8 +529,9 @@ The byte-level porting contracts live in
 `tools/bizhawk-headless/docs/s3k-complete-run-behavior.md` (segmentation
 state machine, per-segment offsets, `zone_token_for`),
 `tools/bizhawk-headless/docs/s3k-completerun-profiles.md` (the three segment
-profiles, the `ADDR_FRAMECOUNT` `0xFE04` fork, the `game_paused_state` aux
-addition), and `tools/bizhawk-headless/docs/s3k-run-publication.md`
+profiles, the retired `ADDR_FRAMECOUNT` recorder-identity fork now unified on
+`0xFE04` for both S3K recorders, the `game_paused_state` aux addition), and
+`tools/bizhawk-headless/docs/s3k-run-publication.md`
 (directory/metadata/manifest byte layout, the three capture identities, the
 full environment-variable surface); where any spec text and the Lua
 disagree, the Lua wins.

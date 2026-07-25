@@ -7,7 +7,7 @@ namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
     /// Recorder profile selected by OGGF_S3K_TRACE_PROFILE in the Lua
-    /// (tools/bizhawk/s3k_trace_recorder.lua v6.30-s3k). The profile
+    /// (tools/bizhawk/s3k_trace_recorder.lua v6.31-s3k). The profile
     /// changes arm/stop rules (runner concern), the checkpoint
     /// vocabulary, and the aiz_fire_transition profile gate (both
     /// handled here).
@@ -26,12 +26,16 @@ namespace OpenGGF.BizHawk.Headless
         /// aiz_end_to_end checkpoint vocabularies and the
         /// aiz_fire_transition writer are all structurally unreachable —
         /// exactly what the existing profile gates already produce for an
-        /// unrecognised profile. Its two OBSERVABLE deltas over the
-        /// standard recorder are handled here: the always-on
+        /// unrecognised profile. Its ONE remaining observable delta over
+        /// the standard recorder is handled here: the always-on
         /// game_paused_state family (emitted between oscillation_state and
-        /// object_state, absent from the standard recorder entirely) and
-        /// ADDR_FRAMECOUNT moving 0xFE08 -> 0xFE04, which changes every
-        /// "vfc" field and oscillation_state.level_frame_counter.
+        /// object_state, absent from the standard recorder entirely).
+        /// ADDR_FRAMECOUNT used to be a second delta (0xFE08 here, 0xFE04
+        /// there, feeding every "vfc" field and
+        /// oscillation_state.level_frame_counter); Lua v6.31-s3k moved the
+        /// standard recorder to 0xFE04 too, so both recorders now read
+        /// <see cref="S3KRam.LevelFrameCounter"/> and no profile seam is
+        /// left for it.
         ///
         /// The s3k_bonus_stage profile is NOT a value here: a bonus
         /// segment runs this identical row writer and aux pipeline and
@@ -45,7 +49,7 @@ namespace OpenGGF.BizHawk.Headless
     /// <summary>
     /// Byte-exact port of the S3K standard Lua trace recorder's
     /// frame-polled aux_state.jsonl event surface
-    /// (tools/bizhawk/s3k_trace_recorder.lua v6.30-s3k, spec
+    /// (tools/bizhawk/s3k_trace_recorder.lua v6.31-s3k, spec
     /// docs/s3k-aux-events.md). Covers every family present in the three
     /// gated fixtures: the first-recorded-frame pre-trace snapshots
     /// (<see cref="EmitPreTraceSnapshots"/>), the per-frame cascade after
@@ -97,7 +101,6 @@ namespace OpenGGF.BizHawk.Headless
         public const int CrlWindowEnd = 624;
 
         private readonly S3KTraceProfile profile;
-        private readonly int frameCounterAddress;
         private readonly bool emitsGamePausedState;
 
         // P1 previous-state latches (Lua prev_status / prev_routine /
@@ -128,38 +131,20 @@ namespace OpenGGF.BizHawk.Headless
         private readonly uint[] knownObjects =
             new uint[S3KRam.TotalObjectSlots];
 
-        public S3KAuxEventEngine(S3KTraceProfile profile)
-            : this(profile, FrameCounterAddressFor(profile))
-        {
-        }
-
         /// <summary>
-        /// Explicit-ADDR_FRAMECOUNT constructor. Only the two canonical
-        /// addresses are ever correct — 0xFE08 for the standard recorder,
-        /// 0xFE04 for the complete-run recorder — but the parameter is
-        /// kept open so a test can pin the legacy 0xFE08 complete-run
-        /// captures (the runs/s3-knux-multibonus-ss fixture set, taken
-        /// before Lua commit 6564667eb moved the address WITHOUT bumping
-        /// LUA_SCRIPT_VERSION; spec s3k-completerun-profiles.md §7.3).
+        /// ADDR_FRAMECOUNT is <see cref="S3KRam.LevelFrameCounter"/>
+        /// (0xFE04) for every profile, so there is no address parameter and
+        /// no FrameCounterAddressFor seam any more: the standard recorder
+        /// moved off the dead 0xFE08 read in Lua v6.31-s3k, and the legacy
+        /// 0xFE08-era complete-run captures that the explicit-address
+        /// constructor existed to pin (runs/s3-knux-multibonus-ss) were
+        /// themselves regenerated on 0xFE04 in commit 63eccd290.
         /// </summary>
-        public S3KAuxEventEngine(
-            S3KTraceProfile profile, int frameCounterAddress)
+        public S3KAuxEventEngine(S3KTraceProfile profile)
         {
             this.profile = profile;
-            this.frameCounterAddress = frameCounterAddress;
             this.emitsGamePausedState =
                 profile == S3KTraceProfile.CompleteRun;
-        }
-
-        /// <summary>
-        /// The recorder's ADDR_FRAMECOUNT, selected by RECORDER identity
-        /// (which is what the profile encodes), never by version string.
-        /// </summary>
-        public static int FrameCounterAddressFor(S3KTraceProfile profile)
-        {
-            return profile == S3KTraceProfile.CompleteRun
-                ? S3KRam.LevelFrameCounter
-                : S3KRam.FrameCount;
         }
 
         /// <summary>
@@ -178,7 +163,7 @@ namespace OpenGGF.BizHawk.Headless
 
             var lines = new List<string>();
             lines.Add("{\"frame\":-1,\"vfc\":"
-                + Dec(S3KRam.U16(host, frameCounterAddress))
+                + Dec(S3KRam.U16(host, S3KRam.LevelFrameCounter))
                 + ",\"event\":\"cpu_state_snapshot\",\"character\":\"tails\""
                 + ",\"control_counter\":"
                 + Dec(S3KRam.U16(host, S3KRam.TailsCpuIdleTimer))
@@ -195,7 +180,7 @@ namespace OpenGGF.BizHawk.Headless
                 + "\",\"jumping\":"
                 + Dec(S3KRam.U8(host, S3KRam.TailsCpuAutoJumpFlag)) + "}");
 
-            int vfc = S3KRam.U16(host, frameCounterAddress);
+            int vfc = S3KRam.U16(host, S3KRam.LevelFrameCounter);
             for (int slot = S3KRam.FirstDynamicSlot;
                 slot < S3KRam.TotalObjectSlots;
                 slot++)
@@ -242,7 +227,7 @@ namespace OpenGGF.BizHawk.Headless
             // The Lua re-reads vfc (ADDR_FRAMECOUNT) inside every writer;
             // RAM is static within on_frame_end so one read is
             // byte-identical.
-            int vfc = S3KRam.U16(host, frameCounterAddress);
+            int vfc = S3KRam.U16(host, S3KRam.LevelFrameCounter);
 
             EmitSemanticEvents(lines, traceFrame, host);
             EmitPlayerModeEvent(lines, traceFrame, vfc, host);
@@ -759,7 +744,7 @@ namespace OpenGGF.BizHawk.Headless
 
         /// <summary>
         /// write_oscillation_per_frame: vfc and level_frame_counter are
-        /// the SAME 0xFE08 read; osc_table is the 0x42 Oscillating_table
+        /// the SAME 0xFE04 read; osc_table is the 0x42 Oscillating_table
         /// bytes as one concatenated uppercase-hex string.
         /// </summary>
         private static string FormatOscillationState(

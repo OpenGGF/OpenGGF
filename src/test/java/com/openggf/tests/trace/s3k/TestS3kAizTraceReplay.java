@@ -1089,13 +1089,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
     }
 
     private void stepReplayFrame(TraceData trace, HeadlessTestFixture fixture, TraceExecutionPhase phase) {
-        if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-            fixture.skipFrameFromRecording();
-        } else if (TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace)) {
-            fixture.stepFrameFromRecordingUsingPreviousInput();
-        } else {
-            fixture.stepFrameFromRecording();
-        }
+        driveScenarioReplayFrame(trace, fixture, phase);
     }
 
     private Path findBk2File(Path traceDir) throws IOException {

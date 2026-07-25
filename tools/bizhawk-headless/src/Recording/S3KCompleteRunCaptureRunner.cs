@@ -91,10 +91,10 @@ namespace OpenGGF.BizHawk.Headless
     ///
     /// - segmentation (arm / finalize / stop, dir tokens, transitions) to
     ///   <see cref="S3KCompleteRunSegmenter"/>,
-    /// - the 42-column level/bonus row to <see cref="S3KTraceCsvWriter"/>
-    ///   with the complete-run ADDR_FRAMECOUNT
-    ///   (<see cref="S3KRam.LevelFrameCounter"/>, 0xFE04 — NOT the standard
-    ///   recorder's dead-zero 0xFE08),
+    /// - the 42-column level/bonus row to <see cref="S3KTraceCsvWriter"/>,
+    ///   whose gameplay_frame_counter is the shared ADDR_FRAMECOUNT
+    ///   (<see cref="S3KRam.LevelFrameCounter"/>, 0xFE04) that the standard
+    ///   recorder also reads since Lua v6.31-s3k,
     /// - the aux cascade to <see cref="S3KAuxEventEngine"/> under
     ///   <see cref="S3KTraceProfile.CompleteRun"/>,
     /// - the 20-column special-stage row to
@@ -404,8 +404,7 @@ namespace OpenGGF.BizHawk.Headless
                 WriteLine(physics, S3KTraceCsvWriter.FormatRow(
                     rowIndex,
                     S1InputMask.FromFrame(inputRow),
-                    host,
-                    S3KRam.LevelFrameCounter));
+                    host));
                 foreach (string line in auxEngine.ProcessFrame(rowIndex, host))
                 {
                     WriteLine(aux, line);

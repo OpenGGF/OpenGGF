@@ -1,7 +1,7 @@
 # S3K Standard Trace Recorder — Profiles, Hooks, and Movie Handling
 
 Authoritative migration spec for `tools/bizhawk/s3k_trace_recorder.lua`
-(v6.30-s3k at HEAD, using `tools/bizhawk/lib/oggf_trace_common.lua`) covering:
+(v6.31-s3k at HEAD, using `tools/bizhawk/lib/oggf_trace_common.lua`) covering:
 
 1. the recorder's **profiles** (`aiz_end_to_end`, `level_gated_reset_aware`,
    and the default `gameplay_unlock`): arm/reset/discard/stop semantics and
@@ -15,8 +15,8 @@ Authoritative migration spec for `tools/bizhawk/s3k_trace_recorder.lua`
 
 **The Lua is the behavioral authority.** This document was derived by reading
 the full 4957-line recorder at worktree HEAD plus the shared lib, the three
-gated fixtures, and the Lua's git history for the 6.28 → 6.29 → 6.30 version
-bumps. The S1 spec ([s1-trace-recorder-behavior.md](s1-trace-recorder-behavior.md))
+gated fixtures, and the Lua's git history for the 6.28 → 6.29 → 6.30 → 6.31
+version bumps. The S1 spec ([s1-trace-recorder-behavior.md](s1-trace-recorder-behavior.md))
 §2 frame-alignment model and §8 file-encoding rules carry over; S3K deltas are
 called out explicitly. **s3k_complete_run_recorder.lua (6.32-s3k-completerun)
 is a separate later migration and is out of scope here.**
@@ -25,22 +25,22 @@ is a separate later migration and is out of scope here.**
 
 ## 0. Canonical fixtures and byte targets
 
-All three fixtures are stamped `lua_script_version: "6.28-s3k"`,
+All three fixtures are stamped `lua_script_version: "6.31-s3k"`,
 `trace_schema: 6`, `csv_version: 7`, and — decisively —
 `capture_mode: "physics_animation_aux_without_diagnostic_hooks"`. Gunzipped
 byte targets (fixtures are read-only; gunzip to temp for comparison):
 
 | Fixture | Profile | Offset | Rows | Movie (input rows) | physics.csv sha256 | aux_state.jsonl sha256 |
 |---|---|---|---|---|---|---|
-| `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/` | `aiz_end_to_end` | 511 | 20798 | `s3-aiz1-2-sonictails.bk2` (21309) | `f7b27ab88246de341e90b96e908331f1b5c7d338b825a46c61975140176be456` | `1fd26d37b3d07b5a95dd355bd56d9ba39b5cf63e68e93233320efd607646979e` |
-| `src/test/resources/traces/s3k/cnz/` | `level_gated_reset_aware` | 3171 | 42253 | `s3k-cnz-sonic-tails.bk2` (45597) | `08e7920aa2ab358adb8a051d3e6b8aa6fc23a9c90b783b396e28cdd739f8cf58` | `661c0b58cf65368dd87f20db146076cf5e2893656648f575aef4a81630543ce1` |
-| `src/test/resources/traces/s3k/mgz/` | `level_gated_reset_aware` | 2602 | 35912 | `s3k-mgz-sonic-tails.bk2` (38818) | `e056a587b2f435e5094ec6cc2c050dfb3e25aaecba5ad93165d6bf06ada9b2da` | `2ff344db97ad07f0444eae0296729454f31b50542a9f5d93ff18e3f15c0eedaa` |
+| `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/` | `aiz_end_to_end` | 511 | 20798 | `s3-aiz1-2-sonictails.bk2` (21309) | `aa1f76c7e5adfa9c2618d6189d0f06e0cb2df8bbc2a032e9ca3ba92b8f7f638b` | `9d90d669de5b9fc0c00666ad2023a164d1d110d441b9bcc8403280d1a5d74b47` |
+| `src/test/resources/traces/s3k/cnz/` | `level_gated_reset_aware` | 3171 | 42253 | `s3k-cnz-sonic-tails.bk2` (45597) | `7aa8226d67e28591b469d23deca56065763b9e9fccc69cf1c53d216d1037d1c6` | `17ddb988b74e8718d6e3d73a7aaefff56d077e6e5d015c7ab875a4674a94052e` |
+| `src/test/resources/traces/s3k/mgz/` | `level_gated_reset_aware` | 2602 | 35912 | `s3k-mgz-sonic-tails.bk2` (38818) | `f3b0beb79c0438b65dae215a72f75bc391e964e82791d8f63a163de931bdd558` | `4ce8ee02e8e6dc1664659a494578427da0c6111e5a4c0fb88b71026b2b2c2035` |
 
 `physics.csv` and `aux_state.jsonl` must be **byte-identical with zero
 normalization**. Any difference is a native-port bug (or a mis-derived spec),
 never a normalization.
 
-### 0.1 Pinned metadata delta (6.28-stamped fixtures vs 6.30 output)
+### 0.1 Pinned metadata delta (recording_date only, as of 6.31-s3k)
 
 Established empirically from the Lua git history and the fixture bytes:
 
@@ -56,22 +56,26 @@ Established empirically from the Lua git history and the fixture bytes:
   commit **regenerated the AIZ fixture's `physics.csv.gz`** to the new input
   convention and **hand-removed** the `pre_trace_osc_frames` line from the
   AIZ and CNZ `metadata.json` — but **not** from MGZ's.
+- **v6.30 → v6.31** (`95c36166c` "fix(tools): S3K standard recorder
+  frame-counter address 0xFE08 -> 0xFE04"): `ADDR_FRAMECOUNT` moved from
+  `0xFE08` (`Debug_placement_mode`, dead-zero in normal gameplay) to `0xFE04`
+  (`Level_frame_counter`), and the version string bumped. All three fixtures
+  were regenerated on the fixed recorder (`3eebb13bf`): `physics.csv`'s
+  `gameplay_frame_counter` column and every aux `vfc` /
+  `oscillation_state.level_frame_counter` went from a constant `0`/`0000` to
+  a live, ROM-plausible value, and the MGZ fixture's leftover
+  `pre_trace_osc_frames` line (missed by the v6.29→v6.30 hand-removal) was
+  dropped in the same regeneration.
 
-Therefore the **exact** permitted `metadata.json` delta for a fresh 6.30
-capture vs the checked-in fixtures is, per fixture:
-
-| Key | AIZ / CNZ fixtures | MGZ fixture | 6.30 output |
-|---|---|---|---|
-| `lua_script_version` | `"6.28-s3k"` | `"6.28-s3k"` | `"6.30-s3k"` |
-| `recording_date` | `"2026-07-23"` | `"2026-07-23"` | capture date (`%Y-%m-%d`) |
-| `pre_trace_osc_frames` | absent (hand-normalized) | present, `0` | **absent** |
-
+The three canonical fixtures in tree today are the **regenerated, v6.31**
+captures — the byte targets above are already current. The only permitted
+`metadata.json` delta for a fresh v6.31 capture vs. the checked-in fixtures
+is `recording_date`; `lua_script_version` is `"6.31-s3k"` on both sides and
+`pre_trace_osc_frames` is absent from every fixture (retired since v6.29).
 Every other byte of `metadata.json` — key order, two-space indent, hex
 widths, `aux_schema_extras` element order and `", "` joining, the
-`capture_mode` line, the `notes` value — must match exactly. The gate must
-pin these three deltas exactly; no loose normalization. The AIZ `physics.csv`
-fixture already carries the v6.30 input convention (patched in `4393d74c3`);
-CNZ/MGZ never differed (their profile always used adjustment 0).
+`capture_mode` line, the `notes` value — must match exactly. No loose
+normalization.
 
 ### 0.2 Capture environment of the fixtures
 
@@ -104,7 +108,7 @@ checkpoint vocabulary, metadata `notes`, and the `aux_schema_extras` list.
 | `0xF711` | u8 | level-started flag | `gameplay_start` checkpoints |
 | `0xEEC6` | u16be | `Events_fg_5` | `aiz1_intro_refresh_begin` checkpoint |
 | `0xF636` | u32be | RNG seed | metadata `rng_seed` (captured at arm) |
-| `0xFE08` | u16be | `Level_frame_counter` | CSV `gameplay_frame_counter`; aux `vfc` |
+| `0xFE04` | u16be | `Level_frame_counter` | CSV `gameplay_frame_counter`; aux `vfc`. Was `0xFE08` (`Debug_placement_mode`, dead-zero) before v6.31-s3k — the label in this row was always `Level_frame_counter`, the address was not |
 | `0xFE12` | u16be | VBlank word | CSV `vblank_counter` |
 | `0xF628` | u16be | lag frame count | CSV `lag_counter` (S3K reads a real counter, unlike S2's constant 0) |
 
@@ -398,7 +402,7 @@ fires on**):
 8. *(not started)* arm check (§1.2-1.4). On arm: `offset :=
    emu.framecount()`; capture `start_x/y` (`0xB010`/`0xB014` u16be),
    `start_zone_id/act`, `start_rng_seed` (u32be `0xF636`),
-   `start_gameplay_frame_counter` (`0xFE08`), zone name; `open_files()`
+   `start_gameplay_frame_counter` (`0xFE04`), zone name; `open_files()`
    (CSV header written + flushed); `write_metadata()` (first of many —
    rewritten every 300 frames and at finalize; only the final rewrite's
    bytes ship). Then: `aiz_end_to_end` **falls through** (arm frame = row
@@ -417,7 +421,7 @@ fires on**):
     recorded** — the same movie-end stop-ordering bug found independently in
     both prior ports; do not reintroduce it.
 11. First recorded frame only: pre-trace snapshots (§2.3) and a **recapture**
-    of `start_gameplay_frame_counter` from `0xFE08` (unifies the
+    of `start_gameplay_frame_counter` from `0xFE04` (unifies the
     arm-frame-recorded vs arm-frame-dropped profiles; since v6.29 this value
     no longer reaches metadata but the recapture still happens).
 12. Write CSV row `trace_frame` (§3.3), flush every 60 rows, rewrite
@@ -433,7 +437,8 @@ level-gated, emit `gameplay_end` (§1.4); flush CSV; final
 
 Header and 42-column row format are byte-identical to the S1/S2 CSV v7
 surface (S1 §3.1). S3K-specific sources: `gameplay_frame_counter` ←
-`0xFE08`, `vblank_counter` ← `0xFE12`, `lag_counter` ← `0xF628` (a real
+`0xFE04` (`Level_frame_counter`; `0xFE08` before v6.31-s3k),
+`vblank_counter` ← `0xFE12`, `lag_counter` ← `0xF628` (a real
 counter — MUST be read, not pinned 0), `stand_on_obj` ← u16be at
 `base+0x42` mapped to an OST slot index (0 unless the address is exactly
 `0xB000 + slot*0x4A`, slot < 110), sidekick block from `0xB04A` with
@@ -556,9 +561,10 @@ knob, `pre_trace_osc_frames`, for exactly this reason.)
    segment (CNZ offset 3171 exists only because an earlier AIZ segment was
    discarded via pause+A).
 5. **Pinned metadata delta only** (§0.1): fresh-capture `metadata.json` may
-   differ from fixtures solely in `lua_script_version` (`6.28-s3k` →
-   `6.30-s3k`), `recording_date`, and MGZ's leftover
-   `"pre_trace_osc_frames": 0` line (absent from 6.30 output). Everything
+   differ from fixtures solely in `recording_date` — both sides stamp the
+   literal `lua_script_version: "6.31-s3k"`, and `pre_trace_osc_frames` is
+   absent from every fixture (retired since v6.29, and the MGZ fixture's
+   leftover line was removed in the v6.31 regeneration). Everything
    else — including `capture_mode`, `aux_schema_extras` order, `notes` —
    byte-exact. physics.csv / aux_state.jsonl: zero normalization.
 6. **Hook events are env-gated OFF in all fixtures:** `capture_mode:

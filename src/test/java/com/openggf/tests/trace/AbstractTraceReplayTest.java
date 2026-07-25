@@ -174,6 +174,38 @@ public abstract class AbstractTraceReplayTest {
         return game == SonicGame.SONIC_2 || game == SonicGame.SONIC_3K;
     }
 
+    /**
+     * Drives one replay frame for a focused scenario test through the same
+     * {@link TraceReplayFrameClosureDriver} the whole-trace comparison loop
+     * uses.
+     *
+     * <p>Scenario tests replay a prefix of a trace to reach one interesting
+     * frame and then assert on engine state there. They must reach that frame
+     * along exactly the path {@link #replayMatchesTrace()} takes, otherwise
+     * they are asserting against a differently-driven engine. Hand-rolled
+     * per-test steppers that only special-cased {@code VBLANK_ONLY} silently
+     * promoted {@code ADVANCE_ONLY} rows -- ROM frames where the recorder saw
+     * a controller edge while {@code Level_frame_counter}, {@code
+     * V_int_run_count} and the lag counter all stood still -- into full level
+     * ticks, advancing the object/VBlank clock on frames the ROM never ran.
+     *
+     * @return the BK2 input consumed for this frame
+     */
+    protected final int driveScenarioReplayFrame(
+            TraceData trace, HeadlessTestFixture fixture, TraceExecutionPhase phase) {
+        return TraceReplayFrameClosureDriver.driveS3k(
+                phase,
+                TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace),
+                fixture::stepFrameFromRecording,
+                fixture::stepFrameFromRecordingUsingPreviousInput,
+                fixture::skipFrameFromRecording,
+                fixture::consumeRecordingFrameInputOnly,
+                fixture::advancePlayableAnimationsOnly,
+                fixture::suppressFirstSidekickAnimationOnce,
+                () -> {
+                });
+    }
+
     @Test
     public void replayMatchesTrace() throws Exception {
         // 0. Skip if trace directory or required files are missing

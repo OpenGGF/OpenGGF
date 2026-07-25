@@ -260,21 +260,31 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     string playerTail =
                         ",0000,0000,0000,00,0,0,0,0000,0000,00,00,00,00,00,"
                         + EmptySidekickBlock + "\n";
+                    // gameplay_frame_counter (column 6) is a LIVE
+                    // Level_frame_counter read at 0xFE04 since Lua
+                    // v6.31-s3k — before that the standard recorder read
+                    // the dead-zero Debug_placement_mode at 0xFE08 and this
+                    // column was constant 0000. FakeS1Host.Advance() writes
+                    // the completed frame number to 0xFE04, so rows 0..2
+                    // (completed frames 4..6) carry 0004/0005/0006.
                     AssertEx.Equal(
                         S3KTraceCsvWriter.Header + "\n"
-                        + "0000,0008,0000,0000,0000,0000,0300,0004,1,0104,0304"
+                        + "0000,0008,0000,0000,0000,0004,0300,0004,1,0104,0304"
                         + playerTail
-                        + "0001,0012,0000,0000,0000,0000,0300,0005,1,0104,0304"
+                        + "0001,0012,0000,0000,0000,0005,0300,0005,1,0104,0304"
                         + playerTail
-                        + "0002,0000,0000,0000,0000,0000,0300,0006,1,0104,0304"
+                        + "0002,0000,0000,0000,0000,0006,0300,0006,1,0104,0304"
                         + playerTail,
                         physics.ToString());
 
                     string auxText = aux.ToString();
+                    // Same address feeds every aux vfc: the pre-trace
+                    // snapshot is written immediately before trace row 0,
+                    // i.e. against completed frame 4's RAM.
                     AssertEx.Equal(
                         true,
                         auxText.StartsWith(
-                            "{\"frame\":-1,\"vfc\":0,"
+                            "{\"frame\":-1,\"vfc\":4,"
                             + "\"event\":\"cpu_state_snapshot\""));
                     AssertEx.Equal(
                         1, CountOf(auxText, "\"cpu_state_snapshot\""));
