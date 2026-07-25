@@ -156,6 +156,27 @@ class TestEngineLiveCapturePresentation {
                 .contains("if ("));
     }
 
+    /**
+     * The presented outer frame carries exactly one audio presentation. A
+     * second call here would double the producer's cadence and hand the
+     * recorder a packet the speaker never played, so it is pinned alongside the
+     * capture seam rather than left to the audio-side tests alone.
+     */
+    @Test
+    void productionDisplayPresentsTheAudioOuterFrameExactlyOnce()
+            throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        int displayStart = source.indexOf("private void display()");
+        int displayEnd = source.indexOf(
+                "static LiveCapturePresentationState resolveLiveCapturePresentationState(",
+                displayStart);
+        String display = source.substring(displayStart, displayEnd);
+        assertEquals(1, occurrences(display, "presentOuterAudioFrame(gameLoop"));
+        assertEquals(0, occurrences(display, "presentFrame("),
+                "display() must reach the producer only through the shared "
+                        + "outer-frame seam");
+    }
+
     @Test
     void productionPresentationFlagsResolveEveryExecutableStateBranch() {
         assertEquals(Engine.LiveCapturePresentationState.NORMAL,

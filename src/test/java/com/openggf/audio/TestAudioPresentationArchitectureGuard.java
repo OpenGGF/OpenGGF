@@ -76,6 +76,14 @@ class TestAudioPresentationArchitectureGuard {
     private static final Set<String> FINAL_PCM_SINK = Set.of(
             "audio/output/OpenAlPcmSink.java");
 
+    /** The one production site allowed to publish a presented packet. */
+    private static final Set<String> PRESENTATION_FAN_OUT_OWNER = Set.of(
+            "audio/presentation/AudioPresentationProducer.java");
+
+    /** The listener contract itself, which only declares the callback. */
+    private static final Set<String> PRESENTATION_LISTENER_CONTRACT = Set.of(
+            "audio/presentation/AudioPresentationListener.java");
+
     /**
      * The manager-only reverse-release failure injection. It is consumed on
      * every reverse release and reset by {@code resetState()}, but a second
@@ -251,6 +259,28 @@ class TestAudioPresentationArchitectureGuard {
                         backendFile + " still owns " + forbidden);
             }
         }
+    }
+
+    /**
+     * The speaker and every capture lease must be fed by the one producer
+     * fan-out, from the one packet that presentation just selected. A second
+     * production site that handed a frame view to a sink or a listener could
+     * give the recorder a different packet from the speaker's — exactly the
+     * split the ROM/integration parity tests assert cannot happen — so the fan
+     * out is pinned to the producer here rather than only observed in tests.
+     */
+    @Test
+    void onlyTheProducerFansOnePacketOutToSpeakerAndCaptureConsumers()
+            throws IOException {
+        assertEquals(List.of(),
+                productionOffenders("sink.accept(",
+                        PRESENTATION_FAN_OUT_OWNER, Set.of()),
+                "speaker packets are handed out only by the producer");
+        assertEquals(List.of(),
+                productionOffenders("onPresentationFrame(",
+                        PRESENTATION_FAN_OUT_OWNER,
+                        PRESENTATION_LISTENER_CONTRACT),
+                "capture packets are handed out only by the producer");
     }
 
     @Test

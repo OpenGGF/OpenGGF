@@ -134,8 +134,14 @@ find . -maxdepth 1 -type f -name '*.gen' -print
 mvn -Dtest=TestUnifiedAudioPresentationIntegration,TestSonic1UnifiedAudioPresentationRomIntegration,TestSonic2UnifiedAudioPresentationRomIntegration,TestSonic3kUnifiedAudioPresentationRomIntegration,TestRomAudioIntegration,TestEngineLiveCapturePresentation,TestAudioPresentationArchitectureGuard test
 ```
 
-At this handoff there are no root-level `.gen` files in the worktree. Missing
-ROM tests must be assumptions/`NOT RUN`, never reported as passes.
+All three verified ROMs are present at the worktree root as **symlinks**
+(`s1.gen`, `s2.gen`, `s3k.gen`). An earlier revision of this handoff claimed
+there were no root-level `.gen` files; that was wrong, and came from the
+discovery command above using `-type f`, which does not follow symlinks. Use
+`find -L . -maxdepth 1 -type f -name '*.gen' -print` and verify with
+`sha1sum`. Missing ROM tests must be assumptions/`NOT RUN`, never reported as
+passes — but with these ROMs present the `@RequiresRom` tests must actually run
+and pass.
 
 Expected hashes:
 
