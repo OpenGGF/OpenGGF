@@ -877,7 +877,8 @@ namespace BizHawk.Headless.Gpgx
                     options.CreateCompressor());
                 session = publisher.OpenSession(
                     options.OutputDirectory);
-                NoReplacePublisher.IncrementalStagingSession sink = session;
+                using (var sink = new StagedRunSegmentSink(
+                    session, expandNewlines))
                 using (new NativeStandardOutputSilencer())
                 using (IGpgxHost host = openHost(
                     options.RomPath,
@@ -893,27 +894,7 @@ namespace BizHawk.Headless.Gpgx
                             CultureInfo.InvariantCulture),
                         S1CompleteRunMetadataWriter.LuaScriptVersion,
                         0,
-                        segment =>
-                        {
-                            sink.StageFile(
-                                segment.DirToken + "/"
-                                + CommandLineOptions.TraceOutputFileNames[0],
-                                ExpandNewlinesIf(
-                                    expandNewlines,
-                                    segment.PhysicsCsv));
-                            sink.StageFile(
-                                segment.DirToken + "/"
-                                + CommandLineOptions.TraceOutputFileNames[1],
-                                ExpandNewlinesIf(
-                                    expandNewlines,
-                                    segment.AuxStateJsonl));
-                            sink.StageFile(
-                                segment.DirToken + "/"
-                                + CommandLineOptions.TraceOutputFileNames[2],
-                                ExpandNewlinesIf(
-                                    expandNewlines,
-                                    segment.MetadataJson));
-                        });
+                        sink);
                 }
                 if (result.RunManifestJson != null)
                 {
@@ -1644,10 +1625,20 @@ namespace BizHawk.Headless.Gpgx
         }
 
         /// <summary>
-        /// S2 run mode (--run-id): capture completes fully in memory, then
-        /// every per-segment file plus run_manifest.json is staged and
-        /// published as one all-or-nothing no-replace set — the manifest is
-        /// linked last, so it can never exist without its segment files.
+        /// S2 run mode (--run-id): every per-segment file plus
+        /// run_manifest.json is staged and published as one all-or-nothing
+        /// no-replace set — the manifest is linked last, so it can never
+        /// exist without its segment files.
+        ///
+        /// Segments stage incrementally AND stream: physics.csv and
+        /// aux_state.jsonl are written straight into their staged
+        /// temporaries as the capture produces them, so the complete-emeralds
+        /// pass (35 segments, ~375 MB of output) never holds a segment in
+        /// memory. The manifest stages last.
+        ///
+        /// Line endings are the canonical run capture's CRLF
+        /// (<see cref="ExpandRunNewlines"/>), applied to the streams by the
+        /// sink and to the manifest here.
         /// </summary>
         private static int RunS2TraceRun(
             CommandLineOptions options,
@@ -1658,12 +1649,16 @@ namespace BizHawk.Headless.Gpgx
             TextWriter stderr,
             Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
         {
-            var publisher = new NoReplacePublisher(
-                options.CreateCompressor());
+            NoReplacePublisher publisher = null;
+            NoReplacePublisher.IncrementalStagingSession session = null;
             NoReplacePublisher.StagedPublicationSet staged = null;
             try
             {
                 S2RunCaptureResult result;
+                publisher = new NoReplacePublisher(
+                    options.CreateCompressor());
+                session = publisher.OpenSession(options.OutputDirectory);
+                using (var sink = new StagedRunSegmentSink(session, true))
                 using (new NativeStandardOutputSilencer())
                 using (IGpgxHost host = openHost(
                     options.RomPath,
@@ -1677,36 +1672,14 @@ namespace BizHawk.Headless.Gpgx
                         DateTime.Now.ToString(
                             "yyyy-MM-dd",
                             CultureInfo.InvariantCulture),
-                        options.EffectiveMovieLength);
+                        options.EffectiveMovieLength,
+                        sink);
                 }
-
-                var fileNames = new List<string>();
-                var contents = new List<string>();
-                foreach (S2RunSegmentOutput segment in result.Segments)
-                {
-                    fileNames.Add(segment.DirToken + "/"
-                        + CommandLineOptions.TraceOutputFileNames[0]);
-                    contents.Add(ExpandRunNewlines(segment.PhysicsCsv));
-                    fileNames.Add(segment.DirToken + "/"
-                        + CommandLineOptions.TraceOutputFileNames[1]);
-                    contents.Add(ExpandRunNewlines(segment.AuxStateJsonl));
-                    fileNames.Add(segment.DirToken + "/"
-                        + CommandLineOptions.TraceOutputFileNames[2]);
-                    contents.Add(ExpandRunNewlines(segment.MetadataJson));
-                }
-                fileNames.Add(CommandLineOptions.RunManifestFileName);
-                contents.Add(ExpandRunNewlines(result.RunManifestJson));
-
-                staged = publisher.StageAll(
-                    options.OutputDirectory,
-                    fileNames.ToArray(),
-                    writers =>
-                    {
-                        for (var index = 0; index < contents.Count; index++)
-                        {
-                            writers[index].Write(contents[index]);
-                        }
-                    });
+                session.StageFile(
+                    CommandLineOptions.RunManifestFileName,
+                    ExpandRunNewlines(result.RunManifestJson));
+                staged = session.Complete();
+                session = null;
 
                 var summary = new StringBuilder();
                 summary.Append("BizHawk: ")
@@ -1733,9 +1706,8 @@ namespace BizHawk.Headless.Gpgx
                     .Append(result.Transitions.Count.ToString(
                         CultureInfo.InvariantCulture))
                     .Append('\n');
-                foreach (S2RunSegmentOutput segment in result.Segments)
+                foreach (RunManifestSegment entry in result.Segments)
                 {
-                    RunManifestSegment entry = segment.ManifestEntry;
                     summary.Append("Segment ").Append(entry.Dir)
                         .Append(": kind=").Append(entry.Kind)
                         .Append(", BK2 frame offset=")
@@ -1761,6 +1733,10 @@ namespace BizHawk.Headless.Gpgx
             }
             catch (Exception exception)
             {
+                if (session != null)
+                {
+                    session.Dispose();
+                }
                 if (staged != null)
                 {
                     staged.Dispose();
@@ -1784,7 +1760,7 @@ namespace BizHawk.Headless.Gpgx
         /// run-mode file (the S1 ss aux remains empty and passes through
         /// unchanged).
         /// </summary>
-        private static string ExpandRunNewlines(string content)
+        internal static string ExpandRunNewlines(string content)
         {
             return content.Replace("\n", "\r\n");
         }
