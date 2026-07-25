@@ -151,12 +151,17 @@ Empirically measured (`grep -c $'\r$'` on every gunzipped file):
 | **(C)** `bonus_gumball` / `bonus_slots` / `bonus_pachinko` / `special_stage` | LF | LF | LF | — |
 | **(B)** `runs/s3-knux-multibonus-ss/**` (all 25 segments) | **CRLF** | **CRLF** | **CRLF** | **CRLF** |
 
-This is **not** a run-mode-vs-plain-mode distinction: (C) also carries a
-`run_id`. It is the host-platform text-mode artefact of Lua's `io.open(path,
-"w")` — (B) was captured on Windows EmuHawk (2026-07-19/20), (A) and (C) on
-Linux (2026-07-22/23). The native port must therefore make the newline
-convention an explicit per-fixture property, exactly as S1/S2 run mode does
-with `ExpandRunNewlines`; it must **not** be inferred from run-vs-plain mode.
+This is **not** a run-mode-vs-plain-mode distinction ((C) also carries a
+`run_id` and is LF), and **not** a `runs/`-layout distinction either: the
+repo-wide census in
+[s3k-complete-run-behavior.md](s3k-complete-run-behavior.md) §9 finds
+`traces/s1/special_stage/` CRLF outside any `runs/` tree. It is the
+host-platform text-mode artefact of Lua's `io.open(path, "w")` — (B) was
+captured 2026-07-19 on the CRLF host, (A) and (C) on 2026-07-23 on the LF
+host. The native port must therefore make the newline convention an explicit
+per-fixture property, as `Program.cs`'s `ExpandNewlinesIf` /
+`ExpandRunNewlines` already do for S1/S2; it must **not** be inferred from
+run-vs-plain mode or from the output layout.
 
 ---
 
@@ -263,7 +268,7 @@ fixtures.
 |---|---|---|
 | `cage_state` | **Data-driven only**: any OST slot `0..109` whose `object_code` is the CNZ wire-cage init or frame pointer. No zone or frame gate. | `{"frame":%d,"vfc":%d,"event":"cage_state","slot":%d,"x":"0x%04X","y":"0x%04X","subtype":"0x%02X","status":"0x%02X","p1_phase":"0x%02X","p1_state":"0x%02X","p2_phase":"0x%02X","p2_state":"0x%02X"}` |
 | `cnz_cylinder_state` | Frame window `[4490, 4512]` (863–864, env `OGGF_S3K_CNZ_CYLINDER_RANGE`) **and** slot `object_code == OBJ_CNZ_CYLINDER`. No zone gate. | `{"frame":%d,"vfc":%d,"event":"cnz_cylinder_state","slot":%d,"x":"0x%04X","y":"0x%04X","subtype":"0x%02X","status":"0x%02X","routine":"0x%02X","render_flags":"0x%02X","p1_state":"0x%02X","p1_angle":"0x%02X","p1_distance":"0x%02X","p1_threshold":"0x%02X","p2_state":"0x%02X","p2_angle":"0x%02X","p2_distance":"0x%02X","p2_threshold":"0x%02X"}` |
-| `aiz_handoff_terrain_state` | Frame window `[5430, 5438]` (env `OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START`/`_END`) **and** `Current_zone == 0`. Window gate runs **before** the hook-state check, so it emits with hooks off — the four `*_seen` fields then read `false`/`0`. | 4206–4216; 24 fields. |
+| `aiz_handoff_terrain_state` | Frame window `[5430, 5438]` (env `OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START`/`_END`) **and** `Current_zone == 0` (4113–4119). The flush (4195) gates only on `aux_file` / `started` / `in_window()` — there is **no** hook-state check — so it emits unconditionally with hooks off, with the hook-fed accumulators at their `V69_AIZ.current()` defaults (4121–4137): the two `*_seen` booleans (`sonic_floor_seen`, `solid_vertical_seen`) read `false` and their seven companion numerics read `"0x0000"`/`"0x00"`. | 4206–4215; 24 non-`event` fields. |
 | `terrain_wall_sensor` | Frame window `[7549, 7560]` (env `OGGF_S3K_AIZ_WALL_SENSOR_RANGE`) **and** `Current_zone == 0`. | `{"frame":%d,"vfc":%d,"event":"terrain_wall_sensor",%s,%s}` where each `%s` is `V613_AIZ_WALL.snapshot_player(base, label)` (4506) for `"sonic"` then `"tails"`. |
 | `collision_response_list_end_of_frame` | Frame window `[618, 624]` (env `OGGF_S3K_CRL_RANGE`) **and** `Current_zone == 0x03`. Emits *"regardless of whether Touch_Process was hooked"* (4849). | `{"frame":%d,"vfc":%d,"event":"collision_response_list_end_of_frame","list_count":%d,"list_entries":[%s],"spring_children":[%s]}` |
 | `cnz_event_ram` | `V622_CNZ_EVENT_RAM.enabled`, set **only** when `OGGF_S3K_CNZ_EVENT_RAM_RANGE` is non-empty. **Off by default** — absent from all fixtures. | 3319–3327. |
@@ -487,10 +492,18 @@ So the *only* observable 6.31→6.32 differences are:
 normalization.
 
 The same commit hand-updated only the **bonus** segments' `metadata.json`
-inside `runs/s3-knux-multibonus-ss/`, which is precisely why that one run
-directory carries mixed stamps: level and `ss` segments **and**
+inside `runs/s3-knux-multibonus-ss/` — `git show --name-only 9e3ccdb41`
+lists exactly those 8 files plus the 3 standalone `bonus_*`
+`metadata.json` and this Lua, and **no** `.gz` payload. Despite the
+commit subject saying "re-capture", nothing was re-captured: the per-file
+diff is the three lines above. That is precisely why the one run
+directory carries mixed stamps — level and `ss` segments **and**
 `run_manifest.json` say `6.31-s3k-completerun`; `gumball`, `gumball_2`,
-`pachinko`, `slots`, `slots_2..5` say `6.32-s3k-completerun`.
+`pachinko`, `slots`, `slots_2..5` say `6.32-s3k-completerun` — while all
+25 dirs' physics/aux bytes remain homogeneous 6.31/`0xFE08` output
+(`pre_trace_osc_frames: 0` and all-zero `vfc` in the bonus dirs too).
+No recorder configuration emits this combination, so the mixed stamping
+is not a port target; see `s3k-complete-run-behavior.md` §0.2 / §8.3.
 
 ### 7.2 Why `special_stage/` carries neither `capture_mode` nor `v_int_run_count`
 
@@ -544,11 +557,11 @@ The (A) and (C) sets were regenerated together by `192d9c976`
 (`fix(trace): regenerate consistent S3K v7 fixtures`, 2026-07-23) on Linux
 with hooks off. So the three fixture sets are:
 
-| Set | Date | Host / newline | Hooks | `run_id` | `ADDR_FRAMECOUNT` |
+| Set | Captured | Host / newline | Hooks | `run_id` | `ADDR_FRAMECOUNT` |
 |---|---|---|---|---|---|
-| **(A)** 7 × `*_completerun` | 2026-07-23 | Linux / LF | off (`capture_mode` present) | none | `0xFE04` |
-| **(B)** `runs/s3-knux-multibonus-ss/` (25 segs + manifest) | 2026-07-19/20 | Windows / CRLF | **on** | `s3-knux-multibonus-ss` | `0xFE08` |
-| **(C)** `bonus_gumball`, `bonus_slots`, `bonus_pachinko`, `special_stage` | 2026-07-23 | Linux / LF | off (bonus dirs); SS writer emits neither key | `s3k-multibonus` | `0xFE04` |
+| **(A)** 7 × `*_completerun` | 2026-07-23 (`192d9c976`) | LF | off (`capture_mode` present) | none | `0xFE04` |
+| **(B)** `runs/s3-knux-multibonus-ss/` (25 segs + manifest) | 2026-07-19 (`76bdfc0f2`); 8 bonus `metadata.json` restamped 2026-07-20 (`9e3ccdb41`) | CRLF | **on** | `s3-knux-multibonus-ss` | `0xFE08` |
+| **(C)** `bonus_gumball`, `bonus_slots`, `bonus_pachinko`, `special_stage` | 2026-07-23 (`192d9c976`) | LF | off (bonus dirs); SS writer emits neither key | `s3k-multibonus` | `0xFE04` |
 
 **Do not "fix" this by loosening a comparison.** Model it: the differential
 gate targets (A)+(C) byte-exactly; (B) is a legacy-address, hooks-on capture

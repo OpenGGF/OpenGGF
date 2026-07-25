@@ -104,15 +104,25 @@ Published as `src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/`
 Character metadata is `knuckles` (solo), so no `sidekick_interact_object`
 events appear.
 
-**Set (B) is a COMPOSITE of two capture passes** (§8.3): the 14
-level + 3 special-stage dirs and the manifest are `6.31-s3k-completerun`
-/ `recording_date 2026-07-19`; the 8 bonus dirs are
-`6.32-s3k-completerun` / `2026-07-20`. None of them carries
-`capture_mode`, i.e. **both passes ran with
-`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`**. All 25 carry
-`pre_trace_osc_frames: 0` because both passes predate the
+**Set (B) is ONE capture pass with a retroactive metadata patch** (§8.3)
+— not two passes. All 25 dirs' `physics.csv.gz` / `aux_state.jsonl.gz`
+and the manifest come from commit `76bdfc0f2` (2026-07-19,
+`6.31-s3k-completerun`). Commit `9e3ccdb41` (2026-07-20) then hand-edited
+**only** the 8 bonus `metadata.json` files — `git show --name-only
+9e3ccdb41` lists exactly those 8 plus the 3 standalone `bonus_*`
+`metadata.json` and the Lua, and **no** `.gz` payload — bumping their
+`lua_script_version` to `6.32-s3k-completerun`, their `recording_date` to
+`2026-07-20`, and inserting `v_int_run_count`. Hence the mixed stamps
+inside one run dir; the underlying bytes are homogeneous 6.31.
+
+None of the 25 carries `capture_mode`, i.e. **the pass ran with
+`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`** (§10.7). All 25 — bonus dirs
+included — carry `pre_trace_osc_frames: 0` and all-zero `vfc` /
+`gameplay_frame_counter`, because the pass predates the
 `ADDR_FRAMECOUNT 0xFE08 → 0xFE04` fix (commit `6564667eb`), which did
-**not** bump `LUA_SCRIPT_VERSION`.
+**not** bump `LUA_SCRIPT_VERSION`. That the 6.32-stamped bonus dirs still
+carry the 0xFE08 artefacts is the direct proof that the stamp was patched
+in rather than re-captured.
 
 | # | `dir` | `kind` | `trace_profile` | `bk2_frame_offset` | `trace_frame_count` | `zone_id` | `act` | extra | `offset(i)+rows(i)+1` |
 |---|---|---|---|---|---|---|---|---|---|
@@ -145,8 +155,10 @@ level + 3 special-stage dirs and the manifest are `6.31-s3k-completerun`
 21 of the 24 successions reproduce exactly under
 `offset(i+1) = offset(i) + rows(i) + 1` — including every
 level→bonus, bonus→level and level→level boundary, and including the
-level→special-stage boundary at segment 11→12 (48174), which satisfies
-the same identity for a *different* structural reason (§5.6).
+level→special-stage **entry** boundaries at 11→12 (48174), 15→16 (61926)
+and 22→23 (98092). SS entry is the *same* structural case as a level arm
+(§5.6): `finalize_segment()` and `start_ss_segment()` run on one frame,
+so the successor's `bk2_frame_offset` is that frame.
 
 The three special-stage **exits** are the only boundaries that are not a
 `+1` succession, because SS-results (`Game_mode = 0x48`) and the level
@@ -229,7 +241,7 @@ Iteration 0 evaluates against the frame at which the script was loaded
 `2000000` when no bound exists. It is a runaway backstop only and never
 fires in any fixture capture.
 
-### 1.2 The ordered predicate chain (`on_frame_end`, Lua 5274–5593)
+### 1.2 The ordered predicate chain (`on_frame_end`, Lua 5274–5786)
 
 Every step below is evaluated in this order. `⇥return` = returns from
 `on_frame_end` for this frame; `⇥finish` = sets `finished = true` and
@@ -238,21 +250,21 @@ returns, which routes to the end-of-run finalize in the main loop.
 | # | Lua | Guard | Condition | Effect |
 |---|---|---|---|---|
 | 1 | 5275 | — | `finished` | ⇥return |
-| 2 | 5288 | — | `movie.isloaded()` and `movie.length() > 0` and `emu.framecount() >= movie.length()` | ⇥finish |
+| 2 | 5289 | — | `movie.isloaded()` and `movie.length() > 0` and `emu.framecount() >= movie.length()` | ⇥finish |
 | 3a | 5301 | `HEADLESS and started` | `OGGF_TRACE_STOP_FRAME ~= nil and trace_frame >= it` | ⇥finish |
-| 3b | 5307 | `HEADLESS and started` | `OGGF_BK2_FRAME_COUNT > 0 and (bk2_frame_offset + trace_frame) >= it` | ⇥finish |
-| 3c | 5315 | `HEADLESS and started` | `not movie.isloaded()` | ⇥finish |
-| 4 | 5325 | — | read `game_mode = u8[0xF600]`, `zone_id = u8[0xFE10]` | — |
-| 5 | 5334 | `started and game_mode == 0x34` | `detour_active ~= "special_stage"` | SS **entry**: `finalize_segment()`; push `giant_ring` transition; `start_ss_segment()`; `detour_active = "special_stage"`; ⇥return |
-| 6 | 5361 | `started and game_mode == 0x34` | else (continuation) | `write_ss_row()`; ⇥return |
-| 7 | 5365 | — | `detour_active == "special_stage"` (first non-`0x34` frame) | `finalize_ss_segment()`; `detour_active = nil`; if **not** `is_level_family_mode(game_mode)` then ⇥return, else fall through |
-| 8 | 5407 | — | `game_mode == 0x0C` **and** `zone_id ~= current_segment_zone` **and** `u16[0xB032] == 0` **and** `u8[0xF7CA] == 0` | **arm**: `finalize_segment()` if `started`; push `stage_exit` and/or `starpost_bonus` transitions; `start_new_segment(zone_id)`; ⇥return (**arm frame is NOT recorded**) |
-| 9 | 5467 | — | `not started` | ⇥return |
-| 10 | 5476 | — | `not is_level_family_mode(u8[0xF600])` (re-read) | ⇥return (**no row; segment stays armed and unfinalized**) |
-| 11 | 5493 | `HEADLESS and movie.isloaded()` | `(bk2_frame_offset + trace_frame) >= end_frame_limit` | ⇥finish |
-| 12 | 5505 | `HEADLESS and movie.isloaded()` | `not allow_post_movie_tail and movie.mode() == "FINISHED"` | ⇥finish |
-| 13 | 5513 | — | `not pre_trace_snapshots_written` | emit `cpu_state_snapshot` + `object_state_snapshot`s; set `start_gameplay_frame_counter = u16[0xFE04]` |
-| 14 | 5533+ | — | — | write the `physics.csv` row, all aux events, `scan_objects`, then `trace_frame = trace_frame + 1` |
+| 3b | 5308 | `HEADLESS and started` | `OGGF_BK2_FRAME_COUNT > 0 and (bk2_frame_offset + trace_frame) >= it` | ⇥finish |
+| 3c | 5316 | `HEADLESS and started` | `not movie.isloaded()` | ⇥finish |
+| 4 | 5325–5326 | — | read `game_mode = u8[0xF600]`, `zone_id = u8[0xFE10]` | — |
+| 5 | 5335 | `started and game_mode == 0x34` | `detour_active ~= "special_stage"` | SS **entry**: `finalize_segment()`; push `giant_ring` transition; `start_ss_segment()`; `detour_active = "special_stage"`; ⇥return |
+| 6 | 5364 | `started and game_mode == 0x34` | else (continuation) | `write_ss_row()`; ⇥return |
+| 7 | 5367 | — | `detour_active == "special_stage"` (first non-`0x34` frame) | `finalize_ss_segment()`; `detour_active = nil`; if **not** `is_level_family_mode(game_mode)` then ⇥return, else fall through |
+| 8 | 5411 | — | `game_mode == 0x0C` **and** `zone_id ~= current_segment_zone` **and** `u16[0xB032] == 0` **and** `u8[0xF7CA] == 0` | **arm**: `finalize_segment()` if `started`; push `stage_exit` and/or `starpost_bonus` transitions; `start_new_segment(zone_id)`; ⇥return (**arm frame is NOT recorded**) |
+| 9 | 5480 | — | `not started` | ⇥return |
+| 10 | 5496–5501 | — | `not is_level_family_mode(u8[0xF600])` (re-read) | ⇥return (**no row; segment stays armed and unfinalized**) |
+| 11 | 5511 | `HEADLESS and movie.isloaded()` | `(bk2_frame_offset + trace_frame) >= end_frame_limit` | ⇥finish |
+| 12 | 5518 | `HEADLESS and movie.isloaded()` | `not allow_post_movie_tail and movie.mode() == "FINISHED"` | ⇥finish |
+| 13 | 5527 | — | `not pre_trace_snapshots_written` | emit `cpu_state_snapshot` + `object_state_snapshot`s; set `start_gameplay_frame_counter = u16[0xFE04]` |
+| 14 | 5546+ | — | — | write the `physics.csv` row (5586), all aux events (5633–5783), `scan_objects`, then `trace_frame = trace_frame + 1` |
 
 Notes that matter for a byte-identical port:
 
@@ -269,8 +281,13 @@ Notes that matter for a byte-identical port:
   skip rows without ever closing the segment.
 - Step 11's `end_frame_limit` is `movie.length()`, raised to
   `OGGF_BK2_FRAME_COUNT` when that is larger (`allow_post_movie_tail`).
+  **`allow_post_movie_tail` cannot actually extend recording while a
+  movie is loaded:** step 2 is unconditional and fires at
+  `emu.framecount() == movie.length()`, one frame before either step 3b
+  or step 11 could fire on the raised limit. It is reachable only in the
+  no-movie / `movie.length() == 0` configuration, which no fixture uses.
 - Steps 3a/3b/3c and 11/12 apply to SS segments too, because `started`
-  and `trace_frame` are shared globals (§5.3).
+  and `trace_frame` are shared state (§5.3).
 
 ---
 
@@ -331,8 +348,9 @@ STANDARD classes (`S3KRam`, `S3KTraceCsvWriter`, `S3KAuxEventEngine`,
   **not** re-arm on act change: a seamless act1→act2 transition stays
   inside one segment (this is why every set-(A) segment records
   `act: 1`, §6.3).
-- S1/S2 run-mode published files are CRLF via `ExpandRunNewlines`; S3K's
-  convention is **per publication layout, not per game** (§9).
+- S1/S2 run-mode published files are CRLF, reproduced port-side by
+  `ExpandRunNewlines`; S3K's convention is **per capture host, not per
+  game and not per publication layout** (§9).
 - S3K's detour model has *two* stage families (bonus stages, which are
   level-family `Game_mode` with zone ids 0x13–0x15, and special stages,
   which are `Game_mode == 0x34` with their own CSV schema). S1/S2 have
@@ -361,24 +379,33 @@ must not accept it here.
 
 ## 4. Segmentation state
 
-All of these are Lua **globals** (deliberately — the main chunk sits at
-Lua 5.4's 200-local cap):
+Scope is **mixed**, and the split is arbitrary — a native port should
+treat all of it as one recorder-instance state bag. The `Lua` column
+below is the declaration line; `global` entries were deliberately left
+unscoped because the main chunk sits at Lua 5.4's 200-local cap, but the
+older frame/segment counters predate that pressure and are still
+`local`:
 
-| Name | Meaning | Reset by |
-|---|---|---|
-| `started` | a segment (level, bonus **or** SS) is armed and open | `reset_recording_state` |
-| `trace_frame` | rows written in the current segment; next row's `frame` column | `reset_recording_state`; explicitly `= 0` in `start_ss_segment` |
-| `bk2_frame_offset` | BK2 frame at which the current segment armed | set at arm |
-| `current_segment_zone` | ROM zone id of the armed **level/bonus** segment; `nil` when none | `nil` at every finalize; never set by `start_ss_segment` |
-| `current_segment_dir_token` | dir name of the current segment (`aiz`, `aiz_3`, `ss_2`, …) | set at arm |
-| `current_segment_is_bonus` | `BONUS_TOKENS[zone_id] ~= nil` at arm | set at arm |
-| `segment_dir_counts` | base token → visit count; drives the `_2`/`_3` suffix | never reset |
-| `segments_done` | ordered list of finalized segment records | never reset |
-| `transitions_done` | ordered list of boundary records | never reset |
-| `detour_active` | `nil` \| `"special_stage"` | SS entry / SS exit |
-| `current_ss_index` | `u8[0xFE16]` read at SS arm | SS arm / SS finalize |
-| `run_id` | `OGGF_TRACE_RUN_ID` | — |
-| `start_zone_id`, `start_act`, `start_zone_name`, `start_x/y`, `start_rng_seed`, `start_gameplay_frame_counter`, `start_v_int_run_count` | per-segment metadata captured at arm | `reset_recording_state` |
+| Name | Lua | Scope | Meaning | Reset by |
+|---|---|---|---|---|
+| `started` | 873 | local | a segment (level, bonus **or** SS) is armed and open | `reset_recording_state` |
+| `finished` | 874 | local | main-loop termination latch | never |
+| `trace_frame` | 875 | local | rows written in the current segment; next row's `frame` column | `reset_recording_state`; explicitly `= 0` in `start_ss_segment` |
+| `bk2_frame_offset` | 876 | local | BK2 frame at which the current segment armed | set at arm |
+| `current_segment_zone` | 884 | **global** | ROM zone id of the armed **level/bonus** segment; `nil` when none | `nil` at every finalize; never set by `start_ss_segment` |
+| `segments_done` | 885 | **global** | ordered list of finalized segment records | never reset |
+| `transitions_done` | 895 | **global** | ordered list of boundary records | never reset |
+| `segment_dir_counts` | 896 | **global** | base token → visit count; drives the `_2`/`_3` suffix | never reset |
+| `detour_active` | 897 | **global** | `nil` \| `"special_stage"` | SS entry / SS exit |
+| `current_segment_dir_token` | 898 | **global** | dir name of the current segment (`aiz`, `aiz_3`, `ss_2`, …) | set at arm |
+| `current_segment_is_bonus` | 899 | **global** | `BONUS_TOKENS[zone_id] ~= nil` at arm | set at arm |
+| `current_ss_index` | 902 | **global** | `u8[0xFE16]` read at SS arm | SS arm; `nil` at SS finalize |
+| `ss_prev_spheres_left`, `ss_spheres_left_increased`, `ss_prev_started`, `ss_started_transitions` | 903–906 | **global** | SS self-check accumulators — **print-only**, never written to any file | SS arm / SS finalize |
+| `run_id` | 907 | **global** | `OGGF_TRACE_RUN_ID` | — |
+| `start_x`, `start_y`, `start_zone_id`, `start_zone_name`, `start_act`, `start_rng_seed` | 909–914 | local | per-segment metadata captured at arm | `reset_recording_state` |
+| `start_v_int_run_count` | 919 | **global** | bonus-only `u32be[0xFE0C]` at arm; `nil` otherwise | `reset_recording_state` |
+| `start_gameplay_frame_counter` | 920 | local | arm-time lfc, **overwritten** at step 13 | `reset_recording_state` |
+| `pre_trace_snapshots_written` | 941 | local | one-shot latch for the step-13 snapshots | `reset_recording_state` |
 
 `reset_recording_state(keep_files)` closes both files, clears `started`,
 zeroes `trace_frame` / `bk2_frame_offset` / all `start_*`, clears the
@@ -541,9 +568,17 @@ regardless of what mode follows:
    the first settled `0x0C`). Otherwise (`0x48` SS-results, fades)
    ⇥return.
 
+`write_ss_row` carries its **own** flush cadence, mirroring the level
+path but calling the SS writer: `physics_file:flush()` every 60 rows and
+`write_ss_metadata()` every 300 rows (Lua 5205–5206). Neither changes
+final bytes — `finalize_ss_segment` rewrites the metadata with the final
+`trace_frame_count` — but a port that streams must match the flush points
+if it asserts on partial output.
+
 **SS segments emit no aux events at all.** `write_ss_row` writes only
 CSV. `aux_state.jsonl` is opened and closed empty — the committed
-`ss`, `ss_2`, `special_stage` aux fixtures are 0 bytes uncompressed.
+`ss`, `ss_2`, `ss_3` and `special_stage` aux fixtures are all 0 bytes
+uncompressed.
 
 ### 5.4 Bonus stages are NOT a detour
 
@@ -629,15 +664,24 @@ because `finalize_ss_segment` and the next level arm are different frames
 separated by SS-results and the level reload.
 
 A segment terminated by a stop condition (steps 2/3/11/12) instead of a
-boundary has `trace_frame_count` fixed by that stop:
+boundary has `trace_frame_count` fixed by that stop. Two different
+indices are in play and must not be conflated: the **observed BK2
+framecount** `c` at which a row is written (row `N` ⇔ `c = F + 1 + N`)
+and the row's **input index** `F + N = c - 1` (the replay convention
+above). The table gives both:
 
-| Terminator | Last recorded frame |
-|---|---|
-| step 2 (`emu.framecount() >= movie.length()`) | `movie.length() - 1` |
-| step 3a (`OGGF_TRACE_STOP_FRAME = S`) | `bk2_frame_offset + S - 1`, i.e. exactly `S` rows |
-| step 3b / 11 (`limit = L`) | `L - 1` |
-| step 12 (`movie.mode() == "FINISHED"`) | emulator-determined |
-| `FRAME_CAP` backstop | `FRAME_CAP - 1` |
+| Terminator | rows (`trace_frame_count`) | last row's observed framecount `c` | last row's input index |
+|---|---|---|---|
+| step 2 (`emu.framecount() >= movie.length()`, `= M`) | `M - F - 1` | `M - 1` | `M - 2` |
+| step 3a (`OGGF_TRACE_STOP_FRAME = S`) | exactly `S` | `F + S` | `F + S - 1` |
+| step 3b / 11 (`limit = L`) | `L - F` | `L` | `L - 1` |
+| step 12 (`movie.mode() == "FINISHED"`) | emulator-determined | — | — |
+| `FRAME_CAP` backstop | `FRAME_CAP - F - 1` | `FRAME_CAP - 1` | `FRAME_CAP - 2` |
+
+Step 2's row is the one that matters in practice: it is the reason a
+movie-terminated final segment ends at observed framecount
+`movie.length() - 1`, and (per §1.2) it preempts steps 3b/11/12 whenever
+a movie is loaded.
 
 ### 5.7 End-of-run finalize
 
@@ -773,10 +817,20 @@ record, so record order does not map to boundary order.
 | `starpost_bonus` | arm gate (step 8), when the zone being armed is 0x13/0x14/0x15 | same six |
 | `stage_exit` | arm gate (step 8), when the just-finalized segment's kind is `bonus_stage` or `special_stage` | `rings_after`, `emeralds_after` |
 
-Every record also carries `from_segment`, `to_segment`, `entry_kind`,
-`mode_change_bk2_frame` (= `emu.framecount()` at the push frame).
-Optional numeric fields are emitted only when non-nil, in the fixed order
-listed in the writer.
+Every record opens with `from_segment`, `to_segment`, `entry_kind`,
+`mode_change_bk2_frame` (= `emu.framecount()` at the push frame), always
+in that order. The optional numeric fields follow, emitted only when
+non-nil, in this **fixed writer order** (Lua 5521–5528) — note that
+`rings_after` sits between `rings_before` and `emeralds_before`, so the
+order is *not* "entry fields then exit fields":
+
+```
+special_bonus_entry_flag, saved_x_pos, saved_y_pos, last_star_post_hit,
+rings_before, rings_after, emeralds_before, emeralds_after
+```
+
+All eight are `%d` decimal. Fields are joined with `", "` and wrapped as
+`    {…}` with a trailing `,` on every record but the last.
 
 Set (B) has 22 transitions for 24 boundaries: the two missing are
 `8→9` (`aiz_5`→`hcz`) and `19→20` (`hcz_6`→`mgz`), both plain
@@ -872,19 +926,29 @@ never a regex):
 | (C) 1 ss | `6.32-s3k-completerun` | n/a | n/a | n/a |
 
 A current-HEAD native port reproduces the **(A)** and **(C)** columns.
-It cannot reproduce (B)'s `pre_trace_osc_frames: 0` or (B)'s 6.31 stamps
-without deliberately regressing the frame-counter address, and it must
-not: those fixtures are pre-fix artifacts. Assert (B) only on
-`physics.csv` / `aux_state.jsonl` / `run_manifest.json` **segment
-geometry** (dirs, offsets, counts, kinds, transitions) — which is
-version-independent, as (C) proves.
+It cannot reproduce (B) at all:
+
+- (B)'s `pre_trace_osc_frames: 0` and all-zero `vfc` /
+  `gameplay_frame_counter` require the reverted `0xFE08`
+  `ADDR_FRAMECOUNT`;
+- (B)'s **mixed** 6.31/6.32 stamping is not a recorder output at all
+  (§0.2) — a single HEAD run stamps `6.32-s3k-completerun` uniformly
+  across level, bonus, SS **and** manifest, and writes `v_int_run_count`
+  on bonus segments, so no recorder configuration reproduces the
+  committed combination;
+- (B) also contains hook-driven aux families (§10.7) that the current
+  port does not emit.
+
+Assert (B) only on `physics.csv` / `aux_state.jsonl` / `run_manifest.json`
+**segment geometry** (dirs, offsets, counts, kinds, transitions) — which
+is version-independent, as (C) proves.
 
 ---
 
 ## 9. File encodings — as observed in this fixture set
 
-Newlines are **per publication layout, not per game and not per
-recorder**:
+Newlines are **per capture, not per game, per recorder, per `run_id`, or
+per publication layout**:
 
 | Location | `metadata.json` | `physics.csv` | `aux_state.jsonl` | `run_manifest.json` |
 |---|---|---|---|---|
@@ -892,14 +956,29 @@ recorder**:
 | `traces/s3k/bonus_*`, `traces/s3k/special_stage/` (C) | LF | LF | LF | — |
 | `traces/s3k/runs/<run_id>/**` (B) | **CRLF** | **CRLF** | **CRLF** | **CRLF** |
 
-The Lua itself always writes `\n` (`io.open(..., "w")` in text mode on
-Windows would translate, but the committed LF dirs prove the recorder's
-own output is LF). CRLF in the `runs/` tree is applied by the run-mode
-publisher (`ExpandRunNewlines`, same as S1/S2 run mode) at publish time.
-Note that set (C) carries a `run_id` yet is LF — **CRLF keys on
-publication into `runs/<run_id>/`, not on `run_id` being set.**
+The Lua only ever writes `\n`; CRLF is the host text-mode artefact of
+`io.open(path, "w")` on the machine that ran the capture. There is no
+Lua-side publisher, so nothing rewrites newlines between capture and
+commit.
 
-The empty SS `aux_state.jsonl` has no newline in either layout (0 bytes).
+**The tempting rule "CRLF keys on publication into `runs/<run_id>/`" is
+falsified by the fixture tree.** Census over all 142 committed
+`metadata.json` files: 69 are CRLF — the four `runs/` trees
+(`s1/runs/s1-ghz-maze-roundtrip`, `s2/runs/s2-ehz-halfpipe-roundtrip`,
+`s2/runs/s2-sonic-tails-complete-emeralds`, `s3k/runs/s3-knux-multibonus-ss`)
+**plus `traces/s1/special_stage/`**, which is not under any `runs/` tree
+and was committed by `70233ae6d` on the same 2026-07-19 date as the S1
+run. Conversely set (C) carries a `run_id` and is LF. The single
+predictor that fits every case is the capture host/date, not the layout
+and not `run_id`.
+
+For the port this changes nothing operationally — the newline convention
+must be an explicit **per-fixture-set property**, which is exactly what
+`Program.cs`'s `ExpandNewlinesIf(bool, string)` / `ExpandRunNewlines`
+already express for S1/S2. Do not derive it from run-vs-plain mode.
+
+The empty SS `aux_state.jsonl` has no newline in either layout (0 bytes;
+the `special_stage/` gzip member is 20 bytes).
 
 No BOM anywhere; all output is ASCII.
 
@@ -923,8 +1002,9 @@ the `+1` succession identity across the entire run.
 
 ### 10.3 `started` is shared between level and SS segments
 
-`start_ss_segment` sets the same `started`/`trace_frame`/
-`bk2_frame_offset` globals. Consequences that must be preserved:
+`start_ss_segment` sets the same `started` / `trace_frame` /
+`bk2_frame_offset` state (all three are file-scope `local`s, Lua 873–876
+— see §4). Consequences that must be preserved:
 `OGGF_TRACE_STOP_FRAME` and `OGGF_BK2_FRAME_COUNT` truncate SS segments
 too; and the SS entry branch must be gated on `detour_active`, never on
 `started`.
@@ -955,24 +1035,53 @@ In a 25-segment run each segment restarts the windows from 0. Set (A)'s
 `aiz_handoff_terrain_state`; the other six (A) segments emit neither,
 because their live zone is not 0.
 
-### 10.7 No hook-driven aux family appears in any complete-run fixture
+### 10.7 Hook-driven aux families are absent from (A)/(C) but PRESENT in (B)
 
-Census over all 7 (A) dirs and the (B)/(C) dirs: zero
-`cage_execution`, `cnz_cylinder_execution`, `velocity_write`,
-`position_write`, `solid_object_cont_entry`,
-`collision_response_list*`, `rng_call`, `tails_cpu_normal_step`,
-`aiz_boundary_state`, `aiz_transition_floor_solid`, `aiz_ship_loop`,
-`sonic_record_pos`, `cnz_event_ram`, `aiz_fire_transition`. The only
-zone-gated families that *do* appear are state-polled:
-`cage_state` (8030 in `cnz_completerun`) and `cnz_cylinder_state` (23,
-same dir), plus `terrain_wall_sensor` / `aiz_handoff_terrain_state` in
-AIZ. `aiz_fire_transition` can never appear because its writer is gated
-on `is_aiz_end_to_end_profile()`, which is permanently false here.
+**Do not carry the STANDARD recorder's hook-absence result over to this
+recorder.** The census splits by capture, not by recorder:
 
-Note that set (B) was captured with hooks **enabled** and still contains
-no hook-driven family — because every hook's window/zone predicate fails
-for that route. This extends, not replaces, the STANDARD recorder's hook
-absence pin (`S3KHookAbsenceTests`).
+- **(A) 7 dirs + (C) 4 dirs — hooks OFF** (`capture_mode` present ⇒
+  `LIGHTWEIGHT_REGEN` ⇒ the `if not LIGHTWEIGHT_REGEN` registration block
+  at Lua 5816–5830 never ran). Zero of every hook-driven family:
+  `cage_execution`, `cnz_cylinder_execution`, `velocity_write`,
+  `position_write`, `solid_object_cont_entry`,
+  `collision_response_list_per_frame`, `rng_call`,
+  `tails_cpu_normal_step`, `aiz_boundary_state`,
+  `aiz_transition_floor_solid`, `aiz_ship_loop`, `sonic_record_pos`,
+  `cnz_event_ram`, `aiz_fire_transition`.
+- **(B) 25 dirs — hooks ON** (no `capture_mode` key; `write_metadata`
+  emits that line iff `LIGHTWEIGHT_REGEN`, Lua 1375–1377). Four segments
+  carry real hook events, measured on the gunzipped, CR-stripped streams:
+
+  | Segment | `position_write` | `velocity_write` | `solid_object_cont_entry` |
+  |---|--:|--:|--:|
+  | `hcz_2` | 43 | 21 | 31 |
+  | `hcz_6` | 17 | · | 31 |
+  | `mgz` | 43 | · | 26 |
+  | `mgz_3` | 38 | · | 31 |
+
+  The other 21 (B) segments carry none — their hooks fired outside every
+  window, not "hooks were off".
+
+Byte-reproducing (B) therefore requires LibGPGX exec **and** memory-write
+callbacks in `GpgxHost`; see
+[s3k-completerun-profiles.md](s3k-completerun-profiles.md) §6 for the
+recommended (A)+(C)-byte-exact / (B)-shape-only split and the
+`ADDR_FRAMECOUNT` reason (§8.3, and profiles §7.3) that (B) is not
+byte-reproducible from current HEAD anyway.
+
+The non-hook, gate-restricted families that *do* appear in the hooks-off
+sets are all state-polled: `cage_state` (8030 in `cnz_completerun`),
+`cnz_cylinder_state` (23, same dir),
+`collision_response_list_end_of_frame` (7, same dir),
+`object_state_snapshot` (4, same dir), and `terrain_wall_sensor` (12) /
+`aiz_handoff_terrain_state` (9) in `aiz_completerun`.
+`aiz_fire_transition` can never appear under any configuration because
+its writer is gated on `is_aiz_end_to_end_profile()`, which is
+permanently false here.
+
+The existing `S3KHookAbsenceTests` pin may be extended to the eleven
+(A)+(C) dirs. It must **not** be widened to cover (B).
 
 ### 10.8 `zone_token_for` ≠ `ZONE_NAMES`
 
