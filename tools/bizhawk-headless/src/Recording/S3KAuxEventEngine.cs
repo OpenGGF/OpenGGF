@@ -16,7 +16,30 @@ namespace OpenGGF.BizHawk.Headless
     {
         GameplayUnlock,
         AizEndToEnd,
-        LevelGatedResetAware
+        LevelGatedResetAware,
+
+        /// <summary>
+        /// The COMPLETE-RUN recorder
+        /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.32; spec
+        /// docs/s3k-completerun-profiles.md). Its TRACE_PROFILE is a
+        /// hard-pinned "complete_run" local, so the level-gated and
+        /// aiz_end_to_end checkpoint vocabularies and the
+        /// aiz_fire_transition writer are all structurally unreachable —
+        /// exactly what the existing profile gates already produce for an
+        /// unrecognised profile. Its two OBSERVABLE deltas over the
+        /// standard recorder are handled here: the always-on
+        /// game_paused_state family (emitted between oscillation_state and
+        /// object_state, absent from the standard recorder entirely) and
+        /// ADDR_FRAMECOUNT moving 0xFE08 -> 0xFE04, which changes every
+        /// "vfc" field and oscillation_state.level_frame_counter.
+        ///
+        /// The s3k_bonus_stage profile is NOT a value here: a bonus
+        /// segment runs this identical row writer and aux pipeline and
+        /// differs only in metadata.json and the run manifest (spec §1.2).
+        /// The s3k_special_stage profile is not here either: it emits no
+        /// aux events at all (spec §4.4).
+        /// </summary>
+        CompleteRun
     }
 
     /// <summary>
@@ -74,6 +97,8 @@ namespace OpenGGF.BizHawk.Headless
         public const int CrlWindowEnd = 624;
 
         private readonly S3KTraceProfile profile;
+        private readonly int frameCounterAddress;
+        private readonly bool emitsGamePausedState;
 
         // P1 previous-state latches (Lua prev_status / prev_routine /
         // prev_ctrl_lock, all starting 0).
@@ -104,8 +129,37 @@ namespace OpenGGF.BizHawk.Headless
             new uint[S3KRam.TotalObjectSlots];
 
         public S3KAuxEventEngine(S3KTraceProfile profile)
+            : this(profile, FrameCounterAddressFor(profile))
+        {
+        }
+
+        /// <summary>
+        /// Explicit-ADDR_FRAMECOUNT constructor. Only the two canonical
+        /// addresses are ever correct — 0xFE08 for the standard recorder,
+        /// 0xFE04 for the complete-run recorder — but the parameter is
+        /// kept open so a test can pin the legacy 0xFE08 complete-run
+        /// captures (the runs/s3-knux-multibonus-ss fixture set, taken
+        /// before Lua commit 6564667eb moved the address WITHOUT bumping
+        /// LUA_SCRIPT_VERSION; spec s3k-completerun-profiles.md §7.3).
+        /// </summary>
+        public S3KAuxEventEngine(
+            S3KTraceProfile profile, int frameCounterAddress)
         {
             this.profile = profile;
+            this.frameCounterAddress = frameCounterAddress;
+            this.emitsGamePausedState =
+                profile == S3KTraceProfile.CompleteRun;
+        }
+
+        /// <summary>
+        /// The recorder's ADDR_FRAMECOUNT, selected by RECORDER identity
+        /// (which is what the profile encodes), never by version string.
+        /// </summary>
+        public static int FrameCounterAddressFor(S3KTraceProfile profile)
+        {
+            return profile == S3KTraceProfile.CompleteRun
+                ? S3KRam.LevelFrameCounter
+                : S3KRam.FrameCount;
         }
 
         /// <summary>
@@ -124,7 +178,7 @@ namespace OpenGGF.BizHawk.Headless
 
             var lines = new List<string>();
             lines.Add("{\"frame\":-1,\"vfc\":"
-                + Dec(S3KRam.U16(host, S3KRam.FrameCount))
+                + Dec(S3KRam.U16(host, frameCounterAddress))
                 + ",\"event\":\"cpu_state_snapshot\",\"character\":\"tails\""
                 + ",\"control_counter\":"
                 + Dec(S3KRam.U16(host, S3KRam.TailsCpuIdleTimer))
@@ -141,7 +195,7 @@ namespace OpenGGF.BizHawk.Headless
                 + "\",\"jumping\":"
                 + Dec(S3KRam.U8(host, S3KRam.TailsCpuAutoJumpFlag)) + "}");
 
-            int vfc = S3KRam.U16(host, S3KRam.FrameCount);
+            int vfc = S3KRam.U16(host, frameCounterAddress);
             for (int slot = S3KRam.FirstDynamicSlot;
                 slot < S3KRam.TotalObjectSlots;
                 slot++)
@@ -170,6 +224,7 @@ namespace OpenGGF.BizHawk.Headless
         /// + checkpoints) → player_mode_set → mode/routine changes →
         /// cpu_state → aiz_handoff_terrain_state (windowed poll, hook
         /// fields pinned) → aiz_fire_transition → oscillation_state →
+        /// game_paused_state (complete-run recorder only) →
         /// object_state* → interact_state (sonic, tails) →
         /// sidekick_interact_object → air_countdown_state (p1, p2) →
         /// cnz_cylinder_state* → cage_state* → state_snapshot (every 60) →
@@ -184,9 +239,10 @@ namespace OpenGGF.BizHawk.Headless
             }
 
             var lines = new List<string>();
-            // The Lua re-reads vfc (0xFE08) inside every writer; RAM is
-            // static within on_frame_end so one read is byte-identical.
-            int vfc = S3KRam.U16(host, S3KRam.FrameCount);
+            // The Lua re-reads vfc (ADDR_FRAMECOUNT) inside every writer;
+            // RAM is static within on_frame_end so one read is
+            // byte-identical.
+            int vfc = S3KRam.U16(host, frameCounterAddress);
 
             EmitSemanticEvents(lines, traceFrame, host);
             EmitPlayerModeEvent(lines, traceFrame, vfc, host);
@@ -201,6 +257,10 @@ namespace OpenGGF.BizHawk.Headless
             EmitAizHandoffTerrainState(lines, traceFrame, vfc, host);
             EmitAizFireTransition(lines, traceFrame, vfc, host);
             lines.Add(FormatOscillationState(traceFrame, vfc, host));
+            if (emitsGamePausedState)
+            {
+                lines.Add(FormatGamePausedState(traceFrame, vfc, host));
+            }
 
             int p1X = S3KRam.U16(host, S3KRam.PlayerBase + S3KRam.OffXPos);
             int p1Y = S3KRam.U16(host, S3KRam.PlayerBase + S3KRam.OffYPos);
@@ -715,6 +775,24 @@ namespace OpenGGF.BizHawk.Headless
                 + ",\"event\":\"oscillation_state\",\"level_frame_counter\":"
                 + Dec(vfc)
                 + ",\"osc_table\":\"" + table + "\"}";
+        }
+
+        /// <summary>
+        /// write_game_paused_per_frame (complete-run recorder ONLY, Lua
+        /// 1566): the ROM Game_paused WORD at 0xF63A, emitted
+        /// unconditionally once per recorded row in slot #11 of the
+        /// cascade — after oscillation_state, before the first
+        /// object_state. Comparison-only: recording is never altered while
+        /// paused, so a paused stretch is recorded verbatim as ordinary
+        /// frozen rows (the HCZ fixture carries 1967 such rows).
+        /// </summary>
+        private static string FormatGamePausedState(
+            int traceFrame, int vfc, IGpgxHost host)
+        {
+            return "{\"frame\":" + Dec(traceFrame)
+                + ",\"vfc\":" + Dec(vfc)
+                + ",\"event\":\"game_paused_state\",\"game_paused\":"
+                + Dec(S3KRam.U16(host, S3KRam.GamePaused)) + "}";
         }
 
         /// <summary>

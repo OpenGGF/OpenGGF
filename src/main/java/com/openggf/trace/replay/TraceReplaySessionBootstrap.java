@@ -809,9 +809,22 @@ public final class TraceReplaySessionBootstrap {
                 && GameServices.spritesOrNull() != null) {
             GameServices.spritesOrNull().setFrameCounter(previousDriveFrame.gameplayFrameCounter());
         }
-        if (firstDriveFrame != null && firstDriveFrame.gameplayFrameCounter() >= 0
+        // LevelManager.setFrameCounter's contract (see its javadoc) is the
+        // PREVIOUS completed level frame: ROM increments Level_frame_counter
+        // before Process_Sprites, so consumers recover the current ROM value
+        // with getFrameCounter() + 1 (16 call sites do exactly that). Seed it
+        // from the same pre-row this method's javadoc names and the sprite
+        // branch above already uses; seeding the first driven row's value put
+        // every frame-counter-keyed object phase one frame ahead of ROM for
+        // the whole segment. That was invisible while s3k_complete_run_recorder
+        // sampled 0xFE08 (Debug_placement_mode, dead-zero) and only surfaced
+        // once the counter column was captured live.
+        if (previousDriveFrame != null && previousDriveFrame.gameplayFrameCounter() >= 0
                 && GameServices.levelOrNull() != null) {
-            GameServices.levelOrNull().setFrameCounter(firstDriveFrame.gameplayFrameCounter());
+            GameServices.levelOrNull().setFrameCounter(previousDriveFrame.gameplayFrameCounter());
+        } else if (firstDriveFrame != null && firstDriveFrame.gameplayFrameCounter() >= 0
+                && GameServices.levelOrNull() != null) {
+            GameServices.levelOrNull().setFrameCounter(firstDriveFrame.gameplayFrameCounter() - 1);
         }
     }
 

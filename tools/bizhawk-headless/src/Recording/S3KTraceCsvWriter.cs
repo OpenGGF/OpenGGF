@@ -124,6 +124,27 @@ namespace OpenGGF.BizHawk.Headless
         /// </summary>
         public static string FormatRow(int traceFrame, int inputMask, IGpgxHost host)
         {
+            return FormatRow(traceFrame, inputMask, host, S3KRam.FrameCount);
+        }
+
+        /// <summary>
+        /// Same row, with the gameplay_frame_counter source address made
+        /// explicit. The STANDARD recorder's ADDR_FRAMECOUNT is 0xFE08
+        /// (<see cref="S3KRam.FrameCount"/>, dead-zero Debug_placement_mode);
+        /// the complete-run recorder's is 0xFE04
+        /// (<see cref="S3KRam.LevelFrameCounter"/>, the real
+        /// Level_frame_counter). Both recorders stamp overlapping
+        /// LUA_SCRIPT_VERSION strings across that move, so the address is a
+        /// RECORDER-identity parameter and must never be derived from the
+        /// version string (spec s3k-completerun-profiles.md §7.3). Every
+        /// other column is byte-shared between the two recorders.
+        /// </summary>
+        public static string FormatRow(
+            int traceFrame,
+            int inputMask,
+            IGpgxHost host,
+            int frameCounterAddress)
+        {
             if (host == null)
             {
                 throw new ArgumentNullException("host");
@@ -132,7 +153,7 @@ namespace OpenGGF.BizHawk.Headless
             ushort cameraX = S3KRam.U16(host, S3KRam.CameraX);
             ushort cameraY = S3KRam.U16(host, S3KRam.CameraY);
             ushort rings = S3KRam.U16(host, S3KRam.RingCount);
-            ushort gameplayFrameCounter = S3KRam.U16(host, S3KRam.FrameCount);
+            ushort gameplayFrameCounter = S3KRam.U16(host, frameCounterAddress);
             ushort vblankCounter = S3KRam.U16(host, S3KRam.VblankWord);
             ushort lagCounter = S3KRam.U16(host, S3KRam.LagFrameCount);
 

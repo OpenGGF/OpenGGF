@@ -229,6 +229,8 @@ namespace OpenGGF.BizHawk.Headless
             private readonly Action<string> deleteFile;
             private readonly List<StagedPublication> staged =
                 new List<StagedPublication>();
+            private readonly List<StagedStream> open =
+                new List<StagedStream>();
             private bool finished;
 
             internal IncrementalStagingSession(
@@ -318,10 +320,91 @@ namespace OpenGGF.BizHawk.Headless
             }
 
             /// <summary>
+            /// Opens a staged file for INCREMENTAL writing, for output too
+            /// large to hold as a string: the caller writes through the
+            /// returned stream's <see cref="StagedStream.Writer"/> as the
+            /// capture produces it and calls
+            /// <see cref="StagedStream.Complete"/> when the file is done.
+            /// Only then does the file join the session's publication set.
+            ///
+            /// This exists because the S3K complete-run pass produces
+            /// ~1.4 GB of aux_state.jsonl across its segments, with a
+            /// single 266 MB segment; routing that through
+            /// <see cref="StageFile(string,string)"/> would hold the whole
+            /// segment as a .NET string (two bytes per ASCII char) and then
+            /// copy it. Streaming keeps peak footprint at the OS write
+            /// buffer.
+            ///
+            /// Guarantees match <see cref="StageFile(string,string)"/>: the
+            /// temporary lives next to its final so link(2) never crosses a
+            /// filesystem, nothing lands under a final name before the
+            /// completed set's Publish(), and an abandoned stream (Dispose
+            /// without Complete) removes its temporary and never publishes.
+            /// Bytes are written verbatim as BOM-free UTF-8 with LF
+            /// newlines; any line-ending policy is the caller's.
+            /// </summary>
+            public StagedStream OpenFile(string fileName)
+            {
+                if (finished)
+                {
+                    throw new InvalidOperationException(
+                        "The staging session is already finalized.");
+                }
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    throw new ArgumentException(
+                        "An output file name is required.",
+                        "fileName");
+                }
+
+                string finalPath = Path.Combine(outputDirectory, fileName);
+                string finalDirectory = Path.GetDirectoryName(finalPath);
+                Directory.CreateDirectory(finalDirectory);
+                string temporaryPath = Path.Combine(
+                    finalDirectory,
+                    CreateTemporaryName(Path.GetFileName(fileName)));
+                var stream = new StagedStream(
+                    this, temporaryPath, finalPath);
+                open.Add(stream);
+                return stream;
+            }
+
+            internal void CompleteStream(
+                StagedStream stream, string temporaryPath, string finalPath)
+            {
+                open.Remove(stream);
+                staged.Add(new StagedPublication(
+                    temporaryPath,
+                    finalPath,
+                    linkOperation,
+                    deleteFile));
+            }
+
+            internal void AbandonStream(StagedStream stream)
+            {
+                open.Remove(stream);
+            }
+
+            internal void DeleteTemporary(string temporaryPath)
+            {
+                try
+                {
+                    deleteFile(temporaryPath);
+                }
+                catch (Exception)
+                {
+                    // Preserve the staging failure. A leftover temporary
+                    // file is safer than obscuring why capture failed.
+                }
+            }
+
+            /// <summary>
             /// Finishes staging and hands the accumulated files over as one
             /// all-or-nothing publication set (possibly empty, whose
             /// Publish() is then a no-op). After Complete() the session
-            /// itself owns nothing — dispose the returned set instead.
+            /// itself owns nothing — dispose the returned set instead. Any
+            /// stream still open is a caller bug: it is discarded rather
+            /// than half-published.
             /// </summary>
             public StagedPublicationSet Complete()
             {
@@ -329,6 +412,16 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     throw new InvalidOperationException(
                         "The staging session is already finalized.");
+                }
+                if (open.Count != 0)
+                {
+                    int unfinished = open.Count;
+                    DiscardOpenStreams();
+                    throw new InvalidOperationException(
+                        "The staging session still has "
+                        + unfinished.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture)
+                        + " unfinished streamed file(s).");
                 }
                 finished = true;
                 return new StagedPublicationSet(staged.ToArray());
@@ -341,10 +434,121 @@ namespace OpenGGF.BizHawk.Headless
                     return;
                 }
                 finished = true;
+                DiscardOpenStreams();
                 foreach (StagedPublication file in staged)
                 {
                     file.Dispose();
                 }
+            }
+
+            private void DiscardOpenStreams()
+            {
+                var pending = open.ToArray();
+                foreach (StagedStream stream in pending)
+                {
+                    stream.Dispose();
+                }
+                open.Clear();
+            }
+        }
+
+        /// <summary>
+        /// One incrementally written staged file (see
+        /// <see cref="IncrementalStagingSession.OpenFile"/>). Write through
+        /// <see cref="Writer"/>, then call <see cref="Complete"/> exactly
+        /// once; disposing without completing removes the temporary and
+        /// publishes nothing.
+        /// </summary>
+        internal sealed class StagedStream : IDisposable
+        {
+            private readonly IncrementalStagingSession owner;
+            private readonly string temporaryPath;
+            private readonly string finalPath;
+            private readonly FileStream stream;
+            private readonly StreamWriter writer;
+            private bool finished;
+
+            internal StagedStream(
+                IncrementalStagingSession owner,
+                string temporaryPath,
+                string finalPath)
+            {
+                this.owner = owner;
+                this.temporaryPath = temporaryPath;
+                this.finalPath = finalPath;
+                try
+                {
+                    stream = new FileStream(
+                        temporaryPath,
+                        FileMode.CreateNew,
+                        FileAccess.Write,
+                        FileShare.None);
+                    writer = new StreamWriter(
+                        stream,
+                        new UTF8Encoding(false),
+                        64 * 1024,
+                        true);
+                    writer.NewLine = "\n";
+                }
+                catch
+                {
+                    TryDispose(writer);
+                    TryDispose(stream);
+                    owner.DeleteTemporary(temporaryPath);
+                    throw;
+                }
+            }
+
+            public TextWriter Writer
+            {
+                get
+                {
+                    if (finished)
+                    {
+                        throw new InvalidOperationException(
+                            "The staged stream is already finalized.");
+                    }
+                    return writer;
+                }
+            }
+
+            /// <summary>
+            /// Flushes and closes the file, then registers it with the
+            /// session so the session's own Complete() includes it in the
+            /// all-or-nothing publication set.
+            /// </summary>
+            public void Complete()
+            {
+                if (finished)
+                {
+                    throw new InvalidOperationException(
+                        "The staged stream is already finalized.");
+                }
+                finished = true;
+                try
+                {
+                    writer.Flush();
+                    stream.Flush(true);
+                }
+                finally
+                {
+                    TryDispose(writer);
+                    TryDispose(stream);
+                }
+                owner.CompleteStream(this, temporaryPath, finalPath);
+            }
+
+            public void Dispose()
+            {
+                if (finished)
+                {
+                    return;
+                }
+                finished = true;
+                TryDispose(writer);
+                TryDispose(stream);
+                owner.AbandonStream(this);
+                owner.DeleteTemporary(temporaryPath);
             }
         }
 

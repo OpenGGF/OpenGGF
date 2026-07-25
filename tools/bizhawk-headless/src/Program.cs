@@ -501,15 +501,26 @@ namespace BizHawk.Headless.Gpgx
                                 "Argument --gameplay-segment is only"
                                 + " supported with the Sonic 2 ROM.");
                         }
-                        if (options.RunId != null)
+                        if (options.RunId != null
+                            || options.TraceProfile
+                                == S3KCompleteRunSegmenter.LevelTraceProfile)
                         {
-                            throw new ArgumentException(
-                                "Argument --run-id is not supported with"
-                                + " the Sonic 3 & Knuckles ROM: the S3K"
-                                + " complete-run recorder"
-                                + " (s3k_complete_run_recorder.lua) has"
-                                + " not been migrated to the native"
-                                + " pipeline yet.");
+                            // s3k_complete_run_recorder.lua: --run-id is the
+                            // Lua's OGGF_TRACE_RUN_ID (identities (B)/(C));
+                            // --trace-profile complete_run is the same
+                            // recorder with run_id unset (identity (A)),
+                            // matching the S1 complete-run CLI shape. The
+                            // Lua hard-pins TRACE_PROFILE to "complete_run",
+                            // so no other profile string can select it.
+                            RejectUnmodeledS3kCompleteRunEnvironment();
+                            return RunS3kCompleteRun(
+                                options,
+                                installation,
+                                romSha1,
+                                movie,
+                                stdout,
+                                stderr,
+                                openHost);
                         }
                         RejectUnmodeledS3kEnvironment();
                         return RunS3kTrace(
@@ -1056,6 +1067,173 @@ namespace BizHawk.Headless.Gpgx
             }
         };
 
+        /// <summary>
+        /// The COMPLETE-RUN recorder's own environment surface
+        /// (s3k_complete_run_recorder.lua; spec
+        /// tools/bizhawk-headless/docs/s3k-run-publication.md §8.1). It is
+        /// deliberately NOT the standard recorder's table: that recorder
+        /// honors OGGF_S3K_TRACE_PROFILE, while this one hard-pins
+        /// TRACE_PROFILE to "complete_run" at L341, which makes three
+        /// otherwise plausible refusals FALSE refusals. Every entry below
+        /// was justified against HEAD rather than inherited.
+        ///
+        /// Refused — nine variables, eight entries:
+        ///
+        /// - OGGF_TRACE_STOP_FRAME / OGGF_BK2_FRAME_COUNT truncate both
+        ///   published streams. The modeled equivalent of the latter is the
+        ///   existing --effective-movie-length option, exactly as in the
+        ///   S1/S2 run ports.
+        /// - OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1 arms all 13 hook families
+        ///   (which the port defers entirely) AND removes the capture_mode
+        ///   metadata line.
+        /// - OGGF_S3K_CNZ_EVENT_RAM_RANGE is the ONLY gate on the
+        ///   frame-polled cnz_event_ram emit (V622_CNZ_EVENT_RAM.write
+        ///   L3310, called unconditionally per frame at L5699; .enabled
+        ///   defaults false at L3250 and is set only here at L3255), so
+        ///   setting it injects aux lines no fixture has.
+        /// - OGGF_S3K_AIZ_WALL_SENSOR_RANGE, OGGF_S3K_CRL_RANGE,
+        ///   OGGF_S3K_CNZ_CYLINDER_RANGE and the
+        ///   OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START/_END pair retune
+        ///   frame-polled families that emit purely on window + zone with no
+        ///   hit-list guard — and which ARE present in the fixtures
+        ///   (terrain_wall_sensor 12 and aiz_handoff_terrain_state 9 in
+        ///   aiz_completerun; cnz_cylinder_state 23 and
+        ///   collision_response_list_end_of_frame 7 in cnz_completerun). The
+        ///   port pins their windows as S3KAuxEventEngine constants.
+        ///
+        /// NOT refused, and pinned as such by a test so this guard can never
+        /// degrade into a blanket OGGF_* ban:
+        ///
+        /// - OGGF_S3K_AIZ_FIRE_RANGE. V628_AIZ_FIRE.write() returns at
+        ///   L3393 on !is_aiz_end_to_end_profile(), which is
+        ///   TRACE_PROFILE == "aiz_end_to_end" — impossible under L341. The
+        ///   family can never be emitted by this recorder. The STANDARD
+        ///   recorder's table refuses it; carrying that over would be a
+        ///   false refusal.
+        /// - OGGF_S3K_RNG_CALL_RANGE. Both consumers are dead here: the
+        ///   aux_schema_extras append is at L1422 inside the `else` arm of
+        ///   `if TRACE_PROFILE == "complete_run"` (L1392), and rng_call
+        ///   lines come only from V625_RNG_CALLS.flush() (L3042), which
+        ///   early-returns on an empty hit list populated only by hooks
+        ///   registered inside `if not LIGHTWEIGHT_REGEN` (L5816) — i.e.
+        ///   only under the already-refused hook switch. Same "no with
+        ///   hooks off" class as the seven window variables below.
+        /// - OGGF_S3K_POSITION_WRITE_RANGE, OGGF_S3K_VELOCITY_WRITE_RANGE,
+        ///   OGGF_S3K_SOLID_CONT_RANGE, OGGF_S3K_AIZ_SHIP_LOOP_RANGE,
+        ///   OGGF_S3K_AIZ_BOUNDARY_RANGE (+ its legacy
+        ///   _FRAME_START/_END form) and
+        ///   OGGF_S3K_AIZ_TRANSITION_FLOOR_FRAME_START/_END: each only
+        ///   widens a window consulted by a flush that early-returns on an
+        ///   empty hit list, and those lists stay empty while L5816 leaves
+        ///   the hooks unregistered.
+        /// - OGGF_TRACE_QUIET only replaces `print` with a no-op; it
+        ///   changes stdout, never a published file.
+        /// - OGGF_TRACE_LIGHTWEIGHT no longer exists (removed by
+        ///   192d9c976). A stale export of it is silently ignored by HEAD,
+        ///   so refusing it would be a false refusal.
+        /// - OGGF_TRACE_OUTPUT_DIR, OGGF_BK2_BASENAME and
+        ///   OGGF_TRACE_RUN_ID are MODELED (--output, the movie file name,
+        ///   --run-id).
+        /// </summary>
+        private static void RejectUnmodeledS3kCompleteRunEnvironment()
+        {
+            if (Environment.GetEnvironmentVariable(
+                "OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS") == "1")
+            {
+                throw new InvalidOperationException(
+                    "OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1 requests the"
+                    + " Lua complete-run recorder's M68K exec/memory-write"
+                    + " diagnostic hooks, which the native S3K complete-run"
+                    + " recorder does not implement (deferred; see"
+                    + " tools/bizhawk-headless/docs/"
+                    + "s3k-run-publication.md section 8.2). It also removes"
+                    + " the capture_mode metadata line. Unset it or capture"
+                    + " with the Lua recorder.");
+            }
+            foreach (string[] entry in
+                UnmodeledS3kCompleteRunEnvironmentVariables)
+            {
+                if (!string.IsNullOrEmpty(
+                    Environment.GetEnvironmentVariable(entry[0])))
+                {
+                    throw new InvalidOperationException(
+                        entry[0] + " " + entry[1] + " Unset it or capture"
+                        + " with the Lua recorder.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// {variable name, reason} for every complete-run recorder
+        /// environment variable that changes published output and that the
+        /// native port does not model. See
+        /// <see cref="RejectUnmodeledS3kCompleteRunEnvironment"/> for the
+        /// per-variable justification and for the deliberate omissions.
+        /// </summary>
+        private static readonly string[][]
+            UnmodeledS3kCompleteRunEnvironmentVariables =
+        {
+            // Arms a frame-polled family absent from every fixture.
+            new[]
+            {
+                "OGGF_S3K_CNZ_EVENT_RAM_RANGE",
+                CompleteRunHookArmingRejectionReason
+            },
+            // Retunes frame-polled families the port implements with the
+            // Lua's default window pinned as a constant.
+            new[]
+            {
+                "OGGF_S3K_AIZ_WALL_SENSOR_RANGE",
+                PolledWindowRejectionReason
+            },
+            new[]
+            {
+                "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START",
+                PolledWindowRejectionReason
+            },
+            new[]
+            {
+                "OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_END",
+                PolledWindowRejectionReason
+            },
+            new[]
+            {
+                "OGGF_S3K_CRL_RANGE",
+                PolledWindowRejectionReason
+            },
+            new[]
+            {
+                "OGGF_S3K_CNZ_CYLINDER_RANGE",
+                PolledWindowRejectionReason
+            },
+            // Truncates the capture (lua :342-343).
+            new[]
+            {
+                "OGGF_TRACE_STOP_FRAME",
+                CompleteRunEarlyStopRejectionReason
+            },
+            new[]
+            {
+                "OGGF_BK2_FRAME_COUNT",
+                CompleteRunEarlyStopRejectionReason
+            }
+        };
+
+        private const string CompleteRunHookArmingRejectionReason =
+            "is the only gate on the frame-polled cnz_event_ram aux event"
+            + " family, which the native S3K complete-run recorder does not"
+            + " implement and which appears in no canonical fixture (see"
+            + " tools/bizhawk-headless/docs/s3k-run-publication.md"
+            + " section 8.1).";
+
+        private const string CompleteRunEarlyStopRejectionReason =
+            "finalizes the Lua complete-run recorder's capture early and"
+            + " truncates physics.csv and aux_state.jsonl; the native"
+            + " recorder models the movie-length signal through"
+            + " --effective-movie-length instead (see"
+            + " tools/bizhawk-headless/docs/s3k-run-publication.md"
+            + " section 8.1).";
+
         private const string HookArmingRejectionReason =
             "arms a hook-driven aux event family that the native S3K"
             + " recorder does not implement (deferred; see"
@@ -1142,6 +1320,166 @@ namespace BizHawk.Headless.Gpgx
                     + "Aux state JSONL: " + auxStatePath + "\n"
                     + "Metadata JSON: " + metadataPath + "\n",
                 new NoReplacePublisher());
+        }
+
+        /// <summary>
+        /// S3K complete-run mode (--run-id, or --trace-profile
+        /// complete_run): one movie pass through
+        /// <see cref="S3KCompleteRunCaptureRunner"/> — the per-zone
+        /// auto-segmenting recorder whose bonus/special-stage detour
+        /// machine is always on, exactly like the Lua — publishing every
+        /// discovered segment directory plus (when emitted)
+        /// run_manifest.json as one all-or-nothing no-replace set.
+        ///
+        /// Segments stage incrementally AND stream: physics.csv and
+        /// aux_state.jsonl are written straight into their staged
+        /// temporaries as the capture produces them, so a 19-segment,
+        /// 1.4 GB pass never holds a segment in memory (spec
+        /// docs/s3k-run-publication.md §9 invariant 12). The manifest
+        /// stages last, so it can never exist without its segment files.
+        ///
+        /// run_manifest.json is emitted iff any transition was recorded OR
+        /// --run-id was supplied (the Lua's disjunction) — which is exactly
+        /// why the seven canonical *_completerun fixtures, a detour-free
+        /// pass with no run id, have none.
+        ///
+        /// Line endings are LF in BOTH modes.
+        /// <see cref="ExpandRunNewlines"/> is deliberately NOT applied on
+        /// this path: the canonical run-mode S3K fixture set (identity (C),
+        /// captured under Linux/Mono on 2026-07-23) is LF, so the S1/S2
+        /// "run mode implies CRLF" rule would corrupt it (spec §6).
+        /// </summary>
+        private static int RunS3kCompleteRun(
+            CommandLineOptions options,
+            BizHawkInstallation installation,
+            string romSha1,
+            Bk2Movie movie,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
+            NoReplacePublisher.IncrementalStagingSession session = null;
+            NoReplacePublisher.StagedPublicationSet staged = null;
+            try
+            {
+                string manifestPath = Path.Combine(
+                    options.OutputDirectory,
+                    CommandLineOptions.RunManifestFileName);
+                if (options.RunId == null
+                    && LinuxPathEntry.Exists(manifestPath))
+                {
+                    // Parse() preflights the manifest for --run-id; the
+                    // complete_run profile reaches here without that check,
+                    // yet may still emit a manifest when the movie takes a
+                    // bonus/giant-ring detour — and even a manifest-free
+                    // capture next to a stale manifest would corrupt the run
+                    // layout that stale manifest describes.
+                    throw new IOException(
+                        "Final output already exists and will not be"
+                        + " replaced: " + manifestPath);
+                }
+
+                S3KCompleteRunCaptureResult result;
+                session = new NoReplacePublisher().OpenSession(
+                    options.OutputDirectory);
+                using (var sink = new S3KStagedSegmentSink(session))
+                using (new NativeStandardOutputSilencer())
+                using (IGpgxHost host = openHost(
+                    options.RomPath,
+                    movie.SyncSettings))
+                {
+                    result = S3KCompleteRunCaptureRunner.Capture(
+                        movie,
+                        host,
+                        options.RunId,
+                        Path.GetFileName(options.MoviePath),
+                        DateTime.Now.ToString(
+                            "yyyy-MM-dd",
+                            CultureInfo.InvariantCulture),
+                        options.EffectiveMovieLength,
+                        sink);
+                }
+                if (result.RunManifestJson != null)
+                {
+                    session.StageFile(
+                        CommandLineOptions.RunManifestFileName,
+                        result.RunManifestJson);
+                }
+                staged = session.Complete();
+                session = null;
+
+                var summary = new StringBuilder();
+                summary.Append("BizHawk: ")
+                    .Append(installation.ManagedVersion).Append('\n');
+                summary.Append("ROM SHA-1: ").Append(romSha1).Append('\n');
+                summary.Append("Movie frames: ")
+                    .Append(movie.FrameCount.ToString(
+                        CultureInfo.InvariantCulture))
+                    .Append('\n');
+                if (options.EffectiveMovieLength != 0)
+                {
+                    summary.Append("Effective movie length: ")
+                        .Append(options.EffectiveMovieLength.ToString(
+                            CultureInfo.InvariantCulture))
+                        .Append('\n');
+                }
+                if (options.RunId != null)
+                {
+                    summary.Append("Run ID: ").Append(options.RunId)
+                        .Append('\n');
+                }
+                else
+                {
+                    summary.Append("Trace profile: ")
+                        .Append(S3KCompleteRunSegmenter.LevelTraceProfile)
+                        .Append('\n');
+                }
+                summary.Append("Segments: ")
+                    .Append(result.Segments.Count.ToString(
+                        CultureInfo.InvariantCulture))
+                    .Append('\n');
+                summary.Append("Transitions: ")
+                    .Append(result.Transitions.Count.ToString(
+                        CultureInfo.InvariantCulture))
+                    .Append('\n');
+                foreach (RunManifestSegment entry in result.Segments)
+                {
+                    summary.Append("Segment ").Append(entry.Dir)
+                        .Append(": kind=").Append(entry.Kind)
+                        .Append(", BK2 frame offset=")
+                        .Append(entry.Bk2FrameOffset.ToString(
+                            CultureInfo.InvariantCulture))
+                        .Append(", trace frames=")
+                        .Append(entry.TraceFrameCount.ToString(
+                            CultureInfo.InvariantCulture))
+                        .Append('\n');
+                }
+                if (result.RunManifestJson != null)
+                {
+                    summary.Append("Run manifest: ")
+                        .Append(manifestPath)
+                        .Append('\n');
+                }
+                stdout.Write(summary.ToString());
+                stdout.Flush();
+
+                staged.Publish();
+                staged = null;
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                if (session != null)
+                {
+                    session.Dispose();
+                }
+                if (staged != null)
+                {
+                    staged.Dispose();
+                }
+                ReportFailure(stderr, exception);
+                return 1;
+            }
         }
 
         /// <summary>
