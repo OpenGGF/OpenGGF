@@ -2,6 +2,7 @@ package com.openggf.configuration;
 
 import java.util.EnumSet;
 import java.util.Locale;
+import java.util.OptionalInt;
 import java.util.Set;
 
 /**
@@ -18,7 +19,7 @@ import java.util.Set;
  * {@code "O"}, {@code "GLFW_KEY_O"} — and reads those as a chord with no
  * modifiers, so existing {@code config.yaml} files keep their meaning.
  *
- * <p>{@link #matches} requires the declared modifiers to be held and the others
+ * <p>{@link #matchesModifiers} requires the declared modifiers to be held and the others
  * to be released. A binding of {@code "O"} therefore does not fire while Ctrl
  * is down, which is what stops a plain shortcut stealing a chord that another
  * binding has claimed.
@@ -64,6 +65,12 @@ public record KeyChord(int keyCode, Set<Modifier> modifiers) {
         // Splitting on '+' is safe because no GLFW key name contains one — the
         // plus key is named KP_ADD or EQUAL.
         String[] segments = text.split("\\+");
+        if (segments.length == 0) {
+            // "+", "++" and "+++" split to a zero-length array, so there is no
+            // key segment to index. '+' is the separator; the plus key is named
+            // EQUAL or KP_ADD.
+            return new KeyChord(NO_KEY, EnumSet.noneOf(Modifier.class));
+        }
         for (int i = 0; i < segments.length - 1; i++) {
             Modifier modifier = modifier(segments[i]);
             if (modifier == null) {
@@ -90,12 +97,18 @@ public record KeyChord(int keyCode, Set<Modifier> modifiers) {
         if (name.isEmpty()) {
             return NO_KEY;
         }
+        // The name table wins, exactly as SonicConfigurationService.resolveInt
+        // does for a KEY value: "1" is the number-row key (49), not raw code 1.
+        // A raw code is only read when no key of that name exists.
+        OptionalInt resolved = GlfwKeyNameResolver.resolve(name);
+        if (resolved.isPresent()) {
+            return resolved.getAsInt();
+        }
         try {
             return Integer.parseInt(name);
         } catch (NumberFormatException ignored) {
-            // Fall through to the name table.
+            return NO_KEY;
         }
-        return GlfwKeyNameResolver.resolve(name).orElse(NO_KEY);
     }
 
     public boolean isBound() {

@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.OptionalInt;
+
 import static com.openggf.configuration.KeyChord.Modifier.ALT;
 import static com.openggf.configuration.KeyChord.Modifier.CTRL;
 import static com.openggf.configuration.KeyChord.Modifier.META;
@@ -11,6 +13,8 @@ import static com.openggf.configuration.KeyChord.Modifier.SHIFT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_1;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LAST;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_BRACKET;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_O;
 
@@ -107,6 +111,67 @@ class TestKeyChord {
             assertFalse(chord.isBound(), "should be unbound: " + configured);
             assertEquals(KeyChord.NO_KEY, chord.keyCode());
         }
+    }
+
+    /**
+     * getInt resolves a KEY value through the name table first so "1" means the
+     * number-row key, not raw code 1. KeyChord must agree or a digit binding is
+     * silently dead: 1 is below GLFW_KEY_SPACE (32), so isBound() would be true.
+     */
+    @Test
+    void aDigitBindingMeansTheNumberRowKeyNotTheRawKeyCode() {
+        assertEquals(GLFW_KEY_1, KeyChord.parse("1").keyCode());
+        assertEquals(KeyChord.of(GLFW_KEY_1, CTRL), KeyChord.parse("CTRL+1"));
+    }
+
+    @Test
+    void aNumericStringWithNoNameStillResolvesAsARawKeyCode() {
+        assertEquals(GLFW_KEY_O, KeyChord.parse("79").keyCode());
+    }
+
+    /**
+     * The guard must be a round-trip identity check, not a presence check.
+     * {@code nameOf} returns the numeric string for a code with no
+     * {@code GLFW_KEY_*} constant, and the lowest real constant is
+     * {@code GLFW_KEY_SPACE} = 32 — so {@code nameOf(0)}..{@code nameOf(9)} are
+     * {@code "0"}..{@code "9"}, which ARE real key names resolving to 48..57. A
+     * {@code resolve(name).isEmpty()} guard would not skip them, and
+     * {@code assertEquals(0, 48)} on the first iteration is unfixable by any
+     * correct change to KeyChord.
+     */
+    @Test
+    void everyNameInTheTableFormatsBackToAnEqualChord() {
+        int covered = 0;
+        for (int keyCode = 0; keyCode <= GLFW_KEY_LAST; keyCode++) {
+            String name = GlfwKeyNameResolver.nameOf(keyCode);
+            OptionalInt resolved = GlfwKeyNameResolver.resolve(name);
+            if (resolved.isEmpty() || resolved.getAsInt() != keyCode) {
+                continue; // no constant for this code; nameOf gave back a number
+            }
+            covered++;
+            KeyChord plain = KeyChord.parse(name);
+            assertEquals(keyCode, plain.keyCode(), name);
+            assertEquals(plain, KeyChord.parse(plain.format()), name);
+
+            KeyChord chorded = KeyChord.of(keyCode, CTRL, SHIFT, ALT, META);
+            assertEquals(chorded, KeyChord.parse(chorded.format()), name);
+        }
+        assertTrue(covered >= 100, "guard must not skip the table itself: " + covered);
+    }
+
+    /**
+     * {@code "+"} is what a player writes to bind the plus key once '+' is the
+     * documented separator. {@code text.split("\\+")} returns a zero-length array
+     * for it, so the last-segment index was -1. The capture-toggle conversion
+     * parses per frame on the render path, where a throw is not recoverable.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"+", "++", "+++"})
+    void separatorOnlyInputIsUnboundRatherThanThrowing(String configured) {
+        KeyChord chord = KeyChord.parse(configured);
+
+        assertFalse(chord.isBound(), configured);
+        assertEquals(KeyChord.NO_KEY, chord.keyCode(), configured);
     }
 
     @Test
