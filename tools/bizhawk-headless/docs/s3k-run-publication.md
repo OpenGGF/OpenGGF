@@ -74,8 +74,10 @@ differential gate must therefore compare **the seven named dirs**, not
 `src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/`: 25 segment
 dirs + `run_manifest.json` + a curation copy of the movie. Captured
 **2026-07-19** on Windows EmuHawk with Lua `6.31-s3k-completerun`;
-the nine bonus segments' `metadata.json` were later **hand-edited**
-(not re-captured) on 2026-07-20 by commit `9e3ccdb41`.
+the eight bonus segments' `metadata.json` were later **hand-edited**
+(not re-captured) on 2026-07-20 by commit `9e3ccdb41`. Being pre-`192d9c976`,
+this capture ran with the diagnostic hooks **armed**, and four of its
+segments carry hook-driven aux families as a result (§8.2).
 
 | Dir | version stamp | date | profile | `bk2_frame_offset` | rows |
 |---|---|---|---|---|---|
@@ -412,7 +414,7 @@ every bonus fixture. `v_int_run_count` is `read_u32_be(0xFE0C)`
 segment arm**, gated on `current_segment_is_bonus` — the level path
 leaves `start_v_int_run_count = nil` and the key is omitted entirely.
 
-### 3.3 Special-stage segment (`write_ss_metadata`, L5103-5124)
+### 3.3 Special-stage segment (`write_ss_metadata`, L5103-5128)
 
 A **different key set and order**, not a superset of §3.1:
 
@@ -442,13 +444,30 @@ A **different key set and order**, not a superset of §3.1:
 Absent by construction — do **not** add them: `zone`, `zone_id`, `act`,
 `pre_trace_osc_frames`, `start_x`, `start_y`, `rng_seed`,
 `trace_schema`, `csv_version`, **`capture_mode`**, `aux_schema_extras`,
-`notes`. `fresh_load` is a hardcoded `false` (giant-ring entries are
-always mid-level).
+**`bonus_stage_type`**, **`v_int_run_count`**, `notes`. `fresh_load` is a
+hardcoded `false` (giant-ring entries are always mid-level).
 
-`capture_mode`'s absence from `special_stage/` is **not** a
-version/env delta: `write_ss_metadata` simply has no `LIGHTWEIGHT_REGEN`
-branch. The (C) fixture set proves the point — captured in one pass, the
-three bonus dirs carry `capture_mode` and `special_stage/` does not.
+The two absences that look like version/env deltas but are not:
+
+- **`capture_mode`.** `write_metadata` emits it from an
+  `if LIGHTWEIGHT_REGEN then` branch (L1375-1377). `write_ss_metadata`
+  (L5103-5128) contains no such branch — it never reads
+  `LIGHTWEIGHT_REGEN` at all — so no env value and no recorder build can
+  make it appear on the SS path.
+- **`v_int_run_count`** (and `bonus_stage_type`). Both live inside
+  `write_metadata`'s `if current_segment_is_bonus then` block
+  (L1431-1436), and `v_int_run_count` is further gated on
+  `start_v_int_run_count ~= nil` (L1434). `write_ss_metadata` references
+  neither variable, and `start_ss_segment` (L5137) never assigns
+  `current_segment_is_bonus` or `start_v_int_run_count`. The
+  6.31→6.32 line addition (§7.2) is therefore structurally invisible to
+  the SS shape.
+
+The (C) fixture set proves both empirically: captured in **one** pass
+under the same `--run-id s3k-multibonus`, the three bonus dirs carry
+`capture_mode` **and** a decimal `v_int_run_count` while
+`special_stage/` carries neither — so neither absence can be attributed
+to a differing recorder build, date, or environment.
 
 ---
 
@@ -673,7 +692,7 @@ Commit `9e3ccdb41` changed the published bytes in exactly two ways:
 `aux_schema_extras`, and every other metadata key are untouched. The
 commit's own message records that it re-captured the movie
 deterministically, confirmed the physics rows byte-identical, and then
-**hand-edited only the `metadata.json` files** of the nine bonus
+**hand-edited only the `metadata.json` files** of the eight bonus
 segments plus the three interior `bonus_*` copies.
 
 ### 7.3 The two version-invisible deltas that break (B)
@@ -725,9 +744,12 @@ lightweight early-return that used to suppress the pre-trace
 `cpu_state_snapshot` / `object_state_snapshot` emissions.
 
 Consequence: **`capture_mode`'s presence is an env/build fact, not a
-version fact.** (B) omits it because it predates the inversion, not
-because hooks were on — its aux vocabulary is identical to (A)/(C)'s
-(§8.2).
+version fact.** (B) omits it because it predates the inversion — and,
+because it predates it, (B) really did capture with the hooks armed:
+four of its 25 segments contain hook-driven aux families that no (A) or
+(C) fixture contains (§8.2). That is a **third** independent reason (B)
+is not byte-reproducible against HEAD, on top of the `ADDR_FRAMECOUNT`
+change and CRLF.
 
 ### 7.4 Per-fixture permitted delta versus a fresh 6.32 (HEAD) capture
 
@@ -740,8 +762,8 @@ lines below.
 | (A) `aiz_completerun`, `hcz_completerun`, `mgz_completerun`, `cnz_completerun`, `icz_completerun`, `lbz_completerun`, `mhz_completerun` | `recording_date` value **only** | byte-identical; no manifest emitted |
 | (C) `bonus_gumball`, `bonus_pachinko`, `bonus_slots` | `recording_date` value **only** (capture must set `--run-id s3k-multibonus`) | byte-identical |
 | (C) `special_stage` | `recording_date` value **only** (same `--run-id`); note this shape has no `capture_mode` and no `v_int_run_count` by construction | `physics.csv` byte-identical; `aux_state.jsonl` byte-identical **and empty** |
-| (B) `runs/s3-knux-multibonus-ss/` — 16 level segments (`aiz`..`aiz_5`, `hcz`..`hcz_6`, `mgz`..`mgz_3`) | `recording_date`; `lua_script_version` `6.31`↔`6.32`; **`pre_trace_osc_frames` 0↔1**; **absent↔present `capture_mode` line** | **NOT byte-reproducible** — every `gameplay_frame_counter` cell and every aux `vfc` / `level_frame_counter` differ (§7.3 i), and all files are CRLF (§6) |
-| (B) 9 bonus segments (`gumball`, `gumball_2`, `slots`..`slots_5`, `pachinko`) | `recording_date`; **absent↔present `capture_mode`**; `pre_trace_osc_frames` 0↔1. `lua_script_version` and `v_int_run_count` already match 6.32 (hand-edited by `9e3ccdb41`) | **NOT byte-reproducible** — same two reasons |
+| (B) `runs/s3-knux-multibonus-ss/` — 14 level segments (`aiz`..`aiz_5`, `hcz`..`hcz_6`, `mgz`..`mgz_3`) | `recording_date`; `lua_script_version` `6.31`↔`6.32`; **`pre_trace_osc_frames` 0↔1**; **absent↔present `capture_mode` line** | **NOT byte-reproducible** — every `gameplay_frame_counter` cell and every aux `vfc` / `level_frame_counter` differ (§7.3 i); all files are CRLF (§6); and `hcz_2` / `hcz_6` / `mgz` / `mgz_3` additionally carry hook-driven aux lines a hooks-off capture never emits (§8.2) |
+| (B) 8 bonus segments (`gumball`, `gumball_2`, `slots`..`slots_5`, `pachinko`) | `recording_date`; **absent↔present `capture_mode`**; `pre_trace_osc_frames` 0↔1. `lua_script_version` and `v_int_run_count` already match 6.32 (hand-edited by `9e3ccdb41`) | **NOT byte-reproducible** — same `ADDR_FRAMECOUNT` + CRLF reasons; these eight are hook-free |
 | (B) 3 ss segments (`ss`, `ss_2`, `ss_3`) | `recording_date`; `lua_script_version` `6.31`↔`6.32` | `physics.csv` **NOT byte-reproducible** (CRLF); `aux_state.jsonl` is empty in both, so byte-identical |
 | (B) `run_manifest.json` | `lua_script_version` `6.31`↔`6.32` | **NOT byte-reproducible** (CRLF) |
 
@@ -755,6 +777,9 @@ instead — segment inventory, dir tokens, `bk2_frame_offset` /
 transition list including field presence per kind — and pin the
 enumerated deltas above as literals so a future regeneration of (B)
 against the current recorder is detected rather than silently accepted.
+The (B) structural gate must **not** assert aux-vocabulary equality with
+(A)/(C), and the hook-absence gate must not be pointed at (B) at all:
+four (B) segments legitimately contain hook families (§8.2).
 
 Never widen normalization to make (B) pass. If a divergence appears
 against (A) or (C), fix production code.
@@ -775,9 +800,9 @@ against (A) or (C), fix production code.
 | `OGGF_TRACE_QUIET` | 350 | replaces `print` with a no-op | no (stdout only; no published file changes) | **deliberately NOT refused** — pin this in a test |
 | `OGGF_BK2_BASENAME` | 360 | `source_bk2` in every `metadata.json` and in `run_manifest.json` | **yes** | **modeled** — derived from the movie filename (`Path.GetFileName(options.MoviePath)`), same as S1/S2 |
 | `OGGF_TRACE_RUN_ID` | 907 | `run_id` line in level/bonus/ss metadata and in the manifest; forces manifest emission | **yes** | **modeled** — `--run-id` |
-| `OGGF_S3K_RNG_CALL_RANGE` | 786 | arms `rng_call` **and** appends `rng_call_per_frame` to `aux_schema_extras` (cnz, non-`complete_run` branch) | **yes** | **refuse** |
-| `OGGF_S3K_CNZ_EVENT_RAM_RANGE` | 3253 / 1418 | arms `cnz_event_ram` **and** appends `cnz_event_ram_per_frame` to `aux_schema_extras` | **yes** | **refuse** |
-| `OGGF_S3K_AIZ_FIRE_RANGE` | 3365 | retunes the frame-polled `aiz_fire_transition` window | **yes** | **refuse** |
+| `OGGF_S3K_RNG_CALL_RANGE` | 786 | sets `V625_RNG_CALLS.enabled`; both consumers are dead here (see below) | no with hooks off | **deliberately NOT refused** |
+| `OGGF_S3K_CNZ_EVENT_RAM_RANGE` | 3253 | sets `V622_CNZ_EVENT_RAM.enabled`, the only gate on the **frame-polled** `cnz_event_ram` emit (`V622_CNZ_EVENT_RAM.write` L3310, called per frame at L5699) | **yes** | **refuse** |
+| `OGGF_S3K_AIZ_FIRE_RANGE` | 3365 | retunes the `aiz_fire_transition` window, but the emitter is unreachable here (see below) | no | **deliberately NOT refused** |
 | `OGGF_S3K_AIZ_WALL_SENSOR_RANGE` | 4411 | retunes the frame-polled `terrain_wall_sensor` window (**present in `aiz_completerun`: 12 events**) | **yes** | **refuse** |
 | `OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START` / `_END` | 4103-4105 | retunes the frame-polled `aiz_handoff_terrain_state` window (**present in `aiz_completerun`: 9 events**) | **yes** | **refuse** |
 | `OGGF_S3K_CRL_RANGE` | 4665 | retunes the end-of-frame `collision_response_list_end_of_frame` poll (**present in `cnz_completerun`: 7 events**) | **yes** | **refuse** |
@@ -799,46 +824,129 @@ export of that name is silently ignored by HEAD and must **not** be
 added to the refusal table, because refusing it would be a false
 refusal.
 
-### 8.2 Hook-family absence, verified per fixture
+That hardcoded `TRACE_PROFILE` is what makes three otherwise
+plausible-looking refusals false. The refusal table above must be
+justified per-variable against HEAD, not inherited from the standard
+recorder's table:
 
-Full `event`-value census over every (A) and (C) `aux_state.jsonl`:
+- **`OGGF_S3K_AIZ_FIRE_RANGE` — no output effect.**
+  `V628_AIZ_FIRE.write()` (L3388) returns at **L3393**
+  (`if not is_aiz_end_to_end_profile() then return end`), and
+  `is_aiz_end_to_end_profile()` (L1032-1034) is
+  `TRACE_PROFILE == "aiz_end_to_end"` — impossible under L341.
+  `aiz_fire_transition` can never be emitted by this recorder, and no
+  fixture contains one. Refusing this variable would be a false refusal.
+- **`OGGF_S3K_RNG_CALL_RANGE` — no output effect with hooks off.** Its
+  two consumers are both dead: (i) the `rng_call_per_frame` append to
+  `aux_schema_extras` is at **L1422**, inside the `else` arm of
+  `if TRACE_PROFILE == "complete_run"` (L1392) — unreachable under L341;
+  (ii) `rng_call` lines come only from `V625_RNG_CALLS.flush()` (L3042),
+  which returns at **L3044** when `#hits == 0`, and `hits` is populated
+  only by callbacks registered in `V625_RNG_CALLS.register_hooks()`
+  (L3053), itself called only inside `if not LIGHTWEIGHT_REGEN then`
+  (**L5816**) — i.e. only when the already-refused
+  `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`. It therefore belongs in the
+  same "no with hooks off" class as the seven window variables below it.
+- **`OGGF_S3K_CNZ_EVENT_RAM_RANGE` — refused, but for one reason only.**
+  Its `aux_schema_extras` append is at **L1418**, in the same
+  unreachable `else` arm, so that half of the older description was
+  wrong. What survives is real and sufficient: `V622_CNZ_EVENT_RAM.write()`
+  (L3310) is called unconditionally per frame at **L5699** and gates
+  solely on `.enabled` (L3313) + window + CNZ act 1 — and `.enabled`
+  defaults `false` (L3250) and is set **only** by this env var
+  (L3255). Setting it therefore injects `cnz_event_ram` aux lines
+  into a stream that has none in any fixture. Refusal stands.
+
+The seven remaining `*_RANGE` / `*_FRAME_START|END` variables are
+correctly classified as not-refused: each only widens a window consulted
+by a flush that early-returns on an empty hit list
+(`WRITE_DIAG.flush_tails_velocity_writes` L2485,
+`WRITE_DIAG.flush_position_writes_for` L2642,
+`V611_SOLID.flush_solid_object_cont_entries` L4529,
+`V618_AIZ_SHIP.flush` L2779, `V66.flush_aiz_boundary_state` L3778,
+`V67_AIZ.flush_aiz_transition_floor_solid` L4035), and those lists stay
+empty while L5816 leaves the hooks unregistered. By contrast
+`V613_AIZ_WALL.write_terrain_wall_sensor` (L4375),
+`V69_AIZ.flush_aiz_handoff_terrain_state` (L4195),
+`V67_CNZ.emit_cnz_cylinder_state_per_frame` (L3209) and the
+`collision_response_list_end_of_frame` branch of
+`V615_CRL.flush_collision_response_list_per_frame` (L4816, emit at
+L4871) have **no** hit-list guard — they poll and emit purely on window
++ zone, which is why their four variables are refused and why their
+events are present in the fixtures.
+
+### 8.2 Hook-family absence in (A)/(C) — and its *presence* in (B)
+
+Full `event`-value census over every (A) and (C) `aux_state.jsonl`
+(counts are per fixture; only the non-uniform families are itemized):
 
 ```
-air_countdown_state  control_lock_state  cpu_state  cpu_state_snapshot
-game_paused_state    interact_state      mode_change  object_appeared
-object_near          object_removed      object_state  oscillation_state
-player_mode_set      routine_change      sidekick_interact_object
-slot_dump            state_snapshot      zone_act_state
+COMMON to all seven (A) dirs and all three (C) bonus dirs:
+  air_countdown_state  control_lock_state  cpu_state  cpu_state_snapshot
+  game_paused_state    interact_state      mode_change  object_appeared
+  object_near          object_removed      object_state  oscillation_state
+  player_mode_set      routine_change      slot_dump    state_snapshot
+  zone_act_state
+  + (A) only:              sidekick_interact_object  (present in all seven
+                           (A) dirs; absent from all three (C) bonus dirs,
+                           which are Knuckles-solo and never take the
+                           sidekick branch)
   + aiz_completerun only:  aiz_handoff_terrain_state (9), terrain_wall_sensor (12)
   + cnz_completerun only:  cage_state (8030), cnz_cylinder_state (23),
                            collision_response_list_end_of_frame (7),
                            object_state_snapshot (4)
-  + special_stage:         (file is empty)
+  + (C) special_stage:     (file is empty — no vocabulary at all)
 ```
 
-**Every one of these is frame-polled or a pre-trace snapshot. Not a
+An absence gate must therefore treat `sidekick_interact_object` as
+route-dependent, not universal: asserting it on `bonus_gumball` /
+`bonus_slots` / `bonus_pachinko` fails.
+
+**Every family above is frame-polled or a pre-trace snapshot. Not a
 single hook-driven family (`event.onmemoryexecute` / memory-write
-callbacks) appears in any complete-run fixture** — no `cage_execution`,
+callbacks) appears in any (A) or (C) fixture** — no `cage_execution`,
 `cnz_cylinder_execution`, `velocity_write`, `position_write`,
 `sonic_record_pos`, `rng_call`, `tails_cpu_normal_step`,
 `aiz_boundary_state`, `aiz_transition_floor_solid`,
 `solid_object_cont_entry`, `collision_response_list_per_frame`,
 `aiz_ship_loop`, `cnz_event_ram`.
 
-The same census over (B) returns the identical vocabulary, even though
-(B) was captured with the hook registration block **enabled** (§7.3 ii):
-all hook families are additionally window- and zone-gated, and the (B)
-route never entered a configured window. This is a stronger result than
-task 7's — hook absence here is not merely "the switch was off".
+**(B) is different, and an earlier revision of this spec was wrong to
+claim otherwise.** (B) predates the `LIGHTWEIGHT_REGEN` inversion
+(§7.3 ii), so its capture ran the L5816 hook-registration block, and
+**four of its 25 segments do carry hook-driven families**:
 
-**Therefore the LibGPGX exec/memory-write callback surface stays
+| (B) segment | rows | hook-driven events |
+|---|---|---|
+| `hcz_2` | 11933 | `position_write` 43, `solid_object_cont_entry` 31, `velocity_write` 21 |
+| `hcz_6` | 8422 | `position_write` 17, `solid_object_cont_entry` 31 |
+| `mgz` | 8721 | `position_write` 43, `solid_object_cont_entry` 26 |
+| `mgz_3` | 8517 | `position_write` 38, `solid_object_cont_entry` 31 |
+
+Their `frame` values land exactly inside the recorder's **default
+trace-frame** windows — `position_write` at 4788-4792 and 7549-7625
+(`POSITION_WRITE_RANGES`), `solid_object_cont_entry` at 4788 and
+7600-7625 (`V611_SOLID`), `velocity_write` at 3640-3660
+(`VELOCITY_WRITE_RANGES`) — so the windows *were* entered; only segments
+long enough to reach them and whose route actually executed the hooked
+PCs produced hits. The remaining 21 (B) segments are hook-free — the
+longest of them, `aiz_3` at 7568 rows, stops short of the 7600-7625
+window and never executed the hooked PCs inside the 3640-3660 /
+4788-4792 ones.
+
+**Hook absence in (A)/(C) is therefore exactly "the switch was off"
+(L5816), the same result task 7 established — no stronger.** It is still
+sufficient, because the port refuses `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS`
+and (A)/(C) are the only byte-differential targets.
+
+**The LibGPGX exec/memory-write callback surface therefore stays
 deferred for the complete-run port too.** Extend
-`tests/S3KHookAbsenceTests.cs` to the eleven (A)/(C) fixtures rather
-than building the callback surface: per fixture assert zero aux lines
-whose `event` is any deferred family, anchor non-vacuously on
-`cpu_state` == `oscillation_state` == row count and exactly one
-`cpu_state_snapshot`, and assert the `capture_mode` line's presence in
-each level/bonus `metadata.json` and its **absence** in
+`tests/S3KHookAbsenceTests.cs` to the eleven **(A)/(C)** fixtures only —
+never to (B) — rather than building the callback surface: per fixture
+assert zero aux lines whose `event` is any deferred family, anchor
+non-vacuously on `cpu_state` == `oscillation_state` == row count and
+exactly one `cpu_state_snapshot`, and assert the `capture_mode` line's
+presence in each level/bonus `metadata.json` and its **absence** in
 `special_stage/metadata.json`. If a future fixture regeneration turns a
 hook family on, those gates fail — that is the signal to build the
 callback surface (and to watch delegate GC-pinning under Mono: a
@@ -871,9 +979,17 @@ collected delegate is the classic interop crash).
    `starpost_bonus` within one arm block (§5.4).
 10. All arm / publish / stop conditions evaluated POST-advance in the
     Lua's `on_frame_end` source order (§1.5).
-11. Refuse every output-affecting env var in §8.1; pin, in a test, the
-    variables that are deliberately **not** refused, so the guard cannot
-    degrade into a blanket `OGGF_*` ban.
+11. Refuse every output-affecting env var in §8.1 — exactly eight
+    entries: `OGGF_TRACE_STOP_FRAME`, `OGGF_BK2_FRAME_COUNT`,
+    `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS`, `OGGF_S3K_CNZ_EVENT_RAM_RANGE`,
+    `OGGF_S3K_AIZ_WALL_SENSOR_RANGE`,
+    `OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START`/`_END`,
+    `OGGF_S3K_CRL_RANGE` and `OGGF_S3K_CNZ_CYLINDER_RANGE` — and pin, in
+    a test, the variables that are deliberately **not** refused
+    (including `OGGF_TRACE_QUIET`, `OGGF_S3K_RNG_CALL_RANGE` and
+    `OGGF_S3K_AIZ_FIRE_RANGE`, whose emitters are dead under the
+    hardcoded `complete_run` profile), so the guard cannot degrade into
+    a blanket `OGGF_*` ban.
 12. Stream, do not buffer, any profile that cannot discard a
     mid-capture recording. The (A) pass alone produces ~1.4 GB of
     `aux_state.jsonl` across seven segments (largest single segment:
