@@ -2,7 +2,7 @@
 
 Authoritative behavioural spec for the native port of
 `tools/bizhawk/s3k_complete_run_recorder.lua`
-(`LUA_SCRIPT_VERSION = "6.32-s3k-completerun"`, line 357).
+(`LUA_SCRIPT_VERSION = "6.33-s3k-completerun"`, line 357).
 
 Authority order, per the migration contract:
 
@@ -503,7 +503,16 @@ directory carries mixed stamps — level and `ss` segments **and**
 25 dirs' physics/aux bytes remain homogeneous 6.31/`0xFE08` output
 (`pre_trace_osc_frames: 0` and all-zero `vfc` in the bonus dirs too).
 No recorder configuration emits this combination, so the mixed stamping
-is not a port target; see `s3k-complete-run-behavior.md` §0.2 / §8.3.
+was never a port target; see `s3k-complete-run-behavior.md` §0.2 / §8.3.
+
+**Superseded, kept as history:** commit `63eccd290` re-captured the whole
+`runs/s3-knux-multibonus-ss/` tree on Linux with the hooks off, and
+`eb87d681b` regenerated it again for the `ADDR_VBLA_WORD` fix, so all 25
+dirs and the manifest now stamp `6.33-s3k-completerun` uniformly, are LF,
+carry `capture_mode` and `pre_trace_osc_frames: 1`, and carry the live
+`0xFE04` / `0xFE0E` counters. The paragraph above explains why the mixed
+stamp existed and must not be reintroduced — it no longer describes the
+tree in git.
 
 ### 7.2 Why `special_stage/` carries neither `capture_mode` nor `v_int_run_count`
 
