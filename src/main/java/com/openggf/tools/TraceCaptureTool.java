@@ -499,15 +499,13 @@ public final class TraceCaptureTool {
             }
             return false;
         }
+        if (phase == TraceExecutionPhase.ADVANCE_ONLY) {
+            frameDriver.consumeRecordingFrameInputOnly();
+            return false;
+        }
         if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
             frameDriver.suppressFirstSidekickAnimationOnce();
         }
-        // NOTE: the S3K replay loop in AbstractTraceReplayTest.replayS3kTrace
-        // does NOT special-case ADVANCE_ONLY; only VBLANK_ONLY is skipped and
-        // every other phase drives a gameplay tick. Mirror that exactly — an
-        // ADVANCE_ONLY frame still runs a tick (and advances the vbla counter),
-        // so do not divert it to consumeRecordingFrameInputOnly or the vbla
-        // counter slips by one mid-intro and the player path desyncs.
         if (TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace)) {
             frameDriver.stepFrameFromRecordingUsingPreviousInput();
         } else {

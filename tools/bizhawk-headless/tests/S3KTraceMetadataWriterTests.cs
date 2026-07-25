@@ -1,0 +1,280 @@
+using System.Collections.Generic;
+
+namespace OpenGGF.BizHawk.Headless.Tests
+{
+    /// <summary>
+    /// S3KTraceMetadataWriter tests: each profile's full metadata.json
+    /// bytes are pinned against the checked-in fixture files' literal
+    /// text with EXACTLY the deltas the spec permits for fresh v6.30
+    /// output (docs/s3k-trace-recorder-behavior.md §6.2): the
+    /// lua_script_version string 6.28-s3k → 6.30-s3k, the injected
+    /// recording_date, and the ABSENCE of MGZ's leftover
+    /// pre_trace_osc_frames line. Everything else — key order, indent,
+    /// hex widths, aux_schema_extras order and ", " joining, the
+    /// capture_mode line, the notes values — is byte-exact fixture text.
+    /// Never edit the expected strings to make a test pass.
+    /// </summary>
+    internal static class S3KTraceMetadataWriterTests
+    {
+        private const string SharedMidBlock =
+            "  \"characters\": [\"sonic\", \"tails\"],\n"
+            + "  \"main_character\": \"sonic\",\n"
+            + "  \"sidekicks\": [\"tails\"],\n";
+
+        private const string SharedVersionBlock =
+            "  \"lua_script_version\": \"6.30-s3k\",\n"
+            + "  \"trace_schema\": 6,\n"
+            + "  \"csv_version\": 7,\n"
+            + "  \"capture_mode\": "
+            + "\"physics_animation_aux_without_diagnostic_hooks\",\n";
+
+        private const string SharedTailBlock =
+            "  \"bizhawk_version\": \"2.11\",\n"
+            + "  \"genesis_core\": \"Genplus-gx\",\n"
+            + "  \"rom_checksum\": \"C5B1C655C19F462ADE0AC4E17A844D10\",\n";
+
+        private const string AizAuxSchemaExtras =
+            "  \"aux_schema_extras\": [\"cpu_state_per_frame\", "
+            + "\"oscillation_state_per_frame\", \"object_state_per_frame\", "
+            + "\"interact_state_per_frame\", \"velocity_write_per_frame\", "
+            + "\"position_write_per_frame\", "
+            + "\"tails_cpu_normal_step_per_frame\", "
+            + "\"sidekick_interact_object_per_frame\", "
+            + "\"control_lock_state_per_frame\", "
+            + "\"sonic_record_pos_per_frame\", "
+            + "\"air_countdown_state_per_frame\", "
+            + "\"aiz_boundary_state_per_frame\", "
+            + "\"aiz_transition_floor_solid_per_frame\", "
+            + "\"aiz_handoff_terrain_state_per_frame\", "
+            + "\"terrain_wall_sensor_per_frame\", "
+            + "\"aiz_ship_loop_per_frame\", "
+            + "\"aiz_fire_transition_per_frame\"],\n";
+
+        private const string NonAizAuxSchemaExtras =
+            "  \"aux_schema_extras\": [\"cpu_state_per_frame\", "
+            + "\"oscillation_state_per_frame\", \"object_state_per_frame\", "
+            + "\"interact_state_per_frame\", \"velocity_write_per_frame\", "
+            + "\"position_write_per_frame\", "
+            + "\"tails_cpu_normal_step_per_frame\", "
+            + "\"sidekick_interact_object_per_frame\", "
+            + "\"control_lock_state_per_frame\", "
+            + "\"sonic_record_pos_per_frame\", "
+            + "\"air_countdown_state_per_frame\", "
+            + "\"cage_state_per_frame\", \"cage_execution_per_frame\", "
+            + "\"cnz_cylinder_state_per_frame\", "
+            + "\"cnz_cylinder_execution_per_frame\", "
+            + "\"solid_object_cont_entry_per_frame\", "
+            + "\"collision_response_list_per_frame\", "
+            + "\"collision_response_list_end_of_frame\"],\n";
+
+        public static void Register(List<TestMain.TestCase> tests)
+        {
+            tests.Add(new TestMain.TestCase(
+                "S3K metadata matches the AIZ fixture bytes at version 6.30",
+                MatchesAizFixtureBytes));
+            tests.Add(new TestMain.TestCase(
+                "S3K metadata matches the CNZ fixture bytes at version 6.30",
+                MatchesCnzFixtureBytes));
+            tests.Add(new TestMain.TestCase(
+                "S3K metadata matches the MGZ fixture bytes minus"
+                + " pre_trace_osc_frames",
+                MatchesMgzFixtureBytesWithoutOscLine));
+            tests.Add(new TestMain.TestCase(
+                "S3K metadata gives unknown profiles the non-AIZ surface"
+                + " verbatim",
+                UnknownProfileGetsNonAizSurfaceVerbatim));
+            tests.Add(new TestMain.TestCase(
+                "S3K metadata scopes the CNZ notes to level-gated cnz only",
+                CnzNotesRequireLevelGatedCnz));
+        }
+
+        /// <summary>
+        /// aiz_end_to_end at the AIZ fixture's arm values. Every line is
+        /// the fixture's literal text except the version string (6.28 →
+        /// 6.30); the date is injected as the fixture's value.
+        /// </summary>
+        private static void MatchesAizFixtureBytes()
+        {
+            string formatted = S3KTraceMetadataWriter.Format(
+                0x00,
+                0x00,
+                511,
+                20798,
+                0x0120,
+                0x00D4,
+                0x00000000u,
+                "aiz_end_to_end",
+                "2026-07-23");
+
+            AssertEx.Equal(
+                "{\n"
+                + "  \"game\": \"s3k\",\n"
+                + "  \"zone\": \"aiz\",\n"
+                + "  \"zone_id\": 0,\n"
+                + "  \"act\": 1,\n"
+                + "  \"bk2_frame_offset\": 511,\n"
+                + "  \"trace_frame_count\": 20798,\n"
+                + "  \"start_x\": \"0x0120\",\n"
+                + "  \"start_y\": \"0x00D4\",\n"
+                + SharedMidBlock
+                + "  \"rng_seed\": \"0x00000000\",\n"
+                + "  \"recording_date\": \"2026-07-23\",\n"
+                + SharedVersionBlock
+                + AizAuxSchemaExtras
+                + "  \"trace_profile\": \"aiz_end_to_end\",\n"
+                + SharedTailBlock
+                + "  \"notes\": \"AIZ intro through HCZ handoff end-to-end"
+                + " fixture\"\n"
+                + "}\n",
+                formatted);
+        }
+
+        private static void MatchesCnzFixtureBytes()
+        {
+            string formatted = S3KTraceMetadataWriter.Format(
+                0x03,
+                0x00,
+                3171,
+                42253,
+                0x0018,
+                0x0600,
+                0x14A7ABBBu,
+                "level_gated_reset_aware",
+                "2026-07-23");
+
+            AssertEx.Equal(
+                "{\n"
+                + "  \"game\": \"s3k\",\n"
+                + "  \"zone\": \"cnz\",\n"
+                + "  \"zone_id\": 3,\n"
+                + "  \"act\": 1,\n"
+                + "  \"bk2_frame_offset\": 3171,\n"
+                + "  \"trace_frame_count\": 42253,\n"
+                + "  \"start_x\": \"0x0018\",\n"
+                + "  \"start_y\": \"0x0600\",\n"
+                + SharedMidBlock
+                + "  \"rng_seed\": \"0x14A7ABBB\",\n"
+                + "  \"recording_date\": \"2026-07-23\",\n"
+                + SharedVersionBlock
+                + NonAizAuxSchemaExtras
+                + "  \"trace_profile\": \"level_gated_reset_aware\",\n"
+                + SharedTailBlock
+                + "  \"notes\": \"CNZ1+CNZ2 Sonic+Tails playthrough from"
+                + " level-select BK2 (pause+A reset from AIZ)\"\n"
+                + "}\n",
+                formatted);
+        }
+
+        /// <summary>
+        /// The MGZ fixture carries a leftover "pre_trace_osc_frames": 0
+        /// line (hand-normalization in commit 4393d74c3 skipped it);
+        /// fresh v6.30 output must NOT contain it. MGZ armed outside CNZ
+        /// under the level-gated profile, so notes is the empty string
+        /// while the aux tail still advertises the CNZ families (the
+        /// advertisement is profile-based, not zone-based).
+        /// </summary>
+        private static void MatchesMgzFixtureBytesWithoutOscLine()
+        {
+            string formatted = S3KTraceMetadataWriter.Format(
+                0x02,
+                0x00,
+                2602,
+                35912,
+                0x00C0,
+                0x0F00,
+                0x00000000u,
+                "level_gated_reset_aware",
+                "2026-07-23");
+
+            AssertEx.Equal(
+                "{\n"
+                + "  \"game\": \"s3k\",\n"
+                + "  \"zone\": \"mgz\",\n"
+                + "  \"zone_id\": 2,\n"
+                + "  \"act\": 1,\n"
+                + "  \"bk2_frame_offset\": 2602,\n"
+                + "  \"trace_frame_count\": 35912,\n"
+                + "  \"start_x\": \"0x00C0\",\n"
+                + "  \"start_y\": \"0x0F00\",\n"
+                + SharedMidBlock
+                + "  \"rng_seed\": \"0x00000000\",\n"
+                + "  \"recording_date\": \"2026-07-23\",\n"
+                + SharedVersionBlock
+                + NonAizAuxSchemaExtras
+                + "  \"trace_profile\": \"level_gated_reset_aware\",\n"
+                + SharedTailBlock
+                + "  \"notes\": \"\"\n"
+                + "}\n",
+                formatted);
+        }
+
+        /// <summary>
+        /// The Lua keys every profile branch on string equality and
+        /// writes TRACE_PROFILE verbatim: an unrecognized profile string
+        /// gets gameplay_unlock semantics (non-AIZ aux tail, empty
+        /// notes) while metadata.trace_profile carries the raw string.
+        /// Unknown zone ids render as unknown_%02x with lowercase hex,
+        /// act stays raw+1, and start values format at fixed hex widths.
+        /// </summary>
+        private static void UnknownProfileGetsNonAizSurfaceVerbatim()
+        {
+            string formatted = S3KTraceMetadataWriter.Format(
+                0x22,
+                0x01,
+                7,
+                2,
+                0xABC,
+                0x5,
+                0xDEADBEEFu,
+                "custom_profile",
+                "2026-07-24");
+
+            AssertEx.Equal(
+                "{\n"
+                + "  \"game\": \"s3k\",\n"
+                + "  \"zone\": \"unknown_22\",\n"
+                + "  \"zone_id\": 34,\n"
+                + "  \"act\": 2,\n"
+                + "  \"bk2_frame_offset\": 7,\n"
+                + "  \"trace_frame_count\": 2,\n"
+                + "  \"start_x\": \"0x0ABC\",\n"
+                + "  \"start_y\": \"0x0005\",\n"
+                + SharedMidBlock
+                + "  \"rng_seed\": \"0xDEADBEEF\",\n"
+                + "  \"recording_date\": \"2026-07-24\",\n"
+                + SharedVersionBlock
+                + NonAizAuxSchemaExtras
+                + "  \"trace_profile\": \"custom_profile\",\n"
+                + SharedTailBlock
+                + "  \"notes\": \"\"\n"
+                + "}\n",
+                formatted);
+        }
+
+        /// <summary>
+        /// The CNZ notes line requires BOTH the level-gated profile and a
+        /// cnz start zone: gameplay_unlock armed in CNZ gets empty notes,
+        /// as does level-gated armed anywhere else (the MGZ fixture).
+        /// </summary>
+        private static void CnzNotesRequireLevelGatedCnz()
+        {
+            string gameplayUnlockInCnz = S3KTraceMetadataWriter.Format(
+                0x03, 0x00, 10, 5, 0, 0, 0u,
+                "gameplay_unlock", "2026-07-24");
+            AssertEx.Equal(
+                true,
+                gameplayUnlockInCnz.Contains("  \"notes\": \"\"\n"));
+            AssertEx.Equal(
+                true,
+                gameplayUnlockInCnz.Contains(
+                    "  \"trace_profile\": \"gameplay_unlock\",\n"));
+
+            string levelGatedInAiz = S3KTraceMetadataWriter.Format(
+                0x00, 0x00, 10, 5, 0, 0, 0u,
+                "level_gated_reset_aware", "2026-07-24");
+            AssertEx.Equal(
+                true,
+                levelGatedInAiz.Contains("  \"notes\": \"\"\n"));
+        }
+    }
+}

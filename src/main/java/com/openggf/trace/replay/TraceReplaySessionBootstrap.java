@@ -223,6 +223,11 @@ public final class TraceReplaySessionBootstrap {
         OscillationManager.suppressNextFrames(
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace));
         advanceAnimatedTilePreludeForTraceReplay(trace);
+        // S3K level-gated starts deliberately return zero for both replay-only
+        // prelude counts. Their first normal frame runs the ordinary production
+        // playable dispatch, so Sonic, Tails, objects, input history, and
+        // OscillateNumDo stay in one native phase.
+        // S1/S2 retain their game-owned title-card setup rules below.
         int sidekickPreludeFrames =
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace);
         int objectPreludeFrames = 0;
@@ -804,9 +809,22 @@ public final class TraceReplaySessionBootstrap {
                 && GameServices.spritesOrNull() != null) {
             GameServices.spritesOrNull().setFrameCounter(previousDriveFrame.gameplayFrameCounter());
         }
-        if (firstDriveFrame != null && firstDriveFrame.gameplayFrameCounter() >= 0
+        // LevelManager.setFrameCounter's contract (see its javadoc) is the
+        // PREVIOUS completed level frame: ROM increments Level_frame_counter
+        // before Process_Sprites, so consumers recover the current ROM value
+        // with getFrameCounter() + 1 (16 call sites do exactly that). Seed it
+        // from the same pre-row this method's javadoc names and the sprite
+        // branch above already uses; seeding the first driven row's value put
+        // every frame-counter-keyed object phase one frame ahead of ROM for
+        // the whole segment. That was invisible while s3k_complete_run_recorder
+        // sampled 0xFE08 (Debug_placement_mode, dead-zero) and only surfaced
+        // once the counter column was captured live.
+        if (previousDriveFrame != null && previousDriveFrame.gameplayFrameCounter() >= 0
                 && GameServices.levelOrNull() != null) {
-            GameServices.levelOrNull().setFrameCounter(firstDriveFrame.gameplayFrameCounter());
+            GameServices.levelOrNull().setFrameCounter(previousDriveFrame.gameplayFrameCounter());
+        } else if (firstDriveFrame != null && firstDriveFrame.gameplayFrameCounter() >= 0
+                && GameServices.levelOrNull() != null) {
+            GameServices.levelOrNull().setFrameCounter(firstDriveFrame.gameplayFrameCounter() - 1);
         }
     }
 
@@ -957,7 +975,8 @@ public final class TraceReplaySessionBootstrap {
         }
         refreshSidekickCpuBoundsFromCamera();
         var collision = GameServices.collisionOrNull();
-        if (collision != null && sprite != null) {
+        if (collision != null && sprite != null
+                && !shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
             collision.resolveGroundAttachment(
                     FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
         }
@@ -1025,10 +1044,22 @@ public final class TraceReplaySessionBootstrap {
         // the first state-changing row is driven.
         var collision = GameServices.collisionOrNull();
         if (collision != null
-                && TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)) {
+                && TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)
+                && !shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
             collision.resolveGroundAttachment(
                     FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
         }
+    }
+
+    /**
+     * Applies the game-owned fresh-player lifecycle rule to a structurally
+     * fresh trace start. Complete-run, bonus-stage, and mid-level segments do
+     * not enter this path.
+     */
+    public static boolean shouldPreserveFreshGroundedStatusUntilFirstDispatch(TraceData trace) {
+        return TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)
+                && GameServices.module().getLevelInitProfile()
+                        .preserveFreshGroundedStatusUntilFirstDispatch();
     }
 
     /**

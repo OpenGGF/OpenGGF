@@ -408,7 +408,7 @@ need to add `y_vel` to position and ROM stores the full position as a long.
 
 **ROM citation.** `docs/s2disasm/s2.asm:29967-29981`
 (`ObjectMoveAndFall`); same convention in S1 / S3K
-(`docs/s1disasm/_inc/ObjectMove.asm`,
+(`docs/s1disasm/_incObj/sub ObjectFall & SpeedToPos.asm`,
 `docs/skdisasm/sonic3k.asm` `ObjectMoveAndFall` / `MoveSprite`).
 Engine equivalent: `AbstractSprite.move` in
 `src/main/java/com/openggf/sprites/AbstractSprite.java`.
@@ -761,7 +761,7 @@ set.
 `s2.asm:84807-84890` (`Touch_Enemy` / `Touch_KillEnemy` — reads
 `status_secondary(a0)` / `anim(a0)` per call; the same routine handles
 both hurt and kill outcomes based on current state).  Same per-frame
-loop in S1 (`docs/s1disasm/_incObj/sub ReactToItem.asm`) and S3K
+loop in S1 (`docs/s1disasm/_incObj/Sonic ReactToItem.asm`) and S3K
 (`docs/skdisasm/sonic3k.asm` `Collision_response_list` dispatcher).
 Engine equivalent: `ObjectManager.TouchResponses.processCollisionLoop`
 (`shouldTrigger` decision around the `!overlappingSet.contains`
@@ -1111,7 +1111,7 @@ three. If one differs, gate the behaviour at the owning abstraction instead
 of changing every game implicitly.
 
 **ROM citation.** S2 `docs/s2disasm/s2.asm:25618-25631`; S1
-`docs/s1disasm/_incObj/2E Monitor Content Power-Up.asm:35-43`; S3K
+`docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:35-43`; S3K
 `docs/skdisasm/sonic3k.asm:40723-40753` and S3-side
 `docs/skdisasm/s3.asm:33392-33421`.
 
@@ -2003,7 +2003,7 @@ that first update. See also P30 (`bmi`/`bpl` countdowns fire at -1).
 **ROM citation.** S2 `Obj27_Init`/`Obj27_Main` `docs/s2disasm/s2.asm:46672-46684`
 (init `#3`, reload `#7`, delete at mapping_frame 5); S3K `loc_1E626`/`loc_1E66E`
 `docs/skdisasm/sonic3k.asm:42195-42205` (init `#3`); S1 `ExItem_Main`/
-`ExItem_Animate` `docs/s1disasm/_incObj/24, 27 & 3F Explosions.asm` (init `#7`).
+`ExItem_Animate` `docs/s1disasm/_incObj/27, 3F Explosions.asm` (init `#7`).
 Points popup Obj29 (`docs/s2disasm/s2.asm` `Obj29_Main`) is the velocity-driven
 variant: delete when `y_vel >= 0`, 32 frames after spawn.
 

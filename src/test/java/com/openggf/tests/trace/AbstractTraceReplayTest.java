@@ -233,6 +233,9 @@ public abstract class AbstractTraceReplayTest {
                         .startPosition(meta.startX(), meta.startY())
                         .startPositionIsCentre();
             }
+            if (TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)) {
+                fixtureBuilder.withFreshLevelStartLifecycle();
+            }
             HeadlessTestFixture fixture = fixtureBuilder.build();
             // ROM/production ordering: GameLoop.doEnterBonusStage loads the
             // bonus zone through the normal level path (LevelManager
@@ -603,6 +606,7 @@ public abstract class AbstractTraceReplayTest {
                     fixture::stepFrameFromRecording,
                     fixture::stepFrameFromRecordingUsingPreviousInput,
                     fixture::skipFrameFromRecording,
+                    fixture::consumeRecordingFrameInputOnly,
                     fixture::advancePlayableAnimationsOnly,
                     fixture::suppressFirstSidekickAnimationOnce,
                     () -> {

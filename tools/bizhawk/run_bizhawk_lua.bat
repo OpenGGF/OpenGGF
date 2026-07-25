@@ -114,6 +114,12 @@ if not "%OGGF_STOP%"=="" echo OGGF_STOP=%OGGF_STOP%
 if not "%OGGF_OUT%"=="" echo OGGF_OUT=%OGGF_OUT%
 echo.
 
+REM Authoritative shared-lib path for the recorders' oggf_lib_dir() loader
+REM (tools/bizhawk/lib/oggf_trace_common.lua). Wins over the debug.getinfo and
+REM CWD fallbacks; child EmuHawk inherits it on both the direct and wrapper
+REM launch routes. Trailing backslash matches the loader's dir .. "file" concat.
+set "OGGF_BIZHAWK_LIB=%~dp0lib\"
+
 pushd "%~dp0" >nul
 if "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" (
     if "%BIZHAWK_HAS_DIAG_CONFIG%"=="1" (

@@ -1,5 +1,119 @@
 # Trace Frontier Log
 
+### 2026-07-25 -- S3K mega-run chain: fixture recapture exposes a bootstrap counter off-by-one; frontier returns to seg2
+
+Command (worktree `.worktrees/bizhawk-headless-poc`, branch
+`feature/ai-bizhawk-native-s3k-completerun`):
+
+`mvn -q test -Dtest=com.openggf.tests.trace.runs.TestS3kMegaRunChain -Ds3k.rom.path=s3k.gen '-Dsurefire.argLine=-Xshare:off -Xmx4g' -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+**Use `mvn test`, not `mvn surefire:test`** -- the latter does not compile, and this
+worktree's `target/classes` was 2 days stale over 13 changed trace-replay sources
+including the class diagnosed below. Every number here is from a real compile.
+
+WHAT MOVED. `runs/s3-knux-multibonus-ss/` was recaptured (`63eccd290`) with the
+current Lua, replacing a 2026-07-19 Windows capture whose `gameplay_frame_counter`
+column was dead-zero (the recorder sampled 0xFE08 = `Debug_placement_mode` until
+`6564667eb`). With a truthful live counter the chain regressed from the seg2 exit
+boundary to seg0 (seg0 21 -> 22,216 errors). Fixed here; frontier is back at seg2.
+
+| state | seg0 | seg1 | seg2 | seg2 first non-camera | fails at |
+|---|---|---|---|---|---|
+| before recapture | 21 | 12 | 18,711 | f192 `y` 0x024B vs 0x024A | seg2 exit boundary |
+| recaptured, unfixed | 22,216 | -- | -- | -- | **seg0 exit boundary** |
+| recaptured + this fix | 21 | 12 | 18,725 | f192 `y` 0x024B vs 0x024A | seg2 exit boundary |
+
+seg2's first divergence is unchanged, so the +14 is downstream noise inside an
+already-18.7k-error segment, not a new frontier. Do not report this as "restored
+exactly".
+
+ROOT CAUSE (one call site violating a documented contract).
+`TraceReplaySessionBootstrap.alignFrameCountersForReplayStart` seeded
+`LevelManager` with the FIRST DRIVEN row's counter. That field's contract, stated
+in `LevelManager.setFrameCounter`'s own javadoc, is the PREVIOUS completed level
+frame -- ROM increments `Level_frame_counter` before `Process_Sprites`, so
+consumers recover the current value with `getFrameCounter() + 1` (16 call sites).
+The method's own javadoc already said the value "comes from the trace row
+immediately before the first driven row", and the sprite branch three lines above
+already used `previousDriveFrame`; only the level branch was the outlier. Effect:
+every frame-counter-keyed object phase ran exactly one frame ahead of ROM for a
+whole segment. With both sides zero the off-by-one was unobservable, which is why
+it survived. Two earlier entries in this log independently assert the same
+convention (the 2026-07-17 MGZ entry naming `getFrameCounter()` the canonical
+counterpart of ROM `Level_frame_counter`, and the AIZ falling-log entry near the
+`Level_frame_counter` discussion below).
+
+FIRST REAL DIVERGENCE was NOT f1766. f1766/f1767 `y_speed` is a pre-existing
+2-error blip, byte-identical in the passing configuration and already recorded in
+the 2026-07-21 seg0 entry. The regression's own first divergence is **f1934**:
+Knuckles grabs the AIZ Giant Ride Vine handle (`object_control` 0x00 -> 0x03) and
+the ROM seats him at handle_y + $14 (`docs/skdisasm/sonic3k.asm:46714-46748`
+`AIZRideVineHandle_CheckGrab` / `TestGrabRange`, and the per-frame hold at
+`:46607-46613`, `addi.w #$14,y_pos(a1)`). One frame of vine-swing phase error
+seats him ~6px low and everything cascades. Note the grab test itself guards on
+`Debug_placement_mode` -- the same address the recorder had been misreading, dead
+precisely because the ROM uses it as a debug guard.
+
+SCOPE / NOT REGRESSED. S1 GHZ1, S1 GHZ1 complete-run, S2 EHZ1 and S2 CNZ
+level-select stay green. `TestS3kAizTraceReplay` is 2 passed / 14 failed
+identically with and without the fix (its fixture still has a dead-zero counter --
+see the queued standard-recorder work). A clean compile reports 14 failures there,
+not the 3 a stale build reports; distrust any stale-build measurement in this tree.
+
+STILL OPEN at seg2: the f192 `y` 1-pixel divergence and the seg2 exit boundary,
+unchanged by this work and untouched by the recapture.
+
+### 2026-07-23 -- CNZ fresh-start lifecycle advances from f0 to f185
+
+The focused CNZ level-select replay previously failed at frame 0 because
+bootstrap's synthetic terrain attachment detached Sonic before the first
+ordinary dispatch, while a separate S3K-only fresh-player marker then skipped
+that dispatch's movement/control path. The combination suppressed gravity but
+also prevented the grounded Wait selection: the engine published animation
+`$00` / mapping `$07` instead of the ROM's animation `$05` / mapping `$BA`.
+
+S3K's `LevelInitProfile` now states the actual fresh-start lifecycle:
+bootstrap preserves the reset player's cleared grounded status and routine 2's
+first ordinary dispatch owns `Player_AnglePos` terrain walk-off. The incorrect
+initialization-only dispatch marker and its rewind field are removed. Existing
+structural replay policy still excludes complete-run, bonus-stage, and
+mid-level starts; there is no trace-profile predicate or trace-to-engine state
+hydration. S1/S2 retain their existing pre-frame ground-snap behavior.
+
+Strict lifecycle regression:
+
+- `mvn -Ptrace-replay -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#freshCnzStartRunsGroundedWalkOffBeforeCarryInit' -Dsurefire.argLine='-Xshare:off -Xmx3g' -Dsurefire.forkCount=1 -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' -DfailIfNoTests=false test`
+  first failed at frame 0 (`animation_id`, expected `$05`, actual `$00`) and
+  then passed after the lifecycle correction. It checks Sonic's frame-0
+  airborne/y-speed/animation/mapping closure, Tails' routine `$0C` carry-init
+  state, and Sonic's frame-1 carried state with `object_control=$03`.
+
+Focused replay:
+
+- The same 3 GiB command selecting the full `TestS3kCnzTraceReplay` class now
+  reports 9,169 downstream mismatches with its first divergence at frame 185:
+  `y_speed` expected `$0370`, actual `-$0700`. The pre-fix run reported 9,116
+  mismatches beginning at frame 0 (`player_animation_id`, expected `$05`,
+  actual `$00`). The larger downstream count is exposed state beyond the
+  advanced frontier, not a pre-frontier regression.
+
+### 2026-07-23 -- S3K structural replay scheduling baseline for Task 4
+
+Task 3 removes recorder-emitted phase-control metadata only. The replay engine
+now follows the ordinary production playable lifecycle and classifies the AIZ
+prefix from the recorded LEVEL transition; trace rows remain comparison-only.
+No fixture was changed.
+
+Pre-fix focused evidence (the final measured counts and frontiers are owned by
+Task 4 and are intentionally not filled in here):
+
+- `mvn -Dtest=TestS3kAizTraceReplay#replayMatchesTrace -Ds3k.rom.path=s3k.gen test`
+  reported 5,057 errors, first at f290: `y` (ROM `$0420`, engine `$041A`).
+- `mvn -Dtest=TestS3kCnzTraceReplay#replayMatchesTrace -Ds3k.rom.path=s3k.gen -Dsurefire.argLine="-Xshare:off -Xmx3g" test`
+  reported 4,940 errors, first at f0: `y_speed` (ROM `$0000`, engine `$0038`).
+
+These are comparison frontiers, not trace-to-engine synchronization failures.
+
 ### 2026-07-23 -- CPZ2 and DEZ level-select regressions fixed
 
 CPZ2's sole remaining divergence at f7206 was a missing
@@ -300,11 +414,40 @@ whether the ROM's DJF is genuinely 1/3 there (landing-DJF root) or 0 (monitor-ro
 root) needs a BizHawk `double_jump_flag` read across f186-231 -- pending. The f186
 landing reset (radii/DJF) is otherwise already correct.
 
-RECORDER DEFECT (fixed): `gameplay_frame_counter` (CSV col 6) + aux
-`level_frame_counter` were 0 across all segments (dead since the recorder's first
-commit -- ADDR_FRAMECOUNT sampled 0xFE08 = Debug_placement_mode instead of 0xFE04).
-Fixed on develop 6564667eb (0xFE08->0xFE04, matching the S1/S2 recorders); the
-re-merge carries it. Existing recordings cannot be healed without recapture.
+RECORDER DEFECT (fixed in ONE of the two S3K recorders): `gameplay_frame_counter`
+(CSV col 6) + aux `level_frame_counter` were 0 across all segments (dead since the
+recorder's first commit -- ADDR_FRAMECOUNT sampled 0xFE08 = Debug_placement_mode
+instead of 0xFE04). Fixed on develop 6564667eb (0xFE08->0xFE04, matching the S1/S2
+recorders); the re-merge carries it. Existing recordings cannot be healed without
+recapture.
+
+> **SCOPE CORRECTION (2026-07-25).** The sentence above overstates the fix and
+> should not be read as "S3K captures are now sound". `6564667eb` changed exactly
+> one file, `s3k_complete_run_recorder.lua`. Its sibling `s3k_trace_recorder.lua`
+> -- the S3K **standard** recorder -- still declares `ADDR_FRAMECOUNT = 0xFE08`
+> (line 375) and reads it at 10+ sites feeding both the CSV counter column and
+> every aux `vfc` field. Verified consequence: all three canonical standard
+> fixtures (`aiz1_to_hcz_fullrun`, `cnz`, `mgz`) still carry a dead-zero counter
+> column, so the AIZ->HCZ / CNZ / MGZ replay frontiers -- the primary release
+> slice -- are still being validated against a constant the ROM never produces.
+> The native harness now mirrors the split faithfully for byte-parity (a passing
+> test asserts the standard profiles read `Debug_placement_mode` while complete-run
+> reads `Level_frame_counter`), which means the defect is reproduced in two
+> implementations until the standard recorder is fixed and its three fixtures are
+> recaptured. Root cause of the miss: the six recorders each carry their own copy
+> of these constants, so a fix in one does not propagate -- the duplication that
+> `tools/bizhawk/SHARED_MODULE_HANDOFF.md` catalogues and `fd3a74291` only
+> partially addressed (leaf helpers were extracted; per-recorder ROM address
+> constants deliberately were not).
+>
+> What a recapture costs is now measured, on the run fixtures rather than the
+> release slice: regenerating `runs/s3-knux-multibonus-ss/` with a live counter
+> (`63eccd290`) moved that chain from the seg2 exit boundary back to seg0 (21 ->
+> 22,216 errors, first non-camera divergence f1766 `y_speed`) because
+> `TraceReplaySessionBootstrap` seeds the engine's level/sprite frame counters
+> from this column and branches on it being > 0. Expect a comparable, currently
+> un-measured shift on AIZ/CNZ/MGZ when their fixtures are recaptured. That work
+> is deliberately queued behind the current fix rather than bundled with it.
 
 ### 2026-07-21 -- S3K mega-run chain: Option B return-attach + seg2 (aiz_2) blocker classified as landing-fidelity, NOT exit-hold
 
@@ -48987,3 +49130,363 @@ standalone CNZ remains at f0 in both scopes.
   zone/route/frame exception.
 - Validation: the focused complete-run replay reports zero physics or animation
   divergences through frame 25254 and the frozen transition tail.
+
+## 2026-07-23 - S3K universal CSV v7 fixture regeneration
+
+- Re-recorded the standalone AIZ/CNZ/MGZ movies, the complete-run route through
+  MHZ, and the multi-bonus/special-stage movie with Linux BizHawk 2.11 and the
+  locked-on S3K ROM (`CFBF98C36C776677290A872547AC47C53D2761D6`).
+  Physics, aux, and metadata were installed atomically from each run; normal
+  gameplay fixtures now carry CSV v7/schema 6 plus fresh frame-0 bootstrap and
+  RAM-sampled aux events.
+- The S3K recorders now skip expensive PC-execution hooks by default; focused
+  diagnostics opt in with `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`. The Linux
+  launcher defaults `OGGF_TRACE_QUIET=1` to avoid Mono repainting the full Lua
+  Console pane on each status line.
+- BK2 input normalization is profile-aware: `aiz_end_to_end` samples the
+  preceding physical row used by its replay bootstrap, while level-gated and
+  complete-run fixtures sample `bk2_frame_offset + trace_frame`.
+- Validation on local uncommitted regeneration changes:
+  `mvn -Dtest=TestS3kAizTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path=s3k.gen test` passes input alignment and reports 5,057 errors,
+  first at f290 (`y`, ROM `$0420`, engine `$041A`).
+  `mvn -Dtest=TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path=s3k.gen -Dsurefire.argLine="-Xshare:off -Xmx3g" test` passes
+  input alignment and reports 4,940 errors, first at f0 (`y_speed`, ROM
+  `$0000`, engine `$0038`). These are newly exposed comparison frontiers, not
+  input-alignment failures; no trace-to-engine hydration was added.
+
+## 2026-07-23 - S3K structural replay phase verification failed
+
+Verification ran at clean tracked commit `2a688288f7ce5007e2c1eda9e533d048cefdad3e`
+on branch `bugfix/ai-s3k-structural-replay-phases-impl`. The worktree contained
+only the existing untracked disassembly links under `docs/`; no local production
+or test edits were present. Every command for which the task brief specified a
+heap override used the requested 3 GiB heap.
+
+Focused CNZ command:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1. The class ran 16 tests with 11 failures, 0 errors, and 5 passes.
+- BK2/CSV input alignment passed, but the expected frame-zero bootstrap repair
+  did not: `replayMatchesTrace` reports 4,940 comparison errors, first at f0
+  `y_speed` (ROM `0x0000`, engine `0x0038`). The other ten failures are focused
+  route assertions.
+- `target/trace-reports/s3k_cnz1_context.txt` does not expose the
+  fresh-main-playable marker's armed/consumed state. Its observable f0 engine
+  diagnostics show both Sonic and Tails at `y_speed=0x0038`; Sonic is
+  `anim=00/map=07` while ROM is `anim=05/map=BA`. Therefore this run cannot
+  claim the marker was armed or consumed, and its first-dispatch outcome does
+  not meet the Task 4 target.
+
+Focused AIZ command:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1. The class ran 16 tests with 15 failures, 0 errors, and 1 pass.
+- `replayMatchesTrace` aborts on an input-alignment error at f161: BK2 input
+  `0x0004`, trace input `0x0000`. Because comparison stops at the alignment
+  guard, this run has no valid AIZ comparison-error count or first parity
+  frame/field; the expected later post-f290 frontier was not reached. Fourteen
+  focused route-state assertions also fail.
+
+Must-keep-green/bootstrap command:
+
+```bash
+mvn -Dtest='com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kBootstrapResolver,com.openggf.tests.TestSonic3kDecodingUtils,com.openggf.tests.trace.TestTraceReplayStartPositionPolicy,com.openggf.trace.TestPreludeFramesKnobsZero,com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.trace.TestTraceAnimationRecorderContract' test
+```
+
+- Exit 1. The selected suite ran 103 tests with 1 failure, 0 errors, and 102
+  passes.
+- The sole regression is
+  `TestBuildToolingGuard.traceReplayBootstrapContractsShouldBeDocumentedAndNotLegacy`:
+  `docs/KNOWN_DISCREPANCIES.md` does not document the S3K sidekick seed-frame
+  trace bootstrap debt.
+
+S3K trace-fleet command:
+
+```bash
+mvn -Dtest='*S3k*TraceReplay' \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1. The fleet ran 46 tests with 38 failures, 0 errors, and 8 passes.
+  The two special-stage tests pass; the remaining six passes are focused
+  methods within the AIZ/CNZ classes.
+- Release-comparison results:
+
+| Replay | Errors / state | First failure |
+|---|---:|---|
+| AIZ standalone | alignment abort | f161 input: BK2 `0x0004`, trace `0x0000` |
+| CNZ standalone | 4,940 | f0 `y_speed`: `0x0000` / `0x0038` |
+| AIZ complete-run | 5,831 | f2574 `camera_x`: `0x1CCD` / `0x1CD7` |
+| CNZ complete-run | 9,503 | f0 `y`: `0x0600` / `0x061C` |
+| HCZ complete-run | 4,822 | f1088 `tails_cpu_target_y`: `0x0578` / `0x04F0` |
+| MGZ standalone | 10,768 | f5164 `air`: `0` / `1` |
+| MGZ complete-run | 8,050 | f5550 `air`: `0` / `1` |
+| ICZ complete-run | 7,930 | f0 `y`: `0x00F0` / `0x00F2` |
+| LBZ complete-run | 9,298 | f0 `player_mapping_frame`: `0x0000` / `0x0007` |
+| MHZ complete-run | 6,037 | f0 `y`: `0x0500` / `0x051C` |
+| Slots bonus | 11 | f1052 `x`: `0x0000` / `0x0572` |
+| Gumball bonus | 11 | f1300 `x`: `0x0000` / `0x0100` |
+| Pachinko bonus | 13 | f2926 `x`: `0x0000` / `0x015D` |
+| Special stage | green | 2 tests pass |
+
+This is a failed verification snapshot, not a new accepted parity baseline.
+It regresses explicitly recorded green results for AIZ complete-run, both MGZ
+replays, and ICZ complete-run, and moves several known-red complete-run
+frontiers substantially earlier (including CNZ, HCZ, LBZ, and MHZ). The AIZ
+alignment abort and CNZ f0 bootstrap mismatch are input/bootstrap regressions,
+not later true parity frontiers.
+
+## 2026-07-23 - S3K structural replay corrective verification
+
+Verification was repeated at clean tracked commit
+`737fc562ec6c1f40e4c0ffc53de2ad9c6213f6a8` on branch
+`bugfix/ai-s3k-structural-replay-phases-impl`. Only the existing untracked
+disassembly links under `docs/` were present. Commands with a task-specified
+heap override used `-Xshare:off -Xmx3g`.
+
+Focused CNZ:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 16 tests, 12 failures, 0 errors, 4 passes.
+- Input alignment passes and the prior f0 `y_speed` bootstrap divergence is
+  gone. The new first comparison error is f0 `player_animation_id` (ROM
+  `0x0005`, engine `0x0000`), with 9,125 total errors in the focused run.
+- The fleet invocation later reproduced the same first frame/field/value but
+  reported 9,116 errors. Both exact measurements are retained because the
+  nine-error repeat-order difference means the downstream count is not stable
+  across these two invocations.
+
+Focused AIZ:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 16 tests, 14 failures, 0 errors, 2 passes.
+- Input alignment now passes. The prior f290 route-state/bootstrap divergence
+  is gone; comparison reaches f717 `x` (ROM `0x0040`, engine `0x0050`) with
+  5,147 errors. The fleet reproduces the same count and first error.
+
+Must-keep-green/bootstrap selection:
+
+```bash
+mvn -Dtest='com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kBootstrapResolver,com.openggf.tests.TestSonic3kDecodingUtils,com.openggf.tests.trace.TestTraceReplayStartPositionPolicy,com.openggf.trace.TestPreludeFramesKnobsZero,com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.trace.TestTraceAnimationRecorderContract' test
+```
+
+- Exit 0. The prescribed command discovered 105 tests; all 105 passed with 0
+  failures or errors. The prior `TestBuildToolingGuard` failure is fixed.
+- The command's two `TestSonic3k*` package names are stale:
+  `TestSonic3kBootstrapResolver` and `TestSonic3kDecodingUtils` actually live
+  under `com.openggf.game.sonic3k`, not `com.openggf.tests`, so those classes
+  were not among the 105 discovered tests. Supplemental command
+  `mvn -Dtest='com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils' test`
+  exits 0 with all 8 tests passing (5 + 3).
+
+S3K fleet:
+
+```bash
+mvn -Dtest='*S3k*TraceReplay' \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 46 tests, 38 failures, 0 errors, 8 passes. The two special-stage
+  tests pass; the other six passes are focused AIZ/CNZ methods.
+
+| Replay | Errors / state | First failure |
+|---|---:|---|
+| AIZ standalone | 5,147 | f717 `x`: `0x0040` / `0x0050` |
+| CNZ standalone | 9,116 | f0 `player_animation_id`: `0x0005` / `0x0000` |
+| AIZ complete-run | 5,831 | f2574 `camera_x`: `0x1CCD` / `0x1CD7` |
+| CNZ complete-run | 9,721 | f0 `y`: `0x0600` / `0x061C` |
+| HCZ complete-run | 6,008 | f0 `x`: `0x027F` / `0x0280` |
+| MGZ standalone | 7,623 | f0 `x_sub`: `0x1800` / `0x0000` |
+| MGZ complete-run | 9,347 | f0 `y_speed`: `0x0038` / `0x0000` |
+| ICZ complete-run | 6,563 | f0 `player_mapping_frame`: `0x0000` / `0x0096` |
+| LBZ complete-run | 9,298 | f0 `player_mapping_frame`: `0x0000` / `0x0007` |
+| MHZ complete-run | 6,037 | f0 `y`: `0x0500` / `0x051C` |
+| Slots bonus | 11 | f1052 `x`: `0x0000` / `0x0572` |
+| Gumball bonus | 209 | f0 `x`: `0x00FF` / `0x0100` |
+| Pachinko bonus | 1,064 | f0 `air`: `1` / `0` |
+| Special stage | green | 2 tests pass; report has 0 errors, 3 warnings |
+
+The corrective commits fix both requested standalone gates: AIZ is input-aligned
+at a later true comparison frontier, and CNZ no longer applies f0 gravity.
+However, the fleet is not regression-clean. Several previously green or later
+frontier routes still begin at f0, and HCZ/MGZ/bonus results moved earlier
+relative to the immediately preceding verification. This remains a
+`DONE_WITH_CONCERNS` verification snapshot, not a green release baseline.
+
+## 2026-07-23 - AIZ pre-level input-latch execution correction
+
+- **Standalone AIZ advanced from f717 to f2707.** Release-blocking comparison
+  errors fell from 5,147 to 1,298. The new first error is
+  `tails_animation_id` (ROM `0x00`, engine `0x05`).
+- Root cause: the three structurally classified pre-LEVEL `ADVANCE_ONLY` input
+  rows at f161, f201, and f211 executed full headless level frames. Because the
+  replay fixture had already loaded AIZ, those rows dispatched
+  `Obj_AIZPlaneIntro` three times even though the ROM had not reached its setup
+  `Process_Sprites` call.
+- Fix: `ADVANCE_ONLY` keeps its existing structural classification but now
+  consumes the BK2 row through the input-only cursor operation. It does not
+  dispatch the resident level, advance VBlank/gameplay counters, animate
+  playables, or validate a post-step rewind closure. Headless trace replay and
+  `TraceCaptureTool` use the same operation.
+- ROM proof: `Obj_AIZPlaneIntro` always calls its scroll accumulator after
+  routine dispatch (`docs/skdisasm/sonic3k.asm:135469-135476`), and the
+  accumulator adds `$40(a0)` only while `Events_fg_1` is negative, moving
+  Player 1 only on the following nonnegative dispatch
+  (`docs/skdisasm/sonic3k.asm:135945-135956`). A production-object regression
+  confirms the one setup dispatch plus 430 LevelLoop dispatches leaves Sonic
+  at `$0040`; the next dispatch moves him to `$0050`.
+
+Focused replay:
+
+```bash
+mvn -Ptrace-replay \
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay' \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' \
+  -Dsurefire.forkCount=1 \
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -DfailIfNoTests=false test
+```
+
+Result: expected exit 1 at the later frontier; 16 tests ran with 14 failures,
+0 errors. `replayMatchesTrace` reports 1,298 errors, first at f2707
+`tails_animation_id`; the report contains no f717 mismatch.
+
+The focused cadence/driver regression and the bootstrap/policy/must-keep-green
+selection pass. The selected fresh Surefire reports contain 127 tests with
+zero failures or errors.
+
+Review follow-up closed the remaining playback-path contract: live comparison
+now treats `ADVANCE_ONLY` as a zero-VBlank, zero-lag gameplay skip, and the
+input-only driver operation latches both the controller snapshot and the P1
+action press edge for the following gameplay row. Focused live, real-driver,
+AIZ cadence, reference-closure, start-policy, and tooling guards pass (93 tests,
+zero failures or errors). The AIZ frontier remains f2707.
+
+## 2026-07-23 - Final clean-HEAD structural replay verification
+
+Verified commit: `8c9ae021a4a6cb0ebd3336a801dfa6aedbc661dc`.
+
+Focused CNZ:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 17 tests, 12 failures, 0 errors, 5 passes.
+- `replayMatchesTrace` reaches the true comparison frontier at f185
+  `y_speed` (ROM `0x0370`, engine `-0700`) with 9,114 errors and 0 warnings.
+- There is no input-alignment, bootstrap, or f0 regression in the focused
+  replay. The fleet repeat reaches the same f185 frontier with 9,140 errors;
+  the 26-error count difference does not move the first mismatch.
+
+Focused AIZ:
+
+```bash
+mvn -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 16 tests, 14 failures, 0 errors, 2 passes.
+- `replayMatchesTrace` reaches the true comparison frontier at f2707
+  `tails_animation_id` (ROM `0x0000`, engine `0x0005`) with 1,298 errors and
+  0 warnings.
+- There is no input-alignment, bootstrap, or f0 regression in the focused
+  replay. The fleet repeat has the same count and first mismatch.
+
+Must-keep-green/bootstrap selection, using the classes' correct packages:
+
+```bash
+mvn -Dtest='com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.tests.trace.TestTraceReplayStartPositionPolicy,com.openggf.trace.TestPreludeFramesKnobsZero,com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.trace.TestTraceAnimationRecorderContract' test
+```
+
+- Exit 0: all 113 tests pass with 0 failures, errors, or skips.
+
+S3K fleet:
+
+```bash
+mvn -Dtest='*S3k*TraceReplay' \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' test
+```
+
+- Exit 1: 47 tests, 38 failures, 0 errors, 9 passes.
+
+| Replay | Errors / state | First failure |
+|---|---:|---|
+| AIZ standalone | 1,298 | f2707 `tails_animation_id`: `0x0000` / `0x0005` |
+| CNZ standalone | 9,140 | f185 `y_speed`: `0x0370` / `-0700` |
+| AIZ complete-run | 5,831 | f2574 `camera_x`: `0x1CCD` / `0x1CD7` |
+| CNZ complete-run | 9,503 | f0 `y`: `0x0600` / `0x061C` |
+| HCZ complete-run | 4,822 | f1088 `tails_cpu_target_y`: `0x0578` / `0x04F0` |
+| MGZ standalone | 10,768 | f5164 `air`: `0` / `1` |
+| MGZ complete-run | 8,050 | f5550 `air`: `0` / `1` |
+| ICZ complete-run | 7,930 | f0 `y`: `0x00F0` / `0x00F2` |
+| LBZ complete-run | 9,298 | f0 `player_mapping_frame`: `0x0000` / `0x0007` |
+| MHZ complete-run | 6,037 | f0 `y`: `0x0500` / `0x051C` |
+| Slots bonus | 11 | f1052 `x`: `0x0000` / `0x0572` |
+| Gumball bonus | 11 | f1300 `x`: `0x0000` / `0x0100` |
+| Pachinko bonus | 13 | f2926 `x`: `0x0000` / `0x015D` |
+| Special stage | green | 2 tests pass; report has 0 errors, 3 warnings |
+
+The requested standalone AIZ and CNZ gates are input-aligned and now reach
+later, genuine parity frontiers. The fleet is not globally frame-zero clean:
+CNZ complete-run, ICZ, LBZ, and MHZ still begin at f0. The result therefore
+remains `DONE_WITH_CONCERNS`, not a green fleet baseline.
+
+## 2026-07-23 - ADVANCE_ONLY live and visual-rewind edge closure
+
+Forward live playback and visual rewind now preserve an action edge latched by
+an `ADVANCE_ONLY` row until the next gameplay dispatch, even when the next
+movie row keeps the action held. Visual rewind consumes the input row without
+advancing gameplay, animation, VBlank, lag, object, or oscillator state.
+
+Focused bridge, rewind, driver, closure, invariant, bootstrap, and must-keep
+tests pass:
+
+```bash
+mvn -Dtest=TestPlaybackAdvanceOnlyInputBridge,TestTraceSessionLauncherAdvanceOnlyRewind,LiveTraceComparatorTest,TestRecordingFrameDriverInputOnly,TestTraceReplayReferenceClosureGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestTraceSessionLauncherRewindPresentation,TestBonusStagePlaybackBridge,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils \
+  -Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen test
+```
+
+- Exit 0.
+- `TestLiveTraceComparatorObserver` also passes when run independently; mixing
+  it after the selected ROM-backed fixture classes exposes pre-existing static
+  sidekick-state leakage between classes.
+
+Policy guards pass:
+
+```bash
+mvn -Dtest=TestArchitecturalSourceGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestProductionSingletonClosureGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault test
+```
+
+- Exit 0.
+
+Focused AIZ remains at the established true frontier:
+
+```bash
+mvn -Dtest=TestS3kAizTraceReplay \
+  -Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen test
+```
+
+- Expected exit 1: 16 tests, 14 failures, 0 errors.
+- `replayMatchesTrace` reports 1,298 errors and 0 warnings.
+- First mismatch remains f2707 `tails_animation_id` (ROM `0x0000`, engine
+  `0x0005`); there is no f717 scheduling regression.

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A56E5B42-F158-4D25-A82D-3343884B4E46}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <StartupObject>BizHawk.Headless.Gpgx.Program</StartupObject>
+    <RootNamespace>OpenGGF.BizHawk.Headless</RootNamespace>
+    <AssemblyName>BizHawk.Headless.Gpgx</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <OutputPath>bin/Debug/</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin/Release/</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="netstandard" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="BizHawk.Common">
+      <HintPath>$(BizHawkDllDir)/BizHawk.Common.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="BizHawk.Emulation.Common">
+      <HintPath>$(BizHawkDllDir)/BizHawk.Emulation.Common.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="BizHawk.Emulation.Cores">
+      <HintPath>$(BizHawkDllDir)/BizHawk.Emulation.Cores.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="BizHawk.Emulation.DiscSystem">
+      <HintPath>$(BizHawkDllDir)/BizHawk.Emulation.DiscSystem.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="BizHawk.BizInvoke">
+      <HintPath>$(BizHawkDllDir)/BizHawk.BizInvoke.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(BizHawkDllDir)/Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="src/Bootstrap/BizHawkInstallation.cs" />
+    <Compile Include="src/Bootstrap/LinuxPathEntry.cs" />
+    <Compile Include="src/Bootstrap/NativeStandardOutputSilencer.cs" />
+    <Compile Include="src/Bootstrap/RomIdentity.cs" />
+    <Compile Include="src/Bk2/Bk2Frame.cs" />
+    <Compile Include="src/Bk2/Bk2Movie.cs" />
+    <Compile Include="src/Bk2/Bk2Reader.cs" />
+    <Compile Include="src/Core/GpgxHost.cs" />
+    <Compile Include="src/Core/IGpgxHost.cs" />
+    <Compile Include="src/Core/MutableController.cs" />
+    <Compile Include="src/Core/NoFirmwareProvider.cs" />
+    <Compile Include="src/Core/RomAsset.cs" />
+    <Compile Include="src/Program.cs" />
+    <Compile Include="src/Recording/NoReplacePublisher.cs" />
+    <Compile Include="src/Recording/RunManifestWriter.cs" />
+    <Compile Include="src/Recording/S1AuxEventEngine.cs" />
+    <Compile Include="src/Recording/S1CompleteRunMetadataWriter.cs" />
+    <Compile Include="src/Recording/S1InputMask.cs" />
+    <Compile Include="src/Recording/S1Ram.cs" />
+    <Compile Include="src/Recording/S1RunCaptureRunner.cs" />
+    <Compile Include="src/Recording/S1RunManifestWriter.cs" />
+    <Compile Include="src/Recording/S1SmokeRecorder.cs" />
+    <Compile Include="src/Recording/S1SpecialStageCsvWriter.cs" />
+    <Compile Include="src/Recording/S1SpecialStageMetadataWriter.cs" />
+    <Compile Include="src/Recording/S1TraceCaptureRunner.cs" />
+    <Compile Include="src/Recording/S1TraceCsvWriter.cs" />
+    <Compile Include="src/Recording/S1TraceMetadataWriter.cs" />
+    <Compile Include="src/Recording/S2AuxEventEngine.cs" />
+    <Compile Include="src/Recording/S2Ram.cs" />
+    <Compile Include="src/Recording/S2RunCaptureRunner.cs" />
+    <Compile Include="src/Recording/S2RunManifestWriter.cs" />
+    <Compile Include="src/Recording/S2SpecialStageAuxEventEngine.cs" />
+    <Compile Include="src/Recording/S2SpecialStageCsvWriter.cs" />
+    <Compile Include="src/Recording/S2SpecialStageMetadataWriter.cs" />
+    <Compile Include="src/Recording/S2TraceCaptureRunner.cs" />
+    <Compile Include="src/Recording/S2TraceCsvWriter.cs" />
+    <Compile Include="src/Recording/S2TraceMetadataWriter.cs" />
+    <Compile Include="src/Recording/S2Zones.cs" />
+    <Compile Include="src/Recording/S3KAuxEventEngine.cs" />
+    <Compile Include="src/Recording/S3KCompleteRunCaptureRunner.cs" />
+    <Compile Include="src/Recording/S3KCompleteRunMetadataWriter.cs" />
+    <Compile Include="src/Recording/S3KCompleteRunSegmenter.cs" />
+    <Compile Include="src/Recording/S3KRam.cs" />
+    <Compile Include="src/Recording/S3KRunManifestWriter.cs" />
+    <Compile Include="src/Recording/S3KSpecialStageCsvWriter.cs" />
+    <Compile Include="src/Recording/S3KStagedSegmentSink.cs" />
+    <Compile Include="src/Recording/S3KTraceCaptureRunner.cs" />
+    <Compile Include="src/Recording/S3KTraceMetadataWriter.cs" />
+    <Compile Include="src/Recording/S3KTraceCsvWriter.cs" />
+    <Compile Include="src/Recording/S3KZoneTokens.cs" />
+    <Compile Include="src/Recording/SmokeCaptureRunner.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="fixtures/*.txt" />
+    <None Include="fixtures/*.json" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)/Microsoft.CSharp.targets" />
+</Project>

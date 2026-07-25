@@ -292,6 +292,30 @@
 -- level segments (start_v_int_run_count stays nil). CSV schema unchanged.
 ------------------------------------------------------------------------------
 
+------------------
+--- Shared lib ---
+------------------
+
+-- Locate tools/bizhawk/lib/ robustly across the .bat/%TEMP%-wrapper route, the
+-- direct --lua= route, and headless launches (see lib/oggf_trace_common.lua and
+-- SHARED_MODULE_HANDOFF.md). The launcher-provided env var wins; otherwise fall
+-- back to this recorder's own directory, then CWD. Scoped in a do-block so the
+-- helper's local slot is freed (these recorders sit near Lua's 200-locals cap).
+local C
+do
+    local function oggf_lib_dir()
+        local env = os.getenv("OGGF_BIZHAWK_LIB")        -- launcher-provided, most robust
+        if env and #env > 0 then return env end
+        local src = debug.getinfo(1, "S").source         -- "@<abs path to this recorder>"
+        local dir = src:match("^@(.*[/\\])")             -- strip filename
+        if dir then return dir .. "lib/" end
+        return "lib/"                                     -- CWD fallback
+    end
+    -- assert() so a bad path surfaces as a load error (visible without
+    -- --chromeless) instead of silently skipping the whole recorder.
+    C = assert(loadfile(oggf_lib_dir() .. "oggf_trace_common.lua"))()
+end
+
 -----------------
 --- Constants ---
 -----------------
@@ -317,9 +341,15 @@ local MOVIE_FRAME_SAFETY_MARGIN = 30
 local TRACE_PROFILE = "complete_run"
 TRACE_STOP_FRAME = tonumber(os.getenv("OGGF_TRACE_STOP_FRAME") or "")
 local BK2_FRAME_COUNT = tonumber(os.getenv("OGGF_BK2_FRAME_COUNT") or "")
--- Physics/animation-only regeneration skips expensive diagnostic hooks/scans.
--- Existing aux_state streams can be retained when only CSV v7 is refreshed.
-LIGHTWEIGHT_REGEN = os.getenv("OGGF_TRACE_LIGHTWEIGHT") == "1"
+-- Fixture regeneration is physics/animation-only by default. PC-execution
+-- diagnostics cross the Lua/C# boundary frequently and are especially costly
+-- under Mono; opt into them only for focused frontier investigation.
+DIAGNOSTIC_HOOKS_ENABLED =
+    os.getenv("OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS") == "1"
+LIGHTWEIGHT_REGEN = not DIAGNOSTIC_HOOKS_ENABLED
+if os.getenv("OGGF_TRACE_QUIET") == "1" then
+    print = function() end
+end
 -- GLOBALS (no `local`): keeps the main chunk under Lua's 200-local limit.
 BIZHAWK_VERSION = "2.11"
 GENESIS_CORE = "Genplus-gx"
@@ -568,11 +598,13 @@ local ADDR_STAT_TABLE        = 0xE400
 local ADDR_POS_TABLE         = 0xE500
 local ADDR_POS_TABLE_INDEX   = 0xEE26
 
-local INPUT_UP    = 0x01
-local INPUT_DOWN  = 0x02
-local INPUT_LEFT  = 0x04
-local INPUT_RIGHT = 0x08
-local INPUT_JUMP  = 0x10
+-- Genesis joypad bitmask — single-sourced in lib/oggf_trace_common.lua;
+-- rebound locally to keep hot-loop lookups cheap.
+local INPUT_UP    = C.INPUT_UP
+local INPUT_DOWN  = C.INPUT_DOWN
+local INPUT_LEFT  = C.INPUT_LEFT
+local INPUT_RIGHT = C.INPUT_RIGHT
+local INPUT_JUMP  = C.INPUT_JUMP
 
 local GAMEMODE_SEGA       = 0x00  -- verified from GameModes entry 0 label <Sega_Screen>       (sonic3k.asm:431)
 local GAMEMODE_TITLE      = 0x04  -- verified from GameModes entry 1 label <Title_Screen>      (sonic3k.asm:432)
@@ -942,77 +974,23 @@ local aux_file = nil
 --- Helpers   ---
 -----------------
 
-local function read_speed(base, offset)
-    return mainmemory.read_s16_be(base + offset)
-end
+-- Leaf helpers single-sourced in lib/oggf_trace_common.lua. Rebound to locals
+-- so the many call sites below stay unchanged; the two that captured file-scope
+-- upvalues (bk2_input_mask -> bk2_frame_offset, write_aux -> aux_file) keep thin
+-- local wrappers that forward those upvalues. rom_joypad_to_mask is NOT rebound
+-- to a local here: this recorder's main chunk sits at Lua 5.4's 200-local cap,
+-- so its only caller (ss_input_mask) uses C.rom_joypad_to_mask directly instead.
+local read_speed = C.read_speed
+local hex = C.hex
+local angle_to_ground_mode = C.angle_to_ground_mode
+local json_quote = C.json_quote
 
-local function rom_joypad_to_mask(raw)
-    local mask = raw & 0x0F
-    if (raw & 0x70) ~= 0 then
-        mask = mask + INPUT_JUMP
-    end
-    return mask
-end
-
--- Mirrors the S2/S1 recorder's BK2-derived input read. ROM-side $FFF604
--- updates from inside the Genesis V-int subroutines that call ReadJoypads;
--- on lag frames and during long V-int paths the written byte can lag the
--- BK2 logical input by one game frame, producing spurious "Input alignment
--- error" failures in S3K trace replay. Read the BK2 movie input directly
--- so the CSV input column matches what the test fixture's BK2 reader sees.
 local function bk2_input_mask(fallback_raw, trace_row)
-    if not movie.isloaded() then
-        return rom_joypad_to_mask(fallback_raw)
-    end
-    -- Replay metadata defines trace row N as BK2 frame
-    -- (bk2_frame_offset + N). Use that same convention here; direct
-    -- emu.framecount() is one frame ahead in this recorder loop.
-    local frame_index = bk2_frame_offset ~= nil
-        and trace_row ~= nil
-        and (bk2_frame_offset + trace_row)
-        or emu.framecount()
-    local jp = movie.getinput(frame_index, 1)
-    if jp == nil then
-        return rom_joypad_to_mask(fallback_raw)
-    end
-    local mask = 0
-    if jp["P1 Up"]    or jp["Up"]    then mask = mask | INPUT_UP    end
-    if jp["P1 Down"]  or jp["Down"]  then mask = mask | INPUT_DOWN  end
-    if jp["P1 Left"]  or jp["Left"]  then mask = mask | INPUT_LEFT  end
-    if jp["P1 Right"] or jp["Right"] then mask = mask | INPUT_RIGHT end
-    if jp["P1 A"] or jp["A"] or jp["P1 B"] or jp["B"]
-            or jp["P1 C"] or jp["C"] then
-        mask = mask | INPUT_JUMP
-    end
-    return mask
-end
-
-local function hex(val, width)
-    width = width or 4
-    if val < 0 then
-        val = val + 0x10000
-    end
-    return string.format("%0" .. width .. "X", val)
-end
-
-local function angle_to_ground_mode(angle)
-    if angle <= 0x1F or angle >= 0xE0 then return 0 end
-    if angle >= 0x20 and angle <= 0x5F then return 1 end
-    if angle >= 0x60 and angle <= 0x9F then return 2 end
-    return 3
+    return C.bk2_input_mask(fallback_raw, trace_row, bk2_frame_offset)
 end
 
 local function write_aux(json_str)
-    if aux_file then
-        aux_file:write(json_str .. "\n")
-        aux_file:flush()
-    end
-end
-
-local function json_quote(value)
-    return '"' .. tostring(value)
-        :gsub("\\", "\\\\")
-        :gsub('"', '\\"') .. '"'
+    C.write_aux(aux_file, json_str)
 end
 
 local function json_int_or_null(value)
@@ -1395,7 +1373,7 @@ local function write_metadata()
     meta_file:write('  "trace_schema": 6,\n')
     meta_file:write('  "csv_version": 7,\n')
     if LIGHTWEIGHT_REGEN then
-        meta_file:write('  "capture_mode": "physics_animation_only",\n')
+        meta_file:write('  "capture_mode": "physics_animation_aux_without_diagnostic_hooks",\n')
     end
     local aux_schema_extras = {
         "cpu_state_per_frame",
@@ -5096,12 +5074,12 @@ end
 -- is loaded, same convention as bk2_input_mask/rom_joypad_to_mask.
 function ss_input_mask(player, fallback_raw, trace_row)
     if not movie.isloaded() then
-        return rom_joypad_to_mask(fallback_raw)
+        return C.rom_joypad_to_mask(fallback_raw)
     end
     local frame_index = bk2_frame_offset + trace_row
     local jp = movie.getinput(frame_index, player)
     if jp == nil then
-        return rom_joypad_to_mask(fallback_raw)
+        return C.rom_joypad_to_mask(fallback_raw)
     end
     local prefix = "P" .. player .. " "
     local mask = 0
@@ -5547,10 +5525,8 @@ function on_frame_end()
     end
 
     if not pre_trace_snapshots_written then
-        if not LIGHTWEIGHT_REGEN then
-            write_tails_cpu_snapshot()
-            write_object_snapshots()
-        end
+        write_tails_cpu_snapshot()
+        write_object_snapshots()
         pre_trace_snapshots_written = true
         -- v6.1-s3k: capture Level_frame_counter at the moment the first
         -- physics row is recorded. The engine's seeded-frame-0 mode
@@ -5652,11 +5628,6 @@ function on_frame_end()
     end
     if trace_frame % 300 == 0 then
         write_metadata()
-    end
-
-    if LIGHTWEIGHT_REGEN then
-        trace_frame = trace_frame + 1
-        return
     end
 
     emit_s3k_semantic_events(trace_frame)
@@ -5828,7 +5799,7 @@ if HEADLESS then
     if client.SetSoundOn then
         pcall(client.SetSoundOn, false)
     end
-    if not HEADLESS_VISIBLE then
+    if not HEADLESS_VISIBLE and client.invisibleemulation then
         client.invisibleemulation(true)
     end
 end

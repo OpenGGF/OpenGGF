@@ -25,10 +25,10 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 12. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table)
 13. [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge)
 14. [Object Despawn and Visibility Windows](#object-despawn-and-visibility-windows)
-15. [Pre-Level Intro Prefix Trace Bootstrap Contract](#pre-level-intro-prefix-trace-bootstrap-contract)
+15. [Legacy Pre-Level Intro Prefix Trace Bootstrap Contract](#legacy-pre-level-intro-prefix-trace-bootstrap-contract)
 16. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract)
 17. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract)
-18. [S3K Sidekick Seed-Frame Trace Bootstrap Debt](#s3k-sidekick-seed-frame-trace-bootstrap-debt)
+18. [S3K Production Lifecycle and Structural Trace Replay Scheduling](#s3k-production-lifecycle-and-structural-trace-replay-scheduling)
 19. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
 20. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
 21. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
@@ -803,45 +803,31 @@ At widescreen viewport widths (e.g. `ULTRA_21_9` = 528 px) the ROM's hardcoded 6
 This entry should remain as long as widescreen `DISPLAY_ASPECT` presets are supported. It would only be removed if the engine reverted to a fixed 320 × 224 viewport assumption.
 ---
 
-## Pre-Level Intro Prefix Trace Bootstrap Contract
+## Legacy Pre-Level Intro Prefix Trace Bootstrap Contract
 
-**Location:** `TraceReplayBootstrap`, `TraceMetadata.hasPreLevelIntroPrefix`
-**Scope:** Trace replay fixture compatibility only; not live gameplay.
+**Location:** `TraceReplayBootstrap`, legacy `TraceMetadata` capability parsing
+**Scope:** S1/S2 fixture compatibility only; not live gameplay.
 
-### Original State
+### Current Boundary
 
-Some end-to-end replay fixtures intentionally begin recording before the ROM has
-entered its first comparable LEVEL-mode row. Frame 0 may still contain stale
-Player_1 RAM from pre-level or transition setup, while the trace must still
-drive the visible intro prefix to preserve timers, object setup, and global
-phase.
+Some older non-S3K replay fixtures intentionally begin before their first
+comparable LEVEL-mode row. Their legacy capability remains parser-compatible
+while those fixtures are retained.
 
-### Our Implementation
-
-Such fixtures declare the generic `pre_level_intro_prefix` metadata capability.
-`TraceReplayBootstrap` then starts replay from trace frame 0, validates the
-current BK2 row while driving gameplay with the previously latched movie input,
-treats rows before the first LEVEL-mode event as VBlank-only, advances
-post-level input-latch rows without comparing their duplicated sampled state,
-and uses the recorded `gameplay_start` checkpoint only to end the
-prefix-specific phase classifier.
-The bootstrap does not key this behavior from game id, zone id, act, route, or
-fixture name, and it does not copy trace-row player state into the engine.
+S3K no longer consumes this metadata. It recognizes a pre-level prefix from
+the recorded `zone_act_state` mode transition, so it does not infer a phase
+from a fixture name, start position, velocity, animation, or oscillator value.
 
 ### Rationale
 
-The ROM can spend hundreds of frames in setup/intro execution before the first
-strict gameplay comparison row. Skipping directly to that row loses native
-state that a single metadata start position cannot reconstruct, but treating
-the early stale Player_1 rows as normal gameplay comparisons is equally wrong.
-The explicit capability makes the fixture contract visible and reusable without
-preserving a zone-specific carve-out.
+The engine must execute its own production lifecycle. Trace rows and auxiliary
+events are comparison-only evidence; they never hydrate player, sidekick,
+object, CPU, or oscillator state.
 
 ### Removal Condition
 
-This entry can be removed if all release replay fixtures start at a comparable
-LEVEL-mode row or if the trace recorder exposes a richer generic phase stream
-that makes this metadata capability redundant.
+Remove this compatibility boundary when the remaining S1/S2 legacy fixtures no
+longer advertise it.
 
 ---
 
@@ -905,30 +891,43 @@ feature-state phase metadata.
 
 ---
 
-## S3K Sidekick Seed-Frame Trace Bootstrap Debt
+## S3K Production Lifecycle and Structural Trace Replay Scheduling
 
-**Location:** `TraceReplayBootstrap` sidekick seed-frame fixture capability
-**Scope:** Sonic 3 and Knuckles trace replay comparison setup.
+**Location:** `TraceReplayBootstrap`, `TraceReplaySessionBootstrap`, and the
+S3K trace recorder.
+**Scope:** Replay scheduling only; live gameplay remains the source of runtime
+state.
 
-### Contract
+### Production Lifecycle
 
-Some S3K sidekick trace fixtures need one native sidekick setup tick before
-normal comparison because trace frame 0 is a seed row for sidekick/history state.
-Replay now requires explicit `TraceMetadata.hasSidekickSeedFramePrelude()`
-capability metadata (`sidekick_seed_frame_prelude`) for that bootstrap phase.
+S3K replay starts through the same fresh-main-playable lifecycle used by
+production. The recorder does not request a sidekick setup tick, an oscillator
+pre-advance, or a fixture-specific intro action. Legacy phase metadata remains
+parsable for old files, but new S3K recordings do not emit it and S3K scheduling
+does not consult it.
 
-### Rationale
+### Structural Scheduling
 
-The fixture capability is accepted trace replay setup, not live gameplay policy.
-It replaces the previous first-frame movement-shape heuristic and keeps the
-special bootstrap path out of route/frame carve-outs. `TestBuildToolingGuard`
-guards `TraceReplayBootstrap` against regaining the retired shape inference.
+When the first recorded `zone_act_state` is outside LEVEL mode and a later
+event enters LEVEL mode, replay has a structural pre-level prefix. The actual
+LEVEL-transition row is VBlank-only; later rows execute as full LEVEL frames by
+default. Direct lag evidence remains VBlank-only, and unchanged-state input
+latches are advance-only only within the bounded prefix. No zone, route, frame,
+or first-row outcome predicate chooses the phase.
+
+### Comparison-Only Contract
+
+Physics CSV and auxiliary events are expected values for the comparator and
+diagnostic reports only. They never write player, sidekick, object, CPU, RNG,
+or oscillator state into the engine during replay. New recorder metadata keeps
+the trace profile, BK2 input-alignment offset, and CSV/aux schema versions; its
+diagnostic hooks remain explicitly opt-in and quiet mode remains supported.
 
 ### Removal Condition
 
-Replace the ad hoc fixture capability string with recorder-emitted ROM phase
-metadata for sidekick seed/history setup, then update replay bootstrap to
-consume that richer phase contract.
+Keep this entry while trace replay exists. It documents the invariant that
+production lifecycle execution, rather than trace outcome data, establishes
+runtime state.
 
 ---
 
