@@ -124,7 +124,12 @@ discord:
 # ── Trace Capture ──
 capture:
   outputDir: "target/trace-videos"   # Output directory for trace capture videos
-  scale: 4   # Integer nearest-neighbor upscale factor for capture output
+  # TRACE CAPTURE ONLY. Live viewport recording (Shift+O) records the game
+  # viewport at its current on-screen size instead, so the recording includes
+  # menu and debug-overlay elements that scale outside the game's pixel space.
+  # That is why resizing the window ends a live recording: the frame size is
+  # fixed for the life of an encode.
+  scale: 4   # Integer nearest-neighbor upscale factor for trace capture output
   fps: 60   # Output frame rate for trace capture
   codec: "ffv1"   # Video codec: ffv1, h264 or h265 (all lossless)
   audioCodec: "flac"   # Audio codec: flac (lossless), or aac / mp3 (LOSSY)

@@ -1,6 +1,11 @@
 # Configuration Reference
 
 All settings live in `config.yaml` in the working directory (next to the JAR). The bundled
+`src/main/resources/config.yaml` is written to **`config.yaml.example`** alongside it on
+every run, so the fully commented current template — including the worked ffmpeg recipes —
+is always there to read or copy values from. Your own `config.yaml` is never overwritten by
+it; once written it holds your values and does not regain later comments or new keys.
+
 `src/main/resources/config.yaml` is used as the default template. On first run, a legacy
 `config.json` is automatically migrated to `config.yaml` and the original is backed up to
 `config.json.bak`. Keys are now grouped into nested YAML sections rather than being flat
