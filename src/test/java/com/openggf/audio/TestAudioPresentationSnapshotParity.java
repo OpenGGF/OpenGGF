@@ -350,6 +350,66 @@ class TestAudioPresentationSnapshotParity {
     }
 
     /**
+     * The other side of the release's one irreversible step. Once
+     * {@code shadowProducer.endReverse(...)} has returned, the reverse cursor
+     * is consumed and the prepared restore is committed; no retry can recreate
+     * that session. A failure in the manager-local ledger publication that
+     * follows must therefore complete the release rather than report it
+     * retryable — otherwise the retry re-prepares a selection that
+     * {@code endReverse} silently refuses to commit (it early-returns on an
+     * inactive reverse), leaking every voice the preparation recreated and
+     * leaving the ledger unpublished forever.
+     */
+    @Test
+    void reverseReleaseFailureAfterTheProducerCommitCompletesTheRelease()
+            throws Exception {
+        arrangeSelectedReverseReleaseTarget();
+        AudioLogicalSnapshot selected =
+                audio.deferredReverseLogicalSnapshotForTesting();
+        assertNotNull(selected);
+        int publicationsBefore = AudioManagerTestDiagnostics
+                .logicalRestorePublications(audio);
+
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio,
+                AudioManager.ReverseReleaseFailurePoint
+                        .AFTER_PRODUCER_COMMIT);
+        assertTrue(audio.endReverseAudioPresentation(),
+                "a failure after the irreversible producer commit must not be "
+                        + "reported as a retryable release failure");
+
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertEquals(null, audio.deferredReverseLogicalSnapshotForTesting());
+        AudioManager.ReleaseStateForTesting after =
+                audio.releaseStateForTesting();
+        assertFalse(after.producer().reverseActive(),
+                "the producer reverse session is gone");
+        assertEquals(0L, after.producer().selectedRestoreIdentity().token(),
+                "no selection may be left behind for a retry to re-prepare");
+        assertEquals(0L,
+                after.producer().preparedSelectedRestoreIdentity().token(),
+                "no prepared restore may leak its recreated voices");
+
+        // The ledger prepared before the commit is published in full.
+        assertEquals(publicationsBefore + 1, AudioManagerTestDiagnostics
+                .logicalRestorePublications(audio));
+        AudioLogicalSnapshot published = audio.captureLogicalSnapshot();
+        assertEquals(AudioSourceDescriptor.baseMusic(0x80),
+                published.presentation().activeMusic().sourceDescriptor());
+        assertEquals(selected.ringLeft(), published.ringLeft());
+        assertEquals(selected.commandTimelineFrame(),
+                published.commandTimelineFrame());
+        assertEquals(selected.commandTimelineNextOrder(),
+                published.commandTimelineNextOrder());
+        assertEquals(selected.donorBindings(), published.donorBindings());
+
+        // The release is complete, so a later call is an inert no-op rather
+        // than a second publication.
+        assertTrue(audio.endReverseAudioPresentation());
+        assertEquals(publicationsBefore + 1, AudioManagerTestDiagnostics
+                .logicalRestorePublications(audio));
+    }
+
+    /**
      * Drives a held rewind up to the point where a pre-boundary logical target
      * is selected but not yet prepared, leaving the caller to decide whether
      * the release attempt or an earlier explicit commit owns the preparation.

@@ -123,6 +123,9 @@ class TestLiveRewindManagerAudioCleanup {
         assertTrue(audio.isReverseAudioPresentationActive());
         assertTrue(fadeManager.isReversePresentationActive());
         assertTrue((boolean) getField(manager, "rewinding"));
+        assertRetryReusesTheExactPreparedRelease(
+                () -> assertTrue(manager.handleRealtimeRewindInput(
+                        GameMode.LEVEL, false, input)));
 
         assertFalse(manager.handleRealtimeRewindInput(
                         GameMode.LEVEL, false, input),
@@ -156,6 +159,9 @@ class TestLiveRewindManagerAudioCleanup {
         assertTrue(audio.isReverseAudioPresentationActive());
         assertTrue(fadeManager.isReversePresentationActive());
         assertTrue((boolean) getField(manager, "rewinding"));
+        assertRetryReusesTheExactPreparedRelease(
+                () -> assertTrue(manager.handleRealtimeRewindInput(
+                        GameMode.TITLE_SCREEN, false, new InputHandler())));
         assertEquals(controller, getField(manager, "rewindController"));
         assertEquals(inputSource, getField(manager, "inputSource"));
 
@@ -354,6 +360,34 @@ class TestLiveRewindManagerAudioCleanup {
         return field.get(target);
     }
 
+    /**
+     * Producer-side replacement for the prepare/commit/rollback/discard counts
+     * the deleted {@code FailingReleaseBackend} carried. A failed release must
+     * retain the exact prepared restore for the retry: if a retry discarded and
+     * re-prepared it, the producer would mint fresh identity tokens (and leak
+     * the voices the discarded preparation recreated). Runs one further failing
+     * attempt through {@code retry} and compares the whole transaction
+     * fingerprint across it.
+     */
+    private void assertRetryReusesTheExactPreparedRelease(Runnable retry) {
+        AudioPresentationProducer.TransactionFingerprint afterFirstFailure =
+                AudioManagerTestDiagnostics.producerFingerprint(audio);
+        assertTrue(afterFirstFailure
+                        .preparedSelectedRestoreIdentity().token() != 0,
+                "the failed release must hold a prepared restore to retain");
+
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
+        retry.run();
+
+        assertEquals(afterFirstFailure,
+                AudioManagerTestDiagnostics.producerFingerprint(audio),
+                "a retry must reuse the exact prepared token, selection, "
+                        + "resolver, history and cursor rather than "
+                        + "re-preparing them");
+        assertTrue(audio.isReverseAudioPresentationActive(),
+                "the second failed attempt must still retain the release");
+    }
+
     private void assertBoundaryReleaseFailureIsGated(
             RewindBoundary boundary,
             int expectedRetriedFrame,
@@ -381,6 +415,8 @@ class TestLiveRewindManagerAudioCleanup {
         assertTrue(audio.isReverseAudioPresentationActive());
         assertTrue(fadeManager.isReversePresentationActive());
         assertTrue((boolean) getField(manager, "rewinding"));
+        assertRetryReusesTheExactPreparedRelease(
+                () -> manager.markBoundary(boundary));
         assertEquals(frameBefore, controller.currentFrame(),
                 "failed release must not move the controller boundary");
         assertEquals(earliestBefore, controller.earliestAvailableFrame(),

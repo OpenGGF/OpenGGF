@@ -330,7 +330,13 @@ class TestAudioManagerPresentationModes {
         audio.restoreLogicalSnapshot(selected);
         var before = audio.releaseStateForTesting();
         var deferred = audio.deferredReverseLogicalSnapshotForTesting();
-        presentationPcmCache(audio).clear();
+        // A release-stage failure, distinct from the dependency-resolution
+        // (prepare-stage) failure that
+        // producerPrepareFailurePreservesPriorSelectionForRetry covers: the
+        // selection prepares successfully and the release then fails at the
+        // publication step, which is the case the deleted
+        // FailingReleaseBackend.failNextCommit used to inject.
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
 
         audio.afterRewindRestore(7, policy);
 
@@ -343,10 +349,6 @@ class TestAudioManagerPresentationModes {
                 policy.name());
         assertTrue(audio.isReverseAudioPresentationActive(), policy.name());
 
-        registeredPcm(audio, "base");
-        registeredPcm(audio, "override");
-        registeredPcm(audio, "sample");
-        registeredPcm(audio, "raw");
         audio.afterRewindRestore(7, policy);
 
         assertFalse(audio.isReverseAudioPresentationActive(), policy.name());

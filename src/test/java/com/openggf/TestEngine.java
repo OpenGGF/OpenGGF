@@ -77,6 +77,11 @@ class TestEngine {
 
     @AfterEach
     void tearDown() {
+        // Constructing an Engine publishes it into a process-global static.
+        // Surefire reuses forks, so leaving it set lets an unrelated later test
+        // reach Engine.currentGameLoop() and drive a GL shader compile with no
+        // context, which aborts the JVM rather than failing a test.
+        Engine.clearGlobalInstance();
         SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }

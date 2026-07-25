@@ -54,10 +54,21 @@ class TestTraceSessionLauncherRewindPresentation {
         audio.resetState();
         backend = new RecordingReverseAudioBackend();
         audio.setBackend(backend);
+        // Defensive: never inherit a live GameLoop from an Engine another test
+        // in this reused fork constructed and did not release.
+        Engine.clearGlobalInstance();
     }
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws Exception {
+        // This class installs itself as TraceSessionLauncher.activeSession. If
+        // an assertion fails between the two teardown attempts the launcher is
+        // left installed with teardownPending=true, and any later test in the
+        // same fork that pumps an engine frame would run its
+        // GameLoop.returnToMasterTitle() hand-back — a GL call with no context,
+        // i.e. a JVM abort attributed to the wrong class.
+        setStaticField(TraceSessionLauncher.class, "activeSession", null);
+        Engine.clearGlobalInstance();
         audio.resetState();
         SessionManager.clear();
     }

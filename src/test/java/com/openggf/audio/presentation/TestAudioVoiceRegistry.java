@@ -1205,6 +1205,177 @@ class TestAudioVoiceRegistry {
         assertTrue(driver.psgMuteAtFirstAttachment[0]);
     }
 
+    /**
+     * The sibling of {@code existingMuteAndSoloMasksApplyBeforeStandaloneSfx
+     * Attachment} for the other way a driver becomes audible.
+     * {@code applyDriverControlsAtomically} only reaches the <em>active</em>
+     * music voice and the standalone SFX driver, so a base driver sitting under
+     * an override never sees a toggle made while the override is playing.
+     * {@code restoreMusicOverride}'s {@code applyMusicControls} is the sole
+     * thing that re-masks it when it becomes audible again; without it a
+     * rewind-era mute silently un-mutes on every override pop.
+     */
+    @Test
+    void masksSelectedDuringAnOverrideApplyWhenTheSavedBaseBecomesAudible() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        RecordingDriver base = new RecordingDriver(false);
+        RecordingDriver override = new RecordingDriver(false);
+        instantiation.enqueueMusicDriver(base);
+        instantiation.enqueueMusicDriver(override);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, base))));
+        registry.apply(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(2, 0x82, override))));
+
+        registry.apply(new ToggleMute(ChannelType.FM, 2));
+        registry.apply(new ToggleSolo(ChannelType.PSG, 1));
+
+        assertArrayEquals(new boolean[] {false, false, false, false, false, false},
+                base.fmMutes,
+                "a stacked base driver must not be touched while inaudible");
+        assertArrayEquals(new boolean[] {false, false, false, false},
+                base.psgMutes,
+                "a stacked base driver must not be touched while inaudible");
+
+        registry.apply(new RestoreMusicOverride());
+
+        assertArrayEquals(new boolean[] {true, true, true, true, true, true},
+                base.fmMutes,
+                "FM2 is muted outright and a PSG solo mutes every FM channel");
+        assertArrayEquals(new boolean[] {true, false, true, true},
+                base.psgMutes,
+                "only the soloed PSG channel stays audible");
+    }
+
+    /**
+     * Every real rewind restore targets a registry that is already holding
+     * live, dirtied voices — never a fresh one. Restoring into that registry
+     * must render bit-identically to restoring the same snapshot into a fresh
+     * one, otherwise a reused driver instance carries residue across a seek.
+     */
+    @Test
+    void restoringIntoADirtyRegistryRendersBitExactlyLikeAFreshRestore() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry original = registry(instantiation, new ArrayList<>());
+        SmpsDriver driver = new SmpsDriver();
+        AudioTestFixtures.StubSmpsData data =
+                new AudioTestFixtures.StubSmpsData("music");
+        data.setId(0x81);
+        driver.addSequencer(new SmpsSequencer(
+                data, dacData(), driver, AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder().build()), false);
+        primeSynth(driver);
+        instantiation.enqueueMusicDriver(driver);
+        original.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(70, 0x81, driver))));
+        original.apply(raw(longSample(71, 2, "raw")));
+        AudioPresentationSnapshot snapshot = original.snapshot();
+
+        AudioVoiceRegistry fresh =
+                registry(new RecordingInstantiation(), new ArrayList<>());
+        fresh.restore(snapshot, new FixtureResolver());
+        List<short[]> expected = mixPackets(fresh, 12);
+
+        // The dirty target: restored once, rendered, then perturbed with a
+        // different live voice set before the snapshot is restored again.
+        AudioVoiceRegistry dirty =
+                registry(new RecordingInstantiation(), new ArrayList<>());
+        dirty.restore(snapshot, new FixtureResolver());
+        mixFrames(dirty, MAX_STEREO_FRAMES);
+        dirty.apply(new ReplaceMusic(music(90, 0x83, "music")));
+        dirty.apply(start(sample(91, 5, "sample")));
+        mixFrames(dirty, MAX_STEREO_FRAMES);
+        dirty.restore(snapshot, new FixtureResolver());
+        List<short[]> actual = mixPackets(dirty, 12);
+
+        assertTrue(expected.stream().flatMapToInt(packet -> {
+            int[] samples = new int[packet.length];
+            for (int index = 0; index < packet.length; index++) {
+                samples[index] = packet[index];
+            }
+            return Arrays.stream(samples);
+        }).anyMatch(sample -> sample != 0),
+                "fixture must exercise audible driver state");
+        for (int packet = 0; packet < expected.size(); packet++) {
+            assertArrayEquals(expected.get(packet), actual.get(packet),
+                    "dirty-registry restore diverged at packet " + packet);
+        }
+    }
+
+    /**
+     * The prepare-failure cleanup loop only has work to do when some voices
+     * were already recreated before the failing one. A resolver that throws on
+     * the first voice (as
+     * {@code failedSnapshotDependencyResolutionDoesNotDestroyLiveRegistry}
+     * uses) runs that loop over an all-null array, so a double-stop or a leaked
+     * voice there would be invisible.
+     */
+    @Test
+    void partialPrepareFailureStopsEveryEarlierRecreatedVoiceExactlyOnce() {
+        AudioVoiceRegistry registry =
+                registry(new RecordingInstantiation(), new ArrayList<>());
+        SmpsDriver source = new SmpsDriver();
+        List<PresentationVoiceSnapshot> voices = List.of(
+                new PresentationVoiceSnapshot.Smps(
+                        1, 0, 0x81, AudioSourceDescriptor.baseMusic(0x81),
+                        MAX_STEREO_FRAMES, source.captureSnapshot()),
+                new PresentationVoiceSnapshot.Smps(
+                        2, 0, 0x82, AudioSourceDescriptor.baseMusic(0x82),
+                        MAX_STEREO_FRAMES, source.captureSnapshot()));
+        AudioPresentationSnapshot snapshot = new AudioPresentationSnapshot(
+                3, voices,
+                new AudioPresentationSnapshot.MusicSlotSnapshot(
+                        0x81, AudioSourceDescriptor.baseMusic(0x81), 1),
+                List.of(new AudioPresentationSnapshot.MusicSlotSnapshot(
+                        0x82, AudioSourceDescriptor.baseMusic(0x82), 2)),
+                null, null, 0, 0, 0, 0,
+                false, false, false, 1, true,
+                new SmpsCoordFlagRuntimeState.Snapshot(0));
+        List<CountingStopDriver> recreated = new ArrayList<>();
+        AudioPresentationDependencyResolver failsOnTheSecondVoice =
+                new AudioPresentationDependencyResolver() {
+                    @Override
+                    public DecodedPcm resolvePcm(String assetId) {
+                        throw new AssertionError("no PCM voice expected");
+                    }
+
+                    @Override
+                    public SmpsCompositeVoice recreateSmps(
+                            PresentationVoiceSnapshot.Smps voiceSnapshot) {
+                        if (voiceSnapshot.voiceId() == 2) {
+                            throw new IllegalStateException(
+                                    "injected recreation failure");
+                        }
+                        CountingStopDriver driver = new CountingStopDriver();
+                        recreated.add(driver);
+                        SmpsCompositeVoice voice = new SmpsCompositeVoice(
+                                voiceSnapshot.voiceId(),
+                                voiceSnapshot.priority(),
+                                voiceSnapshot.musicId(),
+                                voiceSnapshot.sourceDescriptor(),
+                                voiceSnapshot.maxStereoFrames(), driver);
+                        voice.restore(voiceSnapshot,
+                                SmpsDriverSnapshot.liveReferences());
+                        return voice;
+                    }
+                };
+
+        assertThrows(IllegalStateException.class,
+                () -> registry.prepareSnapshotRestore(
+                        snapshot, failsOnTheSecondVoice));
+
+        assertEquals(1, recreated.size(),
+                "the failure must land after the first voice was recreated");
+        assertEquals(1, recreated.get(0).stopCalls,
+                "an already-recreated voice must be stopped exactly once");
+        assertEquals(0, registry.orderedVoiceCount(),
+                "a failed preparation must publish nothing");
+    }
+
     @Test
     void continuousRetriggerExtendsMusicOwnerWithoutCreatingSequencer() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
@@ -1983,6 +2154,16 @@ class TestAudioVoiceRegistry {
                 throw new IllegalStateException(
                         "injected stop-all-SFX failure");
             }
+        }
+    }
+
+    private static final class CountingStopDriver extends SmpsDriver {
+        private int stopCalls;
+
+        @Override
+        public void stopAll() {
+            stopCalls++;
+            super.stopAll();
         }
     }
 

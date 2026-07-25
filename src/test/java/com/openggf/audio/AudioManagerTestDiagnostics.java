@@ -44,13 +44,27 @@ public final class AudioManagerTestDiagnostics {
     }
 
     /**
-     * Makes the next reverse-release publication throw exactly once. The
-     * producer is the only restore owner, so a test backend can no longer fail
-     * the publication step; this keeps the retained-and-retried release
-     * contract testable from a production host.
+     * Makes the next reverse-release throw exactly once, just before the one
+     * irreversible producer commit. The producer is the only restore owner, so
+     * a test backend can no longer fail the publication step; this keeps the
+     * retained-and-retried release contract testable from a production host.
      */
     public static void failNextReverseRelease(AudioManager audio) {
-        audio.failNextReverseReleaseForTesting();
+        failNextReverseRelease(audio,
+                AudioManager.ReverseReleaseFailurePoint
+                        .BEFORE_PRODUCER_COMMIT);
+    }
+
+    /**
+     * Makes the next reverse-release throw exactly once at {@code point}. The
+     * two sides of {@code shadowProducer.endReverse(...)} carry different
+     * contracts: before it the release must be exactly retryable, after it the
+     * reverse session no longer exists and the release must complete instead.
+     */
+    public static void failNextReverseRelease(
+            AudioManager audio,
+            AudioManager.ReverseReleaseFailurePoint point) {
+        audio.failNextReverseReleaseForTesting(point);
     }
 
     /**

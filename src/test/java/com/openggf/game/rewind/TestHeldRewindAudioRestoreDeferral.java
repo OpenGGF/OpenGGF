@@ -4,6 +4,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.configuration.SonicConfiguration;
@@ -135,38 +136,38 @@ class TestHeldRewindAudioRestoreDeferral {
         for (int i = 0; i < 5; i++) {
             fresh.step();
         }
+        // Live forward play only *enqueues* presentation commands; the queue is
+        // drained when a frame is presented. The rewind paths above drain it
+        // explicitly while staging/restoring, so the fresh run must present one
+        // (non-rendering) frame before the comparison, or it would be measured
+        // with frames 1..5 still queued. Without this the registry's
+        // ring-alternation mirror reads its initial `true` here instead of the
+        // `false` the ring sfx at frame 5 produced.
+        audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot freshState = audio.captureLogicalSnapshot();
 
         assertEquals(freshState.ringLeft(), deferredState.ringLeft());
         assertEquals(freshState.commandTimelineFrame(), deferredState.commandTimelineFrame());
         assertEquals(freshState.commandTimelineNextOrder(), deferredState.commandTimelineNextOrder());
         assertEquals(freshState.commandEntryCount(), deferredState.commandEntryCount());
-        // The presentation snapshot is the whole restored audio state now.
-        // Compare the voice-bearing components explicitly rather than the
-        // whole record, because of one known divergence:
-        //
-        // TODO(unified-audio): the deferred release builds the manager-level
-        // ringLeft from managerRingAfter(selected.ringLeft(), command) while
-        // the presentation component carries stagedRegistry.snapshot()'s own
-        // ringLeft (AudioManager.java staged/committed reverse release), so
-        // after a held-rewind release the registry's ring-alternation mirror
-        // can sit one toggle away from the manager's. That mirror is NOT
-        // inert: AudioVoiceRegistry.restore reads it back
-        // (`ringLeft = snapshot.ringLeft()`), so a later capture/restore cycle
-        // propagates the stale value. Pre-existing (the two ring computations
-        // are byte-identical at the split-runtime baseline; the old assertion
-        // simply compared an empty NullAudioBackend record and never saw it).
-        // Decide in a follow-up whether the deferred path should stage the
-        // registry ring from managerRingAfter, then widen this back to a
-        // whole-snapshot comparison.
-        assertEquals(freshState.presentation().voices(),
-                deferredState.presentation().voices());
-        assertEquals(freshState.presentation().activeMusic(),
-                deferredState.presentation().activeMusic());
-        assertEquals(freshState.presentation().overrideStack(),
-                deferredState.presentation().overrideStack());
-        assertEquals(freshState.presentation().nextVoiceId(),
-                deferredState.presentation().nextVoiceId());
+        // The presentation snapshot is the whole restored audio state now, so
+        // compare the whole record rather than a hand-picked subset.
+        assertEquals(freshState.presentation(), deferredState.presentation(),
+                "released held rewind must land the exact fresh-replay "
+                        + "presentation state");
+        // Called out explicitly because it is the one component the manager
+        // also tracks independently: AudioPresentationCommandResolver.submitSfx
+        // enqueues ResetRingAlternation for every RING_RESOLVED sfx, so the
+        // registry's mirror must equal the manager's authoritative alternation
+        // rather than merely matching between two rewind paths.
+        assertEquals(freshState.ringLeft(),
+                freshState.presentation().ringLeft(),
+                "the registry ring mirror must track the manager's ring "
+                        + "alternation");
+        assertEquals(deferredState.ringLeft(),
+                deferredState.presentation().ringLeft(),
+                "a held-rewind release must publish a registry ring mirror "
+                        + "that matches the manager's ring alternation");
     }
 
     @Test

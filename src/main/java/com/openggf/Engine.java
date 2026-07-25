@@ -2410,6 +2410,32 @@ public class Engine {
 		return instance != null ? instance.gameLoop : null;
 	}
 
+	/**
+	 * Drops the process-global reference behind {@link #currentGameLoop()}.
+	 *
+	 * <p>The constructor publishes {@code this} into a static, and nothing used
+	 * to take it back. That matters because {@code currentGameLoop()} is a
+	 * static back door: {@link TraceSessionLauncher#retryPendingTeardown()} and
+	 * {@link RewindReleaseRetryCoordinator} call it and then drive
+	 * {@code GameLoop.returnToMasterTitle()}, which unconditionally runs
+	 * {@code MasterTitleScreen.initialize()} -&gt; {@code glCreateShader}. With no
+	 * GL context that is not a catchable exception — LWJGL raises it through
+	 * {@code JNIEnv::FatalError}, which calls {@code abort()} and takes the
+	 * whole JVM down (exit 134).
+	 *
+	 * <p>So a headless test that constructs an {@code Engine} would otherwise
+	 * poison its surefire fork (forks are reused): any later test in that fork
+	 * reaching one of those retry paths crashes the JVM, and which fork a class
+	 * lands in is nondeterministic. Shutdown and every such test must therefore
+	 * release the reference.
+	 *
+	 * <p>Unconditional: only one {@code Engine} is ever live in a real process,
+	 * and a test that constructed one has no handle on any earlier one.
+	 */
+	public static void clearGlobalInstance() {
+		instance = null;
+	}
+
 	public void draw() {
 		renderDispatcher.draw(getCurrentGameMode(), debugViewEnabled, debugState, drawActions);
 	}
@@ -2660,6 +2686,7 @@ public class Engine {
 				callback.free();
 			}
 		});
+		cleanupStep("global engine instance", Engine::clearGlobalInstance);
 	}
 
 	private void cleanupStep(String description, Runnable cleanup) {

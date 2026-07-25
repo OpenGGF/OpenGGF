@@ -89,8 +89,34 @@ public class AudioManager implements MusicRestoreSink {
      * only restore owner, so there is no second (backend) publication step a
      * test double could fail; this hook keeps the "a failed release is retained
      * and retried" contract testable from production hosts.
+     *
+     * <p>Null means "inject nothing". The point selects which side of the one
+     * irreversible step in {@link #endReverseAudioPresentation()} the failure
+     * lands on — the two sides carry different contracts, so a single boolean
+     * could only ever exercise one of them.
      */
-    private boolean failNextReverseRelease;
+    private ReverseReleaseFailurePoint failNextReverseRelease;
+
+    /**
+     * Where an injected reverse-release failure is raised, relative to
+     * {@code shadowProducer.endReverse(...)} — the single irreversible step of
+     * the release (it consumes the reverse PCM cursor and commits the prepared
+     * registry restore).
+     */
+    enum ReverseReleaseFailurePoint {
+        /**
+         * Before the producer commit. Nothing observable has been mutated by
+         * this attempt, so the release must be exactly retryable.
+         */
+        BEFORE_PRODUCER_COMMIT,
+        /**
+         * After the producer commit, while the manager-local ledger is being
+         * published. The reverse session no longer exists and cannot be
+         * recreated, so the release must complete rather than report a
+         * retryable failure.
+         */
+        AFTER_PRODUCER_COMMIT
+    }
     private AudioPresentationCommandQueue shadowCommands;
     private AudioPresentationSourceFactory shadowFactory;
     private AudioPresentationCommandResolver shadowResolver;
@@ -210,17 +236,28 @@ public class AudioManager implements MusicRestoreSink {
         return handle;
     }
 
+    /**
+     * Idempotently closes the live-recording lease. Identical rule to
+     * {@link #endCaptureMode()}: the manager's view of the lease is retired
+     * only after the producer has accepted the detach.
+     *
+     * <p>A capture lease can only be released on the producer's owner thread,
+     * so an off-thread close throws with the lease still attached. Marking the
+     * handle closed or clearing {@code activeLiveCaptureAudioHandle} first
+     * would leave this manager believing it holds no lease while the producer
+     * keeps copying every presented packet into the orphan, would let the next
+     * {@code beginLiveCaptureAudio} attach a second lease instead of rejecting
+     * it, and would make a retry from the owner thread a no-op so the orphan
+     * could never be detached at all.
+     */
     private synchronized void closeLiveCaptureAudio(ManagerLiveCaptureAudioHandle handle) {
         if (handle.closed) {
             return;
         }
+        handle.capture.close();
         handle.closed = true;
-        try {
-            handle.capture.close();
-        } finally {
-            if (activeLiveCaptureAudioHandle == handle) {
-                activeLiveCaptureAudioHandle = null;
-            }
+        if (activeLiveCaptureAudioHandle == handle) {
+            activeLiveCaptureAudioHandle = null;
         }
     }
 
@@ -953,13 +990,33 @@ public class AudioManager implements MusicRestoreSink {
         return reverseAudioPresentationActive;
     }
 
+    /**
+     * Ends the held reverse presentation and publishes the selected logical
+     * target.
+     *
+     * <p>The release is split around exactly one irreversible step,
+     * {@code shadowProducer.endReverse(...)}: it consumes the reverse PCM
+     * cursor and commits the prepared registry restore, and no retry can
+     * recreate the session it destroyed. Every fallible step — preparing the
+     * restore selection and materializing the donor-binding replacement —
+     * therefore runs strictly <em>before</em> it, so a failure up to that point
+     * leaves the release exactly retryable. Everything after it is
+     * unconditional local publication that must not be skipped: if it somehow
+     * throws, the release still completes from the values prepared before the
+     * commit, because reporting a retryable failure there would make the retry
+     * re-prepare a restore selection that {@code endReverse} can no longer
+     * commit (the reverse session is already gone), leaking every voice that
+     * preparation recreated.
+     */
     public boolean endReverseAudioPresentation() {
         AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
         boolean preparedDuringAttempt = false;
+        boolean producerCommitted = false;
         // Consumed once per entry, whichever exit this attempt takes, so an
         // armed injection can never leak into a later unrelated release.
-        boolean injectFailure = failNextReverseRelease;
-        failNextReverseRelease = false;
+        ReverseReleaseFailurePoint injectFailure = failNextReverseRelease;
+        failNextReverseRelease = null;
+        Map<GameSound, DonorSfxBinding> publishedBindings = null;
         try {
             if (selected != null && !deferredReverseLogicalPrepared) {
                 if (!commitDeferredReverseLogicalRestore()) {
@@ -967,7 +1024,20 @@ public class AudioManager implements MusicRestoreSink {
                 }
                 preparedDuringAttempt = true;
             }
-            if (injectFailure) {
+            if (selected != null) {
+                // Built before the irreversible commit so a malformed or
+                // unmappable binding fails while the release is still exactly
+                // retryable, rather than half-published afterwards.
+                publishedBindings = new EnumMap<>(GameSound.class);
+                for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding
+                        : selected.donorBindings()) {
+                    publishedBindings.put(binding.sound(),
+                            new DonorSfxBinding(binding.donorGameId(),
+                                    binding.sfxId()));
+                }
+            }
+            if (injectFailure
+                    == ReverseReleaseFailurePoint.BEFORE_PRODUCER_COMMIT) {
                 throw new IllegalStateException(
                         "injected reverse release publication failure");
             }
@@ -975,25 +1045,21 @@ public class AudioManager implements MusicRestoreSink {
                 shadowProducer.endReverse(
                         !postBoundaryReverseTarget);
             }
-            if (selected != null) {
-                logicalRestorePublications++;
-                ringLeft = selected.ringLeft();
-                commandTimeline.restoreCursor(
-                        selected.commandTimelineFrame(),
-                        selected.commandTimelineNextOrder());
-                donorSoundBindings.clear();
-                for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding
-                        : selected.donorBindings()) {
-                    donorSoundBindings.put(binding.sound(),
-                            new DonorSfxBinding(binding.donorGameId(),
-                                    binding.sfxId()));
-                }
+            producerCommitted = true;
+            if (injectFailure
+                    == ReverseReleaseFailurePoint.AFTER_PRODUCER_COMMIT) {
+                throw new IllegalStateException(
+                        "injected reverse release publication failure");
             }
-            deferredReverseLogicalSnapshot = null;
-            deferredReverseLogicalPrepared = false;
-            reverseAudioPresentationActive = false;
-            postBoundaryReverseTarget = false;
         } catch (RuntimeException failure) {
+            if (producerCommitted) {
+                publishReverseReleaseLedger(selected, publishedBindings);
+                LOGGER.log(Level.WARNING,
+                        "Audio reverse release publication failed after the "
+                                + "producer commit; completed the release from "
+                                + "the pre-commit ledger", failure);
+                return true;
+            }
             if (preparedDuringAttempt) {
                 try {
                     shadowProducer.discardPreparedRestoreSelection();
@@ -1007,7 +1073,30 @@ public class AudioManager implements MusicRestoreSink {
                     failure);
             return false;
         }
+        publishReverseReleaseLedger(selected, publishedBindings);
         return true;
+    }
+
+    /**
+     * Unconditional post-commit publication. Every value it writes was
+     * computed before the producer commit, so it cannot fail.
+     */
+    private void publishReverseReleaseLedger(
+            AudioLogicalSnapshot selected,
+            Map<GameSound, DonorSfxBinding> publishedBindings) {
+        if (selected != null) {
+            logicalRestorePublications++;
+            ringLeft = selected.ringLeft();
+            commandTimeline.restoreCursor(
+                    selected.commandTimelineFrame(),
+                    selected.commandTimelineNextOrder());
+            donorSoundBindings.clear();
+            donorSoundBindings.putAll(publishedBindings);
+        }
+        deferredReverseLogicalSnapshot = null;
+        deferredReverseLogicalPrepared = false;
+        reverseAudioPresentationActive = false;
+        postBoundaryReverseTarget = false;
     }
 
     /**
@@ -1159,8 +1248,9 @@ public class AudioManager implements MusicRestoreSink {
         logicalRestorePublications = 0;
     }
 
-    void failNextReverseReleaseForTesting() {
-        failNextReverseRelease = true;
+    void failNextReverseReleaseForTesting(ReverseReleaseFailurePoint point) {
+        failNextReverseRelease =
+                java.util.Objects.requireNonNull(point, "point");
     }
 
     AudioPresentationTuning shadowTuningForTesting() {
@@ -1726,7 +1816,7 @@ public class AudioManager implements MusicRestoreSink {
         this.deferredReverseLogicalPrepared = false;
         this.postBoundaryReverseTarget = false;
         this.logicalRestorePublications = 0;
-        this.failNextReverseRelease = false;
+        this.failNextReverseRelease = null;
         this.commandTimeline.clear();
         closeShadowPresentation();
         clearDonorAudio();

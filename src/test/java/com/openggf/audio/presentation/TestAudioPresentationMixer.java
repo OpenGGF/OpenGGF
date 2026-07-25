@@ -45,6 +45,33 @@ class TestAudioPresentationMixer {
         assertSame(mixer.mix(voices, 4), mixer.mix(voices, 4));
     }
 
+    /**
+     * The accumulation, per-voice scratch and output buffers are allocated once
+     * at full capacity and reused, so a shorter frame following a longer one
+     * must see none of the longer frame's residue and must not re-emit a voice
+     * that has since been removed. Fractional frame rates (48000/60 is exact,
+     * but 48000/50 and every capture-lease rate are not) alternate packet
+     * lengths every frame, so this is the ordinary case, not an edge case.
+     */
+    @Test
+    void shorterFrameAfterALongerOneCarriesNoReusedScratchResidue() {
+        AudioPresentationMixer mixer = new AudioPresentationMixer(4);
+        PresentationVoice keptVoice = voice(1, 7, -7);
+
+        short[] grown = mixer.mix(
+                fixedVoices(keptVoice, voice(2, 1_000, -1_000)), 4);
+        assertArrayEquals(new short[] {
+                1_007, -1_007, 1_007, -1_007,
+                1_007, -1_007, 1_007, -1_007}, grown);
+
+        short[] shrunk = mixer.mix(fixedVoices(keptVoice), 2);
+
+        assertArrayEquals(new short[] {7, -7, 7, -7},
+                java.util.Arrays.copyOf(shrunk, 4),
+                "the shorter frame must be the new mix alone, with no residue "
+                        + "from the longer frame's accumulation or scratch");
+    }
+
     @Test
     void rejectsFramesBeyondDeclaredCapacity() {
         assertThrows(IllegalArgumentException.class,

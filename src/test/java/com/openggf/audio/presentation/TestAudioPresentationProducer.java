@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
@@ -170,6 +171,65 @@ class TestAudioPresentationProducer {
         assertEquals(5, capture.totalStereoFrames());
         assertEquals(new AudioFrameClock.Snapshot(5, 2, 5, 0),
                 capture.clockSnapshot());
+    }
+
+    /**
+     * The drain's capacity guard sits deliberately ahead of
+     * {@code captureClock.samplesForNextFrame()}: a rejected drain must not
+     * burn a clocked frame, or the caller's retry would silently skip audio and
+     * permanently desynchronize the lease from the producer.
+     */
+    @Test
+    void undersizedCaptureTargetIsRejectedBeforeTheCaptureClockAdvances() {
+        Fixture fixture = fixture(5, 2, rampStereo("undersized-drain", 16));
+        fixture.submitTone();
+        LiveCaptureAudioHandle capture = fixture.producer.attachCapture(2);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        short[] undersized =
+                new short[capture.maxStereoFramesPerPacket() * 2 - 1];
+
+        assertThrows(IllegalArgumentException.class,
+                () -> capture.drainPresentationFrame(undersized));
+
+        assertEquals(0, capture.totalStereoFrames(),
+                "a rejected drain must not consume a clocked frame");
+        short[] target = new short[capture.maxStereoFramesPerPacket() * 2];
+        assertEquals(2, capture.drainPresentationFrame(target),
+                "the retry must still receive the full clocked frame");
+        assertArrayEquals(new short[] {0, 100, 1, 101},
+                Arrays.copyOf(target, 4),
+                "the rejected drain must not have consumed the fresh packet");
+        assertEquals(2, capture.totalStereoFrames());
+        capture.close();
+    }
+
+    /**
+     * The mixer's accumulation/scratch/output buffers and the composite voice's
+     * scratch are grown once and reused, so a fractional clock's long frame
+     * followed by a short one is the case where stale samples would leak. 5/2
+     * clocks 2, 3, 2 stereo frames.
+     */
+    @Test
+    void aShortPacketAfterALongOneCarriesNoResidueFromTheLongerFrame() {
+        Fixture fixture = fixture(5, 2, rampStereo("long-then-short", 16));
+        fixture.submitTone();
+
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        assertArrayEquals(new short[] {0, 100, 1, 101},
+                fixture.sink.lastPacket(2));
+        fixture.producer.present(1, PresentationMode.FORWARD);
+        assertArrayEquals(new short[] {2, 102, 3, 103, 4, 104},
+                fixture.sink.lastPacket(3),
+                "the buffers grow on the long frame");
+
+        fixture.producer.present(2, PresentationMode.FORWARD);
+
+        assertArrayEquals(new short[] {5, 105, 6, 106},
+                fixture.sink.lastPacket(2),
+                "the short packet must contain only its own clocked frames, "
+                        + "with no tail from the grown buffers");
+        assertEquals(7, fixture.sink.totalStereoFrames,
+                "three 5/2 packets must clock exactly seven stereo frames");
     }
 
     @Test
