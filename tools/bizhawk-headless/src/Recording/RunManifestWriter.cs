@@ -17,6 +17,16 @@ namespace OpenGGF.BizHawk.Headless
         public const string LevelKind = "level";
         public const string SpecialStageKind = "special_stage";
 
+        /// <summary>
+        /// S3K-only third kind: gumball / pachinko / slots run under the
+        /// ordinary level Game_mode family with zone ids 0x13-0x15, so they
+        /// arm, record and finalize through the level path and differ only
+        /// in kind / trace_profile / the bonus_stage_type extra
+        /// (docs/s3k-complete-run-behavior.md §5.4). S1 and S2 never
+        /// produce it.
+        /// </summary>
+        public const string BonusStageKind = "bonus_stage";
+
         public RunManifestSegment(
             string dir,
             string kind,
@@ -76,6 +86,13 @@ namespace OpenGGF.BizHawk.Headless
     public sealed class RunManifestTransition
     {
         public const string StarpostSpecialKind = "starpost_special";
+
+        /// <summary>
+        /// S3K-only: pushed at the level arm gate when the zone being armed
+        /// is a bonus zone (docs/s3k-complete-run-behavior.md §7.2). Not
+        /// S2's "starpost_special", which names the special-stage entry.
+        /// </summary>
+        public const string StarpostBonusKind = "starpost_bonus";
         public const string GiantRingKind = "giant_ring";
         public const string StageExitKind = "stage_exit";
         public const string DeathRestartKind = "death_restart";

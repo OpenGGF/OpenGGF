@@ -161,12 +161,33 @@ namespace OpenGGF.BizHawk.Headless
         public const uint ObjClamerSpringReset = 0x000890D0;  // loc_890D0_reset
         public const int CnzBalloonSnapshotId = 0x41;
 
+        // Complete-run recorder additions (s3k_complete_run_recorder.lua
+        // v6.32; spec docs/s3k-complete-run-behavior.md §5). The STANDARD
+        // recorder reads none of these.
+        //
+        // LevelFrameCounter is that recorder's ADDR_FRAMECOUNT. It is NOT
+        // the same address as FrameCount above: commit 6564667eb moved it
+        // 0xFE08 -> 0xFE04 (Debug_placement_mode, dead-zero since
+        // inception, -> the real Level_frame_counter) WITHOUT bumping
+        // LUA_SCRIPT_VERSION, so 6.32-stamped fixtures exist on both sides
+        // of the change and the address must never be keyed off the
+        // version string (spec §8.3 / §10.10).
+        public const int LevelFrameCounter = 0xFE04;     // u16be Level_frame_counter (complete-run ADDR_FRAMECOUNT)
+        public const int VIntRunCount = 0xFE0C;          // u32be free-running V-int counter; bonus-segment metadata only
+        public const int CurrentSpecialStage = 0xFE16;   // u8 Current_special_stage -> special_stage_index
+        public const int LastStarPostHit = 0xFE2A;       // u8 transition field
+        public const int SavedXPos = 0xFE2E;             // u16be transition field
+        public const int SavedYPos = 0xFE30;             // u16be transition field
+        public const int SpecialBonusEntryFlag = 0xFE48; // u8 transition field
+        public const int EmeraldCount = 0xFFB0;          // u8 emeralds_before/emeralds_after
+
         // Game modes. The engine ORs $40/$80 during level-load handoff, so
         // the level family accepts $0C/$4C/$8C via the masked check.
         public const int GameModeSega = 0x00;
         public const int GameModeTitle = 0x04;
         public const int GameModeLevelSelect = 0x28;
         public const int GameModeLevel = 0x0C;
+        public const int GameModeSpecialStage = 0x34;    // blue-spheres SS; its own CSV schema
         public const int GameModeMask = 0x0F;
 
         public static bool IsLevelFamilyMode(int gameMode)
