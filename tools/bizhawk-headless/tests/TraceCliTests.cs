@@ -90,14 +90,24 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "TraceCli rejects the gameplay-segment argument with the"
                 + " S3K ROM",
                 RejectsSegmentArgumentWithS3kRom));
+            // The four environment-variable tests below set OGGF_* in
+            // this process and restore them afterwards. A capture child
+            // started anywhere in that window inherits the block, and
+            // OGGF_TRACE_STOP_FRAME or OGGF_BK2_FRAME_COUNT would then
+            // truncate a concurrent gate's capture — either a refusal or,
+            // worse, a shorter trace. They run alone.
             tests.Add(new TestMain.TestCase(
                 "TraceCli S3K trace refuses every unmodeled output"
                 + " affecting environment variable",
-                S3kTraceRefusesUnmodeledEnvironment));
+                S3kTraceRefusesUnmodeledEnvironment,
+                game: "s3k",
+                serial: true));
             tests.Add(new TestMain.TestCase(
                 "TraceCli S3K trace does not refuse the deferred"
                 + " families' hook-gated window overrides",
-                S3kTraceAcceptsHookGatedWindowEnvironment));
+                S3kTraceAcceptsHookGatedWindowEnvironment,
+                game: "s3k",
+                serial: true));
             tests.Add(new TestMain.TestCase(
                 "TraceCli S3K complete-run mode publishes segment"
                 + " directories and a manifest with labeled stdout",
@@ -109,11 +119,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "TraceCli S3K complete-run refuses every unmodeled output"
                 + " affecting environment variable",
-                S3kCompleteRunRefusesUnmodeledEnvironment));
+                S3kCompleteRunRefusesUnmodeledEnvironment,
+                game: "s3k",
+                serial: true));
             tests.Add(new TestMain.TestCase(
                 "TraceCli S3K complete-run does not refuse the variables"
                 + " that cannot change its output",
-                S3kCompleteRunAcceptsNonOutputEnvironment));
+                S3kCompleteRunAcceptsNonOutputEnvironment,
+                game: "s3k",
+                serial: true));
         }
 
         /// <summary>

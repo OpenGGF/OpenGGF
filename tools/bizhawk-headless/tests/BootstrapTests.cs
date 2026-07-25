@@ -21,9 +21,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "ROM identity reports mutated SHA-1",
                 ReportsMutatedSha1));
+            // Clears S1_ROM_PATH out of the process environment and puts
+            // it back. Any test resolving a ROM in that window — and
+            // every capture child process, which inherits the block —
+            // would see it missing and skip, so this one runs alone.
             tests.Add(new TestMain.TestCase(
                 "ROM identity skips only when S1_ROM_PATH is absent",
-                SkipsOnlyWhenSonic1RomPathIsAbsent));
+                SkipsOnlyWhenSonic1RomPathIsAbsent,
+                game: "s1",
+                serial: true));
             tests.Add(new TestMain.TestCase(
                 "ROM identity accepts Sonic 2 REV01",
                 AcceptsSonic2Rev01));
@@ -36,9 +42,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "ROM identity reports mutated Sonic 3 & Knuckles SHA-1",
                 ReportsMutatedSonic3kSha1));
+            // Same hazard as the S1 case above: it unsets S3K_ROM_PATH
+            // process-wide for the duration.
             tests.Add(new TestMain.TestCase(
                 "ROM identity skips only when S3K_ROM_PATH is absent",
-                SkipsOnlyWhenSonic3kRomPathIsAbsent));
+                SkipsOnlyWhenSonic3kRomPathIsAbsent,
+                game: "s3k",
+                serial: true));
             tests.Add(new TestMain.TestCase(
                 "ROM identity detects supported games by SHA-1",
                 DetectsSupportedGamesBySha1));

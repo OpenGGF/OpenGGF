@@ -10,8 +10,19 @@ if [[ -v BIZHAWK_HOME ]]; then
   BIZHAWK_HOME_WAS_SET=true
 fi
 
-if [[ "$#" -ge 2 && "$1" == "--filter" ]] &&
-   { [[ "$2" == "EndToEnd" ]] || [[ "$2" == "GpgxHost" ]]; } &&
+# The runner now takes several flags, so --filter is no longer guaranteed
+# to be the first argument. Find its value wherever it appears; an absent
+# --filter leaves this empty and both guards below fall through.
+BIZHAWK_FILTER_VALUE=""
+for (( bizhawk_arg = 1; bizhawk_arg <= $#; bizhawk_arg++ )); do
+  if [[ "${!bizhawk_arg}" == "--filter" && $((bizhawk_arg + 1)) -le "$#" ]]; then
+    bizhawk_next=$((bizhawk_arg + 1))
+    BIZHAWK_FILTER_VALUE="${!bizhawk_next}"
+  fi
+done
+
+if { [[ "$BIZHAWK_FILTER_VALUE" == "EndToEnd" ]] ||
+     [[ "$BIZHAWK_FILTER_VALUE" == "GpgxHost" ]]; } &&
    [[ -v S1_ROM_PATH ]]
 then
   if [[ ! -f "$S1_ROM_PATH" ]]; then
@@ -31,11 +42,11 @@ then
   fi
 fi
 
-if [[ "$#" -ge 2 && "$1" == "--filter" ]] &&
-   { [[ "$2" == "EndToEnd" ]] || [[ "$2" == "GpgxHost" ]]; } &&
+if { [[ "$BIZHAWK_FILTER_VALUE" == "EndToEnd" ]] ||
+     [[ "$BIZHAWK_FILTER_VALUE" == "GpgxHost" ]]; } &&
    [[ "$BIZHAWK_HOME_WAS_SET" == false && ! -d "$BIZHAWK_DEFAULT_HOME" ]]
 then
-  echo "SKIP $2: BizHawk distribution not installed"
+  echo "SKIP $BIZHAWK_FILTER_VALUE: BizHawk distribution not installed"
   exit 0
 fi
 

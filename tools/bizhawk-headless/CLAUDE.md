@@ -42,9 +42,9 @@ below), which is the other reason not to port callbacks here.
    not compile.
 4. **Every new `.cs` file must be hand-added to BOTH `BizHawk.Headless.Gpgx.csproj`
    and `BizHawk.Headless.Gpgx.Tests.csproj`.** There is no globbing.
-5. **Every new test class must be registered in `tests/TestMain.cs`.** The runner
-   is a plain registry, not NUnit — an unregistered test silently never runs, and
-   the suite still reports green.
+5. **Every new test class must be registered in `TestMain.BuildRegistry()`.** The
+   runner is a plain registry, not NUnit — an unregistered test silently never
+   runs, and the suite still reports green.
 6. **`.gitignore` ignores `tools/*`.** New files here are invisible to
    `git status` and need `git add -f`. A forgotten `-f` builds and tests green
    locally while the file is missing from the commit. Verify with
@@ -52,11 +52,76 @@ below), which is the other reason not to port callbacks here.
 7. **Check for an existing untracked file before creating one.** Writing a "new"
    doc over untracked work has already happened here once.
 
+## The runner runs tests in parallel
+
+`./test.sh` defaults to `--jobs 8`. What that costs you to know:
+
+- **`--jobs 1` is the debugging path** and reproduces the pre-parallel runner
+  exactly: registration order, unbuffered writes, no timing report. Any time a
+  parallel result looks strange, re-run the case at `--jobs 1` before believing
+  it. A test that passes only at `--jobs 1` is a defect worth reporting, not a
+  scheduling detail to route around.
+- **Output is buffered per test and flushed as one block.** `PASS `/`FAIL `/`SKIP `
+  keep their exact shapes and streams; do not change them, and do not add output
+  that starts with those prefixes. The slowest-N report and the summary line
+  start with `  ` or `---` so a `grep '^PASS '` count is unaffected.
+- **Anything that mutates process-global state must run alone.** Three families
+  exist today:
+  1. **File descriptors 1 and 2.** The CLI wraps its capture in
+     `NativeStandardOutputSilencer`, which `dup2()`s `/dev/null` onto both for
+     the whole process. Anything another thread writes in that window is not
+     interleaved, it is **destroyed**. This is how it was found: a parallel run
+     reported 34 of 352 tests and still exited 0. `TraceCliTests` and
+     `EndToEndTests` drive the CLI in-process and are therefore registered
+     through `RegisterSerial` in `TestMain.BuildRegistry()` — **marked by class,
+     not by case**, so a case added to either later inherits the constraint
+     instead of silently eating the suite's output.
+  2. **The environment block.** The `BootstrapTests` / `TraceCliTests` cases that
+     set or clear `S1_ROM_PATH`, `S3K_ROM_PATH` or an `OGGF_*` variable. A
+     capture child started in that window inherits the block —
+     `OGGF_TRACE_STOP_FRAME` would silently truncate a concurrent gate's capture.
+  3. **The in-process emulator core.** The two `GpgxHostTests` cases that
+     `GpgxHost.Open`; two live waterbox cores in one process is not a supported
+     configuration.
+
+  Serial tests run alone, before the parallel phase; today that phase costs about
+  four seconds. **Look for this hazard whenever a test writes to `Environment`,
+  constructs a `GpgxHost`, or calls `Program.Run`** — none of them announce
+  themselves, and what they produce looks like a flaky gate or a truncated run
+  rather than a scheduling bug.
+- **New ROM-backed gates should carry metadata**: `game:`, `movie:`,
+  `kind: TestKind.Gate` and `estimatedSeconds:`. All are optional C# defaults,
+  so no other registration needs touching. `estimatedSeconds` chooses start
+  order and nothing else — it is never an assertion and never a timeout.
+  **Do not add a memory weight or a per-test resource budget.** Captures are a
+  flat ~231 MB regardless of movie length (the emulator core, not the
+  recording), so a scheduler that modelled RAM would be modelling a constraint
+  that does not exist, and the next person would trust it.
+- **Gate scratch goes under `.scratch/`, never `Path.GetTempPath()`.** Use
+  `TestScratch.CreateRootPath(prefix)` and delete the root in a finally block. A
+  single capture materializes up to ~1.6 GB and `/tmp` is frequently a RAM-backed
+  tmpfs; four gates against one produced ENOSPC inside three captures. The gates
+  reported that correctly — a full disk and a recorder that stopped early are
+  indistinguishable to a byte gate — but it is not a failure worth reproducing.
+- **A run that loses a test cannot exit 0.** `TestRunner` asserts that every
+  selected test produced a result and prints `RUNNER ERROR: …` and exits 1 if
+  not, and a worker whose execution wrapper throws records a failure rather than
+  dying. Both exist because the first parallel run here reported 34 of 352 tests
+  and exited 0. Do not remove them for being untestable in the ordinary path;
+  they are the check that the ordinary path is what happened.
+- Timings live in `tests/test-timings.tsv`, refreshed with `--update-timings`.
+  They are a scheduling hint: a stale, partial or deleted file changes start
+  order and nothing else.
+
 ## Verifying your work
 
 - Run the full suite: `BIZHAWK_HOME=<abs> S1_ROM_PATH=… S2_ROM_PATH=… S3K_ROM_PATH=… ./test.sh`.
   Report the counts you actually observed. `--filter <substr>` while iterating,
   but finish on a full run.
+- `--no-gates` is the sub-minute tier for iterating on unit-level code;
+  `--gates-only`, `--game s1|s2|s3k` and `--movie <substr>` narrow to the
+  ROM-backed work. `--game` and `--movie` select on tags, so an **untagged test
+  is excluded** by them — use `--filter` for name-based selection.
 - Gates skip when a ROM or the BizHawk distribution is missing, and fail when one
   is present but wrong. A "green" suite with everything skipped proves nothing —
   check the skip count, not just the failure count.

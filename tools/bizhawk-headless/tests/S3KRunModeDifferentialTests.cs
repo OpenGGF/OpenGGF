@@ -423,11 +423,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S3KRunModeDifferential native run-mode capture matches the"
                 + " four canonical identity-(C) segments",
-                NativeRunCaptureMatchesSetC));
+                NativeRunCaptureMatchesSetC,
+                game: "s3k",
+                movie: "s3-knux-multibonus-ss",
+                kind: TestKind.Gate,
+                estimatedSeconds: 71.0));
             tests.Add(new TestMain.TestCase(
                 "S3KRunModeDifferential native run-mode capture reproduces"
                 + " the s3-knux-multibonus-ss run byte for byte",
-                NativeRunCaptureReproducesSetB));
+                NativeRunCaptureReproducesSetB,
+                game: "s3k",
+                movie: "s3-knux-multibonus-ss",
+                kind: TestKind.Gate,
+                estimatedSeconds: 75.0));
         }
 
         // ==================================================================
