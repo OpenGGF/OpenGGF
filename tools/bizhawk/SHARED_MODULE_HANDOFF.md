@@ -203,3 +203,164 @@ Follow the same isolation-before-installing discipline `3eebb13bf` used for
 defect (A): categorize every byte delta mechanically (cell-by-cell CSV,
 per-key JSON) before installing, and confirm the delta reduces to exactly
 the `vblank_counter`/VBlank-derived fields with no other column moving.
+
+---
+
+## 4. The original extraction plan (still standing, partially executed)
+
+Everything below is the pre-existing feasibility study that proposed
+`lib/oggf_trace_common.lua`. `fd3a74291` executed its phases 0-2 for the **leaf
+helpers** only; the ROM address constants it lists under "Do NOT extract" were
+deliberately left per-recorder, which section 1 above identifies as the root cause
+of both defects in section 2. Read the two halves together: the audit is the
+evidence that this plan's scope should now be widened to cover the constants, or
+that some other mechanism must stop a fix to one recorder from silently failing to
+reach its five siblings.
+
+**Status:** proposed, not started. Read-only feasibility exploration complete.
+**Goal:** stop copy-pasting the same leaf helpers across the six per-game recorders
+by having them `dofile` one shared module. **Not** a rewrite of the schema writers.
+
+## Why (the duplication)
+
+Six real recorders live in `tools/bizhawk/`:
+
+| File | Lines |
+|------|------:|
+| `s1_trace_recorder.lua` | 782 |
+| `s1_complete_run_recorder.lua` | 1797 |
+| `s2_trace_recorder.lua` | 2093 |
+| `s2_ss_trace_recorder.lua` | 785 |
+| `s3k_trace_recorder.lua` | 4983 |
+| `s3k_complete_run_recorder.lua` | 5947 |
+
+~370 duplicated lines of game-agnostic leaf helpers. The worst offender is
+`bk2_input_mask()` — **26 lines, byte-for-byte identical in 5 files**.
+
+### Extract these (byte-identical or trivially wrappable) — the ONLY scope
+
+| Helper | Approx lines | Sites (file:line at time of writing) |
+|--------|-----:|--------|
+| `bk2_input_mask(fallback_raw, trace_row, bk2_frame_offset)` | 26 | `s1:202`, `s1_complete:463`, `s2:409`, `s3k:646`, `s3k_complete:963` |
+| `hex(val, width)` | 7 | `s1:230`, `s1_complete:491`, `s2:437`, `s3k:673`, `s3k_complete:990` |
+| `angle_to_ground_mode(angle)` | 6–8 | `s1:240`, `s1_complete:501`, `s2:469`, `s3k:681`, `s3k_complete:998` |
+| `write_aux(aux_file, json_str)` | 6 | `s1:248`, `s1_complete:509`, `s2:477`, `s2_ss:179`, `s3k:688`, `s3k_complete:1005` |
+| `read_speed(base, offset)` | 3 | `s1:182`, `s1_complete:443`, `s2:385`, `s3k:628`, `s3k_complete:945` |
+| `rom_joypad_to_mask(raw)` | 5–9 | `s1:189`, `s3k:632`, … (logic identical, formatting differs) |
+| `json_escape(v)` / `json_quote(v)` | ~4 | `s2:445 json_escape`, `s2_ss:168`, `s3k:695 json_quote`, `s3k_complete:1012` |
+| `INPUT_UP/DOWN/LEFT/RIGHT/JUMP` = 0x01/0x02/0x04/0x08/0x10 | 5 | `s1:123`, `s2:291`, `s3k:387`, `s3k_complete:571` |
+
+> Two helpers rely on file-scope upvalues and must take them as parameters to
+> stay pure: `bk2_input_mask` reads the recorder's `bk2_frame_offset`; `write_aux`
+> closes over `aux_file`. Pass both in. Both also call BizHawk globals
+> (`mainmemory`/`movie`/`emu`) which are present in the module's environment — fine.
+
+### Do NOT extract (out of scope — high risk, low reward)
+
+- `open_files`, `write_metadata`, `write_ss_metadata`, `write_run_manifest`,
+  `close_files`, `build_slot_dump` — they *look* similar but embed per-game CSV
+  column lists, ROM addresses, and schema fields. The comparator is **byte-sensitive**;
+  parameterizing these risks changing emitted bytes. Leave inline.
+- All `*_csv_version` / `lua_script_version` / column-list / schema constants —
+  keep inline per recorder so the three games' schemas evolve independently.
+  (Note: `s1_complete_run_recorder.lua` now uses file-level globals
+  `S1_COMPLETE_SCRIPT_VERSION` / `S1_COMPLETE_ROM_CHECKSUM` — that is per-recorder
+  single-sourcing, NOT the shared module.)
+- **The fast-headless toggle block** (`emu.limitframerate(false)`,
+  `client.speedmode(6400)`, `client.invisibleemulation(true)`, `client.SetSoundOn(...false)`
+  before the main loop, e.g. `s1:737-743`, `s2:1985-1991`, `s3k:4914-4920`).
+  `prepare_bizhawk_fast_lua.ps1:31-42` statically greps each recorder's TEXT for
+  those exact calls before the main loop; moving them into the module makes the
+  guard abort every launch. **Must stay inline.**
+
+## Mechanism (verified available)
+
+BizHawk 2.11 runs **native Lua 5.4** (KeraLua), not the old 5.1 KopiLua — proven
+by the recorders' use of `|` / bit-ops (`s1:218,222`, `s3k:662-668`). So the full
+stdlib is available: `require`, `package.path`, `dofile`, `loadfile`, `debug`, `os`.
+
+- `dofile(<absolute path>)` is already the production launch mechanism: the
+  fast-headless wrapper generator `prepare_bizhawk_fast_lua.ps1:56-62` emits a
+  `%TEMP%` wrapper whose body is `local t = "<abs>"; dofile(t)`. Absolute-path
+  `dofile` of another Lua file works in this exact runtime.
+- **Relative paths are unreliable.** EmuHawk's CWD is the loaded script's dir on
+  the `--lua=` route (`README.md:61-64`), but the `.bat` route runs the `%TEMP%`
+  wrapper with `pushd tools/bizhawk` (`run_bizhawk_lua.bat:117`). Do not rely on
+  CWD or default `package.path`.
+- `os.getenv` works today (heavy use: `s2:110-122`, `s3k:240+`, `diag_template_fast.lua:25-27`).
+
+## Proposed design
+
+Create `tools/bizhawk/lib/oggf_trace_common.lua` returning a table `M` with the
+byte-copied helper bodies (see list above). Consume via a robust loader at the top
+of each recorder:
+
+```lua
+local function oggf_lib_dir()
+  local env = os.getenv("OGGF_BIZHAWK_LIB")            -- launcher-provided, most robust
+  if env and #env > 0 then return env end
+  local src = debug.getinfo(1, "S").source             -- "@<abs path to this recorder>"
+  local dir = src:match("^@(.*[/\\])")                 -- strip filename
+  if dir then return dir .. "lib/" end
+  return "lib/"                                          -- CWD fallback
+end
+local C = assert(loadfile(oggf_lib_dir() .. "oggf_trace_common.lua"))()
+```
+
+Call sites become `C.hex(x)`, `C.bk2_input_mask(raw, row, bk2_frame_offset)`,
+`C.write_aux(aux_file, s)`, etc. Re-bind only the hot-loop **constants** locally
+(`local INPUT_UP = C.INPUT_UP`) — cheap, and avoids re-introducing local slots
+against the 200-locals limit. Consuming helpers through the single `C` table
+*reduces* main-chunk locals (helps the trap).
+
+**Launcher change (recommended, one line):** in `run_bizhawk_lua.bat` (~line 116,
+before launch) add `set "OGGF_BIZHAWK_LIB=%~dp0lib\"` so the absolute path is
+authoritative on the `.bat`/wrapper route; the `debug.getinfo` fallback covers the
+direct `--lua=` route.
+
+Why path-robust across worktrees/headless/diag: `debug.getinfo(1,"S").source`
+returns the recorder's own absolute path even when reached through the wrapper's
+`dofile`; `lib/` travels next to the recorder in every checkout (no cross-worktree
+bleed); the env var wins for headless `.bat`.
+
+## Hard constraints / risks
+
+- **Byte-identical output is mandatory.** The trace comparator diffs bytes.
+  Extraction must be a *pure copy* with identical `string.format` specifiers and
+  formatting. After each step, regenerate one trace per affected game and `diff`
+  `physics.csv` / `aux_state.jsonl` / `metadata.json` against pre-change output —
+  require **zero diff** before committing.
+- **Silent failure is the dominant risk.** In `--chromeless`, Lua errors are
+  invisible (`README.md:69-72`): a bad lib path → `dofile` throws → recorder never
+  runs → no `trace_output/` → looks like a core-init crash. Mitigation: wrap the
+  load in `assert(loadfile(path))`, keep the three-tier fallback, and first-run
+  validate WITHOUT `--chromeless` to surface a load-error dialog.
+- **Do not touch the fast-headless block or schema writers** (see above).
+
+## Validation tooling
+
+- `luac -p <file>` is available locally (`/usr/bin/luac`, Lua 5.4) — syntax-check
+  the module and every edited recorder in pre-commit/CI. (Only parse is meaningful
+  offline; the module references BizHawk globals absent under stock `lua`.)
+- `lupa` (python) is NOT installed here. Runtime behavior still needs a real
+  BizHawk regen to validate (that's the byte-diff gate above).
+
+## Phased plan
+
+0. Create `lib/oggf_trace_common.lua` with **`bk2_input_mask` + `json_escape`/`json_quote` only**.
+   Add the loader to the smallest recorder (`s1_trace_recorder.lua`). Add
+   `OGGF_BIZHAWK_LIB` to `run_bizhawk_lua.bat`. Regenerate one S1 trace; `diff` — must
+   be identical. Test BOTH the `.bat` route and a direct `--lua=` launch.
+1. Expand the module with `hex`, `angle_to_ground_mode`, `read_speed`,
+   `rom_joypad_to_mask`, `write_aux`, `INPUT_*`. Migrate `s1_trace_recorder.lua`
+   fully; regen + diff.
+2. Roll to the other five recorders one at a time, each gated by a per-game
+   byte-identical regen diff. Update `README.md` and the recorder header comments.
+3. **Stop.** Do not extend into schema writers or the fast-headless block.
+
+## Commit policy reminder
+
+Per `CLAUDE.md`: recorder-schema changes commit separately from any regenerated
+trace payloads; use the trailer block (no `--no-verify`); keep
+`docs/TRACE_FRONTIER_LOG.md` updated only if a frontier moves (this refactor should
+not move any).
