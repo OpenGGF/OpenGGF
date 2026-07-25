@@ -2,12 +2,26 @@ package com.openggf.audio;
 
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.presentation.AudioPresentationCommand;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.AudioVoiceRegistry;
+import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
+import com.openggf.audio.presentation.SmpsAssetKey;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Collections;
 import java.util.EnumMap;
@@ -57,7 +71,8 @@ public class TestDonorAudioRouting {
 
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
 
-        assertEquals("donor-spindash", backend.lastSfxName);
+        assertEquals(AudioCommand.SfxRoute.DONOR_SMPS, lastSfx().route());
+        assertEquals("s2", lastSfx().donorGameId());
     }
 
     @Test
@@ -68,9 +83,8 @@ public class TestDonorAudioRouting {
 
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
 
-        // Should fall through to backend.playSfx(name)
-        assertEquals("SPINDASH_CHARGE", backend.lastFallbackName);
-        assertNull(backend.lastSfxName, "SMPS data should not have been played");
+        assertEquals(AudioCommand.SfxRoute.FALLBACK_NAME, lastSfx().route());
+        assertEquals("SPINDASH_CHARGE", lastSfx().sfxName());
     }
 
     @Test
@@ -97,8 +111,8 @@ public class TestDonorAudioRouting {
 
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
 
-        // Base loader should have handled it
-        assertEquals("base-roll", backend.lastSfxName);
+        assertEquals(AudioCommand.SfxRoute.BASE_SMPS_ID, lastSfx().route());
+        assertEquals(0xA5, lastSfx().sfxId());
     }
 
     @Test
@@ -116,7 +130,7 @@ public class TestDonorAudioRouting {
         Map<GameSound, Integer> baseMap = new EnumMap<>(GameSound.class);
         audioManager.setSoundMap(baseMap);
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
-        assertEquals("SPINDASH_CHARGE", backend.lastFallbackName);
+        assertEquals(AudioCommand.SfxRoute.FALLBACK_NAME, lastSfx().route());
     }
 
     @Test
@@ -139,7 +153,8 @@ public class TestDonorAudioRouting {
 
         // Donor spindash should still work
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
-        assertEquals("donor-spindash", backend.lastSfxName, "Donor spindash must survive setRom()");
+        assertEquals("s2", lastSfx().donorGameId(),
+                "Donor spindash must survive setRom()");
     }
 
     @Test
@@ -162,11 +177,11 @@ public class TestDonorAudioRouting {
 
         // Play spindash â€” should route to S2
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
-        assertEquals("s2-spindash", backend.lastSfxName);
+        assertEquals("s2", lastSfx().donorGameId());
 
         // Play fire shield â€” should route to S3K
         audioManager.playSfx(GameSound.FIRE_SHIELD, 1.0f);
-        assertEquals("s3k-fire-shield", backend.lastSfxName);
+        assertEquals("s3k", lastSfx().donorGameId());
     }
 
     @Test
@@ -185,11 +200,101 @@ public class TestDonorAudioRouting {
 
         audioManager.playSfx(GameSound.SPINDASH_CHARGE, 1.0f);
 
-        assertNotNull(backend.lastDonorConfig, "Donor config should be passed to backend");
-        assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW, backend.lastDonorConfig.getTempoMode());
+        assertEquals(AudioCommand.SfxRoute.DONOR_SMPS, lastSfx().route());
+        assertEquals("s3k", lastSfx().donorGameId());
+    }
+
+    @Test
+    public void presentationFactoryPreservesDonorRouteAndSequencerConfig() {
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(() -> true, handlers);
+        SmpsSequencerConfig donorConfig =
+                new SmpsSequencerConfig.Builder()
+                        .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                        .build();
+        SmpsAssetKey key = new SmpsAssetKey(
+                "s2", SmpsAssetKey.Route.DONOR_ID, 0xE0, null);
+        factory.warmSmpsSfxAsset(
+                key, new StubSmpsData("donor-spindash"),
+                EMPTY_DAC, donorConfig);
+        ResolvedSmpsSfxSource source = factory.resolveSmpsSfx(
+                1, key, 1 << 16, 0x70, 0, 0, 2_048);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> {
+                });
+
+        registry.apply(new AudioPresentationCommand.AddSmpsSfx(source));
+
+        SmpsCompositeVoice voice =
+                (SmpsCompositeVoice) registry.orderedVoiceAt(0);
+        assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW,
+                voice.driver().captureSnapshot().sequencers().get(0)
+                        .config().getTempoMode());
+        assertEquals("s2",
+                voice.driver().captureSnapshot().sequencers().get(0)
+                        .source().donorGameId());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"s1", "s2"})
+    void hostSessionS3kDonorMusicAndSfxUseSharedOwnersOnBothPaths(
+            String hostGameId) {
+        HeadlessSmpsAudioBackend realBackend =
+                new HeadlessSmpsAudioBackend(
+                        SonicConfigurationService.getInstance(), null);
+        audioManager.setBackend(realBackend);
+        audioManager.setAudioProfile(
+                new HostAudioProfile(hostGameId, new StubSmpsLoader()));
+        audioManager.setRom(null);
+
+        StubSmpsLoader donor = new StubSmpsLoader();
+        StubSmpsData music = new StubSmpsData("s3k-donor-music");
+        music.setId(0x21);
+        StubSmpsData sfx = new StubSmpsData("s3k-donor-sfx");
+        sfx.setId(0xA4);
+        donor.musicResults.put(0x21, music);
+        donor.sfxResults.put(0xA4, sfx);
+        Sonic3kAudioProfile donorProfile = new Sonic3kAudioProfile();
+        audioManager.registerDonorLoader(
+                "s3k", donor, EMPTY_DAC,
+                donorProfile.getSequencerConfig(), donorProfile);
+
+        audioManager.playDonorMusic("s3k", 0x21);
+        audioManager.playDonorSfx("s3k", 0xA4);
+        audioManager.presentFrame(PresentationMode.SILENT);
+
+        var presentationOwner =
+                audioManager.presentationCoordFlagHandlersForTesting();
+
+        var shadowDriver =
+                audioManager.shadowSmpsDriverSnapshotForTesting();
+        assertNotNull(shadowDriver);
+        assertEquals(2, shadowDriver.sequencers().size(),
+                "shadow donor SFX must join shadow donor music's driver");
+        var shadowMusicHandler = shadowDriver.sequencers().get(0)
+                .config().getCoordFlagHandler();
+        var shadowSfxHandler = shadowDriver.sequencers().get(1)
+                .config().getCoordFlagHandler();
+        assertSame(presentationOwner.handlerFor("s3k"),
+                shadowMusicHandler);
+        assertSame(shadowMusicHandler, shadowSfxHandler,
+                "shadow donor music and SFX must share the counter owner");
+        presentationOwner.state().setSpindashRevCounter(29);
+        assertEquals(29, presentationOwner.state().spindashRevCounter());
+        shadowSfxHandler.onSfxStart(0);
+        assertEquals(0, presentationOwner.state().spindashRevCounter(),
+                "the configured shadow SFX handler must mutate the shared "
+                        + "presentation counter");
     }
 
     // --- Test doubles ---
+
+    private AudioCommand.PlaySfx lastSfx() {
+        var entries = audioManager.commandTimeline().entries();
+        return (AudioCommand.PlaySfx) entries.get(entries.size() - 1).command();
+    }
 
     /** Minimal SmpsData stub that carries a name for assertion. */
     private static class StubSmpsData extends AbstractSmpsData {
@@ -214,11 +319,12 @@ public class TestDonorAudioRouting {
 
     /** SmpsLoader stub that returns pre-configured results by sfxId. */
     private static class StubSmpsLoader implements SmpsLoader {
+        final Map<Integer, AbstractSmpsData> musicResults = new HashMap<>();
         final Map<Integer, AbstractSmpsData> sfxResults = new HashMap<>();
 
         @Override
         public AbstractSmpsData loadMusic(int musicId) {
-            return null;
+            return musicResults.get(musicId);
         }
 
         @Override
@@ -234,6 +340,25 @@ public class TestDonorAudioRouting {
         @Override
         public DacData loadDacData() {
             return EMPTY_DAC;
+        }
+    }
+
+    private static final class HostAudioProfile extends StubAudioProfile {
+        private final String gameId;
+
+        private HostAudioProfile(String gameId, SmpsLoader loader) {
+            super(loader);
+            this.gameId = gameId;
+        }
+
+        @Override
+        public String presentationGameId() {
+            return gameId;
+        }
+
+        @Override
+        public SmpsSequencerConfig getSequencerConfig() {
+            return new SmpsSequencerConfig.Builder().build();
         }
     }
 
@@ -305,5 +430,3 @@ public class TestDonorAudioRouting {
         }
     }
 }
-
-

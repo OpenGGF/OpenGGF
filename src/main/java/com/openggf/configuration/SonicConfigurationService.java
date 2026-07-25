@@ -113,6 +113,8 @@ public class SonicConfigurationService {
 			}
 		}
 
+		publishBundledConfigExample();
+
 		// Migrate deprecated key encodings/defaults before applying defaults.
 		ConfigMigrationService migrationService = new ConfigMigrationService();
 		boolean configChanged = false;
@@ -637,6 +639,11 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CAPTURE_SCALE, 4);
 		putDefault(SonicConfiguration.CAPTURE_FPS, 60);
 		putDefault(SonicConfiguration.CAPTURE_CODEC, "ffv1");
+		putDefault(SonicConfiguration.CAPTURE_AUDIO_CODEC, "flac");
+		putDefault(SonicConfiguration.CAPTURE_CONTAINER, "mkv");
+		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS, "default");
+		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS, "default");
+		putDefaultKey(SonicConfiguration.CAPTURE_TOGGLE_KEY, GLFW_KEY_O);
 		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, false);
 		putDefault(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_R);
@@ -786,6 +793,36 @@ public class SonicConfigurationService {
 	 * launched from macOS Finder, getcwd() is broken so File("relative") may
 	 * resolve against the wrong directory. This ensures consistent behavior.
 	 */
+	/**
+	 * Writes the bundled {@code config.yaml} to {@code config.yaml.example}
+	 * beside wherever the player's own {@code config.yaml} is looked for,
+	 * overwriting it on every run.
+	 *
+	 * <p>A player's {@code config.yaml} is the values they have changed, and
+	 * once written it never regains the comments, new keys, or worked examples
+	 * that the bundled template gains later. Refreshing a sibling example file
+	 * means the current documented template is always readable next to their
+	 * own, to consult or to copy over.
+	 *
+	 * <p>Deliberately never touches {@code config.yaml} itself: overwriting a
+	 * player's settings to give them comments would be a poor trade. Failure is
+	 * logged and ignored — a read-only install directory must not stop the game
+	 * starting.
+	 */
+	private void publishBundledConfigExample() {
+		File target = new File(resolveConfigFile().getAbsoluteFile().getParent(),
+				"config.yaml.example");
+		try (InputStream is = getClass().getResourceAsStream("/config.yaml")) {
+			if (is == null) {
+				return;
+			}
+			java.nio.file.Files.copy(is, target.toPath(),
+					java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException | RuntimeException e) {
+			LOGGER.log(Level.FINE, "Could not refresh config.yaml.example", e);
+		}
+	}
+
 	private File resolveRelativeFile(String name) {
 		File f = new File(name);
 		if (!f.isAbsolute()) {

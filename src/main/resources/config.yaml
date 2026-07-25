@@ -124,8 +124,52 @@ discord:
 # ── Trace Capture ──
 capture:
   outputDir: "target/trace-videos"   # Output directory for trace capture videos
-  scale: 4   # Integer nearest-neighbor upscale factor for capture output
+  # TRACE CAPTURE ONLY. Live viewport recording (Shift+O) records the game
+  # viewport at its current on-screen size instead, so the recording includes
+  # menu and debug-overlay elements that scale outside the game's pixel space.
+  # That is why resizing the window ends a live recording: the frame size is
+  # fixed for the life of an encode.
+  scale: 4   # Integer nearest-neighbor upscale factor for trace capture output
   fps: 60   # Output frame rate for trace capture
+  codec: "ffv1"   # Video codec: ffv1, h264 or h265 (all lossless)
+  audioCodec: "flac"   # Audio codec: flac (lossless), or aac / mp3 (LOSSY)
+  container: "mkv"   # Recording file extension; mp4 is portable only with h264/h265 + aac
+  # ── ADVANCED: full ffmpeg argument lists ───────────────────────────────
+  # "default" = the engine's own command. Empty = skip that pass (pass 2 only,
+  # which publishes the video with no audio). Anything else is used literally.
+  # Pass 1 placeholders: {width} {height} {fps} {scale} {scaledWidth}
+  #                      {scaledHeight} {videoCodecArgs} {videoOut}
+  # Pass 2 placeholders: {videoIn} {audioIn} {sampleRate} {audioCodecArgs}
+  #                      {output}
+  # Frames always arrive as rawvideo/rgba on pipe:0.
+  #
+  # Example - small, portable, LOSSY (CRF 24 h264 + aac):
+  #   audioCodec: "aac"
+  #   ffmpegPass1Args: >-
+  #     -y -f rawvideo -pix_fmt rgba -s {width}x{height} -r {fps} -i pipe:0
+  #     -vf vflip,scale={scaledWidth}:{scaledHeight}:flags=neighbor
+  #     -c:v libx264 -crf 24 -preset veryfast -pix_fmt yuv420p -an {videoOut}
+  #
+  # Example - web-ready MP4 with faststart:
+  #   container: "mp4"
+  #   audioCodec: "aac"
+  #   ffmpegPass2Args: >-
+  #     -y -i {videoIn} -f s16le -ar {sampleRate} -ac 2 -i {audioIn}
+  #     -c:v copy {audioCodecArgs} -movflags +faststart {output}
+  #
+  # Example - video only, no audio, no mux pass (fastest):
+  #   ffmpegPass2Args: ""
+  #
+  # Example - smooth upscale instead of nearest-neighbour:
+  #   ffmpegPass1Args: >-
+  #     -y -f rawvideo -pix_fmt rgba -s {width}x{height} -r {fps} -i pipe:0
+  #     -vf vflip,scale={scaledWidth}:{scaledHeight}:flags=lanczos
+  #     {videoCodecArgs} -an {videoOut}
+  #
+  # Full reference: CONFIGURATION.md "Overriding the ffmpeg commands".
+  ffmpegPass1Args: "default"
+  ffmpegPass2Args: "default"
+  toggleKey: O   # Shift+key toggles live viewport audio/video recording
   codec: "ffv1"   # Capture video codec (e.g. ffv1)
 
 # ════════════════════════════════════════════

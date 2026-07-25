@@ -10,8 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestEngineResourceLifetime {
     private static final Path ENGINE_SOURCE = Path.of("src", "main", "java", "com", "openggf", "Engine.java");
-    private static final Path LWJGL_AUDIO_SOURCE = Path.of(
-            "src", "main", "java", "com", "openggf", "audio", "LWJGLAudioBackend.java");
+    private static final Path OPENAL_SINK_SOURCE = Path.of(
+            "src", "main", "java", "com", "openggf", "audio", "output", "OpenAlPcmSink.java");
 
     @Test
     void runEntersCleanupScopeBeforeStartupInit() throws IOException {
@@ -26,12 +26,11 @@ class TestEngineResourceLifetime {
     }
 
     @Test
-    void lwJglAudioInitCatchReleasesPartialNativeAllocationsBeforeRethrow() throws IOException {
-        String source = Files.readString(LWJGL_AUDIO_SOURCE);
-        String catchBody = catchBodyAfter(source, "hookInitDevice");
-
-        assertTrue(catchBody.contains("destroyDeviceAfterFailedInit"),
-                "LWJGLAudioBackend.hookInitDevice() catch must release partially initialized native resources");
+    void openAlSinkInitCatchReleasesPartialNativeAllocationsBeforeRethrow() throws IOException {
+        String source = Files.readString(OPENAL_SINK_SOURCE);
+        assertTrue(source.contains("catch (Throwable failure) {\n"
+                        + "            closeDeviceAfterFailure(failure);"),
+                "OpenAlPcmSink construction must release partially initialized native resources");
     }
 
     private static String methodBody(String source, String methodName) {
@@ -44,19 +43,6 @@ class TestEngineResourceLifetime {
             throw new AssertionError("Could not find method body for " + methodName);
         }
         return balancedBody(source, openBrace);
-    }
-
-    private static String catchBodyAfter(String source, String methodName) {
-        String methodBody = methodBody(source, methodName);
-        int catchIndex = methodBody.indexOf("catch");
-        if (catchIndex < 0) {
-            throw new AssertionError("Could not find catch in " + methodName);
-        }
-        int openBrace = methodBody.indexOf('{', catchIndex);
-        if (openBrace < 0) {
-            throw new AssertionError("Could not find catch body in " + methodName);
-        }
-        return balancedBody(methodBody, openBrace);
     }
 
     private static String balancedBody(String source, int openBrace) {

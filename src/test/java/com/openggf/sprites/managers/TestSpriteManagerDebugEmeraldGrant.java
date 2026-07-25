@@ -3,13 +3,9 @@ package com.openggf.sprites.managers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
-import com.openggf.audio.AudioBackend;
 import com.openggf.audio.AudioManager;
-import com.openggf.audio.ChannelType;
-import com.openggf.audio.GameAudioProfile;
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
-import com.openggf.audio.smps.AbstractSmpsData;
-import com.openggf.audio.smps.DacData;
+import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
@@ -43,15 +39,12 @@ import org.junit.jupiter.api.Test;
 import org.lwjgl.glfw.GLFW;
 
 class TestSpriteManagerDebugEmeraldGrant {
-    private RecordingAudioBackend audioBackend;
-
     @BeforeEach
     void setUp() {
         TestEnvironment.resetAll();
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
         AudioManager.getInstance().resetState();
-        audioBackend = new RecordingAudioBackend();
-        AudioManager.getInstance().setBackend(audioBackend);
+        AudioManager.getInstance().setBackend(new NullAudioBackend());
         AudioManager.getInstance().setAudioProfile(new Sonic2AudioProfile());
 
         GameplayModeContext mode = TestEnvironment.activeGameplayMode();
@@ -98,8 +91,9 @@ class TestSpriteManagerDebugEmeraldGrant {
         GameServices.sprites().update(input);
 
         assertEquals(7, GameServices.gameState().getEmeraldCount());
-        assertEquals(Sonic2Music.GOT_EMERALD.id, audioBackend.lastMusicId);
-        assertEquals(1, audioBackend.musicPlayCount);
+        var commands = musicCommands();
+        assertEquals(1, commands.size());
+        assertEquals(Sonic2Music.GOT_EMERALD.id, commands.getFirst().musicId());
     }
 
     @Test
@@ -112,109 +106,14 @@ class TestSpriteManagerDebugEmeraldGrant {
         GameServices.sprites().update(input);
 
         assertEquals(0, GameServices.gameState().getEmeraldCount());
-        assertEquals(-1, audioBackend.lastMusicId);
-        assertEquals(0, audioBackend.musicPlayCount);
+        assertEquals(0, musicCommands().size());
     }
 
-    private static final class RecordingAudioBackend implements AudioBackend {
-        private int lastMusicId = -1;
-        private int musicPlayCount;
-
-        @Override
-        public void init() {
-        }
-
-        @Override
-        public void setAudioProfile(GameAudioProfile profile) {
-        }
-
-        @Override
-        public void playMusic(int musicId) {
-            lastMusicId = musicId;
-            musicPlayCount++;
-        }
-
-        @Override
-        public void playSmps(AbstractSmpsData data, DacData dacData) {
-        }
-
-        @Override
-        public void playSfxSmps(AbstractSmpsData data, DacData dacData) {
-        }
-
-        @Override
-        public void playSfxSmps(AbstractSmpsData data, DacData dacData, float pitch) {
-        }
-
-        @Override
-        public void playSfx(String sfxName) {
-        }
-
-        @Override
-        public void playSfx(String sfxName, float pitch) {
-        }
-
-        @Override
-        public void stopPlayback() {
-        }
-
-        @Override
-        public void stopAllSfx() {
-        }
-
-        @Override
-        public void fadeOutMusic(int steps, int delay) {
-        }
-
-        @Override
-        public void toggleMute(ChannelType type, int channel) {
-        }
-
-        @Override
-        public void toggleSolo(ChannelType type, int channel) {
-        }
-
-        @Override
-        public boolean isMuted(ChannelType type, int channel) {
-            return false;
-        }
-
-        @Override
-        public boolean isSoloed(ChannelType type, int channel) {
-            return false;
-        }
-
-        @Override
-        public void setSpeedShoes(boolean enabled) {
-        }
-
-        @Override
-        public void restoreMusic() {
-        }
-
-        @Override
-        public void endMusicOverride(int musicId) {
-        }
-
-        @Override
-        public void update() {
-        }
-
-        @Override
-        public void destroy() {
-        }
-
-        @Override
-        public void pause() {
-        }
-
-        @Override
-        public void resume() {
-        }
-
-        @Override
-        public AudioBackendLogicalSnapshot captureLogicalSnapshot() {
-            return AudioBackendLogicalSnapshot.empty();
-        }
+    private static java.util.List<AudioCommand.PlayMusic> musicCommands() {
+        return AudioManager.getInstance().commandTimeline().entries().stream()
+                .map(entry -> entry.command())
+                .filter(AudioCommand.PlayMusic.class::isInstance)
+                .map(AudioCommand.PlayMusic.class::cast)
+                .toList();
     }
 }

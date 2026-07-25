@@ -10,6 +10,8 @@ import com.openggf.game.*;
 
 import com.openggf.control.InputHandler;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.presentation.OuterFramePresentation;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -125,6 +127,7 @@ public class GameLoop {
     private final EngineContext engineServices;
     private final SonicConfigurationService configService;
     private final AudioManager audioManager;
+    private final OuterFramePresentation outerFramePresentation;
     private final RomManager romManager;
     private final DebugOverlayManager debugOverlayManager;
     private SpriteManager spriteManager;
@@ -335,6 +338,7 @@ public class GameLoop {
         EngineServices.configure(this.engineServices);
         this.configService = this.engineServices.configuration();
         this.audioManager = this.engineServices.audio();
+        this.outerFramePresentation = new OuterFramePresentation(this.audioManager);
         this.romManager = this.engineServices.roms();
         this.debugOverlayManager = this.engineServices.debugOverlay();
         this.profiler = this.engineServices.profiler();
@@ -682,6 +686,18 @@ public class GameLoop {
         return userPaused;
     }
 
+    /** @see OuterFramePresentation#modeFor */
+    public PresentationMode presentationModeForOuterFrame(boolean modalPicker, boolean frameStepRequested) {
+        return outerFramePresentation.modeFor(modalPicker, isPaused(), frameStepRequested);
+    }
+
+    /** @see OuterFramePresentation#present */
+    public void presentOuterFrame(boolean modalPicker, boolean frameStepRequested) {
+        outerFramePresentation.present(modalPicker, isPaused(), frameStepRequested);
+    }
+
+    void setAudioPresentationProbe(OuterFramePresentation.Probe probe) { outerFramePresentation.setProbe(probe); }
+
     /**
      * @return true if the game loop is currently paused (either by window or user)
      */
@@ -836,6 +852,7 @@ public class GameLoop {
         playbackDebugManager.handleInput(inputHandler);
         playbackDebugManager.setObservedMode(currentGameMode);
 
+        if (RewindReleaseRetryCoordinator.consumePendingFrame(liveRewindManager, inputHandler)) return;
         boolean rewindBlocked = isRewindBlocked();
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() != null
@@ -1694,11 +1711,6 @@ public class GameLoop {
             return;
         }
         profiler.beginSection("audio");
-        if (doFrameStep) {
-            audioManager.advancePausedFrameStepAudio();
-        } else {
-            audioManager.update();
-        }
         audioUpdatedThisStep = true;
         profiler.endSection("audio");
     }
@@ -1719,12 +1731,6 @@ public class GameLoop {
             return;
         }
         profiler.beginSection("audio");
-        if (doFrameStep) {
-            audioManager.advancePausedFrameStepAudio();
-        } else {
-            audioManager.advanceGameplayFrameAudio();
-            audioManager.update();
-        }
         audioUpdatedThisStep = true;
         profiler.endSection("audio");
     }

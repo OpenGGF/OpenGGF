@@ -41,12 +41,13 @@ class TestRewindControllerAudioSuppression {
         for (int i = 0; i < 8; i++) {
             controller.step();
         }
-        assertEquals(8, backend.totalCalls());
+        assertEquals(8, audio.commandTimeline().entryCount());
         backend.clear();
 
         controller.seekTo(3);
 
-        assertEquals(0, backend.totalCalls(), "seek replay must not emit live audio");
+        assertEquals(3, audio.commandTimeline().entryCount(),
+                "seek must discard commands after the restored frame and emit no replay commands");
         assertEquals(3, controller.currentFrame());
     }
 
@@ -65,7 +66,8 @@ class TestRewindControllerAudioSuppression {
 
         assertTrue(controller.stepBackward());
 
-        assertEquals(0, backend.totalCalls(), "segment expansion must not emit live audio");
+        assertEquals(7, audio.commandTimeline().entryCount(),
+                "segment expansion must not append presentation commands");
         assertEquals(7, controller.currentFrame());
     }
 
@@ -86,7 +88,8 @@ class TestRewindControllerAudioSuppression {
         assertThrows(RuntimeException.class, controller::stepBackward);
         audio.playSfx("LIVE");
 
-        assertEquals(1, backend.totalCalls(), "failed rewind must close suppression before returning");
+        assertEquals(1, audio.commandTimeline().entryCount(),
+                "failed rewind must close suppression before returning");
         assertEquals(7, controller.currentFrame());
     }
 
@@ -110,7 +113,8 @@ class TestRewindControllerAudioSuppression {
         assertTrue(controller.recordExternalStep());
         audio.playSfx("LIVE");
 
-        assertEquals(1, backend.totalCalls(), "external live frame audio remains audible");
+        assertEquals(1, audio.commandTimeline().entryCount(),
+                "external live frame audio remains in the presentation timeline");
         assertEquals(0, steps.get(), "recordExternalStep must not invoke the stepper");
     }
 
@@ -137,7 +141,8 @@ class TestRewindControllerAudioSuppression {
 
         controller.seekTo(3);
 
-        assertEquals(0, backend.totalCalls(), "logical rewind replay must not emit presentation calls");
+        assertEquals(3, audio.commandTimeline().entryCount(),
+                "logical rewind replay must truncate to the restored presentation timeline");
         assertEquals(3, controller.currentFrame());
         assertEquals(false, audio.captureLogicalSnapshot().ringLeft(),
                 "frame 3 ring command must be reflected in restored logical state");

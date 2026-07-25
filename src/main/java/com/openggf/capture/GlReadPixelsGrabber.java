@@ -13,12 +13,28 @@ import static org.lwjgl.opengl.GL11.*;
  */
 public final class GlReadPixelsGrabber implements VideoFrameGrabber {
 
+    private final int x;
+    private final int y;
     private final int width;
     private final int height;
+    private final GlReadRegion glReadRegion;
 
     public GlReadPixelsGrabber(int width, int height) {
+        this(0, 0, width, height);
+    }
+
+    public GlReadPixelsGrabber(int x, int y, int width, int height) {
+        this(x, y, width, height, GlReadPixelsGrabber::readBackBufferRegion);
+    }
+
+    GlReadPixelsGrabber(int x, int y, int width, int height, GlReadRegion glReadRegion) {
+        CaptureViewport viewport = new CaptureViewport(x, y, width, height);
+        viewport.rgbaByteSize();
+        this.x = viewport.x();
+        this.y = viewport.y();
         this.width = width;
         this.height = height;
+        this.glReadRegion = glReadRegion;
     }
 
     /** RGBA8888 — 4 bytes per pixel. */
@@ -33,7 +49,7 @@ public final class GlReadPixelsGrabber implements VideoFrameGrabber {
      * is the single source of truth for the {@code grab()} byte contract.
      */
     static int frameByteSize(int width, int height) {
-        return width * height * BYTES_PER_PIXEL;
+        return new CaptureViewport(0, 0, width, height).rgbaByteSize();
     }
 
     /** Byte size of a frame at this grabber's configured dimensions. */
@@ -45,13 +61,23 @@ public final class GlReadPixelsGrabber implements VideoFrameGrabber {
     public byte[] grab() {
         ByteBuffer buf = MemoryUtil.memAlloc(frameByteSize());
         try {
-            glReadBuffer(GL_BACK);
-            glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+            glReadRegion.read(x, y, width, height, buf);
             byte[] out = new byte[frameByteSize()];
             buf.get(out);            // tight copy, bottom-up as GL provides
             return out;
         } finally {
             MemoryUtil.memFree(buf);
         }
+    }
+
+    private static void readBackBufferRegion(int x, int y, int width, int height,
+                                             ByteBuffer target) {
+        glReadBuffer(GL_BACK);
+        glReadPixels(x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, target);
+    }
+
+    @FunctionalInterface
+    interface GlReadRegion {
+        void read(int x, int y, int width, int height, ByteBuffer target);
     }
 }
