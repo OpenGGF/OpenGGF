@@ -58,12 +58,24 @@ when a `mainmemory.read_*` address is found wrong in one recorder, grep all
 six for the same logical constant (by symbolic name across recorders, since
 names are not even consistent — e.g. S1/S2 call it `v_framecount` in
 comments while S3K calls it `Level_frame_counter`) before assuming the fix
-is complete. Section 2 is that audit, current as of `95c36166c`; re-run it
-whenever a recorder's RAM-map section changes.
+is complete. Section 2 is that audit, current as of `e234a9d6b` (both defects
+it found are now closed); re-run it whenever a recorder's RAM-map section
+changes.
 
 ---
 
-## 2. Cross-recorder ROM-constant audit (as of `95c36166c`, 2026-07-25)
+## 2. Cross-recorder ROM-constant audit (originally `95c36166c`, 2026-07-25; re-run at `e234a9d6b`, 2026-07-27)
+
+**STATUS: BOTH defects this audit found are now CLOSED, and the re-run found
+no third one.** (A) was fixed in `95c36166c`. (B) was fixed in `f71b5ea44`
+(both S3K Lua recorders, `LUA_SCRIPT_VERSION` -> `6.32-s3k` /
+`6.33-s3k-completerun`), all 39 S3K fixture directories were regenerated on it
+in `eb87d681b`, and the native C# port was re-pinned in `e234a9d6b`
+(`tools/bizhawk-headless/src/Recording/S3KRam.cs:69`). All six recorders now
+agree on `ADDR_FRAMECOUNT = 0xFE04` and `ADDR_VBLA_WORD = 0xFE0E` (the S2
+special-stage recorder reads neither). §2.3's "other pairs, no defect found"
+conclusions stand unchanged at `e234a9d6b`; nothing from this audit remains
+outstanding.
 
 Performed by extracting every `ADDR_*`/`SS_ADDR_*` constant and every inline
 literal-address `mainmemory.read` from all six recorders, then diffing each
@@ -77,12 +89,12 @@ same-game pair.
 | `s1_complete_run_recorder.lua` | `0xFE04` (`v_framecount`) — correct | `0xFE0E` — correct |
 | `s2_trace_recorder.lua` | `0xFE04` (`Level_frame_counter`) — correct | `0xFE0E` (`Vint_runcount+2`) — correct |
 | `s2_ss_trace_recorder.lua` | n/a (does not read this address) | n/a (does not read this address) |
-| `s3k_trace_recorder.lua` | `0xFE04` (`Level_frame_counter`) — **fixed in `95c36166c`, was `0xFE08`** | `0xFE12` (`Life_count`) — **wrong, queued, see §2.2** |
-| `s3k_complete_run_recorder.lua` | `0xFE04` (`Level_frame_counter`) — correct since `6564667eb` | `0xFE12` (`Life_count`) — **wrong, queued, see §2.2** |
+| `s3k_trace_recorder.lua` | `0xFE04` (`Level_frame_counter`) — **fixed in `95c36166c`, was `0xFE08`** | `0xFE0E` (`V_int_run_count` low word) — **fixed in `f71b5ea44`, was `0xFE12` = `Life_count`** |
+| `s3k_complete_run_recorder.lua` | `0xFE04` (`Level_frame_counter`) — correct since `6564667eb` | `0xFE0E` (`V_int_run_count` low word) — **fixed in `f71b5ea44`, was `0xFE12` = `Life_count`** |
 
-### 2.2 The two defects found
+### 2.2 The two defects found — BOTH NOW CLOSED
 
-**(A) `ADDR_FRAMECOUNT` in `s3k_trace_recorder.lua` — FIXED here.**
+**(A) `ADDR_FRAMECOUNT` in `s3k_trace_recorder.lua` — FIXED in `95c36166c`.**
 Pointed at `0xFE08` = `Debug_placement_mode`, which is dead-zero during
 normal gameplay (it is itself a ROM debug guard, e.g.
 `AIZRideVineHandle_CheckGrab` at `docs/skdisasm/sonic3k.asm:46714+`). The
@@ -107,8 +119,8 @@ recorder-identity read (`FrameCounterAddressFor`, the 4-argument
 `FormatRow` overload) was deleted in `ba882f967` once both S3K recorders
 agreed on `0xFE04`, unifying on `S3KRam.LevelFrameCounter`.
 
-**(B) `ADDR_VBLA_WORD = 0xFE12` in BOTH S3K recorders — wrong, NOT fixed
-here, deliberately queued.** `0xFE12` is `Life_count`. S3K's
+**(B) `ADDR_VBLA_WORD = 0xFE12` in BOTH S3K recorders — FIXED in `f71b5ea44`;
+this paragraph describes it as it stood when queued.** `0xFE12` is `Life_count`. S3K's
 `V_int_run_count` is a `ds.l` (long) at `$FE0C`, so the low word — the S1/S2
 equivalent of `v_vblank_word` / `Vint_runcount+2` — is `0xFE0E`. S1/S2
 recorders already read `0xFE0E` correctly. Confirmed empirically: the S3K
@@ -126,6 +138,35 @@ second fixture-invalidating change that should be sequenced and reviewed on
 its own rather than folded into the frame-counter fix. **Do not fix this as
 a side effect of an unrelated recorder change; land it as its own commit
 with its own fixture regeneration, following the same pattern as (A).**
+
+**How (B) was actually closed, and what it cost.** It landed exactly as
+prescribed above: `f71b5ea44` corrected both Lua recorders in one commit and
+bumped both `LUA_SCRIPT_VERSION`s (`6.32-s3k`, `6.33-s3k-completerun`);
+`eb87d681b` regenerated all 39 S3K fixture directories with the delta
+categorized cell-by-cell before installing (only 35 carry a `vblank_counter`
+column — the four special-stage-profile directories do not; `aux_state.jsonl`
+came out byte-identical everywhere because no aux field reads that address, so
+aux blobs were left untouched; offsets, row counts, segment inventories and the
+manifest's 25 segments / 22 transitions all reproduced exactly); `e234a9d6b`
+re-pinned the native C# port and its differential gates, taking the native
+suite to 359 PASS / 0 FAIL / 0 SKIP. Verification that the column was dead:
+across the 35 vblank-carrying fixtures,
+`frames[0].vblankCounter() == frames[1].vblankCounter()` held **35/35 before
+and 0/35 after**, and the frame-0 seed moved from lives-in-the-high-byte values
+(`0300`, `0A00`, `0E00`, `1100`, …) to true counter values (`01EC`, `7ED8`,
+`7E86`, `3329`, …).
+
+Engine-side impact was measured as a controlled A/B — `git diff 94258e08c..HEAD -- src/main/`
+is empty, so only fixture bytes moved. **Every S3K trace-replay frontier held**
+(all 15 classes report a byte-identical first non-camera divergence);
+`TestS3kMgzTraceReplay` shed 2,584 errors; `TestS3kSpecialStageTraceReplay`
+stayed green; one previously red assertion
+(`TestTraceExecutionModel.sonic3kMissingCpuExecutionHookMarksMovingDuplicateAsLag`)
+went green because its subject row became representable, and one new red
+appeared in `TestTraceReplayStartPositionPolicy` because a test premise that
+depended on the frozen counter lost its subject. Full numbers, the
+prediction-vs-actual phase-flip table, and the remaining open items are in the
+2026-07-27 entry at the top of `docs/TRACE_FRONTIER_LOG.md`.
 
 ### 2.3 Other pairs audited, no defect found
 
@@ -186,23 +227,31 @@ next person doesn't have to rediscover the tradeoff):
    `loadfile` plumbing and locals-budget care `fd3a74291` already took for
    leaf helpers (S3K recorders sit near Lua's 200-locals cap — see that
    commit's message for the do-block trick used to keep the loader from
-   costing a permanent local slot). Not done here: the two S3K recorders
-   disagreeing on `ADDR_VBLA_WORD` (§2.2) is itself evidence that per-game
-   constants were never unified even within one game, so this would be a
-   larger, deliberate follow-up, not a drive-by extension of the leaf-helper
-   module.
+   costing a permanent local slot). Not done here, and still not done: every
+   constant in §2.1 and §2.3 remains a per-recorder copy, so the failure mode
+   is structurally intact even though both known instances of it are now
+   closed. Defect (B) is the sharper argument for this than the wording that
+   stood here before — the two S3K recorders **agreed with each other** and
+   were **both wrong**, so no amount of same-game pair-diffing would have
+   caught it. Only the cross-*game* comparison did.
 
-**When queuing defect (B):** fix `ADDR_VBLA_WORD` in both S3K recorders in
-one commit (they already agree with each other, so no unification step is
-needed — only correction), bump both `LUA_SCRIPT_VERSION`s, and regenerate
-every fixture whose `vblank_counter` column or VBlank-adjacent aux field
-would change: the three STANDARD fixtures (`aiz1_to_hcz_fullrun`, `cnz`,
-`mgz`) and every complete-run/bonus/special-stage identity (A/B/C — see
-`tools/bizhawk-headless/docs/s3k-run-publication.md` §"capture identities").
-Follow the same isolation-before-installing discipline `3eebb13bf` used for
-defect (A): categorize every byte delta mechanically (cell-by-cell CSV,
-per-key JSON) before installing, and confirm the delta reduces to exactly
-the `vblank_counter`/VBlank-derived fields with no other column moving.
+**Defect (B) is CLOSED — how it was landed.** It followed this section's own
+prescription exactly: `f71b5ea44` corrected `ADDR_VBLA_WORD` in both S3K
+recorders in one commit and bumped both `LUA_SCRIPT_VERSION`s (`6.32-s3k`,
+`6.33-s3k-completerun`); `eb87d681b` regenerated every affected fixture — all
+39 S3K directories, of which 35 carry the `vblank_counter` column — after
+categorizing the delta mechanically cell-by-cell, confirming it reduced to the
+`vblank_counter` column alone with `aux_state.jsonl` byte-identical everywhere
+(no aux field reads that address) and offsets, row counts, segment inventories
+and the manifest's 25 segments / 22 transitions all reproducing exactly; and
+`e234a9d6b` re-pinned the native C# port (`S3KRam.VblankWord`) and its four S3K
+differential gates. Engine-side consequences (all frontiers held; MGZ -2,584
+errors; one red assertion recovered, one test premise died) are recorded in the
+2026-07-27 entry of `docs/TRACE_FRONTIER_LOG.md`.
+
+**Nothing from this audit is outstanding.** Both defects are closed and the
+§2.3 pairs re-checked clean at `e234a9d6b`. The next recorder change should
+re-run the §2 diff from scratch rather than trusting this snapshot.
 
 ---
 
