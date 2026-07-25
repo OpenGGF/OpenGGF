@@ -288,7 +288,7 @@ Lua wins.
 ### Sonic 3 & Knuckles trace mode (STANDARD recorder, all three profiles)
 
 With the S3&K locked-on ROM, `--mode trace` replaces `s3k_trace_recorder.lua`
-(v6.30-s3k) on Linux across its three STANDARD-recorder profiles, selected
+(v6.32-s3k) on Linux across its three STANDARD-recorder profiles, selected
 with `--trace-profile` (mirroring the Lua's `OGGF_S3K_TRACE_PROFILE`):
 
 - **`gameplay_unlock`** — the default; no extra flags.
@@ -300,7 +300,7 @@ with `--trace-profile` (mirroring the Lua's `OGGF_S3K_TRACE_PROFILE`):
   movie-end stop.
 
 `s3k_complete_run_recorder.lua` (the separate per-zone-segment / bonus /
-special-stage recorder, `6.32-s3k-completerun` fixture stamps) is a
+special-stage recorder, `6.33-s3k-completerun` fixture stamps) is a
 **separately natively ported recorder** — see "Sonic 3 & Knuckles
 complete-run and run mode" below — selected by `--trace-profile complete_run`
 or `--run-id` instead of a `--trace-profile` value from the table above;
@@ -347,13 +347,22 @@ normalization on `physics.csv` / `aux_state.jsonl`:
   `gameplay_start`/act-transition checkpoint — only `gameplay_end`).
 
 **Pinned metadata delta (no loose normalization):** `metadata.json` differs
-from these three fixtures only in `recording_date`; the fixtures' stamped
-`lua_script_version` `"6.28-s3k"` is produced as `"6.30-s3k"` (the v6.29/
-v6.30 Lua commits changed nothing else in these fixtures' output); and, for
-the MGZ fixture only, its leftover `"pre_trace_osc_frames": 0,` line
-(dropped from `write_metadata()` in v6.29, hand-removed from the AIZ/CNZ
-fixtures but not MGZ's). Every delta is asserted as an exact literal at an
-exact position, never a loose regex or a "drop unknown keys" normalization.
+from these three fixtures only in `recording_date` — both sides stamp the
+literal `lua_script_version` `"6.32-s3k"`, so there is no version-line delta
+to normalize. This is a regeneration, not a widened allowance: the fixtures
+previously in tree were captured before `95c36166c` fixed
+`s3k_trace_recorder.lua`'s `ADDR_FRAMECOUNT` from `0xFE08`
+(`Debug_placement_mode`, dead-zero in normal gameplay) to `0xFE04`
+(`Level_frame_counter`), so `physics.csv`'s `gameplay_frame_counter` column
+and every aux `vfc` / `oscillation_state.level_frame_counter` read a constant
+`0`/`0000` across all three fixtures' entire length. All three were
+recaptured on the fixed recorder (`3eebb13bf`) and now carry a live,
+ROM-plausible counter (monotonic apart from documented lag-frame stalls and
+level re-init clears); the MGZ fixture's leftover `"pre_trace_osc_frames": 0,`
+line (retired from `write_metadata()` in v6.29, already dropped from the
+AIZ/CNZ fixtures) is dropped here too. Every delta is asserted as an exact
+literal at an exact position, never a loose regex or a "drop unknown keys"
+normalization.
 The byte-level porting contract lives in
 `tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md` (RAM map,
 physics.csv, metadata) and `tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md`
@@ -397,7 +406,7 @@ Full table and rationale: `s3k-aux-events.md` §5.1.
 ### Sonic 3 & Knuckles complete-run and run mode
 
 With the S3&K locked-on ROM, `--mode trace` also replaces
-`s3k_complete_run_recorder.lua` (`6.32-s3k-completerun`) on Linux — the
+`s3k_complete_run_recorder.lua` (`6.33-s3k-completerun`) on Linux — the
 separate per-zone-segment / bonus-stage / special-stage recorder, distinct
 from the STANDARD recorder above. It is selected the same way as S1's
 complete-run recorder, not via `--trace-profile <one of the three STANDARD
@@ -444,7 +453,8 @@ tools/bizhawk-headless/run.sh \
 
 # Run mode, identity (B): the same movie under the run_id the
 # runs/s3-knux-multibonus-ss/ tree carries (byte-exact since that set was
-# regenerated at 6.32 — see the byte-parity note below)
+# regenerated at 6.32, then again at 6.33 for the ADDR_VBLA_WORD fix —
+# see the byte-parity note below)
 BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
 tools/bizhawk-headless/run.sh \
   --mode trace \
@@ -478,27 +488,22 @@ distinct capture identities (`docs/s3k-run-publication.md` §0):
   movie (measured ~2m20s wall combined, ~235 MB peak RSS): `--run-id
   s3k-multibonus` reproduces all four **identity (C)** fixtures
   (`bonus_gumball`, `bonus_slots`, `bonus_pachinko`, `special_stage`)
-  byte-identical; `--run-id s3-knux-multibonus-ss` reproduces the *structure*
-  of the legacy **identity (B)** run tree
+  byte-identical; `--run-id s3-knux-multibonus-ss` reproduces the **identity
+  (B)** run tree
   (`src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/`) — all 25
-  segment directories and `run_manifest.json` — with every permitted delta
-  pinned as an exact literal, not a byte match (identity (B) is a 2026-07-19
-  Windows EmuHawk capture by Lua `6.31-s3k-completerun`, three builds behind
-  HEAD, and is provably not byte-reproducible by the current recorder: it is
-  CRLF where HEAD publishes LF-only, it reads the pre-fix
-  `ADDR_FRAMECOUNT` `0xFE08` where HEAD reads the fixed `0xFE04` (making every
-  physics.csv frame-counter column and `oscillation_state.level_frame_counter`
-  a constant across all 25 (B) segments), and it predates the
-  `LIGHTWEIGHT_REGEN` inversion so it ran with the diagnostic hooks armed —
-  four of its segments (`hcz_2`, `hcz_6`, `mgz`, `mgz_3`) carry real
-  `position_write`/`velocity_write`/`solid_object_cont_entry` hook events that
-  the native port does not implement). `S3KHookAbsenceTests` is extended to
-  pin absence across all eleven (A)+(C) fixtures and, in the opposite
-  direction, to pin that those four (B) segments keep their exact hook-event
-  counts — so the absence gate can never silently widen to cover them.
+  segment directories and `run_manifest.json` — likewise byte-identical
+  (`physics.csv` / `aux_state.jsonl` by length AND sha256, zero
+  normalization; `run_manifest.json` byte-identical). Identity (B) was not
+  always this clean a gate — see "Identity (B) reached that state by
+  regeneration" below for the CRLF / `ADDR_FRAMECOUNT` / armed-hooks history
+  and the `ADDR_VBLA_WORD` `0xFE12`→`0xFE0E` recapture that keeps it
+  byte-identical through this fix. `S3KHookAbsenceTests` pins that all
+  eleven (A)+(C) fixtures and all 25 (B) segments now carry zero hook-driven
+  aux events, including the four (B) segments (`hcz_2`, `hcz_6`, `mgz`,
+  `mgz_3`) that used to carry real ones before the hooks-off recapture.
 
 **Pinned metadata delta (no loose normalization):** all three identities were
-captured by the same `6.32-s3k-completerun` Lua build this port targets, so
+captured by the same `6.33-s3k-completerun` Lua build this port targets, so
 `metadata.json` differs from every committed fixture **only** in
 `recording_date` — there is no version-line delta to normalize, unlike the
 S1/S2 complete-run ports.
@@ -514,14 +519,19 @@ structure. It was recaptured at 6.32 with hooks unset (segmentation provably
 unchanged: identical offsets and row counts for all 25 segments, every
 physics cell outside the counter column byte-identical), and the gate now
 asserts all 25 segments plus `run_manifest.json` byte-for-byte with zero
-normalization.
+normalization. It was recaptured again at 6.33 for the `ADDR_VBLA_WORD`
+`0xFE12`→`0xFE0E` fix (identity (B) was carrying `Life_count`, i.e. `lives
+<< 8`, in its `vblank_counter` column, same as every other S3K fixture); the
+byte-for-byte gate held through that recapture too, since the native port's
+own `S3KRam.VblankWord` moved to `0xFE0E` in lockstep.
 
 The byte-level porting contracts live in
 `tools/bizhawk-headless/docs/s3k-complete-run-behavior.md` (segmentation
 state machine, per-segment offsets, `zone_token_for`),
 `tools/bizhawk-headless/docs/s3k-completerun-profiles.md` (the three segment
-profiles, the `ADDR_FRAMECOUNT` `0xFE04` fork, the `game_paused_state` aux
-addition), and `tools/bizhawk-headless/docs/s3k-run-publication.md`
+profiles, the retired `ADDR_FRAMECOUNT` recorder-identity fork now unified on
+`0xFE04` for both S3K recorders, the `game_paused_state` aux addition), and
+`tools/bizhawk-headless/docs/s3k-run-publication.md`
 (directory/metadata/manifest byte layout, the three capture identities, the
 full environment-variable surface); where any spec text and the Lua
 disagree, the Lua wins.

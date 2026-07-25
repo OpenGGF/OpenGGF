@@ -112,6 +112,9 @@ rules on PRs into `develop`.
   current — when a frontier moves, a fix lands, a passing trace regresses, or a full
   `*TraceReplay` sweep picks the next target. Record command, commit/worktree context,
   pass/fail, error count, and first-error frame/field.
+- Never commit an uncompressed trace payload (`physics*.csv`, `aux_state*.jsonl`) under
+  `src/test/resources/traces/` — they exceed GitHub's per-file limit. Enforced by
+  `TestTraceFixtureCompressionGuard`.
 
 ## Gotchas
 

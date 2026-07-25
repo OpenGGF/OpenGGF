@@ -164,6 +164,18 @@ public final class AudioPresentationProducer {
     }
 
     public LiveCaptureAudioHandle attachCapture(int frameRate) {
+        return attachCapture(frameRate, null);
+    }
+
+    /**
+     * @param phase clock phase to resume from, or null to start from this
+     *        producer's current phase. Used when a recording outlives the
+     *        producer it was attached to: a rebuilt producer starts its clock
+     *        at zero, and reseeding the lease from zero would jump the recorded
+     *        audio relative to the video.
+     */
+    public LiveCaptureAudioHandle attachCapture(
+            int frameRate, AudioFrameClock.Snapshot phase) {
         assertOwnerBoundary();
         if (frameRate <= 0) {
             throw new IllegalArgumentException("frameRate must be positive");
@@ -172,8 +184,8 @@ public final class AudioPresentationProducer {
             throw new IllegalStateException(
                     "audio presentation capture capacity exhausted");
         }
-        CaptureHandle capture =
-                new CaptureHandle(frameRate, clock.captureSnapshot());
+        CaptureHandle capture = new CaptureHandle(frameRate,
+                phase != null ? phase : clock.captureSnapshot());
         captures[captureCount++] = capture;
         return capture;
     }

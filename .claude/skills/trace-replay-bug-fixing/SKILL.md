@@ -64,6 +64,75 @@ For traces recorded at `lua_script_version >= 9.2-s2`, `TraceBinder.compareBoots
 
 Do not commit trace-to-engine hydration switches or writeback binders. If a bootstrap divergence needs A/B isolation, use a local throwaway patch or a debugger to reseed state, then remove it before committing. The committed replay path must remain comparison-only: it may report pre-trace snapshots and compare bootstrap frame 0, but it must not copy recorded `player_history_snapshot`, `cpu_state_snapshot`, or `object_state_snapshot` data into engine runtime state.
 
+### Diagnostic hooks — investigation only, never sync drivers
+
+The S3K Lua recorders carry ~61 `event.onmemoryexecute` / `onmemorywrite` registrations
+each, gated behind `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS`. They were decisive for deep
+frontier work. They are also **off in every committed fixture**, disabled during the Linux
+move because the per-write cost was severe and because their enriched fields were not being
+used by the sync checks.
+
+**A hook must never be the thing that decides when a trace lines up.** Hook-derived
+per-level sync points were used for AIZ and CNZ (S3) and were rejected as hydration in
+another guise: the trace ends up telling the engine when to start, instead of the engine
+reaching that state natively. **The sync point is the beginning of the level load.** If a
+trace only lines up because a per-level hook says so, that is the same defect class as
+copying a CSV column into a sprite — fix the engine's level-load path instead. Minimise
+one-off per-level hooks used as drivers for making syncing work; they are the mechanism by
+which "it passes" quietly stops meaning "it is correct".
+
+For investigation, prefer a **one-off throwaway Lua script** over extending a production
+recorder. The two S3K recorders are already 4,957 and 5,918 lines and sit against Lua 5.4's
+200-locals-per-chunk cap; every permanent addition also widens the env-var surface the
+native CLI must refuse. Same rule as the reseeding policy above: write it, learn from it,
+remove it before committing.
+
+**Re-enabling hooks in a fixture capture is a fixture-invalidating change.** The gates pin
+hooks-off two ways — `S3KHookAbsenceTests` asserts zero aux lines for the deferred families,
+*and* asserts that hook-enriched records keep their unpopulated shape (the 9 AIZ
+`aiz_handoff_terrain_state` records must keep `sonic_floor_seen:false` /
+`solid_vertical_seen:false`). A hooks-on regeneration fails those gates by design. Treat it
+like any other fixture regeneration: user approval, categorise every delta, full frontier
+re-measurement. Note also that hook output is exactly what has previously breached git's
+file-size limits.
+
+**Do not confuse a hook family with hook output.** Several families emit frame-polled and
+appear in fixtures regardless — the AIZ fixture carries 401 `aiz_fire_transition`, 12
+`terrain_wall_sensor` and 9 `aiz_handoff_terrain_state` records with hooks off. Those are
+validation data; hooks only *enrich* them. Do not remove a family because it is
+"hook-driven".
+
+The catalogue of what each hook watched already exists — do not re-derive it.
+`tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md` §2 tabulates every family with its
+hooked ROM addresses, the routine and disassembly line it sits on, its gating conditions and
+frame windows, and the aux family it feeds; §2.4 records the native port's deferral verdict
+and the exact trigger for revisiting it.
+
+**The AIZ/CNZ precedent, and where its record lives.** This rule exists because it was
+litigated once already, and the outcome is written down — read it before re-opening the
+argument:
+
+- `d5eb5d2ef` (2026-06-09, *"replace legacy AIZ trace bootstrap policy"*) retired
+  seed-at-`gameplay_start` in favour of the frame-0 comparison-only policy, and removed the
+  S3K/AIZ/act/checkpoint identity predicate in favour of generic capability metadata. The
+  recorded `gameplay_start` checkpoint survived **only** to terminate the prefix phase
+  classifier — never to seed state.
+- `2b4b075be` (2026-07-02) realigned the AIZ probe to that policy: it deleted seven tests
+  that existed solely to pin the superseded seed-at-anchor and hydrated-anchor semantics,
+  retired the legacy diagnostic fixture with its 289 suppressed oscillator frames, and
+  documented the two-row intro-handoff skew as parity-neutral (rows 1384-1427 are recorded
+  fully idle).
+- The 2026-07-23 structural work went further still: S3K stopped consuming the metadata
+  capability at all and now recognises a pre-level prefix from the recorded `zone_act_state`
+  mode transition, so it infers phase from no fixture name, start position, velocity,
+  animation or oscillator value.
+
+`docs/KNOWN_DISCREPANCIES.md` → *Legacy Pre-Level Intro Prefix Trace Bootstrap Contract*
+holds the current boundary (S1/S2 fixture compatibility only), its rationale — *"the engine
+must execute its own production lifecycle; trace rows and auxiliary events are
+comparison-only evidence"* — and its removal condition. The direction of travel across all
+three steps is the same: each one removed a trace-derived driver rather than adding one.
+
 ## Pipeline Overview
 
 ```
@@ -104,7 +173,7 @@ the recorder is unchanged. Pick by game:
 | S1 standard + complete-run | **native** (`tools/bizhawk-headless/`) | Migrated and gated |
 | S2 all modes + complete-run | **native** | Migrated and gated |
 | S3K standard | **native** | Migrated and gated (AIZ end-to-end, CNZ, MGZ). Hook-driven aux families are deferred, and the CLI refuses every unmodeled `OGGF_*` recorder variable rather than diverging silently |
-| S3K complete-run | **native** | Migrated and gated — `--trace-profile complete_run` / `--run-id` on the S3K ROM, everything stamped `6.32-s3k-completerun` (`runs/`, `special_stage/`, `bonus_*`, `*_completerun`). Same hook-driven-aux deferral and `OGGF_*` refusal policy as S3K standard. All three capture identities gate byte-exactly, including `runs/s3-knux-multibonus-ss/`, which was regenerated at 6.32 to make it reproducible |
+| S3K complete-run | **native** | Migrated and gated — `--trace-profile complete_run` / `--run-id` on the S3K ROM, everything stamped `6.33-s3k-completerun` (`runs/`, `special_stage/`, `bonus_*`, `*_completerun`; bumped from `6.32-s3k-completerun` when `ADDR_VBLA_WORD` moved off `Life_count` — see below). Same hook-driven-aux deferral and `OGGF_*` refusal policy as S3K standard. All three capture identities gate byte-exactly, including `runs/s3-knux-multibonus-ss/`, which was regenerated at 6.33 to make it reproducible |
 
 The entire Lua recorder fleet (S1, S2, S3K standard, S3K complete-run) now has a
 byte-parity-gated native port. `s3k_trace_recorder.lua` /
@@ -160,7 +229,18 @@ delta may differ. Run-mode published files are CRLF; plain mode and S1 complete-
 #### Porting a recorder to the native harness
 
 The Lua recorder is the behavioural authority; the written spec is second; the disassembly
-resolves RAM questions. Lessons already paid for on the S1 and S2 ports:
+resolves RAM questions.
+
+Read "authority" narrowly: it means the Lua is the **oracle a port is checked against**, not
+that two recorders are maintained forever. The native harness is the preferred capture path
+— faster, genuinely headless, loud on failure, and the only one with a test suite — and the
+intended direction is that the Lua recorders are retired rather than kept at parity. What
+keeps them alive is that a fixture recaptured *with the native harness* would be gated
+against bytes the harness itself produced, which proves nothing; so the Lua stays runnable
+(frozen and unmaintained is fine) for fixture regeneration and for ad-hoc hook-driven
+debugging. Do not invest in Lua-side parity for its own sake.
+
+Lessons already paid for on the S1 and S2 ports:
 
 - **Evaluate stop conditions POST-advance, in the Lua's `on_frame_end` source order.** This
   exact bug was found independently in both ports. Don't reintroduce it.
@@ -441,7 +521,7 @@ OGGF_S3K_TRACE_PROFILE=<profile> DISPLAY=:0 \
         "$S3K_ROM_PATH"
 ```
 
-Output lands in `tools/bizhawk/trace_output/`. Copy `metadata.json`, `physics.csv`, `aux_state.jsonl` into the test resources tree (the `.bk2` is unchanged) and commit the regen as a separate logical change from any recorder schema change.
+Output lands in `tools/bizhawk/trace_output/`. Copy `metadata.json` into the test resources tree, and the payloads **gzipped** — `tools/traces/compress-traces.ps1 <dir> -Recurse` on Windows, or `gzip -9 -n` — so `physics.csv.gz` / `aux_state.jsonl.gz` land there (the `.bk2` is unchanged). `TestTraceFixtureCompressionGuard` fails on a new uncompressed payload under `src/test/resources/traces/`: uncompressed, a complete-run aux stream exceeds GitHub's per-file limit and cannot be pushed. The native harness compresses at capture time by default. Commit the regen as a separate logical change from any recorder schema change.
 
 **Before regenerating, confirm which recorder produced the target trace** — read its
 `metadata.json` `profile` / `lua_script_version`. A trace stamped e.g. `6.32-s3k-completerun`

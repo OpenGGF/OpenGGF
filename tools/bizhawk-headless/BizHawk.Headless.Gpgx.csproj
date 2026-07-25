@@ -67,7 +67,10 @@
     <Compile Include="src/Core/RomAsset.cs" />
     <Compile Include="src/Program.cs" />
     <Compile Include="src/Recording/NoReplacePublisher.cs" />
+    <Compile Include="src/Recording/TracePayloadCompressor.cs" />
     <Compile Include="src/Recording/RunManifestWriter.cs" />
+    <Compile Include="src/Recording/RunSegmentSink.cs" />
+    <Compile Include="src/Recording/StagedRunSegmentSink.cs" />
     <Compile Include="src/Recording/S1AuxEventEngine.cs" />
     <Compile Include="src/Recording/S1CompleteRunMetadataWriter.cs" />
     <Compile Include="src/Recording/S1InputMask.cs" />

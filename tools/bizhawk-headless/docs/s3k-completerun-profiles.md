@@ -2,7 +2,7 @@
 
 Authoritative behavioural spec for the native port of
 `tools/bizhawk/s3k_complete_run_recorder.lua`
-(`LUA_SCRIPT_VERSION = "6.32-s3k-completerun"`, line 357).
+(`LUA_SCRIPT_VERSION = "6.33-s3k-completerun"`, line 357).
 
 Authority order, per the migration contract:
 
@@ -503,7 +503,16 @@ directory carries mixed stamps — level and `ss` segments **and**
 25 dirs' physics/aux bytes remain homogeneous 6.31/`0xFE08` output
 (`pre_trace_osc_frames: 0` and all-zero `vfc` in the bonus dirs too).
 No recorder configuration emits this combination, so the mixed stamping
-is not a port target; see `s3k-complete-run-behavior.md` §0.2 / §8.3.
+was never a port target; see `s3k-complete-run-behavior.md` §0.2 / §8.3.
+
+**Superseded, kept as history:** commit `63eccd290` re-captured the whole
+`runs/s3-knux-multibonus-ss/` tree on Linux with the hooks off, and
+`eb87d681b` regenerated it again for the `ADDR_VBLA_WORD` fix, so all 25
+dirs and the manifest now stamp `6.33-s3k-completerun` uniformly, are LF,
+carry `capture_mode` and `pre_trace_osc_frames: 1`, and carry the live
+`0xFE04` / `0xFE0E` counters. The paragraph above explains why the mixed
+stamp existed and must not be reintroduced — it no longer describes the
+tree in git.
 
 ### 7.2 Why `special_stage/` carries neither `capture_mode` nor `v_int_run_count`
 
@@ -697,8 +706,8 @@ segments and adds no CLI; segmentation is Stage A
 | Seam | Where | Why |
 |---|---|---|
 | `S3KTraceProfile.CompleteRun` | `S3KAuxEventEngine` | The complete-run recorder is a *different recorder*, not a different `OGGF_S3K_TRACE_PROFILE` value. The enum already encodes recorder identity for the standard recorder's three profiles, and every existing profile gate (`checkpoint` vocabulary, `aiz_fire_transition`) is already written as "only for profile X", so the new value falls through them correctly with no edits — matching the Lua, where both `is_*_profile()` predicates are false. |
-| `S3KAuxEventEngine.FrameCounterAddressFor(profile)` + the explicit-address constructor | `S3KAuxEventEngine` | `ADDR_FRAMECOUNT` is `0xFE08` in the standard recorder and `0xFE04` in the complete-run recorder (§7.3). It is read by *every* `vfc` field, by `oscillation_state.level_frame_counter`, and by the pre-trace `cpu_state_snapshot`. Selecting it from the profile (= recorder identity) keeps the single engine; the explicit constructor exists so the legacy `0xFE08`-era (B) captures can be pinned without a second class. **Never derive it from `lua_script_version`** — 6.32-stamped fixtures exist on both sides of the move. |
-| `S3KTraceCsvWriter.FormatRow(frame, input, host, frameCounterAddress)` | `S3KTraceCsvWriter` | The same fork, in the one CSV column that differs. The 3-argument overload is unchanged and still reads `0xFE08`, so the standard recorder's byte output and its differential gate are untouched. |
+| ~~`S3KAuxEventEngine.FrameCounterAddressFor(profile)` + the explicit-address constructor~~ **DELETED** | `S3KAuxEventEngine` | `ADDR_FRAMECOUNT` used to be `0xFE08` in the standard recorder and `0xFE04` in the complete-run recorder (§7.3), so the address was selected from the profile (= recorder identity), with an explicit-address constructor so the legacy `0xFE08`-era (B) captures could be pinned without a second class. Both halves are gone. `s3k_trace_recorder.lua` v6.31-s3k moved the standard recorder to `0xFE04` and its three canonical fixtures were regenerated, and the legacy (B) captures were themselves regenerated on `0xFE04` (commit `63eccd290`). The engine now reads `S3KRam.LevelFrameCounter` unconditionally and exposes ONE constructor. |
+| ~~`S3KTraceCsvWriter.FormatRow(frame, input, host, frameCounterAddress)`~~ **DELETED** | `S3KTraceCsvWriter` | The same fork, in the one CSV column that differed. With both recorders on `0xFE04` the 3-argument overload reads `S3KRam.LevelFrameCounter` and the 4-argument overload is removed. |
 | `emitsGamePausedState` | `S3KAuxEventEngine` | `game_paused_state` is the ONE aux family the complete-run recorder adds (§8) — verified by diffing the two Lua scripts' `"event":"…"` literals, which differ by exactly that one line, and by diffing all 26 shared writer bodies, which are character-identical apart from an inert `bk2_input_mask` default argument. Emitted in cascade slot #11, between `oscillation_state` and the first `object_state`. |
 
 `S3KSpecialStageCsvWriter` is genuinely new (nothing to delegate to): a

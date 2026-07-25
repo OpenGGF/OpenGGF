@@ -5,13 +5,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
     /// Stage-B tests for the S3K COMPLETE-RUN recorder's profile surface
-    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.32-s3k-completerun;
+    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.33-s3k-completerun;
     /// spec tools/bizhawk-headless/docs/s3k-completerun-profiles.md):
     ///
-    /// - the 42-column complete_run / s3k_bonus_stage physics row, which is
-    ///   the standard recorder's row with ONE substitution —
-    ///   gameplay_frame_counter reads Level_frame_counter (0xFE04) instead
-    ///   of the dead Debug_placement_mode (0xFE08);
+    /// - the 42-column complete_run / s3k_bonus_stage physics row, which
+    ///   is now the standard recorder's row with NO substitution at all:
+    ///   gameplay_frame_counter reads Level_frame_counter (0xFE04) in both
+    ///   recorders since Lua v6.31-s3k moved the standard one off the dead
+    ///   Debug_placement_mode read at 0xFE08;
     /// - the 20-column s3k_special_stage physics row, a completely separate
     ///   writer with the opposite numeric convention;
     /// - game_paused_state, the ONE aux family the complete-run recorder
@@ -38,9 +39,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3KCompleteRun reproduces bonus_gumball physics row 0",
                 ReproducesBonusGumballRowZero));
             tests.Add(new TestMain.TestCase(
-                "S3KCompleteRun row reads Level_frame_counter, standard row"
-                + " reads Debug_placement_mode",
-                LevelAndStandardRowsReadDifferentFrameCounters));
+                "S3KCompleteRun row and standard row both read"
+                + " Level_frame_counter",
+                LevelAndStandardRowsReadTheSameFrameCounter));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRun special-stage header matches the"
                 + " special_stage fixture header",
@@ -90,17 +91,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3K standard profiles emit no game_paused_state",
                 StandardProfilesEmitNoGamePausedState));
             tests.Add(new TestMain.TestCase(
-                "S3KCompleteRun aux vfc reads Level_frame_counter while the"
-                + " standard profiles read Debug_placement_mode",
-                AuxVfcFollowsRecorderIdentity));
+                "S3KCompleteRun aux vfc and the standard profiles' aux vfc"
+                + " both read Level_frame_counter",
+                AuxVfcReadsLevelFrameCounterForEveryProfile));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRun profile emits no checkpoint, no"
                 + " aiz_fire_transition and no finalization event",
                 CompleteRunProfileEmitsNoProfileGatedFamilies));
             tests.Add(new TestMain.TestCase(
-                "S3KAuxEventEngine frame-counter address is selected by"
-                + " recorder identity",
-                FrameCounterAddressIsSelectedByRecorderIdentity));
+                "S3KAuxEventEngine reads ADDR_FRAMECOUNT 0xFE04 for every"
+                + " profile with no address seam",
+                FrameCounterAddressIsUnifiedAcrossProfiles));
         }
 
         // ------------------------------------------------------------------
@@ -137,11 +138,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var host = new RamBackedHost();
             host.SetWord(S3KRam.CameraX, 0x0000);
             host.SetWord(S3KRam.CameraY, 0x0390);
-            // The complete-run recorder's ADDR_FRAMECOUNT is LIVE: row 0 of
-            // every (A)/(C) fixture carries gameplay_frame_counter 0001,
-            // where the standard recorder's dead 0xFE08 read renders 0000.
+            // ADDR_FRAMECOUNT is LIVE: row 0 of every (A)/(C) fixture
+            // carries gameplay_frame_counter 0001 straight out of
+            // Level_frame_counter.
             host.SetWord(S3KRam.LevelFrameCounter, 0x0001);
-            host.SetWord(S3KRam.VblankWord, 0x0300);
+            // ADDR_VBLA_WORD is LIVE too since Lua v6.33-s3k-completerun:
+            // 0x0388 is the V_int_run_count low word (0xFE0E), not the
+            // 0x0300 lives << 8 the Life_count read used to produce.
+            host.SetWord(S3KRam.VblankWord, 0x0388);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffXPos, 0x0040);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffYPos, 0x0420);
             host.Ram[S3KRam.PlayerBase + S3KRam.OffRoutine] = 0x02;
@@ -156,11 +160,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             // LITERAL data row 0 of the gunzipped
             // src/test/resources/traces/s3k/aiz_completerun/physics.csv.
             AssertEx.Equal(
-                "0000,0000,0000,0390,0000,0001,0300,0000,1,0040,0420,0000,"
+                "0000,0000,0000,0390,0000,0001,0388,0000,1,0040,0420,0000,"
                 + "0000,0000,00,0,0,0,0000,0000,02,00,00,00,00,1,7F00,0000,"
                 + "0000,0000,0000,00,1,0,0,0000,0000,02,02,00,00,00",
-                S3KTraceCsvWriter.FormatRow(
-                    0, 0x0000, host, S3KRam.LevelFrameCounter));
+                S3KTraceCsvWriter.FormatRow(0, 0x0000, host));
         }
 
         private static void ReproducesBonusGumballRowZero()
@@ -174,7 +177,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             host.SetWord(S3KRam.CameraY, 0x00C0);
             host.SetWord(S3KRam.RingCount, 0x003B);
             host.SetWord(S3KRam.LevelFrameCounter, 0x0001);
-            host.SetWord(S3KRam.VblankWord, 0x0400);
+            // 0x159A: a mid-run V_int_run_count low word, far past any
+            // plausible lives << 8 value the old 0xFE12 read produced.
+            host.SetWord(S3KRam.VblankWord, 0x159A);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffXPos, 0x00FF);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffYPos, 0x0120);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffXSub, 0xF400);
@@ -187,32 +192,37 @@ namespace OpenGGF.BizHawk.Headless.Tests
             // LITERAL data row 0 of the gunzipped
             // src/test/resources/traces/s3k/bonus_gumball/physics.csv.
             AssertEx.Equal(
-                "0000,0004,0060,00C0,003B,0001,0400,0000,1,00FF,0120,FFF4,"
+                "0000,0004,0060,00C0,003B,0001,159A,0000,1,00FF,0120,FFF4,"
                 + "0000,FFF4,00,1,0,0,F400,0000,02,03,00,00,07,0,0000,0000,"
                 + "0000,0000,0000,00,0,0,0,0000,0000,00,00,00,00,00",
-                S3KTraceCsvWriter.FormatRow(
-                    0, 0x0004, host, S3KRam.LevelFrameCounter));
+                S3KTraceCsvWriter.FormatRow(0, 0x0004, host));
         }
 
-        private static void LevelAndStandardRowsReadDifferentFrameCounters()
+        private static void LevelAndStandardRowsReadTheSameFrameCounter()
         {
-            // Lua commit 6564667eb moved ADDR_FRAMECOUNT 0xFE08 -> 0xFE04
-            // WITHOUT bumping LUA_SCRIPT_VERSION, so the two recorders'
-            // rows differ in exactly this column and the address can never
-            // be derived from a version string.
+            // The two recorders' rows USED to differ in column 5: the
+            // complete-run recorder read Level_frame_counter (0xFE04) while
+            // the standard recorder read the dead-zero
+            // Debug_placement_mode (0xFE08). Lua v6.31-s3k moved the
+            // standard recorder to 0xFE04 and its three canonical fixtures
+            // were regenerated on it, so there is one row writer, one
+            // address, and no recorder-identity parameter left. Staging
+            // 0xFE08 with a DIFFERENT value is what proves the dead read is
+            // gone rather than merely unexercised.
             var host = new RamBackedHost();
             host.SetWord(S3KRam.LevelFrameCounter, 0x1234);
-            host.SetWord(S3KRam.FrameCount, 0x5678);
+            host.SetWord(0xFE08, 0x5678);
 
-            string[] completeRun = S3KTraceCsvWriter
-                .FormatRow(0, 0, host, S3KRam.LevelFrameCounter)
-                .Split(',');
-            string[] standard =
-                S3KTraceCsvWriter.FormatRow(0, 0, host).Split(',');
-            AssertEx.Equal("1234", completeRun[5]);
-            AssertEx.Equal("5678", standard[5]);
             AssertEx.Equal(0xFE04, S3KRam.LevelFrameCounter);
-            AssertEx.Equal(0xFE08, S3KRam.FrameCount);
+            AssertEx.Equal(
+                "1234",
+                S3KTraceCsvWriter.FormatRow(0, 0, host).Split(',')[5]);
+
+            // And it tracks 0xFE04 rather than being a constant.
+            host.SetWord(S3KRam.LevelFrameCounter, 0x00FF);
+            AssertEx.Equal(
+                "00FF",
+                S3KTraceCsvWriter.FormatRow(0, 0, host).Split(',')[5]);
         }
 
         // ------------------------------------------------------------------
@@ -526,32 +536,50 @@ namespace OpenGGF.BizHawk.Headless.Tests
         // Recorder-identity seams
         // ------------------------------------------------------------------
 
-        private static void AuxVfcFollowsRecorderIdentity()
+        private static void AuxVfcReadsLevelFrameCounterForEveryProfile()
         {
+            // Every aux "vfc" field is one ADDR_FRAMECOUNT read, and it is
+            // 0xFE04 for the complete-run recorder AND for all three
+            // standard profiles. 0xFE08 is staged with a different value so
+            // a regression back to the dead read cannot render 0 and pass.
             var host = new RamBackedHost();
             StageMinimalLevelFrame(host);
             host.SetWord(S3KRam.LevelFrameCounter, 0x0141);
-            host.SetWord(S3KRam.FrameCount, 0x0BB8);
+            host.SetWord(0xFE08, 0x0BB8);
 
             // oscillation_state emits the SAME read twice (vfc and
             // level_frame_counter), so it pins both at once.
+            const string expected =
+                "{\"vfc\":321,\"level_frame_counter\":321}";
             AssertEx.Equal(
-                "{\"vfc\":321,\"level_frame_counter\":321}",
+                expected,
                 VfcProbe(NewCompleteRunEngine().ProcessFrame(7, host)));
-            AssertEx.Equal(
-                "{\"vfc\":3000,\"level_frame_counter\":3000}",
-                VfcProbe(
-                    new S3KAuxEventEngine(S3KTraceProfile.GameplayUnlock)
+            foreach (S3KTraceProfile profile in new[]
+            {
+                S3KTraceProfile.GameplayUnlock,
+                S3KTraceProfile.AizEndToEnd,
+                S3KTraceProfile.LevelGatedResetAware
+            })
+            {
+                AssertEx.Equal(
+                    expected,
+                    VfcProbe(new S3KAuxEventEngine(profile)
                         .ProcessFrame(7, host)));
+            }
 
-            // The pre-trace cpu_state_snapshot uses the same address.
-            IList<string> snapshots =
-                NewCompleteRunEngine().EmitPreTraceSnapshots(host);
+            // The pre-trace cpu_state_snapshot uses the same address, in
+            // both recorders.
             AssertEx.Equal(
                 true,
-                snapshots[0].IndexOf(
+                NewCompleteRunEngine().EmitPreTraceSnapshots(host)[0].IndexOf(
                     "{\"frame\":-1,\"vfc\":321,",
                     StringComparison.Ordinal) == 0);
+            AssertEx.Equal(
+                true,
+                new S3KAuxEventEngine(S3KTraceProfile.AizEndToEnd)
+                    .EmitPreTraceSnapshots(host)[0].IndexOf(
+                        "{\"frame\":-1,\"vfc\":321,",
+                        StringComparison.Ordinal) == 0);
         }
 
         private static void CompleteRunProfileEmitsNoProfileGatedFamilies()
@@ -578,38 +606,50 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "checkpoint"));
         }
 
-        private static void FrameCounterAddressIsSelectedByRecorderIdentity()
+        private static void FrameCounterAddressIsUnifiedAcrossProfiles()
         {
+            // The seam this replaces was S3KAuxEventEngine's
+            // FrameCounterAddressFor(profile) plus its explicit-address
+            // constructor, which selected 0xFE08 for the standard profiles
+            // and 0xFE04 for complete_run and let a test pin the legacy
+            // 0xFE08-era complete-run captures. Both halves are gone: Lua
+            // v6.31-s3k unified the address, and the legacy
+            // runs/s3-knux-multibonus-ss captures were themselves
+            // regenerated on 0xFE04 (commit 63eccd290), so nothing needs a
+            // second address. The engine therefore exposes ONE constructor
+            // and reads S3KRam.LevelFrameCounter unconditionally.
+            AssertEx.Equal(0xFE04, S3KRam.LevelFrameCounter);
             AssertEx.Equal(
-                S3KRam.LevelFrameCounter,
-                S3KAuxEventEngine.FrameCounterAddressFor(
-                    S3KTraceProfile.CompleteRun));
+                1,
+                typeof(S3KAuxEventEngine).GetConstructors().Length);
             AssertEx.Equal(
-                S3KRam.FrameCount,
-                S3KAuxEventEngine.FrameCounterAddressFor(
-                    S3KTraceProfile.GameplayUnlock));
+                1,
+                typeof(S3KAuxEventEngine)
+                    .GetConstructors()[0].GetParameters().Length);
             AssertEx.Equal(
-                S3KRam.FrameCount,
-                S3KAuxEventEngine.FrameCounterAddressFor(
-                    S3KTraceProfile.AizEndToEnd));
-            AssertEx.Equal(
-                S3KRam.FrameCount,
-                S3KAuxEventEngine.FrameCounterAddressFor(
-                    S3KTraceProfile.LevelGatedResetAware));
+                null,
+                typeof(S3KAuxEventEngine).GetMethod(
+                    "FrameCounterAddressFor"));
 
-            // The explicit-address constructor is the seam that lets a test
-            // pin the legacy 0xFE08-era complete-run captures
-            // (runs/s3-knux-multibonus-ss), whose vfc fields are all 0.
+            // Every profile advances its vfc with 0xFE04 and ignores
+            // 0xFE08 entirely.
             var host = new RamBackedHost();
             StageMinimalLevelFrame(host);
-            host.SetWord(S3KRam.LevelFrameCounter, 0x0141);
-            var legacy = new S3KAuxEventEngine(
-                S3KTraceProfile.CompleteRun, S3KRam.FrameCount);
-            AssertEx.Equal(
-                "{\"vfc\":0,\"level_frame_counter\":0}",
-                VfcProbe(legacy.ProcessFrame(7, host)));
-            AssertEx.Equal(1, Count(
-                legacy.ProcessFrame(8, host), "game_paused_state"));
+            host.SetWord(0xFE08, 0x0BB8);
+            foreach (S3KTraceProfile profile in new[]
+            {
+                S3KTraceProfile.CompleteRun,
+                S3KTraceProfile.GameplayUnlock,
+                S3KTraceProfile.AizEndToEnd,
+                S3KTraceProfile.LevelGatedResetAware
+            })
+            {
+                host.SetWord(S3KRam.LevelFrameCounter, 0x0007);
+                AssertEx.Equal(
+                    "{\"vfc\":7,\"level_frame_counter\":7}",
+                    VfcProbe(new S3KAuxEventEngine(profile)
+                        .ProcessFrame(7, host)));
+            }
         }
 
         // ------------------------------------------------------------------

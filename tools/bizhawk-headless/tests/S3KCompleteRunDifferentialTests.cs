@@ -10,7 +10,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// <summary>
     /// ROM-backed differential gate for the native S3K COMPLETE-RUN
     /// recorder (tools/bizhawk/s3k_complete_run_recorder.lua
-    /// v6.32-s3k-completerun; spec
+    /// v6.33-s3k-completerun; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It runs the
     /// real CLI end-to-end through run.sh over the canonical Knuckles
     /// multi-bonus movie and asserts that the published bonus segment is
@@ -58,10 +58,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static readonly Regex RecordingDateLine = new Regex(
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
-        // docs/s3k-run-publication.md §0.3, identity (C).
+        /// <summary>
+        /// The stamp the fixture and this port both carry, pinned as an
+        /// exact literal so a shared drift fails rather than cancels out.
+        /// </summary>
+        private const string LuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.33-s3k-completerun\",";
+
+        // docs/s3k-run-publication.md §0.3, identity (C). The physics hash
+        // was last moved by Lua 6.33-s3k-completerun (ADDR_VBLA_WORD 0xFE12
+        // Life_count -> 0xFE0E V_int_run_count low word); the aux hash was
+        // NOT, because no aux field reads that address.
         private const string GumballPhysicsSha256 =
-            "7faeb1e2b1804ac75b98daf97810e2c6be9818b8baee8417b56faff036"
-            + "cbe917";
+            "8d6e3e3004e811a124c516ac224fe9e9dd5476cce1d6c3097b3b7c65c2"
+            + "526dd6";
         private const string GumballAuxSha256 =
             "842fbad87a91effb9749bcd7b95f61d558d1cb9929e35cf5ca9ac32874"
             + "3460e7";
@@ -71,7 +81,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunDifferential native capture matches the"
                 + " canonical bonus_gumball segment",
-                NativeCaptureMatchesCanonicalBonusSegment));
+                NativeCaptureMatchesCanonicalBonusSegment,
+                game: "s3k",
+                movie: "s3-knux-multibonus-ss",
+                kind: TestKind.Gate,
+                estimatedSeconds: 5.0));
         }
 
         private static void NativeCaptureMatchesCanonicalBonusSegment()
@@ -91,10 +105,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             BizHawkInstallation installation =
                 BizHawkInstallation.Validate(dependencies.BizHawkHome);
 
-            string root = Path.Combine(
-                Path.GetTempPath(),
-                "openggf-s3k-completerun-differential-"
-                + Guid.NewGuid().ToString("N"));
+            string root = TestScratch.CreateRootPath(
+                "openggf-s3k-completerun-differential");
             string output = Path.Combine(root, "capture");
             try
             {
@@ -206,6 +218,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// well-formed recording_date line at the same index; every other
         /// line must be identical, and the line counts must match — no
         /// key-dropping normalization.
+        ///
+        /// lua_script_version is additionally pinned as an exact literal on
+        /// BOTH sides, exactly as the three sibling S3K gates do. It is not
+        /// an allowance — raw line equality already forces the two sides to
+        /// agree — but it forces them to agree on the CURRENT stamp rather
+        /// than on any shared value, so a fixture and a port that drifted
+        /// together fail here instead of passing quietly.
         /// </summary>
         private static void AssertMetadataEqualExceptRecordingDate(
             string fixturePath, string producedPath)
@@ -218,8 +237,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "metadata.json line count is " + actual.Length
                     + "; expected " + expected.Length + ".");
             }
+            var versionLines = 0;
             for (var index = 0; index < expected.Length; index++)
             {
+                if (expected[index] == LuaScriptVersionLine)
+                {
+                    versionLines++;
+                }
                 if (expected[index] == actual[index])
                 {
                     continue;
@@ -234,6 +258,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + actual[index] + ">; expected <" + expected[index]
                     + ">.");
             }
+            AssertEx.Equal(1, versionLines);
         }
 
         private static string[] ReadLines(string path)
@@ -255,6 +280,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     EndToEndTests.Quote(
                         Path.Combine(EndToEndTests.ToolDirectory, "run.sh"))
                     + " --mode trace"
+                    + EndToEndTests.NoCompressArgument
                     + " --rom " + EndToEndTests.Quote(romPath)
                     + " --movie " + EndToEndTests.Quote(moviePath)
                     + " --output " + EndToEndTests.Quote(output)

@@ -21,12 +21,22 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 return;
             }
 
+            // Both of these open the waterbox core inside the test
+            // process itself. Two live cores in one process is not a
+            // supported configuration, so they are tagged serial rather
+            // than merely mutually exclusive.
             tests.Add(new TestMain.TestCase(
                 "GpgxHost binds 64KiB 68K RAM before compatibility Main RAM",
-                BindsPinnedMainRamDomain));
+                BindsPinnedMainRamDomain,
+                game: "s1",
+                serial: true,
+                estimatedSeconds: 2.0));
             tests.Add(new TestMain.TestCase(
                 "GpgxHost advances ten frames",
-                AdvancesTenFrames));
+                AdvancesTenFrames,
+                game: "s1",
+                serial: true,
+                estimatedSeconds: 2.0));
         }
 
         private static void BindsPinnedMainRamDomain()

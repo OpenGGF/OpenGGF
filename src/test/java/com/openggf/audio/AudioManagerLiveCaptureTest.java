@@ -23,12 +23,16 @@ class AudioManagerLiveCaptureTest {
     @BeforeEach
     void setUp() {
         audio = AudioManager.getInstance();
+        // destroy(), not resetState(): only a genuine teardown retires a live
+        // lease, so this is what guarantees a clean start for each case.
+        audio.destroy();
         audio.resetState();
         audio.setBackend(new FixedRateNullBackend(2));
     }
 
     @AfterEach
     void tearDown() {
+        audio.destroy();
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
     }
@@ -105,20 +109,62 @@ class AudioManagerLiveCaptureTest {
     }
 
     @Test
-    void handleRejectsDrainAfterTheProducerItLeasedIsReplaced() {
-        LiveCaptureAudioHandle replacedHandle = audio.beginLiveCaptureAudio(1);
+    void aLeaseIsCarriedAcrossAProducerRebuildRatherThanRetired() {
+        LiveCaptureAudioHandle handle = audio.beginLiveCaptureAudio(1);
 
-        // Installing a backend rebuilds the presentation producer, which owns
-        // every lease attached to it.
+        // Installing a backend rebuilds the presentation producer. It replaces
+        // the output device, which is not a reason to end a recording of what
+        // the engine is playing: entering gameplay does exactly this, and
+        // retiring the lease here left a recording started on the master title
+        // screen silent from the moment the player started a game.
         audio.setBackend(new FixedRateNullBackend(2));
+        audio.presentFrame(PresentationMode.FORWARD);
+
+        assertEquals(2, handle.drainPresentationFrame(new short[4]),
+                "the carried lease keeps receiving packets from the new producer");
+        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(1),
+                "the manager still knows it holds that lease, so a second"
+                        + " attach is refused rather than silently added");
+
+        handle.close();
+        audio.beginLiveCaptureAudio(1).close();
+    }
+
+    /**
+     * The lease is carried only where a rebuild is in flight. A handle whose
+     * producer went away for any other reason must still refuse to read from
+     * it, rather than quietly returning packets from a dead producer.
+     *
+     * <p>{@code destroy()} is that teardown. {@code resetState()} is not: it is
+     * also the mode-transition reset {@code Engine.exitMasterTitleScreen} runs
+     * on the way into gameplay, and retiring the lease there is what left a
+     * recording started on the master title screen silent for the rest of the
+     * session.
+     */
+    @Test
+    void aLeaseRetiredByTeardownStillRejectsDrains() {
+        LiveCaptureAudioHandle handle = audio.beginLiveCaptureAudio(1);
+
+        audio.destroy();
 
         assertThrows(IllegalStateException.class,
-                () -> replacedHandle.drainPresentationFrame(new short[4]));
+                () -> handle.drainPresentationFrame(new short[4]));
+    }
 
-        LiveCaptureAudioHandle replacementHandle = audio.beginLiveCaptureAudio(1);
-        replacedHandle.close();
-        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(1));
-        replacementHandle.close();
+    /**
+     * A mode transition rebuilds the presentation; it does not end a recording
+     * of the window.
+     */
+    @Test
+    void aLeaseIsCarriedAcrossResetStateRatherThanRetired() {
+        LiveCaptureAudioHandle handle = audio.beginLiveCaptureAudio(1);
+
+        audio.resetState();
+        audio.presentFrame(PresentationMode.FORWARD);
+
+        assertEquals(2, handle.drainPresentationFrame(new short[4]),
+                "the carried lease keeps receiving packets from the new producer");
+        handle.close();
     }
 
     /**
@@ -128,7 +174,7 @@ class AudioManagerLiveCaptureTest {
      * {@code handle.close()} on a foreign thread, which is the one path
      * {@code AudioManagerCaptureModeTest}'s off-owner-thread cases never
      * reach — they go through {@code endCaptureMode()} (the offline lease) and
-     * {@code resetState()} (which retires the handle before any close).
+     * {@code destroy()} (which retires the handle before any close).
      *
      * <p>Marking the handle closed or clearing the manager's reference before
      * the producer accepted would orphan a lease that keeps receiving every
