@@ -351,11 +351,40 @@ whether the ROM's DJF is genuinely 1/3 there (landing-DJF root) or 0 (monitor-ro
 root) needs a BizHawk `double_jump_flag` read across f186-231 -- pending. The f186
 landing reset (radii/DJF) is otherwise already correct.
 
-RECORDER DEFECT (fixed): `gameplay_frame_counter` (CSV col 6) + aux
-`level_frame_counter` were 0 across all segments (dead since the recorder's first
-commit -- ADDR_FRAMECOUNT sampled 0xFE08 = Debug_placement_mode instead of 0xFE04).
-Fixed on develop 6564667eb (0xFE08->0xFE04, matching the S1/S2 recorders); the
-re-merge carries it. Existing recordings cannot be healed without recapture.
+RECORDER DEFECT (fixed in ONE of the two S3K recorders): `gameplay_frame_counter`
+(CSV col 6) + aux `level_frame_counter` were 0 across all segments (dead since the
+recorder's first commit -- ADDR_FRAMECOUNT sampled 0xFE08 = Debug_placement_mode
+instead of 0xFE04). Fixed on develop 6564667eb (0xFE08->0xFE04, matching the S1/S2
+recorders); the re-merge carries it. Existing recordings cannot be healed without
+recapture.
+
+> **SCOPE CORRECTION (2026-07-25).** The sentence above overstates the fix and
+> should not be read as "S3K captures are now sound". `6564667eb` changed exactly
+> one file, `s3k_complete_run_recorder.lua`. Its sibling `s3k_trace_recorder.lua`
+> -- the S3K **standard** recorder -- still declares `ADDR_FRAMECOUNT = 0xFE08`
+> (line 375) and reads it at 10+ sites feeding both the CSV counter column and
+> every aux `vfc` field. Verified consequence: all three canonical standard
+> fixtures (`aiz1_to_hcz_fullrun`, `cnz`, `mgz`) still carry a dead-zero counter
+> column, so the AIZ->HCZ / CNZ / MGZ replay frontiers -- the primary release
+> slice -- are still being validated against a constant the ROM never produces.
+> The native harness now mirrors the split faithfully for byte-parity (a passing
+> test asserts the standard profiles read `Debug_placement_mode` while complete-run
+> reads `Level_frame_counter`), which means the defect is reproduced in two
+> implementations until the standard recorder is fixed and its three fixtures are
+> recaptured. Root cause of the miss: the six recorders each carry their own copy
+> of these constants, so a fix in one does not propagate -- the duplication that
+> `tools/bizhawk/SHARED_MODULE_HANDOFF.md` catalogues and `fd3a74291` only
+> partially addressed (leaf helpers were extracted; per-recorder ROM address
+> constants deliberately were not).
+>
+> What a recapture costs is now measured, on the run fixtures rather than the
+> release slice: regenerating `runs/s3-knux-multibonus-ss/` with a live counter
+> (`63eccd290`) moved that chain from the seg2 exit boundary back to seg0 (21 ->
+> 22,216 errors, first non-camera divergence f1766 `y_speed`) because
+> `TraceReplaySessionBootstrap` seeds the engine's level/sprite frame counters
+> from this column and branches on it being > 0. Expect a comparable, currently
+> un-measured shift on AIZ/CNZ/MGZ when their fixtures are recaptured. That work
+> is deliberately queued behind the current fix rather than bundled with it.
 
 ### 2026-07-21 -- S3K mega-run chain: Option B return-attach + seg2 (aiz_2) blocker classified as landing-fidelity, NOT exit-hold
 
