@@ -540,8 +540,60 @@ Key bindings accept any of the following formats:
 | Named key | `"SPACE"`, `"ENTER"`, `"F9"` | Special keys by name |
 | Modifier key | `"LEFT_SHIFT"`, `"RIGHT_CONTROL"` | Modifier keys |
 | GLFW prefix | `"GLFW_KEY_Q"` | Full GLFW constant name (prefix stripped) |
+| Chord | `"SHIFT+O"`, `"CTRL+SHIFT+O"`, `"META+LEFT_BRACKET"` | Key qualified by modifiers — acted on by the bindings listed under *Modifier support per binding* below |
 
 Invalid key names log a warning and fall back to the default binding for that key.
+
+#### Chord syntax
+
+- **Modifier aliases** (case-insensitive): `CTRL`/`CONTROL`, `SHIFT`,
+  `ALT`/`OPTION`, and `META`/`SUPER`/`CMD`/`COMMAND`/`WIN`. Whitespace around
+  `+` is tolerated, so `"Shift + O"` and `"shift+o"` are the same value.
+- **Canonical order is `CTRL, SHIFT, ALT, META`.** That is the spelling the
+  engine writes back when it saves the config, whatever order you typed.
+- **Matching is exact.** A binding fires only when its declared modifiers are
+  held *and* the others are released, so a plain `"O"` does not fire while any
+  modifier is down.
+- **Binding the plus key:** `+` is the separator, so write `EQUAL` (or `KP_ADD`
+  for the numpad). A value of only separators (`"+"`, `"++"`) is unbound.
+- **Unresolvable values.** A **non-empty** value that resolves to no key —
+  `"NOT_A_KEY"`, `"CTRL+"`, an unknown modifier — logs a warning and falls back
+  to that binding's registered default. An **explicitly empty** value (`""`) is
+  unbound outright: no default is substituted. That asymmetry is how a shortcut
+  is deliberately switched off.
+- **`O` is reserved for `capture.toggleKey`.** The migration that carries
+  existing installs onto the `SHIFT+O` default matches on the value rather than
+  on a schema version, so it re-runs on every launch and rewrites `O` — and
+  `GLFW_KEY_O`, `KEY_O`, `79` — back to `SHIFT+O`. Binding *this one action* to a
+  bare `O` is not possible; pick another key.
+
+#### Modifier support per binding
+
+Modifiers parse everywhere, but only some bindings act on them. There are three
+states, and the third is invisible from the config file:
+
+| State | Meaning | Bindings |
+|-------|---------|----------|
+| Chord honoured | Read as a chord and matched exactly | `CAPTURE_TOGGLE_KEY` |
+| Modifiers ignored | Read as a bare key code; a chord resolves to its key and the modifiers are dropped, so `"CTRL+P"` fires on plain `P` | every binding not named in the other two rows |
+| Chord permanently dead | Read through a "no modifier held" check, so the modifier you must hold to type the chord is exactly what blocks the shortcut. `debug.playback.toggleKey: "CTRL+P"` resolves to a live key code and still never fires | the nine `PLAYBACK_*` keys; `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`, `SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`, `SPECIAL_STAGE_PLANE_DEBUG_KEY`, `NEXT_ACT`, `NEXT_ZONE`, `DEBUG_LAST_CHECKPOINT_KEY`, `LEVEL_SELECT_KEY`, `DEBUG_MODE_KEY` |
+
+`UP`/`DOWN`/`LEFT`/`RIGHT` are in **two** states at once: modifiers are ignored
+on the gameplay path, and the chord is dead on the special-stage sprite-debug
+path, which reads them through the same unmodified-debug-key check.
+
+Some shortcuts are hardcoded and consume a keystroke whatever a binding says:
+Shift/Ctrl/Alt+`B` (bonus-stage debug, exactly one modifier), Shift+`Tab`, Ctrl+`P`
+(copy performance stats), the editor's `Tab`-without-Shift and Ctrl+`Z`/`S`/`Y`,
+and the display shader picker's confirm key. `RECORDING_RECORD_KEY` is a
+configurable binding whose Shift is still hardcoded at its call sites (the
+runtime recording controls and the master title screen), so its modifier cannot
+be moved into the value yet.
+
+**Under playback:** live rewind records and reproduces real Shift, Ctrl, Alt and
+Super states, so a chord behaves the same on replay as it did live. BK2 movies
+carry no modifier column at all, so all four read as released under BK2
+playback and any chord requiring a modifier does not fire there.
 
 The tables below list each key's name, default code, and the human-readable key name for the default.
 
