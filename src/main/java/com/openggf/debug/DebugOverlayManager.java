@@ -9,6 +9,7 @@ import com.openggf.game.GameServices;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -25,6 +26,9 @@ public class DebugOverlayManager {
 
     /** GLFW window handle for clipboard operations - set by Engine */
     private long windowHandle;
+
+    /** Where a copied report goes; swapped out by tests that have no window. */
+    private Consumer<String> clipboardWriter = this::writeToGlfwClipboard;
 
     /** Reusable list for shortcut lines to avoid per-frame allocations */
     private final List<String> shortcutLines = new ArrayList<>(16);
@@ -81,6 +85,21 @@ public class DebugOverlayManager {
             setEnabled(DebugOverlayToggle.PERFORMANCE,
                     !isEnabled(DebugOverlayToggle.PERFORMANCE));
         }
+
+        // Ctrl+P copies performance stats to clipboard. Read as the chord the
+        // toggles are checked against, so the two agree about which keystroke
+        // belongs to which action; isControlDown() also honours right Ctrl,
+        // which the previous isKeyDown(GLFW_KEY_LEFT_CONTROL) did not.
+        //
+        // Dispatched above the debug-shortcuts gate, with the PERFORMANCE toggle
+        // it is paired with. The toggle stands down for this chord, so leaving
+        // the copy below the gate made Ctrl+P a wholly dead keystroke on the
+        // shipped default (debug.viewEnabled is false): no overlay, no copy.
+        if (handler.isKeyPressed(PERFORMANCE_STATS_COPY.keyCode())
+                && modifiersMatch(handler, PERFORMANCE_STATS_COPY)) {
+            copyPerformanceStatsToClipboard();
+        }
+
         if (!debugShortcutsEnabled) {
             return;
         }
@@ -91,15 +110,6 @@ public class DebugOverlayManager {
             if (togglePressed(handler, toggle.keyCode(), captureToggle)) {
                 setEnabled(toggle, !isEnabled(toggle));
             }
-        }
-
-        // Ctrl+P copies performance stats to clipboard. Read as the chord the
-        // toggles are checked against, so the two agree about which keystroke
-        // belongs to which action; isControlDown() also honours right Ctrl,
-        // which the previous isKeyDown(GLFW_KEY_LEFT_CONTROL) did not.
-        if (handler.isKeyPressed(PERFORMANCE_STATS_COPY.keyCode())
-                && modifiersMatch(handler, PERFORMANCE_STATS_COPY)) {
-            copyPerformanceStatsToClipboard();
         }
     }
 
@@ -171,13 +181,25 @@ public class DebugOverlayManager {
             }
         }
 
-        // Copy to clipboard using GLFW (avoids AWT dependency for native images)
+        clipboardWriter.accept(sb.toString());
+    }
+
+    /** Copy to clipboard using GLFW (avoids AWT dependency for native images). */
+    private void writeToGlfwClipboard(String text) {
         if (windowHandle != 0) {
-            glfwSetClipboardString(windowHandle, sb.toString());
+            glfwSetClipboardString(windowHandle, text);
             LOGGER.info("Performance stats copied to clipboard");
         } else {
             LOGGER.warning("Cannot copy to clipboard: window handle not set");
         }
+    }
+
+    /**
+     * Redirects the copy, so a test with no GLFW window can observe that Ctrl+P
+     * reached the clipboard at all. {@code null} restores the GLFW sink.
+     */
+    void setClipboardWriter(Consumer<String> writer) {
+        this.clipboardWriter = writer == null ? this::writeToGlfwClipboard : writer;
     }
 
     /**

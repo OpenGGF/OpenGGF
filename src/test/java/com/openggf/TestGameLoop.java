@@ -982,9 +982,16 @@ public class TestGameLoop {
     }
 
     /**
-     * Shift and Ctrl already answered from the logical override here, so under
-     * live rewind the bonus stage a recorded B selected depended on which
-     * modifier was held. Alt now answers from the same source.
+     * Shift and Ctrl already answered from the logical override here; Alt now
+     * answers from the same source, so the shortcut cannot pick a stage from a
+     * mixture of recorded and live modifiers.
+     *
+     * <p>No production caller evaluates this with an override installed today --
+     * {@code stepInternal:994} reaches it before any override window opens, and
+     * every window (LiveRewindStepper, RecordingFrameDriver, TraceSessionLauncher)
+     * both opens and closes later in the same frame. So this pins the contract,
+     * not a reachable defect. The reachable reader of the same override is
+     * {@code updateSpecialStageInput()}, inside TraceSessionLauncher's window.
      */
     @Test
     public void testResolveBonusStageDebugShortcutReadsAltFromTheLogicalOverride() {

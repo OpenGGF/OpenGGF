@@ -230,6 +230,62 @@ public class TestDebugOverlayManagerReset {
         manager.resetState();
     }
 
+    /**
+     * The blast radius of the reservation above. PERFORMANCE stands down for
+     * Ctrl+P, so the copy it stands down for has to be reachable wherever the
+     * toggle is -- and the toggle is dispatched above the debug-shortcuts gate
+     * while {@code debug.viewEnabled} ships as false. With the copy left below
+     * the gate, Ctrl+P was a wholly dead keystroke on a default install: no
+     * overlay, no copy.
+     */
+    @Test
+    public void ctrlPStillCopiesStatsWhenDebugShortcutsAreDisabled() {
+        assertFalse(SonicConfigurationService.createStandalone(configDir)
+                        .getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED),
+                "this guard is about the shipped default; debug.viewEnabled is no longer false");
+
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        boolean before = manager.isEnabled(DebugOverlayToggle.PERFORMANCE);
+        StringBuilder copied = new StringBuilder();
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_PRESS);
+        handler.handleKeyEvent(GLFW.GLFW_KEY_P, GLFW.GLFW_PRESS);
+        try {
+            manager.setClipboardWriter(copied::append);
+            manager.updateInput(handler, false, captureToggle());
+        } finally {
+            manager.setClipboardWriter(null);
+        }
+
+        assertFalse(copied.isEmpty(),
+                "Ctrl+P must copy the performance stats with debug shortcuts disabled");
+        assertEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE),
+                "Ctrl+P must not also toggle the performance overlay");
+        manager.resetState();
+    }
+
+    /** An unmodified P keeps the toggle it has always had, gate or no gate. */
+    @Test
+    public void aBarePStillTogglesThePerformanceOverlayWithoutCopying() {
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        boolean before = manager.isEnabled(DebugOverlayToggle.PERFORMANCE);
+        StringBuilder copied = new StringBuilder();
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW.GLFW_KEY_P, GLFW.GLFW_PRESS);
+        try {
+            manager.setClipboardWriter(copied::append);
+            manager.updateInput(handler, false, captureToggle());
+        } finally {
+            manager.setClipboardWriter(null);
+        }
+
+        assertNotEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE));
+        assertTrue(copied.isEmpty(), "a bare P must not copy the stats");
+        manager.resetState();
+    }
+
     @Test
     public void ringBoundsToggleDoesNotShareTheLevelSelectShortcut() {
         int levelSelectKey = SonicConfigurationService.getInstance().getInt(SonicConfiguration.LEVEL_SELECT_KEY);

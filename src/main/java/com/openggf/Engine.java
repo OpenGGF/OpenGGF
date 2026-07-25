@@ -493,29 +493,12 @@ public class Engine {
 		});
 
 		// Setup window focus callback
-		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
-			if (focused) {
-				paused = false;
-				gameLoop.resume();
-			} else {
-				paused = true;
-				gameLoop.pause();
-				if (inputHandler != null) {
-					inputHandler.clearKeyState();
-				}
-			}
-		});
+		glfwSetWindowFocusCallback(window, (windowHandle, focused) ->
+				paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume));
 
 		// Setup window iconify callback
-		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) -> {
-			if (iconified) {
-				paused = true;
-				gameLoop.pause();
-			} else {
-				paused = false;
-				gameLoop.resume();
-			}
-		});
+		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) ->
+				paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume));
 
 		// Get the thread stack and push a new frame
 		try (MemoryStack stack = stackPush()) {
@@ -1928,6 +1911,35 @@ public class Engine {
 			throw new IllegalStateException("Unsupported rendered presentation");
 		}
 		presentationSeam.run();
+	}
+
+	/**
+	 * Gates the loop on the window becoming active or inactive, and drops held
+	 * key state either way. Focus and iconify deliver the same event through two
+	 * callbacks, so they share one body rather than drifting apart.
+	 *
+	 * <p>The clear runs on both edges. A key is otherwise forgotten only when its
+	 * release arrives, and the release for a window-switch modifier goes to the
+	 * window that took focus -- so a latched Super would disable every
+	 * {@code isKeyPressedWithoutModifiers} shortcut for the rest of the process.
+	 * Clearing on the way back in as well means whatever swallowed the release --
+	 * a minimise that delivered no focus event, a window-manager grab on a Super
+	 * combo -- is recovered from the next time the window is activated, instead
+	 * of only when the loss edge happened to fire.
+	 *
+	 * @return the engine's new paused state
+	 */
+	static boolean applyWindowActivation(boolean active, InputHandler inputHandler,
+			Runnable pause, Runnable resume) {
+		if (inputHandler != null) {
+			inputHandler.clearKeyState();
+		}
+		if (active) {
+			resume.run();
+		} else {
+			pause.run();
+		}
+		return !active;
 	}
 
 	static void startLiveCaptureAttempt(

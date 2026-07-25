@@ -120,10 +120,19 @@ public class InputHandler {
 	/**
 	 * Checks whether a specific key was just pressed this frame.
 	 *
-	 * @param keyCode The GLFW key code to check
+	 * @param keyCode The GLFW key code to check, or a negative value for an
+	 *        unbound binding, which is never pressed
 	 * @return Whether the key was just pressed
 	 */
 	public boolean isKeyPressed(int keyCode) {
+		// An explicitly empty binding resolves to -1, and so do the unbound
+		// debugModeKey()/frameStepKey() bindings -- so without this an unbound
+		// shortcut matches a pad-substitution branch below and fires from a held
+		// gamepad button. Unbinding debug mode fired every other unbound binding
+		// with it, including all nine playback keys, which ship unbound.
+		if (keyCode < 0) {
+			return false;
+		}
 		if (keyCode == inputBindings.debugModeKey()) {
 			if (logicalOverride != null) {
 				return logicalOverride.debugModeTogglePressed();

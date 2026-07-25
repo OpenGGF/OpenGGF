@@ -78,6 +78,41 @@ class TestModifierSupportDocumentation {
     }
 
     /**
+     * The other direction, and the one that matters more. The check above walks
+     * from the row outwards, so it can only catch the row naming something that
+     * moved; it cannot catch the row being *incomplete*, which is the failure
+     * that actually shipped -- CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY was
+     * read through the unmodified check and named nowhere in the table, so the
+     * catch-all "Modifiers ignored" row claimed a modifier held for an unrelated
+     * reason was harmless to it when it silently killed the shortcut.
+     */
+    @Test
+    void everyBindingReadThroughAnUnmodifiedCheckIsDocumentedAsSuch() throws IOException {
+        Set<String> documented = new LinkedHashSet<>(deadChordBindings());
+        documented.addAll(dualStateBindings());
+
+        List<String> violations = new ArrayList<>();
+        for (SonicConfiguration binding : SonicConfiguration.values()) {
+            if (documented.contains(binding.name())) {
+                continue;
+            }
+            for (String read : readSitesOf(binding.name())) {
+                if (read.contains("isUnmodifiedDebugKeyPressed(")
+                        || read.contains("isKeyPressedWithoutModifiers(")) {
+                    violations.add(binding.name() + " is read through a no-modifier-held check but "
+                            + "appears in neither the 'Chord permanently dead' row nor the "
+                            + "dual-state paragraph: " + read);
+                    break;
+                }
+            }
+        }
+        if (!violations.isEmpty()) {
+            fail("CONFIGURATION.md's 'Modifier support per binding' table is missing a binding "
+                    + "whose chord is dead:\n  " + String.join("\n  ", violations));
+        }
+    }
+
+    /**
      * DEBUG_MODE_KEY is the one binding in both states at once: GameLoop reads
      * it through the unmodified check, while SpriteManager (via the debugModeKey
      * field) and LiveRewindInputSource read it with a plain isKeyPressed. The
@@ -186,25 +221,75 @@ class TestModifierSupportDocumentation {
         return names;
     }
 
-    /** Every line in src/main that names the binding, outside the config plumbing. */
+    /**
+     * The names in the paragraph that follows the table, which covers the
+     * bindings that are chord-dead on one path and chord-unaware on another.
+     */
+    private static Set<String> dualStateBindings() throws IOException {
+        String doc = Files.readString(CONFIGURATION_DOC);
+        int paragraph = doc.indexOf("are in **two** states at once");
+        assertTrue(paragraph >= 0, "the dual-state paragraph was reworded; re-point this guard");
+        int start = doc.lastIndexOf("\n\n", paragraph);
+        int end = doc.indexOf("\n\n", paragraph);
+        String text = doc.substring(Math.max(0, start), end < 0 ? doc.length() : end);
+
+        Set<String> names = new LinkedHashSet<>();
+        Matcher matcher = BINDING_NAME.matcher(text);
+        while (matcher.find()) {
+            names.add(matcher.group(1));
+        }
+        names.removeIf(name -> Stream.of(SonicConfiguration.values())
+                .noneMatch(key -> key.name().equals(name)));
+        return names;
+    }
+
+    /**
+     * Every statement in src/main that names the binding, outside the config
+     * plumbing. Statements, not lines: a call wrapped across two lines puts the
+     * binding name on one line and the check that reads it on another, and a
+     * per-line match would call that an unguarded read (or, in the reverse
+     * sweep, miss it entirely).
+     */
     private static List<String> readSitesOf(String name) throws IOException {
         Pattern reference = Pattern.compile("SonicConfiguration\\." + name + "(?![A-Z0-9_])");
         List<String> reads = new ArrayList<>();
+        for (Path file : mainSources()) {
+            String flattened = flatten(Files.readString(file));
+            Matcher matcher = reference.matcher(flattened);
+            while (matcher.find()) {
+                reads.add(file + ": " + statementAround(flattened, matcher.start()));
+            }
+        }
+        return reads;
+    }
+
+    /** Source files that can hold a shortcut read, in a stable order. */
+    private static List<Path> mainSources() throws IOException {
         try (Stream<Path> sources = Files.walk(SRC_MAIN)) {
-            List<Path> files = sources
+            return sources
                     .filter(path -> path.toString().endsWith(".java"))
                     .filter(path -> !path.toString().replace('\\', '/')
                             .contains("com/openggf/configuration/"))
                     .sorted()
                     .toList();
-            for (Path file : files) {
-                for (String line : Files.readAllLines(file)) {
-                    if (reference.matcher(line).find()) {
-                        reads.add(file + ": " + line);
-                    }
-                }
-            }
         }
-        return reads;
+    }
+
+    /** Collapses every whitespace run, newlines included, to a single space. */
+    private static String flatten(String source) {
+        return source.replaceAll("\\s+", " ");
+    }
+
+    /** The enclosing statement: everything between the surrounding {@code ; { }}. */
+    private static String statementAround(String flattened, int index) {
+        int start = index;
+        while (start > 0 && ";{}".indexOf(flattened.charAt(start - 1)) < 0) {
+            start--;
+        }
+        int end = index;
+        while (end < flattened.length() && ";{}".indexOf(flattened.charAt(end)) < 0) {
+            end++;
+        }
+        return flattened.substring(start, Math.min(end + 1, flattened.length())).trim();
     }
 }

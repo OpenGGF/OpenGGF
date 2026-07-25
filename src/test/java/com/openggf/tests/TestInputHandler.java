@@ -1,12 +1,24 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import com.openggf.InputBindingFactory;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
+
+import java.nio.file.Path;
+import java.util.List;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TestInputHandler {
+
+    @TempDir
+    Path configDir;
+
     @Test
     public void testKeyPressRelease() {
         InputHandler handler = new InputHandler();
@@ -102,6 +114,62 @@ public class TestInputHandler {
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
         assertTrue(handler.isKeyPressedWithoutModifiers(GLFW_KEY_B));
+    }
+
+    /**
+     * An explicitly empty binding is documented as switching a shortcut off, and
+     * it resolves to key code -1. isKeyPressed(-1) used to reach the pad
+     * substitution branch -- {@code keyCode == inputBindings.debugModeKey()} is
+     * satisfied by an unbound debug-mode binding, which is -1 too -- so with
+     * {@code debug.keys.debugMode: ""} a single pad debug-mode press fired every
+     * other unbound binding at once, including all nine playback keys, which
+     * ship unbound. The isKeyDown twin of this hazard is guarded at its call
+     * site (Engine.shouldToggleLiveCapture).
+     */
+    @Test
+    public void testAnUnboundBindingDoesNotFireFromTheGamepadDebugModeButton() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(configDir);
+        config.setConfigValue(SonicConfiguration.DEBUG_MODE_KEY, "");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        InputHandler handler = new InputHandler(InputBindingFactory.supplier(config),
+                new PadWithNorthFaceButtonHeld());
+        handler.refreshLogicalSnapshot();
+
+        assertEquals(-1, config.getInt(SonicConfiguration.DEBUG_MODE_KEY),
+                "precondition: an empty binding resolves to -1");
+        assertEquals(-1, config.getInt(SonicConfiguration.PLAYBACK_TOGGLE_KEY),
+                "precondition: the playback keys ship unbound, so they resolve to -1 too");
+
+        assertFalse(handler.isKeyPressed(config.getInt(SonicConfiguration.PLAYBACK_TOGGLE_KEY)),
+                "an unbound playback key must not fire from the pad's debug-mode button");
+        assertFalse(handler.isKeyPressed(config.getInt(SonicConfiguration.DEBUG_MODE_KEY)),
+                "an unbound debug-mode binding is switched off, pad or no pad");
+    }
+
+    /** The pad path itself is untouched: a bound debug-mode key still fires. */
+    @Test
+    public void testABoundDebugModeKeyStillFiresFromTheGamepad() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(configDir);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        InputHandler handler = new InputHandler(InputBindingFactory.supplier(config),
+                new PadWithNorthFaceButtonHeld());
+        handler.refreshLogicalSnapshot();
+
+        assertTrue(handler.isKeyPressed(config.getInt(SonicConfiguration.DEBUG_MODE_KEY)));
+    }
+
+    /** One connected pad with the debug-mode (North face) button held. */
+    private static final class PadWithNorthFaceButtonHeld implements GamepadStateSource {
+        @Override
+        public List<DeviceState> pollDevices() {
+            boolean[] buttons = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];
+            buttons[GLFW_GAMEPAD_BUTTON_Y] = true;
+            return List.of(DeviceState.connected(0, "pad-0", buttons, 0.0f, 0.0f));
+        }
     }
 }
 

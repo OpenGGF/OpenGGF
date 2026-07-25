@@ -651,6 +651,18 @@ of an inconsistency. `GameLoop` is already half-converted; this finishes it.
 The change is recorded here, tested in Step 1, and named in the changelog. It is not a
 side effect.
 
+**Correction (post-review).** The "under live rewind" framing above overstates the
+reach. `resolveBonusStageDebugShortcut` has one production caller,
+`GameLoop.stepInternal` at `:994`, and every window that installs a logical override
+opens strictly after it — `LiveRewindStepper.step` and `RecordingFrameDriver.stepFrame`
+set and clear it around the gameplay tick, and `TraceSessionLauncher`'s window runs at
+`GameLoop:1157-1168` later in the same frame. The override is therefore always null at
+`:994`, so no recorded `B` ever picked a different stage; the consistency argument
+stands, the reachable defect does not. The reachable case for the Alt/Super override is
+`updateSpecialStageInput()` (`GameLoop:4060-4095`), which does run inside
+`TraceSessionLauncher`'s window and reads its keys through the no-modifier-held check.
+The changelog entry is worded against that case.
+
 **Files:**
 - Modify: `src/main/java/com/openggf/control/LogicalInputSnapshot.java`
 - Modify: `src/main/java/com/openggf/control/InputHandler.java`
@@ -858,7 +870,7 @@ Expected: `BUILD SUCCESS`. Record the exact `Tests run` totals. Restore
 Add under `## Unreleased`:
 
 ```markdown
-- Fix: rewind and movie playback now reproduce the Alt and Super/Command keys the same way they already reproduced Shift and Ctrl. Alt was read from live hardware even while recorded input was driving the engine, so a shortcut using Alt behaved differently on replay than the identical shortcut using Ctrl. This also settles the bonus-stage debug shortcut, which picks a stage from whichever one of Shift/Ctrl/Alt is held: Shift and Ctrl already came from the recorded input while Alt came from the keyboard, so during a rewind the same recorded `B` could select a different stage. BK2 movies record no modifier column at all, so all four read as released under BK2 playback.
+- Fix: rewind and movie playback now reproduce the Alt and Super/Command keys the same way they already reproduced Shift and Ctrl. Alt was read from live hardware even while recorded input was driving the engine, so a shortcut using Alt behaved differently on replay than the identical shortcut using Ctrl. The reachable case is the special-stage debug keys during a visual trace session: they are read through a "no modifier held" check inside the window where recorded input drives the engine, so Shift and Ctrl came from the recording while Alt and Super came from whatever the keyboard happened to be doing, and a modifier held live could silently swallow a recorded keystroke. BK2 movies record no modifier column at all, so all four read as released under BK2 playback.
 ```
 
 ```bash

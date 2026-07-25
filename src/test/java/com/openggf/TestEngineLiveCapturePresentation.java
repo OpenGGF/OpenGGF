@@ -397,24 +397,75 @@ class TestEngineLiveCapturePresentation {
     }
 
     /**
-     * A latched modifier is cleared by the window focus callback, and that is
-     * the only production caller of clearKeyState. Testing the helper directly
-     * leaves the wiring free to be dropped, which re-latches Super after an
-     * alt-tab and kills every isKeyPressedWithoutModifiers shortcut for the rest
-     * of the process. The iconify callback deliberately has no clear of its own:
-     * a minimise takes focus with it, so this callback has already run.
+     * A latched modifier disables every isKeyPressedWithoutModifiers shortcut --
+     * the playback controls, the recording menu, the trace picker, the debug
+     * keys -- for the rest of the process, because a key is otherwise forgotten
+     * only when its release arrives and the release for a window-switch modifier
+     * goes to whichever window took focus.
      */
     @Test
-    void losingWindowFocusClearsLatchedKeyState() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
-        int start = source.indexOf("glfwSetWindowFocusCallback(window");
-        assertTrue(start >= 0, "the focus callback was renamed; re-point this guard");
-        int end = source.indexOf("glfwSetWindowIconifyCallback(window", start);
-        assertTrue(end > start, "the focus callback must precede the iconify callback");
-        String callback = source.substring(start, end);
+    void leavingTheWindowClearsLatchedKeyState() {
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_LEFT_SUPER, GLFW_PRESS);
+        assertTrue(input.isAnyModifierDown(), "arrange: Super is latched");
 
-        assertEquals(1, occurrences(callback, "inputHandler.clearKeyState()"),
-                "focus loss must drop key state or a window-switch modifier latches");
+        assertTrue(Engine.applyWindowActivation(false, input, () -> {
+        }, () -> {
+        }), "deactivating the window pauses the engine");
+
+        assertFalse(input.isAnyModifierDown(),
+                "leaving the window must drop the latched modifier");
+    }
+
+    /**
+     * The recovery edge. Clearing only on the way out relies on the loss edge
+     * having fired at all: a minimise that delivers no focus event, or a window
+     * manager that grabs a Super combo without moving focus, both swallow the
+     * release with the window still active. Clearing on the way back in as well
+     * means the next activation recovers whatever the loss edge missed.
+     */
+    @Test
+    void returningToTheWindowAlsoClearsLatchedKeyState() {
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_LEFT_SUPER, GLFW_PRESS);
+
+        assertFalse(Engine.applyWindowActivation(true, input, () -> {
+        }, () -> {
+        }), "activating the window unpauses the engine");
+
+        assertFalse(input.isAnyModifierDown(),
+                "returning to the window must drop a modifier whose release was swallowed");
+    }
+
+    /** Activation drives the loop's pause state, not just the engine's flag. */
+    @Test
+    void windowActivationPausesAndResumesTheLoop() {
+        List<String> calls = new ArrayList<>();
+        Engine.applyWindowActivation(false, null, () -> calls.add("pause"), () -> calls.add("resume"));
+        Engine.applyWindowActivation(true, null, () -> calls.add("pause"), () -> calls.add("resume"));
+
+        assertEquals(List.of("pause", "resume"), calls);
+    }
+
+    /**
+     * Both callbacks must route through the shared body. The iconify branch used
+     * to pause identically with no clear of its own, on the reasoning that a
+     * minimise takes focus with it -- which is a platform assumption, not a
+     * guarantee, and left the recovery reachable from only one of the two edges.
+     */
+    @Test
+    void bothWindowCallbacksRouteThroughTheSharedActivationBody() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        int focus = source.indexOf("glfwSetWindowFocusCallback(window");
+        int iconify = source.indexOf("glfwSetWindowIconifyCallback(window", Math.max(focus, 0));
+        int afterCallbacks = source.indexOf("// Get the thread stack", Math.max(iconify, 0));
+        assertTrue(focus >= 0 && iconify > focus && afterCallbacks > iconify,
+                "the window focus/iconify callbacks were reordered or renamed; re-point this guard");
+
+        assertEquals(1, occurrences(source.substring(focus, iconify), "applyWindowActivation("),
+                "the focus callback must gate the loop through the shared activation body");
+        assertEquals(1, occurrences(source.substring(iconify, afterCallbacks), "applyWindowActivation("),
+                "the iconify callback must gate the loop through the shared activation body");
     }
 
     /** One connected pad with the given buttons held. */

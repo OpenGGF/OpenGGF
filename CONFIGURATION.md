@@ -577,7 +577,7 @@ states, and the third is invisible from the config file:
 |-------|---------|----------|
 | Chord honoured | Read as a chord and matched exactly | `CAPTURE_TOGGLE_KEY` |
 | Modifiers ignored | Read as a bare key code; a chord resolves to its key and the modifiers are dropped, so `"CTRL+P"` fires on plain `P` | every binding not named in the other two rows |
-| Chord permanently dead | Read through a "no modifier held" check, so the modifier you must hold to type the chord is exactly what blocks the shortcut. The modifiers are still dropped, so `debug.playback.toggleKey: "CTRL+P"` binds plain `P`: the chord as written never fires, and an unmodified `P` does | the nine `PLAYBACK_*` keys; `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`, `SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`, `SPECIAL_STAGE_PLANE_DEBUG_KEY`, `NEXT_ACT`, `NEXT_ZONE`, `DEBUG_LAST_CHECKPOINT_KEY`, `LEVEL_SELECT_KEY` |
+| Chord permanently dead | Read through a "no modifier held" check, so the modifier you must hold to type the chord is exactly what blocks the shortcut. The modifiers are still dropped, so `debug.playback.toggleKey: "CTRL+P"` binds plain `P`: the chord as written never fires, and an unmodified `P` does | the nine `PLAYBACK_*` keys; `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`, `SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`, `SPECIAL_STAGE_PLANE_DEBUG_KEY`, `NEXT_ACT`, `NEXT_ZONE`, `DEBUG_LAST_CHECKPOINT_KEY`, `LEVEL_SELECT_KEY`, `CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY` |
 
 `UP`/`DOWN`/`LEFT`/`RIGHT` and `DEBUG_MODE_KEY` are in **two** states at once.
 Modifiers are ignored for `UP`/`DOWN`/`LEFT`/`RIGHT` on the gameplay path, and
