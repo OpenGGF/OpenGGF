@@ -229,7 +229,18 @@ delta may differ. Run-mode published files are CRLF; plain mode and S1 complete-
 #### Porting a recorder to the native harness
 
 The Lua recorder is the behavioural authority; the written spec is second; the disassembly
-resolves RAM questions. Lessons already paid for on the S1 and S2 ports:
+resolves RAM questions.
+
+Read "authority" narrowly: it means the Lua is the **oracle a port is checked against**, not
+that two recorders are maintained forever. The native harness is the preferred capture path
+— faster, genuinely headless, loud on failure, and the only one with a test suite — and the
+intended direction is that the Lua recorders are retired rather than kept at parity. What
+keeps them alive is that a fixture recaptured *with the native harness* would be gated
+against bytes the harness itself produced, which proves nothing; so the Lua stays runnable
+(frozen and unmaintained is fine) for fixture regeneration and for ad-hoc hook-driven
+debugging. Do not invest in Lua-side parity for its own sake.
+
+Lessons already paid for on the S1 and S2 ports:
 
 - **Evaluate stop conditions POST-advance, in the Lua's `on_frame_end` source order.** This
   exact bug was found independently in both ports. Don't reintroduce it.

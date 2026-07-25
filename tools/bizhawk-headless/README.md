@@ -16,10 +16,28 @@ supported capture path on Linux for every game.
 | S3K standard (both profiles) | yes — gated |
 | S3K complete-run (level / bonus / special-stage) | yes — gated |
 
-The Lua recorders remain the **behavioural authority**: when the two disagree,
-the Lua is right by definition and the port is fixed. They are also still needed
-for the hook-driven aux event families this harness deliberately defers, and on
-platforms where the harness does not run.
+**This harness is the preferred capture path**, and the intended direction is that
+the Lua recorders are retired rather than kept at feature parity. It is roughly
+1,300-2,800 fps against Lua's ~840, genuinely headless, fails loudly where Lua
+under `--chromeless` swallows errors into a silent no-output run, and is the only
+one of the two with a test suite.
+
+Two things keep the Lua recorders around, and neither is a parity obligation:
+
+1. **They are the regeneration oracle.** When a recorder must change, the sequence
+   is: fix the Lua, recapture with it, then make this harness independently
+   reproduce those bytes. That last step is the check. Capture a replacement
+   fixture *with this harness* and the gate compares the port against its own
+   output, which proves nothing. Keep the Lua runnable — frozen and unmaintained
+   is fine — so that check survives.
+2. **They are the substrate for ad-hoc debugging.** The `event.onmemoryexecute` /
+   `onmemorywrite` families live only there, and a twenty-line throwaway script
+   beats adding a `.cs` to two non-SDK csproj files for something you intend to
+   delete within the hour.
+
+So: when the two disagree today, the Lua is right by definition and the port is
+fixed. That is a statement about which artifact is the oracle, not a commitment
+to maintaining two recorders forever.
 
 ## Requirements
 
