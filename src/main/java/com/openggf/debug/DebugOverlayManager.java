@@ -18,7 +18,10 @@ public class DebugOverlayManager {
     private static final Logger LOGGER = Logger.getLogger(DebugOverlayManager.class.getName());
     private static DebugOverlayManager debugOverlayManager;
 
-    /** Ctrl+P copies the performance stats; it must not also toggle the panel. */
+    /**
+     * Ctrl+P copies the performance stats; it must not also toggle the panel.
+     * Left Ctrl only, and debug-only — see {@link #statsCopyHeld}.
+     */
     static final KeyChord PERFORMANCE_STATS_COPY =
             KeyChord.of(GLFW_KEY_P, KeyChord.Modifier.CTRL);
 
@@ -81,23 +84,10 @@ public class DebugOverlayManager {
         if (handler == null) {
             return;
         }
-        if (togglePressed(handler, DebugOverlayToggle.PERFORMANCE.keyCode(), captureToggle)) {
+        if (togglePressed(handler, DebugOverlayToggle.PERFORMANCE.keyCode(), captureToggle,
+                debugShortcutsEnabled)) {
             setEnabled(DebugOverlayToggle.PERFORMANCE,
                     !isEnabled(DebugOverlayToggle.PERFORMANCE));
-        }
-
-        // Ctrl+P copies performance stats to clipboard. Read as the chord the
-        // toggles are checked against, so the two agree about which keystroke
-        // belongs to which action; isControlDown() also honours right Ctrl,
-        // which the previous isKeyDown(GLFW_KEY_LEFT_CONTROL) did not.
-        //
-        // Dispatched above the debug-shortcuts gate, with the PERFORMANCE toggle
-        // it is paired with. The toggle stands down for this chord, so leaving
-        // the copy below the gate made Ctrl+P a wholly dead keystroke on the
-        // shipped default (debug.viewEnabled is false): no overlay, no copy.
-        if (handler.isKeyPressed(PERFORMANCE_STATS_COPY.keyCode())
-                && modifiersMatch(handler, PERFORMANCE_STATS_COPY)) {
-            copyPerformanceStatsToClipboard();
         }
 
         if (!debugShortcutsEnabled) {
@@ -107,9 +97,20 @@ public class DebugOverlayManager {
             if (toggle == DebugOverlayToggle.PERFORMANCE) {
                 continue;
             }
-            if (togglePressed(handler, toggle.keyCode(), captureToggle)) {
+            if (togglePressed(handler, toggle.keyCode(), captureToggle, true)) {
                 setEnabled(toggle, !isEnabled(toggle));
             }
+        }
+
+        // Ctrl+P copies performance stats to clipboard. It stays below the gate,
+        // where it has always been: this is a debug capability, and
+        // debug.viewEnabled ships false, so dispatching it above the gate handed
+        // every player who never enabled debug a keystroke that silently
+        // overwrites their clipboard. PERFORMANCE stands down for this chord
+        // only while this line can run, so on a default install Ctrl+P toggles
+        // the overlay exactly as it did before the chord existed.
+        if (handler.isKeyPressed(PERFORMANCE_STATS_COPY.keyCode()) && statsCopyHeld(handler)) {
+            copyPerformanceStatsToClipboard();
         }
     }
 
@@ -124,13 +125,39 @@ public class DebugOverlayManager {
      * and P2's jump defaults to RIGHT_SHIFT, so in a two-player session P2
      * holding jump would silently switch every debug overlay shortcut off, as
      * would the Shift a developer holds for debug fast movement.
+     *
+     * <p>And a toggle only stands down for an action that can actually run.
+     * The stats copy is behind the debug-shortcuts gate, so it reserves nothing
+     * while that gate is shut; live capture is not gated, so its chord reserves
+     * its key whatever the debug setting is.
      */
-    private static boolean togglePressed(InputHandler handler, int keyCode, KeyChord captureToggle) {
+    private static boolean togglePressed(InputHandler handler, int keyCode, KeyChord captureToggle,
+            boolean debugShortcutsEnabled) {
         if (!handler.isKeyPressed(keyCode)) {
             return false;
         }
-        return !claims(handler, PERFORMANCE_STATS_COPY, keyCode)
-                && !claims(handler, captureToggle, keyCode);
+        if (debugShortcutsEnabled && keyCode == PERFORMANCE_STATS_COPY.keyCode()
+                && statsCopyHeld(handler)) {
+            return false;
+        }
+        return !claims(handler, captureToggle, keyCode);
+    }
+
+    /**
+     * True when the hardcoded Ctrl+P stats-copy chord is satisfied right now.
+     *
+     * <p>The Ctrl has to be the left one. {@link InputHandler#isControlDown()}
+     * is left OR right, and RIGHT_CONTROL is player two's default Start
+     * ({@code SonicConfiguration.P2_START}), so matching on it alone means P2
+     * holding Start while P1 presses P overwrites the system clipboard — the
+     * same oversight as RIGHT_SHIFT being P2's jump, one key over. Reading the
+     * left key directly is also what this chord did before it was a chord.
+     * Only a hardcoded chord can be pinned to a side like this; a configured
+     * binding names CTRL and gets both.
+     */
+    private static boolean statsCopyHeld(InputHandler handler) {
+        return handler.isKeyDown(GLFW_KEY_LEFT_CONTROL)
+                && modifiersMatch(handler, PERFORMANCE_STATS_COPY);
     }
 
     /** True when {@code chord} is a modified chord on {@code keyCode} and is satisfied now. */

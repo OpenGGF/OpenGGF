@@ -123,8 +123,8 @@ public class TestInputHandler {
      * satisfied by an unbound debug-mode binding, which is -1 too -- so with
      * {@code debug.keys.debugMode: ""} a single pad debug-mode press fired every
      * other unbound binding at once, including all nine playback keys, which
-     * ship unbound. The isKeyDown twin of this hazard is guarded at its call
-     * site (Engine.shouldToggleLiveCapture).
+     * ship unbound. The isKeyDown twin is closed in InputHandler too -- see
+     * {@link #testAnUnboundBindingIsNotHeldFromTheGamepadRewindButton}.
      */
     @Test
     public void testAnUnboundBindingDoesNotFireFromTheGamepadDebugModeButton() {
@@ -148,6 +148,53 @@ public class TestInputHandler {
                 "an unbound debug-mode binding is switched off, pad or no pad");
     }
 
+    /**
+     * The isKeyDown half of the same hazard. {@code isKeyDown} fell through to
+     * {@code keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld()},
+     * so with {@code rewind.liveKey: ""} both sides of that comparison were -1
+     * and every unbound binding read as held for the whole time the pad's left
+     * bumper was down. P1_B and P1_C ship unbound and are read through
+     * KeyboardInputMapper's held path, so player one gained a phantom B and C
+     * with no matching press edge -- held disagreeing with pressed, which is the
+     * inconsistency this work exists to remove. rewindHeld is set from the
+     * bumper unconditionally, so LIVE_REWIND_ENABLED does not save it either.
+     */
+    @Test
+    public void testAnUnboundBindingIsNotHeldFromTheGamepadRewindButton() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(configDir);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_KEY, "");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        InputHandler handler = new InputHandler(InputBindingFactory.supplier(config),
+                new PadWithLeftBumperHeld());
+        handler.refreshLogicalSnapshot();
+
+        assertEquals(-1, config.getInt(SonicConfiguration.LIVE_REWIND_KEY),
+                "precondition: an empty binding resolves to -1");
+        assertEquals(-1, config.getInt(SonicConfiguration.P1_B),
+                "precondition: P1_B ships unbound, so it resolves to -1 too");
+
+        assertFalse(handler.isKeyDown(config.getInt(SonicConfiguration.P1_B)),
+                "an unbound P1_B must not read as held from the pad's rewind bumper");
+        assertFalse(handler.isKeyDown(config.getInt(SonicConfiguration.LIVE_REWIND_KEY)),
+                "an unbound live-rewind binding is switched off, pad or no pad");
+    }
+
+    /** The pad rewind path itself is untouched: a bound rewind key still reads as held. */
+    @Test
+    public void testABoundRewindKeyStillReadsAsHeldFromTheGamepad() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(configDir);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        InputHandler handler = new InputHandler(InputBindingFactory.supplier(config),
+                new PadWithLeftBumperHeld());
+        handler.refreshLogicalSnapshot();
+
+        assertTrue(handler.isKeyDown(config.getInt(SonicConfiguration.LIVE_REWIND_KEY)));
+    }
+
     /** The pad path itself is untouched: a bound debug-mode key still fires. */
     @Test
     public void testABoundDebugModeKeyStillFiresFromTheGamepad() {
@@ -160,6 +207,16 @@ public class TestInputHandler {
         handler.refreshLogicalSnapshot();
 
         assertTrue(handler.isKeyPressed(config.getInt(SonicConfiguration.DEBUG_MODE_KEY)));
+    }
+
+    /** One connected pad with the rewind (left bumper) button held. */
+    private static final class PadWithLeftBumperHeld implements GamepadStateSource {
+        @Override
+        public List<DeviceState> pollDevices() {
+            boolean[] buttons = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];
+            buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] = true;
+            return List.of(DeviceState.connected(0, "pad-0", buttons, 0.0f, 0.0f));
+        }
     }
 
     /** One connected pad with the debug-mode (North face) button held. */

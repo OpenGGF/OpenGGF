@@ -1954,16 +1954,19 @@ public class Engine {
 	/**
 	 * True on the frame the configured capture chord becomes satisfied.
 	 *
-	 * <p>The {@code isBound()} guard is load-bearing and must precede
-	 * {@code isKeyDown}: {@link com.openggf.control.InputHandler#isKeyDown(int)}
-	 * with -1 is not false, it falls through to
-	 * {@code keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld()},
-	 * and {@code rewindKey()} is -1 too when live rewind is unbound -- so an
-	 * unbound binding would fire from a held pad bumper.
+	 * <p>An unbound chord cannot fire, and no longer needs a guard here to say
+	 * so: its key code is negative, which
+	 * {@link com.openggf.control.InputHandler#isKeyDown(int)} reports as not
+	 * down, and {@link LiveCaptureChord#update} requires {@code isBound()} of
+	 * its own accord. It used to need one, because {@code isKeyDown(-1)} fell
+	 * through to the pad-rewind substitution and {@code rewindKey()} is -1 too
+	 * when live rewind is unbound; that hole is closed in {@code InputHandler}
+	 * for both {@code isKeyDown} and {@code isKeyPressed}, so every call site
+	 * gets it rather than this one.
 	 */
 	static boolean shouldToggleLiveCapture(KeyChord chord, LiveCaptureChord detector,
 			InputHandler input) {
-		if (chord == null || !chord.isBound()) {
+		if (chord == null) {
 			return false;
 		}
 		return detector.update(chord, input.isKeyDown(chord.keyCode()),

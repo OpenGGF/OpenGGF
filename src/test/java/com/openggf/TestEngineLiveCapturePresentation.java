@@ -351,10 +351,14 @@ class TestEngineLiveCapturePresentation {
     }
 
     /**
-     * isKeyDown(-1) is not false: it falls through to
+     * isKeyDown(-1) used to fall through to
      * {@code keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld()},
-     * and an unbound LIVE_REWIND_KEY is -1 too. So an unbound capture binding
-     * fires from a held pad bumper unless the call site guards on isBound() first.
+     * and an unbound LIVE_REWIND_KEY is -1 too, so an unbound capture binding
+     * fired from a held pad bumper unless its own call site guarded first.
+     * InputHandler now rejects a negative key outright, which closes it for
+     * every caller rather than for the one that remembered -- and there were six
+     * that did not. Both the closure and the end-to-end result are asserted, so
+     * neither can regress behind the other.
      */
     @Test
     void anUnboundBindingDoesNotFireFromAHeldGamepadRewindButton() {
@@ -369,18 +373,38 @@ class TestEngineLiveCapturePresentation {
         input.refreshLogicalSnapshot();
 
         assertEquals(-1, config.getInt(SonicConfiguration.LIVE_REWIND_KEY),
-                "precondition: rewind unbound, so isKeyDown(-1) reaches the pad branch");
-        assertTrue(input.isKeyDown(-1), "precondition: the hazard this guard exists for");
+                "precondition: rewind unbound, so an unguarded isKeyDown(-1) reaches the pad branch");
+        assertTrue(padReallyReportsItsRewindButtonHeld(),
+                "precondition: the pad is genuinely holding rewind, or the assertions below "
+                        + "pass for want of any pad input at all");
+        assertFalse(input.isKeyDown(-1),
+                "an unbound binding is not held, whatever the pad is doing");
         assertFalse(toggles(config, input));
     }
 
     /**
+     * The same pad, read through a rewind binding that IS bound. Without this the
+     * test above cannot tell "the guard works" from "the fake pad reports
+     * nothing", and it would keep passing if FakePad or the bumper constant
+     * moved underneath it.
+     */
+    private static boolean padReallyReportsItsRewindButtonHeld() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config),
+                new FakePad(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER));
+        input.refreshLogicalSnapshot();
+        return input.isKeyDown(config.getInt(SonicConfiguration.LIVE_REWIND_KEY));
+    }
+
+    /**
      * Every chord case above evaluates the seam directly, so the production
-     * shortcut could stop using it and they would all stay green. Inlining the
-     * detector call into handleLiveCaptureShortcut is exactly what drops the
-     * isBound() pre-check -- LiveCaptureChord.update's own isBound() check does
-     * not save it, because {@code input.isKeyDown(chord.keyCode())} is evaluated
-     * as an argument first, and isKeyDown(-1) reaches the pad rewind branch.
+     * shortcut could stop using it and they would all stay green. The seam is
+     * the one place the null check, the detector and the modifier reads are
+     * assembled in the right order; an inlined {@code liveCaptureChord.update()}
+     * is a second assembly of the same parts, and the two drift.
      */
     @Test
     void theProductionShortcutEvaluatesTheChordOnlyThroughTheGuardedSeam() throws Exception {
@@ -393,7 +417,7 @@ class TestEngineLiveCapturePresentation {
         assertEquals(1, occurrences(body, "shouldToggleLiveCapture("),
                 "the shortcut must reach the chord through the guarded seam");
         assertEquals(0, occurrences(body, "liveCaptureChord.update("),
-                "an inlined detector call skips the load-bearing isBound() guard");
+                "an inlined detector call is a second, unguarded assembly of the same seam");
     }
 
     /**

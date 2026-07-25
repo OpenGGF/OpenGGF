@@ -220,26 +220,33 @@ public class TestDebugOverlayManagerReset {
         DebugOverlayManager manager = DebugOverlayManager.getInstance();
         manager.resetState();
         boolean before = manager.isEnabled(DebugOverlayToggle.PERFORMANCE);
+        StringBuilder copied = new StringBuilder();
         InputHandler handler = new InputHandler();
         handler.handleKeyEvent(GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_PRESS);
         handler.handleKeyEvent(GLFW.GLFW_KEY_P, GLFW.GLFW_PRESS);
+        try {
+            manager.setClipboardWriter(copied::append);
+            manager.updateInput(handler, true, captureToggle());
+        } finally {
+            manager.setClipboardWriter(null);
+        }
 
-        manager.updateInput(handler, true);
-
+        assertFalse(copied.isEmpty(), "Ctrl+P must copy the stats with debug shortcuts enabled");
         assertEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE));
         manager.resetState();
     }
 
     /**
-     * The blast radius of the reservation above. PERFORMANCE stands down for
-     * Ctrl+P, so the copy it stands down for has to be reachable wherever the
-     * toggle is -- and the toggle is dispatched above the debug-shortcuts gate
-     * while {@code debug.viewEnabled} ships as false. With the copy left below
-     * the gate, Ctrl+P was a wholly dead keystroke on a default install: no
-     * overlay, no copy.
+     * The blast radius of the reservation above, and the limit of it. The stats
+     * copy is a debug capability and {@code debug.viewEnabled} ships false, so
+     * dispatching it above the gate to keep Ctrl+P alive handed every default
+     * install a keystroke that silently overwrites the OS clipboard. The
+     * reservation is narrowed instead: PERFORMANCE stands down for Ctrl+P only
+     * while the copy can actually run, so with debug shortcuts off the keystroke
+     * does what it did before the chord existed -- toggles, and copies nothing.
      */
     @Test
-    public void ctrlPStillCopiesStatsWhenDebugShortcutsAreDisabled() {
+    public void ctrlPTogglesTheOverlayAndCopiesNothingOnADefaultInstall() {
         assertFalse(SonicConfigurationService.createStandalone(configDir)
                         .getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED),
                 "this guard is about the shipped default; debug.viewEnabled is no longer false");
@@ -258,10 +265,45 @@ public class TestDebugOverlayManagerReset {
             manager.setClipboardWriter(null);
         }
 
-        assertFalse(copied.isEmpty(),
-                "Ctrl+P must copy the performance stats with debug shortcuts disabled");
-        assertEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE),
-                "Ctrl+P must not also toggle the performance overlay");
+        assertTrue(copied.isEmpty(),
+                "a debug-only clipboard copy must not run with debug shortcuts disabled");
+        assertNotEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE),
+                "Ctrl+P must still toggle the performance overlay on a default install");
+        manager.resetState();
+    }
+
+    /**
+     * RIGHT_CONTROL is player two's default Start ({@code P2_START}), and
+     * {@code isControlDown()} is left OR right -- so matching the copy chord
+     * through it alone means P2 holding Start while P1 presses P clobbers the
+     * system clipboard. Same oversight as RIGHT_SHIFT being P2's jump, one key
+     * over. Right Ctrl+P is not the chord: it toggles, as it always has.
+     */
+    @Test
+    public void playerTwosStartButtonDoesNotTurnPIntoTheStatsCopyChord() {
+        assertEquals(GLFW.GLFW_KEY_RIGHT_CONTROL,
+                SonicConfigurationService.createStandalone(configDir)
+                        .getInt(SonicConfiguration.P2_START),
+                "this guard is about P2's Start; it is no longer RIGHT_CONTROL");
+
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        boolean before = manager.isEnabled(DebugOverlayToggle.PERFORMANCE);
+        StringBuilder copied = new StringBuilder();
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW.GLFW_KEY_RIGHT_CONTROL, GLFW.GLFW_PRESS);
+        handler.handleKeyEvent(GLFW.GLFW_KEY_P, GLFW.GLFW_PRESS);
+        try {
+            manager.setClipboardWriter(copied::append);
+            manager.updateInput(handler, true, captureToggle());
+        } finally {
+            manager.setClipboardWriter(null);
+        }
+
+        assertTrue(copied.isEmpty(),
+                "P2 holding Start must not turn P1's P into a clipboard copy");
+        assertNotEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE),
+                "right Ctrl+P is not the copy chord, so P keeps its toggle");
         manager.resetState();
     }
 

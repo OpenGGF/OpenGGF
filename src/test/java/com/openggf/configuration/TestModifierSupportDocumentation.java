@@ -113,6 +113,39 @@ class TestModifierSupportDocumentation {
     }
 
     /**
+     * The sweep above scans statements, and a hoisted read puts the binding name
+     * and the check that reads it in different statements:
+     * {@code int leftKey = configService.getInt(SonicConfiguration.LEFT);} at the
+     * top of GameLoop.updateSpecialStageInput, then
+     * {@code isUnmodifiedDebugKeyPressed(leftKey)} several statements down. The
+     * statement returned for the reference matches neither marker, so a binding
+     * written that way was classified by the catch-all "Modifiers ignored" row
+     * and the sweep said nothing -- the exact shape of the
+     * CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY miss it was written to catch,
+     * and invisible because the five bindings that hoist today are all excused by
+     * the dual-state paragraph. This pins the blind spot closed: the guard's own
+     * reach is asserted, not assumed.
+     */
+    @Test
+    void theSweepSeesAnUnmodifiedCheckOnAHoistedRead() throws IOException {
+        // The hoisted reads only. LEFT is ALSO read inline inside the check at
+        // GameLoop:1138, and asserting over every read site would pass on that
+        // one whether or not the sweep can follow a local at all.
+        List<String> hoisted = readSitesOf("LEFT").stream()
+                .filter(read -> read.contains("GameLoop.java") && read.contains("int leftKey ="))
+                .toList();
+
+        assertFalse(hoisted.isEmpty(),
+                "GameLoop no longer hoists LEFT into a local; re-point this guard at a binding "
+                        + "that is still read that way, or the sweep's reach goes unasserted");
+        assertTrue(hoisted.stream().anyMatch(read -> read.contains("isUnmodifiedDebugKeyPressed(")),
+                "LEFT is hoisted into a local in updateSpecialStageInput and read through an "
+                        + "unmodified check further down, so the sweep must follow the local. "
+                        + "While it cannot, a newly-hoisted binding is silently undocumented: "
+                        + hoisted);
+    }
+
+    /**
      * DEBUG_MODE_KEY is the one binding in both states at once: GameLoop reads
      * it through the unmodified check, while SpriteManager (via the debugModeKey
      * field) and LiveRewindInputSource read it with a plain isKeyPressed. The
@@ -249,6 +282,14 @@ class TestModifierSupportDocumentation {
      * binding name on one line and the check that reads it on another, and a
      * per-line match would call that an unguarded read (or, in the reverse
      * sweep, miss it entirely).
+     *
+     * <p>A read hoisted into a local splits them the same way and a statement is
+     * no longer enough either -- {@code int leftKey = configService.getInt(...)}
+     * names the binding, and the {@code isUnmodifiedDebugKeyPressed(leftKey)}
+     * that reads it is several statements down. So the unmodified checks on that
+     * local are looked up in the rest of the enclosing block and appended to the
+     * read. Hoisting is the dominant style in GameLoop.updateSpecialStageInput,
+     * which is precisely the method these sweeps exist to see into.
      */
     private static List<String> readSitesOf(String name) throws IOException {
         Pattern reference = Pattern.compile("SonicConfiguration\\." + name + "(?![A-Z0-9_])");
@@ -257,10 +298,62 @@ class TestModifierSupportDocumentation {
             String flattened = flatten(Files.readString(file));
             Matcher matcher = reference.matcher(flattened);
             while (matcher.find()) {
-                reads.add(file + ": " + statementAround(flattened, matcher.start()));
+                String statement = statementAround(flattened, matcher.start());
+                reads.add(file + ": " + statement
+                        + checksOnHoistedLocal(flattened, matcher.start(), statement));
             }
         }
         return reads;
+    }
+
+    /** {@code int leftKey =} — the local a hoisted binding read is assigned to. */
+    private static final Pattern HOISTED_LOCAL =
+            Pattern.compile("^(?:final )?int ([A-Za-z_$][A-Za-z0-9_$]*) ?=");
+
+    /** The two spellings of the "no modifier held" check. */
+    private static final List<String> UNMODIFIED_CHECKS =
+            List.of("isUnmodifiedDebugKeyPressed(", "isKeyPressedWithoutModifiers(");
+
+    /**
+     * The unmodified checks applied to the local a hoisted read assigns to,
+     * rendered so both sweeps match on them exactly as they would an inline
+     * call. Empty when the read is not a hoisted assignment, which leaves every
+     * other read site reading precisely as it did.
+     */
+    private static String checksOnHoistedLocal(String flattened, int index, String statement) {
+        Matcher local = HOISTED_LOCAL.matcher(statement);
+        if (!local.find()) {
+            return "";
+        }
+        String block = restOfEnclosingBlock(flattened, index);
+        StringBuilder checks = new StringBuilder();
+        for (String check : UNMODIFIED_CHECKS) {
+            String call = check + local.group(1) + ")";
+            if (block.contains(call)) {
+                checks.append(" -> ").append(call);
+            }
+        }
+        return checks.toString();
+    }
+
+    /**
+     * From {@code index} to the closing brace of the block enclosing it — the
+     * method body, for a local declared at the top of one.
+     */
+    private static String restOfEnclosingBlock(String flattened, int index) {
+        int depth = 0;
+        for (int i = index; i < flattened.length(); i++) {
+            char character = flattened.charAt(i);
+            if (character == '{') {
+                depth++;
+            } else if (character == '}') {
+                if (depth == 0) {
+                    return flattened.substring(index, i);
+                }
+                depth--;
+            }
+        }
+        return flattened.substring(index);
     }
 
     /** Source files that can hold a shortcut read, in a stable order. */

@@ -13,6 +13,7 @@ import static com.openggf.configuration.KeyChord.Modifier.CTRL;
 import static com.openggf.configuration.KeyChord.Modifier.SHIFT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_1;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_O;
@@ -195,6 +196,62 @@ class TestConfigKeyChordResolution {
 
         assertEquals(-1, configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
         assertFalse(configService.getKeyChord(SonicConfiguration.FRAME_STEP_KEY).isBound());
+    }
+
+    /**
+     * A separator-only value is NOT the unbind form, whatever it looks like.
+     * {@code KeyChord.parse("+")} does return NO_KEY -- '+' is the separator, so
+     * there is no key segment left -- but resolveKeyChord only reports unbound
+     * for an empty value or an explicit -1, and {@code Integer.parseInt("+")}
+     * throws, so it takes the fall-back-to-default path like any other
+     * unresolvable value. CONFIGURATION.md claimed the opposite, which meant a
+     * player who wrote {@code capture.toggleKey: "+"} to switch recording off
+     * still started a recording on SHIFT+O. Pinned on CAPTURE_TOGGLE_KEY because
+     * its default is a chord, so a regression that dropped the modifiers would
+     * show here too.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"+", "++"})
+    void aSeparatorOnlyValueFallsBackToTheDefaultRatherThanUnbinding(String configured) {
+        configService.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, configured);
+
+        assertEquals(GLFW_KEY_O, configService.getInt(SonicConfiguration.CAPTURE_TOGGLE_KEY));
+        assertEquals(KeyChord.of(GLFW_KEY_O, SHIFT),
+                configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
+                "a separator-only value is unresolvable, not unbound");
+    }
+
+    /**
+     * The asymmetry the bullet above describes, asserted next to it: {@code ""}
+     * is the one spelling that unbinds. Without this the test above reads as
+     * "separator-only happens to equal the default" rather than "separator-only
+     * is not the unbind form".
+     */
+    @Test
+    void theEmptyValueIsTheOneSpellingThatUnbindsACaptureToggle() {
+        configService.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "");
+
+        assertEquals(-1, configService.getInt(SonicConfiguration.CAPTURE_TOGGLE_KEY));
+        assertFalse(configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY).isBound());
+    }
+
+    /**
+     * And the doc that describes it, so the two cannot drift apart again. The
+     * bullet is the only place this rule is written down for a player.
+     */
+    @Test
+    void theDocumentedPlusKeyRuleMatchesTheResolver() throws java.io.IOException {
+        String doc = java.nio.file.Files.readString(java.nio.file.Path.of("CONFIGURATION.md"));
+        int bullet = doc.indexOf("**Binding the plus key:**");
+        assertTrue(bullet >= 0, "the plus-key bullet was reworded; re-point this guard");
+        String text = doc.substring(bullet, doc.indexOf("\n- ", bullet));
+
+        assertFalse(text.contains("is unbound"),
+                "a separator-only value falls back to the registered default; the bullet still "
+                        + "calls it unbound: " + text);
+        assertTrue(text.contains("registered default"),
+                "the bullet must say a separator-only value falls back to the registered "
+                        + "default: " + text);
     }
 
     @Test

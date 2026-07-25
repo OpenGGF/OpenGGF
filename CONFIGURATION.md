@@ -555,7 +555,10 @@ Invalid key names log a warning and fall back to the default binding for that ke
   held *and* the others are released, so a plain `"O"` does not fire while any
   modifier is down.
 - **Binding the plus key:** `+` is the separator, so write `EQUAL` (or `KP_ADD`
-  for the numpad). A value of only separators (`"+"`, `"++"`) is unbound.
+  for the numpad). A value of only separators (`"+"`, `"++"`) names no key, so
+  it is an unresolvable value under the next bullet and falls back to the
+  binding's registered default — it does **not** unbind. `capture.toggleKey:
+  "+"` leaves recording live on `SHIFT+O`. Only `""` unbinds.
 - **Unresolvable values.** A **non-empty** value that resolves to no key —
   `"NOT_A_KEY"`, `"CTRL+"`, an unknown modifier — logs a warning and falls back
   to that binding's registered default. An **explicitly empty** value (`""`) is
@@ -589,16 +592,26 @@ check, so `debug.keys.debugMode: "CTRL+D"` still toggles sprite debug mode on a
 plain `D` with the Ctrl neither required nor checked.
 
 Some shortcuts are hardcoded and consume a keystroke whatever a binding says:
-Shift/Ctrl/Alt+`B` (bonus-stage debug, exactly one modifier), Shift+`Tab`, Ctrl+`P`
-(copy performance stats), the editor's `Tab`-without-Shift and Ctrl+`Z`/`S`/`Y`,
-and the display shader picker's confirm key. The sixteen debug-overlay toggles
+Shift/Ctrl/Alt+`B` (bonus-stage debug, exactly one modifier), Shift+`Tab`, left
+Ctrl+`P` (copy performance stats — debug-only, see below), the editor's
+`Tab`-without-Shift and Ctrl+`Z`/`S`/`Y`, and the display shader picker's confirm
+key. The sixteen debug-overlay toggles
 (`F1`-`F8`, `F10`-`F12`, `K`, `` ` ``, `=`, `P`, `O`) are hardcoded too. They fire
 on their bare key with any modifier held — a modifier is usually held for an
 unrelated reason, and player two's jump defaults to right Shift — but stand aside
 for the frame a chord bound to the *same* key is satisfied, which is what stops
-the `SHIFT+O` capture default toggling the object-debug overlay and Ctrl+`P`
-toggling the performance overlay. Binding `capture.toggleKey` to one of these
-keys with no modifier makes both fire on the same keystroke. `RECORDING_RECORD_KEY` is a
+the `SHIFT+O` capture default toggling the object-debug overlay. Binding
+`capture.toggleKey` to one of these keys with no modifier makes both fire on the
+same keystroke.
+
+A toggle only stands aside for an action that can actually run, so `P` gives way
+to the stats copy only while `DEBUG_VIEW_ENABLED` is on. With debug shortcuts
+off — the shipped default — Ctrl+`P` toggles the performance overlay and copies
+nothing, so no install has a keystroke that silently overwrites the OS clipboard.
+The stats copy also needs the **left** Ctrl specifically: `CTRL` in a configured
+chord means either Ctrl, but right Ctrl is player two's default Start, so
+matching either would let player two's Start turn player one's `P` into a
+clipboard write. `RECORDING_RECORD_KEY` is a
 configurable binding whose Shift is still hardcoded at its call sites (the
 runtime recording controls and the master title screen), so its modifier cannot
 be moved into the value yet.
