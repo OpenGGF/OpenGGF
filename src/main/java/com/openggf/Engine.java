@@ -265,6 +265,10 @@ public class Engine {
 	private final LiveCaptureController liveCaptureController;
 	private final LiveCapturePresentationCoordinator liveCapturePresentation;
 	private final LiveCaptureIndicatorRenderer liveCaptureIndicator;
+	/** How long a recording-interrupted notice stays on screen. */
+	private static final long LIVE_CAPTURE_NOTICE_NANOS = 3_000_000_000L;
+	private LiveCaptureController.Interruption liveCaptureInterruption;
+	private long liveCaptureInterruptionExpiryNanos;
 	private final LiveCaptureFailureTransitionReporter liveCaptureFailureReporter =
 			new LiveCaptureFailureTransitionReporter(failure ->
 					LOGGER.log(java.util.logging.Level.WARNING,
@@ -321,7 +325,12 @@ public class Engine {
 				this::drawLiveCaptureDot,
 				(text, x, y, red, green, blue, alpha, fontScale) ->
 						liveCaptureTextRenderer.drawShadowedText(
-								text, x, y, DebugColor.WHITE, fontScale),
+								text, x, y,
+								new DebugColor(Math.round(red * 255f),
+										Math.round(green * 255f),
+										Math.round(blue * 255f),
+										Math.round(alpha * 255f)),
+								fontScale),
 				new LiveCaptureIndicatorRenderer.TextMeasurer() {
 					@Override
 					public int width(String text, float fontScale) {
@@ -1964,12 +1973,50 @@ public class Engine {
 	}
 
 	private void renderLiveCaptureIndicatorIfActive() {
-		if (!liveCaptureController.indicatorVisible()) {
+		liveCaptureController.consumeInterruption().ifPresent(interruption -> {
+			liveCaptureInterruption = interruption;
+			liveCaptureInterruptionExpiryNanos =
+					System.nanoTime() + LIVE_CAPTURE_NOTICE_NANOS;
+		});
+		boolean recording = liveCaptureController.indicatorVisible();
+		if (liveCaptureNoticeFinished(recording, System.nanoTime(),
+				liveCaptureInterruptionExpiryNanos)) {
+			liveCaptureInterruption = null;
+		}
+		if (!recording && liveCaptureInterruption == null) {
 			return;
 		}
 		prepareOverlayState();
 		liveCaptureTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		liveCaptureIndicator.render((int) projectionWidth, (int) realHeight);
+		if (recording) {
+			liveCaptureIndicator.render((int) projectionWidth, (int) realHeight);
+		} else {
+			liveCaptureIndicator.renderInterruption(
+					liveCaptureNoticeText(liveCaptureInterruption),
+					(int) projectionWidth, (int) realHeight);
+		}
+	}
+
+	/**
+	 * Executable non-GL seam: whether a latched recording-interrupted notice
+	 * should stop being drawn. A new recording supersedes a stale notice, and
+	 * an expired one is dropped so it cannot reappear on a later frame.
+	 *
+	 * <p>Compares elapsed nanos rather than the instants themselves so a
+	 * {@code System.nanoTime()} wrap cannot strand a notice on screen.
+	 */
+	static boolean liveCaptureNoticeFinished(boolean recording, long nowNanos,
+			long expiryNanos) {
+		return recording || nowNanos - expiryNanos >= 0;
+	}
+
+	/** Display text for a recording that ended without the user asking. */
+	static String liveCaptureNoticeText(
+			LiveCaptureController.Interruption interruption) {
+		return switch (interruption) {
+			case WINDOW_RESIZED -> "REC STOPPED: RESIZED";
+			case CAPTURE_ERROR -> "REC STOPPED: ERROR";
+		};
 	}
 
 	private void drawLiveCaptureDot(int x, int y, int diameter,

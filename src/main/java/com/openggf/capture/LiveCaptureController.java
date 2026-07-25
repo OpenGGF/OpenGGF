@@ -19,6 +19,13 @@ public final class LiveCaptureController implements AutoCloseable {
 
     public enum State { INACTIVE, STARTING, ACTIVE, STOPPING, FAILED }
     public enum StopReason { USER, VIEWPORT_CHANGED, CAPTURE_ERROR, SHUTDOWN }
+
+    /**
+     * A recording that ended without the user asking for it, worth surfacing
+     * on screen. A user-requested stop and an ordinary shutdown are not
+     * interruptions: the player already knows why the indicator went away.
+     */
+    public enum Interruption { WINDOW_RESIZED, CAPTURE_ERROR }
     public interface AudioHandleFactory { LiveCaptureAudioHandle open(int frameRate); }
     public interface FrameGrabberFactory { VideoFrameGrabber create(CaptureViewport viewport); }
     public interface RecorderFactory { CaptureRecorder create(CaptureViewport viewport, int frameRate); }
@@ -47,6 +54,7 @@ public final class LiveCaptureController implements AutoCloseable {
     private long frameIndex;
     private Future<?> finalization;
     private boolean audioWarningLogged;
+    private Interruption pendingInterruption;
     private AudioFrameClock.Snapshot nextAudioPhase;
     private int captureSampleRate;
 
@@ -101,6 +109,11 @@ public final class LiveCaptureController implements AutoCloseable {
     public synchronized void requestStop(StopReason reason) {
         if (state != State.ACTIVE) return;
         state = State.STOPPING;
+        recordInterruption(switch (reason) {
+            case VIEWPORT_CHANGED -> Interruption.WINDOW_RESIZED;
+            case CAPTURE_ERROR -> Interruption.CAPTURE_ERROR;
+            case USER, SHUTDOWN -> null;
+        });
         Throwable audioCloseFailure = closeAudioOnCaller();
         if (audioCloseFailure != null) {
             warnAudioOnce(audioCloseFailure);
@@ -119,6 +132,7 @@ public final class LiveCaptureController implements AutoCloseable {
                     if (state == State.STOPPING) {
                         lastFailure = failure;
                         state = State.FAILED;
+                        recordInterruption(Interruption.CAPTURE_ERROR);
                     }
                     clearResources();
                 }
@@ -170,7 +184,25 @@ public final class LiveCaptureController implements AutoCloseable {
         if (recorder != null) recorder.abort();
         lastFailure = failure;
         state = State.FAILED;
+        recordInterruption(Interruption.CAPTURE_ERROR);
         clearResources();
+    }
+
+    private void recordInterruption(Interruption interruption) {
+        if (interruption != null) {
+            pendingInterruption = interruption;
+        }
+    }
+
+    /**
+     * Takes the interruption awaiting display, if any. One-shot: the caller
+     * owns how long to show it, so a repeated poll each frame does not keep
+     * re-arming the notice.
+     */
+    public synchronized java.util.Optional<Interruption> consumeInterruption() {
+        Interruption pending = pendingInterruption;
+        pendingInterruption = null;
+        return java.util.Optional.ofNullable(pending);
     }
 
     /**

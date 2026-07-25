@@ -1,5 +1,6 @@
 package com.openggf.tests.trace.s2;
 
+import com.openggf.tests.TestTempFiles;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.trace.TraceData;
 import org.junit.jupiter.api.Test;
@@ -93,7 +94,7 @@ class TestS2TraceRouteAssertions {
 
     @Test
     void rejectsRawRomZoneIdStoredAsCatalogZoneId() throws IOException {
-        Path dir = Files.createTempDirectory("s2-route-raw-zone");
+        Path dir = TestTempFiles.createTempDirectory("s2-route-raw-zone");
         writeMetadata(dir, Sonic2ZoneConstants.ROM_ZONE_CPZ, Sonic2ZoneConstants.ROM_ZONE_CPZ);
         writePhysics(dir);
         Files.writeString(dir.resolve("aux_state.jsonl"), """
@@ -110,7 +111,7 @@ class TestS2TraceRouteAssertions {
     }
 
     private static Path createTraceDir(String auxState) throws IOException {
-        Path dir = Files.createTempDirectory("s2-route-ok");
+        Path dir = TestTempFiles.createTempDirectory("s2-route-ok");
         writeMetadata(dir, Sonic2ZoneConstants.ZONE_CPZ, Sonic2ZoneConstants.ROM_ZONE_CPZ);
         writePhysics(dir);
         Files.writeString(dir.resolve("aux_state.jsonl"), auxState);

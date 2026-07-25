@@ -1,5 +1,6 @@
 package com.openggf.capture;
 
+import com.openggf.tests.TestTempFiles;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -110,7 +111,7 @@ class LiveCaptureMediaSmokeTest {
         Assumptions.assumeTrue(ffmpeg.isPresent() && ffprobe.isPresent(),
                 "ffmpeg and ffprobe must both be on PATH");
 
-        Path directory = Files.createTempDirectory("live-capture-media-smoke-");
+        Path directory = TestTempFiles.createTempDirectory("live-capture-media-smoke-");
         CaptureRecorder recorder = new CaptureRecorder(
                 new FfmpegEncoder(ffmpeg.orElseThrow().toString(), 1),
                 BackpressurePolicy.BLOCK, 8, directory, "live", "smoke");
@@ -192,7 +193,7 @@ class LiveCaptureMediaSmokeTest {
         Assumptions.assumeTrue(ffmpeg.isPresent() && ffprobe.isPresent(),
                 "ffmpeg and ffprobe must both be on PATH");
 
-        Path directory = Files.createTempDirectory("live-capture-silent-media-");
+        Path directory = TestTempFiles.createTempDirectory("live-capture-silent-media-");
         AtomicReference<Path> output = new AtomicReference<>();
         CaptureRecorder recorder = new CaptureRecorder(
                 new FfmpegEncoder(ffmpeg.orElseThrow().toString(), 1),
@@ -283,7 +284,7 @@ class LiveCaptureMediaSmokeTest {
         int packetFrames = SAMPLE_RATE / frameRate;
         admitMixedSources();
 
-        Path directory = Files.createTempDirectory("live-capture-mixed-media-");
+        Path directory = TestTempFiles.createTempDirectory("live-capture-mixed-media-");
         CaptureRecorder recorder = new CaptureRecorder(
                 new FfmpegEncoder(ffmpeg.orElseThrow().toString(), 1),
                 BackpressurePolicy.BLOCK, 8, directory, "live", "mixed");
@@ -381,7 +382,7 @@ class LiveCaptureMediaSmokeTest {
 
         String priorProperty = System.getProperty(AUDIO_FAIL_PROPERTY);
         Path directory =
-                Files.createTempDirectory("live-capture-tap-failure-media-");
+                TestTempFiles.createTempDirectory("live-capture-tap-failure-media-");
         AtomicReference<Path> output = new AtomicReference<>();
         CaptureRecorder recorder = new CaptureRecorder(
                 new FfmpegEncoder(ffmpeg.orElseThrow().toString(), 1),

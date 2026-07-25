@@ -1,5 +1,6 @@
 package com.openggf.capture;
 
+import com.openggf.tests.TestTempFiles;
 import com.openggf.audio.LiveCaptureAudioHandle;
 import com.openggf.audio.DebugFailAfterFramesAudioHandle;
 import com.openggf.audio.runtime.AudioFrameClock;
@@ -44,6 +45,92 @@ class LiveCaptureControllerTest {
         assertEquals(LiveCaptureController.State.INACTIVE, c.state());
         assertEquals(List.of("audio-close", "recorder-stop"), h.events);
         assertFalse(c.indicatorVisible());
+    }
+
+    // ---------------------------------------------------------------
+    // Why a recording ended, for the on-screen notice
+    // ---------------------------------------------------------------
+
+    @Test void resizeStopIsReportedAsAnInterruption() throws Exception {
+        Harness h = new Harness();
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+
+        c.requestStop(LiveCaptureController.StopReason.VIEWPORT_CHANGED);
+        awaitNotStopping(c);
+
+        assertEquals(java.util.Optional.of(
+                        LiveCaptureController.Interruption.WINDOW_RESIZED),
+                c.consumeInterruption());
+    }
+
+    /**
+     * The player pressed the key, so the indicator disappearing is exactly what
+     * they asked for. Reporting it would train them to ignore the notice.
+     */
+    @Test void userStopIsNotAnInterruption() throws Exception {
+        Harness h = new Harness();
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+
+        c.requestStop(LiveCaptureController.StopReason.USER);
+        awaitNotStopping(c);
+
+        assertEquals(java.util.Optional.empty(), c.consumeInterruption());
+    }
+
+    @Test void shutdownStopIsNotAnInterruption() throws Exception {
+        Harness h = new Harness();
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+
+        c.requestStop(LiveCaptureController.StopReason.SHUTDOWN);
+        awaitNotStopping(c);
+
+        assertEquals(java.util.Optional.empty(), c.consumeInterruption());
+    }
+
+    /**
+     * A recording that dies from a grab or encoder fault currently only reaches
+     * a log line, which is exactly as invisible as the silent resize stop was.
+     */
+    @Test void captureFailureIsReportedAsAnInterruption() {
+        Harness h = new Harness();
+        h.failGrab = true;
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+
+        c.capturePresentedFrame(h.viewport);
+
+        assertEquals(LiveCaptureController.State.FAILED, c.state());
+        assertEquals(java.util.Optional.of(
+                        LiveCaptureController.Interruption.CAPTURE_ERROR),
+                c.consumeInterruption());
+    }
+
+    /**
+     * The renderer polls every frame, so a non-consuming read would re-arm the
+     * notice forever and it would never time out.
+     */
+    @Test void consumingAnInterruptionClearsIt() throws Exception {
+        Harness h = new Harness();
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+        c.requestStop(LiveCaptureController.StopReason.VIEWPORT_CHANGED);
+        awaitNotStopping(c);
+
+        assertTrue(c.consumeInterruption().isPresent());
+        assertEquals(java.util.Optional.empty(), c.consumeInterruption(),
+                "a second poll must not re-arm the notice");
+    }
+
+    @Test void aQuietRecordingReportsNoInterruption() {
+        Harness h = new Harness();
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+        c.capturePresentedFrame(h.viewport);
+
+        assertEquals(java.util.Optional.empty(), c.consumeInterruption());
     }
 
     @Test void viewportMismatchStopsBeforeGrabOrSubmit() throws Exception {
@@ -266,7 +353,7 @@ class LiveCaptureControllerTest {
         RetainedProcess mux = new RetainedProcess(false);
         CountDownLatch muxLaunched = new CountDownLatch(1);
         List<Path> temporaryFiles = new ArrayList<>();
-        Path outputDirectory = Files.createTempDirectory("live-close");
+        Path outputDirectory = TestTempFiles.createTempDirectory("live-close");
         AtomicReference<Path> partialOutput = new AtomicReference<>();
         int[] launches = {0};
         FfmpegEncoder encoder = new FfmpegEncoder("ffmpeg", 1, command -> {

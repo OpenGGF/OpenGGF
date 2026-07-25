@@ -1,5 +1,6 @@
 package com.openggf.capture;
 
+import com.openggf.tests.TestTempFiles;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -81,7 +82,7 @@ class FfmpegEncoderCommandTest {
     @Test
     void videoHangIsForciblyDestroyedWithinBoundedWait() throws Exception {
         FakeProcess video = new FakeProcess(false);
-        Path output = Files.createTempDirectory("ffmpeg-test").resolve("out.mkv");
+        Path output = TestTempFiles.createTempDirectory("ffmpeg-test").resolve("out.mkv");
         FfmpegEncoder encoder = new FfmpegEncoder("ffmpeg", 1, command -> video, 5);
         encoder.open(output, 1, 1, 60, 48000);
         CaptureException failure = assertThrows(CaptureException.class, encoder::finish);
@@ -94,7 +95,7 @@ class FfmpegEncoderCommandTest {
     void muxHangIsDestroyedAndPartialOutputDeleted() throws Exception {
         FakeProcess video = new FakeProcess(true);
         FakeProcess mux = new FakeProcess(false);
-        Path output = Files.createTempDirectory("ffmpeg-test").resolve("out.mkv");
+        Path output = TestTempFiles.createTempDirectory("ffmpeg-test").resolve("out.mkv");
         int[] launches = {0};
         FfmpegEncoder encoder = new FfmpegEncoder("ffmpeg", 1, command -> {
             if (launches[0]++ == 0) return video;
@@ -112,7 +113,7 @@ class FfmpegEncoderCommandTest {
     void abortBeforeMuxPublicationDestroysUnpublishedMuxAndPreventsSuccess() throws Exception {
         FakeProcess video = new FakeProcess(true);
         FakeProcess mux = new FakeProcess(false);
-        Path output = Files.createTempDirectory("ffmpeg-race").resolve("out.mkv");
+        Path output = TestTempFiles.createTempDirectory("ffmpeg-race").resolve("out.mkv");
         CountDownLatch atPublication = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         int[] launches = {0};
@@ -141,7 +142,7 @@ class FfmpegEncoderCommandTest {
     void abortBeforeSuccessPublicationPreventsReturningDeletedPath() throws Exception {
         FakeProcess video = new FakeProcess(true);
         FakeProcess mux = new FakeProcess(true);
-        Path output = Files.createTempDirectory("ffmpeg-race").resolve("out.mkv");
+        Path output = TestTempFiles.createTempDirectory("ffmpeg-race").resolve("out.mkv");
         CountDownLatch atSuccess = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         int[] launches = {0};
