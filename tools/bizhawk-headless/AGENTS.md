@@ -12,10 +12,24 @@ it — read that first if you are new here.
 
 It reproduces the Lua trace recorders in `../bizhawk/` byte-for-byte so traces can
 be captured headlessly on Linux. Every capability is locked by a differential gate
-that replays a real movie against a committed fixture. **The Lua recorders are the
-behavioural authority.** If the port and the Lua disagree, the port is wrong —
-even when the port looks more correct. Fix the port, or fix the Lua first and
-regenerate deliberately.
+that replays a real movie against a committed fixture.
+
+**This is the preferred capture path**, and the intended direction is that the Lua
+recorders are retired rather than kept at feature parity. Do not add work here whose
+only justification is matching a Lua capability nobody uses.
+
+**But the Lua is still the oracle, and that is a different claim.** If the port and
+the Lua disagree today, the port is wrong — even when the port looks more correct.
+Fix the port, or fix the Lua first and regenerate deliberately. The reason is
+narrow and worth understanding rather than obeying: a fixture recaptured *with this
+harness* would be compared by the gates against bytes this harness produced, so the
+gate would pass regardless of whether the port is right. Both S3K address defects
+this year were caught precisely because the Lua was fixed first and the port had to
+arrive at the same bytes independently.
+
+That makes the Lua worth keeping **runnable** — frozen and unmaintained is fine —
+rather than deleted. It is also the substrate for ad-hoc hook-driven debugging (see
+below), which is the other reason not to port callbacks here.
 
 ## Hard rules
 
