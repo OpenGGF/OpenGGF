@@ -510,7 +510,7 @@ OGGF_S3K_TRACE_PROFILE=<profile> DISPLAY=:0 \
         "$S3K_ROM_PATH"
 ```
 
-Output lands in `tools/bizhawk/trace_output/`. Copy `metadata.json`, `physics.csv`, `aux_state.jsonl` into the test resources tree (the `.bk2` is unchanged) and commit the regen as a separate logical change from any recorder schema change.
+Output lands in `tools/bizhawk/trace_output/`. Copy `metadata.json` into the test resources tree, and the payloads **gzipped** — `tools/traces/compress-traces.ps1 <dir> -Recurse` on Windows, or `gzip -9 -n` — so `physics.csv.gz` / `aux_state.jsonl.gz` land there (the `.bk2` is unchanged). `TestTraceFixtureCompressionGuard` fails on a new uncompressed payload under `src/test/resources/traces/`: uncompressed, a complete-run aux stream exceeds GitHub's per-file limit and cannot be pushed. The native harness compresses at capture time by default. Commit the regen as a separate logical change from any recorder schema change.
 
 **Before regenerating, confirm which recorder produced the target trace** — read its
 `metadata.json` `profile` / `lua_script_version`. A trace stamped e.g. `6.32-s3k-completerun`

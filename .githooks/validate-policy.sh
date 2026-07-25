@@ -203,7 +203,7 @@ validate_file_size_policy() {
         case "$path" in
             aux_state*.jsonl|physics*.csv|*/aux_state*.jsonl|*/physics*.csv)
                 if [ "$size" -ge "$TRACE_COMPRESSION_THRESHOLD_BYTES" ]; then
-                    append_error "\`$path\` is an uncompressed trace payload (${size} bytes). Run \`tools/traces/compress-traces.ps1\` and commit the \`.gz\` file instead."
+                    append_error "\`$path\` is an uncompressed trace payload (${size} bytes). Commit the \`.gz\` instead: the native harness (tools/bizhawk-headless) compresses at capture time by default, and \`tools/traces/compress-traces.ps1\` does it for a Lua capture directory."
                 fi
                 ;;
         esac

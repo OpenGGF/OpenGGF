@@ -148,6 +148,14 @@ Verify:
 
 After recording, copy the three output files to the correct test resource directory.
 
+**Payloads are committed gzipped.** `TestTraceFixtureCompressionGuard` fails the build on
+a `physics*.csv` / `aux_state*.jsonl` under `src/test/resources/traces/` that is not in
+`src/test/resources/trace-guard/uncompressed-payload-baseline.txt` — uncompressed they run
+to hundreds of MB and exceed GitHub's per-file limit. The commands below refresh fixtures
+that are already in that baseline (the stable-retro `*_fullrun` and `credits_*` sets), so
+they copy in place. For a **new** fixture directory, gzip both payloads first
+(`gzip -9 -n "$SRC/physics.csv"`) and copy the `.gz` files instead.
+
 **Full-run traces (GHZ1/MZ1):**
 ```bash
 SRC="tools/retro/trace_output"

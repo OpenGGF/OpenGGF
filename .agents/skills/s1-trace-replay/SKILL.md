@@ -75,8 +75,19 @@ repo-relative; `$SRC` is your `--output` dir for a native capture, or
 ```bash
 SRC=/tmp/regen-<zone>
 DST=src/test/resources/traces/s1/<zone>_fullrun
-cp "$SRC"/{physics.csv,aux_state.jsonl,metadata.json} "$DST/"
+cp "$SRC"/metadata.json "$DST/"
+# Payloads are committed GZIPPED. A native capture already produced .gz for
+# anything over 1 MiB; gzip whatever is still plain before copying.
+for f in physics.csv aux_state.jsonl; do
+    [ -f "$SRC/$f.gz" ] && cp "$SRC/$f.gz" "$DST/"
+    [ -f "$SRC/$f" ] && gzip -9 -n -c "$SRC/$f" > "$DST/$f.gz"
+done
 ```
+
+`TestTraceFixtureCompressionGuard` fails the build if an uncompressed `physics*.csv` or
+`aux_state*.jsonl` lands under `src/test/resources/traces/`: uncompressed these run to
+hundreds of MB and exceed GitHub's per-file limit. The pre-existing uncompressed fixtures
+are grandfathered in `src/test/resources/trace-guard/uncompressed-payload-baseline.txt`.
 
 Fixtures are read-only ground truth: only overwrite one deliberately, to gain diagnostic
 data, and commit the regen separately from any recorder change.

@@ -122,7 +122,12 @@ is the designed signal to build the callback surface — not something to work a
 - **Row input columns index by `bk2_frame_offset + trace_row`**, not by the
   last-applied emulator frame. The two agree only while every frame produces a
   row, so the bug hides until a mid-segment excursion.
-- **Output is uncompressed** while fixtures are stored gzipped. Compress
-  deliberately and verify the round trip; different gzip implementations produce
-  different container bytes for identical content, which shows up as spurious
-  binary diffs.
+- **Payloads are gzipped at publication by default** (1 MiB threshold), because
+  an uncompressed complete-run aux stream is past GitHub's per-file limit and
+  cannot be pushed. `--no-compress` opts out and every ROM-backed gate passes it,
+  since gates compare raw bytes in a temp directory and commit nothing. Do not
+  gzip by hand: hand compression is where the spurious binary diffs come from —
+  different gzip implementations produce different container bytes for identical
+  content. `TestTraceFixtureCompressionGuard` (Java, `mvn test`) fails the build
+  if an uncompressed payload appears under `src/test/resources/traces/`
+  regardless of which tool wrote it.

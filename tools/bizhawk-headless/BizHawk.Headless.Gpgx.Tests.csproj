@@ -79,6 +79,7 @@
     <Compile Include="tests/S3KTraceMetadataWriterTests.cs" />
     <Compile Include="tests/SmokeCaptureRunnerTests.cs" />
     <Compile Include="tests/TestMain.cs" />
+    <Compile Include="tests/TracePayloadCompressorTests.cs" />
     <Compile Include="tests/TraceCliTests.cs" />
   </ItemGroup>
   <ItemGroup>
