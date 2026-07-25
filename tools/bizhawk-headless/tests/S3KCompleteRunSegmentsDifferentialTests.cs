@@ -183,7 +183,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunSegmentsDifferential native capture matches"
                 + " all seven canonical completerun segments",
-                NativeCaptureMatchesCanonicalCompleteRunSegments));
+                NativeCaptureMatchesCanonicalCompleteRunSegments,
+                game: "s3k",
+                movie: "s3k-complete-sonic-tails",
+                kind: TestKind.Gate,
+                // 466,334 input rows: the suite's critical path. It has
+                // to be the first thing a parallel run starts, which is
+                // what the longest-first ordering is for.
+                estimatedSeconds: 370.0));
         }
 
         private static void NativeCaptureMatchesCanonicalCompleteRunSegments()

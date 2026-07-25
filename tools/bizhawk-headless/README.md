@@ -54,14 +54,65 @@ to maintaining two recorders forever.
 ```bash
 ./build.sh                       # xbuild both projects into bin/Release
 ./run.sh <args>                  # exec mono against the harness executable
-./test.sh [--filter <substr>]    # the differential + unit suite
+./test.sh [options]              # the differential + unit suite
+./test.sh --no-gates             # ~4s: everything except the ROM-backed gates
+./test.sh --game s3k             # just the S3K gates
+./test.sh --jobs 1               # sequential, the debugging path
 ```
 
 `test.sh` skips cleanly when a ROM variable or the BizHawk distribution is
 absent, and fails loudly when one is present but wrong (it re-verifies the ROM
-SHA-1 rather than trusting the path). `--filter` narrows to matching test names,
-which matters because a full run takes several minutes — the ROM-backed
-differential gates replay entire movies.
+SHA-1 rather than trusting the path).
+
+A full run is minutes, not seconds, because the ROM-backed gates replay entire
+movies — about 1.4 million frames of real Genesis emulation per run. The runner
+therefore executes them **in parallel by default**, and takes selectors so you
+can run a slice instead of all of it.
+
+| Option | Meaning |
+|---|---|
+| `--filter <substr>` | Case-insensitive substring of the test name |
+| `--game s1\|s2\|s3k` | Tests tagged with that game. **Untagged tests are excluded** |
+| `--movie <substr>` | Tests replaying a matching BK2 movie, e.g. `--movie s3k-complete-sonic-tails`. **Untagged tests are excluded** |
+| `--gates-only` / `--no-gates` | The ROM-backed differential gates, or everything else |
+| `--jobs <n>` | Worker threads, default 8. `--jobs 1` is sequential and reproduces the pre-parallel output exactly |
+| `--slowest <n>` | Slowest-test report size. Default 10 in parallel, 0 (off) at `--jobs 1` |
+| `--timings <path>`, `--update-timings` | Read / rewrite the recorded timings used to order the queue |
+| `--help` | The above, from the runner itself |
+
+Selectors combine and intersect. `--game` and `--movie` select on tags rather
+than on names, so a test that declares neither is excluded by them — use
+`--filter` for name-based selection. Exit codes: **0** all passed, **1** a test
+failed, **2** the selection matched nothing, **3** a malformed command line.
+
+### What bounds a parallel run
+
+Measured on a 32-core box: the full suite is **957 s sequential and 383 s at the
+default `--jobs 8`**, 372 passed / 0 failed / 0 skipped either way, with an
+identical per-test outcome set. `--jobs 4` measures 388 s — both are within
+noise of the floor below, which is the point.
+
+**One gate sets the floor.** The 466,334-row S3K complete-run capture is **379 s**
+on its own, and no amount of concurrency makes a full run shorter than it — the
+383 s above is that gate plus ~4 s of serial-tagged tests. That is why the queue is ordered **longest first**, from the recorded
+`tests/test-timings.tsv` (refreshed by `--update-timings`, and falling back to
+each test's static estimate when the file is missing): start that gate late and
+the parallelism evaporates behind it.
+
+**Nothing else throttles.** Each capture is a flat ~231 MB resident whatever the
+movie length — that floor is the emulator core, ROM and framebuffers, not the
+recording — so on a box with GBs free, memory does not bind and the scheduler
+does not model it. The default of 8 sits well inside the 32 cores here and well
+above the point where extra workers stop helping; raise or lower it freely with
+`--jobs`.
+
+Gate scratch lives under `.scratch/` in this directory, **not** `/tmp`, and each
+gate deletes its own root in a finally block, so peak usage is what is
+concurrently running (2.7 GB observed at `--jobs 8`, and 0 once the run ends)
+rather than what the run has ever produced. `/tmp` is
+frequently a RAM-backed tmpfs: running four gates against one filled it and
+three captures failed with ENOSPC — correctly, because a full disk and a
+recorder that stopped early are indistinguishable to a byte gate.
 
 ## Capturing a trace
 
@@ -195,7 +246,11 @@ src/Bootstrap/    BizHawk installation discovery, ROM identity/SHA-1 validation
 src/Core/         GpgxHost — the emulator core wrapper and controller
 src/Recording/    Per-game capture runners, CSV/aux/metadata writers, publisher
 src/Program.cs    CLI entry point and per-game dispatch
-tests/            Dependency-free console runner (TestMain registry + AssertEx)
+tests/            Dependency-free console runner: TestMain (registry, test
+                  metadata), TestOptions (CLI), TestRunner (scheduling and
+                  buffered output), TestConsoleRouter, TestTimings,
+                  TestScratch, AssertEx
+.scratch/         Per-test capture scratch, created and deleted per gate
 docs/             Byte-level porting specs
 fixtures/         Small synthetic inputs for unit tests
 ```
@@ -204,5 +259,6 @@ fixtures/         Small synthetic inputs for unit tests
 
 Read [`CLAUDE.md`](CLAUDE.md) before changing anything here — it carries the
 constraints that are expensive to discover by trial: the two `.csproj` files that
-both need editing, the test registry that silently drops unregistered classes, and
-the `.gitignore` rule that makes new files here invisible to `git status`.
+both need editing, the test registry that silently drops unregistered classes,
+the `.gitignore` rule that makes new files here invisible to `git status`, and
+which kinds of test cannot run beside anything else.

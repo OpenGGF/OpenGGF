@@ -540,25 +540,47 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S2TraceDifferential native capture matches canonical EHZ1"
                 + " trace",
-                () => NativeCaptureMatchesCanonicalTrace(Ehz1Case)));
+                () => NativeCaptureMatchesCanonicalTrace(Ehz1Case),
+                game: "s2",
+                movie: "s2-ehz1",
+                kind: TestKind.Gate,
+                estimatedSeconds: 3.0));
             tests.Add(new TestMain.TestCase(
                 "S2TraceDifferential native segment 0 capture matches"
                 + " canonical ARZ trace",
-                () => NativeCaptureMatchesCanonicalTrace(ArzSegment0Case)));
+                () => NativeCaptureMatchesCanonicalTrace(ArzSegment0Case),
+                game: "s2",
+                movie: "s2-lvl-select-ARZ",
+                kind: TestKind.Gate,
+                estimatedSeconds: 3.0));
             tests.Add(new TestMain.TestCase(
                 "S2TraceDifferential native segment 1 capture matches"
                 + " canonical ARZ2 trace",
-                () => NativeCaptureMatchesCanonicalTrace(ArzSegment1Case)));
+                () => NativeCaptureMatchesCanonicalTrace(ArzSegment1Case),
+                game: "s2",
+                movie: "s2-lvl-select-ARZ",
+                kind: TestKind.Gate,
+                estimatedSeconds: 6.0));
             tests.Add(new TestMain.TestCase(
                 "S2TraceDifferential native run mode capture matches"
                 + " canonical halfpipe round trip",
                 () => NativeRunModeCaptureMatchesCanonicalRun(
-                    HalfpipeRunCase)));
+                    HalfpipeRunCase),
+                game: "s2",
+                movie: "s2-ehz-halfpipe-roundtrip",
+                kind: TestKind.Gate,
+                estimatedSeconds: 8.0));
+            // The 259,590-row emeralds movie: the second longest capture
+            // in the suite, so it has to start early.
             tests.Add(new TestMain.TestCase(
                 "S2TraceDifferential native run mode capture matches"
                 + " canonical complete emeralds run",
                 () => NativeRunModeCaptureMatchesCanonicalRun(
-                    CompleteEmeraldsRunCase)));
+                    CompleteEmeraldsRunCase),
+                game: "s2",
+                movie: "sonic-2-sonic-tails-complete-emeralds",
+                kind: TestKind.Gate,
+                estimatedSeconds: 227.0));
         }
 
         /// <summary>
@@ -703,10 +725,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 runDirectory,
                 runCase.MovieFileName));
 
-            string root = Path.Combine(
-                Path.GetTempPath(),
-                "openggf-s2-run-differential-"
-                + Guid.NewGuid().ToString("N"));
+            string root = TestScratch.CreateRootPath(
+                "openggf-s2-run-differential");
             string output = Path.Combine(root, "capture");
             try
             {
@@ -813,10 +833,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 traceDirectory,
                 differentialCase.MovieRelativePath));
 
-            string root = Path.Combine(
-                Path.GetTempPath(),
-                "openggf-s2-trace-differential-"
-                + Guid.NewGuid().ToString("N"));
+            string root = TestScratch.CreateRootPath(
+                "openggf-s2-trace-differential");
             string output = Path.Combine(root, "capture");
             try
             {

@@ -183,7 +183,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunDifferential native capture matches all 19"
                 + " canonical complete-run segments",
-                NativeCaptureMatchesCanonicalCompleteRun));
+                NativeCaptureMatchesCanonicalCompleteRun,
+                game: "s1",
+                movie: "s1-complete-run",
+                kind: TestKind.Gate,
+                estimatedSeconds: 90.0));
         }
 
         private sealed class S1CompleteRunSegmentCase
@@ -240,10 +244,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "_movies",
                 MovieFileName);
 
-            string root = Path.Combine(
-                Path.GetTempPath(),
-                "openggf-s1-completerun-differential-"
-                + Guid.NewGuid().ToString("N"));
+            string root = TestScratch.CreateRootPath(
+                "openggf-s1-completerun-differential");
             string output = Path.Combine(root, "capture");
             try
             {

@@ -76,11 +76,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S1TraceDifferential native capture matches canonical GHZ1"
                 + " trace",
-                () => NativeCaptureMatchesCanonicalTrace(Ghz1)));
+                () => NativeCaptureMatchesCanonicalTrace(Ghz1),
+                game: "s1",
+                movie: "ghz1_fullrun",
+                kind: TestKind.Gate,
+                estimatedSeconds: 2.0));
             tests.Add(new TestMain.TestCase(
                 "S1TraceDifferential native capture matches canonical MZ1"
                 + " trace",
-                () => NativeCaptureMatchesCanonicalTrace(Mz1)));
+                () => NativeCaptureMatchesCanonicalTrace(Mz1),
+                game: "s1",
+                movie: "s1-mz1",
+                kind: TestKind.Gate,
+                estimatedSeconds: 4.0));
         }
 
         private static void NativeCaptureMatchesCanonicalTrace(
@@ -120,9 +128,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 ComputeFixtureSha256(
                     Path.Combine(traceDirectory, "aux_state.jsonl")));
 
-            string root = Path.Combine(
-                Path.GetTempPath(),
-                "openggf-trace-differential-" + Guid.NewGuid().ToString("N"));
+            string root = TestScratch.CreateRootPath(
+                "openggf-trace-differential");
             string output = Path.Combine(root, "capture");
             try
             {

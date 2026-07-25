@@ -75,9 +75,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "EndToEnd production assembly excludes frontend references",
                 ProductionAssemblyExcludesFrontendReferences));
+            // The only ROM-backed capture outside the Differential
+            // classes: it replays 1000 GHZ1 frames and hashes the rows.
             tests.Add(new TestMain.TestCase(
                 "EndToEnd",
-                CapturesCanonicalRowsDeterministically));
+                CapturesCanonicalRowsDeterministically,
+                game: "s1",
+                movie: "ghz1_fullrun",
+                kind: TestKind.Gate,
+                estimatedSeconds: 2.0));
         }
 
         private static void CliRequiresArguments()

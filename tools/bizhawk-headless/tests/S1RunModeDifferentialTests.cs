@@ -106,11 +106,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S1RunModeDifferential native run mode capture matches"
                 + " canonical maze round trip",
-                NativeRunModeCaptureMatchesCanonicalRun));
+                NativeRunModeCaptureMatchesCanonicalRun,
+                game: "s1",
+                movie: "s1-ghz-maze-roundtrip",
+                kind: TestKind.Gate,
+                estimatedSeconds: 4.0));
             tests.Add(new TestMain.TestCase(
                 "S1RunModeDifferential native run mode ss segment matches"
                 + " standalone special-stage fixture",
-                NativeRunModeSsSegmentMatchesStandaloneFixture));
+                NativeRunModeSsSegmentMatchesStandaloneFixture,
+                game: "s1",
+                movie: "s1-ghz-maze-roundtrip",
+                kind: TestKind.Gate,
+                estimatedSeconds: 4.0));
         }
 
         /// <summary>
@@ -157,10 +165,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string runDirectory = RunFixtureDirectory();
             string moviePath = Path.Combine(runDirectory, RunMovieFileName);
 
-            string root = Path.Combine(
-                Path.GetTempPath(),
-                "openggf-s1-run-differential-"
-                + Guid.NewGuid().ToString("N"));
+            string root = TestScratch.CreateRootPath(
+                "openggf-s1-run-differential");
             string output = Path.Combine(root, "capture");
             try
             {
@@ -264,10 +270,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
             }
 
-            string root = Path.Combine(
-                Path.GetTempPath(),
-                "openggf-s1-ss-differential-"
-                + Guid.NewGuid().ToString("N"));
+            string root = TestScratch.CreateRootPath(
+                "openggf-s1-ss-differential");
             string output = Path.Combine(root, "capture");
             try
             {

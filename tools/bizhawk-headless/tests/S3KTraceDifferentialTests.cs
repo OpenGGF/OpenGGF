@@ -134,15 +134,27 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S3KTraceDifferential native capture matches canonical AIZ"
                 + " end-to-end trace",
-                () => NativeCaptureMatchesCanonicalTrace(AizEndToEndCase)));
+                () => NativeCaptureMatchesCanonicalTrace(AizEndToEndCase),
+                game: "s3k",
+                movie: "s3-aiz1-2-sonictails",
+                kind: TestKind.Gate,
+                estimatedSeconds: 19.0));
             tests.Add(new TestMain.TestCase(
                 "S3KTraceDifferential native capture matches canonical CNZ"
                 + " level-gated trace",
-                () => NativeCaptureMatchesCanonicalTrace(CnzLevelGatedCase)));
+                () => NativeCaptureMatchesCanonicalTrace(CnzLevelGatedCase),
+                game: "s3k",
+                movie: "s3k-cnz-sonic-tails",
+                kind: TestKind.Gate,
+                estimatedSeconds: 37.0));
             tests.Add(new TestMain.TestCase(
                 "S3KTraceDifferential native capture matches canonical MGZ"
                 + " level-gated trace",
-                () => NativeCaptureMatchesCanonicalTrace(MgzLevelGatedCase)));
+                () => NativeCaptureMatchesCanonicalTrace(MgzLevelGatedCase),
+                game: "s3k",
+                movie: "s3k-mgz-sonic-tails",
+                kind: TestKind.Gate,
+                estimatedSeconds: 28.0));
         }
 
         /// <summary>
@@ -206,10 +218,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 traceDirectory,
                 differentialCase.MovieFileName);
 
-            string root = Path.Combine(
-                Path.GetTempPath(),
-                "openggf-s3k-trace-differential-"
-                + Guid.NewGuid().ToString("N"));
+            string root = TestScratch.CreateRootPath(
+                "openggf-s3k-trace-differential");
             string output = Path.Combine(root, "capture");
             try
             {

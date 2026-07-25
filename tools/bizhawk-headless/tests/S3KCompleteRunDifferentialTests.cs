@@ -81,7 +81,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunDifferential native capture matches the"
                 + " canonical bonus_gumball segment",
-                NativeCaptureMatchesCanonicalBonusSegment));
+                NativeCaptureMatchesCanonicalBonusSegment,
+                game: "s3k",
+                movie: "s3-knux-multibonus-ss",
+                kind: TestKind.Gate,
+                estimatedSeconds: 5.0));
         }
 
         private static void NativeCaptureMatchesCanonicalBonusSegment()
@@ -101,10 +105,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             BizHawkInstallation installation =
                 BizHawkInstallation.Validate(dependencies.BizHawkHome);
 
-            string root = Path.Combine(
-                Path.GetTempPath(),
-                "openggf-s3k-completerun-differential-"
-                + Guid.NewGuid().ToString("N"));
+            string root = TestScratch.CreateRootPath(
+                "openggf-s3k-completerun-differential");
             string output = Path.Combine(root, "capture");
             try
             {
