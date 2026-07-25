@@ -22,12 +22,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///    assertions rather than "contains" checks, and they cover the
     ///    identity-(A) shape (capture_mode, no run_id) and the
     ///    identity-(C) shape (run_id, v_int_run_count) simultaneously.
-    /// 2. run_manifest.json reproduced against the committed (B) manifest.
-    ///    (B) is NOT byte-reproducible (spec §7.2/§7.4), so its two
-    ///    enumerated deltas are pinned as literals — CRLF line endings and
-    ///    the 6.31 version stamp — and asserted to be the ONLY differences.
-    ///    That gates all 25 segment entries, all 22 transition records,
-    ///    every optional field's presence rule and the whole byte layout.
+    /// 2. run_manifest.json reproduced against the committed (B) manifest
+    ///    BYTE FOR BYTE, with zero normalization. The two deltas this gate
+    ///    used to pin as literals — CRLF line endings and the 6.31 version
+    ///    stamp — were artifacts of a legacy Windows/6.31 capture and were
+    ///    removed at the source when commit 63eccd290 re-captured the
+    ///    fixture on Linux at 6.32 (spec §0.2.1). That gates all 25 segment
+    ///    entries, all 22 transition records, every optional field's
+    ///    presence rule and the whole byte layout.
     /// 3. The driver over a synthetic movie and a scripted host: a
     ///    level -> bonus -> level -> special-stage -> level round trip with
     ///    its dir tokens, row counts, per-kind file sets, per-kind metadata
@@ -81,8 +83,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 ShapeAbsencesAreStructural));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunPublication run_manifest.json reproduces the"
-                + " s3-knux-multibonus-ss manifest modulo its two pinned"
-                + " legacy deltas",
+                + " s3-knux-multibonus-ss manifest byte for byte",
                 RunManifestReproducesSetB));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunPublication manifest emission gate is"
@@ -554,13 +555,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
         };
 
         /// <summary>
-        /// The (B) manifest's two enumerated, pinned legacy deltas
-        /// (spec §7.4): it was captured on Windows EmuHawk, so every "\n"
-        /// became "\r\n", and it stamps 6.31 because commit 9e3ccdb41
-        /// hand-edited only the bonus segments' metadata and never
-        /// rewrote the manifest. Both are asserted as exact literals; the
-        /// remaining bytes must match with no other normalization
-        /// whatsoever.
+        /// The formatter's output must equal the committed (B) manifest
+        /// exactly, with no normalization at all. Two deltas used to be
+        /// pinned here as literals — CRLF, because the legacy fixture was
+        /// captured on Windows EmuHawk where io.open text mode expands
+        /// every "\n", and a 6.31 version stamp, because commit 9e3ccdb41
+        /// hand-edited only the bonus segments' metadata and never rewrote
+        /// the manifest. Commit 63eccd290 re-captured the run on Linux at
+        /// 6.32 (spec §0.2.1), so both are gone and the folding is deleted
+        /// rather than left dormant. The two facts that made it possible
+        /// are asserted directly, so a fixture that regressed to CRLF or
+        /// to a stale stamp fails here by name.
         /// </summary>
         private static void RunManifestReproducesSetB()
         {
@@ -573,25 +578,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 throw new InvalidOperationException(
                     "Checked-in S3K fixture missing: " + path);
             }
-            string raw = ReadAllBytesAsText(path);
-            if (raw.IndexOf("\r\n", StringComparison.Ordinal) < 0)
+            string expected = ReadAllBytesAsText(path);
+            if (expected.IndexOf('\r') >= 0)
             {
                 throw new InvalidOperationException(
-                    "The (B) run manifest is expected to be CRLF (a"
-                    + " Windows-EmuHawk capture artifact). If it is now LF,"
-                    + " the fixture was regenerated and"
-                    + " docs/s3k-run-publication.md section 7.4 must be"
-                    + " revisited.");
+                    "The (B) run manifest carries CR. Every committed S3K"
+                    + " fixture is LF and this port publishes LF in both"
+                    + " modes (docs/s3k-run-publication.md section 6).");
             }
-            const string LegacyVersionLine =
-                "  \"lua_script_version\": \"6.31-s3k-completerun\",\n";
             const string CurrentVersionLine =
                 "  \"lua_script_version\": \""
                 + S3KCompleteRunMetadataWriter.LuaScriptVersion + "\",\n";
-            string normalized = raw.Replace("\r\n", "\n");
-            AssertContains(normalized, LegacyVersionLine);
-            string expected = normalized.Replace(
-                LegacyVersionLine, CurrentVersionLine);
+            AssertContains(expected, CurrentVersionLine);
 
             var transitions = new List<RunManifestTransition>();
             foreach (TransitionSpec spec in SetBTransitions)

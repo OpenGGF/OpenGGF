@@ -26,85 +26,59 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///    previously verified only by hand
     ///    (docs/s3k-run-publication.md §10.5); this closes them.
     ///
-    /// 2. <c>--run-id s3-knux-multibonus-ss</c> reproduces the STRUCTURE of
-    ///    the committed identity-(B) run tree —
+    /// 2. <c>--run-id s3-knux-multibonus-ss</c> reproduces the committed
+    ///    identity-(B) run tree —
     ///    src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/ — all
-    ///    25 segment directories and run_manifest.json, with every
-    ///    permitted delta pinned as an exact literal (§3 below).
+    ///    25 segment directories and run_manifest.json, on the same terms:
+    ///    physics.csv and aux_state.jsonl by raw length AND sha256 with
+    ///    ZERO normalization, run_manifest.json byte-identical, and
+    ///    metadata.json line for line apart from the recording_date VALUE.
     ///
-    /// ## Why (B) is gated structurally and not byte-exactly
+    /// ## (B) is byte-reproducible; it did not used to be
     ///
-    /// (B) is a 2026-07-19 Windows EmuHawk capture by Lua
-    /// 6.31-s3k-completerun, three recorder builds behind HEAD. It is NOT
-    /// byte-reproducible by the current recorder, for three independent
-    /// reasons, each of which was re-verified against the fixture bytes
-    /// before this gate was written rather than taken from the spec:
+    /// Until the fixtures were regenerated (commit 63eccd290), (B) was a
+    /// 2026-07-19 Windows EmuHawk capture by Lua 6.31-s3k-completerun,
+    /// three recorder builds behind HEAD, and this case could only assert
+    /// STRUCTURE with three separately pinned non-byte-exact deltas:
     ///
     /// - **CRLF.** The Lua writes only "\n"; io.open(…, "w") is text mode,
-    ///   so a Windows host expands every newline. All 25 (B) segments and
-    ///   the (B) manifest are CRLF. Identity (A) and identity (C) — both
-    ///   Linux/Mono captures — are LF, and this port publishes LF in both
-    ///   modes. Emitting CRLF here would corrupt the identity-(C) gate in
-    ///   case 1 of this very file. ExpandRunNewlines must never reach an
+    ///   so the Windows host expanded every newline, leaving all 25 (B)
+    ///   segments and the (B) manifest CRLF. Identity (A) and identity (C)
+    ///   are Linux/Mono captures and are LF, and this port publishes LF in
+    ///   both plain and run mode — ExpandRunNewlines must never reach an
     ///   S3K path.
     /// - **ADDR_FRAMECOUNT 0xFE08 → 0xFE04** (Lua commit 6564667eb, no
     ///   version bump). 0xFE08 is Debug_placement_mode, dead-zero in
-    ///   gameplay; 0xFE04 is the live Level_frame_counter. The complete-run
-    ///   Lua at HEAD reads 0xFE04 (s3k_complete_run_recorder.lua:547, whose
-    ///   own comment records the change), so the port must too. Measured
-    ///   consequence, and it is the whole consequence: across all 25 (B)
-    ///   segments every physics.csv column 5 cell is the constant "0000"
-    ///   and every aux vfc / level_frame_counter is the constant 0.
-    /// - **Diagnostic hooks were armed.** (B) predates the
-    ///   LIGHTWEIGHT_REGEN inversion (Lua commit 192d9c976), so its capture
-    ///   ran the hook-registration block, and four of its 25 segments carry
-    ///   hook-driven aux families that a hooks-off capture cannot emit:
-    ///   hcz_2 95 lines, hcz_6 48, mgz 69, mgz_3 69.
+    ///   gameplay; 0xFE04 is the live Level_frame_counter. The old (B)
+    ///   carried the constant "0000" in physics.csv column 5 and a
+    ///   constant 0 vfc / level_frame_counter on every aux line.
+    /// - **Diagnostic hooks were armed.** The old (B) predated the
+    ///   LIGHTWEIGHT_REGEN inversion (Lua commit 192d9c976), so four of
+    ///   its 25 segments carried hook-driven aux families a hooks-off
+    ///   capture cannot emit: hcz_2 95 lines, hcz_6 48, mgz 69, mgz_3 69.
     ///
-    /// None of the three is a defect in this port, and none can be
-    /// "fixed": reverting any of them would break the identity-(A) gate
-    /// (S3KCompleteRunSegmentsDifferentialTests) and case 1 below, which
-    /// are byte-exact against captures made by the CURRENT Lua. So (B) is
-    /// gated at recorder level instead, and hard.
+    /// The regenerated fixtures were captured on Linux by
+    /// s3k_complete_run_recorder.lua 6.32-s3k-completerun with the
+    /// diagnostic hooks off, so all three are gone at the source: the tree
+    /// is LF, stamps 6.32 in the manifest and in all 25 metadata files,
+    /// carries the live 0xFE04 counter, carries capture_mode, reports
+    /// pre_trace_osc_frames 1, and contains no hook-driven aux line. That
+    /// is the same recorder identity the port targets, so the CRLF folding,
+    /// the counter-column masking, the per-segment hook-line-count literals
+    /// and the differing-key allowances are all deleted rather than
+    /// retained-but-unused — a normalization nobody needs is a
+    /// normalization that silently absorbs the next regression.
     ///
-    /// ## What the (B) case actually proves
-    ///
-    /// It is not a weakened byte comparison — every byte is still
-    /// accounted for, and the only free value is pinned to a constant:
-    ///
-    /// - **run_manifest.json**: the fixture, after CRLF→LF and the
-    ///   substitution of its single 6.31 lua_script_version line, must
-    ///   equal the produced manifest EXACTLY. That is 8,740 bytes covering
-    ///   all 25 segment records (dir, kind, trace_profile,
-    ///   bk2_frame_offset, trace_frame_count, zone_id, act,
-    ///   bonus_stage_type / special_stage_index) and all 22 transition
-    ///   records with their sampled RAM (special_bonus_entry_flag,
-    ///   saved_x_pos, saved_y_pos, last_star_post_hit, rings_before,
-    ///   rings_after, emeralds_before, emeralds_after) — reproduced by a
-    ///   real capture, not fed to the formatter.
-    ///   S3KCompleteRunPublicationTests already gates the formatter given
-    ///   the right data; this gates the recorder discovering that data
-    ///   from the movie.
-    /// - **physics.csv**: same row count, and the set of differing COLUMN
-    ///   indices must be exactly {5} for level and bonus segments and
-    ///   EMPTY for the three special-stage segments, whose 20-column
-    ///   schema has no counter. Every one of the other 41 columns of every
-    ///   row must match byte for byte.
-    /// - **aux_state.jsonl**: the fixture's hook-driven line count must
-    ///   equal the pinned per-segment literal and the capture's must be 0;
-    ///   after dropping exactly those lines, the two streams must be equal
-    ///   line for line, in order, with the counter fields masked — and the
-    ///   fixture's masked-away values are separately asserted to be the
-    ///   constant 0 that the dead 0xFE08 read produces. A live value on the
-    ///   fixture side fails rather than being absorbed.
-    /// - **metadata.json**: the set of differing KEYS must equal the
-    ///   pinned per-kind literal, key order must be identical, and every
-    ///   other key's line must match byte for byte.
-    ///
-    /// The counter column itself is not left ungated by any of this: it is
-    /// byte-gated on the four identity-(C) directories in case 1 — cut from
-    /// this same movie — and on the seven identity-(A) directories in
-    /// S3KCompleteRunSegmentsDifferentialTests.
+    /// What (B) gates that (A) and (C) do not is run_manifest.json: 8,740
+    /// bytes covering all 25 segment records (dir, kind, trace_profile,
+    /// bk2_frame_offset, trace_frame_count, zone_id, act, bonus_stage_type
+    /// / special_stage_index) and all 22 transition records with their
+    /// sampled RAM (special_bonus_entry_flag, saved_x_pos, saved_y_pos,
+    /// last_star_post_hit, rings_before, rings_after, emeralds_before,
+    /// emeralds_after). S3KCompleteRunPublicationTests already gates the
+    /// formatter given the right data; this gates the recorder discovering
+    /// that data from the movie. The manifest carries no recording_date, so
+    /// it is compared with no free field at all.
     ///
     /// Cost, measured: 1m08s wall and 234 MB peak RSS per pass, 370 MB of
     /// output each. The passes run sequentially and each output tree is
@@ -133,52 +107,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static readonly Regex RecordingDateLine = new Regex(
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
+        /// <summary>
+        /// The stamp both fixture sets and this port carry, pinned as an
+        /// exact literal on BOTH sides of every metadata comparison. There
+        /// is no version line to normalize in either case any more.
+        /// </summary>
         private const string CurrentVersionLine =
             "  \"lua_script_version\": \"6.32-s3k-completerun\",";
-
-        /// <summary>
-        /// The stamp (B) was captured under. Commit 9e3ccdb41 hand-edited
-        /// only the eight bonus segments' metadata to 6.32 and never
-        /// rewrote the manifest or the level/ss segments, which is why this
-        /// literal appears in the manifest and in 17 of the 25 segments but
-        /// not in the other 8 — an in-run version drift that is a fixture
-        /// provenance artifact, not recorder behavior. write_run_manifest
-        /// and write_metadata read the same LUA_SCRIPT_VERSION global and
-        /// can never disagree in a real capture.
-        /// </summary>
-        private const string LegacyVersionLine =
-            "  \"lua_script_version\": \"6.31-s3k-completerun\",";
-
-        private const string CaptureModeKey = "capture_mode";
-        private const string VersionKey = "lua_script_version";
-        private const string PreTraceOscKey = "pre_trace_osc_frames";
-        private const string RecordingDateKey = "recording_date";
-        private const string RunIdKey = "run_id";
-
-        /// <summary>
-        /// Aux event families that only a hook-driven (memory-execute /
-        /// memory-write callback) capture can emit. The port does not wire
-        /// LibGPGX's callback surface at all and refuses
-        /// OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS, so a produced stream must
-        /// contain none of these; (B) contains four families' worth
-        /// because it predates the LIGHTWEIGHT_REGEN inversion.
-        /// </summary>
-        private static readonly string[] HookDrivenEvents =
-        {
-            "position_write",
-            "velocity_write",
-            "solid_object_cont_entry",
-            "cage_execution",
-            "cnz_cylinder_execution",
-            "sonic_record_pos",
-            "rng_call",
-            "tails_cpu_normal_step",
-            "aiz_boundary_state",
-            "aiz_transition_floor_solid",
-            "collision_response_list_per_frame",
-            "aiz_ship_loop",
-            "cnz_event_ram"
-        };
 
         // ------------------------------------------------------------------
         // Identity (C): four byte-exact directories.
@@ -238,42 +173,238 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string Ss = "special_stage";
 
         /// <summary>
+        /// The committed run_manifest.json, recomputed from the file. It is
+        /// the one published artefact identities (A) and (C) do not have,
+        /// and it carries no recording_date or other host-dependent field,
+        /// so it is gated raw with nothing excluded.
+        /// </summary>
+        private const long ManifestLength = 8740;
+
+        private const string ManifestSha256 =
+            "76d22f09a8fa6e145f2f068bdb263c982ec633fd2e1f24b497a5b9986fe0"
+            + "1048";
+
+        /// <summary>
         /// The 25 published segments in recorder emission order, with the
         /// bk2_frame_offset / trace_frame_count pairs transcribed from the
-        /// committed manifest, and the per-segment count of hook-driven aux
-        /// lines the legacy capture contains. The dir tokens pin the
-        /// repeat-visit suffix rule: one segment_dir_counts table keyed by
-        /// BASE token, shared by the level, bonus and ss paths, 1-based, no
-        /// zero padding, never reset — so aiz_5 is the fifth AIZ segment
+        /// committed manifest and the canonical byte lengths and sha256s
+        /// recomputed from the committed files (the three special-stage
+        /// segments' aux is the empty file — the SS path opens
+        /// aux_state.jsonl and never writes to it, and the port must
+        /// publish the empty file rather than omit it). The dir tokens pin
+        /// the repeat-visit suffix rule: one segment_dir_counts table keyed
+        /// by BASE token, shared by the level, bonus and ss paths, 1-based,
+        /// no zero padding, never reset — so aiz_5 is the fifth AIZ segment
         /// even though four other zones' segments were interleaved.
+        ///
+        /// gumball, slots, pachinko and ss are cut from this same movie at
+        /// the same offsets as the four identity-(C) fixtures, so their
+        /// hashes here equal the SetCCases hashes above. That agreement is
+        /// a property of the fixtures, not an assumption of this gate:
+        /// each set is pinned independently and a drift in either fails.
         /// </summary>
         private static readonly SetBCase[] SetBCases =
         {
-            new SetBCase("aiz", Level, 915, 4654, 0),
-            new SetBCase("gumball", Bonus, 5570, 1430, 0),
-            new SetBCase("aiz_2", Level, 7001, 2140, 0),
-            new SetBCase("slots", Bonus, 9142, 1200, 0),
-            new SetBCase("aiz_3", Level, 10343, 7568, 0),
-            new SetBCase("slots_2", Bonus, 17912, 1278, 0),
-            new SetBCase("aiz_4", Level, 19191, 3210, 0),
-            new SetBCase("gumball_2", Bonus, 22402, 1648, 0),
-            new SetBCase("aiz_5", Level, 24051, 3631, 0),
-            new SetBCase("hcz", Level, 27683, 3176, 0),
-            new SetBCase("slots_3", Bonus, 30860, 5379, 0),
-            new SetBCase("hcz_2", Level, 36240, 11933, 95),
-            new SetBCase("ss", Ss, 48174, 4630, 0),
-            new SetBCase("hcz_3", Level, 54274, 3949, 0),
-            new SetBCase("slots_4", Bonus, 58224, 1603, 0),
-            new SetBCase("hcz_4", Level, 59828, 2097, 0),
-            new SetBCase("ss_2", Ss, 61926, 7194, 0),
-            new SetBCase("hcz_5", Level, 70590, 3435, 0),
-            new SetBCase("slots_5", Bonus, 74026, 1791, 0),
-            new SetBCase("hcz_6", Level, 75818, 8422, 48),
-            new SetBCase("mgz", Level, 84241, 8721, 69),
-            new SetBCase("pachinko", Bonus, 92963, 3051, 0),
-            new SetBCase("mgz_2", Level, 96015, 2076, 0),
-            new SetBCase("ss_3", Ss, 98092, 6537, 0),
-            new SetBCase("mgz_3", Level, 106104, 8517, 69)
+            new SetBCase(
+                "aiz", Level, 915, 4654,
+                754582,
+                "b203982682ce486092ccc4ed417dcdce75ec944b2af5ce2c4adc21a1"
+                + "83c5236d",
+                18023508,
+                "ccc46fde829d551e95655e8bb3214ae65e8ff9586325f912484934dc"
+                + "0726da3d"),
+            new SetBCase(
+                "gumball", Bonus, 5570, 1430,
+                232294,
+                "7faeb1e2b1804ac75b98daf97810e2c6be9818b8baee8417b56faff0"
+                + "36cbe917",
+                8408680,
+                "842fbad87a91effb9749bcd7b95f61d558d1cb9929e35cf5ca9ac328"
+                + "743460e7"),
+            new SetBCase(
+                "aiz_2", Level, 7001, 2140,
+                347314,
+                "4c6de5effeed4e0f98737eedf36a8cf3e988e0e80b19780d99bd030f"
+                + "1797daca",
+                8918326,
+                "7cd589eb0b9b68fed3954d6ab367d6e3221e042f28c595d4da56d376"
+                + "443f73c8"),
+            new SetBCase(
+                "slots", Bonus, 9142, 1200,
+                195034,
+                "4e037ce8ee31835333c04f72fbd953f4b14aab85bacbaea1f643ed9a"
+                + "7c810dcb",
+                2360965,
+                "afe43538f38435bb28ef09defe765ff8fabeae6b4e9d1253485bc4f7"
+                + "9c682249"),
+            new SetBCase(
+                "aiz_3", Level, 10343, 7568,
+                1226650,
+                "f1afcde934c8ebce65a0955c785c15e7975cb32729ab54ce4659637b"
+                + "9f351f73",
+                36963175,
+                "0b336043d50df9c0fb6be2dee5e51216e4cd7421a72975de24c91e46"
+                + "946e79c4"),
+            new SetBCase(
+                "slots_2", Bonus, 17912, 1278,
+                207670,
+                "5456b4b4b5127404fc2e16dfa8cf5aa78cadc3aa0d8843f83d9049a0"
+                + "7a0a5199",
+                2336061,
+                "0c9f153f864ebe8e6c382552a5555246f1f8fc92fc8f54d5cc45c15e"
+                + "9b41db3d"),
+            new SetBCase(
+                "aiz_4", Level, 19191, 3210,
+                520654,
+                "0d5fa165aef5d2bfd0d8a2a5203ca9f37aff68742741f63038aaa20a"
+                + "d8f3d527",
+                13945382,
+                "388f3a6dd421a0745e3e7ab3460260ae44166e68ff9b02513d99cc86"
+                + "e538b79a"),
+            new SetBCase(
+                "gumball_2", Bonus, 22402, 1648,
+                267610,
+                "df01dfd1c8556ca18c39653eeb4f16c7a964ced298f4c041b5820e77"
+                + "1e6987ab",
+                8748548,
+                "f14cb0e9896de0bbb1e535e25efcb5caef9ee23894f3f258ae26a664"
+                + "85737c48"),
+            new SetBCase(
+                "aiz_5", Level, 24051, 3631,
+                588856,
+                "c109799862f06db5519681ba1ae84adce2537a8919f4888c40a6699c"
+                + "ad1700f3",
+                20699767,
+                "a60ef04fbfa191dc5ac426156280288923142df456dbc099aa81a945"
+                + "a51b6c60"),
+            new SetBCase(
+                "hcz", Level, 27683, 3176,
+                515146,
+                "e16991f6329d8e1fce44ed3bf23c11faf7b932240f7a78f8ee174e5e"
+                + "b83af5b6",
+                8044731,
+                "4e250430b13e1ed772458e44c4377fb617ff2e124f23bcd9d07f52c6"
+                + "ce14fd18"),
+            new SetBCase(
+                "slots_3", Bonus, 30860, 5379,
+                872032,
+                "0fb29783347350f2af5f0ff9185ef043ff073f8b20ed674bfb2d9202"
+                + "03d74e4a",
+                12593522,
+                "43bee552023e9c9050f610c068c9d8a29af407efab149b404210164f"
+                + "6bfacb8b"),
+            new SetBCase(
+                "hcz_2", Level, 36240, 11933,
+                1933780,
+                "478059c91351b36334c4758cfe76fe0c9e2a5cba887007a8ce13ed1f"
+                + "67540e5c",
+                59293817,
+                "6c9e06d388307ae92a8a2e004ef98da3da70943e2827082b1ea30d70"
+                + "3c2c7f68"),
+            new SetBCase(
+                "ss", Ss, 48174, 4630,
+                272711,
+                "b6afb3f5f9708f974bf71d5fcfb973aced8e60d81e51f64e01a88012"
+                + "996fa5a1",
+                0,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b"
+                + "7852b855"),
+            new SetBCase(
+                "hcz_3", Level, 54274, 3949,
+                640372,
+                "6994c09f79e1dd31f439b0caea0a1e71b1f35b452c5a5065e8e9cb5b"
+                + "cfa57bb0",
+                16420543,
+                "2c84dbeefe0ca9ebf0780d22396f1407a2975eafbc256d76de60cdc9"
+                + "1cf6ba85"),
+            new SetBCase(
+                "slots_4", Bonus, 58224, 1603,
+                260320,
+                "8fb97098b281a817bf98440407eede5031ea082f73b212a53c349451"
+                + "8aa07b48",
+                3013209,
+                "90965d479a85699ae301e923a16cf6ff295abdb32836c6ca06938350"
+                + "ae8888af"),
+            new SetBCase(
+                "hcz_4", Level, 59828, 2097,
+                340348,
+                "4a528776139a07f24bb51e78ca86ac97c6fc911f5b2deb10b97e825e"
+                + "71149db7",
+                7012807,
+                "92a0b2faa1ccb0f1e577fa84f1bfa3af13343e9eaa11bf0d89559bda"
+                + "bf4d9fa7"),
+            new SetBCase(
+                "ss_2", Ss, 61926, 7194,
+                429484,
+                "1ccbc30da3673f16507a2d0b358c865d26da3d0ad58fbf13e86a2a73"
+                + "0ab4608f",
+                0,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b"
+                + "7852b855"),
+            new SetBCase(
+                "hcz_5", Level, 70590, 3435,
+                557104,
+                "38ebe5926ce07ce4bf173b4cb1b6288370a96cecaa8686e85c14971a"
+                + "8a7a9af1",
+                10236156,
+                "d62d0bb938a35b3b01ccf95c56f7594b1cbdbd6ee453794c6fb777f4"
+                + "d5ad406c"),
+            new SetBCase(
+                "slots_5", Bonus, 74026, 1791,
+                290776,
+                "1af5b0c38415f7a194c66a74644d7e3e4f7e0bd4b145514cf1a75e78"
+                + "903e1327",
+                4323235,
+                "8cb1b8bb7dee0eb37b517b307408e29d342b2616bb234571fdaa397b"
+                + "89109c56"),
+            new SetBCase(
+                "hcz_6", Level, 75818, 8422,
+                1364998,
+                "0b8152ee85884f0d4b2902fc9df3448b3c8940f0b2324878e006ef94"
+                + "b384223f",
+                50968620,
+                "9a7f37e0075ad2fe2c6dbc34cba738b921df11a4412640bf19eeb1b5"
+                + "e4d7858e"),
+            new SetBCase(
+                "mgz", Level, 84241, 8721,
+                1413436,
+                "07417f87a9491afca026101d50a70eb05a115d6113effbc704c7a6f2"
+                + "e50daf84",
+                29159750,
+                "4b64aa6e3e0503c8b4500843ba4b3f13f712185daa14854490712365"
+                + "07a9c37b"),
+            new SetBCase(
+                "pachinko", Bonus, 92963, 3051,
+                494896,
+                "61a25ceed47298965838c3c4bb3847dbab3702065a16e1581acfed11"
+                + "07d3fc67",
+                10733394,
+                "129c19c636f1df05783f72d19af3f8aa1936bc44c63501d3825f1e8d"
+                + "35c6acc3"),
+            new SetBCase(
+                "mgz_2", Level, 96015, 2076,
+                336946,
+                "3400f3ce18784405fc9441b82e133094e22631158a267f0ed27aeff3"
+                + "bd8f5a11",
+                6794557,
+                "3dea858b83e875342441a55d64746ac85c10e3ff67c0a2c3c153d160"
+                + "f6bc2d4a"),
+            new SetBCase(
+                "ss_3", Ss, 98092, 6537,
+                387486,
+                "885b9ac9a1ed75787f07d03da7db7228a34b6c29ace72b7efea84ab7"
+                + "a08fff64",
+                0,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b"
+                + "7852b855"),
+            new SetBCase(
+                "mgz_3", Level, 106104, 8517,
+                1380388,
+                "c1679dee80b702ac235b82558a25d56f502918e8b672a59ad5648c6b"
+                + "3bf367a1",
+                32018694,
+                "f03276738b033442be0fafbfdad3820d2ccdc86163e9727dd843a389"
+                + "4490b3bf")
         };
 
         public static void Register(ICollection<TestMain.TestCase> tests)
@@ -284,7 +415,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 NativeRunCaptureMatchesSetC));
             tests.Add(new TestMain.TestCase(
                 "S3KRunModeDifferential native run-mode capture reproduces"
-                + " the s3-knux-multibonus-ss run structure",
+                + " the s3-knux-multibonus-ss run byte for byte",
                 NativeRunCaptureReproducesSetB));
         }
 
@@ -370,8 +501,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// the same index (well-formed on the produced side), carry exactly
         /// one lua_script_version line equal to the pinned 6.32 literal,
         /// and carry the run_id line for the id this pass was given — which
-        /// is not a delta at all, because the identity-(C) fixtures were
-        /// themselves captured under --run-id s3k-multibonus.
+        /// is not a delta at all in either case, because each fixture set
+        /// was itself captured under the run id its case supplies.
+        ///
+        /// Shared by both cases: the two identities differ only in which
+        /// run id and which fixture tree they point at, so a single
+        /// comparison serves both and neither can drift into a weaker
+        /// allowance than the other.
         /// </summary>
         private static void AssertMetadataEqualExceptRecordingDate(
             string context,
@@ -439,7 +575,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         // ==================================================================
-        // Case 2 — identity (B), recorder-level with every delta pinned
+        // Case 2 — identity (B), byte-exact
         // ==================================================================
 
         private static void NativeRunCaptureReproducesSetB()
@@ -464,38 +600,72 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 dependencies, moviePath, SetBRunId, installation,
                 delegate(string output)
                 {
-                    AssertRunManifestReproduced(runRoot, output);
+                    // Self-check the canonical bytes first, streamed from
+                    // the .gz so nothing is materialised, so that a hash
+                    // mismatch says whether the fixture or the capture
+                    // moved. 370 MB decompressed across the 25 segments.
                     foreach (SetBCase segment in SetBCases)
                     {
                         string fixtureDirectory =
                             Path.Combine(runRoot, segment.DirToken);
+                        AssertFixtureBytes(
+                            segment.DirToken + "/physics.csv (fixture)",
+                            Path.Combine(fixtureDirectory, "physics.csv"),
+                            segment.PhysicsLength,
+                            segment.PhysicsSha256);
+                        AssertFixtureBytes(
+                            segment.DirToken
+                            + "/aux_state.jsonl (fixture)",
+                            Path.Combine(
+                                fixtureDirectory, "aux_state.jsonl"),
+                            segment.AuxStateLength,
+                            segment.AuxStateSha256);
+                    }
+                    AssertFixtureBytes(
+                        "run_manifest.json (fixture)",
+                        Path.Combine(runRoot, "run_manifest.json"),
+                        ManifestLength,
+                        ManifestSha256);
+
+                    AssertRunManifestReproduced(runRoot, output);
+                    foreach (SetBCase segment in SetBCases)
+                    {
                         string produced =
                             Path.Combine(output, segment.DirToken);
-                        AssertSetBPhysics(
-                            segment, fixtureDirectory, produced);
-                        AssertSetBAux(
-                            segment, fixtureDirectory, produced);
-                        AssertSetBMetadata(
-                            segment, fixtureDirectory, produced);
+                        AssertProducedBytes(
+                            segment.DirToken + "/physics.csv",
+                            Path.Combine(produced, "physics.csv"),
+                            segment.PhysicsLength,
+                            segment.PhysicsSha256);
+                        AssertProducedBytes(
+                            segment.DirToken + "/aux_state.jsonl",
+                            Path.Combine(produced, "aux_state.jsonl"),
+                            segment.AuxStateLength,
+                            segment.AuxStateSha256);
+                        AssertMetadataEqualExceptRecordingDate(
+                            segment.DirToken,
+                            SetBRunId,
+                            Path.Combine(
+                                runRoot,
+                                segment.DirToken,
+                                "metadata.json"),
+                            Path.Combine(produced, "metadata.json"));
                     }
                     AssertOutputLayout(output);
                 });
         }
 
         /// <summary>
-        /// The produced manifest must equal the committed (B) manifest
-        /// after exactly two pinned substitutions and no others: CRLF→LF
-        /// (a Windows text-mode artifact of the legacy host) and the single
-        /// 6.31 lua_script_version line. Both are asserted to be present on
-        /// the fixture side before being applied, so a regenerated fixture
-        /// that no longer needs them fails here instead of passing
-        /// vacuously.
+        /// The produced manifest must equal the committed one exactly: no
+        /// newline folding, no version substitution, and no free field at
+        /// all, because run_manifest.json carries no recording_date. The
+        /// decoded-text comparison runs first so a mismatch names the
+        /// diverging line; the raw length-and-sha256 assertion behind it is
+        /// what makes the check byte-exact rather than text-exact.
         /// </summary>
         private static void AssertRunManifestReproduced(
             string runRoot, string output)
         {
-            string fixturePath =
-                Path.Combine(runRoot, "run_manifest.json");
             string producedPath =
                 Path.Combine(output, "run_manifest.json");
             if (!File.Exists(producedPath))
@@ -505,360 +675,23 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " pass published none. The Lua's gate (L1459) is a"
                     + " disjunction — a run id alone forces emission.");
             }
-            string fixtureText = ReadAllTextExact(fixturePath);
-            if (fixtureText.IndexOf("\r\n", StringComparison.Ordinal) < 0)
-            {
-                throw new InvalidOperationException(
-                    "The (B) run manifest is expected to be CRLF (a"
-                    + " Windows-EmuHawk capture artifact). If it is now"
-                    + " LF, the fixture was regenerated and"
-                    + " docs/s3k-run-publication.md section 7.4 must be"
-                    + " revisited.");
-            }
-            string normalized = fixtureText.Replace("\r\n", "\n");
-            AssertLineCount(
-                "run_manifest.json (fixture)",
-                normalized, LegacyVersionLine, 1);
-            AssertLineCount(
-                "run_manifest.json (fixture)",
-                normalized, CurrentVersionLine, 0);
-            string expected = normalized.Replace(
-                LegacyVersionLine + "\n", CurrentVersionLine + "\n");
-
             string producedText = ReadAllTextExact(producedPath);
             AssertPublishedShape("run_manifest.json", producedText);
-            AssertTextEqual("run_manifest.json", expected, producedText);
-        }
-
-        /// <summary>
-        /// Same header, same row count, and the set of differing COLUMN
-        /// indices exactly {5} for level and bonus segments (the 42-column
-        /// v7 schema's gameplay_frame_counter) and EMPTY for special-stage
-        /// segments, whose 20-column schema carries no counter. The
-        /// fixture's column 5 must additionally be the constant "0000" on
-        /// every row — the observable signature of the dead 0xFE08
-        /// Debug_placement_mode read — so a fixture carrying live values
-        /// fails rather than being absorbed.
-        /// </summary>
-        private static void AssertSetBPhysics(
-            SetBCase segment, string fixtureDirectory, string produced)
-        {
-            string context = segment.DirToken + "/physics.csv";
-            string[] fixtureLines = SplitLines(
-                ReadFixtureText(
-                    Path.Combine(fixtureDirectory, "physics.csv")));
-            string producedText = ReadAllTextExact(
-                Path.Combine(produced, "physics.csv"));
-            AssertPublishedShape(context, producedText);
-            string[] producedLines = SplitLines(producedText);
-
-            if (fixtureLines.Length != producedLines.Length)
-            {
-                throw new InvalidOperationException(
-                    "First divergence at " + context + ": line count is "
-                    + producedLines.Length + "; expected "
-                    + fixtureLines.Length + ".");
-            }
-            AssertEx.Equal(
-                segment.TraceFrameCount, producedLines.Length - 1);
             AssertTextEqual(
-                context + " header", fixtureLines[0], producedLines[0]);
-
-            bool isSpecialStage = segment.Kind == Ss;
-            var differingColumns = new List<int>();
-            for (var row = 1; row < fixtureLines.Length; row++)
-            {
-                if (fixtureLines[row] == producedLines[row])
-                {
-                    continue;
-                }
-                string[] fixtureCells = fixtureLines[row].Split(',');
-                string[] producedCells = producedLines[row].Split(',');
-                if (fixtureCells.Length != producedCells.Length)
-                {
-                    throw new InvalidOperationException(
-                        "First divergence at " + context + " row "
-                        + (row - 1) + ": column count is "
-                        + producedCells.Length + "; expected "
-                        + fixtureCells.Length + ".");
-                }
-                for (var column = 0;
-                    column < fixtureCells.Length;
-                    column++)
-                {
-                    if (fixtureCells[column] == producedCells[column])
-                    {
-                        continue;
-                    }
-                    if (isSpecialStage
-                        || column != S3KLevelFrameCounterColumn)
-                    {
-                        throw new InvalidOperationException(
-                            "First divergence at " + context + " row "
-                            + (row - 1) + " column " + column + ": was <"
-                            + producedCells[column] + ">; expected <"
-                            + fixtureCells[column] + ">. Only column "
-                            + S3KLevelFrameCounterColumn
-                            + " (gameplay_frame_counter) may differ, and"
-                            + " only on a level or bonus segment.");
-                    }
-                    if (fixtureCells[column] != DeadFrameCounterCell)
-                    {
-                        throw new InvalidOperationException(
-                            "First divergence at " + context + " row "
-                            + (row - 1) + " column " + column
-                            + ": the legacy fixture cell is <"
-                            + fixtureCells[column] + ">, not the constant <"
-                            + DeadFrameCounterCell + "> a dead 0xFE08 read"
-                            + " produces. The fixture was regenerated;"
-                            + " re-derive the permitted delta.");
-                    }
-                    if (!differingColumns.Contains(column))
-                    {
-                        differingColumns.Add(column);
-                    }
-                }
-            }
-            differingColumns.Sort();
-            AssertTextEqual(
-                context + " differing column indices",
-                isSpecialStage
-                    ? string.Empty
-                    : S3KLevelFrameCounterColumn.ToString(),
-                string.Join(
-                    ",",
-                    differingColumns.ConvertAll(
-                        delegate(int value)
-                        {
-                            return value.ToString();
-                        }).ToArray()));
-        }
-
-        /// <summary>
-        /// After dropping the fixture's hook-driven lines — whose count
-        /// must equal the pinned per-segment literal, and of which the
-        /// capture must have none — the two streams must be equal line for
-        /// line and in order, with only the vfc and level_frame_counter
-        /// VALUES masked. The fixture's masked values are separately
-        /// required to be the constant 0.
-        ///
-        /// Both sides are streamed a line at a time: the largest (B)
-        /// segment's aux is 32 MB compressed and neither side is
-        /// materialised.
-        /// </summary>
-        private static void AssertSetBAux(
-            SetBCase segment, string fixtureDirectory, string produced)
-        {
-            string context = segment.DirToken + "/aux_state.jsonl";
-            var fixtureHookLines = 0;
-            var producedHookLines = 0;
-            var compared = 0;
-            using (TextReader fixtureReader = OpenFixtureReader(
-                Path.Combine(fixtureDirectory, "aux_state.jsonl")))
-            using (TextReader producedReader = new StreamReader(
-                Path.Combine(produced, "aux_state.jsonl"),
-                new UTF8Encoding(false)))
-            {
-                while (true)
-                {
-                    string fixtureLine = NextNonHookLine(
-                        fixtureReader, ref fixtureHookLines);
-                    string producedLine = NextNonHookLine(
-                        producedReader, ref producedHookLines);
-                    if (fixtureLine == null && producedLine == null)
-                    {
-                        break;
-                    }
-                    if (fixtureLine == null || producedLine == null)
-                    {
-                        throw new InvalidOperationException(
-                            "First divergence at " + context + " line "
-                            + (compared + 1) + ": "
-                            + (producedLine == null
-                                ? "the capture ended early."
-                                : "the capture has extra lines, starting <"
-                                    + Truncate(producedLine) + ">."));
-                    }
-                    compared++;
-                    string maskedFixture = MaskFrameCounters(
-                        context, compared, fixtureLine, true);
-                    string maskedProduced = MaskFrameCounters(
-                        context, compared, producedLine, false);
-                    if (maskedFixture != maskedProduced)
-                    {
-                        throw new InvalidOperationException(
-                            "First divergence at " + context + " line "
-                            + compared + ": was <"
-                            + Truncate(producedLine) + ">; expected <"
-                            + Truncate(fixtureLine)
-                            + "> (vfc / level_frame_counter values"
-                            + " excluded).");
-                    }
-                }
-            }
-            AssertEx.Equal(segment.HookDrivenAuxLines, fixtureHookLines);
-            AssertEx.Equal(0, producedHookLines);
-        }
-
-        /// <summary>
-        /// The set of differing metadata KEYS must equal the pinned literal
-        /// for this segment kind, key ORDER must be identical, and every
-        /// other key's line must match byte for byte:
-        ///
-        /// - level: capture_mode added, lua_script_version 6.31→6.32,
-        ///   pre_trace_osc_frames 0→1, recording_date.
-        /// - bonus: capture_mode added, pre_trace_osc_frames 0→1,
-        ///   recording_date. lua_script_version already reads 6.32 because
-        ///   commit 9e3ccdb41 hand-edited exactly these eight files, and
-        ///   v_int_run_count — the line that commit ADDED — must therefore
-        ///   MATCH, which is what makes this the tightest available check
-        ///   on the arm-time 0xFE0C sample.
-        /// - special_stage: lua_script_version 6.31→6.32 and
-        ///   recording_date, and nothing else — the SS shape has no
-        ///   capture_mode branch and no pre_trace_osc_frames key at all,
-        ///   which is why its delta is strictly smaller.
-        /// </summary>
-        private static void AssertSetBMetadata(
-            SetBCase segment, string fixtureDirectory, string produced)
-        {
-            string context = segment.DirToken + "/metadata.json";
-            string fixtureText = ReadFixtureText(
-                Path.Combine(fixtureDirectory, "metadata.json"));
-            string producedText = ReadAllTextExact(
-                Path.Combine(produced, "metadata.json"));
-            AssertPublishedShape(context, producedText);
-
-            List<string> fixtureKeys;
-            IDictionary<string, string> fixtureByKey =
-                ParseMetadataLines(fixtureText, out fixtureKeys);
-            List<string> producedKeys;
-            IDictionary<string, string> producedByKey =
-                ParseMetadataLines(producedText, out producedKeys);
-
-            // recording_date is excluded from the diff and checked
-            // separately for well-formedness: it is sampled at finalize, so
-            // whether it differs from the 2026-07-19 fixture depends on the
-            // day the gate runs. Requiring it to differ would make the gate
-            // pass or fail by calendar.
-            var differing = new List<string>();
-            foreach (string key in producedKeys)
-            {
-                if (key == RecordingDateKey)
-                {
-                    continue;
-                }
-                if (!fixtureByKey.ContainsKey(key))
-                {
-                    differing.Add(key);
-                    continue;
-                }
-                if (fixtureByKey[key] != producedByKey[key])
-                {
-                    differing.Add(key);
-                }
-            }
-            foreach (string key in fixtureKeys)
-            {
-                if (key != RecordingDateKey
-                    && !producedByKey.ContainsKey(key))
-                {
-                    differing.Add(key);
-                }
-            }
-            differing.Sort(StringComparer.Ordinal);
-            AssertTextEqual(
-                context + " differing keys",
-                string.Join(",", segment.PermittedMetadataDeltaKeys),
-                string.Join(",", differing.ToArray()));
-
-            // Key order must be identical over the shared keys: a
-            // set-equality check alone would let a reordering through.
-            var sharedFixtureOrder = new List<string>();
-            foreach (string key in fixtureKeys)
-            {
-                if (producedByKey.ContainsKey(key))
-                {
-                    sharedFixtureOrder.Add(key);
-                }
-            }
-            var sharedProducedOrder = new List<string>();
-            foreach (string key in producedKeys)
-            {
-                if (fixtureByKey.ContainsKey(key))
-                {
-                    sharedProducedOrder.Add(key);
-                }
-            }
-            AssertTextEqual(
-                context + " key order",
-                string.Join(",", sharedFixtureOrder.ToArray()),
-                string.Join(",", sharedProducedOrder.ToArray()));
-
-            // The values behind each permitted delta, pinned.
-            AssertTextEqual(
-                context + " lua_script_version (fixture)",
-                segment.Kind == Bonus
-                    ? CurrentVersionLine
-                    : LegacyVersionLine,
-                fixtureByKey[VersionKey]);
-            AssertTextEqual(
-                context + " lua_script_version",
-                CurrentVersionLine,
-                producedByKey[VersionKey]);
-            AssertEx.Equal(false, fixtureByKey.ContainsKey(CaptureModeKey));
-            if (segment.Kind == Ss)
-            {
-                AssertEx.Equal(
-                    false, producedByKey.ContainsKey(CaptureModeKey));
-                AssertEx.Equal(
-                    false, producedByKey.ContainsKey(PreTraceOscKey));
-            }
-            else
-            {
-                AssertTextEqual(
-                    context + " capture_mode",
-                    "  \"capture_mode\":"
-                    + " \"physics_animation_aux_without_diagnostic_hooks\",",
-                    producedByKey[CaptureModeKey]);
-                AssertTextEqual(
-                    context + " pre_trace_osc_frames (fixture)",
-                    "  \"pre_trace_osc_frames\": 0,",
-                    fixtureByKey[PreTraceOscKey]);
-                AssertTextEqual(
-                    context + " pre_trace_osc_frames",
-                    "  \"pre_trace_osc_frames\": 1,",
-                    producedByKey[PreTraceOscKey]);
-            }
-            AssertTextEqual(
-                context + " run_id",
-                "  \"run_id\": \"" + SetBRunId + "\",",
-                producedByKey[RunIdKey]);
-            if (!RecordingDateLine.IsMatch(
-                producedByKey[RecordingDateKey]))
-            {
-                throw new InvalidOperationException(
-                    "First divergence at " + context
-                    + ": recording_date is malformed: <"
-                    + producedByKey[RecordingDateKey] + ">.");
-            }
+                "run_manifest.json",
+                ReadAllTextExact(
+                    Path.Combine(runRoot, "run_manifest.json")),
+                producedText);
+            AssertProducedBytes(
+                "run_manifest.json",
+                producedPath,
+                ManifestLength,
+                ManifestSha256);
         }
 
         // ==================================================================
         // Shared capture driver and helpers
         // ==================================================================
-
-        /// <summary>
-        /// The 0-based index of gameplay_frame_counter in the 42-column
-        /// CSV v7 schema (frame, input, camera_x, camera_y, rings,
-        /// gameplay_frame_counter, …).
-        /// </summary>
-        private const int S3KLevelFrameCounterColumn = 5;
-
-        /// <summary>
-        /// What a dead 0xFE08 (Debug_placement_mode) read renders as in
-        /// column 5 — the constant every (B) row carries.
-        /// </summary>
-        private const string DeadFrameCounterCell = "0000";
 
         private static void WithCapture(
             Dependencies dependencies,
@@ -1051,176 +884,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return result.StandardOutput;
         }
 
-        /// <summary>
-        /// Reads the next line whose event is NOT hook-driven, counting
-        /// the hook-driven lines it skipped. Returns null at end of
-        /// stream.
-        /// </summary>
-        private static string NextNonHookLine(
-            TextReader reader, ref int hookLines)
-        {
-            while (true)
-            {
-                string line = reader.ReadLine();
-                if (line == null)
-                {
-                    return null;
-                }
-                if (line.Length == 0)
-                {
-                    continue;
-                }
-                if (IsHookDriven(line))
-                {
-                    hookLines++;
-                    continue;
-                }
-                return line;
-            }
-        }
-
-        private static bool IsHookDriven(string line)
-        {
-            const string marker = "\"event\":\"";
-            int start = line.IndexOf(marker, StringComparison.Ordinal);
-            if (start < 0)
-            {
-                return false;
-            }
-            start += marker.Length;
-            int end = line.IndexOf('"', start);
-            if (end < 0)
-            {
-                return false;
-            }
-            string name = line.Substring(start, end - start);
-            foreach (string candidate in HookDrivenEvents)
-            {
-                if (candidate == name)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Replaces the VALUE of every "vfc" and "level_frame_counter"
-        /// field with a placeholder. On the fixture side the replaced value
-        /// must be exactly "0" — the dead 0xFE08 read — so this is a pinned
-        /// substitution of a known constant, not a tolerance.
-        /// </summary>
-        private static string MaskFrameCounters(
-            string context, int lineNumber, string line, bool isFixture)
-        {
-            string masked = MaskField(
-                context, lineNumber, line, "\"vfc\":", isFixture);
-            return MaskField(
-                context, lineNumber, masked,
-                "\"level_frame_counter\":", isFixture);
-        }
-
-        private static string MaskField(
-            string context,
-            int lineNumber,
-            string line,
-            string key,
-            bool isFixture)
-        {
-            var builder = new StringBuilder(line.Length);
-            var index = 0;
-            while (true)
-            {
-                int found = line.IndexOf(
-                    key, index, StringComparison.Ordinal);
-                if (found < 0)
-                {
-                    builder.Append(line, index, line.Length - index);
-                    return builder.ToString();
-                }
-                int valueStart = found + key.Length;
-                int valueEnd = valueStart;
-                if (valueEnd < line.Length && line[valueEnd] == '-')
-                {
-                    valueEnd++;
-                }
-                while (valueEnd < line.Length
-                    && line[valueEnd] >= '0'
-                    && line[valueEnd] <= '9')
-                {
-                    valueEnd++;
-                }
-                if (isFixture)
-                {
-                    string value = line.Substring(
-                        valueStart, valueEnd - valueStart);
-                    if (value != "0")
-                    {
-                        throw new InvalidOperationException(
-                            "First divergence at " + context + " line "
-                            + lineNumber + ": the legacy fixture's " + key
-                            + " is <" + value + ">, not the constant 0 a"
-                            + " dead 0xFE08 read produces. The fixture was"
-                            + " regenerated; re-derive the permitted"
-                            + " delta.");
-                    }
-                }
-                builder.Append(line, index, valueStart - index);
-                builder.Append('X');
-                index = valueEnd;
-            }
-        }
-
-        /// <summary>
-        /// Splits a metadata.json body into its "  \"key\": value," lines,
-        /// preserving order. The opening brace, closing brace and trailing
-        /// empty line are dropped.
-        /// </summary>
-        private static IDictionary<string, string> ParseMetadataLines(
-            string text, out List<string> order)
-        {
-            order = new List<string>();
-            var byKey = new Dictionary<string, string>();
-            foreach (string line in text.Split('\n'))
-            {
-                const string prefix = "  \"";
-                if (!line.StartsWith(prefix, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-                int end = line.IndexOf('"', prefix.Length);
-                if (end < 0)
-                {
-                    continue;
-                }
-                string key = line.Substring(
-                    prefix.Length, end - prefix.Length);
-                order.Add(key);
-                byKey[key] = line;
-            }
-            return byKey;
-        }
-
-        private static void AssertLineCount(
-            string context, string text, string line, int expected)
-        {
-            var count = 0;
-            foreach (string candidate in text.Split('\n'))
-            {
-                if (candidate == line)
-                {
-                    count++;
-                }
-            }
-            if (count != expected)
-            {
-                throw new InvalidOperationException(
-                    "First divergence at " + context + ": found " + count
-                    + " occurrences of <" + line + ">; expected "
-                    + expected + ".");
-            }
-        }
-
         private static void AssertTextEqual(
             string context, string expected, string actual)
         {
@@ -1291,42 +954,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 return reader.ReadToEnd();
             }
-        }
-
-        /// <summary>
-        /// Reads a committed fixture that may be stored gzipped, with the
-        /// legacy CRLF collapsed to LF. Every (B) file is CRLF; the
-        /// collapse is asserted to be necessary by the callers that can
-        /// (the manifest) and is uniform for the rest.
-        /// </summary>
-        private static string ReadFixtureText(string plainPath)
-        {
-            using (TextReader reader = OpenFixtureReader(plainPath))
-            {
-                return reader.ReadToEnd().Replace("\r\n", "\n");
-            }
-        }
-
-        private static TextReader OpenFixtureReader(string plainPath)
-        {
-            if (File.Exists(plainPath))
-            {
-                return new StreamReader(
-                    plainPath, new UTF8Encoding(false));
-            }
-            return new StreamReader(
-                new GZipStream(
-                    File.OpenRead(plainPath + ".gz"),
-                    CompressionMode.Decompress),
-                new UTF8Encoding(false));
-        }
-
-        private static string[] SplitLines(string text)
-        {
-            string trimmed = text.EndsWith("\n", StringComparison.Ordinal)
-                ? text.Substring(0, text.Length - 1)
-                : text;
-            return trimmed.Split('\n');
         }
 
         private static void AssertFixtureBytes(
@@ -1547,45 +1174,29 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 string kind,
                 int bk2FrameOffset,
                 int traceFrameCount,
-                int hookDrivenAuxLines)
+                long physicsLength,
+                string physicsSha256,
+                long auxStateLength,
+                string auxStateSha256)
             {
                 DirToken = dirToken;
                 Kind = kind;
                 Bk2FrameOffset = bk2FrameOffset;
                 TraceFrameCount = traceFrameCount;
-                HookDrivenAuxLines = hookDrivenAuxLines;
+                PhysicsLength = physicsLength;
+                PhysicsSha256 = physicsSha256;
+                AuxStateLength = auxStateLength;
+                AuxStateSha256 = auxStateSha256;
             }
 
             public string DirToken { get; private set; }
             public string Kind { get; private set; }
             public int Bk2FrameOffset { get; private set; }
             public int TraceFrameCount { get; private set; }
-            public int HookDrivenAuxLines { get; private set; }
-
-            /// <summary>
-            /// The metadata keys permitted to differ, sorted ordinally, as
-            /// the exact literal this segment's kind requires.
-            /// recording_date is excluded — it is date-dependent and is
-            /// checked separately for well-formedness.
-            /// </summary>
-            public string[] PermittedMetadataDeltaKeys
-            {
-                get
-                {
-                    if (Kind == Ss)
-                    {
-                        return new[] { VersionKey };
-                    }
-                    if (Kind == Bonus)
-                    {
-                        return new[] { CaptureModeKey, PreTraceOscKey };
-                    }
-                    return new[]
-                    {
-                        CaptureModeKey, VersionKey, PreTraceOscKey
-                    };
-                }
-            }
+            public long PhysicsLength { get; private set; }
+            public string PhysicsSha256 { get; private set; }
+            public long AuxStateLength { get; private set; }
+            public string AuxStateSha256 { get; private set; }
         }
     }
 }

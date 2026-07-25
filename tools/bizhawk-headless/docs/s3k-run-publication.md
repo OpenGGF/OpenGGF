@@ -31,10 +31,14 @@ everything *around* them.
 ## 0. Canonical fixtures — three distinct capture identities
 
 The S3K complete-run recorder has produced **three** committed fixture
-sets from **two** movies. They are not interchangeable, they do not
-share a recorder build, and only two of the three are byte-reproducible
-by the current Lua. Establishing which is which is the single most
-important prerequisite for the native port.
+sets from **two** movies. They are not interchangeable and they publish
+different shapes, so establishing which is which remains the single most
+important prerequisite for the native port. All three now share one
+recorder identity — Lua `6.32-s3k-completerun`, Linux, diagnostic hooks
+off — and **all three are byte-reproducible**. That was not true of (B)
+until commit `63eccd290` re-captured it; the legacy (B) analysis is kept
+below because it is the whole reason the port's normalization rules
+(§6, §7.3) are written the way they are.
 
 Movies live in `src/test/resources/traces/s3k/_movies/`:
 `s3k-complete-sonic-tails.bk2` (Sonic+Tails AIZ→Doomsday complete run)
@@ -69,54 +73,82 @@ only these seven segments are committed as fixtures. A native
 differential gate must therefore compare **the seven named dirs**, not
 "every dir the capture produced".
 
-### 0.2 Identity (B) — run pass, `run_id: s3-knux-multibonus-ss` (LEGACY, NOT reproducible)
+### 0.2 Identity (B) — run pass, `run_id: s3-knux-multibonus-ss`
 
 `src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/`: 25 segment
-dirs + `run_manifest.json` + a curation copy of the movie. Captured
-**2026-07-19** on Windows EmuHawk with Lua `6.31-s3k-completerun`;
-the eight bonus segments' `metadata.json` were later **hand-edited**
-(not re-captured) on 2026-07-20 by commit `9e3ccdb41`. Being pre-`192d9c976`,
-this capture ran with the diagnostic hooks **armed**, and four of its
-segments carry hook-driven aux families as a result (§8.2).
+dirs + `run_manifest.json` + a curation copy of the movie. **Re-captured
+2026-07-25 on Linux** by commit `63eccd290` with Lua
+`6.32-s3k-completerun` and the diagnostic hooks off, so all 25
+`metadata.json` stamp `6.32-s3k-completerun` and `recording_date:
+2026-07-25`, the 22 level/bonus segments carry `capture_mode:
+physics_animation_aux_without_diagnostic_hooks` and
+`pre_trace_osc_frames: 1`, every published file is LF, the
+`gameplay_frame_counter` column is live (4547 distinct values across
+`aiz`'s 4654 rows), and **no segment carries a hook-driven aux line**.
 
-| Dir | version stamp | date | profile | `bk2_frame_offset` | rows |
-|---|---|---|---|---|---|
-| `aiz` | 6.31 | 07-19 | complete_run | 915 | 4654 |
-| `gumball` | **6.32** | **07-20** | s3k_bonus_stage | 5570 | 1430 |
-| `aiz_2` | 6.31 | 07-19 | complete_run | 7001 | 2140 |
-| `slots` | **6.32** | **07-20** | s3k_bonus_stage | 9142 | 1200 |
-| `aiz_3` | 6.31 | 07-19 | complete_run | 10343 | 7568 |
-| `slots_2` | **6.32** | **07-20** | s3k_bonus_stage | 17912 | 1278 |
-| `aiz_4` | 6.31 | 07-19 | complete_run | 19191 | 3210 |
-| `gumball_2` | **6.32** | **07-20** | s3k_bonus_stage | 22402 | 1648 |
-| `aiz_5` | 6.31 | 07-19 | complete_run | 24051 | 3631 |
-| `hcz` | 6.31 | 07-19 | complete_run | 27683 | 3176 |
-| `slots_3` | **6.32** | **07-20** | s3k_bonus_stage | 30860 | 5379 |
-| `hcz_2` | 6.31 | 07-19 | complete_run | 36240 | 11933 |
-| `ss` | 6.31 | 07-19 | s3k_special_stage | 48174 | 4630 |
-| `hcz_3` | 6.31 | 07-19 | complete_run | 54274 | 3949 |
-| `slots_4` | **6.32** | **07-20** | s3k_bonus_stage | 58224 | 1603 |
-| `hcz_4` | 6.31 | 07-19 | complete_run | 59828 | 2097 |
-| `ss_2` | 6.31 | 07-19 | s3k_special_stage | 61926 | 7194 |
-| `hcz_5` | 6.31 | 07-19 | complete_run | 70590 | 3435 |
-| `slots_5` | **6.32** | **07-20** | s3k_bonus_stage | 74026 | 1791 |
-| `hcz_6` | 6.31 | 07-19 | complete_run | 75818 | 8422 |
-| `mgz` | 6.31 | 07-19 | complete_run | 84241 | 8721 |
-| `pachinko` | **6.32** | **07-20** | s3k_bonus_stage | 92963 | 3051 |
-| `mgz_2` | 6.31 | 07-19 | complete_run | 96015 | 2076 |
-| `ss_3` | 6.31 | 07-19 | s3k_special_stage | 98092 | 6537 |
-| `mgz_3` | 6.31 | 07-19 | complete_run | 106104 | 8517 |
+`run_manifest.json` is sha256
+`76d22f09a8fa6e145f2f068bdb263c982ec633fd2e1f24b497a5b9986fe01048`,
+8740 bytes, and stamps `6.32-s3k-completerun` in agreement with every
+segment. This set is byte-reproducible; §0.2.1 records what it used to
+be, because that history is what §6 and §7.3's rules were derived from.
 
-`run_manifest.json` (sha256
+| Dir | kind | profile | `bk2_frame_offset` | rows |
+|---|---|---|---|---|
+| `aiz` | level | complete_run | 915 | 4654 |
+| `gumball` | bonus_stage | s3k_bonus_stage | 5570 | 1430 |
+| `aiz_2` | level | complete_run | 7001 | 2140 |
+| `slots` | bonus_stage | s3k_bonus_stage | 9142 | 1200 |
+| `aiz_3` | level | complete_run | 10343 | 7568 |
+| `slots_2` | bonus_stage | s3k_bonus_stage | 17912 | 1278 |
+| `aiz_4` | level | complete_run | 19191 | 3210 |
+| `gumball_2` | bonus_stage | s3k_bonus_stage | 22402 | 1648 |
+| `aiz_5` | level | complete_run | 24051 | 3631 |
+| `hcz` | level | complete_run | 27683 | 3176 |
+| `slots_3` | bonus_stage | s3k_bonus_stage | 30860 | 5379 |
+| `hcz_2` | level | complete_run | 36240 | 11933 |
+| `ss` | special_stage | s3k_special_stage | 48174 | 4630 |
+| `hcz_3` | level | complete_run | 54274 | 3949 |
+| `slots_4` | bonus_stage | s3k_bonus_stage | 58224 | 1603 |
+| `hcz_4` | level | complete_run | 59828 | 2097 |
+| `ss_2` | special_stage | s3k_special_stage | 61926 | 7194 |
+| `hcz_5` | level | complete_run | 70590 | 3435 |
+| `slots_5` | bonus_stage | s3k_bonus_stage | 74026 | 1791 |
+| `hcz_6` | level | complete_run | 75818 | 8422 |
+| `mgz` | level | complete_run | 84241 | 8721 |
+| `pachinko` | bonus_stage | s3k_bonus_stage | 92963 | 3051 |
+| `mgz_2` | level | complete_run | 96015 | 2076 |
+| `ss_3` | special_stage | s3k_special_stage | 98092 | 6537 |
+| `mgz_3` | level | complete_run | 106104 | 8517 |
+
+#### 0.2.1 What (B) was before `63eccd290` (history)
+
+The superseded (B) was captured **2026-07-19 on Windows EmuHawk** with
+Lua `6.31-s3k-completerun`, and the eight bonus segments'
+`metadata.json` were later **hand-edited** (not re-captured) on
+2026-07-20 by commit `9e3ccdb41` — so the version stamp read `6.32` in
+those eight and `6.31` in the other seventeen and in the manifest. That
+in-run drift was a fixture-provenance artifact, never recorder
+behavior: `write_run_manifest` and `write_metadata` both read the same
+`LUA_SCRIPT_VERSION` global and can never disagree in a single real
+capture. Its `run_manifest.json` was sha256
 `2a78eb3c40d1f2d2c13d5f604b1a5418b85099423cd6fdd9ced917c6a52dbd60`,
-8799 bytes) stamps `"lua_script_version": "6.31-s3k-completerun"` —
-commit `9e3ccdb41` did not rewrite it, so **the manifest disagrees with
-its own bonus segments' metadata**. This is a fixture-provenance
-artifact, not recorder behavior: `write_run_manifest` and
-`write_metadata` both read the same `LUA_SCRIPT_VERSION` global and can
-never disagree in a single real capture.
+8799 bytes.
 
-**This set is not byte-reproducible by the current Lua.** See §7.2.
+Three independent facts made that capture non-byte-reproducible against
+the current recorder: **CRLF** from the Windows host's text-mode
+`io.open` (§6), the pre-`6564667eb` **`ADDR_FRAMECOUNT` `0xFE08`** dead
+read that left `gameplay_frame_counter` constant `0000` and every aux
+`vfc` / `level_frame_counter` constant `0` (§7.3 i), and **armed
+diagnostic hooks** — being pre-`192d9c976` it ran the hook-registration
+block, so `hcz_2` (95 lines), `hcz_6` (48), `mgz` (69) and `mgz_3` (69)
+carried hook-driven aux families a hooks-off capture cannot emit
+(§8.2).
+
+All three are gone at the source in the re-captured set. This section
+exists because the rules those facts produced — LF everywhere, `0xFE04`
+in the complete-run recorder, hooks off — are still load-bearing, and
+because a future regeneration that reintroduces any of them must be
+recognised as a regression rather than a new baseline.
 
 ### 0.3 Identity (C) — second run pass, `run_id: s3k-multibonus`
 
@@ -125,7 +157,11 @@ The four published standalone dirs
 are the (B) movie re-captured on **2026-07-23** under `run_id:
 s3k-multibonus`, then lifted out of the run tree into standalone fixture
 dirs. Same `bk2_frame_offset` and `trace_frame_count` as their (B)
-counterparts; different bytes.
+counterparts, and — since (B) was re-captured under the same recorder
+identity by `63eccd290` — the same `physics.csv` and `aux_state.jsonl`
+bytes too. Only `metadata.json` still separates them, by `run_id`. The
+two sets are nonetheless pinned independently in the gate, so a drift in
+either is caught rather than cancelling out.
 
 | Dir | (B) counterpart | `segment_index` | offset | rows | physics.csv sha256 / bytes | aux_state.jsonl sha256 / bytes |
 |---|---|---|---|---|---|---|
@@ -647,22 +683,24 @@ Determined from fixture bytes, not assumed.
 |---|---|---|---|---|
 | (A) complete-run pass | **LF** | **LF** | **LF** | n/a |
 | (C) run pass `s3k-multibonus` | **LF** | **LF** | **LF** | n/a (dirs lifted out) |
-| (B) run pass `s3-knux-multibonus-ss` | CRLF | CRLF | CRLF | CRLF |
+| (B) run pass `s3-knux-multibonus-ss` | **LF** | **LF** | **LF** | **LF** |
+| (B) *before* `63eccd290` (superseded) | CRLF | CRLF | CRLF | CRLF |
 
 The Lua writes only `"\n"`; the encoding comes from the host. `io.open(…,
 "w")` is **text mode**, so a Windows EmuHawk expands every `\n` to
-`\r\n`. (B) was captured on Windows; (A) and (C) were captured on
-Linux/Mono on 2026-07-23 (commit `192d9c976`).
+`\r\n`. The superseded (B) was captured on Windows; (A) and (C) were
+captured on Linux/Mono on 2026-07-23 (commit `192d9c976`), and the
+current (B) on Linux on 2026-07-25 (§0.2.1).
 
 **Therefore the S3K complete-run port publishes LF for every file in
 both plain mode and run mode.** Do **not** copy the S1/S2 run-mode rule
-("run mode ⇒ `ExpandRunNewlines`") — for S3K that would corrupt the (C)
-gate, which is a run-mode capture with LF output. `ExpandRunNewlines`
-must not be applied on any S3K path.
+("run mode ⇒ `ExpandRunNewlines`") — for S3K that would corrupt the (B)
+and (C) gates, which are run-mode captures with LF output.
+`ExpandRunNewlines` must not be applied on any S3K path.
 
-(B)'s CRLF is a stale-capture artifact of a fixture set that is not
-byte-reproducible for other reasons anyway (§7.2). Its line endings must
-never be used to justify a normalization step.
+No committed S3K fixture is CRLF any more, so nothing in this tree can
+be cited to justify a newline normalization step — and the gates carry
+none.
 
 ---
 
@@ -695,26 +733,34 @@ deterministically, confirmed the physics rows byte-identical, and then
 **hand-edited only the `metadata.json` files** of the eight bonus
 segments plus the three interior `bonus_*` copies.
 
-### 7.3 The two version-invisible deltas that break (B)
+### 7.3 The two version-invisible deltas that broke the legacy (B)
 
 Neither bumped `LUA_SCRIPT_VERSION`, so a version string alone cannot
-distinguish a (B)-era capture from a current one.
+distinguish a legacy capture from a current one. That is why both are
+still specified here even though (B) has been re-captured (§0.2.1): a
+regenerated fixture set announces neither change in its version stamp,
+so the port must be pinned to the current behaviour by observation, not
+by trusting `lua_script_version`.
 
 **(i) `ADDR_FRAMECOUNT` `0xFE08` → `0xFE04` (commit `6564667eb`).**
 `0xFE08` is `Debug_placement_mode`, dead-zero in normal gameplay;
 `0xFE04` is the live `Level_frame_counter`. This changes:
 
-- `physics.csv` column 6 `gameplay_frame_counter` — the whole column is
-  `0000` in (B) (verified: `runs/…/aiz/physics.csv` has exactly one
-  distinct value across all 4654 rows) versus 26040 distinct values
-  across 26228 rows in `aiz_completerun`;
+- `physics.csv` column 6 `gameplay_frame_counter` — the whole column was
+  `0000` in the legacy (B) (verified: its `runs/…/aiz/physics.csv` had
+  exactly one distinct value across all 4654 rows) versus 26040 distinct
+  values across 26228 rows in `aiz_completerun`. The re-captured (B)
+  reads live: 4547 distinct values across the same 4654 rows;
 - every `aux_state.jsonl` line's `vfc` field, and
   `oscillation_state.level_frame_counter`;
-- `metadata.json`'s `pre_trace_osc_frames` (0 in (B), 1 in (A)/(C)).
+- `metadata.json`'s `pre_trace_osc_frames` (0 in the legacy (B), 1 in
+  (A)/(C) and in the re-captured (B)).
 
-A structural diff of (B) `gumball` against (C) `bonus_gumball` (after
-stripping CR) shows **identical line counts, identical key sets, and
-differences confined to `vfc` / `level_frame_counter`**:
+A structural diff of the legacy (B) `gumball` against (C)
+`bonus_gumball` (after stripping CR) showed **identical line counts,
+identical key sets, and differences confined to `vfc` /
+`level_frame_counter`** — which is why the re-captured `gumball` is now
+byte-identical to `bonus_gumball`:
 
 ```
 object_state.vfc 18149   object_near.vfc 18149   air_countdown_state.vfc 2600
@@ -744,12 +790,15 @@ lightweight early-return that used to suppress the pre-trace
 `cpu_state_snapshot` / `object_state_snapshot` emissions.
 
 Consequence: **`capture_mode`'s presence is an env/build fact, not a
-version fact.** (B) omits it because it predates the inversion — and,
-because it predates it, (B) really did capture with the hooks armed:
-four of its 25 segments contain hook-driven aux families that no (A) or
-(C) fixture contains (§8.2). That is a **third** independent reason (B)
-is not byte-reproducible against HEAD, on top of the `ADDR_FRAMECOUNT`
-change and CRLF.
+version fact.** The legacy (B) omitted it because it predated the
+inversion — and, because it predated it, that capture really did run
+with the hooks armed: four of its 25 segments contained hook-driven aux
+families that no (A) or (C) fixture contains (§8.2). That was the
+**third** independent reason the legacy (B) was not byte-reproducible
+against HEAD, on top of the `ADDR_FRAMECOUNT` change and CRLF. The
+re-captured (B) carries `capture_mode` in all 22 of its level/bonus
+segments and no hook-driven line anywhere, so all three reasons are
+gone.
 
 ### 7.4 Per-fixture permitted delta versus a fresh 6.32 (HEAD) capture
 
@@ -762,27 +811,32 @@ lines below.
 | (A) `aiz_completerun`, `hcz_completerun`, `mgz_completerun`, `cnz_completerun`, `icz_completerun`, `lbz_completerun`, `mhz_completerun` | `recording_date` value **only** | byte-identical; no manifest emitted |
 | (C) `bonus_gumball`, `bonus_pachinko`, `bonus_slots` | `recording_date` value **only** (capture must set `--run-id s3k-multibonus`) | byte-identical |
 | (C) `special_stage` | `recording_date` value **only** (same `--run-id`); note this shape has no `capture_mode` and no `v_int_run_count` by construction | `physics.csv` byte-identical; `aux_state.jsonl` byte-identical **and empty** |
-| (B) `runs/s3-knux-multibonus-ss/` — 14 level segments (`aiz`..`aiz_5`, `hcz`..`hcz_6`, `mgz`..`mgz_3`) | `recording_date`; `lua_script_version` `6.31`↔`6.32`; **`pre_trace_osc_frames` 0↔1**; **absent↔present `capture_mode` line** | **NOT byte-reproducible** — every `gameplay_frame_counter` cell and every aux `vfc` / `level_frame_counter` differ (§7.3 i); all files are CRLF (§6); and `hcz_2` / `hcz_6` / `mgz` / `mgz_3` additionally carry hook-driven aux lines a hooks-off capture never emits (§8.2) |
-| (B) 8 bonus segments (`gumball`, `gumball_2`, `slots`..`slots_5`, `pachinko`) | `recording_date`; **absent↔present `capture_mode`**; `pre_trace_osc_frames` 0↔1. `lua_script_version` and `v_int_run_count` already match 6.32 (hand-edited by `9e3ccdb41`) | **NOT byte-reproducible** — same `ADDR_FRAMECOUNT` + CRLF reasons; these eight are hook-free |
-| (B) 3 ss segments (`ss`, `ss_2`, `ss_3`) | `recording_date`; `lua_script_version` `6.31`↔`6.32` | `physics.csv` **NOT byte-reproducible** (CRLF); `aux_state.jsonl` is empty in both, so byte-identical |
-| (B) `run_manifest.json` | `lua_script_version` `6.31`↔`6.32` | **NOT byte-reproducible** (CRLF) |
+| (B) `runs/s3-knux-multibonus-ss/` — 14 level segments (`aiz`..`aiz_5`, `hcz`..`hcz_6`, `mgz`..`mgz_3`) | `recording_date` value **only** (capture must set `--run-id s3-knux-multibonus-ss`) | byte-identical |
+| (B) 8 bonus segments (`gumball`, `gumball_2`, `slots`..`slots_5`, `pachinko`) | `recording_date` value **only** (same `--run-id`) | byte-identical |
+| (B) 3 ss segments (`ss`, `ss_2`, `ss_3`) | `recording_date` value **only** (same `--run-id`); this shape has no `capture_mode`, no `pre_trace_osc_frames` and no `v_int_run_count` by construction | `physics.csv` byte-identical; `aux_state.jsonl` byte-identical **and empty** |
+| (B) `run_manifest.json` | n/a — the manifest carries no `recording_date` | byte-identical, **zero** free fields |
 
-**Gate policy.** (A) and (C) are the byte-differential targets: eleven
-dirs, full-file sha256 on `physics.csv` and `aux_state.jsonl`, and a
-`metadata.json` comparison that permits **only** the `recording_date`
-value line. (B) must **not** be gated byte-exactly. Gate it structurally
-instead — segment inventory, dir tokens, `bk2_frame_offset` /
-`trace_frame_count` pairs, `kind` / `trace_profile` /
-`bonus_stage_type` / `special_stage_index`, and the full 22-record
-transition list including field presence per kind — and pin the
-enumerated deltas above as literals so a future regeneration of (B)
-against the current recorder is detected rather than silently accepted.
-The (B) structural gate must **not** assert aux-vocabulary equality with
-(A)/(C), and the hook-absence gate must not be pointed at (B) at all:
-four (B) segments legitimately contain hook families (§8.2).
+**Gate policy.** All three identities are byte-differential targets:
+thirty-six dirs in total, full-file sha256 on `physics.csv` and
+`aux_state.jsonl`, `run_manifest.json` raw, and a `metadata.json`
+comparison that permits **only** the `recording_date` value line with
+`lua_script_version` pinned as the exact `6.32-s3k-completerun` literal
+on both sides.
 
-Never widen normalization to make (B) pass. If a divergence appears
-against (A) or (C), fix production code.
+This is a tightening. Until `63eccd290` re-captured it, (B) could only
+be gated structurally — segment inventory, dir tokens, offsets/row
+counts, `kind` / `trace_profile` / `bonus_stage_type` /
+`special_stage_index`, the 22-record transition list — with three
+non-byte-exact deltas pinned as literals (CRLF folding, the dead
+`gameplay_frame_counter` column and aux counter fields, and per-segment
+hook-line counts). All three normalizations have been **deleted**, not
+left dormant: a normalization nobody needs is one that silently absorbs
+the next regression.
+
+Never widen normalization to make a fixture pass. If a divergence
+appears against any identity, fix production code — or, if the fixture
+itself is stale, re-capture it under the current recorder and re-pin the
+bytes, which is exactly what `63eccd290` did.
 
 ---
 
@@ -875,7 +929,7 @@ L4871) have **no** hit-list guard — they poll and emit purely on window
 + zone, which is why their four variables are refused and why their
 events are present in the fixtures.
 
-### 8.2 Hook-family absence in (A)/(C) — and its *presence* in (B)
+### 8.2 Hook-family absence in (A)/(C) — and its former *presence* in (B)
 
 Full `event`-value census over every (A) and (C) `aux_state.jsonl`
 (counts are per fixture; only the non-uniform families are itemized):
@@ -911,38 +965,50 @@ callbacks) appears in any (A) or (C) fixture** — no `cage_execution`,
 `solid_object_cont_entry`, `collision_response_list_per_frame`,
 `aiz_ship_loop`, `cnz_event_ram`.
 
-**(B) is different, and an earlier revision of this spec was wrong to
-claim otherwise.** (B) predates the `LIGHTWEIGHT_REGEN` inversion
-(§7.3 ii), so its capture ran the L5816 hook-registration block, and
-**four of its 25 segments do carry hook-driven families**:
+**The re-captured (B) matches that: all 25 of its segments are
+hook-free** (verified by an `event`-value census over all 25
+`aux_state.jsonl`). The *legacy* (B) was different, and an earlier
+revision of this spec was wrong to claim otherwise: it predated the
+`LIGHTWEIGHT_REGEN` inversion (§7.3 ii), so its capture ran the L5816
+hook-registration block, and **four of its 25 segments carried
+hook-driven families**:
 
-| (B) segment | rows | hook-driven events |
+| legacy (B) segment | rows | hook-driven events |
 |---|---|---|
 | `hcz_2` | 11933 | `position_write` 43, `solid_object_cont_entry` 31, `velocity_write` 21 |
 | `hcz_6` | 8422 | `position_write` 17, `solid_object_cont_entry` 31 |
 | `mgz` | 8721 | `position_write` 43, `solid_object_cont_entry` 26 |
 | `mgz_3` | 8517 | `position_write` 38, `solid_object_cont_entry` 31 |
 
-Their `frame` values land exactly inside the recorder's **default
+Their `frame` values landed exactly inside the recorder's **default
 trace-frame** windows — `position_write` at 4788-4792 and 7549-7625
 (`POSITION_WRITE_RANGES`), `solid_object_cont_entry` at 4788 and
 7600-7625 (`V611_SOLID`), `velocity_write` at 3640-3660
 (`VELOCITY_WRITE_RANGES`) — so the windows *were* entered; only segments
 long enough to reach them and whose route actually executed the hooked
-PCs produced hits. The remaining 21 (B) segments are hook-free — the
-longest of them, `aiz_3` at 7568 rows, stops short of the 7600-7625
+PCs produced hits. The other 21 legacy (B) segments were hook-free — the
+longest of them, `aiz_3` at 7568 rows, stopped short of the 7600-7625
 window and never executed the hooked PCs inside the 3640-3660 /
-4788-4792 ones.
+4788-4792 ones. Those same four dirs, re-captured with the hooks off,
+now carry none.
 
-**Hook absence in (A)/(C) is therefore exactly "the switch was off"
-(L5816), the same result task 7 established — no stronger.** It is still
-sufficient, because the port refuses `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS`
-and (A)/(C) are the only byte-differential targets.
+**Hook absence across all three identities is therefore exactly "the
+switch was off" (L5816), the same result task 7 established — no
+stronger.** It is still sufficient, because the port refuses
+`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS` and every committed fixture is now
+a byte-differential target.
 
 **The LibGPGX exec/memory-write callback surface therefore stays
-deferred for the complete-run port too.** Extend
-`tests/S3KHookAbsenceTests.cs` to the eleven **(A)/(C)** fixtures only —
-never to (B) — rather than building the callback surface: per fixture
+deferred for the complete-run port too.** `tests/S3KHookAbsenceTests.cs`
+covers the eleven **(A)/(C)** fixtures plus the four (B) segments that
+used to be hook-bearing — `hcz_2`, `hcz_6`, `mgz`, `mgz_3` — which now
+sit on the *absence* side. Its old (B) counter-gate, which pinned those
+same four in the opposite direction so the absence gate could never
+silently widen to a fixture that genuinely needed exec callbacks, lost
+its subject when the run was re-captured and is deleted; gating the four
+directly is what that guarantee becomes. The other 21 (B) segments are
+not enumerated there because their bytes are gated in full by
+`S3KRunModeDifferentialTests` case 2. Per fixture
 assert zero aux lines whose `event` is any deferred family, anchor
 non-vacuously on `cpu_state` == `oscillation_state` == row count and
 exactly one `cpu_state_snapshot`, and assert the `capture_mode` line's
@@ -1083,10 +1149,11 @@ Landed:
   `bonus_slots`, `bonus_pachinko`, `special_stage` — each fed its own
   `recording_date`, so these are full-file equality assertions covering
   both the (A) shape and the (C) shape.
-- `run_manifest.json` reproduced against the (B) manifest with its two
-  enumerated deltas pinned as literals (CRLF, the 6.31 stamp) and
-  asserted to be the only differences — gating all 25 segment entries,
-  all 22 transition records and every optional-field presence rule.
+- `run_manifest.json` reproduced against the (B) manifest **byte for
+  byte with zero normalization** — gating all 25 segment entries, all 22
+  transition records and every optional-field presence rule. The two
+  deltas this once pinned as literals (CRLF, the 6.31 stamp) were legacy
+  capture artifacts and are gone from the fixture (§0.2.1).
 - The driver, sink and staging over synthetic movies: dir tokens, row
   counts, per-kind file sets and metadata shapes, the empty SS aux file,
   input-column alignment, finalize-time sampling, the manifest gate in
@@ -1100,8 +1167,9 @@ Landed:
 - **The full identity-(A) byte gate,
   `S3KCompleteRunSegmentsDifferentialTests`** (§10.6).
 - **The full run-mode gate, `S3KRunModeDifferentialTests`** (§10.7),
-  which closes the three formerly hand-verified identity-(C) dirs and
-  raises the (B) manifest check from formatter level to recorder level.
+  which closes the three formerly hand-verified identity-(C) dirs, gates
+  the 25-segment (B) run tree byte for byte, and raises the (B) manifest
+  check from formatter level to recorder level.
 
 Nothing in the publication contract is now left to manual verification.
 
@@ -1156,8 +1224,11 @@ capture's own 2.84 GB instead of 4.3 GB.
 
 `S3KRunModeDifferentialTests` runs **two untruncated `--run-id` passes**
 over the 114,622-row `s3-knux-multibonus-ss.bk2`, one per capture
-identity. It passed on the first attempt: **no production change was
-needed**, and every observed delta is one §7.4 already predicted.
+identity, and **both are byte-exact**. It passed on the first attempt:
+**no production change was needed**, and every observed delta is one
+§7.4 already predicted. Tightening case 2 to byte-exact after
+`63eccd290` likewise needed no production change — only the deletion of
+the normalizations the legacy fixtures had required.
 
 **Case 1 — identity (C), byte-exact.** `--run-id s3k-multibonus`
 reproduces all four committed (C) dirs. `physics.csv` and
@@ -1168,65 +1239,60 @@ normalization; `metadata.json` matches line for line with only the
 hand-verified only. `special_stage`'s `aux_state.jsonl` is gated as the
 0-byte file it is.
 
-**Case 2 — identity (B), recorder-level.** `--run-id
-s3-knux-multibonus-ss` reproduces the 25-segment run tree. (B) is a
-2026-07-19 **Windows** EmuHawk capture by Lua **6.31**, three builds
-behind HEAD, and is not byte-reproducible for three independent
-reasons — all three re-verified from the fixture bytes before the gate
-was written, not taken on faith from this document:
+**Case 2 — identity (B), byte-exact.** `--run-id
+s3-knux-multibonus-ss` reproduces the 25-segment run tree on the same
+terms as case 1: `physics.csv` and `aux_state.jsonl` by raw length
+**and** sha256 with zero normalization, `run_manifest.json`
+byte-identical, and `metadata.json` line for line with only the
+`recording_date` value free and `lua_script_version` pinned as the exact
+`6.32-s3k-completerun` literal on both sides. The three SS segments'
+`aux_state.jsonl` are gated as the 0-byte files they are. The pass must
+publish exactly the 25 segment dirs, three files each, plus
+`run_manifest.json` and nothing else.
 
-| Reason | Verified how | Scope of its effect, measured |
+`run_manifest.json` is what this case gates that (A) and (C) cannot:
+8,740 bytes carrying all 25 segment records and all 22 transition
+records with their sampled RAM. `S3KCompleteRunPublicationTests` already
+gates the *formatter* given the right data; this gates the **recorder
+rediscovering that data from the movie** — every `bk2_frame_offset`,
+`trace_frame_count`, dir token, `saved_x_pos`, `rings_before`/`_after`,
+`emeralds_*` and `last_star_post_hit`. It carries no `recording_date`,
+so it is compared with **no free field at all**.
+
+**This case used to be structural, and why it no longer is.** Until
+commit `63eccd290` re-captured the fixtures, (B) was a 2026-07-19
+**Windows** EmuHawk capture by Lua **6.31**, three builds behind HEAD,
+and the case could only assert structure — segment inventory, dir
+tokens, offset/row pairs, kinds and profiles, the 22-record transition
+list — with three independently pinned, non-byte-exact deltas:
+
+| Legacy delta | What it was | Scope of its effect, as measured then |
 |---|---|---|
-| CRLF (host text mode) | all 25 dirs + manifest contain `\r\n` | every file |
-| `ADDR_FRAMECOUNT` `0xFE08`→`0xFE04` | Lua L547 reads `0xFE04` at HEAD; every (B) `physics.csv` column 5 cell is the constant `0000` and every (B) aux `vfc` / `level_frame_counter` is the constant `0` | `physics.csv` **column 5 only** — all 41 other columns of all rows are byte-identical; aux counter fields only |
-| diagnostic hooks armed (pre-`192d9c976`) | hook-driven families present in exactly 4 of 25 segments | `hcz_2` +95 aux lines, `hcz_6` +48, `mgz` +69, `mgz_3` +69; line counts subtract exactly |
+| CRLF (host text mode) | all 25 dirs + manifest contained `\r\n` | every file |
+| `ADDR_FRAMECOUNT` `0xFE08`→`0xFE04` | Lua L547 reads `0xFE04` at HEAD; every legacy (B) `physics.csv` column 5 cell was the constant `0000` and every aux `vfc` / `level_frame_counter` the constant `0` | `physics.csv` **column 5 only** — all 41 other columns of all rows already matched; aux counter fields only |
+| diagnostic hooks armed (pre-`192d9c976`) | hook-driven families present in exactly 4 of 25 segments | `hcz_2` +95 aux lines, `hcz_6` +48, `mgz` +69, `mgz_3` +69 |
 
-There is **no unexplained residue**: after accounting for those three,
-every remaining byte matches. So the gate pins each one as an exact
-literal rather than normalizing:
+There was **no unexplained residue** even then: after accounting for
+those three, every remaining byte already matched, which is why
+re-capturing under the current recorder identity — Linux, Lua 6.32,
+hooks off — closed all three at the source rather than exposing new
+work. The regenerated tree is LF, stamps 6.32 in the manifest and in all
+25 `metadata.json`, carries the live `0xFE04` counter, carries
+`capture_mode`, reports `pre_trace_osc_frames: 1`, and contains zero
+hook-driven aux lines (§0.2).
 
-- **`run_manifest.json`** — the fixture, after CRLF→LF and the
-  substitution of its **single** 6.31 version line (both asserted
-  present before being applied), must equal the produced manifest
-  **exactly**: 8,740 bytes, all 25 segment records and all 22 transition
-  records with their sampled RAM. `S3KCompleteRunPublicationTests`
-  already gates the *formatter* given the right data; this gates the
-  **recorder rediscovering that data from the movie** — every
-  `bk2_frame_offset`, `trace_frame_count`, dir token, `saved_x_pos`,
-  `rings_before`/`_after`, `emeralds_*` and `last_star_post_hit`.
-- **`physics.csv`** — same row count, and the set of differing column
-  indices must be exactly `{5}` for level/bonus segments and **empty**
-  for the three SS segments, whose 20-column schema has no counter. The
-  fixture's column 5 must additionally be the constant `0000`, so a
-  regenerated fixture carrying live values fails instead of being
-  absorbed.
-- **`aux_state.jsonl`** — the fixture's hook-driven line count must equal
-  the pinned per-segment literal and the capture's must be `0`; after
-  dropping exactly those lines the streams must be equal line for line
-  and in order, with only `vfc` / `level_frame_counter` masked, and the
-  fixture's masked values separately required to be `0`.
-- **`metadata.json`** — the set of differing **keys** must equal the
-  pinned per-kind literal (`capture_mode` + `lua_script_version` +
-  `pre_trace_osc_frames` for level; `capture_mode` +
-  `pre_trace_osc_frames` for bonus, whose `lua_script_version` and
-  `v_int_run_count` must **match** because `9e3ccdb41` hand-edited
-  exactly those eight files; `lua_script_version` alone for SS), key
-  order must be identical, and every other key must match byte for byte.
-
-The counter column is not left ungated by any of this: it is byte-gated
-on the four (C) dirs in case 1 — cut from this same movie — and on the
-seven (A) dirs in §10.6.
+The CRLF folding, the counter-column masking, the per-segment
+hook-line-count literals and the differing-key allowances have all been
+**deleted from the gate**, not left dormant behind now-unreachable
+branches. Do not reintroduce any of them: emitting CRLF, reverting
+`ADDR_FRAMECOUNT`, or arming the hooks would now break case 2 as well as
+the identity-(A) gate and case 1.
 
 Measured: **2m20s wall, 235 MB peak RSS**, 370 MB of output per pass.
 The passes run sequentially and each output tree is deleted before the
 next, so peak scratch is one pass, under `tools/bizhawk-headless/.scratch/`
-for the same tmpfs reason as §10.6. Both aux streams are compared a
-line at a time, so neither side is materialised.
-
-**(B) must never be made to pass byte-exactly.** Emitting CRLF,
-reverting `ADDR_FRAMECOUNT`, or arming the hooks would each break the
-identity-(A) gate and case 1 of this same file, which are byte-exact
-against captures made by the current Lua.
+for the same tmpfs reason as §10.6. Both fixture sides are hashed by
+streaming the `.gz`, so neither side is materialised.
 
 ### 10.8 Migration status
 

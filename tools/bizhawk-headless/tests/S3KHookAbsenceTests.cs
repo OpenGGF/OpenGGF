@@ -44,16 +44,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   differential target. The absence gate above is extended to all
     ///   eleven of them, with per-fixture non-vacuous anchors including
     ///   the complete-run-only game_paused_state family.
-    /// - (B) <c>runs/s3-knux-multibonus-ss/</c> was captured with hooks ON
-    ///   and DOES contain position_write / velocity_write /
-    ///   solid_object_cont_entry events in four of its 25 segments. That
-    ///   set is explicitly out of scope for byte-exactness (it also
-    ///   predates the ADDR_FRAMECOUNT 0xFE08 -> 0xFE04 move, so it is not
-    ///   reproducible from the current Lua at all — spec §7.3). It is
-    ///   pinned here in the OPPOSITE direction: the hook families must be
-    ///   PRESENT, so this absence gate can never silently widen to cover
-    ///   fixtures whose reproduction really would require native exec
-    ///   callbacks.
+    /// - (B) <c>runs/s3-knux-multibonus-ss/</c> USED to be the one
+    ///   committed set captured with hooks ON: four of its 25 segments —
+    ///   hcz_2, hcz_6, mgz, mgz_3 — carried position_write /
+    ///   velocity_write / solid_object_cont_entry events, and this file
+    ///   pinned them in the OPPOSITE direction so the absence gate could
+    ///   never silently widen to cover a fixture whose reproduction really
+    ///   would require native exec callbacks. Commit 63eccd290 re-captured
+    ///   that run on Linux at Lua 6.32 with the hooks off, so no committed
+    ///   S3K fixture needs exec callbacks any more and the counter-gate
+    ///   had no subject left. Those exact four segments are therefore
+    ///   carried on the ABSENCE side instead — they are the ones that
+    ///   would regress first if a future regeneration ever re-armed the
+    ///   hooks, so gating them is what keeps the deferral honest.
     /// </summary>
     internal static class S3KHookAbsenceTests
     {
@@ -151,11 +154,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             };
         }
 
+        /// <summary>A segment dir inside the identity-(B) run tree.</summary>
+        private static string RunSegment(string dirToken)
+        {
+            return Path.Combine(
+                "runs", "s3-knux-multibonus-ss", dirToken);
+        }
+
         /// <summary>
-        /// (A) the seven complete-run level segments plus (C) the three
-        /// standalone bonus segments and the standalone special stage.
-        /// Row counts and the AIZ skeleton count are the fixtures' own
-        /// measured values.
+        /// (A) the seven complete-run level segments, (C) the three
+        /// standalone bonus segments and the standalone special stage, and
+        /// the four (B) run segments that were hook-bearing before the run
+        /// was re-captured. Row counts and the AIZ skeleton count are the
+        /// fixtures' own measured values.
         /// </summary>
         private static readonly CompleteRunFixture[] CompleteRunFixtures =
         {
@@ -169,6 +180,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             Level("bonus_gumball", "bonus_gumball", 1430, 0),
             Level("bonus_slots", "bonus_slots", 1200, 0),
             Level("bonus_pachinko", "bonus_pachinko", 3051, 0),
+            // The four (B) run segments that carried hook-driven families
+            // before 63eccd290 re-captured the run with the hooks off.
+            // Gating these four is what the deleted counter-gate's
+            // guarantee becomes: if a regeneration re-arms the hooks,
+            // these fail first and by name.
+            Level("run hcz_2", RunSegment("hcz_2"), 11933, 0),
+            Level("run hcz_6", RunSegment("hcz_6"), 8422, 0),
+            Level("run mgz", RunSegment("mgz"), 8721, 0),
+            Level("run mgz_3", RunSegment("mgz_3"), 8517, 0),
             new CompleteRunFixture
             {
                 CaseName = "special_stage",
@@ -178,19 +198,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AuxIsEmpty = true,
                 PhysicsHeader = S3KSpecialStageCsvWriter.Header
             }
-        };
-
-        /// <summary>
-        /// (B) segments of runs/s3-knux-multibonus-ss, captured with
-        /// diagnostic hooks ON. Counts are the fixtures' own measured
-        /// values (CR-stripped).
-        /// </summary>
-        private static readonly string[][] HookBearingRunSegments =
-        {
-            new[] { "hcz_2", "43", "21", "31" },
-            new[] { "hcz_6", "17", "0", "31" },
-            new[] { "mgz", "43", "0", "26" },
-            new[] { "mgz_3", "38", "0", "31" }
         };
 
         public static void Register(ICollection<TestMain.TestCase> tests)
@@ -217,11 +224,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " aux stream has no hook-driven events",
                     () => CompleteRunFixtureHasNoHookDrivenEvents(captured)));
             }
-
-            tests.Add(new TestMain.TestCase(
-                "S3KHookAbsence hooks-on run segments DO carry hook-driven"
-                + " events (absence gate must not widen to them)",
-                HookBearingRunSegmentsStillCarryHookEvents));
         }
 
         private static void FixtureHasNoHookDrivenEvents(
@@ -384,60 +386,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 aizHandoffSkeletonLines);
         }
 
-        /// <summary>
-        /// The (B) counter-gate. runs/s3-knux-multibonus-ss was captured
-        /// with OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1, so four of its 25
-        /// segments genuinely contain hook-driven events. Pinning their
-        /// presence stops the absence gate above from being widened to
-        /// cover them, which would silently claim exec-callback support is
-        /// unnecessary for a fixture set that actually needs it. Those
-        /// segments are NOT byte-exact reproduction targets — they also
-        /// predate the ADDR_FRAMECOUNT move (spec §7.3).
-        /// </summary>
-        private static void HookBearingRunSegmentsStillCarryHookEvents()
-        {
-            foreach (string[] segment in HookBearingRunSegments)
-            {
-                string directory = Path.Combine(
-                    FixtureDirectory(Path.Combine(
-                        "runs", "s3-knux-multibonus-ss")),
-                    segment[0]);
-                // absenceCaseName stays null here: this is the counter-gate,
-                // so the deferred families are EXPECTED and must be counted
-                // rather than rejected.
-                var counts =
-                    new Dictionary<string, long>(StringComparer.Ordinal);
-                CountAuxLines(directory, counts, null);
-
-                AssertEx.Equal(
-                    long.Parse(segment[1]),
-                    CountOf(counts, "position_write"));
-                AssertEx.Equal(
-                    long.Parse(segment[2]),
-                    CountOf(counts, "velocity_write"));
-                AssertEx.Equal(
-                    long.Parse(segment[3]),
-                    CountOf(counts, "solid_object_cont_entry"));
-
-                // The hooks-on capture is exactly why these segments carry
-                // no capture_mode key: write_metadata emits it only in
-                // LIGHTWEIGHT_REGEN mode.
-                string metadata = File.ReadAllText(
-                    Path.Combine(directory, "metadata.json"));
-                if (metadata.IndexOf(
-                    "\"capture_mode\"", StringComparison.Ordinal) >= 0)
-                {
-                    throw new InvalidOperationException(
-                        "Run segment " + segment[0]
-                        + " unexpectedly carries a capture_mode key while"
-                        + " containing hook-driven events — the fixture set"
-                        + " was re-captured and the (A)/(B)/(C) split in"
-                        + " docs/s3k-completerun-profiles.md §6 must be"
-                        + " revisited.");
-                }
-            }
-        }
-
         private static string FixtureDirectory(string relativeName)
         {
             string fixtureDirectory = Path.Combine(
@@ -462,10 +410,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// names into <paramref name="counts"/> (when non-null) and
         /// throwing on any deferred hook family when
         /// <paramref name="absenceCaseName"/> is non-null — pass null to
-        /// COUNT the deferred families instead of rejecting them, which is
-        /// what the hooks-on (B) counter-gate needs. Lines are
-        /// CR-stripped so the CRLF-host (B) captures compare like the LF
-        /// ones. The synthetic
+        /// tally without rejecting, which is what the empty special-stage
+        /// stream's total-line check needs. Lines are CR-stripped
+        /// defensively; no committed S3K fixture is CRLF since 63eccd290
+        /// re-captured the last one that was. The synthetic
         /// "aiz_handoff_terrain_state_skeleton" key counts in-window
         /// events whose hook-fed fields are at their lightweight defaults.
         /// Returns the total line count.
