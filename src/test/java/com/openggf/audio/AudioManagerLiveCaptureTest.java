@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -118,6 +119,60 @@ class AudioManagerLiveCaptureTest {
         replacedHandle.close();
         assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(1));
         replacementHandle.close();
+    }
+
+    /**
+     * The live lease follows the same retirement rule as the offline lease:
+     * the manager's view is retired only after the producer accepts the
+     * detach. This drives {@code closeLiveCaptureAudio} directly through
+     * {@code handle.close()} on a foreign thread, which is the one path
+     * {@code AudioManagerCaptureModeTest}'s off-owner-thread cases never
+     * reach — they go through {@code endCaptureMode()} (the offline lease) and
+     * {@code resetState()} (which retires the handle before any close).
+     *
+     * <p>Marking the handle closed or clearing the manager's reference before
+     * the producer accepted would orphan a lease that keeps receiving every
+     * presented packet, let the next attach succeed with a second lease, and
+     * make the owner-thread retry a no-op so the orphan could never be
+     * detached.
+     */
+    @Test
+    void offOwnerThreadCloseKeepsTheLiveLeaseAttachedAndRetryable()
+            throws Exception {
+        int leasesBefore = AudioManagerTestDiagnostics
+                .producerFingerprint(audio).captureCount();
+        LiveCaptureAudioHandle handle = audio.beginLiveCaptureAudio(1);
+        assertEquals(leasesBefore + 1, AudioManagerTestDiagnostics
+                .producerFingerprint(audio).captureCount());
+
+        Throwable[] offThreadFailure = new Throwable[1];
+        Thread offOwnerThread = new Thread(() -> {
+            try {
+                handle.close();
+            } catch (Throwable failure) {
+                offThreadFailure[0] = failure;
+            }
+        }, "not-the-producer-owner");
+        offOwnerThread.start();
+        offOwnerThread.join();
+
+        assertInstanceOf(IllegalStateException.class, offThreadFailure[0],
+                "the producer refuses an off-owner-thread detach");
+        assertEquals(leasesBefore + 1, AudioManagerTestDiagnostics
+                        .producerFingerprint(audio).captureCount(),
+                "the refused detach left the lease attached to the producer");
+        assertThrows(IllegalStateException.class,
+                () -> audio.beginLiveCaptureAudio(1),
+                "the manager must still know it holds that lease, so a second"
+                        + " lease is rejected rather than silently attached");
+
+        handle.close();
+
+        assertEquals(leasesBefore, AudioManagerTestDiagnostics
+                        .producerFingerprint(audio).captureCount(),
+                "a retry on the owner thread releases it");
+        LiveCaptureAudioHandle reattached = audio.beginLiveCaptureAudio(1);
+        reattached.close();
     }
 
     private static final class FixedRateNullBackend extends NullAudioBackend {

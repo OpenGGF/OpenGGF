@@ -151,6 +151,37 @@ class LiveCaptureControllerTest {
         assertEquals(List.of("audio-close", "recorder-stop"), h.events);
     }
 
+    /**
+     * A capture lease can only be released on the producer's owner thread, so
+     * an off-thread stop is refused. {@code AudioManager} deliberately keeps
+     * its lease reference in that case so a later owner-thread stop can
+     * complete the detach; the controller is the only production owner of the
+     * handle, so it must keep its reference too. Dropping it in a {@code
+     * finally} would throw away the sole retry path, leaving the producer
+     * copying every presented packet into an orphan lease while every later
+     * {@code start()} is refused and degrades to clocked silence.
+     */
+    @Test void refusedAudioCloseKeepsTheHandleSoALaterStopCanRetryTheDetach() throws Exception {
+        Harness h = new Harness();
+        h.failAudioClose = true;
+        LiveCaptureController c = h.controller();
+        c.start(h.viewport, 60);
+        c.capturePresentedFrame(h.viewport);
+
+        c.requestStop(LiveCaptureController.StopReason.USER);
+        awaitNotStopping(c);
+        assertEquals(1, h.audioCloseCalls, "the refused detach was attempted once");
+
+        // The owner thread is available now, so the retry must actually happen.
+        h.failAudioClose = false;
+        c.close();
+
+        assertEquals(2, h.audioCloseCalls,
+                "the controller must retain the handle after a refused detach"
+                        + " so a later stop can release the lease");
+        assertTrue(h.audioClosed, "the retry released the lease");
+    }
+
     @Test void audioAttachFailureStartsActiveVideoWithSilentStereoTrack() {
         Harness h = new Harness();
         h.failAudio = true;

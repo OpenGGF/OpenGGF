@@ -173,16 +173,31 @@ public final class LiveCaptureController implements AutoCloseable {
         clearResources();
     }
 
+    /**
+     * Releases the audio lease on the calling thread, following the same rule
+     * {@code AudioManager.closeLiveCaptureAudio} follows: the reference is
+     * dropped only once the producer has accepted the detach.
+     *
+     * <p>A capture lease can only be released on the producer's owner thread.
+     * {@code AudioManager} deliberately keeps its {@code
+     * activeLiveCaptureAudioHandle} when the detach is refused, so a later
+     * owner-thread stop can complete it. Nulling {@code audio} in a {@code
+     * finally} would throw away the only reference able to retry, leaving the
+     * producer copying every presented packet into an orphan lease while every
+     * subsequent {@code start()} is rejected with "a live capture audio handle
+     * is already attached" and degrades to clocked silence for the rest of the
+     * process.
+     */
     private Throwable closeAudioOnCaller() {
-        if (audio != null) {
-            try {
-                audio.close();
-            } catch (Throwable closeFailure) {
-                return closeFailure;
-            } finally {
-                audio = null;
-            }
+        if (audio == null) {
+            return null;
         }
+        try {
+            audio.close();
+        } catch (Throwable closeFailure) {
+            return closeFailure;
+        }
+        audio = null;
         return null;
     }
 
