@@ -7,6 +7,7 @@ import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceFrame;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
@@ -21,8 +22,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
+import static com.openggf.tests.trace.TraceFieldComparisons.bool;
+import static com.openggf.tests.trace.TraceFieldComparisons.cmp;
+import static com.openggf.tests.trace.TraceFieldComparisons.str;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -420,44 +423,11 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
                 str(tf.rings() & 0xFFFF), str(state.ringsCollected()), Severity.ERROR));
     }
 
-    private static FieldComparison cmp(String name, String expected, String actual,
-                                       Severity mismatchSeverity) {
-        boolean match = Objects.equals(expected, actual);
-        Severity severity = match ? Severity.MATCH : mismatchSeverity;
-        return new FieldComparison(name, expected, actual, severity, numericDelta(expected, actual));
-    }
-
-    private static int numericDelta(String expected, String actual) {
-        try {
-            return Integer.parseInt(actual) - Integer.parseInt(expected);
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
-
-    private static String str(int value) {
-        return Integer.toString(value);
-    }
-
-    private static String bool(boolean value) {
-        return Boolean.toString(value);
-    }
-
     // ==================== Report output ====================
 
     static void writeReport(DivergenceReport report, int ssIndex) throws IOException {
-        Path outDir = reportDir();
-        Files.createDirectories(outDir);
-        String prefix = "s1_special_stage_" + ssIndex;
-        Path jsonPath = outDir.resolve(prefix + "_report.json");
-        Files.writeString(jsonPath, report.toJson());
-        if (report.hasErrors()) {
-            Path contextPath = outDir.resolve(prefix + "_context.txt");
-            int firstErrorFrame = report.errors().isEmpty()
-                    ? 0
-                    : report.errors().get(0).startFrame();
-            Files.writeString(contextPath, report.getContextWindow(firstErrorFrame, CONTEXT_RADIUS));
-        }
+        TraceReportWriter.writeSpecialStageReport(
+                report, reportDir(), "s1_special_stage_" + ssIndex, CONTEXT_RADIUS);
     }
 
     static Path reportDir() {

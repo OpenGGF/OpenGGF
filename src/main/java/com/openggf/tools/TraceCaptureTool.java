@@ -89,7 +89,7 @@ public final class TraceCaptureTool {
      * config defaults.
      */
     public record Args(String trace, Path outDir, int scale, int fps, String codec,
-                       boolean showGhosts, long verifyFrame, int[] verifyFrames,
+                       boolean showGhosts, int[] verifyFrames,
                        String clip, int tailFrames) {
 
         public static Args parse(String[] argv) {
@@ -123,7 +123,7 @@ public final class TraceCaptureTool {
             if (trace == null || trace.isBlank()) {
                 throw new IllegalArgumentException("--trace <id|name|dir> is required");
             }
-            return new Args(trace, Paths.get(outDir), scale, fps, codec, showGhosts, -1,
+            return new Args(trace, Paths.get(outDir), scale, fps, codec, showGhosts,
                     verifyFrames, clip, tailFrames);
         }
 
