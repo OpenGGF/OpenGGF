@@ -5,7 +5,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
     /// Stage-B tests for the S3K COMPLETE-RUN recorder's profile surface
-    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.32-s3k-completerun;
+    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.33-s3k-completerun;
     /// spec tools/bizhawk-headless/docs/s3k-completerun-profiles.md):
     ///
     /// - the 42-column complete_run / s3k_bonus_stage physics row, which
@@ -142,7 +142,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             // carries gameplay_frame_counter 0001 straight out of
             // Level_frame_counter.
             host.SetWord(S3KRam.LevelFrameCounter, 0x0001);
-            host.SetWord(S3KRam.VblankWord, 0x0300);
+            // ADDR_VBLA_WORD is LIVE too since Lua v6.33-s3k-completerun:
+            // 0x0388 is the V_int_run_count low word (0xFE0E), not the
+            // 0x0300 lives << 8 the Life_count read used to produce.
+            host.SetWord(S3KRam.VblankWord, 0x0388);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffXPos, 0x0040);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffYPos, 0x0420);
             host.Ram[S3KRam.PlayerBase + S3KRam.OffRoutine] = 0x02;
@@ -157,7 +160,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             // LITERAL data row 0 of the gunzipped
             // src/test/resources/traces/s3k/aiz_completerun/physics.csv.
             AssertEx.Equal(
-                "0000,0000,0000,0390,0000,0001,0300,0000,1,0040,0420,0000,"
+                "0000,0000,0000,0390,0000,0001,0388,0000,1,0040,0420,0000,"
                 + "0000,0000,00,0,0,0,0000,0000,02,00,00,00,00,1,7F00,0000,"
                 + "0000,0000,0000,00,1,0,0,0000,0000,02,02,00,00,00",
                 S3KTraceCsvWriter.FormatRow(0, 0x0000, host));
@@ -174,7 +177,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             host.SetWord(S3KRam.CameraY, 0x00C0);
             host.SetWord(S3KRam.RingCount, 0x003B);
             host.SetWord(S3KRam.LevelFrameCounter, 0x0001);
-            host.SetWord(S3KRam.VblankWord, 0x0400);
+            // 0x159A: a mid-run V_int_run_count low word, far past any
+            // plausible lives << 8 value the old 0xFE12 read produced.
+            host.SetWord(S3KRam.VblankWord, 0x159A);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffXPos, 0x00FF);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffYPos, 0x0120);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffXSub, 0xF400);
@@ -187,7 +192,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             // LITERAL data row 0 of the gunzipped
             // src/test/resources/traces/s3k/bonus_gumball/physics.csv.
             AssertEx.Equal(
-                "0000,0004,0060,00C0,003B,0001,0400,0000,1,00FF,0120,FFF4,"
+                "0000,0004,0060,00C0,003B,0001,159A,0000,1,00FF,0120,FFF4,"
                 + "0000,FFF4,00,1,0,0,F400,0000,02,03,00,00,07,0,0000,0000,"
                 + "0000,0000,0000,00,0,0,0,0000,0000,00,00,00,00,00",
                 S3KTraceCsvWriter.FormatRow(0, 0x0004, host));

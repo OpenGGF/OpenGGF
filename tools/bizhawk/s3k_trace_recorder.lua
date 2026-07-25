@@ -43,6 +43,12 @@
 -- every aux "vfc" / oscillation_state "level_frame_counter" field. Mirrors the
 -- same fix already applied to s3k_complete_run_recorder.lua. Existing captures
 -- carry the dead column and need recapture.
+-- v6.32-s3k changes: point ADDR_VBLA_WORD at the low word of V_int_run_count
+-- (0xFE0E) instead of Life_count (0xFE12). Fixes the physics.csv
+-- vblank_counter column, which was recording the lives counter -- constant
+-- except on 1UPs -- rather than the ROM's free-running V-int counter. Matches
+-- the S1 and S2 recorders, which already read 0xFE0E. Existing captures carry
+-- the wrong column and need recapture.
 -- v6.0-s3k changes: emit per-frame cpu_state events with the full Tails CPU
 -- global block plus Ctrl_2_logical so engine SidekickCpuController state can
 -- be hydrated each frame in trace replay (closes the visibility gap that
@@ -386,7 +392,7 @@ local ADDR_FRAMECOUNT       = 0xFE04  -- Level_frame_counter (was 0xFE08 = Debug
 -- $FFFF0000 -> CrossResetRAM at $FFFFFE00 -> Oscillating_table at offset $6E.
 local ADDR_OSC_TABLE        = 0xFE6E
 local OSC_TABLE_SIZE        = 0x42
-local ADDR_VBLA_WORD        = 0xFE12
+local ADDR_VBLA_WORD        = 0xFE0E  -- V_int_run_count low word (was 0xFE12 = Life_count, constant except on 1UPs; matches S1/S2 recorders)
 local ADDR_LAG_FRAME_COUNT  = 0xF628
 local ADDR_RNG_SEED         = 0xF636
 ADDR_RANDOM_NUMBER          = 0x001D24
@@ -961,7 +967,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.31-s3k",\n')
+    meta_file:write('  "lua_script_version": "6.32-s3k",\n')
     -- trace_schema remains 6 for the auxiliary event vocabulary. csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
@@ -4909,7 +4915,7 @@ elseif is_level_gated_reset_aware_profile() then
 else
     WAIT_DESC = "level gameplay (Game_Mode=0x0C, controls unlocked)"
 end
-print(string.format("S3K Trace Recorder v6.31-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
+print(string.format("S3K Trace Recorder v6.32-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
 
 -- Register the CNZ wire cage execution hooks. Done once at script load
 -- before the main loop runs so the memoryexecute callbacks are armed for

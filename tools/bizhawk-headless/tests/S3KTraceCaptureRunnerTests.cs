@@ -198,10 +198,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// <summary>
         /// gameplay_unlock end-to-end: detection frame not recorded, CSV
         /// input from BK2 rows offset..offset+2, lag_counter as a REAL
-        /// 0xF628 read (S3K delta — S2 pins 0), vblank_counter from the
-        /// Life_count word at 0xFE12, start values captured on the arm
-        /// frame only, and the movie-FINISHED stop never recording the
-        /// final input row's frame.
+        /// 0xF628 read (S3K delta — S2 pins 0), vblank_counter as an
+        /// equally REAL read of the V_int_run_count low word at 0xFE0E
+        /// (it read the Life_count word at 0xFE12 until Lua v6.32-s3k, so
+        /// the fake keeps a 0x0300 lives value parked at 0xFE12 that must
+        /// never reach the column), start values captured on the arm frame
+        /// only, and the movie-FINISHED stop never recording the final
+        /// input row's frame.
         /// </summary>
         private static void CapturesByteExactGameplayUnlockOutput()
         {
@@ -223,6 +226,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var host = new FakeS1Host((h, frame) =>
                     {
                         h.SetU16(0xF628, (ushort)frame);   // lag counter
+                        // V_int_run_count low word: live, one per frame.
+                        h.SetU16(0xFE0E, (ushort)(0x0400 + frame));
+                        // Life_count word: the address the recorder USED to
+                        // read. A decoy — it must not reach the CSV.
                         h.SetU16(0xFE12, 0x0300);          // lives word
                         if (frame == 3)
                         {
@@ -260,20 +267,26 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     string playerTail =
                         ",0000,0000,0000,00,0,0,0,0000,0000,00,00,00,00,00,"
                         + EmptySidekickBlock + "\n";
-                    // gameplay_frame_counter (column 6) is a LIVE
+                    // gameplay_frame_counter (column 5) is a LIVE
                     // Level_frame_counter read at 0xFE04 since Lua
                     // v6.31-s3k — before that the standard recorder read
                     // the dead-zero Debug_placement_mode at 0xFE08 and this
                     // column was constant 0000. FakeS1Host.Advance() writes
                     // the completed frame number to 0xFE04, so rows 0..2
                     // (completed frames 4..6) carry 0004/0005/0006.
+                    //
+                    // vblank_counter (column 6) is a LIVE V_int_run_count
+                    // low-word read at 0xFE0E since Lua v6.32-s3k, so it
+                    // carries 0404/0405/0406 — the per-frame value written
+                    // above — and NOT the 0x0300 Life_count decoy still
+                    // parked at the address it used to read.
                     AssertEx.Equal(
                         S3KTraceCsvWriter.Header + "\n"
-                        + "0000,0008,0000,0000,0000,0004,0300,0004,1,0104,0304"
+                        + "0000,0008,0000,0000,0000,0004,0404,0004,1,0104,0304"
                         + playerTail
-                        + "0001,0012,0000,0000,0000,0005,0300,0005,1,0104,0304"
+                        + "0001,0012,0000,0000,0000,0005,0405,0005,1,0104,0304"
                         + playerTail
-                        + "0002,0000,0000,0000,0000,0006,0300,0006,1,0104,0304"
+                        + "0002,0000,0000,0000,0000,0006,0406,0006,1,0104,0304"
                         + playerTail,
                         physics.ToString());
 

@@ -7,7 +7,7 @@ namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
     /// Recorder profile selected by OGGF_S3K_TRACE_PROFILE in the Lua
-    /// (tools/bizhawk/s3k_trace_recorder.lua v6.31-s3k). The profile
+    /// (tools/bizhawk/s3k_trace_recorder.lua v6.32-s3k). The profile
     /// changes arm/stop rules (runner concern), the checkpoint
     /// vocabulary, and the aiz_fire_transition profile gate (both
     /// handled here).
@@ -20,7 +20,7 @@ namespace OpenGGF.BizHawk.Headless
 
         /// <summary>
         /// The COMPLETE-RUN recorder
-        /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.32; spec
+        /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.33; spec
         /// docs/s3k-completerun-profiles.md). Its TRACE_PROFILE is a
         /// hard-pinned "complete_run" local, so the level-gated and
         /// aiz_end_to_end checkpoint vocabularies and the
@@ -49,7 +49,7 @@ namespace OpenGGF.BizHawk.Headless
     /// <summary>
     /// Byte-exact port of the S3K standard Lua trace recorder's
     /// frame-polled aux_state.jsonl event surface
-    /// (tools/bizhawk/s3k_trace_recorder.lua v6.31-s3k, spec
+    /// (tools/bizhawk/s3k_trace_recorder.lua v6.32-s3k, spec
     /// docs/s3k-aux-events.md). Covers every family present in the three
     /// gated fixtures: the first-recorded-frame pre-trace snapshots
     /// (<see cref="EmitPreTraceSnapshots"/>), the per-frame cascade after

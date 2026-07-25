@@ -38,6 +38,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// unknown keys" normalization — so a fixture regenerated at some
     /// other version fails here rather than being absorbed.
     ///
+    /// The three physics.csv hashes moved once more at Lua v6.32-s3k, the
+    /// ADDR_VBLA_WORD fix: vblank_counter now reads 0xFE0E (the
+    /// V_int_run_count low word) instead of 0xFE12 (Life_count), so column
+    /// 6 became a live per-frame counter instead of lives &lt;&lt; 8. The
+    /// column is fixed-width, so all three files kept their byte LENGTH and
+    /// only the hash moved; the aux hashes did not move at all, because no
+    /// aux field ever read that address.
+    ///
     /// The cases deliberately cover both terminating profiles:
     ///
     /// - aiz1_to_hcz_fullrun / aiz_end_to_end records its arm frame as row
@@ -80,7 +88,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// comparison. There is no version delta left to allow for.
         /// </summary>
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.31-s3k\",";
+            "  \"lua_script_version\": \"6.32-s3k\",";
 
         private static readonly S3KDifferentialCase AizEndToEndCase =
             new S3KDifferentialCase(
@@ -90,8 +98,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 511,
                 20798,
                 21309,
-                "aa1f76c7e5adfa9c2618d6189d0f06e0cb2df8bbc2a032e9ca3ba92b"
-                + "8f7f638b",
+                "3c219725d85d64762b514f973263edced337a37cd16fb8bf50f2b0ac"
+                + "3b5a2a39",
                 "9d90d669de5b9fc0c00666ad2023a164d1d110d441b9bcc8403280d1"
                 + "a5d74b47");
 
@@ -103,8 +111,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 3171,
                 42253,
                 45597,
-                "7aa8226d67e28591b469d23deca56065763b9e9fccc69cf1c53d216d1"
-                + "037d1c6",
+                "195de5a64bd879f6d920ffe9a487931beb4f6366516587d23268b105"
+                + "9a7b46e2",
                 "17ddb988b74e8718d6e3d73a7aaefff56d077e6e5d015c7ab875a4674"
                 + "a94052e");
 
@@ -116,8 +124,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 2602,
                 35912,
                 38818,
-                "f3b0beb79c0438b65dae215a72f75bc391e964e82791d8f63a163de93"
-                + "1bdd558",
+                "16bff6712e4228494b8aeac587006edeee9f6befc62aa7b9078a465d"
+                + "b4e2d611",
                 "4ce8ee02e8e6dc1664659a494578427da0c6111e5a4c0fb88b71026b2"
                 + "b2c2035");
 
@@ -440,7 +448,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// count, so an inserted or dropped line fails. The
         /// lua_script_version line is additionally pinned as an exact
         /// literal on BOTH sides: the fixtures and this port both stamp
-        /// 6.31-s3k, so a fixture regenerated at another version fails
+        /// 6.32-s3k, so a fixture regenerated at another version fails
         /// here instead of silently redefining the gate. There is no
         /// fixture-only line allowance any more — MGZ's leftover
         /// "pre_trace_osc_frames": 0 is gone from the regenerated fixture,

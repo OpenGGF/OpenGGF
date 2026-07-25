@@ -23,7 +23,7 @@ namespace OpenGGF.BizHawk.Headless
 
     /// <summary>
     /// Native port of the S3K standard Lua trace recorder's frame loop
-    /// (tools/bizhawk/s3k_trace_recorder.lua v6.31-s3k; spec
+    /// (tools/bizhawk/s3k_trace_recorder.lua v6.32-s3k; spec
     /// tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md §1/§3).
     /// Supports all three profiles:
     ///

@@ -33,12 +33,22 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// - metadata.json line for line, with exactly ONE permitted
     ///   difference: the recording_date VALUE. There is no version delta to
     ///   normalize away — the fixtures were captured by Lua
-    ///   6.32-s3k-completerun, which is the stamp this port emits, so the
+    ///   6.33-s3k-completerun, which is the stamp this port emits, so the
     ///   gate pins that line as an exact literal on BOTH sides and would
     ///   fail if either drifted. That is the whole of the metadata
     ///   allowance; no key is dropped, no line count is normalized, and the
     ///   absence of a <c>run_id</c> key is asserted explicitly because it
     ///   is what distinguishes identity (A) from identities (B)/(C).
+    ///
+    /// The seven physics.csv hashes below were last moved by Lua
+    /// 6.33-s3k-completerun, the ADDR_VBLA_WORD fix: vblank_counter reads
+    /// 0xFE0E (the V_int_run_count low word) instead of 0xFE12
+    /// (Life_count), turning column 6 from lives &lt;&lt; 8 into a live
+    /// per-frame counter. Because the column is fixed-width every
+    /// PhysicsLength below is unchanged, and every AuxStateSha256 is
+    /// unchanged too — no aux field ever read that address. A gate that
+    /// pinned only lengths would have missed the whole change, which is
+    /// why both are pinned.
     ///
     /// The output root must hold exactly the fifteen segment directories,
     /// three files each, and NO run_manifest.json: the Sonic route takes no
@@ -80,7 +90,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// gate asserts the equality instead of tolerating a difference.
         /// </summary>
         private const string LuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.32-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.33-s3k-completerun\",";
 
         /// <summary>
         /// Identity (A) carries no run_id key at all. Identities (B) and
@@ -104,56 +114,56 @@ namespace OpenGGF.BizHawk.Headless.Tests
             new SegmentCase(
                 "aiz", "aiz_completerun", 941, 26228,
                 4249570,
-                "b791a57430224adb3042a478f76cfd5deaa985a979f6dc85a6325088"
-                + "16475e6c",
+                "2f8d3d0c2f5a4b3f30b7784ed28fa37071951f6d8d538f08573b4631"
+                + "fa33f872",
                 172380688,
                 "d55efb44c7fadc022591c56054964e002c8ade868867a8965a0efbe8"
                 + "20f2d210"),
             new SegmentCase(
                 "hcz", "hcz_completerun", 27170, 31482,
                 5100718,
-                "d051d6c2621170a6e64dca8c5d9152ec3898b46dd99ba408defb9485"
-                + "07aeb001",
+                "5d829f35729bb9254f272283dd078d3c6b259c771ca3d57eea3fb249"
+                + "d7ed73c7",
                 210920712,
                 "9fa13b138dd4e22749bdf0cfb66c71cd28e0e72568372b683efbc025"
                 + "5208077f"),
             new SegmentCase(
                 "mgz", "mgz_completerun", 58653, 39398,
                 6383110,
-                "10c1fd138b596d4325020c0151afb01f58e0764f1765d5a2cd15b285"
-                + "770d1530",
+                "ddfcc9851a6c6b100e9366ebe9fccfecd9a99745639a8192f0f93e24"
+                + "1879ae52",
                 208896738,
                 "1b3faa5204d83883a8877c0c3873ba7831aefde4a07abff942e119dc"
                 + "3a8038eb"),
             new SegmentCase(
                 "cnz", "cnz_completerun", 98052, 40064,
                 6491002,
-                "1d2061d93e92be8d9cc85ec0691b3fcddfe1a8b2213d2e76984f2d67"
-                + "27dc8b49",
+                "2d1ba19a27d614c25ceb8962f7506552cc8b038cc3a36a00b08f4337"
+                + "d329d404",
                 211836043,
                 "1134664398b8b911f0ed0024376c71d1aa546598785cd3008e04ed91"
                 + "ffbd3406"),
             new SegmentCase(
                 "icz", "icz_completerun", 138117, 25393,
                 4114300,
-                "d1b8e36b4716af52c467e7a7b14a36e124257a6530eba07c935e1cff"
-                + "6a0f0bd7",
+                "386cf6e8e62b61c8cd03c252668db47d3511fc1fd6c43399830e6655"
+                + "086d0c99",
                 173735703,
                 "0e21af4b895ab47ceca79ea74301208bd8ab1a44899cab921c566d75"
                 + "608efaa9"),
             new SegmentCase(
                 "lbz", "lbz_completerun", 163511, 46244,
                 7492162,
-                "49b48f7bca47fa3e3b9ece6bf033e78c1a4f365e24602adad71cf25b"
-                + "f84e536d",
+                "dba472735a28d1bb3235a4fe79ab6734202456f97bca6ca00cac2f5d"
+                + "64c8a139",
                 266307785,
                 "d89419f674e653686a80482954eb6cb309dfbf17016c6962e9f53f83"
                 + "0ed1b8b5"),
             new SegmentCase(
                 "mhz", "mhz_completerun", 209756, 28156,
                 4561906,
-                "8ba0ca5c90f8eee765f704588acae7b19261fe556d81a586441fc79f"
-                + "f1af71db",
+                "d502ee1305f363c448d5507aae54b732d851433713f809fdd79ce8cc"
+                + "c21c9c03",
                 184254918,
                 "0260219e935d5ec5b0873d8f59422fabe1ad8a6be8b8d2d9f505428e"
                 + "220764d6"),
@@ -335,7 +345,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// be LF-only and newline-terminated, must have the same line
         /// count, must carry exactly one recording_date line at the same
         /// index (well-formed on the produced side), must carry exactly one
-        /// lua_script_version line equal to the pinned 6.32 literal, and
+        /// lua_script_version line equal to the pinned 6.33 literal, and
         /// must carry no run_id line. Every other line is compared raw.
         /// </summary>
         private static void AssertMetadataEqualExceptRecordingDate(

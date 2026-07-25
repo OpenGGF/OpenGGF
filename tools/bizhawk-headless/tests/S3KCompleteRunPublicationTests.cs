@@ -157,8 +157,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// (Player_mode 0) — and identity (C) — the run pass under
         /// --run-id s3k-multibonus, Knuckles solo (Player_mode 3), whose
         /// three bonus dirs carry capture_mode AND v_int_run_count while
-        /// special_stage/ carries neither. Both were captured on
-        /// 2026-07-23.
+        /// special_stage/ carries neither. Both were originally captured
+        /// on 2026-07-23 and last regenerated on 2026-07-25 (commit
+        /// eb87d681b, the ADDR_VBLA_WORD fix), which is the recording_date
+        /// every one of the 39 committed S3K fixtures now carries. These
+        /// comparisons are FULL-FILE equality, so the date is injected to
+        /// match the fixture rather than allowed to differ.
         /// </summary>
         private static readonly MetadataFixture[] MetadataFixtures =
         {
@@ -178,7 +182,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-07-23"
+                RecordingDate = "2026-07-25"
             },
             new MetadataFixture
             {
@@ -196,7 +200,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-07-23"
+                RecordingDate = "2026-07-25"
             },
             new MetadataFixture
             {
@@ -216,7 +220,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-23"
+                RecordingDate = "2026-07-25"
             },
             new MetadataFixture
             {
@@ -236,7 +240,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-23"
+                RecordingDate = "2026-07-25"
             },
             new MetadataFixture
             {
@@ -256,7 +260,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-23"
+                RecordingDate = "2026-07-25"
             },
             new MetadataFixture
             {
@@ -269,7 +273,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-23"
+                RecordingDate = "2026-07-25"
             }
         };
 

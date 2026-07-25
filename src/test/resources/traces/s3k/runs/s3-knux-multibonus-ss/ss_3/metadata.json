@@ -9,7 +9,7 @@
   "bk2_frame_offset": 98092,
   "trace_frame_count": 6537,
   "source_bk2": "s3-knux-multibonus-ss.bk2",
-  "lua_script_version": "6.32-s3k-completerun",
+  "lua_script_version": "6.33-s3k-completerun",
   "recording_date": "2026-07-25",
   "bizhawk_version": "2.11",
   "genesis_core": "Genplus-gx",

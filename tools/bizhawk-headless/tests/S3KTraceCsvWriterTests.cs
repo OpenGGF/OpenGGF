@@ -35,6 +35,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3KTraceCsvWriter reads a real lag counter from Lag_frame_count",
                 ReadsRealLagCounterFromLagFrameCount));
             tests.Add(new TestMain.TestCase(
+                "S3KTraceCsvWriter reads vblank_counter from the V_int_run_count"
+                + " low word, not Life_count",
+                ReadsVblankCounterFromVIntRunCountLowWord));
+            tests.Add(new TestMain.TestCase(
                 "S3KRam pins the S3K OST geometry and mode helpers",
                 PinsOstGeometryAndModeHelpers));
         }
@@ -45,12 +49,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// the aiz_end_to_end ARM frame itself (Game_mode 0x4C), where
         /// player RAM still holds title-handoff values (y_vel 0xFFA5 with
         /// status 0), 100 pre-arm lag frames have accrued (lag 0x0064) and
-        /// the Life_count word renders 0x0300 (3 lives).
+        /// the V-int counter's low word reads 0x01EC — 492 V-ints since
+        /// power-on, a real free-running counter rather than the
+        /// lives &lt;&lt; 8 constant the column carried before Lua v6.32-s3k
+        /// pointed ADDR_VBLA_WORD at 0xFE0E.
         /// </summary>
         internal static RamBackedHost BuildAizRowZeroHost()
         {
             var host = new RamBackedHost();
-            host.SetWord(S3KRam.VblankWord, 0x0300);
+            host.SetWord(S3KRam.VblankWord, 0x01EC);
             host.SetWord(S3KRam.LagFrameCount, 0x0064);
             // Player_1 (0xB000) - read unconditionally, no presence check.
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffXPos, 0x0120);
@@ -90,13 +97,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             RamBackedHost host = BuildAizRowZeroHost();
 
             // LITERAL data row 0 of the gunzipped AIZ fixture physics.csv:
-            // lag_counter 0064 is a REAL 0xF628 read, vblank_counter 0300
-            // is the Life_count word, gameplay_frame_counter 0000 is a LIVE
-            // Level_frame_counter (0xFE04) read that genuinely reads 0 on
-            // the pre-level arm frame — it first ticks at row 0x0063 — and
-            // the sidekick block is live (present=1, x=0x00F0, y=0x0140).
+            // lag_counter 0064 is a REAL 0xF628 read, vblank_counter 01EC
+            // is a REAL 0xFE0E read (the V_int_run_count low word),
+            // gameplay_frame_counter 0000 is a LIVE Level_frame_counter
+            // (0xFE04) read that genuinely reads 0 on the pre-level arm
+            // frame — it first ticks at row 0x0063 — and the sidekick block
+            // is live (present=1, x=0x00F0, y=0x0140).
             AssertEx.Equal(
-                "0000,0000,0000,0000,0000,0000,0300,0064,1,0120,00D4,0000,FFA5,"
+                "0000,0000,0000,0000,0000,0000,01EC,0064,1,0120,00D4,0000,FFA5,"
                 + "0000,00,0,0,0,0000,0000,00,00,00,00,00,1,00F0,0140,0000,0000,"
                 + "0000,00,0,0,0,0000,0000,00,00,00,00,00",
                 S3KTraceCsvWriter.FormatRow(0, 0x0000, host));
@@ -107,17 +115,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
             // LITERAL row 0x00A1 of the gunzipped AIZ fixture physics.csv -
             // the first ADVANCE_ONLY-classified prefix row: its BK2-derived
             // input flips 0000 -> 0004 while every sampled state field is
-            // byte-identical to row 0x00A0. Of the three counters, vblank
-            // 0300 and lag 0085 are unchanged from 0x00A0 while
-            // gameplay_frame_counter steps 003E -> 003F, because it is a
-            // live Level_frame_counter read (0xFE04) rather than the
-            // dead-zero Debug_placement_mode read the recorder used before
-            // Lua v6.31-s3k. The recorder derives the input column from the
-            // BK2 (never RAM) and records counters verbatim; the replay's
-            // phase classifier depends on it.
+            // byte-identical to row 0x00A0. Of the three counters only lag
+            // 0085 is unchanged from 0x00A0: gameplay_frame_counter steps
+            // 003E -> 003F because it is a live Level_frame_counter read
+            // (0xFE04) rather than the dead-zero Debug_placement_mode read
+            // the recorder used before Lua v6.31-s3k, and vblank_counter
+            // steps 027B -> 027C because it is a live V_int_run_count low
+            // word read (0xFE0E) rather than the lives << 8 Life_count
+            // word the recorder used before Lua v6.32-s3k. The recorder
+            // derives the input column from the BK2 (never RAM) and records
+            // counters verbatim; the replay's phase classifier depends on
+            // it.
             var host = new RamBackedHost();
             host.SetWord(S3KRam.LevelFrameCounter, 0x003F);
-            host.SetWord(S3KRam.VblankWord, 0x0300);
+            host.SetWord(S3KRam.VblankWord, 0x027C);
             host.SetWord(S3KRam.LagFrameCount, 0x0085);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffXPos, 0x0120);
             host.SetWord(S3KRam.PlayerBase + S3KRam.OffYPos, 0x014C);
@@ -131,7 +142,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             host.Ram[S3KRam.SidekickBase + S3KRam.OffMappingFrame] = 0x01;
 
             AssertEx.Equal(
-                "00A1,0004,0000,0000,0000,003F,0300,0085,1,0120,014C,0000,0000,"
+                "00A1,0004,0000,0000,0000,003F,027C,0085,1,0120,014C,0000,0000,"
                 + "0000,00,0,0,0,0120,0000,00,00,00,00,03,1,0110,00E2,0000,0000,"
                 + "0000,00,0,0,0,0110,0000,00,00,00,00,01",
                 S3KTraceCsvWriter.FormatRow(0x00A1, 0x0004, host));
@@ -159,7 +170,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             host.SetLong(S3KRam.SidekickBase + S3KRam.OffObjectCode, 0);
 
             AssertEx.Equal(
-                "0000,0000,0000,0000,0000,0000,0300,0064,1,0120,00D4,0000,FFA5,"
+                "0000,0000,0000,0000,0000,0000,01EC,0064,1,0120,00D4,0000,FFA5,"
                 + "0000,00,0,0,0,0000,0000,00,00,00,00,00,"
                 + "0,0000,0000,0000,0000,0000,00,0,0,0,0000,0000,00,00,00,00,00",
                 S3KTraceCsvWriter.FormatRow(0, 0x0000, host));
@@ -244,6 +255,30 @@ namespace OpenGGF.BizHawk.Headless.Tests
             host.SetWord(S3KRam.LagFrameCount, 0x1234);
             string[] fields = S3KTraceCsvWriter.FormatRow(0, 0, host).Split(',');
             AssertEx.Equal("1234", fields[7]);
+        }
+
+        /// <summary>
+        /// vblank_counter is column 6 and reads the LOW WORD of the ds.l
+        /// V_int_run_count at 0xFE0C — i.e. 0xFE0E, the same address S1Ram
+        /// and S2Ram read — and NOT 0xFE12, which is skdisasm Life_count
+        /// and made the column carry lives &lt;&lt; 8 until Lua v6.32-s3k /
+        /// v6.33-s3k-completerun. Writing a distinguishing value into each
+        /// address pins the direction: 0xFE0E must reach the column and
+        /// 0xFE12 must not, so a regression back to the old constant is a
+        /// failure rather than a silently plausible number.
+        /// </summary>
+        private static void ReadsVblankCounterFromVIntRunCountLowWord()
+        {
+            AssertEx.Equal(0xFE0E, S3KRam.VblankWord);
+            AssertEx.Equal(
+                S3KRam.VIntRunCount + 2, S3KRam.VblankWord);
+            AssertEx.Equal(S1Ram.VblankWord, S3KRam.VblankWord);
+
+            var host = new RamBackedHost();
+            host.SetWord(0xFE0E, 0x027C);   // V_int_run_count low word
+            host.SetWord(0xFE12, 0x0300);   // Life_count word (3 lives)
+            string[] fields = S3KTraceCsvWriter.FormatRow(0, 0, host).Split(',');
+            AssertEx.Equal("027C", fields[6]);
         }
 
         private static void PinsOstGeometryAndModeHelpers()
