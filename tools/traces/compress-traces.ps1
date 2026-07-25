@@ -1,3 +1,14 @@
+# Compresses trace payload files (aux_state*.jsonl, physics*.csv) above a size
+# threshold, verifying the round trip by SHA-256 and length before deleting the
+# original.
+#
+# This is the WINDOWS LUA ROUTE path: the Lua recorders in tools/bizhawk/ write
+# uncompressed output into a directory, and this compresses that directory in
+# place. The native headless harness no longer needs it — pass --compress to
+# tools/bizhawk-headless (same filter, same threshold, same verify-before-delete
+# ordering, applied inside its atomic publication). Keep both in step if the
+# semantics ever change.
+
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]

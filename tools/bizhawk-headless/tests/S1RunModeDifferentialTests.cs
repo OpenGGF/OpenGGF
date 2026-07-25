@@ -464,6 +464,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 EndToEndTests.Quote(
                     Path.Combine(EndToEndTests.ToolDirectory, "run.sh"))
                 + " --mode trace"
+                + EndToEndTests.NoCompressArgument
                 + " --rom " + EndToEndTests.Quote(romPath)
                 + " --movie " + EndToEndTests.Quote(moviePath)
                 + " --output " + EndToEndTests.Quote(output)

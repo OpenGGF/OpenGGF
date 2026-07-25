@@ -39,7 +39,9 @@ namespace BizHawk.Headless.Gpgx
             string traceProfile,
             int? gameplaySegment,
             string runId,
-            int effectiveMovieLength)
+            int effectiveMovieLength,
+            bool compress,
+            long compressThresholdBytes)
         {
             Mode = mode;
             RomPath = romPath;
@@ -51,6 +53,8 @@ namespace BizHawk.Headless.Gpgx
             GameplaySegment = gameplaySegment;
             RunId = runId;
             EffectiveMovieLength = effectiveMovieLength;
+            Compress = compress;
+            CompressThresholdBytes = compressThresholdBytes;
         }
 
         public CaptureMode Mode { get; private set; }
@@ -89,6 +93,46 @@ namespace BizHawk.Headless.Gpgx
         /// </summary>
         public int EffectiveMovieLength { get; private set; }
 
+        /// <summary>
+        /// Trace-mode payload compression, ON by default: physics.csv and
+        /// aux_state.jsonl are gzipped inside the publication once they
+        /// reach --compress-threshold (default 1 MiB, inherited from
+        /// tools/traces/compress-traces.ps1).
+        ///
+        /// The default is on because the risk being managed is a commit, not
+        /// disk usage: a full S3K complete-run aux stream measures ~254 MB
+        /// raw against ~12 MB gzipped, so an uncompressed one is past
+        /// GitHub's 100 MB per-file hard limit — unpushable, not merely
+        /// large — and the failure mode of an opt-in flag is precisely that
+        /// a human installing a fixture forgets it. Pairing the default with
+        /// the 1 MiB threshold makes the harness and the repo's own commit
+        /// policy agree by construction: the policy
+        /// (.githooks/validate-policy.sh) rejects exactly the same two name
+        /// patterns at exactly the same size, so a default capture can never
+        /// produce a file that policy would refuse, while small captures
+        /// keep their plain names.
+        ///
+        /// --no-compress opts out, for consumers that read a capture by its
+        /// uncompressed name and never commit it: the ROM-backed
+        /// differential gates, which capture into a temp directory and
+        /// compare raw bytes against a fixture. --compress states the
+        /// default explicitly and is mutually exclusive with it.
+        /// </summary>
+        public bool Compress { get; private set; }
+        public long CompressThresholdBytes { get; private set; }
+
+        /// <summary>
+        /// The compressor for this invocation, or null under --no-compress.
+        /// One instance per capture, so its report covers every payload the
+        /// publication considered.
+        /// </summary>
+        public TracePayloadCompressor CreateCompressor()
+        {
+            return Compress
+                ? new TracePayloadCompressor(CompressThresholdBytes)
+                : null;
+        }
+
         public static CommandLineOptions Parse(string[] args)
         {
             if (args == null)
@@ -98,13 +142,28 @@ namespace BizHawk.Headless.Gpgx
 
             var values = new Dictionary<string, string>(
                 StringComparer.Ordinal);
-            for (var index = 0; index < args.Length; index += 2)
+            var index = 0;
+            while (index < args.Length)
             {
                 string name = args[index];
                 if (!IsSupportedArgument(name))
                 {
                     throw new ArgumentException(
                         "Unknown argument: " + name + ".");
+                }
+                if (IsValuelessArgument(name))
+                {
+                    // Switches carry no value and consume one slot; every
+                    // other argument keeps the original strict name/value
+                    // pairing, including its rejection order.
+                    if (values.ContainsKey(name))
+                    {
+                        throw new ArgumentException(
+                            "Duplicate argument: " + name + ".");
+                    }
+                    values.Add(name, string.Empty);
+                    index += 1;
+                    continue;
                 }
                 if (index + 1 >= args.Length)
                 {
@@ -122,6 +181,7 @@ namespace BizHawk.Headless.Gpgx
                         "Argument " + name + " requires a value.");
                 }
                 values.Add(name, args[index + 1]);
+                index += 2;
             }
 
             string romPath = Required(values, "--rom");
@@ -141,6 +201,11 @@ namespace BizHawk.Headless.Gpgx
             RejectInSmokeMode(values, "--gameplay-segment");
             RejectInSmokeMode(values, "--run-id");
             RejectInSmokeMode(values, "--effective-movie-length");
+            // Smoke mode publishes smoke.csv, which is not a trace payload,
+            // so every compression argument would silently do nothing.
+            RejectInSmokeMode(values, "--compress");
+            RejectInSmokeMode(values, "--no-compress");
+            RejectInSmokeMode(values, "--compress-threshold");
             int offset = ParseInteger(
                 values,
                 "--bk2-frame-offset",
@@ -184,7 +249,9 @@ namespace BizHawk.Headless.Gpgx
                 null,
                 null,
                 null,
-                0);
+                0,
+                false,
+                TracePayloadCompressor.DefaultThresholdBytes);
         }
 
         private static CommandLineOptions ParseTrace(
@@ -248,6 +315,36 @@ namespace BizHawk.Headless.Gpgx
                 }
             }
 
+            if (values.ContainsKey("--compress")
+                && values.ContainsKey("--no-compress"))
+            {
+                throw new ArgumentException(
+                    "Argument --compress cannot be combined with"
+                    + " --no-compress.");
+            }
+            bool compress = !values.ContainsKey("--no-compress");
+            long compressThresholdBytes =
+                TracePayloadCompressor.DefaultThresholdBytes;
+            if (values.ContainsKey("--compress-threshold"))
+            {
+                if (!compress)
+                {
+                    throw new ArgumentException(
+                        "Argument --compress-threshold cannot be combined"
+                        + " with --no-compress: it only retunes the size"
+                        + " floor above which a trace payload is"
+                        + " compressed.");
+                }
+                compressThresholdBytes = ParseLong(
+                    values, "--compress-threshold", compressThresholdBytes);
+                if (compressThresholdBytes < 0)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        "--compress-threshold",
+                        "Argument --compress-threshold must be at least 0.");
+                }
+            }
+
             string fullOutputDirectory =
                 Path.GetFullPath(outputDirectory);
             if (runId != null)
@@ -279,6 +376,23 @@ namespace BizHawk.Headless.Gpgx
                             "Final output already exists and will not be"
                             + " replaced: " + finalPath);
                     }
+                    // Whether a payload lands compressed depends on its size,
+                    // which is unknown until capture ends, so --compress
+                    // preflights BOTH names it could publish under.
+                    if (!compress
+                        || !TracePayloadCompressor.IsTracePayloadName(
+                            fileName))
+                    {
+                        continue;
+                    }
+                    string compressedPath =
+                        finalPath + TracePayloadCompressor.GzipExtension;
+                    if (LinuxPathEntry.Exists(compressedPath))
+                    {
+                        throw new IOException(
+                            "Final output already exists and will not be"
+                            + " replaced: " + compressedPath);
+                    }
                 }
             }
 
@@ -292,7 +406,9 @@ namespace BizHawk.Headless.Gpgx
                 traceProfile,
                 gameplaySegment,
                 runId,
-                effectiveMovieLength);
+                effectiveMovieLength,
+                compress,
+                compressThresholdBytes);
         }
 
         private static CaptureMode ParseMode(
@@ -348,7 +464,15 @@ namespace BizHawk.Headless.Gpgx
                 || name == "--trace-profile"
                 || name == "--gameplay-segment"
                 || name == "--run-id"
-                || name == "--effective-movie-length";
+                || name == "--effective-movie-length"
+                || name == "--compress"
+                || name == "--no-compress"
+                || name == "--compress-threshold";
+        }
+
+        private static bool IsValuelessArgument(string name)
+        {
+            return name == "--compress" || name == "--no-compress";
         }
 
         private static string Required(
@@ -377,6 +501,35 @@ namespace BizHawk.Headless.Gpgx
 
             int parsed;
             if (!int.TryParse(
+                value,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out parsed))
+            {
+                throw new ArgumentException(
+                    "Argument " + name + " must be an integer.");
+            }
+            return parsed;
+        }
+
+        /// <summary>
+        /// Byte counts are parsed as 64-bit: a single complete-run
+        /// aux_state.jsonl segment already reaches hundreds of megabytes, so
+        /// a threshold above int range is a reasonable thing to ask for.
+        /// </summary>
+        private static long ParseLong(
+            IDictionary<string, string> values,
+            string name,
+            long defaultValue)
+        {
+            string value;
+            if (!values.TryGetValue(name, out value))
+            {
+                return defaultValue;
+            }
+
+            long parsed;
+            if (!long.TryParse(
                 value,
                 NumberStyles.Integer,
                 CultureInfo.InvariantCulture,
@@ -658,7 +811,7 @@ namespace BizHawk.Headless.Gpgx
                     + "Physics CSV: " + physicsPath + "\n"
                     + "Aux state JSONL: " + auxStatePath + "\n"
                     + "Metadata JSON: " + metadataPath + "\n",
-                new NoReplacePublisher());
+                new NoReplacePublisher(options.CreateCompressor()));
         }
 
         /// <summary>
@@ -697,6 +850,7 @@ namespace BizHawk.Headless.Gpgx
             Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
         {
             bool expandNewlines = options.RunId != null;
+            NoReplacePublisher publisher = null;
             NoReplacePublisher.IncrementalStagingSession session = null;
             NoReplacePublisher.StagedPublicationSet staged = null;
             try
@@ -719,7 +873,9 @@ namespace BizHawk.Headless.Gpgx
                 }
 
                 S1RunCaptureResult result;
-                session = new NoReplacePublisher().OpenSession(
+                publisher = new NoReplacePublisher(
+                    options.CreateCompressor());
+                session = publisher.OpenSession(
                     options.OutputDirectory);
                 NoReplacePublisher.IncrementalStagingSession sink = session;
                 using (new NativeStandardOutputSilencer())
@@ -820,6 +976,7 @@ namespace BizHawk.Headless.Gpgx
 
                 staged.Publish();
                 staged = null;
+                WriteCompressionReport(stdout, publisher);
                 return 0;
             }
             catch (Exception exception)
@@ -916,7 +1073,7 @@ namespace BizHawk.Headless.Gpgx
                     + "Physics CSV: " + physicsPath + "\n"
                     + "Aux state JSONL: " + auxStatePath + "\n"
                     + "Metadata JSON: " + metadataPath + "\n",
-                new NoReplacePublisher());
+                new NoReplacePublisher(options.CreateCompressor()));
         }
 
         /// <summary>
@@ -1319,7 +1476,7 @@ namespace BizHawk.Headless.Gpgx
                     + "Physics CSV: " + physicsPath + "\n"
                     + "Aux state JSONL: " + auxStatePath + "\n"
                     + "Metadata JSON: " + metadataPath + "\n",
-                new NoReplacePublisher());
+                new NoReplacePublisher(options.CreateCompressor()));
         }
 
         /// <summary>
@@ -1358,6 +1515,7 @@ namespace BizHawk.Headless.Gpgx
             TextWriter stderr,
             Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
         {
+            NoReplacePublisher publisher = null;
             NoReplacePublisher.IncrementalStagingSession session = null;
             NoReplacePublisher.StagedPublicationSet staged = null;
             try
@@ -1380,7 +1538,9 @@ namespace BizHawk.Headless.Gpgx
                 }
 
                 S3KCompleteRunCaptureResult result;
-                session = new NoReplacePublisher().OpenSession(
+                publisher = new NoReplacePublisher(
+                    options.CreateCompressor());
+                session = publisher.OpenSession(
                     options.OutputDirectory);
                 using (var sink = new S3KStagedSegmentSink(session))
                 using (new NativeStandardOutputSilencer())
@@ -1465,6 +1625,7 @@ namespace BizHawk.Headless.Gpgx
 
                 staged.Publish();
                 staged = null;
+                WriteCompressionReport(stdout, publisher);
                 return 0;
             }
             catch (Exception exception)
@@ -1497,6 +1658,8 @@ namespace BizHawk.Headless.Gpgx
             TextWriter stderr,
             Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
         {
+            var publisher = new NoReplacePublisher(
+                options.CreateCompressor());
             NoReplacePublisher.StagedPublicationSet staged = null;
             try
             {
@@ -1534,7 +1697,7 @@ namespace BizHawk.Headless.Gpgx
                 fileNames.Add(CommandLineOptions.RunManifestFileName);
                 contents.Add(ExpandRunNewlines(result.RunManifestJson));
 
-                staged = new NoReplacePublisher().StageAll(
+                staged = publisher.StageAll(
                     options.OutputDirectory,
                     fileNames.ToArray(),
                     writers =>
@@ -1593,6 +1756,7 @@ namespace BizHawk.Headless.Gpgx
 
                 staged.Publish();
                 staged = null;
+                WriteCompressionReport(stdout, publisher);
                 return 0;
             }
             catch (Exception exception)
@@ -1656,6 +1820,7 @@ namespace BizHawk.Headless.Gpgx
                 // rolls back any partially linked finals on failure.
                 staged.Publish();
                 staged = null;
+                WriteCompressionReport(stdout, publisher);
                 return 0;
             }
             catch (Exception exception)
@@ -1699,6 +1864,7 @@ namespace BizHawk.Headless.Gpgx
                 // absorbs only cleanup failures that happen after the link.
                 staged.Publish();
                 staged = null;
+                WriteCompressionReport(stdout, publisher);
                 return 0;
             }
             catch (Exception exception)
@@ -1710,6 +1876,28 @@ namespace BizHawk.Headless.Gpgx
                 ReportFailure(stderr, exception);
                 return 1;
             }
+        }
+
+        /// <summary>
+        /// Reports what --compress did, AFTER publication commits, so every
+        /// line names a file that exists. The pre-publish summary prints each
+        /// payload under its uncompressed name because whether a payload
+        /// clears the threshold is only known once it has been written; these
+        /// lines reconcile that. A no-op when compression is off.
+        /// </summary>
+        private static void WriteCompressionReport(
+            TextWriter stdout,
+            NoReplacePublisher publisher)
+        {
+            if (publisher == null || publisher.Compressor == null)
+            {
+                return;
+            }
+            foreach (string line in publisher.Compressor.Report)
+            {
+                stdout.Write(line + "\n");
+            }
+            stdout.Flush();
         }
 
         private static void ReportFailure(

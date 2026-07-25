@@ -67,6 +67,9 @@ The game is auto-detected from the ROM's SHA-1; there is no `--game` flag.
 | `--gameplay-segment <n>` | S2 only — selects one segment of a multi-segment movie |
 | `--run-id <id>` | Run mode: emits `run_manifest.json` and per-segment directories |
 | `--effective-movie-length <n>` | Run mode only — overrides the movie-length signal |
+| `--no-compress` | Trace mode only: publish the payloads uncompressed (compression is the default) |
+| `--compress` | States the default explicitly; mutually exclusive with `--no-compress` |
+| `--compress-threshold <bytes>` | Size floor for compressing a payload (default 1048576) |
 | `--max-frames <n>`, `--bk2-frame-offset <n>` | Smoke mode only |
 
 Output is published all-or-nothing: files are staged and only linked into
@@ -80,14 +83,41 @@ half-written trace behind.
 - `metadata.json` — capture identity, profile, offsets, versions
 - `run_manifest.json` — run mode only: segment inventory and transitions
 
-**These are written uncompressed.** The committed fixtures under
-`src/test/resources/traces/` store `physics.csv.gz` and `aux_state.jsonl.gz`, so
-installing a fresh capture as a fixture currently requires a separate gzip step —
-[`../traces/compress-traces.ps1`](../traces/compress-traces.ps1) does this for the
-Lua output directory (compressing payloads above a 1 MiB threshold and verifying
-by decompress-and-hash before deleting the original). Folding that into the
-harness's publisher is tracked work; until then, compress deliberately and verify
-the round trip.
+**The two payloads are gzipped at publication by default**, landing as
+`physics.csv.gz` and `aux_state.jsonl.gz` once they reach `--compress-threshold`
+(default 1 MiB). `metadata.json` and `run_manifest.json` are never compressed,
+matching the committed fixture layout. Below the threshold a payload keeps its
+plain name.
+
+Compression happens *inside* the same all-or-nothing publication: each payload is
+gzipped to its own staging file, decompressed again and compared against the
+source by SHA-256 **and** length, and only then adopted with the uncompressed
+staging file discarded. A verification failure publishes nothing at all — no
+final is linked, not even for a payload that compressed cleanly. Each compressed
+payload is reported on stdout after publication commits.
+
+The default is on because the risk is a **commit**, not disk space. A full
+complete-run `aux_state.jsonl` measures ~254 MB raw against ~12 MB gzipped
+(~21x); uncompressed it is past GitHub's 100 MB per-file hard limit, so it cannot
+be pushed at all. An opt-in flag fails exactly when a human installing a fixture
+forgets it. Pairing the default with the 1 MiB threshold makes the harness and
+the repo's commit policy (`.githooks/validate-policy.sh` — same two name
+patterns, same threshold) agree by construction. A repo-level guard,
+`TestTraceFixtureCompressionGuard`, enforces the same rule on the fixture tree
+whatever produced the file.
+
+Output is deterministic: the gzip carries no timestamp (`gzip -n` equivalent), so
+the same capture compresses to the same bytes and a fixture commit shows no noise
+diff. Container bytes could not affect the gates in any case; they hash
+decompressed content.
+
+**`--no-compress`** opts out, for consumers that read a capture by its plain name
+and never commit it. Every ROM-backed differential gate here passes it: they
+capture into a temp directory and compare raw bytes.
+
+[`../traces/compress-traces.ps1`](../traces/compress-traces.ps1) implements the
+same semantics for a directory and remains the path for the **Windows Lua route**,
+whose recorders still write uncompressed output.
 
 ## The differential gates
 

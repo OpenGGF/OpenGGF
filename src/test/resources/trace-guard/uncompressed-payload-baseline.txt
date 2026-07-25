@@ -1,0 +1,40 @@
+# Uncompressed trace payloads under src/test/resources/traces/ that predate
+# the compression guard (TestTraceFixtureCompressionGuard). These are
+# canonical fixtures read by name; they are grandfathered, NOT a licence to
+# add more. Paths are repo-relative, one per line.
+src/test/resources/traces/s1/credits_00_ghz1/aux_state.jsonl
+src/test/resources/traces/s1/credits_00_ghz1/physics.csv
+src/test/resources/traces/s1/credits_01_mz2/aux_state.jsonl
+src/test/resources/traces/s1/credits_01_mz2/physics.csv
+src/test/resources/traces/s1/credits_02_syz3/aux_state.jsonl
+src/test/resources/traces/s1/credits_02_syz3/physics.csv
+src/test/resources/traces/s1/credits_03_lz3/aux_state.jsonl
+src/test/resources/traces/s1/credits_03_lz3/physics.csv
+src/test/resources/traces/s1/credits_04_slz3/aux_state.jsonl
+src/test/resources/traces/s1/credits_04_slz3/physics.csv
+src/test/resources/traces/s1/credits_05_sbz1/aux_state.jsonl
+src/test/resources/traces/s1/credits_05_sbz1/physics.csv
+src/test/resources/traces/s1/credits_06_sbz2/aux_state.jsonl
+src/test/resources/traces/s1/credits_06_sbz2/physics.csv
+src/test/resources/traces/s1/credits_07_ghz1b/aux_state.jsonl
+src/test/resources/traces/s1/credits_07_ghz1b/physics.csv
+src/test/resources/traces/s1/ghz1_fullrun/aux_state.jsonl
+src/test/resources/traces/s1/ghz1_fullrun/aux_state_retro.jsonl
+src/test/resources/traces/s1/ghz1_fullrun/physics.csv
+src/test/resources/traces/s1/ghz1_fullrun/physics_retro.csv
+src/test/resources/traces/s1/mz1_fullrun/aux_state_retro.jsonl
+src/test/resources/traces/s1/mz1_fullrun/physics_retro.csv
+src/test/resources/traces/s2/ehz1_fullrun/physics.csv
+src/test/resources/traces/synthetic/basic_3frames/aux_state.jsonl
+src/test/resources/traces/synthetic/basic_3frames/physics.csv
+src/test/resources/traces/synthetic/execution_v3_2frames/physics.csv
+src/test/resources/traces/synthetic/run_aiz_gumball_3seg/seg00_aiz/physics.csv
+src/test/resources/traces/synthetic/run_aiz_gumball_3seg/seg01_gumball/physics.csv
+src/test/resources/traces/synthetic/run_aiz_gumball_3seg/seg02_aiz/physics.csv
+src/test/resources/traces/synthetic/run_ehz_ss_3seg/seg1_ehz1/physics.csv
+src/test/resources/traces/synthetic/run_ehz_ss_3seg/seg2_ehz1/physics.csv
+src/test/resources/traces/synthetic/run_ehz_ss_3seg/ss/physics.csv
+src/test/resources/traces/synthetic/s2_execution_v3_2frames/aux_state.jsonl
+src/test/resources/traces/synthetic/s2_execution_v3_2frames/physics.csv
+src/test/resources/traces/synthetic/s3k_execution_v3_2frames/aux_state.jsonl
+src/test/resources/traces/synthetic/s3k_execution_v3_2frames/physics.csv
