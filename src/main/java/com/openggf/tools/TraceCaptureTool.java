@@ -255,6 +255,14 @@ public final class TraceCaptureTool {
         String timestamp = ZonedDateTime.now(ZoneOffset.UTC).format(UTC_STAMP);
         String label = entry.dir().getFileName().toString();
         FfmpegEncoder encoder = new FfmpegEncoder(resolveFfmpeg(), args.scale());
+        // --codec / capture.codec was parsed and then never reached the
+        // encoder, so selecting one silently did nothing.
+        SonicConfigurationService captureConfig = GameServices.configuration();
+        encoder.setCodecs(args.codec(),
+                captureConfig.getString(SonicConfiguration.CAPTURE_AUDIO_CODEC));
+        encoder.setCommandOverrides(
+                captureConfig.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS),
+                captureConfig.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS));
         CaptureRecorder recorder = new CaptureRecorder(
                 encoder, BackpressurePolicy.BLOCK, /* queueCapacity */ 8,
                 args.outDir(), label, timestamp);

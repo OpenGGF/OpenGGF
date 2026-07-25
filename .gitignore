@@ -8,6 +8,7 @@
 .vscode/
 /config.json
 /config.yaml
+/config.yaml.example
 /config.json.bak
 *.bin
 *.smd

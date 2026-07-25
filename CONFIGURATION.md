@@ -1,6 +1,11 @@
 # Configuration Reference
 
 All settings live in `config.yaml` in the working directory (next to the JAR). The bundled
+`src/main/resources/config.yaml` is written to **`config.yaml.example`** alongside it on
+every run, so the fully commented current template — including the worked ffmpeg recipes —
+is always there to read or copy values from. Your own `config.yaml` is never overwritten by
+it; once written it holds your values and does not regain later comments or new keys.
+
 `src/main/resources/config.yaml` is used as the default template. On first run, a legacy
 `config.json` is automatically migrated to `config.yaml` and the original is backed up to
 `config.json.bak`. Keys are now grouped into nested YAML sections rather than being flat
@@ -284,6 +289,125 @@ OpenGGF has two separate recording systems:
   indicator in the same corner for three seconds, so an interrupted recording
   is distinguishable from one you stopped yourself. Pressing the toggle again
   clears the notice. It is window-only on the same terms as the indicator.
+
+### Capture codecs
+
+`capture.codec` selects the video codec and `capture.audioCodec` the audio
+codec, for both live viewport recording and trace capture.
+
+| Codec | Lossless | Notes |
+|---|---|---|
+| `ffv1` (default) | yes | Largest files, most widely playable. |
+| `h264` | yes | Much smaller than FFV1. Encoded as RGB — see below. |
+| `h265` | yes | Smaller still, slowest to encode. Encoded as RGB. |
+| `flac` (default) | yes | Audio matches the engine's output exactly. |
+| `aac` | **no** | Lossy. Small files; the audio is not what the engine produced. |
+| `mp3` | **no** | Lossy. Most portable, largest quality loss. |
+
+**Why H.264 and H.265 use RGB.** The usual "lossless" settings — `-crf 0`, or
+`-x265-params lossless=1` — are lossless in the codec's own colour space, but
+the recorder submits RGB frames and converting them to YUV and back does not
+return the original pixels. Even 4:4:4, which discards no chroma resolution,
+differs. So `h264` uses `libx264rgb` and `h265` uses planar RGB (`gbrp`), which
+are byte-exact. The cost is compatibility: RGB H.264/H.265 is valid but some
+players will not decode it. If a recording will not play elsewhere, use `ffv1`.
+
+Choosing `aac` or `mp3` means the recording is no longer a faithful capture of
+the engine's audio. That is a legitimate choice for sharing a clip; it is not
+appropriate for comparing audio against reference material.
+
+### Containers
+
+`capture.container` sets the recording's file extension, and ffmpeg picks its
+muxer from it. Recent ffmpeg will write any of the codecs above into either
+container — FFV1 and FLAC in MP4 both produce valid files — but *player*
+support is far narrower than what ffmpeg will write:
+
+| Container | Plays reliably with |
+|---|---|
+| `mkv` (default) | Everything here. The safe choice. |
+| `mp4` | `h264` or `h265` video with `aac` audio. An MP4 holding FFV1 or FLAC is a valid file that most players will refuse. |
+
+So MP4 is worth choosing when the recording is going somewhere that expects
+it, paired with the lossy example below. For anything else, keep `mkv`.
+
+`-movflags +faststart` — the usual "web-optimised" flag — is an MP4 feature
+and only takes effect when the container is MP4. Add it through
+`capture.ffmpegPass2Args`.
+
+### Overriding the ffmpeg commands
+
+Recording runs ffmpeg twice: the first pass encodes frames arriving on
+`pipe:0` into a lossless intermediate, the second muxes that with the raw audio
+into the finished file. `capture.ffmpegPass1Args` and `capture.ffmpegPass2Args`
+replace the argument list of each pass independently. The executable itself is
+resolved from `PATH` and prepended; everything after it is yours.
+
+Each key takes one of three values:
+
+| Value | Effect |
+|---|---|
+| `default` | The engine's built-in command. Keep this unless you need something specific — it means later improvements still reach you. |
+| *(empty)* | Skip the pass. Only valid for pass 2: the encode output is published as-is, so **the recording has no audio**. A fast video-only capture. |
+| anything else | Used literally, after placeholder expansion. |
+
+Placeholders for pass 1: `{width}` `{height}` `{fps}` `{scale}`
+`{scaledWidth}` `{scaledHeight}` `{videoCodecArgs}` `{videoOut}`.
+For pass 2: `{videoIn}` `{audioIn}` `{sampleRate}` `{audioCodecArgs}`
+`{output}`.
+
+Arguments split on whitespace. Quote a value whose expansion may contain
+spaces — `"{output}"` — and the placeholder still expands inside the quotes. An
+unknown placeholder fails when the recording starts, rather than reaching
+ffmpeg as a filename and failing later with an unrelated error.
+
+Pass 1 cannot be empty: it is where the submitted frames are encoded. Frames
+always arrive as `rawvideo`/`rgba` on `pipe:0`, so a replacement command must
+still read them from there.
+
+```yaml
+capture:
+  codec: "h264"
+  audioCodec: "flac"
+  # Video only, no mux pass:
+  ffmpegPass2Args: ""
+```
+
+#### Example: small, portable, lossy
+
+The codec keys stay lossless by design, so compressing for sharing means
+replacing the encode pass. This writes CRF 24 H.264 in `yuv420p` — the
+most widely playable combination there is — and lets the built-in mux
+pass add AAC:
+
+```yaml
+capture:
+  audioCodec: "aac"
+  ffmpegPass1Args: >-
+    -y -f rawvideo -pix_fmt rgba -s {width}x{height} -r {fps} -i pipe:0
+    -vf vflip,scale={scaledWidth}:{scaledHeight}:flags=neighbor
+    -c:v libx264 -crf 24 -preset veryfast -pix_fmt yuv420p -an {videoOut}
+```
+
+Note what changed relative to the lossless `h264` codec setting: this uses
+`libx264` with `yuv420p` rather than `libx264rgb`, and a CRF of 24 rather
+than 0. Both make it lossy, which is the point here — the result is a
+small file that plays anywhere, and it is no longer a faithful capture.
+There is no large lossless intermediate either, since the encode pass
+compresses directly and the mux pass only copies the video stream.
+
+For a web-ready file, set `capture.container` to `mp4` as well and add
+`-movflags +faststart` to the mux pass:
+
+```yaml
+capture:
+  container: "mp4"
+  audioCodec: "aac"
+  ffmpegPass2Args: >-
+    -y -i {videoIn} -f s16le -ar {sampleRate} -ac 2 -i {audioIn}
+    -c:v copy {audioCodecArgs} -movflags +faststart {output}
+```
+
 - **Trace capture:** the headless `TraceCaptureTool` renders a chosen trace.
   Its scale, frame-rate, and codec settings remain trace-tool options.
 
@@ -309,7 +433,11 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `O` | Complete-chord live viewport recording toggle (`Shift` + this key, with Ctrl/Alt released). |
 | `CAPTURE_SCALE` | `capture.scale` | int | `4` | Trace capture only: integer nearest-neighbor upscale factor applied to captured frames; live viewport recording always uses scale 1. |
 | `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
-| `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Trace capture only: video codec selection; live recording always uses FFV1. |
+| `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
+| `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this — see "Containers" below. |
+| `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: `flac`, `aac` or `mp3`. **`aac` and `mp3` are lossy**: the recorded audio will not match what the engine produced. `flac` is lossless. |
+| `CAPTURE_FFMPEG_PASS1_ARGS` | `capture.ffmpegPass1Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the encode pass. See "Overriding the ffmpeg commands" below. |
+| `CAPTURE_FFMPEG_PASS2_ARGS` | `capture.ffmpegPass2Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the mux pass; leave empty to skip it and record video only. |
 
 Invoke the tool through Maven (requires a ROM in the working directory, an offscreen-capable GL context, and `ffmpeg` on `PATH`):
 

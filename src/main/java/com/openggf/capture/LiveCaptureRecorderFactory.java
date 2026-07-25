@@ -22,8 +22,15 @@ public final class LiveCaptureRecorderFactory {
     }
 
     public CaptureRecorder create(CaptureViewport viewport, int frameRate) {
-        return new CaptureRecorder(new FfmpegEncoder(ffmpeg, 1), BackpressurePolicy.BLOCK, 8,
+        FfmpegEncoder encoder = new FfmpegEncoder(ffmpeg, 1);
+        encoder.setCodecs(config.getString(SonicConfiguration.CAPTURE_CODEC),
+                config.getString(SonicConfiguration.CAPTURE_AUDIO_CODEC));
+        encoder.setCommandOverrides(
+                config.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS),
+                config.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS));
+        return new CaptureRecorder(encoder, BackpressurePolicy.BLOCK, 8,
                 Path.of(config.getString(SonicConfiguration.CAPTURE_OUTPUT_DIR)),
-                "live", TIMESTAMP.format(clock.instant()));
+                "live", TIMESTAMP.format(clock.instant()),
+                config.getString(SonicConfiguration.CAPTURE_CONTAINER));
     }
 }
