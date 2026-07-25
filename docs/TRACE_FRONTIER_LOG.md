@@ -1,5 +1,68 @@
 # Trace Frontier Log
 
+### 2026-07-25 -- S3K mega-run chain: fixture recapture exposes a bootstrap counter off-by-one; frontier returns to seg2
+
+Command (worktree `.worktrees/bizhawk-headless-poc`, branch
+`feature/ai-bizhawk-native-s3k-completerun`):
+
+`mvn -q test -Dtest=com.openggf.tests.trace.runs.TestS3kMegaRunChain -Ds3k.rom.path=s3k.gen '-Dsurefire.argLine=-Xshare:off -Xmx4g' -Dsurefire.forkCount=1 -DfailIfNoTests=false`
+
+**Use `mvn test`, not `mvn surefire:test`** -- the latter does not compile, and this
+worktree's `target/classes` was 2 days stale over 13 changed trace-replay sources
+including the class diagnosed below. Every number here is from a real compile.
+
+WHAT MOVED. `runs/s3-knux-multibonus-ss/` was recaptured (`63eccd290`) with the
+current Lua, replacing a 2026-07-19 Windows capture whose `gameplay_frame_counter`
+column was dead-zero (the recorder sampled 0xFE08 = `Debug_placement_mode` until
+`6564667eb`). With a truthful live counter the chain regressed from the seg2 exit
+boundary to seg0 (seg0 21 -> 22,216 errors). Fixed here; frontier is back at seg2.
+
+| state | seg0 | seg1 | seg2 | seg2 first non-camera | fails at |
+|---|---|---|---|---|---|
+| before recapture | 21 | 12 | 18,711 | f192 `y` 0x024B vs 0x024A | seg2 exit boundary |
+| recaptured, unfixed | 22,216 | -- | -- | -- | **seg0 exit boundary** |
+| recaptured + this fix | 21 | 12 | 18,725 | f192 `y` 0x024B vs 0x024A | seg2 exit boundary |
+
+seg2's first divergence is unchanged, so the +14 is downstream noise inside an
+already-18.7k-error segment, not a new frontier. Do not report this as "restored
+exactly".
+
+ROOT CAUSE (one call site violating a documented contract).
+`TraceReplaySessionBootstrap.alignFrameCountersForReplayStart` seeded
+`LevelManager` with the FIRST DRIVEN row's counter. That field's contract, stated
+in `LevelManager.setFrameCounter`'s own javadoc, is the PREVIOUS completed level
+frame -- ROM increments `Level_frame_counter` before `Process_Sprites`, so
+consumers recover the current value with `getFrameCounter() + 1` (16 call sites).
+The method's own javadoc already said the value "comes from the trace row
+immediately before the first driven row", and the sprite branch three lines above
+already used `previousDriveFrame`; only the level branch was the outlier. Effect:
+every frame-counter-keyed object phase ran exactly one frame ahead of ROM for a
+whole segment. With both sides zero the off-by-one was unobservable, which is why
+it survived. Two earlier entries in this log independently assert the same
+convention (the 2026-07-17 MGZ entry naming `getFrameCounter()` the canonical
+counterpart of ROM `Level_frame_counter`, and the AIZ falling-log entry near the
+`Level_frame_counter` discussion below).
+
+FIRST REAL DIVERGENCE was NOT f1766. f1766/f1767 `y_speed` is a pre-existing
+2-error blip, byte-identical in the passing configuration and already recorded in
+the 2026-07-21 seg0 entry. The regression's own first divergence is **f1934**:
+Knuckles grabs the AIZ Giant Ride Vine handle (`object_control` 0x00 -> 0x03) and
+the ROM seats him at handle_y + $14 (`docs/skdisasm/sonic3k.asm:46714-46748`
+`AIZRideVineHandle_CheckGrab` / `TestGrabRange`, and the per-frame hold at
+`:46607-46613`, `addi.w #$14,y_pos(a1)`). One frame of vine-swing phase error
+seats him ~6px low and everything cascades. Note the grab test itself guards on
+`Debug_placement_mode` -- the same address the recorder had been misreading, dead
+precisely because the ROM uses it as a debug guard.
+
+SCOPE / NOT REGRESSED. S1 GHZ1, S1 GHZ1 complete-run, S2 EHZ1 and S2 CNZ
+level-select stay green. `TestS3kAizTraceReplay` is 2 passed / 14 failed
+identically with and without the fix (its fixture still has a dead-zero counter --
+see the queued standard-recorder work). A clean compile reports 14 failures there,
+not the 3 a stale build reports; distrust any stale-build measurement in this tree.
+
+STILL OPEN at seg2: the f192 `y` 1-pixel divergence and the seg2 exit boundary,
+unchanged by this work and untouched by the recapture.
+
 ### 2026-07-23 -- CNZ fresh-start lifecycle advances from f0 to f185
 
 The focused CNZ level-select replay previously failed at frame 0 because
