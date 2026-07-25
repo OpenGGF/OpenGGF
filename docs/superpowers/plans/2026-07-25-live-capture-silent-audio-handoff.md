@@ -2,6 +2,11 @@
 
 Date: 2026-07-25
 
+> **Resolved.** The measurement the handoff asked for was run first and it
+> disproved the leading hypothesis below. See [Outcome](#outcome) at the end —
+> read that before the hypothesis section, which is kept only as a record of
+> what was ruled out.
+
 ## State
 
 - Worktree: `/home/farrell/code/projects/OpenGGF-live-av-recording`
@@ -145,3 +150,43 @@ mvn -Dmse=off -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen t
 `mvn test` regenerates `docs/rewind/real-gaps.md`; restore it. Commit trailers per
 `CLAUDE.md`; this is a `fix` touching `src/main/` so `Changelog: updated` with
 `CHANGELOG.md` staged.
+
+## Outcome
+
+The measurement was run before any edit, through a harness wiring the real
+`AudioManager`, the real producer, a real music source and a real
+`LiveCaptureController`. Three transitions were driven and observed:
+
+| Transition | Result |
+|---|---|
+| Backend swap alone, 48 kHz → 48 kHz | audio flows; the carry works |
+| Backend swap alone, 48 kHz → 44.1 kHz | `IllegalArgumentException: snapshot clock rate does not match this clock`, thrown out of `ensureShadowPresentation` |
+| `resetState()` **then** the backend swap | speaker audible, capture silent, `IllegalStateException: Live capture audio handle is no longer attached` — the reported failure, byte for byte |
+
+The device rate on this machine was measured directly (OpenAL negotiates 48000,
+matching the `48_000` literal the title screen uses), so the geometry never
+moved and neither the packet-size nor the sample-rate hypothesis was the cause.
+
+**The cause was a rebuild the handoff did not account for.** Entering a game
+rebuilds the presentation *twice*, and the first one is not the backend swap:
+
+```
+Engine.exitMasterTitleScreen
+  -> resetForGameplayFromMasterTitle -> audioManager.resetState()   <-- lease retired here
+  -> initializeGame -> initializeGlobalGameplayServices -> setBackend(LWJGL)
+```
+
+`resetState()` retired the lease outright, so the recording was already dead
+before the carry added in `116651690` could apply. The exception was therefore
+never removed — the report that it had been was mistaken.
+
+Fixed by treating `resetState()` as the presentation rebuild it is: it marks the
+lease for rebind on the same terms as `setBackend`, and only `destroy()` retires.
+The rate-change crash found alongside it is fixed too — a lease that cannot
+follow the producer is retired with a warning naming both rates, rather than
+crashing or recording pitch-shifted audio.
+
+`TestLiveCaptureSurvivesBackendSwap` was rewritten as the handoff asked: it
+asserts non-zero PCM through a real source across the transition and that the
+recorder and speaker receive byte-identical copies of one packet. It was
+verified RED against the exact production message before the fix.
