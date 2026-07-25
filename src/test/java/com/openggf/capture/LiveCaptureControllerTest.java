@@ -1,5 +1,6 @@
 package com.openggf.capture;
 
+import com.openggf.tests.TestTempFiles;
 import com.openggf.audio.LiveCaptureAudioHandle;
 import com.openggf.audio.DebugFailAfterFramesAudioHandle;
 import com.openggf.audio.runtime.AudioFrameClock;
@@ -352,7 +353,7 @@ class LiveCaptureControllerTest {
         RetainedProcess mux = new RetainedProcess(false);
         CountDownLatch muxLaunched = new CountDownLatch(1);
         List<Path> temporaryFiles = new ArrayList<>();
-        Path outputDirectory = Files.createTempDirectory("live-close");
+        Path outputDirectory = TestTempFiles.createTempDirectory("live-close");
         AtomicReference<Path> partialOutput = new AtomicReference<>();
         int[] launches = {0};
         FfmpegEncoder encoder = new FfmpegEncoder("ffmpeg", 1, command -> {

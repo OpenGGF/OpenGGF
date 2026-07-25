@@ -1,5 +1,6 @@
 package com.openggf.tests.playback;
 
+import com.openggf.tests.TestTempFiles;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.recording.UserRecordingWriter;
@@ -153,7 +154,7 @@ public class TestBk2MovieLoader {
 
     @Test
     public void failsWhenInputLogMissing() throws Exception {
-        Path file = Files.createTempFile("missing-input-log", ".bk2");
+        Path file = TestTempFiles.createTempFile("missing-input-log", ".bk2");
         file.toFile().deleteOnExit();
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(file))) {
             writeEntry(zip, "Header.txt", "Author: test\n");
@@ -168,7 +169,7 @@ public class TestBk2MovieLoader {
     }
 
     private static Path createBk2(String inputLogContents) throws IOException {
-        Path file = Files.createTempFile("playback-test", ".bk2");
+        Path file = TestTempFiles.createTempFile("playback-test", ".bk2");
         file.toFile().deleteOnExit();
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(file))) {
             writeEntry(zip, "Header.txt", "Author: unit-test\n");

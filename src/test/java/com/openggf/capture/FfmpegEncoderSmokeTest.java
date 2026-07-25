@@ -1,5 +1,6 @@
 package com.openggf.capture;
 
+import com.openggf.tests.TestTempFiles;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +16,7 @@ class FfmpegEncoderSmokeTest {
     void productionEncoderWritesTenFramesToANonEmptyMkv() throws Exception {
         Optional<Path> ffmpeg = FfmpegEncoder.findFfmpeg();
         Assumptions.assumeTrue(ffmpeg.isPresent(), "ffmpeg not on PATH");
-        Path out = Files.createTempFile("trace-capture-smoke-", ".mkv");
+        Path out = TestTempFiles.createTempFile("trace-capture-smoke-", ".mkv");
         Files.deleteIfExists(out);
 
         FfmpegEncoder enc = new FfmpegEncoder(ffmpeg.get().toString(), 2);

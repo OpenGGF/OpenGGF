@@ -1,5 +1,6 @@
 package com.openggf.graphics;
 
+import com.openggf.tests.TestTempFiles;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -16,7 +17,7 @@ class TestRgbaImageIO {
                 0xFFFF0000,
                 0xFF00FF00
         });
-        Path png = Files.createTempFile("rgba-image", ".png");
+        Path png = TestTempFiles.createTempFile("rgba-image", ".png");
 
         ScreenshotCapture.savePNG(image, png);
         RgbaImage loaded = ScreenshotCapture.loadPNG(png);
