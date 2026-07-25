@@ -10,11 +10,13 @@ import com.openggf.audio.presentation.AudioPresentationCommand.ResetRingAlternat
 import com.openggf.audio.presentation.AudioPresentationCommand.StartSampleSfx;
 import com.openggf.audio.presentation.AudioPresentationCommandQueue;
 import com.openggf.audio.presentation.AudioPresentationDependencyResolver;
+import com.openggf.audio.presentation.AudioPresentationFrameView;
 import com.openggf.audio.presentation.AudioPresentationMixer;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcm;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.presentation.PresentationVoice;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
@@ -64,6 +66,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       storage instances before and after the run, so "no allocation" is
  *       proved structurally as well as statistically.</li>
  * </ol>
+ *
+ * <p>The identity evidence deliberately includes
+ * {@code AudioPresentationFrameView.samples}, which is the one storage
+ * reference on the whole presentation path that is <em>not</em> {@code final}:
+ * the producer rebinds it every frame to whichever preallocated buffer owns
+ * that mode's PCM. Every other captured reference is a {@code private final}
+ * array whose identity and length javac already guarantees, so a per-frame copy
+ * introduced anywhere between the mixer and the taps (for example
+ * {@code return Arrays.copyOf(output, samples)} in the mixer) would be visible
+ * only here. These checks therefore also run per frame across all three
+ * presentation modes in the one-hour test, where nothing is being measured.
  */
 class TestAudioPresentationAllocationBudget {
 
@@ -75,6 +88,14 @@ class TestAudioPresentationAllocationBudget {
     /** Frames warmed through the probe call site itself. */
     private static final int PROBE_WARM_FRAMES = 1_000;
     private static final int ONE_HOUR_FRAMES = 3_600 * FRAME_RATE;
+    /**
+     * Steady-state ordered-voice bound for the one-hour workload: one looping
+     * music voice plus the at most two overlapping 2,048-frame one-shots that
+     * a deferred (held-rewind or SILENT) start can produce. Chosen well below
+     * the registry's fixed ordered-voice array capacity so that a one-shot
+     * retirement leak fails this test instead of saturating the array.
+     */
+    private static final int STEADY_STATE_ORDERED_VOICES = 4;
 
     // ---------------------------------------------------------------
     // 1. Warmed forward mixing allocates nothing per frame
@@ -109,6 +130,11 @@ class TestAudioPresentationAllocationBudget {
                 fixture.producer, warmFrame, PROBE_WARM_FRAMES));
         frame += PROBE_WARM_FRAMES;
         assertEquals(WARM_FRAMES, frame, "the warm phase presents 10,000 frames");
+        // The only non-final storage reference on the presentation path: a
+        // per-frame copy anywhere between the mixer and the taps shows up
+        // here and nowhere else.
+        assertSame(fixture.mixerOutput(), fixture.frameViewSamples(),
+                "a FORWARD present must publish the mixer's own output buffer");
 
         Structure before = fixture.structure();
         long measuredFrame = frame;
@@ -119,6 +145,9 @@ class TestAudioPresentationAllocationBudget {
 
         // Structural evidence always runs, even without a byte counter.
         assertNoStructuralGrowth(before, after);
+        assertSame(fixture.mixerOutput(), fixture.frameViewSamples(),
+                "10,000 measured FORWARD presents must still publish the "
+                        + "mixer's own output buffer, never a per-frame copy");
         assertEquals(5, fixture.registry.orderedVoiceCount(),
                 "looping voices survive the measured run");
         // Prove the drain claim rather than asserting an empty queue nothing
@@ -151,15 +180,28 @@ class TestAudioPresentationAllocationBudget {
         fixture.admitMusic();
 
         Structure before = fixture.structure();
+        Object mixerOutput = fixture.mixerOutput();
+        Object silenceBuffer = field(fixture.producer, "silence");
+        Object reverseBuffer = field(fixture.producer, "reversePcm");
         int maxOrderedVoices = 0;
+        int maxSampleSfxVoices = 0;
         int maxQueueSize = 0;
         int maxHistoryFrames = 0;
+        int viewRebinds = 0;
+        // Counts voices the registry actually admitted, by observing distinct
+        // ids in the live ordered-voice traversal. Ids are strictly increasing
+        // and used once, so every new high-water id is one real admission.
+        // Counting submissions instead would be a tautology on the loop below.
+        long highestAdmittedSfxId = 0;
+        long admittedSfx = 0;
+        long submittedSfx = 0;
         long nextSfxVoiceId = 1_000;
         for (int frame = 0; frame < ONE_HOUR_FRAMES; frame++) {
             if (frame % 7 == 0) {
                 fixture.submit(StartSampleSfx.fromVoice(
                         SampleBackedVoice.oneShot(nextSfxVoiceId++, 1,
                                 fixture.sfxPcm, SAMPLE_RATE, 1.0f, 1.0f)));
+                submittedSfx++;
             }
             if (frame % 601 == 0) {
                 fixture.submit(new ResetRingAlternation(frame % 2 == 0));
@@ -170,15 +212,34 @@ class TestAudioPresentationAllocationBudget {
                 fixture.producer.beginReverse(1.0);
                 for (int reverse = 0; reverse < FRAME_RATE; reverse++) {
                     fixture.producer.present(frame, PresentationMode.REVERSE);
+                    if (frameViewSamples(fixture.producer) != reverseBuffer) {
+                        viewRebinds++;
+                    }
                 }
                 fixture.producer.endReverse();
             } else if (frame % 900 == 0) {
                 fixture.producer.present(frame, PresentationMode.SILENT);
+                if (frameViewSamples(fixture.producer) != silenceBuffer) {
+                    viewRebinds++;
+                }
             } else {
                 fixture.producer.present(frame, PresentationMode.FORWARD);
+                if (frameViewSamples(fixture.producer) != mixerOutput) {
+                    viewRebinds++;
+                }
             }
-            maxOrderedVoices = Math.max(
-                    maxOrderedVoices, fixture.registry.orderedVoiceCount());
+            int orderedVoices = fixture.registry.orderedVoiceCount();
+            for (int index = 0; index < orderedVoices; index++) {
+                PresentationVoice voice = fixture.registry.orderedVoiceAt(index);
+                if (voice.voiceId() > highestAdmittedSfxId
+                        && voice.voiceId() >= 1_000) {
+                    highestAdmittedSfxId = voice.voiceId();
+                    admittedSfx++;
+                }
+            }
+            maxOrderedVoices = Math.max(maxOrderedVoices, orderedVoices);
+            maxSampleSfxVoices = Math.max(
+                    maxSampleSfxVoices, sampleSfxCount(fixture.registry));
             maxHistoryFrames = Math.max(
                     maxHistoryFrames, historyStoredFrames(fixture.producer));
         }
@@ -190,14 +251,34 @@ class TestAudioPresentationAllocationBudget {
         Structure after = fixture.structure();
 
         assertNoStructuralGrowth(before, after);
-        long admittedSfx = nextSfxVoiceId - 1_000;
+        assertEquals(0, viewRebinds,
+                viewRebinds + " of the run's presents published PCM that was "
+                        + "not the preallocated buffer owning that mode");
+        assertEquals(30_858, submittedSfx,
+                "the run must submit a sample start every seventh frame");
+        // Real admissions, not submissions: a registry or queue that silently
+        // refused every sample start would leave this at zero.
         assertTrue(admittedSfx > 30_000,
-                "the run only admitted " + admittedSfx + " sample voices");
+                "the registry only admitted " + admittedSfx + " of "
+                        + submittedSfx + " submitted sample voices");
+        assertEquals(0, warnedRejectionCount(fixture.registry),
+                "no sample voice may be refused admission across the run");
         assertTrue(maxOrderedVoices > 1,
                 "the run must actually admit and retire sample voices");
-        assertTrue(maxOrderedVoices
-                        <= AudioVoiceRegistry.MAX_SAMPLE_SFX_VOICES + 3,
-                "ordered voices peaked at " + maxOrderedVoices);
+        // Steady-state bound, deliberately far below the registry's fixed
+        // ORDERED_VOICE_CAPACITY (MAX_SAMPLE_SFX_VOICES + 3): asserting the
+        // array capacity would be unbreachable by construction and would
+        // absorb a total one-shot-retirement leak instead of catching it.
+        // One looping music voice plus the at most two 2,048-frame one-shots
+        // that can overlap when a held-rewind or SILENT frame defers a start.
+        assertTrue(maxOrderedVoices <= STEADY_STATE_ORDERED_VOICES,
+                "ordered voices peaked at " + maxOrderedVoices
+                        + ", above the steady-state bound "
+                        + STEADY_STATE_ORDERED_VOICES);
+        assertTrue(maxSampleSfxVoices
+                        < AudioVoiceRegistry.MAX_SAMPLE_SFX_VOICES,
+                "sample voices must retire, but the slot table peaked at "
+                        + maxSampleSfxVoices);
         // Bound the queue below its droppable-admission ceiling, not at its
         // array length: a producer that stopped draining would pin the queue
         // at NORMAL_CAPACITY (droppable starts are then silently refused), so
@@ -253,8 +334,18 @@ class TestAudioPresentationAllocationBudget {
             Structure after = fixture.structure();
 
             assertNoStructuralGrowth(before, after);
+            assertSame(fixture.mixerOutput(), fixture.frameViewSamples(),
+                    "a saturated speaker FIFO must not make the producer copy "
+                            + "its packet");
+            // The device is only ever touched from OpenAlPcmSink#updateDevice,
+            // which the render thread drives; nothing here calls it. This is
+            // the guard that the presentation path itself performs no device
+            // I/O: a regression that pumped the device from accept() would
+            // block the producer on the audio device and fail here.
+            assertEquals(0, device.updateCalls,
+                    "the presentation path must never drive the device");
             assertTrue(device.enqueuedFrames.isEmpty(),
-                    "a stalled device consumes nothing");
+                    "the presentation path must never enqueue to the device");
             assertTrue(sink.droppedStereoFrames() > 0,
                     "speaker-only PCM is discarded rather than backpressured");
             assertTrue(sink.queuedStereoFrames() > SAMPLE_RATE,
@@ -287,36 +378,54 @@ class TestAudioPresentationAllocationBudget {
         Fixture fixture = fixture(new NoDeviceAudioSink(SAMPLE_RATE));
         Object queueEntriesBefore = field(fixture.commands, "entries");
         Object deferredBefore = field(fixture.registry, "deferredRemovals");
+        // One recording applier for both paths. Overflow can force a
+        // synchronous owner-boundary drain from inside submit(), so an applier
+        // installed only on applyPending would silently miss the commands that
+        // drain took, and the ordering evidence below would be incomplete.
+        List<Boolean> applied = new ArrayList<>();
+        java.util.function.Consumer<AudioPresentationCommand> recorder =
+                command -> {
+                    if (command instanceof ResetRingAlternation reset) {
+                        applied.add(reset.ringLeft());
+                    }
+                    fixture.registry.apply(command);
+                };
 
         // Overflow both queue regions: 224 droppable normal starts plus every
-        // one of the 32 reserved structural slots, then more structural
-        // commands than the whole queue can hold.
+        // one of the 32 reserved structural slots, then enough further
+        // structural commands that the queue is full with no droppable left to
+        // evict, which is the only path that reaches the synchronous
+        // owner-boundary drain.
         for (int index = 0;
                 index < AudioPresentationCommandQueue.CAPACITY
                         - AudioPresentationCommandQueue.STRUCTURAL_RESERVE;
                 index++) {
             fixture.submit(StartSampleSfx.fromVoice(
                     SampleBackedVoice.oneShot(10_000 + index, 1,
-                            fixture.sfxPcm, SAMPLE_RATE, 1.0f, 1.0f)));
+                            fixture.sfxPcm, SAMPLE_RATE, 1.0f, 1.0f)), recorder);
         }
         assertEquals(AudioPresentationCommandQueue.CAPACITY
                         - AudioPresentationCommandQueue.STRUCTURAL_RESERVE,
                 fixture.commands.size());
         List<Boolean> expectedRingLeft = new ArrayList<>();
-        for (int index = 0;
-                index < AudioPresentationCommandQueue.CAPACITY; index++) {
+        int structuralSubmissions = AudioPresentationCommandQueue.CAPACITY
+                + AudioPresentationCommandQueue.STRUCTURAL_RESERVE;
+        int drainedInsideSubmit = -1;
+        for (int index = 0; index < structuralSubmissions; index++) {
             boolean ringLeft = index % 2 == 0;
             expectedRingLeft.add(ringLeft);
-            fixture.submit(new ResetRingAlternation(ringLeft));
-        }
-
-        List<Boolean> applied = new ArrayList<>();
-        fixture.commands.applyPending(command -> {
-            if (command instanceof ResetRingAlternation reset) {
-                applied.add(reset.ringLeft());
+            int appliedBefore = applied.size();
+            fixture.submit(new ResetRingAlternation(ringLeft), recorder);
+            if (applied.size() > appliedBefore && drainedInsideSubmit < 0) {
+                drainedInsideSubmit = index;
             }
-            fixture.registry.apply(command);
-        });
+        }
+        assertEquals(AudioPresentationCommandQueue.CAPACITY,
+                drainedInsideSubmit,
+                "a full queue with no droppable command left must drain "
+                        + "synchronously at its owner boundary");
+
+        fixture.commands.applyPending(recorder);
 
         assertEquals(0, fixture.commands.size());
         assertSame(queueEntriesBefore, field(fixture.commands, "entries"),
@@ -442,7 +551,22 @@ class TestAudioPresentationAllocationBudget {
             DecodedPcm sfxPcm) {
 
         private void submit(AudioPresentationCommand command) {
-            commands.submit(command, () -> true, registry::apply);
+            submit(command, registry::apply);
+        }
+
+        private void submit(
+                AudioPresentationCommand command,
+                java.util.function.Consumer<AudioPresentationCommand> applier) {
+            commands.submit(command, () -> true, applier);
+        }
+
+        private Object mixerOutput() {
+            return field(mixer, "output");
+        }
+
+        private Object frameViewSamples() {
+            return TestAudioPresentationAllocationBudget
+                    .frameViewSamples(producer);
         }
 
         private void admitMusic() {
@@ -552,6 +676,48 @@ class TestAudioPresentationAllocationBudget {
     // Reflection helpers
     // ---------------------------------------------------------------
 
+    /**
+     * Resolved once: the one-hour test reads it after every one of its
+     * ~220,000 presents, and a per-call {@code getDeclaredField} would both
+     * dominate that loop and allocate a fresh {@link Field} copy each time.
+     */
+    private static final Field FRAME_VIEW_FIELD =
+            declaredField(AudioPresentationProducer.class, "frameView");
+    private static final Field FRAME_VIEW_SAMPLES_FIELD =
+            declaredField(AudioPresentationFrameView.class, "samples");
+
+    private static Field declaredField(Class<?> owner, String name) {
+        try {
+            Field declared = owner.getDeclaredField(name);
+            declared.setAccessible(true);
+            return declared;
+        } catch (NoSuchFieldException missing) {
+            throw new AssertionError(missing);
+        }
+    }
+
+    /**
+     * The live PCM buffer the producer's synchronous view currently publishes.
+     * This is the only storage reference on the presentation path that is not
+     * {@code final}, so it is the only one whose identity a per-frame copy can
+     * change.
+     */
+    private static Object frameViewSamples(AudioPresentationProducer producer) {
+        try {
+            return FRAME_VIEW_SAMPLES_FIELD.get(FRAME_VIEW_FIELD.get(producer));
+        } catch (IllegalAccessException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
+    private static int sampleSfxCount(AudioVoiceRegistry registry) {
+        return (int) field(registry, "sampleSfxCount");
+    }
+
+    private static int warnedRejectionCount(AudioVoiceRegistry registry) {
+        return (int) field(registry, "warnedRejectionCount");
+    }
+
     private static Object field(Object target, String name) {
         Class<?> type = target.getClass();
         while (type != null) {
@@ -605,6 +771,7 @@ class TestAudioPresentationAllocationBudget {
     private static final class FakeDevice implements OpenAlPcmSink.Device {
         private final int sampleRate;
         private final List<Integer> enqueuedFrames = new ArrayList<>();
+        private int updateCalls;
 
         private FakeDevice(int sampleRate) {
             this.sampleRate = sampleRate;
@@ -623,6 +790,7 @@ class TestAudioPresentationAllocationBudget {
 
         @Override
         public void update() {
+            updateCalls++;
         }
 
         @Override

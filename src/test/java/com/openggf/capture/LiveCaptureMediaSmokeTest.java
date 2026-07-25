@@ -252,6 +252,9 @@ class LiveCaptureMediaSmokeTest {
                     decoded.length);
         } finally {
             controller.close();
+            // close() only awaits the pending finalizer future; an externally
+            // supplied executor stays alive unless the owner shuts it down.
+            finalizer.shutdownNow();
             try (var files = Files.list(directory)) {
                 files.forEach(path -> {
                     try {
