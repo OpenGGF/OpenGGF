@@ -206,13 +206,27 @@ void aNumericStringWithNoNameStillResolvesAsARawKeyCode() {
     assertEquals(GLFW_KEY_O, KeyChord.parse("79").keyCode());
 }
 
+/**
+ * The guard must be a round-trip identity check, not a presence check.
+ * `nameOf` returns the numeric string for a code with no GLFW_KEY_* constant
+ * (`GlfwKeyNameResolver:96`), and the lowest real constant is GLFW_KEY_SPACE
+ * = 32 — so `nameOf(0)`..`nameOf(9)` are `"0"`..`"9"`, which ARE real key
+ * names resolving to 48..57. A `resolve(name).isEmpty()` guard would not skip
+ * them, and `assertEquals(0, 48)` on the first iteration is unfixable by any
+ * correct change to KeyChord. Verified by reflecting over lwjgl-glfw-3.3.3:
+ * the identity guard covers 120 codes, which is every distinct code in the
+ * table, and skips 229 — the 10 digit codes plus 219 gaps.
+ */
 @Test
 void everyNameInTheTableFormatsBackToAnEqualChord() {
+    int covered = 0;
     for (int keyCode = 0; keyCode <= GLFW_KEY_LAST; keyCode++) {
         String name = GlfwKeyNameResolver.nameOf(keyCode);
-        if (GlfwKeyNameResolver.resolve(name).isEmpty()) {
-            continue; // code has no GLFW_KEY_* constant
+        OptionalInt resolved = GlfwKeyNameResolver.resolve(name);
+        if (resolved.isEmpty() || resolved.getAsInt() != keyCode) {
+            continue; // no constant for this code; nameOf gave back a number
         }
+        covered++;
         KeyChord plain = KeyChord.parse(name);
         assertEquals(keyCode, plain.keyCode(), name);
         assertEquals(plain, KeyChord.parse(plain.format()), name);
@@ -220,6 +234,7 @@ void everyNameInTheTableFormatsBackToAnEqualChord() {
         KeyChord chorded = KeyChord.of(keyCode, CTRL, SHIFT, ALT, META);
         assertEquals(chorded, KeyChord.parse(chorded.format()), name);
     }
+    assertTrue(covered >= 100, "guard must not skip the table itself: " + covered);
 }
 
 /**
@@ -238,7 +253,8 @@ void separatorOnlyInputIsUnboundRatherThanThrowing(String configured) {
 }
 ```
 
-Add the imports `GLFW_KEY_1`, `GLFW_KEY_LAST`.
+Add the imports `GLFW_KEY_1`, `GLFW_KEY_LAST`, `java.util.OptionalInt`, and
+`assertTrue` if not already present.
 
 - [ ] **Step 2: Run the focused test and verify RED**
 
@@ -249,7 +265,9 @@ mvn -Dmse=off -Dtest=com.openggf.configuration.TestKeyChord test
 Expected RED: `aDigitBindingMeansTheNumberRowKeyNotTheRawKeyCode` fails with
 `expected: <49> but was: <1>`; `separatorOnlyInputIsUnboundRatherThanThrowing`
 errors with `ArrayIndexOutOfBoundsException: Index -1 out of bounds for length 0`;
-`everyNameInTheTableFormatsBackToAnEqualChord` fails on the first digit name.
+`everyNameInTheTableFormatsBackToAnEqualChord` fails at `keyCode = 48`, whose name
+is `"0"`, with `expected: <48> but was: <0> ==> 0` — the digit codes 0–9 are skipped
+by the identity guard, so the first covered digit is the number-row `0`.
 The 13 landed tests still pass.
 
 - [ ] **Step 3: Correct `keyCode` and guard `parse`**
@@ -393,7 +411,20 @@ public void testAKeyPressedAfterFocusLossStillRegisters() {
 ```
 
 Add to `TestUserRecordingMenu` — one real menu path, using the existing `entry(...)`
-helper, proving the ~30 affected shortcuts recover:
+helper (`:258`) and `UserRecordingMenuState.cursor()` (`:247`), proving the ~30
+affected shortcuts recover.
+
+**Its file path and its package deliberately disagree:** the file is
+`src/test/java/com/openggf/recording/menu/TestUserRecordingMenu.java` but line 1
+declares `package com.openggf.game.recording.menu;`, matching the production class
+under `src/main/java/com/openggf/game/recording/menu/`. Surefire matches `-Dtest`
+against the compiled class, so the selector must be
+`com.openggf.game.recording.menu.TestUserRecordingMenu`. A directory-shaped selector
+matches nothing, and because the other class in the same comma list does match,
+`failIfNoSpecifiedTests` never trips and the run reports success with this test never
+executed. Also add the static imports `GLFW_KEY_DOWN` and `GLFW_KEY_LEFT_SUPER` —
+the file currently imports only `GLFW_KEY_ENTER`, `GLFW_KEY_LEFT_SHIFT`,
+`GLFW_PRESS`, `GLFW_RELEASE` (`:38-41`).
 
 ```java
 @Test
@@ -418,8 +449,11 @@ void aLatchedSuperKeyStopsTheMenuUntilFocusLossClearsIt() {
 - [ ] **Step 2: Run the focused tests and verify RED**
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.tests.TestInputHandler,com.openggf.recording.menu.TestUserRecordingMenu test
+mvn -Dmse=off -Dtest=com.openggf.tests.TestInputHandler,com.openggf.game.recording.menu.TestUserRecordingMenu test
 ```
+
+Confirm the Surefire summary names **both** classes. If `TestUserRecordingMenu` is
+absent from the run, the selector is wrong — do not proceed on a green that skipped it.
 
 Expected RED: compilation fails —
 `cannot find symbol: method isSuperDown()` and
@@ -472,10 +506,10 @@ in Step 4 rather than assuming.
 - [ ] **Step 4: Run the focused tests plus the guard and the affected shortcut suites**
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.tests.TestInputHandler,com.openggf.recording.menu.TestUserRecordingMenu,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.control.TestInputHandlerLogicalSnapshot,com.openggf.control.TestPlayerInputState test
+mvn -Dmse=off -Dtest=com.openggf.tests.TestInputHandler,com.openggf.game.recording.menu.TestUserRecordingMenu,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.control.TestInputHandlerLogicalSnapshot,com.openggf.control.TestPlayerInputState test
 ```
 
-Expected: all pass, including
+Expected: all five classes appear in the Surefire summary and all pass, including
 `rootDispatchMethodsDoNotGrowBeyondCurrentBudgets`. If `Engine#init` now exceeds
 181 lines, extract the focus/iconify callbacks into a private method rather than
 raising the ratchet.
@@ -529,8 +563,14 @@ Meta chord would therefore not be reproducible under playback while the same cho
 Ctrl would be.
 
 This is a record change, not an `InputHandler` edit, which is why it is its own task.
-Verified blast radius — `debugShiftDown`/`debugControlDown` are named in exactly six
-files outside their declaring record:
+
+Blast radius is **two questions, not one**. Naming a component is the smaller one:
+`debugShiftDown`/`debugControlDown` appear in six files outside their declaring
+record. Calling a canonical constructor is the larger one and breaks on arity alone,
+naming nothing — a whole-tree scan of `new Bk2FrameInput(` (64 call sites) finds
+exactly three at the canonical 11-argument form: `LiveRewindInputSource.java:36`,
+`LiveRewindInputSource.java:109`, and `TestLiveRewindLogicalInput.java:51`. The third
+is a test, so it is easy to miss and must be edited and staged with the rest.
 
 | File | Change |
 | --- | --- |
@@ -540,6 +580,7 @@ files outside their declaring record:
 | `game/rewind/LiveRewindInputSource.java:36-47,108-111` | canonical ctor goes 11 args → 13; supply `isAltDown()`/`isSuperDown()` and two more `false` in `neutralFrameInput` |
 | `control/InputHandler.java:186-192` | `isAltDown()`/`isSuperDown()` consult `logicalOverride` |
 | `test/control/TestPlayerInputState.java:111`, `test/control/TestInputHandlerLogicalSnapshot.java:66` | `withDebugInput` arity |
+| `test/game/rewind/TestLiveRewindLogicalInput.java:51-53` | canonical `Bk2FrameInput` ctor, 11 args → 13; found by arity, not by component name |
 
 `debug/playback/Bk2MovieLoader.java:162-166` builds frames with the 8-arg convenience
 constructor and is unchanged — which is also why BK2 movies supply `false` for all
@@ -556,6 +597,7 @@ than calling a canonical constructor. Confirm with a compile, not with this tabl
 - Modify: `src/test/java/com/openggf/control/TestPlayerInputState.java`
 - Modify: `src/test/java/com/openggf/control/TestInputHandlerLogicalSnapshot.java`
 - Modify: `src/test/java/com/openggf/game/rewind/TestLiveRewindInputSource.java`
+- Modify: `src/test/java/com/openggf/game/rewind/TestLiveRewindLogicalInput.java`
 - Modify: `CHANGELOG.md`
 
 **Interfaces:**
@@ -614,10 +656,24 @@ In `TestLiveRewindInputSource`, beside the existing `:122-123` and `:130-131`
 assertions, assert `debugAltDown()`/`debugSuperDown()` for a frame appended while
 Alt and Super are held.
 
+In `TestLiveRewindLogicalInput`, the `recordedSnapshotCarriesDebugModifiersIntoInputOverride`
+case builds a canonical `Bk2FrameInput` at `:51-53`:
+
+```java
+Bk2FrameInput current = new Bk2FrameInput(
+        1, 0, 0, false, 0, 0, false,
+        true, true, true, "current");
+```
+
+Pass two more `true` before `rawLine` and assert `input.isAltDown()` /
+`input.isSuperDown()` beside the existing `isShiftDown()` / `isControlDown()`
+assertions — it is the natural place to prove the new columns reach the override.
+The `previous` frame at `:50` uses the 8-arg convenience constructor and is unchanged.
+
 - [ ] **Step 2: Run the focused tests and verify RED**
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.control.TestInputHandlerLogicalSnapshot,com.openggf.control.TestPlayerInputState,com.openggf.game.rewind.TestLiveRewindInputSource test
+mvn -Dmse=off -Dtest=com.openggf.control.TestInputHandlerLogicalSnapshot,com.openggf.control.TestPlayerInputState,com.openggf.game.rewind.TestLiveRewindInputSource,com.openggf.game.rewind.TestLiveRewindLogicalInput test
 ```
 
 Expected RED: compilation fails —
@@ -659,11 +715,15 @@ public boolean isAltDown() {
 mvn -Dmse=off -DskipTests package
 ```
 
-Expected: `BUILD SUCCESS`. Any other caller of a canonical constructor surfaces here
-as a compile error; fix it rather than adding a lossy default constructor.
+Expected: `BUILD SUCCESS`. `-DskipTests` skips test *execution* only —
+`maven-compiler-plugin:testCompile` still runs (the pom sets no `maven.test.skip`),
+so this compiles `src/test` too and any remaining canonical-constructor caller
+surfaces here as a compile error. Fix it rather than adding a lossy default
+constructor, and add it to the Step 5 `git add` — an edited-but-unstaged file breaks
+Task 4's empty-`git status` precondition.
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.control.TestInputHandlerLogicalSnapshot,com.openggf.control.TestPlayerInputState,com.openggf.game.rewind.TestLiveRewindInputSource,com.openggf.tests.TestInputHandler test
+mvn -Dmse=off -Dtest=com.openggf.control.TestInputHandlerLogicalSnapshot,com.openggf.control.TestPlayerInputState,com.openggf.game.rewind.TestLiveRewindInputSource,com.openggf.game.rewind.TestLiveRewindLogicalInput,com.openggf.tests.TestInputHandler test
 ```
 
 Expected: all pass.
@@ -685,7 +745,8 @@ git add CHANGELOG.md \
   src/main/java/com/openggf/game/rewind/LiveRewindInputSource.java \
   src/test/java/com/openggf/control/TestPlayerInputState.java \
   src/test/java/com/openggf/control/TestInputHandlerLogicalSnapshot.java \
-  src/test/java/com/openggf/game/rewind/TestLiveRewindInputSource.java
+  src/test/java/com/openggf/game/rewind/TestLiveRewindInputSource.java \
+  src/test/java/com/openggf/game/rewind/TestLiveRewindLogicalInput.java
 git commit -m "fix(input): reproduce Alt and Super from recorded input
 
 isShiftDown and isControlDown consulted the logical override so rewind and
@@ -802,6 +863,23 @@ void anUnboundDefaultReportsAsUnbound() {
     assertFalse(configService.getKeyChord(SonicConfiguration.PLAYBACK_TOGGLE_KEY).isBound());
 }
 
+/**
+ * Deliberately unbinding a shortcut must unbind it through BOTH accessors.
+ * resolveInt's default fallback is gated on `!str.isEmpty()` (:204), so an
+ * explicitly empty value returns -1 without consulting the default. A chord
+ * accessor that falls back unconditionally would re-bind the shortcut, and
+ * after Task 5 that means an unbound capture.toggleKey silently fires on
+ * SHIFT+O. FRAME_STEP_KEY is used rather than a PLAYBACK_* key because its
+ * registered default is bound (Q), so the two paths actually differ.
+ */
+@Test
+void anExplicitlyEmptyValueStaysUnboundThroughBothAccessors() {
+    configService.setConfigValue(SonicConfiguration.FRAME_STEP_KEY, "");
+
+    assertEquals(-1, configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
+    assertFalse(configService.getKeyChord(SonicConfiguration.FRAME_STEP_KEY).isBound());
+}
+
 @Test
 void aSessionOverrideWinsOverThePersistedValue() {
     configService.setConfigValue(SonicConfiguration.FRAME_STEP_KEY, "O");
@@ -887,15 +965,28 @@ private KeyChord resolveKeyChord(SonicConfiguration binding) {
     if (binding == SonicConfiguration.P2_JUMP && !hasExplicitValue(SonicConfiguration.P2_JUMP)) {
         return getKeyChord(SonicConfiguration.P2_A);
     }
-    KeyChord chord = KeyChord.parse(getConfigValue(binding));
+    Object value = getConfigValue(binding);
+    KeyChord chord = KeyChord.parse(value);
     if (chord.isBound()) {
         return chord;
     }
     // resolveInt falls back to the registered default rather than reporting
-    // unbound; reconcile here so both accessors agree.
+    // unbound -- but only for a NON-EMPTY value (:204, `if (!str.isEmpty())`).
+    // An explicitly empty value returns -1 with no default lookup, so the same
+    // gate belongs here or a player who writes `capture.toggleKey: ""` to unbind
+    // the shortcut gets getInt == -1 and getKeyChord == SHIFT+O, and the
+    // shortcut keeps firing because Engine reads the chord.
+    if (value == null || value.toString().trim().isEmpty()) {
+        return chord;
+    }
     return KeyChord.parse(defaults.get(binding.name()));
 }
 ```
+
+The gate is load-bearing for acceptance criterion 12 and is **not** covered by
+`anUnboundDefaultReportsAsUnbound` — `PLAYBACK_TOGGLE_KEY`'s registered default is
+itself `""`, so that test passes either way and hides the divergence. The explicit
+test below is the one that pins it.
 
 Add one private invalidator and use it at **all seven** existing `intCache.clear()`
 sites — verified at lines `372, 396, 401, 406, 508, 536, 554`:
@@ -1105,6 +1196,41 @@ void migrateDeprecatedCaptureToggleKey_isIdempotent() {
 }
 ```
 
+Those three call the migration directly on a hand-built map, so they prove the
+function works and prove **nothing** about it being wired in. That wiring is a single
+`if (...) { configChanged = true; }` block among four siblings in `loadConfig`
+(`:118-136`), and if it is omitted or placed after `applyDefaults()`, every existing
+install keeps its bare `O`, exact matching rejects the held Shift, and Shift+O stops
+working — precisely the failure acceptance criterion 7 exists to prevent, with the
+whole suite green. Add the end-to-end case, which `createStandalone(Path)` makes cheap
+because it reads `<dir>/config.yaml`:
+
+```java
+/**
+ * Criterion 7, existing-install half. The three cases above test the migration
+ * function; this one tests that loadConfig actually calls it, which is the part
+ * a user would notice.
+ */
+@Test
+void anExistingInstallCarryingTheSupersededDefaultIsMigratedOnLoad(@TempDir Path tempDir)
+        throws IOException {
+    Files.writeString(tempDir.resolve("config.yaml"), "capture:\n  toggleKey: O\n");
+
+    SonicConfigurationService service = SonicConfigurationService.createStandalone(tempDir);
+
+    assertEquals(KeyChord.of(GLFW_KEY_O, SHIFT),
+            service.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY));
+    assertTrue(Files.readString(tempDir.resolve("config.yaml")).contains("toggleKey: SHIFT+O"),
+            "the migration must be persisted, not re-applied on every launch");
+}
+```
+
+`@TempDir` keeps this leak-free for `TestNoLeakedTemporaryFiles`. If
+`TestConfigMigrationService` has no `@TempDir`/`SonicConfigurationService` imports
+yet, add them; if a service-level test fits its file better, put this case in
+`CaptureConfigDefaultsTest` instead and stage that file — either is fine, but the
+assertion must exist somewhere.
+
 In `CaptureConfigDefaultsTest`, change the bundled-YAML assertion at `:30` from `"O"`
 to `"SHIFT+O"`, and add the fresh/migrated-install assertions. Leave `:21`
 (`assertEquals(GLFW_KEY_O, c.getInt(CAPTURE_TOGGLE_KEY))`) **unchanged** — it must
@@ -1210,9 +1336,21 @@ its sibling. Wire it into the migration block in `loadConfig` (after
 `handler.isKeyPressedWithoutModifiers(toggle.keyCode())`. Do not touch the
 `PERFORMANCE` check above the gate or the Ctrl+P clipboard chord below it.
 
-Update `CONFIGURATION.md:433`'s default cell from `O` to `SHIFT+O` and reword its
-description to say the chord lives in the value. `CONFIGURATION.md:279` and
-`README.md:271` still read `Shift+O` and stay correct.
+`CONFIGURATION.md` needs **two** edits, not one:
+
+- `:433` — the `CAPTURE_TOGGLE_KEY` row's default cell goes from `O` to `SHIFT+O`,
+  and its description ("Complete-chord live viewport recording toggle (`Shift` +
+  this key, with Ctrl/Alt released)") is reworded to say the chord lives in the value.
+- `:279` — currently reads ``press `Shift+O` (or `Shift+<capture.toggleKey>`)``. The
+  parenthetical becomes wrong the moment the Shift moves into the value: it tells a
+  reader to press Shift *plus* their binding, so anyone who set `CTRL+SHIFT+O` reads
+  it as Shift+Ctrl+Shift+O. Reword to ``press `Shift+O` — or whatever
+  `capture.toggleKey` is set to, since the modifiers are part of the value``. Task 6
+  is scoped to the format table and the support table and does not revisit this line,
+  so it must be fixed here, in the commit that carries `Configuration-Docs: updated`.
+
+`README.md:271` names only the concrete default `Shift+O` with no
+`<capture.toggleKey>` parenthetical, so it stays correct and is not staged.
 
 - [ ] **Step 4: Run the focused tests, the capture suites, and the guard**
 
@@ -1442,7 +1580,8 @@ decision: its own binding, or "the record chord without its modifiers".
    input such as `"+"` (Task 1).
 7. Live recording still toggles on Shift+O with no user action, on a fresh install
    **and** on an existing install carrying a persisted `toggleKey: O`, the latter via
-   the Task 5 migration.
+   the Task 5 migration — proved end-to-end through `loadConfig`, not only by calling
+   the migration function on a hand-built map.
 8. Meta chords match real Super presses (Tasks 2, 5).
 9. Alt and Meta chords are reproducible under trace playback on the same terms as
    Shift and Ctrl, and the BK2 no-modifier-column limit is documented (Tasks 3, 6).
@@ -1450,8 +1589,9 @@ decision: its own binding, or "the record chord without its modifiers".
 11. Full suite green; the `capture.toggleKey` conversion carries changelog entries
     covering both the visible-Shift change and the customised-value case (Task 5).
 12. `getKeyChord` and `getInt` agree on the key code for every form — digits, chords,
-    `DERIVED` bindings, and values that fall back to their default — and a converted
-    and unconverted binding coexist in one `config.yaml` (Task 4).
+    `DERIVED` bindings, values that fall back to their default, and an explicitly
+    empty value that falls back to neither and stays unbound — and a converted and
+    unconverted binding coexist in one `config.yaml` (Task 4).
 
 ## Task execution and review protocol
 
@@ -1460,6 +1600,13 @@ decision: its own binding, or "the record chord without its modifiers".
 - Before starting a task, `git status --short --untracked-files=no` must be empty.
 - Run the RED command before writing production code and record the exact failure
   text. NOT RUN is never a pass.
+- A `-Dtest` selector is a **package** name, not a directory path, and at least one
+  test file in this tree deliberately disagrees with its directory
+  (`src/test/java/com/openggf/recording/menu/TestUserRecordingMenu.java` declares
+  `package com.openggf.game.recording.menu;`). Surefire's `failIfNoSpecifiedTests`
+  only trips when *nothing* in the comma list matches, so one bad name in a list
+  silently drops that class while the build reports success. Check every class you
+  selected appears in the Surefire summary before treating a green as evidence.
 - Never weaken, delete, or `@Disabled` an assertion to make a gate green. If a claim
   in this plan is wrong, say so with the evidence rather than working around it.
 - `CaptureConfigDefaultsTest:21`, `TestConfigKeyNameResolution`,
