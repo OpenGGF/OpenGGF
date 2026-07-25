@@ -374,6 +374,49 @@ class TestEngineLiveCapturePresentation {
         assertFalse(toggles(config, input));
     }
 
+    /**
+     * Every chord case above evaluates the seam directly, so the production
+     * shortcut could stop using it and they would all stay green. Inlining the
+     * detector call into handleLiveCaptureShortcut is exactly what drops the
+     * isBound() pre-check -- LiveCaptureChord.update's own isBound() check does
+     * not save it, because {@code input.isKeyDown(chord.keyCode())} is evaluated
+     * as an argument first, and isKeyDown(-1) reaches the pad rewind branch.
+     */
+    @Test
+    void theProductionShortcutEvaluatesTheChordOnlyThroughTheGuardedSeam() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        int start = source.indexOf("private void handleLiveCaptureShortcut()");
+        assertTrue(start >= 0, "handleLiveCaptureShortcut was renamed; re-point this guard");
+        int end = source.indexOf("private CaptureViewport currentCaptureViewport()", start);
+        String body = source.substring(start, end);
+
+        assertEquals(1, occurrences(body, "shouldToggleLiveCapture("),
+                "the shortcut must reach the chord through the guarded seam");
+        assertEquals(0, occurrences(body, "liveCaptureChord.update("),
+                "an inlined detector call skips the load-bearing isBound() guard");
+    }
+
+    /**
+     * A latched modifier is cleared by the window focus callback, and that is
+     * the only production caller of clearKeyState. Testing the helper directly
+     * leaves the wiring free to be dropped, which re-latches Super after an
+     * alt-tab and kills every isKeyPressedWithoutModifiers shortcut for the rest
+     * of the process. The iconify callback deliberately has no clear of its own:
+     * a minimise takes focus with it, so this callback has already run.
+     */
+    @Test
+    void losingWindowFocusClearsLatchedKeyState() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        int start = source.indexOf("glfwSetWindowFocusCallback(window");
+        assertTrue(start >= 0, "the focus callback was renamed; re-point this guard");
+        int end = source.indexOf("glfwSetWindowIconifyCallback(window", start);
+        assertTrue(end > start, "the focus callback must precede the iconify callback");
+        String callback = source.substring(start, end);
+
+        assertEquals(1, occurrences(callback, "inputHandler.clearKeyState()"),
+                "focus loss must drop key state or a window-switch modifier latches");
+    }
+
     /** One connected pad with the given buttons held. */
     private static final class FakePad implements GamepadStateSource {
         private final boolean[] buttons = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];

@@ -563,9 +563,10 @@ Invalid key names log a warning and fall back to the default binding for that ke
   is deliberately switched off.
 - **`O` is reserved for `capture.toggleKey`.** The migration that carries
   existing installs onto the `SHIFT+O` default matches on the value rather than
-  on a schema version, so it re-runs on every launch and rewrites `O` — and
-  `GLFW_KEY_O`, `KEY_O`, `79` — back to `SHIFT+O`. Binding *this one action* to a
-  bare `O` is not possible; pick another key.
+  on a schema version, so it re-runs on every launch and rewrites every value
+  that resolves to an unmodified `O` — `O`, `GLFW_KEY_O`, `KEY_O`, `79` and the
+  quoted `"79"` — back to `SHIFT+O`. Binding *this one action* to a bare `O` is
+  not possible; pick another key.
 
 #### Modifier support per binding
 
@@ -576,11 +577,16 @@ states, and the third is invisible from the config file:
 |-------|---------|----------|
 | Chord honoured | Read as a chord and matched exactly | `CAPTURE_TOGGLE_KEY` |
 | Modifiers ignored | Read as a bare key code; a chord resolves to its key and the modifiers are dropped, so `"CTRL+P"` fires on plain `P` | every binding not named in the other two rows |
-| Chord permanently dead | Read through a "no modifier held" check, so the modifier you must hold to type the chord is exactly what blocks the shortcut. `debug.playback.toggleKey: "CTRL+P"` resolves to a live key code and still never fires | the nine `PLAYBACK_*` keys; `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`, `SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`, `SPECIAL_STAGE_PLANE_DEBUG_KEY`, `NEXT_ACT`, `NEXT_ZONE`, `DEBUG_LAST_CHECKPOINT_KEY`, `LEVEL_SELECT_KEY`, `DEBUG_MODE_KEY` |
+| Chord permanently dead | Read through a "no modifier held" check, so the modifier you must hold to type the chord is exactly what blocks the shortcut. `debug.playback.toggleKey: "CTRL+P"` resolves to a live key code and still never fires | the nine `PLAYBACK_*` keys; `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`, `SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`, `SPECIAL_STAGE_PLANE_DEBUG_KEY`, `NEXT_ACT`, `NEXT_ZONE`, `DEBUG_LAST_CHECKPOINT_KEY`, `LEVEL_SELECT_KEY` |
 
-`UP`/`DOWN`/`LEFT`/`RIGHT` are in **two** states at once: modifiers are ignored
-on the gameplay path, and the chord is dead on the special-stage sprite-debug
-path, which reads them through the same unmodified-debug-key check.
+`UP`/`DOWN`/`LEFT`/`RIGHT` and `DEBUG_MODE_KEY` are in **two** states at once.
+Modifiers are ignored for `UP`/`DOWN`/`LEFT`/`RIGHT` on the gameplay path, and
+the chord is dead on the special-stage sprite-debug path, which reads them
+through the same unmodified-debug-key check. `DEBUG_MODE_KEY`'s chord is dead in
+`GameLoop` (both reads go through that check), but `SpriteManager`'s debug-mode
+toggle and the live-rewind input recorder read it with a plain key-pressed
+check, so `debug.keys.debugMode: "CTRL+D"` still toggles sprite debug mode on a
+plain `D` with the Ctrl neither required nor checked.
 
 Some shortcuts are hardcoded and consume a keystroke whatever a binding says:
 Shift/Ctrl/Alt+`B` (bonus-stage debug, exactly one modifier), Shift+`Tab`, Ctrl+`P`
