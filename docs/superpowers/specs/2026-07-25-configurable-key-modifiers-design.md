@@ -12,7 +12,9 @@ modifier has to hardcode it at its call site, which splits one user-facing
 concept across two places and leaves half of it unconfigurable.
 
 `capture.toggleKey` is the worked example. The player can change the key, but
-the Shift it must be pressed with lives in `Engine.handleLiveCaptureShortcut`:
+the Shift it must be pressed with is not in the config at all — and it is not in
+`Engine` either. `Engine.handleLiveCaptureShortcut:1938` only *forwards* modifier state
+(`:1942-1944`):
 
 ```java
 int key = configService.getInt(SonicConfiguration.CAPTURE_TOGGLE_KEY);
@@ -20,9 +22,19 @@ if (!liveCaptureChord.update(inputHandler.isKeyDown(key), inputHandler.isShiftDo
         inputHandler.isControlDown(), inputHandler.isAltDown())) {
 ```
 
+The Shift policy itself is one line inside the edge detector, `LiveCaptureChord:9`:
+
+```java
+boolean complete = keyDown && shiftDown && !controlDown && !altDown;
+```
+
+That matters for step 4: `LiveCaptureChord.update`'s 4-boolean signature *is* the
+chord policy, so "keep the existing edge-triggering" cannot mean "leave `update`
+alone".
+
 So the binding documents itself as "the key", the chord is really "Shift + that
 key", and there is no way to express `CTRL+SHIFT+O` or to drop the Shift. The
-same shape has already recurred five more times (see the inventory below).
+same shape has already recurred eight more times (see the inventory below).
 
 ## Goal
 
@@ -46,16 +58,26 @@ gamepad chords.
 |---|---|
 | `KEY` bindings resolve **name first, integer second** | `SonicConfigurationService.resolveInt:183-202` |
 | Registered *defaults* resolve **integer first, name second** | `SonicConfigurationService.resolveKeyCode:853-869` |
-| Unresolvable `KEY` value falls back to the **default**, not unbound | `SonicConfigurationService.resolveInt:204-217`; `docs/guide/playing/configuration.md:118` |
+| A **non-empty** unresolvable `KEY` value falls back to the **default** | `SonicConfigurationService.resolveInt:204-217`; `docs/guide/playing/configuration.md:119` |
+| An **empty** `KEY` value is unbound — the whole warn-and-default block sits inside `if (!str.isEmpty())`, so no default is consulted | `SonicConfigurationService.resolveInt:204-217` |
+| `isKeyDown(-1)` is **not** false — out-of-range codes fall through to `keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld()` | `InputHandler.isKeyDown:102-106` |
+| Every `saveConfig()` rewrites all `KEY` values through a normaliser that emits anything it cannot resolve verbatim | `ConfigYamlWriter.formatKey:116-133` |
 | Name↔code tables already exist both ways | `GlfwKeyNameResolver.resolve` / `.nameOf` |
-| 51 `KEY`-typed config entries | `ConfigCatalog` |
+| 53 `KEY`-typed config entries | `ConfigCatalog` |
 | Only Shift/Ctrl/Alt are queryable; **no Super/Meta** | `InputHandler:173-192` |
 | Key state is cleared **only** on an observed `GLFW_RELEASE` | `InputHandler.handleKeyEvent:68-76`; focus callback `Engine:495-502` does not clear |
 | Default is the bare key, in two places | `putDefaultKey(CAPTURE_TOGGLE_KEY, GLFW_KEY_O)` **and** `src/main/resources/config.yaml:172` |
 
 The two resolution orders in rows 1 and 2 are the root of a landed bug — see
 "Finding: two key-resolution orders" below. The earlier draft of this spec cited
-only `resolveKeyCode` and so mis-stated the live rule.
+only `resolveKeyCode` and so mis-stated the live rule, and put the entry count at
+51. It is **53**: 52 entries declare `KEY` on the same line as their `put(`, and
+`CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY` declares it on the continuation
+line `ConfigCatalog:358`. The two `derived(KEY, …)` entries (`JUMP` at `:95`,
+`P2_JUMP` at `:106`) are `KEY`-typed and are counted. Anything that has to
+enumerate these — step 5's table above all — should be generated from
+`ConfigCatalog` entries whose `type() == ConfigType.KEY` rather than transcribed,
+so it cannot drift again.
 
 ### Inventory: hardcoded chords
 
@@ -63,7 +85,8 @@ only `resolveKeyCode` and so mis-stated the live rule.
 
 | Site | Chord | Key source | In scope |
 |---|---|---|---|
-| `Engine.java:1943` | Shift + key | `CAPTURE_TOGGLE_KEY` (config) | **Yes — step 4** |
+| `Engine.java:1943` → `capture/LiveCaptureChord.java:9` | Shift + key, Ctrl/Alt suppress | `CAPTURE_TOGGLE_KEY` (config) | **Yes — step 4** |
+| `sprites/managers/SpriteManager.java:457-458,965-971` | Shift = debug speed-up, Ctrl = debug slow-down, qualifying the direction keys | `UP`/`DOWN`/`LEFT`/`RIGHT` (config) | No — see the decision in the logical-input finding |
 | `game/recording/UserRecordingRuntimeControls.java:33,44` | Shift+key to start; key alone to stop | `RECORDING_RECORD_KEY` (config) | Deferred — step 7, both sites together |
 | `game/MasterTitleScreen.java:375` | Shift + key | `RECORDING_RECORD_KEY` (config) | Deferred — step 7, with the above |
 | `GameLoop.java:1877-1895` | Shift+B / Ctrl+B / Alt+B, exactly-one-modifier | hardcoded `GLFW_KEY_B` | No — key is not configurable |
@@ -125,7 +148,7 @@ drive them deterministically. **`isAltDown()` does not** — it always reads liv
 hardware. Any chord using Alt would therefore not be reproducible under trace
 playback, unlike the same chord using Ctrl or Shift.
 
-Two qualifications the earlier draft missed:
+Three qualifications the earlier draft missed:
 
 - Even for Shift/Ctrl, only *live rewind* supplies real values.
   `Bk2MovieLoader:162-166` builds frames with the 8-arg convenience constructor,
@@ -135,10 +158,53 @@ Two qualifications the earlier draft missed:
   false".
 - Extending the surface is a record change, not an `InputHandler` edit —
   see step 2 for the exact blast radius.
+- The one feature actually *named* after those fields does not consult them.
+  `Bk2FrameInput:19-20` documents `debugShiftDown`/`debugControlDown` as the
+  "debug-movement speed-up modifier" and "slow modifier", but
+  `SpriteManager.isDebugSpeedUpModifierDown`/`isDebugSlowDownModifierDown:965-971`
+  read `isKeyDown(GLFW_KEY_LEFT_SHIFT)` etc. directly, bypassing
+  `logicalOverride` entirely. Only callers that go through
+  `isShiftDown()`/`isControlDown()` see the override.
 
 **Decision: extend the logical-override surface to Alt and Meta** (step 2), so
 `isSuperDown()` does not inherit the asymmetry, and document that BK2 movies
 carry no modifier column so all four read false under BK2 playback.
+
+**Decision: `SpriteManager` stays on raw hardware, out of scope.** Routing it
+through `isShiftDown()`/`isControlDown()` would change what debug movement does
+under trace playback and live rewind in both directions (false under BK2, real
+values under live rewind), which is a physics-adjacent behaviour change that
+should not ride along on a config feature. Recorded here so the next reader does
+not assume step 2 made debug-movement speed reproducible — it did not.
+
+### Finding: an unbound chord is not inert at the call site
+
+`isBound()` is a query, not a guard, and `InputHandler.isKeyDown:102-106` does
+**not** return false for `NO_KEY`:
+
+```java
+if (keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode]) {
+    return true;
+}
+return keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld();
+```
+
+`inputBindings.rewindKey()` is `getInt(LIVE_REWIND_KEY)`
+(`InputBindingFactory:51`). Unbind live rewind and that is `-1` too, so
+`isKeyDown(-1)` becomes "is the gamepad rewind button held". Pair it with
+`matchesModifiers` on an empty modifier set — satisfied whenever no modifier is
+held — and an *unbound* chord fires from a gamepad hold. Every `PLAYBACK_*`
+binding defaults to `""`, so step 6 would meet this repeatedly.
+
+The precondition is narrow (both the chord and `LIVE_REWIND_KEY` unbound, plus a
+pad button held), but it is not visible from reading `isKeyDown`, which is
+exactly why it needs to be written down.
+
+**Decision: guard at the call site, do not harden `isKeyDown`.** Every
+`getKeyChord` consumer returns early on `!chord.isBound()` before touching
+`isKeyDown`. Rejecting `keyCode < 0` inside `isKeyDown` looks tidier but would
+disable *gamepad* rewind for any player who unbinds the keyboard rewind key,
+which is a live behaviour change to an unrelated feature.
 
 ## Design
 
@@ -170,14 +236,29 @@ Decisions taken:
 - **`+` is a safe separator**: no GLFW key name contains one (the plus key is
   `KP_ADD` / `EQUAL`).
 - **Unresolvable input yields `NO_KEY` from `parse`.** This does **not** match
-  how bindings behaved before: `resolveInt` logs a warning and falls back to the
-  registered *default*, returning `-1` only when the default is itself unbound
-  (which is why the empty-defaulted `PLAYBACK_*` keys read as unbound). The
-  earlier draft recorded this as a no-op; it is a divergence.
-  **Decision: `getKeyChord` reconciles at the accessor, not in `parse`** — when
-  the configured value yields `NO_KEY`, `getKeyChord` parses the registered
-  default, exactly as `resolveInt` does, and logs the same warning shape. `parse`
-  stays a pure function with no config knowledge.
+  how bindings behaved before, and the earlier draft got the old behaviour wrong
+  in both directions: it recorded the divergence as a no-op, then described
+  `resolveInt` as always falling back to the default. It does not. The
+  warn-and-default block is inside `if (!str.isEmpty())`
+  (`resolveInt:204-217`), so `resolveInt` has **two** unresolvable cases:
+  - an explicitly empty value → `-1`, no default lookup, no warning. This — not
+    an empty *default* — is why the `PLAYBACK_*` keys read as unbound: their
+    persisted *value* is `""` (`src/main/resources/config.yaml:203-211`).
+    The gate is `isEmpty()`, not `isBlank()`, so a whitespace-only value takes
+    the second path; `getKeyChord` must draw the line in the same place rather
+    than "improving" on it, or the two accessors disagree again.
+  - a non-empty value that resolves as neither name nor integer → warn, then
+    `resolveKeyCode(defaults.get(name))`, falling back to `-1` only if that is
+    itself unbound.
+
+  **Decision: `getKeyChord` reconciles at the accessor, not in `parse`, and
+  reproduces both cases.** A null, empty or blank configured value is unbound
+  full stop; a non-empty value that yields `NO_KEY` falls back to
+  `KeyChord.parse(defaults.get(name))` with the same warning shape as
+  `resolveInt`. Collapsing the two would make `""` mean "the default", so a
+  player could no longer unbind a shortcut and the two accessors would disagree
+  on the very first form a user reaches for. `parse` stays a pure function with
+  no config knowledge.
 - **Canonical format order** CTRL, SHIFT, ALT, META, so `format()` round-trips.
 
 ## Remaining work
@@ -242,7 +323,7 @@ Its own step because it is a record change, not an `InputHandler` edit.
 | `control/InputHandler.java:173-192` | `isAltDown()` / `isSuperDown()` consult `logicalOverride` |
 | `test/.../TestPlayerInputState.java:111`, `TestInputHandlerLogicalSnapshot.java:66`, `TestLiveRewindInputSource.java` | `withDebugInput` arity |
 
-Six files name those components today; the two record *types* appear in 77
+Six files name those components today; the two record *types* appear in 78
 files, but almost all of those read components rather than call the canonical
 constructor, so the arity change is contained to the table above. Confirm with a
 compile rather than assuming.
@@ -274,12 +355,30 @@ on `SonicConfigurationService`. It must:
   are `DERIVED` (`ConfigCatalog:95,106`) and fall back to `P1_A`/`P2_A` when
   unset, so a `getKeyChord` built on `getConfigValue` alone returns `NO_KEY` for
   them;
-- fall back to parsing the registered default when the configured value yields
-  `NO_KEY`, matching `resolveInt:204-217` (see the Design decision above);
+- treat a null, empty or blank configured value as unbound and stop there — no
+  default lookup, no warning — matching `resolveInt`'s `!str.isEmpty()` gate, and
+  fall back to `KeyChord.parse(defaults.get(name))` only for a **non-empty**
+  value that yields `NO_KEY` (see the Design decision above). Put the reasoning
+  in a comment at the gate: it is the one place where "unresolvable" and "empty"
+  must not be collapsed;
 - clear any chord cache everywhere `intCache` is cleared — seven sites:
   `:372, 396, 401, 406, 508, 536, 554`.
 
-`getInt(KEY)` keeps returning the bare key code so the other 50 bindings are
+Two consumer-side rules travel with the accessor and belong in the same step,
+because a caller that follows neither is silently broken rather than loudly:
+
+- **Guard on `isBound()` before `isKeyDown`.** See "Finding: an unbound chord is
+  not inert at the call site" — `isKeyDown(-1)` is not false.
+- **`ConfigYamlWriter.formatKey:116-133` gains a chord branch.** It normalises
+  every `KEY` value on write (`Number` → `nameOf`, resolvable name → canonical
+  name, integer string → `nameOf`, everything else *verbatim*), and a chord lands
+  in the verbatim branch — so `shift+o`, `Shift + O` and `CMD+O` each persist as
+  the player typed them. Nothing is corrupted (a chord is a valid plain scalar
+  and `needsKeyQuote` only quotes all-digit values), but the file stops having
+  one canonical spelling, and this path runs on the very save step 4's migration
+  triggers. Parse and re-`format()` a resolvable chord instead.
+
+`getInt(KEY)` keeps returning the bare key code so the other 52 bindings are
 untouched. **That requires two edits, not zero.** Today a chorded string is
 neither a name nor an integer, so `resolveInt` warns and returns the *default*'s
 key code — and once step 4 makes the default itself `"SHIFT+O"`, the fallback
@@ -291,15 +390,33 @@ into the "Defaulting to unbound" branch, returning `-1` on every cold cache. So:
 - `resolveKeyCode` (`:853-869`) must do the same, since it resolves defaults.
 
 **Done when:** both accessors agree on the key code for every form — including
-digits, chords, `DERIVED` bindings, and values that fall back to their default —
+digits, chords, `DERIVED` bindings, values that fall back to their default, and
+an explicitly empty value, which both must report as unbound; an unbound chord
+cannot fire even while a gamepad rewind button is held; a chord written in a
+non-canonical spelling comes back canonical after a `saveConfig()` round trip;
 and a converted and unconverted binding can coexist in one `config.yaml`.
 
 ### 4. Convert `capture.toggleKey`
 
 Default becomes `"SHIFT+O"`. `Engine.handleLiveCaptureShortcut` reads the chord
-and drops the hardcoded Shift. Keep the existing edge-triggering
-(`liveCaptureChord.update`) — this changes *which* modifiers are required, not
-when the shortcut fires.
+via `getKeyChord`, returns early if it is not `isBound()`, and stops computing
+the Shift policy itself.
+
+**`LiveCaptureChord` changes too — its signature *is* the Shift policy.** The
+earlier draft said "keep the existing `liveCaptureChord.update`", which is not
+possible: the hardcoded Shift lives at `LiveCaptureChord:9`
+(`keyDown && shiftDown && !controlDown && !altDown`), not in `Engine`, and the
+4-boolean signature has no room for the Super state step 1 adds. Only the
+rising-edge latch is kept. `update` is respecified to take the chord plus all
+four modifier states — `update(KeyChord chord, boolean keyDown, boolean
+shiftDown, boolean controlDown, boolean altDown, boolean superDown)` — and
+delegates the accept/reject decision to `chord.matchesModifiers`. Passing a
+pre-computed `complete` boolean instead is equivalent and also acceptable; what
+is not acceptable is leaving a second modifier policy in the detector.
+
+All five tests in `LiveCaptureChordTest` call the 4-arg form and assert
+Shift-required / Ctrl-and-Alt-suppress semantics (`:8-43`), so they change with
+it; see the test plan.
 
 The default lives in **two** places and both must change, or the behaviour is
 unchanged for everyone:
@@ -323,7 +440,7 @@ held Shift, Shift+O stops working, and a stray `O` starts a recording. A
 changelog note does not mitigate a shortcut silently changing meaning.
 
 Add `ConfigMigrationService.migrateDeprecatedCaptureToggleKey(config)`, modelled
-on `migrateDeprecatedDisplayColorProfileToggleKey:179-201`: rewrite to
+on `migrateDeprecatedDisplayColorProfileToggleKey:179-206`: rewrite to
 `"SHIFT+O"` **only** when the persisted value still equals the superseded
 default (`"O"` / `"GLFW_KEY_O"` / `"KEY_O"` / `79`). Wire it into the migration
 block at `SonicConfigurationService:119-136` with the `configChanged = true`
@@ -335,6 +452,61 @@ which is the same one-time behaviour change the migration spares default users,
 and inferring `SHIFT+P` would silently rewrite a value the player chose. Call it
 out in the changelog.
 
+**Decision: the migration is value-based and therefore re-runs, and bare `O`
+becomes a reserved value for this binding.** The migration block at
+`SonicConfigurationService:119-136` runs unconditionally on every load, before
+`applyDefaults`, and `configChanged` forces `saveConfig()` at `:141-143`. There
+is no config schema or version marker anywhere in `src/main` to hang a one-shot
+guard on. So the sequence for a player who deliberately writes `toggleKey: O` to
+drop the Shift is: next launch, the migration matches, rewrites to `"SHIFT+O"`,
+and persists it. Bare `O` cannot survive a launch — and neither can `GLFW_KEY_O`,
+`KEY_O` or `79`, since the match set covers every spelling.
+
+This is the established shape in this file, not a new hazard:
+`migrateDeprecatedDisplayColorProfileToggleKey:179-206` has exactly the same
+property for `#`/`WORLD_1`, in both the numeric and the string spelling.
+(`migrateDeprecatedS1PreviewCoordLogKey:157-169` is milder — `getIntValue`
+returns null for strings, so it only re-rewrites a numeric `WORLD_1`/`F8`.)
+Introducing a `configVersion` marker to make this one migration
+one-shot would touch `ConfigFlattener`, `ConfigYamlWriter.emitOrder`,
+`TestBundledConfigResource` and every other migration — disproportionate to a
+config-syntax feature, and better done as its own change if the pattern keeps
+biting.
+
+What is **not** acceptable is leaving the earlier draft's done-when clause
+`"O" alone toggles without Shift` in place: it is unsatisfiable from
+`config.yaml` and promises the opposite of what ships. It is replaced below with
+a reachable form, and step 5 must document `O` as reserved for this binding.
+
+**Decision on the `DebugOverlayToggle.OBJECT_DEBUG` collision** (the Risks table
+deferred this to step 4; here it is). `DebugOverlayManager.updateInput:58-65`
+fires every toggle on a bare `handler.isKeyPressed(toggle.keyCode())` with no
+modifier filter, and `OBJECT_DEBUG` is `GLFW_KEY_O` (`DebugOverlayToggle:21`), so
+the new `SHIFT+O` default would toggle the object-debug overlay on the same
+keystroke that starts a capture. **The dispatch becomes modifier-exclusive** —
+`isKeyPressedWithoutModifiers` — rather than moving the capture default off `O`,
+because moving it would break acceptance criterion 7 (Shift+O keeps working with
+no user action) for every existing user.
+
+Scope that as its own bullet, because it is not a consequence-free one-liner:
+
+- All 16 `DebugOverlayToggle` entries stop responding while *any* modifier is
+  held, and after step 1 that includes Super — the window-switch modifier this
+  spec spends a paragraph on in step 1. The focus-loss clear from step 1 is what
+  keeps that from latching.
+- `PERFORMANCE` is dispatched at `:51`, *before* the `debugShortcutsEnabled`
+  gate, and must get the same treatment. That incidentally fixes a pre-existing
+  double-fire: today Ctrl+P both toggles the performance overlay and copies the
+  stats to the clipboard (`:68`).
+- Severity without this fix is developer-facing, not player-facing: the bundled
+  `config.yaml:180` ships `debugView: false`, so the collision needs debug
+  shortcuts turned on. That is why it is a step-4 bullet and not a blocker on
+  step 0b.
+
+**Done when (this bullet):** Shift+O starts a capture without toggling
+`OBJECT_DEBUG`; a bare F-key toggle still works; and a regression test covers
+both.
+
 `CaptureConfigDefaultsTest` **must** be updated as part of this step, contrary to
 the earlier draft's test plan:
 
@@ -344,35 +516,70 @@ the earlier draft's test plan:
   in step 3 landed correctly.
 
 **Done when:** a fresh install and a migrated existing install both toggle on
-Shift+O with no user action; `"O"` alone toggles without Shift; `"CTRL+SHIFT+O"`
-requires both; a `TestConfigMigrationService` case covers the rewrite and the
-leave-alone; and the changelog records the customised-value behaviour change.
+Shift+O with no user action; a bare-key chord such as `"P"` toggles without Shift
+(`"O"` cannot — see the reserved-value decision above); `"CTRL+SHIFT+O"` requires
+both; an unbound value (`""`) never toggles; `LiveCaptureChord` holds no modifier
+policy of its own; a `TestConfigMigrationService` case covers the rewrite and the
+leave-alone; Shift+O does not also toggle `OBJECT_DEBUG`; and the changelog
+records the customised-value behaviour change and the reserved `O`.
 
 ### 5. Documentation
 
-`CONFIGURATION.md`: chord syntax, the accepted modifier aliases, the exactness
-rule, how to bind the plus key itself (`EQUAL` or `KP_ADD`, since `+` is the
-separator), and the BK2-playback limit from step 2. Bundled `config.yaml`:
-syntax note by `capture.toggleKey`.
+Four documentation surfaces, not two. The earlier draft scoped only the first
+two:
 
-Both files list every key binding, so the per-binding support table must be
-**three-state**, not two:
+- `CONFIGURATION.md`: chord syntax, the accepted modifier aliases, the exactness
+  rule, how to bind the plus key itself (`EQUAL` or `KP_ADD`, since `+` is the
+  separator), an empty value meaning unbound, `O` being reserved for
+  `capture.toggleKey`, and the BK2-playback limit from step 2.
+- Bundled `config.yaml`: syntax note by `capture.toggleKey`.
+- `docs/guide/playing/configuration.md:107-121` — the "How do I change controls?"
+  section. It is the page that *defines* the accepted syntax ("Key bindings
+  accept either GLFW key codes (integers) or human-readable names. The following
+  formats all work:") and it is the same page this spec's Current-state table
+  cites at `:119` for the fallback rule. After this work both sentences are
+  wrong: the format list omits chords, and "Invalid names log a warning and fall
+  back to the default binding" does not hold for an empty value.
+- `docs/guide/playing/controls.md:3-6` — repeats the same two-format claim as the
+  front door to the controls reference.
+
+Those last two make `Guide: updated` mandatory on the documentation commit; a
+`Guide: n/a` here would be wrong.
+
+`CONFIGURATION.md` and the bundled `config.yaml` both list every key binding, so
+the per-binding support table must be **three-state**, not two:
 
 | State | Meaning | Example |
 |---|---|---|
 | Chord honoured | read via `getKeyChord`, exact matching | `capture.toggleKey` |
 | Modifiers ignored | read via `getInt` + `isKeyDown`/`isKeyPressed`; a chord resolves to its bare key and the modifiers are dropped | most bindings |
-| **Chord permanently dead** | read via `isKeyPressedWithoutModifiers`, which is `isKeyPressed(key) && !isAnyModifierDown()` — the modifier must be held to type the chord, and holding it blocks the shortcut | all 9 `PLAYBACK_*` keys, `GameLoop`'s debug shortcuts |
+| **Chord permanently dead** | read via `isKeyPressedWithoutModifiers`, which is `isKeyPressed(key) && !isAnyModifierDown()` — the modifier must be held to type the chord, and holding it blocks the shortcut | the 9 `PLAYBACK_*` keys and the list below |
 
 The third state is the one a user would file a bug about, and it is invisible
 from the config file. `debug.playback.toggleKey: "CTRL+P"` would give `getInt` a
 live key code and still never fire.
 
+"`GameLoop`'s debug shortcuts" is too vague to build a per-binding table from,
+which is what the done-when demands. The dead set is defined by the
+`isKeyPressedWithoutModifiers` and `GameLoop.isUnmodifiedDebugKeyPressed` call
+sites, and should be generated from them; at the branch base it is the 9
+`PLAYBACK_*` keys plus `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`,
+`SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`,
+`SPECIAL_STAGE_PLANE_DEBUG_KEY`, `DEBUG_MODE_KEY`, `NEXT_ACT`, `NEXT_ZONE`,
+`LEVEL_SELECT_KEY`, `DEBUG_LAST_CHECKPOINT_KEY` — **and `UP`/`DOWN`/`LEFT`/
+`RIGHT`**, via the sprite-debug navigation at `GameLoop:1135-1146`.
+
+So a binding can be in two states on different paths, and the table has to say
+so: the four movement bindings are "modifiers ignored" on the gameplay path and
+"chord permanently dead" on the special-stage sprite-debug path. Step 6's
+gameplay rule is written for the first path only.
+
 Also note the hardcoded non-config keys from the inventory, which will swallow a
 keystroke regardless of what any binding says.
 
-**Done when:** a reader can tell, per binding, which of the three states it is
-in.
+**Done when:** a reader can tell, per binding *and per path*, which of the three
+states it is in, and the dead set was generated from the call sites rather than
+transcribed.
 
 ### 6. Optional — roll out to remaining bindings
 
@@ -389,10 +596,18 @@ and rules:
   `matchesModifiers` — pressing player 2's jump makes its own chord fail. Either
   such bindings bypass exact matching, or `KeyChord` must exclude a held
   modifier that is the chord's own key.
-- **Gameplay/movement bindings keep permissive matching** unless deliberately
-  converted. They are read with `isKeyDown`/`isKeyPressed`, which do not require
-  modifiers released; adopting exact matching silently kills movement while any
-  modifier is held.
+- **Gameplay/movement bindings keep permissive matching *on the gameplay path***
+  unless deliberately converted. They are read with `isKeyDown`/`isKeyPressed`,
+  which do not require modifiers released; adopting exact matching silently kills
+  movement while any modifier is held. Note that this is a per-path rule, not a
+  per-binding one: `UP`/`DOWN`/`LEFT`/`RIGHT` are *also* read through
+  `isUnmodifiedDebugKeyPressed` at `GameLoop:1135-1146`, so the same four
+  bindings are already modifier-exclusive on the sprite-debug path. And Shift and
+  Ctrl already carry meaning alongside them —
+  `SpriteManager.isDebugSpeedUpModifierDown`/`isDebugSlowDownModifierDown` make
+  Shift+direction and Ctrl+direction the debug-movement speed controls. Converting
+  the movement bindings to exact matching would collide with that, which is a
+  further reason not to.
 - **Any binding consumed via `isKeyPressedWithoutModifiers`** must be converted
   to `getKeyChord` + `matchesModifiers` at the same time it is advertised as
   chord-capable, or documented as single-key-only. Converting one without the
@@ -430,16 +645,31 @@ modifiers".
 10. A latched modifier does not survive window focus loss.
 11. Full suite green; `capture.toggleKey` conversion carries a changelog entry
     covering both the visible-Shift change and the customised-value case.
+12. An explicitly empty value is unbound, and `getKeyChord` and `getInt` agree
+    that it is — no default is substituted for either.
+13. An unbound chord never fires, including while a gamepad rewind button is held
+    and `LIVE_REWIND_KEY` is itself unbound.
+14. Shift+O starts a capture without also toggling the `OBJECT_DEBUG` overlay
+    when debug shortcuts are enabled, and bare-key debug overlay toggles still
+    work.
+15. A chord saved in a non-canonical spelling (`shift+o`, `Shift + O`) is
+    rewritten to its canonical form by `saveConfig()`.
+16. The guide pages that define binding syntax
+    (`docs/guide/playing/configuration.md`, `docs/guide/playing/controls.md`)
+    describe chords and the empty-is-unbound rule.
 
 ## Risks
 
 | Risk | Mitigation |
 |---|---|
 | An existing `toggleKey: "O"` starts firing without Shift | Step 4 migration rewrites the untouched default; a customised value is deliberately left alone and called out in the changelog |
+| The step-4 migration re-runs every launch, so bare `O` can never be bound to this action | Accepted, not mitigated: `O` is a reserved value for `capture.toggleKey`. Same property as the two existing key migrations. Documented in step 5; a one-shot guard would need a config schema marker that does not exist |
 | Plain bindings shadowing chords on the same key | `matchesModifiers` is exact — **but only between bindings that route through `KeyChord`**, which after step 4 is one binding |
-| Hardcoded keys shadowing a chord | `DebugOverlayToggle.OBJECT_DEBUG` is `GLFW_KEY_O` and `DebugOverlayManager:58-65` fires it on a bare `isKeyPressed` with no modifier filter, so Shift+O toggles object debug *and* live capture whenever debug shortcuts are enabled. Decide in step 4: move the capture default off `O`, make `DebugOverlayToggle` dispatch modifier-aware, or document the overlap |
-| Adding Super to `isAnyModifierDown` disables ~30 shortcuts while Cmd is held | Step 1 pairs it with the focus-loss clear and a menu regression test |
+| Hardcoded keys shadowing a chord | `DebugOverlayToggle.OBJECT_DEBUG` is `GLFW_KEY_O` and `DebugOverlayManager:58-65` fires it on a bare `isKeyPressed` with no modifier filter. **Decided in step 4:** the toggle dispatch becomes modifier-exclusive, which makes all 16 overlays unresponsive while any modifier is held |
+| An unbound chord firing anyway | `isKeyDown(-1)` falls through to the gamepad rewind comparison; every `getKeyChord` consumer guards on `isBound()` first (step 3) |
+| Adding Super to `isAnyModifierDown` disables ~30 shortcuts while Cmd is held — plus the 16 debug overlay toggles, once step 4 moves them onto `isKeyPressedWithoutModifiers` | Step 1 pairs it with the focus-loss clear and a menu regression test |
 | Alt chords not reproducible under trace playback | Step 2 decision; blocking for advertising Alt |
+| Debug-movement speed modifiers stay on raw hardware | Out of scope by decision; recorded under the logical-input finding so it is not mistaken for something step 2 fixed |
 | Partial rollout confusing users | Step 5's three-state per-binding table |
 
 ## Test plan
@@ -448,16 +678,29 @@ modifiers".
   `"CTRL+1"`, `"79"`), a full-table `format()`/`parse` round-trip, and `"+"` /
   `"++"` as unbound rather than throwing.
 - New: `getKeyChord`/`getInt` agreement — chorded value, digit value, `DERIVED`
-  binding, and a value that falls back to its default.
+  binding, a value that falls back to its default, and an **explicitly empty**
+  value, which both must report as unbound.
 - New: `Engine` chord evaluation via the existing non-GL seam pattern —
-  default Shift+O, unmodified `"O"`, and a Ctrl+Shift chord.
+  default Shift+O, an unmodified bare-key chord, a Ctrl+Shift chord, and an
+  unbound chord that must not fire.
 - New: `isSuperDown`, the aggregate modifier helpers, and the focus-loss clear.
 - New: `TestConfigMigrationService` — `capture.toggleKey` migrated from each
   spelling of the old default, and left alone when customised.
+- New: `DebugOverlayManager` — Shift+O does not toggle `OBJECT_DEBUG`, and a bare
+  F-key toggle still does.
 - **Changed by step 4:** `CaptureConfigDefaultsTest:30` (bundled value becomes
   `"SHIFT+O"`). `:21` must keep passing unchanged and is the evidence that the
   step-3 `resolveInt` edit preserved `getInt`.
+- **Changed by step 4:** `LiveCaptureChordTest` — all 5 tests call the 4-arg
+  `update(...)` and assert the Shift-required / Ctrl-and-Alt-suppress semantics
+  that move into `KeyChord` (`:8-43`), so they are rewritten against the new
+  signature. New coverage there: an unbound chord never produces a rising edge.
+  The earlier draft listed this file in neither the changed nor the untouched
+  set.
+- **Changed by step 3:** `TestConfigYamlWriter` gains a case that a chord written
+  in a non-canonical spelling is saved in canonical form. Its 4 existing cases
+  stay green unchanged.
 - Evidence for criterion 1 is `TestKeyboardInputMapper`,
-  `TestConfigKeyNameResolution`, `TestBundledConfigResource` and
-  `TestConfigYamlWriter` staying green untouched — not
-  `CaptureConfigDefaultsTest`, which this work must edit.
+  `TestConfigKeyNameResolution` and `TestBundledConfigResource` staying green
+  untouched — not `CaptureConfigDefaultsTest`, which this work must edit, and no
+  longer `TestConfigYamlWriter`, which gains a case.
