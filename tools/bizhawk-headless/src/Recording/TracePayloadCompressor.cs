@@ -66,6 +66,7 @@ namespace OpenGGF.BizHawk.Headless
         private const int CopyBufferBytes = 1048576;
 
         private readonly Action<Stream, Stream> compress;
+        private readonly Func<Stream, Stream> openCompressor;
         private readonly List<string> report = new List<string>();
 
         public TracePayloadCompressor()
@@ -87,6 +88,21 @@ namespace OpenGGF.BizHawk.Headless
         internal TracePayloadCompressor(
             long thresholdBytes,
             Action<Stream, Stream> compress)
+            : this(thresholdBytes, compress, OpenGzip)
+        {
+        }
+
+        /// <summary>
+        /// Test seam for the STREAMING path:
+        /// <paramref name="openCompressor"/> replaces the compressing stream
+        /// a staged payload is written through, so the streamed form's
+        /// verification failure can be exercised the same way the bulk
+        /// form's is.
+        /// </summary>
+        internal TracePayloadCompressor(
+            long thresholdBytes,
+            Action<Stream, Stream> compress,
+            Func<Stream, Stream> openCompressor)
         {
             if (thresholdBytes < 0)
             {
@@ -98,8 +114,13 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw new ArgumentNullException("compress");
             }
+            if (openCompressor == null)
+            {
+                throw new ArgumentNullException("openCompressor");
+            }
             ThresholdBytes = thresholdBytes;
             this.compress = compress;
+            this.openCompressor = openCompressor;
         }
 
         public long ThresholdBytes { get; private set; }
@@ -178,6 +199,66 @@ namespace OpenGGF.BizHawk.Headless
             }
         }
 
+        /// <summary>
+        /// Opens a streaming payload over <paramref name="destination"/>:
+        /// the caller writes the PLAINTEXT into
+        /// <see cref="StreamingPayload.PlaintextStream"/> and the gzip lands
+        /// in the destination as it goes, so the uncompressed form never
+        /// exists anywhere. The plaintext is SHA-256'd and counted on its
+        /// way into the compressor, which is what lets
+        /// <see cref="VerifyStreamedGzip"/> preserve the same
+        /// verify-before-destroy guarantee
+        /// <see cref="CompressAndVerify"/> gets from re-reading its source.
+        /// </summary>
+        internal StreamingPayload BeginStreaming(Stream destination)
+        {
+            if (destination == null)
+            {
+                throw new ArgumentNullException("destination");
+            }
+            return new StreamingPayload(openCompressor(destination));
+        }
+
+        /// <summary>
+        /// The streaming counterpart of the round-trip check inside
+        /// <see cref="CompressAndVerify"/>: decompresses the finished gzip
+        /// and compares it against the plaintext digest accumulated while
+        /// writing, by SHA-256 AND length. When
+        /// <paramref name="plainDestinationPath"/> is non-null the
+        /// decompressed bytes are also written there — the below-threshold
+        /// case, where the published file must be the plain payload and the
+        /// single decompress both produces and verifies it.
+        ///
+        /// Verification failure throws with nothing adopted; the caller's
+        /// rollback discards both temporaries and publishes nothing.
+        /// </summary>
+        internal void VerifyStreamedGzip(
+            string gzipPath,
+            string plainDestinationPath,
+            long expectedLength,
+            string expectedHash)
+        {
+            PayloadDigest actual = plainDestinationPath == null
+                ? DigestGzip(gzipPath)
+                : DecompressGzipTo(gzipPath, plainDestinationPath);
+            if (expectedLength == actual.Length
+                && expectedHash == actual.Hash)
+            {
+                return;
+            }
+            if (plainDestinationPath != null)
+            {
+                TryDelete(plainDestinationPath);
+            }
+            throw new IOException(
+                "gzip verification failed for " + gzipPath
+                + ": decompressed "
+                + Format(actual.Length) + " bytes (sha256 "
+                + actual.Hash + ") from a "
+                + Format(expectedLength) + " byte payload (sha256 "
+                + expectedHash + ").");
+        }
+
         internal void RecordCompressed(
             string finalPath,
             long sourceLength,
@@ -192,12 +273,48 @@ namespace OpenGGF.BizHawk.Headless
 
         private static void GzipCopy(Stream source, Stream destination)
         {
-            using (var gzip = new GZipStream(
-                destination,
-                CompressionLevel.Optimal,
-                true))
+            using (Stream gzip = OpenGzip(destination))
             {
                 CopyStream(source, gzip);
+            }
+        }
+
+        private static Stream OpenGzip(Stream destination)
+        {
+            return new GZipStream(
+                destination,
+                CompressionLevel.Optimal,
+                true);
+        }
+
+        private static PayloadDigest DecompressGzipTo(
+            string gzipPath, string destinationPath)
+        {
+            using (FileStream source = File.OpenRead(gzipPath))
+            using (var gzip = new GZipStream(
+                source,
+                CompressionMode.Decompress))
+            using (var destination = new FileStream(
+                destinationPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None))
+            {
+                using (SHA256 sha = SHA256.Create())
+                {
+                    var buffer = new byte[CopyBufferBytes];
+                    long total = 0;
+                    int read;
+                    while ((read = gzip.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        total += read;
+                        sha.TransformBlock(buffer, 0, read, null, 0);
+                        destination.Write(buffer, 0, read);
+                    }
+                    sha.TransformFinalBlock(new byte[0], 0, 0);
+                    destination.Flush(true);
+                    return new PayloadDigest(total, FormatHash(sha.Hash));
+                }
             }
         }
 
@@ -233,12 +350,15 @@ namespace OpenGGF.BizHawk.Headless
                     sha.TransformBlock(buffer, 0, read, null, 0);
                 }
                 sha.TransformFinalBlock(new byte[0], 0, 0);
-                return new PayloadDigest(
-                    total,
-                    BitConverter.ToString(sha.Hash)
-                        .Replace("-", string.Empty)
-                        .ToLowerInvariant());
+                return new PayloadDigest(total, FormatHash(sha.Hash));
             }
+        }
+
+        internal static string FormatHash(byte[] hash)
+        {
+            return BitConverter.ToString(hash)
+                .Replace("-", string.Empty)
+                .ToLowerInvariant();
         }
 
         private static void CopyStream(Stream source, Stream destination)
@@ -278,6 +398,156 @@ namespace OpenGGF.BizHawk.Headless
         private static string Format(long value)
         {
             return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// One payload being compressed as it is written. Write the
+        /// plaintext into <see cref="PlaintextStream"/>, then call
+        /// <see cref="Finish"/> exactly once to close the deflate stream and
+        /// settle <see cref="PlaintextLength"/> / <see cref="PlaintextHash"/>
+        /// — the values <see cref="VerifyStreamedGzip"/> checks the finished
+        /// gzip against.
+        ///
+        /// Flush() is deliberately swallowed rather than forwarded to the
+        /// compressor: a StreamWriter flushes its character buffer through
+        /// this stream, and forwarding that to the deflater could inject a
+        /// sync-flush point, which would make the container bytes depend on
+        /// where the caller happened to flush. Swallowing it keeps a
+        /// streamed gzip byte-identical to the bulk-compressed one (pinned
+        /// by the determinism cases in TracePayloadCompressorTests).
+        /// </summary>
+        internal sealed class StreamingPayload : IDisposable
+        {
+            private readonly Stream compressor;
+            private readonly SHA256 sha;
+            private readonly HashingStream plaintext;
+            private bool finished;
+
+            internal StreamingPayload(Stream compressor)
+            {
+                this.compressor = compressor;
+                sha = SHA256.Create();
+                plaintext = new HashingStream(compressor, sha);
+            }
+
+            internal Stream PlaintextStream
+            {
+                get { return plaintext; }
+            }
+
+            internal long PlaintextLength { get; private set; }
+
+            internal string PlaintextHash { get; private set; }
+
+            internal void Finish()
+            {
+                if (finished)
+                {
+                    throw new InvalidOperationException(
+                        "The streaming payload is already finished.");
+                }
+                finished = true;
+                compressor.Dispose();
+                sha.TransformFinalBlock(new byte[0], 0, 0);
+                PlaintextLength = plaintext.Length;
+                PlaintextHash = FormatHash(sha.Hash);
+                sha.Dispose();
+            }
+
+            public void Dispose()
+            {
+                if (finished)
+                {
+                    return;
+                }
+                finished = true;
+                try
+                {
+                    compressor.Dispose();
+                }
+                catch (Exception)
+                {
+                    // Abandoning a half-written payload: the caller deletes
+                    // the temporary, and a disposal failure here must not
+                    // mask why the capture failed.
+                }
+                sha.Dispose();
+            }
+
+            private sealed class HashingStream : Stream
+            {
+                private readonly Stream inner;
+                private readonly SHA256 sha;
+                private long written;
+
+                internal HashingStream(Stream inner, SHA256 sha)
+                {
+                    this.inner = inner;
+                    this.sha = sha;
+                }
+
+                public override bool CanRead
+                {
+                    get { return false; }
+                }
+
+                public override bool CanSeek
+                {
+                    get { return false; }
+                }
+
+                public override bool CanWrite
+                {
+                    get { return true; }
+                }
+
+                public override long Length
+                {
+                    get { return written; }
+                }
+
+                public override long Position
+                {
+                    get { return written; }
+                    set
+                    {
+                        throw new NotSupportedException();
+                    }
+                }
+
+                public override void Write(
+                    byte[] buffer, int offset, int count)
+                {
+                    if (count <= 0)
+                    {
+                        return;
+                    }
+                    written += count;
+                    sha.TransformBlock(buffer, offset, count, null, 0);
+                    inner.Write(buffer, offset, count);
+                }
+
+                public override void Flush()
+                {
+                    // Intentionally not forwarded; see the class remarks.
+                }
+
+                public override int Read(
+                    byte[] buffer, int offset, int count)
+                {
+                    throw new NotSupportedException();
+                }
+
+                public override long Seek(long offset, SeekOrigin origin)
+                {
+                    throw new NotSupportedException();
+                }
+
+                public override void SetLength(long value)
+                {
+                    throw new NotSupportedException();
+                }
+            }
         }
 
         private struct PayloadDigest

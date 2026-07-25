@@ -1,46 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
 
 namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
-    /// One finished run segment with its buffered output file contents.
-    /// ManifestEntry carries the run_manifest.json fields; DirToken is the
-    /// per-segment output subdirectory name (ghz1, ss, ghz2, ghz1_2, ...).
-    /// Special-stage segments always have a byte-empty aux file.
-    /// </summary>
-    public sealed class S1RunSegmentOutput
-    {
-        public S1RunSegmentOutput(
-            RunManifestSegment manifestEntry,
-            string physicsCsv,
-            string auxStateJsonl,
-            string metadataJson)
-        {
-            ManifestEntry = manifestEntry;
-            PhysicsCsv = physicsCsv;
-            AuxStateJsonl = auxStateJsonl;
-            MetadataJson = metadataJson;
-        }
-
-        public RunManifestSegment ManifestEntry { get; private set; }
-
-        public string DirToken
-        {
-            get { return ManifestEntry.Dir; }
-        }
-
-        public string PhysicsCsv { get; private set; }
-        public string AuxStateJsonl { get; private set; }
-        public string MetadataJson { get; private set; }
-    }
-
-    /// <summary>
     /// Result of a detour-aware complete-run capture: the finished
     /// segments' manifest entries in recording order (the file contents
-    /// were streamed to the caller's sink as each segment finalized), the
-    /// recorded transitions, and the formatted run_manifest.json bytes —
+    /// went straight into the caller's sink as the capture produced them),
+    /// the recorded transitions, and the formatted run_manifest.json bytes —
     /// null when the Lua's emission gate suppressed it (no transitions and
     /// no run id), which keeps a stage-free pass output-identical to the
     /// legacy layout.
@@ -91,6 +59,12 @@ namespace OpenGGF.BizHawk.Headless
     /// for precisely this reason). Non-level modes other than $10 finalize
     /// the armed segment and RE-ARM (S1 records the whole playthrough; the
     /// S2 runner's same branch is a run stop).
+    ///
+    /// Segments STREAM: the runner takes writers from its
+    /// <see cref="IRunSegmentSink"/> at each arm and writes rows straight
+    /// through, because no armed segment is ever thrown away — every arm
+    /// reaches exactly one finalize (the level/ss finalizes or the run-end
+    /// funnel).
     /// </summary>
     public static class S1RunCaptureRunner
     {
@@ -101,8 +75,9 @@ namespace OpenGGF.BizHawk.Headless
         public const string SpecialStageTraceProfile = "s1_special_stage";
 
         /// <summary>
-        /// Captures a complete detour-aware pass, delivering each finalized
-        /// segment to <paramref name="segmentSink"/> in recording order.
+        /// Captures a complete detour-aware pass, streaming each segment's
+        /// rows into writers obtained from <paramref name="segmentSink"/>
+        /// and finalizing them in recording order.
         /// <paramref name="runId"/> is null when OGGF_TRACE_RUN_ID is
         /// unset. <paramref name="luaScriptVersion"/> is the session's
         /// version stamp (production:
@@ -122,7 +97,7 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             string luaScriptVersion,
             int stopAtFrame,
-            Action<S1RunSegmentOutput> segmentSink)
+            IRunSegmentSink segmentSink)
         {
             if (movie == null)
             {
@@ -276,7 +251,7 @@ namespace OpenGGF.BizHawk.Headless
             private readonly string sourceBk2;
             private readonly string recordingDate;
             private readonly string luaScriptVersion;
-            private readonly Action<S1RunSegmentOutput> segmentSink;
+            private readonly IRunSegmentSink segmentSink;
 
             private readonly List<RunManifestSegment> segments =
                 new List<RunManifestSegment>();
@@ -295,9 +270,14 @@ namespace OpenGGF.BizHawk.Headless
                 new Dictionary<string, int>();
 
             // Armed-segment state (shared between level and ss segments,
-            // exactly one of which can be armed at a time).
-            private readonly StringBuilder physicsBuf = new StringBuilder();
-            private readonly StringBuilder auxBuf = new StringBuilder();
+            // exactly one of which can be armed at a time). The two writers
+            // belong to the sink and are live only between the arm and its
+            // finalize; nothing here holds the segment's bytes, because no
+            // armed S1 segment is ever thrown away — every arm reaches
+            // exactly one finalize, through the level/ss finalizes or the
+            // run-end funnel.
+            private TextWriter physicsWriter;
+            private TextWriter auxWriter;
             private int traceFrame;
             private int bk2FrameOffset;
             private string dirToken;
@@ -321,7 +301,7 @@ namespace OpenGGF.BizHawk.Headless
                 string sourceBk2,
                 string recordingDate,
                 string luaScriptVersion,
-                Action<S1RunSegmentOutput> segmentSink)
+                IRunSegmentSink segmentSink)
             {
                 this.runId = runId;
                 this.sourceBk2 = sourceBk2;
@@ -367,22 +347,22 @@ namespace OpenGGF.BizHawk.Headless
                     transitions.Add(exit);
                 }
 
-                physicsBuf.Length = 0;
-                auxBuf.Length = 0;
-                physicsBuf.Append(S1TraceCsvWriter.Header).Append('\n');
+                OpenSegmentStreams();
+                WriteLine(physicsWriter, S1TraceCsvWriter.Header);
             }
 
             internal void AppendLevelRow(Bk2Frame frame, IGpgxHost host)
             {
-                physicsBuf.Append(S1TraceCsvWriter.FormatRow(
-                    traceFrame,
-                    S1InputMask.FromFrame(frame),
-                    host));
-                physicsBuf.Append('\n');
+                WriteLine(
+                    physicsWriter,
+                    S1TraceCsvWriter.FormatRow(
+                        traceFrame,
+                        S1InputMask.FromFrame(frame),
+                        host));
                 foreach (string line in auxEngine.ProcessFrame(
                     traceFrame, host, host.IsLagged, host.LagCount))
                 {
-                    auxBuf.Append(line).Append('\n');
+                    WriteLine(auxWriter, line);
                 }
                 traceFrame++;
             }
@@ -416,15 +396,9 @@ namespace OpenGGF.BizHawk.Headless
                     startActRaw + 1,
                     null);
                 segments.Add(entry);
-                segmentSink(new S1RunSegmentOutput(
-                    entry,
-                    physicsBuf.ToString(),
-                    auxBuf.ToString(),
-                    metadata));
+                CloseSegmentStreams(entry, metadata);
                 Started = false;
                 traceFrame = 0;
-                physicsBuf.Length = 0;
-                auxBuf.Length = 0;
             }
 
             /// <summary>
@@ -459,20 +433,21 @@ namespace OpenGGF.BizHawk.Headless
                 // re-read is a stdout self-check with no output-file
                 // effect, so it is not ported).
                 currentSsIndex = S1Ram.U8(host, S1Ram.LastSpecial);
-                physicsBuf.Length = 0;
-                auxBuf.Length = 0;    // The ss aux file stays byte-empty.
-                physicsBuf.Append(S1SpecialStageCsvWriter.Header)
-                    .Append('\n');
+                // The ss aux writer is opened and never written to: the ss
+                // aux file stays byte-empty and must still be published.
+                OpenSegmentStreams();
+                WriteLine(physicsWriter, S1SpecialStageCsvWriter.Header);
             }
 
             internal void WriteSsRow(Bk2Frame frame, IGpgxHost host)
             {
-                physicsBuf.Append(S1SpecialStageCsvWriter.FormatRow(
-                    traceFrame,
-                    S1InputMask.FromFrame(frame),
-                    host.IsLagged,
-                    host));
-                physicsBuf.Append('\n');
+                WriteLine(
+                    physicsWriter,
+                    S1SpecialStageCsvWriter.FormatRow(
+                        traceFrame,
+                        S1InputMask.FromFrame(frame),
+                        host.IsLagged,
+                        host));
                 traceFrame++;
             }
 
@@ -508,16 +483,10 @@ namespace OpenGGF.BizHawk.Headless
                     0,
                     currentSsIndex);
                 segments.Add(entry);
-                segmentSink(new S1RunSegmentOutput(
-                    entry,
-                    physicsBuf.ToString(),
-                    auxBuf.ToString(),
-                    metadata));
+                CloseSegmentStreams(entry, metadata);
                 Started = false;
                 ssArmed = false;
                 traceFrame = 0;
-                physicsBuf.Length = 0;
-                auxBuf.Length = 0;
             }
 
             /// <summary>
@@ -525,7 +494,7 @@ namespace OpenGGF.BizHawk.Headless
             /// `Started` is true during BOTH an armed level segment and an
             /// armed ss segment, so the detour route must be checked first
             /// — running the level finalize mid-detour would emit a bogus
-            /// level entry with the ss segment's buffers. The manifest is
+            /// level entry over the ss segment's streams. The manifest is
             /// then attempted exactly once, gated per spec §1: emitted iff
             /// at least one transition occurred OR a run id was supplied
             /// (an empty run id string still counts — the caller maps env
@@ -566,6 +535,33 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 return new S1RunCaptureResult(
                     segments, transitions, runManifestJson);
+            }
+
+            /// <summary>
+            /// Asks the sink for this segment's two writers. Called after
+            /// the dir token is allocated and before the CSV header, so the
+            /// sink sees segments in exactly the recording order.
+            /// </summary>
+            private void OpenSegmentStreams()
+            {
+                RunSegmentStreams streams = segmentSink.BeginSegment(
+                    dirToken);
+                physicsWriter = streams.PhysicsCsv;
+                auxWriter = streams.AuxStateJsonl;
+            }
+
+            private void CloseSegmentStreams(
+                RunManifestSegment entry, string metadata)
+            {
+                physicsWriter = null;
+                auxWriter = null;
+                segmentSink.EndSegment(entry, metadata);
+            }
+
+            private static void WriteLine(TextWriter writer, string line)
+            {
+                writer.Write(line);
+                writer.Write('\n');
             }
 
             /// <summary>

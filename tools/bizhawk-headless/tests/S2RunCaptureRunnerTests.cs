@@ -114,14 +114,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "test-run", "synthetic.bk2",
                     "2026-07-24", 0);
 
                 AssertEx.Equal(3, result.Segments.Count);
                 AssertEx.Equal(2, result.Transitions.Count);
 
-                S2RunSegmentOutput seg1 = result.Segments[0];
+                RunSegmentOutput seg1 = result.Segments[0];
                 AssertEx.Equal("seg1_ehz1", seg1.DirToken);
                 AssertEx.Equal("level", seg1.ManifestEntry.Kind);
                 AssertEx.Equal(
@@ -149,7 +149,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertContains(seg1.MetadataJson,
                     "  \"rng_seed\": \"0x11223344\",\n");
 
-                S2RunSegmentOutput ss = result.Segments[1];
+                RunSegmentOutput ss = result.Segments[1];
                 AssertEx.Equal("ss", ss.DirToken);
                 AssertEx.Equal("special_stage", ss.ManifestEntry.Kind);
                 AssertEx.Equal(
@@ -198,7 +198,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + "  \"fresh_load\": false,\n"
                     + "  \"segment_index\": 1\n");
 
-                S2RunSegmentOutput seg2 = result.Segments[2];
+                RunSegmentOutput seg2 = result.Segments[2];
                 AssertEx.Equal("seg2_ehz1", seg2.DirToken);
                 AssertEx.Equal(22, seg2.ManifestEntry.Bk2FrameOffset);
                 AssertEx.Equal(5, seg2.ManifestEntry.TraceFrameCount);
@@ -284,7 +284,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "roundtrip", "synthetic.bk2",
                     "2026-07-24", 0);
 
@@ -360,7 +360,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "midway", "synthetic.bk2",
                     "2026-07-24", 0);
 
@@ -401,7 +401,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "coldstart", "synthetic.bk2",
                     "2026-07-24", 0);
 
@@ -433,7 +433,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "stopped", "synthetic.bk2",
                     "2026-07-24", 0);
 
@@ -466,7 +466,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "short", "synthetic.bk2",
                     "2026-07-24", 12);
 
@@ -518,18 +518,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "death-run", "synthetic.bk2",
                     "2026-07-24", 0);
 
                 AssertEx.Equal(2, result.Segments.Count);
-                S2RunSegmentOutput seg1 = result.Segments[0];
+                RunSegmentOutput seg1 = result.Segments[0];
                 AssertEx.Equal("seg1_ehz1", seg1.DirToken);
                 AssertEx.Equal("level", seg1.ManifestEntry.Kind);
                 AssertEx.Equal(3, seg1.ManifestEntry.Bk2FrameOffset);
                 // Rows F=4..7; the F=8 boundary records no partial row.
                 AssertEx.Equal(4, seg1.ManifestEntry.TraceFrameCount);
-                S2RunSegmentOutput seg2 = result.Segments[1];
+                RunSegmentOutput seg2 = result.Segments[1];
                 AssertEx.Equal("seg2_ehz1", seg2.DirToken);
                 AssertEx.Equal("level", seg2.ManifestEntry.Kind);
                 AssertEx.Equal(12, seg2.ManifestEntry.Bk2FrameOffset);
@@ -611,7 +611,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "advance-run", "synthetic.bk2",
                     "2026-07-24", 0);
 
@@ -669,7 +669,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "midreload", "synthetic.bk2",
                     "2026-07-24", 0);
 
@@ -707,7 +707,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "continue", "synthetic.bk2",
                     "2026-07-24", 0);
 
@@ -773,12 +773,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                S2RunCaptureResult result = S2RunCaptureRunner.Capture(
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
                     movie, host, "ss-aux", "synthetic.bk2",
                     "2026-07-24", 0);
 
                 AssertEx.Equal(3, result.Segments.Count);
-                S2RunSegmentOutput ss = result.Segments[1];
+                RunSegmentOutput ss = result.Segments[1];
                 AssertEx.Equal("ss", ss.DirToken);
                 AssertEx.Equal(4, ss.ManifestEntry.TraceFrameCount);
                 AssertEx.Equal(

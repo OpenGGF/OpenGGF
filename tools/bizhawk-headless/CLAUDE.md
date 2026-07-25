@@ -142,3 +142,19 @@ is the designed signal to build the callback surface — not something to work a
   content. `TestTraceFixtureCompressionGuard` (Java, `mvn test`) fails the build
   if an uncompressed payload appears under `src/test/resources/traces/`
   regardless of which tool wrote it.
+- **A streamed payload is compressed on the way to disk**, so the uncompressed
+  form never exists there. Verify-before-destroy still holds and is the reason
+  that code is trustworthy: the plaintext is hashed incrementally as it is
+  written, and the finished gzip is decompressed and compared against that hash
+  and length before the file can publish. If you touch this, do not "simplify"
+  by dropping the round trip, and do not introduce a mid-stream flush through
+  the deflater — a streamed `.gz` must stay byte-identical to the bulk-compressed
+  one, which `TracePayloadCompressorTests` asserts directly.
+- **Run mode streams; plain trace mode buffers.** Every run-mode runner (S1, S2,
+  S3K) writes rows straight into staged files through an `IRunSegmentSink` /
+  `IS3KCompleteRunSegmentSink`, because no armed run segment is ever discarded.
+  Only the profiles that genuinely throw an armed recording away — S2 plain
+  `level_gated_reset_aware`, S3K standard `level_gated_reset_aware` — buffer, and
+  that is the only reason buffering is acceptable. Re-buffering a run-mode
+  segment cost 1.5 GB peak RSS on the S2 complete-emeralds pass before this
+  split; do not reintroduce it.

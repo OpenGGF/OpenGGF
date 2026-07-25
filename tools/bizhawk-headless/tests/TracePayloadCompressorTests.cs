@@ -55,6 +55,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "TracePayloadCompressor compresses streamed session files",
                 CompressesStreamedSessionFiles));
             tests.Add(new TestMain.TestCase(
+                "TracePayloadCompressor streams a payload straight to gzip"
+                + " with bulk-identical bytes",
+                StreamsStraightToGzipWithBulkIdenticalBytes));
+            tests.Add(new TestMain.TestCase(
+                "TracePayloadCompressor expands a below-threshold streamed"
+                + " payload back to its plain name",
+                ExpandsBelowThresholdStreamedPayload));
+            tests.Add(new TestMain.TestCase(
+                "TracePayloadCompressor streamed verification failure"
+                + " publishes nothing at all",
+                StreamedVerificationFailurePublishesNothing));
+            tests.Add(new TestMain.TestCase(
                 "TracePayloadCompressor reports every payload it considered",
                 ReportsEveryPayloadItConsidered));
             tests.Add(new TestMain.TestCase(
@@ -342,6 +354,256 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         Decompress(Path.Combine(
                             output, "aiz1", "physics.csv.gz")));
                 });
+        }
+
+        /// <summary>
+        /// A streamed payload never materialises uncompressed: only the
+        /// .gz temporary is ever created, and the bytes it holds are
+        /// IDENTICAL to what the bulk compress-then-verify path produces
+        /// from the same content. That equality is the determinism claim
+        /// under streaming — the container cannot depend on how the caller
+        /// chunked its writes (this case writes one short line at a time,
+        /// the way a trace runner does) — and it is also why a fixture
+        /// captured either way shows no diff.
+        /// </summary>
+        private static void StreamsStraightToGzipWithBulkIdenticalBytes()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    var content = new StringBuilder();
+                    for (var row = 0; row < 4096; row++)
+                    {
+                        content.Append("frame,").Append(row)
+                            .Append(",0x0000,idle\n");
+                    }
+                    string payload = content.ToString();
+
+                    string output = Path.Combine(root, "streamed");
+                    var publisher = new NoReplacePublisher(
+                        new TracePayloadCompressor(64));
+                    NoReplacePublisher.IncrementalStagingSession session =
+                        publisher.OpenSession(output);
+                    string[] duringCapture;
+                    using (NoReplacePublisher.StagedStream stream =
+                        session.OpenFile("seg1_ehz1/physics.csv"))
+                    {
+                        foreach (string line in payload.Split('\n'))
+                        {
+                            if (line.Length == 0)
+                            {
+                                continue;
+                            }
+                            stream.Writer.Write(line);
+                            stream.Writer.Write('\n');
+                        }
+                        stream.Complete();
+                        // Nothing uncompressed was ever staged: the only
+                        // temporary is the gzip itself.
+                        duringCapture = RelativeFileNames(output);
+                    }
+                    NoReplacePublisher.StagedPublicationSet staged =
+                        session.Complete();
+                    staged.Publish();
+
+                    AssertEx.Equal(1, duringCapture.Length);
+                    AssertEx.Equal(
+                        true,
+                        duringCapture[0].EndsWith(
+                            ".gz", StringComparison.Ordinal));
+                    AssertEx.Equal(
+                        "seg1_ehz1/physics.csv.gz",
+                        JoinRelativeFileNames(output));
+
+                    string bulkSource = Path.Combine(root, "physics.csv");
+                    string bulkGzip = bulkSource + ".gz";
+                    File.WriteAllBytes(
+                        bulkSource, Encoding.UTF8.GetBytes(payload));
+                    new TracePayloadCompressor(64)
+                        .CompressAndVerify(bulkSource, bulkGzip);
+
+                    AssertBytesEqual(
+                        File.ReadAllBytes(bulkGzip),
+                        File.ReadAllBytes(Path.Combine(
+                            output, "seg1_ehz1", "physics.csv.gz")));
+                    AssertBytesEqual(
+                        Encoding.UTF8.GetBytes(payload),
+                        Decompress(Path.Combine(
+                            output, "seg1_ehz1", "physics.csv.gz")));
+                });
+        }
+
+        /// <summary>
+        /// The threshold rule is unchanged by streaming: a payload that
+        /// turns out to be below it publishes under its PLAIN name, and the
+        /// verifying decompression that establishes the bytes are intact is
+        /// the same pass that writes them. The gzip temporary does not
+        /// survive, and nothing is reported as compressed.
+        /// </summary>
+        private static void ExpandsBelowThresholdStreamedPayload()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "small");
+                    string payload = "frame,input\n0,idle\n";
+                    var compressor = new TracePayloadCompressor(1024);
+                    var publisher = new NoReplacePublisher(compressor);
+                    NoReplacePublisher.IncrementalStagingSession session =
+                        publisher.OpenSession(output);
+                    using (NoReplacePublisher.StagedStream stream =
+                        session.OpenFile("ss/physics.csv"))
+                    {
+                        stream.Writer.Write(payload);
+                        stream.Complete();
+                    }
+                    NoReplacePublisher.StagedPublicationSet staged =
+                        session.Complete();
+                    staged.Publish();
+
+                    AssertEx.Equal(
+                        "ss/physics.csv", JoinRelativeFileNames(output));
+                    AssertBytesEqual(
+                        Encoding.UTF8.GetBytes(payload),
+                        File.ReadAllBytes(Path.Combine(
+                            output, "ss", "physics.csv")));
+                    AssertEx.Equal(0, compressor.Report.Length);
+                });
+        }
+
+        /// <summary>
+        /// Verify-before-destroy holds for the streamed form too, and it
+        /// fails EARLIER: the round-trip check runs at the stream's
+        /// Complete(), so a corrupted payload aborts the capture before any
+        /// staging session finishes and no final is ever linked. The
+        /// injected compressor drops a byte, so the decompressed length no
+        /// longer matches the digest taken on the way in.
+        /// </summary>
+        private static void StreamedVerificationFailurePublishesNothing()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string output = Path.Combine(root, "corrupted");
+                    var publisher = new NoReplacePublisher(
+                        new TracePayloadCompressor(
+                            0, BulkGzip, DroppingGzip));
+                    NoReplacePublisher.IncrementalStagingSession session =
+                        publisher.OpenSession(output);
+                    using (session)
+                    using (NoReplacePublisher.StagedStream stream =
+                        session.OpenFile("seg1_ehz1/physics.csv"))
+                    {
+                        stream.Writer.Write("frame,input\n0,idle\n");
+                        AssertEx.Throws<IOException>(
+                            () => stream.Complete(),
+                            "gzip verification failed");
+                    }
+
+                    AssertEx.Equal(true, Directory.Exists(output));
+                    AssertEx.Equal(
+                        string.Empty, JoinRelativeFileNames(output));
+                });
+        }
+
+        private static void BulkGzip(Stream source, Stream destination)
+        {
+            using (var gzip = new GZipStream(
+                destination, CompressionLevel.Optimal, true))
+            {
+                source.CopyTo(gzip);
+            }
+        }
+
+        private static Stream DroppingGzip(Stream destination)
+        {
+            return new DroppingStream(new GZipStream(
+                destination, CompressionLevel.Optimal, true));
+        }
+
+        /// <summary>
+        /// Silently drops the first byte written through it, so the gzip
+        /// that lands on disk decompresses to something one byte shorter
+        /// than the plaintext the digest saw.
+        /// </summary>
+        private sealed class DroppingStream : Stream
+        {
+            private readonly Stream inner;
+            private bool dropped;
+
+            internal DroppingStream(Stream inner)
+            {
+                this.inner = inner;
+            }
+
+            public override bool CanRead
+            {
+                get { return false; }
+            }
+
+            public override bool CanSeek
+            {
+                get { return false; }
+            }
+
+            public override bool CanWrite
+            {
+                get { return true; }
+            }
+
+            public override long Length
+            {
+                get { throw new NotSupportedException(); }
+            }
+
+            public override long Position
+            {
+                get { throw new NotSupportedException(); }
+                set { throw new NotSupportedException(); }
+            }
+
+            public override void Write(
+                byte[] buffer, int offset, int count)
+            {
+                if (!dropped && count > 0)
+                {
+                    dropped = true;
+                    offset++;
+                    count--;
+                }
+                if (count > 0)
+                {
+                    inner.Write(buffer, offset, count);
+                }
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new NotSupportedException();
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    inner.Dispose();
+                }
+                base.Dispose(disposing);
+            }
         }
 
         /// <summary>
@@ -637,13 +899,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static string JoinRelativeFileNames(string directory)
         {
-            return string.Join(
-                ",",
-                Directory.GetFiles(
-                        directory, "*", SearchOption.AllDirectories)
-                    .Select(path => path.Substring(directory.Length + 1))
-                    .OrderBy(name => name, StringComparer.Ordinal)
-                    .ToArray());
+            return string.Join(",", RelativeFileNames(directory));
+        }
+
+        private static string[] RelativeFileNames(string directory)
+        {
+            return Directory.GetFiles(
+                    directory, "*", SearchOption.AllDirectories)
+                .Select(path => path.Substring(directory.Length + 1))
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
         }
 
         private static void AssertBytesEqual(byte[] expected, byte[] actual)
