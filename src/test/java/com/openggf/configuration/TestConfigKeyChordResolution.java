@@ -117,6 +117,25 @@ class TestConfigKeyChordResolution {
         assertFalse(configService.getKeyChord(SonicConfiguration.FRAME_STEP_KEY).isBound());
     }
 
+    /**
+     * The other half of the same gate, and the one that catches "improving" on
+     * resolveInt. getString does not trim and resolveInt's gate is
+     * {@code !str.isEmpty()} on that untrimmed value, so a whitespace-only value
+     * is NOT the unbind form -- it is an unresolvable non-empty value, and both
+     * accessors must fall back to the registered default. A
+     * {@code trim().isEmpty()} gate in getKeyChord reports it unbound and the two
+     * accessors disagree again, silently, because "" and " " look the same in a
+     * review.
+     */
+    @Test
+    void aWhitespaceOnlyValueFallsBackToTheDefaultThroughBothAccessors() {
+        configService.setConfigValue(SonicConfiguration.FRAME_STEP_KEY, "   ");
+
+        assertEquals(GLFW_KEY_Q, configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
+        assertEquals(KeyChord.of(GLFW_KEY_Q),
+                configService.getKeyChord(SonicConfiguration.FRAME_STEP_KEY));
+    }
+
     @Test
     void aSessionOverrideWinsOverThePersistedValue() {
         configService.setConfigValue(SonicConfiguration.FRAME_STEP_KEY, "O");

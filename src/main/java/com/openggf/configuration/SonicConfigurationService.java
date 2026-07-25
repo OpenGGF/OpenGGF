@@ -214,7 +214,10 @@ public class SonicConfigurationService {
 		// returns -1 with no default lookup, so the same gate belongs here or a
 		// player who writes `toggleKey: ""` to unbind a shortcut gets -1 from
 		// getInt and the default chord from here, and the shortcut keeps firing.
-		if (value == null || value.toString().trim().isEmpty()) {
+		// isEmpty(), NOT trim().isEmpty(): resolveInt's gate is `!str.isEmpty()`
+		// on an untrimmed getString(), so a whitespace-only value takes the
+		// fall-back-to-default path there and must take it here too.
+		if (value == null || value.toString().isEmpty()) {
 			return chord;
 		}
 		return KeyChord.parse(defaults.get(sonicConfiguration.name()));
