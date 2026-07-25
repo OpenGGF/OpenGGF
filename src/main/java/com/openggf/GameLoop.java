@@ -10,6 +10,7 @@ import com.openggf.game.*;
 
 import com.openggf.control.InputHandler;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.presentation.OuterFramePresentation;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -113,7 +114,6 @@ import java.util.logging.Logger;
  * and call {@link #step()} to advance one frame.
  */
 public class GameLoop {
-    @FunctionalInterface interface AudioPresentationProbe { void presented(PresentationMode mode); }
     static final int STATUS_FIRE_SHIELD_BIT = 4;
     static final int STATUS_LIGHTNING_SHIELD_BIT = 5;
     static final int STATUS_BUBBLE_SHIELD_BIT = 6;
@@ -127,7 +127,7 @@ public class GameLoop {
     private final EngineContext engineServices;
     private final SonicConfigurationService configService;
     private final AudioManager audioManager;
-    private AudioPresentationProbe audioPresentationProbe = ignored -> {};
+    private final OuterFramePresentation outerFramePresentation;
     private final RomManager romManager;
     private final DebugOverlayManager debugOverlayManager;
     private SpriteManager spriteManager;
@@ -338,6 +338,7 @@ public class GameLoop {
         EngineServices.configure(this.engineServices);
         this.configService = this.engineServices.configuration();
         this.audioManager = this.engineServices.audio();
+        this.outerFramePresentation = new OuterFramePresentation(this.audioManager);
         this.romManager = this.engineServices.roms();
         this.debugOverlayManager = this.engineServices.debugOverlay();
         this.profiler = this.engineServices.profiler();
@@ -685,28 +686,17 @@ public class GameLoop {
         return userPaused;
     }
 
-    public PresentationMode presentationModeForOuterFrame(
-            boolean modalPicker, boolean frameStepRequested) {
-        return modalPicker || isPaused() || frameStepRequested
-                ? PresentationMode.SILENT
-                : audioManager.isReverseAudioPresentationActive()
-                ? PresentationMode.REVERSE : PresentationMode.FORWARD;
+    /** @see OuterFramePresentation#modeFor */
+    public PresentationMode presentationModeForOuterFrame(boolean modalPicker, boolean frameStepRequested) {
+        return outerFramePresentation.modeFor(modalPicker, isPaused(), frameStepRequested);
     }
 
-    /**
-     * Shared production outer-frame boundary. Engine display and headless
-     * presentation drivers must enter through AudioManager's authoritative
-     * producer hook so speaker, history, and capture cannot drift.
-     */
-    public void presentOuterFrame(
-            boolean modalPicker, boolean frameStepRequested) {
-        PresentationMode mode = presentationModeForOuterFrame(
-                modalPicker, frameStepRequested);
-        audioManager.presentFrame(mode);
-        audioPresentationProbe.presented(mode);
+    /** @see OuterFramePresentation#present */
+    public void presentOuterFrame(boolean modalPicker, boolean frameStepRequested) {
+        outerFramePresentation.present(modalPicker, isPaused(), frameStepRequested);
     }
 
-    void setAudioPresentationProbe(AudioPresentationProbe probe) { audioPresentationProbe = java.util.Objects.requireNonNull(probe); }
+    void setAudioPresentationProbe(OuterFramePresentation.Probe probe) { outerFramePresentation.setProbe(probe); }
 
     /**
      * @return true if the game loop is currently paused (either by window or user)
