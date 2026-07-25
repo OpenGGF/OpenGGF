@@ -175,6 +175,40 @@ namespace OpenGGF.BizHawk.Headless
         public const int LevelFrameCounter = 0xFE04;     // u16be Level_frame_counter (complete-run ADDR_FRAMECOUNT)
         public const int VIntRunCount = 0xFE0C;          // u32be free-running V-int counter; bonus-segment metadata only
         public const int CurrentSpecialStage = 0xFE16;   // u8 Current_special_stage -> special_stage_index
+
+        // Game_paused is declared ds.w 1 (sonic3k.constants.asm:564) and
+        // the ROM writes move.w #1,(Game_paused).w, so the complete-run
+        // recorder's game_paused_state family reads a WORD here: a byte
+        // read of the high half would render the 0x0001 paused state as 0.
+        public const int GamePaused = 0xF63A;            // u16be Game_paused
+
+        // Raw (pre-logical) pad-2 byte. NOT Ctrl2Held/Ctrl2Logical
+        // (0xF66A): the SS row writer's input_p2 fallback reads the raw
+        // Ctrl_2_held byte, matching the Lua's ADDR_CTRL2.
+        public const int Ctrl2Raw = 0xF606;              // u8 Ctrl_2_held (SS input_p2 fallback)
+
+        // Blue-spheres special-stage state block. Read ONLY by the
+        // complete-run recorder's 20-column s3k_special_stage row writer
+        // (write_ss_row, Lua 5174); the level/bonus schema touches none of
+        // it. Column order in the CSV is the blue-spheres plan's TABLE
+        // order, not address order — SsRateTimer (0xE43E) is emitted AFTER
+        // SsRate (0xE444).
+        public const int SsAnimFrame = 0xE420;           // u16be Special_stage_anim_frame
+        public const int SsXPos = 0xE422;                // u16be Special_stage_X_pos
+        public const int SsYPos = 0xE424;                // u16be Special_stage_Y_pos
+        public const int SsAngle = 0xE426;               // u8 Special_stage_angle
+        public const int SsVelocity = 0xE428;            // s16be Special_stage_velocity
+        public const int SsTurning = 0xE42A;             // u8 Special_stage_turning
+        public const int SsJumping = 0xE432;             // u8 Special_stage_jumping
+        public const int SsFadeTimer = 0xE433;           // u8 Special_stage_fade_timer
+        public const int SsSpheresLeft = 0xE438;         // u16be Special_stage_spheres_left
+        public const int SsRingCount = 0xE43A;           // u16be Special_stage_ring_count
+        public const int SsRateTimer = 0xE43E;           // u16be Special_stage_rate_timer
+        public const int SsRingsLeft = 0xE442;           // u16be Special_stage_rings_left
+        public const int SsRate = 0xE444;                // u16be Special_stage_rate
+        public const int SsClearTimer = 0xE44A;          // u16be Special_stage_clear_timer
+        public const int SsClearRoutine = 0xE44C;        // u8 Special_stage_clear_routine
+        public const int SsStarted = 0xE450;             // u8 Special_stage_started (rendered 0/1)
         public const int LastStarPostHit = 0xFE2A;       // u8 transition field
         public const int SavedXPos = 0xFE2E;             // u16be transition field
         public const int SavedYPos = 0xFE30;             // u16be transition field

@@ -683,3 +683,66 @@ complete-run path would diverge from the Lua.
    The complete movie is ~238k input rows across seven segments; peak RSS is
    the S2 complete-emeralds failure mode.
 8. Extend, don't widen, the hook-absence pinning test (§6).
+
+---
+
+## 11. Port status — Stage B (profile + aux surface)
+
+Stage B lands the row/aux surface only. It writes no files, opens no
+segments and adds no CLI; segmentation is Stage A
+(`S3KCompleteRunSegmenter`) and the writer/publication layer is Stage C.
+
+### 11.1 Seams introduced, and why each is a seam rather than a fork
+
+| Seam | Where | Why |
+|---|---|---|
+| `S3KTraceProfile.CompleteRun` | `S3KAuxEventEngine` | The complete-run recorder is a *different recorder*, not a different `OGGF_S3K_TRACE_PROFILE` value. The enum already encodes recorder identity for the standard recorder's three profiles, and every existing profile gate (`checkpoint` vocabulary, `aiz_fire_transition`) is already written as "only for profile X", so the new value falls through them correctly with no edits — matching the Lua, where both `is_*_profile()` predicates are false. |
+| `S3KAuxEventEngine.FrameCounterAddressFor(profile)` + the explicit-address constructor | `S3KAuxEventEngine` | `ADDR_FRAMECOUNT` is `0xFE08` in the standard recorder and `0xFE04` in the complete-run recorder (§7.3). It is read by *every* `vfc` field, by `oscillation_state.level_frame_counter`, and by the pre-trace `cpu_state_snapshot`. Selecting it from the profile (= recorder identity) keeps the single engine; the explicit constructor exists so the legacy `0xFE08`-era (B) captures can be pinned without a second class. **Never derive it from `lua_script_version`** — 6.32-stamped fixtures exist on both sides of the move. |
+| `S3KTraceCsvWriter.FormatRow(frame, input, host, frameCounterAddress)` | `S3KTraceCsvWriter` | The same fork, in the one CSV column that differs. The 3-argument overload is unchanged and still reads `0xFE08`, so the standard recorder's byte output and its differential gate are untouched. |
+| `emitsGamePausedState` | `S3KAuxEventEngine` | `game_paused_state` is the ONE aux family the complete-run recorder adds (§8) — verified by diffing the two Lua scripts' `"event":"…"` literals, which differ by exactly that one line, and by diffing all 26 shared writer bodies, which are character-identical apart from an inert `bk2_input_mask` default argument. Emitted in cascade slot #11, between `oscillation_state` and the first `object_state`. |
+
+`S3KSpecialStageCsvWriter` is genuinely new (nothing to delegate to): a
+20-column writer with the opposite numeric convention and no aux
+counterpart.
+
+Everything else is delegated unchanged. In particular `object_appeared`,
+`object_removed` and `player_mode_set` were already implemented for the
+standard recorder and are reused verbatim.
+
+### 11.2 Hook decision — option §6.3, made explicit
+
+The pragmatic split recommended in §6 is the one taken:
+
+* **(A) + (C) — the eleven hooks-off fixtures — are the byte-exact
+  target.** Measured: zero occurrences of any of the 14 hook/env-armed
+  families across all eleven aux streams. `S3KHookAbsenceTests` is
+  extended to all eleven with per-fixture non-vacuous anchors
+  (`cpu_state`, `oscillation_state` and the new `game_paused_state` each
+  exactly once per row; exactly one `cpu_state_snapshot`; the AIZ
+  `aiz_handoff_terrain_state` skeleton count; the profile's own
+  `physics.csv` header).
+* **(B) `runs/s3-knux-multibonus-ss/` is shape-only**, and is pinned in
+  the OPPOSITE direction by
+  `HookBearingRunSegmentsStillCarryHookEvents`: `hcz_2`, `hcz_6`, `mgz`
+  and `mgz_3` must keep their exact `position_write` /
+  `velocity_write` / `solid_object_cont_entry` counts, and must keep
+  having no `capture_mode` key. That gate exists so the absence gate can
+  never be quietly widened over fixtures whose reproduction really would
+  require the exec/memwrite callback surface.
+
+**No `GpgxHost` exec/memwrite callback surface is implemented.** It stays
+deferred exactly as task 7 left it. The reason is stronger here than
+there: (B) is not byte-reproducible from the current Lua at all (§7.3
+`ADDR_FRAMECOUNT` drift), so implementing callbacks would not make any
+committed fixture reproducible. If a future capture of (A)/(C) turns up
+hook events, the extended absence gate fails and that decision must be
+revisited.
+
+### 11.3 Still out of scope after Stage B
+
+`write_metadata` / `write_ss_metadata` for complete-run,
+`run_manifest.json` emission (including the `bonus_stage_type` field the
+shared `RunManifestWriter` does not yet emit), the CLI subcommand and its
+env-var refusal-table extension, publication via `NoReplacePublisher`,
+the per-fixture newline convention (§2.3), and the ROM-backed
+differential gate.
