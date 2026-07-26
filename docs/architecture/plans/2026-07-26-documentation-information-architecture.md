@@ -192,7 +192,7 @@ docs/BUGLIST_SPECIAL_STAGES.md
   → docs/status/special-stage-bug-list.md
 docs/KNOWN_BUGS.md
   → docs/status/known-bugs.md
-docs/KNOWN_DISCREPANCIES.md
+docs/status/known-discrepancies.md
   → docs/status/known-discrepancies.md
 docs/S3K_KNOWN_BUGS.md
   → docs/status/s3k-known-bugs.md
@@ -343,9 +343,9 @@ Remove `docs/audio-debug` after every file is moved.
 - [ ] **Step 2: Move performance validation**
 
 ```text
-docs/performance/2026-06-11-performance-baseline.md
+docs/architecture/validation/performance/2026-06-11-baseline.md
   → docs/architecture/validation/performance/2026-06-11-baseline.md
-docs/performance/2026-06-11-performance-results-tally.md
+docs/architecture/validation/performance/2026-06-11-results.md
   → docs/architecture/validation/performance/2026-06-11-results.md
 docs/performance/2026-06-12-trace-baseline.md
   → docs/architecture/validation/performance/2026-06-12-trace-baseline.md
@@ -356,9 +356,9 @@ docs/performance/2026-07-performance-integration-report.md
 - [ ] **Step 3: Split rewind status and plan**
 
 ```text
-docs/rewind/real-gaps.md
+docs/status/rewind-round-trip-gaps.md
   → docs/status/rewind-gaps.md
-docs/rewind/real-gaps-fixplan.md
+docs/architecture/plans/rewind-object-coverage-fixes.md
   → docs/architecture/plans/rewind-gap-fixes.md
 ```
 

@@ -3159,7 +3159,7 @@ mvn test
 ```
 
 Expected: zero failures and zero errors. Record the exact passed/skipped counts in the
-validation report. If the suite updates `docs/rewind/real-gaps.md`, inspect the diff and
+validation report. If the suite updates `docs/status/rewind-round-trip-gaps.md`, inspect the diff and
 restore it unless the unified audio change genuinely altered rewind coverage.
 
 - [ ] **Step 2: Run package and architecture verification**

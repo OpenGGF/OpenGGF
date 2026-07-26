@@ -982,7 +982,7 @@ Prioritize MTZ/MCZ/OOZ routes with sidekick death windows.
 ### Task 11: Performance Baseline and Exact-Equivalence Phase
 
 **Files:**
-- Optional create: `docs/performance/2026-06-11-performance-baseline.md`
+- Optional create: `docs/architecture/validation/performance/2026-06-11-baseline.md`
 - Modify only with tests: audio/session/collision/rewind/render/ring files named in PERF-1
 
 - [ ] **Step 1: Confirm clean correctness baseline.**

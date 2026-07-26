@@ -457,7 +457,7 @@ Human checklist before merge:
 
 1. Confirm the listed 17-commit scope and target branch.
 2. Confirm the final test evidence and accepted G1/G2 deferral.
-3. Keep `.gitignore`, `.idea/vcs.xml`, `docs/rewind/real-gaps.md`, and the untracked source task plan
+3. Keep `.gitignore`, `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and the untracked source task plan
    out of the merge unless their owner separately requests them.
 4. Push the final branch and satisfy the repository's README-on-merge policy when merging into
    `develop`.

@@ -430,10 +430,10 @@ class TestArchitecturalSourceGuard {
 
     @Test
     void sonic1EmbeddedRuntimeDataExceptionsStayDocumentedAndBounded() throws IOException {
-        String discrepancies = Files.readString(Path.of("docs", "KNOWN_DISCREPANCIES.md"));
+        String discrepancies = Files.readString(Path.of("docs", "status", "known-discrepancies.md"));
         List<String> violations = new ArrayList<>();
         if (!discrepancies.contains("Sonic 1 Embedded Runtime Data Ratchet")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md must document the bounded Sonic 1 embedded runtime data debt");
+            violations.add("docs/status/known-discrepancies.md must document the bounded Sonic 1 embedded runtime data debt");
         }
 
         List<EmbeddedRuntimeDataBudget> budgets = List.of(

@@ -120,7 +120,7 @@ Then, at the true head:
 ```bash
 mvn -Dmse=off -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test
 mvn -Dmse=off package -DskipTests
-git checkout -- docs/rewind/real-gaps.md
+git checkout -- docs/status/rewind-round-trip-gaps.md
 ```
 
 Confirm the reviewed head and the verified head are the same commit. A previous

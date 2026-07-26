@@ -71,7 +71,7 @@ User documentation was updated in `README.md`, `CONFIGURATION.md`, and
 - Final `mvn package`: exit 0; 12,551 passed, 0 failed/errors, 11 skipped.
 - Final `git diff --check`: exit 0.
 
-The generated `docs/rewind/real-gaps.md` change produced by test execution was
+The generated `docs/status/rewind-round-trip-gaps.md` change produced by test execution was
 restored after verification and is not part of this change.
 
 ## FFmpeg/ffprobe Media Evidence

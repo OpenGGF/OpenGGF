@@ -147,7 +147,7 @@ mvn -Dmse=off -Dtest='com.openggf.audio.**,com.openggf.capture.**' test
 mvn -Dmse=off -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test
 ```
 
-`mvn test` regenerates `docs/rewind/real-gaps.md`; restore it. Commit trailers per
+`mvn test` regenerates `docs/status/rewind-round-trip-gaps.md`; restore it. Commit trailers per
 `CLAUDE.md`; this is a `fix` touching `src/main/` so `Changelog: updated` with
 `CHANGELOG.md` staged.
 

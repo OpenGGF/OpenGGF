@@ -97,7 +97,7 @@ If any `*TraceReplay` test fails, stop and invoke `trace-replay-bug-fixing` befo
 **Files:**
 - Modify: `docs/architecture/designs/2026-06-11-performance-optimization-design.md` only if the measured baseline numbers should be recorded there.
 - Modify: `docs/status/trace-frontier-log.md` after the initial trace sweep.
-- Optional create: `docs/performance/2026-06-11-performance-baseline.md`
+- Optional create: `docs/architecture/validation/performance/2026-06-11-baseline.md`
 
 - [ ] **Step 1: Confirm clean source baseline**
 
@@ -144,7 +144,7 @@ Expected baseline symptom: whole atlas-page uploads for small DPLC changes and f
 If a baseline doc is created:
 
 ```bash
-git add docs/performance/2026-06-11-performance-baseline.md docs/status/trace-frontier-log.md
+git add docs/architecture/validation/performance/2026-06-11-baseline.md docs/status/trace-frontier-log.md
 git commit -m "docs: record performance optimization baseline"
 ```
 

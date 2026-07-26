@@ -36,7 +36,7 @@ Run:
 
 ```bash
 git status --short --branch
-git diff -- .idea/vcs.xml docs/rewind/real-gaps.md
+git diff -- .idea/vcs.xml docs/status/rewind-round-trip-gaps.md
 ```
 
 Expected: the previously identified local changes remain visible and untouched.

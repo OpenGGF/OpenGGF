@@ -192,7 +192,7 @@ git diff --check
 
 OpenAL source tokens may exist only in `OpenAlPcmSink` for the one final-PCM
 source. Superseded runtime tokens must have no matches. Restore
-`docs/rewind/real-gaps.md` after tests unless an intentional rewind-coverage
+`docs/status/rewind-round-trip-gaps.md` after tests unless an intentional rewind-coverage
 change is demonstrated.
 
 Then obtain user-confirmed listening for all three verified ROMs—not merely
@@ -250,7 +250,7 @@ committed `mvn test` and `mvn package`.
   shown order/timing-sensitive full-suite failures and then passed together in
   a clean isolated rerun. Record recurrence honestly; do not mask a genuine
   regression.
-- Maven tests regenerate `docs/rewind/real-gaps.md`; restore it if the task did
+- Maven tests regenerate `docs/status/rewind-round-trip-gaps.md`; restore it if the task did
   not intentionally change rewind coverage.
 
 ## Next first action

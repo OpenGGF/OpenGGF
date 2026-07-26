@@ -381,7 +381,7 @@ git diff --check HEAD~2..HEAD
 git diff --stat origin/develop...HEAD
 ```
 
-Confirm the user's pre-existing `.idea/vcs.xml`, `docs/rewind/real-gaps.md`, and `tools/bizhawk/mz2_glass_*.lua` changes remain unstaged and unmodified by this work.
+Confirm the user's pre-existing `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and `tools/bizhawk/mz2_glass_*.lua` changes remain unstaged and unmodified by this work.
 
 - [ ] **Step 5: Request independent spec-compliance and code-quality reviews**
 

@@ -41,8 +41,8 @@ config pipeline.
 - Test selectors use fully-qualified class names (verified working:
   `mvn -Dmse=off -Dtest=com.openggf.configuration.TestKeyChord test`). Package globs
   need `**`, not `*`.
-- A full `mvn test` regenerates `docs/rewind/real-gaps.md`. Restore it with
-  `git checkout -- docs/rewind/real-gaps.md` before committing. A focused
+- A full `mvn test` regenerates `docs/status/rewind-round-trip-gaps.md`. Restore it with
+  `git checkout -- docs/status/rewind-round-trip-gaps.md` before committing. A focused
   `-Dtest=...` run does not touch it (verified).
 - Tests must not leak temp files. Use `@TempDir` or `com.openggf.tests.TestTempFiles`.
   `TestNoLeakedTemporaryFiles` enforces this. Every test this plan adds either uses
@@ -859,7 +859,7 @@ build green is otherwise asserted rather than established:
 
 ```bash
 mvn -Dmse=off test
-git checkout -- docs/rewind/real-gaps.md
+git checkout -- docs/status/rewind-round-trip-gaps.md
 ```
 
 Expected: `BUILD SUCCESS`. Record the exact `Tests run` totals. Restore
@@ -1207,7 +1207,7 @@ radius, and every consumer of a key binding in the engine sits downstream of it:
 
 ```bash
 mvn -Dmse=off test
-git checkout -- docs/rewind/real-gaps.md
+git checkout -- docs/status/rewind-round-trip-gaps.md
 ```
 
 Expected: `BUILD SUCCESS`. Record the exact `Tests run` totals. Restore
@@ -1906,7 +1906,7 @@ Then the full suite, since this is the commit that changes shipped behaviour:
 
 ```bash
 mvn -Dmse=off test
-git checkout -- docs/rewind/real-gaps.md
+git checkout -- docs/status/rewind-round-trip-gaps.md
 ```
 
 Expected: `BUILD SUCCESS`. Record the exact `Tests run` totals. Restore
@@ -2267,7 +2267,7 @@ decision: its own binding, or "the record chord without its modifiers".
   backward-compatibility evidence. Where a task does not list them as modified, they
   must stay green **untouched**.
 - Run the full `mvn -Dmse=off test` at least at Task 5 and before the branch merges,
-  restoring `docs/rewind/real-gaps.md` with `git checkout --` afterwards.
+  restoring `docs/status/rewind-round-trip-gaps.md` with `git checkout --` afterwards.
 - Each task receives an independent plan-compliance and code-quality review before
   the next dependent task.
 - When this branch merges into `develop`, stage a `README.md` update summarising the

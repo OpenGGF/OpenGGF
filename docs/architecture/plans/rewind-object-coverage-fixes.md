@@ -1,6 +1,6 @@
 # Rewind Coverage — Prioritized Fix Campaign Plan
 
-_Generated 2026-06-17 from the committed coverage-baseline.txt (594 uncovered classes / 1705 gap keys). Companion to the Phase-1 audit; see docs/rewind/real-gaps.md (round-trip probe) and the architecture spec._
+_Generated 2026-06-17 from the committed coverage-baseline.txt (594 uncovered classes / 1705 gap keys). Companion to the Phase-1 audit; see docs/status/rewind-round-trip-gaps.md (round-trip probe) and the architecture spec._
 
 I have all the data needed. The objectRef gaps split 23 player-ref (easy) / 19 object-child-ref (risky). The recreate gaps are 584 classes but most are Phase-1 layout over-approximations (false positives per the analyzer Javadoc). Here is the plan.
 
@@ -8,7 +8,7 @@ I have all the data needed. The objectRef gaps split 23 player-ref (easy) / 19 o
 
 # Rewind Object-Coverage Fix Plan — Multi-Batch Campaign
 
-**Source of truth:** `src/test/resources/rewind/coverage-baseline.txt` (1705 gap keys, 594 classes), Phase-1 report from `RewindCoverageAnalyzer` / `TestRewindCoverageGuard`. Design: `docs/superpowers/specs/2026-06-17-rewind-object-coverage-architecture-design.md`. Precedent: `docs/S3K_KNOWN_DISCREPANCIES.md` "AIZ2 Boss Rewind: Transient Combat/Cosmetic Children Restored".
+**Source of truth:** `src/test/resources/rewind/coverage-baseline.txt` (1705 gap keys, 594 classes), Phase-1 report from `RewindCoverageAnalyzer` / `TestRewindCoverageGuard`. Design: `docs/architecture/designs/2026-06-17-rewind-object-coverage-architecture-design.md`. Precedent: `docs/S3K_KNOWN_DISCREPANCIES.md` "AIZ2 Boss Rewind: Transient Combat/Cosmetic Children Restored".
 
 > Note on input scope: the "~0 objects" figure in the brief was a placeholder; the real dropped/uncovered set is the committed baseline. Counts below are derived from it.
 

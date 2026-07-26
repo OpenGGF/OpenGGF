@@ -21,7 +21,7 @@
 - [ ] Verify the worktree branch is `feature/ai-performance-optimization` and `git status --short` contains only approved plan/spec files.
 - [ ] Run `mvn test` as the only Maven lifecycle using this worktree's `target/`.
 - [ ] Require `Tests run: 11211, Failures: 0, Errors: 0, Skipped: 12` or explain any legitimate test-count change introduced after the recorded baseline.
-- [ ] Restore generated `docs/rewind/real-gaps.md` output unless an implementation intentionally changes coverage and the task owns that update.
+- [ ] Restore generated `docs/status/rewind-round-trip-gaps.md` output unless an implementation intentionally changes coverage and the task owns that update.
 - [ ] Record baseline wall time, allocation probes, rewind benchmark output, special-stage draw/upload counters, and representative GPU timings in `docs/architecture/validation/performance/2026-07-integration-report.md`.
 
 ### Task 2: Execute Audio Tasks 1-7
