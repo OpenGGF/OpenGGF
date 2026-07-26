@@ -673,6 +673,7 @@ git commit -m "feat(s3k): consume initial setup at gameplay seams"
 
 **Files:**
 - Modify: `src/main/java/com/openggf/game/rewind/snapshot/LevelSnapshot.java`
+- Modify: `src/main/java/com/openggf/level/InitialObjectSetupCoordinator.java`
 - Modify: `src/main/java/com/openggf/level/rewind/LevelRewindSnapshotAdapter.java`
 - Modify: `src/main/java/com/openggf/level/LevelManager.java`
 - Modify: `src/test/java/com/openggf/level/TestLevelManagerRewindSnapshot.java`

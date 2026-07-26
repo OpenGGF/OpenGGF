@@ -29,4 +29,12 @@ final class InitialObjectSetupCoordinator {
     void discard() {
         pending = InitialObjectSetupLifecycle.NONE;
     }
+
+    InitialObjectSetupLifecycle captureForRewind() {
+        return pending;
+    }
+
+    void restoreForRewind(InitialObjectSetupLifecycle lifecycle) {
+        pending = lifecycle == null ? InitialObjectSetupLifecycle.NONE : lifecycle;
+    }
 }

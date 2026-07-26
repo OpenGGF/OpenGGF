@@ -1,6 +1,7 @@
 package com.openggf.level.rewind;
 
 import com.openggf.game.LevelGamestate;
+import com.openggf.game.InitialObjectSetupLifecycle;
 import com.openggf.game.mutation.DirectLevelMutationSurface;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
@@ -38,6 +39,8 @@ class TestLevelRewindSnapshotAdapter {
         when(manager.getLevelGamestate()).thenReturn(levelState);
         when(manager.getFrameCounter()).thenReturn(77);
         when(manager.isRespawnRequestedForRewind()).thenReturn(true);
+        when(manager.capturePendingInitialObjectSetupLifecycleForRewind())
+                .thenReturn(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
 
         LevelSnapshot snapshot = LevelRewindSnapshotAdapter.create(manager).capture();
 
@@ -50,6 +53,29 @@ class TestLevelRewindSnapshotAdapter {
         assertEquals(456, snapshot.levelTimerFrames());
         assertTrue(snapshot.levelTimerPaused());
         assertTrue(snapshot.respawnRequested());
+        assertEquals(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE,
+                snapshot.pendingInitialObjectSetupLifecycle());
+    }
+
+    @Test
+    void pausedBeforeCaptureRoundTripsPendingInitialSetupLifecycle() {
+        StubLevel level = new StubLevel();
+        LevelGamestate levelState = new LevelGamestate();
+        levelState.pauseTimer();
+        LevelManager manager = mock(LevelManager.class);
+        when(manager.getCurrentLevel()).thenReturn(level);
+        when(manager.getLevelGamestate()).thenReturn(levelState);
+        when(manager.capturePendingInitialObjectSetupLifecycleForRewind())
+                .thenReturn(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        RewindSnapshottable<LevelSnapshot> adapter = LevelRewindSnapshotAdapter.create(manager);
+
+        LevelSnapshot snapshot = adapter.capture();
+        levelState.resumeTimer();
+        adapter.restore(snapshot);
+
+        assertTrue(levelState.isTimerPaused());
+        verify(manager).restorePendingInitialObjectSetupLifecycleForRewind(
+                InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
     }
 
     @Test
@@ -73,7 +99,8 @@ class TestLevelRewindSnapshotAdapter {
                 123,
                 false,
                 true,
-                null);
+                null,
+                InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
 
         RewindSnapshottable<LevelSnapshot> adapter = LevelRewindSnapshotAdapter.create(manager);
         adapter.restore(snapshot);
@@ -88,6 +115,8 @@ class TestLevelRewindSnapshotAdapter {
         verify(manager).invalidateAllTilemaps();
         verify(manager).restoreRespawnRequestedForRewind(true);
         verify(manager).restoreCheckpointStateForRewind(null);
+        verify(manager).restorePendingInitialObjectSetupLifecycleForRewind(
+                InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
     }
 
     @Test
@@ -108,7 +137,8 @@ class TestLevelRewindSnapshotAdapter {
                 67,
                 true,
                 false,
-                null);
+                null,
+                InitialObjectSetupLifecycle.NONE);
 
         LevelRewindSnapshotAdapter.create(manager).restore(snapshot);
 
@@ -122,6 +152,8 @@ class TestLevelRewindSnapshotAdapter {
         verify(manager).setFrameCounter(44);
         verify(manager).restoreRespawnRequestedForRewind(false);
         verify(manager).restoreCheckpointStateForRewind(null);
+        verify(manager).restorePendingInitialObjectSetupLifecycleForRewind(
+                InitialObjectSetupLifecycle.NONE);
     }
 
     @Test

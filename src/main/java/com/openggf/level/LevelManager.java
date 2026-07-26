@@ -398,6 +398,15 @@ public class LevelManager {
         initialObjectSetup.discard();
     }
 
+    public InitialObjectSetupLifecycle capturePendingInitialObjectSetupLifecycleForRewind() {
+        return initialObjectSetup.captureForRewind();
+    }
+
+    public void restorePendingInitialObjectSetupLifecycleForRewind(
+            InitialObjectSetupLifecycle lifecycle) {
+        initialObjectSetup.restoreForRewind(lifecycle);
+    }
+
     private void resetRewindBufferAfterLevelBoundary() {
         markRewindLevelLoadBoundary();
     }

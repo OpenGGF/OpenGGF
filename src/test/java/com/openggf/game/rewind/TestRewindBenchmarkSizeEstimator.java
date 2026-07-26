@@ -8,6 +8,7 @@ import com.openggf.game.animation.DestinationPlan;
 import com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
+import com.openggf.game.InitialObjectSetupLifecycle;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.rewind.snapshot.SpriteManagerSnapshot;
 import com.openggf.level.Block;
@@ -107,6 +108,8 @@ class TestRewindBenchmarkSizeEstimator {
 
         long bytes = RewindBenchmark.estimateStructuralSize(snapshot);
 
+        assertEquals(InitialObjectSetupLifecycle.NONE,
+                snapshot.pendingInitialObjectSetupLifecycle());
         assertTrue(bytes < 1024,
                 "per-keyframe level estimate should not include the shared map payload");
     }
