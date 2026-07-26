@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- MGZ miniboss camera word writes advance both routes
+
+The combined integration baseline reached frame 13447 with 8,030 errors in
+standard MGZ and frame 15520 with 8,703 errors in complete-run MGZ. During the
+miniboss defeat handoff, the engine clamped the camera to `$2E00` and wrote
+both horizontal boundaries. ROM `loc_887DA` instead reads the camera word,
+increments it with 16-bit wrap, stores it to `Camera_X_pos`, copies the same
+word only to `Camera_min_X_pos`, then performs the unsigned `$2E00` comparison
+and deletes (`docs/skdisasm/sonic3k.asm:185020-185027`). It never writes
+`Camera_max_X_pos`.
+
+The helper now preserves that exact order and ownership. Standard MGZ advances
+to frame 23561 `rings` (ROM 0, engine 1) with 16 errors; complete-run MGZ
+advances to frame 28398 `rings` (ROM 2, engine 1) with 27 errors. Focused
+miniboss coverage passes 15/15, including the untouched maximum boundary,
+post-increment-at-target, restored-above-target, and rewind-compatible camera
+state. Architecture, trace-invariant, rewind, and static-state guards pass
+78/78. AIZ complete-run holds its composed frame 13906 `x` frontier with
+2,249 errors, and LBZ complete-run holds frame 3009 `y_speed` with 6,613
+errors.
+
 ### 2026-07-26 -- Pachinko represented setup ownership returns f350 to green
 
 The combined trace integration exposed a lifecycle interaction absent from the

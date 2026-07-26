@@ -401,7 +401,7 @@ class TestMgzMinibossInstance {
     }
 
     @Test
-    void defeatCameraHelperLocksBothCameraBoundsWhileScrolling() throws Exception {
+    void defeatCameraHelperAdvancesCameraAndLeftBoundWhileScrolling() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzMinibossInstance boss = createBoss(services);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2D00, (short) 0x0100);
@@ -428,20 +428,21 @@ class TestMgzMinibossInstance {
 
         assertEquals(0x2DFF, camera.getX() & 0xFFFF, "Camera helper should advance one pixel per frame");
         assertEquals(0x2DFF, camera.getMinX() & 0xFFFF, "Camera helper should carry the left lock with it");
-        assertEquals(0x2DFF, camera.getMaxX() & 0xFFFF, "Camera helper should carry the right lock with it");
+        assertEquals(0x2DFE, camera.getMaxX() & 0xFFFF,
+                "loc_887DA must leave Camera_max_X_pos untouched");
         assertFalse(helper.isDestroyed(), "Camera helper should remain active before reaching its target");
 
         helper.update(81, player);
 
         assertEquals(0x2E00, camera.getX() & 0xFFFF, "Camera helper should stop at the ROM target X");
         assertEquals(0x2E00, camera.getMinX() & 0xFFFF, "Camera helper should advance the left lock");
-        assertEquals(0x2E00, camera.getMaxX() & 0xFFFF,
-                "Camera helper should also clamp the right bound during the signpost handoff");
+        assertEquals(0x2DFE, camera.getMaxX() & 0xFFFF,
+                "Camera helper should continue to leave the right bound untouched");
         assertTrue(helper.isDestroyed(), "Camera helper should release ownership once the target is reached");
     }
 
     @Test
-    void defeatCameraHelperDoesNotAdvancePastTarget() {
+    void defeatCameraHelperPreservesRomPostIncrementWhenStartingAtTarget() {
         RecordingServices services = new RecordingServices(camera);
         MgzMinibossInstance.MgzBossCameraScrollHelper helper =
                 new MgzMinibossInstance.MgzBossCameraScrollHelper(0x2E00);
@@ -452,11 +453,17 @@ class TestMgzMinibossInstance {
 
         helper.update(0, null);
 
-        assertCameraLockedAtTarget(helper);
+        assertEquals(0x2E01, camera.getX() & 0xFFFF,
+                "loc_887DA increments Camera_X_pos before comparing against the target");
+        assertEquals(0x2E01, camera.getMinX() & 0xFFFF,
+                "loc_887DA copies the post-increment camera position into Camera_min_X_pos");
+        assertEquals(0x2E00, camera.getMaxX() & 0xFFFF,
+                "loc_887DA does not write Camera_max_X_pos");
+        assertTrue(helper.isDestroyed(), "Camera helper should release ownership after the post-increment compare");
     }
 
     @Test
-    void defeatCameraHelperClampsRestoredCameraAboveTarget() {
+    void defeatCameraHelperPreservesRomPostIncrementWhenRestoredAboveTarget() {
         RecordingServices services = new RecordingServices(camera);
         MgzMinibossInstance.MgzBossCameraScrollHelper helper =
                 new MgzMinibossInstance.MgzBossCameraScrollHelper(0x2E00);
@@ -467,7 +474,13 @@ class TestMgzMinibossInstance {
 
         helper.update(0, null);
 
-        assertCameraLockedAtTarget(helper);
+        assertEquals(0x2E02, camera.getX() & 0xFFFF,
+                "loc_887DA performs its increment even when restored above the target");
+        assertEquals(0x2E02, camera.getMinX() & 0xFFFF,
+                "loc_887DA publishes the incremented restored position as the left bound");
+        assertEquals(0x2E01, camera.getMaxX() & 0xFFFF,
+                "loc_887DA leaves the right bound untouched");
+        assertTrue(helper.isDestroyed(), "Camera helper should release ownership after the post-increment compare");
     }
 
     private void assertCameraLockedAtTarget(ObjectInstance helper) {
