@@ -2,6 +2,7 @@ package com.openggf.level;
 
 import com.openggf.level.objects.InitialObjectDispatchScope;
 import com.openggf.sprites.managers.InitialPlayableInput;
+import com.openggf.sprites.managers.PlayableSstDispatcher;
 import com.openggf.sprites.managers.ProcessSpritesEpoch;
 import org.junit.jupiter.api.Test;
 
@@ -68,7 +69,7 @@ class TestInitialProcessSpritesCoordinator {
                 append(calls, failingStage, "DYNAMIC_SLOTS_4_92");
             }
         };
-        PlayableSstStage playables = (epoch, input) -> {
+        PlayableSstDispatcher playables = (epoch, input) -> {
             assertEquals(InitialPlayableInput.nativeNeutral(), input);
             append(calls, failingStage, "P1");
             append(calls, failingStage, "P2");

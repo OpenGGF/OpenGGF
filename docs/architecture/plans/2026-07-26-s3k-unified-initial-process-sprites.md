@@ -221,7 +221,6 @@ Expose one narrow public semantic operation from `SpriteManager` through a publi
 ```java
 public interface PlayableSstDispatcher {
     void processInitialPlayableSlots(
-        LevelManager levelManager,
         ProcessSpritesEpoch epoch,
         InitialPlayableInput input);
 }
@@ -234,6 +233,14 @@ public record InitialPlayableInput(
 ```
 
 `ProcessSpritesEpoch` is a public immutable value carrying `nativeLevelEpoch=0`, `objectDispatchOrdinal=1`, and `advanceGameplayCounter=false`. `InitialPlayableInput.nativeNeutral()` has no dependency on `InputHandler`: raw held and just-pressed `Ctrl_1`/`Ctrl_2` words are zero, matching the clears/locks before setup at `sonic3k.asm:7765-7774`, and P2 manual/virtual controller input is zero. Debug/test shortcuts and BK2/live input are not sampled. Existing object-owned forced-input masks and control locks remain visible. `applyQueuedControlStateForFrameStart` **does run**, because those queued mutations are runtime object-control state rather than user input; it must not consume an input-handler edge or playback cursor. The method reuses the canonical per-playable routine body also used by ordinary updates so setup and gameplay cannot drift in physics, history, animation, status, water, and eligible touch ordering.
+
+`SpriteManager` already owns the active `LevelManager` through its injected
+session wiring and ordinary playable dispatch resolves that field internally.
+The public setup dispatcher therefore does not accept a redundant
+`LevelManager` argument. This keeps `InitialProcessSpritesContext` limited to
+the approved stages and epoch, lets `InitialProcessSpritesStages` hold the
+public `PlayableSstDispatcher` directly, and avoids a second bound adapter or a
+null manager seam.
 
 Refactor `SpriteManager.update` into:
 
@@ -397,11 +404,14 @@ git commit -m "docs(s3k): capture initial Process_Sprites oracle"
 - [ ] Add failure-first lifecycle tests proving `PAUSED`, `SETUP_ONLY`, and `GAMEPLAY_FRAME`, and proving the next invocation after setup produces the first gameplay frame.
 - [ ] Add exception tests proving consume-before-dispatch and balanced scopes.
 - [ ] Add collision-list tests for previous read view, reset-only-current-build, next-frame capture, SPECIAL edge latch, and ENEMY persistent-overlap polling.
+- [ ] Keep the SPECIAL/ENEMY overlap assertions at their actual
+  `ObjectTouchResponseController` owner in `TestTouchResponseManager`; slot-2
+  collision-list reset must preserve that separately owned state.
 - [ ] Retain the useful placement/load assertions from `TestObjectManagerInitialS3kSetupPass`, but rewrite their expected owner as the coordinator.
 - [ ] Run:
 
 ```bash
-mvn -Dmse=off -Dtest=TestInitialProcessSpritesCoordinator,TestInitialPlayableProcessSpritesPass,TestS3kInitialObjectSetupLifecycle,TestObjectManagerInitialS3kSetupPass,TestObjectCollisionResponseList test
+mvn -Dmse=off -Dtest=TestInitialProcessSpritesCoordinator,TestInitialPlayableProcessSpritesPass,TestS3kInitialObjectSetupLifecycle,TestObjectManagerInitialS3kSetupPass,TestObjectCollisionResponseList,TestTouchResponseManager test
 ```
 
 Expected: new tests fail for missing APIs/wrong object-only order; existing unrelated assertions remain green.
@@ -413,7 +423,8 @@ git add src/test/java/com/openggf/level/TestInitialProcessSpritesCoordinator.jav
   src/test/java/com/openggf/sprites/managers/TestInitialPlayableProcessSpritesPass.java \
   src/test/java/com/openggf/tests/TestS3kInitialObjectSetupLifecycle.java \
   src/test/java/com/openggf/level/objects/TestObjectManagerInitialS3kSetupPass.java \
-  src/test/java/com/openggf/level/objects/TestObjectCollisionResponseList.java
+  src/test/java/com/openggf/level/objects/TestObjectCollisionResponseList.java \
+  src/test/java/com/openggf/level/objects/TestTouchResponseManager.java
 git commit -m "test(s3k): pin initial Process_Sprites slot order"
 ```
 
