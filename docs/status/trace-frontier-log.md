@@ -1,5 +1,56 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- LBZ complete-run ground-launch mapping ownership advances f0 to f1659
+
+Verified in worktree `.worktrees/trace-s3k-lbz-complete`, branch
+`bugfix/ai-trace-s3k-lbz-complete`, from base `b6b0a60c0`.
+
+The LBZ1 ground-launch object writes `object_control=$03` during its buried
+30-frame hold (`docs/skdisasm/sonic3k.asm:77207-77250`). Bit 1 bypasses
+`Animate_Sonic` and `Animate_Tails` (`:21992-22018`, `:26242-26262`), so the
+object must preserve the mapping already published for each player. At launch,
+`sub_39AB4` changes the animation to Spring and replaces object control with
+`$01` (`:77252-77281`); animation therefore resumes on the next player-slot
+dispatch rather than retroactively on the post-player object pass. The
+production LBZ controller now owns that precise mapping latch and release. A
+CPU follower arriving from the seamless ICZ handoff publishes its already-live
+animation's first mapping once before the hold suppresses its animator. No
+trace, route, frame, zone-name, or comparison outcome participates in the
+decision.
+
+Focused owner verification:
+
+```bash
+mvn -Dmse=off \
+  -Dtest=com.openggf.tests.TestS3kLbz1GroundLaunchIntroHeadless \
+  -Dsurefire.argLine='-Xshare:off -Xmx3g' -Dsurefire.forkCount=1 \
+  -Ds3k.rom.path='<verified locked-on ROM>' -DfailIfNoTests=false test
+```
+
+Result: 6 tests pass, zero failures/errors/skips. The tests cover the full
+hold, the launch-frame animation/mapping ordering, the following player-slot
+publication, release cleanup, and the seamless-handoff follower pose.
+
+Focused replay:
+
+```bash
+mvn -Dmse=off \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx6g' -Dsurefire.forkCount=1 \
+  -Ds3k.rom.path='<verified locked-on ROM>' -DfailIfNoTests=false test
+```
+
+Result: expected-red, 9,309 errors and zero warnings. The first mismatch moves
+from frame 0 `player_mapping_frame` (9,311 errors) to frame 1659
+`player_mapping_frame`, expected `$96`, actual `$37`.
+
+Cross-route canaries used frontier-only bounded reports. AIZ standard holds at
+frame 2696 `x_speed`; ICZ complete-run retains its existing frame-zero
+bootstrap mismatch; both special-stage replays remain green. The architecture,
+comparison-only hydration, prelude-knob, S3K bootstrap/decoding/loading, and
+AIZ skip guards pass 110 tests with zero failures/errors/skips. No regression
+was introduced.
+
 ### 2026-07-26 -- HCZ complete-run advances from f1088 to f6292
 
 The HCZ evidence from `fa5e8241` is retained here although its duplicate code
