@@ -56,7 +56,8 @@ public record ObjectManagerSnapshot(
          * uses the captured value if present, or leaves the live counter unchanged if
          * the snapshot was captured before this field existed).
          */
-        int dynamicObjectIdCounter
+        int dynamicObjectIdCounter,
+        CollisionResponseState collisionResponseState
 ) {
     public ObjectManagerSnapshot {
         usedSlotsBits = usedSlotsBits == null ? new long[0] : Arrays.copyOf(usedSlotsBits, usedSlotsBits.length);
@@ -70,6 +71,37 @@ public record ObjectManagerSnapshot(
         planeSwitchers = planeSwitchers == null ? PlaneSwitcherSnapshot.empty() : planeSwitchers;
         touchResponseOverlap = touchResponseOverlap == null
                 ? TouchResponseOverlapState.empty() : touchResponseOverlap;
+        collisionResponseState = collisionResponseState == null
+                ? CollisionResponseState.empty() : collisionResponseState;
+    }
+
+    /** Backward-compatible constructor before collision-list rewind state. */
+    public ObjectManagerSnapshot(
+            long[] usedSlotsBits,
+            List<PerSlotEntry> slots,
+            int frameCounter,
+            int vblaCounter,
+            int currentExecSlot,
+            int peakSlotCount,
+            boolean bucketsDirty,
+            List<ChildSpawnEntry> childSpawns,
+            List<DynamicObjectEntry> dynamicObjects,
+            PlacementSnapshot placement,
+            List<SolidContactRidingEntry> solidContactRiding,
+            SolidContactState solidContactState,
+            PlaneSwitcherSnapshot planeSwitchers,
+            TouchResponseOverlapState touchResponseOverlap,
+            int dynamicObjectIdCounter
+    ) {
+        this(
+                usedSlotsBits, slots,
+                frameCounter, vblaCounter, currentExecSlot, peakSlotCount,
+                bucketsDirty, childSpawns, dynamicObjects, placement,
+                solidContactRiding, solidContactState,
+                planeSwitchers, touchResponseOverlap,
+                dynamicObjectIdCounter,
+                CollisionResponseState.empty()
+        );
     }
 
     /** Backward-compatible 14-arg constructor (pre-Task-2 callers; counter defaults to 0). */
@@ -95,7 +127,8 @@ public record ObjectManagerSnapshot(
                 bucketsDirty, childSpawns, dynamicObjects, placement,
                 solidContactRiding, solidContactState,
                 planeSwitchers, touchResponseOverlap,
-                0
+                0,
+                CollisionResponseState.empty()
         );
     }
 
@@ -228,6 +261,21 @@ public record ObjectManagerSnapshot(
                 PerObjectRewindSnapshot state
         ) {
             this(className, spawn, slotIndex, state, null, null);
+        }
+    }
+
+    public record CollisionResponseState(
+            List<ObjectRefId> previousObjects,
+            List<ObjectRefId> currentObjects,
+            boolean usePrevious
+    ) {
+        public CollisionResponseState {
+            previousObjects = previousObjects == null ? List.of() : List.copyOf(previousObjects);
+            currentObjects = currentObjects == null ? List.of() : List.copyOf(currentObjects);
+        }
+
+        public static CollisionResponseState empty() {
+            return new CollisionResponseState(List.of(), List.of(), false);
         }
     }
 

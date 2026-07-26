@@ -495,8 +495,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private void validateInitialProcessSpritesEpoch(ProcessSpritesEpoch epoch) {
 		LevelManager manager = getLevelManager();
 		int levelEpoch = manager != null ? manager.getFrameCounter() : 0;
+		ObjectManager objects = manager != null ? manager.getObjectManager() : null;
 		int completedObjectOrdinal = currentObjectDispatchOrdinal();
-		int setupObjectOrdinal = completedObjectOrdinal + 1;
+		int setupObjectOrdinal = objects != null
+				&& objects.hasActiveInitialProcessSpritesDispatch()
+				? completedObjectOrdinal
+				: completedObjectOrdinal + 1;
 		if (frameCounter != epoch.nativeLevelEpoch()
 				|| levelEpoch != epoch.nativeLevelEpoch()
 				|| setupObjectOrdinal != epoch.objectDispatchOrdinal()) {
@@ -770,6 +774,32 @@ public class SpriteManager implements PlayableSstDispatcher {
 			if (!(playable.getMovementManager() instanceof PlayableSpriteMovement movement)) {
 				continue;
 			}
+			movement.advanceFixedSkidDustWhileStopAnimPersists(frameCounter);
+		}
+	}
+
+	public void processInitialTailsFixedSlot() {
+		AbstractPlayableSprite player2 = sidekicks.isEmpty() ? null : sidekicks.getFirst();
+		if (player2 != null && player2.getTailsTailsController() != null) {
+			player2.getTailsTailsController().update();
+		}
+	}
+
+	public void processInitialDustFixedSlot(int playerIndex) {
+		AbstractPlayableSprite owner;
+		if (playerIndex == 0) {
+			owner = getMainPlayable();
+		} else if (playerIndex == 1) {
+			owner = sidekicks.isEmpty() ? null : sidekicks.getFirst();
+		} else {
+			throw new IllegalArgumentException("fixed dust slot player index must be 0 or 1");
+		}
+		if (owner == null || owner.getSpindashDustController() == null
+				|| owner.getSpindashDustController().fixedSlotIndex() < 0) {
+			return;
+		}
+		owner.getSpindashDustController().update();
+		if (owner.getMovementManager() instanceof PlayableSpriteMovement movement) {
 			movement.advanceFixedSkidDustWhileStopAnimPersists(frameCounter);
 		}
 	}

@@ -355,7 +355,16 @@ public class LevelManager {
                 writeCurrentLevel(ctx.getLevel());
             }
             LevelRewindBoundaryCoordinator.markLevelLoadBoundary();
-            initialObjectSetup.publish(ctx.requestedInitialObjectSetupLifecycle());
+            InitialObjectSetupLifecycle requestedSetup =
+                    ctx.requestedInitialObjectSetupLifecycle();
+            if (requestedSetup != InitialObjectSetupLifecycle.NONE) {
+                // The profile grants this authority only after a successful
+                // FULL + post-load + fresh assembly. Reset the playable epoch
+                // at the same publication seam, before the pending native
+                // frame-zero pass can be observed or consumed.
+                spriteManager.setFrameCounter(0);
+            }
+            initialObjectSetup.publish(requestedSetup);
         } catch (Exception e) {
             initialObjectSetup.discard();
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
@@ -383,9 +392,62 @@ public class LevelManager {
      * cannot replay a partially completed pass.
      */
     public boolean consumePendingInitialObjectSetupPass() {
-        return initialObjectSetup.consume(() ->
-                objectManager.runInitialS3kLoadThenExecutePass(
-                        camera.getX(), spriteManager.getMainPlayable(), spriteManager.getSidekicks()));
+        return initialObjectSetup.consume(this::executeInitialProcessSprites);
+    }
+
+    private void executeInitialProcessSprites() {
+        InitialFixedSstDispatcher fixed =
+                gameModule.createInitialFixedSstDispatcher(
+                        spriteManager, objectManager, zoneFeatureProvider);
+        InitialDynamicSstDispatcher dynamic = new InitialDynamicSstDispatcher() {
+            private com.openggf.level.objects.InitialObjectDispatchScope scope;
+
+            @Override
+            public com.openggf.level.objects.InitialObjectDispatchScope begin(
+                    com.openggf.sprites.managers.ProcessSpritesEpoch epoch) {
+                scope = objectManager.beginInitialProcessSprites(
+                        camera.getX(),
+                        spriteManager.getMainPlayable(),
+                        spriteManager.getSidekicks());
+                return scope;
+            }
+
+            @Override
+            public void loadSprites() {
+                objectManager.loadInitialDynamicSlots(scope);
+            }
+
+            @Override
+            public void processAbsoluteDynamicSlot3() {
+                objectManager.processInitialAbsoluteDynamicSlot3(scope);
+            }
+
+            @Override
+            public void processManagedDynamicSlots4Through92() {
+                objectManager.processInitialDynamicSlots(scope);
+            }
+        };
+        CollisionListSstDispatcher collision = new CollisionListSstDispatcher() {
+            @Override
+            public void freezePreviousReadView() {
+                objectManager.freezeInitialCollisionResponseReadView();
+            }
+
+            @Override
+            public void resetCurrentBuild() {
+                objectManager.resetInitialCollisionResponseBuild();
+            }
+
+            @Override
+            public void captureCompletedBuild() {
+                objectManager.captureInitialCollisionResponseBuild();
+            }
+        };
+        int objectOrdinal = objectManager.getFrameCounter() + 1;
+        new InitialProcessSpritesCoordinator().execute(new InitialProcessSpritesContext(
+                new InitialProcessSpritesStages(dynamic, spriteManager, collision, fixed),
+                new com.openggf.sprites.managers.ProcessSpritesEpoch(
+                        frameCounter, objectOrdinal, false)));
     }
 
     /**

@@ -93,8 +93,9 @@ class TestObjectManagerInitialS3kSetupPass {
                 "post-exec allocations must be materialized before the pass returns");
         manager.snapshotTouchResponseState(true);
         assertTrue(manager.touchUsesPreviousCollisionResponseList());
-        assertEquals(List.of(probe, probe.child), manager.getTouchResponseObjects(),
-                "the setup pass must capture the post-flush collision list for the following frame");
+        assertEquals(List.of(probe), manager.getTouchResponseObjects(),
+                "only objects that actually reached an SST execution point may publish; "
+                        + "a post-exec allocation waits for the next Process_Sprites pass");
         assertEquals(0, probe.touches, "the setup pass must not run touch responses");
         assertEquals(List.of(
                 "SolidExecutionRegistry.beginFrame",
@@ -142,9 +143,94 @@ class TestObjectManagerInitialS3kSetupPass {
                 "SolidExecutionRegistry.finishFrame"), ledger);
     }
 
+    @Test
+    void initialCollisionBuildPublishesDynamicThenFixedInActualSstExecutionOrder() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        ObjectSpawn dynamicSpawn =
+                new ObjectSpawn(0x0100, 0x0080, 0x41, 0, 0, false, 0x0080);
+        RecordingRegistry registry =
+                new RecordingRegistry(dynamicSpawn, null, false);
+        ObjectManager manager = new ObjectManager(
+                List.of(dynamicSpawn), registry, -1, null, null, null, camera,
+                new TestObjectServices()
+                        .withCamera(camera)
+                        .withSolidExecutionRegistry(new RecordingSolidRegistry()));
+        registry.manager = manager;
+        manager.enableExecThenLoadPlacement();
+        ProbeObject fixed = new ProbeObject(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0), false);
+        fixed.managerSupplier = () -> manager;
+        manager.registerInitialFixedDispatchObject(fixed);
+
+        try (InitialObjectDispatchScope scope =
+                     manager.beginInitialProcessSprites(0, null, List.of())) {
+            manager.loadInitialDynamicSlots(scope);
+            manager.resetInitialCollisionResponseBuild();
+            manager.processInitialDynamicSlots(scope);
+            manager.processInitialFixedDispatchObject(scope, fixed);
+            manager.finishInitialProcessSprites(scope);
+        }
+
+        assertEquals(List.of(registry.instances.get(dynamicSpawn), fixed),
+                manager.getTouchResponseObjects(),
+                "the captured native list must retain dynamic 4-92 before fixed 93-109");
+    }
+
+    @Test
+    void freshAbsoluteDynamicSlotThreeMustRemainUnowned() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        RecordingSolidRegistry solids = new RecordingSolidRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(),
+                new RecordingRegistry(null, null, false),
+                -1, null, null, null, camera,
+                new TestObjectServices()
+                        .withCamera(camera)
+                        .withSolidExecutionRegistry(solids));
+        ProbeObject unexpected = new ProbeObject(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0), false);
+        manager.addDynamicObject(unexpected);
+        unexpected.setSlotIndex(3);
+
+        try (InitialObjectDispatchScope scope =
+                     manager.beginInitialProcessSprites(0, null, List.of())) {
+            IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> manager.processInitialAbsoluteDynamicSlot3(scope));
+            assertEquals(
+                    "fresh initial Process_Sprites unexpectedly registered absolute slot 3",
+                    failure.getMessage());
+        }
+    }
+
+    @Test
+    void throwingFinishFrameStillReleasesTheInitialDispatchScope() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        RecordingSolidRegistry solids = new RecordingSolidRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(), new RecordingRegistry(null, null, false),
+                -1, null, null, null, camera,
+                new TestObjectServices()
+                        .withCamera(camera)
+                        .withSolidExecutionRegistry(solids));
+        solids.throwOnFinish = true;
+
+        InitialObjectDispatchScope first =
+                manager.beginInitialProcessSprites(0, null, List.of());
+        assertThrows(IllegalStateException.class, first::close);
+
+        solids.throwOnFinish = false;
+        try (InitialObjectDispatchScope second =
+                     manager.beginInitialProcessSprites(0, null, List.of())) {
+            manager.finishInitialProcessSprites(second);
+        }
+        assertEquals(2, solids.beginCount);
+        assertEquals(2, solids.finishCount);
+    }
+
     private final class RecordingSolidRegistry implements SolidExecutionRegistry {
         int beginCount;
         int finishCount;
+        boolean throwOnFinish;
 
         @Override
         public void beginFrame(int frameCounter, List<? extends PlayableEntity> players) {
@@ -164,6 +250,9 @@ class TestObjectManagerInitialS3kSetupPass {
         public void finishFrame() {
             finishCount++;
             ledger.add("SolidExecutionRegistry.finishFrame");
+            if (throwOnFinish) {
+                throw new IllegalStateException("finish boom");
+            }
         }
 
         @Override public void clearTransientState() {}

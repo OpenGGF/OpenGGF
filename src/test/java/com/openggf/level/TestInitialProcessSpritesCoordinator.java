@@ -49,6 +49,47 @@ class TestInitialProcessSpritesCoordinator {
         }
     }
 
+    @Test
+    void failedDynamicBeginCannotRegisterFixedOwners() {
+        boolean[] fixedPrepared = { false };
+        InitialDynamicSstDispatcher dynamic = new InitialDynamicSstDispatcher() {
+            @Override
+            public InitialObjectDispatchScope begin(ProcessSpritesEpoch epoch) {
+                throw new IllegalStateException("begin boom");
+            }
+
+            @Override public void loadSprites() {}
+            @Override public void processAbsoluteDynamicSlot3() {}
+            @Override public void processManagedDynamicSlots4Through92() {}
+        };
+        InitialFixedSstDispatcher fixed = new InitialFixedSstDispatcher() {
+            @Override
+            public void onInitialScopeAcquired() {
+                fixedPrepared[0] = true;
+            }
+
+            @Override
+            public void processPostDynamicFixedSlots(ProcessSpritesEpoch epoch) {
+            }
+        };
+        InitialProcessSpritesStages stages = new InitialProcessSpritesStages(
+                dynamic,
+                (epoch, input) -> {},
+                new CollisionListSstDispatcher() {
+                    @Override public void freezePreviousReadView() {}
+                    @Override public void resetCurrentBuild() {}
+                    @Override public void captureCompletedBuild() {}
+                },
+                fixed);
+
+        assertThrows(IllegalStateException.class,
+                () -> new InitialProcessSpritesCoordinator().execute(
+                        new InitialProcessSpritesContext(
+                                stages, new ProcessSpritesEpoch(0, 1, false))));
+
+        assertEquals(false, fixedPrepared[0]);
+    }
+
     private static InitialProcessSpritesStages recordingStages(
             List<String> calls, String failingStage) {
         InitialDynamicSstDispatcher dynamic = new InitialDynamicSstDispatcher() {

@@ -250,6 +250,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         fixedAirCountdownManager.update();
     }
 
+    void processInitialFixedAirSlot(int playerIndex, AbstractPlayableSprite owner) {
+        if (playerIndex == 0) {
+            fixedAirCountdownManager.processInitialP1Slot(owner);
+        } else if (playerIndex == 1) {
+            fixedAirCountdownManager.processInitialP2Slot(owner);
+        } else {
+            throw new IllegalArgumentException("fixed air slot player index must be 0 or 1");
+        }
+    }
+
     @Override
     public boolean ownsFixedDrowningBubbleCadence() {
         return true;

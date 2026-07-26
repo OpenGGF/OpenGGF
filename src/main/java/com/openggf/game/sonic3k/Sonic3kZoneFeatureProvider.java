@@ -123,6 +123,22 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
     };
     private Sonic3kWaterSurfaceManager waterSurfaceManager;
+    private final InitialWaveSplashSstOwner initialWaveSplashSstOwner =
+            new InitialWaveSplashSstOwner() {
+                @Override
+                public boolean isRegistered() {
+                    return waterSurfaceManager != null && waterSurfaceManager.isInitialized();
+                }
+
+                @Override
+                public void processInitialWaveSplash(
+                        com.openggf.sprites.managers.ProcessSpritesEpoch epoch) {
+                    if (!isRegistered()) {
+                        throw new IllegalStateException("wave splash fixed SST owner is not registered");
+                    }
+                    waterSurfaceManager.processInitialSstSlot(epoch);
+                }
+            };
     private final Set<AbstractPlayableSprite> forcedAizForestFrontBucketSprites = new HashSet<>();
     private S3kSlotMachinePanelAnimator slotMachinePanelAnimator;
 
@@ -465,6 +481,10 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
      */
     private static boolean zoneHasWaterSurface(int zoneIndex) {
         return zoneIndex == Sonic3kZoneIds.ZONE_HCZ;
+    }
+
+    public InitialWaveSplashSstOwner initialWaveSplashSstOwner() {
+        return initialWaveSplashSstOwner;
     }
 
     @Override
