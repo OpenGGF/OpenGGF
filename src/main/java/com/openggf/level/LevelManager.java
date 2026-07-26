@@ -1014,6 +1014,17 @@ public class LevelManager {
         this.suppressGlobalOscillationForTitleCardPass = true;
     }
 
+    /**
+     * Advances the native VBlank clock while S3K dispatches title-card SSTs.
+     * The engine renders those SSTs outside {@link ObjectManager}, so this must
+     * not execute already-loaded level objects or advance level-frame state.
+     */
+    public void advanceTitleCardVblankOnly() {
+        if (objectManager != null) {
+            objectManager.advanceVblaCounter();
+        }
+    }
+
     private void advanceGlobalOscillation() {
         if (suppressGlobalOscillationForTitleCardPass) {
             suppressGlobalOscillationForTitleCardPass = false;

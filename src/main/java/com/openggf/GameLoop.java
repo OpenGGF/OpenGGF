@@ -1276,9 +1276,9 @@ public class GameLoop {
         // offsetting oscillation-driven moving platforms (Obj18) when control
         // returns -- visible after a special-stage return where the engine runs
         // the real title card (rather than the trace bootstrap that skips it).
-        levelManager.suppressGlobalOscillationForTitleCardPass();
         if (tcpCard.shouldRunPlayerPhysics()) {
             // S2: full title-card frame step.
+            levelManager.suppressGlobalOscillationForTitleCardPass();
             spriteManager.publishHeldInputForLevelEvents(inputHandler);
             LevelFrameStep.execute(LevelFrameContext.from(gameplayMode),
                     levelManager, camera, () -> spriteManager.update(inputHandler),
@@ -1294,11 +1294,20 @@ public class GameLoop {
             // whether those native slots are already the engine's level
             // objects: S1 still has title-card objects in object RAM here and
             // therefore must leave ObjectManager untouched until gameplay
-            // handoff; S3K retains its existing level-object pass.
+            // handoff; S3K's provider represents its title-card SSTs and
+            // advances only the VBlank clock through the branch below.
             if (tcpCard.shouldRunLevelObjectsDuringLockedPhase()) {
+                levelManager.suppressGlobalOscillationForTitleCardPass();
                 levelManager.updateObjectPositions();
-            }
-            camera.updatePosition(true);
+                camera.updatePosition(true);
+            } else if (tcpCard.shouldAdvanceVblankClockDuringLockedPhase())
+                // S3K's native wait loop is dispatching title-card SSTs here.
+                // The provider owns those sprites, so only the VBlank clock
+                // advances; loaded level objects and camera remain untouched.
+                levelManager.advanceTitleCardVblankOnly();
+                // S1 retains its locked-card forced camera step while its
+                // level-object RAM remains unpopulated.
+            else camera.updatePosition(true);
         }
         advanceGameplayAudioFrameForTick(doFrameStep);
         profiler.endSection("input");

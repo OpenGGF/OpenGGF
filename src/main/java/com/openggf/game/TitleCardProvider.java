@@ -164,6 +164,14 @@ public interface TitleCardProvider {
     }
 
     /**
+     * Returns whether a locked title-card frame advances the production VBlank
+     * clock without dispatching the engine's already-loaded level objects.
+     */
+    default boolean shouldAdvanceVblankClockDuringLockedPhase() {
+        return false;
+    }
+
+    /**
      * Number of object-only passes to run immediately before the title card
      * releases into the first normal level frame.
      *
