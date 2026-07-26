@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.GameLoop;
 import com.openggf.LevelFrameContext;
+import com.openggf.LevelFrameResult;
 import com.openggf.LevelFrameStep;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
@@ -54,6 +55,59 @@ class TestS3kInitialObjectSetupLifecycle {
     @AfterEach
     void tearDown() {
         TestEnvironment.resetAll();
+    }
+
+    @Test
+    void firstAdmittedInvocationReturnsSetupOnlyAndTheRetryRunsGameplayFrame()
+            throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            int objectBefore = manager.getObjectManager().getFrameCounter();
+            int levelBefore = manager.getFrameCounter();
+
+            LevelFrameResult setup = LevelFrameStep.executeWithPause(
+                    LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                    manager, GameServices.camera(), () -> {
+                        throw new AssertionError("SETUP_ONLY must not enter ordinary physics");
+                    }, false, LevelFrameStep.DIRECT_WRAPPER);
+
+            assertEquals(LevelFrameResult.SETUP_ONLY, setup);
+            assertEquals(objectBefore + 1, manager.getObjectManager().getFrameCounter());
+            assertEquals(levelBefore, manager.getFrameCounter());
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
+
+            LevelFrameResult gameplay = LevelFrameStep.executeWithPause(
+                    LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                    manager, GameServices.camera(), () -> {
+                    }, false, LevelFrameStep.DIRECT_WRAPPER);
+
+            assertEquals(LevelFrameResult.GAMEPLAY_FRAME, gameplay);
+            assertEquals(objectBefore + 2, manager.getObjectManager().getFrameCounter());
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    @Test
+    void pausedAdmissionReturnsPausedWithoutConsumingSetupAuthority() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            int objectBefore = manager.getObjectManager().getFrameCounter();
+
+            LevelFrameResult result = LevelFrameStep.executeWithPause(
+                    LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                    manager, GameServices.camera(), () -> {
+                        throw new AssertionError("PAUSED must not enter ordinary physics");
+                    }, true, LevelFrameStep.DIRECT_WRAPPER);
+
+            assertEquals(LevelFrameResult.PAUSED, result);
+            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertEquals(objectBefore, manager.getObjectManager().getFrameCounter());
+        } finally {
+            sharedLevel.dispose();
+        }
     }
 
     @Test
@@ -288,24 +342,24 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             int before = manager.getObjectManager().getFrameCounter();
 
-            boolean ran = LevelFrameStep.executeWithPause(
+            LevelFrameResult paused = LevelFrameStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                     }, true, LevelFrameStep.DIRECT_WRAPPER);
 
-            assertFalse(ran);
+            assertEquals(LevelFrameResult.PAUSED, paused);
             assertTrue(manager.hasPendingInitialObjectSetupPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
 
-            boolean resumed = LevelFrameStep.executeWithPause(
+            LevelFrameResult resumed = LevelFrameStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                     }, true, LevelFrameStep.DIRECT_WRAPPER);
 
-            assertTrue(resumed);
+            assertEquals(LevelFrameResult.SETUP_ONLY, resumed);
             assertFalse(manager.hasPendingInitialObjectSetupPass());
-            assertEquals(before + 2, manager.getObjectManager().getFrameCounter(),
-                    "resume runs the setup dispatch and one ordinary object dispatch");
+            assertEquals(before + 1, manager.getObjectManager().getFrameCounter(),
+                    "resume runs setup only; the caller retries for the ordinary frame");
         } finally {
             sharedLevel.dispose();
         }

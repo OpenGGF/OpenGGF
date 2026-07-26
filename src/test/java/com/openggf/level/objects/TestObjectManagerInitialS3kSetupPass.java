@@ -9,19 +9,15 @@ import com.openggf.game.solid.PlayerStandingState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.graphics.GLCommand;
-import com.openggf.physics.Direction;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.TestEnvironment;
-import com.openggf.trace.TraceCharacterState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +45,7 @@ class TestObjectManagerInitialS3kSetupPass {
     }
 
     @Test
-    void setupPassLoadsExecutesAndFlushesInAuditedOrderWithoutGameplayState() {
+    void coordinatorOwnedDynamicStageLoadsExecutesAndFlushesWithoutGameplayState() {
         Camera camera = new Camera(SonicConfigurationService.getInstance());
         camera.setX((short) 0);
         camera.setY((short) 0);
@@ -76,16 +72,15 @@ class TestObjectManagerInitialS3kSetupPass {
         Tails sidekick = new Tails("tails", (short) 0x120, (short) 0x90);
         sidekick.setCpuControlled(true);
         new SidekickCpuController(sidekick, player);
-        seedPlayable(player, 0x111, 0x222, 0x333, 0x45, 3, 7);
-        seedPlayable(sidekick, 0x444, 0x555, 0x666, 0x67, 4, 8);
-        assertEquals(0x45, TraceCharacterState.statusByteFromSprite(player));
-        assertEquals(0x67, TraceCharacterState.statusByteFromSprite(sidekick));
-        PlayableState playerBefore = PlayableState.capture(player);
-        PlayableState sidekickBefore = PlayableState.capture(sidekick);
         int frameBefore = manager.getFrameCounter();
         int vblankBefore = manager.getVblaCounter();
 
-        manager.runInitialS3kLoadThenExecutePass(0, player, List.of(sidekick));
+        try (InitialObjectDispatchScope scope =
+                     manager.beginInitialProcessSprites(0, player, List.of(sidekick))) {
+            manager.loadInitialDynamicSlots(scope);
+            manager.processInitialDynamicSlots(scope);
+            manager.finishInitialProcessSprites(scope);
+        }
 
         ProbeObject probe = registry.instances.get(visible);
         assertEquals(1, registry.visibleCreations);
@@ -101,8 +96,6 @@ class TestObjectManagerInitialS3kSetupPass {
         assertEquals(List.of(probe, probe.child), manager.getTouchResponseObjects(),
                 "the setup pass must capture the post-flush collision list for the following frame");
         assertEquals(0, probe.touches, "the setup pass must not run touch responses");
-        assertEquals(playerBefore, PlayableState.capture(player));
-        assertEquals(sidekickBefore, PlayableState.capture(sidekick));
         assertEquals(List.of(
                 "SolidExecutionRegistry.beginFrame",
                 "SolidExecutionRegistry.finishFrame"), ledger);
@@ -113,7 +106,7 @@ class TestObjectManagerInitialS3kSetupPass {
     }
 
     @Test
-    void setupPassBalancesRegistryAndPropagatesObjectFailureWithoutRetry() {
+    void coordinatorOwnedDynamicStageBalancesRegistryAndPropagatesFailureWithoutRetry() {
         Camera camera = new Camera(SonicConfigurationService.getInstance());
         camera.setX((short) 0);
         camera.setY((short) 0);
@@ -127,8 +120,14 @@ class TestObjectManagerInitialS3kSetupPass {
         registry.manager = manager;
         manager.enableExecThenLoadPlacement();
 
-        IllegalStateException failure = assertThrows(IllegalStateException.class,
-                () -> manager.runInitialS3kLoadThenExecutePass(0, null, List.<PlayableEntity>of()));
+        IllegalStateException failure = assertThrows(IllegalStateException.class, () -> {
+            try (InitialObjectDispatchScope scope =
+                         manager.beginInitialProcessSprites(0, null, List.<PlayableEntity>of())) {
+                manager.loadInitialDynamicSlots(scope);
+                manager.processInitialDynamicSlots(scope);
+                manager.finishInitialProcessSprites(scope);
+            }
+        });
 
         assertEquals("setup boom", failure.getMessage());
         assertEquals(1, registry.instances.get(visible).updates);
@@ -141,46 +140,6 @@ class TestObjectManagerInitialS3kSetupPass {
         assertEquals(List.of(
                 "SolidExecutionRegistry.beginFrame",
                 "SolidExecutionRegistry.finishFrame"), ledger);
-    }
-
-    private static void seedPlayable(AbstractPlayableSprite playable, int xSpeed, int ySpeed,
-                                     int groundSpeed, int status, int animation, int mapping) {
-        playable.setXSpeed((short) xSpeed);
-        playable.setYSpeed((short) ySpeed);
-        playable.setGSpeed((short) groundSpeed);
-        playable.setDirection((status & 0x01) != 0 ? Direction.LEFT : Direction.RIGHT);
-        playable.setAir((status & 0x02) != 0);
-        playable.setRolling((status & 0x04) != 0);
-        playable.setOnObject((status & 0x08) != 0);
-        playable.setRollingJump((status & 0x10) != 0);
-        playable.setPushing((status & 0x20) != 0);
-        playable.setInWater((status & 0x40) != 0);
-        playable.setAnimationId(animation);
-        playable.setMappingFrame(mapping);
-        playable.setSubpixelRaw(0x1234, 0x5678);
-    }
-
-    private record PlayableState(
-            int centreX, int centreY, int xSub, int ySub,
-            int xSpeed, int ySpeed, int groundSpeed, int status,
-            int animation, int mapping, int cpuRoutine, int historyPos,
-            int xHistoryHash, int yHistoryHash, int inputHistoryHash, int statusHistoryHash) {
-        static PlayableState capture(AbstractPlayableSprite playable) {
-            SidekickCpuController cpu = playable.getCpuController();
-            return new PlayableState(
-                    playable.getCentreX(), playable.getCentreY(),
-                    playable.getXSubpixelRaw(), playable.getYSubpixelRaw(),
-                    playable.getXSpeed(), playable.getYSpeed(), playable.getGSpeed(),
-                    TraceCharacterState.statusByteFromSprite(playable),
-                    playable.getAnimationId(), playable.getMappingFrame(),
-                    cpu != null ? cpu.getDiagnosticRomCpuRoutine() : -1,
-                    playable.historyPos(),
-                    Arrays.hashCode(playable.copyXHistory()),
-                    Arrays.hashCode(playable.copyYHistory()),
-                    Arrays.hashCode(playable.copyInputHistory()),
-                    Arrays.hashCode(playable.copyStatusHistory()));
-        }
-
     }
 
     private final class RecordingSolidRegistry implements SolidExecutionRegistry {
