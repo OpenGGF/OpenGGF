@@ -256,28 +256,15 @@ public final class TraceReplayBootstrap {
      * routine/subtype loaded for the route and are therefore selected by
      * {@code TraceReplaySessionBootstrap}, not by trace zone metadata here.
      *
-     * <p>S3K complete-run segments arm after the setup block has already
-     * called {@code SpawnLevelMainSprites}, {@code Process_Sprites}, and
-     * {@code Animate_Tiles}, but before the first replay-driven
-     * {@code LevelLoop} row (docs/skdisasm/sonic3k.asm:7849-7855,
-     * 7884-7894). Replaying the native object pass before applying the
-     * frame-zero RNG seed preserves ROM object initialization order without
-     * copying recorded SST data into the engine.
-     *
-     * <p>S3K Sonic+Tails level-select seed-frame traces have the same setup
-     * {@code Process_Sprites} pass before their first compared row, but keep
-     * Sonic's frame-0 movement as comparison-only state. Replay therefore runs
-     * the native level-object pass here and the sidekick-only tick separately,
-     * both before normal frame-1 driving begins.
+     * <p>S3K replay never selects an object prelude from trace identity or
+     * metadata. Fresh loads publish production setup authority through the
+     * level lifecycle; represented complete-run state discards that authority
+     * before restoration.
      */
     public static int levelObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
         int s1PreludeFrames = resolveS1LevelStartObjectPreludeFrames(trace);
         if (s1PreludeFrames > 0) {
             return s1PreludeFrames;
-        }
-        int s3kCompleteRunPreludeFrames = resolveS3kCompleteRunObjectPreludeFrames(trace);
-        if (s3kCompleteRunPreludeFrames > 0) {
-            return s3kCompleteRunPreludeFrames;
         }
         return 0;
     }
@@ -337,8 +324,6 @@ public final class TraceReplayBootstrap {
 
     private static final int S1_LEVEL_START_OBJECT_PRELUDE_FRAMES = 1;
 
-    private static final int S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES = 1;
-
     private static final int S3K_COMPLETE_RUN_SETUP_ANIMATED_TILE_PRELUDE_FRAMES = 1;
 
     private static int resolveS1LevelStartObjectPreludeFrames(TraceData trace) {
@@ -354,12 +339,6 @@ public final class TraceReplayBootstrap {
         TraceFrame firstFrame = trace.getFrame(0);
         return firstFrame.gameplayFrameCounter() == 1
                 ? S1_LEVEL_START_OBJECT_PRELUDE_FRAMES
-                : 0;
-    }
-
-    private static int resolveS3kCompleteRunObjectPreludeFrames(TraceData trace) {
-        return isS3kCompleteRunSegment(trace)
-                ? S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES
                 : 0;
     }
 

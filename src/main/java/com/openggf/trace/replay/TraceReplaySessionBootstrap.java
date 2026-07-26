@@ -377,6 +377,9 @@ public final class TraceReplaySessionBootstrap {
                     fixture != null ? fixture.sprite() : null);
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        if (gameplayMode != null && gameplayMode.getLevelManager() != null) {
+            gameplayMode.getLevelManager().consumePendingInitialObjectSetupPass();
+        }
         applyInitialRngSeedForReplay(trace.metadata());
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
@@ -986,6 +989,12 @@ public final class TraceReplaySessionBootstrap {
                                                        TraceReplayFixture fixture) {
         if (!TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)) {
             return;
+        }
+        if (TraceReplayBootstrap.isS3kCompleteRunSegment(trace)
+                && fixture.gameplayMode() != null
+                && fixture.gameplayMode().getLevelManager() != null) {
+            fixture.gameplayMode().getLevelManager()
+                    .discardPendingInitialObjectSetupForStateRestoration();
         }
         AbstractPlayableSprite sprite = fixture.sprite();
         if (sprite == null) {
