@@ -120,6 +120,38 @@ class TestIczSnowboardArtLoader {
     }
 
     @Test
+    void startupReleaseObjectDispatchDefersPlayerMotionUntilNextPlayerSlot() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_ICZ, ACT_1)
+                .build();
+        Sonic3kLevelEventManager events =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+
+        events.getIczEvents().restoreSnowboardIntroPostPreludeReset(fixture.sprite());
+        IczSnowboardIntroInstance intro = latestSnowboardIntro();
+        int initialX = fixture.sprite().getCentreX();
+        int initialY = fixture.sprite().getCentreY();
+        int initialXSub = fixture.sprite().getXSubpixelRaw();
+        int initialYSub = fixture.sprite().getYSubpixelRaw();
+        short initialYSpeed = fixture.sprite().getYSpeed();
+
+        for (int dispatch = 0; dispatch < 30; dispatch++) {
+            intro.update(dispatch, fixture.sprite());
+        }
+
+        assertFalse(fixture.sprite().isObjectMappingFrameControl(),
+                "ROM loc_39780 must release object_control when its 30-tick timer expires");
+        assertEquals(initialX, fixture.sprite().getCentreX(),
+                "The later controller slot must not run the already-completed player X motion");
+        assertEquals(initialY, fixture.sprite().getCentreY(),
+                "The later controller slot must not run the already-completed player Y motion");
+        assertEquals(initialXSub, fixture.sprite().getXSubpixelRaw());
+        assertEquals(initialYSub, fixture.sprite().getYSubpixelRaw());
+        assertEquals(initialYSpeed, fixture.sprite().getYSpeed(),
+                "Gravity belongs to the next ordinary player dispatch");
+    }
+
+    @Test
     void snowboardLaunchKeepsBoardSeparateUntilSonicHandoff() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(ZONE_ICZ, ACT_1)

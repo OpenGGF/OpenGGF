@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- ICZ snowboard release respects player/controller SST order
+
+Commands (worktree `.worktrees/trace-s3k-icz-complete`, branch
+`bugfix/ai-trace-s3k-icz-complete`, base `ffc01c64f`):
+
+```bash
+mvn -q \
+  -Dtest=com.openggf.game.sonic3k.objects.TestIczSnowboardArtLoader test
+MAVEN_OPTS='-Xmx6g' mvn -q \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay \
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+MAVEN_OPTS='-Xmx6g' mvn -q \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay \
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -Dtrace.frontierOnly=true test
+MAVEN_OPTS='-Xmx6g' mvn -q \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay \
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -Dtrace.frontierOnly=true test
+MAVEN_OPTS='-Xmx6g' mvn -q \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kSpecialStageTraceReplay \
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -Dtrace.frontierOnly=true test
+```
+
+The ICZ complete-run frontier advances from f28 `y_sub` with 5,694 errors to
+f3102 `x` (ROM `0x4409`, engine `0x440B`) with 1,352 errors and zero warnings.
+`Obj_LevelIntroICZ1`'s later controller SST now performs only the ROM's
+`object_control` release; it does not duplicate player movement after the
+earlier player slot has already dispatched.
+
+The focused snowboard controller suite passes 17/17. AIZ complete-run remains
+at f9376 `rings` (ROM `2`, engine `1`), CNZ complete-run remains at its
+documented f0 `y` bootstrap gap (ROM `0x0600`, engine `0x061C`), and the S3K
+special-stage replay passes 2/2.
+
 ### 2026-07-26 -- S3K production initial-object setup advances standalone CNZ
 
 Verified `d5f0c3c01cfcb42957e417d316ae47a778aa516a` on
