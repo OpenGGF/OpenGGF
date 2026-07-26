@@ -39,6 +39,15 @@ import static org.mockito.Mockito.when;
 class TestStarPointerBadnikInstance {
 
     @Test
+    void parentTouchUsesLiveSstPositionPublishedAfterMovement() {
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0, 0, false, 0));
+
+        assertTrue(starPointer.usesCurrentTouchResponseState(),
+                "Obj_StarPointer moves before publishing its SST pointer to Collision_response_list");
+    }
+
+    @Test
     void registryCreatesStarPointerForS3klZones() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry() {
             @Override

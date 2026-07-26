@@ -99,6 +99,16 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
         return !facingLeft;
     }
 
+    /**
+     * ROM {@code loc_8BE74} moves the parent before publishing its SST pointer
+     * to {@code Collision_response_list}. {@code Touch_Loop} later dereferences
+     * that pointer, so parent contact uses the live post-movement position.
+     */
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        return true;
+    }
+
     private void initializeVelocity(AbstractPlayableSprite player) {
         int speedIndex = ((spawn.subtype() & 0x06) >> 1) & 0x03;
         int speed = TRACK_SPEEDS[speedIndex];

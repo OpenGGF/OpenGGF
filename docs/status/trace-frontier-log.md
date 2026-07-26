@@ -51040,3 +51040,35 @@ mvn -q '-Dsurefire.argLine=-Xshare:off -Xmx4g' \
 - Rewind coverage, rewind round-trip, and architectural source guards pass.
 - Detailed ROM PC, collision-list, activation, and capture-hash evidence:
   `docs/architecture/audits/2026-07-26-icz-star-pointer-launch-oracle.md`.
+
+## 2026-07-26 - ICZ Star Pointer live touch position advances f16361 to f24140
+
+Worktree `.worktrees/integration-icz-16361`, branch
+`bugfix/ai-trace-int-icz-16361`, baseline `5222ff8da`.
+
+The baseline reproduced 32 errors and first diverged at f16361 `y_speed`
+(`expected=0x0093`, `actual=-006D`). A stage-gated, invisible BizHawk probe
+showed `Touch_EnemyNormal` at PC `$1020C` adding `$100` to Sonic's Y velocity
+after touching Star Pointer parent SST `$B172`. The ROM parent had moved to
+X `$0D07` before publishing its SST pointer; the engine tested its cached
+pre-update X `$0D08`, missing the inclusive horizontal boundary by one pixel.
+
+`StarPointerBadnikInstance` now opts into the existing live touch-response
+state contract. This is the object-owned ordering in `loc_8BE74`: `MoveSprite2`
+runs before `Sprite_CheckDeleteTouch`, while `Touch_Loop` later dereferences
+the published live SST pointer.
+
+Verified with:
+
+```bash
+mvn -q '-Dsurefire.argLine=-Xshare:off -Xmx4g' \
+  -Ds3k.rom.path=s3k.gen -Dtrace.context.radius=30 \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay test
+```
+
+- Before: 32 errors; f16361 `y_speed` (`0x0093` / `-006D`).
+- After: 31 errors; f24140 `rings` (`3` / `2`).
+- The focused live-SST capability-contract test fails before and passes after
+  the fix; the complete replay supplies the one-pixel overlap coverage.
+- Full native evidence, commands, and hashes:
+  `docs/architecture/audits/2026-07-26-icz-star-pointer-parent-touch-phase.md`.
