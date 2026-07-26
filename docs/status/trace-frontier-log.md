@@ -1,5 +1,47 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- S3K production initial-object setup advances standalone CNZ
+
+Verified `d5f0c3c01cfcb42957e417d316ae47a778aa516a` on
+`bugfix/ai-trace-s3k-lifecycle` in
+`/home/farrell/code/projects/OpenGGF/.worktrees/trace-s3k-lifecycle`.
+
+Fresh commands were the Task 7 focused lifecycle/policy selection, standalone S3K
+selection, production special-stage selection, seven isolated complete-run Maven
+invocations, and S1/S2 cross-game selection exactly as written in
+`docs/architecture/plans/2026-07-26-s3k-initial-object-setup-lifecycle.md`.
+All used the discovered ROM names; trace commands used one fork and a 6 GiB heap.
+
+The lifecycle/policy suite passed 134/134. Locked S3K title-card coverage measured
+loaded-object delta `0`, VBlank delta `+5`, and RNG delta `0`. Setup measured
+object-dispatch delta `+1`, with VBlank, level-frame, player, sidekick, touch, and
+oscillator deltas all zero. Pending and consumed rewind states round-trip without
+recreating consumed authority.
+
+Standalone CNZ advances from the established 9,140-error baseline at f185
+`y_speed` (`0x0370` / `-0x0700`) to 6,762 full-report errors at f291 `y_speed`
+(`0x01F8` / `-0x0651`); the fresh frontier-only run reports 22 groups at f291
+`x_speed` (`0x0600` / `-0x02FB`). AIZ holds at f719 `x`
+(`0x0040` / `0x0050`, 2 groups), and MGZ holds at f5164 `air` (`0` / `1`,
+18 groups).
+
+| Complete-run class | Fresh isolated frontier-only result |
+|---|---|
+| `TestS3kAizCompleteRunTraceReplay` | 2 groups; f9376 `rings` 2 / 1 |
+| `TestS3kCnzCompleteRunTraceReplay` | 28 groups; f0 `y` `0x0600` / `0x061C` |
+| `TestS3kHczCompleteRunTraceReplay` | 1 replay group; f1088 `tails_cpu_target_y` `0x0578` / `0x04F0`; known-red Poindexter oracle also remains red |
+| `TestS3kIczCompleteRunTraceReplay` | 7 groups; f0 `x` `0x0010` / `0x0018` |
+| `TestS3kLbzCompleteRunTraceReplay` | 1 group; f0 `player_mapping_frame` `0x0000` / `0x0007` |
+| `TestS3kMgzCompleteRunTraceReplay` | 17 groups; f5550 `air` 0 / 1 |
+| `TestS3kMhzCompleteRunTraceReplay` | 28 groups; f0 `y` `0x0500` / `0x051C` |
+
+S3K special-stage replay passed 2/2 and production special-stage lifecycle seams
+passed 6/6. S1 GHZ1, S2 EHZ1, S2 CNZ level-select, and title-card policy passed
+6/6. The implementation follows the ROM title/setup/ordinary-loop separation
+(`docs/skdisasm/sonic3k.asm:7737-7748,7849-7855,7884-7906`) and balloon routine
+(`docs/skdisasm/sonic3k.asm:66752-66803`). Trace data remained comparison-only;
+complete-run frame-zero debt was not addressed.
+
 ### 2026-07-26 -- Debug/trace audit resumes: S1/S2 green, S3K frontiers unchanged
 
 Commands (measured in worktree `/tmp/openggf-debug-trace-audit-resumed`, then replayed

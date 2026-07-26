@@ -1031,8 +1031,8 @@ class TestBuildToolingGuard {
     @Test
     void traceReplayBootstrapContractsShouldBeDocumentedAndOutcomeFree() throws Exception {
         String bootstrap = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
-        String discrepancies = Files.readString(Path.of("docs/KNOWN_DISCREPANCIES.md"));
-        String roadmap = Files.readString(Path.of("docs/RELEASE_READINESS_ROADMAP.md"));
+        String discrepancies = Files.readString(Path.of("docs/status/known-discrepancies.md"));
+        String roadmap = Files.readString(Path.of("docs/project/release-readiness-roadmap.md"));
         List<String> violations = new ArrayList<>();
 
         long legacyTracePredicates = Pattern.compile("\\bboolean\\s+isLegacy\\w*Trace\\s*\\(")
@@ -1053,13 +1053,13 @@ class TestBuildToolingGuard {
             violations.add("TraceReplayBootstrap must not schedule replay from legacy pre-level-prefix metadata");
         }
         if (!discrepancies.contains("Pre-Level Intro Prefix Trace Bootstrap Contract")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the pre-level prefix bootstrap contract");
+            violations.add("docs/status/known-discrepancies.md does not document the pre-level prefix bootstrap contract");
         }
         if (!discrepancies.contains("S2 Tornado Ride-Start Trace Bootstrap Contract")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S2 Tornado ride-start bootstrap contract");
+            violations.add("docs/status/known-discrepancies.md does not document the S2 Tornado ride-start bootstrap contract");
         }
         if (!discrepancies.contains("S2 CNZ Slot-Machine Trace Bootstrap Contract")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S2 CNZ slot-machine trace bootstrap contract");
+            violations.add("docs/status/known-discrepancies.md does not document the S2 CNZ slot-machine trace bootstrap contract");
         }
         for (String relative : List.of(
                 "src/main/java/com/openggf/trace/TraceReplayBootstrap.java",
@@ -1080,13 +1080,13 @@ class TestBuildToolingGuard {
             }
         }
         if (!discrepancies.contains("S3K Complete-Run Segment Start-Position Bootstrap Debt")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S3K complete-run start-position bootstrap debt");
+            violations.add("docs/status/known-discrepancies.md does not document the S3K complete-run start-position bootstrap debt");
         }
         if (!roadmap.contains("Release-blocking pre-level intro trace bootstrap")) {
-            violations.add("docs/RELEASE_READINESS_ROADMAP.md does not classify the pre-level intro bootstrap contract");
+            violations.add("docs/project/release-readiness-roadmap.md does not classify the pre-level intro bootstrap contract");
         }
         if (!roadmap.contains("S3K complete-run segment metadata start-position")) {
-            violations.add("docs/RELEASE_READINESS_ROADMAP.md does not classify the S3K complete-run start-position bootstrap as bounded debt");
+            violations.add("docs/project/release-readiness-roadmap.md does not classify the S3K complete-run start-position bootstrap as bounded debt");
         }
 
         if (!violations.isEmpty()) {

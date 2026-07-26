@@ -1046,6 +1046,50 @@ these field definitions:
 
 Every value must come from a fresh command in Task 7. Expected-red traces are reported by their own Surefire class line and `target/trace-reports` first divergence, not Maven's aggregate exit status. If a command cannot run, the report records the command, exit status, environmental cause, and the narrower command that supplied replacement evidence.
 
+### Task 7 immutable evidence block
+
+- **Implementation branch:** `bugfix/ai-trace-s3k-lifecycle`;
+  `/home/farrell/code/projects/OpenGGF/.worktrees/trace-s3k-lifecycle`.
+- **Task commits in execution order:** Task 1
+  `058e1399ce7ec99a6432071b8dd4db8b48f172c6`; Task 2
+  `d1b85ad77c8e65689d36834a9932138828909a9f`; Task 3
+  `e473154bbc5d1aed9620c748447b2ff7fa5b6e77`; Task 4
+  `f426bd7f8317372ae39b55a27abdfe6d42356146`; Task 5
+  `eaa13384541cc978586193dc18da4e512e7c1261`; Task 6
+  `cad908bc9b91eb16480131b1ab6c0b1aac158a39`, finalized by
+  `d5f0c3c01cfcb42957e417d316ae47a778aa516a`; Task 7 is the documentation
+  commit containing this block (a commit cannot embed its own hash).
+- **Final verified commit:** `d5f0c3c01cfcb42957e417d316ae47a778aa516a`.
+- **Dirty-state audit:** tracked state was clean before Task 7; only five
+  existing untracked disassembly links were present and none was staged.
+- **CNZ standalone before:** 9,140 errors; f185 `y_speed`, `0x0370` /
+  `-0x0700`.
+- **CNZ standalone after:** full report 6,762 errors at f291 `y_speed`,
+  `0x01F8` / `-0x0651`; fresh frontier-only report 22 groups at f291
+  `x_speed`, `0x0600` / `-0x02FB`.
+- **Title-card locked phase:** object `0`, VBlank `+5`, RNG `0`.
+- **Setup isolation:** object dispatch `+1`; VBlank, level-frame, player,
+  sidekick, touch, and oscillator deltas `0`.
+- **Rewind:** pending authority round-trips and consumes once; consumed
+  authority round-trips as consumed; pause and exception atomicity pass.
+- **AIZ standalone:** 2 groups; f719 `x`, `0x0040` / `0x0050`.
+- **MGZ standalone:** 18 groups; f5164 `air`, `0` / `1`.
+- **Complete runs:** AIZ 2 groups at f9376 `rings`; CNZ 28 at f0 `y`; HCZ 1
+  replay group at f1088 `tails_cpu_target_y` plus its known-red Poindexter
+  oracle; ICZ 7 at f0 `x`; LBZ 1 at f0 `player_mapping_frame`; MGZ 17 at
+  f5550 `air`; MHZ 28 at f0 `y`.
+- **S3K special stage:** 8 tests, 0 failures/errors/warnings.
+- **S1 canaries:** GHZ1 and title-card coverage pass, no divergence.
+- **S2 canaries:** EHZ1, CNZ level-select, and title-card coverage pass, no
+  divergence.
+- **Policy and architecture guards:** focused command 134 tests, 0
+  failures/errors; final guard command is recorded in the Task 7 report.
+- **Documentation:** `CHANGELOG.md`, `docs/status/trace-frontier-log.md`, and
+  this plan. The intentional-discrepancy contract did not change.
+- **Regressions introduced:** none; every measured canary frontier held.
+- **Reviewer decision:** `approve` — production-owned, comparison-only setup
+  advances standalone CNZ without a measured frontier regression.
+
 ## End-to-End Review Checklist
 
 - [ ] The implementation used `superpowers:subagent-driven-development`, one implementation worker per task, followed by spec-compliance and code-quality review.
