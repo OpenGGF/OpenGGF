@@ -222,8 +222,6 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private boolean robotnikShipFlameVisible;
     private int robotnikShipEscapeTimer;
     private S3kBossExplosionController robotnikExplosionController;
-    private boolean snowdustEmitterSpawned;
-    private AbstractObjectInstance bossSnowdustEmitter;
 
     private enum WaitCallback {
         NONE,
@@ -321,8 +319,6 @@ public final class IczEndBossInstance extends AbstractBossInstance
         robotnikShipFlameVisible = false;
         robotnikShipEscapeTimer = 0;
         robotnikExplosionController = null;
-        snowdustEmitterSpawned = false;
-        bossSnowdustEmitter = null;
     }
 
     @Override
@@ -418,7 +414,6 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
         services().fadeOutMusic();
         installBossPalette();
-        spawnBossSnowdustEmitter();
         arenaCameraGate.begin(
                 services().camera(),
                 new S3kSharedBossCameraGate.LockBounds(
@@ -429,30 +424,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
                 BOSS_GATE_FADE_TIME);
     }
 
-    private void spawnBossSnowdustEmitter() {
-        if (snowdustEmitterSpawned) {
-            return;
-        }
-        snowdustEmitterSpawned = true;
-        int spawnX = 0;
-        int spawnY = 0;
-        if (services().camera() != null) {
-            spawnX = services().camera().getX();
-            spawnY = services().camera().getY() - 8;
-        }
-        final int emitterX = spawnX;
-        final int emitterY = spawnY;
-        bossSnowdustEmitter = spawnChild(() -> new IczSnowPileObjectInstance(new ObjectSpawn(
-                emitterX, emitterY, Sonic3kObjectIds.ICZ_SNOW_PILE, 0x18, 0, false, emitterY)));
-    }
-
     private void stopBossSnowdustEmitter() {
-        if (bossSnowdustEmitter instanceof IczSnowPileObjectInstance emitter) {
-            emitter.stopSnowdustEmitter();
-        } else if (bossSnowdustEmitter != null) {
-            bossSnowdustEmitter.setDestroyed(true);
-        }
-        bossSnowdustEmitter = null;
         if (services().objectManager() == null) {
             return;
         }

@@ -51098,3 +51098,36 @@ mvn -q -Dsurefire.argLine='-Xshare:off -Xmx6g' \
 - Reproducible patch, focused test evidence, native probe observations, and the
   required next investigation are retained in
   `docs/architecture/audits/2026-07-26-hcz-bubbler-allocation-epoch.md`.
+
+## 2026-07-26 - ICZ end-boss snowdust ownership corrects topology at f24140
+
+Worktree `.worktrees/integration-icz-24140`, branch
+`bugfix/ai-trace-int-icz-24140`, baseline `9a6dc54ca`.
+
+`IczEndBossInstance` incorrectly allocated a second subtype-`$18`
+`Obj_ICZSnowPile` emitter when the arena gate armed. The ROM boss initializer
+does not allocate one; the placed emitter registers its own SST in `_unkFAAE`,
+which boss teardown later verifies and stops. Removing the synthetic child
+restores the native slot sequence: placed emitter slot 9, first snow particle
+slot 10.
+
+Fresh replay:
+
+```bash
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=false \
+  -Ds3k.rom.path=s3k.gen \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace \
+  test
+```
+
+- Before: 31 errors, 0 warnings; first mismatch f24140 `rings`
+  (expected 3, actual 2).
+- After: 29 errors, 0 warnings; first mismatch remains f24140 `rings`
+  (expected 3, actual 2).
+- Result: expected-red, genuine two-error reduction, no frontier movement.
+- Focused verification: 102 explicitly selected boss/rewind tests pass, plus
+  four Maven-selected `TestBizhawkProbeContractGuard` tests, for 106 passing.
+- Read-only follow-up found the engine RNG four calls ahead before the first
+  boss-area particle. No RNG behavior change is part of this slice.
+- Detailed ROM and TDD evidence:
+  `docs/architecture/audits/2026-07-26-icz-end-boss-snowdust-ownership.md`.

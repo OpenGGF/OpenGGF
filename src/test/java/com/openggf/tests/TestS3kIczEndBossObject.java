@@ -159,7 +159,7 @@ class TestS3kIczEndBossObject {
     }
 
     @Test
-    void arenaGateSpawnsRomSnowdustEmitterForBossFight() {
+    void arenaGateDoesNotSynthesizeSnowdustWhenNoPlacedEmitterExists() {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));
         AbstractObjectInstance object = (AbstractObjectInstance) instance;
@@ -170,23 +170,8 @@ class TestS3kIczEndBossObject {
 
         instance.update(1, mock(PlayableEntity.class));
 
-        assertTrue(services.spawnedChildren.stream().anyMatch(child ->
-                child.getClass().getSimpleName().equals("IczSnowPileObjectInstance")),
-                "ICZ2 boss entry should spawn the subtype-$18 Obj_ICZSnowPile snowdust emitter");
-        AbstractObjectInstance emitter = services.spawnedChildren.stream()
-                .filter(AbstractObjectInstance.class::isInstance)
-                .map(AbstractObjectInstance.class::cast)
-                .filter(child -> child.getClass().getSimpleName().equals("IczSnowPileObjectInstance"))
-                .findFirst()
-                .orElseThrow();
-        assertEquals(0x4390, emitter.getX(),
-                "The snow emitter must spawn inside the boss camera, not at world origin where placement culling can remove it");
-        assertEquals(0x05F0, emitter.getY());
-        assertTrue(emitter.usesCustomOutOfRangeCheck());
-        assertFalse(emitter.isCustomOutOfRange(0),
-                "The camera-relative snow emitter has to survive normal off-screen object culling");
-        assertFalse(emitter.isPersistent(),
-                "A level reload clears the native emitter SST; it must not cross an act rebuild");
+        assertFalse(services.spawnedChildren.stream().anyMatch(IczSnowPileObjectInstance.class::isInstance),
+                "Obj_ICZEndBoss initialization does not AllocateObject an emitter; snow comes from the placed subtype-$18 object");
     }
 
     @Test
@@ -202,13 +187,13 @@ class TestS3kIczEndBossObject {
         services.camera.setY((short) 0x05F8);
         object.setServices(services);
 
+        IczSnowPileObjectInstance emitter = new IczSnowPileObjectInstance(
+                new ObjectSpawn(0x44A0, 0x06A0, Sonic3kObjectIds.ICZ_SNOW_PILE,
+                        0x18, 0, false, 0x06A0));
+        emitter.setServices(services);
+        when(services.objectManager.getActiveObjects()).thenReturn(List.of(emitter));
+
         instance.update(1, mock(PlayableEntity.class));
-        AbstractObjectInstance emitter = services.spawnedChildren.stream()
-                .filter(AbstractObjectInstance.class::isInstance)
-                .map(AbstractObjectInstance.class::cast)
-                .filter(child -> child.getClass().getSimpleName().equals("IczSnowPileObjectInstance"))
-                .findFirst()
-                .orElseThrow();
         for (int frame = 0; frame < 10; frame++) {
             emitter.update(10 + frame, mock(PlayableEntity.class));
         }
@@ -1523,6 +1508,14 @@ class TestS3kIczEndBossObject {
 
         assertTrue(sawEmitter,
                 "The production ICZ2 boss entry path should keep the subtype-$18 Obj_ICZSnowPile snow emitter alive");
+        assertEquals(1, activeSnowdustEmitterCount(objectManager),
+                "Boss initialization must reuse the single placed emitter rather than allocate a dynamic duplicate");
+        assertFalse(objectManager.getActiveObjects().stream()
+                        .filter(IczSnowPileObjectInstance.class::isInstance)
+                        .map(IczSnowPileObjectInstance.class::cast)
+                        .filter(IczSnowPileObjectInstance::isSnowdustEmitter)
+                        .anyMatch(emitter -> emitter.getSpawn().layoutIndex() < 0),
+                "Obj_ICZEndBoss does not synthesize a subtype-$18 emitter");
         assertTrue(sawParticle,
                 () -> "The production ICZ2 boss entry path should let the snow emitter allocate visible Obj_ICZSnowdust particles; "
                         + "allocatedSlots=" + objectManager.getAllocatedSlotCount()
