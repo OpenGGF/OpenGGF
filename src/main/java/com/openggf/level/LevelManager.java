@@ -3673,6 +3673,14 @@ public class LevelManager {
         // that native post-ScreenEvents oscillator tick explicitly.
         advanceGlobalOscillation();
 
+        // ChangeRingFrame follows OscillateNumDo in the same remainder of
+        // LevelLoop. Its global words survive the per-act animation-manager
+        // rebuild and still advance on the transition-only frame.
+        if (animatedPatternManager instanceof
+                com.openggf.level.animation.SeamlessTransitionAnimationClock transitionClock) {
+            transitionClock.advanceForSeamlessTransition();
+        }
+
         // The pending seamless reload is consumed at frame top, so this row
         // returns before ObjectManager.update() can perform its normal V-int
         // clock increment. V_int_run_count is global work RAM and still ticks

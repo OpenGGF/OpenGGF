@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.sonic3k.Sonic3kLevelAnimationManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
@@ -12,6 +13,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -54,6 +57,27 @@ public class TestSonic3kActTransitionZoneFeatures {
 
         assertSame(before, levelManager.getZoneFeatureProvider(), "S3K act transitions must reinitialize the existing provider so AIZ fire curtain state survives");
     }
+
+    @Test
+    public void seamlessActTransitionCarriesAndAdvancesGlobalChangeRingFrameState() {
+        LevelManager levelManager = GameServices.level();
+        Sonic3kLevelAnimationManager before = assertInstanceOf(
+                Sonic3kLevelAnimationManager.class,
+                levelManager.getAnimatedPatternManager());
+        before.update();
+        before.update();
+        int beforeTransition = before.aizVineAngleWord();
+
+        levelManager.applySeamlessTransition(SeamlessLevelTransitionRequest
+                .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(Sonic3kZoneIds.ZONE_AIZ, 1)
+                .preserveMusic(true)
+                .build());
+
+        Sonic3kLevelAnimationManager after = assertInstanceOf(
+                Sonic3kLevelAnimationManager.class,
+                levelManager.getAnimatedPatternManager());
+        assertEquals((beforeTransition + 0x180) & 0xFFFF, after.aizVineAngleWord(),
+                "ROM $FEBA survives Load_Level and ChangeRingFrame still runs on the transition-only frame");
+    }
 }
-
-

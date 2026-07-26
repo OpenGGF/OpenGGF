@@ -7,6 +7,7 @@ import com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot;
 import com.openggf.level.Level;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
+import com.openggf.level.animation.SeamlessTransitionAnimationClock;
 
 import java.nio.ByteBuffer;
 
@@ -16,7 +17,8 @@ import java.nio.ByteBuffer;
  * snapshot state from both halves so a rewind restores visual state fully.
  */
 public final class Sonic3kLevelAnimationManager implements AnimatedPatternManager, AnimatedPaletteManager,
-        RewindSnapshottable<PatternAnimatorSnapshot>, AizVineAngleProvider {
+        RewindSnapshottable<PatternAnimatorSnapshot>, AizVineAngleProvider,
+        SeamlessTransitionAnimationClock {
 
     /** See {@code Sonic2LevelAnimationManager.COMBINED_EXTRA_MAGIC} for rationale. */
     private static final byte COMBINED_EXTRA_MAGIC = (byte) 0xC3;
@@ -24,11 +26,17 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
 
     private final Sonic3kPatternAnimator patternAnimator;
     private final Sonic3kPaletteCycler paletteCycler;
-    private final Sonic3kGlobalAnimationState globalAnimationState =
-            new Sonic3kGlobalAnimationState();
+    private final Sonic3kGlobalAnimationState globalAnimationState;
 
     public Sonic3kLevelAnimationManager(RomByteReader reader, Level level,
                                         int zoneIndex, int actIndex, boolean isSkipIntro) {
+        this(reader, level, zoneIndex, actIndex, isSkipIntro,
+                new Sonic3kGlobalAnimationState());
+    }
+
+    Sonic3kLevelAnimationManager(RomByteReader reader, Level level,
+                                 int zoneIndex, int actIndex, boolean isSkipIntro,
+                                 Sonic3kGlobalAnimationState globalAnimationState) {
         this.patternAnimator = new Sonic3kPatternAnimator(reader, level,
                 zoneIndex, actIndex, isSkipIntro);
         // Resolve the palette ownership registry from the active gameplay mode
@@ -37,6 +45,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         // production path always finds a non-null registry here.
         this.paletteCycler = new Sonic3kPaletteCycler(reader, level, zoneIndex, actIndex,
                 resolvePaletteRegistry(), null);
+        this.globalAnimationState = globalAnimationState;
     }
 
     private static com.openggf.game.palette.PaletteOwnershipRegistry resolvePaletteRegistry() {
@@ -75,6 +84,11 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     @Override
     public int aizVineAngleWord() {
         return globalAnimationState.aizVineAngleWord();
+    }
+
+    @Override
+    public void advanceForSeamlessTransition() {
+        globalAnimationState.advanceChangeRingFrame();
     }
 
     @Override

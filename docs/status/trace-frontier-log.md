@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+## 2026-07-26 - AIZ seamless transition preserves the vine animation clock
+
+- Worktree: `integration-aiz-complete` at base `04177c9b8`, including the
+  preceding AIZ complete-run fixes.
+- Root cause: `Load_Level` clears
+  `[Oscillating_table, AIZ_vine_angle)`, deliberately excluding the endpoint
+  word at `$FEBA`, but the engine rebuilt its level-animation manager and
+  therefore reset that surviving word. The transition frame also runs
+  `ChangeRingFrame` after `ScreenEvents` and `OscillateNumDo`
+  (`docs/skdisasm/sonic3k.asm:7622,7884-7910,9673-9695`), so the replacement
+  manager must observe that same frame's `$180` advance.
+- Native probe evidence from `/tmp/aiz_vine_transition_probe.lua`: the
+  transition changes `zoneact` to `0001` while `AIZ_vine_angle` is `E880`,
+  then the write reports post-instruction PC `$7810` and the next sample is
+  `EA00`. This matches the `loc_780A` `addi.w #$180,(AIZ_vine_angle)` write;
+  it does not support frame- or trace-derived correction.
+- Fix: the S3K game module owns the global animation state and injects it into
+  each rebuilt combined animation manager. `LevelManager` advances any
+  `SeamlessTransitionAnimationClock` during the generic seamless-reload
+  remainder, adjacent to global oscillation. The shared state remains covered
+  by the combined animation rewind snapshot and resets with a fresh game
+  module; there is no game, zone, route, trace, or frame carve-out.
+- AIZ complete-run:
+  `mvn -q -Dmse=off -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay -Dsurefire.argLine='-Xshare:off -Xmx6g' -Dsurefire.forkCount=1 -Ds3k.rom.path=<discovered-locked-on-rom> test`
+  is expected red with 28 errors and first mismatch f25039
+  `tails_cpu_ctrl2_held` (ROM `0x0018`, engine `0x0000`), advancing the prior
+  f13906 / 2,249-error frontier.
+- Focused act-transition and animation tests pass (17 assertions), including
+  a regression that proves the rebuilt AIZ manager observes the prior angle
+  plus `$180`. Architecture, rewind, and static-state rewind guards pass
+  (68 assertions).
+- Known-red canaries are unchanged from the full-sweep baseline: standalone
+  AIZ remains at f719 `x` with 1,330 errors; LBZ complete-run remains at
+  f3009 `y_speed` with 6,613 errors; MHZ complete-run remains at f0 `y` with
+  6,051 errors.
+
 ### 2026-07-26 -- MGZ miniboss camera word writes advance both routes
 
 The combined integration baseline reached frame 13447 with 8,030 errors in
