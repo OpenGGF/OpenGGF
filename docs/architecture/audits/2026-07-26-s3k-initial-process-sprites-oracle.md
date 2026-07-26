@@ -36,23 +36,36 @@ control writes before `loc_6468` (`sonic3k.asm:7765-7774`).
 P1 stays at centre `$0040,$0420`, and P2 at `$0020,$0424`; all position
 fractions and x/y/ground velocities remain zero. Both player routines change
 from 0 to 2. P1 `object_control` changes `$00->$53`; P2 remains `$00`.
-Both sampled timer byte `$31` values change `0->4`. Status, secondary status,
-animation id/previous/frame/timer, collision flags/property, and the other
-captured timers remain unchanged (raw lines 1-2).
+Both `air_left` bytes change `0->30`, and both `flip_speed` bytes change
+`0->4`, matching the two native init routines
+(`sonic3k.asm:21931-21940,26139-26155`). Status, secondary status,
+double-jump flag, flips remaining, move lock, animation
+id/previous/frame/timer, collision flags/property, and the actual
+invulnerability, invincibility, and speed-shoes timers remain zero (raw lines
+1-2). The probe uses the player-specific offsets at
+`sonic3k.constants.asm:50-65`; in particular `$30/$31/$35` are not mislabeled
+as power-up timers or `air_left`.
 
 ## History and sidekick CPU
 
 `Pos_table_index` remains zero and all captured Tails CPU globals remain zero.
 The preceding history entry `$FC` changes from zero to P2's centre
-`$0020,$0424`. This is initialization behavior, not an ordinary
-`Sonic_RecordPos` increment: player routine 0 initializes the position arrays,
-and P2's later slot leaves the final shared entry. The source order still
-places P1 before P2 because `Process_Sprites` walks 110 `$4A`-byte SST records
-from `Object_RAM` in ascending order (`sonic3k.asm:35965-35986`;
-`sonic3k.constants.asm:303-323`). No normal delayed-follow CPU read occurs in
-this setup pass: CPU routine/targets/timers remain zero. The first ordinary P1
-entry is `$10A94`; its later `Sonic_RecordPos` write precedes the subsequent P2
-slot's delayed CPU read by the same ascending SST order
+`$0020,$0424`, but P2 does not write it. `Sonic_Init` temporarily moves P1
+from `$0040,$0420` to `$0020,$0424`, calls
+`Reset_Player_Position_Array` to fill the shared history at that adjusted
+position, then restores P1 before returning
+(`sonic3k.asm:21931-21941,22166-22193`). The later non-competition
+`Tails_Init` initializes Tails CPU state and installs `Tails_tails`, but does
+not call the history reset (`sonic3k.asm:26101-26156`).
+
+This is initialization behavior, not an ordinary `Sonic_RecordPos` increment.
+The source order still places P1 before P2 because `Process_Sprites` walks 110
+`$4A`-byte SST records from `Object_RAM` in ascending order
+(`sonic3k.asm:35965-35986`; `sonic3k.constants.asm:303-323`). No normal
+delayed-follow CPU read occurs in this setup pass: CPU
+routine/targets/timers remain zero. The first ordinary P1 entry is `$10A94`;
+its later `Sonic_RecordPos` write precedes the subsequent P2 slot's delayed
+CPU read by the same ascending SST order
 (`sonic3k.asm:22119-22136,26683-26705`).
 
 This qualifies an important implementation expectation: Task 2 must pin the

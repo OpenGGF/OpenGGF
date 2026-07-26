@@ -386,7 +386,13 @@ git commit -m "docs(s3k): capture initial Process_Sprites oracle"
 - Modify: `src/test/java/com/openggf/level/objects/TestObjectCollisionResponseList.java`
 
 - [ ] Add a coordinator contract test whose fake `InitialProcessSpritesStages` collaborators append labels and assert exact order `LOAD, P1, P2, RESET, DYNAMIC_SLOT_3, DYNAMIC_SLOTS_4_92, FIXED, CAPTURE, CLOSE`.
-- [ ] Add a failure-first playable test asserting neutral raw/logical P1/P2 input, main history write before sidekick CPU read, animation/status mutation allowed, and unchanged published gameplay/VBlank counters.
+- [ ] Add a failure-first playable test asserting neutral raw/logical P1/P2 input,
+  P1's temporary-offset `Reset_Player_Position_Array` initialization before the later
+  P2 slot, unchanged `Pos_table_index`, zero/initialized Tails CPU
+  routine/targets/timers with no delayed-follow read during setup, animation/status
+  mutation allowed, and unchanged published gameplay/VBlank counters. Pin P1-before-P2
+  SST dispatch order independently; do not require an ordinary history-index increment
+  or delayed CPU selection that the Task 1 oracle disproves.
 - [ ] Pin the approved Task 1 oracle fields as source-cited assertions rather than the weak expectation that mutation is merely “allowed.”
 - [ ] Add failure-first lifecycle tests proving `PAUSED`, `SETUP_ONLY`, and `GAMEPLAY_FRAME`, and proving the next invocation after setup produces the first gameplay frame.
 - [ ] Add exception tests proving consume-before-dispatch and balanced scopes.

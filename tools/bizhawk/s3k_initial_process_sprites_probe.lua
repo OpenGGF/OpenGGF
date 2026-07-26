@@ -25,9 +25,15 @@ local function player(base)
         anim_frame=u8(base+0x23), anim_timer=u8(base+0x24),
         status="0x"..hex(u8(base+0x2A),2),
         status_secondary="0x"..hex(u8(base+0x2B),2),
+        air_left=u8(base+0x2C),
         object_control="0x"..hex(u8(base+0x2E),2),
-        invulnerability_timer=u8(base+0x30), speed_shoes_timer=u8(base+0x31),
-        air_left=u8(base+0x35), collision_flags="0x"..hex(u8(base+0x28),2),
+        double_jump_flag=u8(base+0x2F),
+        flips_remaining=u8(base+0x30), flip_speed=u8(base+0x31),
+        move_lock=u16(base+0x32),
+        invulnerability_timer=u8(base+0x34),
+        invincibility_timer=u8(base+0x35),
+        speed_shoes_timer=u8(base+0x36),
+        collision_flags="0x"..hex(u8(base+0x28),2),
         collision_property="0x"..hex(u8(base+0x29),2)
     }
 end
