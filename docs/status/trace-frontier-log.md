@@ -51072,3 +51072,29 @@ mvn -q '-Dsurefire.argLine=-Xshare:off -Xmx4g' \
   the fix; the complete replay supplies the one-pixel overlap coverage.
 - Full native evidence, commands, and hashes:
   `docs/architecture/audits/2026-07-26-icz-star-pointer-parent-touch-phase.md`.
+
+## 2026-07-26 - HCZ Bubbler allocation-epoch candidate rejected
+
+Audit context: base `5222ff8da9b1ffaf3b1f79bdb477deb57b47c6c6` in
+`.worktrees/integration-hcz-allocation-epoch`.
+
+Exact replay command:
+
+```bash
+mvn -q -Dsurefire.argLine='-Xshare:off -Xmx6g' \
+  -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace \
+  test
+```
+
+- Restored baseline: 2,411 errors, first mismatch f6292
+  `tails_x_speed` (expected `0x0100`, actual `0x0000`).
+- Reconstructed rejected candidate: 4,794 errors, first mismatch f1824 `y`
+  (expected `0x07F9`, actual `0x07F4`).
+- The source-proven lowest-free Bubbler allocation candidate therefore regresses
+  the trace and remains rejected. It was reverted completely: no production or
+  test candidate landed, and there is no frontier move to record.
+- Reproducible patch, focused test evidence, native probe observations, and the
+  required next investigation are retained in
+  `docs/architecture/audits/2026-07-26-hcz-bubbler-allocation-epoch.md`.
