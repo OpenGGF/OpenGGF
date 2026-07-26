@@ -734,6 +734,62 @@ public class TestRingManager {
         assertEquals(0x00FF, moved.x() & 0xFFFF);
     }
 
+    @Test
+    public void testAttractedRingTargetPhaseFollowsNativeSstSlotOrder() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+        RingManager ringManager = buildRingManagerWithLevelManager(List.of(), levelManager);
+        RingSnapshot base = ringManager.capture();
+        ringManager.restore(new RingSnapshot(
+                base.collected(),
+                base.sparkleTimers(),
+                base.placementCursorIndex(),
+                base.placementLastCameraX(),
+                base.lostRingActiveCount(),
+                base.spillAnimCounter(),
+                base.spillAnimAccum(),
+                base.spillAnimFrame(),
+                base.lostRingFrameCounter(),
+                base.lostRings(),
+                new RingSnapshot.AttractedRingEntry[] {
+                        new RingSnapshot.AttractedRingEntry(
+                                true, 0, 0x0100, 0x0100, 0, 0, 0, 0,
+                                0, 39, false, -1),
+                        new RingSnapshot.AttractedRingEntry(
+                                true, 1, 0x0100, 0x0120, 0, 0, 0, 0,
+                                1, 42, false, -1)
+                }));
+        assertEquals(2, ringManager.capture().attractedRings().length);
+
+        Field xField = ObjectManager.class.getDeclaredField("playerCentreXAtSlotStart");
+        Field yField = ObjectManager.class.getDeclaredField("playerCentreYAtSlotStart");
+        Field validField = ObjectManager.class.getDeclaredField("playerCentreAtSlotStartValid");
+        xField.setAccessible(true);
+        yField.setAccessible(true);
+        validField.setAccessible(true);
+        int[] xBySlot = (int[]) xField.get(objectManager);
+        int[] yBySlot = (int[]) yField.get(objectManager);
+        boolean[] validBySlot = (boolean[]) validField.get(objectManager);
+        xBySlot[7] = 0x0080;
+        yBySlot[7] = 0x0100;
+        validBySlot[7] = true;
+        xBySlot[10] = 0x0180;
+        yBySlot[10] = 0x0120;
+        validBySlot[10] = true;
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0x0180, (short) 0x0120);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.giveShield(ShieldType.LIGHTNING);
+        ringManager.update(0, player, 0, false);
+
+        RingSnapshot.AttractedRingEntry[] moved = ringManager.capture().attractedRings();
+        assertEquals(0xFF40, moved[0].xVel() & 0xFFFF,
+                "slot 7 must target Player 1 before a later carrier moves him");
+        assertEquals(0x0030, moved[1].xVel() & 0xFFFF,
+                "slot 10 must target Player 1 after the earlier carrier moves him");
+    }
+
     private RingManager buildRingManager(List<RingSpawn> spawns) {
         return buildRingManagerWithSpinPiece(spawns, new RingFramePiece(0, 0, 1, 1, 0, false, false, 0));
     }

@@ -68,6 +68,40 @@ type, or comparison result. This matches the ROM exit owners, which publish the
 saved level/restart state from live bonus completion routines
 (`docs/skdisasm/sonic3k.asm:127741-127765,96670-96688,98964-99005`).
 
+### 2026-07-26 -- S3K attracted rings observe Player 1 at their SST execution slot
+
+Commands (worktree `.worktrees/trace-s3k-mgz-standard`, branch
+`bugfix/ai-trace-s3k-mgz-standard`, locked-on S3K ROM, `-Xmx6g` for replay runs):
+
+```bash
+mvn -q "-Dtest=com.openggf.tests.TestRingManager,com.openggf.level.rings.TestLostRingRewindGenericRestore,com.openggf.tests.TestRewindCoverageGuard,com.openggf.tests.TestStaticStateRewindCoverageGuard" test
+mvn -q "-Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace" -Dsurefire.argLine=-Xmx6g test
+mvn -q "-Dtest=com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay#replayMatchesTrace" -Dsurefire.argLine=-Xmx6g test
+mvn -q "-Dtest=com.openggf.tests.trace.s3k.TestS3kSpecialStageTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#giantRideVineGrabsPlayerOnRomFrameAfterPlatformCarry" -Dsurefire.argLine=-Xmx6g test
+```
+
+ROM `Process_Sprites` executes SST slots in ascending order. Each
+`Obj_Attracted_Ring` reads Player 1 directly in `AttractedRing_Move`, so a carrier
+in an earlier slot has already changed the target position while a carrier in a
+later slot has not (`docs/skdisasm/sonic3k.asm:35710-35728,35795-35841`).
+`ObjectManager` now records the live player centre at each slot boundary, and
+`RingManager` uses the snapshot belonging to each attracted ring's reserved SST
+slot. These preallocated per-pass arrays are cleared and rebuilt every object
+pass; they are derived execution scratch, not rewind state.
+
+Fresh results:
+
+- Focused ring/lost-ring rewind and rewind coverage selection: 58/58 pass.
+- Complete-run MGZ: first error advances f6295 `rings` (ROM 130, engine 129)
+  -> f9259 `rings` (ROM 0, engine 1); 8,707 errors, 0 warnings.
+- Standard MGZ: first error remains a later ring-count frontier at f12486,
+  changing from ROM 1 / engine 2 before this slot-phase correction to the next
+  ROM 1 / engine 2 collection mismatch; 8,032 errors, 0 warnings.
+- S3K special stage: 2/2 pass; the focused AIZ giant-vine grab guard passes.
+
+NEXT: complete-run MGZ f9259 ring count (ROM 0, engine 1); standard MGZ f12486
+ring count (ROM 1, engine 2).
+
 ### 2026-07-26 -- MGZ collapsing-bridge terrain handoff clears stale standing ownership
 
 Commands (worktree `.worktrees/trace-s3k-mgz-standard`, branch

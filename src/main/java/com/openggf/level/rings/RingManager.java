@@ -789,8 +789,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * reverse quickly. Position updated via MoveSprite2 (velocity→subpixel).
      */
     private void updateAttractedRings(AbstractPlayableSprite player, int frameCounter, int cameraX) {
-        int pcx = attractedRingTargetCaptured ? attractedRingTargetX : player.getCentreX();
-        int pcy = attractedRingTargetCaptured ? attractedRingTargetY : player.getCentreY();
+        ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
         boolean lightningShieldActive = lightningShieldEnabled(player)
                 && player.getShieldType() == ShieldType.LIGHTNING;
         for (AttractedRing ar : activeAttractedRingsInSlotOrder()) {
@@ -802,6 +801,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 }
                 continue;
             }
+
+            boolean hasSlotTarget = objectManager != null
+                    && objectManager.hasPlayerCentreAtObjectSlotStart(ar.objectSlotIndex);
+            int pcx = hasSlotTarget
+                    ? objectManager.getPlayerCentreXAtObjectSlotStart(ar.objectSlotIndex)
+                    : attractedRingTargetCaptured ? attractedRingTargetX : player.getCentreX();
+            int pcy = hasSlotTarget
+                    ? objectManager.getPlayerCentreYAtObjectSlotStart(ar.objectSlotIndex)
+                    : attractedRingTargetCaptured ? attractedRingTargetY : player.getCentreY();
 
             // --- X axis acceleration (AttractedRing_Move) ---
             int accelX = ATTRACT_ACCEL;

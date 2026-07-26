@@ -104,6 +104,9 @@ public class ObjectManager {
      */
     private final ObjectWindowingStrategy windowingStrategy;
     private final ObjectInstance[] execOrder;
+    private final int[] playerCentreXAtSlotStart;
+    private final int[] playerCentreYAtSlotStart;
+    private final boolean[] playerCentreAtSlotStartValid;
     private int currentExecSlot = -1; // -1 when not in update loop
     private final boolean skipVerticalSpawnLoadFilterForGame;
 
@@ -222,6 +225,9 @@ public class ObjectManager {
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
         this.placement.setWindowingStrategy(windowingStrategy);
         this.execOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
+        this.playerCentreXAtSlotStart = new int[execOrder.length];
+        this.playerCentreYAtSlotStart = new int[execOrder.length];
+        this.playerCentreAtSlotStartValid = new boolean[execOrder.length];
         this.slotAllocator = new SlotAllocator(slotLayout,
                 slotLayout.twoAxisCursorPlacement()
                         ? SlotEmptyPredicate.ROUTINE_POINTER
@@ -298,6 +304,7 @@ public class ObjectManager {
         reservedChildSlots.clear();
         slotAllocator.clear();
         Arrays.fill(execOrder, null);
+        Arrays.fill(playerCentreAtSlotStartValid, false);
         cachedActiveObjects.clear();
         activeObjectsCacheDirty = true;
         bucketsDirty = true;
@@ -732,6 +739,7 @@ public class ObjectManager {
         }
 
         Arrays.fill(execOrder, null);
+        Arrays.fill(playerCentreAtSlotStartValid, false);
         for (ObjectInstance inst : activeObjects.values()) {
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
@@ -747,6 +755,7 @@ public class ObjectManager {
         boolean objectsRemoved = false;
         try {
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
+                capturePlayerCentreAtSlotStart(player);
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
 
@@ -898,6 +907,7 @@ public class ObjectManager {
         // ROM parity: Build slot-ordered execution array.
         slotsFreedDuringObjectPass.clear();
         Arrays.fill(execOrder, null);
+        Arrays.fill(playerCentreAtSlotStartValid, false);
         for (ObjectInstance inst : activeObjects.values()) {
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
@@ -917,6 +927,7 @@ public class ObjectManager {
         try {
             // ROM parity: Iterate slots in ascending order, matching ExecuteObjects.
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
+                capturePlayerCentreAtSlotStart(player);
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
                 processedInExecLoop.add(instance);
@@ -1576,6 +1587,34 @@ public class ObjectManager {
 
     public int getObjectSlotCapacity() {
         return execOrder.length;
+    }
+
+    /**
+     * Captures the live Player 1 target visible when each SST slot begins.
+     * {@code Obj_Attracted_Ring} reads Player 1 directly in its own object
+     * routine, so a carrier in an earlier slot has already moved that target
+     * while one in a later slot has not (sonic3k.asm:35710-35728,
+     * 35795-35841).
+     */
+    private void capturePlayerCentreAtSlotStart(PlayableEntity player) {
+        playerCentreXAtSlotStart[currentExecSlot] = player.getCentreX();
+        playerCentreYAtSlotStart[currentExecSlot] = player.getCentreY();
+        playerCentreAtSlotStartValid[currentExecSlot] = true;
+    }
+
+    public boolean hasPlayerCentreAtObjectSlotStart(int slotIndex) {
+        int execIndex = execIndexForSlot(slotIndex);
+        return execIndex >= 0
+                && execIndex < playerCentreAtSlotStartValid.length
+                && playerCentreAtSlotStartValid[execIndex];
+    }
+
+    public int getPlayerCentreXAtObjectSlotStart(int slotIndex) {
+        return playerCentreXAtSlotStart[execIndexForSlot(slotIndex)];
+    }
+
+    public int getPlayerCentreYAtObjectSlotStart(int slotIndex) {
+        return playerCentreYAtSlotStart[execIndexForSlot(slotIndex)];
     }
 
     public Collection<ObjectSpawn> getActiveSpawns() {
