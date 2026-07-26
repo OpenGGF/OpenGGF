@@ -1,5 +1,46 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- ICZ invisible hurt block uses ordinary Obj37 owner timing
+
+Commands (worktree `.worktrees/trace-s3k-icz-complete`, branch
+`bugfix/ai-trace-s3k-icz-complete`, base `01c7b80a5`):
+
+```bash
+mvn -Dmse=off \
+  -Dtest='com.openggf.game.sonic3k.objects.TestSonic3kInvisibleHurtBlockHObjectInstance,com.openggf.level.objects.TestObjectManagerChildSlotAllocation,com.openggf.level.rings.TestLostRingObjectInstance,com.openggf.level.objects.TestLostRingTouchOrdering' test
+mvn -Dmse=off -Dtrace.context.radius=20 \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay \
+  -Dsurefire.argLine='-Xshare:off -Xmx6g' -Dsurefire.forkCount=1 \
+  -Ds3k.rom.path='<discovered-locked-on-rom>' test
+mvn -Dmse=off \
+  -Dtest='com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard,com.openggf.game.rewind.TestS3kInvisibleBlockRewindGenericRestore,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils' \
+  -Ds3k.rom.path='<discovered-locked-on-rom>' test
+```
+
+`Obj_InvisibleHurtBlockHorizontal` calls `sub_1F58C`, which reaches
+`sub_24280` and the shared `HurtCharacter` path
+(`docs/skdisasm/sonic3k.asm:43427-43436,49205-49220,21065-21088`).
+`HurtCharacter` allocates the Obj37 owner; its routine-0
+`Obj_Bouncing_Ring` initializer clears `Ring_count` after allocating the
+remaining rings (`sonic3k.asm:35549-35621`). The engine had forced only this
+hurt-block caller to defer that clear regardless of the allocated owner slot.
+It now uses the ordinary hurt-spawn path, whose shared slot scheduler still
+defers the clear when the real owner is behind the live `Process_Sprites`
+cursor. No game, zone, trace, route, or frame identity selects the behavior.
+
+The focused hurt-block, owner-slot, lost-ring, and touch-order suites pass
+56/56. The full ICZ complete-run measurement advances from 1,325 errors at
+f3175 `rings` (ROM `0`, engine `42`) to 1,324 errors at f6117
+`tails_cpu_ctrl2_held` (ROM `0x0004`, engine `0x0000`), with zero warnings.
+Architecture, rewind, invisible-block restore, AIZ headless, level-loading,
+bootstrap, and decoding canaries pass 91/91.
+
+`TestBuildToolingGuard` was checked separately: 43 of its 44 tests pass and
+the remaining test has the known base-only `NoSuchFileException` for the
+removed `docs/KNOWN_DISCREPANCIES.md` path. Its sibling lowercase
+`docs/status/known-discrepancies.md` correction is outside this isolated
+worktree and was not modified here.
+
 ### 2026-07-26 -- ICZ path-platform jitter uses the native V-int phase
 
 Commands (worktree `.worktrees/trace-s3k-icz-complete`, branch
