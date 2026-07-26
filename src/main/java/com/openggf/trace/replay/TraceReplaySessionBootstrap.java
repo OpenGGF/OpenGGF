@@ -234,6 +234,17 @@ public final class TraceReplaySessionBootstrap {
         int zoneFeaturePreludeFrames =
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(trace);
         var gameplayMode = fixture.gameplayMode();
+        // Complete-run segments restore state that already represents the
+        // production setup pass. Their reset/restore/dispatch envelope is not
+        // a replay prelude knob and must not consume fresh-load authority.
+        boolean representedS3kCompleteRun =
+                TraceReplayBootstrap.isS3kCompleteRunSegment(trace);
+        if (representedS3kCompleteRun
+                && gameplayMode != null
+                && gameplayMode.getLevelManager() != null) {
+            gameplayMode.getLevelManager()
+                    .discardPendingInitialObjectSetupForStateRestoration();
+        }
         if (gameplayMode != null
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
@@ -258,6 +269,7 @@ public final class TraceReplaySessionBootstrap {
                 objectPreludeFrames = TraceReplayBootstrap
                         .s2GenericObjectTitleCardPreludeFramesForTraceReplay(trace);
             }
+            int objectDispatchFrames = representedS3kCompleteRun ? 1 : objectPreludeFrames;
             int zoneFeatureVblankOffset =
                     TraceReplayBootstrap.zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(trace);
             if (zoneFeaturePreludeFrames > 0
@@ -274,9 +286,10 @@ public final class TraceReplaySessionBootstrap {
                 }
             }
             objectManager.initVblaCounter(
-                    trace.initialVblankCounter() - objectPreludeFrames - 1);
+                    trace.initialVblankCounter() - objectDispatchFrames - 1);
         }
-        if (objectPreludeFrames > 0
+        int objectDispatchFrames = representedS3kCompleteRun ? 1 : objectPreludeFrames;
+        if (objectDispatchFrames > 0
                 && gameplayMode != null
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
@@ -291,7 +304,7 @@ public final class TraceReplaySessionBootstrap {
             // object ticks, so prelude state comes from object code rather
             // than recorded SST data.
             objectManager.reset(cameraX);
-            if (TraceReplayBootstrap.isS3kCompleteRunSegment(trace)) {
+            if (representedS3kCompleteRun) {
                 var levelEventProvider = GameServices.module().getLevelEventProvider();
                 if (levelEventProvider instanceof Sonic3kLevelEventManager s3kLem) {
                     s3kLem.restoreCompleteRunSegmentObjectsAfterPreludeReset();
@@ -302,7 +315,7 @@ public final class TraceReplaySessionBootstrap {
                     ? gameplayMode.getSpriteManager().getSidekicks()
                     : List.of();
             int mainPlayablePreludeFrames = Math.min(
-                    objectPreludeFrames,
+                    objectDispatchFrames,
                     GameServices.module().getLevelInitProfile().freshMainPlayablePreludeFrames());
             if (mainPlayablePreludeFrames > 0 && gameplayMode.getSpriteManager() != null) {
                 // S1 GM_Level creates the fresh Sonic slot, then executes it
@@ -331,11 +344,12 @@ public final class TraceReplaySessionBootstrap {
             int sczTornadoPreludeStartY = tornadoPreludeOrder && player != null
                     ? player.getCentreY() - 4
                     : 0;
-            for (int i = consumedPreludeFrames; i < objectPreludeFrames; i++) {
+            for (int i = consumedPreludeFrames; i < objectDispatchFrames; i++) {
                 if (interleaveSidekickPrelude && !tornadoPreludeOrder) {
                     gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(1, levelManager, player);
                 }
-                objectManager.update(cameraX, player, sidekicks, -(objectPreludeFrames - i), false);
+                objectManager.update(cameraX, player, sidekicks,
+                        -(objectDispatchFrames - i), false);
                 if (tornadoPreludeOrder) {
                     applyS2TornadoRecordSamplePosition(
                             findRideStartTornado(objectManager), player, i, sczTornadoPreludeStartY);
@@ -989,12 +1003,6 @@ public final class TraceReplaySessionBootstrap {
                                                        TraceReplayFixture fixture) {
         if (!TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)) {
             return;
-        }
-        if (TraceReplayBootstrap.isS3kCompleteRunSegment(trace)
-                && fixture.gameplayMode() != null
-                && fixture.gameplayMode().getLevelManager() != null) {
-            fixture.gameplayMode().getLevelManager()
-                    .discardPendingInitialObjectSetupForStateRestoration();
         }
         AbstractPlayableSprite sprite = fixture.sprite();
         if (sprite == null) {

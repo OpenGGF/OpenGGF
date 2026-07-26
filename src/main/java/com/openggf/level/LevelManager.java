@@ -28,13 +28,11 @@ import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
-import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
-import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
@@ -356,7 +354,7 @@ public class LevelManager {
             if (ctx.getLevel() != null) {
                 writeCurrentLevel(ctx.getLevel());
             }
-            resetRewindBufferAfterLevelBoundary();
+            LevelRewindBoundaryCoordinator.markLevelLoadBoundary();
             initialObjectSetup.publish(ctx.requestedInitialObjectSetupLifecycle());
         } catch (Exception e) {
             initialObjectSetup.discard();
@@ -405,17 +403,6 @@ public class LevelManager {
     public void restorePendingInitialObjectSetupLifecycleForRewind(
             InitialObjectSetupLifecycle lifecycle) {
         initialObjectSetup.restoreForRewind(lifecycle);
-    }
-
-    private void resetRewindBufferAfterLevelBoundary() {
-        markRewindLevelLoadBoundary();
-    }
-
-    static void markRewindLevelLoadBoundary() {
-        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null) {
-            gameplayMode.markRewindBoundary(RewindBoundary.LEVEL_LOAD);
-        }
     }
 
     /**
