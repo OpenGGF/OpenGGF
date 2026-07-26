@@ -189,11 +189,11 @@ hardcoding a wait specifically for the CPZ gloop sound:
 
 ## February–March 2026 — AI in earnest: specs and plans
 
-The point where AI use stopped being ad-hoc and became a *method* is documented, literally, in a
-folder. Starting **14–16 March 2026**, design specs and implementation plans accumulate under
-[`docs/superpowers/`](superpowers/) — the artifacts of a structured spec → plan → implement →
-review workflow. As of this writing there are **94 design specs and 146 implementation plans** in
-that tree, dated and committed.
+The point where AI use stopped being ad-hoc and became a *method* is documented, literally, in the
+dated artifacts under [`docs/architecture/`](architecture/). Starting **14–16 March 2026**, design
+specs and implementation plans accumulate there — the artifacts of a structured spec → plan →
+implement → review workflow. At the time this account was written there were **94 design specs and
+146 implementation plans**, dated and committed.
 
 This is the real process inflection. Before it, AI was a fast pair of hands on bounded tasks.
 After it, every non-trivial change started life as a written spec and a reviewable plan, executed

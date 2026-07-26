@@ -125,6 +125,13 @@ rules on PRs into `develop`.
 - Never commit an uncompressed trace payload (`physics*.csv`, `aux_state*.jsonl`) under
   `src/test/resources/traces/` — they exceed GitHub's per-file limit. Enforced by
   `TestTraceFixtureCompressionGuard`.
+- **Architecture artifact placement.** Designs, specifications, implementation plans,
+  research notes, validation reports, and similar agent-generated engineering artifacts
+  live under the matching `docs/architecture/` subdirectory described in
+  [docs/architecture/README.md](docs/architecture/README.md). These repository paths
+  override skill defaults. Never create `docs/superpowers` or recreate the top-level
+  `docs/plans` directory. Before finishing, stage every relevant artifact created for the
+  task; do not leave designs or plans untracked.
 
 ## Gotchas
 

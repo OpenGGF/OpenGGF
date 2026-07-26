@@ -58,8 +58,9 @@ The documentation should now consistently present S3K as:
   - archived dedicated-trace notes superseded by complete-run traces.
 - `docs/TRACE_FRONTIER_LOG.md` is the right canonical ledger, but it is hard to skim. A generated or
   manually maintained "current frontier table" near the top would make release review easier.
-- Older plan/spec files under `docs/superpowers/` remain historical by design. They were not edited
-  because changing old implementation plans can erase useful context.
+- Older plan/spec files under `docs/architecture/plans/` and
+  `docs/architecture/designs/` remain historical by design. They were not edited because changing
+  old implementation plans can erase useful context.
 - `S3K_OBJECT_CHECKLIST.md` may lag behind current object status in places. Because it is a large
   generated/curated checklist, it should be reconciled with registry/test evidence in a separate
   pass rather than guessed from docs.

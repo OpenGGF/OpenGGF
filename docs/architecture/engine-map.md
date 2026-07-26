@@ -95,7 +95,7 @@ destroyed/recreated while `WorldSession` survives, then `LevelManager.restoreInh
 reapplies any `MutableLevel` edits. The old `GameRuntime` / `RuntimeManager` façade is
 retired — prefer explicit dependencies from `GameplayModeContext`, `GameServices`, or
 `ObjectServices`. Full design:
-`docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md`.
+`docs/architecture/designs/2026-04-07-runtime-ownership-migration-design.md`.
 
 ## Level editor
 
