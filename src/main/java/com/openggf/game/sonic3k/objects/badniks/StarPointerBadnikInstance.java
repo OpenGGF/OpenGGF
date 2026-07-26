@@ -49,6 +49,7 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
     private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
 
     private boolean initialized;
+    private boolean activeRoutineReady;
     private boolean releaseChildren;
 
     public StarPointerBadnikInstance(ObjectSpawn spawn) {
@@ -73,6 +74,16 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
             initializeVelocity(player);
             spawnOrbitingPoints();
             initialized = true;
+            return;
+        }
+
+        /*
+         * Obj_WaitOffscreen installs Obj_StarPointer's active address, but
+         * Process_Sprites does not dispatch loc_8BE74 until the following
+         * object pass. Preserve that admission phase before applying velocity.
+         */
+        if (!activeRoutineReady) {
+            activeRoutineReady = true;
             return;
         }
 

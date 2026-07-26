@@ -50984,3 +50984,31 @@ mvn -q -Dsurefire.argLine='-Xshare:off -Xmx6g' \
 - Known-red complete-run canaries retain their established first fields and
   frames: AIZ f9376 `rings` (`2` / `1`, 1,726 errors) and CNZ f0 `y`
   (`0x0600` / `0x061C`, 9,778 errors).
+
+## 2026-07-26 - ICZ Star Pointer launch advances f15940 to f16361
+
+Worktree `.worktrees/integration-icz-next`, baseline `d73649824`.
+
+The ROM's `Obj_WaitOffscreen` transition does not dispatch Star Pointer's
+active `loc_8BE74` routine until the following object pass. The engine moved
+the parent one pass early, giving it a persistent `$40` subpixel phase error.
+That phase propagated to a launched point and made it cross Tails' collision
+boundary one touch pass early.
+
+Verified with:
+
+```bash
+mvn -q '-Dsurefire.argLine=-Xshare:off -Xmx4g' \
+  -Ds3k.rom.path=s3k.gen \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay test
+```
+
+- Before: 1,320 errors; first mismatch f15940 `tails_x_speed`
+  (`expected=-001A`, `actual=-0200`).
+- After: 32 errors; first mismatch f16361 `y_speed`
+  (`expected=0x0093`, `actual=-006D`).
+- The 13-test Star Pointer unit suite passes, including offscreen re-entry,
+  single child-set spawning, and the initialized-before-active rewind seam.
+- Rewind coverage, rewind round-trip, and architectural source guards pass.
+- Detailed ROM PC, collision-list, activation, and capture-hash evidence:
+  `docs/architecture/audits/2026-07-26-icz-star-pointer-launch-oracle.md`.
