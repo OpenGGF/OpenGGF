@@ -608,6 +608,15 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        // SolidObjectTop's out-of-bounds/airborne exit clears both
+        // Status_OnObj and this object's d6 standing bit before returning
+        // (sonic3k.asm:41798-41825). Keeping only the engine ride owner clear
+        // leaves a hidden stale bit for Check_CollapsePlayerRelease.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         // ROM: once the platform enters Obj_PlatformCollapseWaitHandlePlayer it stops
         // calling SolidObjectTop entirely. Only riders already standing on it remain

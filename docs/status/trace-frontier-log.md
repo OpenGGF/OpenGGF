@@ -68,6 +68,40 @@ type, or comparison result. This matches the ROM exit owners, which publish the
 saved level/restart state from live bonus completion routines
 (`docs/skdisasm/sonic3k.asm:127741-127765,96670-96688,98964-99005`).
 
+### 2026-07-26 -- MGZ collapsing-bridge terrain handoff clears stale standing ownership
+
+Commands (worktree `.worktrees/trace-s3k-mgz-standard`, branch
+`bugfix/ai-trace-s3k-mgz-standard`, locked-on S3K ROM, `-Xmx6g` for replay runs):
+
+```bash
+mvn -q "-Dtest=com.openggf.tests.TestS3kCollapsingBridgeParity" test
+mvn -q "-Dtest=com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay,com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay" test
+mvn -q "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kSpecialStageTraceReplay" test
+```
+
+`SolidObjectTop` clears both `Status_OnObj` and the platform's d6 standing bit on
+an airborne/out-of-bounds exit (`docs/skdisasm/sonic3k.asm:41784-41825`).
+`CollapsingBridgeObjectInstance` previously cleared only the engine's generic ride
+owner, so its later `Check_CollapsePlayerRelease` path still saw a stale
+bridge-owned standing bit and released Sonic after terrain had already grounded
+him (`sonic3k.asm:45130-45175,45338-45405`). The bridge now opts into the existing
+object-owned continued-ride-exit clear, with a focused terrain-handoff regression.
+
+Fresh results:
+
+- `TestS3kCollapsingBridgeParity`: 12/12 pass.
+- Standard MGZ: first error advances f5164 `air` -> f12486 `rings`; errors
+  8,184 -> 8,032.
+- Complete-run MGZ: first error advances f5550 -> f6295 `rings`; errors
+  8,064 -> 8,708. The higher downstream count is newly exposed later behavior,
+  not a regression before the former frontier.
+- S3K special stage: 2/2 pass.
+- AIZ standard retains its documented red frontier at f2696 `x_speed`, 3,258
+  errors; the bridge-local change does not move it.
+
+NEXT: standard MGZ f12486 ring count (ROM 1, engine 2); complete-run MGZ f6295
+ring count (ROM 130, engine 129).
+
 ### 2026-07-26 -- Debug/trace audit resumes: S1/S2 green, S3K frontiers unchanged
 
 Commands (measured in worktree `/tmp/openggf-debug-trace-audit-resumed`, then replayed
