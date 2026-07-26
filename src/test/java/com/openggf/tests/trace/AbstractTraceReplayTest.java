@@ -172,6 +172,15 @@ public abstract class AbstractTraceReplayTest {
         return fixture.sprite();
     }
 
+    /**
+     * Whether the live production lifecycle has reached this replay profile's
+     * terminal boundary. Checked only after the current frame has been driven
+     * and compared, so the boundary-owning gameplay row remains verified.
+     */
+    protected boolean replayTerminalReached() {
+        return false;
+    }
+
     static boolean shouldValidateRewindReferenceClosure(SonicGame game) {
         return game == SonicGame.SONIC_2 || game == SonicGame.SONIC_3K;
     }
@@ -729,6 +738,10 @@ public abstract class AbstractTraceReplayTest {
                         traceCheckpoint,
                         engineCheckpoint,
                         detector.requiredCheckpointNamesReached());
+            }
+
+            if (replayTerminalReached()) {
+                break;
             }
 
             driveTraceIndex++;

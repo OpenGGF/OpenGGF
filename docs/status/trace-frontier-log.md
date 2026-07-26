@@ -42,6 +42,32 @@ passed 6/6. S1 GHZ1, S2 EHZ1, S2 CNZ level-select, and title-card policy passed
 (`docs/skdisasm/sonic3k.asm:66752-66803`). Trace data remained comparison-only;
 complete-run frame-zero debt was not addressed.
 
+### 2026-07-26 -- S3K bonus-stage lifecycle terminals green
+
+Verified from worktree `.worktrees/trace-s3k-bonus-gumball`, branch
+`bugfix/ai-trace-s3k-bonus-gumball`, base `b6b0a60c0`:
+
+```bash
+mvn -q -Dsurefire.argLine=-Xmx6g \
+  -Dtest=TestS3kGumballBonusTraceReplay,TestS3kPachinkoBonusTraceReplay,TestS3kSlotsBonusTraceReplay,TestS3kSpecialStageTraceReplay,TestS3kBonusComparedSpriteSeam,TestTraceReplayInvariantGuard,TestTraceHistoryHydration,TestTraceHydrateSwitchDefault \
+  -Ds3k.rom.path='<verified locked-on ROM>' test
+```
+
+- Exit 0: 21 tests, zero failures, errors, or skips.
+- Gumball advances from f1300 `x` to green.
+- Pachinko advances from f2926 `x` to green.
+- Slots advances from f1052 `x` to green.
+- The S3K special-stage replay remains green.
+- Comparison-only and hydration guards remain green.
+
+The generic replay hook defaults to non-terminal and is evaluated only after the
+current driven row has been compared. The S3K bonus profile derives its terminal
+boundary solely from live `BonusStageProvider.isStageComplete()` production state.
+It does not inspect a fixture identity, trace frame, recorded outcome, bonus-stage
+type, or comparison result. This matches the ROM exit owners, which publish the
+saved level/restart state from live bonus completion routines
+(`docs/skdisasm/sonic3k.asm:127741-127765,96670-96688,98964-99005`).
+
 ### 2026-07-26 -- Debug/trace audit resumes: S1/S2 green, S3K frontiers unchanged
 
 Commands (measured in worktree `/tmp/openggf-debug-trace-audit-resumed`, then replayed
