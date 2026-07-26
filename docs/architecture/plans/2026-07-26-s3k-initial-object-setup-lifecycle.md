@@ -735,13 +735,23 @@ git commit -m "feat(rewind): preserve initial setup lifecycle"
 **Files:**
 - Modify: `src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java`
 - Modify: `src/main/java/com/openggf/trace/TraceReplayBootstrap.java`
+- Create: `src/main/java/com/openggf/level/LevelRewindBoundaryCoordinator.java`
+- Modify: `src/main/java/com/openggf/level/LevelManager.java`
+- Modify: `src/test/java/com/openggf/level/TestLevelManagerRewindBoundary.java`
+- Modify: `src/test/java/com/openggf/trace/TestPreludeFramesKnobsZero.java`
 - Modify: `src/test/java/com/openggf/tests/trace/TestTraceReplayStartPositionPolicy.java`
 - Modify: `src/test/java/com/openggf/tests/trace/s3k/TestS3kCnzTraceReplay.java`
+- Verify: `src/test/java/com/openggf/tests/trace/s3k/TestS3kHczCompleteRunTraceReplay.java`
 
 **Interfaces:**
 - Consumes: Task 4 `LevelManager.consumePendingInitialObjectSetupPass(): boolean`
 - Preserves: `TraceReplaySessionBootstrap.applyInitialRngSeedForReplay(TraceMetadata): void`
 - Removes: standalone S3K selection through `usesSidekickTitleCardSeedFrame`, trace profile, sidekick metadata, or `levelObjectTitleCardPreludeFramesForTraceReplay`
+- Preserves: the complete-run represented-state reset/restore/dispatch envelope
+  independently of the now-zero metadata prelude knob
+- Produces: package-private `LevelRewindBoundaryCoordinator` owning the
+  existing rewind reset/mark boundary while preserving the typed
+  `LevelManager` rewind façade and its 2,500-line ratchet
 
 - [ ] **Step 1: Write failing comparison-only and metadata-variance tests**
 
@@ -775,6 +785,21 @@ semantic
 that discards any pending setup token before
 restoring the segment row; preview and warm/shared reuse likewise have none.
 Conversely, a replay backed by a genuine fresh load seam may consume the token.
+
+Keep complete-run represented-state restoration separate from the production
+setup token and from `levelObjectTitleCardPreludeFramesForTraceReplay`. The
+shared bootstrap path must discard fresh-load authority before restoration,
+then preserve the established reset,
+`restoreCompleteRunSegmentObjectsAfterPreludeReset`, and represented-state
+object-dispatch envelope for direct and standard callers alike. The metadata
+prelude knob remains zero. Add the full HCZ complete-run replay and its
+Poindexter slot/bounce oracle to the mandatory gate.
+
+Extract the pre-existing `resetRewindBufferAfterLevelBoundary` /
+`markRewindLevelLoadBoundary` responsibility into a package-private
+`LevelRewindBoundaryCoordinator`. Keep the typed rewind façade on
+`LevelManager`, use normal formatting, do not raise the source budget, and
+retain the existing boundary test at the collaborator owner.
 
 Epoch correction from the Task 6 RED investigation: the recorder emits its
 frame `-1` `object_state_snapshot` block immediately before the first recorded
@@ -840,6 +865,9 @@ applyInitialRngSeedForReplay(trace.metadata());
 ```
 
 Delete standalone S3K replay-owned setup selection. Do not alter S1/S2 title-card preludes or the existing S3K complete-run restoration branch.
+Centralize the complete-run represented-state envelope outside the
+metadata-selected object-prelude count, discard the production token before
+restoration, and keep that count at zero.
 
 - [ ] **Step 4: Run focused CNZ and policy guards**
 
@@ -854,6 +882,12 @@ Expected: policy/guard tests pass. Standalone CNZ's measured first error is
 strictly later than frame 185. Record the actual next frame/field; do not encode
 historical frame 1558 as an expected target because the current fixture and
 surrounding runtime have changed.
+
+Also run `TestLevelManagerRewindBoundary`, the full
+`TestS3kHczCompleteRunTraceReplay` class including its Poindexter oracle, S1
+GHZ1, S2 EHZ1, and the seven-zone S3K complete-run matrix. HCZ must retain its
+documented green behavior and the CNZ frontier must remain at frame 291 or
+later.
 
 - [ ] **Step 5: Commit Task 6**
 
