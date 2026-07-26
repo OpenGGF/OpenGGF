@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- ICZ path-platform jitter uses the native V-int phase
+
+Commands (worktree `.worktrees/trace-s3k-icz-complete`, branch
+`bugfix/ai-trace-s3k-icz-complete`, base `d2d2fd233`):
+
+```bash
+mvn -q \
+  -Dtest=com.openggf.tests.TestS3kIczPathFollowPlatformObject test
+mvn -q -Dsurefire.argLine=-Xmx6g \
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace' \
+  -Ds3k.rom.path='/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+mvn -Dmse=off \
+  -Dtest='com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.game.rewind.TestRewindFieldAudit,com.openggf.game.rewind.TestRewindTransientGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.tests.TestArchitecturalSourceGuard' test
+```
+
+`Obj_ICZPathFollowPlatform` routine `$04` reads bit 0 of
+`V_int_run_count+3` and negates its one-pixel step when that bit is set
+(`docs/skdisasm/sonic3k.asm:187421-187434`). The engine previously encoded an
+unconditional `frameCounter + 1`, bypassing the runtime-owned V-int phase.
+The platform now resolves that counter through `ObjectServices`, the same
+source already used by other S3K V-int consumers, with the object-update
+counter retained as the no-services fallback.
+
+The focused object suite passes 18/18. ICZ complete-run advances from f3102
+`x` (ROM `0x4409`, engine `0x440B`) with 1,352 errors to f3175 `rings`
+(ROM `0`, engine `42`) with 1,325 errors and zero warnings. The selected S3K
+load/bootstrap canaries, architectural source guard, and rewind coverage,
+field-audit, and transient guards pass 126/126.
+
+`TestBuildToolingGuard` was checked separately and remains blocked at this
+base by its pre-existing reference to the removed
+`docs/KNOWN_DISCREPANCIES.md`; the already-staged sibling correction to the
+lowercase `docs/status/known-discrepancies.md` is outside this isolated
+worktree and this commit.
+
 ### 2026-07-26 -- ICZ snowboard release respects player/controller SST order
 
 Commands (worktree `.worktrees/trace-s3k-icz-complete`, branch
