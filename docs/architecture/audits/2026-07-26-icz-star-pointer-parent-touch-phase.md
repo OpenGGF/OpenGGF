@@ -87,20 +87,19 @@ change and green afterward. The complete ICZ replay then reported 31 errors,
 actual 2). The remaining ring and animation differences are later independent
 frontiers.
 
-The implementing agent ran the combined Star Pointer, probe-contract, rewind
-coverage, rewind round-trip, and architectural-source command outside the
-filesystem sandbox so Mockito's Byte Buddy agent could attach. It exited 0
-with all 84 selected tests passing:
+Integration verification ran the combined Star Pointer, probe-contract,
+rewind coverage, rewind round-trip, and architectural-source command with the
+rewind guards' correct packages. Maven exited 0 with all 89 selected tests
+passing (14 + 4 + 1 + 4 + 66), with zero failures, errors, or skips:
 
 ```bash
-mvn -q '-Dsurefire.argLine=-Xshare:off -Xmx3g' \
-  '-Dtest=com.openggf.game.sonic3k.objects.badniks.TestStarPointerBadnikInstance,com.openggf.tests.TestBizhawkProbeContractGuard,com.openggf.tests.TestRewindCoverageGuard,com.openggf.tests.TestRewindRoundTripProbe,com.openggf.tests.TestArchitecturalSourceGuard' \
+mvn -q \
+  '-Dtest=com.openggf.game.sonic3k.objects.badniks.TestStarPointerBadnikInstance,com.openggf.tests.TestBizhawkProbeContractGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.coverage.TestRewindRoundTripProbe,com.openggf.tests.TestArchitecturalSourceGuard' \
   test
 ```
 
-The independent reviewer selected the same 84 tests locally, but that
-environment did not permit Mockito to self-attach: 74 tests passed and the 10
-Mockito-dependent tests errored during test infrastructure initialization.
-Those were environment errors rather than assertion failures; the reviewer
-therefore relied on the implementing agent's successful outside-sandbox run
-for the full-suite result.
+MSE's session aggregate also displayed known-red closure traces from earlier
+runs; those were not part of the exact Surefire selector above and do not
+change the 89 requested XML results. Running the round-trip probe rewrites
+`docs/status/rewind-round-trip-gaps.md`; integration restored that generated
+file to `HEAD`, and it is not part of this task's changes.
