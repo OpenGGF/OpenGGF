@@ -40,14 +40,14 @@ describes and links the maintained subject trees:
 - `assets` for presentation assets;
 - `changelog` for detailed release history;
 - `guide` for contributor, player, and cross-referencing guides;
-- `performance`, `rewind`, `testing`, and `trace` for focused operational
-  references;
 - `project` for project history, roadmap, and process direction;
-- `s3k`, `s3k-zones`, and other game-specific reference areas;
 - `status` for active bug, discrepancy, trace-frontier, and release-state
   ledgers.
 
 No Markdown file remains loose directly under `docs/` except `README.md`.
+Topic names do not form a parallel top-level taxonomy. Performance, rewind,
+testing, trace, audio, and game/zone material is classified by purpose within
+architecture, guide, status, or agent-workflow.
 
 ## Loose `docs/` classification
 
@@ -90,9 +90,9 @@ the current state changes.
 
 ### Game and zone references
 
-- `AIZ-INTRO.md` moves to `s3k-zones/`;
-- both CNZ audit documents move to `s3k-zones/` because they support that
-  zone's current bring-up record;
+- `AIZ-INTRO.md` moves to `architecture/s3k-zones/` as a maintained technical
+  reference;
+- both CNZ audit documents move to `architecture/audits/s3k-zones/`;
 - `sonic2_rev01_checkpoints.md` moves to `guide/cross-referencing/`.
 
 ## Archive elimination
@@ -154,6 +154,65 @@ distinguishing external reference material, engine captures, analysis images,
 and investigation notes. The migrated archive audio documents and assets join
 this collection. The old `docs/audio-debug` path is removed.
 
+## Existing topic-folder classification
+
+The cleanup also eliminates topic folders whose contents fit the purpose-based
+taxonomy.
+
+### Performance
+
+All four `docs/performance` documents are measured baselines or result reports.
+They move to `docs/architecture/validation/performance`.
+
+### Rewind
+
+- `real-gaps.md` is an actively maintained gap ledger and moves to
+  `docs/status/rewind-gaps.md`;
+- `real-gaps-fixplan.md` moves to `docs/architecture/plans`.
+
+### Testing
+
+- `headless-testing.md` is current contributor documentation and moves to
+  `docs/guide/contributing`;
+- `debug-trace-test-audit.md` moves to `docs/architecture/audits/testing`;
+- its TSV inventory and exclusion-list evidence move beside it as supporting
+  audit assets.
+
+### Trace
+
+`s2-ss-init-timeline.md` is an investigation record and moves to
+`docs/architecture/research/trace`.
+
+### S3K general research
+
+`s3k/game-mode-constants.md` is ROM and runtime research and moves to
+`docs/architecture/research/s3k`.
+
+### S3K zones
+
+The `docs/s3k-zones` tree is split by purpose:
+
+- zone `*-analysis.md` documents move to
+  `docs/architecture/research/s3k-zones`;
+- post-workstream baselines and trace-divergence baselines, including their
+  supporting `.d` evidence, move to
+  `docs/architecture/validation/s3k-zones`;
+- regression notes and point-in-time priority/constant audits move to
+  `docs/architecture/audits/s3k-zones`;
+- the current AIZ intro technical reference remains a maintained architecture
+  reference under `docs/architecture/s3k-zones`.
+
+This removes `docs/s3k` and `docs/s3k-zones` without losing the useful zone
+grouping inside each artifact category.
+
+### Prompts
+
+Reusable prompts are workflow support rather than architecture artifacts.
+`docs/prompts` moves to `docs/agent-workflow/prompts`.
+
+After migration, the eliminated topic trees are `audio-debug`, `performance`,
+`prompts`, `rewind`, `s3k`, `s3k-zones`, `testing`, and `trace`.
+
 ## Reference integrity
 
 All tracked references to moved files are rewritten, including:
@@ -197,4 +256,5 @@ The cleanup is complete when:
    research collection;
 6. tracked references do not point to moved or deleted paths;
 7. `AGENTS.md` and `CLAUDE.md` remain identical;
-8. unrelated concurrent changes remain unstaged and unmodified.
+8. the eliminated topic folders listed above no longer exist;
+9. unrelated concurrent changes remain unstaged and unmodified.
