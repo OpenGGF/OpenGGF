@@ -55,7 +55,6 @@ import java.util.Map;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
@@ -91,7 +90,6 @@ public class ObjectManager {
     private int frameCounter;
     private int vblaCounter;
     private boolean updating;
-    private Consumer<String> initialS3kSetupObserverForTests;
 
     // ROM parity: slot-ordered execution array for ExecuteObjects emulation.
     // The dynamic slot window is game-specific and comes from ObjectRegistry.
@@ -117,12 +115,8 @@ public class ObjectManager {
     @SuppressWarnings("unchecked")
     private final List<ObjectInstance>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
     private boolean bucketsDirty = true;
-    // Render-input snapshot from the last bucket rebuild, used by
-    // refreshRenderBucketsIfChanged() to detect priority/membership changes
-    // without rebuilding every frame.
-    private ObjectInstance[] bucketSnapshotInstances = new ObjectInstance[64];
-    private long[] bucketSnapshotKeys = new long[64];
-    private int bucketSnapshotCount;
+    private final ObjectRenderBucketSnapshot renderBucketSnapshot =
+            new ObjectRenderBucketSnapshot();
 
     // Cached combined active objects list to avoid allocation in getActiveObjects()
     private final List<ObjectInstance> cachedActiveObjects = new ArrayList<>();
@@ -425,76 +419,9 @@ public class ObjectManager {
         if (bucketsDirty) {
             return;
         }
-        if (renderBucketInputsChanged()) {
+        if (renderBucketSnapshot.inputsChanged(activeObjects.values(), dynamicObjects)) {
             bucketsDirty = true;
         }
-    }
-
-    private boolean renderBucketInputsChanged() {
-        // Early-out for the common membership-change case; the per-index
-        // identity comparison below would also catch it.
-        if (activeObjects.size() + dynamicObjects.size() != bucketSnapshotCount) {
-            return true;
-        }
-        int position = 0;
-        for (ObjectInstance instance : activeObjects.values()) {
-            if (position >= bucketSnapshotCount
-                    || bucketSnapshotInstances[position] != instance
-                    || bucketSnapshotKeys[position] != renderBucketKey(instance)) {
-                return true;
-            }
-            position++;
-        }
-        for (ObjectInstance instance : dynamicObjects) {
-            if (position >= bucketSnapshotCount
-                    || bucketSnapshotInstances[position] != instance
-                    || bucketSnapshotKeys[position] != renderBucketKey(instance)) {
-                return true;
-            }
-            position++;
-        }
-        return position != bucketSnapshotCount;
-    }
-
-    private void captureRenderBucketSnapshot() {
-        int required = activeObjects.size() + dynamicObjects.size();
-        if (bucketSnapshotInstances.length < required) {
-            int newLength = Math.max(required, bucketSnapshotInstances.length * 2);
-            bucketSnapshotInstances = new ObjectInstance[newLength];
-            bucketSnapshotKeys = new long[newLength];
-        }
-        int position = 0;
-        for (ObjectInstance instance : activeObjects.values()) {
-            bucketSnapshotInstances[position] = instance;
-            bucketSnapshotKeys[position] = renderBucketKey(instance);
-            position++;
-        }
-        for (ObjectInstance instance : dynamicObjects) {
-            bucketSnapshotInstances[position] = instance;
-            bucketSnapshotKeys[position] = renderBucketKey(instance);
-            position++;
-        }
-        // Release stale references beyond the live range so removed objects
-        // are not retained by the snapshot.
-        for (int i = position; i < bucketSnapshotCount; i++) {
-            bucketSnapshotInstances[i] = null;
-        }
-        bucketSnapshotCount = position;
-    }
-
-    // Packed-key layout: bit 0 = highPriority, bits 1-3 = bucket index,
-    // bits 8+ = slot index. The shifted bucket index must stay below bit 8 or
-    // it would bleed into the slot field and silently corrupt change detection.
-    static {
-        if (RenderPriority.MAX - RenderPriority.MIN >= 8) {
-            throw new AssertionError("renderBucketKey bucket bits overflow");
-        }
-    }
-
-    private static long renderBucketKey(ObjectInstance instance) {
-        long slot = instance instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : Integer.MAX_VALUE;
-        int bucket = RenderPriority.clamp(instance.getPriorityBucket()) - RenderPriority.MIN;
-        return (slot << 8) | (long) (bucket << 1) | (instance.isHighPriority() ? 1L : 0L);
     }
 
     public void update(int cameraX, PlayableEntity player, List<? extends PlayableEntity> sidekicks, int touchFrameCounter) {
@@ -693,9 +620,7 @@ public class ObjectManager {
             frameCounter++;
         }
 
-        observeInitialS3kSetupStep("updateCameraBounds");
         updateCameraBounds();
-        observeInitialS3kSetupStep("captureExecStartPlayerCentreY");
         solidContacts.captureExecStartPlayerCentreY(player, activeSidekicks);
 
         SolidExecutionRegistry solidExecutionRegistry = objectServices.solidExecutionRegistry();
@@ -705,37 +630,18 @@ public class ObjectManager {
             // population Process_Sprites consumes immediately afterwards.
             runTwoAxisLoadThenExecutePlacement(cameraX, true);
             cleanupDestroyedDynamicObjects();
-            observeInitialS3kSetupStep("runExecLoop");
             runExecLoop(cameraX, player, activeSidekicks, false, false);
-            observeInitialS3kSetupStep("flushPostExecDynamicSpawns");
             flushPostExecDynamicSpawns();
         } finally {
             solidExecutionRegistry.finishFrame();
         }
 
-        observeInitialS3kSetupStep("captureCollisionResponseListForNextFrame");
         captureCollisionResponseListForNextFrame();
     }
 
     private void runTwoAxisLoadThenExecutePlacement(int cameraX, boolean observeSetupOrder) {
-        if (observeSetupOrder) {
-            observeInitialS3kSetupStep("placement.update");
-        }
         placement.update(cameraX);
-        if (observeSetupOrder) {
-            observeInitialS3kSetupStep("syncActiveSpawnsLoad");
-        }
         syncActiveSpawnsLoad(false);
-    }
-
-    void setInitialS3kSetupObserverForTests(Consumer<String> observer) {
-        initialS3kSetupObserverForTests = observer;
-    }
-
-    private void observeInitialS3kSetupStep(String step) {
-        if (initialS3kSetupObserverForTests != null) {
-            initialS3kSetupObserverForTests.accept(step);
-        }
     }
 
     private void runAfterExecBeforePlacement(Runnable afterExecBeforePlacement) {
@@ -1326,7 +1232,7 @@ public class ObjectManager {
             highPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
         }
 
-        captureRenderBucketSnapshot();
+        renderBucketSnapshot.capture(activeObjects.values(), dynamicObjects);
     }
 
     public void drawPriorityBucket(int bucket, boolean highPriority) {

@@ -105,23 +105,35 @@ class TestS3kInitialObjectSetupLifecycle {
     }
 
     @Test
-    void warmReuseAndSeamlessMutationCannotArmButNextFreshLoadCan() throws Exception {
-        LevelManager manager = managerWithProfile(requestingProfile());
+    void sharedReuseAndProductionSeamlessTransitionCannotArmButFreshReloadCan() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            LevelLoadContext restoration = context(
+                    LevelLoadMode.FULL, true, LevelAssemblyKind.STATE_RESTORATION);
+            manager.loadLevel(0, LevelLoadMode.FULL, restoration);
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
 
-        assertFalse(manager.hasPendingInitialObjectSetupPass());
-        assertFalse(manager.hasPendingInitialObjectSetupPass(),
-                "warm reuse performs no loadLevel call and cannot arm");
+            var reusedLevel = manager.getCurrentLevel();
+            HeadlessTestFixture.builder().withSharedLevel(sharedLevel).build();
+            assertSame(reusedLevel, manager.getCurrentLevel(),
+                    "the SharedLevel fixture must reuse the live level without another load");
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
 
-        manager.requestSeamlessTransition(SeamlessLevelTransitionRequest
-                .builder(SeamlessLevelTransitionRequest.TransitionType.MUTATE_ONLY)
-                .mutationKey("test")
-                .build());
-        manager.consumeSeamlessTransitionRequest();
-        assertFalse(manager.hasPendingInitialObjectSetupPass(),
-                "in-place seamless mutation bypasses load authority");
+            manager.executeActTransition(SeamlessLevelTransitionRequest
+                    .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_SAME_LEVEL)
+                    .targetZoneAct(0, 0)
+                    .preserveMusic(true)
+                    .build());
+            assertFalse(manager.hasPendingInitialObjectSetupPass(),
+                    "the production in-place transition bypasses fresh-load authority");
 
-        manager.loadLevel(0, LevelLoadMode.FULL, freshContext());
-        assertTrue(manager.hasPendingInitialObjectSetupPass());
+            manager.loadCurrentLevel();
+            assertTrue(manager.hasPendingInitialObjectSetupPass(),
+                    "the next genuine playable-runtime assembly publishes one request");
+        } finally {
+            sharedLevel.dispose();
+        }
     }
 
     @Test

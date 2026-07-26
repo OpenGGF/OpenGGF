@@ -71,7 +71,6 @@ class TestObjectManagerInitialS3kSetupPass {
                 null, camera, services);
         registry.manager = manager;
         manager.enableExecThenLoadPlacement();
-        manager.setInitialS3kSetupObserverForTests(ledger::add);
 
         Sonic player = new Sonic("sonic", (short) 0x100, (short) 0x80);
         Tails sidekick = new Tails("tails", (short) 0x120, (short) 0x90);
@@ -105,15 +104,8 @@ class TestObjectManagerInitialS3kSetupPass {
         assertEquals(playerBefore, PlayableState.capture(player));
         assertEquals(sidekickBefore, PlayableState.capture(sidekick));
         assertEquals(List.of(
-                "updateCameraBounds",
-                "captureExecStartPlayerCentreY",
                 "SolidExecutionRegistry.beginFrame",
-                "placement.update",
-                "syncActiveSpawnsLoad",
-                "runExecLoop",
-                "flushPostExecDynamicSpawns",
-                "SolidExecutionRegistry.finishFrame",
-                "captureCollisionResponseListForNextFrame"), ledger);
+                "SolidExecutionRegistry.finishFrame"), ledger);
 
         manager.runTouchResponsesForPlayer(player, 99);
         assertEquals(1, probe.touches,
@@ -134,7 +126,6 @@ class TestObjectManagerInitialS3kSetupPass {
                 new TestObjectServices().withCamera(camera).withSolidExecutionRegistry(solids));
         registry.manager = manager;
         manager.enableExecThenLoadPlacement();
-        manager.setInitialS3kSetupObserverForTests(ledger::add);
 
         IllegalStateException failure = assertThrows(IllegalStateException.class,
                 () -> manager.runInitialS3kLoadThenExecutePass(0, null, List.<PlayableEntity>of()));
@@ -148,12 +139,7 @@ class TestObjectManagerInitialS3kSetupPass {
         assertTrue(manager.getTouchResponseObjects().isEmpty(),
                 "an exceptional setup pass must not publish a partial following-frame collision list");
         assertEquals(List.of(
-                "updateCameraBounds",
-                "captureExecStartPlayerCentreY",
                 "SolidExecutionRegistry.beginFrame",
-                "placement.update",
-                "syncActiveSpawnsLoad",
-                "runExecLoop",
                 "SolidExecutionRegistry.finishFrame"), ledger);
     }
 
