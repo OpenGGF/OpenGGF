@@ -1,5 +1,44 @@
 # Trace Frontier Log
 
+## 2026-07-26 - Complete non-LBZ fleet reconciliation at `4474a366a`
+
+- Command: `mvn -q -Dmse=off -Dmaven.test.failure.ignore=true
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  '-Dsurefire.argLine=-Xshare:off -Xmx6g -XX:-UsePerfData'
+  -Djava.io.tmpdir=target/non-lbz-fleet-tmp
+  -Ds1.rom.path=<verified REV01 ROM>
+  -Ds2.rom.path=<verified REV01 ROM>
+  -Ds3k.rom.path=<verified locked-on ROM>
+  '-Dtest=*TraceReplay,!TestS3kLbzCompleteRunTraceReplay' test`, run from
+  `bugfix/ai-trace-green-integration` at `4474a366a`.
+- Completeness was reconciled against the source inventory: all 63 executable
+  non-LBZ `*TraceReplay` classes produced fresh XML reports, with no missing
+  classes and no fresh LBZ report. Result: 106 tests, 92 passed, 14 failed,
+  zero errors, zero skips. All S1 and S2 trace comparisons are green. The S3K
+  special-stage and bonus-stage comparisons are also green.
+- Nine comparison traces remain red:
+
+  | Trace | Errors | First divergence |
+  | --- | ---: | --- |
+  | AIZ standalone | 1,330 | f719 `x`, ROM `0x0040`, engine `0x0050` |
+  | AIZ complete | 28 | f25039 `tails_cpu_ctrl2_held`, ROM `0x0018`, engine `0x0000` |
+  | CNZ standalone | 3,714 | f4801 `tails_mapping_frame`, ROM `0x0007`, engine `0x0055` |
+  | CNZ complete | 9,844 | f0 `y`, ROM `0x0600`, engine `0x061C` |
+  | HCZ complete | 2,411 | f6292 `tails_x_speed`, ROM `0x0100`, engine `0x0000` |
+  | ICZ complete | 29 | f24140 `rings`, ROM `3`, engine `2` |
+  | MGZ standalone | 16 | f23561 `rings`, ROM `0`, engine `1` |
+  | MGZ complete | 27 | f28398 `rings`, ROM `2`, engine `1` |
+  | MHZ complete | 6,051 | f0 `y`, ROM `0x0500`, engine `0x051C` |
+
+- The other five failures are CNZ standalone scenario-contract checks:
+  f15194 hurt-latched leader input (`0` versus `-128`), f15569 look-down
+  counter (`120` versus `118`), missing older PathSwap slot 5 and fixed
+  AirCountdown child slot 6 at f17824, and missing CNZ Triangle Bumpers slot 5
+  at f20584. These are kept separate from the 3,714-error comparison frontier.
+- LBZ was intentionally excluded from discovery, execution, documentation
+  conclusions, and target selection because it is owned by James's separate
+  branch.
+
 ## 2026-07-26 - MGZ lost-ring frontiers are earlier SST inventory gaps
 
 - Worktree: `integration-mgz-remaining` at base `3eae9f722`.
