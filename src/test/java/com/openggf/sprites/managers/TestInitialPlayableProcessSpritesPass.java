@@ -72,9 +72,6 @@ class TestInitialPlayableProcessSpritesPass {
             assertEquals(0, p2.getGSpeed());
             assertEquals(2, TraceCharacterState.routineFromSprite(p1));
             assertEquals(2, TraceCharacterState.routineFromSprite(p2));
-            assertEquals(0x53, nativeAizSetupObjectControl(p1),
-                    "Obj_AIZPlaneIntro publishes Player_1 object_control=$53");
-            assertEquals(0, nativeAizSetupObjectControl(p2));
             assertEquals(0, TraceCharacterState.statusByteFromSprite(p1));
             assertEquals(0, TraceCharacterState.statusByteFromSprite(p2));
             assertEquals(0, p1.getLogicalInputState());
@@ -167,15 +164,6 @@ class TestInitialPlayableProcessSpritesPass {
         } finally {
             level.dispose();
         }
-    }
-
-    private static int nativeAizSetupObjectControl(AbstractPlayableSprite player) {
-        int value = 0;
-        if (player.isObjectControlled()) value |= 0x01;
-        if (player.isObjectMappingFrameControl()) value |= 0x02;
-        if (player.isControlLocked()) value |= 0x10;
-        if (player.isHidden()) value |= 0x40;
-        return value;
     }
 
     private static void assertSecondaryStatusAndPowerTimersZero(

@@ -63,8 +63,14 @@ class TestS3kInitialObjectSetupLifecycle {
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             LevelManager manager = GameServices.level();
+            AbstractPlayableSprite p1 = GameServices.sprites().getMainPlayable();
+            AbstractPlayableSprite p2 = GameServices.sprites().getSidekicks().getFirst();
             int objectBefore = manager.getObjectManager().getFrameCounter();
             int levelBefore = manager.getFrameCounter();
+
+            assertTrue(nativeObjectControl(p1) != 0x53,
+                    "fresh load must not already contain the plane-intro control publication");
+            assertEquals(0, nativeObjectControl(p2));
 
             LevelFrameResult setup = LevelFrameStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
@@ -76,6 +82,10 @@ class TestS3kInitialObjectSetupLifecycle {
             assertEquals(objectBefore + 1, manager.getObjectManager().getFrameCounter());
             assertEquals(levelBefore, manager.getFrameCounter());
             assertFalse(manager.hasPendingInitialObjectSetupPass());
+            // Obj_AIZPlaneIntro publishes Player_1 object_control=$53 from its
+            // dynamic setup slot; P2 remains zero (sonic3k.asm:26101-26156).
+            assertEquals(0x53, nativeObjectControl(p1));
+            assertEquals(0, nativeObjectControl(p2));
 
             LevelFrameResult gameplay = LevelFrameStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
@@ -87,6 +97,15 @@ class TestS3kInitialObjectSetupLifecycle {
         } finally {
             sharedLevel.dispose();
         }
+    }
+
+    private static int nativeObjectControl(AbstractPlayableSprite player) {
+        int value = 0;
+        if (player.isObjectControlled()) value |= 0x01;
+        if (player.isObjectMappingFrameControl()) value |= 0x02;
+        if (player.isControlLocked()) value |= 0x10;
+        if (player.isHidden()) value |= 0x40;
+        return value;
     }
 
     @Test
