@@ -253,6 +253,36 @@ class TestCollisionSystemAirLanding {
     }
 
     @Test
+    void s3kObjectControlledAngledLandingPublishesWalkUnlessSpindashing() throws Exception {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        Sonic sprite = new Sonic("sonic", (short) 0, (short) 0);
+        sprite.setAir(true);
+        sprite.setObjectControlled(true);
+        sprite.setAnimationId(2);
+
+        CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+        Method method = CollisionSystem.class.getDeclaredMethod(
+                "resetWallCeilingLandingState",
+                AbstractPlayableSprite.class,
+                int.class);
+        method.setAccessible(true);
+        method.invoke(collisionSystem, sprite, 0x58);
+
+        assertEquals(0, sprite.getAnimationId(),
+                "S3K Player_TouchFloor_Check_Spindash owns Walk before the object-control cleanup gate");
+
+        Sonic spindashingSprite = new Sonic("sonic", (short) 0, (short) 0);
+        spindashingSprite.setAir(true);
+        spindashingSprite.setObjectControlled(true);
+        spindashingSprite.setAnimationId(2);
+        spindashingSprite.setSpindash(true);
+        method.invoke(collisionSystem, spindashingSprite, 0x58);
+
+        assertEquals(2, spindashingSprite.getAnimationId(),
+                "A live S3K spin_dash_flag skips the landing Walk publication");
+    }
+
+    @Test
     void angledCeilingLandingRunsBubbleShieldBounceBeforeGroundSpeedSample() throws Exception {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         Sonic sprite = new Sonic("sonic", (short) 0x143C, (short) 0x05BA);

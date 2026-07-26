@@ -107,7 +107,8 @@ class TestAutomaticTunnelObjectInstance {
         AbstractObjectInstance child = services.children.get(0);
         assertInstanceOf(TunnelExhaustControlObjectInstance.class, child);
         assertEquals(player.getCentreX(), child.getX());
-        assertEquals(player.getCentreY(), child.getY());
+        assertEquals(player.getCentreY() + 0x10, child.getY(),
+                "ROM allocates the exhaust before loc_29768 applies the final upward path step");
         assertEquals(0, intField(child, "subtype"),
                 "Obj_AutomaticTunnel exit spawn does not copy subtype; subtype 0 selects directional exhaust");
         assertEquals(0, intField(child, "xVel"));

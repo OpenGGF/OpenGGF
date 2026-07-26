@@ -472,6 +472,9 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         if (state.pathRemaining <= 0) {
             // Path exhausted — transition to LAST_MOVE
             beginExit(player, state);
+            // loc_2970A falls through loc_29768, so the final path velocity is
+            // still applied on the transition frame.
+            moveCharacter(player);
             return;
         }
 

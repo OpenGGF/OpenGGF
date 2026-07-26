@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- LBZ tunnel, angled-landing, and tube-elevator parity
+
+Verified from base `dc8c74881` with:
+
+```bash
+mvn -q -Dsurefire.argLine='-Xshare:off -Xmx6g' -Dsurefire.forkCount=1 \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay \
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+- Before: 8,790 errors; first mismatch f2856.
+- After: 6,613 errors; first mismatch f3009 `y_speed`
+  (ROM `0x0000`, engine `0x02D8`).
+
+The moved frontier comes from three ROM-owned corrections:
+
+- `Obj_AutoTunnelRun`'s exhausted path reaches `loc_2970A` and falls through
+  `loc_29768`, applying the final velocity on that dispatch
+  (`docs/skdisasm/sonic3k.asm:57274-57335`).
+- `Player_TouchFloor_Check_Spindash` publishes Walk on accepted angled
+  landings unless `spin_dash_flag` is live; S1 remains unchanged and S2 keeps
+  its established reset rule
+  (`docs/skdisasm/sonic3k.asm:24325-24329,29123-29127`).
+- Tube-elevator WaitPlayer/WaitExit use `SolidObjectFull_Offset` with
+  `d2=$08`, `d3=$20`; every action except MovePath publishes its solid
+  checkpoint before `LBZTubeElevator_CheckPlayer`
+  (`docs/skdisasm/sonic3k.asm:57838-57847,57970-57977,58045-58083,58139-58146`).
+
+Focused object, collision, rules, architecture, rewind, LBZ headless, AIZ
+release, S1 GHZ1 trace, and S2 EHZ1 trace canaries passed.
+
 ### 2026-07-26 -- LBZ automatic-tunnel word writes advance f2816 to f2856
 
 Independently verified in worktree `.worktrees/trace-s3k-lbz-complete`,

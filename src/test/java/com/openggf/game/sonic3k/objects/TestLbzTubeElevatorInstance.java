@@ -6,6 +6,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
@@ -57,13 +58,18 @@ class TestLbzTubeElevatorInstance {
     }
 
     @Test
-    void openWaitingElevatorDoesNotExposeSideCollisionThatWallsOffTubeEntry() {
+    void openWaitingElevatorUsesRomFullSolidOffsetRoutine() {
         ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
         SolidObjectProvider solid = (SolidObjectProvider) elevator;
 
-        assertTrue(solid.isTopSolidOnly(),
-                "Obj_LBZTubeElevator waits for LBZTubeElevator_CheckPlayer to capture entry; "
-                        + "the shared solid pass must not side-wall the tube opening first");
+        assertFalse(solid.isTopSolidOnly(),
+                "WaitPlayer calls SolidObjectFull_Offset with d2=$08/d3=$20 before CheckPlayer");
+        assertEquals(8, solid.getSolidParams().airHalfHeight());
+        assertEquals(8, solid.getSolidParams().groundHalfHeight());
+        assertEquals(0x20, solid.getSolidParams().offsetY(),
+                "d3 is the SolidObjectFull_Offset anchor displacement, not a grounded half-height");
+        assertEquals(SolidExecutionMode.MANUAL_CHECKPOINT, solid.solidExecutionMode(),
+                "Action's solid call must publish before LBZTubeElevator_CheckPlayer");
     }
 
     @Test
@@ -99,8 +105,8 @@ class TestLbzTubeElevatorInstance {
         elevator.update(0, player);
         elevator.update(0, player);
 
-        assertTrue(((SolidObjectProvider) elevator).isTopSolidOnly(),
-                "LBZTubeElevator_WaitExit waits for standing_mask to clear before running EndSpin");
+        assertFalse(((SolidObjectProvider) elevator).isTopSolidOnly(),
+                "WaitExit remains a SolidObjectFull_Offset caller while it checks standing_mask");
     }
 
     @Test
