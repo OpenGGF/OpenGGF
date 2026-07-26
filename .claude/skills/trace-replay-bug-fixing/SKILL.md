@@ -587,7 +587,18 @@ Camera/boundary/event-timing frontiers are often not a value bug but an **orderi
 
 Separate from the recorder (which produces full trace files), you often need a **one-off lua** that dumps ROM registers/RAM at a few specific frames to compare against the engine — e.g. the ROM value of a player/object field at the exact divergence frame. Three hard-won rules make this fast and non-destructive.
 
-**Use the canonical template — do NOT hand-roll.** Copy `tools/bizhawk/diag_template_fast.lua` and fill only its two USER sections (PC hooks via `event.onmemoryexecute`, and per-frame `mainmemory` reads). It bakes in the non-negotiables below. Run it through the reusable launcher:
+**Use the canonical probe contract — do NOT hand-roll lifecycle.** For new
+diagnostics, copy `tools/bizhawk/probes/example_stage_probe.lua` and provide
+only its semantic stage predicate and declarative hook table. The older
+`tools/bizhawk/diag_template_fast.lua` remains the reference for grandfathered
+diagnostics outside the guarded probe directory. Run probes through the
+reusable launcher:
+
+New ad-hoc probes belong under `tools/bizhawk/probes/` and must use
+`probe_runtime.lua`'s declarative stage-and-hooks contract. The shared runtime
+owns fast-headless setup, stage-before-hook registration, output teardown, hook
+removal, and self-exit. Existing diagnostics outside that directory and the
+production recorder/library fleet are intentionally grandfathered.
 
 ```bash
 OGGF_START=<firstFrame> OGGF_STOP=<lastFrame> OGGF_OUT=/tmp/<name>.txt DISPLAY=:0 \
