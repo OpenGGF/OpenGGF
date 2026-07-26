@@ -776,15 +776,42 @@ that discards any pending setup token before
 restoring the segment row; preview and warm/shared reuse likewise have none.
 Conversely, a replay backed by a genuine fresh load seam may consume the token.
 
-In `TestS3kCnzTraceReplay`, assert before frame zero:
+Epoch correction from the Task 6 RED investigation: the recorder emits its
+frame `-1` `object_state_snapshot` block immediately before the first recorded
+row, while replay bootstrap stops one native `LevelLoop` dispatch earlier.
+The setup pass and the recorder snapshot are therefore adjacent native epochs,
+not the same epoch. Prove both explicitly rather than offsetting a fixture or
+running another bootstrap dispatch:
 
-```java
-assertFalse(levelManager.consumePendingInitialObjectSetupPass());
-assertEquals(recordedBalloonAngle, liveBalloonAngle);
-assertEquals(trace.metadata().rngSeed(), GameServices.rng().getSeed());
+```text
+after zero-seed production setup:
+  slots 4..7 balloon angles = 11,38,38,A8
+  RNG seed = 14A7ABBB
+
+after one ordinary LevelFrameStep:
+  slots 4..7 balloon angles = 12,39,39,A9
+  matching frame -1 object_state_snapshot
+  level frame counter = 1
+  VBlank counter = 1
+  RNG seed remains 14A7ABBB
 ```
 
-The first assertion proves bootstrap already consumed the one-shot token.
+`Random_Number` resets a zero low word to `$2A6D365B` and advances the seed
+(`docs/skdisasm/sonic3k.asm:2992-3011`). `Obj_CNZBalloon` consumes one random
+value during initialization, then increments its angle in the routine tail
+(`docs/skdisasm/sonic3k.asm:66750-66795`). Level setup runs
+`Load_Sprites`/`Process_Sprites` once before `LevelLoop`, whose next ordinary
+row runs them again after its VBlank and level-counter increment
+(`docs/skdisasm/sonic3k.asm:7849-7855,7884-7906`). The recorder writes its
+pre-trace object snapshots at the next-frame arm boundary before emitting the
+first CSV row (`tools/bizhawk/s3k_trace_recorder.lua:1210-1222` and the native
+contract in `tools/bizhawk-headless/docs/s3k-aux-events.md:64-88`).
+
+Before that ordinary frame, still assert the production token is already
+consumed and metadata RNG is exact. After it, prove the snapshot angles at the
+matching epoch and that no extra RNG consumption occurred. Never subtract an
+angle from fixture data, hydrate a snapshot, inject an RNG seed before setup,
+or add an extra replay/bootstrap dispatch.
 
 - [ ] **Step 2: Run focused tests and confirm CNZ remains at frame 185**
 
