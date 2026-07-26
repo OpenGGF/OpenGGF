@@ -1,8 +1,8 @@
 # CNZ Task 7 - Regression-Check Notes
 
 Captured: 2026-04-22
-Related plan: `docs/superpowers/plans/2026-04-22-s3k-cnz-trace-replay-ab-plan.md` (Task 7)
-Related spec: `docs/superpowers/specs/2026-04-22-s3k-cnz-trace-replay-design.md`
+Related plan: `docs/architecture/plans/2026-04-22-s3k-cnz-trace-replay-ab-plan.md` (Task 7)
+Related spec: `docs/architecture/designs/2026-04-22-s3k-cnz-trace-replay-design.md`
 
 ## Scope
 
@@ -91,7 +91,8 @@ A+B does not touch the AIZ fixture.
 
 ## Next
 
-- Extend the top-level `docs/s3k-zones/cnz-trace-divergence-baseline.md` with a
+- Extend
+  `docs/architecture/validation/s3k-zones/cnz-trace-divergence.md` with a
   pointer to this note so any C-G agent reading the baseline sees the AIZ
   caveat immediately.
 - Dispatch C-G per plan Task 8.
