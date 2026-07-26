@@ -4,7 +4,7 @@
 
 **Goal:** Model Sonic 3 & Knuckles' one post-title-card, pre-`LevelLoop` level-object setup pass as a production-owned lifecycle so standalone CNZ advances beyond frame 185 without trace identity, metadata selection, or replay-owned object scheduling.
 
-**Architecture:** Correct the existing S3K title-card approximation first: locked title-card frames advance the native VBlank clock but do not age already-loaded level objects, because the ROM is still dispatching title-card SSTs at that point. A typed `LevelInitProfile` capability arms a private `LevelManager` lifecycle token on genuine S3K level assembly; live title-card release, ordinary first-frame execution, and comparison bootstrap may consume that token but cannot create it. Consumption invokes a dedicated S3K load-then-execute `ObjectManager` setup primitive that excludes player physics, touches, oscillation, and synthetic frame/VBlank advancement.
+**Architecture:** Correct the existing S3K title-card approximation first: locked title-card frames advance the native VBlank clock but do not age already-loaded level objects, scroll the camera, or advance oscillation, because the ROM is still dispatching title-card SSTs at that point. A typed request written into `LevelLoadContext` is published as a private `LevelManager` token only after a genuine fresh S3K post-load assembly succeeds; previews, warm/shared reuse, state restoration, and failed loads cannot publish it. Live title-card release, ordinary first-frame execution, and comparison bootstrap may consume that production token but cannot create it; consumption invokes one audited S3K load-then-execute object-dispatch envelope.
 
 **Tech Stack:** Java 21, Maven, JUnit Jupiter, OpenGGF production level/title-card/object lifecycles, ROM-backed S3K trace replay, local `docs/skdisasm/sonic3k.asm`.
 
@@ -17,6 +17,8 @@
 - The setup pass is object-only because OpenGGF already models playable creation/reset separately. It must not tick Sonic/Tails physics, animation, CPU history, input, control, touch response, or ring collection.
 - The setup pass must not advance `LevelManager.frameCounter`, `ObjectManager.vblaCounter`, lag, camera, level events, water, global oscillation, or animated tiles.
 - The pending lifecycle is rewind/session state because it may span live title-card frames. Reset, teardown, failed load, restore, and fresh reload must leave a deterministic token.
+- `LevelLoadContext` is the production arming authority. `FULL + includePostLoadAssembly + FRESH_LEVEL_ASSEMBLY` may request setup; `PREVIEW_CAPTURE`, decode-only loads, warm/shared-level reuse, and snapshot/complete-run restoration may not.
+- Clear any old token on load entry. Publish the new token only after every profile step and level publication succeeds. Any checked or unchecked load failure leaves `NONE`; startup remains fatal through the existing `IOException`/`RuntimeException` propagation.
 - Keep current comparison-only bootstrap ordering: initialize live counter phases, consume the production token, then call `applyInitialRngSeedForReplay`.
 - Non-goal: this work does not fix CNZ, ICZ, LBZ, or MHZ complete-run frame-zero gaps.
 - Non-goal: this work does not replace or broaden the existing complete-run setup/restoration path.
@@ -24,13 +26,14 @@
 - No uncompressed trace fixture may be added.
 - Update `CHANGELOG.md` and `docs/status/trace-frontier-log.md` when implementation moves the frontier.
 - Every implementation commit must use the repository's required trailers and must not bypass hooks.
+- Execute Tasks 1-7 strictly in order. Each task starts from the reviewed commit produced by the preceding task; no task in this plan is eligible for parallel dispatch.
 
 ---
 
 ## Requirements
 
 1. S3K's pre-level title-card wait must stop executing already-loaded level objects. The title provider continues to animate, and the production VBlank clock advances once per locked frame.
-2. A genuine S3K post-load assembly arms exactly one initial level-object setup pass after player, sidekick, camera, event, and zone-player initialization have established the runtime state needed by object placement.
+2. A genuine fresh S3K post-load assembly requests exactly one initial level-object setup pass after player, sidekick, camera, event, and zone-player initialization. `LevelManager.loadLevel` publishes that request only after the complete load succeeds.
 3. Only production lifecycle consumers may consume the pass:
    - live title-card release, immediately before the first ordinary level frame;
    - the first ordinary level-frame path when no title card is presented;
@@ -46,6 +49,7 @@
 8. Rewind capture/restoration preserves whether the setup pass is pending. Teardown and new load clear stale pending state before arming the new lifecycle.
 9. Standalone CNZ must advance beyond frame 185 through production state only. Metadata variants cannot alter token arming or consumption.
 10. S1/S2 traces and title-card tests, S3K AIZ/MGZ standards, all S3K complete-run frontiers, and S3K special stages must not regress.
+11. A setup exception is atomic for lifecycle ownership: the token is consumed before dispatch and remains consumed if dispatch throws; the solid-execution registry is still balanced by `finally`.
 
 ## Exploration Synthesis
 
@@ -124,7 +128,7 @@ default boolean shouldAdvanceVblankClockDuringLockedPhase() {
 
 `GameLoop.updateTitleCardMode` calls `levelManager.advanceTitleCardVblankOnly()` when that capability is true. The method advances only `ObjectManager.vblaCounter`; it does not execute level objects or advance level-frame state.
 
-The production lifecycle is:
+The production lifecycle and load authority are:
 
 ```java
 public enum InitialObjectSetupLifecycle {
@@ -132,6 +136,35 @@ public enum InitialObjectSetupLifecycle {
     S3K_LOAD_THEN_EXECUTE_ONCE
 }
 ```
+
+```java
+public enum LevelAssemblyKind {
+    DECODE_ONLY,
+    FRESH_LEVEL_ASSEMBLY,
+    STATE_RESTORATION
+}
+```
+
+```java
+// LevelLoadContext; default is DECODE_ONLY.
+private LevelAssemblyKind assemblyKind = LevelAssemblyKind.DECODE_ONLY;
+private InitialObjectSetupLifecycle requestedInitialObjectSetupLifecycle =
+        InitialObjectSetupLifecycle.NONE;
+
+public boolean permitsInitialObjectSetupRequest() {
+    return loadMode == LevelLoadMode.FULL
+            && includePostLoadAssembly
+            && assemblyKind == LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY;
+}
+```
+
+`loadCurrentLevel(...)` sets `FRESH_LEVEL_ASSEMBLY` only when it is actually
+building a playable runtime. Preview capture remains `PREVIEW_CAPTURE` and
+`DECODE_ONLY`. A warm `SharedLevel` reuse performs no `loadLevel` call and
+therefore cannot request a token. Snapshot and complete-run state restoration
+set `STATE_RESTORATION` (or explicitly discard a token at the restoration
+boundary) unless that path performed a genuine fresh level assembly whose
+native setup has not already been represented.
 
 ```java
 // LevelInitProfile
@@ -166,12 +199,16 @@ public boolean consumePendingInitialObjectSetupPass() {
 }
 ```
 
-No value-taking arming setter exists. The named profile step after
-`InitZonePlayerState` calls
-`LevelManager.armInitialObjectSetupLifecycleFromActiveProfile(): void`. That
-method takes no lifecycle, trace, or metadata argument; it clears stale state,
-resolves the active module's `LevelInitProfile`, and copies the profile's typed
-value.
+No value-taking `LevelManager` arming setter exists. The named S3K profile step
+after `InitZonePlayerState` calls
+`ctx.requestInitialObjectSetupFromProfile(initialObjectSetupLifecycle())`.
+That context method accepts the typed profile value only when
+`permitsInitialObjectSetupRequest()` is true. `LevelManager.loadLevel` clears
+its old token before executing steps, then publishes the context request only
+after all steps, `writeCurrentLevel`, and the level-boundary reset succeed.
+The catch path clears the token again before preserving the existing fatal
+load semantics. Consumption clears before dispatch, so an object exception
+cannot replay a partially executed setup pass.
 
 The token may survive from load completion through locked title-card frames, so it is captured in `LevelSnapshot` through `LevelRewindSnapshotAdapter`. Three consumers race safely:
 
@@ -186,6 +223,8 @@ Only the first consumer executes the pass. Replay can call the consumer but cann
 ### File and responsibility map
 
 - Create `src/main/java/com/openggf/game/InitialObjectSetupLifecycle.java`: closed typed lifecycle values.
+- Create `src/main/java/com/openggf/game/LevelAssemblyKind.java`: production load intent, distinct from presentation mode.
+- Modify `src/main/java/com/openggf/game/LevelLoadContext.java`: typed assembly kind and profile-request field.
 - Modify `src/main/java/com/openggf/game/LevelInitProfile.java`: default typed capability.
 - Modify `src/main/java/com/openggf/game/sonic3k/Sonic3kLevelInitProfile.java`: S3K capability and named arming step after `InitZonePlayerState`.
 - Modify `src/main/java/com/openggf/game/TitleCardProvider.java`: locked-phase VBlank-only capability.
@@ -228,20 +267,30 @@ private void runS3kLoadThenExecute(
         boolean incrementDispatchCounter)
 ```
 
-For the initial setup pass, `incrementDispatchCounter` is `true` because `ObjectManager.frameCounter` counts object-dispatch passes, including the native setup `Process_Sprites`. `vblaCounter` remains unchanged because no VBlank is synthesized. The helper performs:
+For the initial setup pass, `incrementDispatchCounter` is `true` because `ObjectManager.frameCounter` counts object-dispatch passes, including the native setup `Process_Sprites`. `vblaCounter` remains unchanged because no VBlank is synthesized. The helper performs the same audited dispatch envelope as `update`:
 
 ```java
 frameCounter++;
 updateCameraBounds();
 placement.update(cameraX);
 syncActiveSpawnsLoad(false);
+solidContacts.captureExecStartPlayerCentreY(player, activeSidekicks);
+SolidExecutionRegistry registry = objectServices.solidExecutionRegistry();
+registry.beginFrame(frameCounter, collectActivePlayers(player, activeSidekicks));
 cleanupDestroyedDynamicObjects();
-runExecLoop(cameraX, player, sidekicks, false, false);
-flushPostExecDynamicSpawns();
+try {
+    runExecLoop(cameraX, player, activeSidekicks, false, false);
+    flushPostExecDynamicSpawns();
+} finally {
+    registry.finishFrame();
+}
 captureCollisionResponseListForNextFrame();
 ```
 
-It does not call `touchResponses`, `solidContacts.beginInlineFrame`, `advanceGlobalOscillation`, `RingManager`, `Camera.updatePosition`, `LevelManager.update`, or playable sprite updates.
+It does not call `touchResponses`, `solidContacts.beginInlineFrame`,
+`advanceGlobalOscillation`, `RingManager`, `Camera.updatePosition`,
+`LevelManager.update`, or playable sprite updates. If dispatch throws,
+`finishFrame()` still runs and the lifecycle remains consumed.
 
 ## Implementation Plan
 
@@ -262,7 +311,7 @@ It does not call `touchResponses`, `solidContacts.beginInlineFrame`, `advanceGlo
 
 - [ ] **Step 1: Write failing S3K locked-card tests**
 
-Change `titleCardLegacyPath_s3kAiz1` to expect zero `ObjectManager.frameCounter` delta and a five-count `vblaCounter` delta. Snapshot the first active level object's routine/debug state and `GameServices.rng().getSeed()` before stepping, then assert both remain unchanged after five locked frames.
+Change `titleCardLegacyPath_s3kAiz1` to expect zero `ObjectManager.frameCounter` delta and a five-count `vblaCounter` delta. Snapshot the first active level object's routine/debug state, camera X/Y and bounds, oscillator rewind state, and `GameServices.rng().getSeed()` before stepping, then assert all except VBlank remain unchanged after five locked frames. Release the card for one ordinary level frame and assert the oscillator advances exactly once from the locked baseline; this catches suppression leaking into the first unlocked frame.
 
 Add provider-policy assertions:
 
@@ -301,13 +350,22 @@ In the locked non-player branch of `GameLoop.updateTitleCardMode`, replace impli
 
 ```java
 if (tcpCard.shouldRunLevelObjectsDuringLockedPhase()) {
+    levelManager.suppressGlobalOscillationForTitleCardPass();
     levelManager.updateObjectPositions();
 } else if (tcpCard.shouldAdvanceVblankClockDuringLockedPhase()) {
     levelManager.advanceTitleCardVblankOnly();
 }
 ```
 
-Keep the existing oscillator suppression for paths that still execute objects; do not advance oscillator on the VBlank-only path.
+Move the existing unconditional
+`suppressGlobalOscillationForTitleCardPass()` into the two actual object-update
+branches only: immediately before the S2 `LevelFrameStep.execute` call and
+inside the `shouldRunLevelObjectsDuringLockedPhase()` branch above. Do not set
+suppression on the VBlank-only path. Preserve the early return while the card
+is locked, and add a test spy/guard that `camera.updatePosition()` and
+`camera.updateBoundaryEasing()` are never called for locked S3K. The first
+unlocked fallthrough must see no stale suppression and must perform its normal
+camera and oscillator steps.
 
 - [ ] **Step 4: Run title-card and cross-game guards**
 
@@ -319,7 +377,9 @@ mvn -Dmse=off \
   -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test
 ```
 
-Expected: all selected tests pass; locked S3K level objects and RNG remain unchanged while VBlank advances exactly five.
+Expected: all selected tests pass; locked S3K level objects, RNG, camera, and
+oscillator remain unchanged while VBlank advances exactly five; the first
+unlocked frame advances camera/oscillator normally.
 
 - [ ] **Step 5: Commit Task 1**
 
@@ -334,6 +394,8 @@ git commit -m "fix(s3k): separate title-card and level object dispatch"
 
 ### Task 2: Add the Dedicated S3K Initial Object Setup Primitive
 
+**Depends on:** Task 1 commit. Do not dispatch in parallel.
+
 **Files:**
 - Modify: `src/main/java/com/openggf/level/objects/ObjectManager.java`
 - Create: `src/test/java/com/openggf/level/objects/TestObjectManagerInitialS3kSetupPass.java`
@@ -344,11 +406,12 @@ git commit -m "fix(s3k): separate title-card and level object dispatch"
 
 - [ ] **Step 1: Write failing setup-pass isolation tests**
 
-Build a two-axis S3K `ObjectManager` fixture with one visible probe spawn and one out-of-window spawn. The visible probe increments an update count, creates one dynamic child, and exposes whether touch response ran. Assert:
+Build a two-axis S3K `ObjectManager` fixture with one visible probe spawn and one out-of-window spawn. Use factory counters keyed by the two `ObjectSpawn` identities so the hidden assertion does not require an instance that should never be created. The visible probe increments an update count, creates one dynamic child, and exposes whether touch response ran. Assert:
 
 ```java
 assertEquals(1, visibleProbe.updateCount());
-assertEquals(0, hiddenProbe.updateCount());
+assertEquals(1, visibleFactoryCreations.get());
+assertEquals(0, hiddenFactoryCreations.get());
 assertEquals(objectFrameBefore + 1, manager.getFrameCounter());
 assertEquals(vblankBefore, manager.getVblaCounter());
 assertEquals(0, touchProbe.touchCount());
@@ -356,6 +419,12 @@ assertTrue(manager.getActiveObjects().contains(dynamicChild));
 ```
 
 Capture player and sidekick position, velocity, status, animation, mapping, CPU routine, and history cursor before the pass and assert byte-for-byte equality afterward.
+
+Use a spy `SolidExecutionRegistry` and `SolidContactManager` to assert one
+`captureExecStartPlayerCentreY`, one `beginFrame`, and one `finishFrame`, in
+that order. Add a throwing object variant and assert `finishFrame` still runs
+exactly once while the exception propagates, no touch response runs, and no
+second setup dispatch is implied.
 
 - [ ] **Step 2: Run the new class and confirm the API is absent**
 
@@ -370,7 +439,7 @@ Expected: test compilation fails because `runInitialS3kLoadThenExecutePass` is u
 
 - [ ] **Step 3: Extract the minimal load-then-execute helper**
 
-Implement the signatures in Feature Design. Reuse the current two-axis placement branch instead of duplicating slot logic. Pass `enableTouchResponses=false`, `inlineSolidResolution=false`, and `solidPostMovement=false`; do not call normal `update`.
+Implement the signatures in Feature Design. Reuse the current two-axis placement branch instead of duplicating slot logic. Extract the whole audited envelope—`captureExecStartPlayerCentreY`, balanced `SolidExecutionRegistry.beginFrame/finishFrame`, placement/load, exec, post-exec child flush, and collision-list capture—not merely `runExecLoop`. Pass `enableTouchResponses=false`, `inlineSolidResolution=false`, and `solidPostMovement=false`; do not call normal `update`.
 
 - [ ] **Step 4: Verify setup isolation and ordinary object updates**
 
@@ -391,51 +460,49 @@ git add src/main/java/com/openggf/level/objects/ObjectManager.java \
 git commit -m "feat(s3k): add initial level-object setup pass"
 ```
 
-### Task 3: Add Production Lifecycle Ownership, Consumption, Convergence, and Rewind
+### Task 3: Add Typed Load-Arming and Reset Semantics
+
+**Depends on:** Task 2 commit. Do not dispatch in parallel.
 
 **Files:**
 - Create: `src/main/java/com/openggf/game/InitialObjectSetupLifecycle.java`
+- Create: `src/main/java/com/openggf/game/LevelAssemblyKind.java`
+- Modify: `src/main/java/com/openggf/game/LevelLoadContext.java`
 - Modify: `src/main/java/com/openggf/game/LevelInitProfile.java`
 - Modify: `src/main/java/com/openggf/game/sonic3k/Sonic3kLevelInitProfile.java`
 - Modify: `src/main/java/com/openggf/level/LevelManager.java`
-- Modify: `src/main/java/com/openggf/LevelFrameStep.java`
-- Modify: `src/main/java/com/openggf/GameLoop.java`
-- Modify: `src/main/java/com/openggf/game/rewind/snapshot/LevelSnapshot.java`
-- Modify: `src/main/java/com/openggf/level/rewind/LevelRewindSnapshotAdapter.java`
 - Modify: `src/test/java/com/openggf/game/TestPostLoadAssemblyBehavior.java`
 - Create: `src/test/java/com/openggf/tests/TestS3kInitialObjectSetupLifecycle.java`
-- Modify: `src/test/java/com/openggf/level/rewind/TestLevelRewindSnapshotAdapter.java`
 
 **Interfaces:**
-- Produces: `InitialObjectSetupLifecycle`
-- Produces: `LevelInitProfile.initialObjectSetupLifecycle(): InitialObjectSetupLifecycle`
-- Produces: `LevelManager.consumePendingInitialObjectSetupPass(): boolean`
-- Produces rewind-specific snapshot accessors:
+- Produces: `InitialObjectSetupLifecycle`, `LevelAssemblyKind`
+- Produces: `LevelLoadContext.requestInitialObjectSetupFromProfile(InitialObjectSetupLifecycle): void`
+- Produces: package-owned publication from successful `LevelLoadContext`
+- Produces: `LevelManager.hasPendingInitialObjectSetupPass(): boolean` as a read-only diagnostic/test query; it cannot arm or consume
+- Consumes: Task 2 setup primitive only in later Task 4
 
-```java
-public InitialObjectSetupLifecycle capturePendingInitialObjectSetupLifecycleForRewind()
-public void restorePendingInitialObjectSetupLifecycleForRewind(
-        InitialObjectSetupLifecycle lifecycle)
-```
+- [ ] **Step 1: Write the load-authority matrix tests**
 
-- Consumes: Task 2 `ObjectManager.runInitialS3kLoadThenExecutePass`
-
-- [ ] **Step 1: Write failing profile and one-shot tests**
-
-In `TestPostLoadAssemblyBehavior`, assert S1/S2 return `NONE`, S3K returns `S3K_LOAD_THEN_EXECUTE_ONCE`, and the S3K step order is:
+Assert S1/S2 profile values are `NONE`, S3K is
+`S3K_LOAD_THEN_EXECUTE_ONCE`, and S3K orders the context request between
+`InitZonePlayerState` and `RequestTitleCard`. Parameterize:
 
 ```text
-SpawnSidekick
-InitZonePlayerState
-ArmInitialObjectSetupLifecycle
-RequestTitleCard
+FULL + post-load + FRESH_LEVEL_ASSEMBLY       -> request/publish
+PREVIEW_CAPTURE + post-load + FRESH           -> NONE
+FULL + no post-load + FRESH                    -> NONE
+FULL + post-load + DECODE_ONLY                 -> NONE
+FULL + post-load + STATE_RESTORATION           -> NONE
+warm SharedLevel reuse (no loadLevel call)      -> NONE
 ```
 
-In `TestS3kInitialObjectSetupLifecycle`, load CNZ with a title-card request, assert the token is pending, consume once, assert one object dispatch occurred, and assert a second consume returns false without changing counters or object state.
+Add a seamless-transition/fresh-reload pair: the in-place seamless path does
+not arm, while the next genuine `loadCurrentLevel` does. Add a synthetic
+profile step that throws after the request step; assert the old token was
+cleared on entry, no new token is published, and the existing fatal exception
+contract is preserved. Add teardown and failed-load retry assertions.
 
-- [ ] **Step 2: Run the new lifecycle tests and confirm missing types fail**
-
-Run:
+- [ ] **Step 2: Run the failing authority tests**
 
 ```bash
 mvn -Dmse=off \
@@ -443,85 +510,181 @@ mvn -Dmse=off \
   -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test
 ```
 
-Expected: compilation fails because the lifecycle enum, profile method, step, and consumer do not exist.
+Expected: compilation fails on the new enums/context methods.
 
-- [ ] **Step 3: Implement typed arming and one-shot consumption**
+- [ ] **Step 3: Implement request-then-publish arming**
 
-Create the enum and profile default exactly as specified under Architecture Decision. Add a protected S3K profile step:
+Add the exact types and predicates from Architecture Decision. The profile
+step writes only to its captured `ctx`. At `loadLevel` entry set the live token
+to `NONE`; after every step, current-level publication, and rewind-boundary
+reset succeeds, copy `ctx.requestedInitialObjectSetupLifecycle()` to the live
+field. In every catch path set `NONE` before rethrowing with the existing
+checked/unchecked wrapping. Do not swallow startup errors.
 
-```java
-protected InitStep armInitialObjectSetupLifecycleStep() {
-    return new InitStep(
-            "ArmInitialObjectSetupLifecycle",
-            "S3K: Load_Sprites then setup Process_Sprites before LevelLoop",
-            GameServices.level()::armInitialObjectSetupLifecycleFromActiveProfile);
-}
-```
+- [ ] **Step 4: Run and commit Task 3**
 
-Expose `armInitialObjectSetupLifecycleFromActiveProfile` only at the narrowest visibility that permits the profile callback; it must take no trace or metadata argument. It clears stale state before copying the active profile value.
-
-At the start of `LevelFrameStep.execute`, call `levelManager.consumePendingInitialObjectSetupPass()`. At title-card release in `GameLoop.updateTitleCardMode`, call the same method before `exitTitleCard()`.
-
-- [ ] **Step 4: Add rewind capture and reset coverage**
-
-Add `InitialObjectSetupLifecycle pendingInitialObjectSetupLifecycle` to `LevelSnapshot`. Capture and restore it in `LevelRewindSnapshotAdapter`. Add two tests:
-
-```java
-assertEquals(S3K_LOAD_THEN_EXECUTE_ONCE, restoredPendingLifecycle);
-assertEquals(NONE, restoredConsumedLifecycle);
-```
-
-Extend teardown/reset tests to assert a failed/new load cannot consume the prior level's token.
-
-- [ ] **Step 5: Prove live/headless convergence**
-
-In `TestS3kInitialObjectSetupLifecycle`, create two fresh CNZ runtimes from the same configuration and RNG seed:
-
-- visible path: advance the production title-card provider through locked frames, consume at release;
-- headless path: initialize the same VBlank phase, consume before its first level frame.
-
-After consumption and before ordinary gameplay, compare:
-
-```java
-assertEquals(visible.objectSnapshot(), headless.objectSnapshot());
-assertEquals(visible.placementSnapshot(), headless.placementSnapshot());
-assertEquals(visible.rngSeed(), headless.rngSeed());
-assertEquals(visible.playerSnapshot(), headless.playerSnapshot());
-assertEquals(visible.sidekickSnapshot(), headless.sidekickSnapshot());
-```
-
-The test must include a CNZ balloon and assert one RNG call/angle initialization in each path.
-
-- [ ] **Step 6: Run lifecycle, rewind, title-card, and must-keep-green tests**
-
-Run:
-
-```bash
-mvn -Dmse=off \
-  -Dtest='com.openggf.tests.TestS3kInitialObjectSetupLifecycle,com.openggf.game.TestPostLoadAssemblyBehavior,com.openggf.level.rewind.TestLevelRewindSnapshotAdapter,com.openggf.tests.TestTitleCardObjectExecution,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils' \
-  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test
-```
-
-Expected: all selected tests pass with zero failures/errors.
-
-- [ ] **Step 7: Commit Task 3**
+Run Step 2 plus `TestS3kAiz1SkipHeadless` and
+`TestArchitecturalSourceGuard`; expect all green.
 
 ```bash
 git add src/main/java/com/openggf/game/InitialObjectSetupLifecycle.java \
+  src/main/java/com/openggf/game/LevelAssemblyKind.java \
+  src/main/java/com/openggf/game/LevelLoadContext.java \
   src/main/java/com/openggf/game/LevelInitProfile.java \
   src/main/java/com/openggf/game/sonic3k/Sonic3kLevelInitProfile.java \
   src/main/java/com/openggf/level/LevelManager.java \
-  src/main/java/com/openggf/LevelFrameStep.java \
-  src/main/java/com/openggf/GameLoop.java \
-  src/main/java/com/openggf/game/rewind/snapshot/LevelSnapshot.java \
-  src/main/java/com/openggf/level/rewind/LevelRewindSnapshotAdapter.java \
   src/test/java/com/openggf/game/TestPostLoadAssemblyBehavior.java \
-  src/test/java/com/openggf/tests/TestS3kInitialObjectSetupLifecycle.java \
-  src/test/java/com/openggf/level/rewind/TestLevelRewindSnapshotAdapter.java
-git commit -m "feat(s3k): own initial object setup in level lifecycle"
+  src/test/java/com/openggf/tests/TestS3kInitialObjectSetupLifecycle.java
+git commit -m "feat(s3k): arm initial setup from successful loads"
 ```
 
-### Task 4: Consume Production Setup in Replay and Prove Standalone CNZ
+### Task 4: Add Consumers and Prove Live/Headless Convergence
+
+**Depends on:** Task 3 commit. Do not dispatch in parallel.
+
+**Files:**
+- Modify: `src/main/java/com/openggf/level/LevelManager.java`
+- Modify: `src/main/java/com/openggf/LevelFrameStep.java`
+- Modify: `src/main/java/com/openggf/GameLoop.java`
+- Modify: `src/test/java/com/openggf/tests/TestS3kInitialObjectSetupLifecycle.java`
+
+**Interfaces:**
+- Produces: `LevelManager.consumePendingInitialObjectSetupPass(): boolean`
+- Produces: `LevelManager.discardPendingInitialObjectSetupForStateRestoration(): void`
+- Consumes: Task 2 `ObjectManager.runInitialS3kLoadThenExecutePass`
+- Consumes: Task 3 private pending token
+
+- [ ] **Step 1: Write one-shot, pause, exception, and convergence tests**
+
+Cover release consumption, no-title first-frame consumption, a pause before
+the first gameplay frame (token remains pending and no setup runs), and a
+second consume returning false without state change. A throwing setup object
+must leave the token consumed while Task 2's registry `finishFrame` remains
+balanced.
+
+Add special-stage ownership cases: entering a special stage with no level
+assembly cannot arm or consume setup; a paused special-stage tick cannot
+consume; returning through a genuine fresh level reload may arm exactly one
+new token, while restoration of an already represented return snapshot may
+not.
+
+Define concrete test-only records rather than nonexistent production snapshot
+APIs:
+
+```java
+record ObjectRow(int slot, String className, int x, int y) {}
+record PlayerState(int centreX, int centreY, int xSpeed, int ySpeed,
+                   int groundSpeed, int status, int animation, int mapping) {}
+record RuntimeState(List<ObjectRow> objects, int activeSlotCount,
+                    int objectFrame, int vbla, int levelFrame,
+                    int cameraX, int cameraY, long rngSeed,
+                    PlayerState player, List<PlayerState> sidekicks) {}
+```
+
+Build `RuntimeState` with a test helper over
+`ObjectManager.getActiveObjects()`, `AbstractObjectInstance.getSlotIndex()`,
+`ObjectInstance.getX()/getY()`, the existing public counters, camera getters,
+and explicit playable getters. Sort rows by slot then class name. Do not invent
+generic routine/status getters that `ObjectInstance` does not expose.
+For the hidden-spawn check retain Task 2's factory creation counters.
+
+Create fresh visible-title-card and no-title CNZ runtimes from the same inputs.
+Compare `RuntimeState` after setup, including one CNZ balloon initialization.
+Also compare the oscillator state immediately before and after the first
+unlocked ordinary frame.
+
+- [ ] **Step 2: Implement consumers**
+
+Clear the token before calling Task 2's primitive. Consume at title-card
+release before `exitTitleCard()`, and at `LevelFrameStep.execute` only after
+the pause/early-return gates but before ordinary object dispatch. A paused
+frame must not consume. Do not consume in preview, special-stage, or results
+modes.
+
+The discard method is a semantic production seam for callers that are about
+to restore an already represented runtime state. It accepts no trace,
+metadata, route, or lifecycle value. It must not be called for a genuine fresh
+load whose native setup is still pending.
+
+- [ ] **Step 3: Verify and commit Task 4**
+
+```bash
+mvn -Dmse=off \
+  -Dtest='com.openggf.tests.TestS3kInitialObjectSetupLifecycle,com.openggf.tests.TestTitleCardObjectExecution,com.openggf.tests.TestS3kAiz1SkipHeadless' \
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+```bash
+git add src/main/java/com/openggf/level/LevelManager.java \
+  src/main/java/com/openggf/LevelFrameStep.java \
+  src/main/java/com/openggf/GameLoop.java \
+  src/test/java/com/openggf/tests/TestS3kInitialObjectSetupLifecycle.java
+git commit -m "feat(s3k): consume initial setup at gameplay seams"
+```
+
+### Task 5: Add Rewind Schema and Pending/Consumed Restoration
+
+**Depends on:** Task 4 commit. Do not dispatch in parallel.
+
+**Files:**
+- Modify: `src/main/java/com/openggf/game/rewind/snapshot/LevelSnapshot.java`
+- Modify: `src/main/java/com/openggf/level/rewind/LevelRewindSnapshotAdapter.java`
+- Modify: `src/main/java/com/openggf/level/LevelManager.java`
+- Modify: `src/test/java/com/openggf/level/TestLevelManagerRewindSnapshot.java`
+- Modify: `src/test/java/com/openggf/level/rewind/TestLevelRewindSnapshotAdapter.java`
+- Modify: `src/test/java/com/openggf/game/rewind/TestRewindBenchmarkSizeEstimator.java`
+
+**Interfaces:**
+- Produces package-owned snapshot accessors:
+
+```java
+InitialObjectSetupLifecycle capturePendingInitialObjectSetupLifecycleForRewind()
+void restorePendingInitialObjectSetupLifecycleForRewind(InitialObjectSetupLifecycle lifecycle)
+```
+
+- [ ] **Step 1: Write pending and consumed round-trip tests**
+
+Capture/restore once while pending and once after consumption. Assert a restored
+pending token executes exactly once, while a restored consumed snapshot cannot
+execute. Add pause-before-capture and exception-after-consume variants.
+
+- [ ] **Step 2: Extend the record and every constructor call**
+
+Append `InitialObjectSetupLifecycle pendingInitialObjectSetupLifecycle` to the
+canonical `LevelSnapshot` record. Update both convenience constructors and all
+current canonical call sites, not just the adapter:
+
+```text
+src/main/java/com/openggf/level/rewind/LevelRewindSnapshotAdapter.java
+src/test/java/com/openggf/level/TestLevelManagerRewindSnapshot.java
+src/test/java/com/openggf/level/rewind/TestLevelRewindSnapshotAdapter.java
+src/test/java/com/openggf/game/rewind/TestRewindBenchmarkSizeEstimator.java
+```
+
+Use `NONE` for legacy/convenience construction. Capture and restore the enum,
+never its ordinal. Run `rg -n 'new LevelSnapshot\\(' src/main src/test` and
+account for every result.
+
+- [ ] **Step 3: Verify and commit Task 5**
+
+```bash
+mvn -Dmse=off \
+  -Dtest='com.openggf.level.TestLevelManagerRewindSnapshot,com.openggf.level.rewind.TestLevelRewindSnapshotAdapter,com.openggf.game.rewind.TestRewindBenchmarkSizeEstimator,com.openggf.game.rewind.coverage.TestRewindCoverageGuard' test
+```
+
+```bash
+git add src/main/java/com/openggf/game/rewind/snapshot/LevelSnapshot.java \
+  src/main/java/com/openggf/level/rewind/LevelRewindSnapshotAdapter.java \
+  src/main/java/com/openggf/level/LevelManager.java \
+  src/test/java/com/openggf/level/TestLevelManagerRewindSnapshot.java \
+  src/test/java/com/openggf/level/rewind/TestLevelRewindSnapshotAdapter.java \
+  src/test/java/com/openggf/game/rewind/TestRewindBenchmarkSizeEstimator.java
+git commit -m "feat(rewind): preserve initial setup lifecycle"
+```
+
+### Task 6: Consume Production Setup in Replay and Prove Standalone CNZ
+
+**Depends on:** Task 5 commit. Do not dispatch in parallel.
 
 **Files:**
 - Modify: `src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java`
@@ -530,13 +693,16 @@ git commit -m "feat(s3k): own initial object setup in level lifecycle"
 - Modify: `src/test/java/com/openggf/tests/trace/s3k/TestS3kCnzTraceReplay.java`
 
 **Interfaces:**
-- Consumes: Task 3 `LevelManager.consumePendingInitialObjectSetupPass(): boolean`
+- Consumes: Task 4 `LevelManager.consumePendingInitialObjectSetupPass(): boolean`
 - Preserves: `TraceReplaySessionBootstrap.applyInitialRngSeedForReplay(TraceMetadata): void`
 - Removes: standalone S3K selection through `usesSidekickTitleCardSeedFrame`, trace profile, sidekick metadata, or `levelObjectTitleCardPreludeFramesForTraceReplay`
 
 - [ ] **Step 1: Write failing comparison-only and metadata-variance tests**
 
-Add a start-policy test that loads the same production S3K level lifecycle and varies these metadata values independently:
+Split this into two independent assertions.
+
+First, a pure metadata-token-invariance parameterized test loads the same
+production S3K lifecycle and varies these metadata values independently:
 
 ```text
 trace_profile
@@ -547,7 +713,22 @@ rng_seed
 start position
 ```
 
-Assert the production token is pending before bootstrap and consumed exactly once afterward for every variant. Assert changing metadata without a production token never creates or executes a pass.
+Assert only token behavior here: the production token is pending before
+bootstrap and consumed exactly once afterward for every variant. Changing
+metadata without a production token never creates or executes a pass. Do not
+assert whole object-state equality across variants such as RNG seed or start
+position, because those inputs legitimately change later comparison state.
+
+Second, a fixed-metadata state-equivalence test compares the concrete
+`RuntimeState` helper from Task 4 between live/no-title/bootstrap consumers.
+The metadata is byte-identical in this test, so object equality has one cause.
+
+Add explicit state-restoration coverage: complete-run restoration calls the
+semantic
+`LevelManager.discardPendingInitialObjectSetupForStateRestoration()` boundary
+that discards any pending setup token before
+restoring the segment row; preview and warm/shared reuse likewise have none.
+Conversely, a replay backed by a genuine fresh load seam may consume the token.
 
 In `TestS3kCnzTraceReplay`, assert before frame zero:
 
@@ -570,7 +751,9 @@ mvn -Dmse=off \
   -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test
 ```
 
-Expected before implementation: metadata-variance assertions fail because replay does not consume a production token; CNZ remains expected-red at frame 185 `y_speed`.
+Expected before implementation: metadata-token assertions fail because replay
+does not consume a production token; CNZ remains expected-red at frame 185
+`y_speed`.
 
 - [ ] **Step 3: Consume the token at the correct bootstrap seam**
 
@@ -594,9 +777,12 @@ mvn -Dmse=off \
   -Dtest='com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.tests.trace.TestTraceHydrateSwitchDefault,com.openggf.trace.TestPreludeFramesKnobsZero' test
 ```
 
-Expected: policy/guard tests pass. Standalone CNZ advances beyond frame 185; the expected next frontier is frame 1558 `tails_cpu_interact`, matching the historical causal experiment without its forbidden selection predicate.
+Expected: policy/guard tests pass. Standalone CNZ's measured first error is
+strictly later than frame 185. Record the actual next frame/field; do not encode
+historical frame 1558 as an expected target because the current fixture and
+surrounding runtime have changed.
 
-- [ ] **Step 5: Commit Task 4**
+- [ ] **Step 5: Commit Task 6**
 
 ```bash
 git add src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java \
@@ -606,7 +792,9 @@ git add src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java 
 git commit -m "fix(trace): consume production S3K setup lifecycle"
 ```
 
-### Task 5: Cross-Game, Complete-Run, Rewind, and Documentation Gate
+### Task 7: Cross-Game, Complete-Run, Rewind, and Documentation Gate
+
+**Depends on:** Task 6 commit. Do not dispatch in parallel.
 
 **Files:**
 - Modify: `CHANGELOG.md`
@@ -614,7 +802,7 @@ git commit -m "fix(trace): consume production S3K setup lifecycle"
 - Modify only if a measured intentional discrepancy changes: `docs/status/known-discrepancies.md`
 
 **Interfaces:**
-- Consumes: Tasks 1-4 complete implementation
+- Consumes: Tasks 1-6 complete implementation, in commit order
 - Produces: exact verification evidence and frontier documentation
 
 - [ ] **Step 1: Run focused lifecycle and policy suite**
@@ -637,6 +825,17 @@ mvn -Dmse=off -Dtrace.frontierOnly=true -Dtrace.context.radius=20 \
 ```
 
 Expected: CNZ first error is later than frame 185; AIZ and MGZ retain their pre-change first frame/field; special-stage and must-keep-green classes pass.
+
+Then run the production special-stage lifecycle seams:
+
+```bash
+mvn -Dmse=off \
+  -Dtest='com.openggf.tests.TestS3kSpecialStageHeadlessBoot,com.openggf.tests.TestS3kAiz1SpecialStageReturn,com.openggf.tests.TestS3kSpecialStageReturnWaterRestore' \
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+Expected: no special-stage tick consumes setup; fresh return reload and restored
+return state follow the Task 4 arming matrix.
 
 - [ ] **Step 3: Prove complete-run non-goal did not regress**
 
@@ -696,7 +895,7 @@ git diff --check
 
 Expected: all guards pass and `git diff --check` prints no output.
 
-- [ ] **Step 7: Commit Task 5**
+- [ ] **Step 7: Commit Task 7**
 
 ```bash
 git add CHANGELOG.md docs/status/trace-frontier-log.md
@@ -719,7 +918,7 @@ these field definitions:
 | Evidence field | Required recorded value |
 |---|---|
 | Implementation branch | Exact branch name and worktree path |
-| Task commits in execution order | Full commit hashes for Tasks 1-5 |
+| Task commits in execution order | Full commit hashes for Tasks 1-7 |
 | Final verified commit | Full hash used for the final commands |
 | Dirty-state audit | Exact `git status --short` output classification |
 | CNZ standalone before | Error count, first frame, field, expected value, actual value |
@@ -738,7 +937,7 @@ these field definitions:
 | Regressions introduced | Empty list when none; otherwise class, old frontier, new frontier |
 | Reviewer decision | `approve`, `revise`, or `reject`, plus the evidence-based reason |
 
-Every value must come from a fresh command in Task 5. Expected-red traces are reported by their own Surefire class line and `target/trace-reports` first divergence, not Maven's aggregate exit status. If a command cannot run, the report records the command, exit status, environmental cause, and the narrower command that supplied replacement evidence.
+Every value must come from a fresh command in Task 7. Expected-red traces are reported by their own Surefire class line and `target/trace-reports` first divergence, not Maven's aggregate exit status. If a command cannot run, the report records the command, exit status, environmental cause, and the narrower command that supplied replacement evidence.
 
 ## End-to-End Review Checklist
 
@@ -746,17 +945,23 @@ Every value must come from a fresh command in Task 5. Expected-red traces are re
 - [ ] `InitialObjectSetupLifecycle` is typed, defaults to `NONE`, and only S3K opts in.
 - [ ] No trace/profile/zone/route/frame/sidekick/checkpoint/filename/outcome predicate arms or selects setup.
 - [ ] Locked pre-level S3K title cards do not execute already-loaded level objects.
-- [ ] Locked S3K title cards advance VBlank only; level frame, oscillator, player, events, camera scroll, touches, and RNG remain unchanged.
+- [ ] Locked S3K title cards advance VBlank only; level frame, oscillator, player, events, camera scroll/bounds, touches, and RNG remain unchanged; first-unlocked oscillator/camera advance is asserted.
+- [ ] Oscillator suppression is set only in branches that actually dispatch title-card objects.
+- [ ] Only `FULL + post-load + FRESH_LEVEL_ASSEMBLY` requests setup; preview, no-post-load, decode-only, warm/shared reuse, state restoration, seamless in-place transitions, and failed loads do not.
+- [ ] Failed-load rollback leaves `NONE` while preserving fatal startup propagation; successful fresh reload publishes once.
 - [ ] Setup consumption follows S3K load-then-execute placement and runs exactly once.
+- [ ] Setup captures exec-start player Y and balances solid-registry begin/finish, including exception paths.
 - [ ] Setup increments only the audited object-dispatch counter and does not synthesize VBlank.
 - [ ] Player and sidekick state are unchanged by the object-only pass.
 - [ ] Replay initializes counter phases, consumes the production token, then installs frame-zero RNG.
 - [ ] A replay without a production token cannot execute setup.
-- [ ] Pending lifecycle rewind/reset/load-failure behavior is covered.
+- [ ] Metadata token invariance and fixed-metadata object-state equivalence are separate tests.
+- [ ] Pending and consumed lifecycle rewind/reset/load-failure behavior is covered, including pause-before-first-frame and exception atomicity.
 - [ ] Standalone CNZ advances beyond frame 185 through native object/RNG state.
 - [ ] AIZ/MGZ standalone frontiers hold.
 - [ ] Complete-run f0 gaps are unchanged and remain outside this feature's scope.
 - [ ] S3K special stage remains green.
+- [ ] Special-stage entry/ticks cannot consume; fresh-return reload versus restored-return state follows the arming matrix.
 - [ ] S1/S2 title-card and green trace behavior remains unchanged.
 - [ ] `CHANGELOG.md` and `docs/status/trace-frontier-log.md` contain exact measured evidence.
 - [ ] Required source, rewind, trace, compression, and tooling guards pass.
