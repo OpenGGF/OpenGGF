@@ -3167,7 +3167,7 @@ public class LevelManager {
                 graphicsManager,
                 camera,
                 buildObjectServices());
-        objectManager.inheritRingFloorCheckCounterPhase(ringFloorCheckCounterPhase - 1);
+        objectManager.inheritRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
         GameRules gameRules = gameModule.getRules();
         if (gameRules != null
                 && gameRules.collision() != null

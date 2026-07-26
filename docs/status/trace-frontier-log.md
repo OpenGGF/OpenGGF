@@ -50271,3 +50271,41 @@ mvn -Dtest=TestS3kAizTraceReplay \
 - `replayMatchesTrace` reports 1,298 errors and 0 warnings.
 - First mismatch remains f2707 `tails_animation_id` (ROM `0x0000`, engine
   `0x0005`); there is no f717 scheduling regression.
+
+## 2026-07-26 - AIZ complete-run Lost Ring floor-check phase inheritance
+
+- Worktree: `bugfix/ai-trace-s3k-aiz-complete` at base
+  `bcbc1e8c3`, with the candidate transition-phase fix applied.
+- Root cause: S3K's Lost Ring floor test consumes a phase of the global
+  `V_int_run_count`; `Load_Level` rebuilds dynamic object RAM but does not
+  decrement that global clock. The engine preserved the phase and then passed
+  `phase - 1` to the replacement `ObjectManager`, delaying its next floor probe
+  by one cadence step. Native execute-hook A/B around AIZ2's first bouncing-ring
+  floor checks confirmed that keeping the numeric phase unchanged reproduces
+  the ROM probe cadence. The inherited-state boolean remains a separate flag.
+- Fix: `LevelManager.rebuildManagersForActTransition` passes
+  `ringFloorCheckCounterPhase` unchanged. The production predicate is the
+  generic manager-rebuild lifecycle: there is no game, zone, route, trace, or
+  frame carve-out.
+- Regression red/green:
+  `TestActTransitionHeadless#executeActTransitionInheritsRingFloorPhaseWithoutChangingItsNumericValue`
+  fails under the prior subtraction (`expected 7, actual 6`) and passes with
+  unchanged inheritance; it also asserts the inherited-state boolean.
+- Focused transition/ring selection:
+  `mvn -Dmse=off -Dsonic2.rom.path=/home/farrell/code/projects/OpenGGF/s2.gen -Dsonic3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen -Dtest=TestActTransitionHeadless,TestLostRingObjectInstance,TestLostRingRewindGenericRestore,TestLostRingTouchOrdering,TestRingManager test`
+  exits 0: 85 tests, 0 failures/errors.
+- AIZ complete-run:
+  `mvn -Dmse=off -Dsonic3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen -Dtest=TestS3kAizCompleteRunTraceReplay -Dsurefire.argLine='-Xshare:off -Xmx6g' test`
+  reaches f14880 `tails_cpu_target_y` (ROM `0x0521`, engine `0x0518`) with
+  1707 errors, advancing the prior f9376 frontier and reducing 1726 errors.
+  This is a later genuine frontier, not a green trace.
+- Current-branch canaries hold their existing owners: standalone AIZ reaches
+  f2696 `x_speed` with 3258 errors; standalone MGZ reaches f5164 `air` with
+  8184 errors; ICZ complete-run reaches f0 `y` with 7964 errors. MGZ and ICZ
+  were rerun individually with `-Dsurefire.argLine='-Xshare:off -Xmx6g'`.
+- Policy guards: rewind coverage, static-state rewind coverage, production
+  singleton closure, trace invariants, hydration default, and fixture
+  compression pass (119 tests/assertions across the selected command).
+  `TestArchitecturalSourceGuard` alone errors because this worktree predates
+  the separately staged path correction from `docs/KNOWN_DISCREPANCIES.md` to
+  `docs/status/known-discrepancies.md`; it is not caused by this fix.
