@@ -68,6 +68,7 @@ namespace OpenGGF.BizHawk.Headless
                 true,   // string.format('  "source_bk2": %q,\n', ...)
                 S3KCompleteRunMetadataWriter.RomChecksum,
                 S3KCompleteRunMetadataWriter.LuaScriptVersion,
+                null,
                 segments,
                 transitions);
         }

@@ -51,8 +51,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + " run with a run id",
                 ForcesManifestForDetourFreeRunWithRunId));
             tests.Add(new TestMain.TestCase(
+                "S1RunCaptureRunner maps PreLevel movie completion to level",
+                MapsPreLevelMovieCompletionToLevel));
+            tests.Add(new TestMain.TestCase(
+                "S1RunCaptureRunner records title-screen movie completion",
+                RecordsTitleScreenMovieCompletion));
+            tests.Add(new TestMain.TestCase(
                 "S1RunCaptureRunner honors stop-at-frame inside a detour",
                 HonorsStopAtFrameInsideDetour));
+            tests.Add(new TestMain.TestCase(
+                "S1RunCaptureRunner gives a same-frame hard stop precedence"
+                + " over movie completion",
+                GivesSameFrameHardStopPrecedenceOverMovieCompletion));
         }
 
         /// <summary>
@@ -148,7 +158,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertContains(seg1.MetadataJson,
                     "  \"source_bk2\": \"synthetic.bk2\"\n");
                 AssertContains(seg1.MetadataJson,
-                    "  \"lua_script_version\": \"3.17\",\n");
+                    "  \"lua_script_version\": \"3.18\",\n");
                 // S1 level metadata is byte-identical in and out of run
                 // context: no run_id / segment_index lines (spec §7).
                 AssertEx.Equal(false, seg1.MetadataJson.Contains("run_id"));
@@ -499,10 +509,68 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(true, result.RunManifestJson != null);
                 AssertContains(result.RunManifestJson,
                     "  \"run_id\": \"forced\",\n");
+                AssertContains(result.RunManifestJson,
+                    "  \"expected_movie_end_mode\": \"level\",\n");
                 AssertEx.Equal(
                     true,
                     result.RunManifestJson.EndsWith(
                         "  \"transitions\": [\n  ]\n}\n"));
+            });
+        }
+
+        private static void MapsPreLevelMovieCompletionToLevel()
+        {
+            WithMovie(Rows(12), movie =>
+            {
+                var host = new FakeS1Host(
+                    (h, frame) =>
+                {
+                    if (frame == 3)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 12)
+                    {
+                        h.Ram[0xF600] = 0x8C;
+                    }
+                });
+
+                IList<RunSegmentOutput> outputs;
+                S1RunCaptureResult result = Capture(
+                    movie, host, "prelevel", 0, out outputs);
+
+                AssertContains(result.RunManifestJson,
+                    "  \"expected_movie_end_mode\": \"level\",\n");
+            });
+        }
+
+        private static void RecordsTitleScreenMovieCompletion()
+        {
+            WithMovie(Rows(12), movie =>
+            {
+                var host = new FakeS1Host(
+                    (h, frame) =>
+                {
+                    if (frame == 3)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 8)
+                    {
+                        h.Ram[0xF600] = 0x18;
+                    }
+                    if (frame == 12)
+                    {
+                        h.Ram[0xF600] = 0x04;
+                    }
+                });
+
+                IList<RunSegmentOutput> outputs;
+                S1RunCaptureResult result = Capture(
+                    movie, host, "title", 0, out outputs);
+
+                AssertContains(result.RunManifestJson,
+                    "  \"expected_movie_end_mode\": \"title_screen\",\n");
             });
         }
 
@@ -541,6 +609,44 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(
                     5, result.Segments[1].SpecialStageIndex ?? -1);
                 AssertEx.Equal(true, result.RunManifestJson != null);
+                AssertEx.Equal(
+                    false,
+                    result.RunManifestJson.Contains(
+                        "expected_movie_end_mode"));
+            });
+        }
+
+        private static void GivesSameFrameHardStopPrecedenceOverMovieCompletion()
+        {
+            const int movieLength = 12;
+            WithMovie(Rows(movieLength), movie =>
+            {
+                var host = new FakeS1Host(
+                    (h, frame) =>
+                {
+                    if (frame == 3)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == movieLength)
+                    {
+                        h.Ram[0xF600] = 0x04;
+                    }
+                });
+
+                IList<RunSegmentOutput> outputs;
+                S1RunCaptureResult result = Capture(
+                    movie,
+                    host,
+                    "same-frame-hard-stop",
+                    movie.FrameCount,
+                    out outputs);
+
+                AssertEx.Equal(true, result.RunManifestJson != null);
+                AssertEx.Equal(
+                    false,
+                    result.RunManifestJson.Contains(
+                        "expected_movie_end_mode"));
             });
         }
 

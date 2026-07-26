@@ -1,8 +1,8 @@
 # S1 Complete-Run Recorder — Byte-Level Segmentation Specification
 
 Authoritative specification of the COMPLETE-RUN (multi-level-segment) behavior
-of `tools/bizhawk/s1_complete_run_recorder.lua` (1764 lines, currently
-stamping `lua_script_version` **"3.17"** — see §2) with
+of `tools/bizhawk/s1_complete_run_recorder.lua` (1792 lines, currently
+stamping `lua_script_version` **"3.18"** — see §2) with
 `tools/bizhawk/lib/oggf_trace_common.lua`, for the native C# port in
 `tools/bizhawk-headless/`.
 
@@ -114,11 +114,11 @@ semantics are identical):
 8. End-of-movie handling is a top-of-function guard + `finalize_run_end`
    funnel, with an absolute frame cap (§4.5).
 
-## 2. Version history: 3.14 fixtures vs the 3.17 Lua — verified byte deltas
+## 2. Version history: 3.14 fixtures vs the 3.18 Lua — verified byte deltas
 
 **The in-file version-history comment block has NO entries for 3.13, 3.15,
-3.16, or 3.17.** The header changelog covers v2.0–v3.12 plus one v3.14 entry
-(inserted out of order at line 54):
+3.16, or 3.17.** The header changelog covers v2.0–v3.12, one v3.14 entry
+(inserted out of order at line 54), and the current v3.18 endpoint entry:
 
 > `-- v3.14 changes: CSV v7 records the player's animation ID and displayed`
 > `-- mapping frame every frame using the shared Player/Sidekick layout.`
@@ -158,15 +158,24 @@ diffing the actual version-bump commits**:
   header asserts *"byte-for-byte identical to the inline copies they
   replace"* (verified: identical format strings). `2f8926778` only guards
   `client.invisibleemulation` (no output bytes).
+- `4cc4dffac` jumped **3.17 → "3.18"**. It bumps the three output version
+  strings, updates the stdout startup banner from stale `v3.7` to `v3.18`,
+  and adds optional root-manifest endpoint metadata. On the stage-free path
+  specified here, `write_run_manifest` remains gated because there are no
+  transitions and no run id, so the endpoint is not emitted and the only
+  file-byte change is the level metadata version line. When a root manifest
+  is enabled, true movie completion maps raw game mode `$0C` or its bit-7
+  PreLevel form `$8C` to `level`, and `$04` to `title_screen`;
+  `S1_STOP_AT_FRAME` and `FRAME_CAP` terminations omit the endpoint.
 
 **Net result:** with default environment, the current Lua's level-segment
 output vs the 3.14-stamped `*_completerun` fixtures differs in EXACTLY one
-place: `  "lua_script_version": "3.17",` vs `"3.14"` in each
+place: `  "lua_script_version": "3.18",` vs `"3.14"` in each
 `metadata.json`. `physics.csv` and `aux_state.jsonl` are byte-identical. The
 native differential gate must allow that single-line normalization (plus
 `recording_date`) and nothing else; if any other byte differs, it is a port
-bug, not a version delta. Note also the stale startup banner
-`print("S1 Trace Recorder v3.7 loaded. ...")` — stdout only, never in files.
+bug, not a version delta. The current startup banner is
+`print("S1 Trace Recorder v3.18 loaded. ...")` — stdout only, never in files.
 
 ## 3. Configuration inputs (level path)
 
@@ -451,7 +460,7 @@ arm, every 300 rows, and at finalize — only final bytes matter):
   "sidekicks": [],
   "rng_seed": "0x<%08X of start_rng_seed>",
   "recording_date": "<%Y-%m-%d>",
-  "lua_script_version": "3.17",
+  "lua_script_version": "3.18",
   "trace_schema": 4,
   "csv_version": 7,
   "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", "v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c", "object_near_objoff_34_36_38", "v_oscillate_per_frame", "lag_state_per_frame", "object_near_objoff_32"],
@@ -497,7 +506,7 @@ exactly, with no CRLF expansion.
 Identical to STD §9 (stdout, flush/metadata cadence, headless speed toggles,
 mkdir strategy), plus complete-run specifics with no output-byte impact: the
 `precreate_segment_dirs` probe/mkdir dance, `ensure_segment_dir`,
-`client.exit()` retry/pause tail, the stale "v3.7 loaded" banner, the
+`client.exit()` retry/pause tail, the current "v3.18 loaded" banner, the
 `segments_done` in-memory accumulation (unobservable without a manifest), and
 the dead declarations `MOVIE_FRAME_SAFETY_MARGIN`, `ADDR_CTRL1`
 (the `0xF604` reads use the literal, not the constant), `ADDR_CTRL1_DUP`,

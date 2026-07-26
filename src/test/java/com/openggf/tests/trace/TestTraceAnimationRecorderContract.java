@@ -112,7 +112,7 @@ class TestTraceAnimationRecorderContract {
         assertTrue(script.contains("local dir_token = next_segment_dir_token(\"ss\")"));
         assertTrue(script.contains(
                 "local dir_token = next_segment_dir_token(start_zone_name .. tostring(start_act + 1))"));
-        assertTrue(script.contains("\"lua_script_version\": \"3.17\""));
+        assertTrue(script.contains("\"lua_script_version\": \"3.18\""));
     }
 
     @Test
@@ -125,7 +125,7 @@ class TestTraceAnimationRecorderContract {
         assertTrue(script.contains("S1_RNG_CALLS.flush()"));
         assertTrue(script.contains("rng_call_per_frame"));
         assertTrue(script.contains("OGGF_TRACE_SOURCE_BK2"));
-        assertTrue(script.contains("\"lua_script_version\": \"3.17\""));
+        assertTrue(script.contains("\"lua_script_version\": \"3.18\""));
     }
 
     @Test

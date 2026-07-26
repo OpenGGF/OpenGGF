@@ -19,7 +19,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// fixture bytes and each metadata.json is compared with exactly two
     /// normalizations: the recording_date value and the fixture's
     /// lua_script_version "3.14" line, which the native port must produce
-    /// as the current recorder version "3.17"
+    /// as the current recorder version "3.18"
     /// (docs/s1-complete-run-behavior.md section 2 verified, via the Lua's
     /// version-bump commit diffs, that the stage-free level path's output
     /// bytes are otherwise identical between the two stamps). The output
@@ -48,7 +48,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string FixtureLuaScriptVersionLine =
             "  \"lua_script_version\": \"3.14\",";
         private const string ProducedLuaScriptVersionLine =
-            "  \"lua_script_version\": \"3.17\",";
+            "  \"lua_script_version\": \"3.18\",";
 
         /// <summary>
         /// The 19 canonical segments in recorder emission order. DirToken
@@ -489,7 +489,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// recording_date value (which must still carry the exact key
         /// formatting and an ISO date value), and the fixture's
         /// lua_script_version "3.14" line, which the native port must
-        /// produce as exactly "3.17" (the byte-compat of every other
+        /// produce as exactly "3.18" (the byte-compat of every other
         /// level-path output byte across those stamps is verified in
         /// docs/s1-complete-run-behavior.md section 2). Both files must be
         /// LF-only: this fixture set carries no CRLF expansion

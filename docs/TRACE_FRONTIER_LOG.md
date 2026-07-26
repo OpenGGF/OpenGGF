@@ -1,5 +1,83 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- Debug/trace audit resumes: S1/S2 green, S3K frontiers unchanged
+
+Commands (measured in worktree `/tmp/openggf-debug-trace-audit-resumed`, then replayed
+without content changes onto final branch `bugfix/ai-debug-trace-test-audit-final`;
+transfer audit base `bc9e24546`):
+
+```bash
+mvn -Ptrace-replay "-Dtest=<36 reviewed S1 executable FQCNs>" \
+  "-Dsonic1.rom.path=<verified REV01 ROM>" test
+mvn -Ptrace-replay "-Dtest=<36 reviewed S2 executable FQCNs>" \
+  "-Dsonic2.rom.path=<verified REV01 ROM>" test
+mvn -Ptrace-replay "-Dtest=<23 reviewed S3K executable FQCNs>" \
+  "-Ds3k.rom.path=<verified locked-on ROM>" test
+mvn -Ptrace-replay -Dsurefire.forkCount=1 -DreuseForks=false \
+  "-Dsurefire.argLine=-Xshare:off -Xmx4g" \
+  "-Dsonic1.rom.path=<verified REV01 ROM>" \
+  "-Dsonic2.rom.path=<verified REV01 ROM>" \
+  "-Ds3k.rom.path=<verified locked-on ROM>" test
+```
+
+The S1 group was reconciled across a resource-safe split run after the first aggregate
+launcher could not complete in this container: 36/36 suites, 59 tests, zero
+failures/errors/skips. `TestS1GhzMazeRoundTripChain` now accepts its manifest-declared
+232-row `LEVEL` endpoint, and the selected MZ1 slot guard passes 14/14. The seven
+f3101 Lost Rings remain visible through the explicitly excluded
+`DebugS1Mz1SlotLayoutProbe`.
+
+S2 completed 36/36 suites and 167 tests with zero failures/errors/skips. S3K reconciled
+23/23 suites, 78 tests, 26 failures, zero errors, and two skips. The failure class counts
+and first-divergence fields exactly match the existing frontier table: Mega Run (1), AIZ
+standard/complete (1/1), CNZ standard/complete (12/1), HCZ (2), ICZ/LBZ/MGZ
+standard/MGZ complete/MHZ (1 each), and Gumball/Pachinko/Slots (1 each). No S3K frontier
+moved and no passing trace regressed.
+
+The full profile completed in 21:59: 113 suites, 613 tests, 34 failures, one error, two
+skips. Thirty-two failures were pre-existing documented gaps (the S3K set plus its AIZ
+reference-closure duplicate, four AIZ input-latch-policy assertions, and the missing
+ring-floor-counter fixture metadata assertion). Two stale S1 recorder `3.17` contract
+assertions were corrected to the reviewed `3.18` schema and passed 11/11 on rerun. The
+single Mockito initialization error was caused by the audit's temporary heap `argLine`
+overriding the configured agent; the affected S2 class passed 5/5 without that override
+and was already green in the exact S2 group.
+
+### 2026-07-25 -- Debug/trace audit stops on S1 short-run terminal-tail regression
+
+Command (worktree `/tmp/openggf-debug-trace-audit`, branch
+`bugfix/ai-debug-trace-test-audit`, clean tracked state at `3715b75b6`):
+
+```bash
+timeout --signal=TERM --kill-after=30s 90m \
+  mvn -Ptrace-replay "-Dtest=<36 reviewed S1 executable FQCNs>" \
+    "-Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" \
+    test
+```
+
+Result: exit 1 after 234 seconds, no timeout. Fresh Surefire reconciliation was exact:
+36 requested/36 reports, 60 tests, 9 failures, 0 errors/skips, and no zero-test suites.
+Thirty-four classes passed. `TestS1Mz1SlotLayoutRegression` remains at its previously
+recorded known-red 8/15 shape; its earliest failed check is f481, where slot 51 expected
+`Sonic1AnimalsObjectInstance` but held `Sonic1CaterkillerBodyInstance`. One of those eight
+failures is a stale-test defect (`NoSuchFieldException: usedSlots` at the f1150
+occupancy check). Both standard MZ1 trace classes passed.
+
+The new blocking failure is `TestS1GhzMazeRoundTripChain`: segment 0 records 168
+diagnostic comparator errors, first at f2082 `player_animation_id` expected `0x0000`,
+actual `0x0002` (mapping `0x001A` versus `0x002E`, all physics matching); segment 2 has
+zero errors. After comparison, the 232-row terminal tail ends in `LEVEL`, but the harness
+asserts `TITLE_SCREEN`. Phase-1 inspection points to the S1 game-wide
+`replayTerminalMovieTailToTitleScreen` capability added by `b1a810536`: it treats any
+post-segment S1 rows as a completion/credits tail, while the committed 9,093-row maze
+movie's last segment ends at row 8,861 and the remaining 232 rows are ordinary level play.
+This is a trace-run terminal-expectation/harness regression, not an accepted parity gap.
+
+The audit stopped before S2, S3K, or the full profile and made no runtime/test fix. Resume
+only after a separate reviewed change models the terminal expectation semantically (not
+by run identity/frame carve-out), verifies both the short maze and full completion movie,
+and separately cleans up the MZ1 class's stale private-field reflection.
+
 ### 2026-07-27 -- S3K live V_int_run_count: EVERY frontier holds, MGZ sheds 2,584 errors, one red test goes green and one new red appears (both in the input-latch policy family)
 
 Command (worktree `.worktrees/bizhawk-headless-poc`, branch
@@ -212,6 +290,100 @@ their original authoring.
   edits; fold them into whichever change retires the four policy assertions.
 - The `special_stage` / `runs/.../ss*` fixtures carry no `vblank_counter` column at all and
   still classify through `deriveLegacyHeuristic`. Unchanged by this work.
+
+### 2026-07-26 -- S1 trace profile hygiene: terminal lifecycle and selected MZ1 fleet GREEN; f3101 Lost Ring lifetime diagnostic retained
+
+Measured in `/tmp/openggf-s1-trace-profile-hygiene`, branch
+`bugfix/ai-s1-trace-profile-hygiene`, at clean tracked commit
+`f96477308a642fafa535b9681374c21ef1acd6a4` (fix range
+`f20cef7498f0797d9d5e5c9ec0fea3e10b605f50..f96477308`). The supplied ROM was the
+absolute Sonic 1 World REV01 image, SHA-1
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`.
+
+The exact previously reviewed `/trace/s1/` source-row request was regenerated from
+`/tmp/openggf-debug-trace-audit/docs/testing/debug-trace-test-audit.md` with the
+plan-pinned Python command and saved to
+`target/debug-trace-audit/s1-trace-requested.txt`. It contains 36 unique FQCNs:
+33 `TRACE_REPLAY` sources, the selected `TestVerifierCostBenchmark` diagnostic, and the
+two profile-selected non-executable sources
+`AbstractS1SpecialStageTraceReplayTest` / `S1SpecialStageReplayHarness`. Relative to the
+old audit's executable grouping, those two source-owned entries replace the shared
+`TestS1SpecialStageTraceParsing` / `TestS1GhzMazeRoundTripChain`; the other 34 FQCNs are
+identical.
+
+Exact fleet command:
+
+```
+timeout --signal=TERM --kill-after=30s 90m mvn -Ptrace-replay \
+  "-Dtest=$(tr -d '\n' < target/debug-trace-audit/s1-trace-requested.txt)" \
+  "-Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  test
+```
+
+The command exited 0 in 272 seconds. Fresh Surefire XML reconciles all 36 requests:
+34 executable suites ran **53 tests, 0 failures, 0 errors, 0 skips**; the two named
+abstract/helper sources above are the only zero-test requests; no requested executable
+class is missing and no unexpected suite was emitted. This closes the reviewed S1 profile
+from the earlier 60 tests / 9 failures (one terminal-chain failure plus eight MZ1 probe
+failures) to a semantically selected green fleet without hiding or tolerating a comparator
+failure.
+
+The endpoint failure moved **RED -> GREEN** by moving the expected terminal mode from the
+game-wide S1 playback profile into recorder-owned `run_manifest.json` metadata. The
+committed short maze manifest declares `level`, and its focused chain passes 1/1 after
+replaying exactly 232 tail rows to `LEVEL`. A fresh Lua-authority full-completion capture
+declares `title_screen`; the external chain passes 1/1 after 10,943 tail rows to
+`TITLE_SCREEN`. Missing endpoint metadata remains `UNSPECIFIED` and performs neither tail
+replay nor assertion. Fresh focused contract verification here is 42/42 green
+(`TestTraceRunManifest`, `TestTracePlaybackProfile`,
+`TestTraceRunReplayWalkerControlFlow`, `TraceCaptureToolArgsTest`). The four native S1
+recorder filters are 5 + 5 + 17 + 2 = **29/29 green, zero skips**
+(`S1RunManifestWriter`, `S1CompleteRunMetadataWriter`, `S1RunCaptureRunner`,
+`S1RunModeDifferential`).
+
+MZ1 was also isolated from stale report files and measured one class per invocation:
+
+```
+mvn -Ptrace-replay \
+  "-Dtest=com.openggf.tests.trace.s1.TestS1Mz1TraceReplay" \
+  "-Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" test
+
+mvn -Ptrace-replay \
+  "-Dtest=com.openggf.tests.trace.s1.TestS1Mz1CompleteRunTraceReplay" \
+  "-Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+Both comparators are 1/1 green with zero errors. In the exact fleet, the selected MZ1
+guards are `TestS1Mz1BatbrainEncounterRegression` 1/1,
+`TestS1Mz1LostRingCollectionOrderRegression` 6/6,
+`TestS1Mz1SlotLayoutRegression` 14/14, plus the standard and complete-run comparators
+1/1 each: **23/23 selected MZ1 tests green**. Canonical
+`TraceReplaySessionBootstrap` supplies the fixture's native one-object prelude; this
+converted six formerly red ROM-backed slot/lifetime probes into blocking green guards.
+The stale reflective `usedSlots` test was removed rather than replaced with a tautological
+snapshot check.
+
+One active parity diagnostic remains directly runnable only through
+`-Ptrace-diagnostics`:
+`DebugS1Mz1SlotLayoutProbe#slotSuffixStillMatchesRecordedRomLayoutBeforeBatbrainRegion`
+first fails at frame **3101**. ROM and engine agree on slots 65-75, but the engine retains
+seven Lost Rings (`0x37`) in slots 97-103 that are absent from the ROM slot dump. Its
+fresh direct result is 1 test / 1 expected assertion failure / 0 errors / 0 skips. This is
+the retained Lost Ring lifetime frontier; it is neither disabled nor rewritten to accept
+engine output, and it will move back into the selected regression class when fixed.
+
+Two qualifications from the full-completion lifecycle evidence remain recorded rather
+than being mistaken for parity:
+
+- The historical preserved SBZ3 aux stream has 10 `rng_call` records and declares
+  `rng_call_per_frame`. The current hooks-unset Lua authority emits zero; a disclosed
+  broad diagnostic range emits 815. No physics/aux payload was installed, and this
+  unreproducible historical RNG-hook shape does not drive or invalidate the terminal-mode
+  assertion.
+- The external 100% chain exceeded the default 1 GB Surefire heap before executing a
+  test. The exact 4 GB retry passed 1/1 in 321.89 seconds with the 10,943-row
+  `TITLE_SCREEN` tail. This is retained as a capacity requirement for that external
+  604 MB lifecycle bundle, not a trace or terminal regression.
 
 ### 2026-07-26 -- S3K release slice on the live-counter fixtures: all three frontiers HOLD; 14 AIZ scenario assertions go green on a scenario-harness fix
 
@@ -32069,7 +32241,7 @@ Result:
 ## 2026-06-12 - Performance-optimization final acceptance sweep (Task 13)
 
 - Scope: closing acceptance sweep for the performance-optimization plan
-  (`docs/superpowers/plans/2026-06-11-performance-optimization.md`), run at
+  (`docs/architecture/plans/2026-06-11-performance-optimization.md`), run at
   the end of the branch after all 12 implementation tasks plus the final
   guard fixes (LevelManager block-grid extraction, lifecycle-fixture test
   setups). Compared against the 2026-06-11 pre-work baseline below.
@@ -32095,7 +32267,7 @@ Result:
 ## 2026-06-11 - Performance-optimization pre-work full sweep baseline
 
 - Scope: Task 0 of the performance-optimization plan
-  (`docs/superpowers/plans/2026-06-11-performance-optimization.md`). Full
+  (`docs/architecture/plans/2026-06-11-performance-optimization.md`). Full
   `*TraceReplay` sweep recorded as the pre-work frontier; no engine changes in
   this pass. Later perf phases compare against this list -- only a trace that
   passes here and fails after a phase is a perf regression.
@@ -36109,7 +36281,7 @@ cnz1 carries an accepted documented regression (3906->3831) pending the ground-c
   - Unit: `TestSpeedShoesTimer`, `TestPhysicsProfile`,
     `TestHybridPhysicsFeatureSet` PASS.
 - Full analysis in
-  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
+  `docs/architecture/designs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
 
 ## 2026-06-01 - S3K speed-shoes diagnosis: per-frame model is pickup-relative; byte timer blocked on frame-counter phase
 
@@ -36134,14 +36306,14 @@ cnz1 carries an accepted documented regression (3906->3831) pending the ground-c
 - Conclusion: byte timer remains blocked on frame-counter phase fidelity at the
   read point (not granularity). Diagnostic logging reverted; committed per-frame
   model retained (CNZ stays f17276). Full analysis + refined next steps in
-  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
+  `docs/architecture/designs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
 
 ## 2026-06-01 - S3K speed-shoes byte-timer (every-8th-frame) attempt: regresses CNZ, reverted
 
 - Branch: `feature/ai-s2-mtz-parity`
 - Worktree: `.worktrees/feature-ai-s2-mtz-parity`
 - Implemented the design in
-  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`:
+  `docs/architecture/designs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`:
   `PhysicsFeatureSet.speedShoesTimerDecimation` (S1/S2 `1`, S3K `8`),
   `SpeedShoesTimer` duration `ROM_DURATION_FRAMES/decimation` (150 for S3K) with
   the decrement gated on `(frameCounter + 1) & (decimation-1) == 0`. `ALIGN=1`

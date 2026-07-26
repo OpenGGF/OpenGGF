@@ -171,14 +171,17 @@ namespace OpenGGF.BizHawk.Headless
     /// Shared byte-exact core of the Lua run-mode run_manifest.json
     /// emitters (s2_trace_recorder.lua write_run_manifest L998-1061;
     /// s1_complete_run_recorder.lua write_run_manifest L785-849). The two
-    /// recorders emit the identical structural layout; the per-game deltas
-    /// are literals and quoting only, injected by the thin
+    /// recorders share one structural layout; the per-game deltas are
+    /// literals, quoting, and the S1-only nullable
+    /// expected_movie_end_mode field, injected by the thin
     /// <see cref="S1RunManifestWriter"/> / <see cref="S2RunManifestWriter"/>
     /// front-ends: the game name, the inline rom_checksum and
     /// lua_script_version literals, whether the run_id line may be absent
     /// (S1: emitted iff OGGF_TRACE_RUN_ID was set; S2: always present), and
     /// whether source_bk2 is rendered with Lua %q (S1) or the shared
-    /// json_escape helper (S2). The optional transition fields keep one
+    /// json_escape helper (S2), and whether expected_movie_end_mode is
+    /// present (S1 true movie completion only; S2 omits it). The optional
+    /// transition fields keep one
     /// fixed order — the S2 superset — of which S1 records only the last
     /// four, so both games' emission orders are preserved verbatim.
     /// </summary>
@@ -191,6 +194,7 @@ namespace OpenGGF.BizHawk.Headless
             bool sourceBk2LuaQuoted,
             string romChecksum,
             string luaScriptVersion,
+            string expectedMovieEndMode,
             IList<RunManifestSegment> segments,
             IList<RunManifestTransition> transitions)
         {
@@ -242,6 +246,11 @@ namespace OpenGGF.BizHawk.Headless
                 .Append("\",\n");
             json.Append("  \"lua_script_version\": \"")
                 .Append(luaScriptVersion).Append("\",\n");
+            if (expectedMovieEndMode != null)
+            {
+                json.Append("  \"expected_movie_end_mode\": \"")
+                    .Append(expectedMovieEndMode).Append("\",\n");
+            }
             json.Append("  \"segments\": [\n");
             for (var index = 0; index < segments.Count; index++)
             {

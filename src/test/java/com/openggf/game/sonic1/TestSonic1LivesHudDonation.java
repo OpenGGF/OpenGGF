@@ -14,6 +14,8 @@ import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+
+@RequiresRom(SonicGame.SONIC_1)
 class TestSonic1LivesHudDonation {
     private static final Path S2_ROM = Path.of("s2.gen");
 

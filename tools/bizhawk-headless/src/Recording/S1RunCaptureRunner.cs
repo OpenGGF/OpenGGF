@@ -68,8 +68,10 @@ namespace OpenGGF.BizHawk.Headless
     /// </summary>
     public static class S1RunCaptureRunner
     {
+        private const byte TitleScreenGameMode = 0x04;
         private const byte LevelGameMode = 0x0C;
         private const byte SpecialStageGameMode = 0x10;
+        private const byte GameModeBaseMask = 0x7F;
 
         public const string LevelTraceProfile = "complete_run";
         public const string SpecialStageTraceProfile = "s1_special_stage";
@@ -87,7 +89,9 @@ namespace OpenGGF.BizHawk.Headless
         /// models S1_STOP_AT_FRAME (0 = off); the movie-done guard folds
         /// the Lua's frame-count and FINISHED checks into "completed frames
         /// >= movie length", evaluated after each advance before any
-        /// recording.
+        /// recording. Only true movie completion maps the observed final
+        /// game mode into expected_movie_end_mode; a configured hard stop
+        /// owns a same-frame tie and omits that field.
         /// </summary>
         public static S1RunCaptureResult Capture(
             Bk2Movie movie,
@@ -145,7 +149,8 @@ namespace OpenGGF.BizHawk.Headless
                         // Movie input exhausted before the frame-count
                         // guard fired (the Lua's movie.mode() == "FINISHED"
                         // signal): finalize whatever is armed and stop.
-                        state.FinalizeRunEnd();
+                        state.FinalizeRunEnd(MapExpectedMovieEndMode(
+                            S1Ram.U8(host, S1Ram.GameMode)));
                         break;
                     }
                     Bk2Frame frame = frames.Current;
@@ -159,6 +164,7 @@ namespace OpenGGF.BizHawk.Headless
                             + "; expected " + rowsConsumed + ".");
                     }
                     int frameNow = rowsConsumed;
+                    byte gameMode = S1Ram.U8(host, S1Ram.GameMode);
 
                     // Top-of-function stop guard (spec §2 item 1): movie
                     // done or the S1_STOP_AT_FRAME hard stop, before any
@@ -167,14 +173,20 @@ namespace OpenGGF.BizHawk.Headless
                     // ending mid-$10 stops the ss tail promptly. No
                     // OGGF_BK2_FRAME_COUNT-style override exists in S1 —
                     // raw movie length only (S2 delta).
-                    if (frameNow >= movie.FrameCount
-                        || (stopAtFrame > 0 && frameNow >= stopAtFrame))
+                    bool movieCompleted = frameNow >= movie.FrameCount;
+                    bool hardStop =
+                        stopAtFrame > 0 && frameNow >= stopAtFrame;
+                    if (movieCompleted || hardStop)
                     {
-                        state.FinalizeRunEnd();
+                        // S1_STOP_AT_FRAME owns a same-frame tie with movie
+                        // completion, matching the Lua: a configured hard
+                        // stop is never authoritative endpoint metadata.
+                        state.FinalizeRunEnd(
+                            hardStop
+                                ? null
+                                : MapExpectedMovieEndMode(gameMode));
                         break;
                     }
-
-                    byte gameMode = S1Ram.U8(host, S1Ram.GameMode);
 
                     // Block 1: SS entry/continuation (spec §2 item 2).
                     // Gated on `started` so a movie beginning inside $10
@@ -236,6 +248,22 @@ namespace OpenGGF.BizHawk.Headless
             }
 
             return state.BuildResult();
+        }
+
+        private static string MapExpectedMovieEndMode(byte gameMode)
+        {
+            // Bit 7 is S1's PreLevel form of GM_Level ($8C); the ROM clears
+            // it back to $0C when pre-level work finishes. No other mode is
+            // normalized.
+            if ((gameMode & GameModeBaseMask) == LevelGameMode)
+            {
+                return "level";
+            }
+            if (gameMode == TitleScreenGameMode)
+            {
+                return "title_screen";
+            }
+            return null;
         }
 
         /// <summary>
@@ -495,12 +523,13 @@ namespace OpenGGF.BizHawk.Headless
             /// armed ss segment, so the detour route must be checked first
             /// — running the level finalize mid-detour would emit a bogus
             /// level entry over the ss segment's streams. The manifest is
-            /// then attempted exactly once, gated per spec §1: emitted iff
+            /// then attempted exactly once with the caller's nullable
+            /// authoritative endpoint, gated per spec §1: emitted iff
             /// at least one transition occurred OR a run id was supplied
             /// (an empty run id string still counts — the caller maps env
             /// presence to non-null).
             /// </summary>
-            internal void FinalizeRunEnd()
+            internal void FinalizeRunEnd(string expectedMovieEndMode)
             {
                 if (DetourActive)
                 {
@@ -519,6 +548,7 @@ namespace OpenGGF.BizHawk.Headless
                             runId,
                             sourceBk2,
                             luaScriptVersion,
+                            expectedMovieEndMode,
                             segments,
                             transitions);
                     }

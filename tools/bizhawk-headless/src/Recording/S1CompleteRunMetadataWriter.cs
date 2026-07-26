@@ -24,13 +24,13 @@ namespace OpenGGF.BizHawk.Headless
     public static class S1CompleteRunMetadataWriter
     {
         /// <summary>
-        /// The version the current Lua stamps. The in-file changelog has no
-        /// 3.15..3.17 entries; the 3.14 -> 3.17 output-byte neutrality on
+        /// The version the current Lua stamps. The 3.14 -> 3.18
+        /// output-byte neutrality on
         /// the stage-free level path was verified against the actual
         /// version-bump commits (spec section 2): the only level-metadata
         /// delta is this string.
         /// </summary>
-        public const string LuaScriptVersion = "3.17";
+        public const string LuaScriptVersion = "3.18";
 
         /// <summary>
         /// The unconditional aux_schema_extras line. The env-gated

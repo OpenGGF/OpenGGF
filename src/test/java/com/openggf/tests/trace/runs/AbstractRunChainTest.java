@@ -184,7 +184,7 @@ abstract class AbstractRunChainTest {
                 stepFrames(loop, remainingFrames);
                 maybeWriteReport(run.runId(), i, activeComparator);
                 if (last) {
-                    replayTerminalMovieTail(loop, inputHandler, movie, seg);
+                    replayTerminalMovieTail(run, loop, inputHandler, movie, seg);
                     break;
                 }
                 SegmentPlan next = plans.get(i + 1);
@@ -939,23 +939,16 @@ abstract class AbstractRunChainTest {
                 interior.segment().bk2FrameOffset(), interior.segment().traceFrameCount());
     }
 
-    /**
-     * Replays movie rows that occur after the final manifest trace segment.
-     * Sonic 1's recorder intentionally emits comparison segments only while
-     * native level gameplay is active; a complete-game movie can continue
-     * through the ending cutscene, credits demos/text, post-credits screen,
-     * and back to the title screen. The per-game trace profile opts into that
-     * terminal lifecycle assertion without changing other games' chain lanes.
-     */
+    /** Replays and asserts only the terminal behavior declared by the run manifest. */
     private static void replayTerminalMovieTail(
+            TraceRunManifest run,
             GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan lastSegment) {
-        var profile = GameServices.module().getTracePlaybackProfile();
-        if (!profile.replayTerminalMovieTailToTitleScreen()) {
-            return;
-        }
         int tailStart = lastSegment.segment().bk2FrameOffset()
                 + lastSegment.segment().traceFrameCount();
-        if (tailStart >= movie.getFrameCount()) {
+        var tailPlan = TraceRunReplayWalker.planTerminalMovieTail(
+                run.expectedMovieEndMode(),
+                tailStart, movie.getFrameCount());
+        if (!tailPlan.shouldAssertExpectedMode()) {
             return;
         }
 
@@ -964,7 +957,8 @@ abstract class AbstractRunChainTest {
         // the local terminal-tail driver, including non-LEVEL modes where the
         // ordinary playback cursor intentionally remains frozen.
         GameServices.playbackDebug().endSession();
-        for (int absoluteRow = tailStart; absoluteRow < movie.getFrameCount(); absoluteRow++) {
+        for (int absoluteRow = tailPlan.tailStart();
+                absoluteRow < movie.getFrameCount(); absoluteRow++) {
             Bk2FrameInput current = movie.getFrame(absoluteRow);
             Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
             inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
@@ -976,9 +970,9 @@ abstract class AbstractRunChainTest {
         }
 
         System.out.printf("[TRACE-RUN-TAIL] rows=%d finalMode=%s%n",
-                movie.getFrameCount() - tailStart, loop.getCurrentGameMode());
-        assertEquals(GameMode.TITLE_SCREEN, loop.getCurrentGameMode(),
-                "Complete Sonic 1 movie must finish back at the title screen");
+                tailPlan.rowsToReplay(), loop.getCurrentGameMode());
+        assertEquals(tailPlan.expectedMode(), loop.getCurrentGameMode(),
+                "Complete movie must finish in the manifest-declared mode");
     }
 
     /**

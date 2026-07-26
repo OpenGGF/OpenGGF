@@ -1,7 +1,9 @@
 package com.openggf.trace;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -28,7 +30,8 @@ public record TraceRunManifest(
     @JsonProperty("rom_checksum") String romChecksum,
     @JsonProperty("lua_script_version") String luaScriptVersion,
     @JsonProperty("segments") List<Segment> segments,
-    @JsonProperty("transitions") List<Transition> transitions
+    @JsonProperty("transitions") List<Transition> transitions,
+    @JsonProperty("expected_movie_end_mode") ExpectedMovieEndMode expectedMovieEndMode
 ) {
 
     public static final int SUPPORTED_RUN_SCHEMA = 1;
@@ -36,6 +39,42 @@ public record TraceRunManifest(
     public static final Set<String> ENTRY_KINDS =
         Set.of("giant_ring", "starpost_special", "starpost_bonus", "stage_exit",
             "death_restart", "level_advance");
+
+    public TraceRunManifest {
+        if (expectedMovieEndMode == null) {
+            expectedMovieEndMode = ExpectedMovieEndMode.UNSPECIFIED;
+        }
+    }
+
+    /** Source-compatible constructor for manifests created before terminal mode was recorded. */
+    public TraceRunManifest(
+            int runSchema, String game, String runId, String sourceBk2,
+            String romChecksum, String luaScriptVersion, List<Segment> segments,
+            List<Transition> transitions) {
+        this(runSchema, game, runId, sourceBk2, romChecksum, luaScriptVersion,
+                segments, transitions, ExpectedMovieEndMode.UNSPECIFIED);
+    }
+
+    /**
+     * Terminal mode sampled by the recorder at movie completion. Its wire form
+     * is deliberately lowercase and optional: missing data disables terminal
+     * tail playback rather than inferring a lifecycle from the game.
+     */
+    public enum ExpectedMovieEndMode {
+        UNSPECIFIED,
+        LEVEL,
+        TITLE_SCREEN;
+
+        @JsonCreator
+        public static ExpectedMovieEndMode fromJson(String wireValue) {
+            return switch (wireValue) {
+                case "level" -> LEVEL;
+                case "title_screen" -> TITLE_SCREEN;
+                default -> throw new IllegalArgumentException(
+                        "Unknown expected_movie_end_mode '" + wireValue + "'");
+            };
+        }
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Segment(
@@ -68,7 +107,12 @@ public record TraceRunManifest(
 
     public static TraceRunManifest load(Path manifestPath) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(Files.readString(manifestPath), TraceRunManifest.class);
+        JsonNode root = mapper.readTree(Files.readString(manifestPath));
+        JsonNode expectedEndMode = root.get("expected_movie_end_mode");
+        if (expectedEndMode != null && !expectedEndMode.isTextual()) {
+            throw new IOException("expected_movie_end_mode must be a string when present");
+        }
+        return mapper.treeToValue(root, TraceRunManifest.class);
     }
 
     /**
