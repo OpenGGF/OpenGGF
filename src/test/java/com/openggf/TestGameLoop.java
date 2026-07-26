@@ -290,11 +290,14 @@ public class TestGameLoop {
     public void traceRealtimeRewindRunsBeforePlaybackInputBridge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int rewind = source.indexOf("TraceSessionLauncher.active().handleRealtimeRewindInput(");
+        int admission = source.indexOf("FrameAdmission admission = admitLevelIteration");
         int bridge = source.indexOf("syncPlaybackInputBridge();");
         assertTrue(rewind >= 0, "GameLoop must handle trace realtime rewind");
         assertTrue(bridge >= 0, "GameLoop must bridge playback input");
         assertTrue(rewind < bridge,
                 "Rewind release must seek/play the playback timeline before forced input is sampled");
+        assertTrue(admission >= 0 && admission < bridge,
+                "playback forced input must not be published before setup admission");
     }
 
     @Test
@@ -345,12 +348,10 @@ public class TestGameLoop {
         assertTrue(updateLevel >= 0 && updateLevelEnd > updateLevel, "updateLevelMode method must exist");
         String levelBody = source.substring(updateLevel, updateLevelEnd);
 
-        for (String required : List.of(
-                "finishUserRecordingPlaybackAtLevelBoundary(true);",
-                "finishUserRecordingPlaybackAtLevelBoundary(false);")) {
-            assertTrue(levelBody.contains(required),
-                    "Level-boundary returns must notify playback policy via " + required);
-        }
+        assertTrue(source.contains("finishUserRecordingPlaybackAtLevelBoundary(true);"),
+                "Seamless boundary completion must notify playback policy");
+        assertTrue(levelBody.contains("finishUserRecordingPlaybackAtLevelBoundary(false);"),
+                "Fade-based level-boundary returns must notify playback policy");
     }
 
     @Test
@@ -449,13 +450,36 @@ public class TestGameLoop {
     @Test
     public void playbackStartInputFeedsGameplayPauseEdge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
-        int updateLevel = source.indexOf("private boolean updateLevelMode(");
-        int levelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
-        assertTrue(updateLevel >= 0 && levelEnd > updateLevel, "updateLevelMode method must exist");
-        String levelBody = source.substring(updateLevel, levelEnd);
+        int stepInternal = source.indexOf("private void stepInternal()");
+        int admission = source.indexOf("private FrameAdmission admitLevelIteration(", stepInternal);
+        assertTrue(stepInternal >= 0 && admission > stepInternal, "stepInternal method must exist");
+        String outerFrameBody = source.substring(stepInternal, admission);
 
-        assertTrue(levelBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
+        assertTrue(outerFrameBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
                 "Recorded P1 Start must route to the same gameplay pause edge as live Start");
+    }
+
+    @Test
+    public void setupAdmissionPrecedesSeamlessBoundaryAndTraceCameraMutations() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int step = source.indexOf("private void stepInternal()");
+        int end = source.indexOf("private FrameAdmission admitLevelIteration(", step);
+        String body = source.substring(step, end);
+
+        int admission = body.indexOf("FrameAdmission admission = admitLevelIteration");
+        int boundary = body.indexOf("completePendingSeamlessBoundary", admission);
+        int traceCamera = body.indexOf("traceCameraFocusController.tick", admission);
+        int timers = body.indexOf("profiler.beginSection(\"timers\")", admission);
+        assertTrue(admission >= 0 && boundary > admission && traceCamera > boundary
+                        && timers > traceCamera,
+                "seamless boundary completion and trace-camera input must follow setup admission");
+
+        int admit = source.indexOf("private FrameAdmission admitLevelIteration(");
+        int admitEnd = source.indexOf("private void applyPendingSeamlessTransitionForAdmission", admit);
+        String admitBody = source.substring(admit, admitEnd);
+        assertTrue(admitBody.indexOf("applyPendingSeamlessTransitionForAdmission()")
+                        < admitBody.indexOf("LevelFrameStep.admit("),
+                "a seamless load must arm its setup token before frame classification");
     }
 
     @Test

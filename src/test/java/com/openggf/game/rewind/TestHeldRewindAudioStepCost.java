@@ -143,6 +143,7 @@ class TestHeldRewindAudioStepCost {
                         }
                     }
                 }
+                return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
             };
             RewindController controller = new RewindController(
                     new RewindRegistry(),

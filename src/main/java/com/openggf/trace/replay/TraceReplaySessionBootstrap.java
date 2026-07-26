@@ -243,7 +243,7 @@ public final class TraceReplaySessionBootstrap {
                 && gameplayMode != null
                 && gameplayMode.getLevelManager() != null) {
             gameplayMode.getLevelManager()
-                    .discardPendingInitialObjectSetupForStateRestoration();
+                    .discardPendingInitialProcessSpritesForStateRestoration();
         }
         if (gameplayMode != null
                 && gameplayMode.getLevelManager() != null
@@ -392,7 +392,7 @@ public final class TraceReplaySessionBootstrap {
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
         if (gameplayMode != null && gameplayMode.getLevelManager() != null) {
-            gameplayMode.getLevelManager().consumePendingInitialObjectSetupPass();
+            gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
         }
         applyInitialRngSeedForReplay(trace.metadata());
         TraceReplayBootstrap.SnapshotReport snapshotReport =
@@ -561,7 +561,7 @@ public final class TraceReplaySessionBootstrap {
         // (sonic3k.asm:7849-7860). Do not let the fresh fixture's pending
         // authority execute that represented pass again when the shared
         // LevelFrameStep begins the bonus-stage interior.
-        GameServices.level().discardPendingInitialObjectSetupForStateRestoration();
+        GameServices.level().discardPendingInitialProcessSpritesForStateRestoration();
         // Comparison-bootstrap seam (same pattern as applyInitialRngSeedForReplay
         // / metadata.rng_seed above): when the trace recorded the ROM's
         // free-running V_int_run_count at bonus-stage entry (recorder

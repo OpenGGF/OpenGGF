@@ -2,7 +2,7 @@ package com.openggf.level;
 
 import com.openggf.game.GameModule;
 import com.openggf.game.InitStep;
-import com.openggf.game.InitialObjectSetupLifecycle;
+import com.openggf.game.InitialProcessSpritesLifecycle;
 import com.openggf.game.LevelAssemblyKind;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelLoadContext;
@@ -60,9 +60,9 @@ class TestInitialProcessSpritesArmingEpoch {
             @Override
             public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
                 return List.of(new InitStep(
-                        "RequestInitialObjectSetup", "test",
-                        () -> ctx.requestInitialObjectSetupFromProfile(
-                                InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE)));
+                        "RequestInitialProcessSprites", "test",
+                        () -> ctx.requestInitialProcessSpritesFromProfile(
+                                InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE)));
             }
 
             @Override public List<InitStep> levelTeardownSteps() { return List.of(); }

@@ -308,7 +308,7 @@ class TestRewindManySidekickPerformanceTrace {
         }
 
         @Override
-        public void step(Bk2FrameInput inputs) {
+        public com.openggf.LevelFrameResult step(Bk2FrameInput inputs) {
             int mask = inputs.p1InputMask();
             boolean jump = (mask & AbstractPlayableSprite.INPUT_JUMP) != 0;
             int dx = ((mask & AbstractPlayableSprite.INPUT_RIGHT) != 0 ? 2 : 0)
@@ -316,6 +316,7 @@ class TestRewindManySidekickPerformanceTrace {
             moveMainSprite(mask, jump, dx);
             moveSidekicks(mask, jump);
             previousJump = jump;
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
         }
 
         @Override

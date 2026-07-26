@@ -1,7 +1,7 @@
 package com.openggf.level.rewind;
 
 import com.openggf.game.LevelGamestate;
-import com.openggf.game.InitialObjectSetupLifecycle;
+import com.openggf.game.InitialProcessSpritesLifecycle;
 import com.openggf.game.mutation.DirectLevelMutationSurface;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
@@ -39,8 +39,8 @@ class TestLevelRewindSnapshotAdapter {
         when(manager.getLevelGamestate()).thenReturn(levelState);
         when(manager.getFrameCounter()).thenReturn(77);
         when(manager.isRespawnRequestedForRewind()).thenReturn(true);
-        when(manager.capturePendingInitialObjectSetupLifecycleForRewind())
-                .thenReturn(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        when(manager.capturePendingInitialProcessSpritesLifecycleForRewind())
+                .thenReturn(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
 
         LevelSnapshot snapshot = LevelRewindSnapshotAdapter.create(manager).capture();
 
@@ -53,8 +53,8 @@ class TestLevelRewindSnapshotAdapter {
         assertEquals(456, snapshot.levelTimerFrames());
         assertTrue(snapshot.levelTimerPaused());
         assertTrue(snapshot.respawnRequested());
-        assertEquals(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE,
-                snapshot.pendingInitialObjectSetupLifecycle());
+        assertEquals(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE,
+                snapshot.pendingInitialProcessSpritesLifecycle());
     }
 
     @Test
@@ -65,8 +65,8 @@ class TestLevelRewindSnapshotAdapter {
         LevelManager manager = mock(LevelManager.class);
         when(manager.getCurrentLevel()).thenReturn(level);
         when(manager.getLevelGamestate()).thenReturn(levelState);
-        when(manager.capturePendingInitialObjectSetupLifecycleForRewind())
-                .thenReturn(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        when(manager.capturePendingInitialProcessSpritesLifecycleForRewind())
+                .thenReturn(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
         RewindSnapshottable<LevelSnapshot> adapter = LevelRewindSnapshotAdapter.create(manager);
 
         LevelSnapshot snapshot = adapter.capture();
@@ -74,8 +74,8 @@ class TestLevelRewindSnapshotAdapter {
         adapter.restore(snapshot);
 
         assertTrue(levelState.isTimerPaused());
-        verify(manager).restorePendingInitialObjectSetupLifecycleForRewind(
-                InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        verify(manager).restorePendingInitialProcessSpritesLifecycleForRewind(
+                InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
     }
 
     @Test
@@ -100,7 +100,7 @@ class TestLevelRewindSnapshotAdapter {
                 false,
                 true,
                 null,
-                InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+                InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
 
         RewindSnapshottable<LevelSnapshot> adapter = LevelRewindSnapshotAdapter.create(manager);
         adapter.restore(snapshot);
@@ -115,8 +115,8 @@ class TestLevelRewindSnapshotAdapter {
         verify(manager).invalidateAllTilemaps();
         verify(manager).restoreRespawnRequestedForRewind(true);
         verify(manager).restoreCheckpointStateForRewind(null);
-        verify(manager).restorePendingInitialObjectSetupLifecycleForRewind(
-                InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        verify(manager).restorePendingInitialProcessSpritesLifecycleForRewind(
+                InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
     }
 
     @Test
@@ -138,7 +138,7 @@ class TestLevelRewindSnapshotAdapter {
                 true,
                 false,
                 null,
-                InitialObjectSetupLifecycle.NONE);
+                InitialProcessSpritesLifecycle.NONE);
 
         LevelRewindSnapshotAdapter.create(manager).restore(snapshot);
 
@@ -152,8 +152,8 @@ class TestLevelRewindSnapshotAdapter {
         verify(manager).setFrameCounter(44);
         verify(manager).restoreRespawnRequestedForRewind(false);
         verify(manager).restoreCheckpointStateForRewind(null);
-        verify(manager).restorePendingInitialObjectSetupLifecycleForRewind(
-                InitialObjectSetupLifecycle.NONE);
+        verify(manager).restorePendingInitialProcessSpritesLifecycleForRewind(
+                InitialProcessSpritesLifecycle.NONE);
     }
 
     @Test

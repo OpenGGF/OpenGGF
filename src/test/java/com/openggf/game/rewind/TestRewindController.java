@@ -28,7 +28,10 @@ class TestRewindController {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(10);
         AtomicInteger stepCount = new AtomicInteger();
-        EngineStepper stepper = (in) -> stepCount.incrementAndGet();
+        EngineStepper stepper = (in) -> {
+            stepCount.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
 
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 3);
         assertEquals(0, rc.currentFrame());
@@ -50,7 +53,10 @@ class TestRewindController {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(10);
         AtomicInteger state = new AtomicInteger(0);
-        EngineStepper stepper = (in) -> state.incrementAndGet();
+        EngineStepper stepper = (in) -> {
+            state.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
 
         // Register a simple snapshottable
         reg.register(new RewindSnapshottable<Integer>() {
@@ -98,7 +104,10 @@ class TestRewindController {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(100);
         AtomicInteger stepInvocations = new AtomicInteger();
-        EngineStepper stepper = (in) -> stepInvocations.incrementAndGet();
+        EngineStepper stepper = (in) -> {
+            stepInvocations.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
 
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 10);
 
@@ -138,6 +147,7 @@ class TestRewindController {
         EngineStepper stepper = in -> {
             stepInvocations.incrementAndGet();
             state.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
         };
         RewindController rc = new RewindController(reg, keyframes, new FakeInputSource(100), stepper, 10);
         for (int i = 0; i < 15; i++) rc.step();
@@ -163,7 +173,8 @@ class TestRewindController {
     void forwardResumeInvalidatesWarmBackwardCache() {
         CountingKeyframeStore keyframes = new CountingKeyframeStore();
         RewindController rc = new RewindController(
-                new RewindRegistry(), keyframes, new FakeInputSource(100), in -> {}, 10);
+                new RewindRegistry(), keyframes, new FakeInputSource(100),
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME, 10);
         for (int i = 0; i < 15; i++) rc.step();
         assertTrue(rc.stepBackward());
         assertTrue(rc.stepBackward());
@@ -182,7 +193,10 @@ class TestRewindController {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(100);
         AtomicInteger stepInvocations = new AtomicInteger();
-        EngineStepper stepper = (in) -> stepInvocations.incrementAndGet();
+        EngineStepper stepper = (in) -> {
+            stepInvocations.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
 
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 10);
 
@@ -199,7 +213,7 @@ class TestRewindController {
         RewindRegistry reg = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(20);
-        EngineStepper stepper = (in) -> {};
+        EngineStepper stepper = (in) -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
 
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 3);
         for (int i = 0; i < 6; i++) rc.step();
@@ -216,7 +230,7 @@ class TestRewindController {
         RewindRegistry reg = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(20);
-        EngineStepper stepper = (in) -> {};
+        EngineStepper stepper = (in) -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
 
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 3);
         for (int i = 0; i < 6; i++) rc.step();
@@ -233,7 +247,7 @@ class TestRewindController {
         RewindRegistry reg = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(10);
-        EngineStepper stepper = (in) -> {};
+        EngineStepper stepper = (in) -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
 
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 5);
         rc.seekTo(-5);  // Request before earliest frame
@@ -245,7 +259,7 @@ class TestRewindController {
         RewindRegistry reg = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(10);
-        EngineStepper stepper = (in) -> {};
+        EngineStepper stepper = (in) -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
 
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 5);
         assertFalse(rc.stepBackward(), "should return false at earliest frame");
@@ -270,6 +284,7 @@ class TestRewindController {
                 fadeManager.startFadeToBlack(completions::incrementAndGet, 0, 0);
             }
             fadeManager.update();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
         };
 
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 5);
@@ -325,6 +340,7 @@ class TestRewindController {
                 reg, keyframes, new FakeInputSource(30), in -> {
                     steps.incrementAndGet();
                     state.incrementAndGet();
+                    return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
                 }, 5);
         for (int i = 0; i < 7; i++) rc.step();
 
@@ -351,7 +367,7 @@ class TestRewindController {
         RewindRegistry reg = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(100);
-        EngineStepper stepper = (in) -> {};
+        EngineStepper stepper = (in) -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
 
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 10);
         for (int i = 0; i < 25; i++) rc.step();
@@ -373,7 +389,10 @@ class TestRewindController {
                 reg,
                 keyframes,
                 inputs,
-                in -> stepInvocations.incrementAndGet(),
+                in -> {
+                    stepInvocations.incrementAndGet();
+                    return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+                },
                 3);
 
         assertTrue(rc.recordExternalStep());
@@ -388,7 +407,9 @@ class TestRewindController {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(10);
 
-        RewindController rc = new RewindController(reg, keyframes, inputs, in -> {}, 3);
+        RewindController rc = new RewindController(
+                reg, keyframes, inputs,
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME, 3);
 
         assertTrue(rc.recordExternalStep());
         assertTrue(rc.recordExternalStep());
@@ -405,7 +426,9 @@ class TestRewindController {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(200);
 
-        RewindController rc = new RewindController(reg, keyframes, inputs, in -> {}, 10);
+        RewindController rc = new RewindController(
+                reg, keyframes, inputs,
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME, 10);
         for (int i = 0; i < 35; i++) {
             rc.step();
         }
@@ -425,7 +448,9 @@ class TestRewindController {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(20);
 
-        RewindController rc = new RewindController(reg, keyframes, inputs, in -> {}, 10);
+        RewindController rc = new RewindController(
+                reg, keyframes, inputs,
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME, 10);
         for (int i = 0; i < 5; i++) {
             rc.step();
         }
@@ -470,8 +495,9 @@ class TestRewindController {
         }
 
         @Override
-        public void step(Bk2FrameInput inputs) {
+        public com.openggf.LevelFrameResult step(Bk2FrameInput inputs) {
             steppedFrames.add(inputs.frameIndex());
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
         }
     }
 

@@ -49,6 +49,19 @@ public final class LevelFrameStep {
         // Utility class
     }
 
+    public static FrameAdmission admit(
+            LevelFrameContext context, LevelManager levelManager,
+            boolean startEdgePressed) {
+        GameStateManager gameState = context.gameStateManager();
+        if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
+            return new FrameAdmission(LevelFrameResult.PAUSED);
+        }
+        if (levelManager.consumePendingInitialProcessSpritesPass()) {
+            return new FrameAdmission(LevelFrameResult.SETUP_ONLY);
+        }
+        return new FrameAdmission(LevelFrameResult.GAMEPLAY_FRAME);
+    }
+
     /**
      * Executes one frame of level-mode updates in the canonical production order,
      * without any step wrapping.
@@ -58,9 +71,10 @@ public final class LevelFrameStep {
      * @param spriteUpdate callback that runs the sprite/player physics update
      *                     (e.g. {@code SpriteManager.update()} or headless equivalent)
      */
-    public static void execute(LevelFrameContext context, LevelManager levelManager, Camera camera,
-                               Runnable spriteUpdate) {
-        execute(context, levelManager, camera, spriteUpdate, DIRECT);
+    public static LevelFrameResult execute(
+            LevelFrameContext context, LevelManager levelManager, Camera camera,
+            Runnable spriteUpdate) {
+        return execute(context, levelManager, camera, spriteUpdate, DIRECT);
     }
 
     /**
@@ -75,21 +89,19 @@ public final class LevelFrameStep {
      * row), so a paused window stays frame-aligned.
      *
      * @param startEdgePressed true only on the leading edge of a Start press
-     * @return true if the level update ran, false if it was skipped due to pause
+     * @return {@link LevelFrameResult#PAUSED} when pause owns the row,
+     *         {@link LevelFrameResult#SETUP_ONLY} for the one-shot setup pass,
+     *         otherwise {@link LevelFrameResult#GAMEPLAY_FRAME}
      */
-    public static boolean executeWithPause(LevelFrameContext context, LevelManager levelManager,
-                                           Camera camera, Runnable spriteUpdate,
-                                           boolean startEdgePressed, StepWrapper wrapper) {
+    public static LevelFrameResult executeWithPause(
+            LevelFrameContext context, LevelManager levelManager,
+            Camera camera, Runnable spriteUpdate,
+            boolean startEdgePressed, StepWrapper wrapper) {
         GameStateManager gameState = context.gameStateManager();
         if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
-            // Paused: ROM Pause_Loop runs only the V-int. Skip the level update
-            // entirely (objects, physics, camera, scroll). The caller's frame
-            // counter / input cursor still advanced before this call, so the
-            // paused window stays frame-aligned with the recorded ROM run.
-            return false;
+            return LevelFrameResult.PAUSED;
         }
-        execute(context, levelManager, camera, spriteUpdate, wrapper);
-        return true;
+        return execute(context, levelManager, camera, spriteUpdate, wrapper);
     }
 
     public static void updateTimers(LevelFrameContext context) {
@@ -107,8 +119,9 @@ public final class LevelFrameStep {
      * @param spriteUpdate callback that runs the sprite/player physics update
      * @param wrapper      wraps individual steps (e.g. for profiling)
      */
-    public static void execute(LevelFrameContext context, LevelManager levelManager, Camera camera,
-                               Runnable spriteUpdate, StepWrapper wrapper) {
+    public static LevelFrameResult execute(
+            LevelFrameContext context, LevelManager levelManager, Camera camera,
+            Runnable spriteUpdate, StepWrapper wrapper) {
         if (context == null) {
             throw new NullPointerException("context");
         }
@@ -117,7 +130,9 @@ public final class LevelFrameStep {
         // before entering LevelLoop (docs/skdisasm/sonic3k.asm:7849-7855,
         // 7889-7906). executeWithPause reaches this body only after its pause
         // gate, so a paused first frame retains the one-shot authority.
-        levelManager.consumePendingInitialObjectSetupPass();
+        if (levelManager.consumePendingInitialProcessSpritesPass()) {
+            return LevelFrameResult.SETUP_ONLY;
+        }
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
         //     any submitter (object palette writes in steps 2-3, zone palette
@@ -303,7 +318,7 @@ public final class LevelFrameStep {
             if (spriteManager != null) {
                 spriteManager.refreshPlayableRenderFlags(camera);
             }
-            return;
+            return LevelFrameResult.GAMEPLAY_FRAME;
         }
 
         if (integratedBonusStageUpdate) {
@@ -327,6 +342,7 @@ public final class LevelFrameStep {
             spriteManager.refreshPlayableRenderFlags(camera);
         }
         levelManager.clearSidekickRomVisibleReloadFrameCounterBridge();
+        return LevelFrameResult.GAMEPLAY_FRAME;
     }
 
 }

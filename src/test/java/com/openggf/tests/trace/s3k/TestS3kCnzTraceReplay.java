@@ -183,8 +183,8 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
 
         try (BootstrappedCnzReplay replay =
                      bootstrappedCnzReplay(trace, false, false)) {
-            assertFalse(GameServices.level().hasPendingInitialObjectSetupPass(), variant.name());
-            assertFalse(GameServices.level().consumePendingInitialObjectSetupPass(), variant.name());
+            assertFalse(GameServices.level().hasPendingInitialProcessSpritesPass(), variant.name());
+            assertFalse(GameServices.level().consumePendingInitialProcessSpritesPass(), variant.name());
         }
     }
 
@@ -194,8 +194,8 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
 
         try (BootstrappedCnzReplay replay =
                      bootstrappedCnzReplay(trace, true, false)) {
-            assertFalse(GameServices.level().hasPendingInitialObjectSetupPass());
-            assertFalse(GameServices.level().consumePendingInitialObjectSetupPass());
+            assertFalse(GameServices.level().hasPendingInitialProcessSpritesPass());
+            assertFalse(GameServices.level().consumePendingInitialProcessSpritesPass());
         }
     }
 
@@ -1230,10 +1230,10 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                 .withFreshLevelStartLifecycle()
                 .build();
 
-        assertTrue(GameServices.level().hasPendingInitialObjectSetupPass(),
+        assertTrue(GameServices.level().hasPendingInitialProcessSpritesPass(),
                 "a genuine production load must publish setup authority");
         if (discardProductionToken) {
-            GameServices.level().discardPendingInitialObjectSetupForStateRestoration();
+            GameServices.level().discardPendingInitialProcessSpritesForStateRestoration();
         }
         int objectFrameBefore = GameServices.level().getObjectManager().getFrameCounter();
         TraceReplaySessionBootstrap.BootstrapResult boot =
@@ -1241,7 +1241,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
         assertEquals(objectFrameBefore + (discardProductionToken ? 0 : 1),
                 GameServices.level().getObjectManager().getFrameCounter(),
                 "bootstrap may execute only authority published by the production load");
-        assertFalse(GameServices.level().consumePendingInitialObjectSetupPass(),
+        assertFalse(GameServices.level().consumePendingInitialProcessSpritesPass(),
                 "bootstrap must already consume the production setup token");
         if (assertOpeningState) {
             assertEquals(List.of(0x11, 0x38, 0x38, 0xA8), liveOpeningBalloonAngles(),
@@ -1347,7 +1347,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                         trace.initialVIntRunCounterPhaseOffset());
                 GameServices.level().getObjectManager().initVblaCounter(
                         trace.initialVblankCounter() - 1);
-                assertTrue(GameServices.level().consumePendingInitialObjectSetupPass());
+                assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
                 TraceReplaySessionBootstrap.applyInitialRngSeedForReplay(trace.metadata());
             }
             TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(

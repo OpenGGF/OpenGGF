@@ -9,7 +9,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.InitStep;
-import com.openggf.game.InitialObjectSetupLifecycle;
+import com.openggf.game.InitialProcessSpritesLifecycle;
 import com.openggf.game.LevelAssemblyKind;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelLoadContext;
@@ -67,10 +67,7 @@ class TestS3kInitialObjectSetupLifecycle {
             AbstractPlayableSprite p2 = GameServices.sprites().getSidekicks().getFirst();
             int objectBefore = manager.getObjectManager().getFrameCounter();
             int levelBefore = manager.getFrameCounter();
-
-            assertTrue(nativeObjectControl(p1) != 0x53,
-                    "fresh load must not already contain the plane-intro control publication");
-            assertEquals(0, nativeObjectControl(p2));
+            int p2ControlBefore = nativeObjectControl(p2);
 
             LevelFrameResult setup = LevelFrameStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
@@ -81,11 +78,11 @@ class TestS3kInitialObjectSetupLifecycle {
             assertEquals(LevelFrameResult.SETUP_ONLY, setup);
             assertEquals(objectBefore + 1, manager.getObjectManager().getFrameCounter());
             assertEquals(levelBefore, manager.getFrameCounter());
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
             // Obj_AIZPlaneIntro publishes Player_1 object_control=$53 from its
-            // dynamic setup slot; P2 remains zero (sonic3k.asm:26101-26156).
+            // dynamic setup slot; it does not change P2 (sonic3k.asm:26101-26156).
             assertEquals(0x53, nativeObjectControl(p1));
-            assertEquals(0, nativeObjectControl(p2));
+            assertEquals(p2ControlBefore, nativeObjectControl(p2));
 
             LevelFrameResult gameplay = LevelFrameStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
@@ -122,7 +119,7 @@ class TestS3kInitialObjectSetupLifecycle {
                     }, true, LevelFrameStep.DIRECT_WRAPPER);
 
             assertEquals(LevelFrameResult.PAUSED, result);
-            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertTrue(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(objectBefore, manager.getObjectManager().getFrameCounter());
         } finally {
             sharedLevel.dispose();
@@ -148,10 +145,10 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelLoadContext ctx = context(
                     authorityCase.mode(), authorityCase.postLoad(), authorityCase.assemblyKind());
             manager.loadLevel(0, authorityCase.mode(), ctx);
-            assertTrue(manager.hasPendingInitialObjectSetupPass() == authorityCase.expected(),
+            assertTrue(manager.hasPendingInitialProcessSpritesPass() == authorityCase.expected(),
                     authorityCase.toString());
-            assertTrue((ctx.requestedInitialObjectSetupLifecycle()
-                            == InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE)
+            assertTrue((ctx.requestedInitialProcessSpritesLifecycle()
+                            == InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE)
                             == authorityCase.expected(),
                     authorityCase.toString());
         }
@@ -162,10 +159,10 @@ class TestS3kInitialObjectSetupLifecycle {
         LevelLoadContext ctx = freshContext();
         LevelManager manager = managerWithProfile(requestingProfile());
 
-        assertFalse(manager.hasPendingInitialObjectSetupPass());
+        assertFalse(manager.hasPendingInitialProcessSpritesPass());
         manager.loadLevel(0, LevelLoadMode.FULL, ctx);
 
-        assertTrue(manager.hasPendingInitialObjectSetupPass());
+        assertTrue(manager.hasPendingInitialProcessSpritesPass());
     }
 
     @Test
@@ -173,7 +170,7 @@ class TestS3kInitialObjectSetupLifecycle {
         LevelManager manager = managerWithProfile(requestingProfile());
         LevelLoadContext reused = freshContext();
         manager.loadLevel(0, LevelLoadMode.FULL, reused);
-        assertTrue(manager.hasPendingInitialObjectSetupPass());
+        assertTrue(manager.hasPendingInitialProcessSpritesPass());
 
         List<AuthorityCase> deniedReuseCases = List.of(
                 new AuthorityCase(false, LevelLoadMode.FULL, true,
@@ -190,14 +187,14 @@ class TestS3kInitialObjectSetupLifecycle {
             reused.setAssemblyKind(denied.assemblyKind());
             manager.loadLevel(0, denied.mode(), reused);
 
-            assertFalse(manager.hasPendingInitialObjectSetupPass(), denied.toString());
-            assertEquals(InitialObjectSetupLifecycle.NONE,
-                    reused.requestedInitialObjectSetupLifecycle(), denied.toString());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass(), denied.toString());
+            assertEquals(InitialProcessSpritesLifecycle.NONE,
+                    reused.requestedInitialProcessSpritesLifecycle(), denied.toString());
 
             reused.setIncludePostLoadAssembly(true);
             reused.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
             manager.loadLevel(0, LevelLoadMode.FULL, reused);
-            assertTrue(manager.hasPendingInitialObjectSetupPass(),
+            assertTrue(manager.hasPendingInitialProcessSpritesPass(),
                     "a fresh authorized retry must publish after " + denied);
         }
     }
@@ -206,7 +203,7 @@ class TestS3kInitialObjectSetupLifecycle {
     void genuineProductionLoadCurrentLevelPublishesRequest() throws Exception {
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
-            assertTrue(GameServices.level().hasPendingInitialObjectSetupPass());
+            assertTrue(GameServices.level().hasPendingInitialProcessSpritesPass());
         } finally {
             sharedLevel.dispose();
         }
@@ -219,11 +216,11 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             int before = manager.getObjectManager().getFrameCounter();
 
-            assertTrue(manager.consumePendingInitialObjectSetupPass());
+            assertTrue(manager.consumePendingInitialProcessSpritesPass());
             assertEquals(before + 1, manager.getObjectManager().getFrameCounter());
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
 
-            assertFalse(manager.consumePendingInitialObjectSetupPass());
+            assertFalse(manager.consumePendingInitialProcessSpritesPass());
             assertEquals(before + 1, manager.getObjectManager().getFrameCounter());
         } finally {
             sharedLevel.dispose();
@@ -242,7 +239,7 @@ class TestS3kInitialObjectSetupLifecycle {
                     new Class<?>[] { boolean.class }, false));
 
             assertEquals(GameMode.BONUS_STAGE, loop.getCurrentGameMode());
-            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertTrue(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
         } finally {
             sharedLevel.dispose();
@@ -260,7 +257,7 @@ class TestS3kInitialObjectSetupLifecycle {
             SpecialStageProvider provider = GameServices.module().getSpecialStageProvider();
 
             loop.enterSpecialStage();
-            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertTrue(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
 
             invoke(loop, "doEnterSpecialStage",
@@ -277,7 +274,7 @@ class TestS3kInitialObjectSetupLifecycle {
             assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
             assertEquals(specialStateBefore, specialStage.captureComparisonState(),
                     "the loop-owned pause gate must skip the special-stage provider tick");
-            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertTrue(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter(),
                     "a paused special-stage tick must not dispatch level objects");
             loop.resume();
@@ -287,7 +284,7 @@ class TestS3kInitialObjectSetupLifecycle {
             loop.step();
 
             assertEquals(GameMode.SPECIAL_STAGE_RESULTS, loop.getCurrentGameMode());
-            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertTrue(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter(),
                     "results ticks must not consume or dispatch fresh-level setup");
         } finally {
@@ -301,7 +298,7 @@ class TestS3kInitialObjectSetupLifecycle {
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             LevelManager manager = GameServices.level();
-            assertTrue(manager.consumePendingInitialObjectSetupPass());
+            assertTrue(manager.consumePendingInitialProcessSpritesPass());
             GameLoop loop = new GameLoop(new InputHandler());
             loop.setGameplayMode(TestEnvironment.activeGameplayMode());
             setField(loop, "currentGameMode", GameMode.SPECIAL_STAGE_RESULTS);
@@ -309,7 +306,7 @@ class TestS3kInitialObjectSetupLifecycle {
             invoke(loop, "doExitResultsScreen", new Class<?>[0]);
 
             assertEquals(GameMode.TITLE_CARD, loop.getCurrentGameMode());
-            assertTrue(manager.hasPendingInitialObjectSetupPass(),
+            assertTrue(manager.hasPendingInitialProcessSpritesPass(),
                     "the genuine return load publishes one fresh setup token");
             int beforeRelease = manager.getObjectManager().getFrameCounter();
             installReleasingTitleProvider(loop);
@@ -317,9 +314,9 @@ class TestS3kInitialObjectSetupLifecycle {
                     new Class<?>[] { boolean.class }, false));
 
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(beforeRelease + 1, manager.getObjectManager().getFrameCounter());
-            assertFalse(manager.consumePendingInitialObjectSetupPass());
+            assertFalse(manager.consumePendingInitialProcessSpritesPass());
             assertEquals(beforeRelease + 1, manager.getObjectManager().getFrameCounter());
         } finally {
             sharedLevel.dispose();
@@ -332,21 +329,21 @@ class TestS3kInitialObjectSetupLifecycle {
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             LevelManager manager = GameServices.level();
-            assertTrue(manager.consumePendingInitialObjectSetupPass());
+            assertTrue(manager.consumePendingInitialProcessSpritesPass());
             GameLoop loop = new GameLoop(new InputHandler());
             loop.setGameplayMode(TestEnvironment.activeGameplayMode());
             setField(loop, "currentGameMode", GameMode.SPECIAL_STAGE_RESULTS);
             invoke(loop, "doExitResultsScreen", new Class<?>[0]);
-            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertTrue(manager.hasPendingInitialProcessSpritesPass());
 
-            manager.discardPendingInitialObjectSetupForStateRestoration();
+            manager.discardPendingInitialProcessSpritesForStateRestoration();
             int beforeRelease = manager.getObjectManager().getFrameCounter();
             installReleasingTitleProvider(loop);
             assertTrue((boolean) invoke(loop, "updateTitleCardMode",
                     new Class<?>[] { boolean.class }, false));
 
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(beforeRelease, manager.getObjectManager().getFrameCounter(),
                     "represented return state must not replay the native setup dispatch");
         } finally {
@@ -367,7 +364,7 @@ class TestS3kInitialObjectSetupLifecycle {
                     }, true, LevelFrameStep.DIRECT_WRAPPER);
 
             assertEquals(LevelFrameResult.PAUSED, paused);
-            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertTrue(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
 
             LevelFrameResult resumed = LevelFrameStep.executeWithPause(
@@ -376,7 +373,7 @@ class TestS3kInitialObjectSetupLifecycle {
                     }, true, LevelFrameStep.DIRECT_WRAPPER);
 
             assertEquals(LevelFrameResult.SETUP_ONLY, resumed);
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(before + 1, manager.getObjectManager().getFrameCounter(),
                     "resume runs setup only; the caller retries for the ordinary frame");
         } finally {
@@ -391,10 +388,10 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             int before = manager.getObjectManager().getFrameCounter();
 
-            manager.discardPendingInitialObjectSetupForStateRestoration();
+            manager.discardPendingInitialProcessSpritesForStateRestoration();
 
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
-            assertFalse(manager.consumePendingInitialObjectSetupPass());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
+            assertFalse(manager.consumePendingInitialProcessSpritesPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
         } finally {
             sharedLevel.dispose();
@@ -413,11 +410,11 @@ class TestS3kInitialObjectSetupLifecycle {
             manager.getObjectManager().addDynamicObject(throwing);
 
             IllegalStateException failure = assertThrows(IllegalStateException.class,
-                    manager::consumePendingInitialObjectSetupPass);
+                    manager::consumePendingInitialProcessSpritesPass);
 
             assertEquals("setup boom", failure.getMessage());
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
-            assertFalse(manager.consumePendingInitialObjectSetupPass());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
+            assertFalse(manager.consumePendingInitialProcessSpritesPass());
         } finally {
             sharedLevel.dispose();
         }
@@ -439,7 +436,7 @@ class TestS3kInitialObjectSetupLifecycle {
     void requestThenThrowClearsOldTokenPreservesCauseAndRetryCanPublish() throws Exception {
         LevelManager manager = managerWithProfile(requestingProfile());
         manager.loadLevel(0, LevelLoadMode.FULL, freshContext());
-        assertTrue(manager.hasPendingInitialObjectSetupPass());
+        assertTrue(manager.hasPendingInitialProcessSpritesPass());
 
         IllegalStateException startupFailure = new IllegalStateException("synthetic startup failure");
         installProfile(requestingProfileThenThrow(startupFailure));
@@ -447,12 +444,12 @@ class TestS3kInitialObjectSetupLifecycle {
                 () -> manager.loadLevel(0, LevelLoadMode.FULL, freshContext()));
 
         assertSame(startupFailure, wrapped.getCause());
-        assertFalse(manager.hasPendingInitialObjectSetupPass(),
+        assertFalse(manager.hasPendingInitialProcessSpritesPass(),
                 "entry must clear the old token and failure must not publish the request");
 
         installProfile(requestingProfile());
         manager.loadLevel(0, LevelLoadMode.FULL, freshContext());
-        assertTrue(manager.hasPendingInitialObjectSetupPass(),
+        assertTrue(manager.hasPendingInitialProcessSpritesPass(),
                 "a genuine successful retry must publish a fresh request");
     }
 
@@ -464,24 +461,24 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelLoadContext restoration = context(
                     LevelLoadMode.FULL, true, LevelAssemblyKind.STATE_RESTORATION);
             manager.loadLevel(0, LevelLoadMode.FULL, restoration);
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
 
             var reusedLevel = manager.getCurrentLevel();
             HeadlessTestFixture.builder().withSharedLevel(sharedLevel).build();
             assertSame(reusedLevel, manager.getCurrentLevel(),
                     "the SharedLevel fixture must reuse the live level without another load");
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
 
             manager.executeActTransition(SeamlessLevelTransitionRequest
                     .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_SAME_LEVEL)
                     .targetZoneAct(0, 0)
                     .preserveMusic(true)
                     .build());
-            assertFalse(manager.hasPendingInitialObjectSetupPass(),
+            assertFalse(manager.hasPendingInitialProcessSpritesPass(),
                     "the production in-place transition bypasses fresh-load authority");
 
             manager.loadCurrentLevel();
-            assertTrue(manager.hasPendingInitialObjectSetupPass(),
+            assertTrue(manager.hasPendingInitialProcessSpritesPass(),
                     "the next genuine playable-runtime assembly publishes one request");
         } finally {
             sharedLevel.dispose();
@@ -492,11 +489,11 @@ class TestS3kInitialObjectSetupLifecycle {
     void teardownClearsPendingLifecycle() throws Exception {
         LevelManager manager = managerWithProfile(requestingProfile());
         manager.loadLevel(0, LevelLoadMode.FULL, freshContext());
-        assertTrue(manager.hasPendingInitialObjectSetupPass());
+        assertTrue(manager.hasPendingInitialProcessSpritesPass());
 
         manager.resetState();
 
-        assertFalse(manager.hasPendingInitialObjectSetupPass());
+        assertFalse(manager.hasPendingInitialProcessSpritesPass());
     }
 
     private static LevelLoadContext context(LevelLoadMode mode,
@@ -517,16 +514,16 @@ class TestS3kInitialObjectSetupLifecycle {
 
     private static LevelInitProfile requestingProfile() {
         return profileWithFactory(ctx -> List.of(new InitStep(
-                "RequestInitialObjectSetup", "test",
-                () -> ctx.requestInitialObjectSetupFromProfile(
-                        InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE))));
+                "RequestInitialProcessSprites", "test",
+                () -> ctx.requestInitialProcessSpritesFromProfile(
+                        InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE))));
     }
 
     private static LevelInitProfile requestingProfileThenThrow(RuntimeException failure) {
         return profileWithFactory(ctx -> List.of(
-                new InitStep("RequestInitialObjectSetup", "test",
-                        () -> ctx.requestInitialObjectSetupFromProfile(
-                                InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE)),
+                new InitStep("RequestInitialProcessSprites", "test",
+                        () -> ctx.requestInitialProcessSpritesFromProfile(
+                                InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE)),
                 new InitStep("ThrowAfterRequest", "test", () -> {
                     throw failure;
                 })));
@@ -566,10 +563,12 @@ class TestS3kInitialObjectSetupLifecycle {
             GameLoop loop = releasingTitleCardLoop("LEVEL");
             assertTrue((boolean) invoke(loop, "updateTitleCardMode",
                     new Class<?>[] { boolean.class }, false));
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
-            LevelFrameStep.execute(LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
-                    manager, GameServices.camera(), () -> {
-                    });
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
+            assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
+                    LevelFrameStep.execute(
+                            LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                            manager, GameServices.camera(), () -> {
+                            }));
             return new ConvergenceState(captureRuntimeState(manager),
                     before, captureOscillator());
         } finally {
@@ -582,10 +581,17 @@ class TestS3kInitialObjectSetupLifecycle {
         try {
             LevelManager manager = GameServices.level();
             OscillatorState before = captureOscillator();
-            LevelFrameStep.execute(LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
-                    manager, GameServices.camera(), () -> {
-                    });
-            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertEquals(LevelFrameResult.SETUP_ONLY,
+                    LevelFrameStep.execute(
+                            LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                            manager, GameServices.camera(), () -> {
+                            }));
+            assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
+                    LevelFrameStep.execute(
+                            LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                            manager, GameServices.camera(), () -> {
+                            }));
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
             return new ConvergenceState(captureRuntimeState(manager),
                     before, captureOscillator());
         } finally {

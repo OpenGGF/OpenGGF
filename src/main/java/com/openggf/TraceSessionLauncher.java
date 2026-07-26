@@ -989,13 +989,13 @@ public final class TraceSessionLauncher {
         }
 
         @Override
-        public void step(Bk2FrameInput inputs) {
+        public LevelFrameResult step(Bk2FrameInput inputs) {
             int relative = Math.max(0, inputs.frameIndex() - movieBaseFrame + 1);
             int traceIndex = traceBaseFrame + relative - 1;
             TraceExecutionPhase phase = executionPhase(traceIndex);
             if (phase == TraceExecutionPhase.ADVANCE_ONLY) {
                 publishPlaybackInput(inputs);
-                return;
+                return LevelFrameResult.GAMEPLAY_FRAME;
             }
             if (phase == TraceExecutionPhase.VBLANK_ONLY
                     || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
@@ -1014,7 +1014,7 @@ public final class TraceSessionLauncher {
                         }
                     }
                 }
-                return;
+                return LevelFrameResult.GAMEPLAY_FRAME;
             }
 
             if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
@@ -1029,15 +1029,26 @@ public final class TraceSessionLauncher {
             var level = GameServices.levelOrNull();
             var camera = GameServices.cameraOrNull();
             if (sprites == null || level == null || camera == null) {
-                return;
+                return LevelFrameResult.PAUSED;
             }
 
+            FrameAdmission admission = LevelFrameStep.admit(
+                    LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+                    level,
+                    inputs.p1StartPressed());
+            if (!admission.runsGameplay()) {
+                return admission.result();
+            }
             publishPlaybackInput(inputs);
             sprites.setPlaybackInputSuppressed(true);
             sprites.publishHeldInputForLevelEvents(loop.getInputHandler());
-            LevelFrameStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+            LevelFrameResult result = LevelFrameStep.execute(
+                    LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
                     level, camera, () -> sprites.update(loop.getInputHandler()));
-            pendingForcedJumpPress = false;
+            if (result == LevelFrameResult.GAMEPLAY_FRAME) {
+                pendingForcedJumpPress = false;
+            }
+            return result;
         }
 
         @Override

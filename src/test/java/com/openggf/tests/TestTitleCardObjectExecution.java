@@ -250,9 +250,20 @@ class TestTitleCardObjectExecution {
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode(),
                     "S3K title card should release within the test guard");
             assertNotNull(beforeRelease);
-            assertEquals(levelFrameBeforeRelease + 1, levelManager.getFrameCounter(),
-                    "release falls through to exactly one ordinary level frame");
+            assertEquals(levelFrameBeforeRelease, levelManager.getFrameCounter(),
+                    "release must exit after the setup-only pass");
             OscillationSnapshot afterRelease = OscillationManager.snapshot();
+            assertOscillationEquals(beforeRelease, afterRelease,
+                    "release must not advance oscillation during the setup-only pass");
+            assertEquals(0, cameraCallSpy.positionUpdates,
+                    "release must not run the ordinary camera path");
+            assertEquals(0, cameraCallSpy.boundaryEasingUpdates,
+                    "release must not run boundary easing");
+
+            loop.step();
+            assertEquals(levelFrameBeforeRelease + 1, levelManager.getFrameCounter(),
+                    "the next ordinary iteration runs exactly one level frame");
+            afterRelease = OscillationManager.snapshot();
             OscillationManager.restore(beforeRelease);
             OscillationManager.update(levelFrameBeforeRelease);
             OscillationSnapshot expectedAfterOneUpdate = OscillationManager.snapshot();
@@ -262,7 +273,7 @@ class TestTitleCardObjectExecution {
             assertEquals(beforeRelease.suppressedUpdates(), afterRelease.suppressedUpdates(),
                     "the VBlank-only locked path must not leak oscillator suppression");
             assertEquals(1, cameraCallSpy.positionUpdates,
-                    "the first unlocked frame performs one normal camera position update");
+                    "the next ordinary frame performs one normal camera position update");
             assertEquals(1, cameraCallSpy.boundaryEasingUpdates,
                     "the first unlocked frame performs one normal boundary-easing update");
         }

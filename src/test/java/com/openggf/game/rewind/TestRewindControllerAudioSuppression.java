@@ -35,7 +35,10 @@ class TestRewindControllerAudioSuppression {
         RewindRegistry registry = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(20);
-        EngineStepper stepper = in -> audio.playSfx("STEP");
+        EngineStepper stepper = in -> {
+            audio.playSfx("STEP");
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
         RewindController controller = new RewindController(registry, keyframes, inputs, stepper, 5, audio);
 
         for (int i = 0; i < 8; i++) {
@@ -56,7 +59,10 @@ class TestRewindControllerAudioSuppression {
         RewindRegistry registry = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(20);
-        EngineStepper stepper = in -> audio.playSfx("STEP");
+        EngineStepper stepper = in -> {
+            audio.playSfx("STEP");
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
         RewindController controller = new RewindController(registry, keyframes, inputs, stepper, 5, audio);
 
         for (int i = 0; i < 8; i++) {
@@ -80,6 +86,7 @@ class TestRewindControllerAudioSuppression {
                     if (failExpansion.get() != 0 && in.frameIndex() == 6) {
                         throw new RuntimeException("failed expansion");
                     }
+                    return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
                 }, 5, audio);
         for (int i = 0; i < 7; i++) controller.step();
         failExpansion.set(1);
@@ -106,6 +113,7 @@ class TestRewindControllerAudioSuppression {
                 in -> {
                     steps.incrementAndGet();
                     audio.playSfx("STEP");
+                    return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
                 },
                 5,
                 audio);
@@ -130,6 +138,7 @@ class TestRewindControllerAudioSuppression {
             if (in.frameIndex() == 2 || in.frameIndex() == 4) {
                 audio.resetRingSound();
             }
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
         };
         RewindController controller = new RewindController(registry, keyframes, inputs, stepper, 2, audio);
 

@@ -2,7 +2,7 @@ package com.openggf.level;
 
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
-import com.openggf.game.InitialObjectSetupLifecycle;
+import com.openggf.game.InitialProcessSpritesLifecycle;
 import com.openggf.game.LevelGamestate;
 import com.openggf.game.mutation.LevelMutationSurface;
 import org.junit.jupiter.api.Test;
@@ -22,10 +22,10 @@ class TestLevelManagerRewindSnapshot {
 
     @Test
     void pendingInitialSetupLifecycleRoundTripsAndDispatchesExactlyOnce() {
-        InitialObjectSetupCoordinator coordinator = new InitialObjectSetupCoordinator();
-        coordinator.publish(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        InitialProcessSpritesLifecycleCoordinator coordinator = new InitialProcessSpritesLifecycleCoordinator();
+        coordinator.publish(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
 
-        InitialObjectSetupLifecycle captured = coordinator.captureForRewind();
+        InitialProcessSpritesLifecycle captured = coordinator.captureForRewind();
         coordinator.discard();
         coordinator.restoreForRewind(captured);
 
@@ -37,12 +37,12 @@ class TestLevelManagerRewindSnapshot {
 
     @Test
     void consumedInitialSetupLifecycleRoundTripsWithoutDispatchAuthority() {
-        InitialObjectSetupCoordinator coordinator = new InitialObjectSetupCoordinator();
-        coordinator.publish(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        InitialProcessSpritesLifecycleCoordinator coordinator = new InitialProcessSpritesLifecycleCoordinator();
+        coordinator.publish(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
         coordinator.consume(() -> { });
 
-        InitialObjectSetupLifecycle captured = coordinator.captureForRewind();
-        coordinator.publish(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        InitialProcessSpritesLifecycle captured = coordinator.captureForRewind();
+        coordinator.publish(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
         coordinator.restoreForRewind(captured);
 
         assertFalse(coordinator.consume(() -> fail("consumed lifecycle must not dispatch")));
@@ -50,18 +50,18 @@ class TestLevelManagerRewindSnapshot {
 
     @Test
     void exceptionAfterConsumeRestoresConsumedStateWithoutReplay() {
-        InitialObjectSetupCoordinator coordinator = new InitialObjectSetupCoordinator();
-        coordinator.publish(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        InitialProcessSpritesLifecycleCoordinator coordinator = new InitialProcessSpritesLifecycleCoordinator();
+        coordinator.publish(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
         assertThrows(IllegalStateException.class,
                 () -> coordinator.consume(() -> {
                     throw new IllegalStateException("setup boom");
                 }));
 
-        InitialObjectSetupLifecycle captured = coordinator.captureForRewind();
-        coordinator.publish(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        InitialProcessSpritesLifecycle captured = coordinator.captureForRewind();
+        coordinator.publish(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
         coordinator.restoreForRewind(captured);
 
-        assertEquals(InitialObjectSetupLifecycle.NONE, captured);
+        assertEquals(InitialProcessSpritesLifecycle.NONE, captured);
         assertFalse(coordinator.consume(() -> fail("exception-consumed lifecycle must not replay")));
     }
 
@@ -91,14 +91,14 @@ class TestLevelManagerRewindSnapshot {
                 services,
                 mock(com.openggf.game.session.WorldSession.class));
 
-        manager.restorePendingInitialObjectSetupLifecycleForRewind(
-                InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE);
+        manager.restorePendingInitialProcessSpritesLifecycleForRewind(
+                InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
 
-        assertEquals(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE,
-                manager.capturePendingInitialObjectSetupLifecycleForRewind());
-        manager.restorePendingInitialObjectSetupLifecycleForRewind(InitialObjectSetupLifecycle.NONE);
-        assertEquals(InitialObjectSetupLifecycle.NONE,
-                manager.capturePendingInitialObjectSetupLifecycleForRewind());
+        assertEquals(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE,
+                manager.capturePendingInitialProcessSpritesLifecycleForRewind());
+        manager.restorePendingInitialProcessSpritesLifecycleForRewind(InitialProcessSpritesLifecycle.NONE);
+        assertEquals(InitialProcessSpritesLifecycle.NONE,
+                manager.capturePendingInitialProcessSpritesLifecycleForRewind());
     }
 
     /**
@@ -176,7 +176,7 @@ class TestLevelManagerRewindSnapshot {
                             levelGamestate.isTimerPaused(),
                             false,
                             null,
-                            InitialObjectSetupLifecycle.NONE
+                            InitialProcessSpritesLifecycle.NONE
                     );
                 }
 

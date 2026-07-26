@@ -162,8 +162,8 @@ public class LevelManager {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
     private boolean resetCounterPlacementAfterCameraSnap;
-    private final InitialObjectSetupCoordinator initialObjectSetup =
-            new InitialObjectSetupCoordinator();
+    private final InitialProcessSpritesLifecycleCoordinator initialProcessSpritesLifecycle =
+            new InitialProcessSpritesLifecycleCoordinator();
 
     void writeCurrentZone(int zone) {
         this.currentZone = zone;
@@ -329,9 +329,9 @@ public class LevelManager {
      * @throws IOException if an I/O error occurs while loading the level
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
-        initialObjectSetup.discard();
+        initialProcessSpritesLifecycle.discard();
         try {
-            ctx.resetInitialObjectSetupRequestForLoadAttempt();
+            ctx.resetInitialProcessSpritesRequestForLoadAttempt();
             GameModule module = activeGameModule();
             LevelInitProfile profile = module.getLevelInitProfile();
             ctx.setLevelIndex(levelIndex);
@@ -355,18 +355,18 @@ public class LevelManager {
                 writeCurrentLevel(ctx.getLevel());
             }
             LevelRewindBoundaryCoordinator.markLevelLoadBoundary();
-            InitialObjectSetupLifecycle requestedSetup =
-                    ctx.requestedInitialObjectSetupLifecycle();
-            if (requestedSetup != InitialObjectSetupLifecycle.NONE) {
+            InitialProcessSpritesLifecycle requestedSetup =
+                    ctx.requestedInitialProcessSpritesLifecycle();
+            if (requestedSetup != InitialProcessSpritesLifecycle.NONE) {
                 // The profile grants this authority only after a successful
                 // FULL + post-load + fresh assembly. Reset the playable epoch
                 // at the same publication seam, before the pending native
                 // frame-zero pass can be observed or consumed.
                 spriteManager.setFrameCounter(0);
             }
-            initialObjectSetup.publish(requestedSetup);
+            initialProcessSpritesLifecycle.publish(requestedSetup);
         } catch (Exception e) {
-            initialObjectSetup.discard();
+            initialProcessSpritesLifecycle.discard();
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
             Throwable cause = e.getCause();
             if (cause instanceof IOException ioe) {
@@ -382,8 +382,8 @@ public class LevelManager {
      * Read-only lifecycle diagnostic. Consumption is introduced at the
      * production gameplay seams, not through this query.
      */
-    public boolean hasPendingInitialObjectSetupPass() {
-        return initialObjectSetup.hasPendingPass();
+    public boolean hasPendingInitialProcessSpritesPass() {
+        return initialProcessSpritesLifecycle.hasPendingPass();
     }
 
     /**
@@ -391,8 +391,17 @@ public class LevelManager {
      * dispatch. Ownership is cleared before object execution so an exception
      * cannot replay a partially completed pass.
      */
+    public boolean consumePendingInitialProcessSpritesPass() {
+        return initialProcessSpritesLifecycle.consume(this::executeInitialProcessSprites);
+    }
+
+    /**
+     * Temporary source-compatibility bridge for external callers owned by parallel work.
+     * Production lifecycle code must use {@link #consumePendingInitialProcessSpritesPass()}.
+     */
+    @Deprecated(forRemoval = true)
     public boolean consumePendingInitialObjectSetupPass() {
-        return initialObjectSetup.consume(this::executeInitialProcessSprites);
+        return consumePendingInitialProcessSpritesPass();
     }
 
     private void executeInitialProcessSprites() {
@@ -454,17 +463,17 @@ public class LevelManager {
      * Discards fresh-load setup authority before restoring runtime state that
      * already represents that native setup pass.
      */
-    public void discardPendingInitialObjectSetupForStateRestoration() {
-        initialObjectSetup.discard();
+    public void discardPendingInitialProcessSpritesForStateRestoration() {
+        initialProcessSpritesLifecycle.discard();
     }
 
-    public InitialObjectSetupLifecycle capturePendingInitialObjectSetupLifecycleForRewind() {
-        return initialObjectSetup.captureForRewind();
+    public InitialProcessSpritesLifecycle capturePendingInitialProcessSpritesLifecycleForRewind() {
+        return initialProcessSpritesLifecycle.captureForRewind();
     }
 
-    public void restorePendingInitialObjectSetupLifecycleForRewind(
-            InitialObjectSetupLifecycle lifecycle) {
-        initialObjectSetup.restoreForRewind(lifecycle);
+    public void restorePendingInitialProcessSpritesLifecycleForRewind(
+            InitialProcessSpritesLifecycle lifecycle) {
+        initialProcessSpritesLifecycle.restoreForRewind(lifecycle);
     }
 
     /**
@@ -3533,7 +3542,7 @@ public class LevelManager {
         frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
-        initialObjectSetup.discard();
+        initialProcessSpritesLifecycle.discard();
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;

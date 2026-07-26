@@ -22,8 +22,8 @@ public interface LevelInitProfile {
      * Initial object setup requested after a genuine successful fresh load.
      * Games without a proven native setup dispatch retain no extra work.
      */
-    default InitialObjectSetupLifecycle initialObjectSetupLifecycle() {
-        return InitialObjectSetupLifecycle.NONE;
+    default InitialProcessSpritesLifecycle initialProcessSpritesLifecycle() {
+        return InitialProcessSpritesLifecycle.NONE;
     }
 
     /**
