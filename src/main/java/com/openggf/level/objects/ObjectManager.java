@@ -1597,6 +1597,9 @@ public class ObjectManager {
      * 35795-35841).
      */
     private void capturePlayerCentreAtSlotStart(PlayableEntity player) {
+        if (player == null) {
+            return;
+        }
         playerCentreXAtSlotStart[currentExecSlot] = player.getCentreX();
         playerCentreYAtSlotStart[currentExecSlot] = player.getCentreY();
         playerCentreAtSlotStartValid[currentExecSlot] = true;

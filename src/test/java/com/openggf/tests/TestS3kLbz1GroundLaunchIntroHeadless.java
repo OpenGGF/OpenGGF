@@ -240,6 +240,9 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
     }
 
     private void applyTitleCardHandoff() {
+        // Production consumes the native Load_Sprites/Process_Sprites setup pass
+        // before releasing the title card and arming this controller.
+        GameServices.level().consumePendingInitialObjectSetupPass();
         ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider())
                 .applyZonePlayerStateAfterTitleCard();
     }
