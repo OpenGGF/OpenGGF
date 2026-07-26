@@ -324,8 +324,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
 
-        // ROM: move.b #2,anim(a1)
-        player.setRolling(true);
+        // ROM writes only anim(a1), not Status_Roll. The tunnel displays the
+        // rolling animation while retaining the player's existing roll status.
         player.setAnimationId(2);
 
         // ROM: clr.b jumping(a1)
@@ -343,8 +343,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         player.setAir(true);
 
         // ROM: move.w x_pos(a0),x_pos(a1); move.w y_pos(a0),y_pos(a1)
-        player.setCentreX((short) spawn.x());
-        player.setCentreY((short) spawn.y());
+        player.setCentreXPreserveSubpixel((short) spawn.x());
+        player.setCentreYPreserveSubpixel((short) spawn.y());
 
         // Setup path and calculate initial velocity
         setupPath(player, state);
@@ -406,8 +406,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         state.pathRemaining = (waypointCount - 1) * 4;
 
         // ROM: move.w (a2)+,d4; move.w d4,x_pos(a1); move.w (a2)+,d5; move.w d5,y_pos(a1)
-        player.setCentreX((short) state.path[0]);
-        player.setCentreY((short) state.path[1]);
+        player.setCentreXPreserveSubpixel((short) state.path[0]);
+        player.setCentreYPreserveSubpixel((short) state.path[1]);
         state.pathIndex = 2;
 
         // Calculate velocity to next waypoint
@@ -430,8 +430,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
         // ROM: lea (a2,d0.w),a2 — jump to end of path data
         int lastIdx = state.path.length - 2;
-        player.setCentreX((short) state.path[lastIdx]);
-        player.setCentreY((short) state.path[lastIdx + 1]);
+        player.setCentreXPreserveSubpixel((short) state.path[lastIdx]);
+        player.setCentreYPreserveSubpixel((short) state.path[lastIdx + 1]);
 
         // ROM: subq.w #8,a2 — back up one waypoint
         state.pathIndex = lastIdx - 2;
@@ -456,8 +456,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         // ROM: movea.l 6(a4),a2; move.w (a2)+,d4; move.w d4,x_pos(a1); ...
         int waypointX = state.path[state.pathIndex];
         int waypointY = state.path[state.pathIndex + 1];
-        player.setCentreX((short) waypointX);
-        player.setCentreY((short) waypointY);
+        player.setCentreXPreserveSubpixel((short) waypointX);
+        player.setCentreYPreserveSubpixel((short) waypointY);
 
         // Advance path pointer
         // ROM: tst.b subtype(a0); bpl.s +; subq.w #8,a2
@@ -500,7 +500,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
         // ROM: andi.w #$FFF,y_pos(a1)
         int y = player.getCentreY() & 0xFFF;
-        player.setCentreY((short) y);
+        player.setCentreYPreserveSubpixel((short) y);
 
         // ROM: btst #6,subtype(a0); bne.s loc_2972C
         if (!maintainVelocity) {

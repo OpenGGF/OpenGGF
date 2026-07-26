@@ -1,5 +1,67 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- LBZ automatic-tunnel word writes advance f2816 to f2856
+
+Independently verified in worktree `.worktrees/trace-s3k-lbz-complete`,
+branch `bugfix/ai-trace-s3k-lbz-complete`, atop `d72541ac2`.
+
+`Obj_AutoTunnelInit` writes only `anim(a1)=2`; it does not set
+`Status_Roll`. The same capture path, forward/reverse path setup, waypoint
+snaps, and exit Y mask all use word writes to `x_pos`/`y_pos`, leaving the
+adjacent fractional words intact (`docs/skdisasm/sonic3k.asm:57224-57250,
+57272-57320,57346-57387`). The subtype is masked with `$1F` for both forward
+and reverse path table selection (`docs/skdisasm/sonic3k.asm:57346-57380`);
+the existing constructor-owned path ID already models that mask.
+
+The tunnel now publishes the Roll animation without changing the player's
+roll-status bit and routes every native word-sized position assignment through
+the centre-position preserve-subpixel operations. No trace data, route, frame,
+zone, expected value, or comparison result selects the behavior.
+
+Focused owner and policy verification:
+
+```bash
+mvn -Dmse=off \
+  -Dtest=com.openggf.game.sonic3k.objects.TestAutomaticTunnelObjectInstance test
+mvn -Dmse=off \
+  -Ds3k.rom.path='<verified locked-on ROM>' \
+  -Dtest='com.openggf.game.sonic3k.objects.TestAutomaticTunnelObjectInstance,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard,com.openggf.tests.trace.s3k.TestS3kSpecialStageTraceReplay,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils' \
+  test
+```
+
+Results: the owner passes 6/6 independently; the combined owner,
+architecture, comparison-only trace, rewind, special-stage, headless,
+level-loading, bootstrap, and decoding selection passes 108 tests with zero
+failures/errors/skips.
+
+Full LBZ replay with the verified locked-on ROM
+(`SHA-1 CFBF98C36C776677290A872547AC47C53D2761D6`):
+
+```bash
+mvn -Dmse=off -Dsurefire.argLine=-Xmx6g \
+  -Ds3k.rom.path='<verified locked-on ROM>' \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay test
+```
+
+Result: expected-red, 8,790 errors and zero warnings. The first mismatch moves
+from f2816 `y_sub` (expected `$8500`, actual `$0000`; 9,041 errors) to f2856
+`y` (expected `$0678`, actual `$0688`): a 40-frame frontier advance and 251
+fewer comparison errors.
+
+The aggregate candidate also modeled `loc_2970A` falling through
+`loc_29768` on the final waypoint, which the disassembly does prove
+(`docs/skdisasm/sonic3k.asm:57294-57335`). In isolation from its still-missing
+downstream ownership, however, that extra transition-frame movement changed
+the result to f2888 with 9,686 errors—896 more than this independently
+beneficial slice and 645 more than the prior frontier. That exact but
+non-isolated sub-change is deliberately deferred until the resulting
+exhaust/release/player-movement cascade is understood; it is not part of this
+commit.
+
+The AIZ standalone canary retains this worktree's documented f2696 `x_speed`
+frontier with exactly 3,258 errors; all 15 scenario checks pass. The S3K
+special-stage replay remains green.
+
 ### 2026-07-26 -- LBZ smashing-pillar grounded edge push advances f2270 to f2816
 
 Independently verified in worktree `.worktrees/trace-s3k-lbz-complete`,
