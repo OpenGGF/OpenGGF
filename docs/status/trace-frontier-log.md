@@ -50133,6 +50133,71 @@ later, genuine parity frontiers. The fleet is not globally frame-zero clean:
 CNZ complete-run, ICZ, LBZ, and MHZ still begin at f0. The result therefore
 remains `DONE_WITH_CONCERNS`, not a green fleet baseline.
 
+## 2026-07-26 - S3K Obj37 previous-list live-coordinate parity
+
+Context: `bugfix/ai-trace-s3k-mgz-standard`, based on `25eea9e97`.
+
+S3K `Touch_Loop` walks pointers retained in `Collision_response_list` and reads
+their current `x_pos`/`y_pos` (`docs/skdisasm/sonic3k.asm:20645-20710`,
+`:20773-20797`). Obj37 moves before publishing itself to that list
+(`:35624-35668`). The engine's generic pre-update cache was one object pass
+older than the live Obj37 state represented by that retained pointer. The
+previous-list Obj37 path now dereferences its live coordinates; other object
+families and non-previous-list touch paths are unchanged.
+
+Focused touch verification:
+
+```bash
+mvn -q -Dtest='com.openggf.level.objects.TestLostRingTouchOrdering,com.openggf.level.objects.TestTouchResponseManager,com.openggf.level.rings.*LostRing*' test
+```
+
+- Exit 0; all selected tests passed.
+
+Standalone MGZ:
+
+```bash
+mvn -q -Dsurefire.argLine=-Xmx6g \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay \
+  -Ds3k.rom.path=s3k.gen test
+```
+
+- Expected-red exit 1.
+- 8,032 → 8,030 errors.
+- Frontier f12486 → f13447 `camera_x` (ROM `0x2E01`, engine `0x2E00`).
+
+Complete-run MGZ:
+
+```bash
+mvn -q -Dsurefire.argLine=-Xmx6g \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay \
+  -Ds3k.rom.path=s3k.gen test
+```
+
+- Expected-red exit 1.
+- 8,707 → 8,703 errors.
+- Frontier f9259 → f15520 `camera_x` (ROM `0x2E01`, engine `0x2E00`).
+
+Cross-route canaries held:
+
+- AIZ complete-run: 1,726 errors, first f9376 `rings`
+  (ROM `2`, engine `1`).
+- ICZ complete-run: 7,963 errors, first f0 `y`
+  (ROM `0x00F0`, engine `0x00F2`).
+
+Policy verification:
+
+```bash
+mvn -q \
+  -Dtest='com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard' test
+```
+
+- Trace-invariant and rewind-coverage guards passed.
+- `TestArchitecturalSourceGuard.objectManagerFacadeStaysWithinExtractedCollaboratorBudget`
+  remains red on the base: `ObjectManager.java` has 2,940 effective lines against
+  its 2,914-line budget. This fix changes only
+  `ObjectTouchResponseController.java`, the extracted touch collaborator, and
+  does not change `ObjectManager.java`.
+
 ## 2026-07-23 - ADVANCE_ONLY live and visual-rewind edge closure
 
 Forward live playback and visual rewind now preserve an action edge latched by

@@ -453,7 +453,12 @@ final class ObjectTouchResponseController {
             // before dynamic objects update. S3K's previous collision-response
             // list stores object RAM pointers, but those pointers still hold
             // frame-start x/y at this phase.
-            boolean useCurrentTouchState = usesCurrentTouchState(instance);
+            // Obj37's engine projection is already the preceding pass's
+            // published state here; its generic pre-update cache is one pass
+            // older than the live SST pointer consumed by Touch_Loop.
+            boolean useCurrentTouchState = usesCurrentTouchState(instance)
+                    || (usePreviousCollisionResponseList
+                    && instance instanceof LostRingObjectInstance);
             int objX = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateX() : instance.getX();
             int objY = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateY() : instance.getY();
             if (category == TouchCategory.HURT
