@@ -615,7 +615,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     public void applyCompleteRunSegmentPlayerStateAfterTitleCard() {
         applyZonePlayerStateAfterTitleCard();
-        releaseCompleteRunSegmentStartupLatchesAfterTitleCard();
     }
 
     public void restoreCompleteRunSegmentObjectsAfterPreludeReset() {

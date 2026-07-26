@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -97,6 +98,25 @@ class TestIczSnowboardArtLoader {
                 "ROM object_control=3 skips Animate_Sonic during the startup lock");
         assertTrue(fixture.sprite().isObjectMappingFrameControl(),
                 "Startup object_control bit 1 should give the intro object frame control");
+    }
+
+    @Test
+    void restoredSetupControllerRetainsNativeStartupOwnership() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_ICZ, ACT_1)
+                .build();
+        Sonic3kLevelEventManager events =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+
+        events.getIczEvents().restoreSnowboardIntroPostPreludeReset(fixture.sprite());
+        IczSnowboardIntroInstance intro = latestSnowboardIntro();
+
+        assertEquals("STARTUP_LOCK", intro.stateNameForTest(),
+                "A restored native setup object must execute its own routine-0 startup");
+        assertTrue(fixture.sprite().isObjectMappingFrameControl(),
+                "ROM object_control=3 must remain owned until the controller's 30-frame timer expires");
+        assertEquals(0, fixture.sprite().getMappingFrame(),
+                "Restoring the setup object must retain its ROM-owned mapping frame");
     }
 
     @Test
@@ -318,6 +338,14 @@ class TestIczSnowboardArtLoader {
                 .map(IczSnowboardIntroInstance.class::cast)
                 .findFirst()
                 .orElseThrow();
+    }
+
+    private IczSnowboardIntroInstance latestSnowboardIntro() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(IczSnowboardIntroInstance.class::isInstance)
+                .map(IczSnowboardIntroInstance.class::cast)
+                .toList()
+                .getLast();
     }
 
     private void stepIdleFrames(HeadlessTestFixture fixture, int frames) {

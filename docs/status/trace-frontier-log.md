@@ -50339,3 +50339,29 @@ mvn -Dtest=TestS3kAizTraceReplay \
   above: this worktree predates the separately staged
   `docs/status/known-discrepancies.md` path correction. No candidate source
   failure was reported.
+
+## 2026-07-26 - ICZ restored snowboard startup ownership
+
+The ICZ complete-run segment restore no longer primes the reconstructed
+snowboard controller past its startup state or clears its player latches at
+title-card exit. The reconstructed `Obj_LevelIntroICZ1` now owns
+`Ctrl_1_locked`, mapping frame 0, and `object_control = 3` until its native
+30-tick startup timer expires, matching `docs/skdisasm/sonic3k.asm`
+`Obj_LevelIntroICZ1` / `loc_39780` (lines 76989-77032).
+
+Fresh focused replay:
+
+```bash
+mvn -q -Dsurefire.argLine='-Xshare:off -Xmx6g' \
+  -Ds3k.rom.path=<discovered-locked-on-rom> \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay test
+```
+
+- Expected exit 1: 5,694 errors, 0 warnings.
+- The frontier advances from f0 `y` (`0x00F0` / `0x00F2`) to f28 `y_sub`
+  (`0x0000` / `0x8000`).
+- The focused `TestIczSnowboardArtLoader` controller suite passes all 14 tests.
+- `TestS3kSpecialStageTraceReplay` remains green: 2 tests pass.
+- Known-red complete-run canaries retain their established first fields and
+  frames: AIZ f9376 `rings` (`2` / `1`, 1,726 errors) and CNZ f0 `y`
+  (`0x0600` / `0x061C`, 9,778 errors).
