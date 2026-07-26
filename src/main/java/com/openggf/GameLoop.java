@@ -1261,10 +1261,11 @@ public class GameLoop {
         //     during Level_TtlCard so Sonic settles onto the Tornado
         //     in SCZ. Use the full LevelFrameStep canonical order
         //     (objects + camera + dynamic events + parallax + water).
-        //   - S1/S3K ROMs run a minimal wait loop that ticks objects
-        //     only — no camera update, no level events, no scroll.
-        //     Use the legacy minimal pre-orchestration path so the
-        //     S3K AIZ trace and S1 Level_TtlCardLoop parity hold.
+        //   - S1 leaves the loaded level ObjectManager untouched and retains
+        //     its forced camera step while native title-card SSTs still own
+        //     object RAM.
+        //   - S3K likewise leaves loaded level objects untouched; its provider
+        //     represents the title-card SSTs and advances only VBlank.
         beginGameplayAudioFrameForTick();
         // ROM: the title-card wait loops (docs/s2disasm/s2.asm:4914-4924 and
         // 5060-5066; docs/s1disasm/sonic.asm Level_TtlCardLoop 2811-2839) run

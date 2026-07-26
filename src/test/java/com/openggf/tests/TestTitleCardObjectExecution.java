@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.GameLoop;
+import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -27,14 +28,12 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -151,6 +150,7 @@ class TestTitleCardObjectExecution {
         ObjectManager objectManager = levelManager.getObjectManager();
         assertNotNull(objectManager, "level load should produce an object manager");
         var camera = fixture.camera();
+        CameraCallSpy cameraCallSpy = new CameraCallSpy();
         LockedPhaseProbe lockedPhaseProbe = new LockedPhaseProbe(camera.getX(), camera.getY());
         objectManager.addDynamicObject(lockedPhaseProbe);
 
@@ -193,6 +193,7 @@ class TestTitleCardObjectExecution {
         int cameraMaxYBefore = camera.getMaxY();
         OscillationSnapshot oscillationBefore = OscillationManager.snapshot();
         long rngSeedBefore = GameServices.rng().getSeed();
+        camera.setUpdateObserver(cameraCallSpy);
 
         // 5. Step exactly FRAMES_TO_STEP frames while in TITLE_CARD mode.
         //    The provider's reset()/initialize() above guarantees the
@@ -229,6 +230,10 @@ class TestTitleCardObjectExecution {
             assertEquals(cameraMinYBefore, camera.getMinY());
             assertEquals(cameraMaxYBefore, camera.getMaxY(),
                     "locked S3K must not run camera position or boundary easing");
+            assertEquals(0, cameraCallSpy.positionUpdates,
+                    "locked S3K must not invoke camera.updatePosition");
+            assertEquals(0, cameraCallSpy.boundaryEasingUpdates,
+                    "locked S3K must not invoke camera.updateBoundaryEasing");
             assertOscillationEquals(oscillationBefore, OscillationManager.snapshot(),
                     "locked S3K must not advance or suppress global oscillation");
             assertEquals(rngSeedBefore, GameServices.rng().getSeed(),
@@ -248,10 +253,18 @@ class TestTitleCardObjectExecution {
             assertEquals(levelFrameBeforeRelease + 1, levelManager.getFrameCounter(),
                     "release falls through to exactly one ordinary level frame");
             OscillationSnapshot afterRelease = OscillationManager.snapshot();
-            assertNotEquals(beforeRelease.lastFrame(), afterRelease.lastFrame(),
-                    "the first unlocked frame must resume oscillator updates");
-            assertFalse(Arrays.equals(beforeRelease.values(), afterRelease.values()),
-                    "the first unlocked frame must advance oscillator values exactly once");
+            OscillationManager.restore(beforeRelease);
+            OscillationManager.update(levelFrameBeforeRelease);
+            OscillationSnapshot expectedAfterOneUpdate = OscillationManager.snapshot();
+            OscillationManager.restore(afterRelease);
+            assertOscillationEquals(expectedAfterOneUpdate, afterRelease,
+                    "the first unlocked frame must perform exactly one ordinary oscillator update");
+            assertEquals(beforeRelease.suppressedUpdates(), afterRelease.suppressedUpdates(),
+                    "the VBlank-only locked path must not leak oscillator suppression");
+            assertEquals(1, cameraCallSpy.positionUpdates,
+                    "the first unlocked frame performs one normal camera position update");
+            assertEquals(1, cameraCallSpy.boundaryEasingUpdates,
+                    "the first unlocked frame performs one normal boundary-easing update");
         }
 
         if (expectLevelFrameCounterToAdvance) {
@@ -262,11 +275,9 @@ class TestTitleCardObjectExecution {
                             + " during the title card on the LevelFrameStep path (game="
                             + game + "); was " + levelDelta);
         } else {
-            // S1 / S3K: per-game gate uses the legacy minimal path
-            // (levelManager.updateObjectPositions + camera force-snap), so
-            // the LevelManager frame counter stays put while objects still
-            // tick. If this changes, the per-game gate has been relaxed —
-            // re-evaluate whether S3K AIZ trace still stays correct.
+            // S1/S3K keep the loaded level lifecycle stopped during the
+            // locked card. S1 retains its forced camera step; S3K advances
+            // only the provider-owned VBlank clock.
             assertEquals(0, levelDelta,
                     "LevelManager.frameCounter must NOT advance during the title card "
                             + "on the legacy minimal path (game=" + game + ")");
@@ -307,6 +318,21 @@ class TestTitleCardObjectExecution {
         assertEquals(expected.control(), actual.control(), message);
         assertEquals(expected.lastFrame(), actual.lastFrame(), message);
         assertEquals(expected.suppressedUpdates(), actual.suppressedUpdates(), message);
+    }
+
+    private static final class CameraCallSpy implements Camera.UpdateObserver {
+        private int positionUpdates;
+        private int boundaryEasingUpdates;
+
+        @Override
+        public void onUpdatePosition(boolean force) {
+            positionUpdates++;
+        }
+
+        @Override
+        public void onUpdateBoundaryEasing() {
+            boundaryEasingUpdates++;
+        }
     }
 
     private static final class LockedPhaseProbe extends AbstractObjectInstance {
