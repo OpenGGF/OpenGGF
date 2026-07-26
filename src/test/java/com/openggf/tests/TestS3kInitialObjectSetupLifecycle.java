@@ -18,6 +18,9 @@ import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageComparisonState;
+import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager;
+import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -190,13 +193,22 @@ class TestS3kInitialObjectSetupLifecycle {
             invoke(loop, "doEnterSpecialStage",
                     new Class<?>[] { SpecialStageProvider.class, int.class, boolean.class },
                     provider, 0, false);
-            GameServices.gameState().applyPauseToggle(true);
+            Sonic3kSpecialStageManager specialStage =
+                    ((Sonic3kSpecialStageProvider) provider).getManager();
+            Sonic3kSpecialStageComparisonState specialStateBefore =
+                    specialStage.captureComparisonState();
+            loop.pause();
+            assertTrue(loop.isPaused());
             loop.step();
 
             assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+            assertEquals(specialStateBefore, specialStage.captureComparisonState(),
+                    "the loop-owned pause gate must skip the special-stage provider tick");
             assertTrue(manager.hasPendingInitialObjectSetupPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter(),
                     "a paused special-stage tick must not dispatch level objects");
+            loop.resume();
+            assertFalse(loop.isPaused());
 
             invoke(loop, "doEnterResultsScreen", new Class<?>[0]);
             loop.step();
