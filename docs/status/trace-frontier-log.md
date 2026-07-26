@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-07-26 - AIZ complete-run preserves late ending-pose Ctrl_2 cadence
+
+- Worktree: `trace-s3k-aiz-complete-25039`, branch
+  `bugfix/ai-trace-s3k-aiz-complete-25039`, based on `1f1fde019`; measurement
+  includes the uncommitted capsule/test/documentation patch described here.
+- Baseline command:
+  `mvn -Dmse=off -Djava.io.tmpdir=target/aiz25039-tmp
+  -Ds3k.rom.path=<verified locked-on ROM>
+  -Dtest=TestS3kAizCompleteRunTraceReplay test`.
+  It reproduced 28 errors with first mismatch f25039
+  `tails_cpu_ctrl2_held` (ROM `0x0018`, engine `0x0000`).
+- Existing per-frame `cpu_state`, `interact_state`, and `control_lock_state`
+  evidence showed Player 1 receiving `object_control=$81` at f25038, then
+  Player 2 receiving `$81` from capsule routine `$0C` at f25039 while ROM
+  retained the already-published `Ctrl_2_logical=$18` until f25040. The engine
+  cleared that word in the capsule's later object slot.
+- Fix: AIZ2's capsule-owned `Check_TailsEndPose` path clears the signed
+  `Ctrl_2_locked` mirror and applies the ending pose without immediately
+  mirroring raw controller input. ROM likewise has no `Ctrl_2_logical` write
+  in `Check_TailsEndPose` or `Set_PlayerEndingPose`; the following Player-2
+  `Tails_Control` dispatch copies raw `Ctrl_2` before `object_control=$81`
+  blocks CPU steering
+  (`docs/skdisasm/sonic3k.asm:181924-181944,181982-181992,26195-26212`).
+- Remeasurement with the same focused trace command reports 27 errors and
+  advances the frontier to f25591 `tails_cpu_ctrl2_held` (ROM `0x0000`,
+  engine `0x0004`). The 26 later teardown comparisons at f26107/f26179 are
+  unchanged. No trace data drives runtime state, and no game, zone, route,
+  trace, or frame predicate was added.
+- The RED-first capsule regression passes after the fix. The complete
+  AIZ capsule/sidekick, S3K must-keep-green, rewind, and architecture selection
+  passed 267 focused tests; Gumball, Pachinko, Slots, and special-stage trace
+  canaries passed five tests. LBZ was not inspected, run, changed, or used as
+  a guard.
+
 ## 2026-07-26 - Complete non-LBZ fleet reconciliation at `4474a366a`
 
 - Command: `mvn -q -Dmse=off -Dmaven.test.failure.ignore=true
