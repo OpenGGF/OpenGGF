@@ -55,6 +55,7 @@ import java.util.Map;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
@@ -90,6 +91,7 @@ public class ObjectManager {
     private int frameCounter;
     private int vblaCounter;
     private boolean updating;
+    private Consumer<String> initialS3kSetupObserverForTests;
 
     // ROM parity: slot-ordered execution array for ExecuteObjects emulation.
     // The dynamic slot window is game-specific and comes from ObjectRegistry.
@@ -670,6 +672,63 @@ public class ObjectManager {
             }
         }
         captureCollisionResponseListForNextFrame();
+    }
+
+    /**
+     * Runs the S3K level-load object setup pass without advancing gameplay-only
+     * systems. The ROM performs {@code Load_Sprites} before
+     * {@code Process_Sprites} during level initialisation
+     * (docs/skdisasm/sonic3k.asm:7849-7855); this pass preserves that ordering
+     * while deliberately leaving VBlank, touch responses, and playable state to
+     * the ordinary frame loop.
+     */
+    public void runInitialS3kLoadThenExecutePass(int cameraX, PlayableEntity player,
+            List<? extends PlayableEntity> sidekicks) {
+        runS3kLoadThenExecute(cameraX, player, sidekicks, true);
+    }
+
+    private void runS3kLoadThenExecute(int cameraX, PlayableEntity player,
+            List<? extends PlayableEntity> sidekicks, boolean incrementDispatchCounter) {
+        List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
+        if (incrementDispatchCounter) {
+            frameCounter++;
+        }
+
+        observeInitialS3kSetupStep("updateCameraBounds");
+        updateCameraBounds();
+        observeInitialS3kSetupStep("captureExecStartPlayerCentreY");
+        solidContacts.captureExecStartPlayerCentreY(player, activeSidekicks);
+
+        SolidExecutionRegistry solidExecutionRegistry = objectServices.solidExecutionRegistry();
+        solidExecutionRegistry.beginFrame(frameCounter, collectActivePlayers(player, activeSidekicks));
+        try {
+            // The initial Load_Sprites pass establishes the same active slot
+            // population Process_Sprites consumes immediately afterwards.
+            observeInitialS3kSetupStep("placement.update");
+            placement.update(cameraX);
+            observeInitialS3kSetupStep("syncActiveSpawnsLoad");
+            syncActiveSpawnsLoad(false);
+            cleanupDestroyedDynamicObjects();
+            observeInitialS3kSetupStep("runExecLoop");
+            runExecLoop(cameraX, player, activeSidekicks, false, false);
+            observeInitialS3kSetupStep("flushPostExecDynamicSpawns");
+            flushPostExecDynamicSpawns();
+        } finally {
+            solidExecutionRegistry.finishFrame();
+        }
+
+        observeInitialS3kSetupStep("captureCollisionResponseListForNextFrame");
+        captureCollisionResponseListForNextFrame();
+    }
+
+    void setInitialS3kSetupObserverForTests(Consumer<String> observer) {
+        initialS3kSetupObserverForTests = observer;
+    }
+
+    private void observeInitialS3kSetupStep(String step) {
+        if (initialS3kSetupObserverForTests != null) {
+            initialS3kSetupObserverForTests.accept(step);
+        }
     }
 
     private void runAfterExecBeforePlacement(Runnable afterExecBeforePlacement) {
