@@ -50309,3 +50309,33 @@ mvn -Dtest=TestS3kAizTraceReplay \
   `TestArchitecturalSourceGuard` alone errors because this worktree predates
   the separately staged path correction from `docs/KNOWN_DISCREPANCIES.md` to
   `docs/status/known-discrepancies.md`; it is not caused by this fix.
+
+## 2026-07-26 - AIZ complete-run S3K flight target preserves Pos_table Y
+
+- Worktree: `bugfix/ai-trace-s3k-aiz-complete` at base `2579e0e86`, including
+  the preceding Lost Ring phase fix.
+- Root cause: the shared `FLIGHT_AUTO_RECOVERY` implementation unconditionally
+  applied Sonic 2's water clamp to the delayed leader Y. Sonic 2
+  `TailsCPU_Flying_Part2` clamps the sampled position to
+  `Water_Level_1-$10` (`docs/s2disasm/s2.asm:39162-39176`), while S3K
+  `Tails_FlySwim_Unknown` copies the delayed `Pos_table` Y directly
+  (`docs/skdisasm/sonic3k.asm:26558-26565`).
+- Fix: typed `SidekickCpuRules.sidekickFlightClampsTargetYToWater` is true only
+  for S2. The predicate is game-wide ROM behavior owned by the existing
+  sidekick CPU rules record; it does not branch on zone, route, frame, water
+  presence, respawn state, or any trace value. The API name matches the
+  independently reviewed HCZ fix (`fa5e82416`) rather than introducing an
+  inverse duplicate.
+- AIZ complete-run:
+  `mvn -Dmse=off -Dsonic3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen -Dtest='TestSidekickCpuControllerFlightAutoRecovery,TestSidekickCpuFollowParity,TestS3kAizCompleteRunTraceReplay' -Dsurefire.argLine='-Xshare:off -Xmx6g' test`
+  runs 119 focused sidekick assertions green and advances the expected-red
+  replay from f14880 / 1707 errors to f25039
+  `tails_cpu_ctrl2_held` (ROM `0x0018`, engine `0x0000`) / 28 errors.
+- Cross-game, rewind, and release canaries: S1 GHZ1, GHZ1 complete-run, MZ1,
+  S2 EHZ1, rewind coverage/static/architecture/transient guards, AIZ1 skip,
+  S3K level loading, bootstrap resolver, and decoding utilities all pass
+  (64 tests, 0 failures/errors).
+- `TestArchitecturalSourceGuard` has the same sole pre-existing error recorded
+  above: this worktree predates the separately staged
+  `docs/status/known-discrepancies.md` path correction. No candidate source
+  failure was reported.

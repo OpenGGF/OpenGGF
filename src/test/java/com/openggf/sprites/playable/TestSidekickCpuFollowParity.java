@@ -367,6 +367,7 @@ class TestSidekickCpuFollowParity {
                         false,
                         false,
                         false,
+                        false,
                         false)));
 
         short[] xHistory = new short[64];

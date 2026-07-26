@@ -3984,11 +3984,15 @@ public class SidekickCpuController {
         //    (sonic3k.asm:26690-26694). An earlier iteration of this body
         //    mis-applied that offset here and produced a chronic -0x20 X drift.
         int targetX = leader.getCentreX(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF;
-        // S2 TailsCPU_Flying_Part2 clamps the sampled Pos_table Y to
-        // Water_Level_1-$10 before publishing Tails_CPU_target_y
-        // (docs/s2disasm/s2.asm:39219-39227).
-        int targetY = clampTargetYToWater(
-                leader.getCentreY(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF);
+        // S2 clamps the sampled position-history Y to Water_Level_1-$10
+        // (s2.asm:39162-39176); S3K copies Pos_table Y verbatim
+        // (sonic3k.asm:26558-26565). Keep the shared controller driven by the
+        // typed per-game ROM rule rather than the current zone or water state.
+        int delayedTargetY = leader.getCentreY(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF;
+        int targetY = rules != null
+                && rules.sidekickFlightClampsTargetYToWater()
+                ? clampTargetYToWater(delayedTargetY)
+                : delayedTargetY;
         catchUpTargetX = targetX;
         catchUpTargetY = targetY;
 

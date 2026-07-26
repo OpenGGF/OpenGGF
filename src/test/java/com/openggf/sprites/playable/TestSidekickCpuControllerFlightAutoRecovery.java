@@ -124,6 +124,31 @@ class TestSidekickCpuControllerFlightAutoRecovery {
     }
 
     @Test
+    void s3kFlightPublishesDelayedTargetYBelowGameplayWaterLine() {
+        GameplayModeContext mode = TestEnvironment.activeGameplayMode();
+        mode.attachLevelManagers(new GameplayWaterLineSystem(), mode.getParallaxManager(),
+                mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
+                mode.getSpriteManager(), mode.getLevelManager());
+
+        TestableSprite sonic = sonicAt(0x1000, 0x0600);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0500);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertEquals(0x0600, controller.targetY(),
+                "Tails_FlySwim_Unknown publishes Pos_table Y without S2's water clamp");
+    }
+
+    @Test
     void flightTimerRollsBackToCatchUpAfter300FramesOffscreen() {
         TestableSprite sonic = sonicAt(0x1000, 0x0400);
         TestableSprite tails = new TestableSprite("tails_p2");
