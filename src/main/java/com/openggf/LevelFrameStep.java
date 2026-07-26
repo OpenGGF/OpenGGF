@@ -113,6 +113,12 @@ public final class LevelFrameStep {
             throw new NullPointerException("context");
         }
 
+        // S3K fresh-level assembly runs Load_Sprites then Process_Sprites once
+        // before entering LevelLoop (docs/skdisasm/sonic3k.asm:7849-7855,
+        // 7889-7906). executeWithPause reaches this body only after its pause
+        // gate, so a paused first frame retains the one-shot authority.
+        levelManager.consumePendingInitialObjectSetupPass();
+
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
         //     any submitter (object palette writes in steps 2-3, zone palette
         //     cyclers in step 6) runs this frame. This is the canonical per-frame

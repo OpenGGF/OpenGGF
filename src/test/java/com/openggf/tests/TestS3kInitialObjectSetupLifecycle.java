@@ -1,5 +1,7 @@
 package com.openggf.tests;
 
+import com.openggf.LevelFrameContext;
+import com.openggf.LevelFrameStep;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.InitStep;
@@ -12,11 +14,17 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.TraceCharacterState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -116,6 +125,95 @@ class TestS3kInitialObjectSetupLifecycle {
         } finally {
             sharedLevel.dispose();
         }
+    }
+
+    @Test
+    void productionConsumerExecutesPendingSetupExactlyOnce() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            int before = manager.getObjectManager().getFrameCounter();
+
+            assertTrue(manager.consumePendingInitialObjectSetupPass());
+            assertEquals(before + 1, manager.getObjectManager().getFrameCounter());
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
+
+            assertFalse(manager.consumePendingInitialObjectSetupPass());
+            assertEquals(before + 1, manager.getObjectManager().getFrameCounter());
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    @Test
+    void pausedFirstOrdinaryFrameRetainsSetupUntilGameplayResumes() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            int before = manager.getObjectManager().getFrameCounter();
+
+            boolean ran = LevelFrameStep.executeWithPause(
+                    LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                    manager, GameServices.camera(), () -> {
+                    }, true, LevelFrameStep.DIRECT_WRAPPER);
+
+            assertFalse(ran);
+            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertEquals(before, manager.getObjectManager().getFrameCounter());
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    @Test
+    void representedStateRestorationDiscardsWithoutExecutingFreshSetup() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            int before = manager.getObjectManager().getFrameCounter();
+
+            manager.discardPendingInitialObjectSetupForStateRestoration();
+
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertFalse(manager.consumePendingInitialObjectSetupPass());
+            assertEquals(before, manager.getObjectManager().getFrameCounter());
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    @Test
+    void setupExceptionConsumesTokenAndLeavesSolidRegistryBalanced() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            ObjectInstance throwing = mock(ObjectInstance.class);
+            doThrow(new IllegalStateException("setup boom"))
+                    .when(throwing).update(org.mockito.ArgumentMatchers.anyInt(),
+                            org.mockito.ArgumentMatchers.any());
+            manager.getObjectManager().addDynamicObject(throwing);
+
+            IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    manager::consumePendingInitialObjectSetupPass);
+
+            assertEquals("setup boom", failure.getMessage());
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertFalse(manager.consumePendingInitialObjectSetupPass());
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    @Test
+    void freshCnzSetupProducesDeterministicConcreteRuntimeState() throws Exception {
+        RuntimeState first = loadAndConsumeCnzRuntime();
+        TestEnvironment.resetAll();
+        RuntimeState second = loadAndConsumeCnzRuntime();
+
+        assertEquals(first, second);
+        assertTrue(first.objects().stream()
+                        .anyMatch(row -> row.className().contains("CnzBalloon")),
+                "the initial CNZ spawn window must include a balloon initialized by the setup pass");
     }
 
     @Test
@@ -239,6 +337,58 @@ class TestS3kInitialObjectSetupLifecycle {
 
     private static void installProfile(LevelInitProfile profile) {
         when(GameModuleRegistry.getCurrent().getLevelInitProfile()).thenReturn(profile);
+    }
+
+    private static RuntimeState loadAndConsumeCnzRuntime() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 3, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            assertTrue(manager.consumePendingInitialObjectSetupPass());
+            return captureRuntimeState(manager);
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    private static RuntimeState captureRuntimeState(LevelManager manager) {
+        List<ObjectRow> objects = new ArrayList<>();
+        for (ObjectInstance object : manager.getObjectManager().getActiveObjects()) {
+            int slot = object instanceof AbstractObjectInstance instance
+                    ? instance.getSlotIndex() : -1;
+            objects.add(new ObjectRow(slot, object.getClass().getName(),
+                    object.getX(), object.getY()));
+        }
+        objects.sort(Comparator.comparingInt(ObjectRow::slot)
+                .thenComparing(ObjectRow::className));
+        AbstractPlayableSprite player = GameServices.sprites().getMainPlayable();
+        List<PlayerState> sidekicks = GameServices.sprites().getSidekicks().stream()
+                .map(TestS3kInitialObjectSetupLifecycle::capturePlayer)
+                .toList();
+        return new RuntimeState(List.copyOf(objects), objects.size(),
+                manager.getObjectManager().getFrameCounter(),
+                manager.getObjectManager().getVblaCounter(), manager.getFrameCounter(),
+                GameServices.camera().getX(), GameServices.camera().getY(),
+                GameServices.rng().getSeed(), capturePlayer(player), sidekicks);
+    }
+
+    private static PlayerState capturePlayer(AbstractPlayableSprite player) {
+        return new PlayerState(player.getCentreX(), player.getCentreY(),
+                player.getXSpeed(), player.getYSpeed(), player.getGSpeed(),
+                TraceCharacterState.statusByteFromSprite(player),
+                player.getAnimationId(), player.getMappingFrame());
+    }
+
+    private record ObjectRow(int slot, String className, int x, int y) {
+    }
+
+    private record PlayerState(int centreX, int centreY, int xSpeed, int ySpeed,
+                               int groundSpeed, int status, int animation, int mapping) {
+    }
+
+    private record RuntimeState(List<ObjectRow> objects, int activeSlotCount,
+                                int objectFrame, int vbla, int levelFrame,
+                                int cameraX, int cameraY, long rngSeed,
+                                PlayerState player, List<PlayerState> sidekicks) {
     }
 
     private record AuthorityCase(boolean expected, LevelLoadMode mode, boolean postLoad,

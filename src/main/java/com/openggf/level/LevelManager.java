@@ -377,9 +377,26 @@ public class LevelManager {
      * production gameplay seams, not through this query.
      */
     public boolean hasPendingInitialObjectSetupPass() {
-        return pendingInitialObjectSetupLifecycle
-                == InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE;
+        return pendingInitialObjectSetupLifecycle == InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE;
     }
+
+    /**
+     * Consumes the fresh S3K level's native Load_Sprites/Process_Sprites setup
+     * dispatch. Ownership is cleared before object execution so an exception
+     * cannot replay a partially completed pass.
+     */
+    public boolean consumePendingInitialObjectSetupPass() {
+        InitialObjectSetupLifecycle pending = pendingInitialObjectSetupLifecycle; pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
+        if (pending != InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE) return false;
+        objectManager.runInitialS3kLoadThenExecutePass(camera.getX(), spriteManager.getMainPlayable(), spriteManager.getSidekicks());
+        return true;
+    }
+
+    /**
+     * Discards fresh-load setup authority before restoring runtime state that
+     * already represents that native setup pass.
+     */
+    public void discardPendingInitialObjectSetupForStateRestoration() { pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE; }
 
     private void resetRewindBufferAfterLevelBoundary() {
         markRewindLevelLoadBoundary();
