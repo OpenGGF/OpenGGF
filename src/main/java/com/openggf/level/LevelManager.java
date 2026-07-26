@@ -2739,8 +2739,9 @@ public class LevelManager {
             return;
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            sidekick.setX((short) (player.getX() + xOffset));
-            sidekick.setY((short) (player.getY() + yOffset));
+            // ROM x_pos/y_pos are player centres, not render bounds.
+            sidekick.setCentreXPreserveSubpixel((short) (player.getCentreX() + xOffset));
+            sidekick.setCentreYPreserveSubpixel((short) (player.getCentreY() + yOffset));
             sidekick.setXSpeed((short) 0);
             sidekick.setYSpeed((short) 0);
             sidekick.setGSpeed((short) 0);

@@ -522,8 +522,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (shouldSpawnIntro(act)) {
             // ROM: SpawnLevelMainSprites clears Level_started_flag as part of the
             // intro bootstrap, before Obj_intPlane executes its first update.
+            // It does not dispatch Player_2 here; Tails_Control owns the later
+            // AIZ dormant marker (sonic3k.asm:8111-8128,26389-26397).
             camera().setLevelStarted(false);
-            applyIntroSidekickDormantMarkersForBootstrap();
             introSpawned = spawnIntroObject();
         } else if (act == 0) {
             // Skip-intro: apply main-level terrain overlays and palette now
@@ -813,19 +814,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         return sidekick != null
                 && shouldSpawnIntro(0)
                 && playerCharacter() == PlayerCharacter.SONIC_AND_TAILS;
-    }
-
-    private void applyIntroSidekickDormantMarkersForBootstrap() {
-        SpriteManager sm = spriteManager();
-        if (sm == null || playerCharacter() != PlayerCharacter.SONIC_AND_TAILS) {
-            return;
-        }
-        for (AbstractPlayableSprite sidekick : sm.getRegisteredSidekicks()) {
-            SidekickCpuController controller = sidekick.getCpuController();
-            if (controller != null && shouldEnterIntroSidekickDormantMarker(sidekick)) {
-                controller.applyLevelEventDormantMarkerForBootstrap();
-            }
-        }
     }
 
     private boolean spawnIntroObject() {

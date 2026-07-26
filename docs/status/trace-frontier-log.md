@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+## 2026-07-27 - AIZ dormant marker returns to the first ordinary Player 2 dispatch
+
+- Worktree: `.worktrees/trace-s3k-aiz-2707`, branch
+  `bugfix/ai-trace-s3k-aiz-2707-dormant`, based on `origin/develop`
+  `1ff178a85`; measurements include the uncommitted production, test, and
+  documentation changes described here.
+- RED command:
+  `mvn -Dtest=com.openggf.game.sonic3k.events.TestSonic3kAIZEvents test
+  -DfailIfNoTests=false -Dmse=off`.
+  Both new lifecycle assertions observed premature Player 2 position
+  `$7F00` instead of the fresh spawn position `$0020`.
+- Root cause: `Sonic3kAIZEvents.init` and
+  `Sonic3kLevelEventManager.applyZonePlayerState` both applied the dormant
+  marker before Player 2's ordinary object dispatch. ROM
+  `SpawnLevelMainSprites_SpawnPlayers` writes Player 1 minus `$20`, plus four
+  Y; `Tails_Init` returns after advancing the player routine; only the later
+  `Tails_Control` / `loc_13A10` dispatch calls `sub_13ECA` and writes CPU
+  routine `$0A`, `object_control=$83`, and position `$7F00,0`
+  (`docs/skdisasm/sonic3k.asm:8351-8369,26101-26156,26389-26397`).
+- Fix: remove the two AIZ bootstrap writes and retain the existing
+  `SidekickCpuController.updateInit` ROM path as the sole marker owner.
+  `LevelManager.spawnSidekicks` now applies its already-typed per-game offsets
+  through subpixel-preserving centre writes, matching ROM word-sized
+  `x_pos/y_pos`; it does not clear or replace generic object-control state or
+  queued input.
+- Focused live/prefix, spawn-offset, and CNZ carry-control command passed its
+  66 relevant tests. Rewind coverage, static-state coverage, architecture,
+  and trace-parity guards passed their four requested classes.
+- Replays retain their current-develop frontiers: standalone AIZ 1,277 errors
+  at f2707 `tails_animation_id` (ROM `0`, engine `5`); complete AIZ 26 errors
+  at f26107 `x`; ICZ complete one error at f24140 `rings`; CNZ standalone two
+  comparison errors at f4801 `tails_mapping_frame`. An identical clean-base
+  CNZ run reproduced the same frontier and five scenario failures, confirming
+  no control regression.
+
 ## 2026-07-26 - AIZ complete-run preserves late ending-pose Ctrl_2 cadence
 
 - Worktree: `trace-s3k-aiz-complete-25039`, branch
