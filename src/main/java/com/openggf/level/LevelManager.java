@@ -164,8 +164,8 @@ public class LevelManager {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
     private boolean resetCounterPlacementAfterCameraSnap;
-    private InitialObjectSetupLifecycle pendingInitialObjectSetupLifecycle =
-            InitialObjectSetupLifecycle.NONE;
+    private final InitialObjectSetupCoordinator initialObjectSetup =
+            new InitialObjectSetupCoordinator();
 
     void writeCurrentZone(int zone) {
         this.currentZone = zone;
@@ -331,7 +331,7 @@ public class LevelManager {
      * @throws IOException if an I/O error occurs while loading the level
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
-        pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
+        initialObjectSetup.discard();
         try {
             ctx.resetInitialObjectSetupRequestForLoadAttempt();
             GameModule module = activeGameModule();
@@ -357,10 +357,9 @@ public class LevelManager {
                 writeCurrentLevel(ctx.getLevel());
             }
             resetRewindBufferAfterLevelBoundary();
-            pendingInitialObjectSetupLifecycle =
-                    ctx.requestedInitialObjectSetupLifecycle();
+            initialObjectSetup.publish(ctx.requestedInitialObjectSetupLifecycle());
         } catch (Exception e) {
-            pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
+            initialObjectSetup.discard();
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
             Throwable cause = e.getCause();
             if (cause instanceof IOException ioe) {
@@ -377,7 +376,7 @@ public class LevelManager {
      * production gameplay seams, not through this query.
      */
     public boolean hasPendingInitialObjectSetupPass() {
-        return pendingInitialObjectSetupLifecycle == InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE;
+        return initialObjectSetup.hasPendingPass();
     }
 
     /**
@@ -386,17 +385,18 @@ public class LevelManager {
      * cannot replay a partially completed pass.
      */
     public boolean consumePendingInitialObjectSetupPass() {
-        InitialObjectSetupLifecycle pending = pendingInitialObjectSetupLifecycle; pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
-        if (pending != InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE) return false;
-        objectManager.runInitialS3kLoadThenExecutePass(camera.getX(), spriteManager.getMainPlayable(), spriteManager.getSidekicks());
-        return true;
+        return initialObjectSetup.consume(() ->
+                objectManager.runInitialS3kLoadThenExecutePass(
+                        camera.getX(), spriteManager.getMainPlayable(), spriteManager.getSidekicks()));
     }
 
     /**
      * Discards fresh-load setup authority before restoring runtime state that
      * already represents that native setup pass.
      */
-    public void discardPendingInitialObjectSetupForStateRestoration() { pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE; }
+    public void discardPendingInitialObjectSetupForStateRestoration() {
+        initialObjectSetup.discard();
+    }
 
     private void resetRewindBufferAfterLevelBoundary() {
         markRewindLevelLoadBoundary();
@@ -3475,7 +3475,7 @@ public class LevelManager {
         frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
-        pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
+        initialObjectSetup.discard();
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;

@@ -1241,7 +1241,7 @@ public class GameLoop {
             // S3K's fresh level performs its one Load_Sprites/Process_Sprites
             // setup dispatch after the title-card wait and before LevelLoop
             // (docs/skdisasm/sonic3k.asm:7737-7748, 7849-7855).
-            levelManager.consumePendingInitialObjectSetupPass(); exitTitleCard();
+            postTitleCardDestination.completeRelease(levelManager, this::exitTitleCard);
             // Continue to LEVEL mode processing this frame (fall through)
             return true;
         }

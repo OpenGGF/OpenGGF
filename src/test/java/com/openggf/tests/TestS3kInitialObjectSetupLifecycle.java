@@ -1,7 +1,10 @@
 package com.openggf.tests;
 
+import com.openggf.GameLoop;
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
+import com.openggf.control.InputHandler;
+import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.InitStep;
@@ -10,6 +13,8 @@ import com.openggf.game.LevelAssemblyKind;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.LevelLoadMode;
+import com.openggf.game.OscillationManager;
+import com.openggf.game.TitleCardProvider;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.level.LevelManager;
@@ -23,9 +28,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -146,6 +154,25 @@ class TestS3kInitialObjectSetupLifecycle {
     }
 
     @Test
+    void nonLevelTitleCardReleaseRetainsFreshSetupAuthority() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            int before = manager.getObjectManager().getFrameCounter();
+            GameLoop loop = releasingTitleCardLoop("BONUS_STAGE");
+
+            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
+                    new Class<?>[] { boolean.class }, false));
+
+            assertEquals(GameMode.BONUS_STAGE, loop.getCurrentGameMode());
+            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertEquals(before, manager.getObjectManager().getFrameCounter());
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    @Test
     void pausedFirstOrdinaryFrameRetainsSetupUntilGameplayResumes() throws Exception {
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
@@ -160,6 +187,16 @@ class TestS3kInitialObjectSetupLifecycle {
             assertFalse(ran);
             assertTrue(manager.hasPendingInitialObjectSetupPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
+
+            boolean resumed = LevelFrameStep.executeWithPause(
+                    LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                    manager, GameServices.camera(), () -> {
+                    }, true, LevelFrameStep.DIRECT_WRAPPER);
+
+            assertTrue(resumed);
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertEquals(before + 2, manager.getObjectManager().getFrameCounter(),
+                    "resume runs the setup dispatch and one ordinary object dispatch");
         } finally {
             sharedLevel.dispose();
         }
@@ -205,13 +242,13 @@ class TestS3kInitialObjectSetupLifecycle {
     }
 
     @Test
-    void freshCnzSetupProducesDeterministicConcreteRuntimeState() throws Exception {
-        RuntimeState first = loadAndConsumeCnzRuntime();
+    void visibleTitleReleaseAndNoTitleFirstFrameConvergeForFreshCnz() throws Exception {
+        ConvergenceState visible = loadCnzThroughVisibleTitleRelease();
         TestEnvironment.resetAll();
-        RuntimeState second = loadAndConsumeCnzRuntime();
+        ConvergenceState noTitle = loadCnzThroughNoTitleFirstFrame();
 
-        assertEquals(first, second);
-        assertTrue(first.objects().stream()
+        assertEquals(visible, noTitle);
+        assertTrue(visible.runtime().objects().stream()
                         .anyMatch(row -> row.className().contains("CnzBalloon")),
                 "the initial CNZ spawn window must include a balloon initialized by the setup pass");
     }
@@ -339,15 +376,74 @@ class TestS3kInitialObjectSetupLifecycle {
         when(GameModuleRegistry.getCurrent().getLevelInitProfile()).thenReturn(profile);
     }
 
-    private static RuntimeState loadAndConsumeCnzRuntime() throws Exception {
+    private static ConvergenceState loadCnzThroughVisibleTitleRelease() throws Exception {
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 3, 0);
         try {
             LevelManager manager = GameServices.level();
-            assertTrue(manager.consumePendingInitialObjectSetupPass());
-            return captureRuntimeState(manager);
+            OscillatorState before = captureOscillator();
+            GameLoop loop = releasingTitleCardLoop("LEVEL");
+            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
+                    new Class<?>[] { boolean.class }, false));
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            LevelFrameStep.execute(LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                    manager, GameServices.camera(), () -> {
+                    });
+            return new ConvergenceState(captureRuntimeState(manager),
+                    before, captureOscillator());
         } finally {
             sharedLevel.dispose();
         }
+    }
+
+    private static ConvergenceState loadCnzThroughNoTitleFirstFrame() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 3, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            OscillatorState before = captureOscillator();
+            LevelFrameStep.execute(LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                    manager, GameServices.camera(), () -> {
+                    });
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            return new ConvergenceState(captureRuntimeState(manager),
+                    before, captureOscillator());
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    private static OscillatorState captureOscillator() {
+        return new OscillatorState(
+                Arrays.stream(OscillationManager.valuesForTest()).boxed().toList(),
+                Arrays.stream(OscillationManager.deltasForTest()).boxed().toList(),
+                OscillationManager.controlForTest());
+    }
+
+    private static GameLoop releasingTitleCardLoop(String destination) throws Exception {
+        TitleCardProvider provider = mock(TitleCardProvider.class);
+        when(provider.shouldReleaseControl()).thenReturn(true);
+        GameLoop loop = new GameLoop(new InputHandler());
+        loop.setGameplayMode(TestEnvironment.activeGameplayMode());
+        setField(loop, "titleCardProvider", provider);
+        setField(loop, "currentGameMode", GameMode.TITLE_CARD);
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        Object target = Enum.valueOf(
+                (Class<? extends Enum>) Class.forName("com.openggf.PostTitleCardDestination"),
+                destination);
+        setField(loop, "postTitleCardDestination", target);
+        return loop;
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private static Object invoke(Object target, String name, Class<?>[] types,
+                                 Object... args) throws Exception {
+        Method method = target.getClass().getDeclaredMethod(name, types);
+        method.setAccessible(true);
+        return method.invoke(target, args);
     }
 
     private static RuntimeState captureRuntimeState(LevelManager manager) {
@@ -389,6 +485,14 @@ class TestS3kInitialObjectSetupLifecycle {
                                 int objectFrame, int vbla, int levelFrame,
                                 int cameraX, int cameraY, long rngSeed,
                                 PlayerState player, List<PlayerState> sidekicks) {
+    }
+
+    private record OscillatorState(List<Integer> values, List<Integer> deltas,
+                                   int control) {
+    }
+
+    private record ConvergenceState(RuntimeState runtime, OscillatorState before,
+                                    OscillatorState after) {
     }
 
     private record AuthorityCase(boolean expected, LevelLoadMode mode, boolean postLoad,
