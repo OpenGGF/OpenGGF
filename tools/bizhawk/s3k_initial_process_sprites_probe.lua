@@ -8,7 +8,21 @@ local OUT = os.getenv("OGGF_OUT")
 local out = assert(io.open(OUT, "w"))
 local SLOT_SIZE, P1, P2 = 0x4A, 0xB000, 0xB04A
 local PRE_PC, POST_PC = 0x00647E, 0x006484
-local post_seen, ordinary_hook_installed, done = false, false, false
+local GAME_MODE, ZONE, ACT = 0xF600, 0xFE10, 0xFE11
+local LEVEL_MODE, LEVEL_MODE_MASK = 0x0C, 0x0F
+local TARGET_ZONE, TARGET_ACT = 0x00, 0x00
+local PRE_HOOK = "initial_process_sprites_pre"
+local POST_HOOK = "initial_process_sprites_post"
+local PLAYER_HOOK = "initial_process_sprites_first_player"
+local hooks_armed, post_seen, ordinary_hook_installed, done =
+    false, false, false, false
+
+-- Match the repository's fast diagnostic template. Rendering and audio
+-- dominate the wait to reach the target stage and are irrelevant here.
+emu.limitframerate(false)
+client.speedmode(6400)
+if client.invisibleemulation then client.invisibleemulation(true) end
+if client.SetSoundOn then pcall(client.SetSoundOn, false) end
 
 local function u8(a) return mainmemory.read_u8(a) end
 local function u16(a) return mainmemory.read_u16_be(a) end
@@ -101,28 +115,57 @@ local function snapshot(label)
     out:write(line.."\n"); out:flush(); print(line)
 end
 
-event.onmemoryexecute(function()
-    snapshot("ADJACENT_MINUS_ONE_PRE_SETUP")
-    local p1pc = u32(P1)
-    if p1pc ~= 0 and not ordinary_hook_installed then
-        ordinary_hook_installed = true
-        event.onmemoryexecute(function()
-            if post_seen and not done then
-                done = true
-                snapshot("FIRST_LEVEL_LOOP_PLAYER_ENTRY")
-                out:close()
-                client.exit()
-            end
-        end, p1pc, "first_ordinary_player")
-    end
-end, PRE_PC, "pre_initial_process_sprites")
+local function unregister_hooks()
+    event.unregisterbyname(PRE_HOOK)
+    event.unregisterbyname(POST_HOOK)
+    event.unregisterbyname(PLAYER_HOOK)
+end
 
-event.onmemoryexecute(function()
-    snapshot("POST_INITIAL_PROCESS_SPRITES")
-    post_seen = true
-end, POST_PC, "post_initial_process_sprites")
+local function arm_target_hooks()
+    if hooks_armed then return end
+    hooks_armed = true
+    event.onmemoryexecute(function()
+        snapshot("ADJACENT_MINUS_ONE_PRE_SETUP")
+        local p1pc = u32(P1)
+        if p1pc ~= 0 and not ordinary_hook_installed then
+            ordinary_hook_installed = true
+            event.onmemoryexecute(function()
+                if post_seen and not done then
+                    done = true
+                    snapshot("FIRST_LEVEL_LOOP_PLAYER_ENTRY")
+                    unregister_hooks()
+                    out:close()
+                    client.exit()
+                end
+            end, p1pc, PLAYER_HOOK)
+        end
+    end, PRE_PC, PRE_HOOK)
+
+    event.onmemoryexecute(function()
+        snapshot("POST_INITIAL_PROCESS_SPRITES")
+        post_seen = true
+    end, POST_PC, POST_HOOK)
+end
+
+local function is_target_stage()
+    local game_mode = u8(GAME_MODE)
+    return (game_mode & LEVEL_MODE_MASK) == LEVEL_MODE
+        and u8(ZONE) == TARGET_ZONE
+        and u8(ACT) == TARGET_ACT
+end
 
 while not done do
+    -- Until AIZ1, poll only three cheap bytes. BizHawk's execution callback
+    -- boundary is deliberately absent during boot, title, and other stages.
+    if not hooks_armed and is_target_stage() then
+        arm_target_hooks()
+    end
+    if movie.isloaded() and movie.mode() == "FINISHED" then
+        unregister_hooks()
+        out:close()
+        client.exit()
+        break
+    end
     if client.ispaused() then client.unpause() end
     emu.frameadvance()
 end

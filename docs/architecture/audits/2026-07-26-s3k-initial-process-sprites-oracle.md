@@ -20,9 +20,9 @@ one-based lines: line 1 is `ADJACENT_MINUS_ONE_PRE_SETUP`, line 2 is
 | State | Pre-call (line 1) | Return (line 2) | First `LevelLoop` P1 entry (line 3) |
 |---|---:|---:|---:|
 | PC | `$647E` | `$6484` | `$10A94` |
-| emulator frame | 1337 | 1337 | 1338 |
+| emulator frame | 799 | 799 | 800 |
 | `Level_frame_counter` | 0 | 0 | 1 |
-| `V_int_run_count` | 1317 | 1317 | 1318 |
+| `V_int_run_count` | 762 | 762 | 763 |
 | oscillation control word | `$007D` | `$007D` | `$007D` |
 | `Water_flag` byte | 1 | 1 | 1 |
 | raw/logical P1 and P2 controls | all zero | all zero | all zero |
@@ -113,7 +113,16 @@ The probe is `tools/bizhawk/s3k_initial_process_sprites_probe.lua`. It uses
 only `mainmemory.read_*`, `emu.getregister`, execution callbacks, logging, and
 normal emulator frame advancement. It contains no memory-write, input-drive,
 savestate, rewind, fixture-read, or state-hydration API. Lua syntax validation
-used `lua -e 'assert(loadfile(...))'`.
+used `luac -p`.
+
+The probe follows `tools/bizhawk/diag_template_fast.lua`: it disables the
+framerate limit, selects 6400% speed, suppresses audio, and uses invisible
+emulation. Before AIZ1 it polls only `Game_Mode`, `Current_zone`, and
+`Current_act` once per frame. It registers the execution callbacks only after
+the ROM enters the level-mode family for AIZ1, then unregisters all three
+callbacks immediately after the first ordinary player-entry snapshot. This
+avoids paying BizHawk's Lua/C# callback cost during boot, title, level select,
+or unrelated stages.
 
 The attended executable was
 `docs/BizHawk-2.11-linux-x64/EmuHawkMono.sh`; the ROM argument was the
