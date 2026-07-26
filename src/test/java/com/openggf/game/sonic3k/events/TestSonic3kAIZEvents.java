@@ -260,14 +260,21 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
-    public void introObjectIsReadyBeforeFirstAizGameplayFrame() {
+    public void introObjectIsReadyBeforeFirstAizGameplayFrame() throws Exception {
         AizPlaneIntroInstance intro = AizPlaneIntroInstance.getActiveIntroInstance();
         assertNotNull(intro, "ROM SpawnLevelMainSprites installs Obj_AIZPlaneIntro before first Process_Sprites");
         assertFalse(GameServices.camera().isLevelStarted());
+        assertEquals(0, intro.getRoutine(),
+                "SpawnLevelMainSprites installs the object without dispatching its routine");
+        assertEquals((short) 0xE918, introEventsFg1(intro),
+                "the installed object retains its ROM initializer before Process_Sprites");
+        assertTrue(GameServices.level().hasPendingInitialObjectSetupPass());
 
         AbstractPlayableSprite sonic = fixture.sprite();
         assertEquals(0x0040, sonic.getCentreX() & 0xFFFF);
         assertEquals(0x0420, sonic.getCentreY() & 0xFFFF);
+        assertFalse(sonic.isObjectControlled(),
+                "object control belongs to the canonical setup dispatch, not object installation");
 
         List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getRegisteredSidekicks();
         assertFalse(sidekicks.isEmpty(), "AIZ Sonic+Tails intro should spawn Player_2 before first frame");
@@ -278,16 +285,21 @@ public class TestSonic3kAIZEvents {
         assertEquals(0, tails.getCentreY() & 0xFFFF);
         assertTrue(tails.getAir());
 
-        fixture.stepFrame(false, false, false, false, false);
+        assertTrue(GameServices.level().consumePendingInitialObjectSetupPass());
 
+        assertEquals(2, intro.getRoutine());
+        assertEquals((short) 0xE920, introEventsFg1(intro));
+        assertTrue(sonic.isObjectControlled());
         assertEquals(0, sonic.getYSpeed() & 0xFFFF,
-                "Obj_AIZPlaneIntro routine 0 should clear y_vel before the first strict frame compare");
+                "the canonical setup dispatch runs Obj_AIZPlaneIntro routine 0");
         assertFalse(sonic.getAir(),
-                "Obj_AIZPlaneIntro routine 0 should keep Sonic grounded for the first strict frame compare");
+                "Obj_AIZPlaneIntro routine 0 keeps Sonic grounded");
         assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
-                "Tails_CPU_Control loc_13A10 parks AIZ intro Tails on the first object tick");
+                "Tails_CPU_Control loc_13A10 parks AIZ intro Tails on the setup dispatch");
         assertEquals(0, tails.getCentreY() & 0xFFFF);
         assertTrue(tails.getAir());
+        assertFalse(GameServices.level().consumePendingInitialObjectSetupPass(),
+                "setup authority is one-shot");
     }
 
     @Test
@@ -302,9 +314,16 @@ public class TestSonic3kAIZEvents {
         // (sonic3k.asm:7849-7855,8111-8128). Routine 0 initializes
         // Events_fg_1=$E918 and the common object tail adds scroll speed 8
         // (sonic3k.asm:135469-135475,135495-135508,135945-135956).
+        assertEquals(0, intro.getRoutine());
+        assertEquals((short) 0xE918, introEventsFg1(intro));
+        assertTrue(GameServices.level().hasPendingInitialObjectSetupPass());
+        assertTrue(GameServices.level().consumePendingInitialObjectSetupPass());
         assertEquals(2, intro.getRoutine());
         assertEquals((short) 0xE920, introEventsFg1(intro),
                 "the production setup path must contribute exactly one intro accumulator update");
+        assertFalse(GameServices.level().consumePendingInitialObjectSetupPass());
+        assertEquals((short) 0xE920, introEventsFg1(intro),
+                "a second setup consume must be idempotent");
 
         // The next 430 native LevelLoop dispatches end on the accumulator's
         // negative-to-zero transition. Because the ROM tests bpl before adding,
