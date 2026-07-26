@@ -66,6 +66,7 @@ class TestLbzRollingDrumInstance {
         LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
         TestablePlayableSprite player = groundedPlayer(0x1800, 0x05AD);
         player.setGSpeed((short) 0);
+        player.setMappingFrame(0x96);
 
         drum.update(0, player);
 
@@ -78,6 +79,8 @@ class TestLbzRollingDrumInstance {
                 "loc_2C44E writes move.w #1,anim(a1), which means anim=0 and prev_anim=1");
         assertTrue(((UnitPlayableSprite) player).wasAnimationRestartForced(),
                 "move.w #1,anim(a1) forces anim != prev_anim, so the walk/tumble script must restart");
+        assertEquals(0x96, player.getMappingFrame(),
+                "loc_2C44E runs after the player animation slot and does not write mapping_frame");
         assertEquals((short) 1, player.getGSpeed(),
                 "loc_2C44E seeds ground_vel=1 when it was zero");
         assertEquals(0x81, drum.getRideAngleForTest(player),
@@ -224,7 +227,7 @@ class TestLbzRollingDrumInstance {
     }
 
     @Test
-    void activeRideRestoresObjectOwnedTumbleMappingAfterNormalAnimationOverwrite() {
+    void activeRideRestoresTumbleMappingWithoutOverwritingPlayerSelectedAnimation() {
         LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
         TestablePlayableSprite player = groundedPlayer(0x1800, 0x05AD);
 
@@ -234,12 +237,37 @@ class TestLbzRollingDrumInstance {
         player.setMappingFrame(0);
         drum.update(1, player);
 
-        assertEquals(Sonic3kAnimationIds.WALK.id(), player.getAnimationId(),
-                "Obj31 keeps anim=0 active while flip_type/flip_angle select Anim_Tumble");
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId(),
+                "loc_2C4BA does not rewrite anim after loc_2C44E's capture-frame word write");
         assertTrue(player.isObjectMappingFrameControl(),
-                "The drum must own the visible tumble mapping so idle animation cannot overwrite it between object frames");
-        assertEquals(rollingDrumTumbleFrame(0x01, 0x80), player.getMappingFrame(),
-                "Anim_Tumble uses flip_angle/flip_type to choose the rolling-drum pose");
+                "flip state continues to route the animation tail through Anim_Tumble");
+        assertEquals(rollingDrumTumbleFrame(0x01, 0x80), player.getMappingFrame());
+    }
+
+    @Test
+    void tumbleFrameBoundaryAdvancesOnePassAfterDrumPublishesNewFlipAngle() {
+        LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
+        TestablePlayableSprite player = groundedPlayer(0x1800, 0x05AD);
+
+        drum.update(0, player);
+        for (int frame = 1; frame <= 6; frame++) {
+            drum.update(frame, player);
+        }
+
+        assertEquals(0x0B, player.getFlipAngle());
+        assertEquals(0x37, player.getMappingFrame(),
+                "the pass publishing flip_angle=$0B still animates from the preceding $09");
+
+        drum.update(7, player);
+
+        assertEquals(0x0D, player.getFlipAngle());
+        assertEquals(0x37, player.getMappingFrame(),
+                "Anim_Tumble sees $0B before loc_2C4BA publishes $0D later in the pass");
+
+        drum.update(8, player);
+
+        assertEquals(0x36, player.getMappingFrame(),
+                "the $0D pose becomes visible on the following player-animation pass");
     }
 
     @Test
@@ -361,6 +389,8 @@ class TestLbzRollingDrumInstance {
         LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
         TestablePlayableSprite sonic = groundedPlayer(0x1800, 0x05AD);
         TestablePlayableSprite tails = groundedPlayer(0x17F8, 0x05AD);
+        sonic.setMappingFrame(0x96);
+        tails.setMappingFrame(0x98);
         drum.setServices(new TestObjectServices() {
             @Override
             public ObjectPlayerQuery playerQuery() {
@@ -375,6 +405,9 @@ class TestLbzRollingDrumInstance {
         assertEquals(0x81, drum.getNativeRideAngleForTest(0));
         assertEquals(0x81, drum.getNativeRideAngleForTest(1),
                 "The ROM stores P1/P2 drum angles in adjacent bytes, not one shared global angle");
+        assertEquals(0x96, sonic.getMappingFrame());
+        assertEquals(0x98, tails.getMappingFrame(),
+                "P2 capture also occurs after its player-animation slot and preserves that pose");
     }
 
     @Test

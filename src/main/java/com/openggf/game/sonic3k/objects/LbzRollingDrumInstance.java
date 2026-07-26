@@ -166,7 +166,11 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);
         }
-        applyRideAnimationState(player);
+        // loc_2C44E runs in the drum's later SST slot. The player animation
+        // slot has already completed this pass, so only arm object-owned tumble
+        // animation here; mapping_frame remains the pose published by the
+        // player's earlier slot until the next Process_Sprites pass.
+        armRideAnimationState(player);
     }
 
     private void updateActiveRide(AbstractPlayableSprite player, int nativePlayerIndex) {
@@ -198,6 +202,11 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             }
         }
 
+        // Anim_Tumble runs in the earlier player slot and consumes the flip_angle
+        // published by the preceding drum pass (sonic3k.asm:24780-24960).
+        // Reproduce that phase before loc_2C4BA writes this pass's new angle.
+        applyRideAnimationState(player);
+
         int angle = getAngle(nativePlayerIndex) & 0xFF;
         int cos = TrigLookupTable.cosHex(angle);
         int radius = ((player.getYRadius() & 0xFFFF) << 8) + 0x4000;
@@ -211,7 +220,6 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             player.setFlipType(FLIP_TYPE_ACTIVE_FROM_REST);
         }
         player.setHighPriority(((byte) player.getFlipAngle()) >= 0);
-        applyRideAnimationState(player);
         refreshRideLatch(player);
     }
 
@@ -292,8 +300,13 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         }
     }
 
-    private void applyRideAnimationState(AbstractPlayableSprite player) {
+    private void armRideAnimationState(AbstractPlayableSprite player) {
         player.setAnimationId(ANIMATION_ROLLING_DRUM);
+        player.setForcedAnimationId(-1);
+        player.setObjectMappingFrameControl(true);
+    }
+
+    private void applyRideAnimationState(AbstractPlayableSprite player) {
         player.setForcedAnimationId(-1);
         player.setObjectMappingFrameControl(true);
         applyRideRenderFlags(player);
