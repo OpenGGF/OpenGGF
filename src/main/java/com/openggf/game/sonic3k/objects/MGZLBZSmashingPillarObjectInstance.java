@@ -181,6 +181,15 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean groundedSquashEdgeSideContactSetsPush() {
+        // SolidObjectFull's grounded lower-half edge escape branches back to
+        // loc_1E042/loc_1E06E, which sets Status_Push even when the falling
+        // pillar is moving into a player who is moving away from its face
+        // (sonic3k.asm:41473-41495,41564-41568).
+        return true;
+    }
+
+    @Override
     public boolean usesInstanceSolidStateLatchKey() {
         // updateDynamicSpawn follows the moving y_pos, but ROM keeps the
         // standing/pushing bits in this object's fixed SST slot. Key the

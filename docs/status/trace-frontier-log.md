@@ -1,5 +1,56 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- LBZ smashing-pillar grounded edge push advances f2270 to f2816
+
+Independently verified in worktree `.worktrees/trace-s3k-lbz-complete`,
+branch `bugfix/ai-trace-s3k-lbz-complete`, atop `1204646f1`.
+
+`Obj_MGZLBZSmashingPillar` calls `SolidObjectFull` with its live moving
+position and padded width (`docs/skdisasm/sonic3k.asm:56920-56935`). For a
+grounded player with zero vertical velocity in the lower-half squash path,
+an overlap within `$10` pixels of the side escapes through `loc_1E134` to
+`loc_1E042`; that side path rejoins `loc_1E06E`, which sets the object's
+pushing bit and player `Status_Push` without consulting horizontal velocity
+(`docs/skdisasm/sonic3k.asm:41473-41495,41564-41568`).
+
+The engine already models that narrow ROM branch through
+`groundedSquashEdgeSideContactSetsPush()`, but the smashing pillar had not
+opted into it. Its object-owned solid profile now does. The predicate is
+consumed only for the grounded, zero-Y-speed, lower-half edge escape; it
+does not alter ordinary side, top, bottom, or airborne contacts. No trace,
+route, frame, expected value, game, or zone identity selects the behavior.
+
+Focused owner/shared/guard verification:
+
+```bash
+mvn -Dmse=off \
+  -Dtest='com.openggf.game.sonic3k.objects.TestMGZLBZSmashingPillarObjectInstance,com.openggf.level.objects.TestSolidObjectManager,com.openggf.level.objects.TestSolidRoutineProfiles,com.openggf.level.objects.TestObjectPhysicsStandardizationGuard,com.openggf.level.objects.TestObjectServicesMigrationGuard,com.openggf.tests.TestNoServicesInObjectConstructors,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestTraceReplayInvariantGuard' \
+  test
+```
+
+Result: 216 tests pass with zero failures, errors, or skips.
+
+Full replay with the verified locked-on ROM
+(`SHA-1 CFBF98C36C776677290A872547AC47C53D2761D6`) and required heap:
+
+```bash
+mvn -Dmse=off -Dsurefire.argLine=-Xmx6g \
+  -Ds3k.rom.path='<verified locked-on ROM>' \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay test
+```
+
+Result: expected-red, 9,041 errors and zero warnings. The first mismatch moves
+from frame 2270 `tails_x` (9,291 errors; expected `$04E1`, actual `$04E0`) to
+frame 2816 `y_sub` (expected `$8500`, actual `$0000`): a 546-frame frontier
+advance and 250 fewer comparison errors.
+
+The only other zone using this object holds at its documented canaries:
+`TestS3kMgzTraceReplay` remains at f5164 `air` with 8,184 errors, and
+`TestS3kMgzCompleteRunTraceReplay` remains at f5550 `air` with 8,064 errors.
+The S3K special-stage replay stays green, and AIZ1 headless plus S3K level
+loading, bootstrap resolver, and decoding gates pass 24 tests with zero
+failures/errors/skips.
+
 ### 2026-07-26 -- LBZ rolling-drum Roll dispatch advances f1707 to f2270
 
 Independently verified in worktree `.worktrees/trace-s3k-lbz-complete`,
