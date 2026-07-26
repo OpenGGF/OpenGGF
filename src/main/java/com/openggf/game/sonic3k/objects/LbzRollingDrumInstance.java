@@ -202,10 +202,11 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             }
         }
 
-        // Anim_Tumble runs in the earlier player slot and consumes the flip_angle
-        // published by the preceding drum pass (sonic3k.asm:24780-24960).
-        // Reproduce that phase before loc_2C4BA writes this pass's new angle.
-        applyRideAnimationState(player);
+        if (usesWalkTumbleScript(player)) {
+            applyRideAnimationState(player);
+        } else {
+            player.setObjectMappingFrameControl(false);
+        }
 
         int angle = getAngle(nativePlayerIndex) & 0xFF;
         int cos = TrigLookupTable.cosHex(angle);
@@ -304,6 +305,15 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         player.setAnimationId(ANIMATION_ROLLING_DRUM);
         player.setForcedAnimationId(-1);
         player.setObjectMappingFrameControl(true);
+    }
+
+    private boolean usesWalkTumbleScript(AbstractPlayableSprite player) {
+        var animationSet = player.getAnimationSet();
+        var script = animationSet != null ? animationSet.getScript(player.getAnimationId()) : null;
+        // Animate_Sonic sends only the $FF walk/run script through Anim_Tumble.
+        // $FE Roll and the other negative script controls keep their ordinary
+        // mappings (sonic3k.asm:24733-24811; Anim - Sonic.asm:AniSonic02).
+        return script == null || (script.delay() & 0xFF) == 0xFF;
     }
 
     private void applyRideAnimationState(AbstractPlayableSprite player) {

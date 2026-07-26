@@ -714,6 +714,29 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void s3kNegativeFlipTypeDoesNotLetWalkTumbleOwnershipSuppressRollScript() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(2, new SpriteAnimationScript(0xFE,
+                List.of(0x96, 0x97), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(2);
+        sprite.getAnimationManager().restoreRewindState(
+                new PlayableSpriteAnimation.RewindState(0, 0));
+        sprite.setAir(true);
+        sprite.setRolling(true);
+        sprite.setFlipType(0x80);
+        sprite.setFlipAngle(0x20);
+        sprite.setObjectMappingFrameControl(true);
+        sprite.setMappingFrame(0x33);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x96, sprite.getMappingFrame(),
+                "AniSonic02 timing $FE follows loc_12A2A instead of the $FF Anim_Tumble branch");
+    }
+
+    @Test
     public void s2TailsRunUsesNativeThreeFrameSlopeStride() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_2);
         ScriptedVelocityAnimationProfile profile =

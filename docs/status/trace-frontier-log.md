@@ -1,5 +1,57 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- LBZ rolling-drum Roll dispatch advances f1707 to f2270
+
+Independently verified in worktree `.worktrees/trace-s3k-lbz-complete`,
+branch `bugfix/ai-trace-s3k-lbz-complete`, atop `f2d48da5c`.
+
+The player animation dispatcher treats `$FF` as the walk/run control path and
+only that path can enter `Anim_Tumble`; `$FE` and the other non-walk controls
+branch to their own handlers (`docs/skdisasm/sonic3k.asm:24733-24811`,
+`25151-25202`; `docs/s2disasm/s2.asm:38449-38454`, `41341-41345`). When
+movement selects Roll while an LBZ drum is still publishing negative
+`flip_type`/`flip_angle`, the Roll script therefore owns the mapping rather
+than the drum tumble pose. The drum now relinquishes its mapping latch for
+that native state, and the shared animator recognizes the same script-control
+boundary. No trace identity, route, frame, zone name, expected value, or
+comparison outcome selects the behavior.
+
+Focused owner and animation verification:
+
+```bash
+mvn -Dmse=off \
+  -Dtest='com.openggf.game.sonic3k.objects.TestLbzRollingDrumInstance,com.openggf.sprites.managers.TestPlayableSpriteAnimation' \
+  test
+```
+
+Result: 56 tests pass, zero failures/errors/skips.
+
+Full replay with the required heap:
+
+```bash
+mvn -q -Dsurefire.argLine='-Xshare:off -Xmx6g' \
+  -Dsurefire.forkCount=1 -Dtrace.context.radius=20 \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay \
+  -Ds3k.rom.path='<verified locked-on ROM>' test
+```
+
+Result: expected-red, 9,291 errors and zero warnings. The first mismatch moves
+from frame 1707 `player_mapping_frame` (9,297 errors; expected `$96`, actual
+`$33`) to frame 2270 `tails_x` (expected `$04E1`, actual `$04E0`): a
+563-frame frontier advance and six fewer comparison errors.
+
+Cross-game frontier-only canaries used the verified S1 REV01, S2 REV01, and
+locked-on S3K ROMs. S1 GHZ1, S2 EHZ1, and the S3K special-stage replay pass.
+AIZ holds at frame 2696 `x_speed`; ICZ retains its documented frame-zero
+bootstrap mismatch. The architecture, comparison-only trace, and rewind
+coverage guards pass 77 tests with zero failures/errors/skips:
+
+```bash
+mvn -Dmse=off \
+  -Dtest='com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard' \
+  test
+```
+
 ### 2026-07-26 -- LBZ rolling-drum SST ordering advances f1659 to f1707
 
 Verified in worktree `.worktrees/trace-s3k-lbz-complete`, branch

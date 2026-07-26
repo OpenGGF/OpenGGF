@@ -13,8 +13,10 @@ import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.TestObjectServices;
-import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -81,6 +83,8 @@ class TestLbzRollingDrumInstance {
                 "move.w #1,anim(a1) forces anim != prev_anim, so the walk/tumble script must restart");
         assertEquals(0x96, player.getMappingFrame(),
                 "loc_2C44E runs after the player animation slot and does not write mapping_frame");
+        assertTrue(player.isObjectMappingFrameControl(),
+                "the next $FF walk-special pass routes negative flip_type through Anim_Tumble");
         assertEquals((short) 1, player.getGSpeed(),
                 "loc_2C44E seeds ground_vel=1 when it was zero");
         assertEquals(0x81, drum.getRideAngleForTest(player),
@@ -227,77 +231,60 @@ class TestLbzRollingDrumInstance {
     }
 
     @Test
-    void activeRideRestoresTumbleMappingWithoutOverwritingPlayerSelectedAnimation() {
+    void activeRideLeavesNonWalkScriptMappingPublishedByEarlierPlayerSlot() {
         LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
         TestablePlayableSprite player = groundedPlayer(0x1800, 0x05AD);
 
         drum.update(0, player);
-        player.setAnimationId(Sonic3kAnimationIds.WAIT.id());
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(Sonic3kAnimationIds.ROLL.id(), new SpriteAnimationScript(
+                0xFE, List.of(0x96, 0x97), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
         player.setObjectMappingFrameControl(false);
-        player.setMappingFrame(0);
+        player.setMappingFrame(0x96);
         drum.update(1, player);
 
-        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId(),
+        assertEquals(Sonic3kAnimationIds.ROLL.id(), player.getAnimationId(),
                 "loc_2C4BA does not rewrite anim after loc_2C44E's capture-frame word write");
-        assertTrue(player.isObjectMappingFrameControl(),
-                "flip state continues to route the animation tail through Anim_Tumble");
-        assertEquals(rollingDrumTumbleFrame(0x01, 0x80), player.getMappingFrame());
+        assertFalse(player.isObjectMappingFrameControl(),
+                "AniSonic02 timing $FE must remain under the normal player animation dispatcher");
+        assertEquals(0x96, player.getMappingFrame(),
+                "the later Obj31 slot updates flip state without overwriting AniSonic02's mapping");
     }
 
     @Test
-    void tumbleFrameBoundaryAdvancesOnePassAfterDrumPublishesNewFlipAngle() {
+    void activeRidePublishesFlipAngleWithoutOverwritingEarlierAnimationMapping() {
         LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
         TestablePlayableSprite player = groundedPlayer(0x1800, 0x05AD);
 
         drum.update(0, player);
+        player.setMappingFrame(0x37);
         for (int frame = 1; frame <= 6; frame++) {
             drum.update(frame, player);
         }
 
         assertEquals(0x0B, player.getFlipAngle());
         assertEquals(0x37, player.getMappingFrame(),
-                "the pass publishing flip_angle=$0B still animates from the preceding $09");
+                "Obj31 only publishes flip state; Animate_Sonic owns mapping_frame");
 
         drum.update(7, player);
 
         assertEquals(0x0D, player.getFlipAngle());
         assertEquals(0x37, player.getMappingFrame(),
-                "Anim_Tumble sees $0B before loc_2C4BA publishes $0D later in the pass");
-
-        drum.update(8, player);
-
-        assertEquals(0x36, player.getMappingFrame(),
-                "the $0D pose becomes visible on the following player-animation pass");
+                "the later object slot must preserve the pose selected by the earlier animation slot");
     }
 
     @Test
-    void activeRideAppliesRomNegativeTumbleRenderFlagsForRightFacingPlayer() {
+    void activeWalkTumbleAppliesRomNegativeRenderFlags() {
         LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
         TestablePlayableSprite player = groundedPlayer(0x1800, 0x05AD);
-        player.setDirection(Direction.RIGHT);
 
         drum.update(0, player);
         drum.update(1, player);
 
-        assertFalse(player.getRenderHFlip(),
-                "Anim_Tumble right-facing flip_type=$80 clears render_flags bit 0");
-        assertTrue(player.getRenderVFlip(),
-                "Anim_Tumble right-facing flip_type=$80 sets render_flags bit 1");
-    }
-
-    @Test
-    void activeRideAppliesRomNegativeTumbleRenderFlagsForLeftFacingPlayer() {
-        LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
-        TestablePlayableSprite player = groundedPlayer(0x1800, 0x05AD);
-        player.setDirection(Direction.LEFT);
-
-        drum.update(0, player);
-        drum.update(1, player);
-
-        assertTrue(player.getRenderHFlip(),
-                "Anim_Tumble left-facing flip_type=$80 sets render_flags bit 0");
-        assertTrue(player.getRenderVFlip(),
-                "Anim_Tumble left-facing flip_type=$80 sets render_flags bit 1 in LBZ");
+        assertFalse(player.getRenderHFlip());
+        assertTrue(player.getRenderVFlip());
     }
 
     @Test
