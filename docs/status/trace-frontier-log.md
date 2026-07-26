@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- HCZ complete-run advances from f1088 to f6292
+
+The HCZ evidence from `fa5e8241` is retained here although its duplicate code
+was not cherry-picked: the shared typed water/flight rule from `c6c493604`
+semantically supersedes it and is the implementation composed in this branch.
+
+The baseline HCZ replay reported 4,751 errors and first diverged at f1088
+`tails_cpu_target_y` (ROM `0x0578`, engine `0x04F0`); the frame-5725
+Poindexter occupancy assertion also failed. With the typed S3K flight-target
+rule, the occupancy assertion passes and `replayMatchesTrace` reports 2,411
+errors, first at f6292 `tails_x_speed` (ROM `0x0100`, engine `0x0000`).
+
+The focused sidekick suite passed 119/119. Sonic 2 EHZ1 remained green,
+proving the S2 water clamp is retained, and the S3K special-stage guard
+remained green.
+
 ### 2026-07-26 -- LBZ tunnel, angled-landing, and tube-elevator parity
 
 Verified from base `dc8c74881` with:
