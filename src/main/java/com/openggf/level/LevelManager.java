@@ -333,6 +333,7 @@ public class LevelManager {
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
         pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
         try {
+            ctx.resetInitialObjectSetupRequestForLoadAttempt();
             GameModule module = activeGameModule();
             LevelInitProfile profile = module.getLevelInitProfile();
             ctx.setLevelIndex(levelIndex);

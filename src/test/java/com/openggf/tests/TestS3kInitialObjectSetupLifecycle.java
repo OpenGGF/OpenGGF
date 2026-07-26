@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -71,6 +72,40 @@ class TestS3kInitialObjectSetupLifecycle {
         manager.loadLevel(0, LevelLoadMode.FULL, ctx);
 
         assertTrue(manager.hasPendingInitialObjectSetupPass());
+    }
+
+    @Test
+    void reusedContextCannotRepublishPriorFreshLoadAuthorityAndCanRetryFresh() throws Exception {
+        LevelManager manager = managerWithProfile(requestingProfile());
+        LevelLoadContext reused = freshContext();
+        manager.loadLevel(0, LevelLoadMode.FULL, reused);
+        assertTrue(manager.hasPendingInitialObjectSetupPass());
+
+        List<AuthorityCase> deniedReuseCases = List.of(
+                new AuthorityCase(false, LevelLoadMode.FULL, true,
+                        LevelAssemblyKind.STATE_RESTORATION),
+                new AuthorityCase(false, LevelLoadMode.FULL, true,
+                        LevelAssemblyKind.DECODE_ONLY),
+                new AuthorityCase(false, LevelLoadMode.PREVIEW_CAPTURE, true,
+                        LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY),
+                new AuthorityCase(false, LevelLoadMode.FULL, false,
+                        LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY));
+
+        for (AuthorityCase denied : deniedReuseCases) {
+            reused.setIncludePostLoadAssembly(denied.postLoad());
+            reused.setAssemblyKind(denied.assemblyKind());
+            manager.loadLevel(0, denied.mode(), reused);
+
+            assertFalse(manager.hasPendingInitialObjectSetupPass(), denied.toString());
+            assertEquals(InitialObjectSetupLifecycle.NONE,
+                    reused.requestedInitialObjectSetupLifecycle(), denied.toString());
+
+            reused.setIncludePostLoadAssembly(true);
+            reused.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
+            manager.loadLevel(0, LevelLoadMode.FULL, reused);
+            assertTrue(manager.hasPendingInitialObjectSetupPass(),
+                    "a fresh authorized retry must publish after " + denied);
+        }
     }
 
     @Test

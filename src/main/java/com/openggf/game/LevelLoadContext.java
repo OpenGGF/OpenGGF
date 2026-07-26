@@ -116,6 +116,16 @@ public class LevelLoadContext {
     }
 
     /**
+     * Clears load-attempt-owned output before profile steps run. This is a
+     * lifecycle boundary used by {@code LevelManager.loadLevel}; it prevents a
+     * reused mutable context from carrying fresh-load authority into a later
+     * decode, preview, or restoration attempt.
+     */
+    public void resetInitialObjectSetupRequestForLoadAttempt() {
+        requestedInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
+    }
+
+    /**
      * Records a profile-owned setup request in this load's private context.
      * Publication to live state remains the responsibility of a successful
      * {@code LevelManager.loadLevel} boundary.
