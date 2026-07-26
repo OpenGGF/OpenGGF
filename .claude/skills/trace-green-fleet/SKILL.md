@@ -143,7 +143,7 @@ After the fleet returns, the conductor reports committed per-trace branches and 
 
 1. Create a fresh integration worktree from current `origin/develop`.
 2. Cherry-pick committed genuine trace fixes.
-3. Resolve additive `CHANGELOG.md` and `docs/TRACE_FRONTIER_LOG.md` conflicts deliberately.
+3. Resolve additive `CHANGELOG.md` and `docs/status/trace-frontier-log.md` conflicts deliberately.
 4. Compose-verify the advanced/greened traces plus green guards against the current branch.
 5. Only then push or hand off for PR/merge, following the user's requested integration path.
 
@@ -317,8 +317,8 @@ Commit if and only if `genuine=true`, `changed=true`, and status is `green`, `ad
 
 Commit requirements:
 
-- Stage only changed source files plus `CHANGELOG.md` and `docs/TRACE_FRONTIER_LOG.md` when required.
-- Update `docs/TRACE_FRONTIER_LOG.md` with exact command, worktree, branch, status, error count, before/after first-error frame/field, and any `REGRESSION INTRODUCED:` lines.
+- Stage only changed source files plus `CHANGELOG.md` and `docs/status/trace-frontier-log.md` when required.
+- Update `docs/status/trace-frontier-log.md` with exact command, worktree, branch, status, error count, before/after first-error frame/field, and any `REGRESSION INTRODUCED:` lines.
 - This touches `src/main` for real fixes, so update and stage `CHANGELOG.md`.
 - Run `git config core.hooksPath .githooks`.
 - Subject: `fix(trace): <zone> <one-line root cause>`. If it introduces a regression, add `(regresses <trace>@<frame>, follow-up)`.

@@ -51,7 +51,7 @@
   - `src/test/java/com/openggf/game/TestBonusStageRewindCapability.java`
   - `src/test/java/com/openggf/game/rewind/TestBonusStageCoordinatorRewindAdapter.java`
   - `src/test/java/com/openggf/game/rewind/TestLiveRewindManagerBonusStageMode.java`
-- **Docs:** `CHANGELOG.md`, `docs/KNOWN_DISCREPANCIES.md`, `AGENTS_S3K.md` (S3K-Known-Discrepancies), plus commit trailers.
+- **Docs:** `CHANGELOG.md`, `docs/status/known-discrepancies.md`, `AGENTS_S3K.md` (S3K-Known-Discrepancies), plus commit trailers.
 
 ---
 
@@ -685,7 +685,7 @@ git commit  # trailers filled
 ### Task 7: Full-suite verification + documentation
 
 **Files:**
-- Modify: `CHANGELOG.md`, `docs/KNOWN_DISCREPANCIES.md`, `AGENTS_S3K.md`
+- Modify: `CHANGELOG.md`, `docs/status/known-discrepancies.md`, `AGENTS_S3K.md`
 - Verify: whole suite
 
 - [ ] **Step 1: Run the S3K must-keep-green tests + rewind coverage guards**
@@ -708,13 +708,13 @@ With a real `s3k.gen`, `debug.flags` shortcuts enabled, and `LIVE_REWIND_ENABLED
 - [ ] **Step 4: Update documentation**
 
 - `CHANGELOG.md` (CRLF file — verify `git diff --stat` shows a small diff, not a full-file rewrite; if the Edit tool flipped line endings, re-normalize): add an entry under the current prerelease section, e.g. "Live rewind now works within the Gumball and Pachinko bonus stages (S3K); the Slot Machine bonus stage remains non-rewindable pending a dedicated runtime snapshot."
-- `docs/KNOWN_DISCREPANCIES.md`: note the intentional scope — bonus-stage rewind is within-stage only (does not cross the mode boundary back into the level), and the minor cosmetic caveat that the player art-tile high-priority bit is not re-forced during backward re-simulation frames.
+- `docs/status/known-discrepancies.md`: note the intentional scope — bonus-stage rewind is within-stage only (does not cross the mode boundary back into the level), and the minor cosmetic caveat that the player art-tile high-priority bit is not re-forced during backward re-simulation frames.
 - `AGENTS_S3K.md` (S3K-Known-Discrepancies trailer): note that Slot Machine bonus-stage rewind is deferred and why (live cross-references in `S3kSlotBonusStageRuntime`).
 
 - [ ] **Step 5: Commit docs**
 
 ```bash
-git add CHANGELOG.md docs/KNOWN_DISCREPANCIES.md AGENTS_S3K.md
+git add CHANGELOG.md docs/status/known-discrepancies.md AGENTS_S3K.md
 git commit  # Changelog: updated / Known-Discrepancies: updated / S3K-Known-Discrepancies: updated
 ```
 

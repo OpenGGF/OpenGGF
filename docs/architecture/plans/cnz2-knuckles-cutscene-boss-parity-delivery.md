@@ -111,7 +111,7 @@ Evidence files: `CnzEndBossInstance.java`, `CnzEndBossMagnetChild.java`, `CnzEnd
 - `Sonic3kObjectArtProvider.loadArtForZone()` loads ordinary explosion art for every zone, and cannon puffs already render `ObjectArtKeys.EXPLOSION`. F3 is therefore a focused readiness test unless it fails.
 - `preparePlayersForIczFade()` is an engine-only neutralization/hide step absent from the ROM. `requestZoneAndAct(ICZ,0,true)` freezes immediately and the ICZ load already installs snowboard X/Y velocity and air state. Remove the source-side rewrite and update the integration expectation.
 - Existing coverage is strong but asserts the old behavior in places. Primary tests are `TestCnzCannonInstance`, `TestS3kCnzTeleporterRouteHeadless`, `TestS3kCnzDirectedTraversalHeadless`, `TestCnzTraversalObjectArt`, `TestS3kCnzEndBossHeadless`, `TestS3kCnzEndBossGraphRewind`, and `TestS3kCnzTraversalPlayerReferenceRewind`.
-- `CHANGELOG.md` must change for main-path fixes. `docs/S3K_KNOWN_DISCREPANCIES.md` changes only for a deliberately retained divergence. `docs/TRACE_FRONTIER_LOG.md` remains untouched because no permitted trace run or frontier move is part of this delivery.
+- `CHANGELOG.md` must change for main-path fixes. `docs/S3K_KNOWN_DISCREPANCIES.md` changes only for a deliberately retained divergence. `docs/status/trace-frontier-log.md` remains untouched because no permitted trace run or frontier move is part of this delivery.
 
 ### Scope corrections and resolved conflicts
 
@@ -336,7 +336,7 @@ Dependency: Phase 6, because the same parent method owns the post-defeat flow.
 Owner: integration worker/coordinator. Feature workers stop editing shared files.
 
 1. Rebase mental model against the source blueprint; inspect every task A1-F4 and G3/G4.
-2. Update `CHANGELOG.md`. Update `docs/S3K_KNOWN_DISCREPANCIES.md` only for a deliberately retained divergence. Do not update `docs/TRACE_FRONTIER_LOG.md` without an actual permitted frontier event.
+2. Update `CHANGELOG.md`. Update `docs/S3K_KNOWN_DISCREPANCIES.md` only for a deliberately retained divergence. Do not update `docs/status/trace-frontier-log.md` without an actual permitted frontier event.
 3. Discover and verify the root S3K ROM, then run the focused non-trace suite:
 
 ```bash
@@ -357,7 +357,7 @@ No planned task requires shared main-path physics/engine changes, so no trace te
 
 1. Stop integration and justify why object-local implementation is impossible.
 2. Run the repository's established currently-green trace replay tests across affected S1, S2, and S3K paths, explicitly excluding every class or method whose name contains CNZ.
-3. Compare first divergent frame and mismatch count against `docs/TRACE_FRONTIER_LOG.md`; any changed non-CNZ frontier is a blocker unless proved to be an intended ROM-correct advancement and documented per policy.
+3. Compare first divergent frame and mismatch count against `docs/status/trace-frontier-log.md`; any changed non-CNZ frontier is a blocker unless proved to be an intended ROM-correct advancement and documented per policy.
 4. Never run CNZ trace tests, stable-retro CNZ capture, or visual trace validation in this delivery.
 
 The exact sweep command must be selected from the current green inventory at integration time rather than hard-coding a stale fleet. Record the selected classes and results in the Integration Report.

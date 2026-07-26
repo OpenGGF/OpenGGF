@@ -15,7 +15,7 @@
 - Discover actual `.gen` files, verify documented hashes, and pass explicit ROM properties.
 - Preserve every pre-existing primary-worktree change.
 - Enforce the timeout budgets in the approved design.
-- Update `docs/TRACE_FRONTIER_LOG.md` if a full sweep selects or moves a frontier, lands a trace fix, or regresses a passing trace.
+- Update `docs/status/trace-frontier-log.md` if a full sweep selects or moves a frontier, lands a trace fix, or regresses a passing trace.
 
 ---
 
@@ -134,7 +134,7 @@ not stage generated reports or unrelated files.
 ### Task 3: Build the complete static inventory
 
 **Files:**
-- Create: `docs/testing/debug-trace-test-audit.md`
+- Create: `docs/architecture/audits/testing/debug-trace-tests.md`
 - Read: `pom.xml`
 - Read: matching Java sources under `src/test/java`
 
@@ -189,13 +189,13 @@ duplicates.
 
 - [ ] **Step 5: Commit the inventory draft**
 
-Stage only `docs/testing/debug-trace-test-audit.md` and commit with required documentation
+Stage only `docs/architecture/audits/testing/debug-trace-tests.md` and commit with required documentation
 trailers.
 
 ### Task 4: Execute matching normal-suite tests
 
 **Files:**
-- Modify: `docs/testing/debug-trace-test-audit.md`
+- Modify: `docs/architecture/audits/testing/debug-trace-tests.md`
 - Runtime output: `target/debug-trace-audit/normal-suite.log`
 
 **Interfaces:**
@@ -241,8 +241,8 @@ issues, and any side effect.
 ### Task 5: Execute trace replay groups and the full profile
 
 **Files:**
-- Modify: `docs/testing/debug-trace-test-audit.md`
-- Modify conditionally: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/architecture/audits/testing/debug-trace-tests.md`
+- Modify conditionally: `docs/status/trace-frontier-log.md`
 - Runtime output: `target/debug-trace-audit/trace-*.log`
 - Runtime reports: `target/trace-reports/`
 
@@ -319,13 +319,13 @@ ROM-caused skips separately. Exit `124` follows the same timeout evidence proced
 - [ ] **Step 5: Apply frontier documentation obligations**
 
 If the sweep selects/moves a frontier, lands a trace fix, or regresses a passing trace,
-update `docs/TRACE_FRONTIER_LOG.md` with command, branch/worktree commit, pass/fail, error
+update `docs/status/trace-frontier-log.md` with command, branch/worktree commit, pass/fail, error
 count, and first-error frame/field.
 
 ### Task 6: Execute safe excluded diagnostics and probes
 
 **Files:**
-- Modify: `docs/testing/debug-trace-test-audit.md`
+- Modify: `docs/architecture/audits/testing/debug-trace-tests.md`
 - Runtime output: `target/debug-trace-audit/diagnostic-*.log`
 
 **Interfaces:**
@@ -376,8 +376,8 @@ allowlist fixed and evidence-backed.
 ### Task 7: Final verification, review, and handoff
 
 **Files:**
-- Modify: `docs/testing/debug-trace-test-audit.md`
-- Modify conditionally: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/architecture/audits/testing/debug-trace-tests.md`
+- Modify conditionally: `docs/status/trace-frontier-log.md`
 
 **Interfaces:**
 - Consumes: all prior commits and runtime evidence
@@ -395,8 +395,8 @@ implemented fix has evidence, and run `git diff --check`.
 
 - [ ] **Step 3: Request independent implementation review**
 
-First stage and commit the completed `docs/testing/debug-trace-test-audit.md` and any
-obligatory `docs/TRACE_FRONTIER_LOG.md` update with the required documentation trailers.
+First stage and commit the completed `docs/architecture/audits/testing/debug-trace-tests.md` and any
+obligatory `docs/status/trace-frontier-log.md` update with the required documentation trailers.
 Verify the worktree is clean except ignored runtime output.
 
 Provide the reviewer the approved design, this plan, all commits/diffs, and verification
@@ -412,8 +412,8 @@ is:
 ```text
 src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectPresentation.java
 src/test/java/com/openggf/game/sonic3k/dataselect/S3kDataSelectVisualCapture.java
-docs/testing/debug-trace-test-audit.md
-docs/TRACE_FRONTIER_LOG.md
+docs/architecture/audits/testing/debug-trace-tests.md
+docs/status/trace-frontier-log.md
 ```
 
 Omit allowlisted files not changed by `AUDIT_BASE..HEAD`. Verify the reviewed commit range

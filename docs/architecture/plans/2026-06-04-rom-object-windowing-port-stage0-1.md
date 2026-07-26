@@ -12,7 +12,7 @@
 
 **Worktree:** create one isolated worktree off `develop` for the whole plan via `superpowers:using-git-worktrees` before Task 0.1 (branch `feature/ai-rom-object-windowing-s2`). Do NOT edit the main checkout. `git add` only the files each task names; never `-A`.
 
-**Per-stage loop (applies after Stage 0 and after Stage 1):** build → run the occupancy oracle on the MTZ + a green sample → full `*TraceReplay` sweep (`-Dsurefire.forkCount=1`) → write the before→after cascade map into `docs/TRACE_FRONTIER_LOG.md` → (Stage 1 only) re-derive regressed frontiers → commit on the branch. Stage 0 must be a **pure refactor**: zero trace-frontier movement (it only consolidates allocation; behavior identical).
+**Per-stage loop (applies after Stage 0 and after Stage 1):** build → run the occupancy oracle on the MTZ + a green sample → full `*TraceReplay` sweep (`-Dsurefire.forkCount=1`) → write the before→after cascade map into `docs/status/trace-frontier-log.md` → (Stage 1 only) re-derive regressed frontiers → commit on the branch. Stage 0 must be a **pure refactor**: zero trace-frontier movement (it only consolidates allocation; behavior identical).
 
 ---
 
@@ -30,7 +30,7 @@
 **Modify:**
 - `src/main/java/com/openggf/level/objects/ObjectManager.java` — own a `SlotAllocator` field; replace the private `allocateSlot`/`allocateSlotAfter`/`releaseSlot`/`reserveDynamicSlot` bodies + the `usedSlots` BitSet field with delegation to it (call sites unchanged in signature). **Keep** `execOrder` and `objectIdInSlot` here (identity authority). Stage 1: swap the S2 unload path off `isOutOfRangeS1` onto `S2ObjectWindowing.markObjGone`, fix the S2 exec/load ordering across **both** load sites (`update()` `:716-746` AND the post-block `:775-782`), and wire the S2 cursor scan to `S2ObjectWindowing` final boundaries.
 - `src/main/java/com/openggf/level/spawn/AbstractPlacementManager.java` — Stage 1: S2 window math sourced from `S2ObjectWindowing` (final `[−$80,+$280]` boundaries); remove the S2 dormancy path once `MarkObjGone` drives unload.
-- `docs/TRACE_FRONTIER_LOG.md` — cascade-map entries per stage.
+- `docs/status/trace-frontier-log.md` — cascade-map entries per stage.
 - `CHANGELOG.md` — Stage 1 engine change.
 
 ---
@@ -742,7 +742,7 @@ git commit -m "feat: S2 directional load cursor consumes ROM final boundaries (s
 
 ### Task 1.9: Stage-1 cascade map + re-derive + merge
 
-- [ ] **Step 1:** Parse the full sweep → write a before→after first-error-frame table for every trace into `docs/TRACE_FRONTIER_LOG.md`; for each S2 regression, attribute it to the prior compensating fix (git blame the relevant object/sidekick code).
+- [ ] **Step 1:** Parse the full sweep → write a before→after first-error-frame table for every trace into `docs/status/trace-frontier-log.md`; for each S2 regression, attribute it to the prior compensating fix (git blame the relevant object/sidekick code).
 - [ ] **Step 2:** Confirm the intended wins: MTZ1 advances past 375, MTZ3 restored ≥3719 (or its slot-recycle now fires on the ROM frame). Re-derive any S2 regression on the now-correct timing (separate commits).
 - [ ] **Step 3:** `CHANGELOG.md` entry; commit with the full trailer block (`Changelog: updated`); do NOT merge to develop until the cascade nets acceptable per the land-correct philosophy. Then merge via the standard integration path.
 

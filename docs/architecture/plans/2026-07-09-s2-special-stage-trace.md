@@ -313,7 +313,7 @@ It must reject a directory whose `metadata.trace_profile` is not
 - Create: `src/test/java/com/openggf/tests/trace/s2/AbstractS2SpecialStageTraceReplayTest.java`
 - Create: `src/test/java/com/openggf/tests/trace/s2/TestS2SpecialStageTraceReplay.java`
 - Create: `src/test/java/com/openggf/tests/trace/s2/S2SpecialStageReplayDeterminismTest.java`
-- Modify: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/status/trace-frontier-log.md`
 
 **Interfaces:**
 - Consumes: `SpecialStageTraceData` (Task 3), `Sonic2SpecialStageComparisonState`/`captureComparisonState()` (Task 2), team config fix (Task 1), trace artifacts (Task 4). Existing: `Sonic2SpecialStageProvider` (`initializeStage(int)`, `handleInput(int,int)`, `handlePlayer2Input(int,int)`, `update()`, `isFinished()`, `setLagCompensation(double)`, `getManager()`), `SpecialStageInputMapper.map(LogicalInputSnapshot)` → `MappedInput(p1Held,p1Pressed,p2Held,p2Logical)`, `RecordedInputSnapshots.fromBk2(current, previous)`, `Bk2MovieLoader`, `TraceReplaySessionBootstrap.prepareConfiguration` two-key team pattern, `DivergenceReport` (read `AbstractTraceReplayTest.java` compareFrame/binder usage and mirror its report construction — same JSON shape, `target/trace-reports` output).
@@ -351,7 +351,7 @@ final class S2SpecialStageReplayHarness {
 - [ ] **Step 4: Concrete test** `TestS2SpecialStageTraceReplay` — `traceDirectory() = src/test/resources/traces/s2/special_stage`, `assumeTrue(s2.gen exists)`.
 - [ ] **Step 5: Determinism test** — run the replay loop twice in one JVM (fresh harness each, `@FullReset`/`SingletonResetExtension` per repo convention), assert the two reports' JSON strings are identical.
 - [ ] **Step 6: Run**: `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest" test` — expect PASS (pipeline), report generated. Read the report; record first-divergence frame/field.
-- [ ] **Step 7: Frontier log + commit.** Add a `docs/TRACE_FRONTIER_LOG.md` entry: command, commit, pass/fail, error count, first-error frame/field. Commit (`feat(trace): S2 special-stage headless trace replay` — `Changelog: n/a: test-tree + docs only` if src/main untouched).
+- [ ] **Step 7: Frontier log + commit.** Add a `docs/status/trace-frontier-log.md` entry: command, commit, pass/fail, error count, first-error frame/field. Commit (`feat(trace): S2 special-stage headless trace replay` — `Changelog: n/a: test-tree + docs only` if src/main untouched).
 
 ---
 
@@ -410,7 +410,7 @@ if (!skipSsTick) {
 ### Task 8: Sweep, docs, merge readiness
 
 **Files:**
-- Modify: `docs/TRACE_FRONTIER_LOG.md` (final status), `README.md` (staged at merge time per policy)
+- Modify: `docs/status/trace-frontier-log.md` (final status), `README.md` (staged at merge time per policy)
 
 - [ ] **Step 1: Full regression sweep**: `mvn test` (expect: pre-existing failures only — compare against a develop baseline run; the new SS trace test passes as pipeline-proof).
 - [ ] **Step 2: Trace suite spot-check**: run 2-3 existing S2 level-select trace classes to confirm zero interference.

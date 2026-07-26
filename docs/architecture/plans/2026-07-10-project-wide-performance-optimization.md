@@ -22,7 +22,7 @@
 - [ ] Run `mvn test` as the only Maven lifecycle using this worktree's `target/`.
 - [ ] Require `Tests run: 11211, Failures: 0, Errors: 0, Skipped: 12` or explain any legitimate test-count change introduced after the recorded baseline.
 - [ ] Restore generated `docs/rewind/real-gaps.md` output unless an implementation intentionally changes coverage and the task owns that update.
-- [ ] Record baseline wall time, allocation probes, rewind benchmark output, special-stage draw/upload counters, and representative GPU timings in `docs/performance/2026-07-performance-integration-report.md`.
+- [ ] Record baseline wall time, allocation probes, rewind benchmark output, special-stage draw/upload counters, and representative GPU timings in `docs/architecture/validation/performance/2026-07-integration-report.md`.
 
 ### Task 2: Execute Audio Tasks 1-7
 
@@ -61,14 +61,14 @@
 - [ ] Run audio bit-exact and rewind-audio tests from the audio plan.
 - [ ] Run render/special-stage focused and S3K safety tests from the render plan.
 - [ ] Run rewind, coverage, trace, and benchmark gates from the rewind plan.
-- [ ] Run `mvn -Ptrace-replay "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test` and update `docs/TRACE_FRONTIER_LOG.md` only when a full sweep or frontier movement requires it.
+- [ ] Run `mvn -Ptrace-replay "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test` and update `docs/status/trace-frontier-log.md` only when a full sweep or frontier movement requires it.
 - [ ] Run `mvn test`, then `mvn package`; require successful exit codes.
 - [ ] Re-run the same warmed allocation, retained-memory, frame-time, rewind latency, draw/upload, and GPU measurements as baseline.
 
 ### Task 8: Integration Report And End-To-End Review
 
 **Files:**
-- Create: `docs/performance/2026-07-performance-integration-report.md`
+- Create: `docs/architecture/validation/performance/2026-07-integration-report.md`
 - Modify: `CHANGELOG.md`
 
 - [ ] Record every changed file/commit, red-green evidence, focused/full commands, baseline/after measurements, disproved candidates, and residual risks.

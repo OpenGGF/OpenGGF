@@ -153,7 +153,7 @@ guards, captured-policy compact-reachability tests, a no-baseline closure
 fixture, and the S3K must-keep-green suite. Because the full trace sweep is used
 to discover and prioritize closure failures, its exact command, commit context,
 pass/fail/skip counts, and closure findings will be recorded in
-`docs/TRACE_FRONTIER_LOG.md`. Physics-frontier movement remains distinguished
+`docs/status/trace-frontier-log.md`. Physics-frontier movement remains distinguished
 from closure-only failures.
 
 ## Non-goals

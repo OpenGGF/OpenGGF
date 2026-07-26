@@ -147,7 +147,7 @@ mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" "-Ds3k.rom.path=
   - Keep trace parser/data/catalog classes free of engine dependencies (no `GameServices`,
     `ObjectManager`, `MutableLevel`, etc.).
   - Extend the shared replay base class for new `*TraceReplay` tests.
-  - See the `trace-replay-bug-fixing` skill and `docs/TRACE_FRONTIER_LOG.md`.
+  - See the `trace-replay-bug-fixing` skill and `docs/status/trace-frontier-log.md`.
 
 ---
 

@@ -42,7 +42,7 @@ results/exit. Sonic + Tails team.
 the headless test loads it, steps the engine, and emits a faithful divergence report
 (first-error frame/field); visual test mode can play it. The test may be red;
 divergences become the follow-up fix plan's worklist and enter
-`docs/TRACE_FRONTIER_LOG.md`.
+`docs/status/trace-frontier-log.md`.
 
 **Approach decision:** parallel SS trace profile reusing the proven S2 level-select
 pipeline shape, discriminated by `trace_profile: "s2_special_stage"` end-to-end
@@ -345,7 +345,7 @@ focus, `LevelFrameStep`-based stepping).
   every pass's exact current/previous `ReadJoypads` BK2 identities and masks.
 - The trace's ERROR-severity frontier is release-gated by
   `assertNoReleaseBlockingDivergences()`; remaining WARNING fields and their first
-  frontier stay explicit in `docs/TRACE_FRONTIER_LOG.md`.
+  frontier stay explicit in `docs/status/trace-frontier-log.md`.
 - Recorder hard-fails if SS mode never appears (bk2 drift guard).
 
 ## Testing the Infrastructure

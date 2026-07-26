@@ -161,7 +161,7 @@ Run the Task 4 command and require zero failures.
 
 - [ ] **Step 1: Update documentation without overwriting unrelated edits**
 
-Document manual S3K activation, character rules, conversion gate, and rewind capture. Do not touch `docs/TRACE_FRONTIER_LOG.md` unless a trace frontier actually moves.
+Document manual S3K activation, character rules, conversion gate, and rewind capture. Do not touch `docs/status/trace-frontier-log.md` unless a trace frontier actually moves.
 
 - [ ] **Step 2: Run focused behavior and rewind suites**
 

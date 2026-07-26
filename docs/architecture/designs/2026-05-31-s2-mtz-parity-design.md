@@ -23,4 +23,4 @@ Bring Sonic 2 Metropolis Zone closer to ROM-accurate parity by closing known imp
 - `ObjectDiscoveryTool` no longer reports MTZ dynamic boss IDs `0x53` and `0x54` as unimplemented when the corresponding engine implementations exist.
 - MTZ3 routine 6 can clamp sidekick lower camera access through a persisted `SidekickCpuController` min-Y bound, captured by rewind state.
 - Obj66 exposes the correct solid profile behavior for the shared offscreen solid gate.
-- Focused MTZ event, art, profile, and trace tests are run, with any remaining trace frontier documented in `docs/TRACE_FRONTIER_LOG.md`.
+- Focused MTZ event, art, profile, and trace tests are run, with any remaining trace frontier documented in `docs/status/trace-frontier-log.md`.

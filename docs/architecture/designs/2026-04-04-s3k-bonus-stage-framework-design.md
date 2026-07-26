@@ -326,7 +326,7 @@ All addresses must be verified via `RomOffsetFinder` before implementation. Disa
 | `game/sonic3k/Sonic3kObjectRegistry.java` | Register gumball object factories |
 | `game/sonic3k/Sonic3kConstants.java` | ROM addresses for gumball art/mappings/layout |
 | `game/sonic3k/objects/Sonic3kStarPostBonusStarChild.java` | Replace NYI log with `requestBonusStageEntry()` |
-| `docs/KNOWN_DISCREPANCIES.md` | Document bonus stage `GameMode` discrepancy |
+| `docs/status/known-discrepancies.md` | Document bonus stage `GameMode` discrepancy |
 
 ### Not In Scope
 

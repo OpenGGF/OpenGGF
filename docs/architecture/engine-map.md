@@ -7,7 +7,7 @@ need when you are actually working inside one of these subsystems.
 Companion references:
 
 - [Object implementation reference](object-implementation-reference.md) — objects, badniks, art loading, constants.
-- [Headless testing](../testing/headless-testing.md) — `HeadlessTestRunner` setup and test infrastructure.
+- [Headless testing](../guide/contributing/headless-testing.md) — `HeadlessTestRunner` setup and test infrastructure.
 - [Per-game rule placement](per-game-rule-placement.md) — where a per-game behavioural difference belongs.
 - [AGENTS_S3K.md](../../AGENTS_S3K.md) — Sonic 3&K specifics.
 
@@ -380,7 +380,8 @@ Key classes: `PatternAtlas` (storage), `DynamicPatternBank` (fixed-size bank for
 DPLC-driven updates), `PlayerSpriteRenderer` (uses `renderPatternWithId()` to bypass the
 11-bit limit in `PatternDesc`), and `GraphicsManager.renderPatternWithId(patternId, desc, x, y)`.
 
-The range table and capacity limits are in [KNOWN_DISCREPANCIES.md](../KNOWN_DISCREPANCIES.md).
+The range table and capacity limits are in
+[Known discrepancies](../status/known-discrepancies.md).
 
 The engine works in Mega Drive coordinates (Y increases downward);
 `BatchedPatternRenderer` flips to the OpenGL convention automatically.

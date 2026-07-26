@@ -12,7 +12,7 @@
 
 **Design spec:** `docs/architecture/designs/2026-04-22-s3k-cnz-workstream-c-tails-carry-design.md` (v3)
 **Parent spec:** `docs/architecture/designs/2026-04-22-s3k-cnz-trace-replay-design.md` §7.1
-**Baseline:** `docs/s3k-zones/cnz-trace-divergence-baseline.md` (first 20 divergences all flagged C)
+**Baseline:** `docs/architecture/validation/s3k-zones/cnz-trace-divergence.md` (first 20 divergences all flagged C)
 
 **Commit trailer policy:** every commit in this workstream MUST carry the 7 required policy trailers per `CLAUDE.md` §Branch Documentation Policy, with `Co-Authored-By` INSIDE the policy block. Intermediate task commits use `Changelog: n/a` / `S3K-Known-Discrepancies: n/a` (the policy validator rejects `Changelog: updated` without a staged `CHANGELOG.md` edit, AND rejects `Changelog: n/a` if `CHANGELOG.md` IS staged — so each commit must be self-consistent). Task 9 does the single documentation rollup that stages `CHANGELOG.md` and `docs/S3K_KNOWN_DISCREPANCIES.md` with matching `updated` trailers.
 
@@ -1401,7 +1401,7 @@ Expected outcome: no code changes in this step. Record the audit result in the c
 Run: `mvn test -Dtest="TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSidekickCpuControllerCarry,TestSonic3kCnzCarryTrigger,TestObjectControlledGravity" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen"`
 Expected: all PASS. This is the `CLAUDE.md` wider-guard floor plus the new carry tests.
 
-`TestS3kAizTraceReplay` is permitted to remain in its pre-existing red state per `docs/s3k-zones/cnz-task7-regression-note.md` — do not chase it.
+`TestS3kAizTraceReplay` is permitted to remain in its pre-existing red state per `docs/architecture/audits/s3k-zones/cnz-task7-regression.md` — do not chase it.
 
 - [ ] **Step 5: Commit**
 
@@ -1626,7 +1626,7 @@ EOF
 ### Task 9: Run `TestS3kCnzTraceReplay`, capture new baseline, roll up CHANGELOG
 
 **Files:**
-- Create: `docs/s3k-zones/cnz-post-workstream-c-baseline.md`
+- Create: `docs/architecture/validation/s3k-zones/cnz-post-workstream-c.md`
 - Modify: `CHANGELOG.md`
 
 **Note on `S3K_KNOWN_DISCREPANCIES.md`:** the Tails-carry intro is a parity *fix*, not an intentional divergence, so `docs/S3K_KNOWN_DISCREPANCIES.md` is **not** updated. The commit trailer for that file stays `n/a`. If the audit in Task 7 Step 3 (or later diagnostic work) reveals a corner we intentionally diverge from ROM — for example accepting an early release instead of matching the exact ROM path — add a new section to that file then and flip the trailer at that point; otherwise do not touch it.
@@ -1644,7 +1644,7 @@ Run: `mvn test -Dtest=TestS3kCnzTraceReplay -Dtest.s3k.cnz.report=target/s3k-cnz
 
 Open the generated JSON / context under `target/s3k-cnz-replay/`. Record the new first-20 divergences in a hand-off note.
 
-Create `docs/s3k-zones/cnz-post-workstream-c-baseline.md` with this exact template (fill the `<...>` placeholders with measured values):
+Create `docs/architecture/validation/s3k-zones/cnz-post-workstream-c.md` with this exact template (fill the `<...>` placeholders with measured values):
 
 ```markdown
 # CNZ Trace Replay - Post-Workstream-C Baseline
@@ -1678,14 +1678,14 @@ Based on the new first-20 distribution, workstreams applicable:
 
 `TestS3kAizTraceReplay` continues to fail on the pre-existing
 `aiz1_fire_transition_begin` checkpoint issue documented in
-`docs/s3k-zones/cnz-task7-regression-note.md`. Workstream H owns that
+`docs/architecture/audits/s3k-zones/cnz-task7-regression.md`. Workstream H owns that
 recovery and does not block this baseline.
 ```
 
 - [ ] **Step 3: Re-run wider guard one last time**
 
 Run: `mvn test -Dtest="TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kCnzCarryHeadless,TestSidekickCpuControllerCarry,TestSonic3kCnzCarryTrigger,TestObjectControlledGravity,TestPhysicsProfile,TestPhysicsProfileRegression,TestSpindashGating,TestCollisionModel" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen"`
-Expected: all PASS. `TestS3kAizTraceReplay` is permitted to remain in its pre-existing red state (per `docs/s3k-zones/cnz-task7-regression-note.md`).
+Expected: all PASS. `TestS3kAizTraceReplay` is permitted to remain in its pre-existing red state (per `docs/architecture/audits/s3k-zones/cnz-task7-regression.md`).
 
 - [ ] **Step 4: Roll up the CHANGELOG entry**
 
@@ -1711,13 +1711,13 @@ Open `CHANGELOG.md`. The file currently opens with `## Unreleased` followed by g
   <NNN> and total errors from 1635 to <NNN> (delta: <delta>). The
   `TestS3kAizTraceReplay` pre-existing regression is orthogonal and stays
   owned by workstream H (see
-  `docs/s3k-zones/cnz-task7-regression-note.md`).
+  `docs/architecture/audits/s3k-zones/cnz-task7-regression.md`).
 ```
 
 - [ ] **Step 5: Commit the baseline + CHANGELOG rollup**
 
 ```bash
-git add docs/s3k-zones/cnz-post-workstream-c-baseline.md CHANGELOG.md
+git add docs/architecture/validation/s3k-zones/cnz-post-workstream-c.md CHANGELOG.md
 git commit -m "$(cat <<'EOF'
 docs(s3k): capture post-workstream-C CNZ baseline and changelog
 

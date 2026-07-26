@@ -16,7 +16,7 @@
 - `src/main/java/com/openggf/game/sonic2/Sonic2LevelEventManager.java`: rewind capture/restore of WFZ event extras.
 - `src/test/java/com/openggf/game/sonic2/TestTodo12_WFZEventSpecs.java`: focused tests for WFZ events.
 - `src/test/java/com/openggf/tests/trace/s2/TestS2WfzLevelSelectTraceReplay.java`: authoritative WFZ route parity test.
-- `docs/TRACE_FRONTIER_LOG.md`: trace frontier evidence.
+- `docs/status/trace-frontier-log.md`: trace frontier evidence.
 
 ### Task 1: Establish Live Baseline
 
@@ -148,7 +148,7 @@ Expected: PASS or a later first-error frame / lower relevant error count without
 ### Task 5: Regression and Documentation
 
 **Files:**
-- Modify: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/status/trace-frontier-log.md`
 
 - [ ] **Step 1: Run regression guard**
 
@@ -161,7 +161,7 @@ Expected: PASS.
 
 - [ ] **Step 2: Update trace frontier log**
 
-Record command output, worktree context, WFZ result, and regression guard result in `docs/TRACE_FRONTIER_LOG.md`.
+Record command output, worktree context, WFZ result, and regression guard result in `docs/status/trace-frontier-log.md`.
 
 - [ ] **Step 3: Final verification**
 

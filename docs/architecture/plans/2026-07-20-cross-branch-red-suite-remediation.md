@@ -15,12 +15,12 @@
 - `docs/architecture/designs/2026-07-20-cross-branch-red-suite-remediation-design.md`: approved scope, exclusions, branch flow, and success gates.
 - `docs/architecture/plans/2026-07-20-develop-red-suite-remediation.md`: executable D1-D3 tasks for all 36 develop reds.
 - `docs/architecture/plans/2026-07-20-next-red-suite-remediation.md`: executable N1-N4 tasks for the current upper bound of 47 next-only reds.
-- `docs/testing/red-suite-inventory.tsv`: tracked ledger produced during execution with columns `branch`, `test`, `kind`, `isolated_result`, `owner`, `wave`, `status`, `disposition`.
-- `docs/testing/unfinished-sk-zone-red-exclusions.txt`: exact 96-test exclusion allowlist; comments identify zone owner and incompleteness reason.
+- `docs/architecture/audits/testing/red-suite-inventory.tsv`: tracked ledger produced during execution with columns `branch`, `test`, `kind`, `isolated_result`, `owner`, `wave`, `status`, `disposition`.
+- `docs/architecture/audits/testing/unfinished-sk-zone-red-exclusions.txt`: exact 96-test exclusion allowlist; comments identify zone owner and incompleteness reason.
 - `tools/testing/Compare-SurefireRedSet.ps1`: deterministic Surefire XML normalizer and exact red-set comparator.
 - `tools/testing/Test-CompareSurefireRedSet.ps1`: self-contained fixture harness for comparator success and failure modes.
 
-The 2026-07-21 `origin/develop` merges do not add red Surefire method rows. The first adds eight CNZ object-class diagnostics inside the two existing D1.4 rewind guard rows; the later merge at `6af04f87e` adds three CNZ touch-profile diagnostics plus three `GameLoop` size diagnostics inside three already-catalogued guard methods. `docs/testing/red-suite-inventory.tsv` records these isolated diagnostics on the existing rows, while develop Tasks D1.4a, D1.5a, and D1.11a own their remediation. Consequently the frozen historical method counts remain 179 union, 36 develop, and 83 in scope; implementation must additionally reach a zero-tail current CNZ sweep and restore every unchanged architecture budget before the develop branch gate.
+The 2026-07-21 `origin/develop` merges do not add red Surefire method rows. The first adds eight CNZ object-class diagnostics inside the two existing D1.4 rewind guard rows; the later merge at `6af04f87e` adds three CNZ touch-profile diagnostics plus three `GameLoop` size diagnostics inside three already-catalogued guard methods. `docs/architecture/audits/testing/red-suite-inventory.tsv` records these isolated diagnostics on the existing rows, while develop Tasks D1.4a, D1.5a, and D1.11a own their remediation. Consequently the frozen historical method counts remain 179 union, 36 develop, and 83 in scope; implementation must additionally reach a zero-tail current CNZ sweep and restore every unchanged architecture budget before the develop branch gate.
 
 ### Task 0: Protect the primary checkouts and record immutable baselines
 
@@ -50,8 +50,8 @@ All subsequent Maven, edit, and commit commands run only in dedicated worktrees.
 ### Task 1: Freeze the measured inventory and exclusion set
 
 **Files:**
-- Create: `docs/testing/red-suite-inventory.tsv`
-- Create: `docs/testing/unfinished-sk-zone-red-exclusions.txt`
+- Create: `docs/architecture/audits/testing/red-suite-inventory.tsv`
+- Create: `docs/architecture/audits/testing/unfinished-sk-zone-red-exclusions.txt`
 - Create: `tools/testing/Compare-SurefireRedSet.ps1`
 - Create: `tools/testing/Test-CompareSurefireRedSet.ps1`
 - Test: `target/surefire-reports/TEST-*.xml`
@@ -141,7 +141,7 @@ N1 20 + N2 10 + N3 7 + N4 10 = 47
 - [ ] **Step 7: Commit the catalogue and comparator**
 
 ```powershell
-git add docs/testing/red-suite-inventory.tsv docs/testing/unfinished-sk-zone-red-exclusions.txt tools/testing/Compare-SurefireRedSet.ps1 tools/testing/Test-CompareSurefireRedSet.ps1
+git add docs/architecture/audits/testing/red-suite-inventory.tsv docs/architecture/audits/testing/unfinished-sk-zone-red-exclusions.txt tools/testing/Compare-SurefireRedSet.ps1 tools/testing/Test-CompareSurefireRedSet.ps1
 git commit -m "test: catalogue cross-branch red suite"
 ```
 
@@ -173,9 +173,9 @@ Do not run implementation subagents in parallel. Continue until every D1-D3 leaf
 ### Task 3: Prove develop green twice
 
 **Files:**
-- Update: `docs/testing/red-suite-inventory.tsv`
+- Update: `docs/architecture/audits/testing/red-suite-inventory.tsv`
 - Update when required: `CHANGELOG.md`
-- Update only if a trace frontier moves: `docs/TRACE_FRONTIER_LOG.md`
+- Update only if a trace frontier moves: `docs/status/trace-frontier-log.md`
 
 - [ ] **Step 1: Run affected guard and cross-game batches**
 
@@ -198,7 +198,7 @@ Review the develop remediation base-to-head diff for spec compliance, parity car
 
 **Files:**
 - Update: `README.md` if the merge targets `develop` under branch policy
-- Update: `docs/testing/red-suite-inventory.tsv`
+- Update: `docs/architecture/audits/testing/red-suite-inventory.tsv`
 
 - [ ] **Step 1: Create or refresh an isolated next remediation worktree**
 
@@ -232,18 +232,18 @@ Do not disable excluded tests or add Maven selection rules. They remain red only
 ### Task 6: Prove both targets meet the success gate
 
 **Files:**
-- Update: `docs/testing/red-suite-inventory.tsv`
+- Update: `docs/architecture/audits/testing/red-suite-inventory.tsv`
 
 - [ ] **Step 1: Run the unfiltered next suite twice and compare each report**
 
 ```powershell
 mvn test
-pwsh -File tools/testing/Compare-SurefireRedSet.ps1 -ReportsPath target/surefire-reports -ExpectedPath docs/testing/unfinished-sk-zone-red-exclusions.txt
+pwsh -File tools/testing/Compare-SurefireRedSet.ps1 -ReportsPath target/surefire-reports -ExpectedPath docs/architecture/audits/testing/unfinished-sk-zone-red-exclusions.txt
 mvn test
-pwsh -File tools/testing/Compare-SurefireRedSet.ps1 -ReportsPath target/surefire-reports -ExpectedPath docs/testing/unfinished-sk-zone-red-exclusions.txt
+pwsh -File tools/testing/Compare-SurefireRedSet.ps1 -ReportsPath target/surefire-reports -ExpectedPath docs/architecture/audits/testing/unfinished-sk-zone-red-exclusions.txt
 ```
 
-Expected after each run: the normalized failure/error multiset equals `docs/testing/unfinished-sk-zone-red-exclusions.txt` exactly, with no missing/stale entry, extra, duplicate, or newly skipped/disabled test.
+Expected after each run: the normalized failure/error multiset equals `docs/architecture/audits/testing/unfinished-sk-zone-red-exclusions.txt` exactly, with no missing/stale entry, extra, duplicate, or newly skipped/disabled test.
 
 - [ ] **Step 2: Re-run develop twice at its final head**
 

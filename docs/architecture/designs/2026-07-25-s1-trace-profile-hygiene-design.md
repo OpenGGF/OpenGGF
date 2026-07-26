@@ -75,7 +75,7 @@ that external directory.
 - ROM/disassembly and recorded metadata remain the source of truth.
 - No game, route, fixture-name, or frame-number carve-outs.
 - No trace-to-engine hydration, tolerance changes, or physics/aux regeneration.
-- Update `docs/TRACE_FRONTIER_LOG.md` with moved profile status and retained diagnostic
+- Update `docs/status/trace-frontier-log.md` with moved profile status and retained diagnostic
   frontiers.
 
 ## Success Criteria

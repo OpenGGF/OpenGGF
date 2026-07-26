@@ -55,7 +55,7 @@ threshold of both more than one second and more than 10% slower.
 - `src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java` — shared post-frame guard in both replay paths.
 - `src/test/java/com/openggf/tests/trace/TestTraceReplayReferenceClosureGuard.java` — trace-context diagnostics and both-loop wiring guard.
 - `CHANGELOG.md` — player/developer-visible rewind reliability note.
-- `docs/TRACE_FRONTIER_LOG.md` — exact full-sweep result because the sweep is used to expose closure failures.
+- `docs/status/trace-frontier-log.md` — exact full-sweep result because the sweep is used to expose closure failures.
 
 ### Task 0: Capture the pre-guard trace baseline
 
@@ -750,7 +750,7 @@ Commit the three Task-4 files with subject
 **Files:**
 - Modify as failures identify: the smallest owning object class and its focused graph/lifecycle test.
 - Modify: `CHANGELOG.md`
-- Modify: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/status/trace-frontier-log.md`
 
 - [ ] **Step 1: Run the full S2/S3K level trace closure sweep**
 
@@ -963,7 +963,7 @@ rejects dangling captured object references and that all sweep-discovered owners
 detach or relink correctly.
 
 Because this full sweep selects closure-repair targets, add a
-`docs/TRACE_FRONTIER_LOG.md` entry with the exact sweep command, branch commit,
+`docs/status/trace-frontier-log.md` entry with the exact sweep command, branch commit,
 pass/fail/skip counts, and whether any previously passing trace changed its
 physics frontier. Closure-only failures are recorded separately from physics
 comparison errors.
@@ -984,7 +984,7 @@ green.
 
 - [ ] **Step 6: Commit documentation and final fixes**
 
-Commit `CHANGELOG.md`, `docs/TRACE_FRONTIER_LOG.md`, and any final focused fixes
+Commit `CHANGELOG.md`, `docs/status/trace-frontier-log.md`, and any final focused fixes
 with subject `fix(rewind): enforce live reference closure`. Fill every branch
 policy trailer accurately; use `Changelog: updated` and do not bypass hooks.
 

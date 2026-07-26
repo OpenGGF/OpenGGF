@@ -122,7 +122,7 @@ Cite the exact routine label and the ROM-state condition (status bit, routine co
 
 ## 7. Documentation & commit-trailer obligations
 
-- **`docs/TRACE_FRONTIER_LOG.md` MUST be updated** when a trace frontier moves, a trace fix is committed, a previously passing trace regresses, or a `*TraceReplay` sweep is used to choose the next target. Record: command, commit/worktree context, pass/fail status, error count, first-error frame/field.
+- **`docs/status/trace-frontier-log.md` MUST be updated** when a trace frontier moves, a trace fix is committed, a previously passing trace regresses, or a `*TraceReplay` sweep is used to choose the next target. Record: command, commit/worktree context, pass/fail status, error count, first-error frame/field.
 - If the fix revealed a reusable pitfall: update `.agents/skills/s{1,2,3k}-implement-object/rom-pitfalls.md` and the mirrored `.claude/skills/...`, set `Skills: updated`.
 - `CHANGELOG.md` + `Changelog: updated` for engine fixes.
 - Fill all trailers; never `--no-verify`.

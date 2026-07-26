@@ -50,7 +50,7 @@
 ### Task 3: Fleet Verification and Delivery
 
 **Files:**
-- Modify if the frontier moves: `docs/TRACE_FRONTIER_LOG.md`
+- Modify if the frontier moves: `docs/status/trace-frontier-log.md`
 - Modify: `CHANGELOG.md`
 
 **Interfaces:**

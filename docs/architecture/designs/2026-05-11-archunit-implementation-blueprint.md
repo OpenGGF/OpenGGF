@@ -4,8 +4,8 @@ Date: 2026-05-11
 Scope: ArchUnit adoption roadmap, architecture-rule functionality, rollout policy
 Status: Blueprint (no implementation)
 
-This blueprint consolidates `docs/PROPOSAL_C_ARCHUNIT_EVALUATION.md` and
-`docs/PROPOSAL_G_ARCHUNIT_EVALUATION.md` into a staged roadmap for adding
+This blueprint consolidates `docs/architecture/audits/proposal-c-archunit-evaluation.md` and
+`docs/architecture/audits/proposal-g-archunit-evaluation.md` into a staged roadmap for adding
 ArchUnit to the engine. Both evaluations reach the same core recommendation:
 adopt ArchUnit as a test-only dependency in two stages, first translating the
 existing bytecode-suitable guard rules, then expanding into broader package and
@@ -206,7 +206,7 @@ Every intentional violation in PR 2 must choose one policy:
 - **Refactor first** when a violation is small, local, and safe to remove before
   enforcing the rule.
 
-Frozen rules must be documented in `docs/KNOWN_DISCREPANCIES.md` or a dedicated
+Frozen rules must be documented in `docs/status/known-discrepancies.md` or a dedicated
 architecture note if the exception is architectural rather than gameplay-visible.
 
 ### Decision 4: prefer broad invariants with narrow exclusions
@@ -584,7 +584,7 @@ The implementation PRs must satisfy the tracked hook policy:
   `Agent-Docs: n/a`, `Configuration-Docs: n/a`, and `Skills: n/a` unless those
   files are changed.
 - PR 2 needs `Known-Discrepancies: updated` if frozen architecture exceptions are
-  documented in `docs/KNOWN_DISCREPANCIES.md`.
+  documented in `docs/status/known-discrepancies.md`.
 - If a dedicated architecture exception doc is added elsewhere, use the trailer
   values required by the actual staged files. Do not bypass `.githooks/run-policy`.
 
@@ -593,7 +593,7 @@ The implementation PRs must satisfy the tracked hook policy:
 ## Human Review Questions
 
 1. Should frozen architectural exceptions be documented in
-   `docs/KNOWN_DISCREPANCIES.md`, a new `docs/architecture/archunit-exceptions.md`,
+   `docs/status/known-discrepancies.md`, a new `docs/architecture/archunit-exceptions.md`,
    or both?
 2. Should PR 2 prefer `FreezingArchRule` snapshots for current debt, or explicit
    allowlists with comments for each known exception?

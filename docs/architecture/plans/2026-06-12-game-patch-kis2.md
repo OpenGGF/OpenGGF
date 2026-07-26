@@ -1723,7 +1723,7 @@ Skills: n/a"
 ### Task 14: Docs, changelog, full-suite verification
 
 **Files:**
-- Modify: `CHANGELOG.md`, `docs/KNOWN_DISCREPANCIES.md`, `ROADMAP.md`, `CLAUDE.md`, `AGENTS.md`, guide docs (`docs/guide/` launch/ROM tables)
+- Modify: `CHANGELOG.md`, `docs/status/known-discrepancies.md`, `ROADMAP.md`, `CLAUDE.md`, `AGENTS.md`, guide docs (`docs/guide/` launch/ROM tables)
 
 - [ ] **Step 1: Full test suite**
 
@@ -1735,7 +1735,7 @@ Expected: no regressions attributable to this branch (compare failures against t
 
 - [ ] **Step 2: Documentation updates**
   - `CHANGELOG.md`: one entry covering the GamePatch framework + KiS2 core slice.
-  - `docs/KNOWN_DISCREPANCIES.md`: "KiS2 faithful mode is Knuckles alone; the config/launch sidekick selection can add sidekicks (intentional divergence). Trace work uses the faithful default."
+  - `docs/status/known-discrepancies.md`: "KiS2 faithful mode is Knuckles alone; the config/launch sidekick selection can add sidekicks (intentional divergence). Trace work uses the faithful default."
   - `ROADMAP.md:235-241`: annotate the KiS2 item with what the core slice delivered and what remains (title/level-select flow, special stages, Super Knuckles, 2P, traces).
   - `CLAUDE.md` + `AGENTS.md`: short subsection under Multi-Game Support describing `com.openggf.game.patch` (GamePatch/registry/choke points) and the KiS2 patch package.
   - Guide ROM tables (`docs/guide/playing/getting-started.md` etc.): note Knuckles-in-S2 requires the combined S3K ROM present.
@@ -1743,7 +1743,7 @@ Expected: no regressions attributable to this branch (compare failures against t
 - [ ] **Step 3: Final commit** — trailers must reflect what's staged:
 
 ```bash
-git add CHANGELOG.md docs/KNOWN_DISCREPANCIES.md ROADMAP.md CLAUDE.md AGENTS.md docs/guide/
+git add CHANGELOG.md docs/status/known-discrepancies.md ROADMAP.md CLAUDE.md AGENTS.md docs/guide/
 git commit -m "docs(kis2): document GamePatch framework and KiS2 core slice
 
 Changelog: updated

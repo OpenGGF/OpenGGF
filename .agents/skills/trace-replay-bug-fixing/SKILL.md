@@ -16,7 +16,7 @@ Use these to get oriented on a divergence before you start editing engine code. 
 - **TraceTriageTool** — reads `target/trace-reports/<game>_<zone>_report.json` and prints a first-divergence brief (frame/field, ROM vs engine value, likely owning subsystem, disasm search terms). Run after a failing `*TraceReplay` test produces a report:
   `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz1"`
 - **`docs/agent-workflow/runbooks/runbook-trace-divergence.md`** — step-by-step divergence runbook.
-- **`docs/agent-workflow/documentation-obligation-checklist.md`** — commit trailers, changelog justification, and the `docs/TRACE_FRONTIER_LOG.md` update obligation when a trace frontier moves.
+- **`docs/agent-workflow/documentation-obligation-checklist.md`** — commit trailers, changelog justification, and the `docs/status/trace-frontier-log.md` update obligation when a trace frontier moves.
 
 ## Core Mission Rules (apply to all trace work)
 
@@ -127,7 +127,7 @@ argument:
   mode transition, so it infers phase from no fixture name, start position, velocity,
   animation or oscillator value.
 
-`docs/KNOWN_DISCREPANCIES.md` → *Legacy Pre-Level Intro Prefix Trace Bootstrap Contract*
+`docs/status/known-discrepancies.md` → *Legacy Pre-Level Intro Prefix Trace Bootstrap Contract*
 holds the current boundary (S1/S2 fixture compatibility only), its rationale — *"the engine
 must execute its own production lifecycle; trace rows and auxiliary events are
 comparison-only evidence"* — and its removal condition. The direction of travel across all
@@ -358,7 +358,7 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
    All previously-green traces must stay green; the targeted trace
    should advance its first error frame (or, ideally, become green).
 
-9. Update `docs/TRACE_FRONTIER_LOG.md` whenever a trace frontier moves,
+9. Update `docs/status/trace-frontier-log.md` whenever a trace frontier moves,
    a trace fix is committed, a previously passing trace regresses, or a full
    trace sweep is used to select the next target. Record the exact command,
    commit/worktree context, pass/fail status, error count, and first-error

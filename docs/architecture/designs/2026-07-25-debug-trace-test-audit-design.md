@@ -52,7 +52,7 @@ Each matching source will be classified as one of:
 
 The audit will record Maven selection, JUnit annotations, external requirements
 (ROM, display, native tools), assertion strength, output volume, and filesystem
-side effects in `docs/testing/debug-trace-test-audit.md`. Each inventory row
+side effects in `docs/architecture/audits/testing/debug-trace-tests.md`. Each inventory row
 will include source, category, normal-suite selection, trace-profile selection,
 annotations, requirements, side effects, execution decision, command, outcome,
 and issue or fix reference. Existing generated and untracked workspace files
@@ -135,7 +135,7 @@ review turn until the reviewer reports green.
   location.
 - Preserve all pre-existing worktree changes.
 - If a full trace sweep chooses a next frontier, moves a frontier, lands a fix,
-  or regresses a passing trace, update `docs/TRACE_FRONTIER_LOG.md` with the
+  or regresses a passing trace, update `docs/status/trace-frontier-log.md` with the
   command, commit/worktree context, pass/fail, error count, and first-error
   frame/field.
 
@@ -144,7 +144,7 @@ review turn until the reviewer reports green.
 - A headless-safe S3K Data Select visual regression test.
 - Focused verification evidence for that regression.
 - A complete categorized inventory of matching test sources.
-- A durable audit at `docs/testing/debug-trace-test-audit.md`.
+- A durable audit at `docs/architecture/audits/testing/debug-trace-tests.md`.
 - Runtime results for each safe execution group.
 - A concise list of concrete test naming, selection, side-effect, and reliability
   issues, with fixes limited to confirmed problems.

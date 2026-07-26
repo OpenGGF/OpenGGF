@@ -52,7 +52,7 @@ Shared base/helpers: `src/main/java/com/openggf/level/objects/` (`AbstractObject
   - **S2:** prefer `S2SpriteDataLoader.loadMappingFrames(reader, mappingAddr)` (add mapping addr to `Sonic2Constants.java`); `loadMappingFramesWithTileOffset()` for VRAM tile adjustment.
   - **S1:** use `Sonic1ObjectArt.buildArtSheet(artAddr, mappings, palette, bankSize)` for Nemesis art; `S1SpriteDataLoader.loadMappingFrames(reader, mappingAddr)` for ROM-parsed mappings (5-byte pieces). Many S1 mappings are inline `spritePiece` macros, so hardcoded mappings with `buildArtSheet()` are common.
 - **New test:** `src/test/java/com/openggf/game/sonic{1,2}/objects/Test<Name>...java`.
-- Docs: `CHANGELOG.md`, possibly `docs/KNOWN_DISCREPANCIES.md`.
+- Docs: `CHANGELOG.md`, possibly `docs/status/known-discrepancies.md`.
 
 ---
 
@@ -103,6 +103,6 @@ Use `HeadlessTestRunner`, `@FullReset`/`SingletonResetExtension`, and `StubObjec
 ## 8. Documentation & commit-trailer obligations
 
 - `CHANGELOG.md` + `Changelog: updated` for engine changes.
-- `docs/KNOWN_DISCREPANCIES.md` + `Known-Discrepancies: updated` if you add/resolve an intentional divergence.
+- `docs/status/known-discrepancies.md` + `Known-Discrepancies: updated` if you add/resolve an intentional divergence.
 - Pitfall reuse → update `.agents/skills/s{1,2}-implement-object/rom-pitfalls.md` and the mirrored `.claude/skills/...`, set `Skills: updated`.
 - Fill all trailers with `updated` or `n/a`; never `--no-verify`.

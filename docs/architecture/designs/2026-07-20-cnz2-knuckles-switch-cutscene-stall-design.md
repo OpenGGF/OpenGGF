@@ -86,7 +86,7 @@ Follow a red-green cycle:
 5. Run the focused CNZ cutscene/button/water tests.
 6. Run relevant camera-gate and boss tests if shared code changes.
 7. Run the S3K CNZ trace replay only if the fix or regression touches the trace
-   path; if its frontier changes, update `docs/TRACE_FRONTIER_LOG.md` according
+   path; if its frontier changes, update `docs/status/trace-frontier-log.md` according
    to repository policy.
 8. Run the project build or an appropriately broad S3K regression set before
    completion.

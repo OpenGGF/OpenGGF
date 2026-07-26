@@ -39,7 +39,7 @@ A headless spike established (and the spike code was reverted, tree clean):
 - `src/test/java/com/openggf/tests/TestS3kAiz2SidekickBoundsSync.java` — reinstate exact `0x44C0` wrap assertion.
 - `src/test/java/com/openggf/game/sonic3k/events/TestSonic3kAizForestLoopSignals.java` *(new)* — predicate/period unit tests.
 - `src/test/java/com/openggf/game/sonic3k/TestSonic3kAizBgWrapActivation.java` *(new)* — bgWrap activation + loop BG-window forest-only guard.
-- `docs/S3K_KNOWN_DISCREPANCIES.md`, `CHANGELOG.md`, `docs/TRACE_FRONTIER_LOG.md` — cleanup/attestation.
+- `docs/S3K_KNOWN_DISCREPANCIES.md`, `CHANGELOG.md`, `docs/status/trace-frontier-log.md` — cleanup/attestation.
 
 ---
 
@@ -433,7 +433,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 4: Trace check + frontier log
 
 **Files:**
-- Modify (if frontier moves): `docs/TRACE_FRONTIER_LOG.md`
+- Modify (if frontier moves): `docs/status/trace-frontier-log.md`
 
 - [ ] **Step 1: Recall the baseline.** Pre-change AIZ first error = frame **8941**
   (`camera_y` expected=`0x02C1` actual=`0x02B8`), recorded in the investigation
@@ -448,14 +448,14 @@ field/frame; the `$200` restore changes camera/object coordinates and may move
 the frontier either direction).
 
 - [ ] **Step 3: Update the frontier log if it moved.** Append a dated entry to
-  `docs/TRACE_FRONTIER_LOG.md` with the command, commit context, pass/fail, error
+  `docs/status/trace-frontier-log.md` with the command, commit context, pass/fail, error
   count, and first-error frame/field, plus the `$200`-wrap explanation. If
   unchanged, no edit.
 
 - [ ] **Step 4: Commit (only if the log changed).**
 
 ```bash
-git add docs/TRACE_FRONTIER_LOG.md
+git add docs/status/trace-frontier-log.md
 git commit -m "docs(s3k): record AIZ trace frontier after \$200 wrap restore
 
 Changelog: n/a

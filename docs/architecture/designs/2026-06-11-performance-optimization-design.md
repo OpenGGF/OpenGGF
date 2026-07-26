@@ -180,7 +180,7 @@ list.
 ## Acceptance Criteria
 
 1. Full `*TraceReplay` sweep: no trace regresses vs the pre-work baseline
-   (record sweep results in `docs/TRACE_FRONTIER_LOG.md` per policy).
+   (record sweep results in `docs/status/trace-frontier-log.md` per policy).
 2. Held-rewind allocation rate reduced ≥10× vs baseline; no audio driver or
    object instances constructed on intermediate backward frames.
 3. Keyframe-capture frame (every 60th) cost measurably reduced (target ≥50%

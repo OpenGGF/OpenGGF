@@ -50,7 +50,7 @@ title screen and level-select flow, special stages with Knuckles, Super Knuckles
 4. **Sidekick:** The patch sets the faithful default (no sidekick), but does
    not hard-disable sidekicks — the existing config/launch-profile sidekick
    selection stays authoritative. A configured sidekick is an intentional
-   divergence documented in `docs/KNOWN_DISCREPANCIES.md`. Trace work always
+   divergence documented in `docs/status/known-discrepancies.md`. Trace work always
    uses the faithful default.
 5. **ROM prerequisite is logical, not physical:** the patch needs "Sonic &
    Knuckles data available" in *any* form — a standalone 2MB S&K image or the
@@ -270,7 +270,7 @@ in the map falls through to stock S2 art.
 - Config/launch-profile sidekick selection remains authoritative: an explicitly
   configured sidekick is honored through the engine's existing multi-sidekick
   support, and documented as an intentional divergence in
-  `docs/KNOWN_DISCREPANCIES.md`.
+  `docs/status/known-discrepancies.md`.
 
 ### Spawn / placement changes
 

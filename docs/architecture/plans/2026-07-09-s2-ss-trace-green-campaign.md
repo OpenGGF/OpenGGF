@@ -18,7 +18,7 @@
 - `feat`/`fix` commits touching `src/main/` → `Changelog: updated` + stage `CHANGELOG.md` (CRLF file — verify `git diff CHANGELOG.md` shows only your line; on flattening, reconstruct from the parent blob: see commit `d759115ff` for the recovery pattern).
 - ROM-gated tests: `Assumptions.assumeTrue(Files.exists(Path.of("s2.gen")))`.
 - PowerShell: quote Maven `-D` props. `-Dtest` prints a project-wide MSE `total=`; judge by the focused class results.
-- `docs/TRACE_FRONTIER_LOG.md` updated on EVERY frontier move (command, commit, status, error count, first-error frame/field).
+- `docs/status/trace-frontier-log.md` updated on EVERY frontier move (command, commit, status, error count, first-error frame/field).
 - The trace test command used throughout:
   `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay" test`
   Report lands at `target/trace-reports/s2_special_stage_0_report.json`.
@@ -29,7 +29,7 @@
 ### Task 1: ROM init-timeline reference (research artifact)
 
 **Files:**
-- Create: `docs/trace/s2-ss-init-timeline.md`
+- Create: `docs/architecture/research/trace/s2-special-stage-init-timeline.md`
 
 **Interfaces:**
 - Produces: a frame-by-frame table of the ROM's `SpecialStage:` init (`s2.asm:6537-6672`) that Tasks 2–3 implement against and reviewers check fixes against. Columns: VInt # (0-based from `Game_Mode=0x10`), ROM action (with `s2.asm` line), observable RAM effects (which recorded csv/aux fields change). The doc states the pre-roll length as a single number that Task 2 encodes as `Sonic2SpecialStageIntro.PRE_ROLL_FRAMES`.
@@ -155,7 +155,7 @@ void spawnedFlagSurvivesRewindRoundTrip() throws Exception {
 ### Task 4: Stage-1 checkpoint — rerun, quantify, bank
 
 **Files:**
-- Modify: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/status/trace-frontier-log.md`
 
 - [ ] **Step 1: Run the trace test** (command in Global Constraints; ROM required). Expected: test passes (pipeline assertions); the report regenerates.
 - [ ] **Step 2: Quantify the collapse.** From the new report: total errors/warnings, first-error frame+field, first divergence per field — compute directly from `target/trace-reports/s2_special_stage_0_report.json` with a short throwaway script (entries live under `errors`/`warnings`, each with `field`, `start_frame`, `end_frame`, `expected_at_start`, `actual_at_start`; group by `field`, take min `start_frame`). Compare against the baseline (15,313 / 1,877 / first error f0). Record before/after in the frontier log with the two commit SHAs.
@@ -186,7 +186,7 @@ void spawnedFlagSurvivesRewindRoundTrip() throws Exception {
 
 **Files (per iteration, varies):**
 - Modify: `src/main/java/com/openggf/game/sonic2/specialstage/*` (fix-specific)
-- Modify: `docs/TRACE_FRONTIER_LOG.md` (every iteration)
+- Modify: `docs/status/trace-frontier-log.md` (every iteration)
 - Final: `src/test/java/com/openggf/tests/trace/s2/AbstractS2SpecialStageTraceReplayTest.java` (ratchet flip) and its concrete test
 
 **Loop protocol (binding — dispatch ONE subagent per iteration):**
@@ -297,11 +297,11 @@ void spawnedFlagSurvivesRewindRoundTrip() throws Exception {
 ### Task 11: Green gate & closeout
 
 **Files:**
-- Modify: `docs/TRACE_FRONTIER_LOG.md`, `CHANGELOG.md`; `README.md` staged at merge time.
+- Modify: `docs/status/trace-frontier-log.md`, `CHANGELOG.md`; `README.md` staged at merge time.
 
 - [ ] **Step 1: Full ratchet audit.** Every comparator group is ERROR (per-player rings, swap flag, timers, anim timer, rings-to-go, control state adjudication) — grep the abstract test for any remaining `WARNING` tier and justify each leftover in the frontier log (target: none).
 - [ ] **Step 2: Full-suite sweep** (`mvn test`), triaged against the pre-existing-failure baseline exactly as the pipeline project's Task 8 did; plus 3 S2 level-select trace spot-checks; plus `TestS2SpecialStageTraceReplay` + determinism, twice.
-- [ ] **Step 3: Add the SS trace test to the tracked keep-green set** used by trace sweeps (follow how the S2 level-select suite is tracked in `docs/TRACE_FRONTIER_LOG.md` / the sweep tooling).
+- [ ] **Step 3: Add the SS trace test to the tracked keep-green set** used by trace sweeps (follow how the S2 level-select suite is tracked in `docs/status/trace-frontier-log.md` / the sweep tooling).
 - [ ] **Step 4: Frontier log final entry + CHANGELOG.** Commit (`docs: S2 SS trace green — campaign closeout`).
 - [ ] **Step 5: Merge readiness** per Branch Documentation Policy (README release-log entry staged in the merge commit into develop). Merge only after the campaign's final whole-branch review.
 

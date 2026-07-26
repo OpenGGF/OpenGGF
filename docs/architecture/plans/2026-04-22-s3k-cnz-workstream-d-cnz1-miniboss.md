@@ -11,7 +11,7 @@
 **Design spec:** `docs/architecture/designs/2026-04-22-s3k-cnz-trace-replay-design.md` §7.2 (CNZ Act 1 mini-boss — 2 lines; scope intentionally minimal)
 **Parent plan:** `docs/architecture/plans/2026-04-22-s3k-cnz-trace-replay-ab-plan.md`
 **Template:** `docs/architecture/plans/2026-04-22-s3k-cnz-workstream-c-tails-carry.md` (workstream C, just completed)
-**Post-C baseline:** `docs/s3k-zones/cnz-post-workstream-c-baseline.md` (errors 6..20 in frames 193..292 are D's territory)
+**Post-C baseline:** `docs/architecture/validation/s3k-zones/cnz-post-workstream-c.md` (errors 6..20 in frames 193..292 are D's territory)
 **Procedural skill:** `.claude/skills/s3k-implement-boss/skill.md`
 
 **Critical ROM-only constraint.** All ROM offsets/line numbers MUST come from `sonic3k.asm` (< 0x200000 / S&K-side). Always run `RomOffsetFinder` with `--game s3k`. If a label returns both halves, pick `sonic3k.asm`. Never substitute an `s3.asm` address.
@@ -49,7 +49,7 @@
 | `src/main/java/com/openggf/tools/Sonic3kObjectProfile.java` | Verify `S3KL_IMPLEMENTED_IDS` already contains `0xA6` at line 203. No change unless audit in T1 finds otherwise. |
 | `src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtProvider.java` | Retain existing `registerSheet(CNZ_MINIBOSS, ...)` call. The PLC-load call path already exists; a corrected `PLC_CNZ_MINIBOSS=0x5D` in constants propagates automatically. Headless tests do not assert art contents. |
 | `CHANGELOG.md` | Single rollup entry in Task 12 covering all workstream-D behavioural changes. |
-| `docs/s3k-zones/cnz-post-workstream-d-baseline.md` | New file, created in Task 12 with post-D divergence summary. |
+| `docs/architecture/validation/s3k-zones/cnz-post-workstream-d.md` | New file, created in Task 12 with post-D divergence summary. |
 | `docs/S3K_KNOWN_DISCREPANCIES.md` | Task 12 — only modify if boss phase has a ROM-divergent residual (e.g. hit-response x_vel sign). If clean parity achieved, leave untouched (trailer `n/a`). |
 
 ### Unchanged
@@ -1439,7 +1439,7 @@ EOF
 ### Task 12: Run `TestS3kCnzTraceReplay`, capture post-D baseline, roll up CHANGELOG
 
 **Files:**
-- Create: `docs/s3k-zones/cnz-post-workstream-d-baseline.md`
+- Create: `docs/architecture/validation/s3k-zones/cnz-post-workstream-d.md`
 - Modify: `CHANGELOG.md`
 - Possibly modify: `docs/S3K_KNOWN_DISCREPANCIES.md` (only if a residual divergence remains)
 
@@ -1457,7 +1457,7 @@ Expected: test still fails (workstream D does not aim to drive it to zero), but:
 
 Open the generated `target/trace-reports/s3k_0300_report.json` and `_context.txt` (or the equivalent path the trace framework writes to on this branch). Record the new first-20 divergences.
 
-Create `docs/s3k-zones/cnz-post-workstream-d-baseline.md`:
+Create `docs/architecture/validation/s3k-zones/cnz-post-workstream-d.md`:
 
 ```markdown
 # CNZ Trace Replay - Post-Workstream-D Baseline
@@ -1562,7 +1562,7 @@ Open `CHANGELOG.md`. Add a new sub-section under `## Unreleased`:
 - Reduced `TestS3kCnzTraceReplay` error count from 1954 to <NNN>
   (delta <delta>). Baseline row 6..20 from the post-C report are
   displaced off the first-20 divergence list; new first-20 captured in
-  `docs/s3k-zones/cnz-post-workstream-d-baseline.md`.
+  `docs/architecture/validation/s3k-zones/cnz-post-workstream-d.md`.
 ```
 
 - [ ] **Step 5: If a D-owned residual divergence remains, add to `S3K_KNOWN_DISCREPANCIES.md`**
@@ -1572,7 +1572,7 @@ Example residual to document (only if seen in the post-D report): "CNZ1 miniboss
 - [ ] **Step 6: Commit the baseline + CHANGELOG rollup**
 
 ```bash
-git add docs/s3k-zones/cnz-post-workstream-d-baseline.md CHANGELOG.md
+git add docs/architecture/validation/s3k-zones/cnz-post-workstream-d.md CHANGELOG.md
 # If S3K_KNOWN_DISCREPANCIES.md was edited:
 #   git add docs/S3K_KNOWN_DISCREPANCIES.md
 git commit -m "$(cat <<'EOF'

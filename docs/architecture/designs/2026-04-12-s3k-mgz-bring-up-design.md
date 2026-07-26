@@ -10,7 +10,7 @@ Bring Marble Garden Zone to a broad, disassembly-backed Sonic 3 and Knuckles par
 - MGZ Act 2 earthquake, background-event, and collapse orchestration
 - MGZ boss-chain object support sufficient for end-to-end zone flow
 
-This design explicitly targets the locked-on S3K behavior described in `docs/skdisasm/sonic3k.asm` and uses the existing long-form zone analyses in `docs/s3k-zones/` as the required depth baseline for any analysis updates.
+This design explicitly targets the locked-on S3K behavior described in `docs/skdisasm/sonic3k.asm` and uses the existing long-form zone analyses in `docs/architecture/research/s3k-zones/` as the required depth baseline for any analysis updates.
 
 ## Workspace And Analysis Constraints
 
@@ -18,18 +18,18 @@ This design explicitly targets the locked-on S3K behavior described in `docs/skd
 
 The MGZ analysis source of truth must remain in the main workspace:
 
-- `docs/s3k-zones/mgz-analysis.md`
+- `docs/architecture/research/s3k-zones/mgz-analysis.md`
 
 The work should not move the analysis into a worktree-specific path or depend on a forked copy as the authoritative document. If implementation work later uses worktrees, the canonical analysis remains the copy in the main repository checkout.
 
 ### Required analysis depth
 
-`docs/s3k-zones/mgz-analysis.md` is already in the same depth class as the longer existing zone analyses:
+`docs/architecture/research/s3k-zones/mgz-analysis.md` is already in the same depth class as the longer existing zone analyses:
 
-- `docs/s3k-zones/lbz-analysis.md`
-- `docs/s3k-zones/aiz-analysis.md`
-- `docs/s3k-zones/icz-analysis.md`
-- `docs/s3k-zones/hcz-analysis.md`
+- `docs/architecture/research/s3k-zones/lbz-analysis.md`
+- `docs/architecture/research/s3k-zones/aiz-analysis.md`
+- `docs/architecture/research/s3k-zones/icz-analysis.md`
+- `docs/architecture/research/s3k-zones/hcz-analysis.md`
 
 Any follow-up expansion of the MGZ analysis should match those documents in specificity: concrete labels, trigger thresholds, object identities, state-machine stages, and cross-cutting concerns. Short summary-only notes are not sufficient.
 
@@ -451,7 +451,7 @@ If MGZ implementation decisions stop being checked against the main-workspace an
 
 Mitigation:
 
-- keep `docs/s3k-zones/mgz-analysis.md` as the canonical analysis in the main workspace
+- keep `docs/architecture/research/s3k-zones/mgz-analysis.md` as the canonical analysis in the main workspace
 - include label references in MGZ implementation comments and tests
 
 ## Recommended Delivery Order
@@ -482,4 +482,4 @@ The MGZ bring-up is complete when:
 - MGZ2 collapse mutates the world and provides temporary footing through collapse solids
 - MGZ boss-chain objects exist and support end-to-end zone completion into CNZ
 - automated tests cover the major orchestration and animation behaviors
-- the implementation remains grounded in both `docs/s3k-zones/mgz-analysis.md` and `docs/skdisasm/sonic3k.asm`
+- the implementation remains grounded in both `docs/architecture/research/s3k-zones/mgz-analysis.md` and `docs/skdisasm/sonic3k.asm`

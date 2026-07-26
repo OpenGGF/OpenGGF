@@ -1633,7 +1633,7 @@ newly-gated branch, so the error is silent until the trace replay runs.
    leave any game at the fallback default unless you have verified the
    disassembly confirms it.
 4. If a game's behaviour is unknown, mark it `TODO` in a comment beside the
-   constant and log it in `docs/KNOWN_DISCREPANCIES.md`, but do not leave the
+   constant and log it in `docs/status/known-discrepancies.md`, but do not leave the
    wrong value silently in place.
 5. Run the relevant trace replay for all three games after the change.
 

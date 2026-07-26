@@ -15,7 +15,7 @@
 - Do not infer scheduling from player/sidekick motion, animation, or oscillator outcome values.
 - Do not add always-on BizHawk execution hooks.
 - S1/S2 behavior remains unchanged unless an explicit profile value enables the lifecycle behavior.
-- Preserve unrelated workspace changes and update `docs/TRACE_FRONTIER_LOG.md` for measured frontier changes.
+- Preserve unrelated workspace changes and update `docs/status/trace-frontier-log.md` for measured frontier changes.
 
 ---
 
@@ -191,8 +191,8 @@ Commit the replay-policy change and tests with policy trailers. Update `CHANGELO
 **Files:**
 - Modify: `tools/bizhawk/s3k_trace_recorder.lua`
 - Modify: `src/test/java/com/openggf/tests/trace/TestTraceAnimationRecorderContract.java`
-- Modify: `docs/KNOWN_DISCREPANCIES.md`
-- Modify: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/status/known-discrepancies.md`
+- Modify: `docs/status/trace-frontier-log.md`
 
 **Interfaces:**
 - Consumes: metadata-free replay policy from Task 2.
@@ -222,9 +222,9 @@ Expected: FAIL while `pre_trace_osc_frames` remains emitted or legacy phase extr
 
 - [ ] **Step 3: Remove obsolete recorder output and documentation**
 
-Stop writing the three obsolete phase controls from the S3K recorder. Keep parsing compatibility in Java. Update `docs/KNOWN_DISCREPANCIES.md` to describe production lifecycle and structural LEVEL-transition scheduling, explicitly stating that trace values remain comparison-only.
+Stop writing the three obsolete phase controls from the S3K recorder. Keep parsing compatibility in Java. Update `docs/status/known-discrepancies.md` to describe production lifecycle and structural LEVEL-transition scheduling, explicitly stating that trace values remain comparison-only.
 
-Update `docs/TRACE_FRONTIER_LOG.md` with the exact focused AIZ/CNZ commands and pre-fix first divergences; fill final counts/frontiers only after Task 4 measurements.
+Update `docs/status/trace-frontier-log.md` with the exact focused AIZ/CNZ commands and pre-fix first divergences; fill final counts/frontiers only after Task 4 measurements.
 
 - [ ] **Step 4: Verify GREEN and Lua syntax**
 
@@ -246,7 +246,7 @@ Commit recorder/docs cleanup with policy trailers marking Known-Discrepancies up
 ### Task 4: Focused replay and fleet verification
 
 **Files:**
-- Modify: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/status/trace-frontier-log.md`
 
 **Interfaces:**
 - Consumes: Tasks 1–3.

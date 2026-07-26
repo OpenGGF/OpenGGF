@@ -944,7 +944,7 @@ Targets:
 Verification:
 
 Run focused trace replay tests for every migrated route. Update
-`docs/TRACE_FRONTIER_LOG.md` only when frontiers actually move or regressions
+`docs/status/trace-frontier-log.md` only when frontiers actually move or regressions
 are discovered.
 
 ### Phase 6: High-Risk Consolidation

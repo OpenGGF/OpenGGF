@@ -14,7 +14,7 @@
 
 - Modify: `pom.xml`
 - Modify or add: `src/test/java/com/openggf/tests/architecture/TestBuildToolingGuard.java`
-- Modify docs only when adding a durable trace-policy note: `docs/TRACE_FRONTIER_LOG.md`
+- Modify docs only when adding a durable trace-policy note: `docs/status/trace-frontier-log.md`
 
 ## Tasks
 

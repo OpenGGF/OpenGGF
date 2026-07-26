@@ -71,7 +71,7 @@ Extension over the single-arm recorder:
 
 ## Stage 4 — Per-segment frontier verification
 
-**Run** each `TestS3k<Zone>CompleteRunTraceReplay`; record first-error frame in `docs/TRACE_FRONTIER_LOG.md`. **HCZ specifically:** confirm it replays *through* the pause window (no divergence at the pause frame, frame-aligned afterward) thanks to Stage 2.
+**Run** each `TestS3k<Zone>CompleteRunTraceReplay`; record first-error frame in `docs/status/trace-frontier-log.md`. **HCZ specifically:** confirm it replays *through* the pause window (no divergence at the pause frame, frame-aligned afterward) thanks to Stage 2.
 
 **Docs/commit:** CHANGELOG + frontier log; trailers; commit on `feature/ai-s3k-complete-run-traces`; integrate to develop via the isolated-worktree compose-verify + FF-push flow. Note S3K is partly Codex's domain — coordinate so the shared `_movies` bk2 and any S3K test overlaps converge.
 

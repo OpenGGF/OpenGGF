@@ -13,7 +13,7 @@ $ARGUMENTS: Zone name or abbreviation (e.g., "HCZ", "Hydrocity Zone", "CNZ1", "F
 
 ## Zone Analysis Spec (Optional)
 
-If a zone analysis spec exists at `docs/s3k-zones/{zone}-analysis.md`, read it first. The **Parallax** section provides:
+If a zone analysis spec exists at `docs/architecture/research/s3k-zones/{zone}-analysis.md`, read it first. The **Parallax** section provides:
 - Band count and deform type
 - Data table labels and disassembly line numbers
 - Water split information

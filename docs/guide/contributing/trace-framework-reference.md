@@ -1256,7 +1256,7 @@ The repo's trailer policy (see `CLAUDE.md` §"Branch Documentation Policy") clos
 every trace-related commit must stage:
 
 - `CHANGELOG.md` — what changed, visible in the trace section of the changelog
-- `docs/KNOWN_DISCREPANCIES.md` / `docs/S3K_KNOWN_DISCREPANCIES.md` — intentional deviations
+- `docs/status/known-discrepancies.md` / `docs/S3K_KNOWN_DISCREPANCIES.md` — intentional deviations
 - `docs/guide/*` — keep the guide truthful
 - `AGENTS.md` + `CLAUDE.md` — keep agent guidance truthful
 - `CONFIGURATION.md` — if a new env var was added (`OGGF_S3K_TRACE_PROFILE`,

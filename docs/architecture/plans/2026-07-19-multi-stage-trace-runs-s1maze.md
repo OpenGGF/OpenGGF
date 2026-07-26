@@ -66,7 +66,7 @@ frame,input,lag,x_pos,y_pos,vel_x,vel_y,inertia,status,ss_angle,ss_rotate,bg_ani
 | `src/test/java/com/openggf/tests/trace/s1/AbstractS1SpecialStageTraceReplayTest.java` | Create | Comparator + report writer |
 | `src/test/java/com/openggf/tests/trace/s1/TestS1SpecialStageTraceReplay.java` | Create | Skip-if-missing concrete test |
 | `src/test/java/com/openggf/tests/TestS1SpecialStageHeadlessBoot.java` | Create | #6-S1 standalone-loadability verify |
-| `tools/bizhawk/README.md`, `docs/TRACE_FRONTIER_LOG.md`, spec | Modify | Recording procedure + log + recorder-host amendment |
+| `tools/bizhawk/README.md`, `docs/status/trace-frontier-log.md`, spec | Modify | Recording procedure + log + recorder-host amendment |
 
 **Scope notes (explicit, for reviewers):**
 - The chained round-trip test (`TestS3kBonusRoundTripChain` analog) and visual standalone SS launch generalization (`TraceSessionLauncher.SPECIAL_STAGE_PROFILE` is still `s2_special_stage`-only) are **deferred follow-ups shared with the S3K blue-spheres work** — neither plan wired in-chain/visual SS-interior comparison; the walker (`TraceRunReplayWalker`) and visual run branch (`RunSegmentAdvancer` is already mode-driven and game-agnostic; `applyPerGameSpecialStageConfig` already handles `"s1"`) need no S1-specific change in this plan. Record the deferral in the frontier log entry (Task 6).
@@ -561,7 +561,7 @@ Model on `TestS3kSpecialStageHeadlessBoot` (read it first). The S1 manager alrea
 
 **Files:**
 - Modify: `tools/bizhawk/README.md`
-- Modify: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/status/trace-frontier-log.md`
 - Modify: `docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md`
 
 - [ ] **Step 1: README recording procedure** (mirror the blue-spheres section's structure): "S1 maze round-trip (s1-ghz-maze-roundtrip)": record a BizHawk movie on the S1 World REV01 ROM — play GHZ1 collecting ≥50 rings, touch the giant ring past the signpost, complete (or fail out of) the maze, continue into GHZ2 until control is settled, stop the movie. Run `s1_complete_run_recorder.lua` against the bk2 (headless per the existing S1 recorder invocation) — the `$10` detour automatically produces `ghz1/` + `ss/` + `ghz2/` segments and `run_manifest.json`. Commit the run under `src/test/resources/traces/s1/runs/s1-ghz-maze-roundtrip/`, copy the `ss/` segment (with its `metadata.json`, `physics.csv`, and the source bk2) to `src/test/resources/traces/s1/special_stage/` to activate `TestS1SpecialStageTraceReplay`. The `source_bk2` filename must match the actual bk2 committed alongside: **mandate the rename** — commit the movie as `s1-complete-run.bk2` inside the trace dirs. (Editing `source_bk2` in the copied SS metadata instead would leave the run bundle internally inconsistent — the level segments' metadata hardcodes `"s1-complete-run.bk2"` at recorder L498.) Include the VERIFY-ON-FIRST-CAPTURE checklist: recorder self-check prints must show plausible angle range, final `ss_rotate` ramping toward `0x1800`, rings/emeralds behaving, and the finalize `v_lastspecial` re-read printing `(special_stage_index + 1) % 6` (anything else = the `SS_Load` emerald-skip loop fired and the recorded index is suspect); any surprise = re-derive the RAM map before committing the trace. Also note: record the round-trip on a **fresh save/no-emeralds state** — after a first emerald is collected, `v_lastspecial`'s pre-`SS_Load` value can name a stage the ROM's skip loop rejects, mislabeling the segment.

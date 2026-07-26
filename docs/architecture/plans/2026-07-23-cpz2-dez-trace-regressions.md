@@ -13,7 +13,7 @@
 - Trace data remains comparison-only and read-only.
 - No zone, route, or frame carve-outs.
 - Production behavior must cite the Sonic 2 disassembly.
-- Update `docs/TRACE_FRONTIER_LOG.md` when the trace results move.
+- Update `docs/status/trace-frontier-log.md` when the trace results move.
 
 ---
 
@@ -96,7 +96,7 @@ Expected: EHZ, SCZ, WFZ, and DEZ all PASS.
 ### Task 3: End-to-end verification and documentation
 
 **Files:**
-- Modify: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/status/trace-frontier-log.md`
 
 **Interfaces:**
 - Consumes: focused and fleet test results

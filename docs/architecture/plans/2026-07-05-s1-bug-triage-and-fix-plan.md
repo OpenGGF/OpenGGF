@@ -40,7 +40,7 @@
 
 **Files:**
 - Create: `docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md`
-- Read: `docs/TRACE_FRONTIER_LOG.md`
+- Read: `docs/status/trace-frontier-log.md`
 - Read: `target/trace-reports/*` if present
 
 - [ ] **Step 1: Create the working branch**
@@ -489,7 +489,7 @@ mvn "-Dtest=TestObjectPlacementManager,TestSonic1AudioPriority,AudioRegressionTe
 
 **Files:**
 - Create BizHawk diagnostic scripts under `tools/bizhawk/` only if needed.
-- Update: `docs/TRACE_FRONTIER_LOG.md` if a trace frontier or sweep is used.
+- Update: `docs/status/trace-frontier-log.md` if a trace frontier or sweep is used.
 - Update: `KNOWN_DISCREPANCIES.md` only if ROM behavior is confirmed intentional and differs from a player expectation.
 
 - [ ] **Step 1: Capture ROM evidence**
@@ -515,7 +515,7 @@ Run:
 mvn "-Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Mz2CompleteRunTraceReplay,TestS1Mz3CompleteRunTraceReplay,TestS1Syz1CompleteRunTraceReplay,TestS1Syz2CompleteRunTraceReplay,TestS1Syz3CompleteRunTraceReplay,TestS1Lz1CompleteRunTraceReplay,TestS1Lz2CompleteRunTraceReplay,TestS1Lz3CompleteRunTraceReplay,TestS1Slz1CompleteRunTraceReplay,TestS1Slz2CompleteRunTraceReplay,TestS1Slz3CompleteRunTraceReplay" "-DfailIfNoTests=false" test
 ```
 
-Expected: no trace that passed in the Task 1 baseline regresses. A moved frontier is acceptable only when the trace was already failing and the new first divergence is documented in `docs/TRACE_FRONTIER_LOG.md`.
+Expected: no trace that passed in the Task 1 baseline regresses. A moved frontier is acceptable only when the trace was already failing and the new first divergence is documented in `docs/status/trace-frontier-log.md`.
 
 - [ ] **Step 2: Run rewind coverage guards**
 
@@ -533,7 +533,7 @@ mvn test
 
 - [ ] **Step 4: Update docs**
 
-Update `CHANGELOG.md` for user-visible fixes. Update `docs/TRACE_FRONTIER_LOG.md` for any trace frontier movement or trace sweep used to pick/confirm targets. Update S1 object pitfall skills only when a generalized object implementation pitfall was found.
+Update `CHANGELOG.md` for user-visible fixes. Update `docs/status/trace-frontier-log.md` for any trace frontier movement or trace sweep used to pick/confirm targets. Update S1 object pitfall skills only when a generalized object implementation pitfall was found.
 
 - [ ] **Step 5: Check ROM evidence before each commit**
 

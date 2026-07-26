@@ -16,7 +16,7 @@
 - Wire values are absent, `level`, or `title_screen`; absence is internal `UNSPECIFIED`.
 - S2/S3K defaults remain absent/`UNSPECIFIED`.
 - Keep standard and complete-run MZ1 trace replay coverage selected.
-- Update `docs/TRACE_FRONTIER_LOG.md`.
+- Update `docs/status/trace-frontier-log.md`.
 
 ---
 
@@ -195,7 +195,7 @@
 ### Task 5: S1 verification and frontier update
 
 **Files:**
-- Modify: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/status/trace-frontier-log.md`
 
 **Interfaces:**
 - Consumes: Tasks 1–4 commits
@@ -211,9 +211,9 @@
       Map declared package + top-level class, reject duplicates, save the exact 36-FQCN
       request list to `target/debug-trace-audit/s1-trace-requested.txt`, and compare it to
       the previously audited 36. Use the preserved reviewed inventory at
-      `/tmp/openggf-debug-trace-audit/docs/testing/debug-trace-test-audit.md` as input;
+      `/tmp/openggf-debug-trace-audit/docs/architecture/audits/testing/debug-trace-tests.md` as input;
       it is intentionally not present on the fix branch. Run from the fix worktree:
-      `python3 -c 'import pathlib,re; a=pathlib.Path("/tmp/openggf-debug-trace-audit/docs/testing/debug-trace-test-audit.md"); paths=[]; [(lambda c: paths.append(re.search(r"\(\.\./\.\./(src/test/java/com/openggf/tests/trace/s1/[^)]+\.java)\)",c[0]).group(1)))([x.strip() for x in line.strip().strip("|").split("|")]) for line in a.read_text().splitlines() if "/trace/s1/" in line and len([x.strip() for x in line.strip().strip("|").split("|")])>3 and [x.strip() for x in line.strip().strip("|").split("|")][3]=="Yes"]; out=[]; [(lambda s: out.append(re.search(r"^package\s+([^;]+);",s,re.M).group(1)+"."+re.search(r"^(?:(?:public|abstract|final)\s+)*class\s+(\w+)",s,re.M).group(1)))(pathlib.Path(x).read_text()) for x in paths]; assert len(out)==len(set(out))==36,(len(out),len(set(out))); d=pathlib.Path("target/debug-trace-audit"); d.mkdir(parents=True,exist_ok=True); (d/"s1-trace-requested.txt").write_text(",".join(out)+"\n")'`.
+      `python3 -c 'import pathlib,re; a=pathlib.Path("/tmp/openggf-debug-trace-audit/docs/architecture/audits/testing/debug-trace-tests.md"); paths=[]; [(lambda c: paths.append(re.search(r"\(\.\./\.\./(src/test/java/com/openggf/tests/trace/s1/[^)]+\.java)\)",c[0]).group(1)))([x.strip() for x in line.strip().strip("|").split("|")]) for line in a.read_text().splitlines() if "/trace/s1/" in line and len([x.strip() for x in line.strip().strip("|").split("|")])>3 and [x.strip() for x in line.strip().strip("|").split("|")][3]=="Yes"]; out=[]; [(lambda s: out.append(re.search(r"^package\s+([^;]+);",s,re.M).group(1)+"."+re.search(r"^(?:(?:public|abstract|final)\s+)*class\s+(\w+)",s,re.M).group(1)))(pathlib.Path(x).read_text()) for x in paths]; assert len(out)==len(set(out))==36,(len(out),len(set(out))); d=pathlib.Path("target/debug-trace-audit"); d.mkdir(parents=True,exist_ok=True); (d/"s1-trace-requested.txt").write_text(",".join(out)+"\n")'`.
 - [ ] Run the exact group with:
       `timeout --signal=TERM --kill-after=30s 90m mvn -Ptrace-replay
       "-Dtest=$(tr -d '\n' < target/debug-trace-audit/s1-trace-requested.txt)"

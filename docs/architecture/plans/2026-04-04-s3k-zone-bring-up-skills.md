@@ -27,7 +27,7 @@
 - `.agent/skills/s3k-palette-cycling/skill.md` — Palette cycling skill (agent-agnostic)
 - `.agent/skills/s3k-zone-bring-up/skill.md` — Orchestrator skill (agent-agnostic)
 - `.agent/skills/s3k-zone-validate/skill.md` — Validation skill (agent-agnostic)
-- `docs/s3k-zones/.gitkeep` — Zone analysis output directory
+- `docs/architecture/research/s3k-zones/.gitkeep` — Zone analysis output directory
 
 **Modified files:**
 - `.claude/skills/s3k-parallax/skill.md` — Add analysis spec input section
@@ -37,7 +37,7 @@
 ### Task 1: Create directory structure
 
 **Files:**
-- Create: `docs/s3k-zones/.gitkeep`
+- Create: `docs/architecture/research/s3k-zones/.gitkeep`
 - Create: `.agent/skills/s3k-zone-analysis/.gitkeep` (ensures dir exists)
 - Create: `.agent/skills/s3k-zone-events/.gitkeep`
 - Create: `.agent/skills/s3k-animated-tiles/.gitkeep`
@@ -55,13 +55,13 @@ mkdir -p .agent/skills/s3k-animated-tiles
 mkdir -p .agent/skills/s3k-palette-cycling
 mkdir -p .agent/skills/s3k-zone-bring-up
 mkdir -p .agent/skills/s3k-zone-validate
-touch docs/s3k-zones/.gitkeep
+touch docs/architecture/research/s3k-zones/.gitkeep
 ```
 
 - [ ] **Step 2: Commit**
 
 ```bash
-git add docs/s3k-zones/.gitkeep
+git add docs/architecture/research/s3k-zones/.gitkeep
 git commit -m "chore: create s3k zone bring-up directory structure"
 ```
 
@@ -238,7 +238,7 @@ For each routine found, read the full assembly code. Focus on extracting:
 
 ### Phase 4: Write the Analysis Spec
 
-Save output to `docs/s3k-zones/{zone-lower}-analysis.md` using this format:
+Save output to `docs/architecture/research/s3k-zones/{zone-lower}-analysis.md` using this format:
 
 ```
 # {Zone Full Name} ({ABBR}) — Zone Analysis
@@ -357,7 +357,7 @@ Implement zone-specific event handlers for Sonic 3&K. These correspond to the `D
 
 ## Inputs
 
-$ARGUMENTS: Zone abbreviation + optional path to zone analysis spec (e.g., "HCZ", "HCZ docs/s3k-zones/hcz-analysis.md")
+$ARGUMENTS: Zone abbreviation + optional path to zone analysis spec (e.g., "HCZ", "HCZ docs/architecture/research/s3k-zones/hcz-analysis.md")
 
 ## Related Skills
 
@@ -408,7 +408,7 @@ The manager dispatches to zone handlers. Each zone needs:
 
 ### Phase 1: Read the Zone Analysis Spec
 
-If a zone analysis spec exists at `docs/s3k-zones/{zone}-analysis.md`, read it first. Focus on the **Events (Dynamic_Resize)** section for:
+If a zone analysis spec exists at `docs/architecture/research/s3k-zones/{zone}-analysis.md`, read it first. Focus on the **Events (Dynamic_Resize)** section for:
 - Routine counter progression per act
 - Camera position thresholds
 - Boss spawn sequences
@@ -640,7 +640,7 @@ Implement zone-specific animated tile triggers for Sonic 3&K. The engine uses An
 
 ## Inputs
 
-$ARGUMENTS: Zone abbreviation + optional path to zone analysis spec (e.g., "HCZ", "HCZ docs/s3k-zones/hcz-analysis.md")
+$ARGUMENTS: Zone abbreviation + optional path to zone analysis spec (e.g., "HCZ", "HCZ docs/architecture/research/s3k-zones/hcz-analysis.md")
 
 ## Related Skills
 
@@ -686,7 +686,7 @@ Scripts are indexed per zone/act. The `resolveAniPlcAddr()` method returns the R
 
 ### Phase 1: Read the Analysis Spec
 
-Read `docs/s3k-zones/{zone}-analysis.md`, focus on **Animated Tiles (AniPLC)** section:
+Read `docs/architecture/research/s3k-zones/{zone}-analysis.md`, focus on **Animated Tiles (AniPLC)** section:
 - Script count per act
 - VRAM destinations and descriptions
 - Gating conditions
@@ -917,7 +917,7 @@ if (--counter <= 0) {
 
 ### Phase 1: Read the Analysis Spec
 
-Read `docs/s3k-zones/{zone}-analysis.md`, focus on **Palette Cycling (AnPal)** section:
+Read `docs/architecture/research/s3k-zones/{zone}-analysis.md`, focus on **Palette Cycling (AnPal)** section:
 - Channel count
 - Palette line and color range per channel
 - Cycling rate (counter reload value)
@@ -1103,7 +1103,7 @@ Add after the existing `## Inputs` section:
 ```markdown
 ## Zone Analysis Spec (Optional)
 
-If a zone analysis spec exists at `docs/s3k-zones/{zone}-analysis.md`, read it first. The **Parallax** section provides:
+If a zone analysis spec exists at `docs/architecture/research/s3k-zones/{zone}-analysis.md`, read it first. The **Parallax** section provides:
 - Band count and deform type
 - Data table labels and disassembly line numbers
 - Water split information
@@ -1196,7 +1196,7 @@ Dispatch an agent with the **s3k-zone-analysis** skill for the target zone:
 ```
 Use the s3k-zone-analysis skill (.claude/skills/s3k-zone-analysis/skill.md).
 Analyse zone: {ZONE}
-Save output to: docs/s3k-zones/{zone}-analysis.md
+Save output to: docs/architecture/research/s3k-zones/{zone}-analysis.md
 ```
 
 Wait for completion. Read the output spec.
@@ -1205,7 +1205,7 @@ Wait for completion. Read the output spec.
 
 Unless `--skip-review` is set, present the analysis spec to the user:
 
-> "Zone analysis complete for {Zone Full Name}. Spec saved to `docs/s3k-zones/{zone}-analysis.md`.
+> "Zone analysis complete for {Zone Full Name}. Spec saved to `docs/architecture/research/s3k-zones/{zone}-analysis.md`.
 > Please review the analysis — especially any LOW confidence items and cross-cutting concerns.
 > Should I proceed with implementation?"
 
@@ -1238,28 +1238,28 @@ Launch one agent per applicable feature category, each in a **worktree**:
 ```
 Use the s3k-zone-events skill (.claude/skills/s3k-zone-events/skill.md).
 Zone: {ZONE}
-Analysis spec: docs/s3k-zones/{zone}-analysis.md
+Analysis spec: docs/architecture/research/s3k-zones/{zone}-analysis.md
 ```
 
 **Parallax agent:**
 ```
 Use the s3k-parallax skill (.claude/skills/s3k-parallax/skill.md).
 Zone: {ZONE}
-Analysis spec: docs/s3k-zones/{zone}-analysis.md
+Analysis spec: docs/architecture/research/s3k-zones/{zone}-analysis.md
 ```
 
 **Animated tiles agent:**
 ```
 Use the s3k-animated-tiles skill (.claude/skills/s3k-animated-tiles/skill.md).
 Zone: {ZONE}
-Analysis spec: docs/s3k-zones/{zone}-analysis.md
+Analysis spec: docs/architecture/research/s3k-zones/{zone}-analysis.md
 ```
 
 **Palette cycling agent:**
 ```
 Use the s3k-palette-cycling skill (.claude/skills/s3k-palette-cycling/skill.md).
 Zone: {ZONE} [validate|implement]
-Analysis spec: docs/s3k-zones/{zone}-analysis.md
+Analysis spec: docs/architecture/research/s3k-zones/{zone}-analysis.md
 ```
 
 ### Step 5: Merge Results
@@ -1508,7 +1508,7 @@ git commit -m "feat: add s3k-zone-validate skill for visual feature validation"
 Validate the most critical skill (zone analysis) by running it against HCZ, the first zone in the priority queue.
 
 **Files:**
-- Create: `docs/s3k-zones/hcz-analysis.md` (output of the analysis)
+- Create: `docs/architecture/research/s3k-zones/hcz-analysis.md` (output of the analysis)
 
 - [ ] **Step 1: Run the s3k-zone-analysis skill on HCZ**
 
@@ -1516,7 +1516,7 @@ Dispatch a sub-agent:
 ```
 Use the s3k-zone-analysis skill (.claude/skills/s3k-zone-analysis/skill.md).
 Analyse zone: HCZ
-Save output to: docs/s3k-zones/hcz-analysis.md
+Save output to: docs/architecture/research/s3k-zones/hcz-analysis.md
 ```
 
 - [ ] **Step 2: Review the output**
@@ -1541,7 +1541,7 @@ sed -n 'NNNNNp' docs/skdisasm/sonic3k.asm
 - [ ] **Step 4: Commit if analysis looks good**
 
 ```bash
-git add docs/s3k-zones/hcz-analysis.md
+git add docs/architecture/research/s3k-zones/hcz-analysis.md
 git commit -m "feat: add HCZ zone analysis spec (smoke test of s3k-zone-analysis skill)"
 ```
 

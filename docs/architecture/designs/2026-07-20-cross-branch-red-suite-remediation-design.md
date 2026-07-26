@@ -121,7 +121,7 @@ A wave is complete only after the complete in-scope suite passes twice consecuti
 
 - Commit each coherent root-cause fix separately with required documentation trailers.
 - Update `CHANGELOG.md` for engine behavior fixes unless the commit records an allowed explicit justification.
-- Update `docs/TRACE_FRONTIER_LOG.md` only when a trace frontier moves, regresses, or is used to select work.
+- Update `docs/status/trace-frontier-log.md` only when a trace frontier moves, regresses, or is used to select work.
 - Merge completed `develop` waves before beginning `next`-only implementation.
 - Rebase the red inventory after every PR; do not continue working from stale aggregate counts.
 

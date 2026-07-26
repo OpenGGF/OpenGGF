@@ -775,11 +775,11 @@ EOF
 Create comprehensive lifecycle documentation for all singletons.
 
 **Files:**
-- Create: `docs/SINGLETON_LIFECYCLE.md`
+- Create: `docs/architecture/singleton-lifecycle.md`
 
 - [ ] **Step 1: Write the document**
 
-Create `docs/SINGLETON_LIFECYCLE.md` with:
+Create `docs/architecture/singleton-lifecycle.md` with:
 
 1. **Singleton inventory table** — all singletons with: class name, package, reset method, thread safety, critical dependencies. Source this by grepping for `getInstance()` across the codebase and reading each class.
 
@@ -794,7 +794,7 @@ Create `docs/SINGLETON_LIFECYCLE.md` with:
 - [ ] **Step 2: Commit**
 
 ```bash
-git add docs/SINGLETON_LIFECYCLE.md
+git add docs/architecture/singleton-lifecycle.md
 git commit -m "$(cat <<'EOF'
 docs: add singleton lifecycle documentation
 

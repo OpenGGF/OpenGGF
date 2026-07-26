@@ -345,7 +345,7 @@ playing the recorded inputs. Boundary assertions are comparisons, not seeds.
 
 Divergence reports keep the existing `target/trace-reports/` naming with
 profile-derived prefixes (chain runs add a segment-index suffix), remain
-`TraceTriageTool`-compatible, and enter `docs/TRACE_FRONTIER_LOG.md`.
+`TraceTriageTool`-compatible, and enter `docs/status/trace-frontier-log.md`.
 
 ### Engine-side additions (src/main), enumerated
 

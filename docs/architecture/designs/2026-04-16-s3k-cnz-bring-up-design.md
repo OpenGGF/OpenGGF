@@ -47,7 +47,7 @@ The primary source of truth is the S&K-side disassembly and ROM behavior, not th
 Primary anchors:
 
 - `docs/skdisasm/sonic3k.asm`
-- `docs/s3k-zones/cnz-analysis.md`
+- `docs/architecture/research/s3k-zones/cnz-analysis.md`
 - S&K-side ROM addresses and labels only
 
 Important CNZ anchors include:

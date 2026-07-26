@@ -41,7 +41,7 @@
 | `tools/bizhawk/s2_trace_recorder.lua` | Modify | Env-gated run mode: detour machine, embedded 48-col SS writer (no hooks), manifest emitter |
 | `src/test/resources/traces/synthetic/run_ehz_ss_3seg/` | Create | Synthetic 3-segment S2 run fixture (level/ss/level, `starpost_special` + `stage_exit` transitions) |
 | `src/test/java/com/openggf/tests/trace/TestS2SyntheticRunFixture.java` | Create | Validates the fixture through `TraceRunManifest` + `SpecialStageTraceData` |
-| `tools/bizhawk/README.md`, `docs/TRACE_FRONTIER_LOG.md` | Modify | Round-trip recording procedure + frontier entry |
+| `tools/bizhawk/README.md`, `docs/status/trace-frontier-log.md` | Modify | Round-trip recording procedure + frontier entry |
 
 **Scope notes (explicit, for reviewers):**
 - Zero `src/main` changes: `TraceMetadata` already parses `run_id`/`segment_index` (plan-a), `TraceRunManifest.validate` has no per-game profile whitelist and `ENTRY_KINDS` already contains `starpost_special`/`stage_exit`, `TraceCatalog.romZoneToProgressionIndex` is identity for s2, and `applyPerGameSpecialStageConfig` already handles `"s2"`. The chain test (`TestS3kBonusRoundTripChain` analog) and in-chain/visual SS-interior comparison remain the shared deferred follow-up recorded in the frontier log since the blue-spheres/S1 plans.
@@ -102,7 +102,7 @@
 ### Task 3: Docs — recording procedure + frontier entry
 
 **Files:**
-- Modify: `tools/bizhawk/README.md`, `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `tools/bizhawk/README.md`, `docs/status/trace-frontier-log.md`
 
 - [ ] **Step 1:** README section "S2 halfpipe round-trip (s2-ehz-halfpipe-roundtrip)": record a 1-player Sonic+Tails movie on the S2 World REV01 ROM — play EHZ1, collect ≥50 rings (emeralds must be < 7), touch a star post, enter the circling-stars ring, play the halfpipe to completion (or failure), return to the level, continue until control is settled, stop. Run `s2_trace_recorder.lua` with `OGGF_TRACE_RUN_ID=s2-ehz-halfpipe-roundtrip` (plus the existing `OGGF_BK2_BASENAME`/frame-count env; leave `OGGF_S2_TRACE_PROFILE` unset so the level segments carry the pinned default `gameplay_unlock`) — run mode emits `seg1_ehz1/` + `ss/` + `seg2_ehz1/` + `run_manifest.json`. Commit under `src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/` with the bk2 committed alongside under the basename `source_bk2` records. **PROHIBITION (stated verbatim):** do NOT copy the run's `ss/` segment over `src/test/resources/traces/s2/special_stage` — the committed interior trace there is produced by `s2_ss_trace_recorder.lua` with the RunObjects PC hooks and is governed by the `Assert-SsAuxCoverage` contract; the run's `ss/` segment has a reduced aux surface (no `run_objects_end` stream) and is consumed by the run/chain path only. VERIFY-ON-FIRST-CAPTURE checklist: boundary prints must show `f_bigring=1` at entry, plausible `saved_x/y` near the star post, `rings_before ≥ 50`, `rings_after = 0` (ROM zeroes on reload — expected), `special_stage_index` plausible; any surprise = re-verify the RAM table before committing.
 - [ ] **Step 2:** Frontier log entry (existing format): S2 retrofit landed — recorder run mode + synthetic fixture; recording pending; deferred follow-ups: (a) RunObjects-hook aux for run ss/ segments (revisit after first capture per spec), (b) chain test for the S2 round-trip (shared with the S3K/S1 deferral), (c) in-chain/visual SS-interior comparison (existing shared item).

@@ -163,7 +163,7 @@ decrement cadence differ. **The 8-frame phase is derived from the GLOBAL
 `Level_frame_counter`, not a per-sprite field** — every S3K speed-shoes timer in
 play shares the same decrement frames.
 
-On 2026-06-01 (see `docs/TRACE_FRONTIER_LOG.md`) an attempt to make speed shoes
+On 2026-06-01 (see `docs/status/trace-frontier-log.md`) an attempt to make speed shoes
 tick at display time uniformly — a `DisplayPhaseTimer` ticked from
 `AbstractPlayableSprite.tickStatus()` (the engine's `Sonic_Display` analog),
 with the `+1` field removed — was implemented and validated:
@@ -283,7 +283,7 @@ Unit guards:
 
 ## References
 
-- `docs/TRACE_FRONTIER_LOG.md` — 2026-06-01 speed-shoes timing entry.
+- `docs/status/trace-frontier-log.md` — 2026-06-01 speed-shoes timing entry.
 - sonic3k.asm:22067-22090 `Sonic_ChkShoes` (every-8th-frame gate + decrement);
   sonic3k.asm:40818 init `(20*60)/8`.
 - s2.asm:36008-36025 `Obj01_ChkShoes`; s1disasm/_incObj/01 Sonic.asm:175-184.

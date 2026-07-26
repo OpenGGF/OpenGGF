@@ -8,7 +8,7 @@ Acceptance criteria:
 - `TestS2WfzLevelSelectTraceReplay` advances from the current documented frontier or passes.
 - Focused WFZ event, Tornado, boss, and object tests cover any changed ROM behavior.
 - Existing known-green traces used as guards remain green.
-- `docs/TRACE_FRONTIER_LOG.md` records any WFZ frontier movement or unchanged result.
+- `docs/status/trace-frontier-log.md` records any WFZ frontier movement or unchanged result.
 
 Non-goals:
 - Do not reimplement already-working WFZ objects without a concrete parity gap.

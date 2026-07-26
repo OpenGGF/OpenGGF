@@ -794,7 +794,7 @@ git commit -m "feat(net): casual-room spot-checking + recording retention GC"
 **Files:**
 - Create: `src/test/java/com/openggf/net/TestVerifiedRoomEndToEnd.java` (in-JVM master + fake worker, no engine/ROM)
 - Modify: the phase-3 protocol fuzzer target list (add `MasterHttpRoutes` request fuzz: random method/path/header/body permutations must never crash the channel)
-- Modify: `CHANGELOG.md`, `docs/KNOWN_DISCREPANCIES.md` n/a, `AGENTS.md`/`CLAUDE.md` n/a unless surfaces changed
+- Modify: `CHANGELOG.md`, `docs/status/known-discrepancies.md` n/a, `AGENTS.md`/`CLAUDE.md` n/a unless surfaces changed
 - Test: full sweep
 
 **Interfaces:** none new.

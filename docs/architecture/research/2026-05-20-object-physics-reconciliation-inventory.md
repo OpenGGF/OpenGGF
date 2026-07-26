@@ -22,7 +22,7 @@ planning input. This research artifact is the committed worker handoff.
 - Do not grow a guard baseline without user approval.
 - Add or run the focused tests named below before migrating a target.
 - If a migrated object appears in a trace fixture, run the focused trace or the
-  canonical smoke trace set and update `docs/TRACE_FRONTIER_LOG.md` only if a
+  canonical smoke trace set and update `docs/status/trace-frontier-log.md` only if a
   trace frontier moves, regresses, or is intentionally advanced.
 - Treat `BOSS_OR_CUTSCENE_ESCAPE_HATCH` and `CUTSCENE_SCRIPT` entries as
   explicit deferrals unless the exact handoff has focused parity coverage.

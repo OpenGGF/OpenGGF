@@ -430,7 +430,7 @@ git commit -m "test(rewind): report-only coverage guard + committed gap baseline
 ### Task 8: Wire into must-run + document
 
 **Files:**
-- Modify: `docs/TRACE_FRONTIER_LOG.md` is NOT relevant; instead add a short note to `AGENTS_S3K.md` (or the rewind section of `CLAUDE.md`) pointing future authors at the guard.
+- Modify: `docs/status/trace-frontier-log.md` is NOT relevant; instead add a short note to `AGENTS_S3K.md` (or the rewind section of `CLAUDE.md`) pointing future authors at the guard.
 - Modify: `docs/architecture/designs/2026-06-17-rewind-object-coverage-architecture-design.md` — mark Phase 1 status `implemented (report-only)`.
 
 **Interfaces:**

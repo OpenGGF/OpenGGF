@@ -320,7 +320,7 @@ Integrate at key allocation sites:
 
 **Problem:** No documentation of initialization order, reset graph, thread-safety assumptions, or the full teardown sequence.
 
-**Design:** Create `docs/SINGLETON_LIFECYCLE.md` with:
+**Design:** Create `docs/architecture/singleton-lifecycle.md` with:
 
 1. **Singleton inventory table** — all singletons with: class name, package, `resetState()` method (if any), thread safety (synchronized/volatile/none), critical dependencies
 
@@ -353,7 +353,7 @@ Integrate at key allocation sites:
 5. **HeadlessTestRunner setup checklist** — the required manual reset sequence with ordering rationale.
 
 **Files created:**
-- `docs/SINGLETON_LIFECYCLE.md`
+- `docs/architecture/singleton-lifecycle.md`
 
 **No code changes.**
 

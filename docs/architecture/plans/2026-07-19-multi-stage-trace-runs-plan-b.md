@@ -298,7 +298,7 @@ Every assertion must check real engine state (no assertion-free diagnostics — 
 ### Task 5: Gate + frontier log
 
 - [ ] **Step 1:** Full suite `mvn test` (sandbox off): no NEW failures vs the develop baseline (baseline: 29F/6E pre-existing, recorded in the plan-(a) ledger).
-- [ ] **Step 2:** `docs/TRACE_FRONTIER_LOG.md` entry: plan-(b) slice landed; bonus replay tests present-but-skipped pending recordings (name the two bk2s needed); smoke-boot coverage green.
+- [ ] **Step 2:** `docs/status/trace-frontier-log.md` entry: plan-(b) slice landed; bonus replay tests present-but-skipped pending recordings (name the two bk2s needed); smoke-boot coverage green.
 - [ ] **Step 3:** Commit docs (all-n/a trailers), subject `docs: record bonus-slice replay scaffolding status`.
 
 **Merge-time reminder:** merging into develop needs a staged README.md release-log line (repo policy).

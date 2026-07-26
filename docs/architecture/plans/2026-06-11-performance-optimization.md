@@ -57,7 +57,7 @@ Use your-files-only staging. Do not use `git add -A`.
 - `src/main/java/com/openggf/level/rings/RingManager.java` — primitive active index storage.
 - `src/main/java/com/openggf/level/LevelManager.java` and `src/main/java/com/openggf/level/LevelTilemapManager.java` — incremental BG rebuild and chunk-desc shift/mask fast path.
 - `src/main/java/com/openggf/game/sonic3k/Sonic3kPatternAnimator.java` — S3K dynamic-art batching after atlas changes.
-- `CHANGELOG.md` and `docs/TRACE_FRONTIER_LOG.md` — phase evidence and user-visible performance notes.
+- `CHANGELOG.md` and `docs/status/trace-frontier-log.md` — phase evidence and user-visible performance notes.
 
 **New or expanded tests:**
 - `src/test/java/com/openggf/audio/synth/TestBlipDeltaBufferReadSamples.java`
@@ -96,7 +96,7 @@ If any `*TraceReplay` test fails, stop and invoke `trace-replay-bug-fixing` befo
 
 **Files:**
 - Modify: `docs/architecture/designs/2026-06-11-performance-optimization-design.md` only if the measured baseline numbers should be recorded there.
-- Modify: `docs/TRACE_FRONTIER_LOG.md` after the initial trace sweep.
+- Modify: `docs/status/trace-frontier-log.md` after the initial trace sweep.
 - Optional create: `docs/performance/2026-06-11-performance-baseline.md`
 
 - [ ] **Step 1: Confirm clean source baseline**
@@ -144,7 +144,7 @@ Expected baseline symptom: whole atlas-page uploads for small DPLC changes and f
 If a baseline doc is created:
 
 ```bash
-git add docs/performance/2026-06-11-performance-baseline.md docs/TRACE_FRONTIER_LOG.md
+git add docs/performance/2026-06-11-performance-baseline.md docs/status/trace-frontier-log.md
 git commit -m "docs: record performance optimization baseline"
 ```
 
@@ -906,7 +906,7 @@ Commit trig call sites separately with messages naming the object and citing the
 
 **Files:**
 - Modify: `CHANGELOG.md`
-- Modify: `docs/TRACE_FRONTIER_LOG.md`
+- Modify: `docs/status/trace-frontier-log.md`
 - Optional modify: `docs/architecture/designs/2026-06-11-performance-optimization-design.md`
 - Optional create/modify: `docs/performance/2026-06-11-performance-results.md`
 
@@ -928,7 +928,7 @@ Run:
 mvn "-Dtest=*TraceReplay" test
 ```
 
-Expected: no regression relative to the Task 0 baseline. Update `docs/TRACE_FRONTIER_LOG.md` with sweep date, command, and result.
+Expected: no regression relative to the Task 0 baseline. Update `docs/status/trace-frontier-log.md` with sweep date, command, and result.
 
 - [ ] **Step 3: Re-run all performance captures**
 
@@ -964,7 +964,7 @@ Add one concise `CHANGELOG.md` entry under the current unreleased section:
 - [ ] **Step 6: Final commit**
 
 ```bash
-git add CHANGELOG.md docs/TRACE_FRONTIER_LOG.md docs/performance/2026-06-11-performance-results.md
+git add CHANGELOG.md docs/status/trace-frontier-log.md docs/performance/2026-06-11-performance-results.md
 git commit -m "docs: record performance optimization validation"
 ```
 

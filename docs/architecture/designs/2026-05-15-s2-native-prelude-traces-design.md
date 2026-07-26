@@ -868,7 +868,7 @@ mvn test -Dtest='TestS2HtzLevelSelectTraceReplay' -Doggf.trace.hydrate=true   # 
 
 **Ownership.**
 - `CONFIGURATION.md`
-- `docs/KNOWN_DISCREPANCIES.md`
+- `docs/status/known-discrepancies.md`
 - `docs/guide/` — new entry for trace-mode toggles
 - `CHANGELOG.md`
 - `AGENTS.md` and `CLAUDE.md` (only if architecture surface changed; if not, trailer says `n/a`)
@@ -876,7 +876,7 @@ mvn test -Dtest='TestS2HtzLevelSelectTraceReplay' -Doggf.trace.hydrate=true   # 
 
 **Implementation.**
 1. `CONFIGURATION.md`: add "Test-only system properties" section documenting `oggf.trace.hydrate`.
-2. `docs/KNOWN_DISCREPANCIES.md`: add entry noting that title-card object execution is currently gated to test-fixture mode pending broader engine harmonisation.
+2. `docs/status/known-discrepancies.md`: add entry noting that title-card object execution is currently gated to test-fixture mode pending broader engine harmonisation.
 3. `docs/guide/trace-replay-modes.md` (new): one-page guide on legacy vs native-prelude mode, the bootstrap comparator, the hydrate switch.
 4. `CHANGELOG.md`: appropriate "added" entries.
 5. Skill files: extend "When to extend the recorder" section with native-prelude flag context.
@@ -1163,10 +1163,10 @@ After the initial Stage 7 review, the human directed "delegate agents to orchest
 
 The S1 Credits 01 (f493 y) + Credits 03 (f221 y) failures pre-existed the orchestration. Credits demo tests use `HeadlessTestFixture` directly, never enter `GameLoop`'s TITLE_CARD branch — confirmed by stashing the orchestration delta and reproducing identical failures. Both are documented ROM-bug emulation gaps:
 
-- **Credits 03 LZ3**: REV01 ROM `LZWindTunnels` bug + missing `v_vbla_byte` in trace recorder; documented at `docs/KNOWN_DISCREPANCIES.md:584-615`.
+- **Credits 03 LZ3**: REV01 ROM `LZWindTunnels` bug + missing `v_vbla_byte` in trace recorder; documented at `docs/status/known-discrepancies.md:584-615`.
 - **Credits 01 MZ2**: shifted from f341 → f493 by commit `50a43e04c` (PushBlock fix); the lava-geyser PushBlock lift fires 1 frame early in engine vs ROM. Documentation entry pre-dated the shift and needs a minor refresh.
 
-Orchestrator updated the existing `docs/KNOWN_DISCREPANCIES.md` entry to mark "pre-2026-05-15". No engine code change.
+Orchestrator updated the existing `docs/status/known-discrepancies.md` entry to mark "pre-2026-05-15". No engine code change.
 
 #### B2-2 — S3K AIZ camera maxY clamp bug
 

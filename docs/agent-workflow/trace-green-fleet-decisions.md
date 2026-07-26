@@ -8,7 +8,7 @@ only fixes that are green-or-advanced with no same-game regression.
 This file records the **decisions** that shape the workflow and the process around
 it, with the rationale, so future runs (and the "next pass") follow the same
 vetted approach instead of re-deriving it. It complements — does not replace —
-`docs/TRACE_FRONTIER_LOG.md` (per-frontier results) and the per-fix commit
+`docs/status/trace-frontier-log.md` (per-frontier results) and the per-fix commit
 messages (per-fix ROM rationale).
 
 ## Discovery decisions

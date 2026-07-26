@@ -167,7 +167,7 @@ class TestTraceCatalogRunDiscovery {
 ### Task 5: Gate + docs
 
 - [ ] **Step 1:** Full suite (detached + log monitor): no NEW failures vs baseline (29F/6E; expected skips unchanged at +4). Watch the guard trio re Task 1's move.
-- [ ] **Step 2:** `docs/TRACE_FRONTIER_LOG.md` entry: plan-(d) visual run chaining landed (catalog run entries, launcher run branch with mode-flip-driven segment advancer, walker promoted to src/main, SS launch-config per-game aware); live visual validation pending the same two recordings.
+- [ ] **Step 2:** `docs/status/trace-frontier-log.md` entry: plan-(d) visual run chaining landed (catalog run entries, launcher run branch with mode-flip-driven segment advancer, walker promoted to src/main, SS launch-config per-game aware); live visual validation pending the same two recordings.
 - [ ] **Step 3:** Commit docs. Merge-time README reminder stands.
 
 ## Plan-level notes

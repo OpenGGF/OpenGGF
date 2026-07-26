@@ -160,11 +160,11 @@ The target should still be native per-game behavior wherever the source data sup
    - S2 mixed icon/name palettes preserved through mappings
    - S1 flashing frame selection still correct
    - no palette uploads during steady-state HUD draw for native S3K lives HUD
-7. Update [KNOWN_DISCREPANCIES.md](../../../docs/KNOWN_DISCREPANCIES.md) only for intentional end-state ROM deviations. If the final shared HUD path deliberately standardizes on an S3K-style lives mapping/palette contract for any S1 or S2 cases, document those resulting behavior differences against the native ROMs. Do not use that document to record the removed palette-override bug.
+7. Update [KNOWN_DISCREPANCIES.md](../../../docs/status/known-discrepancies.md) only for intentional end-state ROM deviations. If the final shared HUD path deliberately standardizes on an S3K-style lives mapping/palette contract for any S1 or S2 cases, document those resulting behavior differences against the native ROMs. Do not use that document to record the removed palette-override bug.
 
 ## Documentation Plan
 
-Use `docs/KNOWN_DISCREPANCIES.md` only for the final architectural result, not for transient bugs or superseded implementation details.
+Use `docs/status/known-discrepancies.md` only for the final architectural result, not for transient bugs or superseded implementation details.
 
 For this refactor, that means:
 

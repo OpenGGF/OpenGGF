@@ -3234,13 +3234,13 @@ Skills: n/a"
 
 **Files:**
 - Create: `docs/modding/music-packs.md`
-- Modify: `CHANGELOG.md`, `docs/KNOWN_DISCREPANCIES.md`, `CLAUDE.md` + `AGENTS.md` (one short "Mod support (Phase 1)" pointer paragraph each)
+- Modify: `CHANGELOG.md`, `docs/status/known-discrepancies.md`, `CLAUDE.md` + `AGENTS.md` (one short "Mod support (Phase 1)" pointer paragraph each)
 
 **Interfaces:** none (documentation).
 
 - [ ] **Step 1: Write `docs/modding/music-packs.md`** — creator-facing: mod jar layout, full `openggf-mod.yaml` and `audio-manifest.yaml` field reference (from Tasks 1/5), wav/ogg constraints (16-bit wav; no mp3 + why), loop-point semantics, how to find music ids (`game.sonicN.audio` constants, e.g. `Sonic2Music`), `jar cf` packaging example, mod manager usage (M on master title), and the documented divergences (fixed 1.25 speed-shoes rate; streams pause/resume across rewind instead of replaying; streamed audio absent from trace/capture runs).
 
-- [ ] **Step 2: Update `CHANGELOG.md`** (one entry: drop-in music-pack mods — mods/ folder, mod manager screen, streamed wav/ogg layer). **Update `docs/KNOWN_DISCREPANCIES.md`**: add the three mod-audio divergences above. **Update `CLAUDE.md` and `AGENTS.md`**: a short paragraph pointing at `com.openggf.mods`, `com.openggf.audio.streamed`, the spec, and `docs/modding/music-packs.md`.
+- [ ] **Step 2: Update `CHANGELOG.md`** (one entry: drop-in music-pack mods — mods/ folder, mod manager screen, streamed wav/ogg layer). **Update `docs/status/known-discrepancies.md`**: add the three mod-audio divergences above. **Update `CLAUDE.md` and `AGENTS.md`**: a short paragraph pointing at `com.openggf.mods`, `com.openggf.audio.streamed`, the spec, and `docs/modding/music-packs.md`.
 
 - [ ] **Step 3: Run the full default suite**
 
@@ -3250,7 +3250,7 @@ Expected: green (same pre-existing failures as `develop` baseline at branch poin
 - [ ] **Step 4: Commit** (docs commit carries the real trailer attestations for the whole branch):
 
 ```bash
-git add docs/modding/music-packs.md CHANGELOG.md docs/KNOWN_DISCREPANCIES.md CLAUDE.md AGENTS.md
+git add docs/modding/music-packs.md CHANGELOG.md docs/status/known-discrepancies.md CLAUDE.md AGENTS.md
 git commit -m "docs: music-pack modding guide, changelog, and discrepancy notes
 
 Changelog: updated

@@ -393,7 +393,7 @@ Modified files:
 - `CONFIGURATION.md` — document new key.
 - `CHANGELOG.md` — release note entry.
 - `README.md` — note that the in-engine notice now appears.
-- `docs/KNOWN_DISCREPANCIES.md` — n/a (no game-behavior divergence).
+- `docs/status/known-discrepancies.md` — n/a (no game-behavior divergence).
 - `docs/S3K_KNOWN_DISCREPANCIES.md` — n/a.
 - `AGENTS.md` / `CLAUDE.md` — note the new boot phase for agent reference.
 

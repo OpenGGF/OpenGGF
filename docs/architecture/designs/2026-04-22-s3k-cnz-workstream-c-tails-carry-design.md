@@ -1,7 +1,7 @@
 # S3K CNZ Workstream C - Tails-Carry Intro Design
 
 **Parent:** `docs/architecture/designs/2026-04-22-s3k-cnz-trace-replay-design.md` §7.1
-**Baseline:** `docs/s3k-zones/cnz-trace-divergence-baseline.md` (first 20 divergences, all flagged C)
+**Baseline:** `docs/architecture/validation/s3k-zones/cnz-trace-divergence.md` (first 20 divergences, all flagged C)
 **Date:** 2026-04-22 (v3 - second-round engine-accuracy corrections: method names, gravity mitigation, player-mode accessor)
 **Scope:** Only the CNZ1 Sonic+Tails carry-in sequence. Other Tails-carry entries (AIZ1, MGZ2, LBZ2, etc.) are explicitly out of scope.
 
@@ -24,7 +24,7 @@ The trace baseline shows all 20 first-divergences flagged `C`, with the window e
 - Replay the Sonic+Tails CNZ1 carry-in with ROM-byte parity for the first ~100 frames (`x_speed`, `y_speed`, `x_pos`, `y_pos`, `air`, `rolling`, `object_control`, `anim` byte all within trace tolerance).
 - Let the carry release into normal physics naturally, so that **the first divergence frame shifts to > 400** and the baseline can be re-captured to drive D/E/F/G triage.
 - Keep `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, and `TestSonic3kDecodingUtils` green throughout.
-- Keep `TestS3kAizTraceReplay` in its pre-existing red state (per `docs/s3k-zones/cnz-task7-regression-note.md`); do not try to fix AIZ from within this workstream.
+- Keep `TestS3kAizTraceReplay` in its pre-existing red state (per `docs/architecture/audits/s3k-zones/cnz-task7-regression.md`); do not try to fix AIZ from within this workstream.
 
 ## 3. Non-goals
 
@@ -35,7 +35,7 @@ The trace baseline shows all 20 first-divergences flagged `C`, with the window e
 
 ## 4. Baseline evidence
 
-From `docs/s3k-zones/cnz-trace-divergence-baseline.md` (first 20 divergences, all start before frame 281):
+From `docs/architecture/validation/s3k-zones/cnz-trace-divergence.md` (first 20 divergences, all start before frame 281):
 
 | # | Frame (start) | Field | Expected | Actual | Interpretation |
 |---|---------------|-------|----------|--------|----------------|

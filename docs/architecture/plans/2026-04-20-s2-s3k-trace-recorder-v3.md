@@ -13,7 +13,7 @@
 - `docs/architecture/research/2026-04-19-trace-lag-model-matrix.md` — cross-game execution matrix and counter addresses (S1/S2/S3K already resolved)
 - `docs/architecture/plans/2026-04-19-trace-lag-model.md` — parent plan; Tasks 6a/6b stubs
 - `docs/guide/contributing/trace-replay.md` — contributor-facing documentation
-- `docs/KNOWN_DISCREPANCIES.md` entry #10 — `Trace Replay Recorder Coverage`
+- `docs/status/known-discrepancies.md` entry #10 — `Trace Replay Recorder Coverage`
 
 **Out of scope:**
 - Do not touch the Java-side parser, metadata, or execution model — v3 is already accepted for all games.
@@ -54,7 +54,7 @@ Any task that reports a different address for any of the values above must stop 
 | `tools/bizhawk/record_s3k_trace.bat` | Create | Launch helper for S3K recorder. |
 | `tools/bizhawk/README.md` | Modify | Add S2 and S3K recorder usage, keep canonical trace-replay guide pointer. |
 | `docs/guide/contributing/trace-replay.md` | Modify | Document that S2 and S3K now emit v3 traces; update the recorder walkthrough. |
-| `docs/KNOWN_DISCREPANCIES.md` | Modify | Update entry #10 `Trace Replay Recorder Coverage` to reflect completed recorder migration and deferred BK2-derived S2/S3K fixtures. |
+| `docs/status/known-discrepancies.md` | Modify | Update entry #10 `Trace Replay Recorder Coverage` to reflect completed recorder migration and deferred BK2-derived S2/S3K fixtures. |
 | `docs/architecture/research/2026-04-20-s2-trace-addresses.md` | Create | Per-game S2 RAM addresses used by the recorder beyond the counter matrix (player base, game mode, zone/act, camera, input, SST layout, status bits). |
 | `docs/architecture/research/2026-04-20-s3k-trace-addresses.md` | Create | Same, for Sonic 3&K. |
 | `src/test/resources/traces/synthetic/s2_execution_v3_2frames/` | Create | Hand-authored synthetic v3 trace with `game: s2` — exercises the S2 metadata path. Mirror layout of the existing `execution_v3_2frames/` fixture (3 files: `physics.csv`, `metadata.json`, `aux_state.jsonl`). |
@@ -541,7 +541,7 @@ git commit -m "feat: add sonic 3k v3 trace recorder"
 **Files:**
 - Modify: `tools/bizhawk/README.md`
 - Modify: `docs/guide/contributing/trace-replay.md`
-- Modify: `docs/KNOWN_DISCREPANCIES.md`
+- Modify: `docs/status/known-discrepancies.md`
 - Modify: `CHANGELOG.md`
 
 - [ ] **Step 1: Update `tools/bizhawk/README.md`**
@@ -597,7 +597,7 @@ The wording must match the tightened `KNOWN_DISCREPANCIES.md` entry from Step 3.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tools/bizhawk/README.md docs/guide/contributing/trace-replay.md docs/KNOWN_DISCREPANCIES.md CHANGELOG.md
+git add tools/bizhawk/README.md docs/guide/contributing/trace-replay.md docs/status/known-discrepancies.md CHANGELOG.md
 git commit -m "docs: document v3 recorder coverage for s1 s2 and s3k"
 ```
 

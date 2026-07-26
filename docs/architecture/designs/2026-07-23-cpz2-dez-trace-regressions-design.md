@@ -40,4 +40,4 @@ retain the frame-zero comparison as the end-to-end assertion.
 Run the focused unit tests first, then both affected trace replays with the
 Sonic 2 REV01 ROM. Finally run all `*TraceReplay` tests because the sidekick
 controller and S2 bootstrap paths are shared. Record the resulting frontier
-movement in `docs/TRACE_FRONTIER_LOG.md`.
+movement in `docs/status/trace-frontier-log.md`.

@@ -308,7 +308,7 @@ the KiS2 content tasks (the framework's first real consumer) while C is pure
 editor-team work. Each workstream lands behind the existing test gates: full default
 suite, S3K must-keep-green set, and — for A — a fresh `*TraceReplay` spot sweep
 (S1 GHZ1, S2 EHZ1, S3K AIZ1) proving patch resolution is a no-op for unpatched
-sessions. `docs/TRACE_FRONTIER_LOG.md` is updated if any sweep is run.
+sessions. `docs/status/trace-frontier-log.md` is updated if any sweep is run.
 
 ## Open questions
 

@@ -190,7 +190,7 @@ mvn test -Dtest="*TraceReplay"
 Expected output:
 - GHZ1 (`TestS1Ghz1TraceReplay`) should PASS
 - Credits demo 6 / SBZ2 (`TestS1Credits06Sbz2TraceReplay`) should PASS
-- MZ1 (`TestS1Mz1TraceReplay`) and the other credits demos (Credits00–Credits05, Credits07): current per-trace error/warning counts live in `docs/TRACE_FRONTIER_LOG.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
+- MZ1 (`TestS1Mz1TraceReplay`) and the other credits demos (Credits00–Credits05, Credits07): current per-trace error/warning counts live in `docs/status/trace-frontier-log.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
 
 ## Step 4: Interpret Results
 

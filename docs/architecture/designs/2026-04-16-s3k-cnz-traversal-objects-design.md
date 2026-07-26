@@ -86,7 +86,7 @@ Primary sources:
 - `docs/skdisasm/sonic3k.asm`
 - `docs/skdisasm/Levels/CNZ/...`
 - `docs/skdisasm/SonLVL INI Files/CNZ/...` as a locator aid only
-- `docs/s3k-zones/cnz-analysis.md`
+- `docs/architecture/research/s3k-zones/cnz-analysis.md`
 
 Behavior authority comes from the disassembly and ROM behavior, not from SonLVL
 metadata, placeholder behavior, or assumptions carried over from Sonic 2.

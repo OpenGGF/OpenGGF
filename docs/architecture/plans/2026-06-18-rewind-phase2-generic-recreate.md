@@ -220,7 +220,7 @@ void spawnConstructibleObjectRecreatesGenerically() {
 - [ ] **Step 2:** If any class regresses (drop/double/state), it needs `RewindRecreatable` or `@RewindTransient` on a field — add the minimum, re-run.
 - [ ] **Step 3:** Remove the now-dead relink helpers and imports; keep `TestArchUnitRules` + `TestObjectServicesMigrationGuard` green.
 - [ ] **Step 4: Commit per batch** (`refactor(rewind): delete <area> codecs, covered by generic recreate`; `Changelog: updated`). Repeat per registry area until `DYNAMIC_REWIND_CODECS` is empty (or only genuinely-bespoke entries remain, each justified in a comment).
-- [ ] **Step 5:** Update `docs/KNOWN_DISCREPANCIES.md` / `S3K_KNOWN_DISCREPANCIES.md` — remove the "construction-spawned / accept-drop" sections that the generic path makes obsolete.
+- [ ] **Step 5:** Update `docs/status/known-discrepancies.md` / `S3K_KNOWN_DISCREPANCIES.md` — remove the "construction-spawned / accept-drop" sections that the generic path makes obsolete.
 
 ---
 

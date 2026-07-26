@@ -18,7 +18,7 @@
 - Modify `src/main/java/com/openggf/level/objects/PerObjectRewindSnapshot.java`: add min-Y to `SidekickCpuRewindExtra`.
 - Modify `src/main/java/com/openggf/game/sonic2/events/Sonic2ZoneEvents.java` and `Sonic2MTZEvents.java`: route MTZ3 routine 6's `Tails_Min_Y_pos` write through sidekick bounds.
 - Modify tests under `src/test/java/com/openggf/game/sonic2`, `src/test/java/com/openggf/sprites/playable`, and `src/test/java/com/openggf/game/sonic2/objects` for focused regressions.
-- Update `docs/TRACE_FRONTIER_LOG.md` and `docs/guide/playing/game-status.md` only when verification changes documented status.
+- Update `docs/status/trace-frontier-log.md` and `docs/guide/playing/game-status.md` only when verification changes documented status.
 
 ### Task 1: Baseline and Plan
 
@@ -153,7 +153,7 @@ Expected: PASS or a documented frontier that is not worsened.
 
 - [ ] **Step 2: Update trace frontier documentation**
 
-If a frontier moves or a trace remains blocked, update `docs/TRACE_FRONTIER_LOG.md` with the exact test command, old/new frontier frames, and semantic root cause.
+If a frontier moves or a trace remains blocked, update `docs/status/trace-frontier-log.md` with the exact test command, old/new frontier frames, and semantic root cause.
 
 - [ ] **Step 3: Update game status documentation**
 

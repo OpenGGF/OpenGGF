@@ -600,7 +600,7 @@ Sonic 1 consumer-side support landed on this branch (commit `94b80d25c` — "wip
 model and S1 slot parity probes"). Sonic 2 and Sonic 3&K recorder-side migration (Tasks 6a/6b)
 remain deferred and are tracked separately in
 `docs/architecture/plans/2026-04-20-s2-s3k-trace-recorder-v3.md` and
-`docs/KNOWN_DISCREPANCIES.md` entry #9 ("Trace Replay Recorder Coverage").
+`docs/status/known-discrepancies.md` entry #9 ("Trace Replay Recorder Coverage").
 
 ### Post-plan scope: S1 object-lifecycle parity (~900 LOC)
 

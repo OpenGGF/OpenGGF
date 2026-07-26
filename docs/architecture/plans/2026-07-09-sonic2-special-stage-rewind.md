@@ -2677,10 +2677,10 @@ Configuration-Docs: n/a
 Skills: n/a"
 ```
 
-If `docs/KNOWN_DISCREPANCIES.md` also changes, commit:
+If `docs/status/known-discrepancies.md` also changes, commit:
 
 ```powershell
-git add CHANGELOG.md docs/KNOWN_DISCREPANCIES.md
+git add CHANGELOG.md docs/status/known-discrepancies.md
 git commit -m "docs: record Sonic 2 special stage rewind acceptance" -m "Changelog: updated
 Guide: n/a
 Known-Discrepancies: updated
@@ -2706,7 +2706,7 @@ Skills: n/a"
 If both discrepancy docs change, commit:
 
 ```powershell
-git add CHANGELOG.md docs/KNOWN_DISCREPANCIES.md docs/S3K_KNOWN_DISCREPANCIES.md
+git add CHANGELOG.md docs/status/known-discrepancies.md docs/S3K_KNOWN_DISCREPANCIES.md
 git commit -m "docs: record Sonic 2 special stage rewind acceptance" -m "Changelog: updated
 Guide: n/a
 Known-Discrepancies: updated

@@ -25,7 +25,7 @@
 - Modify `src/main/java/com/openggf/game/rewind/LiveRewindManager.java`: add mode/provider suppliers, stepper-kind tracking, special-stage capability checks.
 - Modify `src/main/java/com/openggf/game/session/GameplayModeContext.java`: add special-stage adapter registration pair that uses only provider capability and the provider-owned optional adapter.
 - Add tests under `src/test/java/com/openggf/game`, `src/test/java/com/openggf/game/rewind`, and `src/test/java/com/openggf/game/sonic1/specialstage`.
-- Modify `CHANGELOG.md`, `docs/KNOWN_DISCREPANCIES.md`, and `README.md`.
+- Modify `CHANGELOG.md`, `docs/status/known-discrepancies.md`, and `README.md`.
 
 ---
 
@@ -1841,7 +1841,7 @@ The second `-m` argument is the required contiguous trailer block; update any tr
 
 **Files:**
 - Modify: `CHANGELOG.md`
-- Modify: `docs/KNOWN_DISCREPANCIES.md`
+- Modify: `docs/status/known-discrepancies.md`
 - Modify: `README.md`
 - Already modified: `docs/architecture/designs/2026-07-07-special-stage-slots-rewind-design.md`
 
@@ -1924,7 +1924,7 @@ Manually verify:
 - [ ] **Step 8: Commit docs**
 
 ```powershell
-git add CHANGELOG.md docs/KNOWN_DISCREPANCIES.md README.md docs/architecture/designs/2026-07-07-special-stage-slots-rewind-design.md docs/architecture/plans/2026-07-08-special-stage-rewind.md
+git add CHANGELOG.md docs/status/known-discrepancies.md README.md docs/architecture/designs/2026-07-07-special-stage-slots-rewind-design.md docs/architecture/plans/2026-07-08-special-stage-rewind.md
 git commit -m "docs: plan special stage live rewind" -m "Changelog: updated`nGuide: n/a`nKnown-Discrepancies: updated`nS3K-Known-Discrepancies: n/a`nAgent-Docs: n/a`nConfiguration-Docs: n/a`nSkills: n/a"
 ```
 

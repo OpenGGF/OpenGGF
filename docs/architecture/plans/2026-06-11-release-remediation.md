@@ -15,7 +15,7 @@
 - `SIDEKICK_CPU_AUDIT.tmp.md` (now removed from the workspace): disassembly-complete audit of `SidekickCpuController`, `TailsRespawnStrategy`, playable history buffers, and signpost/end-of-act side effects.
 - `RELEASE_REVIEW_FINDINGS.tmp.md` (now removed from the workspace): release architecture/code review findings, including entries already fixed, refuted entries, backlog entries, and confirmed release-facing defects.
 - `docs/tmp-release-sweep-issues.md` and `docs/tmp-release-review-fix-issues.md` (folded here and removed): temporary release-sweep trackers whose open items are now either completed below, deferred in permanent release docs, or represented in the remaining outstanding list.
-- `docs/release-architecture-review-issues.md` and `docs/RELEASE_READINESS_ROADMAP.md`: permanent release-history/debt trackers still referenced by guard tests; this file is the active remediation plan, while those files remain evidence for release-policy and bootstrap-debt assertions.
+- `docs/architecture/audits/release-architecture-review-issues.md` and `docs/project/release-readiness-roadmap.md`: permanent release-history/debt trackers still referenced by guard tests; this file is the active remediation plan, while those files remain evidence for release-policy and bootstrap-debt assertions.
 - `docs/architecture/plans/2026-06-11-performance-optimization.md`: performance remediation plan for audio, rendering, rewind, object, and hot-loop overhead.
 - `docs/architecture/designs/2026-06-11-performance-optimization-design.md`: source-backed performance problem statement and phase design.
 - Conversation remediation plan from 2026-06-11: prioritize release blockers, sidekick parity, medium-risk correctness, docs/release hygiene, and verification.
@@ -43,11 +43,11 @@ performance remediation:
 | P1 | S2/S3K sidekick audit leftovers | Sidekick interaction/input frontiers remain in S2 level-select traces and S3K CNZ/MGZ dedicated traces. | Post-merge `*TraceReplay` sweep: S2 tails CPU/interact/speed failures; CNZ/MGZ input-alignment failures. | Complete sidekick CPU ROM-state modeling and verify with focused cross-game traces; regenerate only for diagnostic insufficiency, not to mask behavior. |
 | P1 | S1/S2 complete-run parity | Many complete-run traces are still red, while shorter known-green traces remain green. | Post-merge sweep: S1 complete-run failures across zones; S2 level-select failures except known greens. | Fix first divergences with per-game disassembly checks and feature flags where behavior differs. |
 | P2 | Performance | Verified hot-path waste remains partially planned, with performance work needing clean correctness baselines and trace sweeps. | `docs/architecture/designs/2026-06-11-performance-optimization-design.md`; performance branch acceptance sweep proved no trace regression for its completed subset. | Execute exact-equivalence quick wins first, then rendering/rewind work with measurement, trace sweeps, and audio/render equivalence evidence. |
-| P2 | Release hygiene/debt | Deferred/review debt must stay bounded and documented. | `docs/release-architecture-review-issues.md`, `docs/KNOWN_DISCREPANCIES.md`, `docs/S3K_KNOWN_DISCREPANCIES.md`, release hooks/guards. | Keep guard tests and discrepancy docs current as fixes land; do not reintroduce temp trackers. |
+| P2 | Release hygiene/debt | Deferred/review debt must stay bounded and documented. | `docs/architecture/audits/release-architecture-review-issues.md`, `docs/status/known-discrepancies.md`, `docs/S3K_KNOWN_DISCREPANCIES.md`, release hooks/guards. | Keep guard tests and discrepancy docs current as fixes land; do not reintroduce temp trackers. |
 
 ## Ordered Remediation Queue
 
-1. Keep `docs/TRACE_FRONTIER_LOG.md` current for every trace frontier move or
+1. Keep `docs/status/trace-frontier-log.md` current for every trace frontier move or
    full sweep, and use the post-merge full sweep as the current baseline:
    Maven/Surefire reported `Tests run: 90, Failures: 58, Errors: 1,
    Skipped: 0`; parsed trace-class reports showed 59 trace classes, 106 trace
@@ -103,7 +103,7 @@ Completed in `bugfix/ai-release-remediation`:
 - Display boundary hardening: guarded startup centering and post-resize integer-scale snapping when GLFW cannot report a monitor or video mode.
 - PERF-0 trace baseline: captured a clean-worktree `*TraceReplay` sweep for
   performance remediation planning and recorded the parsed trace-class table in
-  `docs/performance/2026-06-12-trace-baseline.md`; the sweep generated useful
+  `docs/architecture/validation/performance/2026-06-12-trace-baseline.md`; the sweep generated useful
   frontiers but ended with `Java heap space`, so it is a partial baseline rather
   than clean all-trace certification.
 - Documentation/hook/architecture hygiene: removed stale S3K AIZ2 battleship and S2 latch discrepancy entries, corrected AGENTS/CLAUDE drift, added known-bug/changelog notes, fixed the PowerShell trailer parser no-space substring bug, replaced the two production raw construction-context set/clear call sites with scoped helpers, pruned stale object-service migration guard baselines, added `SessionManager` guard coverage, and removed stale mutation-routing allow-list entries.
@@ -357,7 +357,7 @@ Still outstanding:
 - Shared behavior differences must be modeled as ROM state, object/profile state, or a `PhysicsFeatureSet`/equivalent feature flag.
 - Object runtime assets must come from the user ROM, never from `docs/` fallback bytes.
 - Tests use JUnit 5 only.
-- If a trace frontier moves, update `docs/TRACE_FRONTIER_LOG.md` with command, context, result, and first-error frame/field.
+- If a trace frontier moves, update `docs/status/trace-frontier-log.md` with command, context, result, and first-error frame/field.
 - If object/badnik fixes reveal a reusable pitfall, update the relevant `.agents/skills/.../rom-pitfalls.md` and `.claude/skills/.../rom-pitfalls.md`.
 - Use `CHANGELOG.md`, discrepancy docs, AGENTS/CLAUDE docs, and commit trailers honestly when touched behavior warrants it.
 
@@ -468,7 +468,7 @@ Primary files:
 - `src/main/java/com/openggf/game/GameStateManager.java`
 - `src/main/java/com/openggf/GameLoop.java`
 - `src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java`
-- `docs/KNOWN_DISCREPANCIES.md`
+- `docs/status/known-discrepancies.md`
 
 Required fix:
 - Implement the smallest ROM-faithful game-over/continue state flow that fits current architecture, or explicitly document the discrepancy if full implementation is deferred.
@@ -570,7 +570,7 @@ The cross-frame odd-sensor fallback map is engine-invented, absent from `resetSt
 
 Required fix:
 - Clear it in `CollisionSystem.resetState`.
-- Move/capture/clear it on rewind seek, or document it in `docs/KNOWN_DISCREPANCIES.md`.
+- Move/capture/clear it on rewind seek, or document it in `docs/status/known-discrepancies.md`.
 
 ### MC-2: Seven objects hand-roll MarkObjGone coarse-camera checks incorrectly
 
@@ -681,7 +681,7 @@ Required fix:
 - Capture a clean-source baseline: S3K green-list tests and current `*TraceReplay` frontiers.
 - Capture frame-time p50/p99/max and keyframe-spike data over a deterministic driver.
 - Capture held-rewind allocation data and GPU upload counters.
-- Record durable results under `docs/performance/` or this plan, and update `docs/TRACE_FRONTIER_LOG.md` for trace sweeps.
+- Record durable results under `docs/performance/` or this plan, and update `docs/status/trace-frontier-log.md` for trace sweeps.
 
 ### PERF-1: Exact-equivalence hot-path overhead
 
@@ -951,7 +951,7 @@ Prioritize MTZ/MCZ/OOZ routes with sidekick death windows.
 
 **Files:**
 - Modify: `docs/S3K_KNOWN_DISCREPANCIES.md`
-- Modify: `docs/KNOWN_DISCREPANCIES.md`
+- Modify: `docs/status/known-discrepancies.md`
 - Modify: `AGENTS.md`
 - Modify: `CLAUDE.md`
 - Modify: `CONFIGURATION.md`
@@ -977,7 +977,7 @@ Prioritize MTZ/MCZ/OOZ routes with sidekick death windows.
 - [x] **Step 3: Run S3K must-keep-green tests after S3K sidekick/object/event changes.**
 - [x] **Step 4: Run broader trace sweep after sidekick fixes.**
 - [ ] **Step 5: Run full Maven test suite before final completion.**
-- [x] **Step 6: Update `docs/TRACE_FRONTIER_LOG.md` for every frontier movement/regression/sweep.**
+- [x] **Step 6: Update `docs/status/trace-frontier-log.md` for every frontier movement/regression/sweep.**
 
 ### Task 11: Performance Baseline and Exact-Equivalence Phase
 

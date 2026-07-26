@@ -26,7 +26,7 @@ Success criteria:
   additions below).
 - Normal-play lag compensator replaced by a trace-derived deterministic lag
   model (statistical validation, defined below).
-- `docs/TRACE_FRONTIER_LOG.md` updated at every frontier move per repo policy.
+- `docs/status/trace-frontier-log.md` updated at every frontier move per repo policy.
 
 ## Ground truth: the divergence chain (report of 2026-07-09)
 

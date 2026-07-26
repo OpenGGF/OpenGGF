@@ -529,7 +529,7 @@ TestRuntimeSingletonGuard prevents singleton regression.
 
 **Files:**
 - Modify: `CLAUDE.md` (update architecture section)
-- Modify: `docs/SINGLETON_LIFECYCLE.md` (if it exists — update or delete)
+- Modify: `docs/architecture/singleton-lifecycle.md` (if it exists — update or delete)
 - Update: Memory files
 
 - [ ] **Step 1: Update CLAUDE.md**

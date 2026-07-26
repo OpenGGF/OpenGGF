@@ -221,7 +221,7 @@ CNZ/MGZ sequences may pre-latch or force carry through explicit scripted context
 - Donated animation/DPLC/tail-appendage selection works for every flight/swim variant.
 - Focused CPU recovery, CNZ carry, MGZ boss handoff, playable animation, and rewind suites pass.
 - Relevant S2 and S3K trace replay tests pass without trace hydration or route/frame carve-outs.
-- Any trace-frontier movement is recorded in `docs/TRACE_FRONTIER_LOG.md`.
+- Any trace-frontier movement is recorded in `docs/status/trace-frontier-log.md`.
 
 ## Human Review Checklist
 

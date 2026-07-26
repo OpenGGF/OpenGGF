@@ -434,7 +434,7 @@ Ownership:
 - `src/test/java/com/openggf/level/objects/TestObjectServicesMigrationGuard.java`
 - `AGENTS.md`
 - `CLAUDE.md`
-- `docs/SINGLETON_LIFECYCLE.md`
+- `docs/architecture/singleton-lifecycle.md`
 - `CHANGELOG.md`
 - `README.md` if merging into `develop`
 

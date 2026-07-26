@@ -11,7 +11,7 @@
 ## 1. Problem statement
 
 **Authoritative baseline** is the "Agent Quick State" section at the top of
-[`docs/TRACE_FRONTIER_LOG.md`](../../TRACE_FRONTIER_LOG.md) (the routing table maintained
+[`docs/status/trace-frontier-log.md`](../../status/trace-frontier-log.md) (the routing table maintained
 across sessions on `bugfix/ai-trace-frontier-develop`), currently **90 `*TraceReplay`
 tests, 52 failures, 1 error**. The dated entries lower in that log (including this
 worktree's local "FULL SWEEP" measurement of 53 under different trace-context defaults)
@@ -146,7 +146,7 @@ This is comparison-only diagnostics (honours the trace comparison-only invariant
 6. **Keep iff net-positive:** ≥1 frontier cleared/advanced, **0 frontier regressions**,
    **and the error count does not increase** (the standing 1 error must not grow, and
    ideally is addressed via trace regeneration in the final trace-hygiene milestone). Otherwise revert and record
-   why in `docs/TRACE_FRONTIER_LOG.md`.
+   why in `docs/status/trace-frontier-log.md`.
 7. Commit scoped, with trailers; update the frontier log (cleared/advanced/regressed)
    **including the Agent Quick State table if a frontier moved**.
 
@@ -159,7 +159,7 @@ Baseline to diff against: the **live Agent Quick State** figure re-measured in s
 
 ### 4.0 Ordering authority — this plan does NOT supersede the live queue
 The **execution order is governed by the Agent Quick State "Active queue"** in
-`docs/TRACE_FRONTIER_LOG.md`, not by this document. This plan supplies the *mechanism*
+`docs/status/trace-frontier-log.md`, not by this document. This plan supplies the *mechanism*
 (the per-family contact-evaluation-phase model + protocol); the live queue supplies the
 *what/next*. The phases below are a **family toolbox**, not a fixed sequence — apply
 whichever family matches the current queued target.
@@ -254,7 +254,7 @@ Re-read the queue at the start of every work session; it advances as other branc
   the profile round-trip test (§3.1 item 4), and the must-keep-green S3K set
   (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
   `TestSonic3kDecodingUtils`).
-- **Frontier log:** update `docs/TRACE_FRONTIER_LOG.md` on every frontier move / full
+- **Frontier log:** update `docs/status/trace-frontier-log.md` on every frontier move / full
   sweep (command, commit/worktree, pass/fail, error count, first-error frame/field).
 - **Workspace:** scoped commits; this is a shared tree (never `git add -A`); verify own
   changes in isolation.

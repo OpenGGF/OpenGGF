@@ -1288,7 +1288,7 @@ Trailer note: this commit stages CONFIGURATION.md → `Configuration-Docs: updat
 **Files:**
 - Create: `src/test/java/com/openggf/net/TestVoteRoundTrip.java` (in-JVM, no sockets: HostRoundEngine + 2 ClientRaceSessions over a broadcaster lambda)
 - Modify: the phase-2 Task 17 loopback test class (add vote assertions to the real-socket path)
-- Modify: `CHANGELOG.md`, `README.md` (only at merge time per repo policy), `docs/TRACE_FRONTIER_LOG.md` n/a
+- Modify: `CHANGELOG.md`, `README.md` (only at merge time per repo policy), `docs/status/trace-frontier-log.md` n/a
 
 **Interfaces:** consumes everything above; produces no new API.
 

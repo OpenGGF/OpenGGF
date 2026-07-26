@@ -1591,11 +1591,11 @@ Layout, collision, art, and palette addresses from verified ROM offsets."
 Add the bonus stage `GameMode` discrepancy to the known discrepancies document.
 
 **Files:**
-- Modify: `docs/KNOWN_DISCREPANCIES.md`
+- Modify: `docs/status/known-discrepancies.md`
 
 - [ ] **Step 1: Read the current discrepancies document**
 
-Read `docs/KNOWN_DISCREPANCIES.md` to see the format and table of contents.
+Read `docs/status/known-discrepancies.md` to see the format and table of contents.
 
 - [ ] **Step 2: Add bonus stage discrepancy**
 
@@ -1629,7 +1629,7 @@ Update the table of contents to include the new entry.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add docs/KNOWN_DISCREPANCIES.md
+git add docs/status/known-discrepancies.md
 git commit -m "docs: document bonus stage GameMode intentional discrepancy
 
 ROM uses normal Level() routine for bonus zones. Engine uses distinct

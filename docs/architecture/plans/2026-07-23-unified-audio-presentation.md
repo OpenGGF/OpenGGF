@@ -107,7 +107,7 @@
 | `GameLoop.java` | Runs one or more simulation steps and reports one outer-frame presentation mode; never presents |
 | `TestAudioPresentationArchitectureGuard.java` | Proves no independent OpenAL music/SFX ownership remains |
 | `CHANGELOG.md` | User-visible unified playback/capture behavior |
-| `docs/KNOWN_DISCREPANCIES.md` | Removes the temporary live-recording audio limitation |
+| `docs/status/known-discrepancies.md` | Removes the temporary live-recording audio limitation |
 | `docs/architecture/validation/2026-07-23-unified-audio-presentation-report.md` | Automated, media, ROM-matrix, and failure-injection evidence |
 
 ## Interface ledger
@@ -2724,7 +2724,7 @@ Skills: n/a"
 - Modify: `src/test/java/com/openggf/audio/presentation/TestAudioPresentationProducer.java`
 - Modify: `src/test/java/com/openggf/audio/presentation/TestAudioPresentationProducerRewind.java`
 - Delete: `src/main/java/com/openggf/audio/PcmSampleStream.java`
-- Modify: `docs/KNOWN_DISCREPANCIES.md`
+- Modify: `docs/status/known-discrepancies.md`
 - Modify: `CHANGELOG.md`
 
 **Interfaces:**
@@ -2821,7 +2821,7 @@ Change `TestAudioManagerRuntimeInstallation` assertions to:
 
 - [ ] **Step 5: Remove the known limitation and verify no stale references**
 
-Update `docs/KNOWN_DISCREPANCIES.md` by deleting the live-recording split-audio/runtime-switch
+Update `docs/status/known-discrepancies.md` by deleting the live-recording split-audio/runtime-switch
 limitation and add to `CHANGELOG.md`:
 
 ```markdown
@@ -2852,7 +2852,7 @@ Run:
 
 ```bash
 git add -A CHANGELOG.md \
-  docs/KNOWN_DISCREPANCIES.md \
+  docs/status/known-discrepancies.md \
   src/main/java/com/openggf/audio/AbstractSmpsAudioBackend.java \
   src/main/java/com/openggf/audio/AudioBackend.java \
   src/main/java/com/openggf/audio/AudioManager.java \

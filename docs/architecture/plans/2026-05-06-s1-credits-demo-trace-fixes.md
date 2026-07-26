@@ -281,7 +281,7 @@ mvn test -q '-Dtest=*TraceReplay' -DfailIfNoTests=false
 ```
 Expected: All S1 + S2 EHZ1 traces green. (S3K traces are out of scope for this plan.)
 
-- [ ] **Step 2: Update `CHANGELOG.md`, `docs/KNOWN_DISCREPANCIES.md`, and any guide doc with the fixes landed**
+- [ ] **Step 2: Update `CHANGELOG.md`, `docs/status/known-discrepancies.md`, and any guide doc with the fixes landed**
 
 These are required by the Branch Documentation Policy in `CLAUDE.md`.
 

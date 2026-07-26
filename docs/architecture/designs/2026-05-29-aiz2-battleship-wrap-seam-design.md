@@ -182,7 +182,7 @@ state-8 and CNZ-boss cases; the AIZ event exposes a semantic predicate
 - **Trace acceptance (not strict neutrality):** restoring `$200` changes
   coordinates, so the AIZ first-mismatch frame may move. Acceptance: **no new
   earlier mismatch than the baseline (currently f8941) unless explained by the
-  intended `$200` wrap change**; update `docs/TRACE_FRONTIER_LOG.md` if it moves.
+  intended `$200` wrap change**; update `docs/status/trace-frontier-log.md` if it moves.
 - **Full suite:** `mvn clean test` green; ArchUnit unaffected.
 - **Visual validation (recommended follow-up):** the on-screen result cannot be
   proven headlessly. A stable-retro AIZ2 reference vs engine screenshot (the

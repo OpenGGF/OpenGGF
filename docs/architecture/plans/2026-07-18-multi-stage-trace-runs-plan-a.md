@@ -874,7 +874,7 @@ Expected: `FC: no differences encountered` (byte-identical; the committed movie'
 ### Task 9: Docs wrap-up
 
 **Files:**
-- Modify: `docs/TRACE_FRONTIER_LOG.md` (note the recorder version bump + no-regression sweep result, per the repo's frontier-log obligation for trace-infrastructure changes)
+- Modify: `docs/status/trace-frontier-log.md` (note the recorder version bump + no-regression sweep result, per the repo's frontier-log obligation for trace-infrastructure changes)
 - Modify: `tools/bizhawk/README.md` (short section: run manifests, bonus segments, `OGGF_TRACE_RUN_ID`, the mode guard)
 
 - [ ] **Step 1: Write both doc updates.** Frontier log entry records: date, recorder `v6.30-s3k-completerun`, the Task-8 command, byte-identical result, and that no trace frontiers moved.
@@ -882,7 +882,7 @@ Expected: `FC: no differences encountered` (byte-identical; the committed movie'
 - [ ] **Step 2: Commit**
 
 ```bash
-git add docs/TRACE_FRONTIER_LOG.md tools/bizhawk/README.md
+git add docs/status/trace-frontier-log.md tools/bizhawk/README.md
 git commit -m "docs: record complete-run recorder v6.30 no-regression sweep" -m "Changelog: n/a
 Guide: n/a
 Known-Discrepancies: n/a

@@ -33,7 +33,7 @@ Known concrete violations from review:
 - `src/main/java/com/openggf/debug/DebugObjectArtViewer.java`
 - `src/main/java/com/openggf/debug/DebugOverlayManager.java`
 - `src/main/java/com/openggf/level/objects/InvincibilityStarsObjectInstance.java`
-- `docs/SINGLETON_LIFECYCLE.md`
+- `docs/architecture/singleton-lifecycle.md`
 
 Current guard gap:
 
@@ -160,7 +160,7 @@ Expected: PASS.
 ## Task 4: Rewrite the Singleton Lifecycle Documentation
 
 **Files:**
-- Modify: `docs/SINGLETON_LIFECYCLE.md`
+- Modify: `docs/architecture/singleton-lifecycle.md`
 
 - [ ] **Step 1: update the document from inventory-of-singletons to lifecycle-of-services**
 

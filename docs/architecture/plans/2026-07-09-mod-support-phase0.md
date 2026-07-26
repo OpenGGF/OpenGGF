@@ -333,7 +333,7 @@ public static GameModule resolveModule(GameModule base, GameplayLaunchRequest re
    - The trace path needs **no** extra wiring (spec Amendment 4: `TraceReplaySessionBootstrap.prepareConfiguration` already writes the character config keys before launch, so `initializeGame`'s synthesis covers traces).
    - **Task 8's `TestPatchResolutionAtBoot` cannot be taken verbatim** — it registers `com.openggf.game.sonic2.kis2.Kis2GamePatch` and asserts on `Kis2PhysicsProvider`, classes that only exist after the KiS2-content tasks this plan defers. Substitute a local fake patch (Task 7's inline `knucklesPatch()` stub idiom, or A4's trail stub): register it, assert a Knuckles-request launch resolves a decorated module (`instanceof DelegatingGameModule` / the stub's marker) and a Sonic-request launch resolves the same base instance. Keep every other assertion of that test.
 - [ ] **Step 2:** Full `mvn test` + the S3K must-keep-green set + a trace spot sweep (`s1_ghz1`, `s2_ehz1`, `s3k_aiz1` replay classes) — all green: with no patches registered, `resolveModule` returns the base instance and behavior is bit-identical.
-- [ ] **Step 3:** Commit per KiS2-plan Task 8/9 staging, this plan's trailers. Update `docs/TRACE_FRONTIER_LOG.md` with the sweep (command, commit, pass/fail) per repo policy.
+- [ ] **Step 3:** Commit per KiS2-plan Task 8/9 staging, this plan's trailers. Update `docs/status/trace-frontier-log.md` with the sweep (command, commit, pass/fail) per repo policy.
 
 ---
 
@@ -573,7 +573,7 @@ private byte[] readModAsset(LoadSource.ModAsset asset) throws IOException {
 }
 ```
 
-- [ ] **Step 5:** New tests PASS; then the regression gate: `mvn "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test` (S3K is the heaviest plan consumer) and the existing resources-package tests — all green. **Then the spec's S2 HTZ gate** (HTZ is the only S2 zone on the plan seam): find the HTZ trace-replay class(es) (`grep -ril htz src/test/java --include="*TraceReplay*.java"`) and run them under the trace profile per the trace-replay skill's invocation; expected: same pass/error state as the `develop` baseline at branch point (record in `docs/TRACE_FRONTIER_LOG.md` per repo policy).
+- [ ] **Step 5:** New tests PASS; then the regression gate: `mvn "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test` (S3K is the heaviest plan consumer) and the existing resources-package tests — all green. **Then the spec's S2 HTZ gate** (HTZ is the only S2 zone on the plan seam): find the HTZ trace-replay class(es) (`grep -ril htz src/test/java --include="*TraceReplay*.java"`) and run them under the trace profile per the trace-replay skill's invocation; expected: same pass/error state as the `develop` baseline at branch point (record in `docs/status/trace-frontier-log.md` per repo policy).
 - [ ] **Step 6: Commit** (`feat: ResourceLoader reads mod-jar assets beside ROM sources`; this plan's trailers).
 
 ---
@@ -736,12 +736,12 @@ class TestEditorSpawnCommands {
 ### Task C6: Authoring smoke + docs + changelog
 
 - [ ] **Step 1: Manual smoke (requires ROM + display):** in EHZ with `debug.flags.editor` on — place a badnik and a ring, move both, delete one, toggle a cell's collision mode, reassign a solid-tile index, Ctrl+S, exit to gameplay (badnik spawns, solidity blocks the player), re-enter editor (edits present), restart engine (edits re-applied from sidecar). Record results in the commit body.
-- [ ] **Step 2:** Update `CHANGELOG.md` (one phase-0 entry covering A+B+C), `CLAUDE.md` + `AGENTS.md` (GamePatch framework + editor capabilities pointers), `docs/KNOWN_DISCREPANCIES.md` only if the smoke surfaced an accepted divergence.
-- [ ] **Step 3:** Full `mvn test` + S3K must-keep-green + trace spot sweep; update `docs/TRACE_FRONTIER_LOG.md` for the sweep.
+- [ ] **Step 2:** Update `CHANGELOG.md` (one phase-0 entry covering A+B+C), `CLAUDE.md` + `AGENTS.md` (GamePatch framework + editor capabilities pointers), `docs/status/known-discrepancies.md` only if the smoke surfaced an accepted divergence.
+- [ ] **Step 3:** Full `mvn test` + S3K must-keep-green + trace spot sweep; update `docs/status/trace-frontier-log.md` for the sweep.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add CHANGELOG.md CLAUDE.md AGENTS.md docs/KNOWN_DISCREPANCIES.md
+git add CHANGELOG.md CLAUDE.md AGENTS.md docs/status/known-discrepancies.md
 git commit -m "docs: phase-0 foundations changelog and agent-doc updates
 
 Changelog: updated

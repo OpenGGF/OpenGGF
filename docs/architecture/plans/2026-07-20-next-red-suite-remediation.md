@@ -252,7 +252,7 @@
 - [ ] Add a focused unit/integration assertion for the underlying teleport/event/control state.
 - [ ] Implement the ROM-driven state transition at its event/object/profile owner.
 - [ ] Run the focused assertion and full headless class; expected player survives and event state progresses.
-- [ ] Commit as `fix: restore MGZ background-rise traversal state`, updating `CHANGELOG.md` and `docs/TRACE_FRONTIER_LOG.md` only if a trace frontier moves.
+- [ ] Commit as `fix: restore MGZ background-rise traversal state`, updating `CHANGELOG.md` and `docs/status/trace-frontier-log.md` only if a trace frontier moves.
 
 ### Task N4.6: Preserve special-stage viewport configuration
 

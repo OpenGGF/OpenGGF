@@ -56,7 +56,7 @@ Each value must start with `updated` or `n/a`.
 | --- | --- | --- |
 | `Changelog` | `CHANGELOG.md` | Engine behavior changed in a way users or contributors should know about. |
 | `Guide` | `docs/guide/` | Player or contributor guide content changed. |
-| `Known-Discrepancies` | `docs/KNOWN_DISCREPANCIES.md` | A cross-game or non-S3K intentional divergence was added, changed, or resolved. |
+| `Known-Discrepancies` | `docs/status/known-discrepancies.md` | A cross-game or non-S3K intentional divergence was added, changed, or resolved. |
 | `S3K-Known-Discrepancies` | `docs/S3K_KNOWN_DISCREPANCIES.md` | An S3K-specific intentional divergence was added, changed, or resolved. |
 | `Agent-Docs` | `AGENTS.md` and `CLAUDE.md` | Top-level agent guidance changed. Stage both files together. |
 | `Configuration-Docs` | `CONFIGURATION.md` | A config flag, key binding, startup behavior, or user-facing config default changed. |
@@ -87,7 +87,7 @@ A bare `Changelog: n/a` is rejected for `feat`, `fix`, and `perf` commits that t
 
 ## Trace Frontier Log
 
-`docs/TRACE_FRONTIER_LOG.md` does not have its own trailer, but it is still required when trace
+`docs/status/trace-frontier-log.md` does not have its own trailer, but it is still required when trace
 work changes the frontier.
 
 Update it when:
@@ -105,7 +105,7 @@ frame/field. Stage the log update with the trace work it documents.
 Update the appropriate discrepancy file when behavior intentionally diverges from ROM behavior or
 when an existing known divergence is resolved:
 
-- `docs/KNOWN_DISCREPANCIES.md` for cross-game or non-S3K-specific divergences.
+- `docs/status/known-discrepancies.md` for cross-game or non-S3K-specific divergences.
 - `docs/S3K_KNOWN_DISCREPANCIES.md` for S3K-specific divergences.
 
 Do not leave intentional differences only in PR comments or commit messages.

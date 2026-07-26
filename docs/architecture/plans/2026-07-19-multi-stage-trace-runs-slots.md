@@ -71,7 +71,7 @@
 **Files:**
 - Create: `src/test/java/com/openggf/tests/trace/s3k/TestS3kSlotsBonusTraceReplay.java` (mirror the gumball concrete test: `@RequiresRom(SonicGame.SONIC_3K)`, `game()/zone()=0x15/act()=0/traceDirectory()=traces/s3k/bonus_slots`)
 - Modify: `tools/bizhawk/README.md` (extend the bonus recording subsection: slots = 20–34 rings at the star post — remainder 0; movie naming `s3k-aiz-slots.bk2`; **record SONIC-SOLO** — the slot runtime suppresses sidekicks and the sidekick comparator columns bypass the sprite seam, so a team recording adds pure noise; the slots segment records under the level schema like gumball/pachinko)
-- Modify: `docs/TRACE_FRONTIER_LOG.md` (entry: slots replay accepted; test skips pending the recording; comparator swap-alignment seam landed)
+- Modify: `docs/status/trace-frontier-log.md` (entry: slots replay accepted; test skips pending the recording; comparator swap-alignment seam landed)
 
 - [ ] **Step 1:** Concrete test SKIPs (failed=0). README + frontier entries (line-ending-clean; ring-range accuracy per the verified selector: 20–34 → remainder 0 → SLOT_MACHINE).
 - [ ] **Step 2:** Full-suite gate (detached + monitor): no NEW failures vs baseline (known flakes: geyser, wire-cage — isolated-pass verify if present).

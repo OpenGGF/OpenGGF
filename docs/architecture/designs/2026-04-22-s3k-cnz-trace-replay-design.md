@@ -160,7 +160,7 @@ If `AbstractTraceReplayTest` grows CNZ-specific hooks during iteration (elastic 
 
 ### 6.4 Baseline run
 
-First test run will almost certainly fail. We capture the divergence report (`target/trace-reports/s3k_0300_report.json` and `_context.txt`), copy it into `docs/s3k-zones/cnz-trace-divergence-baseline.md`, and commit it as the ground truth for what C-G need to fix. **Archiving the baseline report is a required deliverable, not optional** - without it there is no audit trail for C-G dispatch decisions.
+First test run will almost certainly fail. We capture the divergence report (`target/trace-reports/s3k_0300_report.json` and `_context.txt`), copy it into `docs/architecture/validation/s3k-zones/cnz-trace-divergence.md`, and commit it as the ground truth for what C-G need to fix. **Archiving the baseline report is a required deliverable, not optional** - without it there is no audit trail for C-G dispatch decisions.
 
 ## 7. Workstreams C-G (lazy)
 
@@ -206,7 +206,7 @@ Anything the divergence report surfaces that is not covered by C-F: missing badn
 ## 10. Success criteria
 
 - `mvn test -Dtest=TestS3kCnzTraceReplay` passes with 0 errors and <= 200 warnings on first green run (tightened iteratively toward <= 50 before merge).
-- `docs/s3k-zones/cnz-trace-divergence-baseline.md` exists, committed as the first iteration artefact. Without this the audit trail for C-G dispatch is broken.
+- `docs/architecture/validation/s3k-zones/cnz-trace-divergence.md` exists, committed as the first iteration artefact. Without this the audit trail for C-G dispatch is broken.
 - `TestS3kAizTraceReplay` still passes, with `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/physics.csv` and `aux_state.jsonl` unchanged byte-for-byte against HEAD~N (N = commit count since the start of this workstream). Metadata may gain the new `trace_profile` field and a `recording_date` bump; other fields must be identical.
 - No regressions in the full `mvn test` run.
 - All ROM addresses referenced by new code are verified against the S&K-side disassembly and documented (source label + address + the `RomOffsetFinder` command that produced them).

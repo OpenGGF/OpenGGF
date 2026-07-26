@@ -321,7 +321,7 @@ Skills: n/a"
 ### Task 5: Gate + docs
 
 - [ ] **Step 1:** Full suite (`mvn test`, sandbox off, detached with a log monitor if >10 min): no NEW failures vs baseline; expect +2 skips (chain tests). Watch specifically for `TestBuildToolingGuard`/`TestTraceReplayInvariantGuard`/`TestArchitecturalSourceGuard` reacting to the new files; register per convention with justification if they fire (never weaken). Also specifically verify no existing level trace test changed behavior from the `isDriving` BONUS_STAGE widening — no committed level trace crosses a bonus entry today, so any such delta is a real bug in Task 2.
-- [ ] **Step 2:** `docs/TRACE_FRONTIER_LOG.md` entry: plan-(c) chained driver landed; chain tests skip pending the same two recordings (named); walker control flow green on synthetic fixture; peeks landed.
+- [ ] **Step 2:** `docs/status/trace-frontier-log.md` entry: plan-(c) chained driver landed; chain tests skip pending the same two recordings (named); walker control flow green on synthetic fixture; peeks landed.
 - [ ] **Step 3:** Commit docs; merge-time README reminder stands.
 
 ## Plan-level notes

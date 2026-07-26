@@ -292,7 +292,7 @@ declared non-parity extension. Requirements:
   `Sonic3kMGZEvents` duplicate via the shared width-driven derivation.
 - `RIGHT_EXTRA = 0x40` and the boss / end-of-level gate are left semantically
   intact; they interact with Phase 4 arena work and are not widened independently.
-- This divergence is recorded in `docs/KNOWN_DISCREPANCIES.md` (and S3K-specific
+- This divergence is recorded in `docs/status/known-discrepancies.md` (and S3K-specific
   notes), per the trailer policy, when implemented.
 
 ## Phasing

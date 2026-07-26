@@ -101,7 +101,7 @@ mvn "-Dtest=*TraceReplay" test
 Expected output pattern:
 - `MSE:TESTS total=15 passed=N failed=M errors=0 skipped=0`
 - GHZ1 (`TestS1Ghz1TraceReplay`) should PASS
-- MZ1 (`TestS1Mz1TraceReplay`): current per-trace error/warning counts live in `docs/TRACE_FRONTIER_LOG.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
+- MZ1 (`TestS1Mz1TraceReplay`): current per-trace error/warning counts live in `docs/status/trace-frontier-log.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
 
 ### Test class mapping
 
@@ -223,5 +223,5 @@ For a full re-record and test cycle:
 3. Copy 3 files to test resources
 4. Repeat for second zone if doing both
 5. Run `mvn test -Dtest="*TraceReplay"`
-6. Compare error count against the current baseline in `docs/TRACE_FRONTIER_LOG.md` (GHZ1 should stay 0)
+6. Compare error count against the current baseline in `docs/status/trace-frontier-log.md` (GHZ1 should stay 0)
 7. If errors changed: read report JSON and cross-reference aux events at first error frame

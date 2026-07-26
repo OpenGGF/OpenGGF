@@ -18,7 +18,7 @@ Manual spec-writing per zone doesn't scale. The agent must autonomously read the
 
 | Skill | Purpose | Input | Output |
 |-------|---------|-------|--------|
-| `s3k-zone-analysis` | Read disassembly, catalogue all zone features | Zone abbreviation | `docs/s3k-zones/<zone>-analysis.md` |
+| `s3k-zone-analysis` | Read disassembly, catalogue all zone features | Zone abbreviation | `docs/architecture/research/s3k-zones/<zone>-analysis.md` |
 
 #### Feature Implementation Layer
 
@@ -269,7 +269,7 @@ Competition zones (ALZ, BPZ, DPZ, CGZ, EMZ) are lowest priority and can follow t
   s3k-zone-validate/skill.md
   s3k-parallax/skill.md          (mirror of .claude version)
 
-docs/s3k-zones/                  (analysis specs, created per zone)
+docs/architecture/research/s3k-zones/                  (analysis specs, created per zone)
   hcz-analysis.md
   lbz-analysis.md
   ...

@@ -905,12 +905,12 @@ Expected: PASS — native movement/boundary tests unchanged.
 
 - [ ] **Step 7: Document the divergence**
 
-Add an entry to `docs/KNOWN_DISCREPANCIES.md` (and the S3K-specific notes it points to) describing the widescreen right-boundary widening: at native it reproduces the ROM `+$128` / `+$128+$40` exactly, but at widescreen the boundary widens to the configured viewport width, deliberately diverging from the ROM-cited `+$128` constant. Reference the spec section "Parity Divergence: Right-Boundary Widening".
+Add an entry to `docs/status/known-discrepancies.md` (and the S3K-specific notes it points to) describing the widescreen right-boundary widening: at native it reproduces the ROM `+$128` / `+$128+$40` exactly, but at widescreen the boundary widens to the configured viewport width, deliberately diverging from the ROM-cited `+$128` constant. Reference the spec section "Parity Divergence: Right-Boundary Widening".
 
 - [ ] **Step 8: Commit (carries the divergence docs + trailers)**
 
 ```bash
-git add src/main/java/com/openggf/sprites/managers/RightBoundary.java src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java src/test/java/com/openggf/sprites/managers/TestRightBoundary.java docs/KNOWN_DISCREPANCIES.md CHANGELOG.md
+git add src/main/java/com/openggf/sprites/managers/RightBoundary.java src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java src/test/java/com/openggf/sprites/managers/TestRightBoundary.java docs/status/known-discrepancies.md CHANGELOG.md
 git commit -m "feat: drive player right-boundary from viewport width
 
 Changelog: updated
@@ -1550,7 +1550,7 @@ Skills: n/a: no skill change"
 Per `CLAUDE.md` Branch Documentation Policy, **every** commit on this branch carries the 7-trailer block (the `prepare-commit-msg` hook auto-appends a blank one — fill it, never `--no-verify`). Docs are **folded into the commit that introduces the matching change**, not deferred, because the `commit-msg` hook + CI reject a bare `Changelog: n/a` on a `feat`/`fix`/`perf` commit touching `src/main/` and require staged↔trailer consistency:
 
 - **Config surface** (`Changelog: updated`, `Configuration-Docs: updated`): folded into **Task 3** — stage `CHANGELOG.md`, `CONFIGURATION.md`, `docs/guide/playing/configuration.md` with the config code.
-- **Right-boundary divergence** (`Known-Discrepancies: updated`, `S3K-Known-Discrepancies: updated`): folded into **Task 6** — stage `docs/KNOWN_DISCREPANCIES.md` with the boundary code.
+- **Right-boundary divergence** (`Known-Discrepancies: updated`, `S3K-Known-Discrepancies: updated`): folded into **Task 6** — stage `docs/status/known-discrepancies.md` with the boundary code.
 - **Intermediate internal commits** (Tasks 1, 2, 4, 5, 8): `feat:` touching `src/main/` with no user-facing behaviour → use justified `Changelog: n/a: <reason>` (a bare `n/a` is rejected). Reason: "internal mechanism; user-facing entry in the DISPLAY_ASPECT commit".
 - **Test-only commits** (Tasks 9, 10): touch only `src/test/` → exempt from the changelog-justification rule; plain `n/a` per trailer is fine.
 

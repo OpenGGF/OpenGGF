@@ -48,7 +48,7 @@
 - `src/main/java/com/openggf/sprites/playable/SidekickCpuController.java`
 - `src/main/java/com/openggf/level/objects/PerObjectRewindSnapshot.java`
 - Tests: existing rule/donor, CPU carry/flight, CNZ/MGZ, art/translation, animation, and rewind suites named below.
-- Documentation: `CHANGELOG.md`; `docs/TRACE_FRONTIER_LOG.md` only when trace policy requires it.
+- Documentation: `CHANGELOG.md`; `docs/status/trace-frontier-log.md` only when trace policy requires it.
 
 ## Task 1: Add source-owned flight capability
 

@@ -544,9 +544,9 @@ mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
 ```
 Expected: **mcz1 still first-diverges at f2757 (NOT regressed toward f1665)**; EHZ1/SCZ/WFZ green.
 
-- [ ] **Step 3: Full S1/S2/S3K sweep** (the authoritative pass), parse `target/surefire-reports/*TraceReplay*.txt` for `First error: frame`. Expected: no green regresses (S1 ×10, S2 ehz1/scz/wfz); **no S2/S3K frontier moves backward** vs the pre-change snapshot in `docs/TRACE_FRONTIER_LOG.md`.
+- [ ] **Step 3: Full S1/S2/S3K sweep** (the authoritative pass), parse `target/surefire-reports/*TraceReplay*.txt` for `First error: frame`. Expected: no green regresses (S1 ×10, S2 ehz1/scz/wfz); **no S2/S3K frontier moves backward** vs the pre-change snapshot in `docs/status/trace-frontier-log.md`.
 
-- [ ] **Step 4: Update `docs/TRACE_FRONTIER_LOG.md`** with the command, commit/worktree context, mtz2 before→after, the mcz1 hold, and the full-sweep result. **Commit** (`docs(trace): spilled-ring object model — mtz2 advance, mcz1 held, no regression`).
+- [ ] **Step 4: Update `docs/status/trace-frontier-log.md`** with the command, commit/worktree context, mtz2 before→after, the mcz1 hold, and the full-sweep result. **Commit** (`docs(trace): spilled-ring object model — mtz2 advance, mcz1 held, no regression`).
 
 ### Task 5.4: Remove dead legacy code
 
