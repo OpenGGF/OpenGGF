@@ -3653,6 +3653,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setAir(true);
 		sprite.setJumping(true);
 		sprite.setPushing(false);
+		sprite.setAnimationId(2);
 		if (!sprite.getRolling()) {
 			sprite.setRolling(true);
 			sprite.setY((short) (sprite.getY() + sprite.getRollHeightAdjustment()));

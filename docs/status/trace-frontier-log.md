@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-07-26 - S3K rolling angled landings publish Walk
+
+- Worktree: `integration-cnz-standard` at base `f52182700`.
+- Root cause: S3K `Player_TouchFloor_Check_Spindash` publishes Walk before
+  `Player_TouchFloor` unless `spin_dash_flag` is live, and the rolling
+  `Player_TouchFloor` branch publishes Walk again while clearing
+  `Status_Roll` (`docs/skdisasm/sonic3k.asm:24325-24350,29123-29148`).
+  The engine's S3K rule incorrectly excluded every player that was rolling
+  when the angled landing was accepted.
+- Fix: generalize the semantic rule from non-rolling to all angled landings,
+  retaining its live-spindash gate and the existing pinball-mode exclusion.
+  S1 keeps the rule disabled and S2 keeps its unconditional native
+  `Sonic_ResetOnFloor` Walk publication. `BubbleShield_Bounce` explicitly
+  restores animation 2 after the floor's Walk write, matching the ROM's final
+  `move.b #2,anim(a0)` (`sonic3k.asm:24383-24435`).
+- Full standalone CNZ is expected red with 3,714 errors and first mismatch
+  f4801 `tails_mapping_frame` (ROM `$07`, engine `$55`), advancing the prior
+  f2821 / 3,735-error frontier. A fresh frontier-only run reports two errors
+  at f4801. The full 26-test class remains 20 passing / six expected-red with
+  the same five later-route companion probes plus the primary replay.
+- The landing and game-rule suites pass 18/18. An exact-base comparison first
+  exposed a Bubble Shield test failure; after restoring the ROM's final Roll
+  write and opening an explicit gameplay session for the capability-owned
+  test, the full 12-test collision class and isolated bounce contract pass.
+  Architecture, rewind, and static-state rewind guards pass 68/68.
+- S1 GHZ1 and S2 EHZ1 remain green. Known-red standalone AIZ remains f719 `x`
+  (`$0040` / `$0050`) and MGZ remains f23561 `rings` (`0` / `1`).
+
 ## 2026-07-26 - CNZ cage preserves native logical-input ownership
 
 - Worktree: `integration-cnz-standard` at base `b9fc4dae2`.

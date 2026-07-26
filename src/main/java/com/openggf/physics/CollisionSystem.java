@@ -1037,9 +1037,8 @@ public class CollisionSystem {
     }
 
     private void resetWallCeilingLandingState(AbstractPlayableSprite sprite, int angle) {
-        boolean wasRolling = sprite.getRolling();
         if (sprite.isObjectControlled()) {
-            publishAngledLandingWalk(sprite, wasRolling);
+            publishAngledLandingWalk(sprite);
             sprite.setAir(false);
             return;
         }
@@ -1086,7 +1085,7 @@ public class CollisionSystem {
         if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
             sprite.setPinballMode(false);
         }
-        publishAngledLandingWalk(sprite, wasRolling);
+        publishAngledLandingWalk(sprite);
         sprite.setAir(false);
         sprite.setPushing(false);
         sprite.setRollingJump(false);
@@ -1098,21 +1097,21 @@ public class CollisionSystem {
         sprite.setLookDelayCounter((short) 0);
     }
 
-    private void publishAngledLandingWalk(AbstractPlayableSprite sprite, boolean wasRolling) {
+    private void publishAngledLandingWalk(AbstractPlayableSprite sprite) {
         PlayerAnimationRules animationRules = playerAnimationRulesOrNull(sprite);
         if (sprite.getPinballMode()
                 || animationRules == null
                 || (!animationRules.angledLandingPublishesWalk()
-                    && (wasRolling
-                        || sprite.getSpindash()
-                        || !animationRules.nonRollingAngledLandingPublishesWalkUnlessSpindashing()))) {
+                    && (sprite.getSpindash()
+                        || !animationRules.angledLandingPublishesWalkUnlessSpindashing()))) {
             return;
         }
         // S2 Sonic_ResetOnFloor publishes Walk on accepted angled terrain
         // landings (s2.asm:38049-38052,38123-38127). S3K's
         // Player_TouchFloor_Check_Spindash performs the same write before
-        // Player_TouchFloor unless spin_dash_flag is live
-        // (sonic3k.asm:24325-24329,29123-29127). Publish before the
+        // Player_TouchFloor unless spin_dash_flag is live. When rolling,
+        // Player_TouchFloor publishes Walk again while clearing Status_Roll
+        // (sonic3k.asm:24325-24350,29123-29148). Publish before the
         // object-control cleanup gate: collision acceptance owns this native
         // animation byte even when an object's release is resolved later in
         // the engine frame.
