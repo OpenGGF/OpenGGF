@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-07-26 - CNZ bumper orbit consumes the production setup epoch
+
+- Worktree: `integration-cnz-standard` at base `0ab17f062`.
+- Root cause: `Obj_Bumper` reads the low byte at
+  `Level_frame_counter+1` (`docs/skdisasm/sonic3k.asm:68828-68849`).
+  The engine's former `LevelManager.frameCounter + 2` compensation counted a
+  fresh setup dispatch that is now already represented by ObjectManager's
+  production initial-object lifecycle. The object-local read is therefore
+  `frameCounter + 1`; the additional retained-results offset remains because
+  that semantic owner holds the native level counter while object dispatch
+  continues.
+- Full standalone CNZ is expected red with 3,738 errors and first mismatch
+  f1808 `tails_cpu_ctrl2_pressed` (ROM `0x0010`, engine `0x0000`), advancing
+  the prior f291 / 6,762-error frontier. A fresh `trace.frontierOnly` run has
+  one error group at the same frame, down from the prior 22 groups.
+- The full 26-test CNZ class has 20 passing and six expected-red methods:
+  the primary replay plus five pre-existing later-route companion probes
+  (f15194 input ownership, f15569 look-down cadence, and f17824/f20584 slot
+  lifetime assertions). These are reported candidly rather than counted as
+  green.
+- The focused bumper suite passes 11/11. Initial-object lifecycle,
+  zero-knob metadata/bootstrap, bootstrap resolver, and architecture guards
+  pass 98/98 when run in isolated forks; the first combined attempt had no
+  assertion failure but one parallel 1 GiB fork exited 134. S1 GHZ1 and S2
+  EHZ1 remain green. Known-red standalone AIZ remains f719 `x`
+  (`0x0040` / `0x0050`) and MGZ remains f23561 `rings` (`0` / `1`).
+
 ## 2026-07-26 - AIZ seamless transition preserves the vine animation clock
 
 - Worktree: `integration-aiz-complete` at base `04177c9b8`, including the
