@@ -886,8 +886,8 @@ surrounding runtime have changed.
 Also run `TestLevelManagerRewindBoundary`, the full
 `TestS3kHczCompleteRunTraceReplay` class including its Poindexter oracle, S1
 GHZ1, S2 EHZ1, and the seven-zone S3K complete-run matrix. HCZ must retain its
-documented green behavior and the CNZ frontier must remain at frame 291 or
-later.
+established pre-change f1088 `tails_cpu_target_y` frontier and known-red
+Poindexter oracle, and the CNZ frontier must remain at frame 291 or later.
 
 - [ ] **Step 5: Commit Task 6**
 
@@ -1050,15 +1050,26 @@ Every value must come from a fresh command in Task 7. Expected-red traces are re
 
 - **Implementation branch:** `bugfix/ai-trace-s3k-lifecycle`;
   `/home/farrell/code/projects/OpenGGF/.worktrees/trace-s3k-lifecycle`.
-- **Task commits in execution order:** Task 1
-  `058e1399ce7ec99a6432071b8dd4db8b48f172c6`; Task 2
-  `d1b85ad77c8e65689d36834a9932138828909a9f`; Task 3
-  `e473154bbc5d1aed9620c748447b2ff7fa5b6e77`; Task 4
-  `f426bd7f8317372ae39b55a27abdfe6d42356146`; Task 5
-  `eaa13384541cc978586193dc18da4e512e7c1261`; Task 6
-  `cad908bc9b91eb16480131b1ab6c0b1aac158a39`, finalized by
-  `d5f0c3c01cfcb42957e417d316ae47a778aa516a`; Task 7 is the documentation
-  commit containing this block (a commit cannot embed its own hash).
+- **Task commits in execution order:**
+  `058e1399ce7ec99a6432071b8dd4db8b48f172c6`,
+  `7c7f7a5c72bd436f6a907fd020b18141c4e7d5e3`,
+  `d1b85ad77c8e65689d36834a9932138828909a9f`,
+  `c690349b392b4d5bcb2a38028129854415c96f5f`,
+  `e473154bbc5d1aed9620c748447b2ff7fa5b6e77`,
+  `4f57b63e75b546e0e4b254f84bb2956bb28c6c86`,
+  `0851aa5cb3b13db126799642fd4995609246f42f`,
+  `f426bd7f8317372ae39b55a27abdfe6d42356146`,
+  `7cdb74fdcbad0a661d46a2342c89e065f91ae55b`,
+  `4fa77c18ced92d11013344a907ef990f0876afb9`,
+  `82c839667bea32afbdc7442d0321d9e1ad944406`,
+  `5fcdf2b6f62f319668e807a7b6d316155e77e0c5`,
+  `8a2ddb8dfe35c7d935184f47c899563822239250`,
+  `eaa13384541cc978586193dc18da4e512e7c1261`,
+  `61cd1a3bcdd116dfc807ef724f272dbb545d3fd9`,
+  `cad908bc9b91eb16480131b1ab6c0b1aac158a39`,
+  `ac704fa554c37e5df2ebfa16bf16794db7c71509`,
+  `d5f0c3c01cfcb42957e417d316ae47a778aa516a`,
+  `763ef493321c4412c1efecd71820c7bf462265b5`.
 - **Final verified commit:** `d5f0c3c01cfcb42957e417d316ae47a778aa516a`.
 - **Dirty-state audit:** tracked state was clean before Task 7; only five
   existing untracked disassembly links were present and none was staged.
