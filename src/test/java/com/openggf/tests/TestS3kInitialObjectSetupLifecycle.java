@@ -14,6 +14,7 @@ import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.LevelLoadMode;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -167,6 +168,102 @@ class TestS3kInitialObjectSetupLifecycle {
             assertEquals(GameMode.BONUS_STAGE, loop.getCurrentGameMode());
             assertTrue(manager.hasPendingInitialObjectSetupPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    @Test
+    void specialStageEntryPausedTickAndResultsRetainPendingSetup() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            int before = manager.getObjectManager().getFrameCounter();
+            GameLoop loop = new GameLoop(new InputHandler());
+            loop.setGameplayMode(TestEnvironment.activeGameplayMode());
+            SpecialStageProvider provider = GameServices.module().getSpecialStageProvider();
+
+            loop.enterSpecialStage();
+            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertEquals(before, manager.getObjectManager().getFrameCounter());
+
+            invoke(loop, "doEnterSpecialStage",
+                    new Class<?>[] { SpecialStageProvider.class, int.class, boolean.class },
+                    provider, 0, false);
+            GameServices.gameState().applyPauseToggle(true);
+            loop.step();
+
+            assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertEquals(before, manager.getObjectManager().getFrameCounter(),
+                    "a paused special-stage tick must not dispatch level objects");
+
+            invoke(loop, "doEnterResultsScreen", new Class<?>[0]);
+            loop.step();
+
+            assertEquals(GameMode.SPECIAL_STAGE_RESULTS, loop.getCurrentGameMode());
+            assertTrue(manager.hasPendingInitialObjectSetupPass());
+            assertEquals(before, manager.getObjectManager().getFrameCounter(),
+                    "results ticks must not consume or dispatch fresh-level setup");
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    @Test
+    void genuineSpecialStageReturnReloadArmsAndLevelReleaseConsumesExactlyOnce()
+            throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            assertTrue(manager.consumePendingInitialObjectSetupPass());
+            GameLoop loop = new GameLoop(new InputHandler());
+            loop.setGameplayMode(TestEnvironment.activeGameplayMode());
+            setField(loop, "currentGameMode", GameMode.SPECIAL_STAGE_RESULTS);
+
+            invoke(loop, "doExitResultsScreen", new Class<?>[0]);
+
+            assertEquals(GameMode.TITLE_CARD, loop.getCurrentGameMode());
+            assertTrue(manager.hasPendingInitialObjectSetupPass(),
+                    "the genuine return load publishes one fresh setup token");
+            int beforeRelease = manager.getObjectManager().getFrameCounter();
+            installReleasingTitleProvider(loop);
+            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
+                    new Class<?>[] { boolean.class }, false));
+
+            assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertEquals(beforeRelease + 1, manager.getObjectManager().getFrameCounter());
+            assertFalse(manager.consumePendingInitialObjectSetupPass());
+            assertEquals(beforeRelease + 1, manager.getObjectManager().getFrameCounter());
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    @Test
+    void representedSpecialStageReturnRestorationDiscardsBeforeLevelRelease()
+            throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+            assertTrue(manager.consumePendingInitialObjectSetupPass());
+            GameLoop loop = new GameLoop(new InputHandler());
+            loop.setGameplayMode(TestEnvironment.activeGameplayMode());
+            setField(loop, "currentGameMode", GameMode.SPECIAL_STAGE_RESULTS);
+            invoke(loop, "doExitResultsScreen", new Class<?>[0]);
+            assertTrue(manager.hasPendingInitialObjectSetupPass());
+
+            manager.discardPendingInitialObjectSetupForStateRestoration();
+            int beforeRelease = manager.getObjectManager().getFrameCounter();
+            installReleasingTitleProvider(loop);
+            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
+                    new Class<?>[] { boolean.class }, false));
+
+            assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+            assertFalse(manager.hasPendingInitialObjectSetupPass());
+            assertEquals(beforeRelease, manager.getObjectManager().getFrameCounter(),
+                    "represented return state must not replay the native setup dispatch");
         } finally {
             sharedLevel.dispose();
         }
@@ -419,11 +516,9 @@ class TestS3kInitialObjectSetupLifecycle {
     }
 
     private static GameLoop releasingTitleCardLoop(String destination) throws Exception {
-        TitleCardProvider provider = mock(TitleCardProvider.class);
-        when(provider.shouldReleaseControl()).thenReturn(true);
         GameLoop loop = new GameLoop(new InputHandler());
         loop.setGameplayMode(TestEnvironment.activeGameplayMode());
-        setField(loop, "titleCardProvider", provider);
+        installReleasingTitleProvider(loop);
         setField(loop, "currentGameMode", GameMode.TITLE_CARD);
         @SuppressWarnings({"unchecked", "rawtypes"})
         Object target = Enum.valueOf(
@@ -431,6 +526,12 @@ class TestS3kInitialObjectSetupLifecycle {
                 destination);
         setField(loop, "postTitleCardDestination", target);
         return loop;
+    }
+
+    private static void installReleasingTitleProvider(GameLoop loop) throws Exception {
+        TitleCardProvider provider = mock(TitleCardProvider.class);
+        when(provider.shouldReleaseControl()).thenReturn(true);
+        setField(loop, "titleCardProvider", provider);
     }
 
     private static void setField(Object target, String name, Object value) throws Exception {
