@@ -232,6 +232,7 @@ Only the first consumer executes the pass. Replay can call the consumer but cann
 - Modify `src/main/java/com/openggf/GameLoop.java`: VBlank-only locked-card call and release token consumption.
 - Modify `src/main/java/com/openggf/LevelFrameStep.java`: no-title first-frame token consumption.
 - Modify `src/main/java/com/openggf/level/LevelManager.java`: private token, private arming step factory, public consume-only seam, VBlank-only operation, reset behavior.
+- Create `src/main/java/com/openggf/level/InitialObjectSetupCoordinator.java`: package-private owner of pending lifecycle state and atomic publish/take/discard/reset transitions; `LevelManager` remains the load-authority boundary and public façade.
 - Modify `src/main/java/com/openggf/level/objects/ObjectManager.java`: dedicated S3K load-then-execute setup primitive.
 - Modify `src/main/java/com/openggf/game/rewind/snapshot/LevelSnapshot.java`: pending lifecycle snapshot field using the enum value, not an ordinal.
 - Modify `src/main/java/com/openggf/level/rewind/LevelRewindSnapshotAdapter.java`: capture and restore the pending lifecycle through `LevelManager` package-owned snapshot accessors.
@@ -567,6 +568,7 @@ git commit -m "feat(s3k): arm initial setup from successful loads"
 **Depends on:** Task 3 commit. Do not dispatch in parallel.
 
 **Files:**
+- Create: `src/main/java/com/openggf/level/InitialObjectSetupCoordinator.java`
 - Modify: `src/main/java/com/openggf/level/LevelManager.java`
 - Modify: `src/main/java/com/openggf/LevelFrameStep.java`
 - Modify: `src/main/java/com/openggf/GameLoop.java`
@@ -577,6 +579,16 @@ git commit -m "feat(s3k): arm initial setup from successful loads"
 - Produces: `LevelManager.discardPendingInitialObjectSetupForStateRestoration(): void`
 - Consumes: Task 2 `ObjectManager.runInitialS3kLoadThenExecutePass`
 - Consumes: Task 3 private pending token
+
+Review-driven architecture correction: the package-private coordinator owns
+the token and its atomic state transitions so the release-critical
+`LevelManager` façade does not grow a second lifecycle responsibility or rely
+on compressed multi-statement lines to satisfy its unchanged source budget.
+`LevelManager.loadLevel` remains the sole publication authority, delegates
+reset/publish only at its existing success/failure boundaries, and preserves
+the Task 3 query plus Task 4 consume/discard APIs. Task 5 may later capture and
+restore the coordinator-owned value through package-owned `LevelManager`
+accessors without changing rewind schema in this task.
 
 - [ ] **Step 1: Write one-shot, pause, exception, and convergence tests**
 
