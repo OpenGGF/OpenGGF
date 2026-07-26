@@ -9,11 +9,13 @@ import com.openggf.game.solid.PlayerStandingState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.graphics.GLCommand;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.trace.TraceCharacterState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,6 +79,8 @@ class TestObjectManagerInitialS3kSetupPass {
         new SidekickCpuController(sidekick, player);
         seedPlayable(player, 0x111, 0x222, 0x333, 0x45, 3, 7);
         seedPlayable(sidekick, 0x444, 0x555, 0x666, 0x67, 4, 8);
+        assertEquals(0x45, TraceCharacterState.statusByteFromSprite(player));
+        assertEquals(0x67, TraceCharacterState.statusByteFromSprite(sidekick));
         PlayableState playerBefore = PlayableState.capture(player);
         PlayableState sidekickBefore = PlayableState.capture(sidekick);
         int frameBefore = manager.getFrameCounter();
@@ -93,6 +97,10 @@ class TestObjectManagerInitialS3kSetupPass {
         assertTrue(manager.getActiveObjects().contains(probe));
         assertTrue(manager.getActiveObjects().contains(probe.child),
                 "post-exec allocations must be materialized before the pass returns");
+        manager.snapshotTouchResponseState(true);
+        assertTrue(manager.touchUsesPreviousCollisionResponseList());
+        assertEquals(List.of(probe, probe.child), manager.getTouchResponseObjects(),
+                "the setup pass must capture the post-flush collision list for the following frame");
         assertEquals(0, probe.touches, "the setup pass must not run touch responses");
         assertEquals(playerBefore, PlayableState.capture(player));
         assertEquals(sidekickBefore, PlayableState.capture(sidekick));
@@ -136,6 +144,9 @@ class TestObjectManagerInitialS3kSetupPass {
         assertEquals(1, solids.beginCount);
         assertEquals(1, solids.finishCount);
         assertEquals(0, registry.instances.get(visible).touches);
+        manager.snapshotTouchResponseState(true);
+        assertTrue(manager.getTouchResponseObjects().isEmpty(),
+                "an exceptional setup pass must not publish a partial following-frame collision list");
         assertEquals(List.of(
                 "updateCameraBounds",
                 "captureExecStartPlayerCentreY",
@@ -151,9 +162,13 @@ class TestObjectManagerInitialS3kSetupPass {
         playable.setXSpeed((short) xSpeed);
         playable.setYSpeed((short) ySpeed);
         playable.setGSpeed((short) groundSpeed);
-        playable.setAir((status & 1) != 0);
-        playable.setRolling((status & 2) != 0);
-        playable.setOnObject((status & 4) != 0);
+        playable.setDirection((status & 0x01) != 0 ? Direction.LEFT : Direction.RIGHT);
+        playable.setAir((status & 0x02) != 0);
+        playable.setRolling((status & 0x04) != 0);
+        playable.setOnObject((status & 0x08) != 0);
+        playable.setRollingJump((status & 0x10) != 0);
+        playable.setPushing((status & 0x20) != 0);
+        playable.setInWater((status & 0x40) != 0);
         playable.setAnimationId(animation);
         playable.setMappingFrame(mapping);
         playable.setSubpixelRaw(0x1234, 0x5678);
@@ -170,7 +185,8 @@ class TestObjectManagerInitialS3kSetupPass {
                     playable.getCentreX(), playable.getCentreY(),
                     playable.getXSubpixelRaw(), playable.getYSubpixelRaw(),
                     playable.getXSpeed(), playable.getYSpeed(), playable.getGSpeed(),
-                    statusBits(playable), playable.getAnimationId(), playable.getMappingFrame(),
+                    TraceCharacterState.statusByteFromSprite(playable),
+                    playable.getAnimationId(), playable.getMappingFrame(),
                     cpu != null ? cpu.getDiagnosticRomCpuRoutine() : -1,
                     playable.historyPos(),
                     Arrays.hashCode(playable.copyXHistory()),
@@ -179,11 +195,6 @@ class TestObjectManagerInitialS3kSetupPass {
                     Arrays.hashCode(playable.copyStatusHistory()));
         }
 
-        private static int statusBits(AbstractPlayableSprite playable) {
-            return (playable.getAir() ? 1 : 0)
-                    | (playable.getRolling() ? 2 : 0)
-                    | (playable.isOnObject() ? 4 : 0);
-        }
     }
 
     private final class RecordingSolidRegistry implements SolidExecutionRegistry {

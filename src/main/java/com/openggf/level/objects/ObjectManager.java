@@ -625,8 +625,7 @@ public class ObjectManager {
                     // the X-cursor pass before the Y-camera pass
                     // (docs/skdisasm/sonic3k.asm:7884-7894, 37640-37762).
                     // S3K stays load-then-exec.
-                    placement.update(cameraX);
-                    syncActiveSpawnsLoad(false);
+                    runTwoAxisLoadThenExecutePlacement(cameraX, false);
                 }
                 // S2: NO pre-exec load. ROM S2 is RunObjects (s2.asm:5095) then
                 // exactly one ObjectsManager (s2.asm:5112) = exec -> one load.
@@ -704,10 +703,7 @@ public class ObjectManager {
         try {
             // The initial Load_Sprites pass establishes the same active slot
             // population Process_Sprites consumes immediately afterwards.
-            observeInitialS3kSetupStep("placement.update");
-            placement.update(cameraX);
-            observeInitialS3kSetupStep("syncActiveSpawnsLoad");
-            syncActiveSpawnsLoad(false);
+            runTwoAxisLoadThenExecutePlacement(cameraX, true);
             cleanupDestroyedDynamicObjects();
             observeInitialS3kSetupStep("runExecLoop");
             runExecLoop(cameraX, player, activeSidekicks, false, false);
@@ -719,6 +715,17 @@ public class ObjectManager {
 
         observeInitialS3kSetupStep("captureCollisionResponseListForNextFrame");
         captureCollisionResponseListForNextFrame();
+    }
+
+    private void runTwoAxisLoadThenExecutePlacement(int cameraX, boolean observeSetupOrder) {
+        if (observeSetupOrder) {
+            observeInitialS3kSetupStep("placement.update");
+        }
+        placement.update(cameraX);
+        if (observeSetupOrder) {
+            observeInitialS3kSetupStep("syncActiveSpawnsLoad");
+        }
+        syncActiveSpawnsLoad(false);
     }
 
     void setInitialS3kSetupObserverForTests(Consumer<String> observer) {
