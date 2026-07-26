@@ -136,6 +136,40 @@ Fresh results:
 NEXT: standard MGZ f12486 ring count (ROM 1, engine 2); complete-run MGZ f6295
 ring count (ROM 130, engine 129).
 
+### 2026-07-26 -- AIZ runtime vine clock restores the frame-2707 frontier
+
+Commands (worktree `.worktrees/trace-s3k-aiz-standard`, branch
+`bugfix/ai-trace-s3k-aiz-standard`, base `b6b0a60c0`):
+
+```bash
+MAVEN_OPTS='-Xmx6g' mvn -q \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay \
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+mvn -q \
+  -Dtest='com.openggf.game.sonic3k.TestS3kMhzPatternAnimation,com.openggf.game.sonic3k.objects.TestAizGiantRideVineObjectInstance,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard,com.openggf.game.rewind.TestRewindArchitectureGuard' \
+  test
+MAVEN_OPTS='-Xmx6g' mvn -q \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay \
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -Dtrace.frontierOnly=true test
+MAVEN_OPTS='-Xmx6g' mvn -q \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kSpecialStageTraceReplay \
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -Dtrace.frontierOnly=true test
+```
+
+The standalone AIZ regression is restored from f2696 `x_speed` (ROM `0x0000`,
+engine `0x01A6`; 3,258 errors) to f2707 `tails_animation_id` (ROM `0x0000`,
+engine `0x0005`; 1,279 errors and 0 warnings). `AIZ_vine_angle` is now a
+runtime-owned, rewindable S3K animation word advanced after the object pass,
+matching `Process_Sprites` followed by `ChangeRingFrame`; no trace value,
+fixture identity, zone predicate, or frame counter drives it.
+
+The focused vine, animation-owner, and rewind suite passes 95/95. The S3K
+special-stage canary passes 2/2 with zero errors. The AIZ complete-run canary
+remains at its established f9376 `rings` frontier (ROM `2`, engine `1`) with
+one error and zero warnings.
+
 ### 2026-07-26 -- Debug/trace audit resumes: S1/S2 green, S3K frontiers unchanged
 
 Commands (measured in worktree `/tmp/openggf-debug-trace-audit-resumed`, then replayed
