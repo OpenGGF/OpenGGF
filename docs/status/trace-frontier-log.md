@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+### 2026-07-26 -- Pachinko represented setup ownership returns f350 to green
+
+The combined trace integration exposed a lifecycle interaction absent from the
+individually verified bonus branch: Pachinko stopped at frame 350 with six
+errors, first on rings (ROM 49, engine 59). `applyBonusStageEntry` reconstructs
+the interior state after the ROM's one-time `Load_Sprites`/`Process_Sprites`
+setup at `docs/skdisasm/sonic3k.asm:7849-7860`, but the fresh headless level
+still retained authority to execute that setup pass. The first shared
+`LevelFrameStep` therefore dispatched the represented setup a second time.
+
+After deferred bonus setup completes, the replay bootstrap now discards that
+pending restoration authority through the parameterless production lifecycle
+API. The decision belongs to the represented-state bootstrap seam: it does not
+read metadata, route identity, frame number, recorded outcomes, or comparison
+state. Live bonus entry does not call this helper; its fresh authority remains
+pending across the bonus title card and is consumed by the first ordinary
+bonus-stage frame.
+
+Pachinko is green with zero failures/errors. Gumball, Slots, both S3K special
+stage cases, three compared-sprite bonus seams, bonus headless boot, title-card
+dispatch, initial setup lifecycle/ObjectManager coverage, trace invariants,
+architecture, and rewind/static-state guards all pass across the resource-safe
+split verification. The aggregate trace/guard selection ran 110 tests; its
+only errors were eleven Mockito agent initialization errors caused by a heap
+`argLine` override. The three affected lifecycle classes then passed 21/21
+without that override.
+
 ### 2026-07-26 -- HCZ complete-run advances from f1088 to f6292
 
 The HCZ evidence from `fa5e8241` is retained here although its duplicate code
