@@ -15,6 +15,7 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -4339,6 +4340,21 @@ class TestSidekickCpuFollowParity {
                 return provider;
             }
         };
+    }
+
+    @Test
+    void s3kIczSwingingPlatformDeclaresCpuSidekickObjectOrderStatusBridge() {
+        IczSwingingPlatformObjectInstance platform = new IczSwingingPlatformObjectInstance(
+                new ObjectSpawn(0x0157, 0x00E1, 0xB4, 0, 0, false, 0));
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        TestableSprite sonic = new TestableSprite("sonic");
+
+        Assertions.assertAll(
+                () -> assertTrue(platform.usesSidekickCpuPushBypassObjectOrderStatusDelay(tails),
+                        "ObjB4's folded child SolidObjectFull slots require the object-order d4 sample."),
+                () -> assertFalse(platform.usesSidekickCpuPushBypassObjectOrderStatusDelay(sonic),
+                        "The bridge only belongs to TailsCPU_Normal."));
     }
 
     private static void installStandaloneGameModule(GameModule module) {

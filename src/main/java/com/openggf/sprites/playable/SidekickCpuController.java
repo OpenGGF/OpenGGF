@@ -2162,6 +2162,7 @@ public class SidekickCpuController {
         }
         byte pushBypassStatus = effectiveLeader.getStatusHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
         byte pushBypassLeaderStatus = usesSidekickCpuPushBypassObjectOrderStatusDelay(ridingObject)
+                && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) != 0
                 ? pushBypassStatus
                 : recordedStatus;
         // ROM loads delayed Ctrl_1_Logical/status into d1/d4, then tests Tails'

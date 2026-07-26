@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-07-26 - ICZ folded swinging-platform push history
+
+Folded ObjB4 child solids now opt the CPU sidekick into the adjacent
+object-order status sample for `TailsCPU_Normal`'s delayed d4 Push test. The
+sample is preservation-only: it substitutes for the ordinary delayed status
+only when its own Push bit is set, and it does not replace delayed Ctrl_1.
+ROM sources are `loc_13DD0` (`docs/skdisasm/sonic3k.asm:26696-26705`) and the
+two independent swinging-platform child SSTs
+(`docs/skdisasm/sonic3k.asm:188977-189000`).
+
+Fresh focused replay from worktree base `152cb92cf`:
+
+```bash
+mvn -q -Dmse=off -Dsurefire.argLine=-Xmx6g \
+  -Ds3k.rom.path=<discovered-locked-on-rom> \
+  -Dtrace.context.radius=20 \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay test
+```
+
+- Expected exit 1: 1,323 errors, 0 warnings.
+- Frontier advances from f6117 `tails_cpu_ctrl2_held`
+  (`0x0018` / `0x0008`) to f13517 `rings` (`1` / `0`).
+- The 116-test sidekick/platform/rewind owner matrix passes.
+- S1 GHZ1 and S2 EHZ1 trace replays pass.
+- Architecture, per-game-rule, and rewind guards pass. `TestBuildToolingGuard`
+  remains independently blocked on its stale `docs/KNOWN_DISCREPANCIES.md`
+  path; that repository path migration is outside this ICZ change.
+
 ### 2026-07-26 -- ICZ invisible hurt block uses ordinary Obj37 owner timing
 
 Commands (worktree `.worktrees/trace-s3k-icz-complete`, branch
