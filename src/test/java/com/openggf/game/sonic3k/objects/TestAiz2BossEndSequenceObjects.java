@@ -1037,6 +1037,44 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void postResultsDelayClearsPositiveLockedSidekickLogicalWordAfterCpu() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setXSpeed((short) 0x0200);
+        player.setYSpeed((short) 0x0100);
+        player.setGSpeed((short) 0x0180);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        SidekickCpuController tailsCpu = new SidekickCpuController(tails, player);
+        tails.setCpuController(tailsCpu);
+        setField(tailsCpu, "diagnosticCtrl2HeldLatch", AbstractPlayableSprite.INPUT_UP);
+        setField(tailsCpu, "diagnosticCtrl2PressedLatch", AbstractPlayableSprite.INPUT_UP);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of(tails)));
+        setField(controller, "postResultsControlRestoreDelay", 2);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+
+        controller.update(1, player);
+
+        assertEquals(1, getIntField(controller, "postResultsControlRestoreDelay"));
+        assertTrue(player.isObjectControlled(),
+                "The results-delay owner must continue holding Sonic's ending pose");
+        assertTrue(player.isControlLocked());
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getYSpeed());
+        assertEquals(0, player.getGSpeed());
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedHeldInput(),
+                "ROM slot 8 loc_863D6 clears Ctrl_2_logical after Player_2 even while "
+                        + "the earlier results-delay owner remains active "
+                        + "(sonic3k.asm:181354-181372).");
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedPressedInput());
+    }
+
+    @Test
     void aiz2ResultsExitKeepsEndingPoseUntilOwnerRestoresControl() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();

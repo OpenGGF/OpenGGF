@@ -51235,3 +51235,41 @@ mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false \
   error-count movement.
 - Detailed call-order and TDD evidence:
   `docs/architecture/audits/2026-07-26-animal-rng-own-dispatch.md`.
+
+## 2026-07-26 - AIZ2 positive-lock logical clear advances complete run
+
+Worktree `.worktrees/trace-s3k-aiz-complete-25591`, branch
+`bugfix/ai-trace-s3k-aiz-complete-25591`, baseline `56b47ae17`.
+
+At f25591 Player 2's physical position, velocity, and status already matched
+the ROM after Tails CPU generated Left. The remaining mismatch was only the
+published `Ctrl_2_logical` word: ROM slot 8 ran `loc_863D6` after the Player 2
+slot and cleared the positive-locked logical word, while the engine's existing
+equivalent clear was gated behind the earlier post-results delay.
+
+The AIZ2 results controller now performs that existing clear before returning
+from each positive delay dispatch. Sonic's ending-pose hold and delay countdown
+remain unchanged. This models `loc_863C0`/`loc_863D6`
+(`docs/skdisasm/sonic3k.asm:181354-181372`) without changing shared sidekick
+CPU behavior.
+
+Fresh replay:
+
+```bash
+mvn -q \
+  "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dtrace.context.diagnosticChars=full \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay test
+```
+
+- Before: 27 errors, first mismatch f25591 `tails_cpu_ctrl2_held`
+  (expected `0x0000`, actual `0x0004`).
+- After: 26 errors, first mismatch f26107 `x`
+  (expected `0x0000`, actual `0x4A9B`).
+- The remaining errors are two isolated transition snapshots at f26107 and
+  f26179, covering reset/absent ROM player state versus retained engine
+  player/camera state.
+- Focused controller tests pass 36/36; architecture, rewind, static-state
+  rewind, and trace-invariant guards pass 76/76; Gumball, Pachinko, Slots, and
+  special-stage canaries pass 5/5. Standalone AIZ retains its f719 `x`
+  frontier.
