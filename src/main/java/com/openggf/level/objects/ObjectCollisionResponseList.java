@@ -18,6 +18,9 @@ final class ObjectCollisionResponseList {
     private final List<ObjectRefId> restoredCurrentOrder = new ArrayList<>();
     private final Map<ObjectRefId, ObjectInstance> restoredObjects = new HashMap<>();
     private boolean usePrevious;
+    private int currentBuildCursor;
+    private ObjectManagerSnapshot.CollisionBuildStage buildStage =
+            ObjectManagerSnapshot.CollisionBuildStage.IDLE;
 
     void setUsePrevious(boolean usePrevious) {
         this.usePrevious = usePrevious;
@@ -37,16 +40,31 @@ final class ObjectCollisionResponseList {
 
     void freezePreviousReadView() {
         usePrevious = true;
+        buildStage = ObjectManagerSnapshot.CollisionBuildStage.PREVIOUS_READ_FROZEN;
     }
 
     void resetCurrentBuild() {
         currentObjects.clear();
         restoredCurrentOrder.clear();
+        currentBuildCursor = 0;
+        buildStage = ObjectManagerSnapshot.CollisionBuildStage.CURRENT_BUILD_RESET;
+    }
+
+    void abortCurrentBuild() {
+        // The dispatch scope is closed by the caller, but the partially built ROM
+        // list remains represented runtime state. Rewind may capture this seam and
+        // must retain both its ordered ids and its build cursor/stage.
+    }
+
+    void markDynamicBuildComplete() {
+        buildStage = ObjectManagerSnapshot.CollisionBuildStage.DYNAMIC_BUILD_COMPLETE;
     }
 
     void addToCurrentBuild(ObjectInstance instance) {
         if (isEligible(instance) && currentObjects.size() < S3K_MAX_ENTRIES) {
             currentObjects.add(instance);
+            currentBuildCursor++;
+            buildStage = ObjectManagerSnapshot.CollisionBuildStage.CURRENT_BUILDING;
         }
     }
 
@@ -57,6 +75,7 @@ final class ObjectCollisionResponseList {
         restoredCurrentOrder.clear();
         restoredObjects.clear();
         usePrevious = true;
+        buildStage = ObjectManagerSnapshot.CollisionBuildStage.COMPLETED;
     }
 
     void captureCompletedBuild(List<ObjectInstance> objects) {
@@ -80,7 +99,9 @@ final class ObjectCollisionResponseList {
         return new ObjectManagerSnapshot.CollisionResponseState(
                 encode(previousObjects, encoder),
                 encode(currentObjects, encoder),
-                usePrevious);
+                usePrevious,
+                currentBuildCursor,
+                buildStage);
     }
 
     void restoreRewindState(
@@ -93,14 +114,18 @@ final class ObjectCollisionResponseList {
         restoredObjects.clear();
         if (state == null) {
             usePrevious = false;
+            currentBuildCursor = 0;
+            buildStage = ObjectManagerSnapshot.CollisionBuildStage.IDLE;
             return;
         }
-        restoredPreviousOrder.addAll(state.previousObjects());
-        restoredCurrentOrder.addAll(state.currentObjects());
+        restoredPreviousOrder.addAll(state.previousCollisionObjectIds());
+        restoredCurrentOrder.addAll(state.currentCollisionBuildObjectIds());
         resolveKnown(restoredPreviousOrder, resolver);
         resolveKnown(restoredCurrentOrder, resolver);
         rebuildRestoredLists();
-        usePrevious = state.usePrevious();
+        usePrevious = state.usePreviousCollisionList();
+        currentBuildCursor = state.currentCollisionBuildCursor();
+        buildStage = state.collisionBuildStage();
     }
 
     void bindRestoredObject(ObjectRefId id, ObjectInstance object) {

@@ -5,5 +5,8 @@ interface CollisionListSstDispatcher {
 
     void resetCurrentBuild();
 
+    default void markDynamicBuildComplete() {
+    }
+
     void captureCompletedBuild();
 }

@@ -448,6 +448,11 @@ public class LevelManager {
             }
 
             @Override
+            public void markDynamicBuildComplete() {
+                objectManager.markInitialDynamicCollisionBuildComplete();
+            }
+
+            @Override
             public void captureCompletedBuild() {
                 objectManager.captureInitialCollisionResponseBuild();
             }

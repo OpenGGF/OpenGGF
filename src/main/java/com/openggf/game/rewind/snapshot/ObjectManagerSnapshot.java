@@ -265,18 +265,45 @@ public record ObjectManagerSnapshot(
     }
 
     public record CollisionResponseState(
-            List<ObjectRefId> previousObjects,
-            List<ObjectRefId> currentObjects,
-            boolean usePrevious
+            List<ObjectRefId> previousCollisionObjectIds,
+            List<ObjectRefId> currentCollisionBuildObjectIds,
+            boolean usePreviousCollisionList,
+            int currentCollisionBuildCursor,
+            CollisionBuildStage collisionBuildStage
     ) {
         public CollisionResponseState {
-            previousObjects = previousObjects == null ? List.of() : List.copyOf(previousObjects);
-            currentObjects = currentObjects == null ? List.of() : List.copyOf(currentObjects);
+            previousCollisionObjectIds = previousCollisionObjectIds == null
+                    ? List.of() : List.copyOf(previousCollisionObjectIds);
+            currentCollisionBuildObjectIds = currentCollisionBuildObjectIds == null
+                    ? List.of() : List.copyOf(currentCollisionBuildObjectIds);
+            collisionBuildStage = collisionBuildStage == null
+                    ? CollisionBuildStage.IDLE : collisionBuildStage;
+        }
+
+        public CollisionResponseState(
+                List<ObjectRefId> previousCollisionObjectIds,
+                List<ObjectRefId> currentCollisionBuildObjectIds,
+                boolean usePreviousCollisionList) {
+            this(previousCollisionObjectIds, currentCollisionBuildObjectIds,
+                    usePreviousCollisionList,
+                    currentCollisionBuildObjectIds != null
+                            ? currentCollisionBuildObjectIds.size() : 0,
+                    CollisionBuildStage.IDLE);
         }
 
         public static CollisionResponseState empty() {
-            return new CollisionResponseState(List.of(), List.of(), false);
+            return new CollisionResponseState(
+                    List.of(), List.of(), false, 0, CollisionBuildStage.IDLE);
         }
+    }
+
+    public enum CollisionBuildStage {
+        IDLE,
+        PREVIOUS_READ_FROZEN,
+        CURRENT_BUILD_RESET,
+        CURRENT_BUILDING,
+        DYNAMIC_BUILD_COMPLETE,
+        COMPLETED
     }
 
     public record SolidContactRidingEntry(

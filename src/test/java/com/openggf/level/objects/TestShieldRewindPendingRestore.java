@@ -80,12 +80,15 @@ class TestShieldRewindPendingRestore {
             objectManager.freezeInitialCollisionResponseReadView();
             objectManager.resetInitialCollisionResponseBuild();
             objectManager.processInitialDynamicSlots(scope);
-            snapshot = objectManager.rewindSnapshottable().capture();
         }
+        snapshot = objectManager.rewindSnapshottable().capture();
 
-        assertEquals(2, snapshot.collisionResponseState().previousObjects().size());
-        assertEquals(1, snapshot.collisionResponseState().currentObjects().size());
-        assertTrue(snapshot.collisionResponseState().usePrevious());
+        assertEquals(2, snapshot.collisionResponseState().previousCollisionObjectIds().size());
+        assertEquals(1, snapshot.collisionResponseState().currentCollisionBuildObjectIds().size());
+        assertTrue(snapshot.collisionResponseState().usePreviousCollisionList());
+        assertEquals(1, snapshot.collisionResponseState().currentCollisionBuildCursor());
+        assertEquals(ObjectManagerSnapshot.CollisionBuildStage.CURRENT_BUILDING,
+                snapshot.collisionResponseState().collisionBuildStage());
 
         objectManager.rewindSnapshottable().restore(snapshot);
         RewindablePublisher restoredDynamic =

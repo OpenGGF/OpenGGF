@@ -11,6 +11,7 @@ import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.InitialProcessSpritesLifecycle;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.rewind.snapshot.SpriteManagerSnapshot;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.objects.ObjectSpawn;
@@ -30,6 +31,36 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindBenchmarkSizeEstimator {
+
+    @Test
+    void expandedCollisionSchemaPreservesOrderedIdsAndPartialBuildState() {
+        ObjectRefId previousFirst = ObjectRefId.layout(4, 0, 10);
+        ObjectRefId previousSecond = ObjectRefId.dynamic(5, 0, 11);
+        ObjectRefId currentFirst = ObjectRefId.dynamic(6, 0, 12);
+
+        ObjectManagerSnapshot.CollisionResponseState state =
+                new ObjectManagerSnapshot.CollisionResponseState(
+                        List.of(previousFirst, previousSecond),
+                        List.of(currentFirst),
+                        true,
+                        1,
+                        ObjectManagerSnapshot.CollisionBuildStage.DYNAMIC_BUILD_COMPLETE);
+
+        assertEquals(List.of(previousFirst, previousSecond),
+                state.previousCollisionObjectIds());
+        assertEquals(List.of(currentFirst), state.currentCollisionBuildObjectIds());
+        assertTrue(state.usePreviousCollisionList());
+        assertEquals(1, state.currentCollisionBuildCursor());
+        assertEquals(ObjectManagerSnapshot.CollisionBuildStage.DYNAMIC_BUILD_COMPLETE,
+                state.collisionBuildStage());
+
+        ObjectManagerSnapshot.CollisionResponseState legacy =
+                new ObjectManagerSnapshot.CollisionResponseState(
+                        List.of(previousFirst), List.of(currentFirst), true);
+        assertEquals(1, legacy.currentCollisionBuildCursor());
+        assertEquals(ObjectManagerSnapshot.CollisionBuildStage.IDLE,
+                legacy.collisionBuildStage());
+    }
 
     @Test
     void estimatesSnapshotsWithLiveSpawnReferences() {

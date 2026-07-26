@@ -13,6 +13,22 @@ import com.openggf.sprites.managers.InitialPlayableInput;
  * docs/skdisasm/sonic3k.constants.asm:303-323).
  */
 final class InitialProcessSpritesCoordinator {
+    enum Checkpoint {
+        AFTER_PLAYABLES_BEFORE_RESET,
+        AFTER_DYNAMIC_BEFORE_FIXED
+    }
+
+    private final java.util.function.Consumer<Checkpoint> checkpoint;
+
+    InitialProcessSpritesCoordinator() {
+        this(ignored -> { });
+    }
+
+    InitialProcessSpritesCoordinator(
+            java.util.function.Consumer<Checkpoint> checkpoint) {
+        this.checkpoint = checkpoint;
+    }
+
     void execute(InitialProcessSpritesContext context) {
         InitialProcessSpritesStages stages = context.stages();
         InitialDynamicSstDispatcher dynamic = stages.dynamic();
@@ -22,9 +38,12 @@ final class InitialProcessSpritesCoordinator {
             dynamic.loadSprites();
             stages.playables().processInitialPlayableSlots(
                     context.epoch(), InitialPlayableInput.nativeNeutral());
+            checkpoint.accept(Checkpoint.AFTER_PLAYABLES_BEFORE_RESET);
             stages.collisionList().resetCurrentBuild();
             dynamic.processAbsoluteDynamicSlot3();
             dynamic.processManagedDynamicSlots4Through92();
+            stages.collisionList().markDynamicBuildComplete();
+            checkpoint.accept(Checkpoint.AFTER_DYNAMIC_BEFORE_FIXED);
             stages.fixed().processPostDynamicFixedSlots(context.epoch());
             stages.collisionList().captureCompletedBuild();
         }

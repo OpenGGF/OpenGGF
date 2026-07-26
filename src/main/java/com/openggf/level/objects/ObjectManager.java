@@ -675,6 +675,10 @@ public class ObjectManager {
         collisionResponseList.resetCurrentBuild();
     }
 
+    public void markInitialDynamicCollisionBuildComplete() {
+        collisionResponseList.markDynamicBuildComplete();
+    }
+
     public void captureInitialCollisionResponseBuild() {
         if (activeInitialDispatch == null) {
             throw new IllegalStateException("no active initial Process_Sprites dispatch");
@@ -718,7 +722,7 @@ public class ObjectManager {
             closed = true;
             try {
                 if (!finished) {
-                    collisionResponseList.resetCurrentBuild();
+                    collisionResponseList.abortCurrentBuild();
                 }
             } finally {
                 try {
