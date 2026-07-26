@@ -272,13 +272,13 @@ For the initial setup pass, `incrementDispatchCounter` is `true` because `Object
 ```java
 frameCounter++;
 updateCameraBounds();
-placement.update(cameraX);
-syncActiveSpawnsLoad(false);
 solidContacts.captureExecStartPlayerCentreY(player, activeSidekicks);
 SolidExecutionRegistry registry = objectServices.solidExecutionRegistry();
 registry.beginFrame(frameCounter, collectActivePlayers(player, activeSidekicks));
-cleanupDestroyedDynamicObjects();
 try {
+    placement.update(cameraX);
+    syncActiveSpawnsLoad(false);
+    cleanupDestroyedDynamicObjects();
     runExecLoop(cameraX, player, activeSidekicks, false, false);
     flushPostExecDynamicSpawns();
 } finally {
@@ -352,8 +352,13 @@ In the locked non-player branch of `GameLoop.updateTitleCardMode`, replace impli
 if (tcpCard.shouldRunLevelObjectsDuringLockedPhase()) {
     levelManager.suppressGlobalOscillationForTitleCardPass();
     levelManager.updateObjectPositions();
+    camera.updatePosition(true); // preserve the existing S1/S2 object path
 } else if (tcpCard.shouldAdvanceVblankClockDuringLockedPhase()) {
     levelManager.advanceTitleCardVblankOnly();
+    // S3K: deliberately no camera.updatePosition(true)
+} else {
+    // Preserve S1's existing locked-card forced camera step.
+    camera.updatePosition(true);
 }
 ```
 
@@ -362,7 +367,10 @@ Move the existing unconditional
 branches only: immediately before the S2 `LevelFrameStep.execute` call and
 inside the `shouldRunLevelObjectsDuringLockedPhase()` branch above. Do not set
 suppression on the VBlank-only path. Preserve the early return while the card
-is locked, and add a test spy/guard that `camera.updatePosition()` and
+is locked. Move the current unconditional `camera.updatePosition(true)` at the
+end of the non-player branch into the explicit branches shown above: it must be
+absent only for the S3K VBlank-only capability, while S1 retains its required
+forced camera update. Add a test spy/guard that `camera.updatePosition(true)` and
 `camera.updateBoundaryEasing()` are never called for locked S3K. The first
 unlocked fallthrough must see no stale suppression and must perform its normal
 camera and oscillator steps.
@@ -422,7 +430,23 @@ Capture player and sidekick position, velocity, status, animation, mapping, CPU 
 
 Use a spy `SolidExecutionRegistry` and `SolidContactManager` to assert one
 `captureExecStartPlayerCentreY`, one `beginFrame`, and one `finishFrame`, in
-that order. Add a throwing object variant and assert `finishFrame` still runs
+this exact order:
+
+```text
+updateCameraBounds
+captureExecStartPlayerCentreY
+SolidExecutionRegistry.beginFrame
+placement.update
+syncActiveSpawnsLoad
+runExecLoop
+flushPostExecDynamicSpawns
+SolidExecutionRegistry.finishFrame
+captureCollisionResponseListForNextFrame
+```
+
+Use an ordered spy/event ledger, not independent call counts, so moving
+placement before `beginFrame` fails the test. Add a throwing object variant and
+assert `finishFrame` still runs
 exactly once while the exception propagates, no touch response runs, and no
 second setup dispatch is implied.
 
