@@ -5,7 +5,9 @@ import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.TailsCarryController;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
@@ -17,6 +19,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestInitialPlayableProcessSpritesPass {
@@ -39,16 +42,121 @@ class TestInitialPlayableProcessSpritesPass {
     }
 
     @Test
+    void firstOrdinaryEpochFollowsTheSetupEpochWithoutMutatingEitherValue() {
+        ProcessSpritesEpoch setup = new ProcessSpritesEpoch(0, 1, false);
+
+        ProcessSpritesEpoch ordinary =
+                ProcessSpritesEpoch.ordinary(1, setup.objectDispatchOrdinal());
+
+        assertEquals(new ProcessSpritesEpoch(0, 1, false), setup);
+        assertEquals(new ProcessSpritesEpoch(1, 2, true), ordinary);
+    }
+
+    @Test
+    void spriteManagerExposesTheNarrowPlayableSstDispatcherContract() {
+        assertInstanceOf(PlayableSstDispatcher.class, new SpriteManager());
+    }
+
+    @Test
+    void setupConsumesQueuedObjectControlAndPreservesForcedRuntimeInput() throws Exception {
+        SharedLevel level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            SpriteManager manager = GameServices.sprites();
+            AbstractPlayableSprite p1 = manager.getMainPlayable();
+            p1.queueControlLockedForNextFrame(true);
+            p1.queueForceInputRightForNextFrame(true);
+
+            manager.processInitialPlayableSlots(
+                    new ProcessSpritesEpoch(0, 1, false),
+                    InitialPlayableInput.nativeNeutral());
+
+            PlayerRewindExtra state = p1.captureRewindState(false).playerExtra();
+            assertTrue(p1.isControlLocked());
+            assertTrue(p1.isForceInputRight());
+            assertEquals(AbstractPlayableSprite.INPUT_RIGHT,
+                    p1.getLogicalInputState() & AbstractPlayableSprite.INPUT_RIGHT);
+            assertFalse(state.hasQueuedControlLockedState());
+            assertFalse(state.hasQueuedForceInputRightState());
+        } finally {
+            level.dispose();
+        }
+    }
+
+    @Test
+    void p2InitPreservesActiveRuntimeControlOwnership() throws Exception {
+        SharedLevel level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            SpriteManager manager = GameServices.sprites();
+            AbstractPlayableSprite p2 = manager.getSidekicks().getFirst();
+            p2.getCpuController().reset();
+            p2.setControlLocked(true);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(p2);
+
+            manager.processInitialPlayableSlots(
+                    new ProcessSpritesEpoch(0, 1, false),
+                    InitialPlayableInput.nativeNeutral());
+
+            assertTrue(p2.isControlLocked());
+            assertTrue(p2.isObjectControlled());
+            assertTrue(p2.isObjectControlAllowsCpu());
+            assertTrue(p2.isObjectControlSuppressesMovement());
+        } finally {
+            level.dispose();
+        }
+    }
+
+    @Test
+    void ordinaryCpuResetClearsCarryCooldownAndVelocityLatches() throws Exception {
+        SharedLevel level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            AbstractPlayableSprite p2 = GameServices.sprites().getSidekicks().getFirst();
+            p2.getTailsCarryController().restore(new TailsCarryController.Snapshot(
+                    (short) 0x1234,
+                    (short) 0x5678,
+                    false,
+                    false,
+                    0x3C,
+                    TailsCarryController.CarryContext.MANUAL));
+
+            p2.getCpuController().reset();
+
+            assertEquals(new TailsCarryController.Snapshot(
+                            (short) 0,
+                            (short) 0,
+                            false,
+                            false,
+                            0,
+                            TailsCarryController.CarryContext.NONE),
+                    p2.getTailsCarryController().capture());
+        } finally {
+            level.dispose();
+        }
+    }
+
+    @Test
     void nativeNeutralInputAndEpochProduceTheCapturedAiz1PlayerState() throws Exception {
         SharedLevel level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             SpriteManager manager = GameServices.sprites();
             AbstractPlayableSprite p1 = manager.getMainPlayable();
             AbstractPlayableSprite p2 = manager.getSidekicks().getFirst();
+            seedPreInitialPlayerSlot(p1);
+            p2.getCpuController().reset();
+            seedPreInitialPlayerSlot(p2);
             int spriteFrame = manager.getFrameCounter();
             int levelFrame = GameServices.level().getFrameCounter();
             int objectFrame = GameServices.level().getObjectManager().getFrameCounter();
             int vblank = GameServices.level().getObjectManager().getVblaCounter();
+
+            assertEquals(0, spriteFrame);
+            assertEquals(0, levelFrame);
+            assertEquals(0, objectFrame);
+            assertEquals(0, TraceCharacterState.routineFromSprite(p1));
+            assertEquals(0, TraceCharacterState.routineFromSprite(p2));
+            assertEquals(0, p1.getDrowningController().getRemainingAir());
+            assertEquals(0, p2.getDrowningController().getRemainingAir());
+            assertEquals(0, p1.getFlipSpeed());
+            assertEquals(0, p2.getFlipSpeed());
 
             manager.processInitialPlayableSlots(
                     new ProcessSpritesEpoch(0, 1, false),
@@ -122,6 +230,13 @@ class TestInitialPlayableProcessSpritesPass {
         } finally {
             level.dispose();
         }
+    }
+
+    private static void seedPreInitialPlayerSlot(AbstractPlayableSprite player) {
+        player.setObjectRoutineOverride(0);
+        player.getDrowningController().setRemainingAirFromFixedCountdown(0);
+        player.setFlipSpeed(0);
+        player.getAnimationManager().resetLastAnimationId();
     }
 
     @Test

@@ -442,19 +442,25 @@ git commit -m "test(s3k): pin initial Process_Sprites slot order"
 - Modify: `src/test/java/com/openggf/sprites/managers/TestInitialPlayableProcessSpritesPass.java`
 - Modify only the exact focused SpriteManager input/CPU/history test files identified by the Task 2 review; record their names in the task checklist before staging.
 
-- [ ] Refactor ordinary `SpriteManager.update` and `updateWithoutInput` to call one canonical `processPlayableSlots(PlayableDispatchContext)` routine.
-- [ ] Implement `processInitialPlayableSlots` with zero P1/P2 raw and logical controls, no debug shortcuts, and a non-counted epoch.
-- [ ] Preserve P1-before-P2 ordering, `recordFollowerHistoryForTick`, CPU target reads, animation/status/touch eligibility, deferred cross-playable mutation, water ordering, and temporary-sidekick sweep only where the ROM player routine owns them.
-- [ ] Prove the setup API does not publish a new `SpriteManager.frameCounter` value, sample `InputHandler`, or consume queued user input.
-- [ ] Prove queued object-control state applies, while raw/logical input, debug shortcuts, BK2 edges, and P2 manual input remain neutral; forced runtime controls and control locks remain semantic inputs rather than being cleared.
-- [ ] Audit and replace every reachable direct manager-counter read with explicit epoch/ordinal use; assert setup `(level=0, sprite=0, object=1)` and first ordinary `(1,1,2)`.
-- [ ] Run:
+- [x] Pre-change focused regression inventory (recorded before production edits):
+  `TestSpriteManagerUpdateOrder`, `TestSpriteManagerDebugMovementModifiers`,
+  `TestSpriteManagerDebugEmeraldGrant`, `TestSpriteManagerCollisionOrder`,
+  `TestSidekickCpuControllerLevelStart`, and `TestSidekickCpuFollowParity`.
+  These are audit/run targets; Task 3 changes none of them unless a demonstrated
+  ordinary-update regression requires a narrowly reviewed expectation update.
+- [x] Refactor ordinary `SpriteManager.update` and `updateWithoutInput` to call one canonical `processPlayableSlots(PlayableDispatchContext)` routine.
+- [x] Implement `processInitialPlayableSlots` with zero P1/P2 raw and logical controls, no debug shortcuts, and a non-counted epoch.
+- [x] Preserve P1-before-P2 ordering, `recordFollowerHistoryForTick`, CPU target reads, animation/status/touch eligibility, deferred cross-playable mutation, water ordering, and temporary-sidekick sweep only where the ROM player routine owns them.
+- [x] Prove the setup API does not publish a new `SpriteManager.frameCounter` value, sample `InputHandler`, or consume queued user input.
+- [x] Prove queued object-control state applies, while raw/logical input, debug shortcuts, BK2 edges, and P2 manual input remain neutral; forced runtime controls and control locks remain semantic inputs rather than being cleared.
+- [x] Audit and replace every reachable direct manager-counter read with explicit epoch/ordinal use; assert setup `(level=0, sprite=0, object=1)` and first ordinary `(1,1,2)`.
+- [x] Run:
 
 ```bash
 mvn -Dmse=off -Dtest=TestInitialPlayableProcessSpritesPass,TestSpriteManager*,TestSidekickCpu*,TestFollowerHistory* test
 ```
 
-- [ ] Request two-stage review: first against the ROM player-slot order and setup input epoch; second for shared-update regressions and absence of game/zone/trace selectors.
+- [x] Request two-stage review: first against the ROM player-slot order and setup input epoch; second for shared-update regressions and absence of game/zone/trace selectors.
 - [ ] Commit:
 
 ```bash
