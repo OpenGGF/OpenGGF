@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-07-26 - CNZ cage preserves native logical-input ownership
+
+- Worktree: `integration-cnz-standard` at base `b9fc4dae2`.
+- Root cause: the cage's low-speed and air-recapture branches set byte `1(a2)`
+  and `object_control` bit 0 before the common latch sets bits 1 and 6
+  (`docs/skdisasm/sonic3k.asm:69917-69938,69954-69963`). They never write
+  `Ctrl_1_locked`. That separate global gates the hardware-to-logical input
+  copy in the player routine, while `Stat_table` records the resulting logical
+  word for Tails's delayed follower control
+  (`docs/skdisasm/sonic3k.asm:21542-21551,22130-22134,26698-26705`).
+- Fix: remove the two synthetic `setControlLocked(true)` writes. The existing
+  native-bits-0-to-6 object-control profile still suppresses ordinary movement
+  and terrain collision, so the player cannot move independently inside the
+  cage; it deliberately leaves Tails CPU active and logical input unlocked.
+- Full standalone CNZ is expected red with 3,735 errors and first mismatch
+  f2821 `player_animation_id` (ROM `0x0000`, engine `0x0002`), advancing the
+  prior f1808 / 3,738-error frontier. A fresh frontier-only run reports two
+  errors at f2821. Because the first error is now f2821, both the f1808
+  pressed-input edge and its f2221 downstream edge are clear.
+- The full 26-test CNZ class remains 20 passing / six expected-red: the primary
+  replay and the same five later-route companion probes. The cage suite passes
+  19/19; architecture, rewind, and static-state rewind guards pass 68/68.
+  S1 GHZ1 and S2 EHZ1 remain green. Known-red standalone AIZ remains f719 `x`
+  (`0x0040` / `0x0050`) and MGZ remains f23561 `rings` (`0` / `1`).
+
 ## 2026-07-26 - CNZ bumper orbit consumes the production setup epoch
 
 - Worktree: `integration-cnz-standard` at base `0ab17f062`.
