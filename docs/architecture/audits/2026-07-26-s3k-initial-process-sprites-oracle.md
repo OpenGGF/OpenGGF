@@ -24,6 +24,7 @@ one-based lines: line 1 is `ADJACENT_MINUS_ONE_PRE_SETUP`, line 2 is
 | `Level_frame_counter` | 0 | 0 | 1 |
 | `V_int_run_count` | 1317 | 1317 | 1318 |
 | oscillation control word | `$007D` | `$007D` | `$007D` |
+| `Water_flag` byte | 1 | 1 | 1 |
 | raw/logical P1 and P2 controls | all zero | all zero | all zero |
 | collision-list byte count | 0 | 0 | 0 |
 | absolute dynamic slot 3 pointer | 0 | 0 | 0 |
@@ -32,6 +33,21 @@ Thus the initial pass does not advance the level, VInt, emulator-frame, or
 observed oscillation epochs. The ordinary boundary advances level and VInt
 once. Control remains neutral throughout setup, consistent with the locked
 control writes before `loc_6468` (`sonic3k.asm:7765-7774`).
+`Water_flag` is the byte at `$F730`
+(`sonic3k.constants.asm:618-633`; byte reads at
+`sonic3k.asm:7777,8474-8478`) and remains 1 at all three boundaries: AIZ1 has
+water enabled, and the initial `Process_Sprites` pass does not change that
+level water state.
+
+`Collision_response_list` starts at `$E380` and is declared as a byte array,
+but its first two bytes are a native big-endian **word** byte count:
+`Touch_Process` reads it with `move.w (a4)+,d6`,
+`Add_SpriteToCollisionResponseList` compares/increments it by 2, and slot 2
+clears it with `move.w #0`
+(`sonic3k.constants.asm:330`;
+`sonic3k.asm:8467-8469,20655-20667,21200-21209`). The probe therefore keeps a
+`u16` read and names the field `collision_list_byte_count`; the value is zero
+at all three captured boundaries.
 
 P1 stays at centre `$0040,$0420`, and P2 at `$0020,$0424`; all position
 fractions and x/y/ground velocities remain zero. Both player routines change

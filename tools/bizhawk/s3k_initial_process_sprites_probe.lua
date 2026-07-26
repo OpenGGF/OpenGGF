@@ -92,7 +92,8 @@ local function snapshot(label)
             level=u16(0xFE04), vint=u32(0xFE0C),
             oscillation_control="0x"..hex(u16(0xFE6E),4)
         },
-        collision_list_count=u16(0xE380),
+        water={flag=u8(0xF730)},
+        collision_list_byte_count=u16(0xE380),
         absolute_dynamic_slot3_code="0x"..hex(u32(P1+3*SLOT_SIZE),8),
         fixed=fixed
     }
