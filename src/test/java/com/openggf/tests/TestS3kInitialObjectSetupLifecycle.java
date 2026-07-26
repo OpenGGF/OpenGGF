@@ -228,6 +228,32 @@ class TestS3kInitialObjectSetupLifecycle {
     }
 
     @Test
+    void rewindLifecycleDistinguishesBeforeAndAfterInitialSetupConsumption() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try {
+            LevelManager manager = GameServices.level();
+
+            InitialObjectSetupLifecycle before =
+                    manager.capturePendingInitialObjectSetupLifecycleForRewind();
+            assertEquals(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE, before);
+
+            assertTrue(manager.consumePendingInitialObjectSetupPass());
+            InitialObjectSetupLifecycle after =
+                    manager.capturePendingInitialObjectSetupLifecycleForRewind();
+            assertEquals(InitialObjectSetupLifecycle.NONE, after);
+
+            manager.restorePendingInitialObjectSetupLifecycleForRewind(before);
+            assertTrue(manager.hasPendingInitialObjectSetupPass(),
+                    "restoring a pre-consume rewind snapshot restores setup authority");
+            manager.restorePendingInitialObjectSetupLifecycleForRewind(after);
+            assertFalse(manager.hasPendingInitialObjectSetupPass(),
+                    "restoring a post-consume rewind snapshot keeps setup authority consumed");
+        } finally {
+            sharedLevel.dispose();
+        }
+    }
+
+    @Test
     void nonLevelTitleCardReleaseRetainsFreshSetupAuthority() throws Exception {
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {

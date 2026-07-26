@@ -126,20 +126,42 @@ sampling/lifecycle-ordering mismatch. It is not, by itself, proof that the
 engine dispatched the plane-intro object an extra time; the generic audit
 below must locate the exact engine-side comparison boundary.
 
-## Required next investigation
+## Engine-side resolution
 
-Before any gameplay or lifecycle behavior change, audit the generic
-recorder/comparator sampling contract:
+A canonical replay diagnostic localized the first state change before trace
+row 0, not at the comparison boundary:
 
-1. identify exactly where each recorder samples player state relative to
-   `Process_Sprites`, V-int, and frame-counter increments;
-2. identify where `AbstractTraceReplayTest` samples engine state relative to
-   the corresponding engine logic step;
-3. verify whether the mismatch affects other fields or traces;
-4. correct the smallest generic sampling owner, or document an intentional
-   phase distinction, using comparison-only data.
+| Observation | Intro offset | Object dispatch count | Pending setup |
+|---|---:|---:|---|
+| fixture built, before replay bootstrap | `$E920` | 0 | yes |
+| canonical replay bootstrap complete | `$E928` | 1 | no |
 
-Do not compensate by removing the ROM-authoritative initial
-`Process_Sprites`, hydrating engine state from trace rows, adding a frame or
-route carve-out, or regenerating the fixture merely to match current engine
-timing.
+`Sonic3kAIZEvents.spawnIntroObject` both installed the fixed intro object and
+called `intro.update(0, focused)` to emulate setup `Process_Sprites`.
+`TraceReplaySessionBootstrap.applyBootstrap` then consumed the production-owned
+pending `InitialObjectSetupLifecycle`, whose
+`ObjectManager.runInitialS3kLoadThenExecutePass` dispatched that same live
+object again. The event-local call was therefore an obsolete second owner
+after the generic lifecycle landed.
+
+The diagnostic drove rows f0 through f289 through the canonical
+`TraceReplayFrameClosureDriver`: every row classified VBlank-only, consumed
+exactly one BK2 row, preserved rewind-reference closure, and produced no
+object dispatch or intro-offset change. A current-schema MGZ control passed
+through the identical driver. This rules out the prefix skip and comparator
+snapshot boundary as the source of the one-dispatch lead.
+
+The correction removes only the event-local update. Object installation
+leaves routine 0 and `Events_fg_1=$E918`; consuming the generic setup authority
+once advances routine 2 and `$E920`; a second consume is inert. After 430
+ordinary closures the accumulator is zero and player X remains `$0040`; the
+next closure moves it to `$0050`.
+
+Fresh standalone replay advances from f719 `x` with 1,331 errors to f2707
+`tails_animation_id` with 1,277 errors. The AIZ complete-run control remains
+at f26107 `x` with 26 errors because represented complete-run restoration
+already discards fresh setup authority.
+
+No trace hydration, recorder regeneration, comparison shift, frame/route
+carve-out, or removal of the ROM-authoritative initial `Process_Sprites` was
+used.

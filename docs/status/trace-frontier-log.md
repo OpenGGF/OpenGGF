@@ -50931,3 +50931,49 @@ mvn -q -Dsurefire.argLine='-Xshare:off -Xmx6g' \
 - Known-red complete-run canaries retain their established first fields and
   frames: AIZ f9376 `rings` (`2` / `1`, 1,726 errors) and CNZ f0 `y`
   (`0x0600` / `0x061C`, 9,778 errors).
+
+## 2026-07-26 - AIZ standalone initial setup ownership advances frontier
+
+Worktree `.worktrees/trace-s3k-aiz-prefix-closure`, branch
+`bugfix/ai-trace-s3k-aiz-prefix-closure`, baseline `7f5f4c1ec`.
+
+The AIZ event initializer installed the fixed plane-intro object and called
+`intro.update(0, focused)` to emulate the setup `Process_Sprites` pass. The
+runtime-owned `InitialObjectSetupLifecycle` subsequently consumed its pending
+authority during canonical replay bootstrap and dispatched the same live
+object again. The accumulator therefore entered the prefix at `$E928` instead
+of `$E920`; all 290 VBlank-only prefix rows themselves were inert.
+
+The event initializer now only installs the object. The generic one-shot
+setup lifecycle owns its sole pre-LevelLoop dispatch, remains idempotent, and
+is captured/restored across rewind.
+
+Fresh standalone replay:
+
+```bash
+mvn -Dmse=off \
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test
+```
+
+- Before: 1,331 errors, 0 warnings; first mismatch f719 `x`
+  (expected `$0040`, actual `$0050`).
+- After: 1,277 errors, 0 warnings; first mismatch f2707
+  `tails_animation_id` (expected `$0000`, actual `$0005`).
+- Result: 54 fewer errors and a frontier advance of 1,988 rows; f719/f720
+  now follow the ROM zero-store/first-player-add seam.
+
+Fresh complete-run control:
+
+```bash
+mvn -Dmse=off \
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay" test
+```
+
+- 26 errors, 0 warnings; first mismatch remains f26107 `x`
+  (expected `$0000`, actual `$4A9B`).
+- Result: non-regression; the represented complete-run state already discards
+  fresh setup authority.
+
+The diagnostic AIZ/MGZ closure contract passes 2/2; focused lifecycle/event
+tests pass 62/62; rewind, reference-closure, S3K headless, level-loading,
+architecture, and trace-invariant controls pass 158/158.
