@@ -1,6 +1,7 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.game.GameServices;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -88,9 +89,38 @@ class TestInitialPlayableProcessSpritesPass {
         try {
             SpriteManager manager = GameServices.sprites();
             AbstractPlayableSprite p2 = manager.getSidekicks().getFirst();
-            p2.getCpuController().reset();
+            SidekickCpuController cpu = p2.getCpuController();
+            SidekickCpuRewindExtra baselineCpu = cpu.captureRewindState();
+            cpu.restoreRewindState(withCpuSetupSentinels(cpu.captureRewindState()));
             p2.setControlLocked(true);
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(p2);
+            p2.queueForceInputRightForNextFrame(true);
+            p2.getTailsCarryController().restore(new TailsCarryController.Snapshot(
+                    (short) 0x1234,
+                    (short) 0x5678,
+                    false,
+                    false,
+                    0x3C,
+                    TailsCarryController.CarryContext.MANUAL));
+            PerObjectRewindSnapshot seededSetupState = p2.captureRewindState(false);
+
+            p2.setControlLocked(false);
+            ObjectControlState.none().applyTo(p2);
+            p2.queueForceInputRightForNextFrame(false);
+            p2.getTailsCarryController().restore(new TailsCarryController.Snapshot(
+                    (short) 0,
+                    (short) 0,
+                    false,
+                    false,
+                    0,
+                    TailsCarryController.CarryContext.NONE));
+            cpu.restoreRewindState(baselineCpu);
+            p2.restoreRewindState(seededSetupState);
+
+            assertEquals(0x44, cpu.captureRewindState().frameCounter());
+            assertEquals(0x3C, p2.getTailsCarryController().capture().cooldown());
+            assertTrue(p2.isControlLocked());
+            assertTrue(p2.isObjectControlled());
 
             manager.processInitialPlayableSlots(
                     new ProcessSpritesEpoch(0, 1, false),
@@ -100,6 +130,29 @@ class TestInitialPlayableProcessSpritesPass {
             assertTrue(p2.isObjectControlled());
             assertTrue(p2.isObjectControlAllowsCpu());
             assertTrue(p2.isObjectControlSuppressesMovement());
+            assertTrue(p2.isForceInputRight());
+
+            SidekickCpuRewindExtra state = cpu.captureRewindState();
+            assertEquals(SidekickCpuController.State.INIT, state.state());
+            assertEquals(-1, state.deadFallingRomCpuRoutine());
+            assertEquals(0, state.despawnCounter());
+            assertEquals(0, state.frameCounter());
+            assertEquals(0, state.controlCounter());
+            assertEquals(0, state.controller2Held());
+            assertEquals(0, state.controller2Logical());
+            assertEquals(0, state.normalFrameCount());
+            assertEquals(0, state.approachFrameCount());
+            assertEquals(0, state.flightTimer());
+            assertEquals(0, state.catchUpTargetX());
+            assertEquals(0, state.catchUpTargetY());
+            assertEquals(new TailsCarryController.Snapshot(
+                            (short) 0,
+                            (short) 0,
+                            false,
+                            false,
+                            0,
+                            TailsCarryController.CarryContext.NONE),
+                    p2.getTailsCarryController().capture());
         } finally {
             level.dispose();
         }
@@ -247,11 +300,23 @@ class TestInitialPlayableProcessSpritesPass {
             AbstractPlayableSprite p1 = manager.getMainPlayable();
             AbstractPlayableSprite p2 = manager.getSidekicks().getFirst();
             SidekickCpuController cpu = p2.getCpuController();
+            short originalX = p1.getCentreX();
+            short originalY = p1.getCentreY();
+            for (int i = 1; i <= 37; i++) {
+                p1.setCentreXPreserveSubpixel((short) (0x6100 + i));
+                p1.setCentreYPreserveSubpixel((short) (0x7100 + i));
+                p1.endOfTick();
+            }
+            p1.setCentreXPreserveSubpixel(originalX);
+            p1.setCentreYPreserveSubpixel(originalY);
 
             assertEquals(List.of(p1, p2),
                     SpriteManager.buildPlayableUpdateOrder(
                             manager.getAllSprites(), manager.getSidekicks(), false),
                     "Process_Sprites visits P1 slot 0 before P2 slot 1");
+            assertEquals(37, p1.historyPos());
+            assertEquals(0x6125, p1.copyXHistory()[37] & 0xFFFF);
+            assertEquals(0x7125, p1.copyYHistory()[37] & 0xFFFF);
 
             manager.processInitialPlayableSlots(
                     new ProcessSpritesEpoch(0, 1, false),
@@ -279,6 +344,63 @@ class TestInitialPlayableProcessSpritesPass {
         } finally {
             level.dispose();
         }
+    }
+
+    private static SidekickCpuRewindExtra withCpuSetupSentinels(SidekickCpuRewindExtra source) {
+        return new SidekickCpuRewindExtra(
+                SidekickCpuController.State.CATCH_UP_FLIGHT,
+                0x22,
+                0x33,
+                0x44,
+                0x55,
+                0x66,
+                0x77,
+                source.inputUp(),
+                source.inputDown(),
+                source.inputLeft(),
+                source.inputRight(),
+                source.inputJump(),
+                source.inputJumpPress(),
+                true,
+                source.minXBound(),
+                source.maxXBound(),
+                source.minYBound(),
+                source.maxYBound(),
+                0x12,
+                source.normalDespawnLastRenderFlagOffscreen(),
+                source.normalDespawnFreshRenderEntryDelayConsumed(),
+                0x3456,
+                0x23,
+                0x34,
+                source.sidekickCount(),
+                0x45,
+                source.suppressNextAirbornePushFollowSteering(),
+                source.releasedUnderwaterPushConsumed(),
+                source.objectOrderGracePushBypassThisFrame(),
+                0x56,
+                0x67,
+                source.suppressNextLevelEventNormalMovement(),
+                source.catchUpUsesRomVisibleLevelFrameCounter(),
+                source.levelEventDormantMarkerReleasePending(),
+                source.skipPhysicsThisFrame(),
+                source.deadOnObjectReenteredVisibleWindow(),
+                source.deferredDespawnDeadFallContinuingThisFrame(),
+                source.bootstrapPreludePlacementApplied(),
+                source.cpuFrameCounterFromStoredLevelFrame(),
+                0x78,
+                0x79,
+                0x7A,
+                source.controller2SignedLocked(),
+                source.nativeEndingPosePending(),
+                source.latestNormalStepDiagnostics(),
+                true,
+                0x7C,
+                true,
+                (short) 0x1234,
+                (short) 0x5678,
+                0x7D,
+                0x1357,
+                0x2468);
     }
 
     private static void assertSecondaryStatusAndPowerTimersZero(

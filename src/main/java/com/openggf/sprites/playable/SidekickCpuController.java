@@ -5799,6 +5799,7 @@ public class SidekickCpuController {
         state = State.INIT;
         deadFallingRomCpuRoutine = -1;
         despawnCounter = 0;
+        frameCounter = 0;
         controlCounter = 0;
         manualInputAppliedThisTick = false;
         approachFrameCount = 0;
