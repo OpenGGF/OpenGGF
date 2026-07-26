@@ -45,6 +45,9 @@ public class LevelLoadContext {
     private boolean showTitleCard = true;
     private LevelData levelData;
     private int spawnY = -1;
+    private LevelAssemblyKind assemblyKind = LevelAssemblyKind.DECODE_ONLY;
+    private InitialObjectSetupLifecycle requestedInitialObjectSetupLifecycle =
+            InitialObjectSetupLifecycle.NONE;
 
     public Rom getRom() { return rom; }
     public void setRom(Rom rom) { this.rom = rom; }
@@ -100,6 +103,32 @@ public class LevelLoadContext {
 
     public int getSpawnY() { return spawnY; }
     public void setSpawnY(int spawnY) { this.spawnY = spawnY; }
+
+    public LevelAssemblyKind getAssemblyKind() { return assemblyKind; }
+    public void setAssemblyKind(LevelAssemblyKind assemblyKind) {
+        this.assemblyKind = assemblyKind == null ? LevelAssemblyKind.DECODE_ONLY : assemblyKind;
+    }
+
+    public boolean permitsInitialObjectSetupRequest() {
+        return loadMode == LevelLoadMode.FULL
+                && includePostLoadAssembly
+                && assemblyKind == LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY;
+    }
+
+    /**
+     * Records a profile-owned setup request in this load's private context.
+     * Publication to live state remains the responsibility of a successful
+     * {@code LevelManager.loadLevel} boundary.
+     */
+    public void requestInitialObjectSetupFromProfile(InitialObjectSetupLifecycle lifecycle) {
+        if (permitsInitialObjectSetupRequest() && lifecycle != null) {
+            requestedInitialObjectSetupLifecycle = lifecycle;
+        }
+    }
+
+    public InitialObjectSetupLifecycle requestedInitialObjectSetupLifecycle() {
+        return requestedInitialObjectSetupLifecycle;
+    }
 
     /**
      * Snapshot checkpoint state from a {@link RespawnState} before level reload.

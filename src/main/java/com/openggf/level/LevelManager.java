@@ -164,6 +164,8 @@ public class LevelManager {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
     private boolean resetCounterPlacementAfterCameraSnap;
+    private InitialObjectSetupLifecycle pendingInitialObjectSetupLifecycle =
+            InitialObjectSetupLifecycle.NONE;
 
     void writeCurrentZone(int zone) {
         this.currentZone = zone;
@@ -329,6 +331,7 @@ public class LevelManager {
      * @throws IOException if an I/O error occurs while loading the level
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
+        pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
         try {
             GameModule module = activeGameModule();
             LevelInitProfile profile = module.getLevelInitProfile();
@@ -353,7 +356,10 @@ public class LevelManager {
                 writeCurrentLevel(ctx.getLevel());
             }
             resetRewindBufferAfterLevelBoundary();
+            pendingInitialObjectSetupLifecycle =
+                    ctx.requestedInitialObjectSetupLifecycle();
         } catch (Exception e) {
+            pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
             Throwable cause = e.getCause();
             if (cause instanceof IOException ioe) {
@@ -363,6 +369,15 @@ public class LevelManager {
             LOGGER.log(SEVERE, "Unexpected error while loading level " + levelIndex, e);
             throw new IOException("Failed to load level due to unexpected error.", e);
         }
+    }
+
+    /**
+     * Read-only lifecycle diagnostic. Consumption is introduced at the
+     * production gameplay seams, not through this query.
+     */
+    public boolean hasPendingInitialObjectSetupPass() {
+        return pendingInitialObjectSetupLifecycle
+                == InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE;
     }
 
     private void resetRewindBufferAfterLevelBoundary() {
@@ -2836,6 +2851,7 @@ public class LevelManager {
             ctx.setShowTitleCard(showTitleCard);
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
+            ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
             ctx.snapshotCheckpoint(checkpointCoordinator.state());
 
             resetCounterPlacementAfterCameraSnap = runtimeReload;
@@ -3441,6 +3457,7 @@ public class LevelManager {
         frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
+        pendingInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;

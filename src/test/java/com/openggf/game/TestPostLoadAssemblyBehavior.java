@@ -310,6 +310,30 @@ public class TestPostLoadAssemblyBehavior {
         assertTrue(step.romRoutine().contains("+4"), "S3K sidekick step should document the +4 Y offset");
     }
 
+    @Test
+    public void initialObjectSetupProfilesAndStepOrderAreTyped() {
+        assertEquals(InitialObjectSetupLifecycle.NONE, newS1Profile().initialObjectSetupLifecycle());
+        assertEquals(InitialObjectSetupLifecycle.NONE, newS2Profile().initialObjectSetupLifecycle());
+
+        Sonic3kLevelInitProfile profile = newS3kProfile();
+        assertEquals(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE,
+                profile.initialObjectSetupLifecycle());
+
+        LevelLoadContext ctx = new LevelLoadContext();
+        ctx.setIncludePostLoadAssembly(true);
+        ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
+        List<InitStep> steps = profile.levelLoadSteps(ctx);
+        int zoneState = indexOfStep(steps, "InitZonePlayerState");
+        int requestSetup = indexOfStep(steps, "RequestInitialObjectSetup");
+        int titleCard = indexOfStep(steps, "RequestTitleCard");
+
+        assertEquals(zoneState + 1, requestSetup);
+        assertEquals(requestSetup + 1, titleCard);
+        steps.get(requestSetup).execute();
+        assertEquals(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE,
+                ctx.requestedInitialObjectSetupLifecycle());
+    }
+
     // ========== Helpers ==========
 
     private CheckpointState createCheckpoint(int index, int x, int y) {
@@ -339,5 +363,14 @@ public class TestPostLoadAssemblyBehavior {
                 .filter(s -> s.name().equals(name))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private static int indexOfStep(List<InitStep> steps, String name) {
+        for (int i = 0; i < steps.size(); i++) {
+            if (steps.get(i).name().equals(name)) {
+                return i;
+            }
+        }
+        return -1;
     }
 }
