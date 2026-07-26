@@ -230,6 +230,7 @@ Only the first consumer executes the pass. Replay can call the consumer but cann
 - Modify `src/main/java/com/openggf/game/TitleCardProvider.java`: locked-phase VBlank-only capability.
 - Modify `src/main/java/com/openggf/game/sonic3k/titlecard/Sonic3kTitleCardManager.java`: no level objects during locked pre-level card; VBlank-only clock enabled.
 - Modify `src/main/java/com/openggf/GameLoop.java`: VBlank-only locked-card call and release token consumption.
+- Modify `src/main/java/com/openggf/PostTitleCardDestination.java`: own the semantic decision whether a releasing title-card destination may consume fresh-level setup authority.
 - Modify `src/main/java/com/openggf/LevelFrameStep.java`: no-title first-frame token consumption.
 - Modify `src/main/java/com/openggf/level/LevelManager.java`: private token, private arming step factory, public consume-only seam, VBlank-only operation, reset behavior.
 - Create `src/main/java/com/openggf/level/InitialObjectSetupCoordinator.java`: package-private owner of pending lifecycle state and atomic publish/take/discard/reset transitions; `LevelManager` remains the load-authority boundary and public façade.
@@ -569,6 +570,7 @@ git commit -m "feat(s3k): arm initial setup from successful loads"
 
 **Files:**
 - Create: `src/main/java/com/openggf/level/InitialObjectSetupCoordinator.java`
+- Modify: `src/main/java/com/openggf/PostTitleCardDestination.java`
 - Modify: `src/main/java/com/openggf/level/LevelManager.java`
 - Modify: `src/main/java/com/openggf/LevelFrameStep.java`
 - Modify: `src/main/java/com/openggf/GameLoop.java`
@@ -589,6 +591,13 @@ reset/publish only at its existing success/failure boundaries, and preserves
 the Task 3 query plus Task 4 consume/discard APIs. Task 5 may later capture and
 restore the coordinator-owned value through package-owned `LevelManager`
 accessors without changing rewind schema in this task.
+
+`PostTitleCardDestination` owns release routing semantics: `LEVEL` delegates
+the one-shot consume call and `BONUS_STAGE` leaves authority untouched.
+`GameLoop` therefore invokes one destination operation before `exitTitleCard`
+without adding a routing predicate to the release-critical façade. Genuine
+special-stage return remains `LEVEL` and may consume a token armed by its
+fresh reload.
 
 - [ ] **Step 1: Write one-shot, pause, exception, and convergence tests**
 
