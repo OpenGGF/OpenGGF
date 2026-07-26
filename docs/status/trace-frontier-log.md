@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-07-26 - MGZ lost-ring frontiers are earlier SST inventory gaps
+
+- Worktree: `integration-mgz-remaining` at base `3eae9f722`.
+- Standalone MGZ reproduces 16 errors with first mismatch f23561 `rings`
+  (ROM `0`, engine `1`). Complete-run MGZ reproduces 27 errors with first
+  mismatch f28398 `rings` (ROM `2`, engine `1`). Commands used the discovered
+  `s3k.gen` ROM and `-Dsurefire.argLine='-Xshare:off -Xmx6g'`; the default
+  1 GiB fork is insufficient.
+- NO_SAFE_FIX: standalone ring physics initially agrees, but the corresponding
+  ring is engine slot 15 versus ROM slot 16. That changes the native
+  `d7 + V_int_run_count` floor-probe phase and causes a bounce and collection
+  one frame early. ROM swinging-platform helper SSTs are at 15/17/18 while
+  engine reservations are at 16/17/19, proving the inventory had diverged
+  before the spill.
+- NO_SAFE_FIX: the complete-run corresponding ring is engine slot 12 versus
+  ROM slot 11 because engine slot 11 is already occupied by a path-swap
+  object at the spill. This is the opposite slot shift and cannot share a
+  global phase or allocation correction with the standalone trace.
+- Full evidence, rejected trace-shaped changes, source locations, and the
+  required next lifecycle capture are recorded in
+  `docs/architecture/audits/2026-07-26-mgz-lost-ring-slot-frontiers.md`.
+  Reports are archived at `/tmp/trace-mgz-remaining-3eae9f722/{standard,complete}`.
+  Their deterministic tar has SHA-256 `f267d28ac5157867a5045a4023166804220972f024dc0c1ed45aac592b0dcbf1`;
+  the separately reproduced engine inventory diagnostics and their reverted
+  patch have archive SHA-256
+  `6a4e92ce13094b57259b484c415c63b2f7bbae60ff0b61527402afa34931f264`.
+  LBZ was not investigated or changed.
+
 ## 2026-07-26 - S3K rolling angled landings publish Walk
 
 - Worktree: `integration-cnz-standard` at base `f52182700`.
