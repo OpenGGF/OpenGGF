@@ -1,0 +1,94 @@
+# S3K initial `Process_Sprites` ROM oracle
+
+## Capture identity
+
+The attended capture used the locked-on World ROM with SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6` and BizHawk 2.11 GPGX. ROM bytes
+at `$00647E` are `4E B9 00 01 AA DA`, an absolute-long `jsr $0001AADA`;
+`Process_Sprites` is assembled at `$1AADA`, and the return PC is therefore
+`$006484`. This agrees with `loc_6468` and the `Process_Sprites` source
+(`docs/skdisasm/sonic3k.asm:7848-7856,35965-36008`).
+
+The local raw artifact is
+`target/initial-process-sprites-oracle/aiz1.jsonl`. References below use its
+one-based lines: line 1 is `ADJACENT_MINUS_ONE_PRE_SETUP`, line 2 is
+`POST_INITIAL_PROCESS_SPRITES`, and line 3 is
+`FIRST_LEVEL_LOOP_PLAYER_ENTRY`. The artifact is deliberately untracked.
+
+## Stable observations
+
+| State | Pre-call (line 1) | Return (line 2) | First `LevelLoop` P1 entry (line 3) |
+|---|---:|---:|---:|
+| PC | `$647E` | `$6484` | `$10A94` |
+| emulator frame | 1337 | 1337 | 1338 |
+| `Level_frame_counter` | 0 | 0 | 1 |
+| `V_int_run_count` | 1317 | 1317 | 1318 |
+| oscillation control word | `$007D` | `$007D` | `$007D` |
+| raw/logical P1 and P2 controls | all zero | all zero | all zero |
+| collision-list byte count | 0 | 0 | 0 |
+| absolute dynamic slot 3 pointer | 0 | 0 | 0 |
+
+Thus the initial pass does not advance the level, VInt, emulator-frame, or
+observed oscillation epochs. The ordinary boundary advances level and VInt
+once. Control remains neutral throughout setup, consistent with the locked
+control writes before `loc_6468` (`sonic3k.asm:7765-7774`).
+
+P1 stays at centre `$0040,$0420`, and P2 at `$0020,$0424`; all position
+fractions and x/y/ground velocities remain zero. Both player routines change
+from 0 to 2. P1 `object_control` changes `$00->$53`; P2 remains `$00`.
+Both sampled timer byte `$31` values change `0->4`. Status, secondary status,
+animation id/previous/frame/timer, collision flags/property, and the other
+captured timers remain unchanged (raw lines 1-2).
+
+## History and sidekick CPU
+
+`Pos_table_index` remains zero and all captured Tails CPU globals remain zero.
+The preceding history entry `$FC` changes from zero to P2's centre
+`$0020,$0424`. This is initialization behavior, not an ordinary
+`Sonic_RecordPos` increment: player routine 0 initializes the position arrays,
+and P2's later slot leaves the final shared entry. The source order still
+places P1 before P2 because `Process_Sprites` walks 110 `$4A`-byte SST records
+from `Object_RAM` in ascending order (`sonic3k.asm:35965-35986`;
+`sonic3k.constants.asm:303-323`). No normal delayed-follow CPU read occurs in
+this setup pass: CPU routine/targets/timers remain zero. The first ordinary P1
+entry is `$10A94`; its later `Sonic_RecordPos` write precedes the subsequent P2
+slot's delayed CPU read by the same ascending SST order
+(`sonic3k.asm:22119-22136,26683-26705`).
+
+This qualifies an important implementation expectation: Task 2 must pin the
+setup's player-init/history-array behavior, not assert that the setup pass
+itself performs an ordinary history-index increment or delayed CPU target
+selection.
+
+## Fixed slots
+
+The fixed SST layout is the 17 slots 93-109 documented at
+`sonic3k.constants.asm:309-323`.
+
+- Slots 93-97 and 101-109 are initially null. During the pass, slot 97
+  (`Tails_tails`) activates as `$000160D2`, frame 1, timer 32.
+- Slots 98 and 99 (`Dust`, `Dust_P2`) start at `$00018B3E`, routine/frame/timer
+  0, and return with routine 2, frame 1, timer 31.
+- Slot 100 (`Shield`) changes code `$000194CE->$0001952A` and returns at frame
+  1, timer 31. This is a real fixed-slot dispatch/mutation, not an empty slot.
+- Slots 101-109 remain null. Absolute dynamic slot 3 remains null before and
+  after the pass.
+
+These values answer the two evidence-dependent inventory questions: native
+Tails-tails activates, and fresh dust/shield mappings advance during the
+initial pass.
+
+## Reproduction and safety
+
+The probe is `tools/bizhawk/s3k_initial_process_sprites_probe.lua`. It uses
+only `mainmemory.read_*`, `emu.getregister`, execution callbacks, logging, and
+normal emulator frame advancement. It contains no memory-write, input-drive,
+savestate, rewind, fixture-read, or state-hydration API. Lua syntax validation
+used `lua -e 'assert(loadfile(...))'`.
+
+The attended executable was
+`docs/BizHawk-2.11-linux-x64/EmuHawkMono.sh`; the ROM argument was the
+discovered `s3k.gen`, and `OGGF_OUT` named the target JSONL. The first
+sandboxed launch was denied X display access; the same command was then run
+against the existing display with GUI permission and produced exactly three
+records.
