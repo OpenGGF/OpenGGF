@@ -51170,3 +51170,34 @@ mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=false \
   boss-area particle. No RNG behavior change is part of this slice.
 - Detailed ROM and TDD evidence:
   `docs/architecture/audits/2026-07-26-icz-end-boss-snowdust-ownership.md`.
+
+## 2026-07-26 - S2/S3K animal RNG moves to its owning SST dispatch
+
+Worktree `.worktrees/integration-icz-24140`, branch
+`bugfix/ai-trace-int-icz-24140`, baseline `6dda95a2d`.
+
+S3K `Obj_Explosion` only allocates `Obj_Animal`; the new animal calls
+`Random_Number` later when its own subtype-zero routine reaches `loc_2C924`.
+The engine instead selected the art variant in the animal constructor during
+the explosion's dispatch. S2 and S3K now share one explicit deferred factory:
+construction and rewind recreation draw nothing, and the first actual animal
+update draws exactly once.
+
+Fresh replay:
+
+```bash
+mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false \
+  -Ds3k.rom.path=s3k.gen \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace \
+  test
+```
+
+- Before and after: 29 errors, 0 warnings; first mismatch f24140 `rings`
+  (expected 3, actual 2).
+- The final pre-boss animal RNG draw moves from f22485 to native f22486.
+- The f22733 snow particle still receives `ECB9BB0B` rather than native
+  `73EF3BAB`; earlier caller ordering remains separate triage.
+- Result: expected-red, genuine ROM ownership correction, no frontier or
+  error-count movement.
+- Detailed call-order and TDD evidence:
+  `docs/architecture/audits/2026-07-26-animal-rng-own-dispatch.md`.

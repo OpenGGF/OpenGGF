@@ -257,7 +257,7 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
         spawnFreeChild(() -> new ExplosionObjectInstance(
                 0x27, riderX, riderY, services().renderManager()));
 
-        spawnFreeChild(() -> AnimalObjectInstance.sonic2DeferredArtVariant(
+        spawnFreeChild(() -> AnimalObjectInstance.deferredArtVariant(
                 new ObjectSpawn(riderX, riderY, 0x28, 0, 0, false, 0), services(), null));
 
         int pointsValue = 100;

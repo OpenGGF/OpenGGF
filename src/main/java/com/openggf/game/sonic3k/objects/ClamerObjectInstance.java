@@ -96,7 +96,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
                     com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY));
     private static final DestructionConfig S3K_DESTRUCTION_CONFIG = new DestructionConfig(
             Sonic3kSfx.BREAK.id,
-            AnimalObjectInstance::new,
+            (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null),
             false,
             (spawn, svc, pts) -> new Sonic3kPointsObjectInstance(spawn, svc, pts),
             null,
