@@ -9,6 +9,12 @@ local function requireConfig(config)
     assert(type(config.stage) == "function", "probe config requires stage = function")
     assert(type(config.hooks) == "table" and #config.hooks > 0,
         "probe config requires at least one declarative hook")
+    for _, hook in ipairs(config.hooks) do
+        assert(type(hook.address) == "number", "probe hook requires a numeric address")
+        assert(type(hook.callback) == "function", "probe hook requires a callback")
+        assert(hook.kind == nil or hook.kind == "execute" or hook.kind == "write",
+            "probe hook kind must be `execute` or observation-only `write`")
+    end
 end
 
 function ProbeRuntime.run(config)
@@ -46,9 +52,9 @@ function ProbeRuntime.run(config)
     local function finish()
         if finished then return end
         finished = true
-        unregisterHooks()
-        closeOutput()
-        client.exit()
+        pcall(unregisterHooks)
+        pcall(closeOutput)
+        pcall(client.exit)
     end
 
     local context = {
@@ -59,34 +65,43 @@ function ProbeRuntime.run(config)
         finish = finish
     }
 
-    while not finished do
-        if not hooksRegistered and config.stage() then
-            hooksRegistered = true
-            registerHooks(config.hooks, context, registeredNames)
+    local ok, originalError = xpcall(function()
+        while not finished do
+            if not hooksRegistered and config.stage() then
+                registerHooks(config.hooks, context, registeredNames, finish)
+                hooksRegistered = true
+            end
+            if movie.isloaded() and movie.mode() == "FINISHED" then
+                finish()
+                break
+            end
+            if client.ispaused() then client.unpause() end
+            emu.frameadvance()
         end
-        if movie.isloaded() and movie.mode() == "FINISHED" then
-            finish()
-            break
-        end
-        if client.ispaused() then client.unpause() end
-        emu.frameadvance()
+    end, debug.traceback)
+    if not ok then
+        finish()
+        error(originalError, 0)
     end
 end
 
-registerHooks = function(hooks, context, registeredNames)
+registerHooks = function(hooks, context, registeredNames, finish)
     for index, hook in ipairs(hooks) do
-        assert(type(hook.address) == "number", "probe hook requires a numeric address")
-        assert(type(hook.callback) == "function", "probe hook requires a callback")
         local name = hook.name or ("adhoc_probe_hook_" .. index)
-        registeredNames[#registeredNames + 1] = name
-        local callback = function() hook.callback(context) end
+        local callback = function()
+            local ok, originalError = xpcall(
+                function() hook.callback(context) end, debug.traceback)
+            if not ok then
+                finish()
+                error(originalError, 0)
+            end
+        end
         if hook.kind == nil or hook.kind == "execute" then
             event.onmemoryexecute(callback, hook.address, name)
-        elseif hook.kind == "write" then
-            event.onmemorywrite(callback, hook.address, name)
         else
-            error("probe hook kind must be `execute` or `write`")
+            event.onmemorywrite(callback, hook.address, name)
         end
+        registeredNames[#registeredNames + 1] = name
     end
 end
 

@@ -599,6 +599,10 @@ New ad-hoc probes belong under `tools/bizhawk/probes/` and must use
 owns fast-headless setup, stage-before-hook registration, output teardown, hook
 removal, and self-exit. Existing diagnostics outside that directory and the
 production recorder/library fleet are intentionally grandfathered.
+The launcher supplies the runtime by absolute `OGGF_BIZHAWK_PROBE_RUNTIME`
+path. Probe callbacks are strictly read/log-only: a `kind = "write"` hook
+observes a write and never authorizes emulated-memory, input, register, or
+savestate mutation.
 
 ```bash
 OGGF_START=<firstFrame> OGGF_STOP=<lastFrame> OGGF_OUT=/tmp/<name>.txt DISPLAY=:0 \

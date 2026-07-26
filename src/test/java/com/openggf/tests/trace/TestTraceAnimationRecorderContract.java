@@ -131,12 +131,19 @@ class TestTraceAnimationRecorderContract {
     @Test
     void fastBizHawkWrapperDelegatesOneShotInitializationToRecorder() throws IOException {
         String generator = Files.readString(TOOLS.resolve("prepare_bizhawk_fast_lua.ps1"));
+        String windowsLauncher = Files.readString(TOOLS.resolve("run_bizhawk_lua.bat"));
 
         assertTrue(generator.contains("dofile(target)"));
+        assertTrue(generator.contains("OGGF_BIZHAWK_PROBE_RUNTIME"));
+        assertTrue(generator.contains("probe_runtime.lua"));
+        assertTrue(generator.contains("$validatedSource"));
+        assertTrue(generator.contains("Split-Path -Parent $luaPath"));
         assertTrue(!generator.contains("pcall(client.invisibleemulation, true)"),
                 "The validated recorder owns the single run-level invisible-emulation call");
         assertTrue(!generator.contains("event.onframestart(apply_openggf_fast_headless"),
                 "Repeated invisibleemulation calls can stall explicit frameadvance recorders");
+        assertTrue(windowsLauncher.contains("OGGF_BIZHAWK_PROBE_RUNTIME"));
+        assertTrue(windowsLauncher.contains("%~dp0probes\\probe_runtime.lua"));
     }
 
     @Test

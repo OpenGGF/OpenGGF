@@ -26,7 +26,17 @@ function Remove-LuaComments([string]$text) {
 }
 
 $executable = Remove-LuaComments $raw
-$preLoop = [regex]::Split($executable, "while\s+true|emu\.frameadvance\s*\(", 2)[0]
+$validatedSource = $executable
+if ($executable -match "OGGF_BIZHAWK_PROBE_RUNTIME" -and
+    $executable -match "ProbeRuntime\.run\s*\(") {
+    $runtimePath = Join-Path (Split-Path -Parent $luaPath) "probe_runtime.lua"
+    if (-not (Test-Path -LiteralPath $runtimePath)) {
+        Write-Host "ERROR: Delegated probe runtime not found beside probe: $runtimePath"
+        exit 1
+    }
+    $validatedSource = Remove-LuaComments (Get-Content -Raw -LiteralPath $runtimePath)
+}
+$preLoop = [regex]::Split($validatedSource, "while\s+true|emu\.frameadvance\s*\(", 2)[0]
 $missing = @()
 if ($preLoop -notmatch "emu\.limitframerate\s*\(\s*false\s*\)") {
     $missing += "emu.limitframerate(false)"
@@ -47,8 +57,8 @@ if ($missing.Count -gt 0) {
     exit 1
 }
 
-if ($executable -match "client\.invisibleemulation\s*\(\s*false\s*\)" -or
-    $executable -match "client\.SetSoundOn[\s\S]{0,80}true") {
+if ($validatedSource -match "client\.invisibleemulation\s*\(\s*false\s*\)" -or
+    $validatedSource -match "client\.SetSoundOn[\s\S]{0,80}true") {
     Write-Host "ERROR: Lua diagnostic re-enables rendering or sound. Set BIZHAWK_ALLOW_SLOW_LUA=1 for deliberate visible debugging."
     exit 1
 }

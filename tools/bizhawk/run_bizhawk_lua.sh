@@ -86,6 +86,7 @@ done
 # matches the loader's dir .. "file" concatenation.
 LUA_DIR=$(dirname "$LUA_SCRIPT")
 export OGGF_BIZHAWK_LIB="${OGGF_BIZHAWK_LIB:-$LUA_DIR/lib/}"
+export OGGF_BIZHAWK_PROBE_RUNTIME="${OGGF_BIZHAWK_PROBE_RUNTIME:-$SCRIPT_DIR/probes/probe_runtime.lua}"
 
 # Native deps (EmuHawkMono.sh replicates this per-distro; /usr/lib covers Arch).
 export LD_LIBRARY_PATH="$BIZHAWK_HOME/dll:$BIZHAWK_HOME:/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"

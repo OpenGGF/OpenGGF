@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -18,6 +19,7 @@ class TestBizhawkProbeContractGuard {
     void sharedRuntimeOwnsProbeLifecycle() throws IOException {
         assertTrue(Files.isRegularFile(RUNTIME), "Missing shared ad-hoc probe runtime: " + RUNTIME);
         String source = Files.readString(RUNTIME);
+        String executable = stripLuaCommentsAndStrings(source);
 
         for (String required : List.of(
                 "emu.limitframerate(false)",
@@ -30,20 +32,37 @@ class TestBizhawkProbeContractGuard {
                 "event.unregisterbyname",
                 "outfile:flush()",
                 "outfile:close()",
-                "client.exit()",
-                "movie.mode() == \"FINISHED\"")) {
-            assertTrue(source.contains(required), () -> RUNTIME + " must own `" + required + "`");
+                "pcall(client.exit)",
+                "movie.mode() ==")) {
+            assertTrue(executable.contains(required), () -> RUNTIME + " must own `" + required + "`");
         }
-        assertTrue(source.indexOf("config.stage()") < source.indexOf("event.onmemoryexecute"),
+        assertTrue(executable.indexOf("config.stage()") < executable.indexOf("event.onmemoryexecute"),
                 "The runtime must evaluate the semantic stage gate before registering hooks");
+    }
+
+    @Test
+    void sharedRuntimeCleansUpAndPreservesOriginalFailures() throws Exception {
+        Path lua = Path.of("/usr/bin/lua");
+        Assumptions.assumeTrue(Files.isExecutable(lua), "Lua is unavailable for the behavioral contract test");
+        Path harness = Path.of("src", "test", "resources", "bizhawk",
+                "probe_runtime_contract_test.lua");
+
+        Process process = new ProcessBuilder(lua.toString(), harness.toString(), RUNTIME.toString())
+                .redirectErrorStream(true)
+                .start();
+        String output = new String(process.getInputStream().readAllBytes());
+        int exitCode = process.waitFor();
+
+        assertTrue(exitCode == 0, () -> "Probe runtime behavioral contract failed:\n" + output);
     }
 
     @Test
     void everyNamespacedProbeUsesDeclarativeRuntimeContract() throws IOException {
         assertTrue(Files.isDirectory(PROBE_DIR), "Missing guarded probe namespace: " + PROBE_DIR);
         List<Path> probes;
-        try (var paths = Files.list(PROBE_DIR)) {
-            probes = paths.filter(path -> path.toString().endsWith(".lua"))
+        try (var paths = Files.walk(PROBE_DIR)) {
+            probes = paths.filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".lua"))
                     .filter(path -> !path.equals(RUNTIME))
                     .toList();
         }
@@ -58,7 +77,9 @@ class TestBizhawkProbeContractGuard {
             for (String forbidden : List.of(
                     "event.onmemoryexecute", "event.onmemorywrite", "event.unregisterbyname",
                     "emu.limitframerate", "client.speedmode", "client.invisibleemulation",
-                    "client.SetSoundOn", "client.exit", "io.open", "while true")) {
+                    "client.SetSoundOn", "client.exit", "io.open", "while true",
+                    "mainmemory.write", "memory.write", "joypad.set", "savestate.",
+                    "emu.setregister")) {
                 assertTrue(!executable.contains(forbidden),
                         () -> probe + " must not own lifecycle or hook registration: `" + forbidden + "`");
             }

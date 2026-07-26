@@ -1,4 +1,6 @@
-local ProbeRuntime = dofile("probes/probe_runtime.lua")
+local runtimePath = assert(os.getenv("OGGF_BIZHAWK_PROBE_RUNTIME"),
+    "run through run_bizhawk_lua so OGGF_BIZHAWK_PROBE_RUNTIME is absolute")
+local ProbeRuntime = dofile(runtimePath)
 
 local GAME_MODE = 0xF600
 local CURRENT_ZONE = 0xFE10
