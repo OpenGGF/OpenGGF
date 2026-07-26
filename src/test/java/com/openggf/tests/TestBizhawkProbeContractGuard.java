@@ -32,7 +32,7 @@ class TestBizhawkProbeContractGuard {
                 "event.unregisterbyname",
                 "outfile:flush()",
                 "outfile:close()",
-                "pcall(client.exit)",
+                "client.exit)",
                 "movie.mode() ==")) {
             assertTrue(executable.contains(required), () -> RUNTIME + " must own `" + required + "`");
         }
@@ -86,17 +86,29 @@ class TestBizhawkProbeContractGuard {
         }
     }
 
+    @Test
+    void luaLongStringsAndCommentsCannotSpoofTheContract() {
+        String executable = stripLuaCommentsAndStrings("""
+                --[=[ ProbeRuntime.run({ stage = function hooks = { client.exit() ]=]
+                local decoy = [==[ event.onmemoryexecute client.exit() ]==]
+                ProbeRuntime.run({ stage = function() return true end, hooks = {} })
+                client.exit()
+                """);
+        assertTrue(!executable.contains("event.onmemoryexecute"), "long-string decoy survived");
+        assertTrue(executable.indexOf("ProbeRuntime.run") == executable.lastIndexOf("ProbeRuntime.run"),
+                "equal-delimited comment decoy survived");
+        assertTrue(executable.contains("client.exit()"), "executable call was stripped");
+    }
+
     private static String stripLuaCommentsAndStrings(String source) {
         StringBuilder executable = new StringBuilder(source.length());
         boolean lineComment = false;
-        boolean blockComment = false;
+        String longClose = null;
         char quote = 0;
         boolean escaped = false;
 
         for (int i = 0; i < source.length(); i++) {
             char current = source.charAt(i);
-            char next = i + 1 < source.length() ? source.charAt(i + 1) : 0;
-
             if (lineComment) {
                 if (current == '\n') {
                     lineComment = false;
@@ -106,14 +118,12 @@ class TestBizhawkProbeContractGuard {
                 }
                 continue;
             }
-            if (blockComment) {
-                if (current == ']' && next == ']') {
-                    blockComment = false;
-                    executable.append("  ");
-                    i++;
-                } else {
-                    executable.append(current == '\n' ? '\n' : ' ');
-                }
+            if (longClose != null) {
+                if (source.startsWith(longClose, i)) {
+                    executable.append(" ".repeat(longClose.length()));
+                    i += longClose.length() - 1;
+                    longClose = null;
+                } else executable.append(current == '\n' ? '\n' : ' ');
                 continue;
             }
             if (quote != 0) {
@@ -127,17 +137,25 @@ class TestBizhawkProbeContractGuard {
                 }
                 continue;
             }
-            if (current == '-' && next == '-') {
-                if (i + 3 < source.length()
-                        && source.charAt(i + 2) == '[' && source.charAt(i + 3) == '[') {
-                    blockComment = true;
-                    executable.append("    ");
-                    i += 3;
+            if (source.startsWith("--", i)) {
+                String close = longBracketClose(source, i + 2);
+                if (close != null) {
+                    int openerLength = close.length() + 2;
+                    executable.append(" ".repeat(openerLength));
+                    i += openerLength - 1;
+                    longClose = close;
                 } else {
                     lineComment = true;
                     executable.append("  ");
                     i++;
                 }
+                continue;
+            }
+            String close = longBracketClose(source, i);
+            if (close != null) {
+                executable.append(" ".repeat(close.length()));
+                i += close.length() - 1;
+                longClose = close;
                 continue;
             }
             if (current == '\'' || current == '"') {
@@ -148,5 +166,13 @@ class TestBizhawkProbeContractGuard {
             executable.append(current);
         }
         return executable.toString();
+    }
+
+    private static String longBracketClose(String source, int start) {
+        if (start >= source.length() || source.charAt(start) != '[') return null;
+        int cursor = start + 1;
+        while (cursor < source.length() && source.charAt(cursor) == '=') cursor++;
+        if (cursor >= source.length() || source.charAt(cursor) != '[') return null;
+        return "]" + "=".repeat(cursor - start - 1) + "]";
     }
 }

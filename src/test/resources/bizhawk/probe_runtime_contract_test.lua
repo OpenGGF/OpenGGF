@@ -12,6 +12,7 @@ local function newEnvironment(options)
         unregistered = {},
         stageCalls = 0,
         exits = 0,
+        flushes = 0,
         closes = 0,
         frames = 0,
         setupCalls = 0
@@ -24,9 +25,13 @@ local function newEnvironment(options)
     io.open = function()
         return {
             write = function() end,
-            flush = function() end,
+            flush = function()
+                state.flushes = state.flushes + 1
+                if options.failFlush then error("flush boom") end
+            end,
             close = function()
                 state.closes = state.closes + 1
+                if options.failClose then error("close boom") end
             end
         }
     end
@@ -56,6 +61,7 @@ local function newEnvironment(options)
         end,
         unregisterbyname = function(name)
             state.unregistered[#state.unregistered + 1] = name
+            if options.failUnregister == name then error("unregister boom " .. name) end
         end
     }
     emu = {
@@ -68,6 +74,35 @@ local function newEnvironment(options)
         end
     }
     return state
+end
+
+local function runCleanupFailures()
+    local state = newEnvironment({
+        invokeCallback = "first",
+        failFlush = true,
+        failClose = true,
+        failUnregister = "first"
+    })
+    local runtime = dofile(runtimePath)
+    local ok, failure = pcall(runtime.run, {
+        stage = function() return true end,
+        hooks = {
+            { name = "first", address = 0x100,
+                callback = function() error("original callback boom") end },
+            { name = "second", address = 0x200, callback = function() end }
+        }
+    })
+    local message = tostring(failure)
+    check(not ok and message:find("original callback boom", 1, true),
+        "cleanup failure replaced the original callback failure")
+    check(message:find("flush boom", 1, true)
+            and message:find("close boom", 1, true)
+            and message:find("unregister boom first", 1, true),
+        "cleanup failures were not recorded")
+    check(#state.unregistered == 2 and state.unregistered[2] == "second",
+        "one unregister failure prevented later hook cleanup")
+    check(state.flushes == 1 and state.closes == 1 and state.exits == 1,
+        "one cleanup failure prevented later cleanup operations")
 end
 
 local function runPrevalidationFailure()
@@ -156,4 +191,5 @@ runPrevalidationFailure()
 runStageFailure()
 runPartialRegistrationFailure()
 runCallbackFailure()
+runCleanupFailures()
 print("probe runtime behavioral contract passed")

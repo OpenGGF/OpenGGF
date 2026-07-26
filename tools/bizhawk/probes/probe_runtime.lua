@@ -34,17 +34,26 @@ function ProbeRuntime.run(config)
     local hooksRegistered = false
     local finished = false
     local closed = false
+    local cleanupFailures = {}
+
+    local function cleanupStep(label, action)
+        local ok, failure = pcall(action)
+        if not ok then
+            cleanupFailures[#cleanupFailures + 1] = label .. ": " .. tostring(failure)
+        end
+    end
 
     local function closeOutput()
         if closed then return end
         closed = true
-        outfile:flush()
-        outfile:close()
+        cleanupStep("flush output", function() outfile:flush() end)
+        cleanupStep("close output", function() outfile:close() end)
     end
 
     local function unregisterHooks()
         for _, name in ipairs(registeredNames) do
-            event.unregisterbyname(name)
+            cleanupStep("unregister " .. name,
+                function() event.unregisterbyname(name) end)
         end
         registeredNames = {}
     end
@@ -52,9 +61,15 @@ function ProbeRuntime.run(config)
     local function finish()
         if finished then return end
         finished = true
-        pcall(unregisterHooks)
-        pcall(closeOutput)
-        pcall(client.exit)
+        unregisterHooks()
+        closeOutput()
+        cleanupStep("exit client", client.exit)
+    end
+
+    local function failureWithCleanup(originalError)
+        if #cleanupFailures == 0 then return originalError end
+        return tostring(originalError) .. "\ncleanup failures:\n- "
+            .. table.concat(cleanupFailures, "\n- ")
     end
 
     local context = {
@@ -81,7 +96,10 @@ function ProbeRuntime.run(config)
     end, debug.traceback)
     if not ok then
         finish()
-        error(originalError, 0)
+        error(failureWithCleanup(originalError), 0)
+    end
+    if #cleanupFailures > 0 then
+        error(failureWithCleanup("probe cleanup failed"), 0)
     end
 end
 

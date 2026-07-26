@@ -5,7 +5,9 @@ Put new one-off PC diagnostics in this directory. Copy
 declarative `hooks`, then run it through `run_bizhawk_lua.sh` with an absolute
 `OGGF_OUT` path. The launcher supplies the absolute
 `OGGF_BIZHAWK_PROBE_RUNTIME` path, so probes do not depend on BizHawk's process
-working directory.
+working directory. This remains true for probes organized in nested
+subdirectories: always load the launcher-provided canonical runtime rather than
+looking for a sibling `probe_runtime.lua`.
 
 `probe_runtime.lua` owns fast-headless setup, delayed hook registration,
 output teardown, hook removal, and emulator exit. Probe files must not perform
