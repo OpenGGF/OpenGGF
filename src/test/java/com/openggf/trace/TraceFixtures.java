@@ -3,6 +3,8 @@ package com.openggf.trace;
 import java.util.List;
 import java.util.Map;
 
+import com.openggf.trace.timing.HardwareTimingSchedule;
+
 /**
  * Test-only factories for building {@link TraceData} / {@link TraceMetadata}
  * values without disk I/O. Kept in {@code src/test/} so production code
@@ -16,13 +18,13 @@ public final class TraceFixtures {
 
     /** In-memory TraceData for unit tests. */
     public static TraceData trace(TraceMetadata metadata, List<TraceFrame> frames) {
-        return new TraceData(metadata, List.copyOf(frames), Map.of());
+        return new TraceData(metadata, List.copyOf(frames), Map.of(), HardwareTimingSchedule.empty());
     }
 
     /** In-memory TraceData for unit tests with explicit aux events. */
     public static TraceData trace(TraceMetadata metadata, List<TraceFrame> frames,
                                   Map<Integer, List<TraceEvent>> eventsByFrame) {
-        return new TraceData(metadata, List.copyOf(frames), Map.copyOf(eventsByFrame));
+        return new TraceData(metadata, List.copyOf(frames), Map.copyOf(eventsByFrame), HardwareTimingSchedule.empty());
     }
 
     /** Minimal metadata stub for unit tests. */
@@ -64,6 +66,7 @@ public final class TraceFixtures {
                 List.of(),
                 0,
                 rngSeedHex,
+                null,
                 null,
                 null,
                 null,

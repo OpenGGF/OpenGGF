@@ -146,6 +146,6 @@ class TestModeTracePickerTest {
                 null, null, null,
                 null, null, null,
                 "sonic", List.of(), 0, null, null, null, null, null, null,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 }
