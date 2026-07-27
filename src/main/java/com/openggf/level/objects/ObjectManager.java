@@ -2114,6 +2114,7 @@ public class ObjectManager {
         ring.setServices(objectServices);
         // Slot is already reserved by RingManager — do NOT re-allocate.
         ring.setSlotIndex(reservedSlot);
+        assignRewindObjectId(ring, ring.getSpawn());
         dynamicObjects.add(ring);
         if (updating && isManagedDynamicSlot(reservedSlot)) {
             int execIdx = execIndexForSlot(reservedSlot);
@@ -2375,6 +2376,7 @@ public class ObjectManager {
                 // Mark slot as consumed in the reservation table so freeAllReservedChildSlots
                 // won't double-free this slot (the real child object now owns it).
                 childSlots[childIndex] = -1;
+                assignRewindObjectId(object, object.getSpawn());
                 dynamicObjects.add(object);
                 if (updating) {
                     int execIdx = execIndexForSlot(reservedSlot);
