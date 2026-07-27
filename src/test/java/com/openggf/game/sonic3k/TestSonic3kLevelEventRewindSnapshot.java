@@ -1505,10 +1505,35 @@ class TestSonic3kLevelEventRewindSnapshot {
         LevelEventSnapshot snap = mgr.capture();
 
         setFixedControllerState(p1, false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        set(mgr, "fixedAirCountdownZone", Sonic3kZoneIds.ZONE_AIZ);
+        set(mgr, "fixedAirCountdownAct", 0);
         mgr.restore(snap);
 
         assertEquals("true,10,129,4660,2,1,255,32832,50,22", fixedControllerState(p1),
                 "fixed Breathing_bubbles sidecar RAM must rewind with S3K event-manager snapshots");
+        assertEquals(Sonic3kZoneIds.ZONE_CNZ, get(mgr, "fixedAirCountdownZone"));
+        assertEquals(1, get(mgr, "fixedAirCountdownAct"));
+    }
+
+    @Test
+    void legacyFixedAirSnapshotClearsUnrepresentedOwner() throws Exception {
+        Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
+        mgr.initLevel(Sonic3kZoneIds.ZONE_CNZ, 1);
+        LevelEventSnapshot current = mgr.capture();
+        byte[] extra = current.extra();
+        LevelEventSnapshot legacy = new LevelEventSnapshot(
+                current.currentZone(), current.currentAct(),
+                current.eventRoutineFg(), current.eventRoutineBg(),
+                current.frameCounter(), current.timerFrames(), current.bossActive(),
+                current.eventDataFg(), current.eventDataBg(),
+                java.util.Arrays.copyOf(extra, extra.length - (2 * Integer.BYTES)));
+
+        set(mgr, "fixedAirCountdownZone", Sonic3kZoneIds.ZONE_AIZ);
+        set(mgr, "fixedAirCountdownAct", 0);
+        mgr.restore(legacy);
+
+        assertEquals(-1, get(mgr, "fixedAirCountdownZone"));
+        assertEquals(-1, get(mgr, "fixedAirCountdownAct"));
     }
 
     @Test

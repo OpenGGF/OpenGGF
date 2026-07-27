@@ -250,6 +250,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         fixedAirCountdownManager.update();
     }
 
+    void processInitialFixedAirSlot(int playerIndex, AbstractPlayableSprite owner) {
+        if (playerIndex == 0) {
+            fixedAirCountdownManager.processInitialP1Slot(owner);
+        } else if (playerIndex == 1) {
+            fixedAirCountdownManager.processInitialP2Slot(owner);
+        } else {
+            throw new IllegalArgumentException("fixed air slot player index must be 0 or 1");
+        }
+    }
+
     @Override
     public boolean ownsFixedDrowningBubbleCadence() {
         return true;
@@ -1555,6 +1565,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   4 bytes   icz schema payload length, when present
         //   N bytes   icz schema payload, when present
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
+        //   4 bytes   fixed-air owner zone
+        //   4 bytes   fixed-air owner act
         byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
         byte[] hczBytes = hczEvents != null ? ZoneEventSchemaSidecar.capture(hczEvents) : null;
         byte[] cnzBytes = cnzEvents != null ? ZoneEventSchemaSidecar.capture(cnzEvents) : null;
@@ -1568,7 +1580,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         size += mgzBytes != null ? 1 + Integer.BYTES + mgzBytes.length : 1;
         size += mhzBytes != null ? 1 + Integer.BYTES + mhzBytes.length : 1;
         size += iczBytes != null ? 1 + Integer.BYTES + iczBytes.length : 1;
-        size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES;
+        size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES
+                + (2 * Integer.BYTES);
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(size);
         // Manager-level
         buf.put((byte) bootstrap.mode().ordinal());
@@ -1632,6 +1645,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             buf.put((byte) 0);
         }
         fixedAirCountdownManager.writeRewindState(buf);
+        buf.putInt(fixedAirCountdownZone);
+        buf.putInt(fixedAirCountdownAct);
         return buf.array();
     }
 
@@ -1771,6 +1786,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (buf.remaining() >= S3kFixedAirCountdownManager.REWIND_STATE_BYTES) {
             fixedAirCountdownManager.readRewindState(buf);
+        }
+        fixedAirCountdownZone = -1;
+        fixedAirCountdownAct = -1;
+        if (buf.remaining() >= 2 * Integer.BYTES) {
+            fixedAirCountdownZone = buf.getInt();
+            fixedAirCountdownAct = buf.getInt();
         }
     }
 

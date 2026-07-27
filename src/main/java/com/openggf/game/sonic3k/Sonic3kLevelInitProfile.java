@@ -2,7 +2,7 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
-import com.openggf.game.InitialObjectSetupLifecycle;
+import com.openggf.game.InitialProcessSpritesLifecycle;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.SidekickSpawnOffset;
 import com.openggf.game.StaticFixup;
@@ -41,7 +41,7 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
             steps.add(initLevelEventsStep());
             steps.add(spawnSidekickStep());
             steps.add(initZonePlayerStateStep());
-            steps.add(requestInitialObjectSetupStep(ctx));
+            steps.add(requestInitialProcessSpritesStep(ctx));
             if (!isPreviewCapture(ctx)) {
                 steps.add(requestTitleCardStep(ctx));
             }
@@ -62,8 +62,8 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
     }
 
     @Override
-    public InitialObjectSetupLifecycle initialObjectSetupLifecycle() {
-        return InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE;
+    public InitialProcessSpritesLifecycle initialProcessSpritesLifecycle() {
+        return InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE;
     }
 
     /**
@@ -71,10 +71,10 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
      * initial Load_Sprites/Process_Sprites setup sequence
      * (docs/skdisasm/sonic3k.asm:7849-7855, 7889-7906).
      */
-    private InitStep requestInitialObjectSetupStep(LevelLoadContext ctx) {
-        return new InitStep("RequestInitialObjectSetup",
+    private InitStep requestInitialProcessSpritesStep(LevelLoadContext ctx) {
+        return new InitStep("RequestInitialProcessSprites",
                 "S3K: arm post-load Load_Sprites then Process_Sprites setup",
-                () -> ctx.requestInitialObjectSetupFromProfile(initialObjectSetupLifecycle()));
+                () -> ctx.requestInitialProcessSpritesFromProfile(initialProcessSpritesLifecycle()));
     }
 
     /** S3K sidekick: -32px X, +4px Y (ROM: {@code player_pos - $20}, {@code player_pos + 4}). */

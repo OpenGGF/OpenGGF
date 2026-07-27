@@ -148,7 +148,10 @@ public final class RewindController {
         segmentCache.invalidate();
         beginAudioFrame(currentFrame + 1);
         Bk2FrameInput in = inputs.read(currentFrame + 1);
-        engineStepper.step(in);
+        if (engineStepper.step(in) == com.openggf.LevelFrameResult.SETUP_ONLY) {
+            discardAudioAfter(currentFrame);
+            return;
+        }
         currentFrame++;
         if (currentFrame % keyframeInterval == 0) {
             keyframes.put(currentFrame, registry.capture());
@@ -199,7 +202,7 @@ public final class RewindController {
                     primeStepperAtFrame(prev.frame());
                     int pos = prev.frame();
                     while (pos < currentFrame) {
-                        engineStepper.step(inputs.read(pos + 1));
+                        stepReplayInput(inputs.read(pos + 1));
                         pos++;
                     }
                     diverged = determinismAuditor.report(
@@ -290,7 +293,7 @@ public final class RewindController {
                 if (profiler != null) profiler.beginSection("rewind.tick");
                 try {
                     Bk2FrameInput in = inputs.read(currentFrame + 1);
-                    engineStepper.step(in);
+                    stepReplayInput(in);
                     currentFrame++;
                 } finally {
                     if (profiler != null) profiler.endSection("rewind.tick");
@@ -363,7 +366,7 @@ public final class RewindController {
                                 if (profiler != null) profiler.beginSection("rewind.tick");
                                 try {
                                     Bk2FrameInput in = inputs.read(pos[0] + 1);
-                                    engineStepper.step(in);
+                                    stepReplayInput(in);
                                     pos[0]++;
                                     // On happy path, registry.capture() opens rewind.capture which
                                     // implicitly ends rewind.tick (recording its delta) before
@@ -563,6 +566,12 @@ public final class RewindController {
     private void primeStepperAtFrame(int frame) {
         if (engineStepper instanceof RewindSeekAwareEngineStepper seekAware) {
             seekAware.restoreToFrame(frame, inputs.read(frame));
+        }
+    }
+
+    private void stepReplayInput(Bk2FrameInput input) {
+        while (engineStepper.step(input) == com.openggf.LevelFrameResult.SETUP_ONLY) {
+            // Initial Process_Sprites consumes no input row or rewind time.
         }
     }
 }

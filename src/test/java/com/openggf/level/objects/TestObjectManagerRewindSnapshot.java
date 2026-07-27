@@ -68,6 +68,20 @@ class TestObjectManagerRewindSnapshot {
         }
     }
 
+    private static final class NullSpawnRewindable extends AbstractObjectInstance
+            implements RewindRecreatable {
+        NullSpawnRewindable() {
+            super(null, "NullSpawnRewindable");
+        }
+
+        @Override public void appendRenderCommands(List<GLCommand> commands) {}
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+            return new NullSpawnRewindable();
+        }
+    }
+
     // ------------------------------------------------------------------
     // Minimal registry
     // ------------------------------------------------------------------
@@ -113,6 +127,32 @@ class TestObjectManagerRewindSnapshot {
     // ------------------------------------------------------------------
     // Tests
     // ------------------------------------------------------------------
+
+    @Test
+    void activeObjectRepeatedRestoreDoesNotConsumeTheNextDynamicIdentity() {
+        ObjectSpawn sp = spawn(100, 200);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = makeManager(List.of(sp), registry);
+        manager.reset(0);
+        manager.update(0, null, null, 1);
+        ObjectManagerSnapshot source = manager.rewindSnapshottable().capture();
+        int expectedNextOrdinal = source.dynamicObjectIdCounter();
+
+        manager.rewindSnapshottable().restore(source);
+        assertEquals(expectedNextOrdinal,
+                manager.rewindSnapshottable().capture().dynamicObjectIdCounter());
+        manager.rewindSnapshottable().restore(source);
+        assertEquals(expectedNextOrdinal,
+                manager.rewindSnapshottable().capture().dynamicObjectIdCounter());
+
+        manager.addDynamicObject(new NullSpawnRewindable());
+        ObjectManagerSnapshot afterSpawn = manager.rewindSnapshottable().capture();
+        ObjectManagerSnapshot.DynamicObjectEntry next = afterSpawn.dynamicObjects().stream()
+                .filter(entry -> entry.className().equals(NullSpawnRewindable.class.getName()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(expectedNextOrdinal, next.objectId().dynamicId());
+    }
 
     @Test
     void captureRestoreRoundTrip_singleObject() {

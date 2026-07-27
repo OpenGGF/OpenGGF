@@ -80,7 +80,7 @@ class TestTraceSessionLauncherRewindPresentation {
                 new RewindRegistry(),
                 new InMemoryKeyframeStore(),
                 new FakeInputSource(10),
-                in -> {},
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
                 2,
                 AudioManager.getInstance());
         for (int i = 0; i < 5; i++) {
@@ -120,7 +120,7 @@ class TestTraceSessionLauncherRewindPresentation {
                 new RewindRegistry(),
                 new InMemoryKeyframeStore(),
                 new FakeInputSource(10),
-                in -> {},
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
                 2,
                 audio);
         for (int i = 0; i < 5; i++) {
@@ -169,7 +169,7 @@ class TestTraceSessionLauncherRewindPresentation {
                 new RewindRegistry(),
                 new InMemoryKeyframeStore(),
                 new FakeInputSource(10),
-                in -> {},
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
                 2,
                 audio);
         for (int i = 0; i < 5; i++) {
@@ -217,7 +217,7 @@ class TestTraceSessionLauncherRewindPresentation {
                 new RewindRegistry(),
                 new InMemoryKeyframeStore(),
                 new FakeInputSource(10),
-                in -> {},
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
                 2,
                 AudioManager.getInstance());
         for (int i = 0; i < 5; i++) {
@@ -256,7 +256,7 @@ class TestTraceSessionLauncherRewindPresentation {
                 new RewindRegistry(),
                 new InMemoryKeyframeStore(),
                 new FakeInputSource(20),
-                in -> {},
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
                 3,
                 AudioManager.getInstance());
         for (int i = 0; i < 5; i++) {

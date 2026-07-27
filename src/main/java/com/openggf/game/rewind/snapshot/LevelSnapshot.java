@@ -3,7 +3,7 @@ package com.openggf.game.rewind.snapshot;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.game.CheckpointState;
-import com.openggf.game.InitialObjectSetupLifecycle;
+import com.openggf.game.InitialProcessSpritesLifecycle;
 
 /**
  * Reference-only level snapshot. Block/Chunk arrays are shared while the
@@ -35,7 +35,7 @@ public record LevelSnapshot(
         boolean levelTimerPaused,
         boolean respawnRequested,
         CheckpointState.RewindState checkpointState,
-        InitialObjectSetupLifecycle pendingInitialObjectSetupLifecycle) {
+        InitialProcessSpritesLifecycle pendingInitialProcessSpritesLifecycle) {
 
     public LevelSnapshot(
             long epochAtCapture,
@@ -44,7 +44,7 @@ public record LevelSnapshot(
             byte[] mapData,
             int frameCounter) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter,
-                false, 0, 0, false, false, null, InitialObjectSetupLifecycle.NONE);
+                false, 0, 0, false, false, null, InitialProcessSpritesLifecycle.NONE);
     }
 
     public LevelSnapshot(
@@ -55,6 +55,6 @@ public record LevelSnapshot(
             int frameCounter,
             boolean respawnRequested) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter,
-                false, 0, 0, false, respawnRequested, null, InitialObjectSetupLifecycle.NONE);
+                false, 0, 0, false, respawnRequested, null, InitialProcessSpritesLifecycle.NONE);
     }
 }

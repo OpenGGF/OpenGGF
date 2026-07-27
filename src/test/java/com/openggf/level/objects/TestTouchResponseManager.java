@@ -832,7 +832,7 @@ public class TestTouchResponseManager {
     // ==================== Overlap Persistence Tests ====================
 
     @Test
-    public void testTouchOnlyTriggersOncePerOverlap() {
+    public void specialTouchRemainsEdgeTriggeredWhileOverlapPersists() {
         MockTouchObject obj = new MockTouchObject(160, 112, 0x48); // SPECIAL category
         setupTableSize(8, 16, 16);
         objectManager.addDynamicObject(obj);
@@ -927,6 +927,24 @@ public class TestTouchResponseManager {
 
         assertTrue(enemy.wasTouched,
                 "ENEMY touch must poll continuously for multi-region objects while overlap persists");
+    }
+
+    @Test
+    public void singleRegionEnemyTouchTriggersEveryOverlappingFrame() {
+        MockTouchObject enemy = new MockTouchObject(160, 112, 0x08);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(), 1);
+        assertTrue(enemy.wasTouched, "First ENEMY overlap frame should dispatch touch");
+
+        enemy.wasTouched = false;
+        objectManager.update(0, player, List.of(), 2);
+
+        // Touch_Loop polls ENEMY every frame; only SPECIAL/monitor contacts use
+        // the persistent-overlap edge latch (docs/skdisasm/sonic3k.asm:20655-20778).
+        assertTrue(enemy.wasTouched,
+                "ENEMY touch must poll continuously for single-region objects while overlap persists");
     }
 
     @Test

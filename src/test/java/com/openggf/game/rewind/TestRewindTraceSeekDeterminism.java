@@ -228,9 +228,9 @@ class TestRewindTraceSeekDeterminism {
         }
 
         @Override
-        public void step(Bk2FrameInput inputs) {
+        public com.openggf.LevelFrameResult step(Bk2FrameInput inputs) {
             int p1 = inputs.p1InputMask();
-            fixture.runner().stepFrame(
+            return fixture.runner().stepFrame(
                     (p1 & AbstractPlayableSprite.INPUT_UP) != 0,
                     (p1 & AbstractPlayableSprite.INPUT_DOWN) != 0,
                     (p1 & AbstractPlayableSprite.INPUT_LEFT) != 0,

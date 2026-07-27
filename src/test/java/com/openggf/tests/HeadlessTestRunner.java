@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.LevelFrameResult;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -48,38 +49,42 @@ public class HeadlessTestRunner {
      * Frame-level ordering is defined by {@code LevelFrameStep#execute};
      * playable/team ordering is defined by {@code SpriteManager.update(...)}.
      */
-    public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump) {
-        driver.stepFrame(up, down, left, right, jump);
-        presentOuterFrame();
+    public LevelFrameResult stepFrame(
+            boolean up, boolean down, boolean left, boolean right, boolean jump) {
+        return retrySetupOnly(() ->
+                driver.stepFrame(up, down, left, right, jump));
     }
 
     /**
      * Convenience overload that also carries P1 Start, used by tests exercising
      * ROM in-game pause.
      */
-    public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
-                          boolean p1Start) {
-        driver.stepFrame(up, down, left, right, jump, p1Start);
-        presentOuterFrame();
+    public LevelFrameResult stepFrame(
+            boolean up, boolean down, boolean left, boolean right, boolean jump,
+            boolean p1Start) {
+        return retrySetupOnly(() ->
+                driver.stepFrame(up, down, left, right, jump, p1Start));
     }
 
     /**
      * Steps one frame with both P1 and P2 input.
      */
-    public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
-                          int p2Mask, boolean p2Start) {
-        driver.stepFrame(up, down, left, right, jump, p2Mask, p2Start);
-        presentOuterFrame();
+    public LevelFrameResult stepFrame(
+            boolean up, boolean down, boolean left, boolean right, boolean jump,
+            int p2Mask, boolean p2Start) {
+        return retrySetupOnly(() ->
+                driver.stepFrame(up, down, left, right, jump, p2Mask, p2Start));
     }
 
     /**
      * Full-input step overload, including P1 Start so ROM in-game pause can be
      * exercised from both unit tests and BK2 replay.
      */
-    public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
-                          int p2Mask, boolean p2Start, boolean p1Start) {
-        driver.stepFrame(up, down, left, right, jump, p2Mask, p2Start, p1Start);
-        presentOuterFrame();
+    public LevelFrameResult stepFrame(
+            boolean up, boolean down, boolean left, boolean right, boolean jump,
+            int p2Mask, boolean p2Start, boolean p1Start) {
+        return retrySetupOnly(() -> driver.stepFrame(
+                up, down, left, right, jump, p2Mask, p2Start, p1Start));
     }
 
     /**
@@ -128,8 +133,11 @@ public class HeadlessTestRunner {
      * @return The raw input mask used (for trace input validation)
      */
     public int stepFrameFromRecording() {
-        int input = driver.stepFrameFromRecording();
-        presentOuterFrame();
+        int input;
+        do {
+            input = driver.stepFrameFromRecording();
+        } while (driver.getLastFrameResult() == LevelFrameResult.SETUP_ONLY);
+        presentIfAdmitted(driver.getLastFrameResult());
         return input;
     }
 
@@ -138,9 +146,28 @@ public class HeadlessTestRunner {
      * previous BK2 row.
      */
     public int stepFrameFromRecordingUsingPreviousInput() {
-        int input = driver.stepFrameFromRecordingUsingPreviousInput();
-        presentOuterFrame();
+        int input;
+        do {
+            input = driver.stepFrameFromRecordingUsingPreviousInput();
+        } while (driver.getLastFrameResult() == LevelFrameResult.SETUP_ONLY);
+        presentIfAdmitted(driver.getLastFrameResult());
         return input;
+    }
+
+    private LevelFrameResult presentIfAdmitted(LevelFrameResult result) {
+        if (result != LevelFrameResult.SETUP_ONLY) {
+            presentOuterFrame();
+        }
+        return result;
+    }
+
+    private LevelFrameResult retrySetupOnly(
+            java.util.function.Supplier<LevelFrameResult> step) {
+        LevelFrameResult result;
+        do {
+            result = step.get();
+        } while (result == LevelFrameResult.SETUP_ONLY);
+        return presentIfAdmitted(result);
     }
 
     static boolean hasNewP1ActionPressForLogicalInput(Bk2Movie movie, int bk2Index, boolean controlLocked) {

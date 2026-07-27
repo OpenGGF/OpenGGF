@@ -46,8 +46,8 @@ public class LevelLoadContext {
     private LevelData levelData;
     private int spawnY = -1;
     private LevelAssemblyKind assemblyKind = LevelAssemblyKind.DECODE_ONLY;
-    private InitialObjectSetupLifecycle requestedInitialObjectSetupLifecycle =
-            InitialObjectSetupLifecycle.NONE;
+    private InitialProcessSpritesLifecycle requestedInitialProcessSpritesLifecycle =
+            InitialProcessSpritesLifecycle.NONE;
 
     public Rom getRom() { return rom; }
     public void setRom(Rom rom) { this.rom = rom; }
@@ -109,7 +109,7 @@ public class LevelLoadContext {
         this.assemblyKind = assemblyKind == null ? LevelAssemblyKind.DECODE_ONLY : assemblyKind;
     }
 
-    public boolean permitsInitialObjectSetupRequest() {
+    public boolean permitsInitialProcessSpritesRequest() {
         return loadMode == LevelLoadMode.FULL
                 && includePostLoadAssembly
                 && assemblyKind == LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY;
@@ -121,8 +121,8 @@ public class LevelLoadContext {
      * reused mutable context from carrying fresh-load authority into a later
      * decode, preview, or restoration attempt.
      */
-    public void resetInitialObjectSetupRequestForLoadAttempt() {
-        requestedInitialObjectSetupLifecycle = InitialObjectSetupLifecycle.NONE;
+    public void resetInitialProcessSpritesRequestForLoadAttempt() {
+        requestedInitialProcessSpritesLifecycle = InitialProcessSpritesLifecycle.NONE;
     }
 
     /**
@@ -130,14 +130,14 @@ public class LevelLoadContext {
      * Publication to live state remains the responsibility of a successful
      * {@code LevelManager.loadLevel} boundary.
      */
-    public void requestInitialObjectSetupFromProfile(InitialObjectSetupLifecycle lifecycle) {
-        if (permitsInitialObjectSetupRequest() && lifecycle != null) {
-            requestedInitialObjectSetupLifecycle = lifecycle;
+    public void requestInitialProcessSpritesFromProfile(InitialProcessSpritesLifecycle lifecycle) {
+        if (permitsInitialProcessSpritesRequest() && lifecycle != null) {
+            requestedInitialProcessSpritesLifecycle = lifecycle;
         }
     }
 
-    public InitialObjectSetupLifecycle requestedInitialObjectSetupLifecycle() {
-        return requestedInitialObjectSetupLifecycle;
+    public InitialProcessSpritesLifecycle requestedInitialProcessSpritesLifecycle() {
+        return requestedInitialProcessSpritesLifecycle;
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.openggf.tools;
 
 import com.openggf.GameLoop;
+import com.openggf.LevelFrameResult;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
@@ -414,9 +415,14 @@ public final class TraceCaptureTool {
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
 
-            boolean stepped = driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            DriveOutcome outcome =
+                    driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            if (!outcome.consumedRow()) {
+                continue;
+            }
 
-            if (stepped && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+            if (outcome.gameplayFrame()
+                    && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                 audioFrames.presentOuterFrame();
                 renderFrame();
                 byte[] rgba = grabber.grab();
@@ -477,9 +483,14 @@ public final class TraceCaptureTool {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
-            boolean stepped = driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            DriveOutcome outcome =
+                    driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            if (!outcome.consumedRow()) {
+                continue;
+            }
 
-            if (stepped && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+            if (outcome.gameplayFrame()
+                    && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                 if (!capturing) {
                     Sonic3kAIZEvents live = resolveAizEvents();
                     if (live != null && live.isBattleshipAutoScrollActive()) {
@@ -564,7 +575,11 @@ public final class TraceCaptureTool {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
-            driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            DriveOutcome outcome =
+                    driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            if (!outcome.consumedRow()) {
+                continue;
+            }
 
             if (wanted.contains(driveFrame.frame())) {
                 var sprite = GameServices.camera().getFocusedSprite();
@@ -583,23 +598,15 @@ public final class TraceCaptureTool {
 
     /**
      * Drives one trace frame using the same phase rules as the test S3K loop.
-     * Returns {@code true} if a gameplay tick was executed (false for cursor-only
-     * advance phases).
+     * Reports whether the row was consumed and whether gameplay actually ran.
      */
-    private boolean driveOneFrame(TraceData trace, RecordingFrameDriver frameDriver,
-                                  TraceReplayBootstrap.ReplayStartState replayStart,
-                                  TraceExecutionPhase phase, int driveTraceIndex) {
-        // Begin the palette-ownership frame exactly as GameLoop.update does
-        // (GameLoop.java:448-450). The headless replay drive path
-        // (RecordingFrameDriver) omits this because the trace TEST never renders;
-        // without it PaletteOwnershipRegistry.writes accumulate across every
-        // captured frame (never cleared) and resolvedThisFrame stays set, so the
-        // rendered palette freezes/corrupts — e.g. the AIZ2 forest->boss palette
-        // transition garbles. Capture-only: physics/comparison is unaffected.
-        PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
-        if (paletteRegistry != null) {
-            paletteRegistry.beginFrame();
-        }
+    private DriveOutcome driveOneFrame(TraceData trace, RecordingFrameDriver frameDriver,
+                                       TraceReplayBootstrap.ReplayStartState replayStart,
+                                       TraceExecutionPhase phase, int driveTraceIndex) {
+        // The admitted-gameplay callback below begins palette ownership after
+        // SETUP_ONLY classification but before the ordinary level step. The
+        // headless replay driver omits this because trace tests never render;
+        // capture needs it to prevent writes accumulating across rendered frames.
         if (phase == TraceExecutionPhase.VBLANK_ONLY
                 || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
             frameDriver.skipFrameFromRecording();
@@ -618,21 +625,43 @@ public final class TraceCaptureTool {
                     handoffSprites.setFrameCounter(handoffSprites.getFrameCounter() + 1);
                 }
             }
-            return false;
+            return DriveOutcome.CONSUMED_WITHOUT_GAMEPLAY;
         }
         if (phase == TraceExecutionPhase.ADVANCE_ONLY) {
             frameDriver.consumeRecordingFrameInputOnly();
-            return false;
+            return DriveOutcome.CONSUMED_WITHOUT_GAMEPLAY;
         }
         if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
             frameDriver.suppressFirstSidekickAnimationOnce();
         }
         if (TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace)) {
-            frameDriver.stepFrameFromRecordingUsingPreviousInput();
+            frameDriver.stepFrameFromRecordingUsingPreviousInput(
+                    TraceCaptureTool::beginPaletteFrame);
         } else {
-            frameDriver.stepFrameFromRecording();
+            frameDriver.stepFrameFromRecording(TraceCaptureTool::beginPaletteFrame);
         }
-        return true;
+        if (frameDriver.getLastFrameResult() == LevelFrameResult.SETUP_ONLY) {
+            return DriveOutcome.RETRY;
+        }
+        return frameDriver.didLastFrameRunGameplay()
+                ? DriveOutcome.CONSUMED_GAMEPLAY
+                : DriveOutcome.CONSUMED_WITHOUT_GAMEPLAY;
+    }
+
+    private static void beginPaletteFrame() {
+        PaletteOwnershipRegistry paletteRegistry =
+                GameServices.paletteOwnershipRegistryOrNull();
+        if (paletteRegistry != null) {
+            paletteRegistry.beginFrame();
+        }
+    }
+
+    private record DriveOutcome(boolean consumedRow, boolean gameplayFrame) {
+        private static final DriveOutcome RETRY = new DriveOutcome(false, false);
+        private static final DriveOutcome CONSUMED_WITHOUT_GAMEPLAY =
+                new DriveOutcome(true, false);
+        private static final DriveOutcome CONSUMED_GAMEPLAY =
+                new DriveOutcome(true, true);
     }
 
     /**

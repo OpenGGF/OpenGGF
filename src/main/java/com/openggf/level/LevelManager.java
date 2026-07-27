@@ -82,7 +82,7 @@ import static org.lwjgl.opengl.GL11.glClearColor;
 /**
  * Manages the loading and rendering of game levels.
  */
-public class LevelManager {
+public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     static final Logger LOGGER = Logger.getLogger(LevelManager.class.getName());
     static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
     private static final int HUD_PATTERN_BASE = PatternAtlasRange.HUD.base();
@@ -162,8 +162,6 @@ public class LevelManager {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
     private boolean resetCounterPlacementAfterCameraSnap;
-    private final InitialObjectSetupCoordinator initialObjectSetup =
-            new InitialObjectSetupCoordinator();
 
     void writeCurrentZone(int zone) {
         this.currentZone = zone;
@@ -329,9 +327,9 @@ public class LevelManager {
      * @throws IOException if an I/O error occurs while loading the level
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
-        initialObjectSetup.discard();
+        discardInitialProcessSpritesLifecycle();
         try {
-            ctx.resetInitialObjectSetupRequestForLoadAttempt();
+            ctx.resetInitialProcessSpritesRequestForLoadAttempt();
             GameModule module = activeGameModule();
             LevelInitProfile profile = module.getLevelInitProfile();
             ctx.setLevelIndex(levelIndex);
@@ -355,9 +353,18 @@ public class LevelManager {
                 writeCurrentLevel(ctx.getLevel());
             }
             LevelRewindBoundaryCoordinator.markLevelLoadBoundary();
-            initialObjectSetup.publish(ctx.requestedInitialObjectSetupLifecycle());
+            InitialProcessSpritesLifecycle requestedSetup =
+                    ctx.requestedInitialProcessSpritesLifecycle();
+            if (requestedSetup != InitialProcessSpritesLifecycle.NONE) {
+                // The profile grants this authority only after a successful
+                // FULL + post-load + fresh assembly. Reset the playable epoch
+                // at the same publication seam, before the pending native
+                // frame-zero pass can be observed or consumed.
+                spriteManager.setFrameCounter(0);
+            }
+            publishInitialProcessSpritesLifecycle(requestedSetup);
         } catch (Exception e) {
-            initialObjectSetup.discard();
+            discardInitialProcessSpritesLifecycle();
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
             Throwable cause = e.getCause();
             if (cause instanceof IOException ioe) {
@@ -369,40 +376,10 @@ public class LevelManager {
         }
     }
 
-    /**
-     * Read-only lifecycle diagnostic. Consumption is introduced at the
-     * production gameplay seams, not through this query.
-     */
-    public boolean hasPendingInitialObjectSetupPass() {
-        return initialObjectSetup.hasPendingPass();
-    }
-
-    /**
-     * Consumes the fresh S3K level's native Load_Sprites/Process_Sprites setup
-     * dispatch. Ownership is cleared before object execution so an exception
-     * cannot replay a partially completed pass.
-     */
-    public boolean consumePendingInitialObjectSetupPass() {
-        return initialObjectSetup.consume(() ->
-                objectManager.runInitialS3kLoadThenExecutePass(
-                        camera.getX(), spriteManager.getMainPlayable(), spriteManager.getSidekicks()));
-    }
-
-    /**
-     * Discards fresh-load setup authority before restoring runtime state that
-     * already represents that native setup pass.
-     */
-    public void discardPendingInitialObjectSetupForStateRestoration() {
-        initialObjectSetup.discard();
-    }
-
-    public InitialObjectSetupLifecycle capturePendingInitialObjectSetupLifecycleForRewind() {
-        return initialObjectSetup.captureForRewind();
-    }
-
-    public void restorePendingInitialObjectSetupLifecycleForRewind(
-            InitialObjectSetupLifecycle lifecycle) {
-        initialObjectSetup.restoreForRewind(lifecycle);
+    @Override
+    protected void executeInitialProcessSprites() {
+        new InitialProcessSpritesExecutor().execute(
+                gameModule, spriteManager, objectManager, camera, zoneFeatureProvider, frameCounter);
     }
 
     /**
@@ -3472,7 +3449,7 @@ public class LevelManager {
         frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
-        initialObjectSetup.discard();
+        discardInitialProcessSpritesLifecycle();
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;

@@ -171,7 +171,6 @@ public class GameLoop {
     private final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
-    private int lastAppliedUserRecordingPlaybackFrame = -1;
     private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
 
@@ -205,6 +204,9 @@ public class GameLoop {
     private boolean endingTransitionPending;
 
     private PostTitleCardDestination postTitleCardDestination = PostTitleCardDestination.LEVEL;
+    private LevelFrameResult titleReleaseResult = LevelFrameResult.GAMEPLAY_FRAME;
+    private final LevelIterationAdmissionController levelIterationAdmission =
+            new LevelIterationAdmissionController();
 
     // Deferred bonus stage setup — applied when title card exits with BONUS_STAGE destination
     private BonusStageProvider deferredBonusProvider;
@@ -315,7 +317,7 @@ public class GameLoop {
         @Override
         public void endPlaybackDebugSession() {
             userRecordingSessionLauncher.endPlaybackSession();
-            resetLastAppliedUserRecordingPlaybackFrame();
+            levelIterationAdmission.resetLastAppliedPlaybackFrame();
         }
     }
 
@@ -503,7 +505,7 @@ public class GameLoop {
             UserRecordingMenu.PlaybackStarter starter) {
         Objects.requireNonNull(starter, "starter");
         return (entry, options) -> {
-            resetLastAppliedUserRecordingPlaybackFrame();
+            levelIterationAdmission.resetLastAppliedPlaybackFrame();
             starter.start(entry, options);
         };
     }
@@ -871,7 +873,6 @@ public class GameLoop {
 
         boolean playbackTakeoverConsumedPausePress =
                 handlePlaybackTakeoverBeforePlaybackInputBridge(inputHandler);
-        syncPlaybackInputBridge();
 
         if (currentGameMode == GameMode.LEGAL_DISCLAIMER) {
             bootScreenModeController.updateLegalDisclaimer(
@@ -929,9 +930,6 @@ public class GameLoop {
         }
 
         escapeToMasterTitleController.update(currentGameMode, inputHandler);
-        if (currentGameMode == GameMode.LEVEL) {
-            userRecordingControls.updateLevelControlInput(inputHandler);
-        }
 
         int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
         if (!userPauseInputAllowedForCurrentMode() && userPaused) {
@@ -943,7 +941,9 @@ public class GameLoop {
         // overlay and the audio halt both key off userPaused/isUserPaused().
         if (!playbackTakeoverConsumedPausePress
                 && userPauseInputAllowedForCurrentMode()
-                && (inputHandler.isKeyPressed(pauseKey) || inputHandler.logical().player1().startPressed())) {
+                && (inputHandler.isKeyPressed(pauseKey)
+                || inputHandler.logical().player1().startPressed()
+                || playbackDebugManager.isCurrentForcedStartPress())) {
             if (userPaused && userRecordingControls.handlePlaybackTakeoverRequest()) {
                 userPaused = false;
                 updateAudioPauseState();
@@ -955,12 +955,12 @@ public class GameLoop {
         int frameStepKey = configService.getInt(SonicConfiguration.FRAME_STEP_KEY);
         boolean doFrameStep = isPaused() && inputHandler.isKeyPressed(frameStepKey);
 
-        if (traceCameraFocusController != null) {
-            traceCameraFocusController.tick(inputHandler);
-        }
-
         if (isPaused() && !doFrameStep) {
             inputHandler.update();
+            return;
+        }
+
+        if (!prepareAdmittedIteration(doFrameStep)) {
             return;
         }
 
@@ -1002,9 +1002,7 @@ public class GameLoop {
         } else if (currentGameMode == GameMode.SPECIAL_STAGE_RESULTS) {
             updateSpecialStageResultsMode();
         } else if (currentGameMode == GameMode.TITLE_CARD) {
-            if (!updateTitleCardMode(doFrameStep)) {
-                return;
-            }
+            throw new IllegalStateException("title-card admission must own the iteration");
         } else if (currentGameMode == GameMode.TITLE_SCREEN) {
             updateTitleScreenMode();
             profiler.endSection("input");
@@ -1037,7 +1035,8 @@ public class GameLoop {
             updateBonusStageMode(doFrameStep);
         }
 
-        driveActiveTraceRunSession();
+        LevelIterationAdmissionController.driveTraceRunSession(
+                currentGameMode, playbackDebugManager.getCursorFrame());
 
         if (traceCameraFocusController != null) {
             traceCameraFocusController.postUpdate();
@@ -1046,47 +1045,36 @@ public class GameLoop {
         inputHandler.update();
     }
 
-    /**
-     * All-mode run-session hook: a multi-stage trace run's segment
-     * boundaries cross LEVEL/TITLE_CARD/BONUS_STAGE/SPECIAL_STAGE, so the
-     * LEVEL-only {@code TraceSessionLauncher.tick()} (driven from
-     * {@link #updateLevelMode}) cannot drive its advancer past the first
-     * mode change. No-op without an active run session.
-     */
-    private void driveActiveTraceRunSession() {
-        TraceSessionLauncher activeTraceSession = TraceSessionLauncher.active();
-        if (activeTraceSession != null) {
-            activeTraceSession.runAdvanceTickIfActive(
-                    currentGameMode, playbackDebugManager.getCursorFrame());
+    private boolean prepareAdmittedIteration(boolean doFrameStep) {
+        LevelFrameResult admission = levelIterationAdmission.admit(
+                currentGameMode, () -> updateTitleCardMode(doFrameStep),
+                () -> titleReleaseResult, levelManager, gameplayMode,
+                inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
+                        || playbackDebugManager.isCurrentForcedStartPress(),
+                userRecordingControls, this::startPendingInLevelTitleCard);
+        if (admission == LevelFrameResult.PAUSED) {
+            inputHandler.update();
+            return false;
         }
-    }
-
-    private void finishUserRecordingPlaybackAtLevelBoundary(boolean advancePlaybackFrame) {
-        int appliedPlaybackFrame;
-        if (advancePlaybackFrame) {
-            appliedPlaybackFrame = playbackDebugManager.getCursorFrame();
-            lastAppliedUserRecordingPlaybackFrame = appliedPlaybackFrame;
-            playbackDebugManager.onLevelFrameAdvanced();
-        } else {
-            appliedPlaybackFrame = lastAppliedUserRecordingPlaybackFrame;
-            if (appliedPlaybackFrame < 0) {
-                return;
-            }
+        if (admission == LevelFrameResult.SETUP_ONLY) {
+            return false;
         }
-        userRecordingControls.afterPlaybackFrame(
-                appliedPlaybackFrame,
-                true,
-                isAppliedPlaybackFrameMovieEnd(appliedPlaybackFrame));
-    }
-
-    private void resetLastAppliedUserRecordingPlaybackFrame() {
-        lastAppliedUserRecordingPlaybackFrame = -1;
-    }
-
-    private boolean isAppliedPlaybackFrameMovieEnd(int appliedPlaybackFrame) {
-        return playbackDebugManager.getMovieFrameCount() > 0
-                && !playbackDebugManager.isSessionPlaying()
-                && appliedPlaybackFrame >= playbackDebugManager.getMovieFrameCount() - 1;
+        syncPlaybackInputBridge();
+        if (levelIterationAdmission.completePendingBoundary(
+                doFrameStep, this::updateNonGameplayAudio,
+                () -> levelIterationAdmission.finishPlaybackBoundary(
+                        true, playbackDebugManager, userRecordingControls),
+                this::resolveGameplayModeContext)) {
+            inputHandler.update();
+            return false;
+        }
+        if (traceCameraFocusController != null) {
+            traceCameraFocusController.tick(inputHandler);
+        }
+        if (currentGameMode == GameMode.LEVEL) {
+            userRecordingControls.updateLevelControlInput(inputHandler);
+        }
+        return true;
     }
 
     /**
@@ -1201,10 +1189,8 @@ public class GameLoop {
     /**
      * TITLE_CARD per-frame update.
      *
-     * @return {@code true} if the title card released control this frame (caller
-     *         should fall through to LEVEL-mode processing), {@code false} if the
-     *         card is still in its locked phase (caller must return — this method
-     *         has already closed the {@code "input"} profiler section).
+     * @return {@code true} if the title card released control this frame,
+     *         {@code false} if the card is still in its locked phase
      */
     private boolean updateTitleCardMode(boolean doFrameStep) {
         // Update title card animation
@@ -1241,8 +1227,10 @@ public class GameLoop {
             // S3K's fresh level performs its one Load_Sprites/Process_Sprites
             // setup dispatch after the title-card wait and before LevelLoop
             // (docs/skdisasm/sonic3k.asm:7737-7748, 7849-7855).
-            postTitleCardDestination.completeRelease(levelManager, this::exitTitleCard);
-            // Continue to LEVEL mode processing this frame (fall through)
+            titleReleaseResult =
+                    postTitleCardDestination.completeRelease(levelManager, this::exitTitleCard);
+            // The setup-only pass owns this outer iteration. Ordinary LEVEL
+            // processing begins on the next iteration.
             return true;
         }
         // Still in locked phase. The work performed differs by game,
@@ -1314,7 +1302,6 @@ public class GameLoop {
             else camera.updatePosition(true);
         }
         advanceGameplayAudioFrameForTick(doFrameStep);
-        profiler.endSection("input");
         return false; // Don't process LEVEL mode logic yet
     }
 
@@ -1377,37 +1364,14 @@ public class GameLoop {
             }
         }
 
-        // Handle in-place seamless transitions before fade-based routes.
-        SeamlessLevelTransitionRequest seamlessRequest = levelManager.consumeSeamlessTransitionRequest();
-        if (seamlessRequest != null) {
-            userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-            levelManager.applySeamlessTransition(seamlessRequest);
-            startPendingInLevelTitleCard();
-            updateNonGameplayAudio(doFrameStep);
-            // Trace playback still consumes one BK2/VBlank row on a
-            // transition-only frame. Headless replay advances its movie
-            // cursor after applySeamlessTransition(); keep the live
-            // comparator cursor aligned with the same ordering.
-            finishUserRecordingPlaybackAtLevelBoundary(true);
-            TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-            if (traceSession != null) {
-                traceSession.recordExternalRewindFrameAtBoundary();
-            } else {
-                GameplayModeContext context = resolveGameplayModeContext();
-                if (context != null) {
-                    context.markRewindBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
-                }
-            }
-        return false;
-    }
-
         // Trigger transparent in-level title card overlays (no mode switch).
         startPendingInLevelTitleCard();
 
         // Check if a title card was requested (new level loaded)
         if (levelManager.consumeTitleCardRequest()) {
             enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
-            finishUserRecordingPlaybackAtLevelBoundary(false);
+            levelIterationAdmission.finishPlaybackBoundary(
+                    false, playbackDebugManager, userRecordingControls);
             updateNonGameplayAudio(doFrameStep);
             return false; // Skip normal level update this frame
         }
@@ -1417,21 +1381,24 @@ public class GameLoop {
         if (!fadeManager.isActive()) {
             if (levelManager.consumeRespawnRequest()) {
                 startRespawnFade();
-                finishUserRecordingPlaybackAtLevelBoundary(false);
+                levelIterationAdmission.finishPlaybackBoundary(
+                        false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeNextActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startNextActFade();
-                finishUserRecordingPlaybackAtLevelBoundary(false);
+                levelIterationAdmission.finishPlaybackBoundary(
+                        false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeNextZoneRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startNextZoneFade();
-                finishUserRecordingPlaybackAtLevelBoundary(false);
+                levelIterationAdmission.finishPlaybackBoundary(
+                        false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
@@ -1439,14 +1406,16 @@ public class GameLoop {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startZoneActFade(levelManager.getRequestedZone(), levelManager.getRequestedAct(),
                         levelManager.getRequestedMusicId());
-                finishUserRecordingPlaybackAtLevelBoundary(false);
+                levelIterationAdmission.finishPlaybackBoundary(
+                        false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
             if (levelManager.consumeCreditsRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 startEndingFade();
-                finishUserRecordingPlaybackAtLevelBoundary(false);
+                levelIterationAdmission.finishPlaybackBoundary(
+                        false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
@@ -1470,32 +1439,32 @@ public class GameLoop {
                 // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
                 spriteManager.publishHeldInputForLevelEvents(inputHandler);
                 // ROM in-game pause (Game_paused / Pause_Loop): the P1 Start leading
-                // edge (isKeyPressed = just-pressed this frame, edge-detected against
-                // the previous frame inside InputHandler) routes through
-                // executeWithPause so a pause freezes the level update for the frame
-                // while the frame counter still advances. Universal across S1/S2/S3K
+                // edge is classified by the outer FrameAdmission before reaching
+                // this ordinary step, so a pause freezes the level update while
+                // the frame counter still advances. Universal across S1/S2/S3K
                 // (the trigger and unpause are a Start-press edge in every game;
                 // per-game pause divergences are debug-only cheats inert in normal
                 // play). Keyboard-only on purpose: this pause has no visible HUD
                 // feedback and never halts audio, so gamepad Start instead drives
                 // the PAUSE_KEY-style userPaused toggle below (which does both) --
                 // see the pauseKey handling earlier in this method.
-                boolean startEdge = inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
-                        || playbackDebugManager.isCurrentForcedStartPress();
                 userRecordingControls.beforeLevelFrame(inputHandler);
                 int heldVblank = levelManager.getObjectManager() != null
                         ? levelManager.getObjectManager().getVblaCounter()
                         : 0;
-                boolean gameplayExecuted = LevelFrameStep.executeWithPause(LevelFrameContext.from(gameplayMode),
+                LevelFrameResult frameResult = LevelFrameStep.execute(
+                        LevelFrameContext.from(gameplayMode),
                         levelManager, camera, () -> spriteManager.update(inputHandler),
-                        startEdge,
                         (name, step) -> {
                             profiler.beginSection(name);
                             step.run();
                             profiler.endSection(name);
                         });
-                if (gameplayExecuted) {
+                if (frameResult == LevelFrameResult.GAMEPLAY_FRAME) {
                     playbackDebugManager.onCurrentGameplayTickExecuted();
+                }
+                if (frameResult == LevelFrameResult.SETUP_ONLY) {
+                    return false;
                 }
                 if (holdVblankForPendingLoad
                         && playbackDebugManager.shouldHoldVblankForPendingLevelLoad()
@@ -1521,12 +1490,15 @@ public class GameLoop {
             // cursor always matches the BK2 cursor. onLevelFrameAdvanced
             // is a no-op when no playback session is active.
             int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();
-            lastAppliedUserRecordingPlaybackFrame = appliedPlaybackFrame;
+            levelIterationAdmission.setLastAppliedPlaybackFrame(appliedPlaybackFrame);
             playbackDebugManager.onLevelFrameAdvanced();
             userRecordingControls.afterPlaybackFrame(
                     appliedPlaybackFrame,
                     false,
-                    isAppliedPlaybackFrameMovieEnd(appliedPlaybackFrame));
+                    LevelIterationAdmissionController.isPlaybackMovieEnd(
+                            appliedPlaybackFrame,
+                            playbackDebugManager.getMovieFrameCount(),
+                            playbackDebugManager.isSessionPlaying()));
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
             if (traceSession != null) {
                 traceSession.recordExternalRewindFrame();
@@ -2211,9 +2183,8 @@ public class GameLoop {
      * session that reaches this transition.
      */
     private SpecialStageStartupPolicy defaultSpecialStageStartupPolicy() {
-        return playbackDebugManager.isSessionPlaying()
-                ? SpecialStageStartupPolicy.TRACE_ACCURATE
-                : SpecialStageStartupPolicy.FAST;
+        return LevelIterationAdmissionController.specialStageStartupPolicy(
+                playbackDebugManager.isSessionPlaying());
     }
 
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
@@ -3187,9 +3158,10 @@ public class GameLoop {
      */
     void returnToMasterTitle() {
         escapeToMasterTitleController.reset();
+        levelIterationAdmission.reset();
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
         userRecordingSessionLauncher.endPlaybackSession();
-        resetLastAppliedUserRecordingPlaybackFrame();
+        levelIterationAdmission.resetLastAppliedPlaybackFrame();
         masterTitleLaunchCoordinator.returnToMasterTitle();
     }
 

@@ -228,7 +228,7 @@ class TestS3kAizPrefixClosureContract {
                 AizPlaneIntroInstance.getIntroScrollOffset(),
                 fixture.sprite().getCentreX() & 0xFFFF,
                 objects.getFrameCounter(),
-                GameServices.level().hasPendingInitialObjectSetupPass(),
+                GameServices.level().hasPendingInitialProcessSpritesPass(),
                 fixture.runner().getRecordingFramesRemaining(),
                 input,
                 usePreviousInput,

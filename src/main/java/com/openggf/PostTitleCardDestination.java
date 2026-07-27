@@ -12,10 +12,12 @@ enum PostTitleCardDestination {
     /** Bonus stage entry: title card -> BONUS_STAGE mode */
     BONUS_STAGE;
 
-    void completeRelease(LevelManager levelManager, Runnable exitTitleCard) {
+    LevelFrameResult completeRelease(LevelManager levelManager, Runnable exitTitleCard) {
+        boolean setupOnly = false;
         if (this == LEVEL) {
-            levelManager.consumePendingInitialObjectSetupPass();
+            setupOnly = levelManager.consumePendingInitialProcessSpritesPass();
         }
         exitTitleCard.run();
+        return setupOnly ? LevelFrameResult.SETUP_ONLY : LevelFrameResult.GAMEPLAY_FRAME;
     }
 }

@@ -614,6 +614,25 @@ On Windows the equivalent is `run_bizhawk_lua.bat` with `set OGGF_*` variables.
 
 BizHawk frame for trace frame `F` = `bk2_frame_offset` (from `metadata.json`) + `F`.
 
+**Before launching any ad-hoc Lua, perform this mandatory probe review:**
+
+- The executable fast-headless block from `diag_template_fast.lua` appears
+  before the main loop: unlimited framerate, 6400% speed, invisible emulation,
+  and sound disabled.
+- The script flushes/closes output and calls `client.exit()` on both success and
+  movie-finished paths.
+- Expensive execution/write hooks are **not registered at script load** when
+  the target is a later stage. Poll only the minimum cheap stage state
+  (`Game_Mode` plus zone/act or the equivalent semantic selector), register
+  hooks when the target stage/window is entered, and unregister them as soon
+  as capture completes. Filtering inside an always-registered callback does
+  not avoid BizHawk's Lua/C# callback cost.
+- The hook gate identifies ROM state, never a trace name alone. Frame windows
+  may further narrow an already stage-gated diagnostic capture.
+
+Review agents must reject a probe or oracle capture whose script or capture
+report does not show these four properties.
+
 **ROM arg: discover the actual root-level `.gen` file.** Search the repository root, select the appropriate ROM using its filename and hash, and pass its quoted absolute path to EmuHawk. Do not assume an alias or rename, copy, delete, or symlink a ROM to fit an example command. Filenames containing spaces, parentheses, or `[!]` must be quoted correctly; otherwise EmuHawk can launch with **no ROM** and hang (~316 MB resident, never writing output while `emu.framecount()` stays 0). This looks like the timeout case below but is distinct: here EmuHawk never advances a frame; there it advances but is killed mid-seek. (The trace-replay Maven tests are unaffected — this only bites the EmuHawk invocation.)
 
 **1. Fast headless is the reusable launcher plus Lua toggles, not the `--chromeless` flag.** Run `tools/bizhawk/run_bizhawk_lua.sh` (`.bat` on Windows) so EmuHawk starts with the generated no-audio diagnostic config and a generated wrapper that runs the fast-headless calls before your diagnostic. The launcher also verifies the copied diagnostic still has executable fast-headless calls before its main loop, so commented-out template text does not pass the guard. Keep these Lua toggles at the top, before the loop:

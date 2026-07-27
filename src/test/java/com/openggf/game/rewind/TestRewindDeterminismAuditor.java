@@ -54,7 +54,10 @@ public class TestRewindDeterminismAuditor {
         CapturedCounter counter = new CapturedCounter();
         RewindRegistry registry = new RewindRegistry(null);
         registry.register(counter);
-        EngineStepper stepper = in -> counter.value = counter.value * 31 + in.frameIndex();
+        EngineStepper stepper = in -> {
+            counter.value = counter.value * 31 + in.frameIndex();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
 
         List<String> reports = new ArrayList<>();
         RewindDeterminismAuditor auditor = new RewindDeterminismAuditor(reports::add);
@@ -74,7 +77,11 @@ public class TestRewindDeterminismAuditor {
         LeakyCounter leaky = new LeakyCounter();
         RewindRegistry registry = new RewindRegistry(null);
         registry.register(leaky);
-        EngineStepper stepper = in -> { leaky.value += leaky.hidden; leaky.hidden++; };
+        EngineStepper stepper = in -> {
+            leaky.value += leaky.hidden;
+            leaky.hidden++;
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
 
         List<String> reports = new ArrayList<>();
         RewindDeterminismAuditor auditor = new RewindDeterminismAuditor(reports::add);
@@ -121,7 +128,11 @@ public class TestRewindDeterminismAuditor {
         LeakyCounter leaky = new LeakyCounter();
         RewindRegistry registry = new RewindRegistry(null);
         registry.register(leaky);
-        EngineStepper stepper = in -> { leaky.value += leaky.hidden; leaky.hidden++; };
+        EngineStepper stepper = in -> {
+            leaky.value += leaky.hidden;
+            leaky.hidden++;
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
 
         AtomicInteger reports = new AtomicInteger();
         RewindDeterminismAuditor auditor = new RewindDeterminismAuditor(report -> {

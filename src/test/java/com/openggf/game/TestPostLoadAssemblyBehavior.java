@@ -311,27 +311,27 @@ public class TestPostLoadAssemblyBehavior {
     }
 
     @Test
-    public void initialObjectSetupProfilesAndStepOrderAreTyped() {
-        assertEquals(InitialObjectSetupLifecycle.NONE, newS1Profile().initialObjectSetupLifecycle());
-        assertEquals(InitialObjectSetupLifecycle.NONE, newS2Profile().initialObjectSetupLifecycle());
+    public void initialProcessSpritesLifecycleProfilesAndStepOrderAreTyped() {
+        assertEquals(InitialProcessSpritesLifecycle.NONE, newS1Profile().initialProcessSpritesLifecycle());
+        assertEquals(InitialProcessSpritesLifecycle.NONE, newS2Profile().initialProcessSpritesLifecycle());
 
         Sonic3kLevelInitProfile profile = newS3kProfile();
-        assertEquals(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE,
-                profile.initialObjectSetupLifecycle());
+        assertEquals(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE,
+                profile.initialProcessSpritesLifecycle());
 
         LevelLoadContext ctx = new LevelLoadContext();
         ctx.setIncludePostLoadAssembly(true);
         ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
         List<InitStep> steps = profile.levelLoadSteps(ctx);
         int zoneState = indexOfStep(steps, "InitZonePlayerState");
-        int requestSetup = indexOfStep(steps, "RequestInitialObjectSetup");
+        int requestSetup = indexOfStep(steps, "RequestInitialProcessSprites");
         int titleCard = indexOfStep(steps, "RequestTitleCard");
 
         assertEquals(zoneState + 1, requestSetup);
         assertEquals(requestSetup + 1, titleCard);
         steps.get(requestSetup).execute();
-        assertEquals(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE,
-                ctx.requestedInitialObjectSetupLifecycle());
+        assertEquals(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE,
+                ctx.requestedInitialProcessSpritesLifecycle());
     }
 
     // ========== Helpers ==========

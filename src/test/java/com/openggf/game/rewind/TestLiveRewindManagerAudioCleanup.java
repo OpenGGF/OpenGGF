@@ -309,7 +309,7 @@ class TestLiveRewindManagerAudioCleanup {
                 new RewindRegistry(),
                 new InMemoryKeyframeStore(),
                 new FakeInputSource(4),
-                in -> {},
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
                 2,
                 audio);
         setField(manager, "rewindController", controller);
@@ -332,7 +332,7 @@ class TestLiveRewindManagerAudioCleanup {
                 new RewindRegistry(),
                 new InMemoryKeyframeStore(),
                 new FakeInputSource(4),
-                in -> {},
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
                 2,
                 audio);
         setField(manager, "rewindController", controller);
@@ -730,7 +730,7 @@ class TestLiveRewindManagerAudioCleanup {
                     new RewindRegistry(),
                     new InMemoryKeyframeStore(),
                     new FakeInputSource(frame + 10),
-                    in -> {},
+                    in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
                     2,
                     AudioManager.getInstance());
             for (int i = 0; i < frame; i++) {

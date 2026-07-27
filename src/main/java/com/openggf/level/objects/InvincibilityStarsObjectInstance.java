@@ -270,4 +270,8 @@ public class InvincibilityStarsObjectInstance extends AbstractObjectInstance
         return true;
     }
 
+    @Override
+    public PlayableEntity boundPlayer() {
+        return player;
+    }
 }

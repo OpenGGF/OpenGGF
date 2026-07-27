@@ -47,6 +47,15 @@ public interface PowerUpObject {
     }
 
     /**
+     * Semantic player owner for player-bound power-up SSTs.
+     * Used to preserve per-player rewind identity when two equivalent visuals
+     * are recreated in a different order.
+     */
+    default PlayableEntity boundPlayer() {
+        return null;
+    }
+
+    /**
      * Called after a rewind restore relinks or respawns this power-up visual.
      * Implementations with transient renderer/DPLC caches should invalidate
      * them so the next draw uploads art for the restored animation frame.

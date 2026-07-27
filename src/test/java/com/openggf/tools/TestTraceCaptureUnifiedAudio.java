@@ -329,7 +329,11 @@ class TestTraceCaptureUnifiedAudio {
                 "audioFrames.drainCaptured(", "audioFrames.discardPresented(");
 
         // --- the simulation step itself presents nothing --------------------
-        String driveOneFrame = methodBody(tool, "private boolean driveOneFrame(");
+        String driveOneFrame = methodBody(tool, "private DriveOutcome driveOneFrame(");
+        assertFalse(driveOneFrame.contains("paletteRegistry.beginFrame()"),
+                "setup-only admission must precede capture palette-frame mutation");
+        assertTrue(driveOneFrame.contains("TraceCaptureTool::beginPaletteFrame"),
+                "palette-frame mutation must be supplied as an admitted-gameplay callback");
         for (String forbidden : List.of("audioFrames", "presentOuterFrame",
                 "presentHeadlessOuterAudioFrame", "drainCaptured",
                 "discardPresented")) {

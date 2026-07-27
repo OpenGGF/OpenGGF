@@ -5785,9 +5785,31 @@ public class SidekickCpuController {
 
     public void reset() {
         carryController().clearAndReleaseMain();
+        carryController().clearState();
+        resetCpuState();
+    }
+
+    /**
+     * Resets the freshly initialized Player_2 CPU globals without releasing or
+     * rewriting Player_1. Native {@code Tails_Init} runs in the later SST slot
+     * and cannot retroactively clear Player_1 control state established in the
+     * preceding slot (sonic3k.asm:26101-26156).
+     */
+    public void resetForInitialProcessSpritesSlot() {
+        int assemblyAnimation = sidekick.getForcedAnimationId();
+        carryController().clearState();
+        resetCpuState();
+        // Tails_Init clears the CPU globals but does not write anim(a0).
+        // Preserve an animation selected earlier by SpawnLevelMainSprites
+        // (for example the simple falling intro's $1B).
+        sidekick.setForcedAnimationId(assemblyAnimation);
+    }
+
+    private void resetCpuState() {
         state = State.INIT;
         deadFallingRomCpuRoutine = -1;
         despawnCounter = 0;
+        frameCounter = 0;
         controlCounter = 0;
         manualInputAppliedThisTick = false;
         approachFrameCount = 0;
@@ -5822,8 +5844,7 @@ public class SidekickCpuController {
         sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
         ObjectControlState.none().applyTo(sidekick);
-        // Carry state (carryTrigger is intentionally NOT cleared — level-load-scoped)
-        carryController().clearState();
+        // carryTrigger is intentionally NOT cleared — it is level-load-scoped.
         flightTimer = 0;
         catchUpTargetX = 0;
         catchUpTargetY = 0;

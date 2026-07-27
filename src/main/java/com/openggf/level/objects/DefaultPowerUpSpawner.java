@@ -199,7 +199,14 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry restored =
                 consumePendingRestoredEntry(object);
         if (restored != null) {
-            ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, object, restored.slotIndex());
+            if (restored.objectId() != null) {
+                objectManager.addRestoredDynamicObjectAtSlot(
+                        object, restored.slotIndex(), restored.objectId());
+            } else {
+                // Legacy/injected entries predate captured dynamic identity.
+                ObjectLifetimeOps.addDynamicAtReservedSlot(
+                        objectManager, object, restored.slotIndex());
+            }
             if (object instanceof AbstractObjectInstance aoi) {
                 aoi.restoreRewindState(restored.state());
             }
@@ -233,7 +240,9 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         }
         if (object instanceof PowerUpObject powerUp && powerUp.isInvincibilityStars()) {
             return objectManager.consumePendingPlayerBoundEntry(
-                    InvincibilityStarsObjectInstance.class);
+                    InvincibilityStarsObjectInstance.class,
+                    entry -> object.getClass().getName().equals(entry.className())
+                            && entry.playerOwner() == powerUp.boundPlayer());
         }
         return null;
     }

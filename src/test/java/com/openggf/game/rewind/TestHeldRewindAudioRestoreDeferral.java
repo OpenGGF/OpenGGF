@@ -462,6 +462,7 @@ class TestHeldRewindAudioRestoreDeferral {
                 case 3 -> audio.resetRingSound();
                 default -> { }
             }
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
         };
     }
 
