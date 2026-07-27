@@ -122,6 +122,23 @@ class TestS3kSignpostInstance {
     }
 
     @Test
+    void groundedNoWaitAndAirborneWaitSelectDistinctResultsChildOwners() {
+        assertEquals(S3kSignpostInstance.ResultsChildAllocationOwner.NATIVE_LATER_SLOT,
+                S3kSignpostInstance.resultsChildAllocationOwner(false, false, false),
+                "a grounded routine-6 sign dispatch allocates Obj_LevelResults in its later child slot");
+        assertEquals(1, S3kSignpostInstance.ResultsChildAllocationOwner.NATIVE_LATER_SLOT.catchUpEntries());
+        assertEquals(S3kSignpostInstance.ResultsChildAllocationOwner.ENGINE_NEXT_PASS,
+                S3kSignpostInstance.resultsChildAllocationOwner(true, false, false),
+                "a sign that waited in routine 6 has already exposed the allocation owner boundary");
+        assertEquals(S3kSignpostInstance.ResultsChildAllocationOwner.ENGINE_NEXT_PASS,
+                S3kSignpostInstance.resultsChildAllocationOwner(false, true, false),
+                "a post-object sign already preserves its later-slot allocation boundary");
+        assertEquals(S3kSignpostInstance.ResultsChildAllocationOwner.ENGINE_NEXT_PASS,
+                S3kSignpostInstance.resultsChildAllocationOwner(false, false, true),
+                "a retained grounded owner already preserves the allocation boundary");
+    }
+
+    @Test
     void fallingDispatchAppliesBumpBeforeGravityAndMovement() {
         assertEquals(-0x1F4, S3kSignpostInstance.romVelocityAfterGravity(-0x200),
                 "Obj_EndSignFall checks the player hit before adding $0C gravity "

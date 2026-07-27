@@ -42,6 +42,29 @@
   `player_animation_id`. LBZ was not inspected, run, changed, or used as a
   guard. Detailed evidence is in
   `docs/architecture/audits/2026-07-27-cnz-f10728-mapping-owner.md`.
+## 2026-07-27 - MGZ grounded sign retains results-child owner
+
+- Worktree: `.worktrees/trace-s3k-mgz-f13903`, branch
+  `bugfix/ai-trace-s3k-mgz-f13903`, based on `2c0bfe29b`.
+- Baseline standalone MGZ reproduced seven frontier-window errors, first at
+  f13903 `player_animation_id` (expected `$13`, actual `$05`). The paired
+  complete run retained its accepted f28398 `rings` mismatch.
+- Live diagnostics distinguished the routes without route identity:
+  standalone entered sign routine 6 already grounded, while the complete run
+  first entered it airborne and waited for landing. The no-wait path's results
+  child occupies a native later SST slot whose one dispatch was absent from
+  both the engine create gate and its carried child-retirement tail.
+- `ResultsChildAllocationOwner` now makes that later-slot ownership explicit.
+  The sign publishes Player 1's routine-6 victory pose immediately and carries
+  the one-entry catch-up through results creation and retirement. Airborne-wait
+  and already-preserved owner boundaries keep their existing timing.
+- The standalone frontier-only replay now reports one error at f23561 `rings`
+  (expected `0`, actual `1`); complete MGZ remains at f28398 `rings`
+  (expected `2`, actual `1`). Paired AIZ canaries were byte-for-byte stable
+  against the clean baseline at f8837 and f26107, and standalone CNZ retained
+  f10728. Detailed evidence is in
+  `docs/architecture/audits/2026-07-27-mgz-f13903-results-child-owner.md`.
+  LBZ was not inspected or run.
 
 ## 2026-07-27 - CNZ cylinder exact right edge retains ground push
 
