@@ -485,14 +485,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// It must occur exactly once.
         ///
         /// Everything else is exact-line equality, including the line
-        /// count, so an inserted or dropped line fails. The
-        /// lua_script_version line is additionally pinned as an exact
-        /// literal on BOTH sides: the fixtures and this port both stamp
-        /// 6.32-s3k, so a fixture regenerated at another version fails
-        /// here instead of silently redefining the gate. There is no
-        /// fixture-only line allowance any more — MGZ's leftover
-        /// "pre_trace_osc_frames": 0 is gone from the regenerated fixture,
-        /// so the allowance was deleted rather than retained-but-unused.
+        /// count, so an inserted or dropped line fails. Published schema-7
+        /// fixtures compare directly; legacy schema-6 fixtures receive only
+        /// the exact approved version/schema normalization.
         /// </summary>
         private static void AssertRecordingDateOnlyMetadataEquality(
             string fixturePath,
@@ -512,15 +507,22 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 1, CountOccurrences(producedText, CurrentTraceSchemaLine));
             AssertEx.Equal(
                 1, CountOccurrences(producedText, HardwareTimingSchemaLine));
-            producedText = producedText.Replace(
-                CurrentLuaScriptVersionLine,
-                FixtureLuaScriptVersionLine);
-            producedText = producedText.Replace(
-                CurrentTraceSchemaLine,
-                FixtureTraceSchemaLine);
-            producedText = producedText.Replace(
-                HardwareTimingSchemaLine + "\n",
-                "");
+            bool fixtureIsCurrent =
+                CountOccurrences(fixtureText, CurrentLuaScriptVersionLine) == 1
+                && CountOccurrences(fixtureText, CurrentTraceSchemaLine) == 1
+                && CountOccurrences(fixtureText, HardwareTimingSchemaLine) == 1;
+            if (!fixtureIsCurrent)
+            {
+                producedText = producedText.Replace(
+                    CurrentLuaScriptVersionLine,
+                    FixtureLuaScriptVersionLine);
+                producedText = producedText.Replace(
+                    CurrentTraceSchemaLine,
+                    FixtureTraceSchemaLine);
+                producedText = producedText.Replace(
+                    HardwareTimingSchemaLine + "\n",
+                    "");
+            }
 
             string[] fixtureLines = fixtureText.Split('\n');
             string[] producedLines = producedText.Split('\n');
@@ -547,7 +549,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
 
                 AssertEx.Equal(fixtureLine, producedLine);
-                if (fixtureLine == FixtureLuaScriptVersionLine)
+                if (fixtureLine == (fixtureIsCurrent
+                    ? CurrentLuaScriptVersionLine
+                    : FixtureLuaScriptVersionLine))
                 {
                     versionLines++;
                 }

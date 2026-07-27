@@ -338,14 +338,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
-        /// Applies only the exact approved version/schema additions, then
-        /// requires line equality apart from a well-formed recording_date
-        /// value. No loose key dropping or unknown-version allowance.
+        /// Published schema-7 fixtures compare directly. Legacy schema-6
+        /// fixtures receive only the exact approved version/schema
+        /// normalization, then every fixture requires line equality apart
+        /// from a well-formed recording_date value. No loose key dropping
+        /// or unknown-version allowance.
         /// </summary>
         private static void AssertMetadataEqualExceptRecordingDate(
             string fixturePath, string producedPath)
         {
-            string[] expected = ReadLines(fixturePath);
+            string fixtureText = File.ReadAllText(fixturePath);
+            string[] expected = fixtureText.Split(
+                new[] { '\n' }, StringSplitOptions.None);
             string actualText = File.ReadAllText(producedPath);
             AssertEx.Equal(
                 1, CountOccurrences(
@@ -354,15 +358,22 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 1, CountOccurrences(actualText, CurrentTraceSchemaLine));
             AssertEx.Equal(
                 1, CountOccurrences(actualText, HardwareTimingSchemaLine));
-            actualText = actualText.Replace(
-                CurrentLuaScriptVersionLine,
-                FixtureLuaScriptVersionLine);
-            actualText = actualText.Replace(
-                CurrentTraceSchemaLine,
-                FixtureTraceSchemaLine);
-            actualText = actualText.Replace(
-                HardwareTimingSchemaLine + "\n",
-                "");
+            bool fixtureIsCurrent =
+                CountOccurrences(fixtureText, CurrentLuaScriptVersionLine) == 1
+                && CountOccurrences(fixtureText, CurrentTraceSchemaLine) == 1
+                && CountOccurrences(fixtureText, HardwareTimingSchemaLine) == 1;
+            if (!fixtureIsCurrent)
+            {
+                actualText = actualText.Replace(
+                    CurrentLuaScriptVersionLine,
+                    FixtureLuaScriptVersionLine);
+                actualText = actualText.Replace(
+                    CurrentTraceSchemaLine,
+                    FixtureTraceSchemaLine);
+                actualText = actualText.Replace(
+                    HardwareTimingSchemaLine + "\n",
+                    "");
+            }
             string[] actual = actualText.Split(
                 new[] { '\n' }, StringSplitOptions.None);
             if (expected.Length != actual.Length)
@@ -374,7 +385,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var versionLines = 0;
             for (var index = 0; index < expected.Length; index++)
             {
-                if (expected[index] == FixtureLuaScriptVersionLine)
+                if (expected[index] == (fixtureIsCurrent
+                    ? CurrentLuaScriptVersionLine
+                    : FixtureLuaScriptVersionLine))
                 {
                     versionLines++;
                 }
