@@ -353,11 +353,21 @@ For the S3K Kos queue:
 - retain invisible, sound-disabled, maximum-speed operation; and
 - terminate within a bounded window.
 
-Native and Lua recorders must emit byte-equivalent timing events before a
-fixture is regenerated. The version-1 differential gates cover both
-`6.34-s3k` standard and `6.34-s3k-completerun` native/Lua captures, including
-byte-exact empty streams for routes with no eligible completion. The stream is
-not declared through `aux_schema_extras`.
+The native harness is the fixture-publication authority. Before publication, its
+implementation must be established against the audited ROM/disassembly
+semantics, behavioral and unit tests, cross-implementation vectors where
+available, and independent code review. An existing candidate is valid when it
+was produced by the unchanged implementation that receives that review.
+Lua/native byte equivalence is optional corroboration, not a publication
+prerequisite. Version-1 differential coverage includes `6.34-s3k` standard and
+`6.34-s3k-completerun` captures and byte-exact empty streams for routes with no
+eligible completion. The stream is not declared through `aux_schema_extras`.
+
+After capture, publication records and pins the native candidate's digests,
+lengths, event counts, ordering, ranges, and semantic inventory as immutable
+evidence, then copies that output exactly after explicit user approval.
+Committed tests use those frozen literal expectations; they must not calculate
+expected values by invoking the native recorder that produced the candidate.
 
 ## Acceptance criteria
 

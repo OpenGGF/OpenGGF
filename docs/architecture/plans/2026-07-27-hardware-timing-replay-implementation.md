@@ -923,12 +923,25 @@ feat(trace-recorder): capture hardware completion timing
 - Test: `src/test/java/com/openggf/trace/timing/TestCommittedHardwareTimingFixtures.java`
 
 **Interfaces:**
-- Consumes: byte-parity-gated native recorder output.
+- Consumes: output from the Task 7 native recorder, whose correctness was
+  established before publication by the ROM/disassembly-backed completion
+  contract, behavioral/unit and cross-language vector tests, bounded real
+  captures, range/inventory validation, and independent implementation review.
 - Produces: immutable version-1 timing fixtures; physics and aux payloads remain unchanged.
 
 - [ ] **Step 1: Obtain explicit fixture-publication approval**
 
 Before replacing committed metadata or adding streams, present SHA-256 and byte-length deltas for metadata, physics, aux, and timing files. Proceed only after explicit approval.
+
+On 2026-07-27 the user authorized the native-authority policy and instructed the
+work to proceed. Exact candidate-byte publication remains pending until the full
+SHA-256 and byte-length table is presented and explicitly approved. The Task 7
+candidates are eligible for that review: Task 7 established their recorder
+through reviewed native implementation, real capture validation, the
+ROM/disassembly completion contract, behavioral/unit tests, cross-language
+fingerprint vectors, synthetic results-mode `$48` behavior, and emitted-frame
+range and event-inventory checks. Lua parity was additional corroboration before
+the final results-mode correction, not authority for publication.
 
 - [ ] **Step 2: Write the fixture RED**
 
@@ -943,10 +956,16 @@ none of these three standalone fixtures is owned by a run manifest
 ```
 
 Also assert physics and aux SHA-256 hashes equal the pre-publication fixtures.
+Record and pin the native candidate's timing digests, byte lengths, event counts,
+canonical ordering, ranges, and semantic inventory as literals.
+The test must not invoke the native recorder or derive expected values
+dynamically from a capture invocation.
 
 - [ ] **Step 3: Stage recorder output exactly**
 
-Copy only the gated metadata and timing stream. Never edit an event or timestamp by hand. Do not add uncompressed `physics*.csv` or `aux_state*.jsonl`.
+Copy only the already approved, gated native metadata and timing stream
+byte-for-byte. Never edit an event or timestamp by hand. Do not add uncompressed
+`physics*.csv` or `aux_state*.jsonl`.
 
 - [ ] **Step 4: Run fixture and compression guards**
 
