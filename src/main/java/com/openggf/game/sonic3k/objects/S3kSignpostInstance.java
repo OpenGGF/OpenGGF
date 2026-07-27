@@ -39,6 +39,21 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // ---- State machine ----
     private enum State { INIT, FALLING, LANDED, RESULTS, AFTER }
 
+    enum ResultsChildAllocationOwner {
+        ENGINE_NEXT_PASS(0),
+        NATIVE_LATER_SLOT(1);
+
+        private final int catchUpEntries;
+
+        ResultsChildAllocationOwner(int catchUpEntries) {
+            this.catchUpEntries = catchUpEntries;
+        }
+
+        int catchUpEntries() {
+            return catchUpEntries;
+        }
+    }
+
     private State state = State.INIT;
 
     // ---- Physics (pixel-level velocities, fixed-point 8.8 where noted) ----
@@ -113,7 +128,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private int resultsWaitDurationAdjustment;
     private int resultsPostControlHandoffDelayEntries;
     private boolean resultsWaitedForPlayerLanding;
-    private boolean mainEndingPosePending;
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
     private boolean landingSparklePending;
@@ -484,20 +498,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         }
 
         boolean sidekickPoseWasAlreadyArmed = sidekickEndingPoseCheckArmed;
-        boolean preservesRoutineSixDispatch = resultsWaitedForPlayerLanding
-                || preservesPostObjectResultDispatchBoundary
-                || preservesGroundedResultsDispatchBoundary;
-        if (preservesRoutineSixDispatch) {
-            // Obj_EndSignResults has occupied its native routine-6 slot, either
-            // while waiting for the grounded player or through the preserved
-            // post-object boundary. Apply P1 now; P2 belongs to routine 8.
-            applyMainPlayerEndingPose(player);
-            sidekickEndingPoseCheckArmed = true;
-        } else {
-            // Preserve the engine's collapsed owner boundary for ordinary
-            // signposts whose routine 6 did not wait.
-            mainEndingPosePending = true;
-        }
+        // Obj_EndSignResults owns Set_PlayerEndingPose in routine 6 regardless
+        // of whether its first entry had to wait for Player_1 to land.
+        applyMainPlayerEndingPose(player);
+        sidekickEndingPoseCheckArmed = true;
 
         // ROM Obj_EndSignLanded writes only Ctrl_2_locked before this routine;
         // Obj_EndSignResults calls Set_PlayerEndingPose with a1=Player_1 only
@@ -519,18 +523,31 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         if (services().gameState() != null) {
             services().gameState().setEndOfLevelActive(true);
         }
+        ResultsChildAllocationOwner resultsChildAllocationOwner = resultsChildAllocationOwner(
+                resultsWaitedForPlayerLanding,
+                preservesPostObjectResultDispatchBoundary,
+                preservesGroundedResultsDispatchBoundary);
+        int resultsChildOwnerCatchUpEntries = resultsChildAllocationOwner.catchUpEntries();
         spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries
                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
                 resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary
                         ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
-                        : RESULTS_CARRIED_RETIRE_DISPATCHES));
+                        : RESULTS_CARRIED_RETIRE_DISPATCHES - resultsChildOwnerCatchUpEntries,
+                resultsChildAllocationOwner));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
         if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
             applyNativeSidekickEndingPose(player);
         }
+    }
+
+    static ResultsChildAllocationOwner resultsChildAllocationOwner(boolean waitedForPlayerLanding,
+            boolean preservesPostObjectBoundary, boolean preservesGroundedOwnerBoundary) {
+        return waitedForPlayerLanding || preservesPostObjectBoundary || preservesGroundedOwnerBoundary
+                ? ResultsChildAllocationOwner.ENGINE_NEXT_PASS
+                : ResultsChildAllocationOwner.NATIVE_LATER_SLOT;
     }
 
     static void applySidekickInputLock(AbstractPlayableSprite sprite) {
@@ -596,10 +613,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // =========================================================================
 
     private void updateAfter(AbstractPlayableSprite player) {
-        if (mainEndingPosePending) {
-            mainEndingPosePending = false;
-            applyMainPlayerEndingPose(player);
-        }
         applyNativeSidekickEndingPose(player);
         if (isResultsScreenActive()) {
             return;
