@@ -458,10 +458,30 @@ public final class AudioPresentationSourceFactory
                 specialSfx);
     }
 
+    /**
+     * Builds a per-instantiation view of a cached source.
+     *
+     * <p>The sequence data is <em>shared</em>, not re-copied. {@code cached.data()}
+     * is already a {@code Frozen*} snapshot — {@code snapshotSource} froze it on
+     * the way into the cache — and a frozen snapshot is immutable: its fields are
+     * assigned once in the constructor, the only two setters on
+     * {@code AbstractSmpsData} ({@code setId}, {@code setPalSpeedupDisabled}) are
+     * called by the SMPS loaders at load time and never during playback, and no
+     * code writes into the byte arrays handed out by {@code getData} /
+     * {@code getVoice} / {@code getPsgEnvelope}. Re-freezing it per SFX trigger
+     * therefore produced a byte-identical object at real cost: each copy clones
+     * the sequence bytes, three {@code byte[256][]} tables, an {@code int[]} word
+     * table, and 256 voices plus envelopes — and a zone like CNZ fires SFX
+     * constantly.
+     *
+     * <p>The DAC and static config are still copied per instantiation. They are
+     * not covered by the immutability argument above, and this change is
+     * deliberately scoped to the one object proven safe to share.
+     */
     private CachedSmpsSource freshSource(CachedSmpsSource cached) {
         return new CachedSmpsSource(
                 cached.gameId(),
-                copySmpsData(cached.data()),
+                cached.data(),
                 copyDac(cached.dac()),
                 copyStaticConfig(cached.staticConfig()),
                 cached.coordFlagHandlerRequired(),
