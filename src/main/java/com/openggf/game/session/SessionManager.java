@@ -3,6 +3,7 @@ package com.openggf.game.session;
 import com.openggf.architecture.CompositionRoot;
 import com.openggf.game.GameModule;
 import com.openggf.game.save.SaveSessionContext;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 
 import java.util.Objects;
 
@@ -11,21 +12,64 @@ public final class SessionManager {
     private static volatile WorldSession currentWorldSession;
     private static volatile GameplayModeContext currentGameplayMode;
     private static volatile EditorModeContext currentEditorMode;
+    private static HardwareReadinessAdmissionPolicy nextGameplayAdmissionPolicy =
+            HardwareReadinessAdmissionPolicy.LIVE;
     private static final EditorSessionFactory EDITOR_SESSION_FACTORY = new EditorSessionFactory();
 
     private SessionManager() {
     }
 
     public static synchronized GameplayModeContext openGameplaySession(GameModule module) {
-        return openGameplaySession(module, null);
+        return openGameplaySession(
+                module, null, consumeNextGameplayAdmissionPolicy());
+    }
+
+    public static synchronized GameplayModeContext openGameplaySession(
+            GameModule module,
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
+        return openGameplaySession(module, null, admissionPolicy);
     }
 
     public static synchronized GameplayModeContext openGameplaySession(GameModule module,
                                                                        SaveSessionContext saveSessionContext) {
+        return openGameplaySession(
+                module, saveSessionContext, consumeNextGameplayAdmissionPolicy());
+    }
+
+    public static synchronized GameplayModeContext openGameplaySession(
+            GameModule module,
+            SaveSessionContext saveSessionContext,
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
         Objects.requireNonNull(module, "module");
+        Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+        nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
         destroyCurrentMode();
         currentWorldSession = new WorldSession(module, saveSessionContext);
-        currentGameplayMode = new GameplayModeContext(currentWorldSession);
+        currentGameplayMode =
+                new GameplayModeContext(currentWorldSession, admissionPolicy);
+        return currentGameplayMode;
+    }
+
+    public static synchronized void armNextGameplayAdmissionPolicy(
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
+        nextGameplayAdmissionPolicy =
+                Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+    }
+
+    public static synchronized void clearNextGameplayAdmissionPolicy() {
+        nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
+    }
+
+    public static synchronized GameplayModeContext reopenGameplaySession(
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
+        Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+        if (currentWorldSession == null) {
+            throw new IllegalStateException(
+                    "Cannot reopen gameplay without an active world session");
+        }
+        destroyCurrentMode();
+        currentGameplayMode =
+                new GameplayModeContext(currentWorldSession, admissionPolicy);
         return currentGameplayMode;
     }
 
@@ -74,11 +118,13 @@ public final class SessionManager {
     public static synchronized void clear() {
         destroyCurrentMode();
         currentWorldSession = null;
+        clearNextGameplayAdmissionPolicy();
     }
 
     public static synchronized void closeGameplaySession() {
         destroyCurrentMode();
         currentWorldSession = null;
+        clearNextGameplayAdmissionPolicy();
     }
 
     public static synchronized GameModule requireCurrentGameModule() {
@@ -115,6 +161,14 @@ public final class SessionManager {
 
     public static EditorModeContext getCurrentEditorMode() {
         return currentEditorMode;
+    }
+
+    private static HardwareReadinessAdmissionPolicy
+    consumeNextGameplayAdmissionPolicy() {
+        HardwareReadinessAdmissionPolicy policy =
+                nextGameplayAdmissionPolicy;
+        nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
+        return policy;
     }
 
 }

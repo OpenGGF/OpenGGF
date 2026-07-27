@@ -1,7 +1,11 @@
 package com.openggf.tools;
 
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.trace.TraceData;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -96,5 +100,18 @@ class TestTraceBenchmarkToolArgs {
     void aFlagMissingItsValueIsRejected() {
         assertThrows(IllegalArgumentException.class,
                 () -> TraceBenchmarkTool.Args.parse(new String[]{"--trace"}));
+    }
+
+    @Test
+    void benchmarkUsesRecordedAdmissionOnlyForTimedFixtures() throws IOException {
+        var timed = TraceData.loadMetadataOnly(Path.of(
+                "src/test/resources/traces/s3k/aiz_completerun")).metadata();
+        var legacy = TraceData.loadMetadataOnly(Path.of(
+                "src/test/resources/traces/s1/ghz1_completerun")).metadata();
+
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                TraceBenchmarkTool.admissionPolicyFor(timed));
+        assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
+                TraceBenchmarkTool.admissionPolicyFor(legacy));
     }
 }

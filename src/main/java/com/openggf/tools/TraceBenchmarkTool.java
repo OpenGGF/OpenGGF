@@ -18,6 +18,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
@@ -196,7 +197,9 @@ public final class TraceBenchmarkTool {
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
         Path romPath = Paths.get(RomManager.resolveRomForGame(entry.gameId()));
-        boot.boot(romPath, entry.zone(), entry.act());
+        HardwareReadinessAdmissionPolicy admissionPolicy =
+                admissionPolicyFor(meta);
+        boot.boot(romPath, entry.zone(), entry.act(), admissionPolicy);
 
         List<BenchmarkReport.Iteration> iterations = new ArrayList<>();
         for (int index = 0; index < args.iterations(); index++) {
@@ -205,7 +208,8 @@ public final class TraceBenchmarkTool {
                 // session whose objects have already run is not the same
                 // workload, and would make later iterations quietly cheaper.
                 TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
-                boot.reboot(romPath, entry.zone(), entry.act());
+                boot.reboot(
+                        romPath, entry.zone(), entry.act(), admissionPolicy);
             }
             BenchmarkReport.Iteration iteration =
                     runIteration(index, args, trace, movie);
@@ -228,6 +232,13 @@ public final class TraceBenchmarkTool {
         }
         printSummary(report);
         return boot;
+    }
+
+    static HardwareReadinessAdmissionPolicy admissionPolicyFor(
+            TraceMetadata metadata) {
+        return metadata.hasHardwareTimingStream()
+                ? HardwareReadinessAdmissionPolicy.RECORDED
+                : HardwareReadinessAdmissionPolicy.LIVE;
     }
 
     /**

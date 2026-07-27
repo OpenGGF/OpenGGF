@@ -13,7 +13,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 
 1. [AIZ Intro Object Spawn Source](#aiz-intro-object-spawn-source)
 2. [Obj_Wait Timer Pattern](#obj_wait-timer-pattern)
-3. [Immediate Art Loading](#immediate-art-loading)
+3. [Host-side KosM Preparation with Native Readiness](#host-side-kosm-preparation-with-native-readiness)
 4. [Knuckles DPLC Pre-Loading](#knuckles-dplc-pre-loading)
 5. [Save System](#save-system)
 6. [Tails Flying-With-Cargo Physics](#tails-flying-with-cargo-physics)
@@ -115,9 +115,9 @@ Timer-driven routine transitions fire on the exact same frame as the ROM's `Obj_
 
 ---
 
-## Immediate Art Loading
+## Host-side KosM Preparation with Native Readiness
 
-**Location:** `AizPlaneIntroInstance.java`, `AizIntroPlaneChild.java`, `AizIntroTerrainSwap.java`  
+**Location:** `S3kKosModuleQueue.java`, `AizPlaneIntroInstance.java`, `Sonic3kAIZEvents.java`
 **ROM Reference:** `sonic3k.asm` `Queue_Kos_Module` calls at `loc_6777A`, `Kos_decomp_queue_count` gate in `AIZ1_Resize`
 
 ### Original Implementation
@@ -133,29 +133,36 @@ The ROM queues KosinskiM-compressed art for deferred DMA transfer during V-blank
     jsr     (Queue_Kos_Module).l
 ```
 
-This queues the decompression work to be spread across multiple V-blank intervals, avoiding frame drops from large decompressions. Downstream, `AIZ1_Resize` routine 2 gates the transition to routine 4 (Y boundary unlock, dynamic maxY) on `Kos_decomp_queue_count` reaching `0` - the BG event handler stays in intro deformation mode until the queue drains.
+This queues decompression work across hardware service intervals. Downstream,
+`AIZ1_Resize` keeps the intro deformation active until the queue drains.
 
 ### Our Implementation
 
-We decompress and load art immediately during the object's init phase:
-
-```java
-byte[] planeArt = ResourceLoader.decompress(romAddr, CompressionType.KOSINSKI_MODULED);
-graphicsManager.writePatterns(ART_TILE_AIZ_INTRO_PLANE, planeArt);
-```
-
-Since there is no decompression queue to poll, the `AIZ1_Resize` routine `2 -> 4` gate uses an `introWasPlayed` flag (from `Sonic3kAIZEvents.shouldSpawnIntro()`) instead of a queue count. When the intro was played, a 30-frame countdown simulates the queue drain delay. When the intro was skipped, `mainLevelPhaseActive` is set immediately - matching the ROM where `Kos_decomp_queue_count` is already `0` at level start.
+The engine now submits the real ROM-backed archives to
+`S3kKosModuleQueue`. Its resumable decoder advances at the native
+pre-main-loop and post-object boundaries, and consumers retain typed handles
+until the queue admits readiness. Replay may hold an already-prepared matching
+job until its independently recorded completion edge, but it cannot supply
+payload or decoder progress. AIZ publishes its terrain overlays and changes
+phase only after claiming that prepared queue output.
 
 ### Rationale
 
-1. **No V-blank constraint** - The engine does not have a V-blank DMA budget. Decompression during init has no frame timing impact.
-2. **Art available before first draw** - Immediate loading guarantees patterns are ready when the object first renders, eliminating any possibility of a blank-frame glitch.
-3. **Simpler code path** - No deferred queue management is needed.
-4. **Intro check is equivalent to queue count** - When the intro was not played, no Kos data was queued, so the count would be `0`. Checking `introWasPlayed` produces the same result.
+The remaining intentional difference is below the ROM-visible readiness
+boundary: the host does not emulate instruction-by-instruction decoder
+pre-emption or VDP bus bandwidth. It advances deterministic whole work units
+at the correct service points. Queue order, ROM archive identity, module
+count, prepared payload, readiness polling, and the consumer's downstream
+mutation remain native-owned and rewind-safe.
 
 ### Verification
 
-All art tiles are present from the first frame the object renders. `TestS3kAiz1SkipHeadless` and `TestS3kAiz1LoopRegression` verify skip-intro correctly unlocks Y boundaries. `TestS3kAiz1SpindashLoopTraversal` verifies Sonic is not killed by premature pit death on the approach to the first loop.
+`TestS3kKosModuleQueue`, `TestSonic3kTitleCardKosQueue`,
+and `TestS3kKosStructuralSequence` cover decoder parity, FIFO ownership,
+and consumer polling. Recorded-identity and composed before/on/after
+completion rewind acceptance remain pending publication of the corrected
+6.35 timing fixtures; candidate-only integration tests are intentionally not
+part of the green prerequisite bundle.
 
 ---
 

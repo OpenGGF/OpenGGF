@@ -11,6 +11,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.AizObjectEventBridge;
+import com.openggf.game.sonic3k.events.AizPreparedTransitionArtBridge;
+import com.openggf.game.sonic3k.events.AizPreparedTransitionArtState;
 import com.openggf.game.sonic3k.events.CnzObjectEventBridge;
 import com.openggf.game.sonic3k.events.HczObjectEventBridge;
 import com.openggf.game.sonic3k.events.MgzObjectEventBridge;
@@ -87,7 +89,7 @@ import java.util.logging.Logger;
 public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         implements CheckpointRuntimeStateProvider,
         AizObjectEventBridge, CnzObjectEventBridge, HczObjectEventBridge, MgzObjectEventBridge,
-        S3kTransitionEventBridge {
+        S3kTransitionEventBridge, AizPreparedTransitionArtBridge {
     private static final Logger LOG = Logger.getLogger(Sonic3kLevelEventManager.class.getName());
     private static final int PACHINKO_TOP_EXIT_Y = -0x20;
     private static final int CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES = 9;
@@ -105,6 +107,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kLBZEvents lbzEvents;
     private Sonic3kMGZEvents mgzEvents;
     private Sonic3kMHZEvents mhzEvents;
+    private final AizPreparedTransitionArtState aizPreparedTransitionArt =
+            new AizPreparedTransitionArtState();
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
             new S3kFixedAirCountdownManager();
     private int fixedAirCountdownZone = -1;
@@ -807,6 +811,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
         return java.util.List.of(
+                aizPreparedTransitionArt,
                 new com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceStaticAdapter(),
                 new Sonic3kLevelTriggerStaticAdapter(),
                 new com.openggf.game.sonic3k.features.HCZWaterSkimStaticAdapter(),
@@ -1453,6 +1458,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void resetState() {
         super.resetState();
+        aizPreparedTransitionArt.reset();
         introFallActiveOnPlayer = false;
         introFallActiveOnSidekick = false;
         clearPostTransitionHandoffState();
@@ -1470,6 +1476,21 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         AizHollowTreeObjectInstance.resetTreeRevealCounter();
         AizPlaneIntroInstance.resetIntroPhaseState();
         IczSnowboardArtLoader.reset();
+    }
+
+    @Override
+    public void retainAizFireOverlay(byte[] tiles8x8) {
+        aizPreparedTransitionArt.retainFireOverlay(tiles8x8);
+    }
+
+    @Override
+    public byte[] aizFireOverlayCopy() {
+        return aizPreparedTransitionArt.fireOverlayCopy();
+    }
+
+    @Override
+    public int aizFireOverlayTileCount() {
+        return aizPreparedTransitionArt.fireOverlayTileCount();
     }
 
     private void clearPostTransitionHandoffState() {
@@ -1910,9 +1931,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] before = ZoneEventSchemaSidecar.capture(aizEvents);
         try {
             ZoneEventSchemaSidecar.restore(aizEvents, bytes);
+            aizEvents.discardHardwareWorkFacadesAfterRewind();
         } catch (RuntimeException e) {
             try {
                 ZoneEventSchemaSidecar.restore(aizEvents, before);
+                aizEvents.discardHardwareWorkFacadesAfterRewind();
             } catch (RuntimeException rollbackFailure) {
                 e.addSuppressed(rollbackFailure);
             }
@@ -1924,9 +1947,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] before = ZoneEventSchemaSidecar.capture(hczEvents);
         try {
             ZoneEventSchemaSidecar.restore(hczEvents, bytes);
+            hczEvents.discardHardwareWorkFacadesAfterRewind();
         } catch (RuntimeException e) {
             try {
                 ZoneEventSchemaSidecar.restore(hczEvents, before);
+                hczEvents.discardHardwareWorkFacadesAfterRewind();
             } catch (RuntimeException rollbackFailure) {
                 e.addSuppressed(rollbackFailure);
             }

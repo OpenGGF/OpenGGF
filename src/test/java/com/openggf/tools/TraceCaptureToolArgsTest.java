@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -55,6 +56,26 @@ class TraceCaptureToolArgsTest {
                 () -> TraceCaptureTool.requireCapturable(run));
         assertTrue(ex.getMessage().contains("not capturable"),
                 "rejection must explain runs are not capturable: " + ex.getMessage());
+    }
+
+    @Test
+    void postBootFailureClosesSessionAndBootBeforePropagating() {
+        AtomicBoolean sessionClosed = new AtomicBoolean();
+        AtomicBoolean bootClosed = new AtomicBoolean();
+        RuntimeException primary = new RuntimeException("post-boot failure");
+
+        RuntimeException actual = assertThrows(RuntimeException.class, () -> {
+            try (TraceCaptureTool.BootOwnership<AutoCloseable> ignored =
+                    new TraceCaptureTool.BootOwnership<>(
+                            () -> bootClosed.set(true),
+                            () -> sessionClosed.set(true))) {
+                throw primary;
+            }
+        });
+
+        assertSame(primary, actual);
+        assertTrue(sessionClosed.get());
+        assertTrue(bootClosed.get());
     }
 
     @Test

@@ -19,6 +19,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 /**
  * Deterministic per-frame gameplay drive shared by headless trace tests and the
@@ -47,6 +48,7 @@ public final class RecordingFrameDriver {
     private LevelFrameResult lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
     private boolean lastFrameRanGameplay = true;
     private boolean pendingSeamlessBoundaryCompletion;
+    private TraceHardwareTimingBoundaryObserver hardwareTimingReplayObserver;
 
     /**
      * Wraps each canonical level-frame step. Defaults to the direct (unwrapped)
@@ -82,6 +84,31 @@ public final class RecordingFrameDriver {
 
     public int getFrameCounter() {
         return frameCounter;
+    }
+
+    public void installHardwareTimingReplayObserver(
+            TraceHardwareTimingBoundaryObserver observer) {
+        hardwareTimingReplayObserver = observer;
+    }
+
+    public void clearHardwareTimingReplayObserver() {
+        hardwareTimingReplayObserver = null;
+    }
+
+    public void beginTraceRow(int traceIndex, int rawFrame) {
+        if (traceIndex < 0) {
+            throw new IllegalArgumentException(
+                    "traceIndex must be non-negative: " + traceIndex);
+        }
+        if (hardwareTimingReplayObserver != null) {
+            hardwareTimingReplayObserver.beginRawFrame(rawFrame);
+        }
+    }
+
+    public void enterHardwareTimingGap() {
+        if (hardwareTimingReplayObserver != null) {
+            hardwareTimingReplayObserver.enterUnrepresentedGap();
+        }
     }
 
     // ---- core frame step ----
@@ -135,12 +162,14 @@ public final class RecordingFrameDriver {
         }
         frameCounter++;
         if (lastFrameResult == LevelFrameResult.PAUSED) {
+            LevelFrameStep.serviceVBlankOnly(context);
             inputHandler.update();
             previousDriverSnapshot = snapshot;
             return lastFrameResult;
         }
         if (pendingSeamlessBoundaryCompletion) {
             pendingSeamlessBoundaryCompletion = false;
+            LevelFrameStep.serviceVBlankOnly(context);
             inputHandler.update();
             previousDriverSnapshot = snapshot;
             return lastFrameResult;
@@ -335,11 +364,15 @@ public final class RecordingFrameDriver {
 
         previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, previousBk2Input(currentBk2Index));
         currentBk2Index++;
+        LevelFrameContext context =
+                LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
         // S3K's in-level title-card wait runs Process_Sprites while the level
         // gameplay counter is held at zero. Such rows are VBlank-only to the
         // physics driver, but the title-card parent/children still dispatch.
         // Keep this overlay-only work moving without ticking player physics.
-        updateHeldCounterTitleCardOverlay();
+        if (!updateHeldCounterTitleCardOverlay(context)) {
+            LevelFrameStep.serviceVBlankOnly(context);
+        }
         if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {
             startPendingInLevelTitleCardIfRequested();
         }
@@ -368,23 +401,27 @@ public final class RecordingFrameDriver {
         }
     }
 
-    private void updateHeldCounterTitleCardOverlay() {
+    private boolean updateHeldCounterTitleCardOverlay(LevelFrameContext context) {
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {
-            titleCardProvider.update();
-            if (titleCardProvider.ownsRetainedResultsHeldLevelCounter()) {
-                var levelEvents = GameServices.module().getLevelEventProvider();
-                if (levelEvents != null) {
-                    // The retained Obj_LevelResults -> Obj_TitleCard path still
-                    // runs fixed SST entries while Level_frame_counter is held.
-                    levelEvents.updateFixedInLevelObjects();
+            LevelFrameStep.executeHardwareTimedObjectScan(context, () -> {
+                titleCardProvider.update();
+                if (titleCardProvider.ownsRetainedResultsHeldLevelCounter()) {
+                    var levelEvents = GameServices.module().getLevelEventProvider();
+                    if (levelEvents != null) {
+                        // The retained Obj_LevelResults -> Obj_TitleCard path still
+                        // runs fixed SST entries while Level_frame_counter is held.
+                        levelEvents.updateFixedInLevelObjects();
+                    }
                 }
-            }
+            });
             if (titleCardProvider.ownsInLevelPlayerControlLock()) {
                 applyInLevelTitleCardControlLock(
                         titleCardProvider.shouldLockPlayerControlForInLevelOverlay());
             }
+            return true;
         }
+        return false;
     }
 
     private static int inputMask(Bk2FrameInput frameInput) {

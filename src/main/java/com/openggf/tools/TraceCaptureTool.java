@@ -1,10 +1,8 @@
 package com.openggf.tools;
 
 import com.openggf.GameLoop;
-import com.openggf.LevelFrameResult;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
-import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.capture.BackpressurePolicy;
@@ -20,9 +18,7 @@ import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
-import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.LevelManager;
-import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
@@ -39,11 +35,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-
-import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.glClear;
-import static org.lwjgl.opengl.GL11.glFinish;
 
 /**
  * Command-line trace-capture driver. Boots a headless gameplay session against
@@ -209,8 +200,17 @@ public final class TraceCaptureTool {
 
         // --- boot headless gameplay session -------------------------------
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
+        try (BootOwnership<HeadlessGameBoot> ownership =
+                new BootOwnership<>(
+                        boot, SessionManager::closeGameplaySession)) {
         Path romPath = Paths.get(RomManager.resolveRomForGame(entry.gameId()));
-        GameLoop loop = boot.boot(romPath, entry.zone(), entry.act());
+        GameLoop loop = boot.boot(
+                romPath,
+                entry.zone(),
+                entry.act(),
+                meta.hasHardwareTimingStream()
+                        ? HardwareReadinessAdmissionPolicy.RECORDED
+                        : HardwareReadinessAdmissionPolicy.LIVE);
 
         // --- deterministic trace replay bootstrap -------------------------
         // Mirror AbstractTraceReplayTest steps 4-5: start position + ground
@@ -249,7 +249,11 @@ public final class TraceCaptureTool {
 
         if (args.verifyFrames() != null) {
             runVerify(trace, meta, frameDriver, replayStart, args.verifyFrames());
-            return boot;
+            int maxRequested = java.util.Arrays.stream(args.verifyFrames()).max().orElse(-1);
+            if (maxRequested >= trace.getFrame(trace.frameCount() - 1).frame()) {
+                fixture.closeHardwareTimingReplayRun();
+            }
+            return ownership.transfer();
         }
 
         // --- capture pipeline ---------------------------------------------
@@ -302,6 +306,9 @@ public final class TraceCaptureTool {
                             recorder, args.clip(), args.tailFrames())
                     : driveAndCapture(trace, meta, frameDriver, replayStart,
                             loop, grabber, audioFrames, recorder);
+            if (args.clip() == null) {
+                fixture.closeHardwareTimingReplayRun();
+            }
         } finally {
             try {
                 Path out = recorder.stop();
@@ -313,7 +320,60 @@ public final class TraceCaptureTool {
                 GameServices.audio().endCaptureMode();
             }
         }
-        return boot;
+        return ownership.transfer();
+        }
+    }
+
+    /**
+     * Keeps ownership of a boot from the instant it is constructed until a
+     * successful run returns it to {@link #main(String[])}. This closes both
+     * the replay session and native boot if any post-construction step throws.
+     */
+    static final class BootOwnership<T extends AutoCloseable>
+            implements AutoCloseable {
+        private final T boot;
+        private final Runnable closeSession;
+        private boolean transferred;
+
+        BootOwnership(T boot, Runnable closeSession) {
+            this.boot = java.util.Objects.requireNonNull(boot, "boot");
+            this.closeSession = java.util.Objects.requireNonNull(
+                    closeSession, "closeSession");
+        }
+
+        T transfer() {
+            transferred = true;
+            return boot;
+        }
+
+        @Override
+        public void close() throws Exception {
+            if (transferred) {
+                return;
+            }
+            Throwable failure = null;
+            try {
+                closeSession.run();
+            } catch (Throwable sessionFailure) {
+                failure = sessionFailure;
+            }
+            try {
+                boot.close();
+            } catch (Throwable bootFailure) {
+                if (failure == null) {
+                    failure = bootFailure;
+                } else {
+                    failure.addSuppressed(bootFailure);
+                }
+            }
+            if (failure instanceof Exception exception) {
+                throw exception;
+            }
+            if (failure != null) {
+                throw new IllegalStateException(
+                        "capture teardown failed", failure);
+            }
+        }
     }
 
     /**

@@ -1,0 +1,237 @@
+package com.openggf.game.sonic3k.titlecard;
+
+import com.openggf.data.Rom;
+import com.openggf.game.GameServices;
+import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.HardwareTimingSnapshot;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@RequiresRom(SonicGame.SONIC_3K)
+class TestSonic3kTitleCardKosQueue {
+    private static final int[] NORMAL_SOURCES = {
+            Sonic3kConstants.ART_KOSM_TITLE_CARD_RED_ACT_ADDR,
+            Sonic3kConstants.ART_KOSM_TITLE_CARD_S3K_ZONE_ADDR,
+            Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM1_ADDR,
+            Sonic3kConstants.TITLE_CARD_ZONE_ART_ADDRS[0]
+    };
+    private static final int[] NORMAL_DESTINATIONS = {0x500, 0x510, 0x53D, 0x54D};
+    private static final int[] BONUS_SOURCES = {
+            Sonic3kConstants.ART_KOSM_TITLE_CARD_RED_ACT_ADDR,
+            Sonic3kConstants.ART_KOSM_TITLE_CARD_S3K_ZONE_ADDR,
+            Sonic3kConstants.ART_KOSM_BONUS_TITLE_CARD_ADDR
+    };
+    private static final int[] BONUS_DESTINATIONS = {0x500, 0x510, 0x54D};
+
+    private HardwareTimingService timing;
+    private Rom rom;
+    private Sonic3kTitleCardManager manager;
+
+    @BeforeEach
+    void setUp() {
+        timing = GameServices.hardwareTiming();
+        timing.resetForMissingSnapshot();
+        rom = TestEnvironment.currentRom();
+        manager = new Sonic3kTitleCardManager();
+        manager.reset();
+    }
+
+    @Test
+    void normalCardQueuesFourArchivesInOrderAndRewindsInFlightBoundary() throws Exception {
+        List<HardwareWorkHandle> expected =
+                expectedHandles(NORMAL_SOURCES, NORMAL_DESTINATIONS);
+
+        manager.initialize(0, 0);
+
+        assertEquals(expected, timing.pendingHandles(),
+                "normal title art must retain native four-archive FIFO order");
+        assertTrue(isArtLoading(manager));
+        assertEquals(0, readyCount(expected));
+
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        assertEquals(0, readyCount(expected),
+                "PRE_MAIN_LOOP may advance descriptors but must not publish readiness");
+        HardwareTimingSnapshot rewindPoint = timing.capture();
+
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        timing.restore(rewindPoint);
+
+        assertEquals(HardwareServiceBoundary.PRE_MAIN_LOOP,
+                timing.capture().lastServicedBoundary());
+        assertEquals(expected, timing.pendingHandles());
+        assertEquals(0, readyCount(expected),
+                "rewind must restore the exact in-flight, not-ready decoder state");
+
+        drainThroughPostObjects(expected);
+    }
+
+    @Test
+    void bonusCardQueuesThreeArchivesInOrderAndPollsUntilFinalPostObjects() throws Exception {
+        List<HardwareWorkHandle> expected =
+                expectedHandles(BONUS_SOURCES, BONUS_DESTINATIONS);
+
+        manager.initializeBonus();
+
+        assertEquals(expected, timing.pendingHandles(),
+                "bonus title art must retain native three-archive FIFO order");
+        assertTrue(isArtLoading(manager));
+        drainThroughPostObjects(expected);
+    }
+
+    @Test
+    void readyUnclaimedTitleJobsDoNotSubmitEnemyArt() throws Exception {
+        Sonic3kObjectArtProvider provider =
+                (Sonic3kObjectArtProvider) GameServices.module().getObjectArtProvider();
+        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "scheduleEnemyKosArt", int.class, int.class);
+        schedule.setAccessible(true);
+        schedule.invoke(provider, 0, 0);
+
+        manager.initialize(0, 0);
+        List<HardwareWorkHandle> titleHandles = List.copyOf(timing.pendingHandles());
+        for (int frame = 0;
+                frame < 100_000 && readyCount(titleHandles) < titleHandles.size();
+                frame++) {
+            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        }
+        assertEquals(titleHandles.size(), readyCount(titleHandles));
+
+        provider.processRuntimeArtQueue();
+        assertEquals(titleHandles, timing.pendingHandles(),
+                "readiness alone is not native title-card retirement");
+
+        manager.update();
+        provider.processRuntimeArtQueue();
+
+        assertEquals(List.of(4L, 5L, 6L),
+                timing.pendingHandles().stream()
+                        .map(HardwareWorkHandle::ordinal)
+                        .toList(),
+                "LoadEnemyArt submits explicitly after the four title jobs retire");
+    }
+
+    @Test
+    void rewindAfterTitleRetirementRebindsEnemyJobsWithoutResubmission()
+            throws Exception {
+        Sonic3kObjectArtProvider provider =
+                (Sonic3kObjectArtProvider) GameServices.module()
+                        .getObjectArtProvider();
+        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "scheduleEnemyKosArt", int.class, int.class);
+        schedule.setAccessible(true);
+        schedule.invoke(provider, 0, 0);
+
+        manager.initialize(0, 0);
+        List<HardwareWorkHandle> titleHandles =
+                List.copyOf(timing.pendingHandles());
+        for (int frame = 0;
+                frame < 4096 && readyCount(titleHandles) < titleHandles.size();
+                frame++) {
+            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        }
+        manager.update();
+        provider.processRuntimeArtQueue();
+
+        List<HardwareWorkHandle> enemyHandles =
+                List.copyOf(timing.pendingHandles());
+        assertEquals(List.of(4L, 5L, 6L),
+                enemyHandles.stream().map(HardwareWorkHandle::ordinal).toList());
+        HardwareTimingSnapshot timingSnapshot = timing.capture();
+        PlcProgressSnapshot providerSnapshot = provider.capture();
+        assertTrue(providerSnapshot.kosSubmissionArmed());
+        assertEquals(List.of(4L, 5L, 6L),
+                providerSnapshot.pendingKosOrdinals());
+
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        timing.restore(timingSnapshot);
+        provider.restore(providerSnapshot);
+        provider.processRuntimeArtQueue();
+
+        assertEquals(enemyHandles, timing.pendingHandles());
+        assertEquals(7L, timing.capture().nextOrdinals()
+                .get(com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE));
+    }
+
+    private List<HardwareWorkHandle> expectedHandles(
+            int[] sources, int[] destinations) throws Exception {
+        HardwareTimingService expectedTiming = new HardwareTimingService();
+        S3kKosModuleQueue expectedQueue = new S3kKosModuleQueue(expectedTiming);
+        List<HardwareWorkHandle> handles = new ArrayList<>(sources.length);
+        for (int i = 0; i < sources.length; i++) {
+            handles.add(expectedQueue.queue(rom, sources[i], destinations[i]));
+        }
+        return List.copyOf(handles);
+    }
+
+    private void drainThroughPostObjects(List<HardwareWorkHandle> handles) throws Exception {
+        boolean sawPostObjectsPublication = false;
+        for (int frame = 0; frame < 4096 && readyCount(handles) < handles.size(); frame++) {
+            int readyBefore = readyCount(handles);
+            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertEquals(readyBefore, readyCount(handles),
+                    "PRE_MAIN_LOOP must not publish newly completed KosM work");
+
+            manager.update();
+            assertTrue(isArtLoading(manager),
+                    "the title-card consumer must keep polling until every archive is ready");
+
+            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            int readyAfter = readyCount(handles);
+            if (readyAfter > readyBefore) {
+                sawPostObjectsPublication = true;
+            }
+        }
+
+        assertEquals(handles.size(), readyCount(handles));
+        assertTrue(sawPostObjectsPublication,
+                "at least one archive must publish readiness at POST_OBJECTS");
+        assertTrue(isArtLoading(manager),
+                "final POST_OBJECTS publishes readiness without running the consumer");
+
+        manager.update();
+
+        assertFalse(isArtLoading(manager));
+        assertTrue(timing.pendingHandles().isEmpty(),
+                "the title-card consumer must claim all retained handles in FIFO order");
+    }
+
+    private int readyCount(List<HardwareWorkHandle> handles) {
+        int count = 0;
+        for (HardwareWorkHandle handle : handles) {
+            if (timing.isReady(handle)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static boolean isArtLoading(Sonic3kTitleCardManager manager) throws Exception {
+        Field field = Sonic3kTitleCardManager.class.getDeclaredField("artLoading");
+        field.setAccessible(true);
+        return field.getBoolean(manager);
+    }
+}

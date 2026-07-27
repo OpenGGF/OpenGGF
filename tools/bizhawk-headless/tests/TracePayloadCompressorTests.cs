@@ -52,6 +52,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "TracePayloadCompressor writes deterministic gzip bytes",
                 WritesDeterministicGzipBytes));
             tests.Add(new TestMain.TestCase(
+                "TracePayloadCompressor publishes a valid empty gzip member",
+                PublishesValidEmptyGzipMember));
+            tests.Add(new TestMain.TestCase(
                 "TracePayloadCompressor compresses streamed session files",
                 CompressesStreamedSessionFiles));
             tests.Add(new TestMain.TestCase(
@@ -312,6 +315,49 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     AssertEx.Equal(
                         "00-00-00-00",
                         BitConverter.ToString(firstBytes, 4, 4));
+                });
+        }
+
+        /// <summary>
+        /// Mono defers the gzip header until the first write. An empty
+        /// auxiliary stream must still publish a real gzip member that every
+        /// fixture loader can open, not a zero-byte file with a .gz suffix.
+        /// </summary>
+        private static void PublishesValidEmptyGzipMember()
+        {
+            WithTemporaryDirectory(
+                root =>
+                {
+                    string source = Path.Combine(root, "aux_state.jsonl");
+                    File.WriteAllBytes(source, new byte[0]);
+                    string destination = source + ".gz";
+
+                    var compressor = new TracePayloadCompressor(0);
+                    compressor.CompressAndVerify(source, destination);
+
+                    AssertEx.Equal(
+                        true, new FileInfo(destination).Length > 0);
+                    AssertBytesEqual(new byte[0], Decompress(destination));
+
+                    string output = Path.Combine(root, "streamed");
+                    var publisher = new NoReplacePublisher(
+                        new TracePayloadCompressor(0));
+                    NoReplacePublisher.IncrementalStagingSession session =
+                        publisher.OpenSession(output);
+                    using (NoReplacePublisher.StagedStream stream =
+                        session.OpenFile("ss/aux_state.jsonl"))
+                    {
+                        stream.Complete();
+                    }
+                    session.StageFile("ss/metadata.json", "metadata\n");
+                    session.StageFile("run_manifest.json", "manifest\n");
+                    session.Complete().Publish();
+
+                    string streamed = Path.Combine(
+                        output, "ss", "aux_state.jsonl.gz");
+                    AssertEx.Equal(
+                        true, new FileInfo(streamed).Length > 0);
+                    AssertBytesEqual(new byte[0], Decompress(streamed));
                 });
         }
 

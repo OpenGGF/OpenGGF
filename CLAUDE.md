@@ -93,8 +93,16 @@ file is guidance you can weigh against the situation in front of you.
    behaviour except in AIZ"* is still a zone carve-out. Zone/event/object providers may
    expose ROM state at the owning boundary, but shared physics/sidekick/object code
    consumes semantic predicates.
-4. **Trace data is read-only.** Engine state must never be hydrated or synced from a trace
-   in committed test code.
+4. **Trace data is comparison-only by default.** Engine gameplay state must never be
+   hydrated or synced from a trace in committed test code. The sole exception is the
+   dedicated hardware-timing input contract documented in
+   [docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md](docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md):
+   it may release only the readiness of a matching, prepared, production-submitted
+   ROM-backed hardware job after kind, ordinal, stable submission fingerprint, and service
+   boundary all match. It must not use physics/aux comparison data, carry gameplay values,
+   call gameplay owners, or create work the engine did not submit. Guard tests must keep
+   this exception confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces
+   parser/authority isolation and forbids physics/aux/gameplay and reflective mutation paths.
 5. **Objects never call `getInstance()`.** Use the injected `services()`.
 6. **Gameplay tile edits route through `ZoneLayoutMutationPipeline` / a
    `LevelMutationSurface`** — never a direct `getMap().setValue(...)`. Editor commands and

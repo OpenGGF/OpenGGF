@@ -18,6 +18,7 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
@@ -162,6 +163,11 @@ public final class HeadlessGameBoot implements AutoCloseable {
      * the fully bound loop ready to be stepped.
      */
     public GameLoop boot(Path romPath, int zone, int act) throws IOException {
+        return boot(romPath, zone, act, HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
+    public GameLoop boot(Path romPath, int zone, int act,
+            HardwareReadinessAdmissionPolicy admissionPolicy) throws IOException {
         // Process-wide services were configured in initGl(); resolve them via
         // the EngineServices locator rather than raw singletons.
         EngineContext services = EngineServices.current();
@@ -179,7 +185,8 @@ public final class HeadlessGameBoot implements AutoCloseable {
                 new IOException("No game module detected for ROM: " + romPath));
 
         // --- gameplay session + managers --------------------------------
-        GameplayModeContext mode = SessionManager.openGameplaySession(module);
+        GameplayModeContext mode =
+                SessionManager.openGameplaySession(module, admissionPolicy);
         GameplaySessionFactory.attachManagers(mode, services);
         if (!mode.isGameplayRuntimeReady()) {
             throw new IllegalStateException(
@@ -256,6 +263,16 @@ public final class HeadlessGameBoot implements AutoCloseable {
      * exists to report.
      */
     public GameLoop reboot(Path romPath, int zone, int act) throws IOException {
+        return reboot(
+                romPath, zone, act, HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
+    public GameLoop reboot(
+            Path romPath,
+            int zone,
+            int act,
+            HardwareReadinessAdmissionPolicy admissionPolicy)
+            throws IOException {
         try {
             SessionManager.closeGameplaySession();
         } catch (Exception ignored) {
@@ -269,7 +286,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
             }
             rom = null;
         }
-        return boot(romPath, zone, act);
+        return boot(romPath, zone, act, admissionPolicy);
     }
 
     /**

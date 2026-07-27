@@ -12,6 +12,9 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplayFixture;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
 import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
@@ -55,6 +58,8 @@ final class TraceReplayDrive {
     static DriveOutcome driveOneFrame(TraceData trace, RecordingFrameDriver frameDriver,
                                       TraceReplayBootstrap.ReplayStartState replayStart,
                                       TraceExecutionPhase phase, int driveTraceIndex) {
+        frameDriver.beginTraceRow(
+                driveTraceIndex, trace.getFrame(driveTraceIndex).frame());
         // The admitted-gameplay callback below begins palette ownership after
         // SETUP_ONLY classification but before the ordinary level step. The
         // headless replay driver omits this because trace tests never render;
@@ -143,6 +148,8 @@ final class TraceReplayDrive {
      */
     static final class DriverFixture implements TraceReplayFixture {
         private final RecordingFrameDriver driver;
+        private HardwareTimingReplayPort hardwareTimingReplayPort;
+        private boolean hardwareTimingReplayClosed;
 
         DriverFixture(RecordingFrameDriver driver) {
             this.driver = driver;
@@ -156,6 +163,63 @@ final class TraceReplayDrive {
         @Override
         public com.openggf.game.session.GameplayModeContext gameplayMode() {
             return SessionManager.getCurrentGameplayMode();
+        }
+
+        @Override
+        public void installHardwareTimingReplay(HardwareTimingReplayPort replayPort) {
+            if (hardwareTimingReplayPort != null) {
+                throw new IllegalStateException("hardware timing replay is already installed");
+            }
+            hardwareTimingReplayPort = replayPort;
+            hardwareTimingReplayClosed = false;
+            TraceHardwareTimingBoundaryObserver observer =
+                    new TraceHardwareTimingBoundaryObserver(replayPort);
+            gameplayMode().getRewindRegistry().register(replayPort);
+            gameplayMode().setHardwareTimingBoundaryObserver(observer);
+            driver.installHardwareTimingReplayObserver(observer);
+            gameplayMode().setHardwareTimingReplayCloseHook(
+                    this::closeHardwareTimingReplayRun);
+        }
+
+        @Override
+        public void beginTraceRow(int traceIndex, int rawFrame) {
+            driver.beginTraceRow(traceIndex, rawFrame);
+        }
+
+        @Override
+        public void enterHardwareTimingGap() {
+            driver.enterHardwareTimingGap();
+        }
+
+        @Override
+        public void verifyHardwareTimingSegmentEdges() {
+            if (hardwareTimingReplayPort != null) {
+                hardwareTimingReplayPort.verifySegmentEdges();
+            }
+        }
+
+        @Override
+        public void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule) {
+            if (hardwareTimingReplayPort != null) {
+                hardwareTimingReplayPort.handoffTo(nextSchedule);
+            }
+        }
+
+        @Override
+        public void closeHardwareTimingReplayRun() {
+            if (hardwareTimingReplayPort == null || hardwareTimingReplayClosed) {
+                return;
+            }
+            hardwareTimingReplayClosed = true;
+            try {
+                hardwareTimingReplayPort.verifyRunComplete();
+            } finally {
+                driver.clearHardwareTimingReplayObserver();
+                gameplayMode().setHardwareTimingBoundaryObserver(null);
+                gameplayMode().getRewindRegistry()
+                        .deregister(HardwareTimingReplayPort.REWIND_KEY);
+                gameplayMode().clearHardwareTimingReplayCloseHook();
+            }
         }
 
         @Override

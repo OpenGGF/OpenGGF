@@ -1051,8 +1051,13 @@ public class GameLoop {
                 () -> titleReleaseResult, levelManager, gameplayMode,
                 inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress(),
-                userRecordingControls, this::startPendingInLevelTitleCard);
+                userRecordingControls, this::startPendingInLevelTitleCard,
+                () -> LevelIterationAdmissionController
+                        .prepareTraceHardwareTimingForAdmission(currentGameMode),
+                LevelIterationAdmissionController
+                        ::deactivateTraceHardwareTimingForAdmission);
         if (admission == LevelFrameResult.PAUSED) {
+            LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode));
             inputHandler.update();
             return false;
         }
@@ -1065,6 +1070,7 @@ public class GameLoop {
                 () -> levelIterationAdmission.finishPlaybackBoundary(
                         true, playbackDebugManager, userRecordingControls),
                 this::resolveGameplayModeContext)) {
+            LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode));
             inputHandler.update();
             return false;
         }
@@ -1147,8 +1153,13 @@ public class GameLoop {
         boolean skipSsTick = ssSession != null
                 && ssSession.shouldSkipCurrentSpecialStageTick();
         if (!skipSsTick) {
-            updateSpecialStageInput();
-            ssProvider.update();
+            LevelFrameStep.executeHardwareTimedObjectScan(
+                    LevelFrameContext.from(gameplayMode), () -> {
+                        updateSpecialStageInput();
+                        ssProvider.update();
+                    });
+        } else {
+            LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode));
         }
         specialStageEntryPresentation.update(ssProvider, fadeManager,
                 () -> playSpecialStageStageMusic(ssProvider));
@@ -1195,7 +1206,12 @@ public class GameLoop {
     private boolean updateTitleCardMode(boolean doFrameStep) {
         // Update title card animation
         TitleCardProvider tcpCard = getTitleCardProviderLazy();
-        if (tcpCard != null) {
+        boolean hardwareTimedProviderScan = tcpCard != null
+                && tcpCard.shouldAdvanceVblankClockDuringLockedPhase();
+        if (hardwareTimedProviderScan) {
+            LevelFrameStep.executeHardwareTimedObjectScan(
+                    LevelFrameContext.from(gameplayMode), tcpCard::update);
+        } else if (tcpCard != null) {
             tcpCard.update();
         }
 
@@ -1292,11 +1308,12 @@ public class GameLoop {
                 levelManager.suppressGlobalOscillationForTitleCardPass();
                 levelManager.updateObjectPositions();
                 camera.updatePosition(true);
-            } else if (tcpCard.shouldAdvanceVblankClockDuringLockedPhase())
+            } else if (tcpCard.shouldAdvanceVblankClockDuringLockedPhase()) {
                 // S3K's native wait loop is dispatching title-card SSTs here.
-                // The provider owns those sprites, so only the VBlank clock
-                // advances; loaded level objects and camera remain untouched.
+                // The provider-owned sprite scan and hardware boundaries ran
+                // above; loaded level objects and camera remain untouched.
                 levelManager.advanceTitleCardVblankOnly();
+            }
                 // S1 retains its locked-card forced camera step while its
                 // level-object RAM remains unpopulated.
             else camera.updatePosition(true);
@@ -1481,6 +1498,7 @@ public class GameLoop {
                 // gates enter gameplay hundreds of VBlanks behind.
                 int vblankTicks = playbackDebugManager.currentSkippedTickVblankAdvanceCount();
                 for (int tick = 0; tick < vblankTicks; tick++) {
+                    LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode));
                     levelManager.getObjectManager().advanceVblaCounter();
                 }
             }
@@ -1647,6 +1665,7 @@ public class GameLoop {
                 // parity, mirroring updateLevelMode's skip branch.
                 int vblankTicks = playbackDebugManager.currentSkippedTickVblankAdvanceCount();
                 for (int tick = 0; tick < vblankTicks; tick++) {
+                    LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode));
                     levelManager.getObjectManager().advanceVblaCounter();
                 }
             }
@@ -1671,6 +1690,7 @@ public class GameLoop {
             // return level a stale frame-0 input. onLevelFrameAdvanced is a no-op
             // when no playback session is active.
             if (levelManager.getObjectManager() != null) {
+                LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode));
                 levelManager.getObjectManager().advanceVblaCounter();
             }
             playbackDebugManager.onLevelFrameAdvanced();

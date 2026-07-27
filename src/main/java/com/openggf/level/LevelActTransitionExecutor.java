@@ -71,6 +71,9 @@ final class LevelActTransitionExecutor {
         if (artProvider != null) {
             artProvider.reloadStandaloneArtForActTransition(levelManager.currentZone);
             artProvider.registerLevelTileArt(levelManager.level, levelManager.currentZone);
+            if (!request.showInLevelTitleCard()) {
+                artProvider.onTitleCardArtRetired();
+            }
             if (levelManager.objectRenderManager != null) {
                 levelManager.objectRenderManager.ensurePatternsCached(
                         levelManager.graphicsManager, LevelManager.OBJECT_PATTERN_BASE);

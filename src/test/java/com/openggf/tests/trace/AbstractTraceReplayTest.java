@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
@@ -245,7 +246,8 @@ public abstract class AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null,
                 "No BK2 found for " + traceDir + " (no _movies/<source_bk2> and no .bk2 in dir)");
         boolean requiresFreshLevelLoad =
-                TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace);
+                TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace)
+                        || meta.hasHardwareTimingStream();
 
         // 3. Validate test configuration matches metadata
         validateMetadata(meta);
@@ -260,10 +262,16 @@ public abstract class AbstractTraceReplayTest {
         // normal report-write at step 7. Previously such failures left a STALE
         // *_report.json from an earlier run, silently masking the real result.
         TraceBinder binder = null;
+        HeadlessTestFixture fixture = null;
+        boolean hardwareTimingReplayClosed = false;
         try {
             HeadlessTestFixture.Builder fixtureBuilder = HeadlessTestFixture.builder()
                 .withRecording(bk2Path)
-                .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace));
+                .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
+                .withHardwareReadinessAdmissionPolicy(
+                        meta.hasHardwareTimingStream()
+                                ? HardwareReadinessAdmissionPolicy.RECORDED
+                                : HardwareReadinessAdmissionPolicy.LIVE);
             if (sharedLevel != null) {
                 fixtureBuilder.withSharedLevel(sharedLevel);
             } else {
@@ -277,7 +285,7 @@ public abstract class AbstractTraceReplayTest {
             if (TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)) {
                 fixtureBuilder.withFreshLevelStartLifecycle();
             }
-            HeadlessTestFixture fixture = fixtureBuilder.build();
+            fixture = fixtureBuilder.build();
             // ROM/production ordering: GameLoop.doEnterBonusStage loads the
             // bonus zone through the normal level path (LevelManager
             // .loadZoneAndAct -> LevelManager.initCameraForLevel, which resets
@@ -346,6 +354,7 @@ public abstract class AbstractTraceReplayTest {
                 int startTraceIndex = replayStart.startingTraceIndex();
                 for (int i = startTraceIndex; i < trace.frameCount(); i++) {
                     TraceFrame expected = trace.getFrame(i);
+                    fixture.beginTraceRow(i, expected.frame());
 
                     // Drive replay from recorded ROM counters instead of inferring
                     // lag from unchanged physics state.
@@ -441,6 +450,9 @@ public abstract class AbstractTraceReplayTest {
                 }
             }
 
+            fixture.closeHardwareTimingReplayRun();
+            hardwareTimingReplayClosed = true;
+
             // 6. Build report
             DivergenceReport report = buildDivergenceReport(binder, meta, trace);
 
@@ -473,6 +485,9 @@ public abstract class AbstractTraceReplayTest {
                 } catch (RuntimeException | java.io.IOError ignored) {
                     // diagnostics only
                 }
+            }
+            if (fixture != null && !hardwareTimingReplayClosed) {
+                fixture.abortHardwareTimingReplayRun();
             }
             if (sharedLevel != null) {
                 sharedLevel.dispose();
@@ -638,6 +653,7 @@ public abstract class AbstractTraceReplayTest {
                 driveTraceIndex < trace.frameCount() ? trace.getFrame(driveTraceIndex) : null);
         while (driveTraceIndex < trace.frameCount()) {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
+            fixture.beginTraceRow(driveTraceIndex, driveFrame.frame());
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
             int validationTraceIndex = driveTraceIndex;
@@ -759,10 +775,13 @@ public abstract class AbstractTraceReplayTest {
     }
 
     private S3kCheckpointProbe captureS3kProbe(int replayFrame, AbstractPlayableSprite sprite) {
-        boolean resultsActive = GameServices.level().getObjectManager().getActiveObjects().stream()
+        var level = GameServices.levelOrNull();
+        ObjectManager objectManager = level != null ? level.getObjectManager() : null;
+        boolean resultsActive = objectManager != null
+                && objectManager.getActiveObjects().stream()
                 .anyMatch(S3kResultsScreenObjectInstance.class::isInstance);
-        boolean signpostActive =
-                S3kSignpostInstance.activeSignpost(GameServices.level().getObjectManager()) != null;
+        boolean signpostActive = objectManager != null
+                && S3kSignpostInstance.activeSignpost(objectManager) != null;
         boolean eventsFg5 =
                 GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager manager
                         && manager.isEventsFg5();

@@ -18,18 +18,17 @@ that replays a real movie against a committed fixture.
 recorders are retired rather than kept at feature parity. Do not add work here whose
 only justification is matching a Lua capability nobody uses.
 
-**But the Lua is still the oracle, and that is a different claim.** If the port and
-the Lua disagree today, the port is wrong — even when the port looks more correct.
-Fix the port, or fix the Lua first and regenerate deliberately. The reason is
-narrow and worth understanding rather than obeying: a fixture recaptured *with this
-harness* would be compared by the gates against bytes this harness produced, so the
-gate would pass regardless of whether the port is right. Both S3K address defects
-this year were caught precisely because the Lua was fixed first and the port had to
-arrive at the same bytes independently.
+**The native harness is also the fixture-publication authority, but recorder
+correctness must be established before publication.** Review the implementation
+against ROM/disassembly-backed semantic invariants, exercise it with behavioral
+and unit tests, and obtain independent code review before treating a capture as
+authoritative. Cross-implementation vectors and Lua byte parity are valuable
+corroboration when available, not publication prerequisites.
 
-That makes the Lua worth keeping **runnable** — frozen and unmaintained is fine —
-rather than deleted. It is also the substrate for ad-hoc hook-driven debugging (see
-below), which is the other reason not to port callbacks here.
+Lua remains a **scratch-only** corroboration and diagnostic path — frozen and
+unmaintained is fine — rather than a publisher. It can provide optional
+differential evidence for recorder changes and remains the substrate for ad-hoc
+hook-driven debugging (see below).
 
 ## Hard rules
 
@@ -37,10 +36,14 @@ below), which is the other reason not to port callbacks here.
    are read-only ground truth. A failing gate means production code is wrong. Do
    not relax a comparison, widen a normalization, or regenerate a fixture to make
    a gate pass. Regenerating canonical fixtures is a **user decision** — ask.
-2. **Never capture a replacement fixture with this harness.** Fixtures come from
-   the Lua authority; gating the port against bytes the port produced proves
-   nothing. The only correct order is: fix the Lua → recapture with the Lua →
-   install → make this harness reproduce those bytes.
+2. **Never make a native recorder certify its own correctness.** Establish its
+   semantic contract from the ROM/disassembly, behavioral/unit tests, available
+   cross-implementation vectors, and independent code review before publication.
+   After capture, record and pin the resulting digests, lengths, event inventory,
+   ordering, and ranges as immutable publication evidence. Tests must not make a
+   bad capture pass by dynamically deriving expectations from that same
+   invocation. Fixture replacement still requires explicit user approval, and
+   the installed files must be the exact gated native output with no hand edits.
 3. **C# 7.x only.** Mono 6.12 + `xbuild`, non-SDK `.csproj`. Newer syntax will
    not compile.
 4. **Every new `.cs` file must be hand-added to BOTH `BizHawk.Headless.Gpgx.csproj`
@@ -139,24 +142,32 @@ below), which is the other reason not to port callbacks here.
 
 ## Regenerating a fixture (when the user has approved it)
 
-The method that has worked three times, in order:
+The publication contract, in order:
 
-1. Fix the **Lua** recorder and bump its `LUA_SCRIPT_VERSION` (each recorder
-   keeps the version in several places — version-history comment, metadata
-   emission, load banner).
-2. Recapture with the Lua, hooks unset, one EmuHawk at a time, writing via
-   `OGGF_TRACE_OUTPUT_DIR` to scratch — never into `tools/bizhawk/trace_output/`,
-   which holds the user's preserved captures.
-3. **Categorise every byte-level delta against a named cause before installing**,
-   mechanically over whole files rather than by sampling. Anything unexplained
-   stops the install. Prove isolation: cutting the intended column should leave
-   the files byte-identical (compare md5 of both sides with it removed), and
-   offsets, row counts and segment inventories must reproduce exactly — that is
-   what shows it is the same emulated run rather than a similar one.
-4. Install, then make this harness reproduce the new bytes and re-pin the gates.
-5. Measure the trace-replay frontiers **before and after** and record the movement
-   in `docs/status/trace-frontier-log.md`. Every instance of this so far has un-masked a
-   latent bug elsewhere; expect one and look for it.
+1. Before publication, establish recorder correctness against named
+   ROM/disassembly semantics, behavioral and unit tests, cross-implementation
+   vectors where available, and independent code review. This may validate an
+   existing candidate produced by the unchanged reviewed code. Lua byte parity is
+   optional corroboration; it is neither the authority nor a publication
+   prerequisite.
+2. Capture the publication candidate with the native harness into scratch, never
+   directly into `src/test/resources/traces/` or the user's preserved
+   `tools/bizhawk/trace_output/`.
+3. Before copying, record and freeze the candidate's SHA-256 digests, byte
+   lengths, metadata versions, segment inventories, row/event counts, canonical
+   ordering, and range checks. **Categorise every byte-level delta against a named
+   cause**, mechanically over whole files rather than by sampling. Anything
+   unexplained stops publication.
+4. Obtain explicit user approval for the exact candidate and reported deltas.
+   Copy the gated native files byte-for-byte; never edit an event, timestamp, or
+   metadata field by hand. Publication tests must assert the frozen literal
+   expectations, not derive them by rerunning native capture.
+5. Re-run the native gates against the installed fixture, plus fixture load,
+   schema, compression, and reference-closure guards. These are regression
+   checks after publication, not the independent authority for Step 1.
+6. Measure the trace-replay frontiers **before and after** and record movement in
+   `docs/status/trace-frontier-log.md`. A fixture correction can unmask a latent
+   engine bug; expect one and investigate it rather than weakening the fixture.
 
 ## Diagnostic hooks are deliberately not ported
 
@@ -167,7 +178,8 @@ records the reasoning, and `tests/S3KHookAbsenceTests.cs` pins it to the fixture
 
 Do not "helpfully" add M68K exec/memory-write callback support. Nothing gates it: no
 fixture contains hook output, so it would be the only significant surface here with no
-differential coverage, in a harness whose entire value is proven byte-parity. It would also
+differential coverage, in a harness whose value depends on reviewed, test-backed capture
+correctness. It would also
 mean Mono delegate GC-pinning (a collected delegate while registered is the classic interop
 crash), and hook-enabled captures are what has previously breached git's file-size limits.
 

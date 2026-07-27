@@ -27,6 +27,14 @@ namespace BizHawk.Headless.Gpgx
             "metadata.json"
         };
 
+        internal static readonly string[] S3kTraceOutputFileNames =
+        {
+            "physics.csv",
+            "aux_state.jsonl",
+            "hardware_timing.jsonl",
+            "metadata.json"
+        };
+
         internal const string RunManifestFileName = "run_manifest.json";
 
         private CommandLineOptions(
@@ -296,11 +304,16 @@ namespace BizHawk.Headless.Gpgx
             var effectiveMovieLength = 0;
             if (values.ContainsKey("--effective-movie-length"))
             {
-                if (runId == null)
+                if (runId == null
+                    && !string.Equals(
+                        traceProfile,
+                        "complete_run",
+                        StringComparison.Ordinal))
                 {
                     throw new ArgumentException(
                         "Argument --effective-movie-length requires"
-                        + " --run-id: only the run runner's movie-done"
+                        + " --run-id or --trace-profile complete_run:"
+                        + " only the complete-run runner's movie-done"
                         + " guard consumes the session movie-length"
                         + " signal.");
                 }
@@ -670,6 +683,7 @@ namespace BizHawk.Headless.Gpgx
                                 options,
                                 installation,
                                 romSha1,
+                                romBytes,
                                 movie,
                                 stdout,
                                 stderr,
@@ -680,6 +694,7 @@ namespace BizHawk.Headless.Gpgx
                             options,
                             installation,
                             romSha1,
+                            romBytes,
                             movie,
                             stdout,
                             stderr,
@@ -1404,6 +1419,7 @@ namespace BizHawk.Headless.Gpgx
             CommandLineOptions options,
             BizHawkInstallation installation,
             string romSha1,
+            byte[] romBytes,
             Bk2Movie movie,
             TextWriter stdout,
             TextWriter stderr,
@@ -1419,7 +1435,10 @@ namespace BizHawk.Headless.Gpgx
                 CommandLineOptions.TraceOutputFileNames[1]);
             string metadataPath = Path.Combine(
                 options.OutputDirectory,
-                CommandLineOptions.TraceOutputFileNames[2]);
+                CommandLineOptions.S3kTraceOutputFileNames[3]);
+            string hardwareTimingPath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.S3kTraceOutputFileNames[2]);
             return RunTraceCapture(
                 options.OutputDirectory,
                 stdout,
@@ -1435,9 +1454,11 @@ namespace BizHawk.Headless.Gpgx
                     DateTime.Now.ToString(
                         "yyyy-MM-dd",
                         CultureInfo.InvariantCulture),
+                    romBytes,
                     writers[0],
                     writers[1],
-                    writers[2]),
+                    writers[2],
+                    writers[3]),
                 result =>
                     "BizHawk: " + installation.ManagedVersion + "\n"
                     + "ROM SHA-1: " + romSha1 + "\n"
@@ -1456,8 +1477,11 @@ namespace BizHawk.Headless.Gpgx
                     + "\n"
                     + "Physics CSV: " + physicsPath + "\n"
                     + "Aux state JSONL: " + auxStatePath + "\n"
+                    + "Hardware timing JSONL: "
+                    + hardwareTimingPath + "\n"
                     + "Metadata JSON: " + metadataPath + "\n",
-                new NoReplacePublisher(options.CreateCompressor()));
+                new NoReplacePublisher(options.CreateCompressor()),
+                CommandLineOptions.S3kTraceOutputFileNames);
         }
 
         /// <summary>
@@ -1491,6 +1515,7 @@ namespace BizHawk.Headless.Gpgx
             CommandLineOptions options,
             BizHawkInstallation installation,
             string romSha1,
+            byte[] romBytes,
             Bk2Movie movie,
             TextWriter stdout,
             TextWriter stderr,
@@ -1538,6 +1563,7 @@ namespace BizHawk.Headless.Gpgx
                             "yyyy-MM-dd",
                             CultureInfo.InvariantCulture),
                         options.EffectiveMovieLength,
+                        romBytes,
                         sink);
                 }
                 if (result.RunManifestJson != null)
@@ -1776,6 +1802,30 @@ namespace BizHawk.Headless.Gpgx
             NoReplacePublisher publisher)
             where TResult : class
         {
+            return RunTraceCapture(
+                outputDirectory,
+                stdout,
+                stderr,
+                silenceNativeOutput,
+                openHost,
+                capture,
+                formatSuccess,
+                publisher,
+                CommandLineOptions.TraceOutputFileNames);
+        }
+
+        internal static int RunTraceCapture<TResult>(
+            string outputDirectory,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<IDisposable> silenceNativeOutput,
+            Func<IGpgxHost> openHost,
+            Func<IGpgxHost, TextWriter[], TResult> capture,
+            Func<TResult, string> formatSuccess,
+            NoReplacePublisher publisher,
+            string[] outputFileNames)
+            where TResult : class
+        {
             NoReplacePublisher.StagedPublicationSet staged = null;
             try
             {
@@ -1785,7 +1835,7 @@ namespace BizHawk.Headless.Gpgx
                 {
                     staged = publisher.StageAll(
                         outputDirectory,
-                        CommandLineOptions.TraceOutputFileNames,
+                        outputFileNames,
                         writers => { result = capture(host, writers); });
                 }
 

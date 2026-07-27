@@ -51899,3 +51899,268 @@ mvn -q -Dmse=off -Dsurefire.forkCount=1 \
 - Focused touch, miniboss, rewind, and coverage suites pass. Established
   canaries retain standalone AIZ f8837 `rings`, standalone MGZ f23561
   `rings`, and CNZ complete-run f0 `y`.
+
+## 2026-07-27 - S3K KosM recorder identity and structural ordinal audit
+
+- Worktree: `.worktrees/trace-green-integration-20260727`, branch
+  `bugfix/ai-trace-green-integration-20260727`, base `2c7cd2ba3`.
+- Source-truth finding: both native and Lua timing scanners delayed the
+  Kosinski descriptor refill until the next bit request. The ROM reloads the
+  descriptor immediately when `dbf` consumes bit 16, before the selected
+  command reads its payload (`docs/skdisasm/sonic3k.asm:2572-2600`).
+- Recorder 6.35 now agrees with `ResumableKosinskiDecoder`. The standard
+  recorder also observes the synchronous `LoadLevelLoadBlock` pair only to
+  preserve ordinals 0/1; those completions are lag/phase evidence and are not
+  exported. Its first authoritative edge is therefore AIZ intro plane,
+  ordinal 2 at raw frame 361.
+- Standalone replay establishes a schedule's later-first ordinal once before
+  the first production submission of that kind (AIZ 2, HCZ 43). Run-chain
+  handoff never resets it, and rewind restores both base and edge progress.
+  Noncontiguous per-kind edges within one timing stream fail structurally.
+
+Focused verification:
+
+```bash
+mvn -q -Dmse=off \
+  "-Dtest=TestHardwareTimingReplayPort,TestHardwareTimingService,TestHardwareTimingRewind,TestTraceRunHardwareTimingCoordinator" \
+  test
+```
+
+- Pass: 36 tests, 0 failures.
+
+```bash
+env BIZHAWK_HOME=<bizhawk> S3K_ROM_PATH="$PWD/s3k.gen" \
+  tools/bizhawk-headless/test.sh --filter HardwareTiming
+```
+
+- Pass: 13 tests, 0 failures, 0 skips.
+
+```bash
+mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false \
+  "-Ds3k.rom.path=$PWD/s3k.gen" \
+  "-Dtest=TestS3kHardwareTimingReplay,TestS3kKosTimingRewindIntegration" \
+  test
+```
+
+- RED pending approved fixture replacement: 4 failures, first
+  `aizStandardFirstEdgeMatchesNativeIntroSubmission`, field
+  `submission_fingerprint` (committed recorder
+  `sha256:4886dc48...`, production `sha256:4423f6be...`).
+- Corrected uncommitted candidates keep physics/aux bytes unchanged.
+  Standard timing is 38 events, 8,246 bytes,
+  `sha256:349894a74ab42d2241f6e87a814e1795a716f276c6b41c2aca4edcf9b65d77e3`;
+  complete AIZ is 41 events, 8,909 bytes,
+  `sha256:beef512cb1aec1da9c08b3e306fd7f40cb1455829eaddd3476a2c78e6a4c211a`;
+  complete HCZ is 45 events, 9,779 bytes,
+  `sha256:edfa009a8c908b55702c5fa110ca8a72251e9c0f42343995c631d92ed83eb86eec`.
+- No trace frontier is claimed from these candidates until the exact fixture
+  bytes are reviewed and approved.
+
+### Task 9A prerequisite correction
+
+- Review found that a first timing edge in a later run segment could seed its
+  ordinal during handoff. That could mask omitted production work (for
+  example, an empty initial schedule followed by ordinal 4).
+- Handoff no longer has ordinal-base authority. A reviewed nonzero base can
+  be established only by initial installation, before production submission;
+  rewind preserves it. Focused port and run-coordinator tests exercise both
+  the rejected missing-continuity case and a valid explicit ordinal-4 base.
+- Native metadata comparisons now classify three exact shapes: current 6.35
+  schema 7 (direct comparison), published 6.34 schema 7 (exact version
+  normalization), and legacy schema 6 (exact version/schema normalization).
+  Unknown and mixed shapes fail.
+
+```bash
+mvn -Dmse=off \
+  "-Dtest=com.openggf.trace.timing.TestHardwareTimingReplayPort,com.openggf.tests.trace.runs.TestTraceRunHardwareTimingCoordinator" \
+  test
+```
+
+- Pass: 25 tests, 0 failures.
+
+```bash
+BIZHAWK_HOME=<bizhawk> tools/bizhawk-headless/test.sh \
+  --filter "metadata compatibility accepts" --jobs 1
+```
+
+- Pass: 3 matching metadata compatibility tests, 0 failures. The mandatory
+  harness dependency skipped because its unrelated S1 ROM was not supplied.
+- Task 9 acceptance remains pending corrected fixture publication and the
+  composed rings/live-window/recorded-rewind acceptance phase. The
+  candidate-only real-ROM integration classes remain outside this staged
+  prerequisite bundle.
+
+### Task 9A handoff-gap correction
+
+- Review identified that exported edge ordinals are not necessarily
+  contiguous across files. During structural phase work such as `$48`, the
+  recorder keeps advancing the production-identity ledger with a null writer,
+  so the next segment can legitimately begin several ordinals later.
+- Cross-handoff edge contiguity validation was removed. Within-stream
+  contiguity remains strict. Tests now prove that real intervening
+  submissions/preparation/claims advance the production ledger to the later
+  edge, while the same gap without those submissions fails naturally at
+  admission (`engine #3` versus expected `#5`). Handoff still cannot seed or
+  reset the ordinal base.
+
+```bash
+mvn -Dmse=off \
+  "-Dtest=com.openggf.trace.timing.TestHardwareTimingReplayPort,com.openggf.tests.trace.runs.TestTraceRunHardwareTimingCoordinator" \
+  test
+```
+
+- Pass: 26 tests, 0 failures.
+
+## 2026-07-27 - Task 9B corrected fixtures and production frontier freeze
+
+- Worktree: `.worktrees/trace-green-integration-20260727`, branch
+  `bugfix/ai-trace-green-integration-20260727`, HEAD `79b12b4fef`.
+- The approved native recorder output replaces only each fixture's
+  `hardware_timing.jsonl` and timing metadata declaration. Physics and aux
+  payloads are unchanged:
+  - AIZ end-to-end: 38 edges, 8,246 bytes,
+    `sha256:349894a74ab42d2241f6e87a814e1795a716f276c6b41c2aca4edcf9b65d77e3`
+    (38 `POST_OBJECTS`, 0 `VINT_SERVICE`).
+  - AIZ complete-run: 41 edges, 8,909 bytes,
+    `sha256:a61c169cc98facbdd7aa4af62c7bc0eca89733f2dce695531e787bdf046f89ba`
+    (38 `POST_OBJECTS`, 3 `VINT_SERVICE`).
+  - HCZ complete-run: 45 edges, 9,779 bytes,
+    `sha256:8d7d92b3eb03ceaf4b563b10da9cf4268c27690e0a5625ef429cb9f8c5f0c67e`
+    (43 `POST_OBJECTS`, 2 `VINT_SERVICE`).
+- Production corrections established before the freeze:
+  - Recorder v6.37 classifies genuine held-counter lag/loading completions as
+    `VINT_SERVICE`, but retains `POST_OBJECTS` for the ROM's `loc_62CC`
+    held-counter title-card scan. The exception arms only from physical slot
+    8's `Obj_TitleCard` parent (`$2D690`) with `objoff_48` set, then follows
+    the loop's raw `objoff_48` / `Nem_decomp_queue` predicates. Nemesis work
+    alone cannot arm it. AIZ raw frame 6351 remains a confirmed gameplay lag
+    symptom; the late AIZ/HCZ VInt pairs occur after the title-card lifecycle
+    has exited. Live and recorded admission use the same production
+    boundaries, and shifted completion edges fail rather than hydrating
+    readiness.
+  - AIZ keeps the already-prepared fire-overlay bytes across its host-side act
+    rebuild in a session-owned resettable and rewindable adapter, matching the
+    ROM's retained VDP contents instead of using process-global readiness or
+    submitting a synthetic second fire job. A title-card-free seamless reload
+    opens the ordinary enemy-art admission gate directly.
+  - StarPost activation submits the exact ROM-selected bonus-star KosM job in
+    the activating object scan. The remainder-zero route uses
+    `ArtKosM_StarPostStars3` at source `$187C4E`, destination tile `$5EC`,
+    compressed length 93, output length 96, fingerprint
+    `sha256:28a69b8f385d0f7355d90a7aa996d75d45e26eb4b2672d7ce3e0eec11a513b3f`.
+    The session-owned PLC snapshot retains its pending handle ordinal across
+    rewind.
+
+Fresh focused command:
+
+```bash
+mvn -Dmse=off -Ds3k.rom.path=s3k.gen \
+  "-Dtest=com.openggf.game.sonic3k.TestSonic3kLevelEventRewindSnapshot,\
+com.openggf.tools.TestRecordingFrameDriverHardwareTiming,\
+com.openggf.game.sonic3k.resources.TestS3kKosStructuralSequence,\
+com.openggf.game.sonic3k.resources.TestS3kKosTimingRewindIntegration,\
+com.openggf.tests.trace.s3k.TestS3kHardwareTimingReplay,\
+com.openggf.trace.timing.TestCommittedHardwareTimingFixtures,\
+com.openggf.tests.TestBuildToolingGuard" test
+```
+
+- Pass: 100 tests, 0 failures, 0 errors, 0 skips. The two real-ROM integration
+  classes verify the corrected fixture identities and a real HCZ KosM
+  before/on/after rewind.
+
+Focused architecture/rewind/fixture guards:
+
+```bash
+mvn -Dmse=off \
+  "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard,\
+com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard,\
+com.openggf.trace.TestTraceFixtureCompressionGuard,\
+com.openggf.tests.TestArchitecturalSourceGuard#hardwareTimingAuthorityExceptionStaysDocumentedAndAgentGuidanceStaysMirrored+levelFrameStepDoesNotUseAmbientGameServices+objectArtDataDoesNotGainNewGameOrZoneSpecificSurface+productionGameplayCodeDoesNotBypassLevelMutationSurfaceWithRawLevelMutators,\
+com.openggf.tests.TestBuildToolingGuard#traceReplayBootstrapMustNotHydrateEngineStateFromTraceRows+traceReplayBootstrapPolicySignalsStayBounded" \
+  test
+```
+
+- Pass: 10 tests, 0 failures.
+- The complete `TestBuildToolingGuard` plus the immutable committed-fixture
+  publication guard pass 45 tests with zero failures. The static-session debt
+  inventory now removes the rejected fire-overlay payload and separately
+  records only the pre-existing immutable ROM-terrain byte cache.
+- Native recorder verification with the discovered `s3k.gen` ROM passes all
+  23 `HardwareTiming` tests. Fresh ROM differential capture matches the
+  committed standard AIZ, complete-run AIZ, and complete-run HCZ timing
+  streams byte-for-byte (3 tests, 0 failures). `luac -p` accepts the shared
+  timing module and both recorder entry points.
+
+Strict frontier command:
+
+```bash
+mvn -Dmse=off -Ds3k.rom.path=s3k.gen \
+  -Dtrace.hardwareTiming.strict=true \
+  "-Dtest=<one of TestS3kAizTraceReplay,\
+TestS3kAizCompleteRunTraceReplay,\
+TestS3kHczCompleteRunTraceReplay>#replayMatchesTrace" test
+```
+
+- AIZ end-to-end consumes exact ordinals 2 through 22 (21 of 38 edges).
+  The first unconsumed edge is ordinal 23 at raw frame 8800,
+  `POST_OBJECTS`, fingerprint
+  `sha256:10eb568a70724c579f022914f56227c2c7fa421aafa8578aebaa874f0cffb0ca`;
+  production pending is empty. This is the ROM's AIZ1 miniboss-results owner
+  mutating into the in-level Act 2 title card and submitting RedAct art, not a
+  bonus-stage or hardware-gap event. The remaining 17 end-to-end edges are
+  not claimed.
+- AIZ complete-run independently reaches the analogous boundary after
+  consuming ordinals 2 through 21 (20 of 41 edges). Its first unconsumed edge
+  is ordinal 22 at raw frame 11860 with the same RedAct fingerprint and no
+  production pending work. The remaining 21 edges are not claimed.
+- HCZ complete-run reaches its first external edge at raw frame 36,
+  `POST_OBJECTS`, ordinal 43, fingerprint
+  `sha256:f7d726c95e019598b69ed655a53fca44b42967d9361230092ba02e539abfa45f`
+  (Blastoid art), with production pending empty. No HCZ edge is consumed; all
+  45 remain outstanding.
+- Outstanding Task 9B acceptance work is therefore the native
+  results-to-title owner timing, strict admission of every later AIZ/HCZ edge,
+  and the composed live-window/rings/recorded-rewind scenario. Fleet-wide
+  committed fixture publication for every S3K level remains required beyond
+  these three corrected fixtures. LBZ was not inspected or changed.
+
+## 2026-07-27 - S3K native v6.37 timing fleet publication
+
+- Worktree: `.worktrees/trace-green-integration-20260727`, branch
+  `bugfix/ai-trace-green-integration-20260727`, capture base
+  `94d7356df860ed1149c18a7a41804522fc91f757`.
+- Five fresh native identities were captured and installed: standard CNZ,
+  standard MGZ, the 15-segment Sonic+Tails route through the ending, and the
+  25-segment/22-transition Knuckles B and C identities.
+- The complete-run publication adds `fbz_completerun`, `soz_completerun`,
+  `lrz_completerun`, `hpz_completerun`, `ssz_completerun`,
+  `dez_completerun`, `ddz_completerun`, and `ending_completerun`.
+  Raw terminal recorder tokens are retained in exact metadata but mapped to
+  semantic destination ownership in
+  `hardware-timing-publication.tsv`.
+- All pre-existing destination physics and aux logical bytes matched before
+  publication. Exact native v6.37 metadata, timing streams, compressed
+  payloads, and the fresh B run manifest were installed. The immutable
+  publication manifest freezes 47 destinations plus the run manifest.
+- Strict installed-fleet loaders pass all 47 destinations. The focused
+  publication/compression/reference command passes 17 tests:
+
+```bash
+mvn -q -Dmse=off \
+  "-Dtest=com.openggf.trace.TestTraceFixtureCompressionGuard,\
+com.openggf.tests.trace.TestTraceReplayReferenceClosureGuard,\
+com.openggf.trace.timing.TestCommittedHardwareTimingFixtures" test
+```
+
+- Native compressor validation passes 12 cases, including a new bulk/streamed
+  empty-gzip regression. Native non-gate `HardwareTiming` validation passes
+  22 cases (the ROM-span case was skipped until the ROM-backed gate command).
+- ROM-backed native S3K publication gates are 9/9 green with the verified
+  `s3k.gen` ROM. This includes one fresh full-movie differential over all 15
+  Sonic+Tails destinations and parallel fresh B/C differentials over both
+  25-segment Knuckles identities.
+- Replay frontiers were intentionally **not remeasured** in this
+  publication-only phase. The eight later-route frontiers are **unmeasured**;
+  no green/red claim is made. Existing observed frontiers remain unchanged.
+  LBZ was regenerated, strictly loaded, and guard-validated only; its replay
+  frontier was neither inspected nor remediated.

@@ -363,7 +363,10 @@ class TestTraceReplayInvariantGuard {
      * writes no recorded engine state anywhere.
      */
     private static boolean isTraceCaptureToolRecordingAdapter(Path source, String trimmed) {
-        return normalize(source).equals("src/main/java/com/openggf/tools/TraceReplayDrive.java")
+        String normalized = normalize(source);
+        return (normalized.equals("src/main/java/com/openggf/tools/TraceReplayDrive.java")
+                || normalized.equals(
+                        "src/test/java/com/openggf/tests/HeadlessTestRunner.java"))
                 && trimmed.equals("driver.advanceRecordingCursor(frameCount);");
     }
 

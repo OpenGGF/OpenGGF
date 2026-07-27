@@ -100,7 +100,23 @@ namespace OpenGGF.BizHawk.Headless
         public const int DynamicResizeRoutine = 0xEE33;  // u8
         public const int ObjectLoadRoutine = 0xF76C;     // u8
         public const int RingsManagerRoutine = 0xF710;   // u8
-        public const int KosModulesLeft = 0xFF04;        // u8
+        // Kosinski queue owners. These are adjacent in the phased
+        // $FFFF0000 RAM namespace declared by sonic3k.constants.asm.
+        // See Kos_decomp_queue_count at lines 866 and
+        // Kos_modules_left/Kos_module_queue at lines 896-909.
+        public const int KosDecompQueueCount = 0xFF0E;   // u16be: bit 15 busy, low 15 queued direct streams
+        public const int NemDecompQueue = 0xF680;        // first u32be source in Nem_decomp_queue; loc_62CC title-card wait predicate
+        public const int KosModulesLeft = 0xFF60;        // u8: bit 7 busy, low 7 modules remaining
+        public const int KosLastModuleSize = 0xFF62;     // u16be words
+        public const int KosModuleQueue = 0xFF64;        // four source:u32be,destination:u16be entries
+        public const int KosModuleSource = 0xFF64;       // active entry source alias
+        public const int KosModuleDestination = 0xFF68;  // active entry destination alias
+        public const int KosModuleQueueEntrySize = 6;
+        public const int KosModuleQueueCapacity = 4;
+        // Schema-6 aiz_handoff_terrain_state accidentally sampled this
+        // unrelated byte. Keep that published diagnostic byte stable while
+        // the authoritative schema-7 timing recorder uses KosModulesLeft.
+        public const int LegacyAizHandoffKosModulesLeft = 0xFF04;
 
         // Object table (OST): 110 slots of 0x4A bytes at 0xB000
         // (Player_1). NOT S2's 0x40 stride. Slot 1 = Player_2 (0xB04A);
@@ -229,6 +245,7 @@ namespace OpenGGF.BizHawk.Headless
         public const int GameModeLevelSelect = 0x28;
         public const int GameModeLevel = 0x0C;
         public const int GameModeSpecialStage = 0x34;    // blue-spheres SS; its own CSV schema
+        public const int GameModeSpecialStageResults = 0x48;
         public const int GameModeMask = 0x0F;
 
         public static bool IsLevelFamilyMode(int gameMode)

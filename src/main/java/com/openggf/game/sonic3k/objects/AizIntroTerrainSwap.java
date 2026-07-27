@@ -107,7 +107,12 @@ public final class AizIntroTerrainSwap {
         LOG.info("AIZ intro transition tilemaps pre-computed successfully");
     }
 
-    public static synchronized boolean applyMainLevelOverlays(ObjectServices services) {
+    public static synchronized boolean applyMainLevelOverlays(
+            ObjectServices services,
+            byte[] preparedMainLevelTiles8x8) {
+        if (preparedMainLevelTiles8x8 == null) {
+            throw new IllegalArgumentException("preparedMainLevelTiles8x8");
+        }
         LevelManager levelManager = services.levelManager();
         if (levelManager == null) {
             return false;
@@ -134,7 +139,7 @@ public final class AizIntroTerrainSwap {
                     overlayData.mainLevelBlocks16x16(),
                     overlayData.chunkOverlayOffsetBytes());
             sonic3kLevel.applyPatternOverlay(
-                    overlayData.mainLevelTiles8x8(),
+                    preparedMainLevelTiles8x8,
                     overlayData.patternOverlayOffsetBytes());
             return MutationEffects.NONE;
         });
@@ -194,35 +199,29 @@ public final class AizIntroTerrainSwap {
         int baseWord0 = rom.read32BitAddr(baseEntryAddr + LLB_PRIMARY_ART);
         int baseWord2 = rom.read32BitAddr(baseEntryAddr + LLB_PRIMARY_BLOCKS);
 
-        int introWord1 = rom.read32BitAddr(introEntryAddr + LLB_SECONDARY_ART);
         int introWord3 = rom.read32BitAddr(introEntryAddr + LLB_SECONDARY_BLOCKS);
 
         int primaryArtAddr = baseWord0 & 0x00FFFFFF;
         int primaryBlocksAddr = baseWord2 & 0x00FFFFFF;
-        int mainLevelArtAddr = introWord1 & 0x00FFFFFF;
         int mainLevelBlocksAddr = introWord3 & 0x00FFFFFF;
 
         int patternOffset = loader.loadSingle(LoadOp.kosinskiMBase(primaryArtAddr)).length;
         int chunkOffset = loader.loadSingle(LoadOp.kosinskiBase(primaryBlocksAddr)).length;
-        byte[] mainLevelTiles8x8 = loader.loadSingle(LoadOp.kosinskiMBase(mainLevelArtAddr));
         byte[] mainLevelBlocks16x16 = loader.loadSingle(LoadOp.kosinskiBase(mainLevelBlocksAddr));
 
         LOG.info(String.format(
-                "AIZ intro terrain swap data: patternOffset=0x%04X chunkOffset=0x%04X main8x8=%d main16x16=%d",
-                patternOffset, chunkOffset, mainLevelTiles8x8.length, mainLevelBlocks16x16.length));
+                "AIZ intro terrain swap data: patternOffset=0x%04X chunkOffset=0x%04X main16x16=%d",
+                patternOffset, chunkOffset, mainLevelBlocks16x16.length));
 
         return new OverlayData(
                 patternOffset,
                 chunkOffset,
-                mainLevelTiles8x8,
                 mainLevelBlocks16x16);
     }
 
     private record OverlayData(
             int patternOverlayOffsetBytes,
             int chunkOverlayOffsetBytes,
-            byte[] mainLevelTiles8x8,
             byte[] mainLevelBlocks16x16) {
     }
 }
-

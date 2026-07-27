@@ -31,6 +31,10 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.rewind.snapshot.OscillationStaticAdapter;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.Level;
@@ -60,6 +64,8 @@ public final class GameplayModeContext implements ModeContext {
     private final int spawnX;
     private final int spawnY;
     private final EditorPlaytestStash resumeStash;
+    private final HardwareTimingService hardwareTiming;
+    private final RecordedCompletionAuthority recordedCompletionAuthority;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -91,23 +97,50 @@ public final class GameplayModeContext implements ModeContext {
     private RewindController rewindController;
     private PlaybackController playbackController;
     private RewindBoundaryReporter rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
+    private HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver =
+            HardwareTimingBoundaryObserver.NO_OP;
+    private Runnable hardwareTimingReplayCloseHook;
 
     public GameplayModeContext(WorldSession worldSession) {
-        this(worldSession, 0, 0, null);
+        this(worldSession, 0, 0, null, HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
+    public GameplayModeContext(
+            WorldSession worldSession,
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
+        this(worldSession, 0, 0, null, admissionPolicy);
     }
 
     public GameplayModeContext(WorldSession worldSession, int spawnX, int spawnY) {
-        this(worldSession, spawnX, spawnY, null);
+        this(worldSession, spawnX, spawnY, null,
+                HardwareReadinessAdmissionPolicy.LIVE);
     }
 
     public GameplayModeContext(WorldSession worldSession,
                                int spawnX,
                                int spawnY,
                                EditorPlaytestStash resumeStash) {
+        this(worldSession, spawnX, spawnY, resumeStash,
+                HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
+    public GameplayModeContext(
+            WorldSession worldSession,
+            int spawnX,
+            int spawnY,
+            EditorPlaytestStash resumeStash,
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
         this.worldSession = Objects.requireNonNull(worldSession, "worldSession");
         this.spawnX = spawnX;
         this.spawnY = spawnY;
         this.resumeStash = resumeStash;
+        HardwareReadinessAdmissionPolicy checkedPolicy =
+                Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+        this.hardwareTiming = new HardwareTimingService();
+        this.recordedCompletionAuthority =
+                checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
+                        ? hardwareTiming.beginRecordedAdmission()
+                        : null;
     }
 
     public boolean isGameplayRuntimeReady() {
@@ -199,6 +232,7 @@ public final class GameplayModeContext implements ModeContext {
         this.managersTornDown = false;
 
         this.rewindRegistry = new RewindRegistry(profiler);
+        this.rewindRegistry.register(hardwareTiming);
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
@@ -395,6 +429,42 @@ public final class GameplayModeContext implements ModeContext {
 
     public ZoneLayoutMutationPipeline getZoneLayoutMutationPipeline() {
         return zoneLayoutMutationPipeline;
+    }
+
+    public HardwareTimingService hardwareTiming() {
+        return hardwareTiming;
+    }
+
+    public RecordedCompletionAuthority recordedCompletionAuthority() {
+        if (recordedCompletionAuthority == null) {
+            throw new IllegalStateException(
+                    "gameplay context was not constructed for recorded hardware admission");
+        }
+        return recordedCompletionAuthority;
+    }
+
+    public HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver() {
+        return hardwareTimingBoundaryObserver;
+    }
+
+    public void setHardwareTimingBoundaryObserver(
+            HardwareTimingBoundaryObserver observer) {
+        hardwareTimingBoundaryObserver = observer != null
+                ? observer
+                : HardwareTimingBoundaryObserver.NO_OP;
+    }
+
+    public void setHardwareTimingReplayCloseHook(Runnable closeHook) {
+        if (hardwareTimingReplayCloseHook != null) {
+            throw new IllegalStateException(
+                    "hardware timing replay close hook is already installed");
+        }
+        hardwareTimingReplayCloseHook =
+                Objects.requireNonNull(closeHook, "closeHook");
+    }
+
+    public void clearHardwareTimingReplayCloseHook() {
+        hardwareTimingReplayCloseHook = null;
     }
 
     // ── Rewind framework ─────────────────────────────────────────────────
@@ -664,6 +734,21 @@ public final class GameplayModeContext implements ModeContext {
             return;
         }
         managersTornDown = true;
+        RuntimeException replayCloseFailure = null;
+        Runnable replayClose = hardwareTimingReplayCloseHook;
+        hardwareTimingReplayCloseHook = null;
+        if (replayClose != null) {
+            try {
+                replayClose.run();
+            } catch (RuntimeException failure) {
+                replayCloseFailure = failure;
+            }
+        }
+        if (rewindRegistry != null) {
+            rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
+        }
+        hardwareTiming.resetForMissingSnapshot();
+        hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();
         }
@@ -740,6 +825,9 @@ public final class GameplayModeContext implements ModeContext {
         playbackController = null;
         rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
         rewindRegistry = null;
+        if (replayCloseFailure != null) {
+            throw replayCloseFailure;
+        }
     }
 
     /**

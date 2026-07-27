@@ -1,8 +1,13 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -47,7 +52,11 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
     private int x;
     private int y;
     private int phase;
-    private int artWaitFramesRemaining;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
+    private S3kKosModuleQueue artQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle artHandle;
+    private long artOrdinal = -1;
     private int dropFramesRemaining;
     private int mappingFrame;
     private int animFrameTimer;
@@ -66,6 +75,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        rebindArtAfterRestore();
         AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite sprite)
                 ? sprite : null;
 
@@ -75,15 +85,18 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
                 return;
             }
             phase = PHASE_LOADING_ART;
-            artWaitFramesRemaining = HCZBreakableBarState.claimLargeFanModuleWaitFrames();
+            queueFanArt();
             return;
         }
 
         if (phase == PHASE_LOADING_ART) {
-            if (artWaitFramesRemaining > 0) {
-                artWaitFramesRemaining--;
+            if (!artQueue.isReady(artHandle)) {
                 return;
             }
+            artQueue.claim(artHandle);
+            artHandle = null;
+            artQueue = null;
+            artOrdinal = -1;
             phase = PHASE_ACTIVE;
             dropFramesRemaining = DROP_FRAMES;
             services().playSfx(Sonic3kSfx.FAN_LATCH.id);
@@ -124,6 +137,31 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
         if (!isOnScreen(64)) {
             setDestroyed(true);
         }
+    }
+
+    private void queueFanArt() {
+        try {
+            artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+            artHandle = artQueue.queue(
+                    services().rom(),
+                    Sonic3kConstants.ART_KOSM_HCZ_LARGE_FAN_ADDR,
+                    Sonic3kConstants.ARTTILE_HCZ_LARGE_FAN);
+            artOrdinal = artHandle.ordinal();
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Unable to queue HCZ large-fan KosM art", e);
+        }
+    }
+
+    private void rebindArtAfterRestore() {
+        if (artOrdinal < 0 || artQueue != null) {
+            return;
+        }
+        artHandle = services().hardwareTiming().pendingHandle(
+                        HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Missing restored HCZ large-fan KosM job " + artOrdinal));
+        artQueue = new S3kKosModuleQueue(services().hardwareTiming());
     }
 
     private boolean shouldActivate(AbstractPlayableSprite player) {

@@ -6,12 +6,15 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceRunManifest;
+import com.openggf.trace.replay.TraceReplayFixture;
+import com.openggf.trace.timing.HardwareTimingSchedule;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * Chained-driver core for multi-stage trace runs (spec: docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md).
@@ -46,6 +49,155 @@ public final class TraceRunReplayWalker {
         TraceRunManifest.Transition entryBoundary,
         TraceRunManifest.Transition exitBoundary
     ) {}
+
+    /**
+     * Hardware-timing view of one structural run segment. Raw frame numbers
+     * remain trace input; the coordinator forwards them only to the bounded
+     * replay fixture and never to gameplay owners.
+     */
+    public record HardwareTimingSegment(
+            int bk2FrameOffset,
+            List<Integer> rawFrames,
+            HardwareTimingSchedule schedule) {
+        public HardwareTimingSegment {
+            if (bk2FrameOffset < 0) {
+                throw new IllegalArgumentException(
+                        "bk2FrameOffset must be non-negative");
+            }
+            rawFrames = List.copyOf(
+                    Objects.requireNonNull(rawFrames, "rawFrames"));
+            schedule = Objects.requireNonNull(schedule, "schedule");
+        }
+    }
+
+    /** True when any structural segment declares the timing stream schema. */
+    public static boolean hasHardwareTimingStream(List<SegmentPlan> plans) {
+        Objects.requireNonNull(plans, "plans");
+        return plans.stream().anyMatch(
+                plan -> plan.trace().metadata().hasHardwareTimingStream());
+    }
+
+    /**
+     * Builds the run timing view. Metadata-only special-stage segments use the
+     * recorder-audited mapping {@code raw_frame = segment-local trace index};
+     * their BK2 location remains {@code bk2_frame_offset + raw_frame}.
+     */
+    public static List<HardwareTimingSegment> hardwareTimingSegments(
+            List<SegmentPlan> plans) {
+        Objects.requireNonNull(plans, "plans");
+        List<HardwareTimingSegment> result = new ArrayList<>(plans.size());
+        for (SegmentPlan plan : plans) {
+            int parsedFrameCount = plan.trace().frameCount();
+            int representedFrameCount = parsedFrameCount > 0
+                    ? parsedFrameCount
+                    : plan.segment().traceFrameCount();
+            List<Integer> rawFrames = new ArrayList<>(representedFrameCount);
+            for (int traceIndex = 0;
+                    traceIndex < representedFrameCount;
+                    traceIndex++) {
+                rawFrames.add(parsedFrameCount > 0
+                        ? plan.trace().getFrame(traceIndex).frame()
+                        : traceIndex);
+            }
+            result.add(new HardwareTimingSegment(
+                    plan.segment().bk2FrameOffset(),
+                    rawFrames,
+                    plan.trace().hardwareTimingSchedule()));
+        }
+        return List.copyOf(result);
+    }
+
+    /**
+     * Run-scoped adapter that latches physical raw frames and changes schedules
+     * exactly when the playback cursor first enters the next structural
+     * segment. It owns no gameplay state and delegates all validation to the
+     * replay fixture/port.
+     */
+    public static final class HardwareTimingCoordinator {
+        private final TraceReplayFixture fixture;
+        private final List<HardwareTimingSegment> segments;
+        private int currentSegment;
+        private boolean closed;
+
+        public HardwareTimingCoordinator(
+                TraceReplayFixture fixture,
+                List<HardwareTimingSegment> segments) {
+            this.fixture = Objects.requireNonNull(fixture, "fixture");
+            this.segments = List.copyOf(
+                    Objects.requireNonNull(segments, "segments"));
+            if (this.segments.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "hardware timing run requires at least one segment");
+            }
+            for (int i = 1; i < this.segments.size(); i++) {
+                HardwareTimingSegment previous = this.segments.get(i - 1);
+                HardwareTimingSegment current = this.segments.get(i);
+                if (current.bk2FrameOffset() < previous.bk2FrameOffset()
+                        + previous.rawFrames().size()) {
+                    throw new IllegalArgumentException(
+                            "hardware timing segment BK2 ranges overlap at index " + i);
+                }
+            }
+        }
+
+        /** Called by {@link BoundaryProbe} before its comparison delegate. */
+        public void beginPlaybackFrame(Bk2FrameInput frame) {
+            Objects.requireNonNull(frame, "frame");
+            for (int segmentIndex = segments.size() - 1;
+                    segmentIndex >= 0;
+                    segmentIndex--) {
+                HardwareTimingSegment segment = segments.get(segmentIndex);
+                int traceIndex = frame.frameIndex() - segment.bk2FrameOffset();
+                if (traceIndex < 0) {
+                    continue;
+                }
+                if (traceIndex < segment.rawFrames().size()) {
+                    beginSegmentRow(segmentIndex, traceIndex);
+                } else {
+                    fixture.enterHardwareTimingGap();
+                }
+                return;
+            }
+            fixture.enterHardwareTimingGap();
+        }
+
+        /**
+         * Latches a row driven outside the ordinary playback observer, such as
+         * an advance-uncompared special-stage segment.
+         */
+        public void beginSegmentRow(int segmentIndex, int traceIndex) {
+            if (closed) {
+                throw new IllegalStateException(
+                        "hardware timing run is already closed");
+            }
+            if (segmentIndex < currentSegment
+                    || segmentIndex > currentSegment + 1) {
+                throw new IllegalStateException(
+                        "hardware timing segment moved out of structural order: "
+                                + currentSegment + " -> " + segmentIndex);
+            }
+            HardwareTimingSegment segment = segments.get(segmentIndex);
+            if (traceIndex < 0 || traceIndex >= segment.rawFrames().size()) {
+                throw new IndexOutOfBoundsException(
+                        "trace row " + traceIndex + " outside segment "
+                                + segmentIndex);
+            }
+            if (segmentIndex == currentSegment + 1) {
+                fixture.handoffHardwareTimingReplay(segment.schedule());
+                currentSegment = segmentIndex;
+            }
+            fixture.beginTraceRow(
+                    traceIndex, segment.rawFrames().get(traceIndex));
+        }
+
+        public void close() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            fixture.closeHardwareTimingReplayRun();
+        }
+    }
 
     /**
      * Pure terminal-tail policy derived from recorder-owned manifest data. A
@@ -502,6 +654,8 @@ public final class TraceRunReplayWalker {
         private TraceRunManifest.Transition armed;
         private BoundaryObservation latchedObservation;
         private int pendingSpecialStageRequestFrame = -1;
+        private Consumer<Bk2FrameInput> beforeFrameObserver = frame -> {
+        };
 
         public BoundaryProbe(EngineHooks hooks) {
             this.hooks = hooks;
@@ -510,6 +664,15 @@ public final class TraceRunReplayWalker {
         /** Attaches (or, with {@code null}, detaches) the delegate observer. */
         public void setDelegate(PlaybackDebugManager.PlaybackFrameObserver delegate) {
             this.delegate = delegate;
+        }
+
+        /**
+         * Installs a row hook that runs before lag classification or any
+         * gameplay service boundary represented by the row.
+         */
+        public void setBeforeFrameObserver(Consumer<Bk2FrameInput> observer) {
+            beforeFrameObserver = observer != null ? observer : frame -> {
+            };
         }
 
         /** Arms the probe for a new boundary, clearing any prior latch. */
@@ -556,6 +719,7 @@ public final class TraceRunReplayWalker {
 
         @Override
         public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+            beforeFrameObserver.accept(frame);
             return delegate != null && delegate.shouldSkipGameplayTick(frame);
         }
 

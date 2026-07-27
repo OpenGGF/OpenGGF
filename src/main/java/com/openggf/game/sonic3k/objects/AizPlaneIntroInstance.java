@@ -2,9 +2,14 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kPlayerArt;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
@@ -208,6 +213,14 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     private PlayerSpriteRenderer sonicRenderer;
     private PlayerSpriteRenderer superSonicRenderer;
     private boolean renderersLoaded;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
+    private S3kKosModuleQueue introSpriteArtQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle planeArtHandle;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle emeraldArtHandle;
+    private long planeArtOrdinal = -1;
+    private long emeraldArtOrdinal = -1;
 
     /** ROM $40 field — scroll speed. Changes at routine transitions. */
     private int scrollSpeed = SCROLL_SPEED;
@@ -219,18 +232,6 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     private static int introScrollOffset = 0;
     /** Set once intro transitions to the post-$1400 main-level phase. */
     private static boolean mainLevelPhaseActive = false;
-    /** Prevent repeated terrain swap attempts. */
-    private static boolean mainLevelTerrainSwapAttempted = false;
-
-    /**
-     * Simulates the ROM's Kos_decomp_queue_count gate.
-     * When > 0, terrain swap has been triggered but art "decompression" is still
-     * in progress — the BG scroll handler stays in intro deformation mode.
-     * ROM queues 2 Kos items (16x16 blocks + 8x8 patterns) that process
-     * incrementally across VBlanks.
-     */
-    private static int decompressionCountdown = 0;
-
     private static AizPlaneIntroInstance activeIntroInstance;
 
     /** Returns the current Events_fg_1 accumulator value for BG parallax. */
@@ -242,8 +243,6 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     public static void resetIntroPhaseState() {
         introScrollOffset = 0;
         mainLevelPhaseActive = false;
-        mainLevelTerrainSwapAttempted = false;
-        decompressionCountdown = 0;
         activeIntroInstance = null;
     }
 
@@ -301,6 +300,8 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        rebindIntroSpriteArtAfterRestore();
+        claimIntroSpriteArtIfReady();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         lastFrameCounter = frameCounter;
         AbstractPlayableSprite trackedPlayer = resolveTrackedPlayer(player);
@@ -535,93 +536,11 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         }
     }
 
-    /**
-     * ROM dynamic-resize transition point:
-     * once camera reaches X >= $1400, switch to main-level terrain overlays and
-     * leave the intro deformation phase.
-     */
-    /**
-     * Simulated decompression frames for 2 Kos queue items.
-     * ROM processes Kos modules incrementally during VBlank — each module takes
-     * multiple frames depending on compressed size. Typical for AIZ1's two small
-     * overlays (16x16 blocks + 8x8 patterns).
-     */
-    private static final int DECOMPRESSION_FRAMES = 30;
-
-    /**
-     * When true, simulates the ROM's KosinskiM decompression queue delay.
-     * The ROM queues 2 items (16x16 blocks + 8x8 patterns) at camera X >= $1400,
-     * then the BG event handler (AIZ1BGE_Intro) polls Kos_decomp_queue_count
-     * each frame and stays in intro deformation until the queue drains.
-     * Set to false to skip the delay for faster testing.
-     */
-    private static boolean simulateDecompressionLoading = true;
-
-    /**
-     * @param introWasPlayed true when the intro cinematic ran (terrain swap was triggered
-     *     dynamically at cameraX=$1400). false for skip-intro or level-select past $1400.
-     *     When false, the simulated decompression countdown is skipped because no Kos data
-     *     was queued — matching ROM behavior where Kos_decomp_queue_count is 0 at level start.
-     */
-    public static void updateMainLevelPhaseForCameraX(int cameraX, boolean introWasPlayed) {
-        updateMainLevelPhaseForCameraX(cameraX, introWasPlayed, null);
-    }
-
-    public static void updateMainLevelPhaseForCameraX(
-            int cameraX, boolean introWasPlayed, ObjectServices fallbackServices) {
-        if (mainLevelPhaseActive) {
-            return;
-        }
-
-        // ROM gate: while Kos_decomp_queue_count > 0, stay in intro deformation.
-        // The BG event handler (AIZ1BGE_Intro, s3.asm line 70004) polls this
-        // each frame and keeps using AIZ1_IntroDeform until the queue empties.
-        if (decompressionCountdown > 0) {
-            decompressionCountdown--;
-            if (decompressionCountdown <= 0) {
-                mainLevelPhaseActive = true;
-            }
-            return;
-        }
-
-        if ((cameraX & 0xFFFF) < 0x1400) {
-            return;
-        }
-
-        // ROM: FG event queues terrain overlays when camera reaches $1400
-        if (!mainLevelTerrainSwapAttempted) {
-            mainLevelTerrainSwapAttempted = true;
-            ObjectServices services = activeIntroInstance != null
-                    ? activeIntroInstance.tryServices()
-                    : fallbackServices;
-            boolean swapped = services != null && AizIntroTerrainSwap.applyMainLevelOverlays(services);
-            if (swapped) {
-                LOG.info("AIZ intro: main-level terrain overlays applied");
-            } else {
-                LOG.warning("AIZ intro: failed to apply main-level terrain overlays at transition point.");
-            }
-        }
-
-        // ROM parity: the decompression queue only has pending work when the
-        // intro terrain swap was triggered dynamically (camera scrolled past
-        // $1400 during gameplay). When the intro is skipped, terrain is already
-        // loaded from LevelLoadBlock entry 26 and Kos_decomp_queue_count is 0.
-        if (simulateDecompressionLoading && introWasPlayed) {
-            decompressionCountdown = DECOMPRESSION_FRAMES;
-        } else {
-            mainLevelPhaseActive = true;
-        }
-    }
-
     private AizIntroPaletteCycler paletteCycler() {
         if (paletteCycler == null) {
             paletteCycler = new AizIntroPaletteCycler(services());
         }
         return paletteCycler;
-    }
-
-    private boolean applyMainLevelOverlaysFromServices() {
-        return AizIntroTerrainSwap.applyMainLevelOverlays(services());
     }
 
     // -----------------------------------------------------------------------
@@ -725,6 +644,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     private void routine2Wait(AbstractPlayableSprite player) {
         waitTimer--;
         if (waitTimer < 0) {
+            queueIntroSpriteArt();
             // Wait complete — spawn plane child and set descent velocity
             LOG.fine("Routine 2: wait complete, spawning plane child");
 
@@ -758,6 +678,75 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
 
             advanceRoutine();
         }
+    }
+
+    private void queueIntroSpriteArt() {
+        if (planeArtHandle != null || emeraldArtHandle != null
+                || planeArtOrdinal >= 0 || emeraldArtOrdinal >= 0) {
+            return;
+        }
+        try {
+            introSpriteArtQueue =
+                    new S3kKosModuleQueue(services().hardwareTiming());
+            planeArtHandle = introSpriteArtQueue.queue(
+                    services().rom(),
+                    Sonic3kConstants.ART_KOSM_AIZ_INTRO_PLANE_ADDR,
+                    Sonic3kConstants.ARTTILE_AIZ_INTRO_PLANE);
+            planeArtOrdinal = planeArtHandle.ordinal();
+            emeraldArtHandle = introSpriteArtQueue.queue(
+                    services().rom(),
+                    Sonic3kConstants.ART_KOSM_AIZ_INTRO_EMERALDS_ADDR,
+                    Sonic3kConstants.ARTTILE_AIZ_INTRO_EMERALDS);
+            emeraldArtOrdinal = emeraldArtHandle.ordinal();
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Unable to queue AIZ intro sprite KosM art", e);
+        }
+    }
+
+    private void claimIntroSpriteArtIfReady() {
+        if (introSpriteArtQueue == null) {
+            return;
+        }
+        if (planeArtHandle != null
+                && introSpriteArtQueue.isReady(planeArtHandle)) {
+            introSpriteArtQueue.claim(planeArtHandle);
+            planeArtHandle = null;
+            planeArtOrdinal = -1;
+        }
+        if (emeraldArtHandle != null
+                && introSpriteArtQueue.isReady(emeraldArtHandle)) {
+            introSpriteArtQueue.claim(emeraldArtHandle);
+            emeraldArtHandle = null;
+            emeraldArtOrdinal = -1;
+        }
+        if (planeArtHandle == null && emeraldArtHandle == null) {
+            introSpriteArtQueue = null;
+        }
+    }
+
+    private void rebindIntroSpriteArtAfterRestore() {
+        if ((planeArtOrdinal < 0 && emeraldArtOrdinal < 0)
+                || introSpriteArtQueue != null) {
+            return;
+        }
+        introSpriteArtQueue = new S3kKosModuleQueue(services().hardwareTiming());
+        if (planeArtOrdinal >= 0) {
+            planeArtHandle = restoredIntroArtHandle(
+                    planeArtOrdinal, "plane");
+        }
+        if (emeraldArtOrdinal >= 0) {
+            emeraldArtHandle = restoredIntroArtHandle(
+                    emeraldArtOrdinal, "emerald");
+        }
+    }
+
+    private HardwareWorkHandle restoredIntroArtHandle(long ordinal, String name) {
+        return services().hardwareTiming().pendingHandle(
+                        HardwareWorkKind.KOS_MODULE_QUEUE, ordinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Missing restored AIZ intro " + name
+                                + " KosM job " + ordinal));
     }
 
     // -----------------------------------------------------------------------

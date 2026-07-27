@@ -2,9 +2,14 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -64,7 +69,6 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     private static final int VERT_Y_RANGE_MIN = -0x40;
     private static final int VERT_Y_RANGE_MAX = -0x30;
     private static final int VERT_ART_LOAD_PULL_PX = 8;
-    private static final int VERT_KOS_MODULE_WAIT_FRAMES = 6;
     private static final int VERT_RISE_TIMER = 0x60; // 96 frames
     private static final int VERT_ERUPTION_TRIGGER = 0x28;
     private static final int VERT_RISE_PX = 8;
@@ -122,7 +126,11 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     private int ySub;
     private boolean playersControlled;
     private boolean debrisSpawned;
-    private int vertArtWaitFramesRemaining = VERT_KOS_MODULE_WAIT_FRAMES;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
+    private S3kKosModuleQueue artQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle artHandle;
+    private long artOrdinal = -1;
 
     // Mapping frame for rendering
     private int mappingFrame;
@@ -195,6 +203,10 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
      * We load synchronously, so just mark done and proceed to setup.
      */
     private void updateHorzArtLoad() {
+        if (!queueArtIfNeeded(
+                Sonic3kConstants.ART_KOSM_HCZ_GEYSER_HORZ_ADDR)) {
+            return;
+        }
         artLoaded = true;
         // ROM setup (loc_2FF32): render_flags=4, priority=$300, width=$80, height=$20
         // Timer $30 = $20 (32 frames initial animation)
@@ -343,9 +355,9 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
      * loc_302FA falls through into the first loc_30338 rise tick.
      */
     private void updateVertArtLoad(AbstractPlayableSprite player) {
-        if (vertArtWaitFramesRemaining > 0) {
+        if (!queueArtIfNeeded(
+                Sonic3kConstants.ART_KOSM_HCZ_GEYSER_VERT_ADDR)) {
             pullPlayersUp(player, VERT_ART_LOAD_PULL_PX);
-            vertArtWaitFramesRemaining--;
             return;
         }
 
@@ -358,6 +370,43 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
 
         vertPhase = VertPhase.RISE;
         updateVertRise(player);
+    }
+
+    private boolean queueArtIfNeeded(int sourceAddress) {
+        rebindArtAfterRestore();
+        try {
+            if (artHandle == null) {
+                artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                artHandle = artQueue.queue(
+                        services().rom(),
+                        sourceAddress,
+                        Sonic3kConstants.ARTTILE_HCZ_GEYSER);
+                artOrdinal = artHandle.ordinal();
+                return false;
+            }
+            if (!artQueue.isReady(artHandle)) {
+                return false;
+            }
+            artQueue.claim(artHandle);
+            artHandle = null;
+            artQueue = null;
+            artOrdinal = -1;
+            return true;
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Unable to queue HCZ geyser KosM art", e);
+        }
+    }
+
+    private void rebindArtAfterRestore() {
+        if (artOrdinal < 0 || artQueue != null) {
+            return;
+        }
+        artHandle = services().hardwareTiming().pendingHandle(
+                        HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Missing restored HCZ water-wall KosM job " + artOrdinal));
+        artQueue = new S3kKosModuleQueue(services().hardwareTiming());
     }
 
     /**

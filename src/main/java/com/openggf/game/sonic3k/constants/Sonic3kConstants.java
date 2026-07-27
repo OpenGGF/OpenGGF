@@ -1351,6 +1351,9 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_AIZ_BLOOMINATOR_ADDR = 0x367DCA;
     // ArtKosM_AIZ_MonkeyDude - Kosinski Moduled compressed art.
     public static final int ART_KOSM_AIZ_MONKEY_DUDE_ADDR = 0x36800C;
+    public static final int ARTTILE_AIZ_BLOOMINATOR = 0x052A;
+    public static final int ARTTILE_AIZ_MONKEY_DUDE = 0x0548;
+    public static final int ARTTILE_AIZ_CATERKILLER_JR = 0x055F;
     // Map_CaterKillerJr - 6 mapping frames (head, tall body, thin body, coconut large/med/small)
     public static final int MAP_CATERKILLER_JR_ADDR = 0x361A18;
     // ArtKosM_AIZ_CaterkillerJr - Kosinski Moduled compressed art ($202 bytes).
@@ -1372,12 +1375,19 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_HCZ_MEGA_CHOPPER_ADDR = 0x36A6C4;
     public static final int ART_KOSM_HCZ_POINTDEXTER_ADDR = 0x36AD8A;
     public static final int ART_KOSM_HCZ_JAWZ_ADDR = 0x36A552;
+    public static final int ARTTILE_HCZ_TURBO_SPIKER = 0x0500;
+    public static final int ARTTILE_HCZ_BLASTOID_JAWZ = 0x0539;
+    public static final int ARTTILE_HCZ_MEGA_CHOPPER = 0x054D;
+    public static final int ARTTILE_HCZ_POINTDEXTER = 0x0559;
 
     // ===== HCZ Water Wall / Geyser (Object 0x3B) =====
     // LockOn data (assembled into S3 half of combined ROM — no S&K-side copy exists).
     // Verified by ROM hex search: these byte patterns are absent from 0x000000-0x200000.
     public static final int ART_KOSM_HCZ_GEYSER_HORZ_ADDR = 0x390C02; // ArtKosM_HCZGeyserHorz
     public static final int ART_KOSM_HCZ_GEYSER_VERT_ADDR = 0x391394; // ArtKosM_HCZGeyserVert
+    // Locked-on S3 data has no S&K-half duplicate; HCZ1BGE_Normal references
+    // this archive through LockOn Data.asm.
+    public static final int ART_KOSM_HCZ2_SECONDARY_ADDR = 0x3BFA6C;
     // ArtTile_HCZGeyser - VRAM tile base for geyser art (both variants)
     public static final int ARTTILE_HCZ_GEYSER = 0x0500;
 

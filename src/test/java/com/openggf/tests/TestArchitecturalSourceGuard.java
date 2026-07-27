@@ -5,6 +5,7 @@ import com.openggf.game.rules.GameRules;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -495,6 +497,29 @@ class TestArchitecturalSourceGuard {
 
         assertNoViolations("Sonic 1 embedded runtime data exceptions must stay documented and bounded",
                 violations);
+    }
+
+    @Test
+    void hardwareTimingAuthorityExceptionStaysDocumentedAndAgentGuidanceStaysMirrored() throws IOException {
+        Path agents = Path.of("AGENTS.md");
+        Path claude = Path.of("CLAUDE.md");
+        byte[] agentsBytes = Files.readAllBytes(agents);
+        assertArrayEquals(agentsBytes, Files.readAllBytes(claude),
+                "AGENTS.md and CLAUDE.md must remain byte-identical");
+
+        String agentGuidance = new String(agentsBytes, StandardCharsets.UTF_8);
+        assertTrue(agentGuidance.contains("Trace data is comparison-only by default."),
+                "agent guidance must retain the comparison-only trace rule");
+        assertTrue(agentGuidance.contains("dedicated hardware-timing input contract"),
+                "agent guidance must retain the dedicated hardware-timing exception");
+        assertTrue(agentGuidance.contains("it may release only the readiness of a matching, prepared, production-submitted"),
+                "agent guidance must retain the bounded timing-release rule");
+
+        String discrepancies = Files.readString(Path.of("docs", "status", "known-discrepancies.md"));
+        assertTrue(discrepancies.contains("## Hardware-Timing Replay Input Exception"),
+                "known discrepancies must retain the hardware-timing exception");
+        assertTrue(discrepancies.contains("Physics CSV and auxiliary events remain comparison-only."),
+                "known discrepancies must retain the physics/aux comparison-only boundary");
     }
 
     @Test

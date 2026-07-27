@@ -7,6 +7,9 @@ import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Level;
@@ -58,6 +61,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private int loadEpoch = 0;
     private RuntimeArtState cnzTeleporterArtState = RuntimeArtState.IDLE;
     private RuntimeArtState cnzEndBossArtState = RuntimeArtState.IDLE;
+    private List<EnemyKosEntry> pendingEnemyKosEntries = List.of();
+    private final List<HardwareWorkHandle> enemyKosHandles = new ArrayList<>();
+    private S3kKosModuleQueue enemyKosQueue;
+    private boolean enemyKosSubmissionArmed;
+
+    private record EnemyKosEntry(int source, int destinationTile) {
+    }
 
     private enum RuntimeArtState {
         IDLE,
@@ -152,6 +162,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         // Get act index from LevelManager (available during level load)
         currentActIndex = GameServices.level().getCurrentAct();
+        scheduleEnemyKosArt(zoneIndex, currentActIndex);
         Sonic3kPlcArtRegistry.ZoneArtPlan plan =
                 Sonic3kPlcArtRegistry.getPlan(zoneIndex, currentActIndex);
         loadStandaloneFromRegistry(plan);
@@ -493,11 +504,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         // Load 3 KosinskiM star art variants (ROM: Queue_Kos_Module at loc_2D436).
         // Each variant is 3 tiles replacing tiles at ArtTile_StarPost+8 (index 8 in our blob).
         loadStarVariant(rom, allPatterns, adjustedStars,
-                Sonic3kConstants.ART_KOSM_STARPOST_STARS3_ADDR, ObjectArtKeys.CHECKPOINT_STAR_YELLOW);
+                Sonic3kConstants.ART_KOSM_STARPOST_STARS3_ADDR, ObjectArtKeys.CHECKPOINT_STAR_RED);
         loadStarVariant(rom, allPatterns, adjustedStars,
                 Sonic3kConstants.ART_KOSM_STARPOST_STARS1_ADDR, ObjectArtKeys.CHECKPOINT_STAR_BLUE);
         loadStarVariant(rom, allPatterns, adjustedStars,
-                Sonic3kConstants.ART_KOSM_STARPOST_STARS2_ADDR, ObjectArtKeys.CHECKPOINT_STAR_RED);
+                Sonic3kConstants.ART_KOSM_STARPOST_STARS2_ADDR, ObjectArtKeys.CHECKPOINT_STAR_YELLOW);
 
         LOG.info("Loaded S3K StarPost art: " + allPatterns.length + " patterns, "
                 + adjusted.size() + " frames, " + adjustedStars.size() + " star frames"
@@ -915,6 +926,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         Sonic3kPlcArtRegistry.ZoneArtPlan plan =
                 Sonic3kPlcArtRegistry.getPlan(zoneIndex, currentActIndex);
         loadStandaloneFromRegistry(plan);
+        scheduleEnemyKosArt(zoneIndex, currentActIndex);
         if (zoneIndex == Sonic3kZoneIds.ZONE_CNZ) {
             loadCnzTraversalArt();
         }
@@ -1260,9 +1272,52 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         return cnzEndBossArtState == RuntimeArtState.COMPLETE;
     }
 
+    /**
+     * Mirrors {@code sub_2D3C8}'s runtime {@code Queue_Kos_Module} request
+     * after a StarPost creates its four bonus stars.
+     *
+     * <p>The StarPost does not poll the job after submission. The ROM's global
+     * module FIFO remains the owner, so this session-owned provider retains
+     * and claims the handle while other ROM consumers can observe the shared
+     * queue as non-empty.
+     */
+    public void queueStarPostBonusArt(int sourceAddress) {
+        if (sourceAddress != Sonic3kConstants.ART_KOSM_STARPOST_STARS1_ADDR
+                && sourceAddress
+                != Sonic3kConstants.ART_KOSM_STARPOST_STARS2_ADDR
+                && sourceAddress
+                != Sonic3kConstants.ART_KOSM_STARPOST_STARS3_ADDR) {
+            throw new IllegalArgumentException(
+                    "unsupported StarPost bonus-art source: 0x"
+                            + Integer.toHexString(sourceAddress));
+        }
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (enemyKosQueue == null) {
+                enemyKosQueue =
+                        new S3kKosModuleQueue(GameServices.hardwareTiming());
+            }
+            // Preserve native FIFO order if activation occurs while the
+            // title-retired enemy group is waiting to submit.
+            for (EnemyKosEntry entry : pendingEnemyKosEntries) {
+                enemyKosHandles.add(enemyKosQueue.queue(
+                        rom, entry.source(), entry.destinationTile()));
+            }
+            pendingEnemyKosEntries = List.of();
+            enemyKosHandles.add(enemyKosQueue.queue(
+                    rom,
+                    sourceAddress,
+                    Sonic3kConstants.ARTTILE_STARPOST + 8));
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Unable to queue S3K StarPost bonus art", e);
+        }
+    }
+
     @Override
     public void processRuntimeArtQueue() {
         boolean registeredRuntimeSheet = false;
+        processEnemyKosArt();
         if (cnzTeleporterArtState == RuntimeArtState.PENDING) {
             loadCnzTeleporterArt();
             PatternSpriteRenderer renderer = renderers.get(Sonic3kObjectArtKeys.CNZ_TELEPORTER);
@@ -1289,6 +1344,94 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 cnzEndBossArtState = RuntimeArtState.FAILED;
             }
         }
+    }
+
+    private void scheduleEnemyKosArt(int zoneIndex, int actIndex) {
+        enemyKosHandles.clear();
+        enemyKosQueue = null;
+        enemyKosSubmissionArmed = false;
+        pendingEnemyKosEntries = switch (zoneIndex) {
+            case Sonic3kZoneIds.ZONE_AIZ -> List.of(
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_AIZ_MONKEY_DUDE_ADDR,
+                            Sonic3kConstants.ARTTILE_AIZ_MONKEY_DUDE),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_AIZ_BLOOMINATOR_ADDR,
+                            Sonic3kConstants.ARTTILE_AIZ_BLOOMINATOR),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_AIZ_CATERKILLER_JR_ADDR,
+                            Sonic3kConstants.ARTTILE_AIZ_CATERKILLER_JR));
+            case Sonic3kZoneIds.ZONE_HCZ -> actIndex == 0
+                    ? List.of(
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_HCZ_BLASTOID_ADDR,
+                                    Sonic3kConstants.ARTTILE_HCZ_BLASTOID_JAWZ),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_HCZ_TURBO_SPIKER_ADDR,
+                                    Sonic3kConstants.ARTTILE_HCZ_TURBO_SPIKER),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_HCZ_MEGA_CHOPPER_ADDR,
+                                    Sonic3kConstants.ARTTILE_HCZ_MEGA_CHOPPER),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_HCZ_POINTDEXTER_ADDR,
+                                    Sonic3kConstants.ARTTILE_HCZ_POINTDEXTER))
+                    : List.of(
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_HCZ_JAWZ_ADDR,
+                                    Sonic3kConstants.ARTTILE_HCZ_BLASTOID_JAWZ),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_HCZ_TURBO_SPIKER_ADDR,
+                                    Sonic3kConstants.ARTTILE_HCZ_TURBO_SPIKER),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_HCZ_MEGA_CHOPPER_ADDR,
+                                    Sonic3kConstants.ARTTILE_HCZ_MEGA_CHOPPER),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_HCZ_POINTDEXTER_ADDR,
+                                    Sonic3kConstants.ARTTILE_HCZ_POINTDEXTER));
+            default -> List.of();
+        };
+    }
+
+    private void processEnemyKosArt() {
+        if (pendingEnemyKosEntries.isEmpty() && enemyKosHandles.isEmpty()) {
+            return;
+        }
+        if (enemyKosHandles.isEmpty()) {
+            if (!enemyKosSubmissionArmed) {
+                return;
+            }
+            var timing = GameServices.hardwareTiming();
+            try {
+                Rom rom = GameServices.rom().getRom();
+                enemyKosQueue = new S3kKosModuleQueue(timing);
+                for (EnemyKosEntry entry : pendingEnemyKosEntries) {
+                    enemyKosHandles.add(enemyKosQueue.queue(
+                            rom, entry.source(), entry.destinationTile()));
+                }
+                pendingEnemyKosEntries = List.of();
+            } catch (IOException e) {
+                throw new IllegalStateException(
+                        "Unable to queue S3K enemy KosM art", e);
+            }
+            return;
+        }
+        if (enemyKosHandles.stream().allMatch(enemyKosQueue::isReady)) {
+            for (HardwareWorkHandle handle : enemyKosHandles) {
+                enemyKosQueue.claim(handle);
+            }
+            enemyKosHandles.clear();
+            enemyKosQueue = null;
+        }
+    }
+
+    /**
+     * Native level setup begins enemy {@code LoadEnemyArt} only after the
+     * title-card KosM entries have retired. A ready-but-unclaimed title job is
+     * not retirement and must not advance the structural submission ordinal.
+     */
+    @Override
+    public void onTitleCardArtRetired() {
+        enemyKosSubmissionArmed = true;
     }
 
     /**
@@ -1917,9 +2060,18 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
     @Override
     public com.openggf.game.rewind.snapshot.PlcProgressSnapshot capture() {
+        List<com.openggf.game.rewind.snapshot.PlcProgressSnapshot.PendingKosModule>
+                pendingModules = pendingEnemyKosEntries.stream()
+                .map(entry ->
+                        new com.openggf.game.rewind.snapshot.PlcProgressSnapshot.PendingKosModule(
+                                entry.source(), entry.destinationTile()))
+                .toList();
         return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(
                 loadEpoch, cnzTeleporterArtState.ordinal()
-                        | (cnzEndBossArtState.ordinal() << 2));
+                        | (cnzEndBossArtState.ordinal() << 2),
+                pendingModules,
+                enemyKosHandles.stream().map(HardwareWorkHandle::ordinal).toList(),
+                enemyKosSubmissionArmed);
     }
 
     /**
@@ -1932,6 +2084,24 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         int packedState = snap.runtimeState();
         cnzTeleporterArtState = decodeRuntimeArtState(packedState & 3);
         cnzEndBossArtState = decodeRuntimeArtState((packedState >>> 2) & 3);
+        pendingEnemyKosEntries = snap.pendingKosModules().stream()
+                .map(entry -> new EnemyKosEntry(
+                        entry.sourceAddress(), entry.destinationTile()))
+                .toList();
+        enemyKosSubmissionArmed = snap.kosSubmissionArmed();
+        enemyKosHandles.clear();
+        enemyKosQueue = null;
+        if (!snap.pendingKosOrdinals().isEmpty()) {
+            var timing = GameServices.hardwareTiming();
+            enemyKosQueue = new S3kKosModuleQueue(timing);
+            for (long ordinal : snap.pendingKosOrdinals()) {
+                enemyKosHandles.add(timing.pendingHandle(
+                                HardwareWorkKind.KOS_MODULE_QUEUE, ordinal)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Missing restored S3K enemy KosM job "
+                                        + ordinal)));
+            }
+        }
     }
 
     private static RuntimeArtState decodeRuntimeArtState(int state) {

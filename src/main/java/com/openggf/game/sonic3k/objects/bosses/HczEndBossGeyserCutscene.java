@@ -1,11 +1,16 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
 import com.openggf.game.sonic3k.scroll.SwScrlHcz;
 import com.openggf.graphics.RenderPriority;
@@ -163,6 +168,11 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     /** True once debris children have been spawned. */
     private boolean debrisSpawned;
     private boolean targetsNativeP2;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
+    private S3kKosModuleQueue artQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle artHandle;
+    private long artOrdinal = -1;
 
     /** ROM root object uses priority $280. */
     private static final int GEYSER_PRIORITY_BUCKET = 5;
@@ -179,6 +189,10 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
      */
     public HczEndBossGeyserCutscene(int spawnX, int spawnY) {
         this(spawnX, spawnY, false, 0);
+    }
+
+    static HczEndBossGeyserCutscene createWithQueuedArt(int spawnX, int spawnY) {
+        return new HczEndBossGeyserCutscene(spawnX, spawnY);
     }
 
     private HczEndBossGeyserCutscene(int spawnX, int spawnY,
@@ -205,6 +219,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        serviceQueuedArt();
         AbstractPlayableSprite player = resolveTargetPlayer(playerEntity);
 
         switch (phase) {
@@ -215,6 +230,44 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
             case PHASE_DONE        -> { /* terminal */ }
             default                -> { }
         }
+    }
+
+    private void serviceQueuedArt() {
+        if (targetsNativeP2) {
+            return;
+        }
+        rebindArtAfterRestore();
+        try {
+            if (artHandle == null && artQueue == null) {
+                artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                artHandle = artQueue.queue(
+                        services().rom(),
+                        Sonic3kConstants.ART_KOSM_HCZ_GEYSER_VERT_ADDR,
+                        Sonic3kConstants.ARTTILE_HCZ_CUTSCENE_GEYSER);
+                artOrdinal = artHandle.ordinal();
+                return;
+            }
+            if (artHandle != null && artQueue.isReady(artHandle)) {
+                artQueue.claim(artHandle);
+                artHandle = null;
+                artQueue = null;
+                artOrdinal = -1;
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Unable to queue HCZ end-cutscene geyser KosM art", e);
+        }
+    }
+
+    private void rebindArtAfterRestore() {
+        if (artOrdinal < 0 || artQueue != null) {
+            return;
+        }
+        artHandle = services().hardwareTiming().pendingHandle(
+                        HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Missing restored HCZ end-geyser KosM job " + artOrdinal));
+        artQueue = new S3kKosModuleQueue(services().hardwareTiming());
     }
 
     private AbstractPlayableSprite resolveTargetPlayer(PlayableEntity playerEntity) {
