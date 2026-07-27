@@ -655,7 +655,7 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         int halfWidth = blockActiveWidth + 0x0B;
-        return new SolidObjectParams(halfWidth, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
+        return SolidObjectParams.of(halfWidth, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
     }
 
     @Override

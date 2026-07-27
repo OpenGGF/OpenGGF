@@ -346,7 +346,7 @@ public class CogObjectInstance extends AbstractObjectInstance
         int index = mappingFrame & 0x0F;
         int halfWidth = COLLISION_SIZES[index][0];
         int yRadius = COLLISION_SIZES[index][1];
-        return new SolidObjectParams(halfWidth, yRadius, yRadius);
+        return SolidObjectParams.of(halfWidth, yRadius, yRadius);
     }
 
     // MultiPieceSolidProvider implementation
@@ -392,7 +392,7 @@ public class CogObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // Default params (used if getPieceParams not called)
-        return new SolidObjectParams(0x10, 0x10, 0x10);
+        return SolidObjectParams.of(0x10, 0x10, 0x10);
     }
 
     @Override

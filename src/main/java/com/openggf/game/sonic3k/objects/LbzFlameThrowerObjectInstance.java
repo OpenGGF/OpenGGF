@@ -33,7 +33,7 @@ public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance
     private static final int FLAME_X_OFFSET = 0x40;
     private static final int PRIORITY_BUCKET = 3;       // sub_263AA: priority=$200
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(SOLID_HALF_WIDTH, HEIGHT_PIXELS, SOLID_GROUND_HALF_HEIGHT);
+            SolidObjectParams.of(SOLID_HALF_WIDTH, HEIGHT_PIXELS, SOLID_GROUND_HALF_HEIGHT);
 
     private int subtype;
     private boolean hFlip;

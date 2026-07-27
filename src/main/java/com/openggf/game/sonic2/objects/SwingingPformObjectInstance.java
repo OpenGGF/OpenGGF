@@ -538,7 +538,7 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
         // jump fired airborne instead of from the on-object ground state.
         // (Retail REV01 builds with fixBugs = 0 (docs/s2disasm/s2.asm:27), so the
         // pillar-specific subq.w #2,d3 at s2.asm:57152-57156 does NOT apply.)
-        return new SolidObjectParams(widthPixels + 0xB, yRadius, yRadius + 1);
+        return SolidObjectParams.of(widthPixels + 0xB, yRadius, yRadius + 1);
     }
 
     @Override

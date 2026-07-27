@@ -114,7 +114,7 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH, SOLID_GROUND_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
+        return SolidObjectParams.of(HALF_WIDTH, SOLID_GROUND_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
     }
 
     @Override

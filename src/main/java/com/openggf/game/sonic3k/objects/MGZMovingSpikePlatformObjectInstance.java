@@ -126,7 +126,7 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // ROM: d1 = width_pixels + $B; d2 = height_pixels; d3 = height_pixels + 1.
-        return new SolidObjectParams(HALF_WIDTH + SIDE_PADDING, HALF_HEIGHT, HALF_HEIGHT + 1);
+        return SolidObjectParams.of(HALF_WIDTH + SIDE_PADDING, HALF_HEIGHT, HALF_HEIGHT + 1);
     }
 
     @Override

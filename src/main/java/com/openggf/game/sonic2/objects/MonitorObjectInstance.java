@@ -350,7 +350,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(0x1A, 0x0F, 0x10);
+        return SolidObjectParams.of(0x1A, 0x0F, 0x10);
     }
 
     @Override

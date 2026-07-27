@@ -301,9 +301,9 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         if (config == null) {
-            return new SolidObjectParams(0x40, 0x10, 0x10);
+            return SolidObjectParams.of(0x40, 0x10, 0x10);
         }
-        return new SolidObjectParams(config.halfWidth(), config.halfHeight(), config.halfHeight());
+        return SolidObjectParams.of(config.halfWidth(), config.halfHeight(), config.halfHeight());
     }
 
     @Override

@@ -45,7 +45,7 @@ public class Sonic1BossBlockInstance extends AbstractObjectInstance
 
     // Solid collision: d1=$1B, d2=$10, d3=$11
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(0x1B, 0x10, 0x11);
+            SolidObjectParams.of(0x1B, 0x10, 0x11);
 
     // Arena constants
     private static final int BOSS_SYZ_X = 0x2C00;

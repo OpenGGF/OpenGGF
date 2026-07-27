@@ -98,7 +98,7 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
         this.animFrame = 0;
 
         // PlatformObject: d1=$18 (half-width), d2=$8 (air half-height), d3=$E (ground half-height)
-        this.platformParams = new SolidObjectParams(
+        this.platformParams = SolidObjectParams.of(
                 PLATFORM_HALF_WIDTH, PLATFORM_Y_RADIUS, PLATFORM_Y_OFFSET);
     }
 

@@ -88,7 +88,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
         // centred on it. The window's centre therefore sits at
         // vineX + (halfWidth - $40).
         int offsetX = halfWidth - INITIAL_RANGE_WIDTH;
-        return new SolidObjectParams(halfWidth, 0, 0, offsetX, 0);
+        return SolidObjectParams.of(halfWidth, 0, 0, offsetX, 0);
     }
 
     /**

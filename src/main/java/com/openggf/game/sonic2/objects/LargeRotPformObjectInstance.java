@@ -131,7 +131,7 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
         // From disassembly: d1 = width_pixels + $0B, d2 = y_radius, d3 = y_radius + 1
         if (!isIndent) {
             int halfWidth = widthPixels + 0x0B;
-            solidParams = new SolidObjectParams(halfWidth, yRadius, yRadius + 1);
+            solidParams = SolidObjectParams.of(halfWidth, yRadius, yRadius + 1);
         } else {
             solidParams = null;
         }

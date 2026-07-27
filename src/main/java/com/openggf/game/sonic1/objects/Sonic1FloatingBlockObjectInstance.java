@@ -291,7 +291,7 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
         // moveq #0,d2 / move.b obHeight(a0),d2 -> d2 = halfHeight
         // move.w d2,d3 / addq.w #1,d3 -> d3 = halfHeight + 1
         // bsr.w SolidObject
-        return new SolidObjectParams(halfWidth + 0x0B, halfHeight, halfHeight + 1);
+        return SolidObjectParams.of(halfWidth + 0x0B, halfHeight, halfHeight + 1);
     }
 
     @Override

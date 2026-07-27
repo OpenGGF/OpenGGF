@@ -132,7 +132,7 @@ public final class CnzRisingPlatformInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH, HALF_HEIGHT, HALF_HEIGHT + 1);
+        return SolidObjectParams.of(HALF_WIDTH, HALF_HEIGHT, HALF_HEIGHT + 1);
     }
 
     @Override

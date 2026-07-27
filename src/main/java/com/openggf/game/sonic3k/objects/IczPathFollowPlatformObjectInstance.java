@@ -67,7 +67,7 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     // which differs from the $2B SolidObjectFull X-collision half-width above.
     private static final int BALANCE_WIDTH_PIXELS = 0x20;
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
+            SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
 
     private static final int JITTER_TIMER = 0x0F; // loc_89FC0: move.w #$F,$2E(a0).
     private static final int PUSH_DELAY = 0x10; // loc_8A00A: cmpi.b #$10,$39(a0).

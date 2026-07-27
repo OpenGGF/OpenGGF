@@ -220,7 +220,7 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
             int d1 = HALF_WIDTH + 0xB;
             int d2 = HALF_HEIGHT;
             int d3 = HALF_HEIGHT + 1;
-            return new SolidObjectParams(d1, d2, d3);
+            return SolidObjectParams.of(d1, d2, d3);
         }
 
         @Override

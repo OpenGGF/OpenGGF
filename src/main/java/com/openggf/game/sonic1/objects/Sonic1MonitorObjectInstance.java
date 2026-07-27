@@ -384,7 +384,7 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
     // From disassembly: Mon_SolidSides params d1=$1A, d2=$0F, d3=$10
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(0x1A, 0x0F, 0x10);
+        return SolidObjectParams.of(0x1A, 0x0F, 0x10);
     }
 
     @Override

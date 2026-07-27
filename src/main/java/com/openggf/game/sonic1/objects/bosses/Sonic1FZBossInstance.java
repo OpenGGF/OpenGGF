@@ -78,11 +78,11 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
     // Solid collision params for combat phase: d1=$2B, d2=$14, d3=$14
     private static final SolidObjectParams COMBAT_SOLID_PARAMS =
-            new SolidObjectParams(0x2B, 0x14, 0x14);
+            SolidObjectParams.of(0x2B, 0x14, 0x14);
 
     // Solid collision params for escape phases: d1=$1B, d2=$70, d3=$71
     private static final SolidObjectParams ESCAPE_SOLID_PARAMS =
-            new SolidObjectParams(0x1B, 0x70, 0x71);
+            SolidObjectParams.of(0x1B, 0x70, 0x71);
     private static final int COMBAT_TOP_LANDING_HALF_WIDTH = 0x20;
 
     // Damage cooldown (objoff_35 in ROM)

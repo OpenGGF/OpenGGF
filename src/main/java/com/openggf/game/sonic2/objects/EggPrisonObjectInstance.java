@@ -429,7 +429,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         // ROM: SolidObject(d1=$2B, d2=$18, d3=$18) at loc_3F278
         // Body is always solid (width=43px, height=24px)
-        return new SolidObjectParams(
+        return SolidObjectParams.of(
             BODY_HALF_WIDTH,    // 0x2B = 43 pixels
             BODY_HALF_HEIGHT,   // 0x18 = 24 pixels (air)
             BODY_HALF_HEIGHT    // 0x18 = 24 pixels (ground)

@@ -89,7 +89,7 @@ public class Sonic1InvisibleBarrierObjectInstance extends AbstractObjectInstance
         int solidHalfWidth = halfWidth + WIDTH_PADDING;
         int airHalfHeight = height;
         int groundHalfHeight = height + 1;
-        return new SolidObjectParams(solidHalfWidth, airHalfHeight, groundHalfHeight);
+        return SolidObjectParams.of(solidHalfWidth, airHalfHeight, groundHalfHeight);
     }
 
     @Override

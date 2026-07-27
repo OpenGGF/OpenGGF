@@ -173,9 +173,9 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         if (mode == Mode.ICZ_PLANE_SWITCH) {
             // loc_2A6D4 passes only d2=height_pixels ($24) to sub_1DDC6;
             // unlike SolidObjectFull, there is no grounded d3=d2+1 surface.
-            return new SolidObjectParams(config.halfWidth + 0x0B, config.halfHeight, config.halfHeight);
+            return SolidObjectParams.of(config.halfWidth + 0x0B, config.halfHeight, config.halfHeight);
         }
-        return new SolidObjectParams(config.halfWidth + 0x0B, config.halfHeight, config.halfHeight + 1);
+        return SolidObjectParams.of(config.halfWidth + 0x0B, config.halfHeight, config.halfHeight + 1);
     }
 
     @Override

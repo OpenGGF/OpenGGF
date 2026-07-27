@@ -225,7 +225,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(config.halfWidth, 0, 0);
+        return SolidObjectParams.of(config.halfWidth, 0, 0);
     }
 
     @Override

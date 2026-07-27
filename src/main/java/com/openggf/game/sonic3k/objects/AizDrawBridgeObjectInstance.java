@@ -137,7 +137,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH, HEIGHT, HEIGHT);
+        return SolidObjectParams.of(HALF_WIDTH, HEIGHT, HEIGHT);
     }
 
     @Override

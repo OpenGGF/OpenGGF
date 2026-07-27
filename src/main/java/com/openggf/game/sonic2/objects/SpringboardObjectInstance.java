@@ -295,7 +295,7 @@ public class SpringboardObjectInstance extends BoxObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // ROM: d1=$27 (half-width), d2=8 (height)
-        return new SolidObjectParams(COLLISION_HALF_WIDTH, COLLISION_HEIGHT, COLLISION_HEIGHT);
+        return SolidObjectParams.of(COLLISION_HALF_WIDTH, COLLISION_HEIGHT, COLLISION_HEIGHT);
     }
 
     /**

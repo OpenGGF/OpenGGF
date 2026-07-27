@@ -384,7 +384,7 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(halfWidth, halfHeight, continuedRideSurfaceHeight);
+        return SolidObjectParams.of(halfWidth, halfHeight, continuedRideSurfaceHeight);
     }
 
     @Override

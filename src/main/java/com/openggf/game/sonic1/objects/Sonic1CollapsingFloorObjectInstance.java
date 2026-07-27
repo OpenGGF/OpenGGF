@@ -511,7 +511,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         // CFlo_WalkOff -> MvSonicOnPtfm2 (subi.w #9,d0). The first landing instead
         // uses CFlo_ChkTouch -> PlatformObject's obY-8 surface, recovered via
         // getTopLandingSnapAdjustment().
-        return new SolidObjectParams(PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT, PLATFORM_HALF_HEIGHT);
+        return SolidObjectParams.of(PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT, PLATFORM_HALF_HEIGHT);
     }
 
     @Override

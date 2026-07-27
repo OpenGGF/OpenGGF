@@ -216,7 +216,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(widthPixels + 0x0B, heightPixels, heightPixels + 1);
+        return SolidObjectParams.of(widthPixels + 0x0B, heightPixels, heightPixels + 1);
     }
 
     @Override

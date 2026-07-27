@@ -165,7 +165,7 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // ROM: addi.w #$B,d1 (width pad); addq.w #1,d3 (air height one greater).
-        return new SolidObjectParams(halfWidth + 0x0B, halfHeight, halfHeight + 1);
+        return SolidObjectParams.of(halfWidth + 0x0B, halfHeight, halfHeight + 1);
     }
 
     @Override

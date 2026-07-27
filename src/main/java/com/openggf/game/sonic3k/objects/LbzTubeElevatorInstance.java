@@ -71,13 +71,13 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
     private static final int[] CHILD_X_OFFSETS = {0, -8, -8, 0, 8, 8};
 
     private static final SolidObjectParams FULL_SOLID =
-            new SolidObjectParams(WIDTH_PIXELS + SOLID_SIDE_PADDING, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
+            SolidObjectParams.of(WIDTH_PIXELS + SOLID_SIDE_PADDING, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
     private static final SolidObjectParams OPEN_SOLID =
             // SolidObjectFull_Offset uses d3 as a downward collision anchor
             // offset and d2 as the radius on both sides. This equivalent
             // geometry also preserves the established-rider placement
             // y_pos(object)+$20-$08-y_radius.
-            new SolidObjectParams(WIDTH_PIXELS + SOLID_SIDE_PADDING, 8, 8, 0, 0x20);
+            SolidObjectParams.of(WIDTH_PIXELS + SOLID_SIDE_PADDING, 8, 8, 0, 0x20);
 
     private final PlayerTubeState p1 = new PlayerTubeState();
     private final PlayerTubeState p2 = new PlayerTubeState();

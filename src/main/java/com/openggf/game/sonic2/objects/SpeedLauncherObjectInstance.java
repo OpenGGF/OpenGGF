@@ -154,7 +154,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
             this.accel = ACCELERATION;
         }
 
-        this.solidParams = new SolidObjectParams(
+        this.solidParams = SolidObjectParams.of(
                 PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT_AIR, PLATFORM_HALF_HEIGHT_GROUND);
     }
 

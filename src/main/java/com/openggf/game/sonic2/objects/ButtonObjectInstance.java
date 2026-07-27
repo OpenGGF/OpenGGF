@@ -81,7 +81,7 @@ public class ButtonObjectInstance extends AbstractObjectInstance
 
     // Solid collision params (constant)
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(HALF_WIDTH, AIR_HALF_HEIGHT, GROUND_HALF_HEIGHT);
+            SolidObjectParams.of(HALF_WIDTH, AIR_HALF_HEIGHT, GROUND_HALF_HEIGHT);
 
     public ButtonObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Button");

@@ -427,7 +427,7 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance implem
         @Override
         public SolidObjectParams getSolidParams() {
             // ROM: move.w #$23,d1 / move.w #4,d2 / move.w #5,d3
-            return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT_AIR, SOLID_HALF_HEIGHT_GND);
+            return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT_AIR, SOLID_HALF_HEIGHT_GND);
         }
 
         @Override

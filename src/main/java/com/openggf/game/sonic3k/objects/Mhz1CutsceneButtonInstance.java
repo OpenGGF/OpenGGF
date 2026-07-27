@@ -50,7 +50,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     // graze (MHZ1 trace F951: Tails must stay a SIDE contact, d3 > 4) and
     // under-lifting the rising rolling-jump graze (F966).
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(0x1B, 4, 5, 0, -INIT_Y_OFFSET);
+            SolidObjectParams.of(0x1B, 4, 5, 0, -INIT_Y_OFFSET);
 
     private int x;
     private int y;

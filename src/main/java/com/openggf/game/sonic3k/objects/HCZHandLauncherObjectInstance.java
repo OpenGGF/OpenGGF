@@ -410,7 +410,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         // Obj_HCZHandLauncher passes d3=$11 to both the fresh landing and
         // continued-ride paths; unlike SolidObjectFull callers, it does not
         // supply a separate +1 ground height (sonic3k.asm:65798-65802).
-        return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
+        return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
     }
 
     @Override

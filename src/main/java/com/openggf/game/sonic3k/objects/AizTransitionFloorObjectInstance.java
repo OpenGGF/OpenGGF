@@ -29,7 +29,7 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
     private static final int FIRE_REFRESH_ZERO_REJECTS_LOW_SUBPIXEL = 21;
     private static final int FIRE_REFRESH_ZERO_REJECTS_HIGH_SUBPIXEL = 20;
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(0xA0, 0x10, 0x10);
+            SolidObjectParams.of(0xA0, 0x10, 0x10);
     private final Map<PlayableEntity, Integer> zeroDistanceRejects = new IdentityHashMap<>(2);
 
     public AizTransitionFloorObjectInstance() {

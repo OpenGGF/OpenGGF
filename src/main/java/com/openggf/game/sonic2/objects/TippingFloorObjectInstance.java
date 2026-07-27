@@ -152,7 +152,7 @@ public class TippingFloorObjectInstance extends AbstractObjectInstance
      */
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(0x10, 0x11, 0x11);
+        return SolidObjectParams.of(0x10, 0x11, 0x11);
     }
 
     @Override

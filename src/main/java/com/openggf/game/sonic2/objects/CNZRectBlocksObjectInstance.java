@@ -209,7 +209,7 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
         // getX/getY expose the live native x_pos/y_pos, so collision is already
         // anchored at the per-frame rectangle position. Applying the offset a
         // second time would move the solid surface twice.
-        return new SolidObjectParams(d1, d2, d3, 0, 0);
+        return SolidObjectParams.of(d1, d2, d3, 0, 0);
     }
 
     @Override

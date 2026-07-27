@@ -235,7 +235,7 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
         int halfWidth = actWidth + 0x0B;
         int airHalfHeight = height;
         int groundHalfHeight = height + 1;
-        this.solidParams = new SolidObjectParams(halfWidth, airHalfHeight, groundHalfHeight);
+        this.solidParams = SolidObjectParams.of(halfWidth, airHalfHeight, groundHalfHeight);
     }
 
     /**

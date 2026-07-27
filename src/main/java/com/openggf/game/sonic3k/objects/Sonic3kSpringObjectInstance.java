@@ -658,15 +658,15 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         if (springType == TYPE_HORIZONTAL) {
-            return new SolidObjectParams(19, 14, 15);
+            return SolidObjectParams.of(19, 14, 15);
         }
         if (springType == TYPE_DIAGONAL_UP || springType == TYPE_DIAGONAL_DOWN) {
-            return new SolidObjectParams(27, 16, 16);
+            return SolidObjectParams.of(27, 16, 16);
         }
         if (springType == TYPE_DOWN) {
-            return new SolidObjectParams(27, 8, 9);
+            return SolidObjectParams.of(27, 8, 9);
         }
-        return new SolidObjectParams(27, 8, 16);
+        return SolidObjectParams.of(27, 8, 16);
     }
 
     @Override

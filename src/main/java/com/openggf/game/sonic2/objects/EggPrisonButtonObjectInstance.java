@@ -77,7 +77,7 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(
+        return SolidObjectParams.of(
             BUTTON_HALF_WIDTH,          // halfWidth = 27px
             BUTTON_HALF_HEIGHT,         // airHalfHeight = 8px
             BUTTON_HALF_HEIGHT,         // groundHalfHeight = 8px

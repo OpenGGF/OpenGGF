@@ -87,7 +87,7 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // From disassembly: d1=$13, d2=y_radius, d3=y_radius+1
-        return new SolidObjectParams(SOLID_HALF_WIDTH, yRadius, yRadius + 1);
+        return SolidObjectParams.of(SOLID_HALF_WIDTH, yRadius, yRadius + 1);
     }
 
     @Override

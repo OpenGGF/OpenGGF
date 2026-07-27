@@ -502,7 +502,7 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(halfWidth, HALF_HEIGHT, GROUND_HALF_HEIGHT);
+        return SolidObjectParams.of(halfWidth, HALF_HEIGHT, GROUND_HALF_HEIGHT);
     }
 
     @Override

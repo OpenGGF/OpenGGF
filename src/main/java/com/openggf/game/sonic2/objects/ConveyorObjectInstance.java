@@ -178,7 +178,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
 
     /** Collision params: half-width = width_pixels, d3 = 8. */
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(WIDTH_PIXELS, Y_RADIUS, Y_RADIUS);
+            SolidObjectParams.of(WIDTH_PIXELS, Y_RADIUS, Y_RADIUS);
 
     public ConveyorObjectInstance(ObjectSpawn spawn, String name) {
         this(spawn, name, spawn.x(), spawn.y());
