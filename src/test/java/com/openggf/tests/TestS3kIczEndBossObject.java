@@ -1526,6 +1526,33 @@ class TestS3kIczEndBossObject {
     }
 
     @Test
+    void foldedIczEndBossReservesEveryLiveNativeChildSst() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, 1)
+                .startPosition((short) 0x4430, (short) 0x0658)
+                .startPositionIsCentre()
+                .build();
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        fixture.camera().setX((short) 0x4390);
+        fixture.camera().setY((short) 0x05F8);
+        objectManager.reset(0x4390);
+
+        for (int frame = 0; frame < 140; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+
+        int[] reserved = objectManager.rewindSnapshottable().capture().childSpawns().stream()
+                .filter(entry -> entry.parentSpawn().objectId() == ICZ_END_BOSS_ID)
+                .map(entry -> entry.reservedSlots())
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(6, reserved.length,
+                "Obj_ICZEndBoss folds Robotnik's ship/head and the bottom hurt child, "
+                        + "but their live SST pressure must remain alongside the three body children");
+    }
+
+    @Test
     void productionIcz2BossDefeatStopsAllBossSnowing() throws Exception {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, 1)
