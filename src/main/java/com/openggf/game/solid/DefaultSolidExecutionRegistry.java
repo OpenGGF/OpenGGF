@@ -67,16 +67,17 @@ public final class DefaultSolidExecutionRegistry
     @Override
     public void finishFrame() {
         previous.clear();
-        for (Map.Entry<ObjectInstance, SolidCheckpointBatch> entry : current.entrySet()) {
+        // forEach rather than entrySet: both maps here are identity-keyed, and
+        // IdentityHashMap's entry iterator allocates a fresh Map.Entry for every
+        // element it hands back. This runs once per solid object per frame, with
+        // an inner pass per player, so entry-wise iteration was allocating
+        // garbage proportional to the level's solid-object count every frame.
+        current.forEach((object, batch) -> {
             IdentityHashMap<PlayableEntity, PlayerStandingState> perPlayer = new IdentityHashMap<>();
-            for (Map.Entry<PlayableEntity, PlayerSolidContactResult> playerEntry
-                    : entry.getValue().perPlayer().entrySet()) {
-                PlayerSolidContactResult result = playerEntry.getValue();
-                perPlayer.put(playerEntry.getKey(),
-                        new PlayerStandingState(result.kind(), result.standingNow(), result.pushingNow()));
-            }
-            previous.put(entry.getKey(), perPlayer);
-        }
+            batch.perPlayer().forEach((player, result) -> perPlayer.put(player,
+                    new PlayerStandingState(result.kind(), result.standingNow(), result.pushingNow())));
+            previous.put(object, perPlayer);
+        });
     }
 
     @Override
