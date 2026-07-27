@@ -1937,6 +1937,52 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kLivePushBypassDoesNotMasqueradeAsObjectOrderGraceNearAizGiantVine() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(sonic3kWithSidekickContext(true));
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setObjectControlled(false);
+            tails.setPushing(true);
+            tails.setCentreX((short) 0x1CED);
+            tails.setCentreY((short) 0x03C0);
+            tails.setGSpeed((short) 0x000C);
+            tails.setXSpeed((short) 0x000C);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1C69);
+            Arrays.fill(yHistory, (short) 0x038B);
+            Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_ON_OBJECT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            setNormalPushingGraceFrames(controller, 16);
+
+            controller.update(0x0972);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics =
+                    controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("current_push_bypass", diagnostics.followBranch()),
+                    () -> assertTrue(diagnostics.skipFollowSteering()),
+                    () -> assertFalse(controller.usedObjectOrderGracePushBypassThisFrame(),
+                            "ROM-visible Status_Push owns loc_13DD0 directly; the synthetic "
+                                    + "object-order bridge must not pre-clear its $000C inertia "
+                                    + "before Tails_InputAcceleration_Path."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
     void s3kLateTerrainPushGraceFallsThroughToFollowLeft() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

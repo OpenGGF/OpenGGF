@@ -2412,7 +2412,12 @@ public class SidekickCpuController {
                 && objectOrderFollowSteeringContext
                 && (leaderStatusOnObject
                 || (recordedStatus & AbstractPlayableSprite.STATUS_ON_OBJECT) != 0);
-        objectOrderGracePushBypassThisFrame = objectOrderGrace;
+        // This flag authorizes the movement layer's synthetic stale-velocity
+        // clear. A live/frame-start Status_Push takes ROM loc_13DD0 directly
+        // and must retain its inertia until Tails_InputAcceleration_Path
+        // performs the ordinary no-input deceleration. Object-order grace can
+        // overlap that direct branch, but it is not the owner in that case.
+        objectOrderGracePushBypassThisFrame = objectOrderGrace && !currentPushBypass;
         boolean followNudgeBlockedByObjectControlBit0 =
                 sidekickRules != null
                         && sidekickRules.sidekickFollowNudgeBlockedByObjectControlBit0()
