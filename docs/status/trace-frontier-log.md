@@ -1,5 +1,38 @@
 # Trace Frontier Log
 
+## 2026-07-27 - AIZ live push retains inertia through native deceleration
+
+- Worktree: `.worktrees/trace-green-integration`, branch
+  `bugfix/ai-trace-green-integration`, based on `origin/develop`
+  `41f3bc62f`.
+- Baseline standalone AIZ reproduced 1,277 errors with first mismatch f2707
+  `tails_animation_id` (ROM `$00`, engine `$05`). All physical comparisons
+  agreed; Tails entered the frame with live `Status_Push` and `$000C`
+  inertia.
+- Canonical stage-gated native probe
+  `tools/bizhawk/probes/aiz_tails_anim_2707_probe.lua` observed
+  `Tails_Normal` at `Level_frame_counter=$0972` without any animation-byte
+  write. ROM preserves Walk while no-input friction decays `$000C` to zero;
+  the stationary `anim=$05` write begins on `$0973`
+  (`docs/skdisasm/sonic3k.asm:26696-26705,26775-26785,27798-27837`).
+- Root cause: direct ROM-visible current-Push bypass overlapped the engine's
+  synthetic object-order grace. The grace flag incorrectly authorized
+  `PlayableSpriteMovement` to pre-clear inertia even though native
+  `Status_Push` already owned the branch. The flag now identifies only
+  `objectOrderGrace && !currentPushBypass`; no zone, trace, route, or frame
+  predicate was added.
+- RED test
+  `s3kLivePushBypassDoesNotMasqueradeAsObjectOrderGraceNearAizGiantVine`
+  failed before and passes after the change. Full sidekick-follow and playable
+  movement suites pass.
+- Full standalone AIZ now reports 1,275 errors and advances to f8215
+  `player_animation_id` (ROM `$05`, engine `$13`). AIZ complete remains
+  26/f26107 `x`; CNZ standalone remains 3,714/f4801
+  `tails_mapping_frame`; MGZ standalone remains 16/f23561 `rings`; S2 EHZ1
+  remains green. Full evidence is in
+  `docs/architecture/audits/2026-07-27-aiz-f2707-live-push-ownership.md`.
+  LBZ was not inspected, run, changed, or used as a guard.
+
 ## 2026-07-27 - AIZ dormant marker returns to the first ordinary Player 2 dispatch
 
 - Worktree: `.worktrees/trace-s3k-aiz-2707`, branch
