@@ -56,6 +56,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         private int priorityThresholdSource;
         private AbstractPlayableSprite player;
         private boolean jumpPressedLastFrame;
+        private boolean externalAirRetirePending;
     }
 
     private int baseX;
@@ -446,6 +447,12 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
         boolean standing = latchedContact || hasStandingBit(player);
         if (slot.active) {
+            if (slot.externalAirRetirePending) {
+                beginPlayerTwoDiagnostic(slot, "retire_external_air", player);
+                clearSlotOnly(slot);
+                endPlayerTwoDiagnostic(slot, player);
+                return;
+            }
             if (player.getAir() && !player.isObjectControlled()) {
                 // External launchers can preempt the cylinder hold before this
                 // object's pass. CNZ balloon sub_317AE writes y_vel=-$700,
@@ -459,7 +466,15 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
                 beginPlayerTwoDiagnostic(slot, "release_external_air", player);
                 holdSlotPositionOnly(slot);
                 clearStaleCylinderSupport(player);
-                clearSlotOnly(slot);
+                // The balloon runs before this cylinder, but SolidObjectFull
+                // clears the cylinder standing status only after sub_324C0
+                // has published this final twist. Keep the rider until the
+                // next cylinder dispatch reaches loc_32604; release only the
+                // mapping latch now so the earlier Player_1 slot can run
+                // Animate_Sonic first (sonic3k.asm:66809-66816,
+                // 68024-68025,68076-68083).
+                player.setObjectMappingFrameControl(false);
+                slot.externalAirRetirePending = true;
                 endPlayerTwoDiagnostic(slot, player);
                 return;
             }
@@ -802,6 +817,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     private void clearSlotOnly(RiderSlot slot) {
         slot.active = false;
+        slot.externalAirRetirePending = false;
     }
 
     private void releaseInvalidSlot(RiderSlot slot, int frameCounter) {

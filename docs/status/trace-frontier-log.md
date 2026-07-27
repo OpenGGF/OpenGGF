@@ -1,5 +1,48 @@
 # Trace Frontier Log
 
+## 2026-07-27 - CNZ external launch releases cylinder mapping ownership
+
+- Worktree: `.worktrees/trace-s3k-cnz-f10728`, branch
+  `bugfix/ai-trace-s3k-cnz-f10728`, based on `origin/develop`
+  `2c0bfe29b`.
+- Baseline command:
+  `mvn -q -Dmse=off
+  -Djava.io.tmpdir=target/trace-f10728-tmp
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -Dtrace.frontierOnly=true
+  -Dtrace.context.radius=20
+  -Ds3k.rom.path=<discovered-locked-on-rom>
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace'
+  test` reproduced one bounded error at f10728 `player_mapping_frame`
+  (expected `$08`, actual `$59`); the canonical comparison contained 3,676
+  errors.
+- At f10727 a balloon has already applied its `-$700` launch and cleared
+  `object_control`. The later cylinder pass still sees its standing byte,
+  publishes the final `$59` twist mapping, and only then has that status
+  cleared by `SolidObjectFull`. On f10728 `Animate_Sonic` owns the next `$08`
+  mapping write before the following cylinder slot reaches `loc_32604`
+  (`docs/skdisasm/sonic3k.asm:66809-66816,68024-68025,68076-68083,
+  24849-24879`).
+- The engine's matching external-air path collapsed final twist and rider
+  retirement into one update. The cylinder now publishes the twist, releases
+  its separate `objectMappingFrameControl` latch, preserves a typed pending
+  rider, and retires it on the next cylinder dispatch. No mapping constant,
+  trace, route, zone, frame, or final-state predicate was added.
+- RED coverage
+  `externalAirLaunchRetainsRiderThroughFinalTwistThenRetiresAfterNextAnimatePass`
+  preserved `$59` on the release row but failed because the rider had already
+  retired. It now verifies the intervening real animation write and following
+  cylinder retirement.
+- Frontier-only standalone CNZ now reports ten bounded errors with first
+  mismatch f14157 `tails_x` (expected `$2EF8`, actual `$31F0`); the canonical
+  comparison falls from 3,676 to 3,675 errors. The full CNZ scenario class
+  retains only the comparison failure plus its five existing later gaps at
+  f15194, f15569, f17824 (two assertions), and f20584.
+- Explicit non-LBZ canaries retained AIZ f8837 `rings` and MGZ f13903
+  `player_animation_id`. LBZ was not inspected, run, changed, or used as a
+  guard. Detailed evidence is in
+  `docs/architecture/audits/2026-07-27-cnz-f10728-mapping-owner.md`.
+
 ## 2026-07-27 - CNZ cylinder exact right edge retains ground push
 
 - Worktree: `.worktrees/trace-s3k-cnz-f6680`, branch

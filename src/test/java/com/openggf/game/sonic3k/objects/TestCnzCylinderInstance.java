@@ -7,10 +7,16 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -849,6 +855,54 @@ class TestCnzCylinderInstance {
         assertTrue(player.getAir());
         assertFalse(player.isOnObject());
         assertFalse(player.isObjectControlled());
+    }
+
+    @Test
+    void externalAirLaunchRetainsRiderThroughFinalTwistThenRetiresAfterNextAnimatePass() throws Exception {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
+        cylinder.setServices(new TestObjectServices());
+        GameRulesTestPlayableSprite player = new GameRulesTestPlayableSprite();
+        player.setGameRulesForTest(GameRules.SONIC_3K);
+        player.setCentreX((short) 0x1BC6);
+        player.setCentreY((short) 0x07AC);
+        player.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                .setIdleAnimId(5)
+                .setWalkAnimId(0)
+                .setRunAnimId(1)
+                .setRollAnimId(2)
+                .setAirAnimId(0));
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(
+                0, List.of(0x08), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(0);
+
+        cylinder.onSolidContact(player, new SolidContact(true, false, false, true, false), 1);
+        cylinder.update(2, player);
+        setSlotField(playerOneSlot(cylinder), "twistAngle", 0x0A);
+
+        player.setYSpeed((short) -0x700);
+        player.setAir(true);
+        player.setOnObject(false);
+        ObjectControlState.none().applyTo(player);
+        cylinder.update(3, player);
+
+        assertEquals(0x59, player.getMappingFrame(),
+                "f10727 sub_324C0 publishes the last twist mapping before SolidObjectFull clears standing");
+        assertTrue((boolean) getSlotField(playerOneSlot(cylinder), "active"),
+                "loc_32604 cannot retire the rider until the cylinder's following object dispatch");
+
+        player.getAnimationManager().update(4);
+
+        assertEquals(0x08, player.getMappingFrame(),
+                "after external object_control release, the next Animate_Sonic pass owns mapping_frame");
+
+        cylinder.update(4, player);
+
+        assertFalse((boolean) getSlotField(playerOneSlot(cylinder), "active"),
+                "the following cylinder loc_32604 dispatch retires the preserved rider");
+        assertEquals(0x08, player.getMappingFrame(),
+                "retiring the rider must not overwrite the mapping published by the earlier player slot");
     }
 
     private static ObjectSpawn spawn() {
