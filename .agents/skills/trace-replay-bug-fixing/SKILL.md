@@ -21,7 +21,7 @@ Use these to get oriented on a divergence before you start editing engine code. 
 ## Core Mission Rules (apply to all trace work)
 
 1. **No hacks or dirty fixes.** Every behaviour change must be backed by the disassembly for the relevant game. Cite ROM file and line numbers in commits and code comments.
-2. **You may regenerate a trace** when the recorded data is genuinely insufficient for diagnosis (missing per-frame data, broken setup, recorder schema changed). Use the native harness (`tools/bizhawk-headless/run.sh`, S1/S2) or the Lua launcher (`tools/bizhawk/run_bizhawk_lua.sh`, S3K) — see [Trace Regeneration](#trace-regeneration). Regeneration is part of the loop — don't avoid it. **But** do not regenerate just to "make the test match"; regenerate to gain visibility.
+2. **You may regenerate a trace** when the recorded data is genuinely insufficient for diagnosis (missing per-frame data, broken setup, recorder schema changed). Use the native harness (`tools/bizhawk-headless/run.sh`) for S1, S2, and S3K; use Lua only for hook-driven diagnostics the native recorder deliberately defers — see [Trace Regeneration](#trace-regeneration). The native harness is also the canonical fixture-publication authority, subject to the independent publication contract below. Regeneration is part of the loop — don't avoid it. **But** do not regenerate just to "make the test match"; regenerate to gain visibility.
 3. **If the engine architecture is missing or fundamentally broken**, or game objects/functionality aren't yet implemented, **plan and delegate**. Use review agents and parallel subagent execution for large-scope work. Don't try to land everything in one pass.
 4. **Cross-game parity is non-negotiable.** The engine supports three games (Sonic 1, Sonic 2, Sonic 3 & Knuckles). Before changing any shared/root code (physics, collision, sidekick AI, oscillation, rendering, audio, shared object base classes, shared object helpers, etc.), check the disassemblies for **all three games** to confirm whether the change is a universal correction or a per-game divergence. Per-game divergences must use the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`: a typed `GameRules` record for game-wide shared runtime gates, or an existing provider/profile/registry/object hook for narrower behavior. **Never** branch on `if (gameId == GameId.S3K) ...`.
 5. **No zone/route/frame carve-outs for trace fixes.** A trace failure in AIZ, CNZ, MGZ, or any other zone must be fixed by modelling the ROM state, object routine, physics profile, event flag, or data-driven object/profile condition that caused it. Do not add behaviour branches whose only predicate is a zone id/name, trace route, frame number, or "known failing trace" exception. "Use ROM-default behaviour except in AIZ" is still a zone-specific carve-out and is not acceptable. Zone/event/object providers may expose ROM state at the owning boundary, but shared physics/sidekick/object behaviour must consume semantic predicates such as object id/routine/control bits/status bits/frame-counter visibility, not "this zone".
@@ -179,8 +179,8 @@ The entire Lua recorder fleet (S1, S2, S3K standard, S3K complete-run) now has a
 byte-parity-gated native port. `s3k_trace_recorder.lua` /
 `s3k_complete_run_recorder.lua` remain useful for the 14 hook-driven aux
 families the native port defers (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`) and as
-the behavioural authority the ports are validated against — see "Porting a
-recorder to the native harness" below.
+optional cross-implementation evidence. They are not fixture-publication
+authorities — see "Porting a recorder to the native harness" below.
 
 **Native harness (`tools/bizhawk-headless/`)** — Linux/Mono, no display required, ~1240-2790
 fps vs ~840 fps for Lua-on-Linux.
@@ -202,10 +202,10 @@ fps vs ~840 fps for Lua-on-Linux.
   `s1-complete-run-behavior.md`, `s1-run-mode-behavior.md`, `s2-trace-recorder-behavior.md`,
   `s2-run-mode-behavior.md`). Read the spec for the mode you're touching.
 
-**Lua recorders (`tools/bizhawk/`)** — the behavioural reference every native port is
-validated against, and still the only way to capture the 14 hook-driven aux families
+**Lua recorders (`tools/bizhawk/`)** — optional corroboration for native recorder
+changes, and still the only way to capture the 14 hook-driven aux families
 (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`) that the native S3K ports (standard and
-complete-run) defer.
+complete-run) defer. Lua parity is not required to publish a canonical fixture.
 
 - `<game>_trace_recorder.lua` — launched inside BizHawk-2.11 with `--lua <recorder>` and
   `--movie <bk2>`. Each frame reads RAM, classifies the frame phase, and emits one CSV row
@@ -217,10 +217,14 @@ complete-run) defer.
 - `run_bizhawk_lua.bat`, `record_<game>_trace.bat` — Windows equivalents. Ignore them on
   Linux.
 - `trace_output/` — scratch directory the recorder writes to (CWD-relative to the script).
-  Outputs are *manually copied* into the test resources tree.
+  Treat all Lua output as scratch-only diagnostic/corroborative evidence. Never install
+  Lua-produced bytes as a canonical fixture.
 
-**Fixtures under `src/test/resources/traces/` are read-only ground truth.** On a recorder
-mismatch, fix the recorder — never the fixture, never looser normalization.
+**Fixtures under `src/test/resources/traces/` are read-only ground truth during ordinary
+differential work.** On an unexplained recorder mismatch, fix the recorder — never the
+fixture or normalization. A deliberately reviewed recorder/schema change may replace a
+fixture only through the native publication contract below, including frozen literal
+evidence and explicit approval for the exact bytes.
 `physics.csv` / `aux_state.jsonl` / `run_manifest.json` must be byte-identical with zero
 normalization; only `metadata.json`'s `recording_date` and an exactly-pinned version-line
 delta may differ. Run-mode published files are CRLF; plain mode and S1 complete-run are LF
@@ -228,25 +232,24 @@ delta may differ. Run-mode published files are CRLF; plain mode and S1 complete-
 
 #### Porting a recorder to the native harness
 
-The Lua recorder is the behavioural authority; the written spec is second; the disassembly
-resolves RAM questions.
+Treat ROM/disassembly semantics as the behavioral source of truth. Establish a
+native recorder change with named semantic invariants, behavioral and unit tests,
+and independent review. Existing committed fixture vectors and Lua parity are
+useful cross-implementation evidence when available, but neither overrides the
+ROM nor gates canonical publication.
 
-Read "authority" narrowly: it means the Lua is the **oracle a port is checked against**, not
-that two recorders are maintained forever. The native harness is the preferred capture path
-— faster, genuinely headless, loud on failure, and the only one with a test suite — and the
-intended direction is that the Lua recorders are retired rather than kept at parity. What
-keeps them alive is that a fixture recaptured *with the native harness* would be gated
-against bytes the harness itself produced, which proves nothing; so the Lua stays runnable
-(frozen and unmaintained is fine) for fixture regeneration and for ad-hoc hook-driven
-debugging. Do not invest in Lua-side parity for its own sake.
+Keep Lua runnable for optional corroboration and ad-hoc hook-driven debugging.
+Frozen and unmaintained is fine; do not invest in Lua-side parity for its own
+sake. The native harness is the preferred capture path and canonical
+fixture-publication authority.
 
 Lessons already paid for on the S1 and S2 ports:
 
 - **Evaluate stop conditions POST-advance, in the Lua's `on_frame_end` source order.** This
   exact bug was found independently in both ports. Don't reintroduce it.
-- **Pin version drift empirically.** When fixture and HEAD recorder versions differ, derive
-  the permitted metadata delta from the Lua git history plus a real capture diff, and assert
-  it exactly in the gate. Never widen normalization to make a diff pass.
+- **Pin version drift empirically.** When fixture and HEAD recorder versions differ,
+  derive the permitted metadata delta from recorder history plus a real capture diff,
+  and assert it exactly in the gate. Never widen normalization to make a diff pass.
 - **Hook-driven aux families are the hard part.** Families like `rng_call_per_frame` and
   `sonic_record_pos_per_frame` use `event.onmemoryexecute`, which the native `GpgxHost` does
   not support yet. Determine which families actually appear in the gated fixtures; port
@@ -338,11 +341,14 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
        the prime suspect.
 
 6. If you can't pinpoint the bug because the trace lacks the right data:
-     - Extend the recorder lua with a new aux event type.
-     - Bump LUA_SCRIPT_VERSION; add an opt-in key to aux_schema_extras.
+     - Extend the native recorder with a new aux event type and behavioral/unit coverage.
+     - Bump the recorder version; add an opt-in key to aux_schema_extras.
+     - Extend Lua only when the field requires a deferred hook-driven family or useful
+       corroboration.
      - Add a matching TraceEvent record + parser handler.
      - Wire the new data into DivergenceReport rendering or a probe class.
-     - Regenerate the affected trace(s).
+     - Regenerate with the native recorder. Publish fixture bytes only through the
+       canonical publication contract and exact-byte approval.
      - DO NOT wire the new data into engine-state mutation in the test loop.
 
 7. Implement the fix:
@@ -374,13 +380,15 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
     (objects, badniks, lifts, springs, monitors, etc.), evaluate
     whether the root cause is a class of bug that could recur in any
     not-yet-implemented object of the same game:
-      - Read the existing `.agents/skills/s{1,2,3k}-implement-object/rom-pitfalls.md`
+      - Read the existing mirrored
+        `.agents/skills/s{1,2,3k}-implement-object/rom-pitfalls.md` and
+        `.claude/skills/s{1,2,3k}-implement-object/rom-pitfalls.md`
         for that game. Does the fix match an existing pattern? If yes,
         consider adding the fresh commit hash + a one-line example to
         the existing entry's "Originating commit" list.
       - If the bug is a NEW pattern not yet catalogued, append a new
-        entry following the format in the pitfalls file. Mirror to
-        `.agents/skills/.../rom-pitfalls.md` in the same logical change.
+        entry following the format in the pitfalls file. Update both
+        mirrored copies in the same logical change.
         Use the `Skills: updated` commit trailer.
       - Cross-apply: if the pattern is plausibly cross-game (S2 and S3K
         share the same ROM convention), copy the entry to the other
@@ -503,8 +511,8 @@ reads it because it hard-pins its own profile), so a variable refused on one bra
 necessarily refused on the other — check `tools/bizhawk/README.md`'s per-branch table
 before assuming a refusal carries over.
 
-**S3K via Lua** — still required for the 14 hook-driven aux families both native S3K
-ports defer (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`). No longer needed for
+**S3K diagnostics via Lua** — use scratch-only for the 14 hook-driven aux families both
+native S3K ports defer (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`). No longer needed for
 `runs/s3-knux-multibonus-ss/`: that set was a 2026-07-19 Windows capture from a Lua build
 three versions behind and could not be reproduced by any current recorder, so it was
 regenerated at 6.32 and the native gate now asserts it byte-for-byte. Lua captures do work
@@ -521,7 +529,12 @@ OGGF_S3K_TRACE_PROFILE=<profile> DISPLAY=:0 \
         "$S3K_ROM_PATH"
 ```
 
-Output lands in `tools/bizhawk/trace_output/`. Copy `metadata.json` into the test resources tree, and the payloads **gzipped** — `tools/traces/compress-traces.ps1 <dir> -Recurse` on Windows, or `gzip -9 -n` — so `physics.csv.gz` / `aux_state.jsonl.gz` land there (the `.bk2` is unchanged). `TestTraceFixtureCompressionGuard` fails on a new uncompressed payload under `src/test/resources/traces/`: uncompressed, a complete-run aux stream exceeds GitHub's per-file limit and cannot be pushed. The native harness compresses at capture time by default. Commit the regen as a separate logical change from any recorder schema change.
+Output lands in `tools/bizhawk/trace_output/` and stays there (or in another scratch
+directory) as diagnostic/corroborative evidence. Never copy Lua output into
+`src/test/resources/traces/`. If a canonical fixture needs a hook-driven or legacy
+capability the native harness lacks, implement and independently review that native
+capability first, or obtain an explicit policy redesign before publication. Do not
+substitute Lua-produced bytes.
 
 **Before regenerating, confirm which recorder produced the target trace** — read its
 `metadata.json` `profile` / `lua_script_version`. A trace stamped e.g. `6.32-s3k-completerun`
@@ -529,6 +542,28 @@ came from the complete-run recorder, not the standard one, and regenerating with
 recorder produces a plausible-looking but wrong fixture.
 
 Profiles are declared inside the lua via `is_*_profile()` predicates — check the recorder for the available list. Common ones: gameplay-unlock starts at controls-active, level-gated-reset-aware starts at gameplay and discards on soft-reset, end-to-end starts at BK2 frame 0.
+
+### Canonical fixture publication contract
+
+Use the native harness for canonical fixture publication. Keep correctness
+independent of the bytes being proposed:
+
+1. Establish recorder correctness from named ROM/disassembly semantics,
+   behavioral and unit tests, and independent review. Use existing fixture
+   vectors or Lua parity as optional corroboration.
+2. Capture into scratch with the unchanged reviewed native implementation.
+3. Freeze literal SHA-256 digests, byte lengths, metadata versions, segment
+   inventories, row/event counts, ordering, ranges, and a named cause for every
+   byte-level delta. Never derive passing expectations dynamically from the same
+   capture invocation.
+4. Obtain explicit user approval for those exact bytes and reported deltas.
+   Install the native output byte-for-byte with no hand edits.
+5. Re-run native gates plus fixture-load, schema, compression, and reference
+   guards, then measure and record replay-frontier movement.
+
+Until Step 4, committed fixtures remain read-only ground truth. A pre-publication
+gate failure means the recorder or its proposed contract is wrong; it never
+authorizes weakening a comparison or silently replacing a fixture.
 
 ## Recorder Extension Recipe
 
@@ -539,15 +574,16 @@ When a divergence can't be pinpointed without more ROM-side state:
    `aux_schema_extras` (e.g. `"<feature>_per_frame"`). Every recorder now has a **native**
    port (S1, S2, S3K standard, S3K complete-run) — extend the relevant `*AuxEventEngine`
    and its writer, with a test in `tools/bizhawk-headless/tests/`. On **Lua**, add a helper
-   function (e.g. `write_<feature>_per_frame()`) and bump `LUA_SCRIPT_VERSION` — needed only
-   when the field requires a hook-driven family the native port defers, or when regenerating
-   a non-Linux / legacy-build fixture. If a native recorder gains
-   a field the Lua one lacks, the differential gate will fail — extend both, or extend the
-   Lua one first since it is the behavioural authority.
+   function (e.g. `write_<feature>_per_frame()`) and bump `LUA_SCRIPT_VERSION` only for
+   scratch diagnostics or optional corroboration. A canonical fixture field requires a
+   native implementation backed by ROM/disassembly semantics, native behavioral/unit
+   coverage, and independent review.
    If a focused frontier only needs a few extra fields on an existing generic diagnostic such as `state_snapshot`, add the fields there and force snapshots for a narrow frame window instead of creating a new event type. Typical S1/S2 movement-input questions need both BK2/CSV input and ROM-side `Ctrl_1_Held_Logical` plus `move_lock`, because `Sonic_Move` consumes the logical RAM byte after `ReadJoypads` runs from V-int (`docs/s2disasm/s2.asm:701,1361-1387,36253-36260`).
 2. **Java parser.** Add a new sealed-record type to `TraceEvent` (e.g. `TraceEvent.<Feature>State`). Parse the new JSON event in `TraceEvent.parseJsonLine`. Add `TraceMetadata.hasPerFrame<Feature>()` and `TraceData.<feature>StateForFrame(frame)`. Keep parsers tolerant — old traces without the new key must still load.
 3. **Diagnostic use.** Wire the new data into `DivergenceReport.getContextWindow` rendering, or into a dedicated probe class for targeted bug investigation. **Do not** wire it into engine state mutation in the per-frame test loop.
-4. **Regenerate the affected trace(s).** Commit the regen separately from the recorder schema change so reviewers can see the data churn distinctly.
+4. **Regenerate with the native recorder.** If the new field belongs in a canonical
+   fixture, complete the publication contract and exact-byte approval, then commit the
+   fixture separately from the recorder/schema change.
 
 ## Recorder → Regen → Decode Loop — the primary engine for deep frontiers
 
@@ -559,24 +595,36 @@ The single highest-leverage method for frontiers labelled "RAM-gated" / "BizHawk
   (measured: ~6 min / ~235 MB peak RSS / 2.84 GB scratch for one untruncated S3K
   complete-run pass over the 466,334-row canonical movie; ~3.5 min for a full S1 run;
   the S2 complete-emeralds run is 259,590 frames ≈ 3.5 min native, ~1.5 GB peak RSS,
-  375 MB output). Fall back to Lua + EmuHawk only for the 14 hook-driven aux families
-  the native S3K ports defer, or to reproduce a non-Linux / legacy-build fixture (e.g.
-  the pre-6.32 `runs/s3-knux-multibonus-ss/` set) — invoke EmuHawk directly in the
-  background via `run_bizhawk_lua.sh` and let it self-exit at movie end. The Windows
-  equivalent is:
+  375 MB output). Use Lua + EmuHawk only for scratch-only hook diagnostics or optional
+  legacy/non-Linux corroboration. Lua output cannot become a canonical fixture. If native
+  lacks a capability required by a canonical fixture, implement/review it natively or
+  explicitly redesign the policy before publication. The Windows diagnostic equivalent is:
   ```
   EmuHawk.exe --chromeless --lua=tools/bizhawk/<game>_complete_run_recorder.lua \
       --movie=<the complete-run bk2> "Sonic The Hedgehog (W) (REV01) [!].gen"
   ```
-  Output lands per-zone in `tools/bizhawk/trace_output/<zone>/` (uncompressed). The full ROM name (spaces/parens/`[!]`) works as the trailing positional ROM arg to the recorder — the "spaces break it" trap is specific to the ad-hoc diag-capture path below, not the recorder. **Check which recorder made the target trace** via its `metadata.json` `profile`/`lua_script_version` (e.g. S3K AIZ is `s3k_trace_recorder.lua` + `OGGF_S3K_TRACE_PROFILE=aiz_end_to_end`, NOT the complete-run recorder).
+  Output lands per-zone in `tools/bizhawk/trace_output/<zone>/` (uncompressed) and remains
+  scratch-only. The full ROM name (spaces/parens/`[!]`) works as the trailing positional
+  ROM arg to the recorder — the "spaces break it" trap is specific to the ad-hoc
+  diag-capture path below, not the recorder. **Check which recorder made the target trace**
+  via its `metadata.json` `profile`/`lua_script_version` when comparing legacy evidence.
 - **The regen CORRECTS wrong "gated" labels — distrust them.** Real ground truth disproved root after root: "needs BizHawk v_objstate" (LZ2) was actually a ring/object placement-pass separation; "needs BizHawk x_sub" (SBZ2) was a no-hardware conveyor subpixel-discard → a WIN; "boss 1px behind" (GHZ3) was a byte-identical boss with a 1-frame defeat-routine slip; a guessed `v_limitbtm2 ~0x2E8` (MZ1) was 0x02EA with a different (camera-ORDER) root. **Before accepting a "RAM-gated" verdict, regen the data that would prove it.** Equally, re-attack any frontier decoded BEFORE a pattern you have since learned (PlatformObject landing-flags, object-push/self-motion subpixel, the bclr-release pattern) — the old decode was blind to it.
 - **Validate recorder lua with a real compile, not balance-checking.** `pip install lupa`, then:
   ```
   python -c "import lupa; lupa.LuaRuntime().compile(open('tools/bizhawk/<recorder>.lua',encoding='utf-8',errors='replace').read())"
   ```
   Brace/paren/quote balance MISSES real errors — notably Lua's **200-locals-per-main-chunk limit** (top-level `local`s past 200 fail to load; EmuHawk runs, writes no `trace_output`, and looks like a silent core-init failure). Fix by making new constants global or keeping the main chunk ≤200 locals. Always lupa-compile before launching a regen.
-- **Install regen output by `bk2_frame_offset`, NOT by directory name.** The recorder names output dirs by RAM-detected zone/act, which do not match the repo `<zone>_completerun` names (e.g. regen `sbz3` off 189578 → repo `fz_completerun`; regen `lz4` off 181004 → repo `sbz3_completerun` — the S1 SBZ3=Labyrinth-act-4 internal quirk). Build an offset→repo-dir map from each repo `metadata.json` and install by matching offset; a name-based copy silently corrupts two zones. Gzip `physics.csv`/`aux_state.jsonl` → `.gz`, copy `metadata.json`.
-- **Verify the frontier reproduces, and do NOT commit aux bloat.** After install, run the comparator: the first-error frame must be UNCHANGED (the engine is unchanged; only the aux is richer) — that proves the regen is faithful before you decode. For the commit: a fix is an ENGINE change that advances against the lean already-committed trace, so prefer engine-only commits. Only commit a regenerated trace when the new aux fields are genuinely needed by the suite, and if the recorder widened the per-frame aux (it can balloon 8×), window it to the relevant frames or keep it out of the commit.
+- **Map scratch output by `bk2_frame_offset`, NOT by directory name.** Recorder output dirs
+  use RAM-detected zone/act names that can differ from repo fixture names (for example,
+  `sbz3` offset 189578 maps to `fz_completerun`; `lz4` offset 181004 maps to
+  `sbz3_completerun`). Build an offset map before local comparison. Never stage a scratch
+  overlay. A canonical installation uses only approved native output through the
+  publication contract.
+- **Verify the frontier reproduces, and do NOT commit aux bloat.** For a temporary local
+  native diagnostic overlay, the first-error frame must remain unchanged when only aux
+  context changed. Revert the overlay after decoding. Commit regenerated fixture bytes only
+  through the native publication contract; otherwise prefer an engine-only fix against the
+  lean committed trace.
 - **Parallel regen/decode agents need worktree isolation.** Two non-isolated agents collided in a shared worktree (one branch overwrote the other). Use `isolation: worktree` (or run serially).
 
 ## Shared-resolver ordering — check the engine's pipeline ORDER against ROM
