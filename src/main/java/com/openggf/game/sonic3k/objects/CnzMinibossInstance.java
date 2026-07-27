@@ -285,7 +285,12 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     private boolean diagnosticWaitHitHandoff;
     private WaitCallback diagnosticLastCallback = WaitCallback.NONE;
     private boolean pendingStartReleaseHandoff = true;
-    private boolean closingTerminatorDeferred;
+    /**
+     * {@code CNZMiniboss_CheckPlayerHit} returns after replacing {@code $30/$34};
+     * Opening's {@code Animate_RawMultiDelay} body first runs on the following
+     * object dispatch (sonic3k.asm:145404-145425, 144941-144944).
+     */
+    private boolean openingObjectDispatchDeferred;
 
     private enum WaitCallback {
         NONE,
@@ -581,6 +586,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         state.routine = ROUTINE_OPENING;
         startRawAnimation(ANIM_OPENING_FRAMES, ANIM_OPENING_DELAYS, false);
         waitCallback = WaitCallback.OPEN_GO;
+        openingObjectDispatchDeferred = true;
         diagnosticPlayerHitOpened = true;
     }
 
@@ -777,6 +783,10 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      */
     private void updateOpening() {
         // ROM sonic3k.asm:144942 — jmp (Animate_RawMultiDelay).l
+        if (openingObjectDispatchDeferred) {
+            openingObjectDispatchDeferred = false;
+            return;
+        }
         animateRawMultiDelay(ANIM_OPENING_FRAMES, ANIM_OPENING_DELAYS, WaitCallback.OPEN_GO);
     }
 
@@ -1272,9 +1282,6 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         mappingFrame = frames[0];
         rawAnimPairIndex = 0;
         rawAnimTimer = initialTimer;
-        if (frames == ANIM_CLOSING_FRAMES) {
-            closingTerminatorDeferred = false;
-        }
     }
 
     /**
@@ -1291,14 +1298,8 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
 
         rawAnimPairIndex++;
         if (rawAnimPairIndex >= frames.length) {
-            if (terminatorCallback == WaitCallback.CLOSE_GO && !closingTerminatorDeferred) {
-                // The previous-list touch pass consumes the final frame-0
-                // publication before CloseGo becomes visible to object motion.
-                closingTerminatorDeferred = true;
-                rawAnimTimer = 0;
-                return;
-            }
-            closingTerminatorDeferred = false;
+            // $F4 clears anim_frame_timer and jumps through $34(a0) in this
+            // same dispatch (sonic3k.asm:177516-177528, 177558-177586).
             waitCallback = terminatorCallback;
             runWaitCallback();
             return;

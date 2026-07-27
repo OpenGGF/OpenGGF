@@ -749,12 +749,8 @@ class TestCnzMinibossTopPhysics {
         }
 
         boss.update(25, fixture.sprite());
-        assertEquals(0x0C, boss.getCurrentRoutine(),
-                "the final frame-0 publication remains Closing for the previous touch list");
-
-        boss.update(26, fixture.sprite());
         assertEquals(0x06, boss.getCurrentRoutine(),
-                "the deferred $F4 terminator invokes Obj_CNZMinibossCloseGo after frame 0 was published "
+                "the $F4 terminator invokes Obj_CNZMinibossCloseGo in the same animation dispatch "
                         + "(docs/skdisasm/sonic3k.asm:144960-144969,145707-145708,177558-177586)");
     }
 

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: CNZ's miniboss now preserves the native pointer-only entry dispatch when a body hit selects its opening raw animation, and its raw `$F4` terminator invokes `CloseGo` in the same animation dispatch instead of adding a synthetic previous-list defer. The parent and coil now reach the ROM's routine `$06` and X position together, advancing standalone CNZ from frame 15058 with 3,413 errors to frame 15096 with 3,922 errors.
 - Fix: CNZ's placed miniboss object now owns the `$31E0` arena-boundary write from its native post-player object slot instead of letting the later zone-event adapter apply it before Player 2. Tails therefore completes the threshold frame before consuming the new left boundary, advancing standalone CNZ from frame 14157 with 3,675 errors to frame 15058 with 3,413 errors.
 - Fix: CNZ cylinders now preserve an externally launched rider through the final native twist dispatch, relinquish twist-mapping ownership before the next player animation, and retire the rider on the following cylinder dispatch. This advances standalone CNZ from frame 10728 to frame 14157 and reduces the canonical comparison from 3,676 to 3,675 errors.
 - Fix: grounded S3K end signs now retain their native later-slot results-child allocation owner through both the results create gate and final child retirement. This restores MGZ's standalone results/reload timing from frame 13903 to its accepted frame-23561 ring frontier while the airborne-wait complete run remains at frame 28398.

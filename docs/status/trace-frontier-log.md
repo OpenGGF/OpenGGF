@@ -51794,3 +51794,45 @@ mvn -q -Dmse=off \
 - Result: frontier advances 901 frames and removes 262 errors.
 - Focused CNZ event/miniboss suites pass 42/42. Non-LBZ canaries retain AIZ
   f8837 `rings`, MGZ f23561 `rings`, and CNZ complete-run f0 `y`.
+
+## 2026-07-27 - CNZ miniboss raw-animation phase ownership
+
+Worktree `.worktrees/trace-s3k-cnz-f15058`, branch
+`bugfix/ai-s3k-cnz-f15058`, based on `9b5391450`.
+
+The frame-15058 velocity reversal was the correct shared boss rebound against
+an engine-only coil overlap. Comparison of parent slot 8 showed that the ROM
+entered `CloseGo`/routine `$06` at frame 14883 while the engine retained
+Closing until frame 14884, leaving parent and coil one pixel behind for that
+cycle and three pixels behind by the frontier.
+
+`Animate_RawMultiDelay` invokes a raw `$F4` callback in the terminator's own
+dispatch (`docs/skdisasm/sonic3k.asm:177516-177528,177558-177586`); the
+engine's extra Closing-only defer was synthetic. Body-hit entry also needs the
+native pointer-only object dispatch before Opening animation advances. With
+both phases represented, parent routine and X agree at the closing handoff
+(frame 14883 routine `$06`, frame 14884 X `$32C6`) and the frame-15058 coil
+contact disappears naturally.
+
+Fresh standalone command:
+
+```bash
+mvn -q -Dmse=off -Dsurefire.forkCount=1 \
+  '-Dsurefire.argLine=-Xshare:off -Xmx6g' \
+  -Ds3k.rom.path=s3k.gen \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace \
+  test
+```
+
+- Before: 3,413 errors, first f15058 `g_speed` (expected `$02B4`, actual
+  `-$02B4`).
+- After: 3,922 errors, first f15096 `tails_x_speed` (expected `-$0340`,
+  actual `$0200`).
+- Result: frontier advances 38 frames; total later differences increase by
+  509 after the corrected collision history exposes the next sidekick owner.
+  The first-frontier advance is accepted for independent review despite that
+  total increase because the corrected parent routine/X sequence agrees with
+  the ROM and removes the original contact naturally; the later sidekick
+  divergence remains separate follow-up work.
+- Focused CNZ miniboss suite passes 58/58. Non-LBZ canaries retain AIZ f8837
+  `rings`, MGZ f23561 `rings`, and CNZ complete-run f0 `y`.
