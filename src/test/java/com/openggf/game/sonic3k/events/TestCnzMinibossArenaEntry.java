@@ -55,6 +55,28 @@ class TestCnzMinibossArenaEntry {
     }
 
     @Test
+    void placedObjectGateIgnoresEventModeAndArenaMax() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        GameServices.camera().setX((short) (Sonic3kConstants.CNZ_MINIBOSS_ARENA_MAX_X + 1));
+
+        Sonic3kCNZEvents cnz = getCnzEvents();
+        cnz.update(0, 0);
+        assertEquals(Sonic3kCNZEvents.BossBackgroundMode.ACT1_POST_BOSS,
+                cnz.getBossBackgroundMode(),
+                "Guard setup: the event adapter has independently selected post-boss mode");
+
+        CnzMinibossInstance boss = addMiniboss();
+        boss.update(0, fixture.sprite());
+
+        assertTrue(cnz.isBossFlag(),
+                "Obj_CNZMiniboss tests only unsigned Camera_X_pos >= $31E0");
+        assertEquals(Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X,
+                GameServices.camera().getMinX() & 0xFFFF);
+    }
+
+    @Test
     void arenaThresholdMatchesRom() {
         // The hard number: ROM sonic3k.asm:144824 reads `move.w #$31E0,d0`.
         // The scaffold previously held 0x3000; workstream D corrects it.
@@ -65,5 +87,12 @@ class TestCnzMinibossArenaEntry {
         Sonic3kLevelEventManager events =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
         return events.getCnzEvents();
+    }
+
+    private static CnzMinibossInstance addMiniboss() {
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x32C0, 0x020C, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        GameServices.level().getObjectManager().addDynamicObject(boss);
+        return boss;
     }
 }

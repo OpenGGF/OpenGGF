@@ -548,14 +548,8 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     public void enterMinibossArenaFromObjectSlot() {
         int cameraX = camera().getX() & 0xFFFF;
         if (minibossArenaLocked
-                || cameraX < Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X
-                || cameraX > Sonic3kConstants.CNZ_MINIBOSS_ARENA_MAX_X
-                || (bossBackgroundMode != BossBackgroundMode.NORMAL
-                    && bossBackgroundMode != BossBackgroundMode.ACT1_MINIBOSS_PATH)) {
+                || cameraX < Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X) {
             return;
-        }
-        if (bossBackgroundMode == BossBackgroundMode.NORMAL) {
-            enterMinibossTunnelApproach();
         }
         enterMinibossArena();
     }
