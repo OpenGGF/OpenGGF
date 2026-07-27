@@ -55,19 +55,20 @@ within that late window:
 particle RNG call in `loc_8B6AE`
 (`docs/skdisasm/sonic3k.asm:189957-189985`).
 
-This capture does **not** cover f14502. The slot-20 contrast at that earlier
-frame comes from the committed native per-frame RNG/SST snapshots crosswalked
-against temporary engine allocation logs and the disassembly allocation
-routines. It remains a narrowed hypothesis requiring an aligned native
-allocation/dispatch probe before a production fix.
+The follow-up `tools/bizhawk/probes/icz_slot20_allocation_probe.lua` arms at
+the earlier ICZ2 `$3888` gameplay-counter boundary and records only the
+f14488-f14511 `Process_Sprites`, allocation, dispatch, and RNG window. Its
+scratch capture contains 144 lines (SHA-256
+`b09cc8ad94fa9fc11f7e80c380d0c3708742578f2f9eb47ca49161f349dbe932`).
+It directly covers f14502.
 
-## First persistent ownership mismatch
+## First persistent ownership mismatch and correction
 
 The first one-frame seed skew is f2661 and realigns at f2662. Several other
-short timing skews also realign. The first mismatch that does not realign is
-f14502:
+short timing skews also realign. Before the correction, the first mismatch
+that did not realign was f14502:
 
-| Frame | Native owner/result | Engine owner/result |
+| Frame | Native owner/result | Baseline engine owner/result |
 |---:|---|---|
 | 14501 | no call; seed `E9697A23` | no call; seed `E9697A23` |
 | 14502 | miniboss explosion controller: `E9697A23 -> F17F8F9B` | same controller draw, then snow particle: `F17F8F9B -> AD40FFD3` |
@@ -83,23 +84,37 @@ The ROM emitter at `loc_8B660` increments its timer/count and calls
 `AllocateObject`; only an allocated child later reaches `loc_8B6AE` and calls
 `Random_Number` (`docs/skdisasm/sonic3k.asm:189930-189985`).
 
-The initial conclusion that late emitter retirement caused the extra draw was
-disproved. A focused experiment implemented the ROM owner boundary:
-`BossDefeated` writes `$3F` to the boss body's `$2E`, and
-`Wait_FadeToLevelMusic` reaches `loc_713E8`, which stops the active
-`_unkFAAE`/`loc_8B660` emitter while the independent
-`Child6_CreateBossExplosion` SST continues. Instrumentation showed the engine
-stopping slot 5 at counter 21498, after its last snow-child first dispatch at
-21492. No child first-dispatched after the stop, and the replay remained
-exactly 29 errors with first error f24140. Moving the whole signpost flow to
-that boundary introduced a separate f14779 control regression. All
-production/test experiments were reverted.
+The aligned native allocation timeline identifies late emitter retirement as
+the owner:
 
-The remaining discrepancy is allocation topology before the stop boundary:
-the engine gives the snow child slot 20, while native slot 20 belongs to the
-miniboss explosion topology. `CreateChild6_Simple` uses
-`AllocateObjectAfterCurrent` and only calls `Random_Number` after successful
-child allocation (`docs/skdisasm/sonic3k.asm:176737-176785,177119-177139`).
+| Trace frame | Native event |
+|---:|---|
+| 14493 | slot-5 `loc_8B660` calls plain `AllocateObject`; the snow child receives slot 16 and first-dispatches that frame |
+| 14500 | the boss body reaches its post-defeat handoff; slot 20 is still an unrelated transient |
+| 14501 | slot 5 sees `$38` bit 5 and deletes; slot 20 is empty |
+| 14502 | slot-15 explosion control calls `AllocateObjectAfterCurrent`, receives slot 20, and alone advances `E9697A23 -> F17F8F9B` |
+
+`BossDefeated` writes `$3F` to the boss body's `$2E`.
+`Wait_FadeToLevelMusic` decrements it and reaches `loc_713E8` on the 64th
+following body dispatch; that routine follows `_unkFAAE`, verifies
+`loc_8B660`, and sets its `$38` bit 5 while the independent
+`Child6_CreateBossExplosion` SST continues
+(`docs/skdisasm/sonic3k.asm:149867-149875,179656-179670,180814-180829`).
+
+The engine had an unused `defeatTimer` initialized to the unrelated `$B3`
+value and stopped the emitter only when the explosion-controller SST finished.
+Temporary baseline logging observed the extra snow allocation at engine object
+frame 21501 before the explosion-controller draw, and emitter stop only at
+21528. The correction sets the body timer to `$3F` and lets the defeated body
+stop the semantic active snow owner on its 64th dispatch. It deliberately
+leaves the already-established folded signpost/results flow at the explosion
+controller completion boundary; moving that whole flow earlier causes a
+separate control regression and is not required to model the emitter write.
+
+The focused RED test
+`bossDefeatedWaitStopsSnowEmitterBeforeExplosionControllerFinishes` proves
+that the emitter remains live through the 63rd body wait and is stopped on the
+64th while the explosion controller remains independent.
 
 ## Ice-cube allocation versus first dispatch
 
@@ -124,20 +139,20 @@ the f14502 extra call. The broader constructor-order concern remains a
 separate architectural risk, but it must not be presented as the ICZ
 f24140 root cause without a failing allocation reproduction.
 
-## Downstream seed and owner crosswalk
+## Corrected downstream seed and owner crosswalk
 
-The f14502 extra draw cascades through later owners:
+Post-correction temporary engine logging proves the ownership sequence
+realigns beyond the local window:
 
-| Event | Native | Engine |
+| Event | Native | Corrected engine |
 |---|---|---|
-| f22486 animal | one animal, `528B07B3 -> 73EF3BAB` | fourth engine animal consumes `1A2FF813 -> ECB9BB0B` |
-| extra engine animals | none in that native dispatch | three additional animal draws occur before the corresponding late animal: `73EF3BAB -> 1FB38E63 -> E19CCDDB -> 1A2FF813` |
-| f22733 first snow | `73EF3BAB -> 1FB38E63`, return `$08B6C2`, slot 10 | begins only after the four engine animals, from `ECB9BB0B` |
+| f14502 explosion | `E9697A23 -> F17F8F9B`, slot 15 allocates slot 20 | `E9697A23 -> F17F8F9B`, explosion slot 15 only |
+| f22486 animal | `528B07B3 -> 73EF3BAB`, slot 5 | `528B07B3 -> 73EF3BAB`, slot 5 |
+| f22733 first snow | `73EF3BAB -> 1FB38E63`, slot 10 | `73EF3BAB -> 1FB38E63`, slot 10 |
+| later snow | `1FB38E63 -> E19CCDDB -> 1A2FF813 -> ECB9BB0B` | the same successor sequence in slots 11-13 and 15 |
 
-The three extra engine animal draws are therefore accounted for as downstream
-object-lifetime/topology consumers, not independent RNG math errors. Native
-uses those same successor values later for periodic snow calls at f22733,
-f22742, f22751, and f22760; the engine has already spent them on animals.
+The former three “extra animal” consumers disappear; they were a cascade of
+the earlier shifted seed ownership, not independent animal-lifetime defects.
 
 ## f24140 ring event
 
@@ -146,27 +161,7 @@ discrepancy. Native rings change from 2 to 3 at f24140. Immediately before the
 change, Sonic is near `$43ED/$06AD`; native lost-ring slot 35
 (`Obj_Lost_Ring`, code `$0001A64A`) is at `$43FD/$0696`, within collection
 range. The engine stays at 2 because its scattered lost-ring geometry differs.
-That geometry is downstream of the persistent RNG ownership skew, so the
-correction belongs to the earlier allocation mismatch—not ring counting,
-collision tolerances, or an f24140 exception.
-
-## Recommended narrow RED tests
-
-Before a production correction, add tests at the owning lifecycle boundary:
-
-1. A saturated/ordered object-manager test where the explosion controller and
-   snow emitter compete for slot 20; assert the same
-   `AllocateObjectAfterCurrent` winner and failure result as native.
-2. A controller test which places the ICZ miniboss explosion owner in its
-   observed slot and verifies its child receives slot 20 before the earlier
-   slot-5 emitter's plain `AllocateObject` call.
-3. A seed ownership test pinned to `E9697A23`: the explosion controller alone
-   must advance to `F17F8F9B`, with no second draw from snowdust.
-4. A trace-side object-lifetime assertion around f14501-f14503 comparing the
-   semantic emitter presence and slot-20 owner, without copying trace state
-   into the engine.
-
-The fix owner should be the smallest inaccurate SST occupancy or
-after-current allocation owner proven by that RED test. Do not special-case
-trace frame 14502, the complete-run route, the RNG seed, ring count, or ICZ
-inside shared allocation code.
+Despite the now-aligned RNG ownership sequence, the full replay remains 29
+errors with first mismatch f24140. The missed pickup is therefore the next
+separate geometry/lifetime frontier; it must not be repaired through ring
+counting, collision tolerance, RNG adjustment, or an f24140 exception.

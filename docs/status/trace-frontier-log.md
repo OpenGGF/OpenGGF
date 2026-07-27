@@ -42,17 +42,22 @@
   `mvn -q -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay
   -Dsonic3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen test`.
 - Result remains 29 errors, 0 warnings; first mismatch f24140 `rings`
-  (expected 3, actual 2). No production change is retained.
+  (expected 3, actual 2). The ring frontier is unchanged by the separately
+  proven lifecycle correction below.
 - Native rings change 2→3 as Sonic crosses lost-ring slot 35 near
   `$43FD/$0696`. Engine scatter geometry misses that collection.
-- The first persistent RNG skew remains f14502: native slot 20 belongs to the
-  miniboss explosion topology, while the engine first-dispatches a snow child
-  there and consumes one extra value.
-- A focused emitter-retirement experiment was disproved as the cause:
-  engine slot 5 stops at counter 21498, after its last snow-child first
-  dispatch at 21492, and the replay remained unchanged. The next owner is the
-  competing `AllocateObjectAfterCurrent`/plain `AllocateObject` SST topology,
-  not ring counting, collision tolerance, RNG math, or an ICZ/frame carve-out.
+- Canonical probe `icz_slot20_allocation_probe.lua` captured native
+  f14488-f14511: the slot-5 snow emitter retires at f14501, then the
+  independent slot-15 explosion controller claims free slot 20 and alone
+  advances `E9697A23 -> F17F8F9B` at f14502.
+- The engine previously left its boss-body `$3F` wait unused and stopped the
+  emitter only when the independent explosion SST finished. The defeated body
+  now owns the 64th-dispatch `loc_713E8` stop. RED lifecycle coverage passes,
+  and post-fix diagnostics match native again at the f14502 explosion,
+  f22486 animal, and f22733 first-snow owner/seed transitions.
+- The unchanged f24140 missed pickup is now a separate scattered-ring
+  geometry/lifetime frontier, not an RNG, ring-counter, tolerance, or
+  ICZ/frame carve-out candidate.
 
 ## 2026-07-27 - AIZ dormant marker returns to the first ordinary Player 2 dispatch
 

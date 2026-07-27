@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczMinibossPostBossPaletteController;
+import com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
@@ -492,6 +493,41 @@ class TestS3kIczMinibossObject {
                 "the folded results owner must retain its final wait entry before control restoration");
         assertTrue(instance.isDestroyed(),
                 "The boss body should delete only after queuing the persistent signpost flow");
+    }
+
+    @Test
+    void bossDefeatedWaitStopsSnowEmitterBeforeExplosionControllerFinishes() throws Exception {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x05F0, 0x07F0, ICZ_MINIBOSS_ID, 0, 0, false, 0));
+        RecordingServices services = new RecordingServices();
+        services.camera.setX((short) 0x06F0);
+        services.camera.setY((short) 0x02B8);
+        ((AbstractObjectInstance) instance).setServices(services);
+
+        IczSnowPileObjectInstance emitter = new IczSnowPileObjectInstance(
+                new ObjectSpawn(0x06F0, 0x02B0, Sonic3kObjectIds.ICZ_SNOW_PILE,
+                        0x18, 0, false, -1));
+        emitter.setServices(services);
+        when(services.objectManager.activeObjectsOfType(IczSnowPileObjectInstance.class))
+                .thenReturn(List.of(emitter));
+
+        PlayableEntity player = mock(PlayableEntity.class);
+        for (int frame = 1; frame <= 123; frame++) {
+            instance.update(frame, player);
+        }
+        for (int hit = 0; hit < 6; hit++) {
+            invokeVoid(instance, "simulateHitForTest");
+        }
+
+        for (int frame = 124; frame <= 186; frame++) {
+            instance.update(frame, player);
+        }
+        assertFalse(emitter.isDestroyed(),
+                "BossDefeated $2E=$3F must retain the active snow owner through its 63rd wait dispatch");
+
+        instance.update(187, player);
+        assertTrue(emitter.isDestroyed(),
+                "Wait_FadeToLevelMusic must execute loc_713E8 on the 64th dispatch and set the snow emitter stop bit");
     }
 
     @Test
