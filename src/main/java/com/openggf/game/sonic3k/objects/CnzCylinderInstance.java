@@ -919,6 +919,16 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj_CNZCylinder calls SolidObjectFull, whose new-contact path enters
+        // SolidObject_cont. Its horizontal gate rejects only with `bhi`, so
+        // relX == d1*2 remains a zero-distance side contact and grounded
+        // players retain Status_Push (sonic3k.asm:67656-67672,
+        // 41383-41400,41468-41501).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return player != releasedJumpSolidSkipPlayer
                 && (!(player instanceof AbstractPlayableSprite sprite) || !isInvalidRider(sprite));

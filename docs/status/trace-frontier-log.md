@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-07-27 - CNZ cylinder exact right edge retains ground push
+
+- Worktree: `.worktrees/trace-s3k-cnz-f6680`, branch
+  `bugfix/ai-trace-s3k-cnz-f6680`, based on `origin/develop`
+  `e4eaa3a84`.
+- Baseline standalone CNZ replay reproduced four frontier-window errors,
+  first at f6680 `status_byte` (expected `$20`, actual `$00`), with 3,700
+  errors in the canonical comparison.
+- At f6680 Sonic is grounded at `$15EB,$052C`, exactly `$2B` pixels to the
+  right of the cylinder at `$15C0,$04FF`, and accelerates right with
+  `x_vel=ground_vel=$000C`. ROM `SolidObject_cont` accepts that exact edge,
+  republishes `Status_Push`, and preserves the velocity; the engine excluded
+  the cylinder's right edge and returned no contact. Detailed evidence is in
+  `docs/architecture/audits/2026-07-27-cnz-f6680-cylinder-inclusive-edge.md`.
+- RED coverage
+  `cnzCylinderExactRightEdgeRetainsGroundPushWhileMovingAway` failed with
+  `pushing=false`. `CnzCylinderInstance` now opts into the shared inclusive
+  right-edge policy used by the ROM's `cmp.w d3,d0 / bhi` gate.
+- The frontier-only replay now reports one error with first mismatch f10728
+  `player_mapping_frame` (expected `$08`, actual `$59`); the canonical
+  comparison falls from 3,700 to 3,676 errors.
+- The focused RED plus all 35 cylinder tests passed. The CNZ scenario sweep
+  retained its five known later gaps at f15194, f15569, f17824 (two
+  assertions), and f20584; rewind coverage passed. Explicit non-LBZ replay
+  canaries retained AIZ f8837 `rings` and MGZ f13903
+  `player_animation_id`. LBZ was not inspected or run.
+
 ## 2026-07-27 - CNZ cylinder consumes preserved standing on re-entry
 
 - Worktree: `.worktrees/trace-s3k-hcz-complete-6292`, branch
