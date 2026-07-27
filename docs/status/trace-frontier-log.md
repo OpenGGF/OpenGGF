@@ -51836,3 +51836,31 @@ mvn -q -Dmse=off -Dsurefire.forkCount=1 \
   divergence remains separate follow-up work.
 - Focused CNZ miniboss suite passes 58/58. Non-LBZ canaries retain AIZ f8837
   `rings`, MGZ f23561 `rings`, and CNZ complete-run f0 `y`.
+
+## 2026-07-27 - CNZ miniboss top live touch coordinate
+
+- Worktree: `.worktrees/trace-s3k-cnz-f15096`, branch
+  `bugfix/ai-trace-s3k-cnz-f15096`, base `d625a84ff`.
+- Before: 3,922 errors, zero warnings; first mismatch f15096
+  `tails_x_speed` (ROM `-$0340`, engine `$0200`).
+- The f15080-f15110 comparison keeps Tails CPU routine `$06`, target
+  `$2E6E,$022C`, unlocked controls, and the recorded left input/history
+  sequence stable. The engine instead entered hurt one frame early while
+  Tails' position still matched the ROM.
+- Native `Obj_CNZMinibossTopMain` runs `MoveSprite2` before
+  `Draw_And_Touch_Sprite`, and the following `Touch_Loop` dereferences the
+  published SST pointer's live `x_pos`/`y_pos`
+  (`docs/skdisasm/sonic3k.asm:145058-145064,178041-178043,20660-20712`).
+  The top was missing the existing object-owned live-touch-coordinate
+  policy, so the engine tested its one-pass-older pre-update position.
+- Fix: `CnzMinibossTopInstance` now publishes its live post-movement touch
+  coordinate through `usesCurrentTouchResponseState()`. Shared touch and
+  sidekick code are unchanged.
+- After: 4,009 errors, zero warnings; first mismatch f16661
+  `player_animation_id` (ROM `$05`, engine `$13`). There are no error
+  records in any field before f16661. The frontier advances 1,565 frames;
+  the 87-error increase belongs to the newly exposed later results-state
+  cascade.
+- Focused touch, miniboss, rewind, and coverage suites pass. Established
+  canaries retain standalone AIZ f8837 `rings`, standalone MGZ f23561
+  `rings`, and CNZ complete-run f0 `y`.

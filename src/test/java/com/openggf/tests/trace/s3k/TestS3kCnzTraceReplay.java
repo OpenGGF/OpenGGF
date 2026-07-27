@@ -74,6 +74,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
     private static final int FRAME_CNZ_MINIBOSS_GO3_HANDOFF = 14712;
     private static final int FRAME_CNZ_MINIBOSS_SECOND_CLOSEGO = 15004;
     private static final int FRAME_CNZ_MINIBOSS_SECOND_BODY_PASS = 15059;
+    private static final int FRAME_CNZ_MINIBOSS_TAILS_HURT_CONTACT = 15096;
     private static final int FRAME_CNZ_MINIBOSS_TAILS_HURT_HISTORY_PUSH = 15194;
     private static final int FRAME_CNZ_MINIBOSS_POST_OPEN_STORED_CHANGEDIR = 15409;
     private static final int FRAME_CNZ_MINIBOSS_LOOK_DOWN_CAMERA_PAN = 15569;
@@ -487,6 +488,39 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                             + "Sonic hurt knockback, so loc_13DD0's current Status_Push bypass "
                             + "must not replay live RIGHT into Tails ground acceleration "
                             + "(docs/skdisasm/sonic3k.asm:22132,24449-24467,26702-26705)");
+        }
+    }
+
+    @Test
+    void traceReplayCnzMinibossTopHurtsTailsOnNativeNextFrameBoundary() throws Exception {
+        try (BootstrappedCnzReplay replay = bootstrappedCnzReplay()) {
+            driveReplayToTraceFrame(
+                    replay.trace(),
+                    replay.fixture(),
+                    replay.replayStart(),
+                    FRAME_CNZ_MINIBOSS_TAILS_HURT_CONTACT);
+
+            AbstractPlayableSprite tails = GameServices.sprites().getRegisteredSidekicks().getFirst();
+            TraceFrame beforeContact =
+                    traceFrame(replay.trace(), FRAME_CNZ_MINIBOSS_TAILS_HURT_CONTACT);
+            assertEquals((short) -0x0340, beforeContact.sidekick().xSpeed());
+            assertEquals(beforeContact.sidekick().xSpeed(), tails.getXSpeed(),
+                    "Frame 15096: Touch_Loop must read the top's live prior-pass X=$32D8; "
+                            + "its right edge $32E8 still misses Tails' left edge $32E9");
+            assertEquals(beforeContact.sidekick().routine(), TraceCharacterState.routineFromSprite(tails),
+                    "Frame 15096 must finish the ordinary Tails routine before contact");
+
+            replay.fixture().stepFrameFromRecording();
+
+            TraceFrame contact =
+                    traceFrame(replay.trace(), FRAME_CNZ_MINIBOSS_TAILS_HURT_CONTACT + 1);
+            assertEquals((short) 0x0200, contact.sidekick().xSpeed());
+            assertEquals(contact.sidekick().xSpeed(), tails.getXSpeed(),
+                    "Frame 15097: Tails' left edge reaches the moving top and HurtCharacter "
+                            + "must apply the native rightward knockback");
+            assertEquals(contact.sidekick().routine(), TraceCharacterState.routineFromSprite(tails),
+                    "Frame 15097 must enter native hurt routine 4 "
+                            + "(sonic3k.asm:20660-20712,21050-21104)");
         }
     }
 
