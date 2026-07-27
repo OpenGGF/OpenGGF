@@ -31,6 +31,8 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.rewind.snapshot.OscillationStaticAdapter;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.Level;
@@ -60,6 +62,7 @@ public final class GameplayModeContext implements ModeContext {
     private final int spawnX;
     private final int spawnY;
     private final EditorPlaytestStash resumeStash;
+    private final HardwareTimingService hardwareTiming = new HardwareTimingService();
 
     private Camera camera;
     private TimerManager timerManager;
@@ -91,6 +94,8 @@ public final class GameplayModeContext implements ModeContext {
     private RewindController rewindController;
     private PlaybackController playbackController;
     private RewindBoundaryReporter rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
+    private HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver =
+            HardwareTimingBoundaryObserver.NO_OP;
 
     public GameplayModeContext(WorldSession worldSession) {
         this(worldSession, 0, 0, null);
@@ -199,6 +204,7 @@ public final class GameplayModeContext implements ModeContext {
         this.managersTornDown = false;
 
         this.rewindRegistry = new RewindRegistry(profiler);
+        this.rewindRegistry.register(hardwareTiming);
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
@@ -395,6 +401,21 @@ public final class GameplayModeContext implements ModeContext {
 
     public ZoneLayoutMutationPipeline getZoneLayoutMutationPipeline() {
         return zoneLayoutMutationPipeline;
+    }
+
+    public HardwareTimingService hardwareTiming() {
+        return hardwareTiming;
+    }
+
+    public HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver() {
+        return hardwareTimingBoundaryObserver;
+    }
+
+    public void setHardwareTimingBoundaryObserver(
+            HardwareTimingBoundaryObserver observer) {
+        hardwareTimingBoundaryObserver = observer != null
+                ? observer
+                : HardwareTimingBoundaryObserver.NO_OP;
     }
 
     // ── Rewind framework ─────────────────────────────────────────────────
@@ -664,6 +685,11 @@ public final class GameplayModeContext implements ModeContext {
             return;
         }
         managersTornDown = true;
+        if (rewindRegistry != null) {
+            rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
+        }
+        hardwareTiming.resetForMissingSnapshot();
+        hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();
         }

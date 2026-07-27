@@ -1,0 +1,228 @@
+package com.openggf.game.timing;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS;
+import static com.openggf.game.timing.HardwareServiceBoundary.VINT_SERVICE;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestHardwareTimingService {
+
+    @Test
+    void ordinalsAreMonotonicPerKind() {
+        HardwareTimingService service = new HardwareTimingService();
+
+        HardwareWorkHandle first = service.submit(submission(1, new byte[] {1}));
+        HardwareWorkHandle second = service.submit(submission(1, new byte[] {2}));
+
+        assertEquals(0, first.ordinal());
+        assertEquals(1, second.ordinal());
+        assertEquals(first.kind(), second.kind());
+    }
+
+    @Test
+    void fifoServiceNeverReleasesLaterJobFirst() {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareWorkHandle first = service.submit(submission(2, new byte[] {1}));
+        HardwareWorkHandle second = service.submit(submission(1, new byte[] {2}));
+
+        service.service(POST_OBJECTS);
+        assertFalse(service.isReady(first));
+        assertFalse(service.isReady(second));
+
+        service.service(POST_OBJECTS);
+        assertTrue(service.isReady(first));
+        assertFalse(service.isReady(second));
+
+        service.service(POST_OBJECTS);
+        assertTrue(service.isReady(second));
+        assertEquals(List.of(first, second), service.pendingHandles());
+    }
+
+    @Test
+    void configuredBoundaryOwnsIntegerWorkBudget() {
+        HardwareTimingService service = new HardwareTimingService(
+                RomWorkBudgetScheduler.oneWorkUnitAt(POST_OBJECTS));
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {7}));
+
+        service.service(VINT_SERVICE);
+        assertFalse(service.isReady(handle));
+
+        service.service(POST_OBJECTS);
+        assertTrue(service.isReady(handle));
+    }
+
+    @Test
+    void claimBeforeReadinessAndSecondClaimFail() {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {3}));
+
+        assertThrows(IllegalStateException.class, () -> service.claim(handle));
+
+        service.service(POST_OBJECTS);
+        assertArrayEquals(new byte[] {3}, service.claim(handle));
+        assertFalse(service.isPending(handle));
+        assertThrows(IllegalStateException.class, () -> service.claim(handle));
+    }
+
+    @Test
+    void hostElapsedTimeCannotAdvancePreparation() throws InterruptedException {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {4}));
+
+        Thread.sleep(10);
+
+        assertTrue(service.isPending(handle));
+        assertFalse(service.isReady(handle));
+    }
+
+    @Test
+    void claimReturnsDefensiveCopyOfPreparedPayload() {
+        byte[] sourcePayload = new byte[] {5, 6, 7};
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareWorkHandle handle = service.submit(submission(1, sourcePayload));
+        service.service(POST_OBJECTS);
+        HardwareTimingSnapshot readySnapshot = service.capture();
+
+        sourcePayload[0] = 99;
+        byte[] claimed = service.claim(handle);
+        claimed[1] = 98;
+
+        service.restore(readySnapshot);
+        assertArrayEquals(new byte[] {5, 6, 7}, service.claim(handle));
+    }
+
+    @Test
+    void recordedAdmissionHoldsPreparedJobUntilMatchingEdge() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {8}));
+
+        service.service(POST_OBJECTS);
+
+        assertTrue(service.isPending(handle));
+        assertFalse(service.isReady(handle));
+        authority.admitRecordedCompletion(
+                POST_OBJECTS, handle.kind(), handle.ordinal(),
+                handle.submissionFingerprint());
+        assertTrue(service.isReady(handle));
+    }
+
+    @Test
+    void recordedAdmissionCannotPrepareAJob() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {9}));
+
+        service.service(VINT_SERVICE);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> authority.admitRecordedCompletion(
+                        VINT_SERVICE, handle.kind(), handle.ordinal(),
+                        handle.submissionFingerprint()));
+        assertTrue(error.getMessage().contains("not prepared"), error::getMessage);
+        assertFalse(service.isReady(handle));
+    }
+
+    @Test
+    void recordedAdmissionStartsOnlyBeforeFirstSubmissionAndEndsOnlyWhenEmpty() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        assertThrows(IllegalStateException.class, service::beginRecordedAdmission);
+
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {10}));
+        assertEquals(List.of(new PendingRecordedSubmission(handle, false)),
+                authority.pendingSubmissions());
+        assertThrows(IllegalStateException.class, authority::endRecordedAdmission);
+
+        service.service(POST_OBJECTS);
+        authority.admitRecordedCompletion(
+                POST_OBJECTS, handle.kind(), handle.ordinal(),
+                handle.submissionFingerprint());
+        service.claim(handle);
+        authority.endRecordedAdmission();
+
+        HardwareWorkHandle liveHandle = service.submit(submission(1, new byte[] {11}));
+        service.service(POST_OBJECTS);
+        assertTrue(service.isReady(liveHandle));
+        assertThrows(IllegalStateException.class, service::beginRecordedAdmission);
+    }
+
+    private static HardwareWorkSubmission submission(int workUnits, byte[] payload) {
+        return new HardwareWorkSubmission(
+                HardwareWorkKind.KOS_MODULE_QUEUE,
+                0x1000 + payload[0],
+                0x100,
+                0x4000,
+                payload.length,
+                "KosM",
+                1,
+                false,
+                new TestPreparation(workUnits, payload));
+    }
+
+    private record PreparationSnapshot(int remainingUnits, byte[] payload)
+            implements HardwareWorkPreparationSnapshot {
+        private PreparationSnapshot {
+            payload = payload.clone();
+        }
+
+        @Override
+        public byte[] payload() {
+            return payload.clone();
+        }
+
+        @Override
+        public HardwareWorkPreparation recreatePreparation() {
+            return new TestPreparation(remainingUnits, payload);
+        }
+    }
+
+    private static final class TestPreparation implements HardwareWorkPreparation {
+        private int remainingUnits;
+        private final byte[] payload;
+
+        private TestPreparation(int remainingUnits, byte[] payload) {
+            this.remainingUnits = remainingUnits;
+            this.payload = payload.clone();
+        }
+
+        @Override
+        public boolean stepOneWorkUnit() {
+            if (remainingUnits == 0) {
+                return false;
+            }
+            remainingUnits--;
+            return true;
+        }
+
+        @Override
+        public boolean isPrepared() {
+            return remainingUnits == 0;
+        }
+
+        @Override
+        public byte[] preparedPayload() {
+            if (!isPrepared()) {
+                throw new IllegalStateException("payload requested before preparation");
+            }
+            return payload;
+        }
+
+        @Override
+        public HardwareWorkPreparationSnapshot snapshot() {
+            return new PreparationSnapshot(remainingUnits, payload);
+        }
+
+        @Override
+        public void restore(HardwareWorkPreparationSnapshot snapshot) {
+            remainingUnits = ((PreparationSnapshot) snapshot).remainingUnits();
+        }
+    }
+}

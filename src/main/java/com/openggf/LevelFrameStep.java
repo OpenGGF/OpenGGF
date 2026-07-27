@@ -5,8 +5,11 @@ import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
+
+import java.util.Objects;
 
 /**
  * Canonical level-mode frame update sequence.
@@ -99,6 +102,7 @@ public final class LevelFrameStep {
             boolean startEdgePressed, StepWrapper wrapper) {
         GameStateManager gameState = context.gameStateManager();
         if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
+            serviceVBlankOnly(context);
             return LevelFrameResult.PAUSED;
         }
         return execute(context, levelManager, camera, spriteUpdate, wrapper);
@@ -106,6 +110,31 @@ public final class LevelFrameStep {
 
     public static void updateTimers(LevelFrameContext context) {
         context.timerManager().update();
+    }
+
+    /**
+     * Services the sole production boundary traversed by a VBlank-only row.
+     */
+    public static void serviceVBlankOnly(LevelFrameContext context) {
+        serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+    }
+
+    /**
+     * Services one admitted ROM loop whose object/sprite scan is owned outside
+     * the normal level-frame executor.
+     *
+     * <p>S3K's special-stage and locked title-card loops both run direct queue
+     * work around VBlank, scan their own sprites, then run module-queue service.
+     * Keeping that sequence here prevents alternate loops from inventing their
+     * own boundary dispatch.
+     */
+    public static void executeHardwareTimedObjectScan(
+            LevelFrameContext context, Runnable objectScan) {
+        Objects.requireNonNull(objectScan, "objectScan");
+        serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        objectScan.run();
+        serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
     }
 
     /**
@@ -133,6 +162,9 @@ public final class LevelFrameStep {
         if (levelManager.consumePendingInitialProcessSpritesPass()) {
             return LevelFrameResult.SETUP_ONLY;
         }
+
+        serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
         //     any submitter (object palette writes in steps 2-3, zone palette
@@ -211,6 +243,7 @@ public final class LevelFrameStep {
             wrapper.wrap("objects",
                     () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
                             afterExecBeforePlacement));
+            serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
         } else {
             LevelEventProvider fixedSlotEvents = context.levelEventProvider();
             if (fixedSlotEvents != null) {
@@ -220,6 +253,7 @@ public final class LevelFrameStep {
             // 2. Legacy compatibility path keeps objects before physics. Touch
             //    responses are still deferred to tickPlayablePhysics after movement.
             wrapper.wrap("objects", levelManager::updateObjectPositionsWithoutTouches);
+            serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
 
             // 3. Sprite / player physics update (caller-provided).
             wrapper.wrap("physics", spriteUpdate);
@@ -343,6 +377,15 @@ public final class LevelFrameStep {
         }
         levelManager.clearSidekickRomVisibleReloadFrameCounterBridge();
         return LevelFrameResult.GAMEPLAY_FRAME;
+    }
+
+    private static void serviceBoundary(
+            LevelFrameContext context, HardwareServiceBoundary boundary) {
+        if (context == null) {
+            throw new NullPointerException("context");
+        }
+        context.hardwareTiming().service(boundary);
+        context.hardwareTimingBoundaryObserver().onBoundary(boundary);
     }
 
 }

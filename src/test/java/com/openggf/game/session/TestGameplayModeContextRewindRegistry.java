@@ -28,6 +28,8 @@ import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.zone.NoOpZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
@@ -58,7 +60,7 @@ import static org.mockito.Mockito.mock;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the seven always-available atomic adapters are
+ * <p>Tests verify that the eight always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
@@ -104,18 +106,19 @@ class TestGameplayModeContextRewindRegistry {
                 "timermanager",
                 "fademanager",
                 "oscillation",
+                HardwareTimingService.REWIND_KEY,
                 "solid-execution");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
                 "Expected all atomic adapter keys to be present, got: " + snapshot.entries().keySet());
     }
 
     @Test
-    void exactlySevenAtomicKeysAfterAttach() {
+    void exactlyEightAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(7, snapshot.entries().keySet().size(),
-                "Expected exactly 7 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(8, snapshot.entries().keySet().size(),
+                "Expected exactly 8 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -168,8 +171,48 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        // New registry should have the same 7 keys
-        assertEquals(7, second.capture().entries().keySet().size());
+        // New registry should have the same 8 keys
+        assertEquals(8, second.capture().entries().keySet().size());
+    }
+
+    @Test
+    void contextOwnsOneHardwareTimingServiceAcrossManagerReattachment() {
+        WorldSession world = new WorldSession(new Sonic2GameModule());
+        GameplayModeContext ctx = new GameplayModeContext(world);
+        HardwareTimingService service = ctx.hardwareTiming();
+
+        ctx.attachGameplayManagers(
+                new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2),
+                new DefaultSolidExecutionRegistry());
+        ctx.tearDownManagers();
+        ctx.attachGameplayManagers(
+                new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2),
+                new DefaultSolidExecutionRegistry());
+
+        assertSame(service, ctx.hardwareTiming());
+        assertTrue(ctx.getRewindRegistry().capture().entries()
+                .containsKey(HardwareTimingService.REWIND_KEY));
+    }
+
+    @Test
+    void contextOwnsBoundaryObserverWithoutStaticOrCrossSessionState() {
+        GameplayModeContext first = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()));
+        GameplayModeContext second = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()));
+        HardwareTimingBoundaryObserver observer = boundary -> {
+        };
+
+        first.setHardwareTimingBoundaryObserver(observer);
+
+        assertSame(observer, first.hardwareTimingBoundaryObserver());
+        assertSame(HardwareTimingBoundaryObserver.NO_OP,
+                second.hardwareTimingBoundaryObserver());
+        first.tearDownManagers();
+        assertSame(HardwareTimingBoundaryObserver.NO_OP,
+                first.hardwareTimingBoundaryObserver());
     }
 
     @Test
