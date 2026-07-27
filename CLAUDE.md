@@ -101,7 +101,8 @@ file is guidance you can weigh against the situation in front of you.
    ROM-backed hardware job after kind, ordinal, stable submission fingerprint, and service
    boundary all match. It must not use physics/aux comparison data, carry gameplay values,
    call gameplay owners, or create work the engine did not submit. Guard tests must keep
-   this exception confined to the timing port.
+   this exception confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces
+   parser/authority isolation and forbids physics/aux/gameplay and reflective mutation paths.
 5. **Objects never call `getInstance()`.** Use the injected `services()`.
 6. **Gameplay tile edits route through `ZoneLayoutMutationPipeline` / a
    `LevelMutationSurface`** — never a direct `getMap().setValue(...)`. Editor commands and
