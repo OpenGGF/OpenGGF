@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+## 2026-07-27 - ICZ folded end-boss SST topology restores lost-ring phase
+
+- Worktree: `.worktrees/trace-s3k-icz-24140-geometry`, branch
+  `bugfix/ai-trace-s3k-icz-24140-geometry`, based on `origin/develop`
+  `203bf3145`.
+- Baseline command:
+  `mvn -Dmse=off
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay
+  -Ds3k.rom.path=s3k.gen test` reproduced 29 errors with first mismatch
+  f24140 `rings` (expected 3, actual 2).
+- Native lost-ring slot 35 and engine slot 42 share the same spawn origin,
+  initial velocity, gravity, and subpixel trajectory until the engine probes
+  the floor one frame early at f24126. The floor cadence includes the
+  `Process_Sprites` slot phase, so that one-frame bounce skew leaves the
+  engine ring one pixel above native at the f24140 touch scan.
+- The earliest owner is the folded ICZ end boss. ROM `loc_71C36` creates a
+  Robotnik ship and three body children; the ship creates Robotnik/head and
+  the bottom body creates its hurt child. All six SSTs are live together in
+  slots 25-30. The engine reserved only three, shifting later snow, frost,
+  frozen-player-block, and spilled-ring allocations by three slots.
+- RED coverage
+  `foldedIczEndBossReservesEveryLiveNativeChildSst` observed three reserved
+  slots; it now observes six. No ring cadence, collision tolerance, zone,
+  route, trace, or frame predicate was added.
+- The exact complete-run replay now advances to 31 errors with first mismatch
+  f24179 `rings` (expected 5, actual 6). The f24140 pickup is fixed; f24179 is
+  the next distinct frontier. Detailed evidence is in
+  `docs/architecture/audits/2026-07-27-icz-f24140-folded-boss-sst-topology.md`.
+  LBZ was not inspected, run, changed, or used as a guard.
+
 ## 2026-07-27 - AIZ live push retains inertia through native deceleration
 
 - Worktree: `.worktrees/trace-green-integration`, branch

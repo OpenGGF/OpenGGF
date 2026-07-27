@@ -127,6 +127,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
             {0, 0x0B, 1, MIDDLE_CHILD_SHIFT_TIME},
             {0, 0x2D, 2, BOTTOM_CHILD_SHIFT_TIME}
     };
+    private static final int FOLDED_NATIVE_CHILD_SST_COUNT = 6;
+    private static final int BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX = 3;
     private static final int[][] FROST_OFFSETS_FRAME_0 = {
             {-0x50, 0x14}, {-0x40, 0x14}, {-0x48, 0x04}, {-0x40, 0x04},
             {-0x34, 0x0C}, {-0x24, 0x08}, {-0x1C, 0x04}
@@ -557,10 +559,16 @@ public final class IczEndBossInstance extends AbstractBossInstance
                 || tryServices().objectManager() == null || getSlotIndex() < 0) {
             return;
         }
+        // ROM loc_71C36 first creates Obj_RobotnikShip4, then three body children.
+        // The ship creates its Robotnik child when slot 25 dispatches, and the
+        // bottom body creates loc_720C6 when slot 28 dispatches. These six SSTs
+        // remain live together (sonic3k.asm:150612-150634,150875-150908).
+        // This implementation folds their rendering/behavior into the boss, but
+        // must retain their allocator pressure and Process_Sprites phase.
         int[] childSlots = tryServices().objectManager().allocateChildSlotsAfter(
-                spawn, STRUCTURAL_CHILD_SPECS.length, getSlotIndex());
-        structuralBottomChildSlot = childSlots.length > BOTTOM_CHILD_INDEX
-                ? childSlots[BOTTOM_CHILD_INDEX]
+                spawn, FOLDED_NATIVE_CHILD_SST_COUNT, getSlotIndex());
+        structuralBottomChildSlot = childSlots.length > BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX
+                ? childSlots[BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX]
                 : -1;
     }
 
