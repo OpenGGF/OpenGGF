@@ -17,8 +17,7 @@ class TestTracePlaybackProfile {
         assertTrue(profile.alignsInterLevelVblank());
         assertEquals(6, profile.interLevelNonAdvancingMovieRows());
         assertTrue(profile.alignUncomparedInteriorReturnVblank());
-        assertTrue(profile.replayTerminalMovieTailToTitleScreen());
-		assertTrue(profile.reinitializeOscillationAtLoadedLevelAttach());
+        assertTrue(profile.reinitializeOscillationAtLoadedLevelAttach());
         assertEquals(new com.openggf.game.profiles.trace.TracePlaybackProfile.LevelIdentity(5, 2),
                 profile.resolveRecordedLevel(1, 4), "ROM LZ4 is engine SBZ3");
         assertEquals(new com.openggf.game.profiles.trace.TracePlaybackProfile.LevelIdentity(6, 0),
@@ -34,12 +33,8 @@ class TestTracePlaybackProfile {
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile()
                 .alignUncomparedInteriorReturnVblank());
         assertFalse(new Sonic2GameModule().getTracePlaybackProfile()
-                .replayTerminalMovieTailToTitleScreen());
+                .reinitializeOscillationAtLoadedLevelAttach());
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile()
-                .replayTerminalMovieTailToTitleScreen());
-		assertFalse(new Sonic2GameModule().getTracePlaybackProfile()
-				.reinitializeOscillationAtLoadedLevelAttach());
-		assertFalse(new Sonic3kGameModule().getTracePlaybackProfile()
-				.reinitializeOscillationAtLoadedLevelAttach());
+                .reinitializeOscillationAtLoadedLevelAttach());
     }
 }

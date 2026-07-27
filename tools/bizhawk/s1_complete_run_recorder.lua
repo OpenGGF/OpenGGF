@@ -114,6 +114,10 @@
 -- root that was "not in aux". Rides the existing object_near proximity gate, so it
 -- only costs bytes for objects already in the player window. metadata
 -- lua_script_version reports "3.12"; aux_schema_extras gains object_near_objoff_32.
+-- v3.18 changes: run_manifest.json records expected_movie_end_mode only when
+-- the movie itself completes: final v_gamemode $0C (or its bit-7 PreLevel
+-- form $8C) maps to "level" and $04 maps to "title_screen".
+-- S1_STOP_AT_FRAME and FRAME_CAP terminations omit it.
 ------------------------------------------------------------------------------
 
 ------------------
@@ -510,7 +514,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": [],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.17",\n')
+    meta_file:write('  "lua_script_version": "3.18",\n')
     meta_file:write('  "trace_schema": 4,\n')
     meta_file:write('  "csv_version": 7,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
@@ -593,7 +597,7 @@ function write_ss_metadata()
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write(string.format('  "source_bk2": %q,\n', source_bk2_name))
-    meta_file:write('  "lua_script_version": "3.17",\n')
+    meta_file:write('  "lua_script_version": "3.18",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     if run_id ~= nil then
         meta_file:write('  "run_id": "' .. run_id .. '",\n')
@@ -754,7 +758,19 @@ end
 -- previous level's zone/act (via the shared OUTPUT_DIR), append a bogus
 -- kind="level" entry, and leave finalize_ss_segment() as a silent no-op on
 -- its `not started` guard. The explicit if/else below routes correctly.
-function finalize_run_end()
+function map_expected_movie_end_mode(game_mode)
+    -- S1 uses bit 7 only for the PreLevel form of GM_Level ($8C); the main
+    -- loop clears it back to $0C after the pre-level sequence. Treat both as
+    -- the same semantic level endpoint, but do not normalize any other mode.
+    if game_mode % 0x80 == 0x0C then
+        return "level"
+    elseif game_mode == 0x04 then
+        return "title_screen"
+    end
+    return nil
+end
+
+function finalize_run_end(expected_movie_end_mode)
     if detour_active == "special_stage" then
         finalize_ss_segment()
         detour_active = nil
@@ -765,7 +781,7 @@ function finalize_run_end()
         close_files()
         started = false
     end
-    write_run_manifest()
+    write_run_manifest(expected_movie_end_mode)
 end
 
 -- v6.30-style: emits BASE_OUTPUT_DIR/run_manifest.json describing every
@@ -779,10 +795,10 @@ end
 -- Unlike the S3K emitter, this recorder has no SOURCE_BK2_NAME /
 -- S3K_ROM_CHECKSUM / LUA_SCRIPT_VERSION globals -- a literal port would hit
 -- string.format('%q', nil). Inline the S1-specific literals instead:
--- "3.17" (script version), "AFE05EEE" (S1 World REV01 CRC32, per
+-- "3.18" (script version), "AFE05EEE" (S1 World REV01 CRC32, per
 -- CLAUDE.md), and source_bk2_name (provided by the shared launcher from the
 -- actual loaded BK2 filename).
-function write_run_manifest()
+function write_run_manifest(expected_movie_end_mode)
     if #transitions_done == 0 and run_id == nil then
         return  -- stage-free legacy run: no manifest, output layout unchanged
     end
@@ -809,7 +825,11 @@ function write_run_manifest()
     if run_id then f:write(string.format('  "run_id": %q,\n', run_id)) end
     f:write(string.format('  "source_bk2": %q,\n', source_bk2_name))
     f:write('  "rom_checksum": "AFE05EEE",\n')
-    f:write('  "lua_script_version": "3.17",\n')
+    f:write('  "lua_script_version": "3.18",\n')
+    if expected_movie_end_mode then
+        f:write(string.format(
+            '  "expected_movie_end_mode": %q,\n', expected_movie_end_mode))
+    end
     f:write('  "segments": [\n')
     for i, s in ipairs(segments_done) do
         local extra = ""
@@ -1346,7 +1366,15 @@ local function on_frame_end()
         or (movie.isloaded() and movie.mode() == "FINISHED")
     local stop_reached = stop_at > 0 and frame_now >= stop_at
     if stop_reached or movie_done then
-        finalize_run_end()
+        local expected_movie_end_mode = nil
+        -- A configured hard stop owns a same-frame tie with movie completion:
+        -- hard-stop captures are intentionally non-authoritative about the
+        -- movie endpoint and therefore omit the manifest field.
+        if movie_done and not stop_reached then
+            expected_movie_end_mode =
+                map_expected_movie_end_mode(game_mode)
+        end
+        finalize_run_end(expected_movie_end_mode)
         finished = true
         return
     end
@@ -1512,7 +1540,7 @@ local function on_frame_end()
             -- Shadowed dead code since v3.6 (the top-of-function movie-end
             -- guard fires strictly earlier on this predicate) -- funneled
             -- through finalize_run_end anyway, belt-and-braces.
-            finalize_run_end()
+            finalize_run_end(map_expected_movie_end_mode(game_mode))
             finished = true
             return
         end
@@ -1523,7 +1551,7 @@ local function on_frame_end()
             -- Shadowed dead code since v3.6 (the top-of-function movie-end
             -- guard fires strictly earlier on this predicate) -- funneled
             -- through finalize_run_end anyway, belt-and-braces.
-            finalize_run_end()
+            finalize_run_end(map_expected_movie_end_mode(game_mode))
             finished = true
             return
         end
@@ -1693,7 +1721,7 @@ end
 -- The onframeend callback pattern doesn't work because callbacks stop
 -- firing when BizHawk pauses, and client.exit() can kill the process
 -- before file I/O completes.
-print("S1 Trace Recorder v3.7 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
+print("S1 Trace Recorder v3.18 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
 
 -- v3.6 hard safety net: even if every movie-end signal fails (movie.length()==0,
 -- mode never reports FINISHED, S1_STOP_AT_FRAME unset), the loop must not run
@@ -1720,7 +1748,7 @@ while true do
         -- lands mid special-stage detour finalizes as a truncated
         -- special_stage segment (not a level segment written into ss/'s
         -- OUTPUT_DIR) and the run manifest is emitted.
-        finalize_run_end()
+        finalize_run_end(nil)
         finished = true
     end
 

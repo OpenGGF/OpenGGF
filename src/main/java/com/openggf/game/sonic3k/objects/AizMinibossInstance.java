@@ -66,12 +66,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private static final int HORIZONTAL_CYCLE_COUNT = 4;    // ROM: move.b #4,$39(a0)
     private static final int INVULN_TIME = 0x20;
     private static final int FATAL_HIT_DEFEAT_DELAY = 13;
-    // The collision bridge keeps the defeated miniboss interactive while the
-    // native object schedule has already advanced into the end-sign sequence.
-    // Carry that elapsed owner state forward instead of spawning the physical
-    // signpost early, which would make it collide with the player twice.
-    private static final int SIGNPOST_RESULTS_TIMER_CATCH_UP_ENTRIES = 16;
-    private static final int RESULTS_WAIT_DURATION_ADJUSTMENT = 3;
+    private static final int RESULTS_WAIT_DURATION_ADJUSTMENT = 2;
     private static final int RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES = 13;
     private static final int DEFEAT_WAIT_FADE_TIMER = 0x3F;
     private static final int FLAG_PARENT_BITS = 0x38;
@@ -101,6 +96,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private HorizontalCallback horizontalCallback = HorizontalCallback.NONE;
     private boolean defeatRenderComplete;
     private int pendingDefeatTimer = -1;
+    private int endSignControlWaitEntriesOwnedByBossBridge;
     private int defeatHandoffTimer = -1;
     private boolean levelEndUnlockStarted;
     private boolean levelEndSizeChangeStarted;
@@ -143,6 +139,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         horizontalCallback = HorizontalCallback.NONE;
         defeatRenderComplete = false;
         pendingDefeatTimer = -1;
+        endSignControlWaitEntriesOwnedByBossBridge = 0;
         defeatHandoffTimer = -1;
         levelEndUnlockStarted = false;
         levelEndSizeChangeStarted = false;
@@ -282,6 +279,14 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         maintainArenaCameraLock();
         if (pendingDefeatTimer >= 0) {
+            if (pendingDefeatTimer > 1) {
+                // The fatal-touch collision bridge remains the executing SST
+                // owner for these entries, while the ROM's Obj_EndSignControl
+                // $77 wait has already begun. Preserve that elapsed owner state
+                // at the later Java handoff instead of shortening Obj_EndSign's
+                // post-landing countdown.
+                endSignControlWaitEntriesOwnedByBossBridge++;
+            }
             pendingDefeatTimer--;
             if (pendingDefeatTimer < 0) {
                 triggerPendingDefeat();
@@ -633,9 +638,11 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             spawnChild(() -> new S3kBossDefeatSignpostFlow(
                     state.x, 0,
                     S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_AIZ_FIRE_PALETTE,
-                    SIGNPOST_RESULTS_TIMER_CATCH_UP_ENTRIES,
+                    endSignControlWaitEntriesOwnedByBossBridge,
+                    0,
                     RESULTS_WAIT_DURATION_ADJUSTMENT,
-                    RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES));
+                    RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES,
+                    true));
         }
     }
 

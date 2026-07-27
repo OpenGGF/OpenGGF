@@ -6,11 +6,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// <summary>
     /// Literal-byte tests for the S1 run_manifest.json: reconstructing the
     /// canonical s1-ghz-maze-roundtrip manifest from its recorded values
-    /// must reproduce the committed fixture exactly — including the
-    /// fixture's "3.15" version stamp, injected as the capture session's
-    /// value (spec s1-run-mode-behavior.md §10), so no version-line
-    /// normalization is applied anywhere. The fixture was captured through
-    /// Windows text-mode io, so its CRLF line endings are normalized to the
+    /// must reproduce the recorder-regenerated 3.18 fixture exactly,
+    /// including its level endpoint. The fixture is stored using the run
+    /// bundle's CRLF convention, so its line endings are normalized to the
     /// Lua's written LF before comparison — the only transformation. Also
     /// covers the S1-only optional run_id line.
     /// </summary>
@@ -19,11 +17,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S1RunManifest writer reproduces the canonical fixture bytes",
+                "S1RunManifestWriter reproduces the canonical fixture bytes",
                 ReproducesCanonicalFixtureBytes));
             tests.Add(new TestMain.TestCase(
-                "S1RunManifest omits the run_id line when no run id was set",
+                "S1RunManifestWriter omits the run_id line when no run id"
+                + " was set",
                 OmitsRunIdLineWhenNoRunIdWasSet));
+            tests.Add(new TestMain.TestCase(
+                "S1RunManifestWriter emits the level movie endpoint",
+                EmitsLevelMovieEndpoint));
+            tests.Add(new TestMain.TestCase(
+                "S1RunManifestWriter emits the title-screen movie endpoint",
+                EmitsTitleScreenMovieEndpoint));
+            tests.Add(new TestMain.TestCase(
+                "S1RunManifestWriter omits an unspecified movie endpoint",
+                OmitsUnspecifiedMovieEndpoint));
         }
 
         private static void ReproducesCanonicalFixtureBytes()
@@ -52,7 +60,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string produced = S1RunManifestWriter.Format(
                 "s1-ghz-maze-roundtrip",
                 "s1-ghz-maze-roundtrip.bk2",
-                "3.15",
+                "3.18",
+                "level",
                 segments,
                 new List<RunManifestTransition> { giantRing, stageExit });
 
@@ -77,7 +86,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string produced = S1RunManifestWriter.Format(
                 null,
                 "movie.bk2",
-                "3.17",
+                "3.18",
+                null,
                 new List<RunManifestSegment>
                 {
                     new RunManifestSegment(
@@ -91,12 +101,68 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "  \"game\": \"s1\",\n"
                     + "  \"source_bk2\": \"movie.bk2\",\n"
                     + "  \"rom_checksum\": \"AFE05EEE\",\n"
-                    + "  \"lua_script_version\": \"3.17\",\n"));
+                    + "  \"lua_script_version\": \"3.18\",\n"));
             // Zero-valued recorded fields still render (Lua truthiness).
             AssertEx.Equal(
                 true,
                 produced.Contains(
                     " \"rings_after\": 0, \"emeralds_after\": 0}"));
+        }
+
+        private static void EmitsLevelMovieEndpoint()
+        {
+            string produced = S1RunManifestWriter.Format(
+                "run",
+                "movie.bk2",
+                "3.18",
+                "level",
+                OneLevelSegment(),
+                new List<RunManifestTransition>());
+            AssertEx.Equal(
+                true,
+                produced.Contains(
+                    "  \"lua_script_version\": \"3.18\",\n"
+                    + "  \"expected_movie_end_mode\": \"level\",\n"
+                    + "  \"segments\": [\n"));
+        }
+
+        private static void EmitsTitleScreenMovieEndpoint()
+        {
+            string produced = S1RunManifestWriter.Format(
+                "run",
+                "movie.bk2",
+                "3.18",
+                "title_screen",
+                OneLevelSegment(),
+                new List<RunManifestTransition>());
+            AssertEx.Equal(
+                true,
+                produced.Contains(
+                    "  \"expected_movie_end_mode\": \"title_screen\",\n"));
+        }
+
+        private static void OmitsUnspecifiedMovieEndpoint()
+        {
+            string produced = S1RunManifestWriter.Format(
+                "run",
+                "movie.bk2",
+                "3.18",
+                null,
+                OneLevelSegment(),
+                new List<RunManifestTransition>());
+            AssertEx.Equal(
+                false,
+                produced.Contains("expected_movie_end_mode"));
+        }
+
+        private static IList<RunManifestSegment> OneLevelSegment()
+        {
+            return new List<RunManifestSegment>
+            {
+                new RunManifestSegment(
+                    "ghz1", "level", "complete_run",
+                    10, 20, 0, 1, null)
+            };
         }
     }
 }

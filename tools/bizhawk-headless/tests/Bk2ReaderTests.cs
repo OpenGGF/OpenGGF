@@ -27,6 +27,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "Bk2Reader validates the canonical GHZ1 archive",
                 ValidatesCanonicalGhz1Archive));
             tests.Add(new TestMain.TestCase(
+                "Bk2Reader reads the canonical S3K fixture movies",
+                ReadsCanonicalS3kFixtureMovies));
+            tests.Add(new TestMain.TestCase(
                 "Bk2Reader maps every supported P1 input bit",
                 MapsEverySupportedP1InputBit));
             tests.Add(new TestMain.TestCase(
@@ -184,6 +187,72 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 4806,
                 movie.OpenFrameStream().Count());
+        }
+
+        /// <summary>
+        /// The S3K migration's movie compatibility check: all three
+        /// canonical S3K fixture movies must parse with the reader's
+        /// EXISTING sync-setting pins/ranges (Overscan 3 and
+        /// GenesisFMSoundChip 0 sit inside the enum-domain ranges the
+        /// Overscan/Filter/FM-chip precedents already admit - no new
+        /// tolerances are required), the standard System|P1|P2 LogKey,
+        /// and an all-idle P2 group throughout (a pressed P2 button still
+        /// throws by design; see the reader's P2Active check). The SHA1
+        /// header carries the BizHawk header hash of the locked-on ROM
+        /// (32 hex chars, not a file SHA-1) and is copied opaquely.
+        /// </summary>
+        private static void ReadsCanonicalS3kFixtureMovies()
+        {
+            var movies = new[]
+            {
+                new
+                {
+                    Dir = "aiz1_to_hcz_fullrun",
+                    File = "s3-aiz1-2-sonictails.bk2",
+                    Frames = 21309
+                },
+                new
+                {
+                    Dir = "cnz",
+                    File = "s3k-cnz-sonic-tails.bk2",
+                    Frames = 45597
+                },
+                new
+                {
+                    Dir = "mgz",
+                    File = "s3k-mgz-sonic-tails.bk2",
+                    Frames = 38818
+                }
+            };
+            foreach (var expected in movies)
+            {
+                string path = Path.GetFullPath(Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    "..",
+                    "..",
+                    "..",
+                    "..",
+                    "src",
+                    "test",
+                    "resources",
+                    "traces",
+                    "s3k",
+                    expected.Dir,
+                    expected.File));
+                Bk2Movie movie = Bk2Reader.Read(path);
+                AssertEx.Equal("Genplus-gx", movie.Core);
+                AssertEx.Equal("GEN", movie.Platform);
+                AssertEx.Equal(
+                    "Sonic and Knuckles & Sonic 3 (W) [!]",
+                    movie.GameName);
+                AssertEx.Equal(
+                    "C5B1C655C19F462ADE0AC4E17A844D10",
+                    movie.Sha1);
+                AssertEx.Equal(expected.Frames, movie.FrameCount);
+                AssertEx.Equal(
+                    expected.Frames,
+                    movie.OpenFrameStream().Count());
+            }
         }
 
         private static void MapsPowerAndResetIndependently()

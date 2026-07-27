@@ -73,7 +73,7 @@ class TestCnzBumperObjectInstance {
 
         bumper.update(0x0D4C, null);
 
-        int expectedAngle = (0x80 + ((0x011C + 2) & 0xFF)) & 0xFF;
+        int expectedAngle = (0x80 + ((0x011C + 1) & 0xFF)) & 0xFF;
         assertEquals(0x03E8 + (TrigLookupTable.cosHex(expectedAngle) >> 2), bumper.getX());
         assertEquals(0x0630 + (TrigLookupTable.sinHex(expectedAngle) >> 2), bumper.getY());
     }
@@ -170,7 +170,7 @@ class TestCnzBumperObjectInstance {
 
         bumper.update(0x0D53, null);
 
-        int expectedVisibleAngle = (0x2B + ((0x0124 + 2) & 0xFF)) & 0xFF;
+        int expectedVisibleAngle = (0x2B + ((0x0124 + 1) & 0xFF)) & 0xFF;
         assertEquals(0x03E8 + (TrigLookupTable.cosHex(expectedVisibleAngle) >> 2), bumper.getX());
         assertEquals(0x0630 + (TrigLookupTable.sinHex(expectedVisibleAngle) >> 2), bumper.getY());
 

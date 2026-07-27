@@ -22,7 +22,7 @@ Zone abbreviations: AIZ, HCZ, MGZ, CNZ, FBZ, ICZ, LBZ, MHZ, SOZ, LRZ, HPZ, SSZ, 
 - **Python 3.8+** with `stable-retro` and `numpy` installed
 - **S3K ROM** imported into stable-retro (`python -m stable_retro.import /path/to/rom/dir/`)
 - **Engine built** (`mvn package`)
-- **Zone analysis spec** at `docs/s3k-zones/{zone}-analysis.md` (produced by `s3k-zone-analysis` skill) -- used to determine which features to validate
+- **Zone analysis spec** at `docs/architecture/research/s3k-zones/{zone}-analysis.md` (produced by `s3k-zone-analysis` skill) -- used to determine which features to validate
 
 ### One-time setup
 
@@ -344,7 +344,7 @@ Reference: stable-retro SonicAndKnuckles-Genesis
 - {next steps to fix FAIL items}
 ```
 
-Save the report to `docs/s3k-zones/{zone}-validation.md`.
+Save the report to `docs/architecture/validation/s3k-zones/{zone}-validation.md`.
 
 ## Confidence Levels
 

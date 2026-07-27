@@ -2164,6 +2164,7 @@ public class SidekickCpuController {
         }
         byte pushBypassStatus = effectiveLeader.getStatusHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
         byte pushBypassLeaderStatus = usesSidekickCpuPushBypassObjectOrderStatusDelay(ridingObject)
+                && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) != 0
                 ? pushBypassStatus
                 : recordedStatus;
         // ROM loads delayed Ctrl_1_Logical/status into d1/d4, then tests Tails'
@@ -2413,7 +2414,12 @@ public class SidekickCpuController {
                 && objectOrderFollowSteeringContext
                 && (leaderStatusOnObject
                 || (recordedStatus & AbstractPlayableSprite.STATUS_ON_OBJECT) != 0);
-        objectOrderGracePushBypassThisFrame = objectOrderGrace;
+        // This flag authorizes the movement layer's synthetic stale-velocity
+        // clear. A live/frame-start Status_Push takes ROM loc_13DD0 directly
+        // and must retain its inertia until Tails_InputAcceleration_Path
+        // performs the ordinary no-input deceleration. Object-order grace can
+        // overlap that direct branch, but it is not the owner in that case.
+        objectOrderGracePushBypassThisFrame = objectOrderGrace && !currentPushBypass;
         boolean followNudgeBlockedByObjectControlBit0 =
                 sidekickRules != null
                         && sidekickRules.sidekickFollowNudgeBlockedByObjectControlBit0()
@@ -3993,11 +3999,15 @@ public class SidekickCpuController {
         //    (sonic3k.asm:26690-26694). An earlier iteration of this body
         //    mis-applied that offset here and produced a chronic -0x20 X drift.
         int targetX = leader.getCentreX(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF;
-        // S2 TailsCPU_Flying_Part2 clamps the sampled Pos_table Y to
-        // Water_Level_1-$10 before publishing Tails_CPU_target_y
-        // (docs/s2disasm/s2.asm:39219-39227).
-        int targetY = clampTargetYToWater(
-                leader.getCentreY(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF);
+        // S2 clamps the sampled position-history Y to Water_Level_1-$10
+        // (s2.asm:39162-39176); S3K copies Pos_table Y verbatim
+        // (sonic3k.asm:26558-26565). Keep the shared controller driven by the
+        // typed per-game ROM rule rather than the current zone or water state.
+        int delayedTargetY = leader.getCentreY(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF;
+        int targetY = rules != null
+                && rules.sidekickFlightClampsTargetYToWater()
+                ? clampTargetYToWater(delayedTargetY)
+                : delayedTargetY;
         catchUpTargetX = targetX;
         catchUpTargetY = targetY;
 
@@ -4106,7 +4116,11 @@ public class SidekickCpuController {
         }
 
         // 7. Otherwise keep object_control locked to keep flight AI active.
+        // loc_13D42 writes the complete byte as $81, so bit 1 from a later
+        // object's prior $03 write is cleared before Animate_Tails runs
+        // (sonic3k.asm:26646-26652).
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        sidekick.setObjectMappingFrameControl(false);
     }
 
     private int resolveRecoveryFlightAnimation() {
@@ -5784,9 +5798,31 @@ public class SidekickCpuController {
 
     public void reset() {
         carryController().clearAndReleaseMain();
+        carryController().clearState();
+        resetCpuState();
+    }
+
+    /**
+     * Resets the freshly initialized Player_2 CPU globals without releasing or
+     * rewriting Player_1. Native {@code Tails_Init} runs in the later SST slot
+     * and cannot retroactively clear Player_1 control state established in the
+     * preceding slot (sonic3k.asm:26101-26156).
+     */
+    public void resetForInitialProcessSpritesSlot() {
+        int assemblyAnimation = sidekick.getForcedAnimationId();
+        carryController().clearState();
+        resetCpuState();
+        // Tails_Init clears the CPU globals but does not write anim(a0).
+        // Preserve an animation selected earlier by SpawnLevelMainSprites
+        // (for example the simple falling intro's $1B).
+        sidekick.setForcedAnimationId(assemblyAnimation);
+    }
+
+    private void resetCpuState() {
         state = State.INIT;
         deadFallingRomCpuRoutine = -1;
         despawnCounter = 0;
+        frameCounter = 0;
         controlCounter = 0;
         manualInputAppliedThisTick = false;
         approachFrameCount = 0;
@@ -5821,8 +5857,7 @@ public class SidekickCpuController {
         sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
         ObjectControlState.none().applyTo(sidekick);
-        // Carry state (carryTrigger is intentionally NOT cleared — level-load-scoped)
-        carryController().clearState();
+        // carryTrigger is intentionally NOT cleared — it is level-load-scoped.
         flightTimer = 0;
         catchUpTargetX = 0;
         catchUpTargetY = 0;

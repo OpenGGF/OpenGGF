@@ -234,6 +234,17 @@ public final class TraceReplaySessionBootstrap {
         int zoneFeaturePreludeFrames =
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(trace);
         var gameplayMode = fixture.gameplayMode();
+        // Complete-run segments restore state that already represents the
+        // production setup pass. Their reset/restore/dispatch envelope is not
+        // a replay prelude knob and must not consume fresh-load authority.
+        boolean representedS3kCompleteRun =
+                TraceReplayBootstrap.isS3kCompleteRunSegment(trace);
+        if (representedS3kCompleteRun
+                && gameplayMode != null
+                && gameplayMode.getLevelManager() != null) {
+            gameplayMode.getLevelManager()
+                    .discardPendingInitialProcessSpritesForStateRestoration();
+        }
         if (gameplayMode != null
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
@@ -258,6 +269,7 @@ public final class TraceReplaySessionBootstrap {
                 objectPreludeFrames = TraceReplayBootstrap
                         .s2GenericObjectTitleCardPreludeFramesForTraceReplay(trace);
             }
+            int objectDispatchFrames = representedS3kCompleteRun ? 1 : objectPreludeFrames;
             int zoneFeatureVblankOffset =
                     TraceReplayBootstrap.zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(trace);
             if (zoneFeaturePreludeFrames > 0
@@ -274,9 +286,10 @@ public final class TraceReplaySessionBootstrap {
                 }
             }
             objectManager.initVblaCounter(
-                    trace.initialVblankCounter() - objectPreludeFrames - 1);
+                    trace.initialVblankCounter() - objectDispatchFrames - 1);
         }
-        if (objectPreludeFrames > 0
+        int objectDispatchFrames = representedS3kCompleteRun ? 1 : objectPreludeFrames;
+        if (objectDispatchFrames > 0
                 && gameplayMode != null
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
@@ -291,7 +304,7 @@ public final class TraceReplaySessionBootstrap {
             // object ticks, so prelude state comes from object code rather
             // than recorded SST data.
             objectManager.reset(cameraX);
-            if (TraceReplayBootstrap.isS3kCompleteRunSegment(trace)) {
+            if (representedS3kCompleteRun) {
                 var levelEventProvider = GameServices.module().getLevelEventProvider();
                 if (levelEventProvider instanceof Sonic3kLevelEventManager s3kLem) {
                     s3kLem.restoreCompleteRunSegmentObjectsAfterPreludeReset();
@@ -302,7 +315,7 @@ public final class TraceReplaySessionBootstrap {
                     ? gameplayMode.getSpriteManager().getSidekicks()
                     : List.of();
             int mainPlayablePreludeFrames = Math.min(
-                    objectPreludeFrames,
+                    objectDispatchFrames,
                     GameServices.module().getLevelInitProfile().freshMainPlayablePreludeFrames());
             if (mainPlayablePreludeFrames > 0 && gameplayMode.getSpriteManager() != null) {
                 // S1 GM_Level creates the fresh Sonic slot, then executes it
@@ -331,11 +344,12 @@ public final class TraceReplaySessionBootstrap {
             int sczTornadoPreludeStartY = tornadoPreludeOrder && player != null
                     ? player.getCentreY() - 4
                     : 0;
-            for (int i = consumedPreludeFrames; i < objectPreludeFrames; i++) {
+            for (int i = consumedPreludeFrames; i < objectDispatchFrames; i++) {
                 if (interleaveSidekickPrelude && !tornadoPreludeOrder) {
                     gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(1, levelManager, player);
                 }
-                objectManager.update(cameraX, player, sidekicks, -(objectPreludeFrames - i), false);
+                objectManager.update(cameraX, player, sidekicks,
+                        -(objectDispatchFrames - i), false);
                 if (tornadoPreludeOrder) {
                     applyS2TornadoRecordSamplePosition(
                             findRideStartTornado(objectManager), player, i, sczTornadoPreludeStartY);
@@ -377,6 +391,9 @@ public final class TraceReplaySessionBootstrap {
                     fixture != null ? fixture.sprite() : null);
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        if (gameplayMode != null && gameplayMode.getLevelManager() != null) {
+            gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
+        }
         applyInitialRngSeedForReplay(trace.metadata());
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
@@ -539,6 +556,12 @@ public final class TraceReplaySessionBootstrap {
             }
         }
         provider.onDeferredSetupComplete();
+        // applyBonusStageEntry reconstructs the ROM state after Level's
+        // one-time Load_Sprites/Process_Sprites setup at loc_6468
+        // (sonic3k.asm:7849-7860). Do not let the fresh fixture's pending
+        // authority execute that represented pass again when the shared
+        // LevelFrameStep begins the bonus-stage interior.
+        GameServices.level().discardPendingInitialProcessSpritesForStateRestoration();
         // Comparison-bootstrap seam (same pattern as applyInitialRngSeedForReplay
         // / metadata.rng_seed above): when the trace recorded the ROM's
         // free-running V_int_run_count at bonus-stage entry (recorder
@@ -809,9 +832,22 @@ public final class TraceReplaySessionBootstrap {
                 && GameServices.spritesOrNull() != null) {
             GameServices.spritesOrNull().setFrameCounter(previousDriveFrame.gameplayFrameCounter());
         }
-        if (firstDriveFrame != null && firstDriveFrame.gameplayFrameCounter() >= 0
+        // LevelManager.setFrameCounter's contract (see its javadoc) is the
+        // PREVIOUS completed level frame: ROM increments Level_frame_counter
+        // before Process_Sprites, so consumers recover the current ROM value
+        // with getFrameCounter() + 1 (16 call sites do exactly that). Seed it
+        // from the same pre-row this method's javadoc names and the sprite
+        // branch above already uses; seeding the first driven row's value put
+        // every frame-counter-keyed object phase one frame ahead of ROM for
+        // the whole segment. That was invisible while s3k_complete_run_recorder
+        // sampled 0xFE08 (Debug_placement_mode, dead-zero) and only surfaced
+        // once the counter column was captured live.
+        if (previousDriveFrame != null && previousDriveFrame.gameplayFrameCounter() >= 0
                 && GameServices.levelOrNull() != null) {
-            GameServices.levelOrNull().setFrameCounter(firstDriveFrame.gameplayFrameCounter());
+            GameServices.levelOrNull().setFrameCounter(previousDriveFrame.gameplayFrameCounter());
+        } else if (firstDriveFrame != null && firstDriveFrame.gameplayFrameCounter() >= 0
+                && GameServices.levelOrNull() != null) {
+            GameServices.levelOrNull().setFrameCounter(firstDriveFrame.gameplayFrameCounter() - 1);
         }
     }
 

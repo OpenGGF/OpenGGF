@@ -1,5 +1,6 @@
 package com.openggf.game.rewind;
 
+import com.openggf.LevelFrameResult;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.RecordedInputSnapshots;
@@ -24,11 +25,11 @@ final class SpecialStageStepper implements RewindSeekAwareEngineStepper {
     }
 
     @Override
-    public void step(Bk2FrameInput input) {
+    public LevelFrameResult step(Bk2FrameInput input) {
         InputHandler liveInput = inputHandlerSupplier.get();
         SpecialStageProvider provider = providerSupplier.get();
         if (liveInput == null || provider == null) {
-            return;
+            return LevelFrameResult.PAUSED;
         }
         Bk2FrameInput previous = inputs.read(Math.max(inputs.earliestFrame(), input.frameIndex() - 1));
         liveInput.setLogicalOverride(RecordedInputSnapshots.fromBk2(input, previous));
@@ -38,6 +39,7 @@ final class SpecialStageStepper implements RewindSeekAwareEngineStepper {
             provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
             provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
             provider.update();
+            return LevelFrameResult.GAMEPLAY_FRAME;
         } finally {
             liveInput.clearLogicalOverride();
         }

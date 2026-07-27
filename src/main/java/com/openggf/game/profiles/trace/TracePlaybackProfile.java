@@ -11,14 +11,13 @@ package com.openggf.game.profiles.trace;
 public record TracePlaybackProfile(
         int interLevelNonAdvancingMovieRows,
         boolean alignUncomparedInteriorReturnVblank,
-        boolean replayTerminalMovieTailToTitleScreen,
-		boolean reinitializeOscillationAtLoadedLevelAttach,
+        boolean reinitializeOscillationAtLoadedLevelAttach,
         RecordedLevelIdentityProfile recordedLevelIdentityProfile) {
 
     public static final TracePlaybackProfile DISABLED = new TracePlaybackProfile(
-			-1, false, false, false, RecordedLevelIdentityProfile.DIRECT);
+			-1, false, false, RecordedLevelIdentityProfile.DIRECT);
     public static final TracePlaybackProfile SONIC_1 = new TracePlaybackProfile(
-			6, true, true, true, RecordedLevelIdentityProfile.SONIC_1_ROM);
+			6, true, true, RecordedLevelIdentityProfile.SONIC_1_ROM);
 
     public TracePlaybackProfile {
         if (interLevelNonAdvancingMovieRows < -1) {

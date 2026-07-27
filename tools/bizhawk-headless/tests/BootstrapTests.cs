@@ -21,9 +21,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "ROM identity reports mutated SHA-1",
                 ReportsMutatedSha1));
+            // Clears S1_ROM_PATH out of the process environment and puts
+            // it back. Any test resolving a ROM in that window — and
+            // every capture child process, which inherits the block —
+            // would see it missing and skip, so this one runs alone.
             tests.Add(new TestMain.TestCase(
                 "ROM identity skips only when S1_ROM_PATH is absent",
-                SkipsOnlyWhenSonic1RomPathIsAbsent));
+                SkipsOnlyWhenSonic1RomPathIsAbsent,
+                game: "s1",
+                serial: true));
             tests.Add(new TestMain.TestCase(
                 "ROM identity accepts Sonic 2 REV01",
                 AcceptsSonic2Rev01));
@@ -31,8 +37,24 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "ROM identity reports mutated Sonic 2 SHA-1",
                 ReportsMutatedSonic2Sha1));
             tests.Add(new TestMain.TestCase(
+                "ROM identity accepts Sonic 3 & Knuckles locked-on",
+                AcceptsSonic3kLockOn));
+            tests.Add(new TestMain.TestCase(
+                "ROM identity reports mutated Sonic 3 & Knuckles SHA-1",
+                ReportsMutatedSonic3kSha1));
+            // Same hazard as the S1 case above: it unsets S3K_ROM_PATH
+            // process-wide for the duration.
+            tests.Add(new TestMain.TestCase(
+                "ROM identity skips only when S3K_ROM_PATH is absent",
+                SkipsOnlyWhenSonic3kRomPathIsAbsent,
+                game: "s3k",
+                serial: true));
+            tests.Add(new TestMain.TestCase(
                 "ROM identity detects supported games by SHA-1",
                 DetectsSupportedGamesBySha1));
+            tests.Add(new TestMain.TestCase(
+                "ROM identity detects Sonic 3 & Knuckles by SHA-1",
+                DetectsSonic3kBySha1));
             tests.Add(new TestMain.TestCase(
                 "ROM identity rejects unknown ROM in game detection",
                 RejectsUnknownRomInGameDetection));
@@ -129,10 +151,58 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 actualSha1);
         }
 
+        private static void AcceptsSonic3kLockOn()
+        {
+            byte[] rom = ReadSonic3kRom();
+            AssertEx.Equal(
+                "CFBF98C36C776677290A872547AC47C53D2761D6",
+                RomIdentity.ValidateSonic3kLockOn(rom));
+        }
+
+        private static void ReportsMutatedSonic3kSha1()
+        {
+            byte[] rom = ReadSonic3kRom();
+            rom[rom.Length / 2] ^= 0x01;
+            string actualSha1 = RomIdentity.ComputeSha1(rom);
+            AssertEx.Throws<InvalidOperationException>(
+                () => RomIdentity.ValidateSonic3kLockOn(rom),
+                actualSha1);
+        }
+
+        private static void SkipsOnlyWhenSonic3kRomPathIsAbsent()
+        {
+            string original =
+                Environment.GetEnvironmentVariable("S3K_ROM_PATH");
+            string missingPath = Path.Combine(
+                Path.GetTempPath(),
+                "openggf-missing-rom-" + Guid.NewGuid().ToString("N") + ".gen");
+            try
+            {
+                Environment.SetEnvironmentVariable("S3K_ROM_PATH", null);
+                AssertEx.Throws<TestMain.SkipTestException>(
+                    () => ReadSonic3kRom(),
+                    "S3K_ROM_PATH is not set");
+
+                Environment.SetEnvironmentVariable("S3K_ROM_PATH", missingPath);
+                AssertEx.Throws<InvalidOperationException>(
+                    () => ReadSonic3kRom(),
+                    "does not exist");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("S3K_ROM_PATH", original);
+            }
+        }
+
         private static void DetectsSupportedGamesBySha1()
         {
             AssertEx.Equal("s2", RomIdentity.DetectGame(ReadSonic2Rom()));
             AssertEx.Equal("s1", RomIdentity.DetectGame(ReadSonic1Rom()));
+        }
+
+        private static void DetectsSonic3kBySha1()
+        {
+            AssertEx.Equal("s3k", RomIdentity.DetectGame(ReadSonic3kRom()));
         }
 
         private static void RejectsUnknownRomInGameDetection()
@@ -158,6 +228,23 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 throw new InvalidOperationException(
                     "Supplied S2_ROM_PATH does not exist: " + romPath + ".");
+            }
+            return File.ReadAllBytes(romPath);
+        }
+
+        private static byte[] ReadSonic3kRom()
+        {
+            string romPath =
+                Environment.GetEnvironmentVariable("S3K_ROM_PATH");
+            if (string.IsNullOrEmpty(romPath))
+            {
+                throw new TestMain.SkipTestException(
+                    "S3K_ROM_PATH is not set.");
+            }
+            if (!File.Exists(romPath))
+            {
+                throw new InvalidOperationException(
+                    "Supplied S3K_ROM_PATH does not exist: " + romPath + ".");
             }
             return File.ReadAllBytes(romPath);
         }

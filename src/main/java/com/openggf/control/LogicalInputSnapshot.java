@@ -15,7 +15,9 @@ public record LogicalInputSnapshot(
         boolean anyActionPressed,
         boolean debugModeTogglePressed,
         boolean debugShiftDown,
-        boolean debugControlDown) {
+        boolean debugControlDown,
+        boolean debugAltDown,
+        boolean debugSuperDown) {
 
     public static LogicalInputSnapshot neutral() {
         return ofPlayers(PlayerInputState.neutral(), PlayerInputState.neutral());
@@ -41,6 +43,8 @@ public record LogicalInputSnapshot(
                 p1ActionPressed || p2ActionPressed || p1.startPressed() || p2.startPressed(),
                 false,
                 false,
+                false,
+                false,
                 false);
     }
 
@@ -58,13 +62,17 @@ public record LogicalInputSnapshot(
                 anyActionPressed,
                 debugModeTogglePressed,
                 debugShiftDown,
-                debugControlDown);
+                debugControlDown,
+                debugAltDown,
+                debugSuperDown);
     }
 
     public LogicalInputSnapshot withDebugInput(
             boolean modeTogglePressed,
             boolean shiftDown,
-            boolean controlDown) {
+            boolean controlDown,
+            boolean altDown,
+            boolean superDown) {
         return new LogicalInputSnapshot(
                 player1,
                 player2,
@@ -78,6 +86,8 @@ public record LogicalInputSnapshot(
                 anyActionPressed,
                 modeTogglePressed,
                 shiftDown,
-                controlDown);
+                controlDown,
+                altDown,
+                superDown);
     }
 }

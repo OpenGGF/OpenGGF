@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.LevelFrameContext;
+import com.openggf.LevelFrameResult;
 import com.openggf.LevelFrameStep;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -139,19 +140,19 @@ class TestInGamePause {
         // short-circuits before touching level managers, so null camera/levelManager
         // are never dereferenced on the paused path.
         advanceFrame.run();
-        boolean ranFrame1 = LevelFrameStep.executeWithPause(
+        LevelFrameResult frame1 = LevelFrameStep.executeWithPause(
                 context, /* levelManager */ null, /* camera */ null,
                 spriteUpdate, /* startEdgePressed */ true, LevelFrameStep.DIRECT_WRAPPER);
-        assertFalse(ranFrame1, "paused frame is skipped");
+        assertEquals(LevelFrameResult.PAUSED, frame1);
         assertTrue(state.isGamePaused());
         assertEquals(1, frameCounter.get(), "frame counter advanced while paused");
         assertEquals(0, spriteUpdates.get(), "no level update while paused");
 
         // Frame 2: Start released (no edge), still paused -> skip again.
         advanceFrame.run();
-        boolean ranFrame2 = LevelFrameStep.executeWithPause(
+        LevelFrameResult frame2 = LevelFrameStep.executeWithPause(
                 context, null, null, spriteUpdate, false, LevelFrameStep.DIRECT_WRAPPER);
-        assertFalse(ranFrame2, "still paused, still skipped");
+        assertEquals(LevelFrameResult.PAUSED, frame2);
         assertEquals(2, frameCounter.get(), "frame counter advanced again while paused");
         assertEquals(0, spriteUpdates.get(), "still no level update while paused");
         assertTrue(state.isGamePaused());

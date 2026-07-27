@@ -25,6 +25,23 @@ class TestArchitecturalSourceGuard {
     private static final String ENGINE_PATH = "com/openggf/Engine.java";
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
+
+    @Test
+    void engineLiveCaptureOrderingStaysAtThePresentationBoundary() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve(ENGINE_PATH));
+        assertOrdered(source, "applyDisplayShaderPhase(ShaderPhase.FINAL)",
+                "liveCapturePresentation.present(");
+        assertOrdered(source, "handleLiveCaptureShortcut();",
+                "updateDisplayShaderInput()");
+        assertOrdered(source, "display();", "glfwSwapBuffers(window);");
+    }
+
+    private static void assertOrdered(String source, String first, String second) {
+        int firstIndex = source.indexOf(first);
+        int secondIndex = source.indexOf(second, firstIndex + first.length());
+        assertTrue(firstIndex >= 0 && secondIndex > firstIndex,
+                () -> first + " must precede " + second);
+    }
     // 2026-07-02: re-ratcheted 2747 -> 2821 after the S2 trace-parity batch
     // (8766a6889..0f7794de8) grew reserved-slot spawn and placement handling,
     // then 2821 -> 2823 for the rewind capture of the S2 post-camera unload
@@ -413,10 +430,10 @@ class TestArchitecturalSourceGuard {
 
     @Test
     void sonic1EmbeddedRuntimeDataExceptionsStayDocumentedAndBounded() throws IOException {
-        String discrepancies = Files.readString(Path.of("docs", "KNOWN_DISCREPANCIES.md"));
+        String discrepancies = Files.readString(Path.of("docs", "status", "known-discrepancies.md"));
         List<String> violations = new ArrayList<>();
         if (!discrepancies.contains("Sonic 1 Embedded Runtime Data Ratchet")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md must document the bounded Sonic 1 embedded runtime data debt");
+            violations.add("docs/status/known-discrepancies.md must document the bounded Sonic 1 embedded runtime data debt");
         }
 
         List<EmbeddedRuntimeDataBudget> budgets = List.of(

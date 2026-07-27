@@ -21,7 +21,6 @@ import com.openggf.trace.TraceReplayBootstrap;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
@@ -87,15 +86,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -116,17 +107,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                 }
                 previous = current;
             }
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -139,15 +119,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -174,17 +146,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                 }
                 previous = current;
             }
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -197,15 +158,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -237,17 +190,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                                     AIZ1_RHINOBOT_ROM_X_AT_CONTACT_SETUP,
                                     AIZ1_RHINOBOT_ROM_Y_AT_CONTACT_SETUP,
                                     0x40));
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -260,15 +202,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -307,17 +241,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                     "After grab, Obj0C should keep carrying Sonic from loc_2248A's passive vine chain");
             assertEquals(postGrab.y() & 0xFFFF, player.getCentreY() & 0xFFFF,
                     "Post-grab carry should use the ROM handle position plus $14, not the root slot");
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -330,15 +253,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -369,17 +284,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                             + "(sonic3k.asm:26702-26705,26775-26785)");
             assertTrue(tails.getRolling(),
                     "Tails_Jump enters the rolling airborne state on the same frame as the CPU auto-jump");
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -392,15 +296,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -448,17 +344,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                     "Tails_Catch_Up_Flying clears x_vel on the $0880 gate");
             assertTrue(tails.isObjectControlled(),
                     "routine $02 wait path preserves object_control=$81 until catch-up triggers");
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -471,15 +356,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -523,17 +400,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                 }
                 previous = current;
             }
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -546,15 +412,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -590,17 +448,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                     "Tails_Jump should add the angle-derived x_vel component on the ROM frame");
             assertEquals(expectedTails.ySpeed(), tails.getYSpeed(),
                     "Tails_Jump should add the angle-derived y_vel component on the ROM frame");
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -613,15 +460,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -645,17 +484,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
             assertEquals(expected.cameraY() & 0xFFFF, GameServices.camera().getY() & 0xFFFF,
                     "Camera_Y_pos should clamp to the ROM AIZ1 hollow-tree minimum on trace frame "
                             + AIZ1_HOLLOW_TREE_VERTICAL_CLAMP_FRAME);
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -668,15 +496,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -710,17 +530,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                     "Camera_X_pos should remain locked on the ROM reload-resume frame");
             assertEquals(expected.cameraY() & 0xFFFF, GameServices.camera().getY() & 0xFFFF,
                     "Camera_Y_pos should remain clamped to the ROM reload-resume maxY");
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -733,15 +542,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -784,17 +585,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                             + fireRevealDiagnostics);
             assertEquals(expected.cameraY() & 0xFFFF, GameServices.camera().getY() & 0xFFFF,
                     "Camera_Y_pos should stay on the AIZ2 reload maxY while the X lock releases");
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -807,15 +597,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -848,17 +630,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                     "Tails x_vel should match the ROM after the auto-jump frame");
             assertEquals(expectedTails.gSpeed(), tails.getGSpeed(),
                     "Tails ground_vel should match the ROM after the auto-jump frame");
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -871,15 +642,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -916,17 +679,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                     "loc_13B50 clears ground_vel on the same frame as the catch-up snap");
             assertTrue(tails.isObjectControlled(),
                     "loc_13B50 writes object_control=$81 while entering routine $04");
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -939,15 +691,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -984,17 +728,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                     "Tails_Jump should write the ROM -$0680 y_vel on frame 7082");
             assertEquals(expectedTails.gSpeed(), tails.getGSpeed(),
                     "Tails ground_vel should match the ROM on the fallthrough auto-jump frame");
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -1007,15 +740,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
 
         TraceData trace = TraceData.load(traceDir);
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
-        Object oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
-        Object oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
-
-        try {
-            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
 
             HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
             TraceReplayBootstrap.ReplayStartState replayStart = primeReplayFixture(trace, fixture);
@@ -1046,17 +771,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                     "Camera_X_pos should still be held at the ROM AIZ miniboss arena lock");
             assertEquals(expected.cameraY() & 0xFFFF, GameServices.camera().getY() & 0xFFFF,
                     "Camera_Y_pos should remain on the ROM miniboss maxY clamp");
-        } finally {
-            config.setConfigValue(
-                    SonicConfiguration.S3K_SKIP_INTROS,
-                    oldSkip != null ? oldSkip : false);
-            config.setConfigValue(
-                    SonicConfiguration.MAIN_CHARACTER_CODE,
-                    oldMain != null ? oldMain : "sonic");
-            config.setConfigValue(
-                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                    oldSidekick != null ? oldSidekick : "tails");
-            TestEnvironment.resetAll();
         }
     }
 
@@ -1089,21 +803,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
     }
 
     private void stepReplayFrame(TraceData trace, HeadlessTestFixture fixture, TraceExecutionPhase phase) {
-        if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-            fixture.skipFrameFromRecording();
-        } else if (TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace)) {
-            fixture.stepFrameFromRecordingUsingPreviousInput();
-        } else {
-            fixture.stepFrameFromRecording();
-        }
-    }
-
-    private Path findBk2File(Path traceDir) throws IOException {
-        try (var files = Files.list(traceDir)) {
-            return files.filter(path -> path.toString().endsWith(".bk2"))
-                    .findFirst()
-                    .orElse(null);
-        }
+        driveScenarioReplayFrame(trace, fixture, phase);
     }
 
     private ObjectInstance findActiveObjectByIdNear(int objectId, int x, int y, int maxDistance) {
@@ -1176,6 +876,45 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                 })
                 .reduce((left, right) -> left + " | " + right)
                 .orElse("<none>");
+    }
+
+    /**
+     * Saves the three replay-relevant config values, applies the AIZ-fullrun
+     * settings (skip-intros off, Sonic + Tails), and on {@link #close()} restores
+     * the originals and resets the test environment. Replaces the per-@Test
+     * save/set/finally-restore scaffold that was copy-pasted across every case;
+     * the exact values applied and restored, and the trailing
+     * {@code TestEnvironment.resetAll()}, are unchanged.
+     */
+    private static final class ReplayConfigScope implements AutoCloseable {
+        private final SonicConfigurationService config;
+        private final Object oldSkip;
+        private final Object oldMain;
+        private final Object oldSidekick;
+
+        private ReplayConfigScope() {
+            config = SonicConfigurationService.getInstance();
+            oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
+            oldMain = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
+            oldSidekick = config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
+            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        }
+
+        @Override
+        public void close() {
+            config.setConfigValue(
+                    SonicConfiguration.S3K_SKIP_INTROS,
+                    oldSkip != null ? oldSkip : false);
+            config.setConfigValue(
+                    SonicConfiguration.MAIN_CHARACTER_CODE,
+                    oldMain != null ? oldMain : "sonic");
+            config.setConfigValue(
+                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+                    oldSidekick != null ? oldSidekick : "tails");
+            TestEnvironment.resetAll();
+        }
     }
 
 }

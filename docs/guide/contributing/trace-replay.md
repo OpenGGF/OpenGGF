@@ -628,7 +628,7 @@ ride-bridge hypothesis: the suspected `interact` slot was
 any `Solid_Object_Detach`-style release as the cause. Skipping this
 check would have produced an engine fix targeted at the wrong root
 cause — a hack by the repo policy in `CLAUDE.md`. Documented in
-`docs/S3K_KNOWN_BUGS.md` under the AIZ F7552 entry.
+`docs/status/s3k-known-bugs.md` under the AIZ F7552 entry.
 
 For the AIZ F8927 case (round 1, diagnosis-only) the same check
 disproved a "swing/vine peak handling" guess that fell out of the

@@ -12,6 +12,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kBossDefeatSignpostFlow {
 
     @Test
+    void displacedBossCollisionEntriesAdvanceEndSignControlWait() {
+        S3kBossDefeatSignpostFlow flow = new S3kBossDefeatSignpostFlow(
+                0x1180, 0,
+                S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_AIZ_FIRE_PALETTE,
+                12, 0, 0, 0);
+
+        assertEquals(0x77 - 12, flow.waitTimerAfterInitialization(),
+                "the boss-owned collision bridge entries advance Obj_EndSignControl's "
+                        + "native $77 wait instead of shortening Obj_EndSign's landed timer");
+    }
+
+    @Test
     void restorePlayerControlMatchesEndSignControlAwaitStartWrites() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         ObjectControlState.nativeBit7FullControl().applyTo(player);

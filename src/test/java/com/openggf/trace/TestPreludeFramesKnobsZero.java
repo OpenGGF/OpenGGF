@@ -79,8 +79,9 @@ class TestPreludeFramesKnobsZero {
                 List.of(seed, next));
 
         assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
-        assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
-                "The separate complete-run setup object pass is not phase classification.");
+        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
+                "represented complete-run restoration is a semantic bootstrap envelope, "
+                        + "not a metadata-selected replay prelude knob");
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(trace, null, seed),
                 "Matching frame-zero/next-row state with visible velocity is an outcome shape, "

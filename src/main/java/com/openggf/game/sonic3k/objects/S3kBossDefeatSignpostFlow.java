@@ -159,6 +159,10 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         LOG.fine("S3K defeat flow started — WAIT_FADE, timer=" + timer);
     }
 
+    int waitTimerAfterInitialization() {
+        return timer - initialWaitCatchUpEntries;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (!initialized) {

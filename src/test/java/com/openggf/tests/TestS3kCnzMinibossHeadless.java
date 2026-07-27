@@ -45,6 +45,7 @@ class TestS3kCnzMinibossHeadless {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
         positionAtMinibossArenaGate(fixture);
+        getCnzEvents().enterMinibossArenaFromObjectSlot();
         fixture.stepFrame(false, false, false, false, false);
 
         assertTrue(getCnzEvents().isBossFlag(),
@@ -155,6 +156,7 @@ class TestS3kCnzMinibossHeadless {
 
         // Trigger arena entry so the camera bounds are locked to the arena box.
         positionAtMinibossArenaGate(fixture);
+        getCnzEvents().enterMinibossArenaFromObjectSlot();
         fixture.stepFrame(false, false, false, false, false);
 
         // Confirm arena lock is active and that the locked max X really is the arena

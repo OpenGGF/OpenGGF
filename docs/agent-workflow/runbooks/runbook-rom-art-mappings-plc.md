@@ -58,7 +58,7 @@ mvn exec:java "-Dexec.mainClass=com.openggf.tools.disasm.RomOffsetFinder" "-Dexe
 
 ## 3. Virtual pattern ID note
 
-The atlas extends the 11-bit VDP space. Each category claims a non-overlapping base (level tiles `0x00000`, objects `0x20000`, HUD `0x28000`, sidekicks `0x38000+`, etc.). When adding a new pattern category, pick a non-overlapping `*_PATTERN_BASE`. See `PatternAtlas`, `DynamicPatternBank`, `GraphicsManager.renderPatternWithId(...)`, and [`docs/KNOWN_DISCREPANCIES.md`](../../KNOWN_DISCREPANCIES.md).
+The atlas extends the 11-bit VDP space. Each category claims a non-overlapping base (level tiles `0x00000`, objects `0x20000`, HUD `0x28000`, sidekicks `0x38000+`, etc.). When adding a new pattern category, pick a non-overlapping `*_PATTERN_BASE`. See `PatternAtlas`, `DynamicPatternBank`, `GraphicsManager.renderPatternWithId(...)`, and [`docs/status/known-discrepancies.md`](../../status/known-discrepancies.md).
 
 ---
 
@@ -100,6 +100,6 @@ For each constant: cite the `sonic3k.asm` (or `s2disasm`/`s1disasm`) label, the 
 ## 7. Documentation & commit-trailer obligations
 
 - `CHANGELOG.md` + `Changelog: updated`.
-- `docs/S3K_KNOWN_DISCREPANCIES.md` (S3K) or `docs/KNOWN_DISCREPANCIES.md` (S1/S2) + the matching trailer if a parity gap changes (e.g. virtual pattern ID range notes).
+- `docs/S3K_KNOWN_DISCREPANCIES.md` (S3K) or `docs/status/known-discrepancies.md` (S1/S2) + the matching trailer if a parity gap changes (e.g. virtual pattern ID range notes).
 - Skill edits mirrored across `.agents/skills/` and `.claude/skills/`, `Skills: updated`.
 - Fill all trailers; never `--no-verify`.

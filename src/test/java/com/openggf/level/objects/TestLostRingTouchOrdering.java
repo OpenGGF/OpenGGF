@@ -259,6 +259,36 @@ public class TestLostRingTouchOrdering {
     }
 
     @Test
+    public void previousListObj37DereferencesLivePublishedPosition() {
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                144, 112, -0x100, 0, 0, 0xFF);
+        ring.setSlotIndex(38);
+        objectManager.addDynamicObject(ring);
+
+        objectManager.update(0, player, List.of(), 10, false, true, true);
+        objectManager.snapshotTouchResponseState(true);
+        objectManager.runTouchResponsesForPlayer(player, 11, true);
+
+        assertFalse(ring.isCollected(),
+                "Obj37's live SST x_pos has moved one pixel beyond the stale-only contact");
+    }
+
+    @Test
+    public void previousListObj37RetainsOverlapAtOldAndLivePositions() {
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                145, 112, -0x100, 0, 0, 0xFF);
+        ring.setSlotIndex(24);
+        objectManager.addDynamicObject(ring);
+
+        objectManager.update(0, player, List.of(), 10, false, true, true);
+        objectManager.snapshotTouchResponseState(true);
+        objectManager.runTouchResponsesForPlayer(player, 11, true);
+
+        assertTrue(ring.isCollected(),
+                "The live-pointer correction must retain an Obj37 contact present at both positions");
+    }
+
+    @Test
     public void placedRingObjectNotHandledByLostRingBranch() {
         // A SPECIAL object that shares the $47 byte shape but is NOT a LostRingObjectInstance
         // must go through its own listener path, not the lost-ring branch.

@@ -47,6 +47,25 @@ public final class TraceRunReplayWalker {
         TraceRunManifest.Transition exitBoundary
     ) {}
 
+    /**
+     * Pure terminal-tail policy derived from recorder-owned manifest data. A
+     * null expected mode means the run did not declare a movie endpoint, so no
+     * remaining rows are replayed and no mode is asserted.
+     */
+    public record TerminalMovieTailPlan(
+        int tailStart,
+        int rowsToReplay,
+        GameMode expectedMode
+    ) {
+        public boolean shouldReplay() {
+            return rowsToReplay > 0;
+        }
+
+        public boolean shouldAssertExpectedMode() {
+            return expectedMode != null;
+        }
+    }
+
     /** Result of {@link #awaitBoundary}: whether the boundary was observed, and at what BK2 frame. */
     public record BoundaryObservation(boolean observed, int observedBk2Frame) {
         static final BoundaryObservation NOT_OBSERVED = new BoundaryObservation(false, -1);
@@ -221,6 +240,34 @@ public final class TraceRunReplayWalker {
             throw new IllegalArgumentException("frame counts must be non-negative");
         }
         return Math.max(0, totalFrames - consumedFrames);
+    }
+
+    /**
+     * Plans the unrecorded tail after a run's final comparison segment. Only a
+     * recorder-declared endpoint opts in; an unspecified endpoint deliberately
+     * leaves both tail replay and terminal assertion disabled.
+     *
+     * @throws IllegalStateException when a declared terminal contract starts
+     *         after the shared movie ends
+     */
+    public static TerminalMovieTailPlan planTerminalMovieTail(
+            TraceRunManifest.ExpectedMovieEndMode expectedMovieEndMode,
+            int tailStart,
+            int movieFrameCount) {
+        Objects.requireNonNull(expectedMovieEndMode, "expectedMovieEndMode");
+        if (expectedMovieEndMode == TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED) {
+            return new TerminalMovieTailPlan(tailStart, 0, null);
+        }
+        if (tailStart > movieFrameCount) {
+            throw new IllegalStateException("Terminal tail start " + tailStart
+                    + " exceeds movie frame count " + movieFrameCount);
+        }
+        GameMode expectedMode = switch (expectedMovieEndMode) {
+            case LEVEL -> GameMode.LEVEL;
+            case TITLE_SCREEN -> GameMode.TITLE_SCREEN;
+            case UNSPECIFIED -> throw new IllegalStateException("unreachable");
+        };
+        return new TerminalMovieTailPlan(tailStart, movieFrameCount - tailStart, expectedMode);
     }
 
     /**

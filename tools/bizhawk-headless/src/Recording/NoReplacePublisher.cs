@@ -60,20 +60,39 @@ namespace OpenGGF.BizHawk.Headless
 
         private readonly ILinkOperation linkOperation;
         private readonly Action<string> deleteFile;
+        private readonly TracePayloadCompressor compressor;
 
         public NoReplacePublisher()
-            : this(LibcLinkOperation.Instance, File.Delete)
+            : this(LibcLinkOperation.Instance, File.Delete, null)
+        {
+        }
+
+        /// <summary>
+        /// Publishes with trace payload compression folded into the
+        /// publication step (null = no compression, the default). See
+        /// <see cref="TracePayloadCompressor"/>.
+        /// </summary>
+        public NoReplacePublisher(TracePayloadCompressor compressor)
+            : this(LibcLinkOperation.Instance, File.Delete, compressor)
         {
         }
 
         internal NoReplacePublisher(ILinkOperation linkOperation)
-            : this(linkOperation, File.Delete)
+            : this(linkOperation, File.Delete, null)
         {
         }
 
         internal NoReplacePublisher(
             ILinkOperation linkOperation,
             Action<string> deleteFile)
+            : this(linkOperation, deleteFile, null)
+        {
+        }
+
+        internal NoReplacePublisher(
+            ILinkOperation linkOperation,
+            Action<string> deleteFile,
+            TracePayloadCompressor compressor)
         {
             if (linkOperation == null)
             {
@@ -85,6 +104,17 @@ namespace OpenGGF.BizHawk.Headless
             }
             this.linkOperation = linkOperation;
             this.deleteFile = deleteFile;
+            this.compressor = compressor;
+        }
+
+        /// <summary>
+        /// The payload compressor this publisher applies at publication
+        /// time, or null when compression is off. The CLI reads its report
+        /// after publication commits.
+        /// </summary>
+        internal TracePayloadCompressor Compressor
+        {
+            get { return compressor; }
         }
 
         public void Publish(
@@ -173,7 +203,7 @@ namespace OpenGGF.BizHawk.Headless
             try
             {
                 WriteTemporaryFiles(temporaryPaths, write);
-                return new StagedPublicationSet(staged);
+                return new StagedPublicationSet(staged, compressor);
             }
             catch
             {
@@ -219,7 +249,8 @@ namespace OpenGGF.BizHawk.Headless
             return new IncrementalStagingSession(
                 fullOutputDirectory,
                 linkOperation,
-                deleteFile);
+                deleteFile,
+                compressor);
         }
 
         internal sealed class IncrementalStagingSession : IDisposable
@@ -227,18 +258,23 @@ namespace OpenGGF.BizHawk.Headless
             private readonly string outputDirectory;
             private readonly ILinkOperation linkOperation;
             private readonly Action<string> deleteFile;
+            private readonly TracePayloadCompressor compressor;
             private readonly List<StagedPublication> staged =
                 new List<StagedPublication>();
+            private readonly List<StagedStream> open =
+                new List<StagedStream>();
             private bool finished;
 
             internal IncrementalStagingSession(
                 string outputDirectory,
                 ILinkOperation linkOperation,
-                Action<string> deleteFile)
+                Action<string> deleteFile,
+                TracePayloadCompressor compressor)
             {
                 this.outputDirectory = outputDirectory;
                 this.linkOperation = linkOperation;
                 this.deleteFile = deleteFile;
+                this.compressor = compressor;
             }
 
             /// <summary>
@@ -318,10 +354,96 @@ namespace OpenGGF.BizHawk.Headless
             }
 
             /// <summary>
+            /// Opens a staged file for INCREMENTAL writing, for output too
+            /// large to hold as a string: the caller writes through the
+            /// returned stream's <see cref="StagedStream.Writer"/> as the
+            /// capture produces it and calls
+            /// <see cref="StagedStream.Complete"/> when the file is done.
+            /// Only then does the file join the session's publication set.
+            ///
+            /// This exists because the S3K complete-run pass produces
+            /// ~1.4 GB of aux_state.jsonl across its segments, with a
+            /// single 266 MB segment; routing that through
+            /// <see cref="StageFile(string,string)"/> would hold the whole
+            /// segment as a .NET string (two bytes per ASCII char) and then
+            /// copy it. Streaming keeps peak footprint at the OS write
+            /// buffer.
+            ///
+            /// Guarantees match <see cref="StageFile(string,string)"/>: the
+            /// temporary lives next to its final so link(2) never crosses a
+            /// filesystem, nothing lands under a final name before the
+            /// completed set's Publish(), and an abandoned stream (Dispose
+            /// without Complete) removes its temporary and never publishes.
+            /// Bytes are written verbatim as BOM-free UTF-8 with LF
+            /// newlines; any line-ending policy is the caller's.
+            ///
+            /// When the session carries a compressor, a payload streamed
+            /// this way is gzipped ON THE WAY to its temporary rather than
+            /// afterwards, so the staged bytes never include the
+            /// uncompressed form — see <see cref="StagedStream"/>.
+            /// </summary>
+            public StagedStream OpenFile(string fileName)
+            {
+                if (finished)
+                {
+                    throw new InvalidOperationException(
+                        "The staging session is already finalized.");
+                }
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    throw new ArgumentException(
+                        "An output file name is required.",
+                        "fileName");
+                }
+
+                string finalPath = Path.Combine(outputDirectory, fileName);
+                string finalDirectory = Path.GetDirectoryName(finalPath);
+                Directory.CreateDirectory(finalDirectory);
+                string temporaryPath = Path.Combine(
+                    finalDirectory,
+                    CreateTemporaryName(Path.GetFileName(fileName)));
+                var stream = new StagedStream(
+                    this, temporaryPath, finalPath, compressor);
+                open.Add(stream);
+                return stream;
+            }
+
+            internal void CompleteStream(
+                StagedStream stream, string temporaryPath, string finalPath)
+            {
+                open.Remove(stream);
+                staged.Add(new StagedPublication(
+                    temporaryPath,
+                    finalPath,
+                    linkOperation,
+                    deleteFile));
+            }
+
+            internal void AbandonStream(StagedStream stream)
+            {
+                open.Remove(stream);
+            }
+
+            internal void DeleteTemporary(string temporaryPath)
+            {
+                try
+                {
+                    deleteFile(temporaryPath);
+                }
+                catch (Exception)
+                {
+                    // Preserve the staging failure. A leftover temporary
+                    // file is safer than obscuring why capture failed.
+                }
+            }
+
+            /// <summary>
             /// Finishes staging and hands the accumulated files over as one
             /// all-or-nothing publication set (possibly empty, whose
             /// Publish() is then a no-op). After Complete() the session
-            /// itself owns nothing — dispose the returned set instead.
+            /// itself owns nothing — dispose the returned set instead. Any
+            /// stream still open is a caller bug: it is discarded rather
+            /// than half-published.
             /// </summary>
             public StagedPublicationSet Complete()
             {
@@ -330,8 +452,20 @@ namespace OpenGGF.BizHawk.Headless
                     throw new InvalidOperationException(
                         "The staging session is already finalized.");
                 }
+                if (open.Count != 0)
+                {
+                    int unfinished = open.Count;
+                    DiscardOpenStreams();
+                    throw new InvalidOperationException(
+                        "The staging session still has "
+                        + unfinished.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture)
+                        + " unfinished streamed file(s).");
+                }
                 finished = true;
-                return new StagedPublicationSet(staged.ToArray());
+                return new StagedPublicationSet(
+                    staged.ToArray(),
+                    compressor);
             }
 
             public void Dispose()
@@ -341,10 +475,215 @@ namespace OpenGGF.BizHawk.Headless
                     return;
                 }
                 finished = true;
+                DiscardOpenStreams();
                 foreach (StagedPublication file in staged)
                 {
                     file.Dispose();
                 }
+            }
+
+            private void DiscardOpenStreams()
+            {
+                var pending = open.ToArray();
+                foreach (StagedStream stream in pending)
+                {
+                    stream.Dispose();
+                }
+                open.Clear();
+            }
+        }
+
+        /// <summary>
+        /// One incrementally written staged file (see
+        /// <see cref="IncrementalStagingSession.OpenFile"/>). Write through
+        /// <see cref="Writer"/>, then call <see cref="Complete"/> exactly
+        /// once; disposing without completing removes the temporary and
+        /// publishes nothing.
+        ///
+        /// When the session carries a compressor and this file is a trace
+        /// payload, the bytes are written THROUGH a gzip stream into a .gz
+        /// temporary and the uncompressed form is never materialised at all:
+        /// a complete-run capture stages ~a tenth of the bytes it used to.
+        /// The verify-before-destroy guarantee is preserved exactly, not
+        /// weakened — the plaintext is SHA-256'd and counted on its way into
+        /// the compressor, and at Complete() the finished gzip is
+        /// decompressed and compared against those values before the file
+        /// joins the publication set (<see cref="ResolveCompressedFile"/>).
+        /// A payload that turns out to be below the compressor's threshold
+        /// is expanded back to its plain name by that same verifying
+        /// decompression, so the threshold semantics are unchanged.
+        /// </summary>
+        internal sealed class StagedStream : IDisposable
+        {
+            private readonly IncrementalStagingSession owner;
+            private readonly TracePayloadCompressor compressor;
+            private readonly string finalPath;
+            private readonly string stagingPath;
+            private readonly FileStream stream;
+            private readonly StreamWriter writer;
+            private readonly TracePayloadCompressor.StreamingPayload payload;
+            private string temporaryPath;
+            private string publishedFinalPath;
+            private bool finished;
+
+            internal StagedStream(
+                IncrementalStagingSession owner,
+                string temporaryPath,
+                string finalPath,
+                TracePayloadCompressor compressor)
+            {
+                this.owner = owner;
+                this.temporaryPath = temporaryPath;
+                this.finalPath = finalPath;
+                publishedFinalPath = finalPath;
+                this.compressor = compressor != null
+                    && TracePayloadCompressor.IsTracePayloadName(
+                        Path.GetFileName(finalPath))
+                    ? compressor
+                    : null;
+                stagingPath = this.compressor == null
+                    ? temporaryPath
+                    : temporaryPath + TracePayloadCompressor.GzipExtension;
+                try
+                {
+                    stream = new FileStream(
+                        stagingPath,
+                        FileMode.CreateNew,
+                        FileAccess.Write,
+                        FileShare.None);
+                    Stream sink = stream;
+                    if (this.compressor != null)
+                    {
+                        payload = this.compressor.BeginStreaming(stream);
+                        sink = payload.PlaintextStream;
+                    }
+                    writer = new StreamWriter(
+                        sink,
+                        new UTF8Encoding(false),
+                        64 * 1024,
+                        true);
+                    writer.NewLine = "\n";
+                }
+                catch
+                {
+                    TryDispose(writer);
+                    TryDispose(payload);
+                    TryDispose(stream);
+                    owner.DeleteTemporary(stagingPath);
+                    throw;
+                }
+            }
+
+            public TextWriter Writer
+            {
+                get
+                {
+                    if (finished)
+                    {
+                        throw new InvalidOperationException(
+                            "The staged stream is already finalized.");
+                    }
+                    return writer;
+                }
+            }
+
+            /// <summary>
+            /// Flushes and closes the file, then registers it with the
+            /// session so the session's own Complete() includes it in the
+            /// all-or-nothing publication set.
+            /// </summary>
+            public void Complete()
+            {
+                if (finished)
+                {
+                    throw new InvalidOperationException(
+                        "The staged stream is already finalized.");
+                }
+                finished = true;
+                try
+                {
+                    writer.Flush();
+                    if (payload != null)
+                    {
+                        // Closes the deflate stream into the file; nothing
+                        // is flushed through the compressor before this, so
+                        // the container bytes do not depend on the caller's
+                        // write pattern.
+                        payload.Finish();
+                    }
+                    stream.Flush(true);
+                }
+                finally
+                {
+                    TryDispose(writer);
+                    TryDispose(stream);
+                }
+                if (payload != null)
+                {
+                    try
+                    {
+                        ResolveCompressedFile();
+                    }
+                    catch
+                    {
+                        owner.AbandonStream(this);
+                        owner.DeleteTemporary(stagingPath);
+                        throw;
+                    }
+                }
+                owner.CompleteStream(
+                    this, temporaryPath, publishedFinalPath);
+            }
+
+            public void Dispose()
+            {
+                if (finished)
+                {
+                    return;
+                }
+                finished = true;
+                TryDispose(writer);
+                TryDispose(payload);
+                TryDispose(stream);
+                owner.AbandonStream(this);
+                owner.DeleteTemporary(stagingPath);
+            }
+
+            /// <summary>
+            /// Verifies the finished gzip against the plaintext digest taken
+            /// while writing, then decides which file publishes: the gzip
+            /// itself at or above the compressor's threshold (final name
+            /// gaining ".gz"), or the payload expanded back to its plain
+            /// name below it — the same threshold rule the bulk path
+            /// applies, evaluated on the plaintext length the digest
+            /// carries. Either way exactly one temporary survives.
+            /// </summary>
+            private void ResolveCompressedFile()
+            {
+                if (payload.PlaintextLength >= compressor.ThresholdBytes)
+                {
+                    compressor.VerifyStreamedGzip(
+                        stagingPath,
+                        null,
+                        payload.PlaintextLength,
+                        payload.PlaintextHash);
+                    compressor.RecordCompressed(
+                        finalPath,
+                        payload.PlaintextLength,
+                        new FileInfo(stagingPath).Length);
+                    temporaryPath = stagingPath;
+                    publishedFinalPath = finalPath
+                        + TracePayloadCompressor.GzipExtension;
+                    return;
+                }
+
+                compressor.VerifyStreamedGzip(
+                    stagingPath,
+                    temporaryPath,
+                    payload.PlaintextLength,
+                    payload.PlaintextHash);
+                publishedFinalPath = finalPath;
+                owner.DeleteTemporary(stagingPath);
             }
         }
 
@@ -409,10 +748,10 @@ namespace OpenGGF.BizHawk.Headless
 
         internal sealed class StagedPublication : IDisposable
         {
-            private readonly string temporaryPath;
-            private readonly string finalPath;
             private readonly ILinkOperation linkOperation;
             private readonly Action<string> deleteFile;
+            private string temporaryPath;
+            private string finalPath;
             private bool finished;
 
             internal StagedPublication(
@@ -425,6 +764,60 @@ namespace OpenGGF.BizHawk.Headless
                 this.finalPath = finalPath;
                 this.linkOperation = linkOperation;
                 this.deleteFile = deleteFile;
+            }
+
+            /// <summary>
+            /// Replaces this staged file with its gzip before publication,
+            /// when it is a trace payload at or above the compressor's
+            /// threshold: the gzip is written next to the staged temporary,
+            /// verified by decompress-and-hash against it, and only then
+            /// adopted (final path gaining ".gz") and the uncompressed
+            /// temporary discarded. A verification failure throws with the
+            /// uncompressed temporary still staged, so the caller's rollback
+            /// publishes nothing.
+            /// </summary>
+            internal void CompressPayload(TracePayloadCompressor compressor)
+            {
+                if (finished)
+                {
+                    throw new InvalidOperationException(
+                        "The staged output is already finalized.");
+                }
+
+                string fileName = Path.GetFileName(finalPath);
+                if (!TracePayloadCompressor.IsTracePayloadName(fileName))
+                {
+                    return;
+                }
+
+                long sourceLength = new FileInfo(temporaryPath).Length;
+                if (!compressor.ShouldCompress(fileName, sourceLength))
+                {
+                    return;
+                }
+
+                string compressedTemporary =
+                    temporaryPath + TracePayloadCompressor.GzipExtension;
+                compressor.CompressAndVerify(
+                    temporaryPath,
+                    compressedTemporary);
+
+                string uncompressedTemporary = temporaryPath;
+                temporaryPath = compressedTemporary;
+                compressor.RecordCompressed(
+                    finalPath,
+                    sourceLength,
+                    new FileInfo(compressedTemporary).Length);
+                finalPath += TracePayloadCompressor.GzipExtension;
+                try
+                {
+                    deleteFile(uncompressedTemporary);
+                }
+                catch (Exception)
+                {
+                    // The verified gzip is the file that publishes; failing
+                    // to remove its source must not fail the capture.
+                }
             }
 
             public void Publish()
@@ -480,13 +873,22 @@ namespace OpenGGF.BizHawk.Headless
         internal sealed class StagedPublicationSet : IDisposable
         {
             private readonly StagedPublication[] staged;
+            private readonly TracePayloadCompressor compressor;
             private bool finished;
 
-            internal StagedPublicationSet(StagedPublication[] staged)
+            internal StagedPublicationSet(
+                StagedPublication[] staged,
+                TracePayloadCompressor compressor)
             {
                 this.staged = staged;
+                this.compressor = compressor;
             }
 
+            /// <summary>
+            /// Hands the single staged file over on the smoke path, which
+            /// publishes without the set and therefore without compression —
+            /// smoke.csv is not a trace payload name in any case.
+            /// </summary>
             internal StagedPublication DetachSingle()
             {
                 if (staged.Length != 1)
@@ -510,6 +912,19 @@ namespace OpenGGF.BizHawk.Headless
                 var publishedCount = 0;
                 try
                 {
+                    // Compression is part of the publication, not a step
+                    // bolted on after it: every payload is compressed and
+                    // verified before the first link(2), so a verification
+                    // failure lands in the rollback below with no final
+                    // touched at all.
+                    if (compressor != null)
+                    {
+                        foreach (StagedPublication file in staged)
+                        {
+                            file.CompressPayload(compressor);
+                        }
+                    }
+
                     while (publishedCount < staged.Length)
                     {
                         staged[publishedCount].Publish();

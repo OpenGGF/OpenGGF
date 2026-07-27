@@ -46,7 +46,10 @@ class TestRewindProfilerAttribution {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(120);
         AtomicInteger state = new AtomicInteger();
-        EngineStepper stepper = (in) -> state.incrementAndGet();
+        EngineStepper stepper = (in) -> {
+            state.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
         reg.register(new RewindSnapshottable<Integer>() {
             @Override public String key() { return "k"; }
             @Override public Integer capture() { return state.get(); }
@@ -87,7 +90,10 @@ class TestRewindProfilerAttribution {
         });
         RewindController rc = new RewindController(
                 reg, new InMemoryKeyframeStore(), new FakeInputSource(120),
-                in -> state.incrementAndGet(), 5, null, prof);
+                in -> {
+                    state.incrementAndGet();
+                    return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+                }, 5, null, prof);
         for (int i = 0; i < 7; i++) rc.step();
         rc.stepBackward();
         prof.clearTranscript();
@@ -107,7 +113,10 @@ class TestRewindProfilerAttribution {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(120);
         AtomicInteger state = new AtomicInteger();
-        EngineStepper stepper = (in) -> state.incrementAndGet();
+        EngineStepper stepper = (in) -> {
+            state.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
         reg.register(new RewindSnapshottable<Integer>() {
             @Override public String key() { return "k"; }
             @Override public Integer capture() { return state.get(); }
@@ -154,6 +163,7 @@ class TestRewindProfilerAttribution {
                 throw new RuntimeException("simulated stepper failure");
             }
             state.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
         };
         reg.register(new RewindSnapshottable<Integer>() {
             @Override public String key() { return "k"; }
@@ -214,6 +224,7 @@ class TestRewindProfilerAttribution {
                         throw new RuntimeException("expansion failed");
                     }
                     state.incrementAndGet();
+                    return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
                 }, 5, null, prof);
         for (int i = 0; i < 12; i++) rc.step();
         failExpansion.set(true);
@@ -240,9 +251,10 @@ class TestRewindProfilerAttribution {
                 primedFrames.add(frame);
             }
 
-            @Override public void step(Bk2FrameInput inputs) {
+            @Override public com.openggf.LevelFrameResult step(Bk2FrameInput inputs) {
                 if (failExpansion.get()) throw new RuntimeException("expansion failed");
                 state.incrementAndGet();
+                return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
             }
         };
         reg.register(new RewindSnapshottable<Integer>() {
@@ -272,7 +284,10 @@ class TestRewindProfilerAttribution {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(120);
         AtomicInteger state = new AtomicInteger();
-        EngineStepper stepper = (in) -> state.incrementAndGet();
+        EngineStepper stepper = (in) -> {
+            state.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
         reg.register(new RewindSnapshottable<Integer>() {
             @Override public String key() { return "k"; }
             @Override public Integer capture() { return state.get(); }
@@ -336,6 +351,7 @@ class TestRewindProfilerAttribution {
                 throw new RuntimeException("simulated seek stepper failure");
             }
             state.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
         };
         reg.register(new RewindSnapshottable<Integer>() {
             @Override public String key() { return "k"; }
@@ -372,7 +388,10 @@ class TestRewindProfilerAttribution {
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(120);
         AtomicInteger state = new AtomicInteger();
-        EngineStepper stepper = (in) -> state.incrementAndGet();
+        EngineStepper stepper = (in) -> {
+            state.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
         reg.register(new RewindSnapshottable<Integer>() {
             @Override public String key() { return "k"; }
             @Override public Integer capture() { return state.get(); }

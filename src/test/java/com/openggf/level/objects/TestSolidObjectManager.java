@@ -12,6 +12,7 @@ import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
 import com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzTrapDoorInstance;
@@ -1380,6 +1381,33 @@ public class TestSolidObjectManager {
                 "Inclusive exact-edge contact has d0 == 0 in SolidObject_cont and must not shove X by 1px");
         assertEquals(0, player.getXSpeed());
         assertEquals(0, player.getGSpeed());
+    }
+
+    @Test
+    public void cnzCylinderExactRightEdgeRetainsGroundPushWhileMovingAway() {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(
+                new ObjectSpawn(0x15C0, 0x04FF, 0x47, 0x45, 0, false, 0));
+        ObjectManager manager = buildManager(cylinder);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setAir(false);
+        player.setXSpeed((short) 0x000C);
+        player.setGSpeed((short) 0x000C);
+        player.setCentreX((short) (0x15C0 + cylinder.getSolidParams().halfWidth()));
+        player.setCentreY((short) 0x052C);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getPushing(),
+                "SolidObject_cont accepts relX == d1*2 and sets Status_Push for a grounded side contact");
+        assertEquals(0x000C, player.getXSpeed(),
+                "loc_1E042 preserves velocity when the rider is moving away from the cylinder");
+        assertEquals(0x000C, player.getGSpeed());
+        assertEquals(0x15C0 + cylinder.getSolidParams().halfWidth(), player.getCentreX(),
+                "the exact edge has d0=0 and does not manufacture an X correction");
     }
 
     @Test

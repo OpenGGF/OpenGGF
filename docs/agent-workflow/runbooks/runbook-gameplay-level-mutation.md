@@ -80,5 +80,5 @@ If the mutation models a ROM behavior (e.g. a collapsing platform's tile swap), 
 ## 7. Documentation & commit-trailer obligations
 
 - `CHANGELOG.md` + `Changelog: updated` for the engine change.
-- `docs/KNOWN_DISCREPANCIES.md` / `docs/S3K_KNOWN_DISCREPANCIES.md` + matching trailer if behavior diverges from ROM.
+- `docs/status/known-discrepancies.md` / `docs/S3K_KNOWN_DISCREPANCIES.md` + matching trailer if behavior diverges from ROM.
 - Fill all trailers (`Guide`, `Agent-Docs`, `Configuration-Docs`, `Skills`) with `updated` or `n/a`; never `--no-verify`.

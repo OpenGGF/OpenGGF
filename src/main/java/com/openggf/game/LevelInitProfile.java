@@ -19,6 +19,14 @@ import java.util.List;
  */
 public interface LevelInitProfile {
     /**
+     * Initial object setup requested after a genuine successful fresh load.
+     * Games without a proven native setup dispatch retain no extra work.
+     */
+    default InitialProcessSpritesLifecycle initialProcessSpritesLifecycle() {
+        return InitialProcessSpritesLifecycle.NONE;
+    }
+
+    /**
      * Offset used to place already-registered sidekicks relative to the main
      * player. Defaults to the S1/S2-style InitPlayers offset; S3K overrides
      * with SpawnLevelMainSprites_SpawnPlayers parity.

@@ -362,7 +362,6 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         introSpawned = false;
         snowboardIntro = null;
         spawnSonicSnowboardIntro();
-        primeSnowboardIntroPostStartupForCompleteRun(player);
     }
 
     /**

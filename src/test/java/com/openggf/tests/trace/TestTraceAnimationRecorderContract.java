@@ -1,6 +1,8 @@
 package com.openggf.tests.trace;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.io.TempDir;
 import com.openggf.trace.TraceMetadata;
 
 import java.io.BufferedReader;
@@ -112,7 +114,7 @@ class TestTraceAnimationRecorderContract {
         assertTrue(script.contains("local dir_token = next_segment_dir_token(\"ss\")"));
         assertTrue(script.contains(
                 "local dir_token = next_segment_dir_token(start_zone_name .. tostring(start_act + 1))"));
-        assertTrue(script.contains("\"lua_script_version\": \"3.17\""));
+        assertTrue(script.contains("\"lua_script_version\": \"3.18\""));
     }
 
     @Test
@@ -125,18 +127,59 @@ class TestTraceAnimationRecorderContract {
         assertTrue(script.contains("S1_RNG_CALLS.flush()"));
         assertTrue(script.contains("rng_call_per_frame"));
         assertTrue(script.contains("OGGF_TRACE_SOURCE_BK2"));
-        assertTrue(script.contains("\"lua_script_version\": \"3.17\""));
+        assertTrue(script.contains("\"lua_script_version\": \"3.18\""));
     }
 
     @Test
     void fastBizHawkWrapperDelegatesOneShotInitializationToRecorder() throws IOException {
         String generator = Files.readString(TOOLS.resolve("prepare_bizhawk_fast_lua.ps1"));
+        String windowsLauncher = Files.readString(TOOLS.resolve("run_bizhawk_lua.bat"));
 
         assertTrue(generator.contains("dofile(target)"));
+        assertTrue(generator.contains("OGGF_BIZHAWK_PROBE_RUNTIME"));
+        assertTrue(generator.contains("probe_runtime.lua"));
+        assertTrue(generator.contains("$validatedSource"));
+        assertTrue(generator.contains("$env:OGGF_BIZHAWK_PROBE_RUNTIME"));
+        assertTrue(generator.contains("Join-Path $PSScriptRoot \"probes\\probe_runtime.lua\""));
+        assertTrue(generator.contains("[IO.Path]::IsPathRooted"));
         assertTrue(!generator.contains("pcall(client.invisibleemulation, true)"),
                 "The validated recorder owns the single run-level invisible-emulation call");
         assertTrue(!generator.contains("event.onframestart(apply_openggf_fast_headless"),
                 "Repeated invisibleemulation calls can stall explicit frameadvance recorders");
+        assertTrue(windowsLauncher.contains("OGGF_BIZHAWK_PROBE_RUNTIME"));
+        assertTrue(windowsLauncher.contains("%~dp0probes\\probe_runtime.lua"));
+    }
+
+    @Test
+    void windowsValidatorAcceptsNestedProbeAndIgnoresLongBracketDecoys(@TempDir Path tempDir)
+            throws Exception {
+        Path pwsh = Path.of("/usr/bin/pwsh");
+        Assumptions.assumeTrue(Files.isExecutable(pwsh),
+                "PowerShell is unavailable for the executable validator test");
+        Path nested = Files.createDirectories(tempDir.resolve("nested")).resolve("probe.lua");
+        Files.writeString(nested, """
+                --[=[ client.invisibleemulation(false) ]=]
+                local decoy = [==[ client.SetSoundOn(true) ]==]
+                local runtimePath = assert(os.getenv("OGGF_BIZHAWK_PROBE_RUNTIME"))
+                local ProbeRuntime = dofile(runtimePath)
+                ProbeRuntime.run({
+                    stage = function() return true end,
+                    hooks = {{ address = 0x123456, callback = function(context) context.finish() end }}
+                })
+                """);
+        Path wrapper = tempDir.resolve("wrapper.lua");
+        ProcessBuilder builder = new ProcessBuilder(
+                pwsh.toString(), "-NoLogo", "-NoProfile", "-File",
+                TOOLS.resolve("prepare_bizhawk_fast_lua.ps1").toAbsolutePath().toString(),
+                "-LuaScript", nested.toString(), "-WrapperPath", wrapper.toString())
+                .redirectErrorStream(true);
+        builder.environment().put("OGGF_BIZHAWK_PROBE_RUNTIME",
+                TOOLS.resolve("probes/probe_runtime.lua").toAbsolutePath().toString());
+        Process process = builder.start();
+        String output = new String(process.getInputStream().readAllBytes());
+
+        assertEquals(0, process.waitFor(), output);
+        assertTrue(Files.readString(wrapper).contains(nested.toAbsolutePath().toString()));
     }
 
     @Test

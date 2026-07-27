@@ -135,7 +135,8 @@ class TestGameLoopSpecialStageRewindGate {
     void heldRewindDisengagesWhileAFadeHasAPendingCompletionCallback() throws Exception {
         LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");
         RewindController controller = new RewindController(
-                new RewindRegistry(), new InMemoryKeyframeStore(), new FakeInputSource(20), in -> { }, 2);
+                new RewindRegistry(), new InMemoryKeyframeStore(), new FakeInputSource(20),
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME, 2);
         for (int i = 0; i < 5; i++) {
             controller.recordExternalStep();
         }
@@ -215,7 +216,8 @@ class TestGameLoopSpecialStageRewindGate {
 
         LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");
         RewindController controller = new RewindController(
-                new RewindRegistry(), new InMemoryKeyframeStore(), new FakeInputSource(20), in -> { }, 2);
+                new RewindRegistry(), new InMemoryKeyframeStore(), new FakeInputSource(20),
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME, 2);
         for (int i = 0; i < 5; i++) {
             controller.recordExternalStep();
         }
@@ -239,7 +241,8 @@ class TestGameLoopSpecialStageRewindGate {
     private void assertHeldRewindDisengagesWhenPending(String pendingFlagField) throws Exception {
         LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");
         RewindController controller = new RewindController(
-                new RewindRegistry(), new InMemoryKeyframeStore(), new FakeInputSource(20), in -> { }, 2);
+                new RewindRegistry(), new InMemoryKeyframeStore(), new FakeInputSource(20),
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME, 2);
         for (int i = 0; i < 5; i++) {
             controller.recordExternalStep();
         }

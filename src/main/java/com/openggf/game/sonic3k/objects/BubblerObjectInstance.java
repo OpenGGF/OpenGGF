@@ -116,6 +116,7 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        boolean initializedThisFrame = routine == ROUTINE_INIT;
         if (routine == ROUTINE_INIT) {
             initialize();
         }
@@ -126,7 +127,7 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
             case ROUTINE_CHK_WATER -> updateChkWater(player);
             case ROUTINE_DISPLAY -> updateDisplay();
             case ROUTINE_DELETE -> setDestroyed(true);
-            case ROUTINE_MAKER -> updateMaker();
+            case ROUTINE_MAKER -> updateMaker(initializedThisFrame);
             default -> { }
         }
     }
@@ -195,7 +196,7 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
         }
     }
 
-    private void updateMaker() {
+    private void updateMaker(boolean initializedThisFrame) {
         updateMakerVisibility();
 
         if (!isInRange()) {
@@ -214,7 +215,10 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
                 return;
             }
         } else {
-            if (!isOnScreen()) {
+            // SetUp_ObjAttributes writes render_flags=$84 before the ROM branches
+            // directly into loc_2FA50, so the initialization dispatch observes
+            // the maker as on-screen until Render_Sprites refreshes the flag.
+            if (!initializedThisFrame && !isOnScreen()) {
                 return;
             }
 

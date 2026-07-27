@@ -3,11 +3,9 @@ package com.openggf.audio;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
-import com.openggf.audio.rewind.SmpsDriverSnapshot;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.FrameAudioMode;
+import com.openggf.audio.presentation.PresentationMode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,7 +79,7 @@ class TestAudioManagerRewindSuppression {
         outer.close();
         assertFalse(audio.isRewindReplaySuppressed());
         audio.playSfx("AUDIBLE");
-        assertEquals(1, backend.totalCalls());
+        assertEquals(1, audio.commandTimeline().entryCount());
     }
 
     @Test
@@ -92,7 +90,7 @@ class TestAudioManagerRewindSuppression {
 
         assertFalse(audio.isRewindReplaySuppressed());
         audio.playSfx("AUDIBLE");
-        assertEquals(1, backend.totalCalls());
+        assertEquals(1, audio.commandTimeline().entryCount());
     }
 
     @Test
@@ -105,8 +103,9 @@ class TestAudioManagerRewindSuppression {
 
         audio.playSfx(GameSound.RING);
 
-        assertEquals(1, backend.totalCalls());
-        assertTrue(backend.calls.get(0).contains("RING_LEFT"),
+        assertEquals(1, audio.commandTimeline().entryCount());
+        assertEquals("RING_LEFT",
+                ((AudioCommand.PlaySfx) audio.commandTimeline().entryAt(0).command()).sfxName(),
                 "first audible ring after suppressed replay must still be left");
     }
 
@@ -125,8 +124,9 @@ class TestAudioManagerRewindSuppression {
 
         audio.playSfx(GameSound.JUMP);
 
-        assertEquals(1, backend.totalCalls());
-        assertTrue(backend.calls.get(0).contains("jump"));
+        assertEquals(1, audio.commandTimeline().entryCount());
+        assertEquals(AudioCommand.SfxRoute.BASE_SMPS_ID,
+                ((AudioCommand.PlaySfx) audio.commandTimeline().entryAt(0).command()).route());
     }
 
     @Test
@@ -135,11 +135,11 @@ class TestAudioManagerRewindSuppression {
         assertEquals(0, backend.totalCalls());
 
         audio.afterRewindRestore(7, AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
-        assertEquals(java.util.List.of("stopAllSfx", "restoreMusic"), backend.calls);
+        assertEquals(java.util.List.of(), backend.calls);
 
-        backend.clear();
         audio.afterRewindRestore(7, AudioPresentationPolicy.STOP_ALL_PRESENTATION);
-        assertEquals(java.util.List.of("stopAllSfx", "stopPlayback"), backend.calls);
+        assertEquals(java.util.List.of(), backend.calls,
+                "cleanup must remain on the sole presentation producer");
     }
 
     @Test
@@ -151,134 +151,78 @@ class TestAudioManagerRewindSuppression {
         // restoreMusic() here would end an override (e.g. invincibility) that
         // is legitimately still active per that just-restored state.
         audio.afterRewindRestore(7, AudioPresentationPolicy.STOP_TRANSIENT_SFX);
-        assertEquals(java.util.List.of("stopAllSfx"), backend.calls);
+        assertEquals(java.util.List.of(), backend.calls);
     }
 
     @Test
-    void pausedFrameStepHookDoesNotPollPresentationBackend() {
-        audio.advancePausedFrameStepAudio();
+    void silentFrameStepDoesNotPollThePresentationBackend() {
+        audio.presentFrame(PresentationMode.SILENT);
 
         assertEquals(java.util.List.of(), backend.calls);
     }
 
     @Test
     void afterRestoreEndsReversePresentationBeforeCleanupPolicy() {
-        ReverseTrackingRuntime runtime = new ReverseTrackingRuntime();
-        audio.setDeterministicAudioRuntime(runtime);
-
         audio.beginReverseAudioPresentation();
         audio.afterRewindRestore(7, AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
 
-        assertEquals(1, runtime.beginReverseCalls);
-        assertEquals(0, runtime.endReverseCalls,
+        assertTrue(audio.isReverseAudioPresentationActive(),
                 "internal step-back restores must not cancel held reverse presentation");
-        assertEquals(0, runtime.flushCalls);
+        assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                .reverseActive());
 
         audio.afterRewindRestore(7, AudioPresentationPolicy.STOP_ALL_PRESENTATION);
 
-        assertEquals(1, runtime.beginReverseCalls);
-        assertEquals(1, runtime.endReverseCalls);
-        assertEquals(1, runtime.flushCalls);
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertFalse(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                .reverseActive());
+        assertEquals(java.util.List.of(), backend.calls);
     }
 
     @Test
     void updateDuringReversePresentationDoesNotRenderNormalFrame() {
-        ReverseTrackingRuntime runtime = new ReverseTrackingRuntime();
-        audio.setDeterministicAudioRuntime(runtime);
-
         audio.beginReverseAudioPresentation();
+        var before = AudioManagerTestDiagnostics.producerFingerprint(audio);
+
         audio.update();
 
-        assertEquals(0, runtime.advanceCalls,
-                "reverse presentation must drain history only, not append forward PCM into history");
-        assertEquals(java.util.List.of("update"), backend.calls);
+        var after = AudioManagerTestDiagnostics.producerFingerprint(audio);
+        assertEquals(before.clock(), after.clock(),
+                "the device pump must not present a frame");
+        assertEquals(before.history(), after.history(),
+                "reverse presentation must drain history only, not append"
+                        + " forward PCM into history");
+        assertEquals(java.util.List.of(), backend.calls);
     }
 
     @Test
-    void logicalRestorePreservesPresentationQueueDuringReversePresentation() {
-        PreserveFlagBackend preserveBackend = new PreserveFlagBackend();
-        audio.setBackend(preserveBackend);
-
-        AudioLogicalSnapshot snapshot = new AudioLogicalSnapshot(
-                true,
-                0,
-                0,
-                0,
-                AudioBackendLogicalSnapshot.empty(),
-                java.util.Set.of(),
-                java.util.Set.of());
+    void logicalRestoreIsDeferredUntilReverseReleaseAndReachesOnlyTheProducer() {
+        AudioLogicalSnapshot snapshot = audio.captureLogicalSnapshot();
 
         audio.beginReverseAudioPresentation();
         audio.restoreLogicalSnapshot(snapshot);
 
-        assertTrue(preserveBackend.lastPreservePresentationQueue);
+        assertEquals(java.util.List.of(), backend.calls,
+                "a held-reverse restore must never touch the backend");
+        assertNotNull(audio.deferredReverseLogicalSnapshotForTesting(),
+                "the restore target is deferred until reverse release");
+
+        assertTrue(audio.endReverseAudioPresentation());
+        assertEquals(java.util.List.of(), backend.calls);
     }
 
     @Test
-    void reversePresentationLifecycleIsForwardedToBackend() {
-        PreserveFlagBackend preserveBackend = new PreserveFlagBackend();
-        audio.setBackend(preserveBackend);
-
+    void reversePresentationLifecycleIsOwnedOnlyByProducer() {
         audio.beginReverseAudioPresentation();
+        assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                .reverseActive());
+
         audio.endReverseAudioPresentation();
 
-        assertEquals(1, preserveBackend.beginReverseCalls);
-        assertEquals(1, preserveBackend.endReverseCalls);
-    }
-
-    private static final class ReverseTrackingRuntime implements DeterministicAudioRuntime {
-        private int beginReverseCalls;
-        private int endReverseCalls;
-        private int flushCalls;
-        private int advanceCalls;
-
-        @Override
-        public void advanceFrame(long frame, FrameAudioMode mode) {
-            advanceCalls++;
-        }
-
-        @Override
-        public boolean consumesSubmittedCommands() {
-            return true;
-        }
-
-        @Override
-        public void beginReversePresentation() {
-            beginReverseCalls++;
-        }
-
-        @Override
-        public void endReversePresentation() {
-            endReverseCalls++;
-        }
-
-        @Override
-        public void flushPresentationFifo() {
-            flushCalls++;
-        }
-    }
-
-    private static final class PreserveFlagBackend extends NullAudioBackend {
-        private boolean lastPreservePresentationQueue;
-        private int beginReverseCalls;
-        private int endReverseCalls;
-
-        @Override
-        public void restoreLogicalSnapshot(
-                AudioBackendLogicalSnapshot snapshot,
-                SmpsDriverSnapshot.DependencyResolver resolver,
-                boolean preservePresentationQueue) {
-            lastPreservePresentationQueue = preservePresentationQueue;
-        }
-
-        @Override
-        public void beginReversePresentation() {
-            beginReverseCalls++;
-        }
-
-        @Override
-        public void endReversePresentation() {
-            endReverseCalls++;
-        }
+        assertFalse(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                .reverseActive());
+        assertEquals(java.util.List.of(), backend.calls,
+                "reverse presentation is producer-owned; the backend sees"
+                        + " nothing");
     }
 }

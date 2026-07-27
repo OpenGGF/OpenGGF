@@ -1,4 +1,5 @@
 package com.openggf.tests.trace;
+import com.openggf.tests.TestTempFiles;
 import com.openggf.trace.*;
 
 import org.junit.jupiter.api.Test;
@@ -645,7 +646,7 @@ public class TestDivergenceReport {
     }
 
     private TraceData createTraceDataWithAuxState() throws IOException {
-        Path dir = Files.createTempDirectory("trace-report");
+        Path dir = TestTempFiles.createTempDirectory("trace-report");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -678,7 +679,7 @@ public class TestDivergenceReport {
     }
 
     private TraceData createTraceDataWithSidekickDiagnostics() throws IOException {
-        Path dir = Files.createTempDirectory("trace-sidekick-diag-report");
+        Path dir = TestTempFiles.createTempDirectory("trace-sidekick-diag-report");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -709,7 +710,7 @@ public class TestDivergenceReport {
     }
 
     private TraceData createTraceDataWithAizBoundaryDiagnostics() throws IOException {
-        Path dir = Files.createTempDirectory("trace-aiz-boundary-diag-report");
+        Path dir = TestTempFiles.createTempDirectory("trace-aiz-boundary-diag-report");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -739,7 +740,7 @@ public class TestDivergenceReport {
     }
 
     private TraceData createTraceDataWithAizTransitionFloorDiagnostics() throws IOException {
-        Path dir = Files.createTempDirectory("trace-aiz-transition-floor-diag-report");
+        Path dir = TestTempFiles.createTempDirectory("trace-aiz-transition-floor-diag-report");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",

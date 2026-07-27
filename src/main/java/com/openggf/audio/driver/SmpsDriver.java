@@ -1,7 +1,7 @@
 package com.openggf.audio.driver;
 
 import com.openggf.audio.AudioStream;
-import com.openggf.audio.AudioManager;
+import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -56,6 +56,71 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private int continuousSfxId;
     private boolean continuousSfxFlag;
     private int contSfxLoopCnt;
+
+    /**
+     * Exact, identity-bearing rollback state for one live presentation command.
+     * This is intentionally separate from {@link SmpsDriverSnapshot}, whose
+     * rewind contract recreates sequencers and omits process-local callbacks.
+     */
+    public static final class LiveCommandMutationToken {
+        private final SmpsDriver owner;
+        private final SmpsSequencer[] sequencers;
+        private final SmpsSequencer.LiveCommandMutationToken[] sequencerStates;
+        private final SmpsSequencer[] sfxSequencers;
+        private final SmpsSequencer[] fmLocks;
+        private final SmpsSequencer[] psgLocks;
+        private final Object[] psgLatchSources;
+        private final int[] psgLatchChannels;
+        private final SmpsSequencer[] pendingRemovals;
+        private final SmpsSequencer[] sfxRemovalBuffer;
+        private final SmpsSequencer.Region region;
+        private final ReadMode readMode;
+        private final int hybridChunkCountForTesting;
+        private final int continuousSfxId;
+        private final boolean continuousSfxFlag;
+        private final int contSfxLoopCnt;
+        private final DacData liveDacDataReference;
+        private final VirtualSynthesizer.Snapshot synthSnapshot;
+
+        private LiveCommandMutationToken(
+                SmpsDriver owner,
+                SmpsSequencer[] sequencers,
+                SmpsSequencer.LiveCommandMutationToken[] sequencerStates,
+                SmpsSequencer[] sfxSequencers,
+                SmpsSequencer[] fmLocks,
+                SmpsSequencer[] psgLocks,
+                Object[] psgLatchSources,
+                int[] psgLatchChannels,
+                SmpsSequencer[] pendingRemovals,
+                SmpsSequencer[] sfxRemovalBuffer,
+                SmpsSequencer.Region region,
+                ReadMode readMode,
+                int hybridChunkCountForTesting,
+                int continuousSfxId,
+                boolean continuousSfxFlag,
+                int contSfxLoopCnt,
+                DacData liveDacDataReference,
+                VirtualSynthesizer.Snapshot synthSnapshot) {
+            this.owner = owner;
+            this.sequencers = sequencers;
+            this.sequencerStates = sequencerStates;
+            this.sfxSequencers = sfxSequencers;
+            this.fmLocks = fmLocks;
+            this.psgLocks = psgLocks;
+            this.psgLatchSources = psgLatchSources;
+            this.psgLatchChannels = psgLatchChannels;
+            this.pendingRemovals = pendingRemovals;
+            this.sfxRemovalBuffer = sfxRemovalBuffer;
+            this.region = region;
+            this.readMode = readMode;
+            this.hybridChunkCountForTesting = hybridChunkCountForTesting;
+            this.continuousSfxId = continuousSfxId;
+            this.continuousSfxFlag = continuousSfxFlag;
+            this.contSfxLoopCnt = contSfxLoopCnt;
+            this.liveDacDataReference = liveDacDataReference;
+            this.synthSnapshot = synthSnapshot;
+        }
+    }
 
     public SmpsDriver() {
         super();
@@ -173,6 +238,111 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     public int getHybridChunkCountForTesting() {
         return hybridChunkCountForTesting;
+    }
+
+    public List<SmpsSequencer> sequencersForTesting() {
+        synchronized (sequencersLock) {
+            return List.copyOf(sequencers);
+        }
+    }
+
+    public LiveCommandMutationToken captureLiveCommandMutation() {
+        synchronized (sequencersLock) {
+            SmpsSequencer[] capturedSequencers =
+                    sequencers.toArray(SmpsSequencer[]::new);
+            SmpsSequencer.LiveCommandMutationToken[] sequencerStates =
+                    new SmpsSequencer.LiveCommandMutationToken[
+                            capturedSequencers.length];
+            for (int index = 0;
+                 index < capturedSequencers.length;
+                 index++) {
+                sequencerStates[index] =
+                        capturedSequencers[index]
+                                .captureLiveCommandMutation();
+            }
+            Object[] latchSources = new Object[psgLatches.size()];
+            int[] latchChannels = new int[psgLatches.size()];
+            int latchIndex = 0;
+            for (Map.Entry<Object, Integer> entry
+                    : psgLatches.entrySet()) {
+                latchSources[latchIndex] = entry.getKey();
+                latchChannels[latchIndex] = entry.getValue();
+                latchIndex++;
+            }
+            return new LiveCommandMutationToken(
+                    this,
+                    capturedSequencers,
+                    sequencerStates,
+                    sfxSequencers.toArray(SmpsSequencer[]::new),
+                    fmLocks.clone(),
+                    psgLocks.clone(),
+                    latchSources,
+                    latchChannels,
+                    pendingRemovals.toArray(SmpsSequencer[]::new),
+                    sfxRemovalBuffer.toArray(SmpsSequencer[]::new),
+                    region,
+                    readMode,
+                    hybridChunkCountForTesting,
+                    continuousSfxId,
+                    continuousSfxFlag,
+                    contSfxLoopCnt,
+                    captureLiveDacDataReference(),
+                    captureSynthSnapshot());
+        }
+    }
+
+    public void rollbackLiveCommandMutation(
+            LiveCommandMutationToken token) {
+        Objects.requireNonNull(token, "token");
+        if (token.owner != this) {
+            throw new IllegalArgumentException(
+                    "live command token belongs to another SMPS driver");
+        }
+        synchronized (sequencersLock) {
+            for (int index = 0;
+                 index < token.sequencers.length;
+                 index++) {
+                token.sequencers[index].rollbackLiveCommandMutation(
+                        token.sequencerStates[index]);
+            }
+
+            sequencers.clear();
+            for (SmpsSequencer sequencer : token.sequencers) {
+                sequencers.add(sequencer);
+            }
+            sfxSequencers.clear();
+            for (SmpsSequencer sequencer : token.sfxSequencers) {
+                sfxSequencers.add(sequencer);
+            }
+            System.arraycopy(token.fmLocks, 0, fmLocks, 0,
+                    fmLocks.length);
+            System.arraycopy(token.psgLocks, 0, psgLocks, 0,
+                    psgLocks.length);
+            psgLatches.clear();
+            for (int index = 0;
+                 index < token.psgLatchSources.length;
+                 index++) {
+                psgLatches.put(token.psgLatchSources[index],
+                        token.psgLatchChannels[index]);
+            }
+            pendingRemovals.clear();
+            for (SmpsSequencer sequencer : token.pendingRemovals) {
+                pendingRemovals.add(sequencer);
+            }
+            sfxRemovalBuffer.clear();
+            for (SmpsSequencer sequencer : token.sfxRemovalBuffer) {
+                sfxRemovalBuffer.add(sequencer);
+            }
+            region = token.region;
+            readMode = token.readMode;
+            hybridChunkCountForTesting =
+                    token.hybridChunkCountForTesting;
+            continuousSfxId = token.continuousSfxId;
+            continuousSfxFlag = token.continuousSfxFlag;
+            contSfxLoopCnt = token.contSfxLoopCnt;
+            restoreLiveDacDataReference(token.liveDacDataReference);
+            restoreSynthSnapshot(token.synthSnapshot);
+        }
     }
 
     public SmpsDriverSnapshot captureSnapshot() {
@@ -333,7 +503,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private record ResolvedSequencerDependencies(
             AbstractSmpsData smpsData,
             DacData dacData,
-            AudioManager audioManager,
+            MusicRestoreSink audioManager,
             SmpsSequencerConfig config) {
     }
 

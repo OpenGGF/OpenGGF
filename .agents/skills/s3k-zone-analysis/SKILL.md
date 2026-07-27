@@ -301,7 +301,7 @@ Record all cross-category dependencies found. Each dependency should state:
 
 ### Phase 5: Write the Analysis Spec
 
-Produce the zone analysis spec using the template below. Save it to `docs/s3k-zones/{zone}-analysis.md` where `{zone}` is the lowercase zone abbreviation (e.g., `docs/s3k-zones/hcz-analysis.md`).
+Produce the zone analysis spec using the template below. Save it to `docs/architecture/research/s3k-zones/{zone}-analysis.md` where `{zone}` is the lowercase zone abbreviation (e.g., `docs/architecture/research/s3k-zones/hcz-analysis.md`).
 
 ---
 

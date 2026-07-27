@@ -91,7 +91,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private static final int PALETTE_SLOWDOWN_TIME = 0x68;
     private static final int RECOVER_WAIT_TIME = 0x3F;
     private static final int RISE_TIME = 0x17;
-    private static final int DEFEAT_TIME = 0xB3;
+    private static final int DEFEAT_TIME = 0x3F;
     private static final int DEFEAT_FLOW_OVERLAP_ENTRIES = 0x1D;
 
     private static final int PARENT_FLAG_ORB_RELEASE = 1 << 1; // $38 bit 1
@@ -872,8 +872,14 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void updateDefeated() {
-        // Child6_CreateBossExplosion owns a separate SST and calls back when
-        // its timed emission sequence is complete.
+        if (defeatTimer < 0 || --defeatTimer >= 0) {
+            return;
+        }
+        // BossDefeated writes $3F to the body timer. Wait_FadeToLevelMusic
+        // reaches loc_713E8 on the 64th following body dispatch and sets bit 5
+        // on the active loc_8B660 snow owner. Child6_CreateBossExplosion is a
+        // separate SST and continues emitting after this boundary.
+        stopActiveSnowdustEmitter();
     }
 
     void onDefeatExplosionControllerFinished() {
@@ -881,7 +887,6 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
             return;
         }
         defeatRenderComplete = true;
-        stopActiveSnowdustEmitter();
         spawnChild(IczMinibossPostBossPaletteController::new);
         // The ROM boss body changes into Wait_FadeToLevelMusic after its $3F
         // wait while Child6_CreateBossExplosion continues in another SST. The

@@ -131,6 +131,31 @@ class TestS3kMhzPatternAnimation {
     }
 
     @Test
+    void changeRingFrameGlobalAngleAdvancesAfterObjectsAndSurvivesRewind() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .build();
+
+        Sonic3kLevelAnimationManager manager = assertInstanceOf(
+                Sonic3kLevelAnimationManager.class,
+                GameServices.level().getAnimatedPatternManager());
+        int initialAngle = manager.aizVineAngleWord();
+
+        manager.updatePatternsOnlyForReplayBootstrap();
+        assertEquals(initialAngle, manager.aizVineAngleWord(),
+                "The setup Animate_Tiles prelude is not ROM ChangeRingFrame");
+
+        var snapshot = manager.capture();
+        manager.update();
+        assertEquals((initialAngle + 0x180) & 0xFFFF, manager.aizVineAngleWord(),
+                "ChangeRingFrame adds $180 to AIZ_vine_angle after Process_Sprites");
+
+        manager.restore(snapshot);
+        assertEquals(initialAngle, manager.aizVineAngleWord(),
+                "The independent global animation word must restore with its owning adapter");
+    }
+
+    @Test
     void mhzMushroomCapCounterStartsAfterRomPreLoopAnimateTilesPass() {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)

@@ -1,5 +1,6 @@
 package com.openggf.audio;
 
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -57,11 +58,11 @@ public class TestAudioManagerResetState {
         // Advance ringLeft to false by playing a RING sound once (toggles trueâ†’false)
         am.setSoundMap(new EnumMap<>(GameSound.class));
         am.playSfx(GameSound.RING);
-        assertTrue(backend.lastPlayedRingLeft, "Precondition: first ring should use RING_LEFT");
+        assertEquals("RING_LEFT", lastSfxName());
 
         // Second ring should use RING_RIGHT (ringLeft is now false)
         am.playSfx(GameSound.RING);
-        assertFalse(backend.lastPlayedRingLeft, "Precondition: second ring should use RING_RIGHT");
+        assertEquals("RING_RIGHT", lastSfxName());
 
         am.resetState();
         am.setBackend(backend);
@@ -69,7 +70,8 @@ public class TestAudioManagerResetState {
 
         // After reset, ringLeft is true again â€” first ring goes left
         am.playSfx(GameSound.RING);
-        assertTrue(backend.lastPlayedRingLeft, "ringLeft should be reset to true after resetState()");
+        assertEquals("RING_LEFT", lastSfxName(),
+                "ringLeft should be reset to true after resetState()");
     }
 
     @Test
@@ -87,8 +89,8 @@ public class TestAudioManagerResetState {
         am.setSoundMap(new EnumMap<>(GameSound.class));
         am.playSfx(GameSound.SPINDASH_CHARGE);
 
-        assertEquals("SPINDASH_CHARGE", backend.lastFallbackName, "Donor bindings should be cleared â€” sound must fall through to name-based SFX");
-        assertNull(backend.lastSmpsName, "No SMPS data should be played after donor state cleared");
+        assertEquals("SPINDASH_CHARGE", lastSfxName(),
+                "Donor bindings should be cleared — presentation must use the base-name route");
     }
 
     @Test
@@ -109,8 +111,8 @@ public class TestAudioManagerResetState {
         // After reset: no soundMap, no smpsLoader â†’ falls through to fallback
         am.playSfx(GameSound.JUMP);
 
-        assertEquals("JUMP", backend.lastFallbackName, "soundMap should be cleared â€” JUMP must fall through to name-based SFX");
-        assertNull(backend.lastSmpsName, "No SMPS data should be played after reset clears smpsLoader");
+        assertEquals("JUMP", lastSfxName(),
+                "soundMap should be cleared — presentation must use the base-name route");
     }
 
     @Test
@@ -118,6 +120,11 @@ public class TestAudioManagerResetState {
         am.resetState();
         // A second reset on an already-cleared instance should not throw
         am.resetState();
+    }
+
+    private String lastSfxName() {
+        var entries = am.commandTimeline().entries();
+        return ((AudioCommand.PlaySfx) entries.get(entries.size() - 1).command()).sfxName();
     }
 
     // --- Test doubles ---
@@ -199,5 +206,4 @@ public class TestAudioManagerResetState {
         @Override public Map<GameSound, Integer> getSoundMap() { return Map.of(); }
     }
 }
-
 

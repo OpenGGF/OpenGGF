@@ -7,9 +7,11 @@ import org.junit.jupiter.api.Test;
 import com.openggf.control.GamepadInputManager;
 import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.configuration.FrameRateResolver;
 import com.openggf.game.DataSelectProvider;
 import com.openggf.game.dataselect.DataSelectAction;
 import com.openggf.game.dataselect.DataSelectActionType;
@@ -70,6 +72,14 @@ import static org.lwjgl.glfw.GLFW.*;
  * without requiring an OpenGL context.
  */
 public class TestGameLoop {
+
+    @Test
+    void palFrameCadenceUsesFiftyHz() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.REGION, "PAL");
+        config.setConfigValue(SonicConfiguration.FPS, 60);
+        assertEquals(50, FrameRateResolver.effective(config));
+    }
 
     private GameLoop gameLoop;
     private InputHandler mockInputHandler;
@@ -280,11 +290,14 @@ public class TestGameLoop {
     public void traceRealtimeRewindRunsBeforePlaybackInputBridge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int rewind = source.indexOf("TraceSessionLauncher.active().handleRealtimeRewindInput(");
+        int admission = source.indexOf("FrameAdmission admission = admitLevelIteration");
         int bridge = source.indexOf("syncPlaybackInputBridge();");
         assertTrue(rewind >= 0, "GameLoop must handle trace realtime rewind");
         assertTrue(bridge >= 0, "GameLoop must bridge playback input");
         assertTrue(rewind < bridge,
                 "Rewind release must seek/play the playback timeline before forced input is sampled");
+        assertTrue(admission >= 0 && admission < bridge,
+                "playback forced input must not be published before setup admission");
     }
 
     @Test
@@ -335,12 +348,10 @@ public class TestGameLoop {
         assertTrue(updateLevel >= 0 && updateLevelEnd > updateLevel, "updateLevelMode method must exist");
         String levelBody = source.substring(updateLevel, updateLevelEnd);
 
-        for (String required : List.of(
-                "finishUserRecordingPlaybackAtLevelBoundary(true);",
-                "finishUserRecordingPlaybackAtLevelBoundary(false);")) {
-            assertTrue(levelBody.contains(required),
-                    "Level-boundary returns must notify playback policy via " + required);
-        }
+        assertTrue(source.contains("finishUserRecordingPlaybackAtLevelBoundary(true);"),
+                "Seamless boundary completion must notify playback policy");
+        assertTrue(levelBody.contains("finishUserRecordingPlaybackAtLevelBoundary(false);"),
+                "Fade-based level-boundary returns must notify playback policy");
     }
 
     @Test
@@ -439,13 +450,36 @@ public class TestGameLoop {
     @Test
     public void playbackStartInputFeedsGameplayPauseEdge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
-        int updateLevel = source.indexOf("private boolean updateLevelMode(");
-        int levelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
-        assertTrue(updateLevel >= 0 && levelEnd > updateLevel, "updateLevelMode method must exist");
-        String levelBody = source.substring(updateLevel, levelEnd);
+        int stepInternal = source.indexOf("private void stepInternal()");
+        int admission = source.indexOf("private FrameAdmission admitLevelIteration(", stepInternal);
+        assertTrue(stepInternal >= 0 && admission > stepInternal, "stepInternal method must exist");
+        String outerFrameBody = source.substring(stepInternal, admission);
 
-        assertTrue(levelBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
+        assertTrue(outerFrameBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
                 "Recorded P1 Start must route to the same gameplay pause edge as live Start");
+    }
+
+    @Test
+    public void setupAdmissionPrecedesSeamlessBoundaryAndTraceCameraMutations() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int step = source.indexOf("private void stepInternal()");
+        int end = source.indexOf("private FrameAdmission admitLevelIteration(", step);
+        String body = source.substring(step, end);
+
+        int admission = body.indexOf("FrameAdmission admission = admitLevelIteration");
+        int boundary = body.indexOf("completePendingSeamlessBoundary", admission);
+        int traceCamera = body.indexOf("traceCameraFocusController.tick", admission);
+        int timers = body.indexOf("profiler.beginSection(\"timers\")", admission);
+        assertTrue(admission >= 0 && boundary > admission && traceCamera > boundary
+                        && timers > traceCamera,
+                "seamless boundary completion and trace-camera input must follow setup admission");
+
+        int admit = source.indexOf("private FrameAdmission admitLevelIteration(");
+        int admitEnd = source.indexOf("private void applyPendingSeamlessTransitionForAdmission", admit);
+        String admitBody = source.substring(admit, admitEnd);
+        assertTrue(admitBody.indexOf("applyPendingSeamlessTransitionForAdmission()")
+                        < admitBody.indexOf("LevelFrameStep.admit("),
+                "a seamless load must arm its setup token before frame classification");
     }
 
     @Test
@@ -967,6 +1001,39 @@ public class TestGameLoop {
     public void testResolveBonusStageDebugShortcutIgnoresPlainB() {
         InputHandler handler = new InputHandler();
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+
+        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+    }
+
+    /**
+     * Shift and Ctrl already answered from the logical override here; Alt now
+     * answers from the same source, so the shortcut cannot pick a stage from a
+     * mixture of recorded and live modifiers.
+     *
+     * <p>No production caller evaluates this with an override installed today --
+     * {@code stepInternal:994} reaches it before any override window opens, and
+     * every window (LiveRewindStepper, RecordingFrameDriver, TraceSessionLauncher)
+     * both opens and closes later in the same frame. So this pins the contract,
+     * not a reachable defect. The reachable reader of the same override is
+     * {@code updateSpecialStageInput()}, inside TraceSessionLauncher's window.
+     */
+    @Test
+    public void testResolveBonusStageDebugShortcutReadsAltFromTheLogicalOverride() {
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+        handler.setLogicalOverride(LogicalInputSnapshot.neutral()
+                .withDebugInput(false, false, false, true, false));
+
+        assertEquals(BonusStageType.SLOT_MACHINE, GameLoop.resolveBonusStageDebugShortcut(handler));
+    }
+
+    @Test
+    public void testResolveBonusStageDebugShortcutIgnoresLiveAltWhileAnOverrideIsInstalled() {
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
+        handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+        handler.setLogicalOverride(LogicalInputSnapshot.neutral()
+                .withDebugInput(false, false, false, false, false));
 
         assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
     }

@@ -1,7 +1,7 @@
 # S1 Complete-Run Recorder — Run Mode + Special-Stage Byte-Level Behavior Spec
 
 Authority: `tools/bizhawk/s1_complete_run_recorder.lua` at current HEAD (the
-file stamps `lua_script_version "3.17"`; see §10 for the 3.15-fixture
+file stamps `lua_script_version "3.18"`; see §10 for the 3.15-fixture
 provenance). The Lua is the behavioral authority; where any spec text and the
 Lua disagree, the Lua wins. Consumer contract:
 `src/main/java/com/openggf/trace/TraceRunManifest.java`.
@@ -112,7 +112,12 @@ in the pre-created set (e.g. `ss_2`, `ghz1_2`, `unknown_XX1`).
    `frame_now` = `emu.framecount()`); `movie_len = movie.isloaded() and
    movie.length() or 0`; `movie_done = (movie_len > 0 and frame_now >=
    movie_len) or (movie.isloaded() and movie.mode() == "FINISHED")`. Either
-   → `finalize_run_end()`, `finished = true`, return. NOT gated on `started`,
+   → `finalize_run_end(expected_movie_end_mode)`, `finished = true`, return.
+   A true movie end samples the final raw `v_gamemode`: `$04` maps to
+   `title_screen`; `$0C` and its bit-7 PreLevel form `$8C` map to `level`
+   (`v_gamemode & $7F == $0C`). Other final modes map to nil. A configured
+   `S1_STOP_AT_FRAME` hard stop maps to nil and wins a same-frame tie with
+   movie completion. The guard is NOT gated on `started`,
    so a movie ending mid-`$10` (or before gameplay ever starts) still
    finalizes correctly. **No `OGGF_BK2_FRAME_COUNT`-style max-override exists
    in S1** — raw `movie.length()` only (S2 delta).
@@ -162,7 +167,8 @@ in the pre-created set (e.g. `ss_2`, `ghz1_2`, `unknown_XX1`).
 
 ### Run termination funnel
 
-Every live termination path calls `finalize_run_end()` (L757-769) exactly
+Every live termination path calls `finalize_run_end(endpoint)` (L757-782)
+exactly
 once before `finished = true`: the top stop/movie-done guard, the two shadowed
 mid-loop sites, and the main-loop `FRAME_CAP` backstop (L1702-1725;
 `movie.length() + 64` when known, else 2,000,000). Routing is load-bearing
@@ -173,14 +179,15 @@ segment:
 if detour_active == "special_stage" -> finalize_ss_segment(); detour_active = nil
 elseif started -> flush; write_metadata(); append_level_segment_done(trace_frame);
                   close_files(); started = false
-write_run_manifest()   -- always attempted, last (gating per §1)
+write_run_manifest(expected_movie_end_mode) -- always attempted, last
 ```
 
 Unconditionally running the level finalize mid-detour would overwrite
 `ss/metadata.json` via the shared `OUTPUT_DIR`, append a bogus `kind="level"`
 entry, and leave `finalize_ss_segment()` a silent no-op on its `not started`
 guard. After `finished = true` the main loop only prints and breaks — it must
-not re-finalize.
+not re-finalize. The `FRAME_CAP` caller always passes nil; it is a runaway
+backstop, not an observed movie endpoint.
 
 ---
 
@@ -327,7 +334,7 @@ formatting (2-space indent, one key per line; `source_bk2` via Lua `%q`):
   "bk2_frame_offset": <n>,
   "trace_frame_count": <trace_frame at write time>,
   "source_bk2": "<source_bk2_name>",
-  "lua_script_version": "3.17",
+  "lua_script_version": "3.18",
   "recording_date": "YYYY-MM-DD",
   "run_id": "<run_id>",
   "fresh_load": false,
@@ -388,11 +395,11 @@ Then `started = false`, `trace_frame = 0`, accumulators and
 
 ## 6. run_manifest.json — exact byte layout and write timing
 
-`write_run_manifest()` (L785-849) writes `BASE_OUTPUT_DIR ..
-"run_manifest.json"`, called only from `finalize_run_end()` — **exactly once,
-at run termination** (never rewritten periodically; a killed process loses the
-manifest but keeps finalized segment dirs). Gating per §1. Before writing, a
-non-fatal invariant check (L798-804) prints a WARNING for any transition where
+`write_run_manifest(expected_movie_end_mode)` writes `BASE_OUTPUT_DIR ..
+"run_manifest.json"`, called only from `finalize_run_end(...)` — **exactly
+once, at run termination** (never rewritten periodically; a killed process
+loses the manifest but keeps finalized segment dirs). Gating per §1. Before
+writing, a non-fatal invariant check prints a WARNING for any transition where
 `to_segment ~= from_segment + 1` or `to_segment > #segments_done`.
 
 Exact emission (2-space indent; `%q` = Lua quoted-string format, used for
@@ -406,7 +413,8 @@ S1 uses `%q` for `source_bk2` where S2 uses `json_escape`):
   "run_id": <%q run_id>,                  <- line present only when run_id ~= nil
   "source_bk2": <%q source_bk2_name>,
   "rom_checksum": "AFE05EEE",
-  "lua_script_version": "3.17",
+  "lua_script_version": "3.18",
+  "expected_movie_end_mode": "level",      <- optional; true movie end only
   "segments": [
     {"dir": <%q>, "kind": <%q>, "trace_profile": <%q>, "bk2_frame_offset": <%d>, "trace_frame_count": <%d>, "zone_id": <%d>, "act": <%d><extra>}<,>
     ...
@@ -421,6 +429,11 @@ S1 uses `%q` for `source_bk2` where S2 uses `json_escape`):
 - `rom_checksum` is the **inline literal** `"AFE05EEE"` — the CRC32 of Sonic 1
   World REV01 (the only ROM this recorder targets), not computed at runtime.
   `lua_script_version` is the inline script-version literal.
+- `expected_movie_end_mode` is emitted immediately after the version line only
+  when true movie completion observed a known semantic mode: `level` for raw
+  `$0C` or the ROM's bit-7 PreLevel form `$8C`, `title_screen` for raw `$04`.
+  `S1_STOP_AT_FRAME`, the `FRAME_CAP` backstop, and unknown final modes omit
+  the field. This is endpoint expectation metadata, never trace state.
 - **Segments array** (L814-823): one object per line, 4-space indented, key
   order exactly `dir, kind, trace_profile, bk2_frame_offset,
   trace_frame_count, zone_id, act`, with `<extra> = ', "special_stage_index":
@@ -520,11 +533,13 @@ events on the return segment and fail the byte gate.
 
 ---
 
-## 10. Version-stamp provenance: fixture "3.15" vs Lua "3.17"
+## 10. Version and endpoint provenance: legacy fixture 3.15 vs Lua 3.18
 
-The runs/ and special_stage/ fixtures are stamped `lua_script_version
-"3.15"`, but the committed Lua at HEAD stamps `"3.17"` (L513, L596, L812).
-Facts established from git history (do not re-derive):
+The run segment metadata and standalone special-stage fixture remain stamped
+`lua_script_version "3.15"`. The recorder-owned root manifest is regenerated
+separately from the same committed movie at version 3.18 so it carries the
+observed endpoint. The committed Lua at HEAD stamps `"3.18"` in every output
+location. Facts established from git history and the 3.18 authority capture:
 
 - `203e647b8` introduced the detour machine + manifest and bumped 3.14→3.15.
   That committed 3.15 **hardcoded** `source_bk2 "s1-complete-run.bk2"` and
@@ -543,26 +558,25 @@ Facts established from git history (do not re-derive):
   env-gated FZ `rng_call` aux events + a conditional `"rng_call_per_frame"`
   aux_schema_extras entry (only when `OGGF_S1_RNG_CALL_RANGE` is set AND the
   segment is zone 5 act index 2 — never in these fixtures); (f)
-  `OGGF_TRACE_VISIBLE`. With only the run/source/output env vars set and no
-  repeated zone+act, current-Lua output matches the fixtures byte-for-byte
-  **except the three `"3.15"` → `"3.17"` version strings and
-  `recording_date`**.
+  `OGGF_TRACE_VISIBLE`.
+- Version 3.18 adds the three version-string bumps plus the optional root
+  manifest endpoint. A real BizHawk 2.11/Mono replay of the committed
+  9,093-frame movie ended with `movie.mode() == "FINISHED"` and raw
+  `v_gamemode == $8C`. The disassembly defines `$8C` as the bit-7 PreLevel
+  form of `$0C`; normalizing that ROM-owned bit produces semantic endpoint
+  `level`. A same-host 3.17→3.18 capture comparison proved every physics and
+  aux payload byte-identical; segment inventories, BK2 hash, offsets and row
+  counts were identical; segment metadata changed only its version string;
+  and the manifest changed only its version plus the endpoint line.
 - Consequence for the differential gate: the handed-down rule "3.15-stamped
   fixtures get NO version normalization" collides with the current Lua's
-  "3.17" — that rule presumed the port would stamp "3.15", but the Lua is
-  the behavioral authority and stamps "3.17", so a byte-identical version
-  line is unattainable against immutable fixtures. Adjudicated resolution
-  (adversarial-review round): the native recorder stamps the current Lua's
-  "3.17" everywhere; the ROM-backed gates drive the production CLI and
-  compare with exactly one pinned-line substitution (fixture line must be
-  exactly the `"3.15"` string, produced line must be exactly `"3.17"`,
-  exactly once per file, every other byte exact) — which also pins the
-  production stamp itself, unlike injecting "3.15" into the runner, and
-  matches the precedent already merged for S2 (9.11-s2 -> 9.12-s2 in
-  S2TraceDifferentialTests). The byte-neutrality of the stamp delta is the
-  verified fact set above, not an assumption. (The separate 3.14-stamped
-  `*_completerun` fixtures follow the same resolution via spec
-  s1-complete-run-behavior.md §2.)
+  "3.18". Segment metadata gates therefore substitute exactly one pinned
+  `"3.15"` line with `"3.18"` (plus the already-permitted recording date)
+  and compare every other byte. The regenerated root manifest instead
+  compares directly at version 3.18 and includes
+  `"expected_movie_end_mode": "level"`. The separate 3.14-stamped
+  `*_completerun` fixtures follow the same pinned-version resolution via
+  `s1-complete-run-behavior.md` §2.
 
 ---
 
@@ -597,6 +611,7 @@ gate's `ss/` comparison — same writer, same detour, same run.
 | SS input | shared `bk2_input_mask` (no Start bit, P1 only) | dedicated mask incl. Start `0x80`, P2 column |
 | SS index source | `v_lastspecial $FFFE16` pre-SS_Load (skip-loop caveat + finalize self-check) | `$FFFE16` equivalent, no skip-loop caveat |
 | Movie length | raw `movie.length()` only | `max(movie.length(), OGGF_BK2_FRAME_COUNT)` |
+| Movie endpoint | true completion only: `$0C`/PreLevel `$8C` → `level`, `$04` → `title_screen`; hard stops omit | absent |
 | `source_bk2` | `OGGF_TRACE_SOURCE_BK2` env, `%q` | BK2 basename, `json_escape` |
 | Post-SS state reset | none — trackers carry across (§8) | `reset_recording_state_keep_files()` |
 | ROM checksum literal | `"AFE05EEE"` | `"7B905383"` |
@@ -637,6 +652,7 @@ gate's `ss/` comparison — same writer, same detour, same run.
     `prev_routine` / `prev_ctrl_lock` / `prev_opl_screen` (§8).
 11. All run/standalone fixture files are CRLF (including inside `.gz`);
     reproduce via the run-file newline expansion, per fixture bytes.
-12. Version strings: fixtures stamp `3.15`, current Lua stamps `3.17`; the
-    only other current-Lua-vs-fixture deltas are `recording_date` (§10) —
-    resolve the stamp question explicitly in the gate design before comparing.
+12. Segment fixture metadata stamps `3.15`; the current Lua and regenerated
+    root manifest stamp `3.18`. Gates pin the one version-line substitution
+    and recording date for legacy segment metadata; the root manifest also
+    pins the recorder-owned endpoint (§10).

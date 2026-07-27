@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.LevelFrameContext;
+import com.openggf.LevelFrameResult;
 import com.openggf.LevelFrameStep;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
@@ -28,22 +29,30 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
     }
 
     @Override
-    public void step(Bk2FrameInput input) {
+    public LevelFrameResult step(Bk2FrameInput input) {
         var sprites = GameServices.spritesOrNull();
         var level = GameServices.levelOrNull();
         var camera = GameServices.cameraOrNull();
         if (sprites == null || level == null || camera == null) {
-            return;
+            return LevelFrameResult.PAUSED;
         }
         InputHandler liveInput = inputHandlerSupplier.get();
         if (liveInput == null) {
-            return;
+            return LevelFrameResult.PAUSED;
         }
-        Bk2FrameInput previous = inputs.read(Math.max(inputs.earliestFrame(), input.frameIndex() - 1));
+        LevelFrameContext context = frameContextSupplier.get();
+        var admission = LevelFrameStep.admit(
+                context, level, input.p1StartPressed());
+        if (!admission.runsGameplay()) {
+            return admission.result();
+        }
+        Bk2FrameInput previous =
+                inputs.read(Math.max(inputs.earliestFrame(), input.frameIndex() - 1));
         liveInput.setLogicalOverride(RecordedInputSnapshots.fromBk2(input, previous));
         try {
             sprites.publishHeldInputForLevelEvents(liveInput);
-            LevelFrameStep.execute(frameContextSupplier.get(), level, camera, () -> sprites.update(liveInput));
+            return LevelFrameStep.execute(
+                    context, level, camera, () -> sprites.update(liveInput));
         } finally {
             liveInput.clearLogicalOverride();
         }

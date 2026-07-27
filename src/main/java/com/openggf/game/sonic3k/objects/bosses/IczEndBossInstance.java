@@ -127,6 +127,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
             {0, 0x0B, 1, MIDDLE_CHILD_SHIFT_TIME},
             {0, 0x2D, 2, BOTTOM_CHILD_SHIFT_TIME}
     };
+    private static final int FOLDED_NATIVE_CHILD_SST_COUNT = 6;
+    private static final int BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX = 3;
     private static final int[][] FROST_OFFSETS_FRAME_0 = {
             {-0x50, 0x14}, {-0x40, 0x14}, {-0x48, 0x04}, {-0x40, 0x04},
             {-0x34, 0x0C}, {-0x24, 0x08}, {-0x1C, 0x04}
@@ -222,8 +224,6 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private boolean robotnikShipFlameVisible;
     private int robotnikShipEscapeTimer;
     private S3kBossExplosionController robotnikExplosionController;
-    private boolean snowdustEmitterSpawned;
-    private AbstractObjectInstance bossSnowdustEmitter;
 
     private enum WaitCallback {
         NONE,
@@ -321,8 +321,6 @@ public final class IczEndBossInstance extends AbstractBossInstance
         robotnikShipFlameVisible = false;
         robotnikShipEscapeTimer = 0;
         robotnikExplosionController = null;
-        snowdustEmitterSpawned = false;
-        bossSnowdustEmitter = null;
     }
 
     @Override
@@ -418,7 +416,6 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
         services().fadeOutMusic();
         installBossPalette();
-        spawnBossSnowdustEmitter();
         arenaCameraGate.begin(
                 services().camera(),
                 new S3kSharedBossCameraGate.LockBounds(
@@ -429,30 +426,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
                 BOSS_GATE_FADE_TIME);
     }
 
-    private void spawnBossSnowdustEmitter() {
-        if (snowdustEmitterSpawned) {
-            return;
-        }
-        snowdustEmitterSpawned = true;
-        int spawnX = 0;
-        int spawnY = 0;
-        if (services().camera() != null) {
-            spawnX = services().camera().getX();
-            spawnY = services().camera().getY() - 8;
-        }
-        final int emitterX = spawnX;
-        final int emitterY = spawnY;
-        bossSnowdustEmitter = spawnChild(() -> new IczSnowPileObjectInstance(new ObjectSpawn(
-                emitterX, emitterY, Sonic3kObjectIds.ICZ_SNOW_PILE, 0x18, 0, false, emitterY)));
-    }
-
     private void stopBossSnowdustEmitter() {
-        if (bossSnowdustEmitter instanceof IczSnowPileObjectInstance emitter) {
-            emitter.stopSnowdustEmitter();
-        } else if (bossSnowdustEmitter != null) {
-            bossSnowdustEmitter.setDestroyed(true);
-        }
-        bossSnowdustEmitter = null;
         if (services().objectManager() == null) {
             return;
         }
@@ -585,10 +559,16 @@ public final class IczEndBossInstance extends AbstractBossInstance
                 || tryServices().objectManager() == null || getSlotIndex() < 0) {
             return;
         }
+        // ROM loc_71C36 first creates Obj_RobotnikShip4, then three body children.
+        // The ship creates its Robotnik child when slot 25 dispatches, and the
+        // bottom body creates loc_720C6 when slot 28 dispatches. These six SSTs
+        // remain live together (sonic3k.asm:150612-150634,150875-150908).
+        // This implementation folds their rendering/behavior into the boss, but
+        // must retain their allocator pressure and Process_Sprites phase.
         int[] childSlots = tryServices().objectManager().allocateChildSlotsAfter(
-                spawn, STRUCTURAL_CHILD_SPECS.length, getSlotIndex());
-        structuralBottomChildSlot = childSlots.length > BOTTOM_CHILD_INDEX
-                ? childSlots[BOTTOM_CHILD_INDEX]
+                spawn, FOLDED_NATIVE_CHILD_SST_COUNT, getSlotIndex());
+        structuralBottomChildSlot = childSlots.length > BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX
+                ? childSlots[BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX]
                 : -1;
     }
 

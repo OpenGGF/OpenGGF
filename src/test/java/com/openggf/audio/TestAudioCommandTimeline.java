@@ -182,7 +182,7 @@ class TestAudioCommandTimeline {
                 registry,
                 new InMemoryKeyframeStore(),
                 new FixedInputSource(10),
-                input -> {},
+                input -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
                 1,
                 audio);
         controller.step();
@@ -204,7 +204,7 @@ class TestAudioCommandTimeline {
                 registry,
                 new InMemoryKeyframeStore(),
                 new FixedInputSource(100),
-                input -> {},
+                input -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
                 10,
                 audio);
         for (int i = 0; i < 35; i++) {

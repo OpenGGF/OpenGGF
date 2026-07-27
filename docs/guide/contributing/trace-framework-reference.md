@@ -969,7 +969,7 @@ The six required checkpoints: `intro_begin`, `gameplay_start`,
 `hcz_handoff_complete`.
 
 This is the design documented in
-`docs/superpowers/specs/2026-04-21-s3k-aiz-intro-parity-gate-design.md`.
+`docs/architecture/designs/2026-04-21-s3k-aiz-intro-parity-gate-design.md`.
 
 ### 6.9 `EngineDiagnostics` and context windows
 
@@ -1178,19 +1178,19 @@ Results come back as short reports; the orchestrator decides what to do next.
 
 ### 10.5 Plan/research/spec artefacts
 
-Longer, structured work lives under `docs/superpowers/`:
+Longer, structured work lives under `docs/architecture/`:
 
-- **`plans/`** — step-by-step execution plans (`executing-plans` skill format). Current
+- **`architecture/plans/`** — step-by-step execution plans (`executing-plans` skill format). Current
   trace-related plans:
   - `2026-04-20-s2-s3k-trace-recorder-v3.md` — the plan this branch implements
   - `2026-04-21-s3k-aiz-intro-parity-gate.md` — aligning elastic-window replay with the
     approved parity gate
   - `2026-04-21-s3k-end-to-end-trace-fixture.md` — roadmap for the real AIZ→HCZ fixture
-- **`research/`** — investigation dumps.
+- **`architecture/research/`** — investigation dumps.
   - `2026-04-20-s2-trace-addresses.md` — S2 RAM addresses
   - `2026-04-20-s3k-trace-addresses.md` / `2026-04-21-s3k-trace-addresses.md` — S3K RAM
     addresses, S&K-side only
-- **`specs/`** — concrete design contracts.
+- **`architecture/designs/`** — concrete design contracts.
   - `2026-04-21-s3k-aiz-intro-parity-gate-design.md` — the six-checkpoint gate contract
 
 Plans are written once (`superpowers:writing-plans`), executed repeatedly
@@ -1234,7 +1234,7 @@ Even more structural than MZ1 — here the issue is not "fix a physics bug" but 
 itself cannot match pixel-perfectly through the intro." Solution:
 
 1. Write a spec
-   (`docs/superpowers/specs/2026-04-21-s3k-aiz-intro-parity-gate-design.md`) defining the
+   (`docs/architecture/designs/2026-04-21-s3k-aiz-intro-parity-gate-design.md`) defining the
    six-checkpoint contract.
 2. Implement detectors (`S3kReplayCheckpointDetector`) + controller
    (`S3kElasticWindowController`) + guard (`S3kRequiredCheckpointGuard`) in the test
@@ -1256,7 +1256,7 @@ The repo's trailer policy (see `CLAUDE.md` §"Branch Documentation Policy") clos
 every trace-related commit must stage:
 
 - `CHANGELOG.md` — what changed, visible in the trace section of the changelog
-- `docs/KNOWN_DISCREPANCIES.md` / `docs/S3K_KNOWN_DISCREPANCIES.md` — intentional deviations
+- `docs/status/known-discrepancies.md` / `docs/S3K_KNOWN_DISCREPANCIES.md` — intentional deviations
 - `docs/guide/*` — keep the guide truthful
 - `AGENTS.md` + `CLAUDE.md` — keep agent guidance truthful
 - `CONFIGURATION.md` — if a new env var was added (`OGGF_S3K_TRACE_PROFILE`,
@@ -1417,13 +1417,13 @@ current schema.
 
 - `docs/guide/contributing/trace-replay.md` — user-facing guide
 - `docs/guide/contributing/trace-framework-reference.md` — this document
-- `docs/superpowers/plans/2026-04-20-s2-s3k-trace-recorder-v3.md`
-- `docs/superpowers/plans/2026-04-21-s3k-aiz-intro-parity-gate.md`
-- `docs/superpowers/plans/2026-04-21-s3k-end-to-end-trace-fixture.md`
-- `docs/superpowers/research/2026-04-20-s2-trace-addresses.md`
-- `docs/superpowers/research/2026-04-20-s3k-trace-addresses.md`
-- `docs/superpowers/research/2026-04-21-s3k-trace-addresses.md`
-- `docs/superpowers/specs/2026-04-21-s3k-aiz-intro-parity-gate-design.md`
+- `docs/architecture/plans/2026-04-20-s2-s3k-trace-recorder-v3.md`
+- `docs/architecture/plans/2026-04-21-s3k-aiz-intro-parity-gate.md`
+- `docs/architecture/plans/2026-04-21-s3k-end-to-end-trace-fixture.md`
+- `docs/architecture/research/2026-04-20-s2-trace-addresses.md`
+- `docs/architecture/research/2026-04-20-s3k-trace-addresses.md`
+- `docs/architecture/research/2026-04-21-s3k-trace-addresses.md`
+- `docs/architecture/designs/2026-04-21-s3k-aiz-intro-parity-gate-design.md`
 
 **Skills:**
 

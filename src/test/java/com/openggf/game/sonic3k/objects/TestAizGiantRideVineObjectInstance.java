@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -164,11 +165,27 @@ class TestAizGiantRideVineObjectInstance {
         vine.update(1, player);
         assertFalse(activatedSwingStarted(vine));
 
-        vine.update(2, player);
+        updateSegmentsFromGlobalAngle(vine, 0x0300);
 
         int expectedAngle = (short) (TrigLookupTable.sinHex(0x03) * 0x2C);
         assertEquals(expectedAngle, firstSegmentAngle(vine),
                 "The next segment pass should still use loc_2248A's AIZ_vine_angle sine path");
+    }
+
+    @Test
+    void passiveGlobalAngleDoesNotComeFromLevelFrameCounterBootstrapSeed() throws Exception {
+        AizGiantRideVineObjectInstance previousRowSeed = newVine();
+        AizGiantRideVineObjectInstance currentRowSeed = newVine();
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x1E40);
+        player.setCentreY((short) 0x0320);
+
+        previousRowSeed.update(0, player);
+        currentRowSeed.update(1, player);
+
+        assertEquals(firstSegmentAngle(previousRowSeed), firstSegmentAngle(currentRowSeed),
+                "ROM AIZ_vine_angle is advanced by ChangeRingFrame and must not be derived from "
+                        + "the independently bootstrapped Level_frame_counter");
     }
 
     @Test
@@ -216,6 +233,14 @@ class TestAizGiantRideVineObjectInstance {
         Field angleField = first.getClass().getDeclaredField("angle");
         angleField.setAccessible(true);
         return angleField.getInt(first);
+    }
+
+    private static void updateSegmentsFromGlobalAngle(
+            AizGiantRideVineObjectInstance vine, int angleWord) throws Exception {
+        Method method = AizGiantRideVineObjectInstance.class
+                .getDeclaredMethod("updateSegmentsFromGlobalAngle", int.class);
+        method.setAccessible(true);
+        method.invoke(vine, angleWord);
     }
 
     private static int handleMode(AizGiantRideVineObjectInstance vine) throws Exception {

@@ -1,6 +1,6 @@
 package com.openggf.audio.rewind;
 
-import com.openggf.audio.AudioManager;
+import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -67,7 +67,7 @@ public record SmpsDriverSnapshot(
 
         DacData resolveDacData(SequencerEntry entry);
 
-        AudioManager resolveAudioManager(SequencerEntry entry);
+        MusicRestoreSink resolveAudioManager(SequencerEntry entry);
 
         SmpsSequencerConfig resolveConfig(SequencerEntry entry);
     }
@@ -85,7 +85,7 @@ public record SmpsDriverSnapshot(
             }
 
             @Override
-            public AudioManager resolveAudioManager(SequencerEntry entry) {
+            public MusicRestoreSink resolveAudioManager(SequencerEntry entry) {
                 return entry.audioManager();
             }
 
@@ -102,7 +102,7 @@ public record SmpsDriverSnapshot(
             SmpsSourceDescriptor fallbackVoiceSource,
             AbstractSmpsData smpsData,
             DacData dacData,
-            AudioManager audioManager,
+            MusicRestoreSink audioManager,
             SmpsSequencerConfig config,
             SmpsSequencerSnapshot snapshot) {
 

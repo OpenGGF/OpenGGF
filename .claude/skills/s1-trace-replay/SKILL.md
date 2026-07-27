@@ -75,8 +75,19 @@ repo-relative; `$SRC` is your `--output` dir for a native capture, or
 ```bash
 SRC=/tmp/regen-<zone>
 DST=src/test/resources/traces/s1/<zone>_fullrun
-cp "$SRC"/{physics.csv,aux_state.jsonl,metadata.json} "$DST/"
+cp "$SRC"/metadata.json "$DST/"
+# Payloads are committed GZIPPED. A native capture already produced .gz for
+# anything over 1 MiB; gzip whatever is still plain before copying.
+for f in physics.csv aux_state.jsonl; do
+    [ -f "$SRC/$f.gz" ] && cp "$SRC/$f.gz" "$DST/"
+    [ -f "$SRC/$f" ] && gzip -9 -n -c "$SRC/$f" > "$DST/$f.gz"
+done
 ```
+
+`TestTraceFixtureCompressionGuard` fails the build if an uncompressed `physics*.csv` or
+`aux_state*.jsonl` lands under `src/test/resources/traces/`: uncompressed these run to
+hundreds of MB and exceed GitHub's per-file limit. The pre-existing uncompressed fixtures
+are grandfathered in `src/test/resources/trace-guard/uncompressed-payload-baseline.txt`.
 
 Fixtures are read-only ground truth: only overwrite one deliberately, to gain diagnostic
 data, and commit the regen separately from any recorder change.
@@ -90,7 +101,7 @@ mvn "-Dtest=*TraceReplay" test
 Expected output pattern:
 - `MSE:TESTS total=15 passed=N failed=M errors=0 skipped=0`
 - GHZ1 (`TestS1Ghz1TraceReplay`) should PASS
-- MZ1 (`TestS1Mz1TraceReplay`): current per-trace error/warning counts live in `docs/TRACE_FRONTIER_LOG.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
+- MZ1 (`TestS1Mz1TraceReplay`): current per-trace error/warning counts live in `docs/status/trace-frontier-log.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
 
 ### Test class mapping
 
@@ -212,5 +223,5 @@ For a full re-record and test cycle:
 3. Copy 3 files to test resources
 4. Repeat for second zone if doing both
 5. Run `mvn test -Dtest="*TraceReplay"`
-6. Compare error count against the current baseline in `docs/TRACE_FRONTIER_LOG.md` (GHZ1 should stay 0)
+6. Compare error count against the current baseline in `docs/status/trace-frontier-log.md` (GHZ1 should stay 0)
 7. If errors changed: read report JSON and cross-reference aux events at first error frame

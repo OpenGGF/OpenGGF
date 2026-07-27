@@ -104,18 +104,41 @@ class TestS3kIczPathFollowPlatformObject {
     }
 
     @Test
-    void subtypeZeroJitterUsesRomVintLowBitPhase() {
+    void subtypeZeroJitterMovesLeftOnOddResolvedVintPhase() {
         IczPathFollowPlatformObjectInstance platform = create(0);
+        platform.setServices(new StubObjectServices() {
+            @Override
+            public int vIntRunCounter(int objectUpdateCounter) {
+                return objectUpdateCounter;
+            }
+        });
         PlayableEntity player = mock(PlayableEntity.class);
 
         platform.onSolidContact(player, standingContact(), 0);
         platform.update(0, player);
 
         platform.update(1, player);
-        assertEquals(0x1201, platform.getX());
+        assertEquals(0x11FF, platform.getX(),
+                "loc_89FD6 negates its one-pixel step when V_int_run_count+3 is odd");
+    }
 
-        platform.update(2, player);
-        assertEquals(0x1200, platform.getX());
+    @Test
+    void subtypeZeroJitterMovesRightOnEvenResolvedVintPhase() {
+        IczPathFollowPlatformObjectInstance platform = create(0);
+        platform.setServices(new StubObjectServices() {
+            @Override
+            public int vIntRunCounter(int objectUpdateCounter) {
+                return objectUpdateCounter + 1;
+            }
+        });
+        PlayableEntity player = mock(PlayableEntity.class);
+
+        platform.onSolidContact(player, standingContact(), 0);
+        platform.update(0, player);
+
+        platform.update(1, player);
+        assertEquals(0x1201, platform.getX(),
+                "loc_89FD6 retains its positive one-pixel step when the resolved phase is even");
     }
 
     @Test

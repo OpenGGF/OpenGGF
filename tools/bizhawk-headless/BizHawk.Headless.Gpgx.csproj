@@ -67,7 +67,10 @@
     <Compile Include="src/Core/RomAsset.cs" />
     <Compile Include="src/Program.cs" />
     <Compile Include="src/Recording/NoReplacePublisher.cs" />
+    <Compile Include="src/Recording/TracePayloadCompressor.cs" />
     <Compile Include="src/Recording/RunManifestWriter.cs" />
+    <Compile Include="src/Recording/RunSegmentSink.cs" />
+    <Compile Include="src/Recording/StagedRunSegmentSink.cs" />
     <Compile Include="src/Recording/S1AuxEventEngine.cs" />
     <Compile Include="src/Recording/S1CompleteRunMetadataWriter.cs" />
     <Compile Include="src/Recording/S1InputMask.cs" />
@@ -91,6 +94,18 @@
     <Compile Include="src/Recording/S2TraceCsvWriter.cs" />
     <Compile Include="src/Recording/S2TraceMetadataWriter.cs" />
     <Compile Include="src/Recording/S2Zones.cs" />
+    <Compile Include="src/Recording/S3KAuxEventEngine.cs" />
+    <Compile Include="src/Recording/S3KCompleteRunCaptureRunner.cs" />
+    <Compile Include="src/Recording/S3KCompleteRunMetadataWriter.cs" />
+    <Compile Include="src/Recording/S3KCompleteRunSegmenter.cs" />
+    <Compile Include="src/Recording/S3KRam.cs" />
+    <Compile Include="src/Recording/S3KRunManifestWriter.cs" />
+    <Compile Include="src/Recording/S3KSpecialStageCsvWriter.cs" />
+    <Compile Include="src/Recording/S3KStagedSegmentSink.cs" />
+    <Compile Include="src/Recording/S3KTraceCaptureRunner.cs" />
+    <Compile Include="src/Recording/S3KTraceMetadataWriter.cs" />
+    <Compile Include="src/Recording/S3KTraceCsvWriter.cs" />
+    <Compile Include="src/Recording/S3KZoneTokens.cs" />
     <Compile Include="src/Recording/SmokeCaptureRunner.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -67,7 +67,7 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
     /** S3K destruction config: spawn animal + points popup, no respawn tracking, S3K break SFX. */
     private static final DestructionConfig S3K_DESTRUCTION_CONFIG = new DestructionConfig(
             Sonic3kSfx.BREAK.id,
-            AnimalObjectInstance::new,
+            (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null),
             false,  // useRespawnTracking (S3K always removeFromActiveSpawns)
             (spawn, svc, pts) -> new Sonic3kPointsObjectInstance(spawn, svc, pts),
             null,

@@ -14,9 +14,7 @@ import com.openggf.game.sonic1.objects.Sonic1PoleThatBreaksObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseDebugState;
-import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
@@ -27,10 +25,10 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
+import static com.openggf.tests.trace.TraceReplayDiagnostics.combineDiagnostics;
+import static com.openggf.tests.trace.TraceReplayDiagnostics.hasTracePayload;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -256,14 +254,8 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
     }
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
-        TraceVerificationScope scope = verificationScope();
-        if (report.hasErrors(scope)) {
-            fail(report.toAssertionSummary(scope));
-        }
-        if (report.hasWarnings(scope) && !allowDiagnosticOnlyWarnings()) {
-            fail("Trace replay warning report is release-blocking by default: "
-                    + report.toAssertionSummary(scope));
-        }
+        TraceReplayDiagnostics.assertNoReleaseBlockingDivergences(
+                report, verificationScope(), allowDiagnosticOnlyWarnings());
     }
 
     private void initialiseDemoPlayerState(HeadlessTestFixture fixture) {
@@ -393,43 +385,8 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                                 sprite.getCentreY()));
             }
 
-            List<EngineNearbyObject> nearbyObjects = new ArrayList<>();
-            for (ObjectInstance instance : om.getActiveObjects()) {
-                if (!(instance instanceof AbstractObjectInstance aoi)) {
-                    continue;
-                }
-                ObjectSpawn spawn = aoi.getSpawn();
-                if (spawn == null || spawn.objectId() == 0) {
-                    continue;
-                }
-                int currentX = aoi.getX();
-                int currentY = aoi.getY();
-                int dx = Math.abs(currentX - sprite.getCentreX());
-                int dy = Math.abs(currentY - sprite.getCentreY());
-                if (dx > 160 || dy > 160) {
-                    continue;
-                }
-                TouchResponseProvider provider =
-                        instance instanceof TouchResponseProvider trp ? trp : null;
-                nearbyObjects.add(new EngineNearbyObject(
-                        aoi.getSlotIndex(),
-                        spawn.objectId(),
-                        aoi.getName(),
-                        currentX,
-                        currentY,
-                        spawn.x(),
-                        spawn.y(),
-                        provider != null,
-                        provider != null ? provider.getCollisionFlags() : -1,
-                        provider != null ? aoi.getPreUpdateCollisionFlags() : -1,
-                        aoi.getPreUpdateX(),
-                        aoi.getPreUpdateY(),
-                        aoi.isSkipTouchThisFrame(),
-                        aoi.isSkipSolidContactThisFrame(),
-                        aoi.isOnScreenForTouch(),
-                        aoi.traceDebugDetails()));
-            }
-            nearbyObjects.sort(Comparator.comparingInt(EngineNearbyObject::slot));
+            List<EngineNearbyObject> nearbyObjects =
+                    TraceReplayDiagnostics.buildNearbyObjects(om, sprite, 160, true);
             solidEvent = combineDiagnostics(solidEvent,
                     EngineNearbyObjectFormatter.summarise(nearbyObjects));
         }
@@ -474,21 +431,6 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         FrameComparison comparison = binder.comparisonForFrame(frame);
         frontierStopper.observe(comparison);
         return frontierStopper.shouldStopAfterFrame(frame);
-    }
-
-    private static String combineDiagnostics(String base, String extra) {
-        if (base == null || base.isEmpty()) {
-            return extra == null ? "" : extra;
-        }
-        if (extra == null || extra.isEmpty()) {
-            return base;
-        }
-        return base + " | " + extra;
-    }
-
-    private static boolean hasTracePayload(Path dir, String fileName) {
-        return Files.exists(dir.resolve(fileName))
-                || Files.exists(dir.resolve(fileName + ".gz"));
     }
 
     /**

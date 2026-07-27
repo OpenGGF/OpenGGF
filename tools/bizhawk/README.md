@@ -26,7 +26,9 @@ Use this folder for the recorder scripts and local BizHawk assets:
 - `s3k_trace_recorder.lua` captures Sonic 3&K ROM-side trace data using schema v3, including
   `zone_act_state` diagnostics and the `aiz_end_to_end` checkpoint stream
 - `s3k_complete_run_recorder.lua` records per-zone segments from any Sonic 3&K BK2 (see
-  "Trace Run Manifests" section below)
+  "Trace Run Manifests" section below) — natively superseded on Linux by the headless
+  harness's `--trace-profile complete_run` / `--run-id` modes below; the Lua remains the
+  reference implementation and the non-Linux recording path
 - `record_s1_credits_traces.bat` launches forced Sonic 1 credits-demo capture
 - `s1_credits_trace_recorder.lua` records the built-in ending replays without a BK2
 - `lib/oggf_trace_common.lua` is a shared module of game-agnostic leaf helpers
@@ -60,15 +62,26 @@ Do not substitute BizHawk 2.11.1 for trace recording. BizHawk 2.11.1 removed
 capture. An existing 2.11.1 installation may remain locally, but it must not be
 selected when running the trace tools.
 
-## Native headless GPGX harness (S1 + S2 trace recorders on Linux)
+## Native headless GPGX harness (the entire Lua recorder fleet, on Linux)
 
 The Linux-only native GPGX harness (`tools/bizhawk-headless/`) runs the
 BizHawk 2.11 core through Mono without starting EmuHawk and without requiring
-`DISPLAY`. It records **full canonical Sonic 1 and Sonic 2 traces** and is the
-supported replacement for `s1_trace_recorder.lua`,
-`s1_complete_run_recorder.lua`, and `s2_trace_recorder.lua` when recording on
-Linux. `--mode trace` auto-detects the game from the supplied ROM (S1 World
-REV01 or S2 World REV01) and selects the matching recorder pipeline.
+`DISPLAY`. It records **full canonical Sonic 1, Sonic 2, and Sonic 3 & Knuckles
+traces across every recorder mode** and is the supported replacement for
+`s1_trace_recorder.lua`, `s1_complete_run_recorder.lua`, `s2_trace_recorder.lua`,
+`s3k_trace_recorder.lua` (all three STANDARD profiles), and now
+`s3k_complete_run_recorder.lua` (complete-run and run mode) when recording on
+Linux. With the S3K complete-run migration, **every Lua recorder that emits
+this harness's `physics.csv`/`aux_state.jsonl`/`metadata.json` trace schema
+now has a byte-parity-gated native port.** The remaining Lua-only surface is
+narrow: `s2_ss_trace_recorder.lua` (the S2 special-stage-only recorder,
+outside this schema) and `s1_credits_trace_recorder.lua` (a BK2-free credits
+capture, also outside this schema) have no native equivalent, and the native
+S3K ports (standard and complete-run) still defer 14 hook-driven aux
+families (below) that only the Lua recorders can capture.
+`--mode trace` auto-detects the game from the supplied ROM (S1 World REV01, S2
+World REV01, or the S3&K locked-on combination) and selects the matching
+recorder pipeline.
 
 ### Sonic 1 trace mode
 
@@ -272,18 +285,310 @@ segment-selection modes) and
 §11 complete-run extension); where any spec text and the Lua disagree, the
 Lua wins.
 
+### Sonic 3 & Knuckles trace mode (STANDARD recorder, all three profiles)
+
+With the S3&K locked-on ROM, `--mode trace` replaces `s3k_trace_recorder.lua`
+(v6.32-s3k) on Linux across its three STANDARD-recorder profiles, selected
+with `--trace-profile` (mirroring the Lua's `OGGF_S3K_TRACE_PROFILE`):
+
+- **`gameplay_unlock`** — the default; no extra flags.
+- **`aiz_end_to_end`** — the AIZ1 → AIZ2 → HCZ handoff checkpoint stream;
+  arms on the first level-family frame and records that arm frame itself as
+  trace row 0 (the only profile that does).
+- **`level_gated_reset_aware`** — discards and re-arms on a soft reset back
+  to title/level-select, and finalizes on a zone-leave rather than either
+  movie-end stop.
+
+`s3k_complete_run_recorder.lua` (the separate per-zone-segment / bonus /
+special-stage recorder, `6.33-s3k-completerun` fixture stamps) is a
+**separately natively ported recorder** — see "Sonic 3 & Knuckles
+complete-run and run mode" below — selected by `--trace-profile complete_run`
+or `--run-id` instead of a `--trace-profile` value from the table above;
+`--gameplay-segment` remains rejected outright on the S3K ROM (the Lua never
+reads `OGGF_TRACE_GAMEPLAY_SEGMENT` for either S3K recorder).
+
+Verified capture commands (BK2 frame offsets are auto-detected):
+
+```bash
+# aiz_end_to_end
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S3K_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/s3-aiz1-2-sonictails.bk2" \
+  --output "$PWD/target/bizhawk-headless-s3k-trace" \
+  --trace-profile aiz_end_to_end
+
+# level_gated_reset_aware (CNZ fixture; MGZ uses the same profile)
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S3K_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s3k/cnz/s3k-cnz-sonic-tails.bk2" \
+  --output "$PWD/target/bizhawk-headless-s3k-trace" \
+  --trace-profile level_gated_reset_aware
+```
+
+**Byte-parity guarantee vs the Lua recorder:** three ROM-backed differential
+gates in `tools/bizhawk-headless/test.sh` (`S3KTraceDifferentialTests`) prove
+the port end to end against the canonical fixtures, each with zero
+normalization on `physics.csv` / `aux_state.jsonl`:
+
+- `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/` — `aiz_end_to_end`,
+  BK2 frame offset 511, 20798 trace rows (ends on the BK2-end guard: 511 +
+  20798 == the movie's 21309 input rows);
+- `src/test/resources/traces/s3k/cnz/` — `level_gated_reset_aware`, offset
+  3171 (the last-armed segment after a pause+A discard-and-re-arm out of
+  AIZ), 42253 trace rows, finalizing on the zone-leave check;
+- `src/test/resources/traces/s3k/mgz/` — `level_gated_reset_aware`, offset
+  2602, 35912 trace rows, pinning the profile's zone-independence (it
+  advertises the `cnz_cylinder_*` aux families and finalizes on zone-leave
+  despite never starting in CNZ, and legitimately carries no
+  `gameplay_start`/act-transition checkpoint — only `gameplay_end`).
+
+**Pinned metadata delta (no loose normalization):** `metadata.json` differs
+from these three fixtures only in `recording_date` — both sides stamp the
+literal `lua_script_version` `"6.32-s3k"`, so there is no version-line delta
+to normalize. This is a regeneration, not a widened allowance: the fixtures
+previously in tree were captured before `95c36166c` fixed
+`s3k_trace_recorder.lua`'s `ADDR_FRAMECOUNT` from `0xFE08`
+(`Debug_placement_mode`, dead-zero in normal gameplay) to `0xFE04`
+(`Level_frame_counter`), so `physics.csv`'s `gameplay_frame_counter` column
+and every aux `vfc` / `oscillation_state.level_frame_counter` read a constant
+`0`/`0000` across all three fixtures' entire length. All three were
+recaptured on the fixed recorder (`3eebb13bf`) and now carry a live,
+ROM-plausible counter (monotonic apart from documented lag-frame stalls and
+level re-init clears); the MGZ fixture's leftover `"pre_trace_osc_frames": 0,`
+line (retired from `write_metadata()` in v6.29, already dropped from the
+AIZ/CNZ fixtures) is dropped here too. Every delta is asserted as an exact
+literal at an exact position, never a loose regex or a "drop unknown keys"
+normalization.
+The byte-level porting contract lives in
+`tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md` (RAM map,
+physics.csv, metadata) and `tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md`
+(profiles, stop ordering, hook architecture); `tools/bizhawk-headless/docs/s3k-aux-events.md`
+owns the aux event surface. Where any spec text and the Lua disagree, the
+Lua wins.
+
+**Deferred: hook-driven aux families.** The Lua's M68K exec/memory-write
+diagnostic hooks (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`) drive 13 aux event
+families (e.g. `tails_cpu_normal_step`, `aiz_boundary_state`,
+`collision_response_list_per_frame`, `cnz_event_ram`) that the native port
+does not implement — every gated fixture was captured with hooks unset, and
+`S3KHookAbsenceTests` pins that absence to the fixture bytes. Implementing
+them would require a native LibGPGX exec/mem callback surface on `GpgxHost`;
+see `s3k-profiles-and-hooks.md` §2.4 for the deferral rationale.
+
+**Environment variables that now refuse loudly instead of silently
+diverging.** The Lua recorder reads its entire diagnostic surface from the
+environment, never from CLI flags, so an operator's shell still exporting one
+of these would otherwise change what the Lua would have produced from the
+same movie while the native capture — which models none of them — got
+committed as canonical with no diagnostic. The CLI now refuses (exits
+non-zero with an explanatory message) whenever any of the following is set,
+scoped to the S3K trace branch only:
+
+| Class | Variables | Reason |
+|---|---|---|
+| Hook arming | `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`, `OGGF_S3K_RNG_CALL_RANGE`, `OGGF_S3K_CNZ_EVENT_RAM_RANGE` | Arms a deferred hook-driven family and appends it to `aux_schema_extras`. |
+| Polled-family window overrides | `OGGF_S3K_AIZ_FIRE_RANGE`, `OGGF_S3K_AIZ_WALL_SENSOR_RANGE`, `OGGF_S3K_CRL_RANGE`, `OGGF_S3K_CNZ_CYLINDER_RANGE`, `OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START`/`_END` | Retunes a frame-polled family the port implements with the Lua's default window pinned as a constant. |
+| Early stop | `OGGF_TRACE_STOP_FRAME`, `OGGF_BK2_FRAME_COUNT` | Finalizes before the movie/zone stop and truncates both output files. |
+
+The window overrides belonging to families the port defers entirely
+(`OGGF_S3K_POSITION_WRITE_RANGE`, `OGGF_S3K_VELOCITY_WRITE_RANGE`,
+`OGGF_S3K_SOLID_CONT_RANGE`, `OGGF_S3K_AIZ_SHIP_LOOP_RANGE`,
+`OGGF_S3K_AIZ_BOUNDARY_RANGE` and its legacy `_FRAME_START/END` pair,
+`OGGF_S3K_AIZ_TRANSITION_FLOOR_FRAME_START/END`) are deliberately **not**
+refused — their flushes are additionally hook-gated, so with the hook switch
+off (itself a refusal) they change no byte of the Lua's own output either.
+Full table and rationale: `s3k-aux-events.md` §5.1.
+
+### Sonic 3 & Knuckles complete-run and run mode
+
+With the S3&K locked-on ROM, `--mode trace` also replaces
+`s3k_complete_run_recorder.lua` (`6.33-s3k-completerun`) on Linux — the
+separate per-zone-segment / bonus-stage / special-stage recorder, distinct
+from the STANDARD recorder above. It is selected the same way as S1's
+complete-run recorder, not via `--trace-profile <one of the three STANDARD
+profiles>`:
+
+- **`--trace-profile complete_run`** — one movie pass over an entire
+  playthrough BK2 emits a separate per-zone segment directory
+  (`physics.csv`, `aux_state.jsonl`, `metadata.json`) for every zone the
+  movie clears, using the recorder's ROM-derived zone tokens (`zone_token_for`,
+  distinct from the STANDARD recorder's `ZONE_NAMES` table). `run_manifest.json`
+  is emitted only on a bonus/giant-ring detour (Lua gate); a stage-free pass
+  publishes exactly the per-zone directories.
+- **`--run-id <id>`** (mirroring `OGGF_TRACE_RUN_ID`; mutually exclusive with
+  `--trace-profile`) — forces `run_manifest.json` emission, records bonus-stage
+  detours as `bonus_stage`-kind segments (`trace_profile s3k_bonus_stage`) and
+  special-stage detours as `special_stage`-kind segments (`trace_profile
+  s3k_special_stage`), and stamps run/source metadata fields. As in S1/S2 run
+  mode, output is staged fully and published as one all-or-nothing no-replace
+  set with the manifest linked last. `--gameplay-segment` remains rejected.
+
+Verified capture commands (BK2 frame offsets are auto-detected per segment):
+
+```bash
+# Complete run: 15 zone segments from the canonical Sonic+Tails playthrough
+# movie (only the first 7 — AIZ..MHZ — are committed as *_completerun fixtures)
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S3K_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2" \
+  --output "$PWD/target/bizhawk-headless-s3k-completerun" \
+  --trace-profile complete_run
+
+# Run mode, identity (C): Knuckles multi-bonus movie under the run_id the
+# bonus_gumball / bonus_slots / bonus_pachinko / special_stage fixtures were
+# captured under
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S3K_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s3k/_movies/s3-knux-multibonus-ss.bk2" \
+  --output "$PWD/target/bizhawk-headless-s3k-run-c" \
+  --run-id s3k-multibonus
+
+# Run mode, identity (B): the same movie under the run_id the
+# runs/s3-knux-multibonus-ss/ tree carries (byte-exact since that set was
+# regenerated at 6.32, then again at 6.33 for the ADDR_VBLA_WORD fix —
+# see the byte-parity note below)
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S3K_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s3k/_movies/s3-knux-multibonus-ss.bk2" \
+  --output "$PWD/target/bizhawk-headless-s3k-run-b" \
+  --run-id s3-knux-multibonus-ss
+```
+
+**Byte-parity guarantee vs the Lua recorder:** three ROM-backed differential
+gates in `tools/bizhawk-headless/test.sh` prove the port, covering three
+distinct capture identities (`docs/s3k-run-publication.md` §0):
+
+- **`S3KCompleteRunSegmentsDifferentialTests`** — one untruncated
+  `--trace-profile complete_run` pass over the 466,334-row complete-playthrough
+  movie (measured ~6 min wall, ~235 MB peak RSS, 2.84 GB scratch under
+  `tools/bizhawk-headless/.scratch/`) reproduces all seven committed
+  **identity (A)** `*_completerun` fixtures (`aiz_completerun`,
+  `hcz_completerun`, `mgz_completerun`, `cnz_completerun`, `icz_completerun`,
+  `lbz_completerun`, `mhz_completerun`) byte-identical — `physics.csv` and
+  `aux_state.jsonl` by length AND sha256, zero normalization — plus a
+  full 15-segment summary assertion (through `fbz`/DDZ) proving the
+  segmenter's arm/finalize ordering on both sides of every fixture boundary,
+  and asserts no `run_manifest.json` is produced (no detour, no `--run-id`).
+- **`S3KCompleteRunDifferentialTests`** — a fast, truncated (`--run-id
+  s3k-multibonus --effective-movie-length 7001`) pass over the Knuckles
+  multi-bonus movie reproduces the **identity (C)** `bonus_gumball` fixture
+  byte-identical in about five seconds, as a quick end-to-end smoke gate
+  layered under the full run-mode gate below.
+- **`S3KRunModeDifferentialTests`** — two untruncated passes over the same
+  movie (measured ~2m20s wall combined, ~235 MB peak RSS): `--run-id
+  s3k-multibonus` reproduces all four **identity (C)** fixtures
+  (`bonus_gumball`, `bonus_slots`, `bonus_pachinko`, `special_stage`)
+  byte-identical; `--run-id s3-knux-multibonus-ss` reproduces the **identity
+  (B)** run tree
+  (`src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/`) — all 25
+  segment directories and `run_manifest.json` — likewise byte-identical
+  (`physics.csv` / `aux_state.jsonl` by length AND sha256, zero
+  normalization; `run_manifest.json` byte-identical). Identity (B) was not
+  always this clean a gate — see "Identity (B) reached that state by
+  regeneration" below for the CRLF / `ADDR_FRAMECOUNT` / armed-hooks history
+  and the `ADDR_VBLA_WORD` `0xFE12`→`0xFE0E` recapture that keeps it
+  byte-identical through this fix. `S3KHookAbsenceTests` pins that all
+  eleven (A)+(C) fixtures and all 25 (B) segments now carry zero hook-driven
+  aux events, including the four (B) segments (`hcz_2`, `hcz_6`, `mgz`,
+  `mgz_3`) that used to carry real ones before the hooks-off recapture.
+
+**Pinned metadata delta (no loose normalization):** all three identities were
+captured by the same `6.33-s3k-completerun` Lua build this port targets, so
+`metadata.json` differs from every committed fixture **only** in
+`recording_date` — there is no version-line delta to normalize, unlike the
+S1/S2 complete-run ports.
+
+Identity (B) reached that state by regeneration rather than by normalization.
+The committed `runs/s3-knux-multibonus-ss/` set was a 2026-07-19 Windows
+capture from a Lua build three versions behind, and differed from any fresh
+6.32 capture three independent ways — CRLF line endings, the pre-`6564667eb`
+`ADDR_FRAMECOUNT` `0xFE08` (`Debug_placement_mode`, dead-zero) counter, and
+real hook events on four segments from an armed-hooks run. No current
+recorder, Lua or native, could reproduce it, so the gate could only assert
+structure. It was recaptured at 6.32 with hooks unset (segmentation provably
+unchanged: identical offsets and row counts for all 25 segments, every
+physics cell outside the counter column byte-identical), and the gate now
+asserts all 25 segments plus `run_manifest.json` byte-for-byte with zero
+normalization. It was recaptured again at 6.33 for the `ADDR_VBLA_WORD`
+`0xFE12`→`0xFE0E` fix (identity (B) was carrying `Life_count`, i.e. `lives
+<< 8`, in its `vblank_counter` column, same as every other S3K fixture); the
+byte-for-byte gate held through that recapture too, since the native port's
+own `S3KRam.VblankWord` moved to `0xFE0E` in lockstep.
+
+The byte-level porting contracts live in
+`tools/bizhawk-headless/docs/s3k-complete-run-behavior.md` (segmentation
+state machine, per-segment offsets, `zone_token_for`),
+`tools/bizhawk-headless/docs/s3k-completerun-profiles.md` (the three segment
+profiles, the retired `ADDR_FRAMECOUNT` recorder-identity fork now unified on
+`0xFE04` for both S3K recorders, the `game_paused_state` aux addition), and
+`tools/bizhawk-headless/docs/s3k-run-publication.md`
+(directory/metadata/manifest byte layout, the three capture identities, the
+full environment-variable surface); where any spec text and the Lua
+disagree, the Lua wins.
+
+**Deferred: hook-driven aux families (same deferral as the STANDARD
+recorder).** Every committed fixture across all three identities is now
+captured with the Lua's M68K exec/memory-write diagnostic hooks unset, so the
+port implements none of the 14 hook/env-armed families for this recorder
+either. The four identity-(B) segments that used to carry real hook events
+(hcz_2, hcz_6, mgz, mgz_3) lost them in the 6.32 recapture, and
+`S3KHookAbsenceTests` now pins their absence to the fixture bytes alongside
+the rest — so regenerating any fixture with hooks armed fails the gate, which
+is the designed signal that a native LibGPGX exec/mem callback surface must
+then actually be built. See `s3k-completerun-profiles.md` §11.2 for the full
+rationale.
+
+**Environment variables that now refuse loudly instead of silently
+diverging.** The complete-run recorder reads its own, distinct environment
+surface (`OGGF_TRACE_RUN_ID` and `OGGF_BK2_BASENAME` instead of
+`OGGF_S3K_TRACE_PROFILE`, which this recorder never reads because it
+hard-pins `TRACE_PROFILE` to `"complete_run"`). The CLI refuses whenever any
+of the following is set, scoped to the S3K complete-run branch only:
+
+| Class | Variables | Reason |
+|---|---|---|
+| Hook arming | `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`, `OGGF_S3K_CNZ_EVENT_RAM_RANGE` | Arms a deferred hook-driven family (`OGGF_S3K_CNZ_EVENT_RAM_RANGE` is the sole gate on the frame-polled `cnz_event_ram` emit for this recorder). |
+| Polled-family window overrides | `OGGF_S3K_AIZ_WALL_SENSOR_RANGE`, `OGGF_S3K_AIZ_HANDOFF_TERRAIN_FRAME_START`/`_END`, `OGGF_S3K_CRL_RANGE`, `OGGF_S3K_CNZ_CYLINDER_RANGE` | Retunes a frame-polled family the port implements with the Lua's default window pinned as a constant. |
+| Early stop | `OGGF_TRACE_STOP_FRAME`, `OGGF_BK2_FRAME_COUNT` | Finalizes before the movie/zone stop and truncates both output files; the native recorder models the movie-length signal through `--effective-movie-length` instead. |
+
+Deliberately **not** refused for this subcommand, pinned by a test so the
+guard cannot degrade into a blanket `OGGF_*` ban: `OGGF_S3K_TRACE_PROFILE`
+(dead — this recorder hard-pins its own profile), `OGGF_S3K_AIZ_FIRE_RANGE`
+and `OGGF_S3K_RNG_CALL_RANGE` (both gate families that can never fire under
+this recorder's fixed profile / hooks-off default), the window overrides for
+families this port defers entirely regardless of the hook switch
+(`OGGF_S3K_POSITION_WRITE_RANGE`, `OGGF_S3K_VELOCITY_WRITE_RANGE`,
+`OGGF_S3K_SOLID_CONT_RANGE`, `OGGF_S3K_AIZ_SHIP_LOOP_RANGE`,
+`OGGF_S3K_AIZ_BOUNDARY_RANGE` and its legacy `_FRAME_START/END` pair,
+`OGGF_S3K_AIZ_TRANSITION_FLOOR_FRAME_START/END`), and `OGGF_TRACE_OUTPUT_DIR`
+/ `OGGF_BK2_BASENAME` / `OGGF_TRACE_RUN_ID` (modeled by `--output`, the movie
+file name, and `--run-id`). Full table and rationale:
+`s3k-run-publication.md` §8.1 and the `RejectUnmodeledS3kCompleteRunEnvironment`
+doc comment in `tools/bizhawk-headless/src/Program.cs`.
+
 ### Limitations and smoke mode
 
-**Limitations:** Linux/Mono only, and S1/S2 recorders only — the S3K
-recorders (`s3k_trace_recorder.lua`, `s3k_complete_run_recorder.lua`) and
-the S2 special-stage-only recorder (`s2_ss_trace_recorder.lua`) remain Lua
-scripts, and `s1_trace_recorder.lua` / `s1_complete_run_recorder.lua` /
-`s2_trace_recorder.lua` remain the reference implementations and the
+**Limitations:** Linux/Mono only. The S2 special-stage-only recorder
+(`s2_ss_trace_recorder.lua`) remains a Lua script with no native port,
+and `s1_trace_recorder.lua` / `s1_complete_run_recorder.lua` /
+`s2_trace_recorder.lua` / `s3k_trace_recorder.lua` /
+`s3k_complete_run_recorder.lua` remain the reference implementations and the
 recording path on non-Linux platforms. The harness
 needs the BizHawk 2.11 Linux x64 assemblies (`BIZHAWK_HOME` must point at an
 absolute install, default `docs/BizHawk-2.11-linux-x64`), Mono, and a
-verified Sonic 1 or Sonic 2 World REV01 ROM (`S1_ROM_PATH` / `S2_ROM_PATH`
-for the test suite's differential gates).
+verified Sonic 1 World REV01, Sonic 2 World REV01, or Sonic 3&K locked-on ROM
+(`S1_ROM_PATH` / `S2_ROM_PATH` / `S3K_ROM_PATH` for the test suite's
+differential gates).
 
 The original smoke-capture proof-of-concept mode is still available
 (`--mode smoke`, the default) with explicit `--bk2-frame-offset` /

@@ -51,16 +51,20 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private boolean romRenderOnScreen;
     private transient DestructionEffects.PointsFactory pointsFactory;
 
+    /**
+     * Probe/rewind-compatible constructor with the same deferred ownership as
+     * {@link #deferredArtVariant(ObjectSpawn, ObjectServices, DestructionEffects.PointsFactory)}.
+     */
     public AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services) {
-        this(spawn, services, null);
+        this(spawn, services, 0, null, true);
     }
 
-    public AnimalObjectInstance(ObjectSpawn spawn, ObjectServices services,
-            DestructionEffects.PointsFactory pointsFactory) {
-        this(spawn, services, services.rng().nextBits(1), pointsFactory);
-    }
-
-    public static AnimalObjectInstance sonic2DeferredArtVariant(
+    /**
+     * Creates a subtype-0 animal without consuming RNG until its own first object dispatch.
+     * Both S2 {@code Obj28_InitRandom} and S3K {@code loc_2C924} run after the
+     * explosion has allocated the animal SST.
+     */
+    public static AnimalObjectInstance deferredArtVariant(
             ObjectSpawn spawn, ObjectServices services,
             DestructionEffects.PointsFactory pointsFactory) {
         return new AnimalObjectInstance(spawn, services, 0, pointsFactory, true);

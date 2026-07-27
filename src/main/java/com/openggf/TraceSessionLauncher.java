@@ -118,10 +118,13 @@ public final class TraceSessionLauncher {
     private int rewindMovieBaseFrame;
     private int rewindTraceBaseFrame;
     private boolean realtimeRewinding;
+    private boolean realtimeReleasePending;
+    private AudioPresentationPolicy pendingRealtimeReleasePolicy;
 
     private boolean completionArmed;
     private int completionHoldFrames;
     private boolean fadeStarted;
+    private boolean teardownPending;
 
     private TraceSessionLauncher(TraceEntry entry, TraceData trace, Bk2Movie movie,
                                  TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot) {
@@ -705,7 +708,16 @@ public final class TraceSessionLauncher {
     public boolean handleRealtimeRewindInput(boolean rewindBlocked, InputHandler input) {
         if (rewindBlocked || input == null || rewindPlaybackController == null
                 || rewindController == null || comparator == null || fadeStarted) {
-            cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+            return !cleanupRealtimeRewindPresentation(
+                    AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+        }
+        if (realtimeReleasePending) {
+            if (!cleanupRealtimeRewindPresentation(
+                    pendingRealtimeReleasePolicy)) {
+                return true;
+            }
+            rewindPlaybackController.play();
+            syncVisualRewindCursors(true);
             return false;
         }
         int rewindKey = GameServices.configuration().getInt(SonicConfiguration.TRACE_REWIND_KEY);
@@ -718,7 +730,6 @@ public final class TraceSessionLauncher {
             realtimeRewinding = true;
             rewindPlaybackController.rewind();
             rewindPlaybackController.tick();
-            GameServices.audio().update();
             syncVisualRewindCursors(false);
             if (cameraFocusController != null) {
                 cameraFocusController.syncDefaultCameraToCurrentPosition();
@@ -727,15 +738,18 @@ public final class TraceSessionLauncher {
             return true;
         }
         if (realtimeRewinding) {
-            rewindPlaybackController.play();
-            syncVisualRewindCursors(true);
             // Release lands a committed logical restore via
             // cleanupRealtimeRewindPresentation's commitDeferredAudioRestore()
             // before this cleanup runs, so the RESYNC_MUSIC variant's extra
             // music-stack pop is not needed and would incorrectly end an
             // override (e.g. invincibility) the just-restored state says
             // should still be active.
-            cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_TRANSIENT_SFX);
+            if (!cleanupRealtimeRewindPresentation(
+                    AudioPresentationPolicy.STOP_TRANSIENT_SFX)) {
+                return true;
+            }
+            rewindPlaybackController.play();
+            syncVisualRewindCursors(true);
         }
         return false;
     }
@@ -854,20 +868,32 @@ public final class TraceSessionLauncher {
         }
     }
 
-    private void cleanupRealtimeRewindPresentation(AudioPresentationPolicy policy) {
-        endReverseFadePresentationIfNeeded();
-        if (!realtimeRewinding) {
-            return;
+    private boolean cleanupRealtimeRewindPresentation(
+            AudioPresentationPolicy policy) {
+        if (!realtimeRewinding && !realtimeReleasePending) {
+            endReverseFadePresentationIfNeeded();
+            return true;
         }
-        realtimeRewinding = false;
+        boolean released;
         if (rewindController != null) {
             // Land the single deferred logical restore at the committed frame
             // before the presentation cleanup acts on backend logical state.
             rewindController.commitDeferredAudioRestore();
-            GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
+            released = GameServices.audio().afterRewindRestore(
+                    rewindController.currentFrame(), policy);
         } else {
-            GameServices.audio().endReverseAudioPresentation();
+            released = GameServices.audio().endReverseAudioPresentation();
         }
+        if (!released) {
+            realtimeReleasePending = true;
+            pendingRealtimeReleasePolicy = policy;
+            return false;
+        }
+        realtimeRewinding = false;
+        realtimeReleasePending = false;
+        pendingRealtimeReleasePolicy = null;
+        endReverseFadePresentationIfNeeded();
+        return true;
     }
 
     private String rewindStatusLabel() {
@@ -883,21 +909,32 @@ public final class TraceSessionLauncher {
     }
 
     private void teardown() {
-        // Clear the static session pointer BEFORE kicking off the
-        // runtime reset so any callback running during teardown
-        // (GameLoop tick, Engine.draw, observer afterFrameAdvanced)
-        // sees a clean "no session active" state instead of the
-        // half-torn-down launcher.
+        teardownPending = true;
+        retryPendingTeardown();
+    }
+
+    /**
+     * Retries teardown at the all-mode frame owner. The active session remains
+     * the retry host until audio release has committed.
+     *
+     * @return true when teardown owned and consumed this frame
+     */
+    public boolean retryPendingTeardown() {
+        if (!teardownPending) {
+            return false;
+        }
+        if (rewindController != null) {
+            rewindController.commitDeferredAudioRestore();
+            if (!GameServices.audio().afterRewindRestore(
+                    rewindController.currentFrame(),
+                    AudioPresentationPolicy.STOP_ALL_PRESENTATION)) {
+                return true;
+            }
+        }
         activeSession = null;
         TraceGhostHook.clear(ghostHook);
         GameServices.audio().setRewindHistoryArmed(false);
         GameServices.playbackDebug().endSession();
-        if (rewindController != null) {
-            rewindController.commitDeferredAudioRestore();
-            GameServices.audio().afterRewindRestore(
-                    rewindController.currentFrame(),
-                    AudioPresentationPolicy.STOP_ALL_PRESENTATION);
-        }
         // Restore the user's gameplay-altering config before we
         // rebuild the master title. If the user re-launches the
         // picker immediately, they see their own preferences rather
@@ -909,6 +946,8 @@ public final class TraceSessionLauncher {
             loop.returnToMasterTitle();
         }
         this.cameraFocusController = null;
+        teardownPending = false;
+        return true;
     }
 
     private static final class OffsetMovieInputSource implements InputSource {
@@ -950,13 +989,13 @@ public final class TraceSessionLauncher {
         }
 
         @Override
-        public void step(Bk2FrameInput inputs) {
+        public LevelFrameResult step(Bk2FrameInput inputs) {
             int relative = Math.max(0, inputs.frameIndex() - movieBaseFrame + 1);
             int traceIndex = traceBaseFrame + relative - 1;
             TraceExecutionPhase phase = executionPhase(traceIndex);
             if (phase == TraceExecutionPhase.ADVANCE_ONLY) {
                 publishPlaybackInput(inputs);
-                return;
+                return LevelFrameResult.GAMEPLAY_FRAME;
             }
             if (phase == TraceExecutionPhase.VBLANK_ONLY
                     || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
@@ -970,7 +1009,7 @@ public final class TraceSessionLauncher {
                         sprites.advancePlayableSlotPrefix();
                     }
                 }
-                return;
+                return LevelFrameResult.GAMEPLAY_FRAME;
             }
 
             if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
@@ -985,15 +1024,26 @@ public final class TraceSessionLauncher {
             var level = GameServices.levelOrNull();
             var camera = GameServices.cameraOrNull();
             if (sprites == null || level == null || camera == null) {
-                return;
+                return LevelFrameResult.PAUSED;
             }
 
+            FrameAdmission admission = LevelFrameStep.admit(
+                    LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+                    level,
+                    inputs.p1StartPressed());
+            if (!admission.runsGameplay()) {
+                return admission.result();
+            }
             publishPlaybackInput(inputs);
             sprites.setPlaybackInputSuppressed(true);
             sprites.publishHeldInputForLevelEvents(loop.getInputHandler());
-            LevelFrameStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+            LevelFrameResult result = LevelFrameStep.execute(
+                    LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
                     level, camera, () -> sprites.update(loop.getInputHandler()));
-            pendingForcedJumpPress = false;
+            if (result == LevelFrameResult.GAMEPLAY_FRAME) {
+                pendingForcedJumpPress = false;
+            }
+            return result;
         }
 
         @Override

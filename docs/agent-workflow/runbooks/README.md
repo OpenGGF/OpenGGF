@@ -2,7 +2,8 @@
 
 Executable, copy-paste runbooks for the recurring high-risk OpenGGF workflows. Each runbook is self-contained: an external agent with no chat context can pick one up, run the listed commands, touch the listed files, run the listed tests, and satisfy the documentation/commit obligations.
 
-These runbooks implement **Option 1** of [`docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md`](../../AGENT_WORKFLOW_SUPPORT_OPTIONS.md).
+These runbooks implement **Option 1** of
+[`docs/agent-workflow/support-options.md`](../support-options.md).
 
 ## Index
 

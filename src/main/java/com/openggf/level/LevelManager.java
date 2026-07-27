@@ -84,7 +84,7 @@ import static org.lwjgl.opengl.GL11.glClearColor;
 /**
  * Manages the loading and rendering of game levels.
  */
-public class LevelManager {
+public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     static final Logger LOGGER = Logger.getLogger(LevelManager.class.getName());
     static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
     private static final int HUD_PATTERN_BASE = PatternAtlasRange.HUD.base();
@@ -329,7 +329,9 @@ public class LevelManager {
      * @throws IOException if an I/O error occurs while loading the level
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
+        discardInitialProcessSpritesLifecycle();
         try {
+            ctx.resetInitialProcessSpritesRequestForLoadAttempt();
             GameModule module = activeGameModule();
             LevelInitProfile profile = module.getLevelInitProfile();
             ctx.setLevelIndex(levelIndex);
@@ -353,7 +355,14 @@ public class LevelManager {
                 writeCurrentLevel(ctx.getLevel());
             }
             resetRewindBufferAfterLevelBoundary();
+            InitialProcessSpritesLifecycle requestedSetup =
+                    ctx.requestedInitialProcessSpritesLifecycle();
+            if (requestedSetup != InitialProcessSpritesLifecycle.NONE) {
+                spriteManager.setFrameCounter(0);
+            }
+            publishInitialProcessSpritesLifecycle(requestedSetup);
         } catch (Exception e) {
+            discardInitialProcessSpritesLifecycle();
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
             Throwable cause = e.getCause();
             if (cause instanceof IOException ioe) {
@@ -368,6 +377,12 @@ public class LevelManager {
             // leave it latched for the next level, which would start that level silent.
             transitions.setSuppressNextMusicChange(false);
         }
+    }
+
+    @Override
+    protected void executeInitialProcessSprites() {
+        new InitialProcessSpritesExecutor().execute(
+                gameModule, spriteManager, objectManager, camera, zoneFeatureProvider, frameCounter);
     }
 
     private void resetRewindBufferAfterLevelBoundary() {
@@ -1016,6 +1031,13 @@ public class LevelManager {
      */
     public void suppressGlobalOscillationForTitleCardPass() {
         this.suppressGlobalOscillationForTitleCardPass = true;
+    }
+
+    /** Advances the native VBlank clock while S3K dispatches title-card SSTs. */
+    public void advanceTitleCardVblankOnly() {
+        if (objectManager != null) {
+            objectManager.advanceVblaCounter();
+        }
     }
 
     private void advanceGlobalOscillation() {

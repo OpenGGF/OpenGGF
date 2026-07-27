@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
+import com.openggf.game.sonic3k.AizVineAngleProvider;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -127,14 +128,7 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         reserveRomChildSlots();
-        int gameplayFrameCounter = frameCounter;
-        ObjectServices svc = tryServices();
-        if (svc != null && svc.levelManager() != null) {
-            // ROM: AIZ_vine_angle advances from ChangeRingFrame in the gameplay loop,
-            // not from the object/VBlank counter that ObjectManager passes here.
-            gameplayFrameCounter = svc.levelManager().getFrameCounter();
-        }
-        updateSegmentsFromGlobalAngle(gameplayFrameCounter);
+        updateSegmentsFromGlobalAngle(currentAizVineAngleWord());
         updateHandle(player);
         // Off-screen lifecycle is handled by the Placement system: non-persistent
         // objects are unloaded when the spawn leaves the window and respawned on
@@ -192,7 +186,7 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void updateSegmentsFromGlobalAngle(int frameCounter) {
+    private void updateSegmentsFromGlobalAngle(int aizVineAngleWord) {
         if (first == null) {
             return;
         }
@@ -200,7 +194,7 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         if (activatedSwingStarted) {
             updateActivatedFirstSegment();
         } else {
-            updatePassiveFirstSegment(frameCounter);
+            updatePassiveFirstSegment(aizVineAngleWord);
         }
 
         Segment parent = first;
@@ -215,9 +209,9 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void updatePassiveFirstSegment(int frameCounter) {
+    private void updatePassiveFirstSegment(int aizVineAngleWord) {
         // loc_2248A default path: angle = sin(AIZ_vine_angle + subtypePhase) * $2C.
-        int angleByte = (currentAizVineAngleByte(frameCounter) + phaseOffset) & 0xFF;
+        int angleByte = (((aizVineAngleWord >> 8) & 0xFF) + phaseOffset) & 0xFF;
         int sin = TrigLookupTable.sinHex(angleByte);
         first.angle = asSigned16(sin * 0x2C);
         first.value3A = first.angle >> 3;
@@ -334,18 +328,14 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         AizVineHandleLogic.clearPlayerControl(player);
     }
 
-    private static int currentAizVineAngleByte(int frameCounter) {
-        // ROM LevelLoop runs Process_Sprites before ChangeRingFrame
-        // (docs/skdisasm/sonic3k.asm:7894, 7910), and ChangeRingFrame then
-        // increments AIZ_vine_angle by $180 (docs/skdisasm/sonic3k.asm:9693).
-        // Obj_AIZGiantRideVine's loc_2248A reads the word during Process_Sprites
-        // (docs/skdisasm/sonic3k.asm:46843), so object code sees the angle value
-        // accumulated through the previous gameplay frame. Engine object updates
-        // run before LevelManager.update() increments its stored counter, so the
-        // stored value already represents that previous completed frame.
-        int word = (Math.max(0, frameCounter) * 0x180) & 0xFFFF;
-        // move.b (AIZ_vine_angle).w,d0 reads the high byte.
-        return (word >> 8) & 0xFF;
+    private int currentAizVineAngleWord() {
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.levelManager() == null) {
+            return 0;
+        }
+        return svc.levelManager().getAnimatedPatternManager() instanceof AizVineAngleProvider provider
+                ? provider.aizVineAngleWord()
+                : 0;
     }
 
     private static int asSigned16(int value) {

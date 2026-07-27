@@ -298,6 +298,53 @@ class TestTraceRunReplayWalkerControlFlow {
     }
 
     @Test
+    void unspecifiedMovieEndModeSkipsTerminalTailReplayAndAssertion() {
+        var plan = TraceRunReplayWalker.planTerminalMovieTail(
+                TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED, 120, 100);
+
+        assertFalse(plan.shouldReplay());
+        assertFalse(plan.shouldAssertExpectedMode());
+    }
+
+    @Test
+    void declaredMovieEndModesReplayRemainingRowsAndAssertTheirMode() {
+        var level = TraceRunReplayWalker.planTerminalMovieTail(
+                TraceRunManifest.ExpectedMovieEndMode.LEVEL, 8, 11);
+        var titleScreen = TraceRunReplayWalker.planTerminalMovieTail(
+                TraceRunManifest.ExpectedMovieEndMode.TITLE_SCREEN, 8, 11);
+
+        assertTrue(level.shouldReplay());
+        assertTrue(level.shouldAssertExpectedMode());
+        assertEquals(3, level.rowsToReplay());
+        assertEquals(GameMode.LEVEL, level.expectedMode());
+        assertTrue(titleScreen.shouldReplay());
+        assertTrue(titleScreen.shouldAssertExpectedMode());
+        assertEquals(3, titleScreen.rowsToReplay());
+        assertEquals(GameMode.TITLE_SCREEN, titleScreen.expectedMode());
+    }
+
+    @Test
+    void declaredMovieEndModeRejectsTailPastMovieWithDiagnostic() {
+        IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                () -> TraceRunReplayWalker.planTerminalMovieTail(
+                        TraceRunManifest.ExpectedMovieEndMode.LEVEL, 12, 11));
+
+        assertTrue(thrown.getMessage().contains("tail start 12"), thrown.getMessage());
+        assertTrue(thrown.getMessage().contains("movie frame count 11"), thrown.getMessage());
+    }
+
+    @Test
+    void declaredMovieEndModeAtMovieBoundaryStillAssertsWithoutReplayingRows() {
+        var plan = TraceRunReplayWalker.planTerminalMovieTail(
+                TraceRunManifest.ExpectedMovieEndMode.TITLE_SCREEN, 11, 11);
+
+        assertFalse(plan.shouldReplay());
+        assertTrue(plan.shouldAssertExpectedMode());
+        assertEquals(0, plan.rowsToReplay());
+        assertEquals(GameMode.TITLE_SCREEN, plan.expectedMode());
+    }
+
+    @Test
     void interLevelVblankBudgetUsesMovieGapAndProfiledNonAdvancingRows() {
         var ghz2 = new TraceRunManifest.Segment(
                 "ghz2", "level", "profile", 8705, 800, 0, 1, null, null);

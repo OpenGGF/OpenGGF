@@ -59,6 +59,8 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     private Sonic3kDustArt dustArt;
     private Sonic3kRingArt ringArt;
     private Sonic3kLevelAnimationManager levelAnimationManager;
+    private final Sonic3kGlobalAnimationState globalAnimationState =
+            new Sonic3kGlobalAnimationState();
     private Level levelAnimationLevel;
     private int levelAnimationZone = -1;
 
@@ -187,7 +189,8 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         int actIndex = GameServices.level().getCurrentAct();
         Sonic3kLoadBootstrap bootstrap = Sonic3kBootstrapResolver.resolve(zoneIndex, actIndex);
         levelAnimationManager = new Sonic3kLevelAnimationManager(
-                RomByteReader.fromRom(rom), level, zoneIndex, actIndex, bootstrap.isSkipIntro());
+                RomByteReader.fromRom(rom), level, zoneIndex, actIndex, bootstrap.isSkipIntro(),
+                globalAnimationState);
         levelAnimationLevel = level;
         levelAnimationZone = zoneIndex;
         return levelAnimationManager;

@@ -112,7 +112,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> segments;
+                IList<RunSegmentOutput> segments;
                 S1RunCaptureResult result =
                     Capture(movie, host, 0, out segments);
 
@@ -121,7 +121,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal("ghz1", result.Segments[0].Dir);
                 AssertEx.Equal("ghz2", result.Segments[1].Dir);
 
-                S1RunSegmentOutput seg1 = segments[0];
+                RunSegmentOutput seg1 = segments[0];
                 AssertEx.Equal("ghz1", seg1.DirToken);
                 AssertEx.Equal(0, seg1.ManifestEntry.ZoneId);
                 AssertEx.Equal(1, seg1.ManifestEntry.Act);
@@ -148,7 +148,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertContains(seg1.MetadataJson,
                     "  \"source_bk2\": \"synthetic.bk2\"\n");
 
-                S1RunSegmentOutput seg2 = segments[1];
+                RunSegmentOutput seg2 = segments[1];
                 AssertEx.Equal("ghz2", seg2.DirToken);
                 AssertEx.Equal(18, seg2.ManifestEntry.Bk2FrameOffset);
                 AssertEx.Equal(6, seg2.ManifestEntry.TraceFrameCount);
@@ -199,7 +199,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> segments;
+                IList<RunSegmentOutput> segments;
                 Capture(movie, host, 0, out segments);
 
                 AssertEx.Equal(2, segments.Count);
@@ -256,7 +256,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> segments;
+                IList<RunSegmentOutput> segments;
                 S1RunCaptureResult result =
                     Capture(movie, host, 0, out segments);
 
@@ -299,7 +299,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> segments;
+                IList<RunSegmentOutput> segments;
                 S1RunCaptureResult result =
                     Capture(movie, host, 0, out segments);
 
@@ -335,7 +335,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> segments;
+                IList<RunSegmentOutput> segments;
                 S1RunCaptureResult result =
                     Capture(movie, host, 0, out segments);
 
@@ -363,7 +363,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> segments;
+                IList<RunSegmentOutput> segments;
                 S1RunCaptureResult result =
                     Capture(movie, host, 0, out segments);
 
@@ -391,7 +391,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> segments;
+                IList<RunSegmentOutput> segments;
                 S1RunCaptureResult result =
                     Capture(movie, host, 10, out segments);
 
@@ -447,7 +447,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 });
 
-                List<S1RunSegmentOutput> segments;
+                IList<RunSegmentOutput> segments;
                 Capture(movie, host, 0, out segments);
 
                 AssertEx.Equal(1, segments.Count);
@@ -543,9 +543,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             Bk2Movie movie,
             FakeS1Host host,
             int stopAtFrame,
-            out List<S1RunSegmentOutput> segments)
+            out IList<RunSegmentOutput> segments)
         {
-            var collected = new List<S1RunSegmentOutput>();
+            var collector = new RunSegmentCollector();
             S1RunCaptureResult result = S1RunCaptureRunner.Capture(
                 movie,
                 host,
@@ -554,11 +554,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "2026-07-24",
                 S1CompleteRunMetadataWriter.LuaScriptVersion,
                 stopAtFrame,
-                collected.Add);
-            segments = collected;
+                collector);
+            segments = collector.Segments;
             AssertEx.Equal(0, result.Transitions.Count);
             AssertEx.Equal(true, result.RunManifestJson == null);
-            foreach (S1RunSegmentOutput segment in collected)
+            foreach (RunSegmentOutput segment in collector.Segments)
             {
                 AssertEx.Equal(
                     RunManifestSegment.LevelKind,

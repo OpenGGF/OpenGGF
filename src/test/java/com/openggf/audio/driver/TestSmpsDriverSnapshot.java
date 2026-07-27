@@ -235,19 +235,19 @@ class TestSmpsDriverSnapshot {
         primeSynth(uninterrupted);
         primeSynth(restored);
 
-        uninterrupted.renderFrames(new short[74], 0, 37);
-        restored.renderFrames(new short[74], 0, 37);
+        uninterrupted.read(new short[74], 74);
+        restored.read(new short[74], 74);
 
         SmpsDriverSnapshot snapshot = uninterrupted.captureSnapshot();
         perturbSynth(uninterrupted);
         short[] expected = new short[192];
-        uninterrupted.renderFrames(expected, 0, expected.length / 2);
+        uninterrupted.read(expected, expected.length);
 
         perturbSynth(restored);
         restored.restoreSnapshot(snapshot);
         perturbSynth(restored);
         short[] actual = new short[192];
-        restored.renderFrames(actual, 0, actual.length / 2);
+        restored.read(actual, actual.length);
 
         assertArrayEquals(expected, actual);
     }

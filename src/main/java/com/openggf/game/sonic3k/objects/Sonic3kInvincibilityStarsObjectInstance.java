@@ -187,4 +187,8 @@ public class Sonic3kInvincibilityStarsObjectInstance extends AbstractObjectInsta
         return true;
     }
 
+    @Override
+    public PlayableEntity boundPlayer() {
+        return player;
+    }
 }

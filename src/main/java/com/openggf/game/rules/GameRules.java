@@ -132,6 +132,7 @@ public record GameRules(
                     false,
                     false,
                     false,
+                    false,
                     true
             ),
             new PowerUpRules(
@@ -222,7 +223,7 @@ public record GameRules(
                     16,
                     false,
                     false,
-                    true
+                    false
             ),
             new RingRules(
                     7,
@@ -267,6 +268,7 @@ public record GameRules(
                     1,
                     32,
                     1024,
+                    true,
                     false,
                     false,
                     true,
@@ -405,6 +407,7 @@ public record GameRules(
                     1,
                     32,
                     1024,
+                    true,
                     true,
                     true,
                     true,

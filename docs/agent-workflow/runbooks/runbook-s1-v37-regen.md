@@ -93,5 +93,5 @@ fields visible), find the engine code path that should produce the ROM-correct
 value, fix it ROM-faithfully (disasm-cited, no zone/frame carve-outs, per-game
 divergences routed through the smallest accurate owner from
 `docs/architecture/per-game-rule-placement.md`), keep all greens green, and update
-`docs/TRACE_FRONTIER_LOG.md`. The agents resume against this ground truth the
+`docs/status/trace-frontier-log.md`. The agents resume against this ground truth the
 instant the regenerated traces are installed.

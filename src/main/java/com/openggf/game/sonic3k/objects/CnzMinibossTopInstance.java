@@ -839,6 +839,15 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Obj_CNZMinibossTopMain runs MoveSprite2 before Draw_And_Touch_Sprite
+        // publishes the SST pointer. The following player-slot Touch_Loop
+        // dereferences that live post-movement x_pos/y_pos.
+        // sonic3k.asm:145058-145064,178041-178043,20660-20712.
+        return true;
+    }
+
+    @Override
     public int getCollisionFlags() {
         return isDestroyed() ? 0 : TOP_COLLISION_FLAGS;
     }

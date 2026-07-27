@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * flag from the coverage analyzer). Objects that cannot be constructed without ROM
  * are SKIPPED and recorded as "unprobed".
  *
- * <p>The test writes a full report to {@code docs/rewind/real-gaps.md}.
+ * <p>The test writes a full report to {@code docs/status/rewind-round-trip-gaps.md}.
  * The test itself only fails if the report write fails; the gap list is
  * informational (not a hard gate).
  *
@@ -58,12 +58,12 @@ class TestRewindRoundTripProbe {
         RewindRoundTripProbe probe = new RewindRoundTripProbe();
         RewindRoundTripProbe.ProbeReport report = probe.run(Set.of());
 
-        Path outDir = Paths.get("docs/rewind");
+        Path outDir = Paths.get("docs/status");
         Files.createDirectories(outDir);
-        Path outFile = outDir.resolve("real-gaps.md");
+        Path outFile = outDir.resolve("rewind-round-trip-gaps.md");
         probe.writeReport(report, outFile);
 
-        assertTrue(Files.exists(outFile), "docs/rewind/real-gaps.md must exist after write");
+        assertTrue(Files.exists(outFile), "docs/status/rewind-round-trip-gaps.md must exist after write");
         String content = Files.readString(outFile);
         assertTrue(content.contains("# Rewind Round-Trip Probe"), "report must have title");
         assertTrue(content.contains("Probed:"), "report must include probed count");

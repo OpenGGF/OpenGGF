@@ -17,6 +17,16 @@ namespace OpenGGF.BizHawk.Headless
         public const string LevelKind = "level";
         public const string SpecialStageKind = "special_stage";
 
+        /// <summary>
+        /// S3K-only third kind: gumball / pachinko / slots run under the
+        /// ordinary level Game_mode family with zone ids 0x13-0x15, so they
+        /// arm, record and finalize through the level path and differ only
+        /// in kind / trace_profile / the bonus_stage_type extra
+        /// (docs/s3k-complete-run-behavior.md §5.4). S1 and S2 never
+        /// produce it.
+        /// </summary>
+        public const string BonusStageKind = "bonus_stage";
+
         public RunManifestSegment(
             string dir,
             string kind,
@@ -26,6 +36,37 @@ namespace OpenGGF.BizHawk.Headless
             int zoneId,
             int act,
             int? specialStageIndex)
+            : this(
+                dir,
+                kind,
+                traceProfile,
+                bk2FrameOffset,
+                traceFrameCount,
+                zoneId,
+                act,
+                specialStageIndex,
+                null)
+        {
+        }
+
+        /// <summary>
+        /// S3K overload carrying the bonus_stage_type extra. The optional
+        /// extras stay mutually exclusive by kind — a bonus_stage entry
+        /// renders bonus_stage_type, a special_stage entry renders
+        /// special_stage_index, a level entry renders neither — so the S1
+        /// and S2 emitters, which never produce
+        /// <see cref="BonusStageKind"/>, are byte-unaffected.
+        /// </summary>
+        public RunManifestSegment(
+            string dir,
+            string kind,
+            string traceProfile,
+            int bk2FrameOffset,
+            int traceFrameCount,
+            int zoneId,
+            int act,
+            int? specialStageIndex,
+            string bonusStageType)
         {
             if (dir == null)
             {
@@ -47,6 +88,7 @@ namespace OpenGGF.BizHawk.Headless
             ZoneId = zoneId;
             Act = act;
             SpecialStageIndex = specialStageIndex;
+            BonusStageType = bonusStageType;
         }
 
         public string Dir { get; private set; }
@@ -57,6 +99,13 @@ namespace OpenGGF.BizHawk.Headless
         public int ZoneId { get; private set; }
         public int Act { get; private set; }
         public int? SpecialStageIndex { get; private set; }
+
+        /// <summary>
+        /// gumball / pachinko / slots for a <see cref="BonusStageKind"/>
+        /// entry; null everywhere else. Emitted in the same trailing slot
+        /// as <see cref="SpecialStageIndex"/>.
+        /// </summary>
+        public string BonusStageType { get; private set; }
     }
 
     /// <summary>
@@ -76,6 +125,13 @@ namespace OpenGGF.BizHawk.Headless
     public sealed class RunManifestTransition
     {
         public const string StarpostSpecialKind = "starpost_special";
+
+        /// <summary>
+        /// S3K-only: pushed at the level arm gate when the zone being armed
+        /// is a bonus zone (docs/s3k-complete-run-behavior.md §7.2). Not
+        /// S2's "starpost_special", which names the special-stage entry.
+        /// </summary>
+        public const string StarpostBonusKind = "starpost_bonus";
         public const string GiantRingKind = "giant_ring";
         public const string StageExitKind = "stage_exit";
         public const string DeathRestartKind = "death_restart";
@@ -115,14 +171,17 @@ namespace OpenGGF.BizHawk.Headless
     /// Shared byte-exact core of the Lua run-mode run_manifest.json
     /// emitters (s2_trace_recorder.lua write_run_manifest L998-1061;
     /// s1_complete_run_recorder.lua write_run_manifest L785-849). The two
-    /// recorders emit the identical structural layout; the per-game deltas
-    /// are literals and quoting only, injected by the thin
+    /// recorders share one structural layout; the per-game deltas are
+    /// literals, quoting, and the S1-only nullable
+    /// expected_movie_end_mode field, injected by the thin
     /// <see cref="S1RunManifestWriter"/> / <see cref="S2RunManifestWriter"/>
     /// front-ends: the game name, the inline rom_checksum and
     /// lua_script_version literals, whether the run_id line may be absent
     /// (S1: emitted iff OGGF_TRACE_RUN_ID was set; S2: always present), and
     /// whether source_bk2 is rendered with Lua %q (S1) or the shared
-    /// json_escape helper (S2). The optional transition fields keep one
+    /// json_escape helper (S2), and whether expected_movie_end_mode is
+    /// present (S1 true movie completion only; S2 omits it). The optional
+    /// transition fields keep one
     /// fixed order — the S2 superset — of which S1 records only the last
     /// four, so both games' emission orders are preserved verbatim.
     /// </summary>
@@ -135,6 +194,7 @@ namespace OpenGGF.BizHawk.Headless
             bool sourceBk2LuaQuoted,
             string romChecksum,
             string luaScriptVersion,
+            string expectedMovieEndMode,
             IList<RunManifestSegment> segments,
             IList<RunManifestTransition> transitions)
         {
@@ -186,6 +246,11 @@ namespace OpenGGF.BizHawk.Headless
                 .Append("\",\n");
             json.Append("  \"lua_script_version\": \"")
                 .Append(luaScriptVersion).Append("\",\n");
+            if (expectedMovieEndMode != null)
+            {
+                json.Append("  \"expected_movie_end_mode\": \"")
+                    .Append(expectedMovieEndMode).Append("\",\n");
+            }
             json.Append("  \"segments\": [\n");
             for (var index = 0; index < segments.Count; index++)
             {
@@ -200,7 +265,16 @@ namespace OpenGGF.BizHawk.Headless
                     .Append(Dec(segment.TraceFrameCount));
                 json.Append(", \"zone_id\": ").Append(Dec(segment.ZoneId));
                 json.Append(", \"act\": ").Append(Dec(segment.Act));
-                if (segment.Kind == RunManifestSegment.SpecialStageKind)
+                // Lua write_run_manifest's if/elseif on s.kind (S3K L1494,
+                // S1/S2 special-stage-only): exactly one optional extra,
+                // appended last, chosen by kind and never by which field
+                // happens to be populated.
+                if (segment.Kind == RunManifestSegment.BonusStageKind)
+                {
+                    json.Append(", \"bonus_stage_type\": ")
+                        .Append(LuaQ(segment.BonusStageType ?? string.Empty));
+                }
+                else if (segment.Kind == RunManifestSegment.SpecialStageKind)
                 {
                     json.Append(", \"special_stage_index\": ")
                         .Append(Dec(segment.SpecialStageIndex ?? 0));

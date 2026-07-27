@@ -3,12 +3,15 @@ package com.openggf.capture;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 /**
  * {@link CaptureEncoder} that streams raw RGBA frames to ffmpeg and produces a
@@ -19,30 +22,117 @@ import java.util.Optional;
  * so the producer hot path is a raw byte write.
  */
 public final class FfmpegEncoder implements CaptureEncoder {
+    @FunctionalInterface
+    interface ProcessLauncher {
+        Process start(List<String> command) throws IOException;
+    }
+
+    interface LifecycleSeam {
+        LifecycleSeam NONE = new LifecycleSeam() {};
+        default void beforeMuxPublication(Process process) throws InterruptedException {}
+        default void beforeSuccessPublication() throws InterruptedException {}
+    }
+
+    private static final long DEFAULT_PROCESS_TIMEOUT_MILLIS = 30_000;
 
     private final String ffmpeg;
     private final int scale;
     private final int sampleRate0;            // captured for phase 2
+    private final ProcessLauncher launcher;
+    private final long processTimeoutMillis;
+    private final LifecycleSeam lifecycleSeam;
+    private final Object lifecycleLock = new Object();
     private Path finalOut;
     private Path tempVideo;
     private Path tempAudio;
     private Process videoProc;
+    private Process muxProc;
     private OutputStream videoStdin;
     private OutputStream audioOut;
     private Thread stderrDrain;
     private int sampleRate;
+    private boolean terminal;
+    private boolean aborted;
+    /** Tail of ffmpeg's stderr, bounded so a chatty encoder cannot grow it. */
+    private static final int DIAGNOSTICS_LIMIT = 4096;
+    private final StringBuilder diagnostics = new StringBuilder();
+
+    private CaptureCodecs.Codec videoCodec = CaptureCodecs.video("ffv1");
+    private CaptureCodecs.Codec audioCodec = CaptureCodecs.audio("flac");
+    private String pass1Override = FfmpegCommandTemplate.DEFAULT;
+    private String pass2Override = FfmpegCommandTemplate.DEFAULT;
+
+    /**
+     * Replaces the argument list of either ffmpeg pass. {@code "default"} keeps
+     * the engine's command; an empty second pass skips muxing entirely and
+     * publishes the first pass's output, so the recording has no audio track.
+     * An empty first pass is rejected: that is where frames are encoded.
+     */
+    public void setCommandOverrides(String pass1, String pass2) {
+        if (FfmpegCommandTemplate.skipsPass(pass1)) {
+            throw new IllegalArgumentException(
+                    "the first ffmpeg pass encodes the submitted frames and cannot"
+                            + " be skipped; use \"default\" for the engine's command");
+        }
+        this.pass1Override = pass1;
+        this.pass2Override = pass2;
+    }
+
+    private boolean skipsMux() {
+        return FfmpegCommandTemplate.skipsPass(pass2Override);
+    }
+
+    /**
+     * Selects the encoders for subsequent recordings. Defaults are FFV1 and
+     * FLAC, which reproduce the submitted frames and samples exactly.
+     *
+     * @throws IllegalArgumentException on an unknown codec name, so a typo in
+     *         configuration fails before a recording starts
+     */
+    public void setCodecs(String video, String audio) {
+        this.videoCodec = CaptureCodecs.video(video);
+        this.audioCodec = CaptureCodecs.audio(audio);
+    }
+
+    public CaptureCodecs.Codec videoCodec() {
+        return videoCodec;
+    }
+
+    public CaptureCodecs.Codec audioCodec() {
+        return audioCodec;
+    }
 
     /** @param ffmpeg path/name of the ffmpeg executable; @param scale integer upscale factor */
     public FfmpegEncoder(String ffmpeg, int scale) {
+        this(ffmpeg, scale, command -> new ProcessBuilder(command).redirectErrorStream(false).start(),
+                DEFAULT_PROCESS_TIMEOUT_MILLIS, LifecycleSeam.NONE);
+    }
+
+    FfmpegEncoder(String ffmpeg, int scale, ProcessLauncher launcher, long processTimeoutMillis) {
+        this(ffmpeg, scale, launcher, processTimeoutMillis, LifecycleSeam.NONE);
+    }
+
+    FfmpegEncoder(String ffmpeg, int scale, ProcessLauncher launcher, long processTimeoutMillis,
+                  LifecycleSeam lifecycleSeam) {
         this.ffmpeg = ffmpeg;
         this.scale = Math.max(1, scale);
         this.sampleRate0 = 0;
+        this.launcher = launcher;
+        this.processTimeoutMillis = Math.max(1, processTimeoutMillis);
+        this.lifecycleSeam = lifecycleSeam;
     }
 
     // ---- pure helpers (unit-tested) ----
 
     static List<String> phase1Command(String ffmpeg, Path videoOut,
                                       int width, int height, int fps, int scale) {
+        return phase1Command(ffmpeg, videoOut, width, height, fps, scale,
+                CaptureCodecs.video("ffv1"));
+    }
+
+    static List<String> phase1Command(String ffmpeg, Path videoOut,
+                                      int width, int height, int fps, int scale,
+                                      CaptureCodecs.Codec video) {
         List<String> c = new ArrayList<>();
         c.add(ffmpeg);
         c.add("-y");
@@ -53,7 +143,7 @@ public final class FfmpegEncoder implements CaptureEncoder {
         c.add("-i"); c.add("pipe:0");
         c.add("-vf"); c.add("vflip,scale=" + (width * scale) + ":" + (height * scale)
                 + ":flags=neighbor");
-        c.add("-c:v"); c.add("ffv1");
+        c.addAll(video.arguments());
         c.add("-an");
         c.add(videoOut.toAbsolutePath().toString());
         return c;
@@ -61,6 +151,13 @@ public final class FfmpegEncoder implements CaptureEncoder {
 
     static List<String> phase2MuxCommand(String ffmpeg, Path videoMkv, Path audioRaw,
                                          int sampleRate, Path finalOut) {
+        return phase2MuxCommand(ffmpeg, videoMkv, audioRaw, sampleRate, finalOut,
+                CaptureCodecs.audio("flac"));
+    }
+
+    static List<String> phase2MuxCommand(String ffmpeg, Path videoMkv, Path audioRaw,
+                                         int sampleRate, Path finalOut,
+                                         CaptureCodecs.Codec audio) {
         List<String> c = new ArrayList<>();
         c.add(ffmpeg);
         c.add("-y");
@@ -70,7 +167,7 @@ public final class FfmpegEncoder implements CaptureEncoder {
         c.add("-ac"); c.add("2");
         c.add("-i"); c.add(audioRaw.toAbsolutePath().toString());
         c.add("-c:v"); c.add("copy");
-        c.add("-c:a"); c.add("flac");
+        c.addAll(audio.arguments());
         c.add(finalOut.toAbsolutePath().toString());
         return c;
     }
@@ -108,18 +205,34 @@ public final class FfmpegEncoder implements CaptureEncoder {
         this.sampleRate = sampleRate;
         try {
             Files.createDirectories(output.toAbsolutePath().getParent());
-            this.tempVideo = Files.createTempFile("trace-capture-", ".video.mkv");
-            this.tempAudio = Files.createTempFile("trace-capture-", ".audio.raw");
-            ProcessBuilder pb = new ProcessBuilder(
-                    phase1Command(ffmpeg, tempVideo, width, height, fps, scale));
-            pb.redirectErrorStream(false);
-            this.videoProc = pb.start();
+            // Beside the final file, not java.io.tmpdir. The phase-1 video is
+            // lossless FFV1 and the raw audio is uncompressed, so together they
+            // are the same order of magnitude as the finished recording -- on
+            // Linux /tmp is routinely a RAM-backed tmpfs a fraction of the disk
+            // size, where a long capture dies partway with ENOSPC. The output
+            // directory is the one the user chose to receive a file this big.
+            Path workingDir = output.toAbsolutePath().getParent();
+            this.tempVideo = Files.createTempFile(workingDir, "capture-", ".video.mkv");
+            this.tempAudio = Files.createTempFile(workingDir, "capture-", ".audio.raw");
+            this.videoProc = launcher.start(FfmpegCommandTemplate.usesBuiltIn(pass1Override)
+                    ? phase1Command(ffmpeg, tempVideo, width, height, fps, scale, videoCodec)
+                    : prefixed(FfmpegCommandTemplate.expand(pass1Override, java.util.Map.of(
+                            "width", Integer.toString(width),
+                            "height", Integer.toString(height),
+                            "fps", Integer.toString(fps),
+                            "scale", Integer.toString(this.scale),
+                            "scaledWidth", Integer.toString(width * this.scale),
+                            "scaledHeight", Integer.toString(height * this.scale),
+                            "videoCodecArgs", String.join(" ", videoCodec.arguments()),
+                            "videoOut", tempVideo.toAbsolutePath().toString()))));
             this.videoStdin = videoProc.getOutputStream();
             this.audioOut = Files.newOutputStream(tempAudio);
             this.stderrDrain = drainAsync(videoProc);
         } catch (IOException e) {
+            String detail = ffmpegDiagnostics();
             abort();
-            throw new CaptureException("failed to start ffmpeg video process", e);
+            throw new CaptureException(
+                    "failed to start ffmpeg video process" + detail, e);
         }
     }
 
@@ -138,28 +251,73 @@ public final class FfmpegEncoder implements CaptureEncoder {
             }
             audioOut.write(bytes);
         } catch (IOException e) {
+            String detail = ffmpegDiagnostics();
             abort();
-            throw new CaptureException("ffmpeg write failed", e);
+            throw new CaptureException("ffmpeg write failed" + detail, e);
         }
     }
 
     @Override
     public Path finish() throws CaptureException {
+        synchronized (lifecycleLock) {
+            if (aborted) throw new CaptureException("ffmpeg capture aborted");
+            if (terminal) throw new CaptureException("ffmpeg capture already finalized");
+        }
+        boolean success = false;
         try {
             videoStdin.close();              // EOF -> ffmpeg finalizes video
-            int vexit = videoProc.waitFor();
+            int vexit = waitForProcess(videoProc, "video");
             if (stderrDrain != null) stderrDrain.join(2000);
             closeAudioOut();
             if (vexit != 0) throw new CaptureException("ffmpeg video exited " + vexit);
+            if (skipsMux()) {
+                // Publish the first pass's output as-is. The raw audio is
+                // discarded with the other temporaries: there is no second pass
+                // to mux it in, so the recording is video-only by request.
+                Files.createDirectories(finalOut.toAbsolutePath().getParent());
+                Files.move(tempVideo, finalOut,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                lifecycleSeam.beforeSuccessPublication();
+                synchronized (lifecycleLock) {
+                    if (aborted) {
+                        throw new CaptureException(
+                                "ffmpeg capture aborted before success publication");
+                    }
+                    terminal = true;
+                    success = true;
+                }
+                return finalOut;
+            }
             // phase 2 mux
-            ProcessBuilder pb = new ProcessBuilder(
-                    phase2MuxCommand(ffmpeg, tempVideo, tempAudio, sampleRate, finalOut));
-            pb.redirectErrorStream(false);
-            Process mux = pb.start();
-            Thread muxDrain = drainAsync(mux);
-            int mexit = mux.waitFor();
+            Process launchedMux = launcher.start(
+                    FfmpegCommandTemplate.usesBuiltIn(pass2Override)
+                            ? phase2MuxCommand(ffmpeg, tempVideo, tempAudio, sampleRate,
+                                    finalOut, audioCodec)
+                            : prefixed(FfmpegCommandTemplate.expand(pass2Override,
+                                    java.util.Map.of(
+                                            "videoIn", tempVideo.toAbsolutePath().toString(),
+                                            "audioIn", tempAudio.toAbsolutePath().toString(),
+                                            "sampleRate", Integer.toString(sampleRate),
+                                            "audioCodecArgs", String.join(" ", audioCodec.arguments()),
+                                            "output", finalOut.toAbsolutePath().toString()))));
+            lifecycleSeam.beforeMuxPublication(launchedMux);
+            synchronized (lifecycleLock) {
+                if (aborted) {
+                    destroyAndWait(launchedMux);
+                    throw new CaptureException("ffmpeg capture aborted before mux publication");
+                }
+                muxProc = launchedMux;
+            }
+            Thread muxDrain = drainAsync(launchedMux);
+            int mexit = waitForProcess(launchedMux, "mux");
             muxDrain.join(2000);
             if (mexit != 0) throw new CaptureException("ffmpeg mux exited " + mexit);
+            lifecycleSeam.beforeSuccessPublication();
+            synchronized (lifecycleLock) {
+                if (aborted) throw new CaptureException("ffmpeg capture aborted before success publication");
+                terminal = true;
+                success = true;
+            }
             return finalOut;
         } catch (IOException e) {
             throw new CaptureException("ffmpeg finish failed", e);
@@ -170,24 +328,123 @@ public final class FfmpegEncoder implements CaptureEncoder {
             closeAudioOutQuietly();
             deleteQuietly(tempVideo);
             deleteQuietly(tempAudio);
+            if (!success) {
+                destroyAndWait(videoProc);
+                destroyAndWait(muxProc);
+                deleteQuietly(finalOut);
+                synchronized (lifecycleLock) { terminal = true; }
+            }
         }
     }
 
     @Override
     public void abort() {
-        try { if (videoStdin != null) videoStdin.close(); } catch (IOException ignored) { }
-        closeAudioOutQuietly();
-        if (videoProc != null) videoProc.destroyForcibly();
-        deleteQuietly(tempVideo);
-        deleteQuietly(tempAudio);
+        abortUntil(System.nanoTime() + Duration.ofMillis(processTimeoutMillis).toNanos());
     }
 
-    private static Thread drainAsync(Process p) {
+    void abortUntil(long deadlineNanos) {
+        Process video;
+        Process mux;
+        synchronized (lifecycleLock) {
+            if (aborted || terminal) return;
+            aborted = true;
+            video = videoProc;
+            mux = muxProc;
+        }
+        try { if (videoStdin != null) videoStdin.close(); } catch (IOException ignored) { }
+        closeAudioOutQuietly();
+        forceDestroy(video);
+        forceDestroy(mux);
+        waitUntil(video, deadlineNanos);
+        waitUntil(mux, deadlineNanos);
+        deleteQuietly(tempVideo);
+        deleteQuietly(tempAudio);
+        deleteQuietly(finalOut);
+        synchronized (lifecycleLock) { terminal = true; }
+    }
+
+    private static void forceDestroy(Process process) {
+        if (process != null && process.isAlive()) process.destroyForcibly();
+    }
+
+    private static void waitUntil(Process process, long deadlineNanos) {
+        if (process == null) return;
+        long remaining = Math.max(0, deadlineNanos - System.nanoTime());
+        try {
+            process.waitFor(remaining, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private int waitForProcess(Process process, String phase)
+            throws InterruptedException, CaptureException {
+        if (!process.waitFor(processTimeoutMillis, TimeUnit.MILLISECONDS)) {
+            process.destroyForcibly();
+            process.waitFor(processTimeoutMillis, TimeUnit.MILLISECONDS);
+            throw new CaptureException("ffmpeg " + phase + " process timed out");
+        }
+        return process.exitValue();
+    }
+
+    private void destroyAndWait(Process process) {
+        if (process == null) return;
+        if (process.isAlive()) process.destroyForcibly();
+        try {
+            process.waitFor(processTimeoutMillis, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private List<String> prefixed(List<String> arguments) {
+        List<String> command = new ArrayList<>(arguments.size() + 1);
+        command.add(ffmpeg);
+        command.addAll(arguments);
+        return command;
+    }
+
+    private void retainDiagnostics(String chunk) {
+        synchronized (diagnostics) {
+            diagnostics.append(chunk);
+            int excess = diagnostics.length() - DIAGNOSTICS_LIMIT;
+            if (excess > 0) {
+                diagnostics.delete(0, excess);
+            }
+        }
+    }
+
+    /**
+     * The last of ffmpeg's own output, for attaching to a failure. ffmpeg
+     * reports why it stopped on stderr and then exits; the write that fails
+     * afterwards only knows the pipe is gone.
+     */
+    private String ffmpegDiagnostics() {
+        synchronized (diagnostics) {
+            String tail = diagnostics.toString().strip();
+            return tail.isEmpty() ? "" : "; ffmpeg said: " + lastLines(tail, 3);
+        }
+    }
+
+    private static String lastLines(String text, int count) {
+        String[] lines = text.split("\\R");
+        int from = Math.max(0, lines.length - count);
+        return String.join(" | ", java.util.Arrays.copyOfRange(lines, from, lines.length));
+    }
+
+    private Thread drainAsync(Process p) {
         Thread t = new Thread(() -> {
             try (var in = p.getErrorStream()) {
                 byte[] buf = new byte[4096];
-                while (in.read(buf) >= 0) {
-                    // discard ffmpeg diagnostics; just keep the pipe drained
+                int read;
+                while ((read = in.read(buf)) >= 0) {
+                    // Keep the pipe drained, but retain the tail: when ffmpeg
+                    // exits, its stdin becomes a NullOutputStream and every
+                    // later write fails with a bare "Stream closed". Without
+                    // these lines the actual cause -- "No space left on
+                    // device", an unsupported pixel format, a bad argument --
+                    // is lost and the caller is left with a symptom.
+                    retainDiagnostics(new String(buf, 0, read, StandardCharsets.UTF_8));
                 }
             } catch (IOException ignored) {
             }

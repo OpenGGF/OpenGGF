@@ -39,13 +39,12 @@ public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBl
 
         boolean hadRings = playerEntity.getRingCount() > 0;
         if (hadRings && !playerEntity.hasShield()) {
-            // The VBlank sample can expose HurtCharacter's routine-0 Obj37
-            // owner before that slot executes. Materialize the spill at the
-            // ordinary post-player phase but defer Ring_count's clear to the
-            // owner's first object update.
-            // ROM: HurtCharacter / Obj_Bouncing_Ring loc_102A8 and loc_1A67A
-            // (sonic3k.asm:21091-21113,35579-35648).
-            services().spawnLostRingsWithDeferredOwner(playerEntity, frameCounter);
+            // HurtCharacter reserves the Obj37 owner; the shared slot scheduler
+            // derives whether its initializer clears Ring_count this pass or
+            // the next. This object has no separate ring-clear rule: it reaches
+            // the same HurtCharacter path as ordinary touch damage.
+            // ROM: sonic3k.asm:21065-21077, 35549-35616.
+            services().spawnLostRingsAfterCurrentFrame(playerEntity, frameCounter);
         }
         playerEntity.applyHurtOrDeath(sourceX, DamageCause.NORMAL, hadRings);
     }

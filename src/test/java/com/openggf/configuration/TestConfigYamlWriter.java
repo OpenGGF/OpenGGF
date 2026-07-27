@@ -73,4 +73,16 @@ class TestConfigYamlWriter {
         ConfigFlattener.Result r = ConfigFlattener.flatten(parsed);
         assertEquals("1", r.flat().get(SonicConfiguration.P1_A.name()));
     }
+
+    /**
+     * A saved config must round-trip a chord, and in one canonical spelling, so
+     * a value the player typed in any case or modifier order comes back the same.
+     */
+    @Test
+    void aChordedKeyValueIsWrittenInCanonicalForm() {
+        Map<String, Object> config = defaults();
+        config.put(SonicConfiguration.CAPTURE_TOGGLE_KEY.name(), "shift+o");
+
+        assertTrue(new ConfigYamlWriter().write(config).contains("toggleKey: SHIFT+O"));
+    }
 }

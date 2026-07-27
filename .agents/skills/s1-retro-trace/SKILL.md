@@ -148,6 +148,14 @@ Verify:
 
 After recording, copy the three output files to the correct test resource directory.
 
+**Payloads are committed gzipped.** `TestTraceFixtureCompressionGuard` fails the build on
+a `physics*.csv` / `aux_state*.jsonl` under `src/test/resources/traces/` that is not in
+`src/test/resources/trace-guard/uncompressed-payload-baseline.txt` — uncompressed they run
+to hundreds of MB and exceed GitHub's per-file limit. The commands below refresh fixtures
+that are already in that baseline (the stable-retro `*_fullrun` and `credits_*` sets), so
+they copy in place. For a **new** fixture directory, gzip both payloads first
+(`gzip -9 -n "$SRC/physics.csv"`) and copy the `.gz` files instead.
+
 **Full-run traces (GHZ1/MZ1):**
 ```bash
 SRC="tools/retro/trace_output"
@@ -182,7 +190,7 @@ mvn test -Dtest="*TraceReplay"
 Expected output:
 - GHZ1 (`TestS1Ghz1TraceReplay`) should PASS
 - Credits demo 6 / SBZ2 (`TestS1Credits06Sbz2TraceReplay`) should PASS
-- MZ1 (`TestS1Mz1TraceReplay`) and the other credits demos (Credits00–Credits05, Credits07): current per-trace error/warning counts live in `docs/TRACE_FRONTIER_LOG.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
+- MZ1 (`TestS1Mz1TraceReplay`) and the other credits demos (Credits00–Credits05, Credits07): current per-trace error/warning counts live in `docs/status/trace-frontier-log.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
 
 ## Step 4: Interpret Results
 

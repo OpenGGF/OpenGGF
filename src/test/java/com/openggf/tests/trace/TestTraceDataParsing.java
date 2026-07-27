@@ -1,4 +1,5 @@
 package com.openggf.tests.trace;
+import com.openggf.tests.TestTempFiles;
 import com.openggf.trace.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,7 +49,7 @@ public class TestTraceDataParsing {
 
     @Test
     void csvVersionFourAcceptsStableRetroV22TwentyColumnRows() throws IOException {
-        Path dir = Files.createTempDirectory("trace-stable-retro-v22");
+        Path dir = TestTempFiles.createTempDirectory("trace-stable-retro-v22");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s1",
@@ -81,7 +82,7 @@ public class TestTraceDataParsing {
 
     @Test
     void metadataParsesRecordedTeamWhenPresent() throws IOException {
-        Path dir = Files.createTempDirectory("trace-meta-team");
+        Path dir = TestTempFiles.createTempDirectory("trace-meta-team");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s2",
@@ -118,7 +119,7 @@ public class TestTraceDataParsing {
 
     @Test
     void parsesExtendedS2LevelSelectMetadata() throws IOException {
-        Path dir = Files.createTempDirectory("s2-level-select-meta");
+        Path dir = TestTempFiles.createTempDirectory("s2-level-select-meta");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s2",
@@ -166,7 +167,7 @@ public class TestTraceDataParsing {
 
     @Test
     void metadataParsesInitialRngSeedWhenPresent() throws IOException {
-        Path dir = Files.createTempDirectory("trace-meta-rng");
+        Path dir = TestTempFiles.createTempDirectory("trace-meta-rng");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -236,7 +237,7 @@ public class TestTraceDataParsing {
 
     @Test
     void v5TraceParsesRecordedSidekickState() throws IOException {
-        Path dir = Files.createTempDirectory("trace-v5-sidekick");
+        Path dir = TestTempFiles.createTempDirectory("trace-v5-sidekick");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s2",
@@ -283,7 +284,7 @@ public class TestTraceDataParsing {
 
     @Test
     void v5TraceExposesTrackedCharactersByName() throws IOException {
-        Path dir = Files.createTempDirectory("trace-v5-characters");
+        Path dir = TestTempFiles.createTempDirectory("trace-v5-characters");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s2",
@@ -333,7 +334,7 @@ public class TestTraceDataParsing {
 
     @Test
     void v6TraceParsesExplicitSonicAndTailsBlocks() throws IOException {
-        Path dir = Files.createTempDirectory("trace-v6-characters");
+        Path dir = TestTempFiles.createTempDirectory("trace-v6-characters");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s2",
@@ -390,7 +391,7 @@ public class TestTraceDataParsing {
 
     @Test
     void v7TraceParsesPlayerAndSidekickAnimationState() throws IOException {
-        Path dir = Files.createTempDirectory("trace-v7-animation");
+        Path dir = TestTempFiles.createTempDirectory("trace-v7-animation");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s2",
@@ -504,7 +505,7 @@ public class TestTraceDataParsing {
 
     @Test
     void loadsAuxEventsFromGzipWhenPlainJsonlIsAbsent() throws IOException {
-        Path dir = Files.createTempDirectory("trace-gz-aux");
+        Path dir = TestTempFiles.createTempDirectory("trace-gz-aux");
         writeMinimalTraceFiles(dir);
         writeGzipString(dir.resolve("aux_state.jsonl.gz"), """
             {"frame":0,"event":"checkpoint","name":"gz_aux_loaded","actual_zone_id":0,"actual_act":0,"apparent_act":0,"game_mode":12}
@@ -520,7 +521,7 @@ public class TestTraceDataParsing {
 
     @Test
     void plainAuxJsonlTakesPrecedenceOverGzipSidecar() throws IOException {
-        Path dir = Files.createTempDirectory("trace-plain-aux-first");
+        Path dir = TestTempFiles.createTempDirectory("trace-plain-aux-first");
         writeMinimalTraceFiles(dir);
         Files.writeString(dir.resolve("aux_state.jsonl"), """
             {"frame":0,"event":"checkpoint","name":"plain_aux_loaded","actual_zone_id":0,"actual_act":0,"apparent_act":0,"game_mode":12}
@@ -539,7 +540,7 @@ public class TestTraceDataParsing {
 
     @Test
     void loadsPhysicsFramesFromGzipWhenPlainCsvIsAbsent() throws IOException {
-        Path dir = Files.createTempDirectory("trace-gz-physics");
+        Path dir = TestTempFiles.createTempDirectory("trace-gz-physics");
         writeMinimalMetadata(dir);
         writeGzipString(dir.resolve("physics.csv.gz"), """
             frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter
@@ -598,7 +599,7 @@ public class TestTraceDataParsing {
 
     @Test
     void s3kLifeCountCaptureUsesBk2OffsetForVIntRunCounterPhase() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-vint-handler-word");
+        Path dir = TestTempFiles.createTempDirectory("s3k-vint-handler-word");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -681,7 +682,7 @@ public class TestTraceDataParsing {
 
     @Test
     void latestCheckpointLookupReturnsNearestEarlierCheckpoint() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-trace");
+        Path dir = TestTempFiles.createTempDirectory("s3k-trace");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -723,7 +724,7 @@ public class TestTraceDataParsing {
 
     @Test
     void reportsAdvertisedCageAuxSchemasMissingFromAuxStream() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-trace");
+        Path dir = TestTempFiles.createTempDirectory("s3k-trace");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -758,7 +759,7 @@ public class TestTraceDataParsing {
 
     @Test
     void parsesPerFrameCpuStateFollowRingDiagnostics() throws IOException {
-        Path dir = Files.createTempDirectory("s2-cpu-state-diag");
+        Path dir = TestTempFiles.createTempDirectory("s2-cpu-state-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s2",
@@ -803,7 +804,7 @@ public class TestTraceDataParsing {
 
     @Test
     void reportsAdvertisedCpuStateMissingFromAuxStream() throws IOException {
-        Path dir = Files.createTempDirectory("s2-missing-cpu-state");
+        Path dir = TestTempFiles.createTempDirectory("s2-missing-cpu-state");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s2",
@@ -837,7 +838,7 @@ public class TestTraceDataParsing {
 
     @Test
     void parsesS1Obj64StateDiagnostics() throws IOException {
-        Path dir = Files.createTempDirectory("s1-obj64-state-diag");
+        Path dir = TestTempFiles.createTempDirectory("s1-obj64-state-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s1",
@@ -882,7 +883,7 @@ public class TestTraceDataParsing {
 
     @Test
     void reportsAdvertisedS1Obj64DiagnosticsMissingFromAuxStream() throws IOException {
-        Path dir = Files.createTempDirectory("s1-missing-obj64-state");
+        Path dir = TestTempFiles.createTempDirectory("s1-missing-obj64-state");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s1",
@@ -915,7 +916,7 @@ public class TestTraceDataParsing {
 
     @Test
     void latestAuxStateLookupsDoNotRebuildFrameIndexPerCall() throws IOException {
-        Path dir = Files.createTempDirectory("trace-latest-aux-index");
+        Path dir = TestTempFiles.createTempDirectory("trace-latest-aux-index");
         int frameCount = 10_000;
         Files.writeString(dir.resolve("metadata.json"), """
             {
@@ -961,7 +962,7 @@ public class TestTraceDataParsing {
 
     @Test
     void parsesS3kSidekickDiagnosticAuxEventsAndMetadataFlags() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-sidekick-diag-trace");
+        Path dir = TestTempFiles.createTempDirectory("s3k-sidekick-diag-trace");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1017,7 +1018,7 @@ public class TestTraceDataParsing {
 
     @Test
     void reportsAdvertisedSidekickDiagnosticsMissingFromAuxStream() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-missing-sidekick-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-missing-sidekick-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1052,7 +1053,7 @@ public class TestTraceDataParsing {
 
     @Test
     void parsesS3kPositionWriteDiagnosticsAndMetadataFlag() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-position-write-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-position-write-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1092,7 +1093,7 @@ public class TestTraceDataParsing {
 
     @Test
     void parsesS3kAizBoundaryDiagnosticsAndMetadataFlag() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-aiz-boundary-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-aiz-boundary-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1133,7 +1134,7 @@ public class TestTraceDataParsing {
 
     @Test
     void reportsAdvertisedAizBoundaryDiagnosticsMissingFromAuxStream() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-missing-aiz-boundary-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-missing-aiz-boundary-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1166,7 +1167,7 @@ public class TestTraceDataParsing {
 
     @Test
     void parsesS3kAizTransitionFloorDiagnosticsAndMetadataFlag() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-aiz-transition-floor-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-aiz-transition-floor-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1212,7 +1213,7 @@ public class TestTraceDataParsing {
 
     @Test
     void reportsAdvertisedAizTransitionFloorDiagnosticsMissingFromAuxStream() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-missing-aiz-transition-floor-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-missing-aiz-transition-floor-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1245,7 +1246,7 @@ public class TestTraceDataParsing {
 
     @Test
     void parsesS3kAizHandoffTerrainDiagnosticsAndMetadataFlag() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-aiz-handoff-terrain-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-aiz-handoff-terrain-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1291,7 +1292,7 @@ public class TestTraceDataParsing {
 
     @Test
     void reportsAdvertisedAizHandoffTerrainDiagnosticsMissingFromAuxStream() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-missing-aiz-handoff-terrain-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-missing-aiz-handoff-terrain-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1324,7 +1325,7 @@ public class TestTraceDataParsing {
 
     @Test
     void parsesS3kFixedAirCountdownDiagnosticsAndMetadataFlag() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-air-countdown-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-air-countdown-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1375,7 +1376,7 @@ public class TestTraceDataParsing {
 
     @Test
     void parsesS3kRngCallDiagnosticsAndMetadataFlag() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-rng-call-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-rng-call-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",
@@ -1424,7 +1425,7 @@ public class TestTraceDataParsing {
 
     @Test
     void reportsAdvertisedAirCountdownDiagnosticsMissingFromAuxStream() throws IOException {
-        Path dir = Files.createTempDirectory("s3k-missing-air-countdown-diag");
+        Path dir = TestTempFiles.createTempDirectory("s3k-missing-air-countdown-diag");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",

@@ -8,6 +8,7 @@
 .vscode/
 /config.json
 /config.yaml
+/config.yaml.example
 /config.json.bak
 *.bin
 *.smd
@@ -31,8 +32,8 @@ __pycache__/
 stable-retro-*/
 stable-retro-*.zip
 
-# Audio debug files (keep locally, don't track)
-docs/audio-debug/
+# Raw audio captures are ignored globally; curated documentation research
+# assets live under docs/architecture/research/audio/.
 *.pcm
 *.raw
 
@@ -40,9 +41,6 @@ docs/audio-debug/
 /src/test/resources/audio-reference/
 /src/test/resources/visual-reference/
 /src/test/resources/EHZ*.kos
-
-# Archived planning docs
-docs/archive/
 
 # Debug tools (uncompiled standalone scripts)
 tools/*

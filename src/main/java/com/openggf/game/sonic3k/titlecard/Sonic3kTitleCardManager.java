@@ -466,6 +466,16 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     }
 
     @Override
+    public boolean shouldRunLevelObjectsDuringLockedPhase() {
+        return false;
+    }
+
+    @Override
+    public boolean shouldAdvanceVblankClockDuringLockedPhase() {
+        return true;
+    }
+
+    @Override
     public void draw() {
         ensureArtCached();
 

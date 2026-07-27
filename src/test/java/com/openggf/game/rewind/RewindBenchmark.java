@@ -1374,14 +1374,14 @@ public class RewindBenchmark {
         }
 
         @Override
-        public void step(Bk2FrameInput inputs) {
+        public com.openggf.LevelFrameResult step(Bk2FrameInput inputs) {
             int p1 = inputs.p1InputMask();
             boolean up    = (p1 & AbstractPlayableSprite.INPUT_UP)    != 0;
             boolean down  = (p1 & AbstractPlayableSprite.INPUT_DOWN)  != 0;
             boolean left  = (p1 & AbstractPlayableSprite.INPUT_LEFT)  != 0;
             boolean right = (p1 & AbstractPlayableSprite.INPUT_RIGHT) != 0;
             boolean jump  = (p1 & AbstractPlayableSprite.INPUT_JUMP)  != 0;
-            fixture.runner().stepFrame(up, down, left, right, jump,
+            return fixture.runner().stepFrame(up, down, left, right, jump,
                     inputs.p2InputMask(), inputs.p2StartPressed());
         }
 

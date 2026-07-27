@@ -4566,6 +4566,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         jumpPressHistory[i] = 0;
                         statusHistory[i] = 0;
                 }
+                historyPos = 0;
                 followerHistoryRecordedThisTick = false;
         }
 

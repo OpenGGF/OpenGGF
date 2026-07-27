@@ -38,7 +38,6 @@ public class TestTitleScreenAudioRegression {
     private static final class CountingBackend implements AudioBackend {
         int musicPlayCalls = 0;
         int sparkleSfxCalls = 0;
-        int stopPcmCalls = 0;
 
         @Override
         public void init() {
@@ -80,11 +79,6 @@ public class TestTitleScreenAudioRegression {
 
         @Override
         public void stopPlayback() {
-        }
-
-        @Override
-        public void stopPcmSample() {
-            stopPcmCalls++;
         }
 
         @Override
@@ -143,14 +137,24 @@ public class TestTitleScreenAudioRegression {
     }
 
     @Test
-    void titleScreenResetStopsActiveSegaPcm() {
+    void titleScreenResetStopsActiveSegaPcm() throws Exception {
         AudioManager audioManager = AudioManager.getInstance();
         CountingBackend backend = new CountingBackend();
         audioManager.setBackend(backend);
+        audioManager.setAudioProfile(new Sonic2AudioProfile());
+        audioManager.setRom(GameServices.rom().getRom());
+        audioManager.playSegaPcm();
+        audioManager.presentFrame(
+                com.openggf.audio.presentation.PresentationMode.SILENT);
+        assertNotNull(audioManager.captureLogicalSnapshot()
+                .presentation().rawPcmVoiceId());
 
         TitleScreenManager.getInstance().reset();
+        audioManager.presentFrame(
+                com.openggf.audio.presentation.PresentationMode.SILENT);
 
-        assertEquals(1, backend.stopPcmCalls,
+        assertEquals(null, audioManager.captureLogicalSnapshot()
+                        .presentation().rawPcmVoiceId(),
                 "Reset must stop any active SEGA PCM before returning to another title/game");
     }
 
@@ -203,8 +207,20 @@ public class TestTitleScreenAudioRegression {
             input.update();
         }
 
-        assertEquals(1, backend.musicPlayCalls, "Title music should be triggered once");
-        assertEquals(10, backend.sparkleSfxCalls,
+        long musicCommands = audioManager.commandTimeline().entries().stream()
+                .map(com.openggf.audio.rewind.AudioTimelineEntry::command)
+                .filter(com.openggf.audio.rewind.AudioCommand.PlayMusic.class::isInstance)
+                .count();
+        long sparkleCommands = audioManager.commandTimeline().entries().stream()
+                .map(com.openggf.audio.rewind.AudioTimelineEntry::command)
+                .filter(com.openggf.audio.rewind.AudioCommand.PlaySfx.class::isInstance)
+                .map(com.openggf.audio.rewind.AudioCommand.PlaySfx.class::cast)
+                .filter(command -> command.sfxId() == Sonic2Sfx.SPARKLE.id)
+                .count();
+        assertEquals(1, musicCommands, "Title music should be triggered once");
+        assertEquals(10, sparkleCommands,
                 "Title sparkle SFX should trigger exactly 10 times (init + 9 positions)");
+        assertEquals(0, backend.musicPlayCalls);
+        assertEquals(0, backend.sparkleSfxCalls);
     }
 }

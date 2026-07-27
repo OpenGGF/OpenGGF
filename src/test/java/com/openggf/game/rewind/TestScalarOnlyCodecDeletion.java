@@ -7791,6 +7791,15 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    @Test
+    void animalRoundTripProbeRecognizesDeferredPublicConstructor() {
+        RoundTripSweepResult result =
+                RewindRoundTripHarness.probeClass(AnimalObjectInstance.class.getName());
+
+        assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                "AnimalObjectInstance must remain probeable without restoring eager constructor RNG");
+    }
+
     // =====================================================================
     // Shared sparkle codec deletion: signpost sparkle
     // =====================================================================

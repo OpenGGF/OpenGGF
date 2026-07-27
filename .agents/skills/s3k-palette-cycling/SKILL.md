@@ -160,7 +160,7 @@ Some zones have BOTH systems active simultaneously (e.g., AIZ has cycling for wa
 
 ### Phase 1: Read the Analysis Spec
 
-If a zone analysis spec exists (in `docs/s3k-zones/{zone}-analysis.md`), read the palette cycling section first. It will list:
+If a zone analysis spec exists (in `docs/architecture/research/s3k-zones/{zone}-analysis.md`), read the palette cycling section first. It will list:
 - Number of channels
 - Timer periods
 - Counter step/limit values

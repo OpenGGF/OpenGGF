@@ -95,6 +95,32 @@ class TestS3kCollapsingBridgeParity {
     }
 
     @Test
+    void terrainHandoffClearsBridgeOwnershipBeforeLaterCollapse() throws Exception {
+        CollapsingBridgeObjectInstance bridge = GameServices.level().getObjectManager()
+                .createDynamicObject(() -> new CollapsingBridgeObjectInstance(
+                        new ObjectSpawn(0, 0, 0x0F, 0, 0x00, false, 0)));
+        initialiseMgzBridge(bridge, 0x00);
+        rider.setCentreX((short) 0);
+        GameServices.level().getObjectManager().forceRidingObjectForBootstrap(rider, bridge);
+
+        rider.setCentreX((short) 0x100);
+        GameServices.level().getObjectManager()
+                .processImmediateInlineSolidCheckpoint(bridge, rider, java.util.List.of());
+
+        assertFalse(GameServices.level().getObjectManager().isRidingObject(rider, bridge),
+                "SolidObjectTop walk-off must retire the engine ride owner with the native standing bit");
+        assertFalse(GameServices.level().getObjectManager().hasObjectStandingBit(rider, bridge));
+
+        // The terrain pass grounds Sonic after the bridge's walk-off path.
+        rider.setAir(false);
+        invokePerformCollapse(bridge, rider);
+        bridge.update(1, rider);
+
+        assertFalse(rider.getAir(),
+                "a later collapse must not release a player already handed off to terrain");
+    }
+
+    @Test
     void collapseWaveRelease_publishesNativePreviousAnimationSentinel() throws Exception {
         CollapsingBridgeObjectInstance bridge = newMgzBridge(0x00);
         rider.getAnimationManager().publishPreviousAnimationId(2);

@@ -11,22 +11,90 @@ $ErrorActionPreference = "Stop"
 $luaPath = (Resolve-Path -LiteralPath $LuaScript).Path
 $raw = Get-Content -Raw -LiteralPath $luaPath
 
-function Remove-LuaComments([string]$text) {
-    $withoutBlocks = [regex]::Replace($text, "--\[(=*)\[(?s:.*?)\]\1\]", "")
-    $lines = $withoutBlocks -split "`r?`n"
-    $stripped = foreach ($line in $lines) {
-        $idx = $line.IndexOf("--", [StringComparison]::Ordinal)
-        if ($idx -ge 0) {
-            $line.Substring(0, $idx)
-        } else {
-            $line
-        }
-    }
-    return ($stripped -join "`n")
+function Get-LuaLongClose([string]$text, [int]$start) {
+    if ($start -ge $text.Length -or $text[$start] -ne '[') { return $null }
+    $cursor = $start + 1
+    while ($cursor -lt $text.Length -and $text[$cursor] -eq '=') { $cursor++ }
+    if ($cursor -ge $text.Length -or $text[$cursor] -ne '[') { return $null }
+    return ']' + (('=' * ($cursor - $start - 1)) -join '') + ']'
 }
 
-$executable = Remove-LuaComments $raw
-$preLoop = [regex]::Split($executable, "while\s+true|emu\.frameadvance\s*\(", 2)[0]
+function Remove-LuaCommentsAndStrings([string]$text) {
+    $result = [Text.StringBuilder]::new($text.Length)
+    $lineComment = $false
+    $quote = [char]0
+    $escaped = $false
+    $longClose = $null
+    for ($i = 0; $i -lt $text.Length; $i++) {
+        $current = $text[$i]
+        if ($lineComment) {
+            if ($current -eq "`n") { $lineComment = $false; [void]$result.Append("`n") }
+            else { [void]$result.Append(' ') }
+            continue
+        }
+        if ($null -ne $longClose) {
+            if ($text.Substring($i).StartsWith($longClose, [StringComparison]::Ordinal)) {
+                [void]$result.Append([char]' ', $longClose.Length)
+                $i += $longClose.Length - 1
+                $longClose = $null
+            } elseif ($current -eq "`n") { [void]$result.Append("`n") }
+            else { [void]$result.Append(' ') }
+            continue
+        }
+        if ($quote -ne [char]0) {
+            [void]$result.Append($(if ($current -eq "`n") { "`n" } else { ' ' }))
+            if ($escaped) { $escaped = $false }
+            elseif ($current -eq '\') { $escaped = $true }
+            elseif ($current -eq $quote) { $quote = [char]0 }
+            continue
+        }
+        if ($i + 1 -lt $text.Length -and $text.Substring($i, 2) -eq '--') {
+            $close = Get-LuaLongClose $text ($i + 2)
+            if ($null -ne $close) {
+                [void]$result.Append([char]' ', $close.Length + 2)
+                $i += $close.Length + 1
+                $longClose = $close
+            } else {
+                [void]$result.Append('  ')
+                $i++
+                $lineComment = $true
+            }
+            continue
+        }
+        $close = Get-LuaLongClose $text $i
+        if ($null -ne $close) {
+            [void]$result.Append([char]' ', $close.Length)
+            $i += $close.Length - 1
+            $longClose = $close
+            continue
+        }
+        if ($current -eq "'" -or $current -eq '"') {
+            $quote = $current
+            [void]$result.Append(' ')
+            continue
+        }
+        [void]$result.Append($current)
+    }
+    return $result.ToString()
+}
+
+$executable = Remove-LuaCommentsAndStrings $raw
+$validatedSource = $executable
+if ($executable -match "ProbeRuntime\.run\s*\(") {
+    $runtimePath = $env:OGGF_BIZHAWK_PROBE_RUNTIME
+    $canonicalRuntimePath = (Resolve-Path -LiteralPath
+        (Join-Path $PSScriptRoot "probes\probe_runtime.lua")).Path
+    if ([string]::IsNullOrWhiteSpace($runtimePath) -or
+        -not [IO.Path]::IsPathRooted($runtimePath) -or
+        -not (Test-Path -LiteralPath $runtimePath) -or
+        -not ((Resolve-Path -LiteralPath $runtimePath).Path.Equals(
+            $canonicalRuntimePath, [StringComparison]::OrdinalIgnoreCase))) {
+        Write-Host "ERROR: OGGF_BIZHAWK_PROBE_RUNTIME must name the canonical absolute probe runtime."
+        exit 1
+    }
+    $validatedSource = Remove-LuaCommentsAndStrings (Get-Content -Raw -LiteralPath $canonicalRuntimePath)
+}
+$preLoop = [regex]::Split($validatedSource, "while\s+true|emu\.frameadvance\s*\(", 2)[0]
 $missing = @()
 if ($preLoop -notmatch "emu\.limitframerate\s*\(\s*false\s*\)") {
     $missing += "emu.limitframerate(false)"
@@ -47,8 +115,8 @@ if ($missing.Count -gt 0) {
     exit 1
 }
 
-if ($executable -match "client\.invisibleemulation\s*\(\s*false\s*\)" -or
-    $executable -match "client\.SetSoundOn[\s\S]{0,80}true") {
+if ($validatedSource -match "client\.invisibleemulation\s*\(\s*false\s*\)" -or
+    $validatedSource -match "client\.SetSoundOn[\s\S]{0,80}true") {
     Write-Host "ERROR: Lua diagnostic re-enables rendering or sound. Set BIZHAWK_ALLOW_SLOW_LUA=1 for deliberate visible debugging."
     exit 1
 }

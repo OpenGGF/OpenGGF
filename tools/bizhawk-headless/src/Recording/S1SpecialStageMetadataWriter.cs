@@ -19,7 +19,7 @@ namespace OpenGGF.BizHawk.Headless
     /// only when non-null and is written RAW (plain concatenation, no
     /// escaping). lua_script_version is a capture-session input for the same
     /// reason as in <see cref="S1RunManifestWriter"/>: the canonical
-    /// fixtures stamp "3.15" while the current Lua stamps "3.17", with no
+    /// fixtures stamp "3.15" while the current Lua stamps "3.18", with no
     /// other output-affecting delta (spec §10).
     /// </summary>
     public static class S1SpecialStageMetadataWriter

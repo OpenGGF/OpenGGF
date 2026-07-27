@@ -8,7 +8,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// Fixture-literal tests for the S1 complete-run level-segment
     /// metadata writer: byte comparison against the committed
     /// ghz1_completerun and fz_completerun fixtures (the fixtures are
-    /// stamped lua_script_version 3.14; the current Lua stamps 3.17 and
+    /// stamped lua_script_version 3.14; the current Lua stamps 3.18 and
     /// that line is the ONLY permitted delta beyond recording_date — spec
     /// docs/s1-complete-run-behavior.md section 2), plus the raw-ROM
     /// naming landmines and the %q-parity guard on source_bk2.
@@ -18,7 +18,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string FixtureVersionLine =
             "  \"lua_script_version\": \"3.14\",";
         private const string ProducedVersionLine =
-            "  \"lua_script_version\": \"3.17\",";
+            "  \"lua_script_version\": \"3.18\",";
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
@@ -113,7 +113,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// Line-by-line byte comparison against a committed fixture's
         /// metadata.json: every line must be identical except the version
         /// line, which must be exactly the 3.14 fixture stamp on one side
-        /// and the 3.17 native stamp on the other. No other normalization.
+        /// and the 3.18 native stamp on the other. No other normalization.
         /// </summary>
         private static void AssertMatchesFixtureExceptVersion(
             string fixtureDirectoryName,

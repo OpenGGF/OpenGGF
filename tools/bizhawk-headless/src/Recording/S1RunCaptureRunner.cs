@@ -1,46 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
 
 namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
-    /// One finished run segment with its buffered output file contents.
-    /// ManifestEntry carries the run_manifest.json fields; DirToken is the
-    /// per-segment output subdirectory name (ghz1, ss, ghz2, ghz1_2, ...).
-    /// Special-stage segments always have a byte-empty aux file.
-    /// </summary>
-    public sealed class S1RunSegmentOutput
-    {
-        public S1RunSegmentOutput(
-            RunManifestSegment manifestEntry,
-            string physicsCsv,
-            string auxStateJsonl,
-            string metadataJson)
-        {
-            ManifestEntry = manifestEntry;
-            PhysicsCsv = physicsCsv;
-            AuxStateJsonl = auxStateJsonl;
-            MetadataJson = metadataJson;
-        }
-
-        public RunManifestSegment ManifestEntry { get; private set; }
-
-        public string DirToken
-        {
-            get { return ManifestEntry.Dir; }
-        }
-
-        public string PhysicsCsv { get; private set; }
-        public string AuxStateJsonl { get; private set; }
-        public string MetadataJson { get; private set; }
-    }
-
-    /// <summary>
     /// Result of a detour-aware complete-run capture: the finished
     /// segments' manifest entries in recording order (the file contents
-    /// were streamed to the caller's sink as each segment finalized), the
-    /// recorded transitions, and the formatted run_manifest.json bytes —
+    /// went straight into the caller's sink as the capture produced them),
+    /// the recorded transitions, and the formatted run_manifest.json bytes —
     /// null when the Lua's emission gate suppressed it (no transitions and
     /// no run id), which keeps a stage-free pass output-identical to the
     /// legacy layout.
@@ -91,18 +59,27 @@ namespace OpenGGF.BizHawk.Headless
     /// for precisely this reason). Non-level modes other than $10 finalize
     /// the armed segment and RE-ARM (S1 records the whole playthrough; the
     /// S2 runner's same branch is a run stop).
+    ///
+    /// Segments STREAM: the runner takes writers from its
+    /// <see cref="IRunSegmentSink"/> at each arm and writes rows straight
+    /// through, because no armed segment is ever thrown away — every arm
+    /// reaches exactly one finalize (the level/ss finalizes or the run-end
+    /// funnel).
     /// </summary>
     public static class S1RunCaptureRunner
     {
+        private const byte TitleScreenGameMode = 0x04;
         private const byte LevelGameMode = 0x0C;
         private const byte SpecialStageGameMode = 0x10;
+        private const byte GameModeBaseMask = 0x7F;
 
         public const string LevelTraceProfile = "complete_run";
         public const string SpecialStageTraceProfile = "s1_special_stage";
 
         /// <summary>
-        /// Captures a complete detour-aware pass, delivering each finalized
-        /// segment to <paramref name="segmentSink"/> in recording order.
+        /// Captures a complete detour-aware pass, streaming each segment's
+        /// rows into writers obtained from <paramref name="segmentSink"/>
+        /// and finalizing them in recording order.
         /// <paramref name="runId"/> is null when OGGF_TRACE_RUN_ID is
         /// unset. <paramref name="luaScriptVersion"/> is the session's
         /// version stamp (production:
@@ -112,7 +89,9 @@ namespace OpenGGF.BizHawk.Headless
         /// models S1_STOP_AT_FRAME (0 = off); the movie-done guard folds
         /// the Lua's frame-count and FINISHED checks into "completed frames
         /// >= movie length", evaluated after each advance before any
-        /// recording.
+        /// recording. Only true movie completion maps the observed final
+        /// game mode into expected_movie_end_mode; a configured hard stop
+        /// owns a same-frame tie and omits that field.
         /// </summary>
         public static S1RunCaptureResult Capture(
             Bk2Movie movie,
@@ -122,7 +101,7 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             string luaScriptVersion,
             int stopAtFrame,
-            Action<S1RunSegmentOutput> segmentSink)
+            IRunSegmentSink segmentSink)
         {
             if (movie == null)
             {
@@ -170,7 +149,8 @@ namespace OpenGGF.BizHawk.Headless
                         // Movie input exhausted before the frame-count
                         // guard fired (the Lua's movie.mode() == "FINISHED"
                         // signal): finalize whatever is armed and stop.
-                        state.FinalizeRunEnd();
+                        state.FinalizeRunEnd(MapExpectedMovieEndMode(
+                            S1Ram.U8(host, S1Ram.GameMode)));
                         break;
                     }
                     Bk2Frame frame = frames.Current;
@@ -184,6 +164,7 @@ namespace OpenGGF.BizHawk.Headless
                             + "; expected " + rowsConsumed + ".");
                     }
                     int frameNow = rowsConsumed;
+                    byte gameMode = S1Ram.U8(host, S1Ram.GameMode);
 
                     // Top-of-function stop guard (spec §2 item 1): movie
                     // done or the S1_STOP_AT_FRAME hard stop, before any
@@ -192,14 +173,20 @@ namespace OpenGGF.BizHawk.Headless
                     // ending mid-$10 stops the ss tail promptly. No
                     // OGGF_BK2_FRAME_COUNT-style override exists in S1 —
                     // raw movie length only (S2 delta).
-                    if (frameNow >= movie.FrameCount
-                        || (stopAtFrame > 0 && frameNow >= stopAtFrame))
+                    bool movieCompleted = frameNow >= movie.FrameCount;
+                    bool hardStop =
+                        stopAtFrame > 0 && frameNow >= stopAtFrame;
+                    if (movieCompleted || hardStop)
                     {
-                        state.FinalizeRunEnd();
+                        // S1_STOP_AT_FRAME owns a same-frame tie with movie
+                        // completion, matching the Lua: a configured hard
+                        // stop is never authoritative endpoint metadata.
+                        state.FinalizeRunEnd(
+                            hardStop
+                                ? null
+                                : MapExpectedMovieEndMode(gameMode));
                         break;
                     }
-
-                    byte gameMode = S1Ram.U8(host, S1Ram.GameMode);
 
                     // Block 1: SS entry/continuation (spec §2 item 2).
                     // Gated on `started` so a movie beginning inside $10
@@ -263,6 +250,22 @@ namespace OpenGGF.BizHawk.Headless
             return state.BuildResult();
         }
 
+        private static string MapExpectedMovieEndMode(byte gameMode)
+        {
+            // Bit 7 is S1's PreLevel form of GM_Level ($8C); the ROM clears
+            // it back to $0C when pre-level work finishes. No other mode is
+            // normalized.
+            if ((gameMode & GameModeBaseMask) == LevelGameMode)
+            {
+                return "level";
+            }
+            if (gameMode == TitleScreenGameMode)
+            {
+                return "title_screen";
+            }
+            return null;
+        }
+
         /// <summary>
         /// All mutable run state: the Lua's run globals (segments_done /
         /// transitions_done / segment_dir_counts / detour_active) plus the
@@ -276,7 +279,7 @@ namespace OpenGGF.BizHawk.Headless
             private readonly string sourceBk2;
             private readonly string recordingDate;
             private readonly string luaScriptVersion;
-            private readonly Action<S1RunSegmentOutput> segmentSink;
+            private readonly IRunSegmentSink segmentSink;
 
             private readonly List<RunManifestSegment> segments =
                 new List<RunManifestSegment>();
@@ -295,9 +298,14 @@ namespace OpenGGF.BizHawk.Headless
                 new Dictionary<string, int>();
 
             // Armed-segment state (shared between level and ss segments,
-            // exactly one of which can be armed at a time).
-            private readonly StringBuilder physicsBuf = new StringBuilder();
-            private readonly StringBuilder auxBuf = new StringBuilder();
+            // exactly one of which can be armed at a time). The two writers
+            // belong to the sink and are live only between the arm and its
+            // finalize; nothing here holds the segment's bytes, because no
+            // armed S1 segment is ever thrown away — every arm reaches
+            // exactly one finalize, through the level/ss finalizes or the
+            // run-end funnel.
+            private TextWriter physicsWriter;
+            private TextWriter auxWriter;
             private int traceFrame;
             private int bk2FrameOffset;
             private string dirToken;
@@ -321,7 +329,7 @@ namespace OpenGGF.BizHawk.Headless
                 string sourceBk2,
                 string recordingDate,
                 string luaScriptVersion,
-                Action<S1RunSegmentOutput> segmentSink)
+                IRunSegmentSink segmentSink)
             {
                 this.runId = runId;
                 this.sourceBk2 = sourceBk2;
@@ -367,22 +375,22 @@ namespace OpenGGF.BizHawk.Headless
                     transitions.Add(exit);
                 }
 
-                physicsBuf.Length = 0;
-                auxBuf.Length = 0;
-                physicsBuf.Append(S1TraceCsvWriter.Header).Append('\n');
+                OpenSegmentStreams();
+                WriteLine(physicsWriter, S1TraceCsvWriter.Header);
             }
 
             internal void AppendLevelRow(Bk2Frame frame, IGpgxHost host)
             {
-                physicsBuf.Append(S1TraceCsvWriter.FormatRow(
-                    traceFrame,
-                    S1InputMask.FromFrame(frame),
-                    host));
-                physicsBuf.Append('\n');
+                WriteLine(
+                    physicsWriter,
+                    S1TraceCsvWriter.FormatRow(
+                        traceFrame,
+                        S1InputMask.FromFrame(frame),
+                        host));
                 foreach (string line in auxEngine.ProcessFrame(
                     traceFrame, host, host.IsLagged, host.LagCount))
                 {
-                    auxBuf.Append(line).Append('\n');
+                    WriteLine(auxWriter, line);
                 }
                 traceFrame++;
             }
@@ -416,15 +424,9 @@ namespace OpenGGF.BizHawk.Headless
                     startActRaw + 1,
                     null);
                 segments.Add(entry);
-                segmentSink(new S1RunSegmentOutput(
-                    entry,
-                    physicsBuf.ToString(),
-                    auxBuf.ToString(),
-                    metadata));
+                CloseSegmentStreams(entry, metadata);
                 Started = false;
                 traceFrame = 0;
-                physicsBuf.Length = 0;
-                auxBuf.Length = 0;
             }
 
             /// <summary>
@@ -459,20 +461,21 @@ namespace OpenGGF.BizHawk.Headless
                 // re-read is a stdout self-check with no output-file
                 // effect, so it is not ported).
                 currentSsIndex = S1Ram.U8(host, S1Ram.LastSpecial);
-                physicsBuf.Length = 0;
-                auxBuf.Length = 0;    // The ss aux file stays byte-empty.
-                physicsBuf.Append(S1SpecialStageCsvWriter.Header)
-                    .Append('\n');
+                // The ss aux writer is opened and never written to: the ss
+                // aux file stays byte-empty and must still be published.
+                OpenSegmentStreams();
+                WriteLine(physicsWriter, S1SpecialStageCsvWriter.Header);
             }
 
             internal void WriteSsRow(Bk2Frame frame, IGpgxHost host)
             {
-                physicsBuf.Append(S1SpecialStageCsvWriter.FormatRow(
-                    traceFrame,
-                    S1InputMask.FromFrame(frame),
-                    host.IsLagged,
-                    host));
-                physicsBuf.Append('\n');
+                WriteLine(
+                    physicsWriter,
+                    S1SpecialStageCsvWriter.FormatRow(
+                        traceFrame,
+                        S1InputMask.FromFrame(frame),
+                        host.IsLagged,
+                        host));
                 traceFrame++;
             }
 
@@ -508,16 +511,10 @@ namespace OpenGGF.BizHawk.Headless
                     0,
                     currentSsIndex);
                 segments.Add(entry);
-                segmentSink(new S1RunSegmentOutput(
-                    entry,
-                    physicsBuf.ToString(),
-                    auxBuf.ToString(),
-                    metadata));
+                CloseSegmentStreams(entry, metadata);
                 Started = false;
                 ssArmed = false;
                 traceFrame = 0;
-                physicsBuf.Length = 0;
-                auxBuf.Length = 0;
             }
 
             /// <summary>
@@ -525,13 +522,14 @@ namespace OpenGGF.BizHawk.Headless
             /// `Started` is true during BOTH an armed level segment and an
             /// armed ss segment, so the detour route must be checked first
             /// — running the level finalize mid-detour would emit a bogus
-            /// level entry with the ss segment's buffers. The manifest is
-            /// then attempted exactly once, gated per spec §1: emitted iff
+            /// level entry over the ss segment's streams. The manifest is
+            /// then attempted exactly once with the caller's nullable
+            /// authoritative endpoint, gated per spec §1: emitted iff
             /// at least one transition occurred OR a run id was supplied
             /// (an empty run id string still counts — the caller maps env
             /// presence to non-null).
             /// </summary>
-            internal void FinalizeRunEnd()
+            internal void FinalizeRunEnd(string expectedMovieEndMode)
             {
                 if (DetourActive)
                 {
@@ -550,6 +548,7 @@ namespace OpenGGF.BizHawk.Headless
                             runId,
                             sourceBk2,
                             luaScriptVersion,
+                            expectedMovieEndMode,
                             segments,
                             transitions);
                     }
@@ -566,6 +565,33 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 return new S1RunCaptureResult(
                     segments, transitions, runManifestJson);
+            }
+
+            /// <summary>
+            /// Asks the sink for this segment's two writers. Called after
+            /// the dir token is allocated and before the CSV header, so the
+            /// sink sees segments in exactly the recording order.
+            /// </summary>
+            private void OpenSegmentStreams()
+            {
+                RunSegmentStreams streams = segmentSink.BeginSegment(
+                    dirToken);
+                physicsWriter = streams.PhysicsCsv;
+                auxWriter = streams.AuxStateJsonl;
+            }
+
+            private void CloseSegmentStreams(
+                RunManifestSegment entry, string metadata)
+            {
+                physicsWriter = null;
+                auxWriter = null;
+                segmentSink.EndSegment(entry, metadata);
+            }
+
+            private static void WriteLine(TextWriter writer, string line)
+            {
+                writer.Write(line);
+                writer.Write('\n');
             }
 
             /// <summary>

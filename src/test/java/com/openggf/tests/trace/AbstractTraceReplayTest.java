@@ -16,7 +16,6 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseDebugHit;
 import com.openggf.level.objects.TouchResponseDebugState;
-import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -24,7 +23,9 @@ import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.tests.trace.s2.S2SkyChaseBadnikDiagnostics;
 import com.openggf.tests.trace.s3k.S3kCheckpointProbe;
+import com.openggf.tests.trace.s3k.S3kSidekickCylinderDiagnostics;
 import com.openggf.trace.DivergenceGroup;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.EngineDiagnostics;
@@ -57,12 +58,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static com.openggf.tests.trace.TraceReplayDiagnostics.combineDiagnostics;
+import static com.openggf.tests.trace.TraceReplayDiagnostics.hasTracePayload;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -170,8 +172,49 @@ public abstract class AbstractTraceReplayTest {
         return fixture.sprite();
     }
 
+    /**
+     * Whether the live production lifecycle has reached this replay profile's
+     * terminal boundary. Checked only after the current frame has been driven
+     * and compared, so the boundary-owning gameplay row remains verified.
+     */
+    protected boolean replayTerminalReached() {
+        return false;
+    }
+
     static boolean shouldValidateRewindReferenceClosure(SonicGame game) {
         return game == SonicGame.SONIC_2 || game == SonicGame.SONIC_3K;
+    }
+
+    /**
+     * Drives one replay frame for a focused scenario test through the same
+     * {@link TraceReplayFrameClosureDriver} the whole-trace comparison loop
+     * uses.
+     *
+     * <p>Scenario tests replay a prefix of a trace to reach one interesting
+     * frame and then assert on engine state there. They must reach that frame
+     * along exactly the path {@link #replayMatchesTrace()} takes, otherwise
+     * they are asserting against a differently-driven engine. Hand-rolled
+     * per-test steppers that only special-cased {@code VBLANK_ONLY} silently
+     * promoted {@code ADVANCE_ONLY} rows -- ROM frames where the recorder saw
+     * a controller edge while {@code Level_frame_counter}, {@code
+     * V_int_run_count} and the lag counter all stood still -- into full level
+     * ticks, advancing the object/VBlank clock on frames the ROM never ran.
+     *
+     * @return the BK2 input consumed for this frame
+     */
+    protected final int driveScenarioReplayFrame(
+            TraceData trace, HeadlessTestFixture fixture, TraceExecutionPhase phase) {
+        return TraceReplayFrameClosureDriver.driveS3k(
+                phase,
+                TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace),
+                fixture::stepFrameFromRecording,
+                fixture::stepFrameFromRecordingUsingPreviousInput,
+                fixture::skipFrameFromRecording,
+                fixture::consumeRecordingFrameInputOnly,
+                fixture::advancePlayableAnimationsOnly,
+                fixture::suppressFirstSidekickAnimationOnce,
+                () -> {
+                });
     }
 
     @Test
@@ -399,9 +442,7 @@ public abstract class AbstractTraceReplayTest {
             }
 
             // 6. Build report
-            DivergenceReport report = "s3k".equals(meta.game())
-                    ? binder.buildReport(trace)
-                    : binder.buildReport();
+            DivergenceReport report = buildDivergenceReport(binder, meta, trace);
 
             // 7. Write report if there are any divergences
             if (report.hasErrors() || report.hasWarnings()) {
@@ -425,9 +466,7 @@ public abstract class AbstractTraceReplayTest {
             // Best-effort: report regeneration must not suppress the real failure.
             if (binder != null) {
                 try {
-                    DivergenceReport finalReport = "s3k".equals(meta.game())
-                            ? binder.buildReport(trace)
-                            : binder.buildReport();
+                    DivergenceReport finalReport = buildDivergenceReport(binder, meta, trace);
                     if (finalReport.hasErrors() || finalReport.hasWarnings()) {
                         writeReport(finalReport, meta);
                     }
@@ -444,14 +483,8 @@ public abstract class AbstractTraceReplayTest {
     }
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
-        TraceVerificationScope scope = verificationScope();
-        if (report.hasErrors(scope)) {
-            fail(report.toAssertionSummary(scope));
-        }
-        if (report.hasWarnings(scope) && !allowDiagnosticOnlyWarnings()) {
-            fail("Trace replay warning report is release-blocking by default: "
-                    + report.toAssertionSummary(scope));
-        }
+        TraceReplayDiagnostics.assertNoReleaseBlockingDivergences(
+                report, verificationScope(), allowDiagnosticOnlyWarnings());
     }
 
     /**
@@ -478,6 +511,17 @@ public abstract class AbstractTraceReplayTest {
         // read-only so bootstrap reports can flag native-prelude CPU drift.
         return EngineSnapshot.capture(xHistory, yHistory, inputHistory, statusHistory,
                 historyPos, tailsCpu, java.util.Map.of());
+    }
+
+    /**
+     * Build the divergence report for this trace. S3K passes the trace so the
+     * binder can normalize split-row diagnostics; other games use the no-arg
+     * builder. Extracted so the step-6 and finally/regen call sites cannot drift.
+     */
+    private DivergenceReport buildDivergenceReport(TraceBinder binder, TraceMetadata meta, TraceData trace) {
+        return "s3k".equals(meta.game())
+                ? binder.buildReport(trace)
+                : binder.buildReport();
     }
 
     private void validateMetadata(TraceMetadata meta) {
@@ -696,6 +740,10 @@ public abstract class AbstractTraceReplayTest {
                         detector.requiredCheckpointNamesReached());
             }
 
+            if (replayTerminalReached()) {
+                break;
+            }
+
             driveTraceIndex++;
             previousDriveFrame = driveFrame;
         }
@@ -780,28 +828,13 @@ public abstract class AbstractTraceReplayTest {
         return findBk2File(traceDir);
     }
 
-    private Path findBk2File(Path dir) throws IOException {
+    protected Path findBk2File(Path dir) throws IOException {
         try (var files = Files.list(dir)) {
             return files
                 .filter(p -> p.toString().endsWith(".bk2"))
                 .findFirst()
                 .orElse(null);
         }
-    }
-
-    private static boolean hasTracePayload(Path dir, String fileName) {
-        return Files.exists(dir.resolve(fileName))
-                || Files.exists(dir.resolve(fileName + ".gz"));
-    }
-
-    private static String combineDiagnostics(String base, String extra) {
-        if (base == null || base.isEmpty()) {
-            return extra == null ? "" : extra;
-        }
-        if (extra == null || extra.isEmpty()) {
-            return base;
-        }
-        return base + " | " + extra;
     }
 
     private static String formatCharacterDiagnostics(String label, TraceCharacterState state) {
@@ -982,11 +1015,12 @@ public abstract class AbstractTraceReplayTest {
                     EngineNearbyObjectFormatter.summarise(nearbyObjects));
             solidEvent = combineDiagnostics(solidEvent,
                     summariseExpectedOnObjectSlot(om, expected, sprite));
-            solidEvent = combineDiagnostics(solidEvent, summariseS2SkyChaseBadnikDiagnostics(om));
+            solidEvent = combineDiagnostics(solidEvent,
+                    S2SkyChaseBadnikDiagnostics.summarise(game(), zone(), om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickStateDiagnostics(om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickNearbyObjects(om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickCpuDiagnostics());
-            solidEvent = combineDiagnostics(solidEvent, summariseSidekickCylinderDiagnostics(om));
+            solidEvent = combineDiagnostics(solidEvent, S3kSidekickCylinderDiagnostics.summarise(om));
             solidEvent = combineDiagnostics(solidEvent, additionalEngineObjectDiagnostics(om));
         }
 
@@ -1011,47 +1045,7 @@ public abstract class AbstractTraceReplayTest {
     private List<EngineNearbyObject> captureEngineNearbyObjects(AbstractPlayableSprite sprite) {
         ObjectManager om = GameServices.level() != null
                 ? GameServices.level().getObjectManager() : null;
-        if (om == null || sprite == null) {
-            return List.of();
-        }
-        List<EngineNearbyObject> nearbyObjects = new ArrayList<>();
-        for (ObjectInstance instance : om.getActiveObjects()) {
-            if (!(instance instanceof AbstractObjectInstance aoi)) {
-                continue;
-            }
-            ObjectSpawn spawn = aoi.getSpawn();
-            if (spawn == null) {
-                continue;
-            }
-            int currentX = aoi.getX();
-            int currentY = aoi.getY();
-            int dx = Math.abs(currentX - sprite.getCentreX());
-            int dy = Math.abs(currentY - sprite.getCentreY());
-            if (dx > 160 || dy > 160) {
-                continue;
-            }
-            TouchResponseProvider provider =
-                    instance instanceof TouchResponseProvider trp ? trp : null;
-            nearbyObjects.add(new EngineNearbyObject(
-                    aoi.getSlotIndex(),
-                    spawn.objectId(),
-                    aoi.getName(),
-                    currentX,
-                    currentY,
-                    spawn.x(),
-                    spawn.y(),
-                    provider != null,
-                    provider != null ? provider.getCollisionFlags() : -1,
-                    provider != null ? aoi.getPreUpdateCollisionFlags() : -1,
-                    aoi.getPreUpdateX(),
-                    aoi.getPreUpdateY(),
-                    aoi.isSkipTouchThisFrame(),
-                    aoi.isSkipSolidContactThisFrame(),
-                    aoi.isOnScreenForTouch(),
-                    aoi.traceDebugDetails()));
-        }
-        nearbyObjects.sort(Comparator.comparingInt(EngineNearbyObject::slot));
-        return nearbyObjects;
+        return TraceReplayDiagnostics.buildNearbyObjects(om, sprite, 160, false);
     }
 
     private String summariseExpectedOnObjectSlot(ObjectManager om, TraceFrame expected, AbstractPlayableSprite sprite) {
@@ -1079,40 +1073,6 @@ public abstract class AbstractTraceReplayTest {
                     details == null || details.isBlank() ? "" : " " + details);
         }
         return String.format("eng-expected-onObj s%02X missing", expectedSlot);
-    }
-
-    private String summariseS2SkyChaseBadnikDiagnostics(ObjectManager om) {
-        if (game() != SonicGame.SONIC_2 || zone() != 8 || om == null) {
-            return "";
-        }
-        List<String> parts = new ArrayList<>();
-        for (ObjectInstance instance : om.getActiveObjects()) {
-            if (!(instance instanceof AbstractObjectInstance aoi)) {
-                continue;
-            }
-            ObjectSpawn spawn = aoi.getSpawn();
-            if (spawn == null) {
-                continue;
-            }
-            int id = spawn.objectId() & 0xFF;
-            if (id != 0x98 && id != 0x99 && id != 0x9A && id != 0x9B && id != 0x9C && id != 0xAC) {
-                continue;
-            }
-            parts.add(String.format("sczobj s%d 0x%02X %s @%04X,%04X spawn=@%04X,%04X %s",
-                    aoi.getSlotIndex(),
-                    id,
-                    aoi.getName(),
-                    aoi.getX() & 0xFFFF,
-                    aoi.getY() & 0xFFFF,
-                    spawn.x() & 0xFFFF,
-                    spawn.y() & 0xFFFF,
-                    aoi.traceDebugDetails()));
-        }
-        parts.sort(String::compareTo);
-        if (parts.size() > 16) {
-            parts = new ArrayList<>(parts.subList(0, 16));
-        }
-        return parts.isEmpty() ? "sczobj none" : String.join(" | ", parts);
     }
 
     private String summariseSidekickStateDiagnostics(ObjectManager om) {
@@ -1263,80 +1223,10 @@ public abstract class AbstractTraceReplayTest {
             return "eng-tails-near none sidekick=inactive";
         }
         AbstractPlayableSprite sidekick = spriteManager.getSidekicks().getFirst();
-        List<EngineNearbyObject> nearbyObjects = new ArrayList<>();
-        for (ObjectInstance instance : om.getActiveObjects()) {
-            if (!(instance instanceof AbstractObjectInstance aoi)) {
-                continue;
-            }
-            ObjectSpawn spawn = aoi.getSpawn();
-            if (spawn == null) {
-                continue;
-            }
-            int currentX = aoi.getX();
-            int currentY = aoi.getY();
-            int dx = Math.abs(currentX - sidekick.getCentreX());
-            int dy = Math.abs(currentY - sidekick.getCentreY());
-            if (dx > 192 || dy > 192) {
-                continue;
-            }
-            TouchResponseProvider provider =
-                    instance instanceof TouchResponseProvider trp ? trp : null;
-            nearbyObjects.add(new EngineNearbyObject(
-                    aoi.getSlotIndex(),
-                    spawn.objectId(),
-                    aoi.getName(),
-                    currentX,
-                    currentY,
-                    spawn.x(),
-                    spawn.y(),
-                    provider != null,
-                    provider != null ? provider.getCollisionFlags() : -1,
-                    provider != null ? aoi.getPreUpdateCollisionFlags() : -1,
-                    aoi.getPreUpdateX(),
-                    aoi.getPreUpdateY(),
-                    aoi.isSkipTouchThisFrame(),
-                    aoi.isSkipSolidContactThisFrame(),
-                    aoi.isOnScreenForTouch(),
-                    aoi.traceDebugDetails()));
-        }
-        nearbyObjects.sort(Comparator.comparingInt(EngineNearbyObject::slot));
+        List<EngineNearbyObject> nearbyObjects =
+                TraceReplayDiagnostics.buildNearbyObjects(om, sidekick, 192, false);
         String summary = EngineNearbyObjectFormatter.summarise(nearbyObjects);
         return summary.isEmpty() ? "eng-tails-near none" : "eng-tails-near " + summary;
-    }
-
-    private String summariseSidekickCylinderDiagnostics(ObjectManager om) {
-        SpriteManager spriteManager = GameServices.sprites();
-        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
-            return "eng-tails-cyl none sidekick=inactive";
-        }
-        AbstractPlayableSprite sidekick = spriteManager.getSidekicks().getFirst();
-        List<String> parts = new ArrayList<>();
-        for (ObjectInstance instance : om.getActiveObjects()) {
-            if (!(instance instanceof com.openggf.game.sonic3k.objects.CnzCylinderInstance)
-                    || !(instance instanceof AbstractObjectInstance aoi)) {
-                continue;
-            }
-            int dx = Math.abs(aoi.getX() - sidekick.getCentreX());
-            int dy = Math.abs(aoi.getY() - sidekick.getCentreY());
-            if (dx > 2048 || dy > 2048) {
-                continue;
-            }
-            parts.add(String.format("eng-tails-cyl d=%04X,%04X s%d @%04X,%04X %s",
-                    dx & 0xFFFF,
-                    dy & 0xFFFF,
-                    aoi.getSlotIndex(),
-                    aoi.getX() & 0xFFFF,
-                    aoi.getY() & 0xFFFF,
-                    aoi.traceDebugDetails()));
-        }
-        parts.sort(Comparator.naturalOrder());
-        if (parts.size() > 4) {
-            parts = new ArrayList<>(parts.subList(0, 4));
-        }
-        if (parts.isEmpty()) {
-            return "eng-tails-cyl none";
-        }
-        return String.join(" | ", parts);
     }
 
     protected String additionalEngineObjectDiagnostics(ObjectManager om) {

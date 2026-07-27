@@ -117,6 +117,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         if (postResultsControlRestoreDelay > 0) {
             postResultsControlRestoreDelay--;
             holdEndingPose(player);
+            clearPositiveLockedSidekickLogicalWord(player);
             if (postResultsControlRestoreDelay == 0) {
                 // The later controller slot reaches loc_69526 after the player
                 // slot but before its separately allocated camera-bound child.
