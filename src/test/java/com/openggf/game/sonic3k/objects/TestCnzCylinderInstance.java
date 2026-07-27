@@ -9,6 +9,7 @@ import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -130,6 +131,54 @@ class TestCnzCylinderInstance {
         assertEquals(0, player.getXSpeed());
         assertEquals(0, player.getYSpeed());
         assertEquals(0, player.getGSpeed());
+    }
+
+    @Test
+    void firstOnscreenPassConsumesStandingBitPreservedByPriorOffscreenSolidSkip() throws Exception {
+        TestEnvironment.activeGameplayMode();
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(
+                spawnAtWithSubtype(0x1BDF, 0x07E0, 0x41));
+        cylinder.setServices(new TestObjectServices());
+        TestPlayableSprite tails = new TestPlayableSprite();
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1A4F);
+        tails.setCentreY((short) 0x062B);
+        tails.setRenderFlagOnScreen(false);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(tails);
+        tails.setAir(false);
+
+        Object slot = playerTwoSlot(cylinder);
+        setSlotField(slot, "player", tails);
+        setSlotField(slot, "active", true);
+        setSlotField(slot, "twistAngle", 0x80);
+        setPrivateField(cylinder, "standingMask", 0x02);
+
+        cylinder.update(0, null);
+
+        assertFalse((boolean) getSlotField(slot, "active"),
+                "offscreen loc_325F2 clears the rider slot after SolidObjectFull skips P2");
+        assertEquals(0x02, getPrivateField(cylinder, "standingMaskDeferredBySkippedSolidPass"));
+        tails.setRenderFlagOnScreen(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(tails);
+        tails.setAir(true);
+        tails.setAnimationId(0x20);
+        tails.setMappingFrame(0xA0);
+
+        cylinder.update(1, null);
+
+        assertTrue((boolean) getSlotField(slot, "active"),
+                "the next sub_324C0 must consume the still-live cylinder standing bit: "
+                        + cylinder.traceDebugDetails());
+        assertEquals(0, tails.getAnimationId(),
+                "sub_324C0 capture overwrites the earlier Tails CPU animation pass");
+        assertEquals(0x55, tails.getMappingFrame(),
+                "PlayerTwist_UpdateFrame owns the post-capture mapping");
+        assertEquals(0x062B, tails.getCentreY() & 0xFFFF,
+                "sub_324C0 capture does not write y_pos before SolidObjectFull evaluates geometry");
+        assertTrue(tails.getAir(),
+                "the later on-screen SolidObjectFull pass releases stale support without clearing object_control");
+        assertTrue(tails.isObjectControlAllowsCpu());
+        assertTrue(tails.isObjectControlSuppressesMovement());
     }
 
     @Test
@@ -857,6 +906,12 @@ class TestCnzCylinderInstance {
         var field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private static Object getPrivateField(Object target, String name) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
     }
 
     private static int getPrivateIntField(Object target, String name) throws Exception {

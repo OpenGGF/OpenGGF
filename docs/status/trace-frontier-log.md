@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-07-27 - CNZ cylinder consumes preserved standing on re-entry
+
+- Worktree: `.worktrees/trace-s3k-hcz-complete-6292`, branch
+  `bugfix/ai-trace-s3k-hcz-complete-6292`, based on `origin/develop`
+  `d8c276fc60748c76dec9bb5addf836ebab58dcaf`.
+- Baseline standalone CNZ replay reproduced two frontier-window errors, first
+  at f4826 `tails_animation_id` (expected `$00`, actual `$20`), with 3,702
+  errors in the canonical comparison.
+- A 24-event stage-gated native probe showed Tails' CPU pass publishing
+  `object_control=$81`, animation `$20`, and mapping `$A0` before the cylinder
+  consumed its preserved Player 2 standing bit. Native `sub_324C0` then wrote
+  `object_control=$03`, animation `$00`, and twist mapping `$55`. The output
+  SHA-256 was
+  `a13d2e36dc95e64493d50d75d541dec11b13ed7afe943d140ecad0774e0918c0`.
+- RED coverage
+  `firstOnscreenPassConsumesStandingBitPreservedByPriorOffscreenSolidSkip`
+  now verifies that a standing bit preserved by an off-screen
+  `SolidObjectFull` skip remains visible to the next on-screen cylinder pass.
+  The stale recapture retains native Y ownership and the later solid phase
+  restores airborne status.
+- The frontier-only replay now reports two errors with first mismatch f6680
+  `status_byte` (expected `$20`, actual `$00`); the canonical comparison falls
+  from 3,702 to 3,700 errors. Detailed evidence is in
+  `docs/architecture/audits/2026-07-27-cnz-f4826-cylinder-recapture.md`.
+- The full cylinder, directed-traversal, CNZ rewind, trace-scenario, and rewind
+  coverage checks passed. Explicit non-LBZ replay canaries retained the
+  existing AIZ f8837 `rings` and MGZ f13903 `player_animation_id` frontiers.
+  LBZ was not inspected, run, changed, or used as a guard.
+
 ## 2026-07-27 - CNZ Tails CPU control-byte ownership advances f4801 to f4826
 
 - Worktree: `.worktrees/trace-s3k-cnz-f4801`, branch
