@@ -94,6 +94,7 @@ class TestInitialPlayableProcessSpritesPass {
             cpu.restoreRewindState(withCpuSetupSentinels(cpu.captureRewindState()));
             p2.setControlLocked(true);
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(p2);
+            p2.setForcedAnimationId(0x1B);
             p2.queueForceInputRightForNextFrame(true);
             p2.getTailsCarryController().restore(new TailsCarryController.Snapshot(
                     (short) 0x1234,
@@ -131,6 +132,8 @@ class TestInitialPlayableProcessSpritesPass {
             assertTrue(p2.isObjectControlAllowsCpu());
             assertTrue(p2.isObjectControlSuppressesMovement());
             assertTrue(p2.isForceInputRight());
+            assertEquals(0x1B, p2.getForcedAnimationId(),
+                    "Tails_Init does not overwrite the animation selected by level assembly");
 
             SidekickCpuRewindExtra state = cpu.captureRewindState();
             assertEquals(SidekickCpuController.State.INIT, state.state());

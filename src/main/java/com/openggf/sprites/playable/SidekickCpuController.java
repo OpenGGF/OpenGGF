@@ -5796,8 +5796,13 @@ public class SidekickCpuController {
      * preceding slot (sonic3k.asm:26101-26156).
      */
     public void resetForInitialProcessSpritesSlot() {
+        int assemblyAnimation = sidekick.getForcedAnimationId();
         carryController().clearState();
         resetCpuState();
+        // Tails_Init clears the CPU globals but does not write anim(a0).
+        // Preserve an animation selected earlier by SpawnLevelMainSprites
+        // (for example the simple falling intro's $1B).
+        sidekick.setForcedAnimationId(assemblyAnimation);
     }
 
     private void resetCpuState() {
