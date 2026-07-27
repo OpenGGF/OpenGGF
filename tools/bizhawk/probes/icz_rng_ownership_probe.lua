@@ -20,7 +20,7 @@ local RNG_ENTRY = 0x001D24
 local RNG_RTS = 0x001D4A
 local PROCESS_SPRITES = 0x01AADA
 local FIRST_SNOW_RETURN = 0x08B6C2
-local GFC_ARM = 0x52DE
+local CAMERA_ARM = 0x1000
 local GFC_STOP = 0x58C0
 
 local pending = nil
@@ -63,7 +63,7 @@ local function callerPc()
 end
 
 local function objectContext(registerName)
-    local ptr = register(registerName) & 0xFFFF
+    local ptr = register("M68K " .. registerName) & 0xFFFF
     local delta = ptr - OBJECT_RAM
     if ptr < OBJECT_RAM or ptr >= OBJECT_END or delta % OBJECT_SIZE ~= 0 then
         return string.format("%s_ptr=%04X %s_slot=-1", registerName, ptr, registerName)
@@ -84,31 +84,27 @@ end
 
 local function prefix()
     return string.format(
-        "emu=%d trace=%d gfc=%04X vint=%08X vintlow=%04X",
+        "emu=%d trace=%d gfc=%04X camera=%04X vint=%08X vintlow=%04X",
         emu.framecount(),
         emu.framecount() - TRACE_OFFSET,
         mainmemory.read_u16_be(GAMEPLAY_COUNTER),
+        mainmemory.read_u16_be(CAMERA_X_COPY),
         mainmemory.read_u32_be(V_INT),
         mainmemory.read_u16_be(V_INT_LOW))
 end
 
 ProbeRuntime.run({
-    -- The trace reaches ICZ2 at f12320, but camera $3F00 only at f21229 /
-    -- GFC $52DE. This deliberately arms there, well before the previously
-    -- proposed $5790 boundary, because no retained engine artifact proves
-    -- engine/native seed equality as late as $5790.
     stage = function()
-        if (mainmemory.read_u8(GAME_MODE) & 0x0F) ~= 0x0C then return false end
-        if mainmemory.read_u8(CURRENT_ZONE) ~= 0x05
-                or mainmemory.read_u8(CURRENT_ACT) ~= 0x01 then return false end
-        if mainmemory.read_u16_be(CAMERA_X_COPY) < 0x3F00 then return false end
-        return mainmemory.read_u16_be(GAMEPLAY_COUNTER) >= GFC_ARM
+        return (mainmemory.read_u8(GAME_MODE) & 0x0F) == 0x0C
+            and mainmemory.read_u8(CURRENT_ZONE) == 0x05
+            and mainmemory.read_u8(CURRENT_ACT) == 0x01
+            and mainmemory.read_u16_be(CAMERA_X_COPY) >= CAMERA_ARM
     end,
     hooks = {
         {
             name = "icz_rng_entry",
             address = RNG_ENTRY,
-            callback = function(context)
+            callback = function()
                 assert(pending == nil, "nested/unmatched Random_Number entry")
                 ordinal = ordinal + 1
                 local seedBefore = mainmemory.read_u32_be(RNG_SEED)
@@ -154,9 +150,7 @@ ProbeRuntime.run({
                     pending.a1))
                 local firstSnow = pending.caller == FIRST_SNOW_RETURN
                 pending = nil
-                if firstSnow then
-                    context.finish()
-                end
+                if firstSnow then context.finish() end
             end
         },
         {

@@ -33,6 +33,27 @@
   `docs/architecture/audits/2026-07-27-aiz-f2707-live-push-ownership.md`.
   LBZ was not inspected, run, changed, or used as a guard.
 
+## 2026-07-27 - ICZ f24140 ring event traced to earlier SST allocation skew
+
+- Worktree: `.worktrees/trace-s3k-icz-rng-ownership`, branch
+  `bugfix/ai-trace-s3k-icz-rng-ownership`, measured on baseline `41f3bc62f`
+  and rebased onto `aede99ae0`.
+- Command:
+  `mvn -q -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay
+  -Dsonic3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen test`.
+- Result remains 29 errors, 0 warnings; first mismatch f24140 `rings`
+  (expected 3, actual 2). No production change is retained.
+- Native rings change 2→3 as Sonic crosses lost-ring slot 35 near
+  `$43FD/$0696`. Engine scatter geometry misses that collection.
+- The first persistent RNG skew remains f14502: native slot 20 belongs to the
+  miniboss explosion topology, while the engine first-dispatches a snow child
+  there and consumes one extra value.
+- A focused emitter-retirement experiment was disproved as the cause:
+  engine slot 5 stops at counter 21498, after its last snow-child first
+  dispatch at 21492, and the replay remained unchanged. The next owner is the
+  competing `AllocateObjectAfterCurrent`/plain `AllocateObject` SST topology,
+  not ring counting, collision tolerance, RNG math, or an ICZ/frame carve-out.
+
 ## 2026-07-27 - AIZ dormant marker returns to the first ordinary Player 2 dispatch
 
 - Worktree: `.worktrees/trace-s3k-aiz-2707`, branch
