@@ -4,7 +4,10 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -12,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -31,8 +35,17 @@ class TestCnzMinibossArenaEntry {
         GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
 
         Sonic3kCNZEvents cnz = getCnzEvents();
-        // Invoke the normal event update loop
+        // Dynamic level events run after Process_Sprites, but the arena write
+        // belongs to the placed Obj_CNZMiniboss slot. Merely crossing the
+        // threshold must not let the event adapter pre-empt that object.
         cnz.update(0, 0);
+        assertFalse(cnz.isBossFlag(),
+                "The zone event must wait for Obj_CNZMiniboss to own the arena write");
+
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x32C0, 0x020C, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        GameServices.level().getObjectManager().addDynamicObject(boss);
+        boss.update(0, fixture.sprite());
 
         assertTrue(cnz.isBossFlag(),  "Boss_flag must be set");
         assertTrue(cnz.isWallGrabSuppressed(),

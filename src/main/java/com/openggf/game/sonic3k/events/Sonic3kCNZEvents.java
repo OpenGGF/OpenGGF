@@ -511,17 +511,11 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                     // arena lock and hand off to post-boss mode.
                     bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
                     bgRoutine = BG_AFTER_BOSS;
-                } else if (camX >= Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X) {
-                    enterMinibossArena();
                 } else if (camX >= MINIBOSS_EARLY_TUNNEL_X_THRESHOLD) {
                     enterMinibossTunnelApproach();
                 }
             }
             case ACT1_MINIBOSS_PATH -> {
-                int camX = camera().getX();
-                if (!minibossArenaLocked && camX >= Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X) {
-                    enterMinibossArena();
-                }
                 if (eventsFg5) {
                     enterPostBossForegroundRefresh();
                     LOG.info("CNZ: post-boss handoff entered");
@@ -541,6 +535,29 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         bossBackgroundMode = BossBackgroundMode.ACT1_MINIBOSS_PATH;
         bgRoutine = BG_BOSS_START;
         LOG.info("CNZ: camera reached miniboss tunnel approach threshold");
+    }
+
+    /**
+     * Executes {@code Obj_CNZMiniboss}'s camera-threshold branch from the
+     * placed object's Process_Sprites slot.
+     *
+     * <p>ROM writes {@code Camera_min_X_pos} after both playable slots have
+     * already run ({@code sonic3k.asm:144823-144840}), so Player 2 consumes
+     * the new left boundary on the following frame.
+     */
+    public void enterMinibossArenaFromObjectSlot() {
+        int cameraX = camera().getX() & 0xFFFF;
+        if (minibossArenaLocked
+                || cameraX < Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X
+                || cameraX > Sonic3kConstants.CNZ_MINIBOSS_ARENA_MAX_X
+                || (bossBackgroundMode != BossBackgroundMode.NORMAL
+                    && bossBackgroundMode != BossBackgroundMode.ACT1_MINIBOSS_PATH)) {
+            return;
+        }
+        if (bossBackgroundMode == BossBackgroundMode.NORMAL) {
+            enterMinibossTunnelApproach();
+        }
+        enterMinibossArena();
     }
 
     /**

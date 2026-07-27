@@ -322,6 +322,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     protected void updateBossLogic(int frameCounter, PlayableEntity player) {
         resetTraceFrameFlags();
         Sonic3kCNZEvents cnz = getCnzEvents();
+        if (cnz != null) {
+            cnz.enterMinibossArenaFromObjectSlot();
+        }
         if (cnz != null && (cnz.isMinibossArenaLocked()
                 || (services().camera().getX() & 0xFFFF) >= 0x3000)) {
             if (!cnz.isMinibossStartReleased()) {

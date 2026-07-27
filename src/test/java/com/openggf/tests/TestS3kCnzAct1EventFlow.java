@@ -412,6 +412,7 @@ class TestS3kCnzAct1EventFlow {
 
         GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
         events.update(0, 1);
+        events.enterMinibossArenaFromObjectSlot();
 
         assertTrue(events.isBossFlag(), "Camera X $31E0 is the ROM arena gate that sets Boss_flag");
         assertEquals(Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X, GameServices.camera().getMinX() & 0xFFFF);
@@ -431,6 +432,7 @@ class TestS3kCnzAct1EventFlow {
         Sonic3kCNZEvents events = initCnzEvents(0);
         GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
 
+        events.enterMinibossArenaFromObjectSlot();
         events.update(0, 0);
 
         assertEquals(1, commandsOfType(AudioCommand.FadeOutMusic.class).size(),

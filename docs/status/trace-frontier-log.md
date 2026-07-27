@@ -51754,3 +51754,43 @@ mvn -Dmse=off -q \
 
 - 26 errors, first f26107 `x` (expected `$0000`, actual `$4A9B`).
 - Result: accepted complete-run frontier retained.
+
+## 2026-07-27 - CNZ miniboss arena boundary object-slot ownership
+
+Worktree `.worktrees/trace-s3k-cnz-f14157`, branch
+`bugfix/ai-s3k-cnz-f14157`, based on `cb74114a6`.
+
+At standalone frame 14157 Tails' CPU and movement owners were still native:
+the CPU step advanced him from `$2EF4.4000` to `$2EF5.4000` with
+`x_vel/ground_vel=$02DC`. The later level-boundary pass alone changed the
+engine state to `$31F0.0000` with zero velocity. ROM retained
+`$2EF8.2800`, `x_vel/ground_vel=$02E8` on that row and first clamped Tails to
+`$31F0` on frame 14158.
+
+The ordering owner is `Obj_CNZMiniboss`. Its camera threshold branch writes
+`Camera_min_X_pos=$31E0` from the placed object's `Process_Sprites` slot,
+after Player 2 has run (`docs/skdisasm/sonic3k.asm:144823-144840`). The engine
+instead performed the write in the later zone-event adapter as soon as the
+camera crossed the threshold, before the next playable pass. The placed
+`CnzMinibossInstance` now invokes the existing arena setup from its own object
+dispatch; the event adapter retains tunnel, wait, palette, music, and
+post-boss state but no longer pre-empts the object-owned gate.
+
+Fresh standalone command:
+
+```bash
+mvn -q -Dmse=off \
+  -Dsurefire.forkCount=1 \
+  '-Dsurefire.argLine=-Xshare:off -Xmx6g' \
+  -Ds3k.rom.path=s3k.gen \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace \
+  test
+```
+
+- Before: 3,675 errors, first f14157 `tails_x` (expected `$2EF8`, actual
+  `$31F0`).
+- After: 3,413 errors, first f15058 `g_speed` (expected `$02B4`, actual
+  `-$02B4`).
+- Result: frontier advances 901 frames and removes 262 errors.
+- Focused CNZ event/miniboss suites pass 42/42. Non-LBZ canaries retain AIZ
+  f8837 `rings`, MGZ f23561 `rings`, and CNZ complete-run f0 `y`.
