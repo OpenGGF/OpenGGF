@@ -185,3 +185,18 @@ earlier regression.
 The trace workflow skill should make the canonical probe template, invisible/fast
 emulation, and stage-delayed hook registration mandatory review items so a new
 diagnostic cannot accidentally run expensive hooks through the preceding stage.
+
+## 2026-07-27 follow-up: initialization dispatch was the missing semantic
+
+An expanded probe window showed the `$3270,$07F8` maker entering
+`Obj_Bubbler` at trace frame 5480. The ROM's init path writes
+`render_flags=$84` in `SetUp_ObjAttributes` and branches directly to
+`loc_2FA50`; consequently the first maker dispatch passes the render-bit test
+even though `Render_Sprites` has not yet refreshed visibility. The engine
+recomputed camera visibility during that same dispatch and skipped production.
+
+Preserving only that initialization-dispatch eligibility keeps the earlier
+frame-1824 interaction green and restores the maker's production epoch. The
+canonical complete-run report moves from 2,411 errors at frame 6292 to 1,206
+errors at frame 9047. The previously proposed lowest-free allocation change
+remains rejected: this follow-up does not alter the child allocator.
