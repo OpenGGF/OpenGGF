@@ -13,8 +13,10 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,6 +47,30 @@ class TestHczMinibossWaterEffectCleanup {
         assertTrue(tails.getAir());
         assertFalse(sonic.isObjectControlled());
         assertFalse(tails.isObjectControlled());
+    }
+
+    @Test
+    void firstVortexContactUsesNativeBit0ObjectControlPolicy() throws Exception {
+        Camera camera = GameServices.camera();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x3720, (short) 0x0800);
+        camera.setFocusedSprite(sonic);
+        HczMinibossInstance boss = buildBoss(new NativePlayerServices(camera, sonic, sonic));
+
+        Method applyVortexPullTo = HczMinibossInstance.class
+                .getDeclaredMethod("applyVortexPullTo", com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        applyVortexPullTo.setAccessible(true);
+        applyVortexPullTo.invoke(boss, sonic);
+
+        assertTrue(sonic.isObjectControlled(), "sub_6AA00 writes object_control=1");
+        assertTrue(sonic.isObjectControlAllowsCpu(),
+                "bit-0 object control must keep the CPU sidekick controller active");
+        assertTrue(sonic.isObjectControlSuppressesMovement(),
+                "the vortex owns player movement while object_control bit 0 is set");
+        assertFalse(sonic.isTouchResponseSuppressedByObjectControl(),
+                "object_control=1 is not the signed bit-7 touch-response gate");
+        assertEquals(0, sonic.getXSpeed());
+        assertEquals(0, sonic.getYSpeed());
+        assertEquals(0, sonic.getGSpeed());
     }
 
     private static HczMinibossInstance buildBoss(ObjectServices services) throws Exception {

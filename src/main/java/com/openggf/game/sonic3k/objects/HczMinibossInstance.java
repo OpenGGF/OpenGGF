@@ -1070,7 +1070,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         // sub_6A9B8 calls sub_6AA30 before sub_6AA00, so first contact moves
         // the player once and then clears x/y/ground speed while setting control.
         if (firstContact) {
-            ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
             sprite.setAir(true);
             // sub_6AA00 writes the public anim byte; forced animation only
             // represents this object's continuing ownership on later frames.

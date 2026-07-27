@@ -51502,6 +51502,33 @@ stage boot, return, and water-restore lifecycle tests also passed. The literal
 S1 inventory covered all 30 concrete replay classes (30 tests), and the
 literal S2 inventory covered all 20 concrete replay classes (21 tests).
 Neither inventory had a missing class, failure, error, or skip.
+## 2026-07-27 - HCZ miniboss vortex bit-0 control
+
+Worktree `.worktrees/trace-s3k-hcz-complete-6292`, branch
+`bugfix/ai-trace-s3k-hcz-complete-6292`, based on `dc05cba5f`.
+
+At frame 9047 the engine's Tails CPU diagnostics already generated the native
+jump (`Ctrl_2_logical=$1010`), but the published engine logical word remained
+zero. The later HCZ miniboss water-effect slot owned the discrepancy:
+`sub_6AA00` writes `object_control=1`, while the port applied signed bit-7 full
+control. Modeling the literal bit-0 policy retains movement suppression while
+allowing the CPU and touch-response paths, matching the ROM dispatcher.
+
+Fresh standalone command:
+
+```bash
+mvn -Dmse=off \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace \
+  -Ds3k.rom.path=<discovered-locked-on-rom> \
+  -Dsurefire.forkCount=1 \
+  '-Dsurefire.argLine=-Xshare:off -Xmx3g' test -B
+```
+
+- Before: 1,206 errors, first f9047 `tails_cpu_ctrl2_pressed`
+  (expected `$0010`, actual `$0000`).
+- After: 1,201 errors, first f10423 `rings` (expected `149`, actual `0`).
+- Result: frontier advances 1,376 frames and removes five errors.
+
 ## 2026-07-27 - HCZ Bubbler initialization visibility
 
 Worktree `.worktrees/trace-s3k-hcz-complete-6292`, branch
