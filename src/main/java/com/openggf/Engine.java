@@ -452,12 +452,18 @@ public class Engine {
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE); // Required for macOS
 
+		// Identify the window to the desktop shell so Wayland/X11 can match its icon
+		WindowIconLoader.applyWindowClassHints();
+
 		// Create the window
 		window = glfwCreateWindow(windowWidth, windowHeight,
 				buildWindowTitle(), NULL, NULL);
 		if (window == NULL) {
 			throw new RuntimeException("Failed to create the GLFW window");
 		}
+
+		// Apply the application icon (ignored on platforms that manage icons themselves)
+		WindowIconLoader.apply(window);
 
 		// Setup key callback
 		glfwSetKeyCallback(window, (windowHandle, key, scancode, action, mods) -> {
