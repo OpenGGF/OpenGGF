@@ -18,6 +18,16 @@ import java.util.Map;
 
 public final class DefaultSolidExecutionRegistry
         implements SolidExecutionRegistry, RewindSnapshottable<SolidExecutionSnapshot> {
+    /**
+     * Expected entry count for the per-player maps built in the solid path:
+     * a leader plus its sidekicks. {@code IdentityHashMap}'s no-arg constructor
+     * expects 21 entries and sizes a 64-slot backing table accordingly, which is
+     * an order of magnitude more than these maps ever hold — and they are built
+     * for every solid object every frame. Exceeding the hint is merely a resize,
+     * never a correctness problem.
+     */
+    private static final int TEAM_SIZE_HINT = 4;
+
     private final IdentityHashMap<ObjectInstance, IdentityHashMap<PlayableEntity, PlayerStandingState>> previous =
             new IdentityHashMap<>();
     private final IdentityHashMap<ObjectInstance, SolidCheckpointBatch> current =
@@ -73,7 +83,8 @@ public final class DefaultSolidExecutionRegistry
         // an inner pass per player, so entry-wise iteration was allocating
         // garbage proportional to the level's solid-object count every frame.
         current.forEach((object, batch) -> {
-            IdentityHashMap<PlayableEntity, PlayerStandingState> perPlayer = new IdentityHashMap<>();
+            IdentityHashMap<PlayableEntity, PlayerStandingState> perPlayer =
+                    new IdentityHashMap<>(TEAM_SIZE_HINT);
             batch.perPlayer().forEach((player, result) -> perPlayer.put(player,
                     new PlayerStandingState(result.kind(), result.standingNow(), result.pushingNow())));
             previous.put(object, perPlayer);
@@ -157,7 +168,7 @@ public final class DefaultSolidExecutionRegistry
             if (object == null || !(sprite instanceof PlayableEntity player)) {
                 continue;
             }
-            previous.computeIfAbsent(object, ignored -> new IdentityHashMap<>())
+            previous.computeIfAbsent(object, ignored -> new IdentityHashMap<>(TEAM_SIZE_HINT))
                     .put(player, new PlayerStandingState(
                             entry.kind(), entry.standing(), entry.pushing()));
         }

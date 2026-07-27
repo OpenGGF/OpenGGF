@@ -57,6 +57,16 @@ import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 public final class ObjectSolidContactController {
+    /**
+     * Expected entry count for the per-player maps built in the solid path:
+     * a leader plus its sidekicks. {@code IdentityHashMap}'s no-arg constructor
+     * expects 21 entries and sizes a 64-slot backing table accordingly, which is
+     * an order of magnitude more than these maps ever hold — and they are built
+     * for every solid object every frame. Exceeding the hint is merely a resize,
+     * never a correctness problem.
+     */
+    private static final int TEAM_SIZE_HINT = 4;
+
     private static final Logger LOGGER = Logger.getLogger(ObjectSolidContactController.class.getName());
     private static final int OBJ85_ID = 0x85;
     private final ObjectManager objectManager;
@@ -959,7 +969,7 @@ public final class ObjectSolidContactController {
             setObjectStandingBit(player, formerSupport);
             controllerAirborneReleaseSupports
                     .computeIfAbsent(player,
-                            ignored -> Collections.newSetFromMap(new IdentityHashMap<>()))
+                            ignored -> Collections.newSetFromMap(new IdentityHashMap<>(TEAM_SIZE_HINT)))
                     .add(formerSupport);
         }
         ridingStates.remove(player);
@@ -1252,7 +1262,12 @@ public final class ObjectSolidContactController {
             List<? extends PlayableEntity> sidekicks, boolean postMovement,
             boolean compatibilityCallbacks) {
         this.postMovement = postMovement;
-        IdentityHashMap<PlayableEntity, PlayerSolidContactResult> perPlayer = new IdentityHashMap<>();
+        // Sized for a team, not IdentityHashMap's default expectation of 21
+        // entries: the default allocates a 64-slot backing table for a map
+        // that holds a leader plus its sidekicks, and this is built for every
+        // solid object every frame.
+        IdentityHashMap<PlayableEntity, PlayerSolidContactResult> perPlayer =
+                new IdentityHashMap<>(TEAM_SIZE_HINT);
         CollisionTrace trace = collisionTrace();
         trace.onSolidCheckpointStart(instance.getClass().getSimpleName(), instance.getX(), instance.getY());
         resolveCheckpointForPlayer(instance, player, perPlayer, compatibilityCallbacks);
