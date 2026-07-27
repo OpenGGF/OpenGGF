@@ -8,6 +8,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Method;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -91,5 +94,33 @@ class TestSonic3kPlcArtRewindSnapshot {
     void snapshotRecordPreservesEpoch() {
         PlcProgressSnapshot snap = new PlcProgressSnapshot(99);
         assertEquals(99, snap.loadEpoch());
+    }
+
+    @Test
+    void snapshotPreservesEnemyEntriesAndRetirementArmState()
+            throws Exception {
+        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "scheduleEnemyKosArt", int.class, int.class);
+        schedule.setAccessible(true);
+        schedule.invoke(provider, 0, 0);
+        PlcProgressSnapshot beforeRetirement = provider.capture();
+
+        assertEquals(3, beforeRetirement.pendingKosModules().size());
+        assertEquals(0x36800C,
+                beforeRetirement.pendingKosModules().get(0).sourceAddress());
+        assertFalse(beforeRetirement.kosSubmissionArmed());
+
+        provider.onTitleCardArtRetired();
+        PlcProgressSnapshot afterRetirement = provider.capture();
+        assertTrue(afterRetirement.kosSubmissionArmed());
+
+        Sonic3kObjectArtProvider restored = new Sonic3kObjectArtProvider();
+        restored.restore(beforeRetirement);
+        PlcProgressSnapshot restoredSnapshot = restored.capture();
+        assertEquals(beforeRetirement.pendingKosModules(),
+                restoredSnapshot.pendingKosModules());
+        assertEquals(List.of(), restoredSnapshot.pendingKosOrdinals());
+        assertFalse(restoredSnapshot.kosSubmissionArmed());
     }
 }

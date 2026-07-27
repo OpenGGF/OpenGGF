@@ -243,7 +243,6 @@ public final class LevelFrameStep {
             wrapper.wrap("objects",
                     () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
                             afterExecBeforePlacement));
-            serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
         } else {
             LevelEventProvider fixedSlotEvents = context.levelEventProvider();
             if (fixedSlotEvents != null) {
@@ -253,7 +252,6 @@ public final class LevelFrameStep {
             // 2. Legacy compatibility path keeps objects before physics. Touch
             //    responses are still deferred to tickPlayablePhysics after movement.
             wrapper.wrap("objects", levelManager::updateObjectPositionsWithoutTouches);
-            serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
 
             // 3. Sprite / player physics update (caller-provided).
             wrapper.wrap("physics", spriteUpdate);
@@ -329,6 +327,12 @@ public final class LevelFrameStep {
         if (levelEvents != null) {
             levelEvents.update();
         }
+
+        // ROM LevelLoop runs ScreenEvents before Process_Kos_Module_Queue
+        // (docs/skdisasm/sonic3k.asm:7898-7908). A completion retired here is
+        // therefore first observable by object/event consumers on their next
+        // dispatch, never by this frame's ScreenEvents pass.
+        serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
 
         // 4c. Flush gameplay layout mutations queued by zone events before
         //     boundary easing and post-camera systems observe the changed level.

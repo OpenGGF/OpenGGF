@@ -7,6 +7,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Session-owned FIFO for deterministic preparation and observable hardware readiness.
@@ -54,6 +55,7 @@ public final class HardwareTimingService
 
     public void service(HardwareServiceBoundary boundary) {
         Objects.requireNonNull(boundary, "boundary");
+        serviceBoundaryDrivenHead(boundary);
         scheduler.service(boundary, jobs);
         if (admissionPolicy == HardwareReadinessAdmissionPolicy.LIVE) {
             releasePreparedInFifoOrder();
@@ -81,6 +83,40 @@ public final class HardwareTimingService
                 .filter(job -> !job.isClaimed())
                 .map(HardwareTimingJob::handle)
                 .toList();
+    }
+
+    /**
+     * Resolves an unclaimed handle by its session-stable identity.
+     *
+     * <p>Rewind owners use this after the timing ledger has been restored so
+     * their transient queue facade can bind to the original job without
+     * submitting replacement work.
+     */
+    public Optional<HardwareWorkHandle> pendingHandle(
+            HardwareWorkKind kind,
+            long ordinal) {
+        Objects.requireNonNull(kind, "kind");
+        if (ordinal < 0) {
+            return Optional.empty();
+        }
+        return jobs.stream()
+                .filter(job -> !job.isClaimed())
+                .map(HardwareTimingJob::handle)
+                .filter(handle -> handle.kind() == kind && handle.ordinal() == ordinal)
+                .findFirst();
+    }
+
+    public int incompleteCount(HardwareWorkKind kind) {
+        Objects.requireNonNull(kind, "kind");
+        int count = 0;
+        for (HardwareTimingJob job : jobs) {
+            if (job.handle().kind() == kind
+                    && !job.isClaimed()
+                    && !job.isReady()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /**
@@ -157,6 +193,23 @@ public final class HardwareTimingService
                 return;
             }
             job.admitReadiness();
+        }
+    }
+
+    private void serviceBoundaryDrivenHead(HardwareServiceBoundary boundary) {
+        for (HardwareTimingJob job : jobs) {
+            if (job.isClaimed() || job.hasPreparedPayload()) {
+                continue;
+            }
+            HardwareWorkPreparation preparation = job.preparation();
+            if (!preparation.isBoundaryDriven()) {
+                return;
+            }
+            preparation.serviceBoundary(boundary);
+            if (preparation.isPrepared()) {
+                job.capturePreparedPayload();
+            }
+            return;
         }
     }
 

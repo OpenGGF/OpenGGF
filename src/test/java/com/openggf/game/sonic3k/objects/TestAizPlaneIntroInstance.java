@@ -6,16 +6,18 @@ import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 
 import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@RequiresRom(SonicGame.SONIC_3K)
 public class TestAizPlaneIntroInstance {
 
     private AizPlaneIntroInstance intro;
@@ -27,9 +29,10 @@ public class TestAizPlaneIntroInstance {
         SessionManager.clear();
         camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
+        GameServices.hardwareTiming().resetForMissingSnapshot();
         intro = new AizPlaneIntroInstance(
                 new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0));
-        intro.setServices(new TestObjectServices().withCamera(camera));
+        intro.setServices(TestEnvironment.objectServices());
     }
 
     @Test

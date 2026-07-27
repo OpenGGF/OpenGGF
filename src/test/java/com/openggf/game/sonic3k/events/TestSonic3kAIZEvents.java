@@ -19,6 +19,9 @@ import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareTimingJob;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.objects.AizBattleshipInstance;
 import com.openggf.game.sonic3k.objects.AizBgTreeInstance;
 import com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance;
@@ -27,6 +30,7 @@ import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizIntroArtLoader;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -53,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -62,6 +67,7 @@ import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestSonic3kAIZEvents {
+    private static final int HARDWARE_DRAIN_FRAME_LIMIT = 100_000;
     private static final Sonic3kLoadBootstrap FIRE_TRANSITION_BOOTSTRAP =
             new Sonic3kLoadBootstrap(Sonic3kLoadBootstrap.Mode.SKIP_INTRO, null);
     private HeadlessTestFixture fixture;
@@ -69,6 +75,36 @@ public class TestSonic3kAIZEvents {
     private static Sonic3kAIZEvents newFireTransitionEvents() {
         AtomicInteger vblankCounter = new AtomicInteger();
         return new Sonic3kAIZEvents(FIRE_TRANSITION_BOOTSTRAP, vblankCounter::getAndIncrement);
+    }
+
+    private static void updateWithHardware(
+            Sonic3kAIZEvents events, int act, int frame) {
+        var timing = GameServices.hardwareTiming();
+        timing.service(HardwareServiceBoundary.VINT_SERVICE);
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        events.update(act, frame);
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+    }
+
+    private static boolean hasActiveObject(Class<?> type) {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .anyMatch(type::isInstance);
+    }
+
+    private static void drainKosModuleHardware() {
+        var timing = GameServices.hardwareTiming();
+        int frames = 0;
+        while (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
+                && frames++ < HARDWARE_DRAIN_FRAME_LIMIT) {
+            int beforePre = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
+            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertEquals(beforePre,
+                    timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
+                    "PRE_MAIN_LOOP must not publish newly completed KosM work");
+            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        }
+        assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
+                "final KosM readiness must publish at POST_OBJECTS");
     }
 
     @BeforeEach
@@ -136,8 +172,9 @@ public class TestSonic3kAIZEvents {
             events.init(0);
             events.setEventsFg5(true);
 
-            for (int i = 0; i < 320 && !events.isAct2TransitionRequested(); i++) {
-                events.update(0, i);
+            for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
+                    && !events.isAct2TransitionRequested(); i++) {
+                updateWithHardware(events, 0, i);
             }
 
             assertTrue(events.isAct2TransitionRequested());
@@ -207,10 +244,38 @@ public class TestSonic3kAIZEvents {
         assertTrue(AizPlaneIntroInstance.isMainLevelPhaseActive(), "test precondition: AIZ main-level phase is active");
         assertEquals(0x2D80, camera.getX() & 0xFFFF, "test precondition: camera is at the resize gate");
 
-        events.update(0, 0);
+        updateWithHardware(events, 0, 0);
 
         assertEquals(0x2D80, camera.getMinX() & 0xFFFF,
                 "AIZ1_Resize loc_1C594 writes Camera_min_X_pos=$2D80 at the fire palette gate");
+    }
+
+    @Test
+    public void act1ResizeOwnerQueuesMainLevelKosmAndAppliesItsPreparedPayload() {
+        Camera camera = GameServices.camera();
+        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        events.init(0);
+        camera.setX((short) 0x1400);
+        camera.setFrozen(true);
+
+        events.update(0, 0);
+
+        List<HardwareTimingJob.Snapshot> jobs = GameServices.hardwareTiming()
+                .capture().jobs().stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .toList();
+        assertEquals(1, jobs.size(),
+                "AIZ1_Resize $1400 owner must submit its real Queue_Kos_Module job");
+        assertEquals(0x3A944E, jobs.getFirst().romSourceAddress());
+        assertEquals(0x0BE * 32, jobs.getFirst().destinationAddress());
+        assertFalse(AizPlaneIntroInstance.isMainLevelPhaseActive(),
+                "synchronous publication cannot shadow-decompress before KosM readiness");
+
+        drainKosModuleHardware();
+        events.update(0, 1);
+
+        assertTrue(AizPlaneIntroInstance.isMainLevelPhaseActive(),
+                "the resize owner must publish the claimed prepared payload");
     }
 
     @Test
@@ -432,7 +497,7 @@ public class TestSonic3kAIZEvents {
                 "SpawnLevelMainSprites writes the intro parent to Dynamic_object_RAM+2 (SST slot 5)");
 
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
-        events.update(0, 0);
+        updateWithHardware(events, 0, 0);
 
         assertEquals(1, countActiveIntroObjects(),
                 "AIZ intro update fallback must reuse the fixed intro object slot");
@@ -459,12 +524,13 @@ public class TestSonic3kAIZEvents {
         events.init(0);
         events.setEventsFg5(true);
 
-        events.update(0, 0);
+        updateWithHardware(events, 0, 0);
         assertTrue(events.isFireTransitionActive());
         assertFalse(events.isAct2TransitionRequested());
 
-        for (int i = 1; i < 320 && !events.isAct2TransitionRequested(); i++) {
-            events.update(0, i);
+        for (int i = 1; i < HARDWARE_DRAIN_FRAME_LIMIT
+                && !events.isAct2TransitionRequested(); i++) {
+            updateWithHardware(events, 0, i);
         }
 
         assertTrue(events.isAct2TransitionRequested());
@@ -507,8 +573,9 @@ public class TestSonic3kAIZEvents {
         events.init(0);
         events.setEventsFg5(true);
 
-        for (int i = 1; i < 320 && !events.isAct2TransitionRequested(); i++) {
-            events.update(0, i);
+        for (int i = 1; i < HARDWARE_DRAIN_FRAME_LIMIT
+                && !events.isAct2TransitionRequested(); i++) {
+            updateWithHardware(events, 0, i);
         }
 
         assertTrue(events.isAct2TransitionRequested());
@@ -528,7 +595,7 @@ public class TestSonic3kAIZEvents {
 
         boolean sawMutationBeforeReload = false;
         for (int i = 0; i < 260 && !events.isAct2TransitionRequested(); i++) {
-            events.update(0, i);
+            updateWithHardware(events, 0, i);
             if (events.isFireTransitionActive()
                     && !events.isAct2TransitionRequested()
                     && events.getFireTransitionBgY() >= 0x190) {
@@ -556,7 +623,7 @@ public class TestSonic3kAIZEvents {
 
         boolean reachedFireMutationHandoff = false;
         for (int i = 0; i < 260 && !events.isAct2TransitionRequested(); i++) {
-            events.update(0, i);
+            updateWithHardware(events, 0, i);
             if (events.isFireTransitionActive() && events.getFireTransitionBgY() >= 0x190) {
                 reachedFireMutationHandoff = true;
                 break;
@@ -571,6 +638,73 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
+    public void fireTransitionPublishesClaimedAct2ArtOnlyAfterPostReadiness() {
+        Sonic3kLevel level = (Sonic3kLevel) GameServices.level().getCurrentLevel();
+        int transitionArtTileCount = Math.min(level.getPatternCount(), 0x1FC + 237);
+        byte[][] patternsBefore = snapshotPatterns(level, 0, transitionArtTileCount);
+
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x2F10);
+        camera.setY((short) 0x0200);
+
+        var events = newFireTransitionEvents();
+        events.init(0);
+        events.setEventsFg5(true);
+
+        for (int frame = 0; frame < 320
+                && !events.isFireTransitionMutationRequested(); frame++) {
+            updateWithHardware(events, 0, frame);
+        }
+
+        assertTrue(events.isFireTransitionMutationRequested(),
+                "Expected the fire handoff to queue the AIZ2 KosM overlays");
+        assertPatternRangeEquals(patternsBefore, level, 0,
+                "Queuing AIZ2 KosM overlays must not publish a synchronous decompression shadow");
+
+        drainKosModuleHardware();
+
+        List<HardwareTimingJob.Snapshot> readyOverlays =
+                GameServices.hardwareTiming().capture().jobs().stream()
+                        .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                        .filter(job -> !job.claimed())
+                        .filter(job -> job.destinationAddress() == 0
+                                || job.destinationAddress() == 0x1FC * Pattern.PATTERN_SIZE_IN_ROM)
+                        .toList();
+        assertEquals(2, readyOverlays.size());
+        assertTrue(readyOverlays.stream().allMatch(HardwareTimingJob.Snapshot::ready),
+                "Both AIZ2 KosM payloads must cross POST readiness before publication");
+        assertPatternRangeEquals(patternsBefore, level, 0,
+                "Ready-but-unclaimed AIZ2 KosM payloads must remain invisible");
+
+        HardwareTimingJob.Snapshot primary = readyOverlays.stream()
+                .filter(job -> job.destinationAddress() == 0)
+                .findFirst()
+                .orElseThrow();
+        HardwareTimingJob.Snapshot secondary = readyOverlays.stream()
+                .filter(job -> job.destinationAddress() == 0x1FC * Pattern.PATTERN_SIZE_IN_ROM)
+                .findFirst()
+                .orElseThrow();
+
+        for (int frame = 320; frame < 640 && !events.isAct2TransitionRequested(); frame++) {
+            assertPatternRangeEquals(patternsBefore, level, 0,
+                    "The owner must retain both ready handles until its publication dispatch");
+            updateWithHardware(events, 0, frame);
+        }
+
+        assertTrue(events.isAct2TransitionRequested());
+        assertPatternPayloadEquals(level, primary.preparedPayload(), 0);
+        assertPatternPayloadEquals(level, secondary.preparedPayload(), 0x1FC);
+
+        java.util.Map<Long, HardwareTimingJob.Snapshot> overlaysAfterClaim =
+                GameServices.hardwareTiming().capture().jobs().stream()
+                        .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                        .collect(java.util.stream.Collectors.toMap(
+                                job -> job.handle().ordinal(), job -> job));
+        assertTrue(overlaysAfterClaim.get(primary.handle().ordinal()).claimed());
+        assertTrue(overlaysAfterClaim.get(secondary.handle().ordinal()).claimed());
+    }
+
+    @Test
     public void postFireHazeOnlyEnablesAfterBurnHandoff() {
         Camera camera = GameServices.camera();
         camera.setX((short) 0x2F10);
@@ -581,11 +715,12 @@ public class TestSonic3kAIZEvents {
         assertFalse(events.isPostFireHazeActive());
 
         events.setEventsFg5(true);
-        events.update(0, 0);
+        updateWithHardware(events, 0, 0);
         assertFalse(events.isPostFireHazeActive());
 
-        for (int i = 1; i < 320 && !events.isAct2TransitionRequested(); i++) {
-            events.update(0, i);
+        for (int i = 1; i < HARDWARE_DRAIN_FRAME_LIMIT
+                && !events.isAct2TransitionRequested(); i++) {
+            updateWithHardware(events, 0, i);
         }
 
         assertTrue(events.isAct2TransitionRequested());
@@ -596,7 +731,7 @@ public class TestSonic3kAIZEvents {
         assertFalse(act2Events.isPostFireHazeActive());
 
         for (int i = 0; i < 240 && !act2Events.isPostFireHazeActive(); i++) {
-            act2Events.update(1, i);
+            updateWithHardware(act2Events, 1, i);
         }
         assertTrue(act2Events.isPostFireHazeActive());
     }
@@ -611,8 +746,9 @@ public class TestSonic3kAIZEvents {
         events.init(0);
         events.setEventsFg5(true);
 
-        for (int i = 0; i < 320 && !events.isAct2TransitionRequested(); i++) {
-            events.update(0, i);
+        for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
+                && !events.isAct2TransitionRequested(); i++) {
+            updateWithHardware(events, 0, i);
         }
 
         assertTrue(events.isAct2TransitionRequested());
@@ -646,7 +782,7 @@ public class TestSonic3kAIZEvents {
 
         FireCurtainRenderState state = FireCurtainRenderState.inactive();
         for (int i = 0; i < 320 && events.getFireTransitionBgY() < 0x190; i++) {
-            events.update(0, i);
+            updateWithHardware(events, 0, i);
             state = events.getFireCurtainRenderState(224);
         }
 
@@ -668,7 +804,7 @@ public class TestSonic3kAIZEvents {
 
         int previous = 0;
         for (int i = 0; i < 80 && !events.isAct2TransitionRequested(); i++) {
-            events.update(0, i);
+            updateWithHardware(events, 0, i);
             FireCurtainRenderState state = events.getFireCurtainRenderState(224);
             if (!state.active() || (state.stage() != FireCurtainStage.AIZ1_RISING
                     && state.stage() != FireCurtainStage.AIZ1_REFRESH)) {
@@ -689,7 +825,7 @@ public class TestSonic3kAIZEvents {
         events.init(0);
         events.setEventsFg5(true);
 
-        events.update(0, 0);
+        updateWithHardware(events, 0, 0);
         FireCurtainRenderState initial = events.getFireCurtainRenderState(224);
         assertTrue(initial.active());
         // First frame just starts the transition (bgY=0x20); fire tiles at BG Y >= 0x100
@@ -702,13 +838,13 @@ public class TestSonic3kAIZEvents {
         FireCurtainRenderState state = initial;
         int i = 1;
         for (; i < 15; i++) {
-            events.update(0, i);
+            updateWithHardware(events, 0, i);
             state = events.getFireCurtainRenderState(224);
         }
         assertTrue(state.coverHeightPx() >= 16, "Curtain should begin covering within the lerp phase");
 
         for (; i < 240 && state.stage() == FireCurtainStage.AIZ1_RISING; i++) {
-            events.update(0, i);
+            updateWithHardware(events, 0, i);
             state = events.getFireCurtainRenderState(224);
         }
 
@@ -726,7 +862,7 @@ public class TestSonic3kAIZEvents {
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.init(0);
         events.setEventsFg5(true);
-        events.update(0, 8);
+        updateWithHardware(events, 0, 8);
 
         FireCurtainRenderState state = events.getFireCurtainRenderState(224);
         assertTrue(state.active());
@@ -753,8 +889,9 @@ public class TestSonic3kAIZEvents {
         events.init(0);
         events.setEventsFg5(true);
 
-        for (int i = 0; i < 320 && !events.isAct2TransitionRequested(); i++) {
-            events.update(0, i);
+        for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
+                && !events.isAct2TransitionRequested(); i++) {
+            updateWithHardware(events, 0, i);
         }
 
         var act2Events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
@@ -777,8 +914,9 @@ public class TestSonic3kAIZEvents {
         var act1Events = newFireTransitionEvents();
         act1Events.init(0);
         act1Events.setEventsFg5(true);
-        for (int i = 0; i < 320 && !act1Events.isAct2TransitionRequested(); i++) {
-            act1Events.update(0, i);
+        for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
+                && !act1Events.isAct2TransitionRequested(); i++) {
+            updateWithHardware(act1Events, 0, i);
         }
 
         var act2Events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
@@ -791,7 +929,7 @@ public class TestSonic3kAIZEvents {
         boolean sawWaitFire = false;
         boolean sawAiz2SourceStrip = false;
         for (int i = 0; i < 240 && act2Events.getFireCurtainRenderState(224).active(); i++) {
-            act2Events.update(1, i);
+            updateWithHardware(act2Events, 1, i);
             state = act2Events.getFireCurtainRenderState(224);
             if (state.stage() == FireCurtainStage.AIZ2_WAIT_FIRE) {
                 sawWaitFire = true;
@@ -826,8 +964,9 @@ public class TestSonic3kAIZEvents {
         var act1Events = newFireTransitionEvents();
         act1Events.init(0);
         act1Events.setEventsFg5(true);
-        for (int i = 0; i < 320 && !act1Events.isAct2TransitionRequested(); i++) {
-            act1Events.update(0, i);
+        for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
+                && !act1Events.isAct2TransitionRequested(); i++) {
+            updateWithHardware(act1Events, 0, i);
         }
         assertTrue(act1Events.isAct2TransitionRequested(), "Fire transition should have requested act 2");
 
@@ -843,7 +982,7 @@ public class TestSonic3kAIZEvents {
         // Run update to trigger SonicResize1
         // Wait for the fire curtain to clear first so resize runs
         for (int i = 0; i < 240; i++) {
-            act2Events.update(1, i);
+            updateWithHardware(act2Events, 1, i);
         }
 
         // minX must NOT have been snapped to $F50 (the miniboss lock)
@@ -877,7 +1016,7 @@ public class TestSonic3kAIZEvents {
         camera.setMinX((short) 0);
 
         // Run update to trigger SonicResize1
-        events.update(1, 0);
+        updateWithHardware(events, 1, 0);
 
         // minX SHOULD be set to $F50 (skipping miniboss area)
         int minX = camera.getMinX() & 0xFFFF;
@@ -911,7 +1050,7 @@ public class TestSonic3kAIZEvents {
         camera.setY((short) 0x0200);
         camera.setMinX((short) 0);
 
-        events.update(1, 0);
+        updateWithHardware(events, 1, 0);
 
         int minX = camera.getMinX() & 0xFFFF;
         assertTrue(minX < 0x0F50,
@@ -929,25 +1068,37 @@ public class TestSonic3kAIZEvents {
         camera.setX((short) 0x3C00);
         camera.setY((short) 0x0200);
         events.setDynamicResizeRoutine(8);
-        events.update(1, 0);
+        updateWithHardware(events, 1, 0);
         assertEquals(0x0A, events.getDynamicResizeRoutine(), "Stage $08 should only prepare battleship art");
         assertTrue(events.isEventsFg5(), "Stage $08 should raise Events_fg_5 for BG setup");
         assertFalse(events.isEventsFg4(), "Stage $08 must not trigger the bombing screen event");
         assertFalse(events.isBattleshipAutoScrollActive(), "Bombing should not start at the art-load gate");
+        List<HardwareTimingJob.Snapshot> resizeJobs = GameServices.hardwareTiming()
+                .capture().jobs().stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .toList();
+        assertEquals(2, resizeJobs.size(),
+                "AIZ2_SonicResize4 must own both battleship module submissions");
+        assertEquals(0x3B48C6, resizeJobs.get(0).romSourceAddress());
+        assertEquals(0x1FC * 32, resizeJobs.get(0).destinationAddress());
+        assertEquals(0x399CC4, resizeJobs.get(1).romSourceAddress());
+        assertEquals(0x500 * 32, resizeJobs.get(1).destinationAddress());
+        assertFalse(events.isBattleshipTerrainLoaded(),
+                "terrain publication must await the prepared resize-owner payload");
 
         camera.setX((short) 0x4000);
-        events.update(1, 1);
+        updateWithHardware(events, 1, 1);
         assertEquals(0x0C, events.getDynamicResizeRoutine(), "Stage $0A should lock min Y");
         assertFalse(events.isEventsFg4(), "Stage $0A must not trigger the bombing screen event");
         assertFalse(events.isBattleshipAutoScrollActive(), "Bombing should not start at the vertical-lock gate");
 
-        events.update(1, 2);
+        updateWithHardware(events, 1, 2);
         assertEquals(0x0E, events.getDynamicResizeRoutine(), "Stage $0C should lock max Y");
         assertFalse(events.isEventsFg4(), "Stage $0C must not trigger the bombing screen event");
         assertFalse(events.isBattleshipAutoScrollActive(), "Bombing should wait for the $4160 gate");
 
         camera.setX((short) 0x4160);
-        events.update(1, 3);
+        updateWithHardware(events, 1, 3);
         assertEquals(0x10, events.getDynamicResizeRoutine(), "Stage $0E should advance to terminal state");
         assertFalse(events.isEventsFg4(), "AIZ2_ScreenEvent should consume Events_fg_4 in the same frame");
         assertTrue(events.isBattleshipAutoScrollActive(), "AIZ2_ScreenEvent should start the bombing sequence");
@@ -962,12 +1113,15 @@ public class TestSonic3kAIZEvents {
         assertEquals(0x4164, camera.getX() & 0xFFFF,
                 "the following SpecialEvents pass should perform the first +4 ship-loop step");
 
-        events.update(1, 4);
+        updateWithHardware(events, 1, 4);
         assertFalse(events.isEventsFg4(), "AIZ2_ScreenEvent should consume Events_fg_4");
         assertTrue(events.isBattleshipAutoScrollActive(), "Battleship bombing should remain active after the handoff");
         assertTrue(objectManager.getActiveObjects().stream()
                         .anyMatch(AizBattleshipInstance.class::isInstance),
                 "the completed ShipRefresh pass should allocate the battleship");
+        assertTrue(GameServices.hardwareTiming().incompleteCount(
+                        HardwareWorkKind.KOS_MODULE_QUEUE) > 0,
+                "ShipRefresh allocation is independent of the still-running KosM art owner");
     }
 
     @Test
@@ -980,8 +1134,8 @@ public class TestSonic3kAIZEvents {
         camera.setX((short) 0x4160);
         camera.setY((short) 0x0200);
         events.setDynamicResizeRoutine(0x0E);
-        events.update(1, 0);
-        events.update(1, 1);
+        updateWithHardware(events, 1, 0);
+        updateWithHardware(events, 1, 1);
 
         var objectManager = GameServices.level().getObjectManager();
         assertTrue(objectManager.getActiveObjects().stream()
@@ -1090,11 +1244,11 @@ public class TestSonic3kAIZEvents {
         Sonic3kAIZEvents events = manager.getAizEvents();
         assertNotNull(events, "AIZ event handler should be active for AIZ2");
 
-        events.update(1, 0);
+        updateWithHardware(events, 1, 0);
 
         assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
                         .anyMatch(AizEndBossInstance.class::isInstance),
-                "AIZ2 end-boss handoff should create the live Robotnik boss object at the waterfall");
+                "AIZ2 end-boss handoff must allocate independently of its object-owned art queue");
     }
 
     @Test
@@ -1113,7 +1267,7 @@ public class TestSonic3kAIZEvents {
         Sonic3kAIZEvents events = manager.getAizEvents();
         assertNotNull(events, "AIZ event handler should be active for AIZ2");
 
-        events.update(1, 0);
+        updateWithHardware(events, 1, 0);
         GameServices.level().getObjectManager().update(camera.getX(), aiz2.sprite(), List.of(), 1, false);
 
         assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
@@ -1144,7 +1298,7 @@ public class TestSonic3kAIZEvents {
         Sonic3kAIZEvents events = manager.getAizEvents();
         assertNotNull(events, "AIZ event handler should be active for AIZ2");
 
-        events.update(1, 0);
+        updateWithHardware(events, 1, 0);
         GameServices.level().getObjectManager().update(camera.getX(), aiz2.sprite(), List.of(), 1,
                 false, true, true);
 
@@ -1173,7 +1327,7 @@ public class TestSonic3kAIZEvents {
         Sonic3kAIZEvents events = manager.getAizEvents();
         assertNotNull(events, "AIZ event handler should be active for AIZ2");
 
-        events.update(1, 0);
+        updateWithHardware(events, 1, 0);
 
         AizEndBossInstance boss = GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(AizEndBossInstance.class::isInstance)
@@ -1206,9 +1360,9 @@ public class TestSonic3kAIZEvents {
                 "The fixture should prove the boss handoff publishes the late path-switch priority");
         assertFalse(tails.isHighPriority());
 
-        events.update(1, 0);
+        updateWithHardware(events, 1, 0);
         assertTrue(aiz2.sprite().isHighPriority(),
-                "The AIZ2 end-boss activation should restore the native late path-switch priority");
+                "The native event handoff must not wait for object-owned boss art");
         assertTrue(tails.isHighPriority(),
                 "The same native boss handoff should apply to Player 2 through the participation policy");
         GameServices.level().getObjectManager().update(camera.getX(), aiz2.sprite(), List.of(), 1, false);
@@ -1290,6 +1444,52 @@ public class TestSonic3kAIZEvents {
             snapshot[i] = level.getChunk(i).saveState();
         }
         return snapshot;
+    }
+
+    private static byte[][] snapshotPatterns(
+            Sonic3kLevel level, int startPattern, int patternCount) {
+        byte[][] snapshot = new byte[patternCount][];
+        for (int i = 0; i < patternCount; i++) {
+            snapshot[i] = snapshotPattern(level.getPattern(startPattern + i));
+        }
+        return snapshot;
+    }
+
+    private static byte[] snapshotPattern(Pattern pattern) {
+        byte[] pixels = new byte[Pattern.PATTERN_SIZE_IN_MEM];
+        int index = 0;
+        for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
+            for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
+                pixels[index++] = pattern.getPixel(x, y);
+            }
+        }
+        return pixels;
+    }
+
+    private static void assertPatternRangeEquals(
+            byte[][] expected, Sonic3kLevel level, int startPattern, String message) {
+        for (int i = 0; i < expected.length; i++) {
+            assertArrayEquals(expected[i], snapshotPattern(level.getPattern(startPattern + i)),
+                    message + " at tile $" + Integer.toHexString(startPattern + i));
+        }
+    }
+
+    private static void assertPatternPayloadEquals(
+            Sonic3kLevel level, byte[] payload, int destinationPattern) {
+        assertNotNull(payload);
+        assertEquals(0, payload.length % Pattern.PATTERN_SIZE_IN_ROM);
+        Pattern expected = new Pattern();
+        byte[] tileBytes = new byte[Pattern.PATTERN_SIZE_IN_ROM];
+        for (int i = 0; i < payload.length / Pattern.PATTERN_SIZE_IN_ROM; i++) {
+            System.arraycopy(payload, i * Pattern.PATTERN_SIZE_IN_ROM,
+                    tileBytes, 0, Pattern.PATTERN_SIZE_IN_ROM);
+            expected.fromSegaFormat(tileBytes);
+            assertArrayEquals(
+                    snapshotPattern(expected),
+                    snapshotPattern(level.getPattern(destinationPattern + i)),
+                    "Published pattern must equal claimed timing payload at tile $"
+                            + Integer.toHexString(destinationPattern + i));
+        }
     }
 
     private static void assert2dArrayEquals(int[][] expected, int[][] actual, String message) {

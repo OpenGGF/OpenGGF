@@ -19,6 +19,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.objects.AizBattleshipInstance;
 import com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance;
 import com.openggf.game.sonic3k.objects.AizBombExplosionInstance;
@@ -226,6 +229,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private boolean paletteSwapped;
     private boolean boundariesUnlocked;
     private boolean fireMinXLockReached;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
+    private S3kKosModuleQueue mainLevelArtKosQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle mainLevelArtHandle;
+    private long mainLevelArtOrdinal = -1;
     // Tracks one-shot application of AIZ1SE_ChangeChunk4/3/2/1.
     private int appliedTreeRevealChunkCopiesMask;
 
@@ -257,6 +265,14 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private int battleshipSpawnRefreshPasses;
     /** True once the AIZ2 end boss has been handed off to the object system. */
     private boolean endBossSpawned;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
+    private S3kKosModuleQueue battleshipKosQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle battleshipTerrainArtHandle;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle battleshipObjectArtHandle;
+    private long battleshipTerrainArtOrdinal = -1;
+    private long battleshipObjectArtOrdinal = -1;
     /** True once the AIZ2 bombership 8x8/16x16 terrain overlays have been applied. */
     private boolean battleshipTerrainLoaded;
     /** Current wrap boundary for auto-scroll (changes after bombing completes). */
@@ -309,6 +325,19 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private boolean postFireHazeActive;
     /** One-shot guard for AIZ1 fire-overlay 8x8 art staging at x >= $2E00. */
     private boolean fireOverlayTilesLoaded;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
+    private S3kKosModuleQueue fireOverlayKosQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle fireOverlayKosHandle;
+    private long fireOverlayKosOrdinal = -1;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
+    private S3kKosModuleQueue act2ArtKosQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle act2PrimaryArtHandle;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle act2SecondaryArtHandle;
+    private long act2PrimaryArtOrdinal = -1;
+    private long act2SecondaryArtOrdinal = -1;
     /** Fixed-point Camera_Y_pos_BG_copy used by AIZ1_FireRise (16.16). */
     private int fireBgCopyFixed;
     /** Events_bg+$02 equivalent: rising-fire speed. */
@@ -344,21 +373,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int FIRE_SOURCE_X_AIZ2 = 0x0200;
     private static final int FIRE_BG_X_PHASE_MASK = 0x0060;
     private static final int FIRE_WAVE_PHASE_STEP = 6;
-    // ROM: AIZ1BGE_Finish waits for Kos_modules_left == 0 after queuing the
-    // AIZ2 128x128/16x16/8x8 art. The engine applies the decoded art eagerly,
-    // but the native module queue exposes completion only on its four-phase
-    // decompression/DMA handoff. Preserve the minimum drain work and wait for
-    // that hardware-visible VBlank phase rather than using one route-wide delay.
-    private static final int FIRE_LINGER_MIN_FRAMES = 64;
-    private static final int KOS_MODULE_DMA_PHASE_MASK = 3;
-    private static final int KOS_MODULE_DMA_READY_PHASE = 3;
     private static final int FIRE_TRANSITION_FALLBACK_FRAMES = 240;
     private static final int FIRE_REDRAW_FRAMES = 16;
-    // ROM queues the AIZ2 128x128 and 16x16 Kosinski streams before entering
-    // AIZ1BGE_FireRefresh, then consumes their decompressed RAM tables while
-    // AIZ1BGE_Finish is still waiting on module art (sonic3k.asm:104664-104738).
-    // The engine has no incremental Kos queue; expose that exact queued terrain
-    // workload after its observed 20 finish ticks instead of at the later act reload.
     private static final int FIRE_TERRAIN_DECOMPRESS_FRAMES = 20;
     // ROM: after the AIZ1BGE_Finish reload (Events_routine_bg cleared, act 0->1),
     // the AIZ2 background event chain re-draws the fire plane before releasing the
@@ -474,6 +490,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         paletteSwapped = false;
         boundariesUnlocked = false;
         fireMinXLockReached = false;
+        mainLevelArtKosQueue = null;
+        mainLevelArtHandle = null;
+        mainLevelArtOrdinal = -1;
         appliedTreeRevealChunkCopiesMask = 0;
         minibossSpawned = false;
         aiz2ResizeRoutine = 0;
@@ -487,6 +506,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         battleshipSpawned = false;
         battleshipSpawnRefreshPasses = 0;
         endBossSpawned = false;
+        battleshipKosQueue = null;
+        battleshipTerrainArtHandle = null;
+        battleshipObjectArtHandle = null;
+        battleshipTerrainArtOrdinal = -1;
+        battleshipObjectArtOrdinal = -1;
         battleshipTerrainLoaded = false;
         battleshipWrapX = BATTLESHIP_WRAP_X_BOMBING;
         levelRepeatOffset = 0;
@@ -501,6 +525,14 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         fireTerrainTablesLoaded = false;
         postFireHazeActive = false;
         fireOverlayTilesLoaded = false;
+        fireOverlayKosQueue = null;
+        fireOverlayKosHandle = null;
+        fireOverlayKosOrdinal = -1;
+        act2ArtKosQueue = null;
+        act2PrimaryArtHandle = null;
+        act2SecondaryArtHandle = null;
+        act2PrimaryArtOrdinal = -1;
+        act2SecondaryArtOrdinal = -1;
         fireBgCopyFixed = FIRE_BG_FIXED_START;
         fireRiseSpeed = 0;
         fireWavePhase = 0;
@@ -527,19 +559,26 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             camera().setLevelStarted(false);
             introSpawned = spawnIntroObject();
         } else if (act == 0) {
-            // Skip-intro: apply main-level terrain overlays and palette now
-            // rather than deferring to the camera X >= $1400 gate in update().
+            // Skip-intro level loading already selected the main AIZ1 terrain
+            // profile, so only publish the matching palette/semantic phase.
             if (!paletteSwapped) {
                 loadPaletteFromPalPointers(PAL_AIZ_INDEX);
                 paletteSwapped = true;
             }
-            AizIntroTerrainSwap.applyMainLevelOverlays(objectServices());
             AizPlaneIntroInstance.setMainLevelPhaseActive(true);
         }
     }
 
     @Override
     public void update(int act, int frameCounter) {
+        if ((mainLevelArtOrdinal >= 0 && mainLevelArtKosQueue == null)
+                || (battleshipTerrainArtOrdinal >= 0 || battleshipObjectArtOrdinal >= 0)
+                        && battleshipKosQueue == null
+                || (fireOverlayKosOrdinal >= 0 && fireOverlayKosQueue == null)
+                || ((act2PrimaryArtOrdinal >= 0 || act2SecondaryArtOrdinal >= 0)
+                        && act2ArtKosQueue == null)) {
+            rebindHardwareWorkAfterRewind();
+        }
         if (act == 0) {
             updateAct1(frameCounter);
         } else {
@@ -654,8 +693,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // The trace recorder samples checkpoints from end-of-frame state after the
         // camera step, so use the current frame's predicted camera X for these
         // threshold-triggered intro transition checks.
-        AizPlaneIntroInstance.updateMainLevelPhaseForCameraX(
-                frameEndCameraX, shouldSpawnIntro(0), objectServices());
+        serviceAiz1MainLevelArt(frameEndCameraX);
         updateIntroNormalRefreshFlag(frameEndCameraX);
         if (frameEndCameraX >= FIRE_OVERLAY_STAGE_X) {
             // Keep the fire overlay staging after the intro/main-level terrain swap.
@@ -716,6 +754,46 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             }
         }
         introSidekickMarkerReleased |= released;
+    }
+
+    private void serviceAiz1MainLevelArt(int cameraX) {
+        if (AizPlaneIntroInstance.isMainLevelPhaseActive()
+                || cameraX < TERRAIN_SWAP_X) {
+            return;
+        }
+        try {
+            if (mainLevelArtHandle == null) {
+                int introEntry = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
+                        + Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX
+                        * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
+                int source = rom().read32BitAddr(introEntry + 4)
+                        & 0x00FF_FFFF;
+                mainLevelArtKosQueue =
+                        new S3kKosModuleQueue(GameServices.hardwareTiming());
+                mainLevelArtHandle = mainLevelArtKosQueue.queue(
+                        rom(), source, 0x0BE);
+                mainLevelArtOrdinal = mainLevelArtHandle.ordinal();
+                return;
+            }
+            if (!mainLevelArtKosQueue.isReady(mainLevelArtHandle)) {
+                return;
+            }
+            byte[] preparedTiles =
+                    mainLevelArtKosQueue.claim(mainLevelArtHandle);
+            if (!AizIntroTerrainSwap.applyMainLevelOverlays(
+                    objectServices(), preparedTiles)) {
+                throw new IllegalStateException(
+                        "AIZ1 main-level terrain owner has no active S3K level");
+            }
+            mainLevelArtHandle = null;
+            mainLevelArtOrdinal = -1;
+            mainLevelArtKosQueue = null;
+            AizPlaneIntroInstance.setMainLevelPhaseActive(true);
+            LOG.info("AIZ1: main-level terrain overlays published from prepared KosM payload");
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Unable to queue AIZ1 main-level KosM art", e);
+        }
     }
 
     /**
@@ -1073,8 +1151,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // before signaling the fire, so promote using at least the $1400
             // terrain-swap threshold instead of requiring the camera singleton to
             // already be there.
-            int cameraX = Math.max(camera().getX() & 0xFFFF, TERRAIN_SWAP_X);
-            AizPlaneIntroInstance.updateMainLevelPhaseForCameraX(cameraX, false, objectServices());
+            AizPlaneIntroInstance.setMainLevelPhaseActive(true);
             LOG.info("AIZ1: promoted intro state to main-level phase for explicit fire signal");
         }
         introNormalRefreshPending = false;
@@ -1182,6 +1259,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateAct2Continuation(int frameCounter) {
+        if (fireOverlayKosHandle != null) {
+            ensureFireOverlayTilesLoaded();
+        }
         boolean battleshipAutoScrollActiveAtEntry = battleshipAutoScrollActive;
         int battleshipSpawnRefreshPassesAtEntry = battleshipSpawnRefreshPasses;
         // ROM order inside LevelLoop is DeformBgLayer -> Do_ResizeEvents,
@@ -1202,6 +1282,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 spawnBattleshipObject();
             }
         }
+        if (battleshipAutoScrollActive
+                && !battleshipSpawned
+                && battleshipSpawnRefreshPasses == 0) {
+            spawnBattleshipObject();
+        }
+        retireBattleshipKosArtIfReady();
 
         if (fireSequencePhase.curtainActive() || fireSequencePhase == FireSequencePhase.AIZ2_BG_REDRAW) {
             switch (fireSequencePhase) {
@@ -1463,7 +1549,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (camera().getX() < AIZ2_SONIC_RESIZE4_TRIGGER_X) {
             return;
         }
-        ensureBattleshipTerrainLoaded();
+        queueBattleshipKosArt();
         eventsFg5 = true; // Signal to background event
         // ROM: AIZ2BGE_Normal applies a one-time BG camera Y adjustment when eventsFg5 fires.
         // If Camera_Y_pos < $400: add $A8; otherwise: add -$198.
@@ -1566,7 +1652,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (camera().getX() < AIZ2_KNUX_RESIZE4_TRIGGER_X) {
             return;
         }
-        ensureBattleshipTerrainLoaded();
+        queueBattleshipKosArt();
         camera().setMinX((short) AIZ2_KNUX_RESIZE4_TRIGGER_X);
         camera().setMaxYTarget((short) AIZ2_KNUX_RESIZE4_TARGET_MAX_Y);
         eventsFg5 = true;
@@ -1609,7 +1695,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      */
     private void startBattleshipSequence() {
         battleshipAutoScrollActive = true;
-        ensureBattleshipTerrainLoaded();
         // ROM writes Pal_AIZBattleship to Normal_palette_line_2, which maps to
         // engine palette index 1 (palette 0 is the character line).
         loadPalette(1, Sonic3kConstants.PAL_AIZ_BATTLESHIP_ADDR);
@@ -1649,6 +1734,54 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         LOG.info("AIZ2 battleship: spawned at cameraX=0x" + Integer.toHexString(cameraX));
     }
 
+    private void retireBattleshipKosArtIfReady() {
+        if (battleshipKosQueue == null) {
+            return;
+        }
+        if (battleshipTerrainArtHandle != null
+                && battleshipKosQueue.isReady(battleshipTerrainArtHandle)) {
+            byte[] preparedTerrain =
+                    battleshipKosQueue.claim(battleshipTerrainArtHandle);
+            applyBattleshipTerrain(preparedTerrain);
+            battleshipTerrainArtHandle = null;
+            battleshipTerrainArtOrdinal = -1;
+        }
+        if (battleshipObjectArtHandle != null
+                && battleshipKosQueue.isReady(battleshipObjectArtHandle)) {
+            battleshipKosQueue.claim(battleshipObjectArtHandle);
+            battleshipObjectArtHandle = null;
+            battleshipObjectArtOrdinal = -1;
+        }
+        if (battleshipTerrainArtHandle == null
+                && battleshipObjectArtHandle == null) {
+            battleshipKosQueue = null;
+        }
+    }
+
+    private void queueBattleshipKosArt() {
+        if (battleshipTerrainArtHandle != null
+                || battleshipObjectArtHandle != null) {
+            return;
+        }
+        try {
+            battleshipKosQueue =
+                    new S3kKosModuleQueue(GameServices.hardwareTiming());
+            battleshipTerrainArtHandle = battleshipKosQueue.queue(
+                    rom(),
+                    Sonic3kConstants.AIZ2_8X8_BOMBERSHIP_ADDR,
+                    Sonic3kConstants.AIZ2_8X8_BOMBERSHIP_DEST_TILE);
+            battleshipTerrainArtOrdinal = battleshipTerrainArtHandle.ordinal();
+            battleshipObjectArtHandle = battleshipKosQueue.queue(
+                    rom(),
+                    Sonic3kConstants.ART_KOSM_AIZ2_BOMBERSHIP_ADDR,
+                    Sonic3kConstants.ART_TILE_AIZ2_BOMBERSHIP);
+            battleshipObjectArtOrdinal = battleshipObjectArtHandle.ordinal();
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Unable to queue AIZ2 battleship KosM art", e);
+        }
+    }
+
     private void updateAiz2EndBossSpawn() {
         if (endBossSpawned || bossFlag || hasLiveAizEndBoss()) {
             return;
@@ -1660,7 +1793,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (camera().getX() < triggerX) {
             return;
         }
-
         applyEndBossPlayerPriority();
         endBossSpawned = true;
         int spawnX = isKnuckles ? AIZ_END_BOSS_KNUX_LAYOUT_X : AIZ_END_BOSS_SONIC_LAYOUT_X;
@@ -1762,28 +1894,30 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         return objManager.getActiveObjects().stream().anyMatch(predicate);
     }
 
-    private void ensureBattleshipTerrainLoaded() {
+    private void applyBattleshipTerrain(byte[] preparedTiles8x8) {
         if (battleshipTerrainLoaded) {
             return;
         }
+        if (preparedTiles8x8 == null) {
+            throw new IllegalArgumentException("preparedTiles8x8");
+        }
         Level level = levelManager().getCurrentLevel();
         if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
-            return;
+            throw new IllegalStateException(
+                    "AIZ2 battleship terrain owner has no active S3K level");
         }
 
         try {
             ResourceLoader loader = new ResourceLoader(rom());
             byte[] shipBlocks16x16 = loader.loadSingle(
                     LoadOp.kosinskiBase(Sonic3kConstants.AIZ2_16X16_BOMBERSHIP_ADDR));
-            byte[] shipTiles8x8 = loader.loadSingle(
-                    LoadOp.kosinskiMBase(Sonic3kConstants.AIZ2_8X8_BOMBERSHIP_ADDR));
 
             sonic3kLevel.applyChunkOverlay(
                     shipBlocks16x16,
                     Sonic3kConstants.AIZ2_16X16_BOMBERSHIP_DEST_OFFSET,
                     false);
             sonic3kLevel.applyPatternOverlay(
-                    shipTiles8x8,
+                    preparedTiles8x8,
                     Sonic3kConstants.AIZ2_8X8_BOMBERSHIP_DEST_BYTES,
                     false);
             loadPaletteFromPalPointers(PAL_AIZ_BOSS_INDEX);
@@ -1791,10 +1925,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             battleshipTerrainLoaded = true;
 
             LOG.info("AIZ2 battleship: loaded terrain overlays (16x16="
-                    + shipBlocks16x16.length + " bytes, 8x8=" + shipTiles8x8.length
+                    + shipBlocks16x16.length + " bytes, 8x8=" + preparedTiles8x8.length
                     + " bytes) and boss palette");
         } catch (IOException e) {
-            LOG.warning("AIZ2 battleship: failed to load terrain overlays: " + e.getMessage());
+            throw new IllegalStateException(
+                    "Unable to apply AIZ2 battleship terrain", e);
         }
     }
 
@@ -2208,10 +2343,23 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                             S3kSeamlessMutationExecutor.MUTATION_AIZ1_FIRE_TERRAIN_READY);
                     fireTerrainTablesLoaded = true;
                 }
-                int vblankPhase = currentVblankCounter() & KOS_MODULE_DMA_PHASE_MASK;
-                if (firePhaseFrames >= FIRE_LINGER_MIN_FRAMES
-                        && vblankPhase == KOS_MODULE_DMA_READY_PHASE
-                        && !act2TransitionRequested) {
+                if (act2KosArtReady() && !act2TransitionRequested) {
+                    LevelManager levelManager = levelManager();
+                    if (!(levelManager.getCurrentLevel() instanceof Sonic3kLevel)) {
+                        throw new IllegalStateException(
+                                "AIZ2 transition art became ready without a live Sonic3kLevel");
+                    }
+                    byte[] primaryTiles8x8 =
+                            act2ArtKosQueue.claim(act2PrimaryArtHandle);
+                    byte[] secondaryTiles8x8 =
+                            act2ArtKosQueue.claim(act2SecondaryArtHandle);
+                    S3kSeamlessMutationExecutor.applyAiz1FireTransitionPreparedArt(
+                            levelManager, primaryTiles8x8, secondaryTiles8x8);
+                    act2PrimaryArtHandle = null;
+                    act2SecondaryArtHandle = null;
+                    act2PrimaryArtOrdinal = -1;
+                    act2SecondaryArtOrdinal = -1;
+                    act2ArtKosQueue = null;
                     requestAct2Transition();
                 }
             }
@@ -2219,13 +2367,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 // Act 2 continuation is advanced by updateAct2Continuation().
             }
         }
-    }
-
-    private int currentVblankCounter() {
-        if (vblankCounterSource != null) {
-            return vblankCounterSource.getAsInt();
-        }
-        return levelManager().getObjectManager().getVblaCounter();
     }
 
     private void updateIntroNormalRefreshFlag(int cameraX) {
@@ -2281,10 +2422,106 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      */
     private void applyFireTransitionMutation() {
         fireTransitionMutationRequested = true;
+        queueAct2KosArt();
         S3kSeamlessMutationExecutor.apply(
                 levelManager(),
                 S3kSeamlessMutationExecutor.MUTATION_AIZ1_FIRE_TRANSITION_STAGE);
         LOG.info("AIZ1: applied in-place fire mutation stage (direct)");
+    }
+
+    private void queueAct2KosArt() {
+        if (act2PrimaryArtHandle != null) {
+            return;
+        }
+        try {
+            Rom rom = rom();
+            int entry = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
+                    + Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
+            int primarySource = rom.read32BitAddr(entry) & 0x00FF_FFFF;
+            int secondarySource = rom.read32BitAddr(entry + 4) & 0x00FF_FFFF;
+            act2ArtKosQueue =
+                    new S3kKosModuleQueue(GameServices.hardwareTiming());
+            act2PrimaryArtHandle =
+                    act2ArtKosQueue.queue(rom, primarySource, 0x000);
+            act2PrimaryArtOrdinal = act2PrimaryArtHandle.ordinal();
+            act2SecondaryArtHandle =
+                    act2ArtKosQueue.queue(rom, secondarySource, 0x1FC);
+            act2SecondaryArtOrdinal = act2SecondaryArtHandle.ordinal();
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Unable to queue AIZ2 KosM transition art", e);
+        }
+    }
+
+    private boolean act2KosArtReady() {
+        return act2PrimaryArtHandle != null
+                && act2SecondaryArtHandle != null
+                && act2ArtKosQueue.isReady(act2PrimaryArtHandle)
+                && act2ArtKosQueue.isReady(act2SecondaryArtHandle);
+    }
+
+    /**
+     * Rebuilds transient queue facades after the session timing ledger and
+     * scalar zone-event sidecar have both been restored.
+     */
+    public void rebindHardwareWorkAfterRewind() {
+        var timing = GameServices.hardwareTiming();
+
+        mainLevelArtHandle = restoredKosHandle(
+                timing, mainLevelArtOrdinal, "AIZ1 main-level art");
+        mainLevelArtKosQueue = mainLevelArtHandle != null
+                ? new S3kKosModuleQueue(timing)
+                : null;
+
+        battleshipTerrainArtHandle = restoredKosHandle(
+                timing, battleshipTerrainArtOrdinal, "AIZ battleship terrain");
+        battleshipObjectArtHandle = restoredKosHandle(
+                timing, battleshipObjectArtOrdinal, "AIZ battleship object");
+        battleshipKosQueue = battleshipTerrainArtHandle != null
+                || battleshipObjectArtHandle != null
+                        ? new S3kKosModuleQueue(timing)
+                        : null;
+
+        fireOverlayKosHandle = restoredKosHandle(
+                timing, fireOverlayKosOrdinal, "AIZ fire overlay");
+        fireOverlayKosQueue = fireOverlayKosHandle != null
+                ? new S3kKosModuleQueue(timing)
+                : null;
+
+        act2PrimaryArtHandle = restoredKosHandle(
+                timing, act2PrimaryArtOrdinal, "AIZ2 primary transition art");
+        act2SecondaryArtHandle = restoredKosHandle(
+                timing, act2SecondaryArtOrdinal, "AIZ2 secondary transition art");
+        act2ArtKosQueue = act2PrimaryArtHandle != null
+                || act2SecondaryArtHandle != null
+                        ? new S3kKosModuleQueue(timing)
+                        : null;
+    }
+
+    /** Drops only derived facades; captured ordinals remain authoritative. */
+    public void discardHardwareWorkFacadesAfterRewind() {
+        mainLevelArtKosQueue = null;
+        mainLevelArtHandle = null;
+        battleshipKosQueue = null;
+        battleshipTerrainArtHandle = null;
+        battleshipObjectArtHandle = null;
+        fireOverlayKosQueue = null;
+        fireOverlayKosHandle = null;
+        act2ArtKosQueue = null;
+        act2PrimaryArtHandle = null;
+        act2SecondaryArtHandle = null;
+    }
+
+    private static HardwareWorkHandle restoredKosHandle(
+            com.openggf.game.timing.HardwareTimingService timing,
+            long ordinal,
+            String owner) {
+        if (ordinal < 0) {
+            return null;
+        }
+        return timing.pendingHandle(HardwareWorkKind.KOS_MODULE_QUEUE, ordinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored " + owner + " owner cannot find KosM ordinal " + ordinal));
     }
 
     private void requestAct2Transition() {
@@ -2396,9 +2633,24 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             if (rom == null) {
                 return;
             }
-            ResourceLoader loader = new ResourceLoader(rom);
-            byte[] fireOverlay8x8 = loader.loadSingle(
-                    LoadOp.kosinskiMBase(Sonic3kConstants.ART_KOSM_AIZ1_FIRE_OVERLAY_ADDR));
+            if (fireOverlayKosHandle == null) {
+                fireOverlayKosQueue =
+                        new S3kKosModuleQueue(GameServices.hardwareTiming());
+                fireOverlayKosHandle = fireOverlayKosQueue.queue(
+                        rom,
+                        Sonic3kConstants.ART_KOSM_AIZ1_FIRE_OVERLAY_ADDR,
+                        FIRE_OVERLAY_TILE_DEST);
+                fireOverlayKosOrdinal = fireOverlayKosHandle.ordinal();
+                return;
+            }
+            if (!fireOverlayKosQueue.isReady(fireOverlayKosHandle)) {
+                return;
+            }
+            byte[] fireOverlay8x8 =
+                    fireOverlayKosQueue.claim(fireOverlayKosHandle);
+            fireOverlayKosHandle = null;
+            fireOverlayKosQueue = null;
+            fireOverlayKosOrdinal = -1;
             fireOverlayTileCount = fireOverlay8x8.length / Pattern.PATTERN_SIZE_IN_ROM;
             int destOffset = FIRE_OVERLAY_TILE_DEST * Pattern.PATTERN_SIZE_IN_ROM;
             sonic3kLevel.applyPatternOverlay(fireOverlay8x8, destOffset, false);

@@ -44,6 +44,9 @@ public final class RomWorkBudgetScheduler {
             if (head == null) {
                 return;
             }
+            if (head.preparation().isBoundaryDriven()) {
+                return;
+            }
             if (head.preparation().isPrepared()) {
                 head.capturePreparedPayload();
                 unit--;

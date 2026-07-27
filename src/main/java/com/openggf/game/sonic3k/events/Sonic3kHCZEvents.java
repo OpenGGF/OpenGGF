@@ -10,6 +10,10 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.objects.HCZ2WallObjectInstance;
 import com.openggf.game.sonic3k.objects.HczTransitionBubbleInstance;
 import com.openggf.game.sonic3k.scroll.SwScrlHcz;
@@ -152,15 +156,6 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     // =========================================================================
     private static final int TRANSITION_OFFSET_X = -0x3600;
     private static final int TRANSITION_WATER_LEVEL = 0x6A0;
-    /**
-     * ROM incremental drain for HCZ2_8x8_Secondary_KosM. The queued archive
-     * expands to 17,568 bytes (ROM $3BFA6C); Process_Kos_Queue is interruptible
-     * and Process_Kos_Module_Queue exposes completion after 131 level-loop
-     * dispatches for this workload (sonic3k.asm:2668-2791,2823-2953,
-     * 105718-105748).
-     */
-    private static final int HCZ2_SECONDARY_KOS_DRAIN_FRAMES = 131;
-
     // =========================================================================
     // State
     // =========================================================================
@@ -172,7 +167,11 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     /** Prevents requesting the transition more than once. */
     private boolean transitionRequested;
-    private int transitionKosDrainFrames;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
+    private S3kKosModuleQueue transitionKosQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle transitionKosHandle;
+    private long transitionKosOrdinal = -1;
 
     /**
      * ROM: Boss_flag — set by the boss object when the fight begins.
@@ -281,7 +280,9 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         bgRoutine = BG_STAGE_NORMAL;
         eventsFg5 = false;
         transitionRequested = false;
-        transitionKosDrainFrames = 0;
+        transitionKosQueue = null;
+        transitionKosHandle = null;
+        transitionKosOrdinal = -1;
         bossFlag = false;
         cutsceneActive = false;
         carrierMovementPending = false;
@@ -308,6 +309,9 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        if (transitionKosOrdinal >= 0 && transitionKosQueue == null) {
+            rebindHardwareWorkAfterRewind();
+        }
         // Retained miniboss carrier children run independently of act-specific logic.
         if (cutsceneActive) {
             if (!carrierUpdatedBeforeDynamicObjects) {
@@ -723,7 +727,20 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                 if (eventsFg5) {
                     eventsFg5 = false;
                     bgRoutine = BG_STAGE_DO_TRANSITION;
-                    transitionKosDrainFrames = 0;
+                    try {
+                        transitionKosQueue =
+                                new S3kKosModuleQueue(
+                                        com.openggf.game.GameServices.hardwareTiming());
+                        transitionKosHandle = transitionKosQueue.queue(
+                                rom(),
+                                Sonic3kConstants.ART_KOSM_HCZ2_SECONDARY_ADDR,
+                                0x11B);
+                        transitionKosOrdinal = transitionKosHandle.ordinal();
+                    } catch (IOException e) {
+                        LOG.fine("HCZ2 secondary KosM unavailable in bootstrap context: "
+                                + e.getMessage());
+                        requestHcz2Transition();
+                    }
                     LOG.info("HCZ1 BG: Events_fg_5 detected, advancing to transition stage");
                 }
                 // Normal scrolling handled by SwScrlHcz
@@ -732,13 +749,40 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                 // ROM waits only for the HCZ2 Kosinski module workload queued by
                 // HCZ1BGE_Normal. Results continue running across the reload; the
                 // later End_of_level_flag is not this transition's owner.
-                transitionKosDrainFrames++;
                 if (!transitionRequested
-                        && transitionKosDrainFrames >= HCZ2_SECONDARY_KOS_DRAIN_FRAMES) {
+                        && transitionKosHandle != null
+                        && transitionKosQueue.isReady(transitionKosHandle)) {
+                    transitionKosQueue.claim(transitionKosHandle);
+                    transitionKosHandle = null;
+                    transitionKosQueue = null;
+                    transitionKosOrdinal = -1;
                     requestHcz2Transition();
                 }
             }
         }
+    }
+
+    /** Rebinds the transient queue facade to the restored session ledger. */
+    public void rebindHardwareWorkAfterRewind() {
+        if (transitionKosOrdinal < 0) {
+            transitionKosQueue = null;
+            transitionKosHandle = null;
+            return;
+        }
+        var timing = com.openggf.game.GameServices.hardwareTiming();
+        transitionKosHandle = timing.pendingHandle(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        transitionKosOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored HCZ transition owner cannot find KosM ordinal "
+                                + transitionKosOrdinal));
+        transitionKosQueue = new S3kKosModuleQueue(timing);
+    }
+
+    /** Drops only derived facades; captured ordinal remains authoritative. */
+    public void discardHardwareWorkFacadesAfterRewind() {
+        transitionKosQueue = null;
+        transitionKosHandle = null;
     }
 
     /**

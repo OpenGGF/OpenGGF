@@ -30,6 +30,7 @@ import com.openggf.game.session.WorldSession;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
@@ -270,6 +271,15 @@ public class DefaultObjectServices implements ObjectServices {
             return worldSession.getGameModule();
         }
         return levelManager.getGameModule();
+    }
+
+    @Override
+    public HardwareTimingService hardwareTiming() {
+        if (gameplayMode == null) {
+            throw new IllegalStateException(
+                    "hardware timing requires session-backed object services");
+        }
+        return gameplayMode.hardwareTiming();
     }
 
     @Override
