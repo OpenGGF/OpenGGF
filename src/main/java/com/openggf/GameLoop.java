@@ -1051,7 +1051,11 @@ public class GameLoop {
                 () -> titleReleaseResult, levelManager, gameplayMode,
                 inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress(),
-                userRecordingControls, this::startPendingInLevelTitleCard);
+                userRecordingControls, this::startPendingInLevelTitleCard,
+                () -> LevelIterationAdmissionController
+                        .prepareTraceHardwareTimingForAdmission(currentGameMode),
+                LevelIterationAdmissionController
+                        ::deactivateTraceHardwareTimingForAdmission);
         if (admission == LevelFrameResult.PAUSED) {
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode));
             inputHandler.update();

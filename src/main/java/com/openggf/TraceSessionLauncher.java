@@ -17,6 +17,7 @@ import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.rewind.RewindController;
@@ -40,6 +41,9 @@ import com.openggf.trace.replay.TraceGhostHook;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -99,6 +103,9 @@ public final class TraceSessionLauncher {
      */
     private List<TraceRunReplayWalker.SegmentPlan> runSegments;
     private RunSegmentAdvancer runAdvancer;
+    private TraceRunReplayWalker.HardwareTimingCoordinator runHardwareTiming;
+    private int runSpecialTimingSegment = -1;
+    private int runSpecialTimingRow;
     /**
      * Snapshot of the user's gameplay-altering config taken before
      * {@link TraceReplaySessionBootstrap#prepareConfiguration} ran.
@@ -234,6 +241,10 @@ public final class TraceSessionLauncher {
                     entry, trace, movie, configSnapshot);
             TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
             configMutated = true;
+            SessionManager.armNextGameplayAdmissionPolicy(
+                    trace.metadata().hasHardwareTimingStream()
+                            ? HardwareReadinessAdmissionPolicy.RECORDED
+                            : HardwareReadinessAdmissionPolicy.LIVE);
             loop.launchGameByEntry(
                     resolveGameEntry(entry.gameId()),
                     session::finishLaunchAfterGameBootstrap);
@@ -244,9 +255,7 @@ public final class TraceSessionLauncher {
             // If we already mutated config before launchGameByEntry
             // threw, restore the user's settings so the picker
             // resumes with their preferences intact.
-            if (configMutated) {
-                TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
-            }
+            restoreFailedLaunch(configSnapshot, configMutated);
             return false;
         }
     }
@@ -271,6 +280,10 @@ public final class TraceSessionLauncher {
                     new TraceSessionLauncher(entry, movie, segments, configSnapshot);
             TraceReplaySessionBootstrap.prepareConfiguration(seg0Trace, seg0Trace.metadata());
             configMutated = true;
+            SessionManager.armNextGameplayAdmissionPolicy(
+                    TraceRunReplayWalker.hasHardwareTimingStream(segments)
+                            ? HardwareReadinessAdmissionPolicy.RECORDED
+                            : HardwareReadinessAdmissionPolicy.LIVE);
             loop.launchGameByEntry(
                     resolveGameEntry(entry.gameId()),
                     session::finishRunLaunch);
@@ -278,9 +291,7 @@ public final class TraceSessionLauncher {
         } catch (Exception e) {
             LOGGER.log(java.util.logging.Level.SEVERE,
                     "Failed to launch trace run " + entry.dir(), e);
-            if (configMutated) {
-                TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
-            }
+            restoreFailedLaunch(configSnapshot, configMutated);
             return false;
         }
     }
@@ -301,6 +312,7 @@ public final class TraceSessionLauncher {
                     new TraceSessionLauncher(entry, movie, ssTrace, configSnapshot);
             prepareSpecialStageConfiguration(entry.metadata());
             configMutated = true;
+            armSpecialStageAdmissionPolicy(ssTrace);
             loop.launchGameByEntry(
                     resolveGameEntry(entry.gameId()),
                     session::finishSpecialStageLaunch);
@@ -308,11 +320,25 @@ public final class TraceSessionLauncher {
         } catch (Exception e) {
             LOGGER.log(java.util.logging.Level.SEVERE,
                     "Failed to launch SS trace " + entry.dir(), e);
-            if (configMutated) {
-                TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
-            }
+            restoreFailedLaunch(configSnapshot, configMutated);
             return false;
         }
+    }
+
+    static void restoreFailedLaunch(
+            TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot,
+            boolean configMutated) {
+        SessionManager.clearNextGameplayAdmissionPolicy();
+        if (configMutated) {
+            TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
+        }
+    }
+
+    static void armSpecialStageAdmissionPolicy(SpecialStageTraceData trace) {
+        SessionManager.armNextGameplayAdmissionPolicy(
+                trace.metadata().hasHardwareTimingStream()
+                        ? HardwareReadinessAdmissionPolicy.RECORDED
+                        : HardwareReadinessAdmissionPolicy.LIVE);
     }
 
     /**
@@ -371,7 +397,14 @@ public final class TraceSessionLauncher {
                     + "aborting for " + entry.dir());
             return;
         }
+        finishSpecialStageLaunch(loop);
+    }
+
+    void finishSpecialStageLaunch(GameLoop loop) {
+        GameplayModeContext failedContext = SessionManager.getCurrentGameplayMode();
         try {
+            this.fixture = new LiveFixture(GameServices.playbackDebug(), loop);
+            installSpecialStageHardwareTiming(fixture);
             // Mark active before entering so any entry-time rewind recording is
             // suppressed (GameLoop gates SS capture on active() == null).
             activeSession = this;
@@ -380,10 +413,36 @@ public final class TraceSessionLauncher {
             enterSpecialStageTrace(loop, provider, index != null ? index : 0);
         } catch (Exception e) {
             activeSession = null;
-            TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
+            try {
+                if (fixture != null) {
+                    fixture.closeHardwareTimingReplayRun();
+                }
+            } catch (RuntimeException closeFailure) {
+                e.addSuppressed(closeFailure);
+            } finally {
+                try {
+                    TraceReplaySessionBootstrap.restoreGameplayConfig(
+                            configSnapshot);
+                } catch (RuntimeException restoreFailure) {
+                    e.addSuppressed(restoreFailure);
+                } finally {
+                    try {
+                        if (failedContext != null) {
+                            failedContext.destroy();
+                        }
+                    } catch (RuntimeException contextFailure) {
+                        e.addSuppressed(contextFailure);
+                    } finally {
+                        try {
+                            loop.returnToMasterTitle();
+                        } catch (RuntimeException returnFailure) {
+                            e.addSuppressed(returnFailure);
+                        }
+                    }
+                }
+            }
             LOGGER.log(java.util.logging.Level.SEVERE,
                     "Failed to finish SS trace launch for " + entry.dir(), e);
-            loop.returnToMasterTitle();
         }
     }
 
@@ -418,6 +477,7 @@ public final class TraceSessionLauncher {
             int startIndex = driver.recordingStartFrame();
             int initialCursor = driver.initialCursor();
             this.comparator = driver.comparator();
+            playback.setFrameObserver(comparator);
             this.cameraFocusController = new TraceCameraFocusController(
                     comparator,
                     loop::getMainPlayableSprite,
@@ -483,10 +543,17 @@ public final class TraceSessionLauncher {
             TraceData seg0Trace = runSegments.get(0).trace();
             this.fixture = new LiveFixture(playback, loop);
             TraceReplayDriver driver = new TraceReplayDriver(
-                    seg0Trace, movie, fixture, loop, loop::getMainPlayableSprite);
+                    seg0Trace, movie, fixture, loop, loop::getMainPlayableSprite,
+                    loop::toggleUserPause,
+                    TraceRunReplayWalker.hasHardwareTimingStream(runSegments));
             driver.start(entry.zone(), entry.act());
 
             this.comparator = driver.comparator();
+            this.runHardwareTiming =
+                    new TraceRunReplayWalker.HardwareTimingCoordinator(
+                            fixture,
+                            TraceRunReplayWalker.hardwareTimingSegments(runSegments));
+            playback.setFrameObserver(comparator);
             this.cameraFocusController = new TraceCameraFocusController(
                     comparator,
                     loop::getMainPlayableSprite,
@@ -581,6 +648,9 @@ public final class TraceSessionLauncher {
             return;
         }
         if (ssCursor >= ssStageFinishedFrame) {
+            if (fixture != null) {
+                fixture.closeHardwareTimingReplayRun();
+            }
             startFadeOut();
             return;
         }
@@ -600,6 +670,9 @@ public final class TraceSessionLauncher {
             return;
         }
         if (comparator.isComplete() && !completionArmed) {
+            if (fixture != null) {
+                fixture.closeHardwareTimingReplayRun();
+            }
             completionArmed = true;
             completionHoldFrames = (int) Math.round(COMPLETION_HOLD_SECONDS * 60.0);
         }
@@ -630,7 +703,108 @@ public final class TraceSessionLauncher {
         if (event instanceof RunSegmentAdvancer.AdvanceAction action) {
             applyRunSegmentAdvance(action);
         } else if (event instanceof RunSegmentAdvancer.EndOfRun) {
+            if (fixture != null) {
+                fixture.closeHardwareTimingReplayRun();
+            }
             startFadeOut();
+        }
+    }
+
+    void installSpecialStageHardwareTiming(TraceReplayFixture replayFixture) {
+        fixture = replayFixture;
+        if (ssTrace != null
+                && ssTrace.metadata().hasHardwareTimingStream()) {
+            TraceReplaySessionBootstrap.installHardwareTimingReplay(
+                    ssTrace.hardwareTimingSchedule(), replayFixture);
+        }
+    }
+
+    /**
+     * Selects represented hardware-timing authority before iteration
+     * admission, so paused VBlank service and transition/title-card scans
+     * cannot observe the previous row's latch.
+     */
+    public void prepareHardwareTimingForAdmission(GameMode mode) {
+        if (fixture == null) {
+            return;
+        }
+        if (fadeStarted) {
+            fixture.enterHardwareTimingGap();
+            return;
+        }
+        if (runAdvancer != null && runHardwareTiming != null) {
+            if (mode == GameMode.LEVEL
+                    || mode == GameMode.BONUS_STAGE) {
+                runHardwareTiming.beginPlaybackFrame(
+                        GameServices.playbackDebug().currentFrameOrThrow());
+            } else if (mode == GameMode.SPECIAL_STAGE) {
+                prepareRunSpecialStageHardwareTimingRow();
+            } else {
+                fixture.enterHardwareTimingGap();
+            }
+            return;
+        }
+        if (ssTrace != null) {
+            if (mode == GameMode.SPECIAL_STAGE
+                    && ssTrace.metadata().hasHardwareTimingStream()
+                    && ssCursor >= 0
+                    && ssCursor < ssTrace.frameCount()) {
+                fixture.beginTraceRow(ssCursor, ssCursor);
+            } else {
+                fixture.enterHardwareTimingGap();
+            }
+            return;
+        }
+        if (trace != null
+                && trace.metadata().hasHardwareTimingStream()
+                && mode == GameMode.LEVEL
+                && comparator != null) {
+            int cursor = comparator.cursor();
+            if (cursor >= 0 && cursor < trace.frameCount()) {
+                fixture.beginTraceRow(
+                        cursor, trace.getFrame(cursor).frame());
+                return;
+            }
+        }
+        fixture.enterHardwareTimingGap();
+    }
+
+    public void deactivateHardwareTimingForAdmission() {
+        if (fixture != null) {
+            fixture.enterHardwareTimingGap();
+        }
+    }
+
+    /**
+     * Latches metadata-only special-stage rows before their production update.
+     * The run advancer changes segments after the update, so the first stage
+     * frame anticipates the immediately following structural segment.
+     */
+    private void prepareRunSpecialStageHardwareTimingRow() {
+        int segmentIndex = runAdvancer.currentSegmentIndex();
+        if (!"special_stage".equals(
+                runSegments.get(segmentIndex).segment().kind())
+                && segmentIndex + 1 < runSegments.size()
+                && "special_stage".equals(
+                        runSegments.get(segmentIndex + 1).segment().kind())) {
+            segmentIndex++;
+        }
+        if (!"special_stage".equals(
+                runSegments.get(segmentIndex).segment().kind())) {
+            fixture.enterHardwareTimingGap();
+            return;
+        }
+        if (runSpecialTimingSegment != segmentIndex) {
+            runSpecialTimingSegment = segmentIndex;
+            runSpecialTimingRow = 0;
+        }
+        int rowCount =
+                runSegments.get(segmentIndex).segment().traceFrameCount();
+        if (runSpecialTimingRow < rowCount) {
+            runHardwareTiming.beginSegmentRow(
+                    segmentIndex, runSpecialTimingRow++);
+        } else {
+            fixture.enterHardwareTimingGap();
         }
     }
 
@@ -673,7 +847,8 @@ public final class TraceSessionLauncher {
         this.overlay = new TraceHudOverlay(comparator,
                 () -> cameraFocusController.currentLabel(),
                 this::rewindStatusLabel);
-        GameServices.playbackDebug().setFrameObserver(comparator);
+        GameServices.playbackDebug().setFrameObserver(
+                comparator);
         GameServices.playbackDebug().startSession(movie, action.reseekOffset());
         completionArmed = false;
         completionHoldFrames = 0;
@@ -824,7 +999,12 @@ public final class TraceSessionLauncher {
 
     private void startFadeOut() {
         fadeStarted = true;
-        GameServices.fade().startFadeToBlack(this::teardown);
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode == null || gameplayMode.getFadeManager() == null) {
+            throw new IllegalStateException(
+                    "trace fade requires an active gameplay fade manager");
+        }
+        gameplayMode.getFadeManager().startFadeToBlack(this::teardown);
     }
 
     private void installTraceRewindController(GameLoop loop, int movieBaseFrame, int traceBaseFrame) {
@@ -836,7 +1016,9 @@ public final class TraceSessionLauncher {
         this.rewindTraceBaseFrame = traceBaseFrame;
         this.rewindPlaybackController = gameplayMode.installPlaybackController(
                 new OffsetMovieInputSource(movie, movieBaseFrame),
-                new VisualTraceRewindStepper(loop, movie, trace, movieBaseFrame, traceBaseFrame),
+                new VisualTraceRewindStepper(
+                        loop, movie, trace, fixture,
+                        movieBaseFrame, traceBaseFrame),
                 60);
         this.rewindController = gameplayMode.getRewindController();
         // A Trace Test Mode session is the whole reason held rewind exists
@@ -975,15 +1157,22 @@ public final class TraceSessionLauncher {
         private final GameLoop loop;
         private final Bk2Movie movie;
         private final TraceData trace;
+        private final TraceReplayFixture fixture;
         private final int movieBaseFrame;
         private final int traceBaseFrame;
         private boolean pendingForcedJumpPress;
 
-        private VisualTraceRewindStepper(GameLoop loop, Bk2Movie movie, TraceData trace,
-                                         int movieBaseFrame, int traceBaseFrame) {
+        private VisualTraceRewindStepper(
+                GameLoop loop,
+                Bk2Movie movie,
+                TraceData trace,
+                TraceReplayFixture fixture,
+                int movieBaseFrame,
+                int traceBaseFrame) {
             this.loop = loop;
             this.movie = movie;
             this.trace = trace;
+            this.fixture = fixture;
             this.movieBaseFrame = movieBaseFrame;
             this.traceBaseFrame = traceBaseFrame;
         }
@@ -992,6 +1181,12 @@ public final class TraceSessionLauncher {
         public LevelFrameResult step(Bk2FrameInput inputs) {
             int relative = Math.max(0, inputs.frameIndex() - movieBaseFrame + 1);
             int traceIndex = traceBaseFrame + relative - 1;
+            if (traceIndex >= 0 && traceIndex < trace.frameCount()) {
+                fixture.beginTraceRow(
+                        traceIndex, trace.getFrame(traceIndex).frame());
+            } else {
+                fixture.enterHardwareTimingGap();
+            }
             TraceExecutionPhase phase = executionPhase(traceIndex);
             if (phase == TraceExecutionPhase.ADVANCE_ONLY) {
                 publishPlaybackInput(inputs);
@@ -1108,6 +1303,10 @@ public final class TraceSessionLauncher {
     private static final class LiveFixture implements TraceReplayFixture {
         private final PlaybackDebugManager playback;
         private final GameLoop gameLoop;
+        private HardwareTimingReplayPort hardwareTimingReplayPort;
+        private TraceHardwareTimingBoundaryObserver hardwareTimingObserver;
+        private GameplayModeContext hardwareTimingGameplayMode;
+        private boolean hardwareTimingReplayClosed;
 
         private LiveFixture(PlaybackDebugManager playback, GameLoop gameLoop) {
             this.playback = playback;
@@ -1122,6 +1321,73 @@ public final class TraceSessionLauncher {
         @Override
         public GameplayModeContext gameplayMode() {
             return SessionManager.getCurrentGameplayMode();
+        }
+
+        @Override
+        public void installHardwareTimingReplay(HardwareTimingReplayPort replayPort) {
+            if (hardwareTimingReplayPort != null) {
+                throw new IllegalStateException("hardware timing replay is already installed");
+            }
+            hardwareTimingReplayPort = replayPort;
+            hardwareTimingObserver = new TraceHardwareTimingBoundaryObserver(replayPort);
+            hardwareTimingGameplayMode = gameplayMode();
+            hardwareTimingReplayClosed = false;
+            hardwareTimingGameplayMode.getRewindRegistry().register(replayPort);
+            hardwareTimingGameplayMode.setHardwareTimingBoundaryObserver(
+                    hardwareTimingObserver);
+            hardwareTimingGameplayMode.setHardwareTimingReplayCloseHook(
+                    this::closeHardwareTimingReplayRun);
+        }
+
+        @Override
+        public void beginTraceRow(int traceIndex, int rawFrame) {
+            if (hardwareTimingObserver != null) {
+                hardwareTimingObserver.beginRawFrame(rawFrame);
+            }
+        }
+
+        @Override
+        public void enterHardwareTimingGap() {
+            if (hardwareTimingObserver != null) {
+                hardwareTimingObserver.enterUnrepresentedGap();
+            }
+        }
+
+        @Override
+        public void verifyHardwareTimingSegmentEdges() {
+            if (hardwareTimingReplayPort != null) {
+                hardwareTimingReplayPort.verifySegmentEdges();
+            }
+        }
+
+        @Override
+        public void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule) {
+            if (hardwareTimingReplayPort != null) {
+                hardwareTimingReplayPort.handoffTo(nextSchedule);
+            }
+        }
+
+        @Override
+        public void closeHardwareTimingReplayRun() {
+            if (hardwareTimingReplayPort == null || hardwareTimingReplayClosed) {
+                return;
+            }
+            hardwareTimingReplayClosed = true;
+            try {
+                hardwareTimingReplayPort.verifyRunComplete();
+            } finally {
+                if (hardwareTimingGameplayMode != null) {
+                    hardwareTimingGameplayMode.setHardwareTimingBoundaryObserver(
+                            null);
+                    if (hardwareTimingGameplayMode.getRewindRegistry() != null) {
+                        hardwareTimingGameplayMode.getRewindRegistry()
+                                .deregister(HardwareTimingReplayPort.REWIND_KEY);
+                    }
+                    hardwareTimingGameplayMode.clearHardwareTimingReplayCloseHook();
+                }
+                hardwareTimingObserver = null;
+                hardwareTimingGameplayMode = null;
+            }
         }
 
         @Override

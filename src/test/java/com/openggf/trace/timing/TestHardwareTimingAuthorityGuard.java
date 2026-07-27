@@ -30,6 +30,12 @@ class TestHardwareTimingAuthorityGuard {
     private static final Pattern TIMING_PARSER_ACCESS = Pattern.compile(
             "(?m)^import\\s+(?:static\\s+)?com\\.openggf\\.trace\\.timing(?:\\.[\\w*]+)*\\s*;"
                     + "|\\bcom\\.openggf\\.trace\\.timing\\.[A-Z][A-Za-z0-9_]*\\b");
+    private static final Pattern REPLAY_PORT_REFERENCE = Pattern.compile(
+            "\\bHardwareTimingReplayPort\\b");
+    private static final Pattern REPLAY_PORT_APPLY = Pattern.compile(
+            "(?:\\b[A-Za-z_$][A-Za-z0-9_$]*|\\))\\s*\\.\\s*apply\\s*\\(");
+    private static final Pattern IMPORT_DECLARATION = Pattern.compile(
+            "(?m)^import\\s+(?:static\\s+)?([\\w.]+)(?:\\.\\*)?\\s*;");
     private static final Pattern HARDWARE_TIMING_FILE_LITERAL = Pattern.compile(
             "\\\"hardware_timing\\.jsonl\\\"");
     private static final Pattern HARDWARE_TIMING_FILE_CONCATENATION = Pattern.compile(
@@ -59,7 +65,6 @@ class TestHardwareTimingAuthorityGuard {
     private static final Set<String> ROOT_GAMEPLAY_OWNER_TYPES = Set.of(
             "com.openggf.Engine",
             "com.openggf.GameLoop",
-            "com.openggf.TraceSessionLauncher",
             "com.openggf.LevelIterationAdmissionController");
 
     @Test
@@ -188,6 +193,64 @@ class TestHardwareTimingAuthorityGuard {
     }
 
     @Test
+    void rejectsReplayPortApplyOutsideTheStatelessBoundaryObserver() {
+        assertDetected(scanReplayPortApply("com/openggf/trace/replay/Driver.java", """
+                class Driver { void drive(HardwareTimingReplayPort replayPort) {
+                    replayPort.apply(null);
+                } }
+                """));
+        assertTrue(scanReplayPortApply(
+                "com/openggf/trace/timing/TraceHardwareTimingBoundaryObserver.java",
+                "class TraceHardwareTimingBoundaryObserver { void x() { replayPort.apply(null); } }")
+                .isEmpty());
+        assertDetected(scanReplayPortApply("com/openggf/trace/replay/Alias.java", """
+                class Alias { void drive(HardwareTimingReplayPort gate) {
+                    gate.apply(null);
+                } }
+                """));
+        assertDetected(scanReplayPortApply("com/openggf/trace/replay/Field.java", """
+                class Field {
+                    HardwareTimingReplayPort gate;
+                    void drive() { this.gate.apply(null); }
+                }
+                """));
+        assertDetected(scanReplayPortApply("com/openggf/trace/replay/Nested.java", """
+                class Nested {
+                    HardwareTimingReplayPort port() { return null; }
+                    void drive() { port().apply(null); }
+                }
+                """));
+    }
+
+    @Test
+    void rejectsGameplaySubsystemDependenciesFromReplayPort() {
+        assertDetected(scanReplayPortDependencies("""
+                import com.openggf.level.LevelManager;
+                class HardwareTimingReplayPort {}
+                """));
+        assertDetected(scanReplayPortDependencies("""
+                import com.openggf.game.TitleCardProvider;
+                class HardwareTimingReplayPort {}
+                """));
+        assertDetected(scanReplayPortDependencies("""
+                import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+                class HardwareTimingReplayPort {}
+                """));
+        assertDetected(scanReplayPortDependencies("""
+                import com.openggf.game.sonic2.objects.TornadoObjectInstance;
+                class HardwareTimingReplayPort {}
+                """));
+        assertDetected(scanReplayPortDependencies("""
+                import com.openggf.level.objects.ObjectManager;
+                class HardwareTimingReplayPort {}
+                """));
+        assertTrue(scanReplayPortDependencies("""
+                import com.openggf.game.timing.RecordedCompletionAuthority;
+                class HardwareTimingReplayPort {}
+                """).isEmpty());
+    }
+
+    @Test
     void comparisonAndAuxiliaryParsersDoNotImportTheGameplayTimingService() throws IOException {
         List<String> violations = new ArrayList<>();
         for (Path file : productionFiles()) {
@@ -242,6 +305,23 @@ class TestHardwareTimingAuthorityGuard {
         assertNoViolations("timing fixtures must not mutate gameplay through reflection", violations);
     }
 
+    @Test
+    void onlyTheBoundaryObserverMayInvokeReplayPortApply() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (Path file : productionFiles()) {
+            violations.addAll(scanReplayPortApply(relative(file), Files.readString(file)));
+        }
+        assertNoViolations("only the stateless boundary observer may apply replay edges", violations);
+    }
+
+    @Test
+    void replayPortDoesNotDependOnGameplaySubsystems() throws IOException {
+        Path port = SRC_MAIN.resolve(
+                "com/openggf/trace/timing/HardwareTimingReplayPort.java");
+        assertNoViolations("replay port must remain bounded to timing authority",
+                scanReplayPortDependencies(Files.readString(port)));
+    }
+
     private static List<Path> productionFiles() throws IOException {
         try (Stream<Path> stream = Files.walk(SRC_MAIN)) {
             return stream.filter(path -> path.toString().endsWith(".java")).sorted().toList();
@@ -283,6 +363,9 @@ class TestHardwareTimingAuthorityGuard {
 
     private static List<String> scanGameplayTimingParserAccess(String packageName, String fileName, String source) {
         String typeName = packageName + "." + fileName.replaceFirst("\\.java$", "");
+        if (typeName.equals("com.openggf.TraceSessionLauncher")) {
+            return List.of();
+        }
         if (!hasPackagePrefix(packageName, GAMEPLAY_OWNER_PACKAGE_PREFIXES)
                 && !ROOT_GAMEPLAY_OWNER_TYPES.contains(typeName)
                 && !(packageName.equals("com.openggf")
@@ -313,6 +396,36 @@ class TestHardwareTimingAuthorityGuard {
         }
         if (REFLECTIVE_GAMEPLAY_ACCESS.matcher(stripCommentsAndStrings(source)).find()) {
             return List.of(relative + " reflectively accesses a hardware-timing gameplay boundary");
+        }
+        return List.of();
+    }
+
+    private static List<String> scanReplayPortApply(String relative, String source) {
+        if (relative.equals(
+                "com/openggf/trace/timing/TraceHardwareTimingBoundaryObserver.java")) {
+            return List.of();
+        }
+        String stripped = stripCommentsAndStrings(source);
+        if (!REPLAY_PORT_REFERENCE.matcher(stripped).find()) {
+            return List.of();
+        }
+        return scanAccess(relative, stripped, REPLAY_PORT_APPLY,
+                " invokes HardwareTimingReplayPort.apply outside the boundary observer");
+    }
+
+    private static List<String> scanReplayPortDependencies(String source) {
+        var imports = IMPORT_DECLARATION.matcher(
+                stripCommentsAndStrings(source));
+        while (imports.find()) {
+            String imported = imports.group(1);
+            if (imported.startsWith("com.openggf.")
+                    && !imported.startsWith("com.openggf.trace.timing.")
+                    && !imported.startsWith("com.openggf.game.timing.")
+                    && !imported.startsWith("com.openggf.game.rewind.")) {
+                return List.of(
+                        "HardwareTimingReplayPort imports gameplay dependency "
+                                + imported);
+            }
         }
         return List.of();
     }

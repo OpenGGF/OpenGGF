@@ -29,6 +29,7 @@ import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.zone.NoOpZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -52,6 +53,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -213,6 +215,31 @@ class TestGameplayModeContextRewindRegistry {
         first.tearDownManagers();
         assertSame(HardwareTimingBoundaryObserver.NO_OP,
                 first.hardwareTimingBoundaryObserver());
+    }
+
+    @Test
+    void recordedPolicyBeginsAdmissionDuringContextConstruction() {
+        GameplayModeContext context = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()),
+                HardwareReadinessAdmissionPolicy.RECORDED);
+
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                context.hardwareTiming().admissionPolicy());
+        assertNotNull(context.recordedCompletionAuthority());
+    }
+
+    @Test
+    void contextTeardownInvokesReplayCloseHookExactlyOnce() {
+        GameplayModeContext context = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()),
+                HardwareReadinessAdmissionPolicy.RECORDED);
+        AtomicInteger closes = new AtomicInteger();
+        context.setHardwareTimingReplayCloseHook(closes::incrementAndGet);
+
+        context.tearDownManagers();
+        context.tearDownManagers();
+
+        assertEquals(1, closes.get());
     }
 
     @Test

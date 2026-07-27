@@ -6,14 +6,21 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -29,6 +36,8 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
     private final GameplayModeContext gameplayMode;
     private final HeadlessTestRunner runner;
     private final AbstractPlayableSprite sprite;
+    private HardwareTimingReplayPort hardwareTimingReplayPort;
+    private boolean hardwareTimingReplayClosed;
 
     private HeadlessTestFixture(GameplayModeContext gameplayMode, HeadlessTestRunner runner,
                                 AbstractPlayableSprite sprite) {
@@ -121,6 +130,68 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         return gameplayMode;
     }
 
+    @Override
+    public void installHardwareTimingReplay(
+            HardwareTimingReplayPort replayPort) {
+        if (hardwareTimingReplayPort != null) {
+            throw new IllegalStateException(
+                    "hardware timing replay is already installed");
+        }
+        hardwareTimingReplayPort =
+                java.util.Objects.requireNonNull(replayPort, "replayPort");
+        TraceHardwareTimingBoundaryObserver observer =
+                new TraceHardwareTimingBoundaryObserver(replayPort);
+        gameplayMode.getRewindRegistry().register(replayPort);
+        gameplayMode.setHardwareTimingBoundaryObserver(observer);
+        runner.installHardwareTimingReplayObserver(observer);
+        gameplayMode.setHardwareTimingReplayCloseHook(
+                this::closeHardwareTimingReplayRun);
+    }
+
+    @Override
+    public void beginTraceRow(int traceIndex, int rawFrame) {
+        runner.beginTraceRow(traceIndex, rawFrame);
+    }
+
+    @Override
+    public void enterHardwareTimingGap() {
+        runner.enterHardwareTimingGap();
+    }
+
+    @Override
+    public void verifyHardwareTimingSegmentEdges() {
+        if (hardwareTimingReplayPort != null) {
+            hardwareTimingReplayPort.verifySegmentEdges();
+        }
+    }
+
+    @Override
+    public void handoffHardwareTimingReplay(
+            HardwareTimingSchedule nextSchedule) {
+        if (hardwareTimingReplayPort != null) {
+            hardwareTimingReplayPort.handoffTo(nextSchedule);
+        }
+    }
+
+    @Override
+    public void closeHardwareTimingReplayRun() {
+        if (hardwareTimingReplayClosed || hardwareTimingReplayPort == null) {
+            return;
+        }
+        hardwareTimingReplayClosed = true;
+        try {
+            hardwareTimingReplayPort.verifyRunComplete();
+        } finally {
+            runner.clearHardwareTimingReplayObserver();
+            gameplayMode.setHardwareTimingBoundaryObserver(null);
+            if (gameplayMode.getRewindRegistry() != null) {
+                gameplayMode.getRewindRegistry()
+                        .deregister(HardwareTimingReplayPort.REWIND_KEY);
+            }
+            gameplayMode.clearHardwareTimingReplayCloseHook();
+        }
+    }
+
     /** Returns the underlying headless test runner. */
     public HeadlessTestRunner runner() {
         return runner;
@@ -145,6 +216,8 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         private boolean startPositionIsCentre;
         private boolean customStartPositionProvided;
         private boolean freshLevelStartLifecycle;
+        private HardwareReadinessAdmissionPolicy hardwareAdmissionPolicy =
+                HardwareReadinessAdmissionPolicy.LIVE;
 
         private Builder() {}
 
@@ -197,10 +270,36 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             return this;
         }
 
+        public Builder withHardwareReadinessAdmissionPolicy(
+                HardwareReadinessAdmissionPolicy admissionPolicy) {
+            this.hardwareAdmissionPolicy =
+                    java.util.Objects.requireNonNull(
+                            admissionPolicy, "admissionPolicy");
+            return this;
+        }
+
         public HeadlessTestFixture build() {
             if (sharedLevel == null && zone < 0) {
                 throw new IllegalStateException(
                         "HeadlessTestFixture.Builder requires either withSharedLevel() or withZoneAndAct() before build()");
+            }
+
+            // Recorded admission must own the context before any level load
+            // can submit hardware work.
+            GameplayModeContext existing = SessionManager.getCurrentGameplayMode();
+            if (hardwareAdmissionPolicy
+                    == HardwareReadinessAdmissionPolicy.RECORDED
+                    && (existing == null
+                    || existing.hardwareTiming().admissionPolicy()
+                    != HardwareReadinessAdmissionPolicy.RECORDED)) {
+                GameplayModeContext reopened =
+                        SessionManager.reopenGameplaySession(
+                                HardwareReadinessAdmissionPolicy.RECORDED);
+                GameplaySessionFactory.attachManagers(
+                        reopened,
+                        com.openggf.game.session.EngineServices.current());
+                GameModuleRegistry.setCurrent(
+                        reopened.getWorldSession().getGameModule());
             }
 
             // 1. Reset transient per-test state

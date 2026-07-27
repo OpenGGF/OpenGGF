@@ -220,12 +220,14 @@ Therefore special-stage `raw_frame` ownership is:
   `bk2_frame_offset` retaining the emulator frame at which the segment armed; and
 - one increment per emitted special-stage row, performed only by `write_ss_row`.
 
-Hardware-timing state must reset with `start_ss_segment`: clear the observed FIFO mirror
-and pending ledger, reset the next `KOS_MODULE_QUEUE` ordinal for the new structural
-segment, and treat the first eligible queue snapshot as its baseline/submission state.
-Within the segment, ordinals remain monotonic and each retiring FIFO head consumes exactly
-one pending ordinal. Segment finalization must reject an unmatched completion or
-unresolved exportable pending job before that state is discarded.
+Only the observation clock resets with `start_ss_segment`: the special-stage
+`raw_frame` and its segment-local mirror baseline restart at zero. Production submission
+identity does not. `KOS_MODULE_QUEUE` ordinals are monotonic across the whole structural
+run, never reset at a level/special-stage boundary, and pending production work remains
+owned by that same run-scoped ledger. A segment handoff verifies that every pending export
+is explicitly exportable and has an exact kind/ordinal/fingerprint edge in the next
+segment; non-exportable or unmatched work fails the handoff. Each retiring FIFO head
+still consumes exactly one pending run ordinal.
 
 The sampling call belongs in the special-stage continuation branch immediately before
 `write_ss_row`, using the current `trace_frame` before that function increments it. The

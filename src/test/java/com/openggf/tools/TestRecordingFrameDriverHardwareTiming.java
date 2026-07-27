@@ -8,10 +8,14 @@ import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -81,6 +85,23 @@ class TestRecordingFrameDriverHardwareTiming {
         driver.consumeRecordingFrameInputOnly();
 
         assertEquals(List.of(), events);
+    }
+
+    @Test
+    void beginTraceRowForwardsRawFrameRatherThanTraceIndex() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+        RecordedCompletionAuthority authority = mock(RecordedCompletionAuthority.class);
+        HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
+        port.install(HardwareTimingSchedule.empty());
+        TraceHardwareTimingBoundaryObserver observer =
+                new TraceHardwareTimingBoundaryObserver(port);
+        RecordingFrameDriver driver =
+                new RecordingFrameDriver(mock(AbstractPlayableSprite.class));
+        driver.installHardwareTimingReplayObserver(observer);
+
+        driver.beginTraceRow(7, 0x1234);
+
+        assertEquals(0x1234, port.capture().rawFrameLatch());
     }
 
     @Test

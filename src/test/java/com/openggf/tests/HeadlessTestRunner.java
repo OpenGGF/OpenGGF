@@ -5,6 +5,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.RecordingFrameDriver;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import com.openggf.game.GameServices;
 import com.openggf.audio.presentation.PresentationMode;
 
@@ -125,6 +126,23 @@ public class HeadlessTestRunner {
      */
     public void setBk2Movie(Bk2Movie movie, int bk2FrameOffset) {
         driver.setBk2Movie(movie, bk2FrameOffset);
+    }
+
+    public void installHardwareTimingReplayObserver(
+            TraceHardwareTimingBoundaryObserver observer) {
+        driver.installHardwareTimingReplayObserver(observer);
+    }
+
+    public void clearHardwareTimingReplayObserver() {
+        driver.clearHardwareTimingReplayObserver();
+    }
+
+    public void beginTraceRow(int traceIndex, int rawFrame) {
+        driver.beginTraceRow(traceIndex, rawFrame);
+    }
+
+    public void enterHardwareTimingGap() {
+        driver.enterHardwareTimingGap();
     }
 
     /**

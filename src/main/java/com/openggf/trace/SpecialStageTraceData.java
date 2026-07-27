@@ -1,5 +1,8 @@
 package com.openggf.trace;
 
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.HardwareTimingStreamLoader;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
@@ -34,13 +37,17 @@ public final class SpecialStageTraceData {
     private final List<SpecialStageTraceFrame> frames;
     private final Map<Integer, List<TraceEvent>> eventsByFrame;
     private final List<ControlStateTransition> controlStateTransitions;
+    private final HardwareTimingSchedule hardwareTimingSchedule;
 
     private SpecialStageTraceData(TraceMetadata metadata, List<SpecialStageTraceFrame> frames,
-            Map<Integer, List<TraceEvent>> eventsByFrame) {
+            Map<Integer, List<TraceEvent>> eventsByFrame,
+            HardwareTimingSchedule hardwareTimingSchedule) {
         this.metadata = metadata;
         this.frames = frames;
         this.eventsByFrame = eventsByFrame;
         this.controlStateTransitions = parseControlStateTransitions(eventsByFrame);
+        this.hardwareTimingSchedule =
+                Objects.requireNonNull(hardwareTimingSchedule, "hardwareTimingSchedule");
     }
 
     public static SpecialStageTraceData load(Path traceDirectory) throws IOException {
@@ -64,8 +71,11 @@ public final class SpecialStageTraceData {
         Map<Integer, List<TraceEvent>> events = auxPath != null
             ? TraceData.loadAuxEvents(auxPath)
             : Collections.emptyMap();
+        HardwareTimingSchedule hardwareTimingSchedule =
+                HardwareTimingStreamLoader.load(traceDirectory, metadata);
 
-        return new SpecialStageTraceData(metadata, frames, events);
+        return new SpecialStageTraceData(
+                metadata, frames, events, hardwareTimingSchedule);
     }
 
     public TraceMetadata metadata() {
@@ -82,6 +92,10 @@ public final class SpecialStageTraceData {
                 "Frame " + i + " out of range [0, " + frames.size() + ")");
         }
         return frames.get(i);
+    }
+
+    public HardwareTimingSchedule hardwareTimingSchedule() {
+        return hardwareTimingSchedule;
     }
 
     /** Reuses {@link TraceEvent} + aux jsonl parsing shared with {@link TraceData}. */

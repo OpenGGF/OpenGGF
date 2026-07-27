@@ -20,6 +20,7 @@ import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
@@ -31,6 +32,9 @@ import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -209,8 +213,17 @@ public final class TraceCaptureTool {
 
         // --- boot headless gameplay session -------------------------------
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
+        try (BootOwnership<HeadlessGameBoot> ownership =
+                new BootOwnership<>(
+                        boot, SessionManager::closeGameplaySession)) {
         Path romPath = Paths.get(RomManager.resolveRomForGame(entry.gameId()));
-        GameLoop loop = boot.boot(romPath, entry.zone(), entry.act());
+        GameLoop loop = boot.boot(
+                romPath,
+                entry.zone(),
+                entry.act(),
+                meta.hasHardwareTimingStream()
+                        ? HardwareReadinessAdmissionPolicy.RECORDED
+                        : HardwareReadinessAdmissionPolicy.LIVE);
 
         // --- deterministic trace replay bootstrap -------------------------
         // Mirror AbstractTraceReplayTest steps 4-5: start position + ground
@@ -249,7 +262,11 @@ public final class TraceCaptureTool {
 
         if (args.verifyFrames() != null) {
             runVerify(trace, meta, frameDriver, replayStart, args.verifyFrames());
-            return boot;
+            int maxRequested = java.util.Arrays.stream(args.verifyFrames()).max().orElse(-1);
+            if (maxRequested >= trace.getFrame(trace.frameCount() - 1).frame()) {
+                fixture.closeHardwareTimingReplayRun();
+            }
+            return ownership.transfer();
         }
 
         // --- capture pipeline ---------------------------------------------
@@ -302,6 +319,9 @@ public final class TraceCaptureTool {
                             recorder, args.clip(), args.tailFrames())
                     : driveAndCapture(trace, meta, frameDriver, replayStart,
                             loop, grabber, audioFrames, recorder);
+            if (args.clip() == null) {
+                fixture.closeHardwareTimingReplayRun();
+            }
         } finally {
             try {
                 Path out = recorder.stop();
@@ -313,7 +333,60 @@ public final class TraceCaptureTool {
                 GameServices.audio().endCaptureMode();
             }
         }
-        return boot;
+        return ownership.transfer();
+        }
+    }
+
+    /**
+     * Keeps ownership of a boot from the instant it is constructed until a
+     * successful run returns it to {@link #main(String[])}. This closes both
+     * the replay session and native boot if any post-construction step throws.
+     */
+    static final class BootOwnership<T extends AutoCloseable>
+            implements AutoCloseable {
+        private final T boot;
+        private final Runnable closeSession;
+        private boolean transferred;
+
+        BootOwnership(T boot, Runnable closeSession) {
+            this.boot = java.util.Objects.requireNonNull(boot, "boot");
+            this.closeSession = java.util.Objects.requireNonNull(
+                    closeSession, "closeSession");
+        }
+
+        T transfer() {
+            transferred = true;
+            return boot;
+        }
+
+        @Override
+        public void close() throws Exception {
+            if (transferred) {
+                return;
+            }
+            Throwable failure = null;
+            try {
+                closeSession.run();
+            } catch (Throwable sessionFailure) {
+                failure = sessionFailure;
+            }
+            try {
+                boot.close();
+            } catch (Throwable bootFailure) {
+                if (failure == null) {
+                    failure = bootFailure;
+                } else {
+                    failure.addSuppressed(bootFailure);
+                }
+            }
+            if (failure instanceof Exception exception) {
+                throw exception;
+            }
+            if (failure != null) {
+                throw new IllegalStateException(
+                        "capture teardown failed", failure);
+            }
+        }
     }
 
     /**
@@ -412,6 +485,7 @@ public final class TraceCaptureTool {
 
         while (driveTraceIndex < trace.frameCount()) {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
+            frameDriver.beginTraceRow(driveTraceIndex, driveFrame.frame());
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
 
@@ -481,6 +555,7 @@ public final class TraceCaptureTool {
         System.out.println("clip aiz-battleship-to-boss: fast-forwarding to battleship start...");
         while (driveTraceIndex < trace.frameCount()) {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
+            frameDriver.beginTraceRow(driveTraceIndex, driveFrame.frame());
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
             DriveOutcome outcome =
@@ -573,6 +648,7 @@ public final class TraceCaptureTool {
         System.out.println("=== VERIFY trajectory (rings, camera_x at requested frames) ===");
         while (driveTraceIndex < trace.frameCount() && driveTraceIndex <= maxFrame) {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
+            frameDriver.beginTraceRow(driveTraceIndex, driveFrame.frame());
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
             DriveOutcome outcome =
@@ -755,6 +831,8 @@ public final class TraceCaptureTool {
      */
     private static final class CaptureFixture implements com.openggf.trace.replay.TraceReplayFixture {
         private final RecordingFrameDriver driver;
+        private HardwareTimingReplayPort hardwareTimingReplayPort;
+        private boolean hardwareTimingReplayClosed;
 
         private CaptureFixture(RecordingFrameDriver driver) {
             this.driver = driver;
@@ -768,6 +846,63 @@ public final class TraceCaptureTool {
         @Override
         public com.openggf.game.session.GameplayModeContext gameplayMode() {
             return SessionManager.getCurrentGameplayMode();
+        }
+
+        @Override
+        public void installHardwareTimingReplay(HardwareTimingReplayPort replayPort) {
+            if (hardwareTimingReplayPort != null) {
+                throw new IllegalStateException("hardware timing replay is already installed");
+            }
+            hardwareTimingReplayPort = replayPort;
+            hardwareTimingReplayClosed = false;
+            TraceHardwareTimingBoundaryObserver observer =
+                    new TraceHardwareTimingBoundaryObserver(replayPort);
+            gameplayMode().getRewindRegistry().register(replayPort);
+            gameplayMode().setHardwareTimingBoundaryObserver(observer);
+            driver.installHardwareTimingReplayObserver(observer);
+            gameplayMode().setHardwareTimingReplayCloseHook(
+                    this::closeHardwareTimingReplayRun);
+        }
+
+        @Override
+        public void beginTraceRow(int traceIndex, int rawFrame) {
+            driver.beginTraceRow(traceIndex, rawFrame);
+        }
+
+        @Override
+        public void enterHardwareTimingGap() {
+            driver.enterHardwareTimingGap();
+        }
+
+        @Override
+        public void verifyHardwareTimingSegmentEdges() {
+            if (hardwareTimingReplayPort != null) {
+                hardwareTimingReplayPort.verifySegmentEdges();
+            }
+        }
+
+        @Override
+        public void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule) {
+            if (hardwareTimingReplayPort != null) {
+                hardwareTimingReplayPort.handoffTo(nextSchedule);
+            }
+        }
+
+        @Override
+        public void closeHardwareTimingReplayRun() {
+            if (hardwareTimingReplayPort == null || hardwareTimingReplayClosed) {
+                return;
+            }
+            hardwareTimingReplayClosed = true;
+            try {
+                hardwareTimingReplayPort.verifyRunComplete();
+            } finally {
+                driver.clearHardwareTimingReplayObserver();
+                gameplayMode().setHardwareTimingBoundaryObserver(null);
+                gameplayMode().getRewindRegistry()
+                        .deregister(HardwareTimingReplayPort.REWIND_KEY);
+                gameplayMode().clearHardwareTimingReplayCloseHook();
+            }
         }
 
         @Override

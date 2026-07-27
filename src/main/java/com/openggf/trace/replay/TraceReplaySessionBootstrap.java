@@ -35,8 +35,11 @@ import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -215,6 +218,15 @@ public final class TraceReplaySessionBootstrap {
     public static BootstrapResult applyBootstrap(TraceData trace,
                                                  TraceReplayFixture fixture,
                                                  int preTraceOscOverride) {
+        return applyBootstrap(trace, fixture, preTraceOscOverride, false);
+    }
+
+    public static BootstrapResult applyBootstrap(
+            TraceData trace,
+            TraceReplayFixture fixture,
+            int preTraceOscOverride,
+            boolean forceHardwareTimingReplay) {
+        installHardwareTimingReplay(trace, fixture, forceHardwareTimingReplay);
         int preTraceOsc = TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(
                 trace, preTraceOscOverride);
         for (int i = 0; i < preTraceOsc; i++) {
@@ -400,6 +412,33 @@ public final class TraceReplaySessionBootstrap {
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+    public static void installHardwareTimingReplay(
+            TraceData trace,
+            TraceReplayFixture fixture,
+            boolean forceHardwareTimingReplay) {
+        if (trace == null
+                || fixture == null
+                || (!forceHardwareTimingReplay
+                        && !trace.metadata().hasHardwareTimingStream())) {
+            return;
+        }
+        installHardwareTimingReplay(trace.hardwareTimingSchedule(), fixture);
+    }
+
+    /** Installs one already-validated replay schedule into the active gameplay session. */
+    public static void installHardwareTimingReplay(
+            HardwareTimingSchedule schedule,
+            TraceReplayFixture fixture) {
+        Objects.requireNonNull(schedule, "schedule");
+        Objects.requireNonNull(fixture, "fixture");
+        GameplayModeContext gameplayMode = Objects.requireNonNull(
+                fixture.gameplayMode(), "trace replay gameplay mode");
+        HardwareTimingReplayPort replayPort = new HardwareTimingReplayPort(
+                gameplayMode.recordedCompletionAuthority());
+        replayPort.install(schedule);
+        fixture.installHardwareTimingReplay(replayPort);
     }
 
     /**

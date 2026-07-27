@@ -358,6 +358,9 @@ class TestTraceReplayInvariantGuard {
 
     private static boolean isTraceCaptureToolRecordingAdapter(Path source, String trimmed) {
         return normalize(source).equals("src/main/java/com/openggf/tools/TraceCaptureTool.java")
+                && trimmed.equals("driver.advanceRecordingCursor(frameCount);")
+                || normalize(source).equals(
+                        "src/test/java/com/openggf/tests/HeadlessTestRunner.java")
                 && trimmed.equals("driver.advanceRecordingCursor(frameCount);");
     }
 

@@ -39,6 +39,7 @@ public final class TraceReplayDriver {
     private final GameLoop loop;
     private final Supplier<AbstractPlayableSprite> spriteSupplier;
     private final Runnable onComparatorPause;
+    private final boolean forceHardwareTimingReplay;
 
     private LiveTraceComparator comparator;
     private int initialCursor;
@@ -60,12 +61,24 @@ public final class TraceReplayDriver {
     public TraceReplayDriver(TraceData trace, Bk2Movie movie, TraceReplayFixture fixture,
                              GameLoop loop, Supplier<AbstractPlayableSprite> spriteSupplier,
                              Runnable onComparatorPause) {
+        this(trace, movie, fixture, loop, spriteSupplier, onComparatorPause, false);
+    }
+
+    public TraceReplayDriver(
+            TraceData trace,
+            Bk2Movie movie,
+            TraceReplayFixture fixture,
+            GameLoop loop,
+            Supplier<AbstractPlayableSprite> spriteSupplier,
+            Runnable onComparatorPause,
+            boolean forceHardwareTimingReplay) {
         this.trace = trace;
         this.movie = movie;
         this.fixture = fixture;
         this.loop = loop;
         this.spriteSupplier = spriteSupplier;
         this.onComparatorPause = onComparatorPause;
+        this.forceHardwareTimingReplay = forceHardwareTimingReplay;
     }
 
     /**
@@ -176,7 +189,8 @@ public final class TraceReplayDriver {
         }
         TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
         TraceReplaySessionBootstrap.BootstrapResult boot =
-                TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
+                TraceReplaySessionBootstrap.applyBootstrap(
+                        trace, fixture, -1, forceHardwareTimingReplay);
 
         this.initialCursor = boot.replayStart().startingTraceIndex();
         TraceFrame previousDriveFrame = boot.replayStart().hasSeededTraceState()

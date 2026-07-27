@@ -27,6 +27,13 @@ public final class TraceFixtures {
         return new TraceData(metadata, List.copyOf(frames), Map.copyOf(eventsByFrame), HardwareTimingSchedule.empty());
     }
 
+    public static TraceData trace(
+            TraceMetadata metadata,
+            List<TraceFrame> frames,
+            HardwareTimingSchedule schedule) {
+        return new TraceData(metadata, List.copyOf(frames), Map.of(), schedule);
+    }
+
     /** Minimal metadata stub for unit tests. */
     public static TraceMetadata metadata(String gameId, int zoneId, int act) {
         return metadata(gameId, zoneId, act, null);
@@ -35,6 +42,24 @@ public final class TraceFixtures {
     /** Minimal metadata stub with an explicit frame-0 RNG seed. */
     public static TraceMetadata metadataWithRngSeed(String gameId, int zoneId, int act, String rngSeedHex) {
         return metadata(gameId, zoneId, act, rngSeedHex);
+    }
+
+    public static TraceMetadata metadataWithHardwareTiming(
+            String gameId, int zoneId, int act, int traceFrameCount) {
+        TraceMetadata base = metadata(gameId, zoneId, act);
+        return new TraceMetadata(
+                base.game(), base.zone(), base.zoneId(), base.act(),
+                base.bk2FrameOffset(), base.ringFloorCheckCounterPhase(),
+                traceFrameCount, base.startXHex(), base.startYHex(),
+                base.recordingDate(), base.luaScriptVersion(), base.traceSchema(),
+                base.csvVersion(), base.traceProfile(), base.bizhawkVersion(),
+                base.genesisCore(), base.auxSchemaExtras(), base.romZoneId(),
+                base.route(), base.sourceBk2(), base.romChecksum(), base.notes(),
+                base.characters(), base.mainCharacter(), base.sidekicks(),
+                base.preTraceOscFrames(), base.rngSeedHex(), base.traceType(),
+                base.inputSource(), base.creditsDemoIndex(), base.creditsDemoSlug(),
+                base.specialStageIndex(), base.runId(), base.segmentIndex(),
+                base.bonusStageType(), base.freshLoad(), base.vIntRunCount(), 1);
     }
 
     private static TraceMetadata metadata(String gameId, int zoneId, int act, String rngSeedHex) {

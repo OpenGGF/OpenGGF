@@ -19,6 +19,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 /**
  * Deterministic per-frame gameplay drive shared by headless trace tests and the
@@ -47,6 +48,7 @@ public final class RecordingFrameDriver {
     private LevelFrameResult lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
     private boolean lastFrameRanGameplay = true;
     private boolean pendingSeamlessBoundaryCompletion;
+    private TraceHardwareTimingBoundaryObserver hardwareTimingReplayObserver;
 
     // BK2 recording playback fields
     private Bk2Movie bk2Movie;
@@ -64,6 +66,31 @@ public final class RecordingFrameDriver {
 
     public int getFrameCounter() {
         return frameCounter;
+    }
+
+    public void installHardwareTimingReplayObserver(
+            TraceHardwareTimingBoundaryObserver observer) {
+        hardwareTimingReplayObserver = observer;
+    }
+
+    public void clearHardwareTimingReplayObserver() {
+        hardwareTimingReplayObserver = null;
+    }
+
+    public void beginTraceRow(int traceIndex, int rawFrame) {
+        if (traceIndex < 0) {
+            throw new IllegalArgumentException(
+                    "traceIndex must be non-negative: " + traceIndex);
+        }
+        if (hardwareTimingReplayObserver != null) {
+            hardwareTimingReplayObserver.beginRawFrame(rawFrame);
+        }
+    }
+
+    public void enterHardwareTimingGap() {
+        if (hardwareTimingReplayObserver != null) {
+            hardwareTimingReplayObserver.enterUnrepresentedGap();
+        }
     }
 
     // ---- core frame step ----
