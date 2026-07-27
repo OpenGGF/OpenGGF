@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+## 2026-07-27 - CNZ Tails CPU control-byte ownership advances f4801 to f4826
+
+- Worktree: `.worktrees/trace-s3k-cnz-f4801`, branch
+  `bugfix/ai-trace-s3k-cnz-f4801`, based on `origin/develop`
+  `6f48f3d9af9aacacf00f259eaf2fe48288a94fcd`.
+- Baseline command:
+  `mvn -Dmse=off
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.frontierOnly=true
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace'
+  test` reproduced two frontier-window errors, first at f4801
+  `tails_mapping_frame` (expected `$07`, actual `$55`); the canonical full
+  comparison contained 3,714 errors.
+- A bounded, stage-gated ProbeRuntime capture observed
+  `Tails_FlySwim_Unknown` reaching `loc_13D42` before `Animate_Tails` on every
+  frame in the release window. At native f4801 the complete `$81`
+  `object_control` write clears bit 1, and the walk animation publishes mapping
+  `$07` before the later cylinder slot releases Tails. The capture contained
+  175 event rows and had SHA-256
+  `b4c09810de28cf0a511cb4e5920d3067574712022cb30c7f21d091e462964ca5`.
+- RED coverage
+  `offscreenFlightContinuationClearsPriorObjectMappingOwnership` retained the
+  stale mapping owner after applying native `$81`; it now observes the owner
+  cleared while animation and forced-animation bytes remain unchanged.
+- The same frontier-only command now reports two errors with first mismatch
+  f4826 `tails_animation_id` (expected `$00`, actual `$20`); the canonical
+  comparison falls from 3,714 to 3,702 errors. Native f4826 is a separate later
+  cylinder-contact owner: the CPU/animation pass publishes `$20`/`$A0`, then
+  `sub_324C0` captures Tails and overwrites the post-frame state to `$00`/`$55`.
+- Verification: 122 sidekick CPU tests, 60 CNZ cylinder/directed-traversal
+  tests, 20 CNZ trace-scenario invocations, 70 probe/architecture guard tests,
+  and the rewind coverage guard passed. The five already-red CNZ scenario gaps
+  reproduced at f15194, f15569, f17824 (two assertions), and f20584. Explicit
+  AIZ and MGZ replay canaries retained their existing red frontiers at f8837
+  `rings` and f13903 `player_animation_id`.
+
 ## 2026-07-27 - ICZ folded end-boss SST topology restores lost-ring phase
 
 - Worktree: `.worktrees/trace-s3k-icz-24140-geometry`, branch

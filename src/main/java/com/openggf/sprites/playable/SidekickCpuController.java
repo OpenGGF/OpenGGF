@@ -4107,7 +4107,11 @@ public class SidekickCpuController {
         }
 
         // 7. Otherwise keep object_control locked to keep flight AI active.
+        // loc_13D42 writes the complete byte as $81, so bit 1 from a later
+        // object's prior $03 write is cleared before Animate_Tails runs
+        // (sonic3k.asm:26646-26652).
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        sidekick.setObjectMappingFrameControl(false);
     }
 
     private int resolveRecoveryFlightAnimation() {

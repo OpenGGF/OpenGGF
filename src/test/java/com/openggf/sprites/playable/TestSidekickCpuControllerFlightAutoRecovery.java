@@ -443,6 +443,34 @@ class TestSidekickCpuControllerFlightAutoRecovery {
     }
 
     @Test
+    void offscreenFlightContinuationClearsPriorObjectMappingOwnership() {
+        TestableSprite sonic = sonicAt(0x1000, 0x0400);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0300);
+        tails.setAir(false);
+        tails.setRenderFlagOnScreen(false);
+        tails.setAnimationId(0);
+        tails.setForcedAnimationId(-1);
+        tails.setObjectMappingFrameControl(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertSame(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState());
+        assertEquals(0, tails.getAnimationId(),
+                "off-screen routine 4 preserves an animation byte written by a later object slot");
+        assertEquals(-1, tails.getForcedAnimationId(),
+                "off-screen routine 4 does not call Tails_Set_Flying_Animation");
+        assertFalse(tails.isObjectMappingFrameControl(),
+                "loc_13D42 writes object_control=$81, clearing bit 1 before Animate_Tails");
+    }
+
+    @Test
     void flightSteersNegativeYWordDownTowardPositiveTarget() {
         TestableSprite sonic = sonicAt(0x116C, 0x0080);
         TestableSprite tails = new TestableSprite("tails_p2");
