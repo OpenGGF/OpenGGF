@@ -17,6 +17,7 @@ import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.tools.Sonic3kObjectProfile;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -26,6 +27,17 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Object-registry assertions depend on the S3K zone set, which the registry
+ * derives from the globally loaded level: {@code getCurrentZoneSet()} answers
+ * S3KL only while no level is loaded, and any earlier test in the same reused
+ * fork that left an MHZ-DDZ level behind flips it to SKL, at which point every
+ * S3KL-only factory hands back a {@code PlaceholderObjectInstance}. A full
+ * reset clears the session, so the zone set these tests assert against is
+ * established rather than inherited.
+ */
+@FullReset
+@ExtendWith(SingletonResetExtension.class)
 class TestS3kMgzSwingingSpikeBallObject {
 
     @Test
