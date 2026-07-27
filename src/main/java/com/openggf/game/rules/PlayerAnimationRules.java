@@ -6,5 +6,5 @@ public record PlayerAnimationRules(
         boolean animationChangeClearsPush,
         boolean walkRunDelayLatchesRenderOrientation,
         boolean angledLandingPublishesWalk,
-        boolean nonRollingAngledLandingPublishesWalkUnlessSpindashing) {
+        boolean angledLandingPublishesWalkUnlessSpindashing) {
 }

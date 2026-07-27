@@ -355,8 +355,9 @@ class TestCnzWireCageObjectInstance {
                 "loc_339B6 sets bits 0+1+6, not bit 7, so sidekick CPU is still allowed");
         assertTrue(player.isObjectControlSuppressesMovement(),
                 "loc_339B6 sets object_control bit 0, which suppresses normal movement");
-        assertTrue(player.isControlLocked(),
-                "The one-frame release cooldown mirrors the ROM byte at 1(a2)");
+        assertFalse(player.isControlLocked(),
+                "loc_339B6 sets object_control bit 0 and the byte at 1(a2), "
+                        + "but does not write Ctrl_1_locked");
         assertTrue(player.isOnObject());
         assertFalse(player.getAir());
     }

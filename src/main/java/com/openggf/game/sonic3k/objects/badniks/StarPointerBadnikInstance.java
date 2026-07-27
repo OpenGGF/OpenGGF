@@ -49,6 +49,7 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
     private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
 
     private boolean initialized;
+    private boolean activeRoutineReady;
     private boolean releaseChildren;
 
     public StarPointerBadnikInstance(ObjectSpawn spawn) {
@@ -76,6 +77,16 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
             return;
         }
 
+        /*
+         * Obj_WaitOffscreen installs Obj_StarPointer's active address, but
+         * Process_Sprites does not dispatch loc_8BE74 until the following
+         * object pass. Preserve that admission phase before applying velocity.
+         */
+        if (!activeRoutineReady) {
+            activeRoutineReady = true;
+            return;
+        }
+
         moveWithVelocity();
         updateReleaseLatch(player);
     }
@@ -86,6 +97,16 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
 
     boolean isFacingRight() {
         return !facingLeft;
+    }
+
+    /**
+     * ROM {@code loc_8BE74} moves the parent before publishing its SST pointer
+     * to {@code Collision_response_list}. {@code Touch_Loop} later dereferences
+     * that pointer, so parent contact uses the live post-movement position.
+     */
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        return true;
     }
 
     private void initializeVelocity(AbstractPlayableSprite player) {

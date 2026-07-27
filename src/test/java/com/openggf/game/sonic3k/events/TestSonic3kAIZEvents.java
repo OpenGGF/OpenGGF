@@ -30,11 +30,13 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.LogCaptureHandler;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.TraceCharacterState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -268,7 +270,7 @@ public class TestSonic3kAIZEvents {
                 "SpawnLevelMainSprites installs the object without dispatching its routine");
         assertEquals((short) 0xE918, introEventsFg1(intro),
                 "the installed object retains its ROM initializer before Process_Sprites");
-        assertTrue(GameServices.level().hasPendingInitialObjectSetupPass());
+        assertTrue(GameServices.level().hasPendingInitialProcessSpritesPass());
 
         AbstractPlayableSprite sonic = fixture.sprite();
         assertEquals(0x0040, sonic.getCentreX() & 0xFFFF);
@@ -280,12 +282,18 @@ public class TestSonic3kAIZEvents {
         assertFalse(sidekicks.isEmpty(), "AIZ Sonic+Tails intro should spawn Player_2 before first frame");
         AbstractPlayableSprite tails = sidekicks.get(0);
 
-        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
-                "AIZ intro bootstrap must park Tails before the first drawable gameplay frame");
-        assertEquals(0, tails.getCentreY() & 0xFFFF);
-        assertTrue(tails.getAir());
+        SidekickCpuController tailsCpu = tails.getCpuController();
+        assertNotNull(tailsCpu);
+        assertEquals(0x0020, tails.getCentreX() & 0xFFFF,
+                "SpawnLevelMainSprites places Tails at Player_1-$20 before Tails_Control");
+        assertEquals(0x0424, tails.getCentreY() & 0xFFFF);
+        assertEquals(0, tails.getAnimationId());
+        assertFalse(tails.isObjectControlled());
+        assertFalse(tails.isObjectControlSuppressesMovement());
+        assertEquals(0, tailsCpu.getDiagnosticRomCpuRoutine());
+        assertFalse(tails.getAir());
 
-        assertTrue(GameServices.level().consumePendingInitialObjectSetupPass());
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
 
         assertEquals(2, intro.getRoutine());
         assertEquals((short) 0xE920, introEventsFg1(intro));
@@ -294,12 +302,43 @@ public class TestSonic3kAIZEvents {
                 "the canonical setup dispatch runs Obj_AIZPlaneIntro routine 0");
         assertFalse(sonic.getAir(),
                 "Obj_AIZPlaneIntro routine 0 keeps Sonic grounded");
-        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
-                "Tails_CPU_Control loc_13A10 parks AIZ intro Tails on the setup dispatch");
-        assertEquals(0, tails.getCentreY() & 0xFFFF);
-        assertTrue(tails.getAir());
-        assertFalse(GameServices.level().consumePendingInitialObjectSetupPass(),
+        assertEquals(0x0020, tails.getCentreX() & 0xFFFF,
+                "initial Process_Sprites setup does not dispatch the later Player_2 slot");
+        assertEquals(0x0424, tails.getCentreY() & 0xFFFF);
+        assertEquals(2, TraceCharacterState.routineFromSprite(tails));
+        assertEquals(0, tails.getAnimationId());
+        assertFalse(tails.isObjectControlled());
+        assertFalse(tails.isObjectControlSuppressesMovement());
+        assertEquals(0x0020, sonic.getCentreX(1) & 0xFFFF,
+                "Sonic_Init fills the shared position history from its temporary Player_2 centre");
+        assertEquals(0x0424, sonic.getCentreY(1) & 0xFFFF);
+        assertNotNull(tails.getCpuController());
+        assertEquals(0, tailsCpu.getDiagnosticRomCpuRoutine());
+        assertEquals(0, tails.getCpuController().targetX());
+        assertEquals(0, tails.getCpuController().targetY());
+        assertEquals(0, tails.getCpuController().getDiagnosticControlCounter());
+        assertEquals(0, tails.getCpuController().getDiagnosticRespawnCounter());
+        assertFalse(GameServices.level().consumePendingInitialProcessSpritesPass(),
                 "setup authority is one-shot");
+
+        sonic.recordFollowerHistoryForTick();
+        sonic.clearFollowerHistoryRecordedFlag();
+
+        assertEquals(0x0020, tails.getCentreX() & 0xFFFF,
+                "the earlier Player 1 history boundary must not dispatch Player 2");
+        assertEquals(0x0424, tails.getCentreY() & 0xFFFF);
+        assertFalse(tails.isObjectControlled());
+        assertEquals(0, tailsCpu.getDiagnosticRomCpuRoutine());
+
+        GameServices.sprites().warmUpCpuSidekicksOnly(1, GameServices.level(), sonic);
+
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF);
+        assertEquals(0, tails.getCentreY() & 0xFFFF);
+        assertTrue(tails.isObjectControlled());
+        assertFalse(tails.isObjectControlAllowsCpu());
+        assertTrue(tails.isObjectControlSuppressesMovement());
+        assertEquals(0x0A, tailsCpu.getDiagnosticRomCpuRoutine());
+        assertTrue(tails.getAir());
     }
 
     @Test
@@ -316,12 +355,12 @@ public class TestSonic3kAIZEvents {
         // (sonic3k.asm:135469-135475,135495-135508,135945-135956).
         assertEquals(0, intro.getRoutine());
         assertEquals((short) 0xE918, introEventsFg1(intro));
-        assertTrue(GameServices.level().hasPendingInitialObjectSetupPass());
-        assertTrue(GameServices.level().consumePendingInitialObjectSetupPass());
+        assertTrue(GameServices.level().hasPendingInitialProcessSpritesPass());
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
         assertEquals(2, intro.getRoutine());
         assertEquals((short) 0xE920, introEventsFg1(intro),
                 "the production setup path must contribute exactly one intro accumulator update");
-        assertFalse(GameServices.level().consumePendingInitialObjectSetupPass());
+        assertFalse(GameServices.level().consumePendingInitialProcessSpritesPass());
         assertEquals((short) 0xE920, introEventsFg1(intro),
                 "a second setup consume must be idempotent");
 
@@ -346,7 +385,7 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
-    public void introSidekickDormantMarkerSurvivesProductionSidekickSpawnStep() {
+    public void introSidekickDormantMarkerBeginsOnFirstOrdinaryPlayer2Dispatch() {
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
 
@@ -360,9 +399,23 @@ public class TestSonic3kAIZEvents {
         assertFalse(sidekicks.isEmpty(), "AIZ Sonic+Tails intro should keep Player_2 registered");
         AbstractPlayableSprite tails = sidekicks.get(0);
 
+        assertEquals(0x0020, tails.getCentreX() & 0xFFFF);
+        assertEquals(0x0424, tails.getCentreY() & 0xFFFF);
+        assertFalse(tails.isObjectControlled());
+        assertFalse(tails.isObjectControlSuppressesMovement());
+        assertEquals(0, tails.getCpuController().getDiagnosticRomCpuRoutine());
+        assertFalse(tails.getAir());
+
+        GameServices.sprites().warmUpCpuSidekicksOnly(
+                1, GameServices.level(), fixture.sprite());
+
         assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
-                "AIZ intro post-spawn state must park Tails before the first drawable gameplay frame");
+                "Tails_Control loc_13A10 parks Tails on her first ordinary dispatch");
         assertEquals(0, tails.getCentreY() & 0xFFFF);
+        assertTrue(tails.isObjectControlled());
+        assertFalse(tails.isObjectControlAllowsCpu());
+        assertTrue(tails.isObjectControlSuppressesMovement());
+        assertEquals(0x0A, tails.getCpuController().getDiagnosticRomCpuRoutine());
         assertTrue(tails.getAir());
     }
 

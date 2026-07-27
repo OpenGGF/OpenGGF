@@ -15,7 +15,7 @@ class TestSonic2AnimalObjectTiming {
         control.nextBits(1);
         RecordingServices services = new RecordingServices(0x13579BDFL);
 
-        AnimalObjectInstance animal = AnimalObjectInstance.sonic2DeferredArtVariant(
+        AnimalObjectInstance animal = AnimalObjectInstance.deferredArtVariant(
                 new ObjectSpawn(0x100, 0x120, 0x28, 0, 0, false, 0), services, null);
         animal.setServices(services);
 

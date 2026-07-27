@@ -1,5 +1,194 @@
 # Trace Frontier Log
 
+## 2026-07-27 - AIZ dormant marker returns to the first ordinary Player 2 dispatch
+
+- Worktree: `.worktrees/trace-s3k-aiz-2707`, branch
+  `bugfix/ai-trace-s3k-aiz-2707-dormant`, based on `origin/develop`
+  `1ff178a85`; measurements include the uncommitted production, test, and
+  documentation changes described here.
+- RED command:
+  `mvn -Dtest=com.openggf.game.sonic3k.events.TestSonic3kAIZEvents test
+  -DfailIfNoTests=false -Dmse=off`.
+  Both new lifecycle assertions observed premature Player 2 position
+  `$7F00` instead of the fresh spawn position `$0020`.
+- Root cause: `Sonic3kAIZEvents.init` and
+  `Sonic3kLevelEventManager.applyZonePlayerState` both applied the dormant
+  marker before Player 2's ordinary object dispatch. ROM
+  `SpawnLevelMainSprites_SpawnPlayers` writes Player 1 minus `$20`, plus four
+  Y; `Tails_Init` returns after advancing the player routine; only the later
+  `Tails_Control` / `loc_13A10` dispatch calls `sub_13ECA` and writes CPU
+  routine `$0A`, `object_control=$83`, and position `$7F00,0`
+  (`docs/skdisasm/sonic3k.asm:8351-8369,26101-26156,26389-26397`).
+- Fix: remove the two AIZ bootstrap writes and retain the existing
+  `SidekickCpuController.updateInit` ROM path as the sole marker owner.
+  `LevelManager.spawnSidekicks` now applies its already-typed per-game offsets
+  through subpixel-preserving centre writes, matching ROM word-sized
+  `x_pos/y_pos`; it does not clear or replace generic object-control state or
+  queued input.
+- Focused live/prefix, spawn-offset, and CNZ carry-control command passed its
+  66 relevant tests. Rewind coverage, static-state coverage, architecture,
+  and trace-parity guards passed their four requested classes.
+- Replays retain their current-develop frontiers: standalone AIZ 1,277 errors
+  at f2707 `tails_animation_id` (ROM `0`, engine `5`); complete AIZ 26 errors
+  at f26107 `x`; ICZ complete one error at f24140 `rings`; CNZ standalone two
+  comparison errors at f4801 `tails_mapping_frame`. An identical clean-base
+  CNZ run reproduced the same frontier and five scenario failures, confirming
+  no control regression.
+
+## 2026-07-26 - AIZ complete-run preserves late ending-pose Ctrl_2 cadence
+
+- Worktree: `trace-s3k-aiz-complete-25039`, branch
+  `bugfix/ai-trace-s3k-aiz-complete-25039`, based on `1f1fde019`; measurement
+  includes the uncommitted capsule/test/documentation patch described here.
+- Baseline command:
+  `mvn -Dmse=off -Djava.io.tmpdir=target/aiz25039-tmp
+  -Ds3k.rom.path=<verified locked-on ROM>
+  -Dtest=TestS3kAizCompleteRunTraceReplay test`.
+  It reproduced 28 errors with first mismatch f25039
+  `tails_cpu_ctrl2_held` (ROM `0x0018`, engine `0x0000`).
+- Existing per-frame `cpu_state`, `interact_state`, and `control_lock_state`
+  evidence showed Player 1 receiving `object_control=$81` at f25038, then
+  Player 2 receiving `$81` from capsule routine `$0C` at f25039 while ROM
+  retained the already-published `Ctrl_2_logical=$18` until f25040. The engine
+  cleared that word in the capsule's later object slot.
+- Fix: AIZ2's capsule-owned `Check_TailsEndPose` path clears the signed
+  `Ctrl_2_locked` mirror and applies the ending pose without immediately
+  mirroring raw controller input. ROM likewise has no `Ctrl_2_logical` write
+  in `Check_TailsEndPose` or `Set_PlayerEndingPose`; the following Player-2
+  `Tails_Control` dispatch copies raw `Ctrl_2` before `object_control=$81`
+  blocks CPU steering
+  (`docs/skdisasm/sonic3k.asm:181924-181944,181982-181992,26195-26212`).
+- Remeasurement with the same focused trace command reports 27 errors and
+  advances the frontier to f25591 `tails_cpu_ctrl2_held` (ROM `0x0000`,
+  engine `0x0004`). The 26 later teardown comparisons at f26107/f26179 are
+  unchanged. No trace data drives runtime state, and no game, zone, route,
+  trace, or frame predicate was added.
+- The RED-first capsule regression passes after the fix. The complete
+  AIZ capsule/sidekick, S3K must-keep-green, rewind, and architecture selection
+  passed 267 focused tests; Gumball, Pachinko, Slots, and special-stage trace
+  canaries passed five tests. LBZ was not inspected, run, changed, or used as
+  a guard.
+
+## 2026-07-26 - Complete non-LBZ fleet reconciliation at `4474a366a`
+
+- Command: `mvn -q -Dmse=off -Dmaven.test.failure.ignore=true
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  '-Dsurefire.argLine=-Xshare:off -Xmx6g -XX:-UsePerfData'
+  -Djava.io.tmpdir=target/non-lbz-fleet-tmp
+  -Ds1.rom.path=<verified REV01 ROM>
+  -Ds2.rom.path=<verified REV01 ROM>
+  -Ds3k.rom.path=<verified locked-on ROM>
+  '-Dtest=*TraceReplay,!TestS3kLbzCompleteRunTraceReplay' test`, run from
+  `bugfix/ai-trace-green-integration` at `4474a366a`.
+- Completeness was reconciled against the source inventory: all 63 executable
+  non-LBZ `*TraceReplay` classes produced fresh XML reports, with no missing
+  classes and no fresh LBZ report. Result: 106 tests, 92 passed, 14 failed,
+  zero errors, zero skips. All S1 and S2 trace comparisons are green. The S3K
+  special-stage and bonus-stage comparisons are also green.
+- Nine comparison traces remain red:
+
+  | Trace | Errors | First divergence |
+  | --- | ---: | --- |
+  | AIZ standalone | 1,330 | f719 `x`, ROM `0x0040`, engine `0x0050` |
+  | AIZ complete | 28 | f25039 `tails_cpu_ctrl2_held`, ROM `0x0018`, engine `0x0000` |
+  | CNZ standalone | 3,714 | f4801 `tails_mapping_frame`, ROM `0x0007`, engine `0x0055` |
+  | CNZ complete | 9,844 | f0 `y`, ROM `0x0600`, engine `0x061C` |
+  | HCZ complete | 2,411 | f6292 `tails_x_speed`, ROM `0x0100`, engine `0x0000` |
+  | ICZ complete | 29 | f24140 `rings`, ROM `3`, engine `2` |
+  | MGZ standalone | 16 | f23561 `rings`, ROM `0`, engine `1` |
+  | MGZ complete | 27 | f28398 `rings`, ROM `2`, engine `1` |
+  | MHZ complete | 6,051 | f0 `y`, ROM `0x0500`, engine `0x051C` |
+
+- The other five failures are CNZ standalone scenario-contract checks:
+  f15194 hurt-latched leader input (`0` versus `-128`), f15569 look-down
+  counter (`120` versus `118`), missing older PathSwap slot 5 and fixed
+  AirCountdown child slot 6 at f17824, and missing CNZ Triangle Bumpers slot 5
+  at f20584. These are kept separate from the 3,714-error comparison frontier.
+- LBZ was intentionally excluded from discovery, execution, documentation
+  conclusions, and target selection because it is owned by James's separate
+  branch.
+
+## 2026-07-26 - MGZ lost-ring frontiers are earlier SST inventory gaps
+
+- Worktree: `integration-mgz-remaining` at base `3eae9f722`.
+- Standalone MGZ reproduces 16 errors with first mismatch f23561 `rings`
+  (ROM `0`, engine `1`). Complete-run MGZ reproduces 27 errors with first
+  mismatch f28398 `rings` (ROM `2`, engine `1`). Commands used the discovered
+  `s3k.gen` ROM and `-Dsurefire.argLine='-Xshare:off -Xmx6g'`; the default
+  1 GiB fork is insufficient.
+- NO_SAFE_FIX: standalone ring physics initially agrees, but the corresponding
+  ring is engine slot 15 versus ROM slot 16. That changes the native
+  `d7 + V_int_run_count` floor-probe phase and causes a bounce and collection
+  one frame early. ROM swinging-platform helper SSTs are at 15/17/18 while
+  engine reservations are at 16/17/19, proving the inventory had diverged
+  before the spill.
+- NO_SAFE_FIX: the complete-run corresponding ring is engine slot 12 versus
+  ROM slot 11 because engine slot 11 is already occupied by a path-swap
+  object at the spill. This is the opposite slot shift and cannot share a
+  global phase or allocation correction with the standalone trace.
+- Full evidence, rejected trace-shaped changes, source locations, and the
+  required next lifecycle capture are recorded in
+  `docs/architecture/audits/2026-07-26-mgz-lost-ring-slot-frontiers.md`.
+  Reports are archived at `/tmp/trace-mgz-remaining-3eae9f722/{standard,complete}`.
+  Their deterministic tar has SHA-256 `f267d28ac5157867a5045a4023166804220972f024dc0c1ed45aac592b0dcbf1`;
+  the separately reproduced engine inventory diagnostics and their reverted
+  patch have archive SHA-256
+  `6a4e92ce13094b57259b484c415c63b2f7bbae60ff0b61527402afa34931f264`.
+  LBZ was not investigated or changed.
+
+## 2026-07-26 - S3K rolling angled landings publish Walk
+
+- Worktree: `integration-cnz-standard` at base `f52182700`.
+- Root cause: S3K `Player_TouchFloor_Check_Spindash` publishes Walk before
+  `Player_TouchFloor` unless `spin_dash_flag` is live, and the rolling
+  `Player_TouchFloor` branch publishes Walk again while clearing
+  `Status_Roll` (`docs/skdisasm/sonic3k.asm:24325-24350,29123-29148`).
+  The engine's S3K rule incorrectly excluded every player that was rolling
+  when the angled landing was accepted.
+- Fix: generalize the semantic rule from non-rolling to all angled landings,
+  retaining its live-spindash gate and the existing pinball-mode exclusion.
+  S1 keeps the rule disabled and S2 keeps its unconditional native
+  `Sonic_ResetOnFloor` Walk publication. `BubbleShield_Bounce` explicitly
+  restores animation 2 after the floor's Walk write, matching the ROM's final
+  `move.b #2,anim(a0)` (`sonic3k.asm:24383-24435`).
+- Full standalone CNZ is expected red with 3,714 errors and first mismatch
+  f4801 `tails_mapping_frame` (ROM `$07`, engine `$55`), advancing the prior
+  f2821 / 3,735-error frontier. A fresh frontier-only run reports two errors
+  at f4801. The full 26-test class remains 20 passing / six expected-red with
+  the same five later-route companion probes plus the primary replay.
+- The landing and game-rule suites pass 18/18. An exact-base comparison first
+  exposed a Bubble Shield test failure; after restoring the ROM's final Roll
+  write and opening an explicit gameplay session for the capability-owned
+  test, the full 12-test collision class and isolated bounce contract pass.
+  Architecture, rewind, and static-state rewind guards pass 68/68.
+- S1 GHZ1 and S2 EHZ1 remain green. Known-red standalone AIZ remains f719 `x`
+  (`$0040` / `$0050`) and MGZ remains f23561 `rings` (`0` / `1`).
+
+## 2026-07-26 - CNZ cage preserves native logical-input ownership
+
+- Worktree: `integration-cnz-standard` at base `b9fc4dae2`.
+- Root cause: the cage's low-speed and air-recapture branches set byte `1(a2)`
+  and `object_control` bit 0 before the common latch sets bits 1 and 6
+  (`docs/skdisasm/sonic3k.asm:69917-69938,69954-69963`). They never write
+  `Ctrl_1_locked`. That separate global gates the hardware-to-logical input
+  copy in the player routine, while `Stat_table` records the resulting logical
+  word for Tails's delayed follower control
+  (`docs/skdisasm/sonic3k.asm:21542-21551,22130-22134,26698-26705`).
+- Fix: remove the two synthetic `setControlLocked(true)` writes. The existing
+  native-bits-0-to-6 object-control profile still suppresses ordinary movement
+  and terrain collision, so the player cannot move independently inside the
+  cage; it deliberately leaves Tails CPU active and logical input unlocked.
+- Full standalone CNZ is expected red with 3,735 errors and first mismatch
+  f2821 `player_animation_id` (ROM `0x0000`, engine `0x0002`), advancing the
+  prior f1808 / 3,738-error frontier. A fresh frontier-only run reports two
+  errors at f2821. Because the first error is now f2821, both the f1808
+  pressed-input edge and its f2221 downstream edge are clear.
+- The full 26-test CNZ class remains 20 passing / six expected-red: the primary
+  replay and the same five later-route companion probes. The cage suite passes
+  19/19; architecture, rewind, and static-state rewind guards pass 68/68.
+  S1 GHZ1 and S2 EHZ1 remain green. Known-red standalone AIZ remains f719 `x`
+  (`0x0040` / `0x0050`) and MGZ remains f23561 `rings` (`0` / `1`).
+
 ## 2026-07-26 - CNZ bumper orbit consumes the production setup epoch
 
 - Worktree: `integration-cnz-standard` at base `0ab17f062`.
@@ -50931,6 +51120,194 @@ mvn -q -Dsurefire.argLine='-Xshare:off -Xmx6g' \
 - Known-red complete-run canaries retain their established first fields and
   frames: AIZ f9376 `rings` (`2` / `1`, 1,726 errors) and CNZ f0 `y`
   (`0x0600` / `0x061C`, 9,778 errors).
+
+## 2026-07-26 - ICZ Star Pointer launch advances f15940 to f16361
+
+Worktree `.worktrees/integration-icz-next`, baseline `d73649824`.
+
+The ROM's `Obj_WaitOffscreen` transition does not dispatch Star Pointer's
+active `loc_8BE74` routine until the following object pass. The engine moved
+the parent one pass early, giving it a persistent `$40` subpixel phase error.
+That phase propagated to a launched point and made it cross Tails' collision
+boundary one touch pass early.
+
+Verified with:
+
+```bash
+mvn -q '-Dsurefire.argLine=-Xshare:off -Xmx4g' \
+  -Ds3k.rom.path=s3k.gen \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay test
+```
+
+- Before: 1,320 errors; first mismatch f15940 `tails_x_speed`
+  (`expected=-001A`, `actual=-0200`).
+- After: 32 errors; first mismatch f16361 `y_speed`
+  (`expected=0x0093`, `actual=-006D`).
+- The 13-test Star Pointer unit suite passes, including offscreen re-entry,
+  single child-set spawning, and the initialized-before-active rewind seam.
+- Rewind coverage, rewind round-trip, and architectural source guards pass.
+- Detailed ROM PC, collision-list, activation, and capture-hash evidence:
+  `docs/architecture/audits/2026-07-26-icz-star-pointer-launch-oracle.md`.
+
+## 2026-07-26 - ICZ Star Pointer live touch position advances f16361 to f24140
+
+Worktree `.worktrees/integration-icz-16361`, branch
+`bugfix/ai-trace-int-icz-16361`, baseline `5222ff8da`.
+
+The baseline reproduced 32 errors and first diverged at f16361 `y_speed`
+(`expected=0x0093`, `actual=-006D`). A stage-gated, invisible BizHawk probe
+showed `Touch_EnemyNormal` at PC `$1020C` adding `$100` to Sonic's Y velocity
+after touching Star Pointer parent SST `$B172`. The ROM parent had moved to
+X `$0D07` before publishing its SST pointer; the engine tested its cached
+pre-update X `$0D08`, missing the inclusive horizontal boundary by one pixel.
+
+`StarPointerBadnikInstance` now opts into the existing live touch-response
+state contract. This is the object-owned ordering in `loc_8BE74`: `MoveSprite2`
+runs before `Sprite_CheckDeleteTouch`, while `Touch_Loop` later dereferences
+the published live SST pointer.
+
+Verified with:
+
+```bash
+mvn -q '-Dsurefire.argLine=-Xshare:off -Xmx4g' \
+  -Ds3k.rom.path=s3k.gen -Dtrace.context.radius=30 \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay test
+```
+
+- Before: 32 errors; f16361 `y_speed` (`0x0093` / `-006D`).
+- After: 31 errors; f24140 `rings` (`3` / `2`).
+- The focused live-SST capability-contract test fails before and passes after
+  the fix; the complete replay supplies the one-pixel overlap coverage.
+- Full native evidence, commands, and hashes:
+  `docs/architecture/audits/2026-07-26-icz-star-pointer-parent-touch-phase.md`.
+
+## 2026-07-26 - HCZ Bubbler allocation-epoch candidate rejected
+
+Audit context: base `5222ff8da9b1ffaf3b1f79bdb477deb57b47c6c6` in
+`.worktrees/integration-hcz-allocation-epoch`.
+
+Exact replay command:
+
+```bash
+mvn -q -Dsurefire.argLine='-Xshare:off -Xmx6g' \
+  -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace \
+  test
+```
+
+- Restored baseline: 2,411 errors, first mismatch f6292
+  `tails_x_speed` (expected `0x0100`, actual `0x0000`).
+- Reconstructed rejected candidate: 4,794 errors, first mismatch f1824 `y`
+  (expected `0x07F9`, actual `0x07F4`).
+- The source-proven lowest-free Bubbler allocation candidate therefore regresses
+  the trace and remains rejected. It was reverted completely: no production or
+  test candidate landed, and there is no frontier move to record.
+- Reproducible patch, focused test evidence, native probe observations, and the
+  required next investigation are retained in
+  `docs/architecture/audits/2026-07-26-hcz-bubbler-allocation-epoch.md`.
+
+## 2026-07-26 - ICZ end-boss snowdust ownership corrects topology at f24140
+
+Worktree `.worktrees/integration-icz-24140`, branch
+`bugfix/ai-trace-int-icz-24140`, baseline `9a6dc54ca`.
+
+`IczEndBossInstance` incorrectly allocated a second subtype-`$18`
+`Obj_ICZSnowPile` emitter when the arena gate armed. The ROM boss initializer
+does not allocate one; the placed emitter registers its own SST in `_unkFAAE`,
+which boss teardown later verifies and stops. Removing the synthetic child
+restores the native slot sequence: placed emitter slot 9, first snow particle
+slot 10.
+
+Fresh replay:
+
+```bash
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=false \
+  -Ds3k.rom.path=s3k.gen \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace \
+  test
+```
+
+- Before: 31 errors, 0 warnings; first mismatch f24140 `rings`
+  (expected 3, actual 2).
+- After: 29 errors, 0 warnings; first mismatch remains f24140 `rings`
+  (expected 3, actual 2).
+- Result: expected-red, genuine two-error reduction, no frontier movement.
+- Focused verification: 102 explicitly selected boss/rewind tests pass, plus
+  four Maven-selected `TestBizhawkProbeContractGuard` tests, for 106 passing.
+- Read-only follow-up found the engine RNG four calls ahead before the first
+  boss-area particle. No RNG behavior change is part of this slice.
+- Detailed ROM and TDD evidence:
+  `docs/architecture/audits/2026-07-26-icz-end-boss-snowdust-ownership.md`.
+
+## 2026-07-26 - S2/S3K animal RNG moves to its owning SST dispatch
+
+Worktree `.worktrees/integration-icz-24140`, branch
+`bugfix/ai-trace-int-icz-24140`, baseline `6dda95a2d`.
+
+S3K `Obj_Explosion` only allocates `Obj_Animal`; the new animal calls
+`Random_Number` later when its own subtype-zero routine reaches `loc_2C924`.
+The engine instead selected the art variant in the animal constructor during
+the explosion's dispatch. S2 and S3K now share one explicit deferred factory:
+construction and rewind recreation draw nothing, and the first actual animal
+update draws exactly once.
+
+Fresh replay:
+
+```bash
+mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false \
+  -Ds3k.rom.path=s3k.gen \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace \
+  test
+```
+
+- Before and after: 29 errors, 0 warnings; first mismatch f24140 `rings`
+  (expected 3, actual 2).
+- The final pre-boss animal RNG draw moves from f22485 to native f22486.
+- The f22733 snow particle still receives `ECB9BB0B` rather than native
+  `73EF3BAB`; earlier caller ordering remains separate triage.
+- Result: expected-red, genuine ROM ownership correction, no frontier or
+  error-count movement.
+- Detailed call-order and TDD evidence:
+  `docs/architecture/audits/2026-07-26-animal-rng-own-dispatch.md`.
+
+## 2026-07-26 - AIZ2 positive-lock logical clear advances complete run
+
+Worktree `.worktrees/trace-s3k-aiz-complete-25591`, branch
+`bugfix/ai-trace-s3k-aiz-complete-25591`, baseline `56b47ae17`.
+
+At f25591 Player 2's physical position, velocity, and status already matched
+the ROM after Tails CPU generated Left. The remaining mismatch was only the
+published `Ctrl_2_logical` word: ROM slot 8 ran `loc_863D6` after the Player 2
+slot and cleared the positive-locked logical word, while the engine's existing
+equivalent clear was gated behind the earlier post-results delay.
+
+The AIZ2 results controller now performs that existing clear before returning
+from each positive delay dispatch. Sonic's ending-pose hold and delay countdown
+remain unchanged. This models `loc_863C0`/`loc_863D6`
+(`docs/skdisasm/sonic3k.asm:181354-181372`) without changing shared sidekick
+CPU behavior.
+
+Fresh replay:
+
+```bash
+mvn -q \
+  "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dtrace.context.diagnosticChars=full \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay test
+```
+
+- Before: 27 errors, first mismatch f25591 `tails_cpu_ctrl2_held`
+  (expected `0x0000`, actual `0x0004`).
+- After: 26 errors, first mismatch f26107 `x`
+  (expected `0x0000`, actual `0x4A9B`).
+- The remaining errors are two isolated transition snapshots at f26107 and
+  f26179, covering reset/absent ROM player state versus retained engine
+  player/camera state.
+- Focused controller tests pass 36/36; architecture, rewind, static-state
+  rewind, and trace-invariant guards pass 76/76; Gumball, Pachinko, Slots, and
+  special-stage canaries pass 5/5. Standalone AIZ retains its f719 `x`
+  frontier.
 
 ## 2026-07-26 - AIZ standalone initial setup ownership advances frontier
 

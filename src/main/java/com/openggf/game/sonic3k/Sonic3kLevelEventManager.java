@@ -549,8 +549,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      *
      * <p>Zones handled:
      * <ul>
-     *   <li>AIZ1 ($0000): Sonic+Tails intro parks Player 2 in dormant marker state
-     *       while Obj_AIZPlaneIntro owns the opening pan</li>
      *   <li>HCZ1 ($0100): Sonic/Tails anim $1B (tumble), Knuckles anim $21 (glide drop)</li>
      *   <li>MGZ1 ($0200): anim $1B, airborne (loc_68A6)</li>
      *   <li>ICZ1 ($0500): Sonic player modes spawn Obj_LevelIntroICZ1 and
@@ -560,10 +558,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * </ul>
      */
     public void applyZonePlayerState() {
-        if (currentZone == Sonic3kZoneIds.ZONE_AIZ && currentAct == 0
-                && AizPlaneIntroInstance.getActiveIntroInstance() != null) {
-            applyAizIntroSidekickDormantMarkersAfterSpawn();
-        }
+        // AIZ deliberately has no Player_2 mutation here. SpawnLevelMainSprites
+        // leaves fresh Tails at Player_1-$20,+4; Tails_Init returns before the
+        // later ordinary Tails_Control/loc_13A10 dispatch writes the dormant
+        // marker (sonic3k.asm:8351-8369,26101-26156,26389-26397).
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
             applyHcz1IntroState();
         }
@@ -588,19 +586,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
         }
         // TODO: LRZ1 non-Knuckles, SSZ falling intros (same loc_68A6 path)
-    }
-
-    private void applyAizIntroSidekickDormantMarkersAfterSpawn() {
-        SpriteManager spriteManager = GameServices.spritesOrNull();
-        if (spriteManager == null) {
-            return;
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
-            SidekickCpuController controller = sidekick.getCpuController();
-            if (controller != null && shouldEnterSidekickDormantMarker(sidekick)) {
-                controller.applyLevelEventDormantMarkerForBootstrap();
-            }
-        }
     }
 
     private void applyIczIntroSidekickDormantMarkersAfterSpawn() {

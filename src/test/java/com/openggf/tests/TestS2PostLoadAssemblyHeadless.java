@@ -158,32 +158,47 @@ public class TestS2PostLoadAssemblyHeadless {
     public void s2SidekickSpawnsAtMinus40XSameY() {
         short playerX = 200;
         short playerY = 400;
-        sprite.setX(playerX);
-        sprite.setY(playerY);
+        sprite.setCentreX(playerX);
+        sprite.setCentreY(playerY);
 
         Tails tails = createSidekick();
 
         // S2 sidekick offset: -40 X, 0 Y
         GameServices.level().spawnSidekicks(-40, 0);
 
-        assertEquals(playerX - 40, tails.getX(), "S2 sidekick X should be player X - 40");
-        assertEquals(playerY, tails.getY(), "S2 sidekick Y should equal player Y");
+        assertEquals(playerX - 40, tails.getCentreX(), "S2 sidekick X should be player X - 40");
+        assertEquals(playerY, tails.getCentreY(), "S2 sidekick Y should equal player Y");
     }
 
     @Test
     public void s3kSidekickOffsetDiffersFromS2() {
         short playerX = 200;
         short playerY = 400;
-        sprite.setX(playerX);
-        sprite.setY(playerY);
+        sprite.setCentreX(playerX);
+        sprite.setCentreY(playerY);
 
         Tails tails = createSidekick();
 
         // S3K sidekick offset: -32 X, +4 Y
         GameServices.level().spawnSidekicks(-32, 4);
 
-        assertEquals(playerX - 32, tails.getX(), "S3K sidekick X should be player X - 32");
-        assertEquals(playerY + 4, tails.getY(), "S3K sidekick Y should be player Y + 4");
+        assertEquals(playerX - 32, tails.getCentreX(), "S3K sidekick X should be player X - 32");
+        assertEquals(playerY + 4, tails.getCentreY(), "S3K sidekick Y should be player Y + 4");
+    }
+
+    @Test
+    public void sidekickSpawnPositionWritesPreserveFractionalWords() {
+        sprite.setCentreX((short) 200);
+        sprite.setCentreY((short) 400);
+        Tails tails = createSidekick();
+        tails.setSubpixelRaw(0x5A00, 0xA500);
+
+        GameServices.level().spawnSidekicks(-32, 4);
+
+        assertEquals(0x5A00, tails.getXSubpixelRaw(),
+                "ROM move.w x_pos preserves the fractional x word");
+        assertEquals(0xA500, tails.getYSubpixelRaw(),
+                "ROM move.w y_pos preserves the fractional y word");
     }
 
     @Test
@@ -215,6 +230,4 @@ public class TestS2PostLoadAssemblyHeadless {
         return tails;
     }
 }
-
-
 

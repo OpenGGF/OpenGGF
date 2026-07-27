@@ -233,20 +233,20 @@ class TestS3kInitialObjectSetupLifecycle {
         try {
             LevelManager manager = GameServices.level();
 
-            InitialObjectSetupLifecycle before =
-                    manager.capturePendingInitialObjectSetupLifecycleForRewind();
-            assertEquals(InitialObjectSetupLifecycle.S3K_LOAD_THEN_EXECUTE_ONCE, before);
+            InitialProcessSpritesLifecycle before =
+                    manager.capturePendingInitialProcessSpritesLifecycleForRewind();
+            assertEquals(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE, before);
 
-            assertTrue(manager.consumePendingInitialObjectSetupPass());
-            InitialObjectSetupLifecycle after =
-                    manager.capturePendingInitialObjectSetupLifecycleForRewind();
-            assertEquals(InitialObjectSetupLifecycle.NONE, after);
+            assertTrue(manager.consumePendingInitialProcessSpritesPass());
+            InitialProcessSpritesLifecycle after =
+                    manager.capturePendingInitialProcessSpritesLifecycleForRewind();
+            assertEquals(InitialProcessSpritesLifecycle.NONE, after);
 
-            manager.restorePendingInitialObjectSetupLifecycleForRewind(before);
-            assertTrue(manager.hasPendingInitialObjectSetupPass(),
+            manager.restorePendingInitialProcessSpritesLifecycleForRewind(before);
+            assertTrue(manager.hasPendingInitialProcessSpritesPass(),
                     "restoring a pre-consume rewind snapshot restores setup authority");
-            manager.restorePendingInitialObjectSetupLifecycleForRewind(after);
-            assertFalse(manager.hasPendingInitialObjectSetupPass(),
+            manager.restorePendingInitialProcessSpritesLifecycleForRewind(after);
+            assertFalse(manager.hasPendingInitialProcessSpritesPass(),
                     "restoring a post-consume rewind snapshot keeps setup authority consumed");
         } finally {
             sharedLevel.dispose();

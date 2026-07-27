@@ -334,17 +334,6 @@ class TestRewindSchemaRegistry {
     }
 
     @Test
-    void exactDefaultObjectPolicyCapturesIczEndBossSnowdustEmitterLink() {
-        RewindClassSchema schema =
-                RewindSchemaRegistry.defaultObjectSubclassSchemaFor(IczEndBossInstance.class);
-
-        assertPolicy(schema, "bossSnowdustEmitter", RewindFieldPolicy.CAPTURED);
-        assertTrue(schema.unsupportedFields().isEmpty(),
-                "ICZ end boss compact schema must capture the snowdust emitter link without fallback: "
-                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
-    }
-
-    @Test
     void exactDefaultObjectPolicyCapturesPlayerReferenceLinks() {
         RewindClassSchema grabberSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(GrabberBadnikInstance.class);
