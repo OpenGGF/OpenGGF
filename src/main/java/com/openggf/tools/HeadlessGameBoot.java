@@ -245,6 +245,34 @@ public final class HeadlessGameBoot implements AutoCloseable {
     }
 
     /**
+     * Closes the current gameplay session and ROM, then boots a fresh one on the
+     * existing GL context.
+     *
+     * <p>Repeated measured passes need a genuinely fresh session — a second
+     * bootstrap over a session whose objects have already spawned and despawned
+     * is not the same workload as the first — but they must not pay for GL/GLFW
+     * re-initialisation, and they must not accumulate ROM images: a leaked ~4MB
+     * image per pass would show up directly in the heap and GC figures the run
+     * exists to report.
+     */
+    public GameLoop reboot(Path romPath, int zone, int act) throws IOException {
+        try {
+            SessionManager.closeGameplaySession();
+        } catch (Exception ignored) {
+            // best-effort teardown; boot() below re-opens a fresh session
+        }
+        if (rom != null) {
+            try {
+                rom.close();
+            } catch (Exception ignored) {
+                // best-effort teardown
+            }
+            rom = null;
+        }
+        return boot(romPath, zone, act);
+    }
+
+    /**
      * The single headless outer-frame audio boundary. Headless capture drivers
      * (the trace-capture tool and {@link TraceCaptureSession}) call this exactly
      * once for each outer framebuffer frame they treat as presented, then drain

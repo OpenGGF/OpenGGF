@@ -203,10 +203,12 @@ public class TestProductionSingletonClosureGuard {
             "com/openggf/Engine.java",
             "com/openggf/game/session/EngineContext.java",
             "com/openggf/game/session/EngineServices.java",
-            // Headless composition roots for the trace-capture tool: configure
-            // EngineServices from the legacy singletons exactly like Engine does.
+            // Headless composition roots for the trace-driven CLI tools:
+            // configure EngineServices from the legacy singletons exactly like
+            // Engine does.
             "com/openggf/tools/HeadlessGameBoot.java",
-            "com/openggf/tools/TraceCaptureTool.java"
+            "com/openggf/tools/TraceCaptureTool.java",
+            "com/openggf/tools/TraceBenchmarkTool.java"
     );
 
     @Test

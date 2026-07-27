@@ -48,6 +48,15 @@ public final class RecordingFrameDriver {
     private boolean lastFrameRanGameplay = true;
     private boolean pendingSeamlessBoundaryCompletion;
 
+    /**
+     * Wraps each canonical level-frame step. Defaults to the direct (unwrapped)
+     * runner so tests and capture pay nothing; the offline benchmark harness
+     * swaps in a profiling wrapper so a headless replay reports the same
+     * per-step section names ({@code physics}, {@code objects}, {@code level},
+     * {@code camera-scroll}, …) that {@code GameLoop} reports in a live run.
+     */
+    private LevelFrameStep.StepWrapper stepWrapper = LevelFrameStep.DIRECT_WRAPPER;
+
     // BK2 recording playback fields
     private Bk2Movie bk2Movie;
     private int bk2StartIndex;
@@ -60,6 +69,15 @@ public final class RecordingFrameDriver {
 
     public AbstractPlayableSprite getSprite() {
         return sprite;
+    }
+
+    /**
+     * Installs the per-step wrapper used by {@link LevelFrameStep}. Passing
+     * {@code null} restores the direct runner. The wrapper must not alter step
+     * ordering or skip steps — it exists for cross-cutting observation only.
+     */
+    public void setStepWrapper(LevelFrameStep.StepWrapper wrapper) {
+        this.stepWrapper = wrapper != null ? wrapper : LevelFrameStep.DIRECT_WRAPPER;
     }
 
     public int getFrameCounter() {
@@ -136,7 +154,7 @@ public final class RecordingFrameDriver {
                 lastFrameResult = LevelFrameStep.execute(
                         context, levelManager, GameServices.camera(),
                         () -> GameServices.sprites().update(inputHandler),
-                        LevelFrameStep.DIRECT_WRAPPER);
+                        stepWrapper);
                 lastFrameRanGameplay =
                         lastFrameResult == LevelFrameResult.GAMEPLAY_FRAME;
             }
