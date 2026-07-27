@@ -51387,3 +51387,62 @@ mvn -Dmse=off \
 The diagnostic AIZ/MGZ closure contract passes 2/2; focused lifecycle/event
 tests pass 62/62; rewind, reference-closure, S3K headless, level-loading,
 architecture, and trace-invariant controls pass 158/158.
+
+## 2026-07-27 - Unified initial Process_Sprites integration validation
+
+Worktree `.worktrees/integration-initial-process-sprites`, branch
+`bugfix/ai-trace-initial-process-sprites`, composed develop head
+`aede99ae0` through merge `c160a9e68`.
+
+The unified fresh-level `Process_Sprites` lifecycle initially regressed
+standalone MGZ from its accepted f23561 rings frontier to f0
+`tails_animation_id` (`$001B` / `$0000`). `SpawnLevelMainSprites` owns the
+simple falling intro's `$1B` animation before `Tails_Init`; the latter clears
+Tails CPU globals but does not write `anim(a0)`
+(`docs/skdisasm/sonic3k.asm:26101-26156`). The engine's initial-slot CPU reset
+also cleared its forced-animation representation. A focused ownership test
+failed with `$1B` / `-1` before the correction. Commit `73a1dbefb` preserves
+that assembly-owned animation across the CPU-global reset.
+
+Fresh post-fix standalone command:
+
+```bash
+mvn -q -Dmse=off -Dtrace.frontierOnly=true \
+  -Dtrace.context.radius=20 \
+  -Dsurefire.argLine='-Xshare:off -Xmx6g' \
+  -Dsurefire.forkCount=1 \
+  -Ds3k.rom.path=<discovered-locked-on-rom> \
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay#replayMatchesTrace' \
+  test
+```
+
+- Expected exit 1: one frontier-window error, zero warnings.
+- MGZ is restored to f23561 `rings` (expected `0`, actual `1`).
+- The focused initial-playable test passes. A combined 77-test run of that
+  suite plus architecture, rewind, and static-rewind guards had only the
+  expected MGZ replay failure; all 76 control tests passed.
+
+An explicit allowlist sweep (no test-name wildcard) measured these S3K
+frontiers with `trace.frontierOnly=true` and radius 20:
+
+| Route | Result |
+|---|---|
+| AIZ standalone | f8215 `player_animation_id` (`$0005` / `$0013`), 6 frontier-window errors |
+| CNZ standalone | f4801 `tails_mapping_frame` (`$0007` / `$0055`), 11 frontier-window errors |
+| MGZ standalone | f23561 `rings` (`0` / `1`), 1 frontier-window error |
+| AIZ complete run | f26107 `x` (`$0000` / `$4A9B`), 26 frontier-window errors |
+| CNZ complete run | f0 `y` (`$0600` / `$061C`), 28 frontier-window errors |
+| HCZ complete run | f6292 `tails_x_speed` (`$0100` / `$0000`), 11 frontier-window errors |
+| ICZ complete run | f24140 `rings` (`3` / `2`), 1 frontier-window error |
+| MGZ complete run | f28398 `rings` (`2` / `1`), 1 frontier-window error |
+| MHZ complete run | f0 `y` (`$0500` / `$051C`), 28 frontier-window errors |
+
+The bounded counts above are diagnostic-window counts, not replacements for
+the canonical full-report acceptance counts. The first frame and field remain
+the frontier identity.
+
+Special-stage replay, Gumball, Pachinko, and Slots passed 5/5. The special
+stage boot, return, and water-restore lifecycle tests also passed. The literal
+S1 inventory covered all 30 concrete replay classes (30 tests), and the
+literal S2 inventory covered all 20 concrete replay classes (21 tests).
+Neither inventory had a missing class, failure, error, or skip.
