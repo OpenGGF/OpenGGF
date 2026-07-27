@@ -13,14 +13,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// Differential gate proving ONE native complete-run capture of the
     /// canonical S3K playthrough movie
     /// (src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2,
-    /// 466,334 input rows) reproduces all seven committed
+    /// 466,334 input rows) reproduces all fifteen committed
     /// <c>*_completerun</c> fixture directories — identity (A) of
     /// docs/s3k-run-publication.md §0.1 — byte for byte.
     ///
     /// The pass is deliberately NOT truncated. The canonical capture ran
-    /// the whole movie and published fifteen segments, of which only the
-    /// first seven (AIZ..MHZ) were committed as fixtures; stopping at MHZ
-    /// would match those seven by construction rather than by fidelity.
+    /// the whole movie and publishes fifteen committed segments.
     /// Running to DDZ and asserting the full fifteen-line segment summary
     /// proves the segmenter's arm/finalize ordering stays correct on both
     /// sides of every fixture boundary — in particular that <c>mhz</c> ends
@@ -29,14 +27,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///
     /// Comparison strength, per fixture:
     /// - physics.csv and aux_state.jsonl by raw byte length AND sha256,
-    ///   with ZERO normalization. 1.43 GB of aux across the seven.
-    /// - metadata.json line for line after exact approved normalization of
-    ///   6.34 -> 6.33, trace_schema 7 -> 6, and removal of the single
-    ///   hardware_timing_schema line; recording_date values may also differ.
+    ///   with ZERO normalization.
+    /// - metadata.json line for line at exact v6.37/schema-7/hardware-schema
+    ///   identity; recording_date values may differ.
     ///   No other key or line may move, and the absence of a <c>run_id</c>
     ///   key is asserted explicitly.
     ///
-    /// The seven physics.csv hashes below were last moved by Lua
+    /// The first seven physics.csv hashes below were last moved by Lua
     /// 6.33-s3k-completerun, the ADDR_VBLA_WORD fix: vblank_counter reads
     /// 0xFE0E (the V_int_run_count low word) instead of 0xFE12
     /// (Life_count), turning column 6 from lives &lt;&lt; 8 into a live
@@ -80,15 +77,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// Exact fixture/current literals used by the approved schema
-        /// normalization. Any other version or schema value fails.
+        /// Exact v6.37 fixture/current literals. No schema or version
+        /// normalization is permitted.
         /// </summary>
-        private const string FixtureLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.33-s3k-completerun\",";
         private const string CurrentLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.37-s3k-completerun\",";
-        private const string FixtureTraceSchemaLine =
-            "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string HardwareTimingSchemaLine =
@@ -104,12 +97,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         /// <summary>
         /// All fifteen segments the full pass publishes, in recorder
-        /// emission order. The first seven carry the committed fixture
-        /// directory name plus its canonical byte lengths and sha256s
-        /// (docs/s3k-run-publication.md §0.1, independently recomputed from
-        /// the committed .gz files); the remaining eight are asserted for
-        /// segmentation and layout only, because no fixture was committed
-        /// for them.
+        /// emission order. Every row carries the semantic committed fixture
+        /// directory plus canonical decompressed lengths and sha256s.
         /// </summary>
         private static readonly SegmentCase[] SegmentCases =
         {
@@ -169,22 +158,77 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 184254918,
                 "0260219e935d5ec5b0873d8f59422fabe1ad8a6be8b8d2d9f505428e"
                 + "220764d6"),
-            // No committed fixture past MHZ; these pin segmentation only.
-            new SegmentCase("fbz", 237913, 44281),
-            new SegmentCase("soz", 282195, 59507),
-            new SegmentCase("lrz", 341703, 38755),
-            new SegmentCase("hpz22", 380459, 16260),
-            new SegmentCase("hpz", 396720, 18641),
-            new SegmentCase("ssz", 415362, 44147),
-            new SegmentCase("dez23", 459510, 6103),
-            new SegmentCase("ddz", 465614, 719)
+            new SegmentCase(
+                "fbz", "fbz_completerun", 237913, 44281,
+                7174156,
+                "337f7619d3b516cfb5c475aed978d023ba370e8fddb3473939c4b65f"
+                + "d2fdd4ca",
+                271508474,
+                "fdab8d3db8f65ff6ee94aad44a4fca1fac74017199ed0709293127cf"
+                + "9909a2ce"),
+            new SegmentCase(
+                "soz", "soz_completerun", 282195, 59507,
+                9640768,
+                "d67337f964240e3ad06854b31e68eb723cc29174d490db15be27669b5"
+                + "3f236bc",
+                336004823,
+                "3f52f3d726039cde16b8832017b6a6f0f8e16f0d0f5c91491e3a821"
+                + "d770c51ef"),
+            new SegmentCase(
+                "lrz", "lrz_completerun", 341703, 38755,
+                6278944,
+                "9c464a019b6fbdfb8086b3adcc47c5ee52d14ca13281b09cea5b648c"
+                + "cf4a4fac",
+                230367757,
+                "1d546a1087fd8639f62f45bd70619055675ec8abb4965542b63ab31c"
+                + "548c650c"),
+            new SegmentCase(
+                "hpz22", "hpz_completerun", 380459, 16260,
+                2634754,
+                "a61cad6c194fc87393d4186a55bbb7d6d47465314f913a75f855d9b9"
+                + "1c671f1b",
+                102697213,
+                "de812500263331a5d151f9c83a5f5ff5a680c8cbdb28b92fdea5940d"
+                + "992a9512"),
+            new SegmentCase(
+                "hpz", "ssz_completerun", 396720, 18641,
+                3020476,
+                "cb7b1b368810000d8ef9e6927ebc721588ec446af0748429e0573e63"
+                + "6789e6dc",
+                103750451,
+                "4401079f44fe1201fa574062701833e14d4560983b108525108133a26"
+                + "cb13d38"),
+            new SegmentCase(
+                "ssz", "dez_completerun", 415362, 44147,
+                7152448,
+                "16aa55471d830106abe26bec42c16cf0bc356f290de5e77a7ec9437d3"
+                + "dbb42c2",
+                248691762,
+                "d9b0a39af0dce2226a8dd157c9840523f3fba8189a15580f0fcdadfc"
+                + "b7b8b238"),
+            new SegmentCase(
+                "dez23", "ddz_completerun", 459510, 6103,
+                989320,
+                "697c5be5a6a52c395d10845625626f10d61a539582012d846cc88f98"
+                + "319da150",
+                37529403,
+                "5f045996346e8e444f009a7398edd8e904a3d99c6b9eff5828e32725"
+                + "87bbf312"),
+            new SegmentCase(
+                "ddz", "ending_completerun", 465614, 719,
+                117112,
+                "18233e2ca65529b4b34ba7c917689100fba0f57a8fba00b56858f757"
+                + "e3830fff",
+                2267476,
+                "d0369c3d638d9a42b3dbe79b00662a62bbf077cb2c66ecd3a9a94889"
+                + "ce16650d")
         };
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunSegmentsDifferential native capture matches"
-                + " all seven canonical completerun segments",
+                + " all fifteen canonical completerun segments",
                 NativeCaptureMatchesCanonicalCompleteRunSegments,
                 game: "s3k",
                 movie: "s3k-complete-sonic-tails",
@@ -285,6 +329,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             segment.FixtureDirectoryName,
                             "metadata.json"),
                         Path.Combine(produced, "metadata.json"));
+                    AssertEx.Equal(
+                        File.ReadAllText(Path.Combine(
+                            tracesRoot,
+                            segment.FixtureDirectoryName,
+                            "hardware_timing.jsonl")),
+                        File.ReadAllText(Path.Combine(
+                            produced, "hardware_timing.jsonl")));
                 }
 
                 AssertOutputLayoutIsExactlyTheSegments(output);
@@ -349,10 +400,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
-        /// Normalizes only the exact approved 6.34/schema-7/hardware-schema
-        /// additions, then requires line equality apart from the
-        /// recording_date value. Both sides stay LF-only and carry no
-        /// run_id line.
+        /// Requires exact v6.37/schema-7/hardware-schema line equality apart
+        /// from recording_date. Both sides stay LF-only and carry no run_id.
         /// </summary>
         private static void AssertMetadataEqualExceptRecordingDate(
             string context, string fixturePath, string producedPath)
@@ -370,17 +419,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 1,
                 CountOccurrences(
                     producedText, HardwareTimingSchemaLine));
-            producedText = producedText.Replace(
-                CurrentLuaScriptVersionLine,
-                FixtureLuaScriptVersionLine);
-            producedText = producedText.Replace(
-                HardwareTimingSchemaLine, "");
             AssertEx.Equal(
                 1,
                 CountOccurrences(
                     producedText, CurrentTraceSchemaLine));
-            producedText = producedText.Replace(
-                CurrentTraceSchemaLine, FixtureTraceSchemaLine);
 
             string[] fixtureLines = fixtureText.Split('\n');
             string[] producedLines = producedText.Split('\n');
@@ -411,7 +453,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                     continue;
                 }
-                if (fixtureLines[index] == FixtureLuaScriptVersionLine)
+                if (fixtureLines[index] == CurrentLuaScriptVersionLine)
                 {
                     versionLines++;
                 }
@@ -742,21 +784,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
-        /// One published segment. <see cref="HasFixture"/> is false for the
-        /// eight post-MHZ segments, which the pass must still publish with
-        /// the exact offsets and row counts below but for which no
-        /// canonical bytes were committed.
+        /// One published segment, with the raw recorder token and semantic
+        /// committed fixture destination kept distinct.
         /// </summary>
         private sealed class SegmentCase
         {
-            public SegmentCase(
-                string dirToken, int bk2FrameOffset, int traceFrameCount)
-            {
-                DirToken = dirToken;
-                Bk2FrameOffset = bk2FrameOffset;
-                TraceFrameCount = traceFrameCount;
-            }
-
             public SegmentCase(
                 string dirToken,
                 string fixtureDirectoryName,

@@ -65,6 +65,13 @@ namespace OpenGGF.BizHawk.Headless
 
         private const int CopyBufferBytes = 1048576;
 
+        private static readonly byte[] EmptyGzipMember =
+        {
+            0x1F, 0x8B, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x03, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00
+        };
+
         private readonly Action<Stream, Stream> compress;
         private readonly Func<Stream, Stream> openCompressor;
         private readonly List<string> report = new List<string>();
@@ -178,6 +185,8 @@ namespace OpenGGF.BizHawk.Headless
                     destination.Flush(true);
                 }
 
+                EnsureEmptyGzipMember(
+                    destinationPath, new FileInfo(sourcePath).Length);
                 PayloadDigest expected = DigestFile(sourcePath);
                 PayloadDigest actual = DigestGzip(destinationPath);
                 if (expected.Length != actual.Length
@@ -238,6 +247,7 @@ namespace OpenGGF.BizHawk.Headless
             long expectedLength,
             string expectedHash)
         {
+            EnsureEmptyGzipMember(gzipPath, expectedLength);
             PayloadDigest actual = plainDestinationPath == null
                 ? DigestGzip(gzipPath)
                 : DecompressGzipTo(gzipPath, plainDestinationPath);
@@ -276,6 +286,19 @@ namespace OpenGGF.BizHawk.Headless
             using (Stream gzip = OpenGzip(destination))
             {
                 CopyStream(source, gzip);
+            }
+        }
+
+        private static void EnsureEmptyGzipMember(
+            string gzipPath,
+            long plaintextLength)
+        {
+            // Mono 6.12 defers the GZipStream header until the first write,
+            // so disposing an unwritten stream leaves a zero-byte file.
+            // Publish the canonical gzip -n representation of empty input.
+            if (plaintextLength == 0 && new FileInfo(gzipPath).Length == 0)
+            {
+                File.WriteAllBytes(gzipPath, EmptyGzipMember);
             }
         }
 

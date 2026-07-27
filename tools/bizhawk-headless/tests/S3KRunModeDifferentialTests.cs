@@ -22,8 +22,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///    <c>bonus_slots</c>, <c>bonus_pachinko</c>, <c>special_stage</c> —
     ///    with physics.csv and aux_state.jsonl byte-identical (length AND
     ///    sha256, ZERO normalization) and metadata.json equal line for line
-    ///    after exact 6.34/schema-7/hardware-schema normalization, apart
-    ///    from the recording_date VALUE. Three of those four were
+    ///    with exact v6.37/schema-7/hardware-schema metadata apart from the
+    ///    recording_date VALUE. Three of those four were
     ///    previously verified only by hand
     ///    (docs/s3k-run-publication.md §10.5); this closes them.
     ///
@@ -32,9 +32,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///    src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/ — all
     ///    25 segment directories and run_manifest.json, on the same terms:
     ///    physics.csv and aux_state.jsonl by raw length AND sha256 with
-    ///    ZERO normalization, run_manifest.json equal after its exact
-    ///    6.34 -> 6.33 version normalization, and metadata.json line for
-    ///    line after the approved schema normalization plus recording_date.
+    ///    ZERO normalization, run_manifest.json byte-identical, and
+    ///    metadata.json line for line apart from recording_date.
     ///
     /// ## (B) is byte-reproducible; it did not used to be
     ///
@@ -91,7 +90,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// emeralds_after). S3KCompleteRunPublicationTests already gates the
     /// formatter given the right data; this gates the recorder discovering
     /// that data from the movie. The manifest carries no recording_date, so
-    /// its only normalized field is the exact 6.34 -> 6.33 version stamp.
+    /// it has no normalized field.
     ///
     /// Cost, measured: 1m08s wall and 234 MB peak RSS per pass, 370 MB of
     /// output each. The passes run sequentially and each output tree is
@@ -121,16 +120,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// Exact fixture/current stamps for the approved 6.37 -> 6.33
-        /// normalization applied to metadata and run manifests. Any other
-        /// version value fails rather than being normalized loosely.
+        /// Exact v6.37 stamps shared by the freshly published fixture and
+        /// the current native capture. No schema/version normalization is
+        /// permitted.
         /// </summary>
-        private const string FixtureVersionLine =
-            "  \"lua_script_version\": \"6.33-s3k-completerun\",";
         private const string CurrentVersionLine =
             "  \"lua_script_version\": \"6.37-s3k-completerun\",";
-        private const string FixtureTraceSchemaLine =
-            "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string HardwareTimingSchemaLine =
@@ -202,8 +197,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const long ManifestLength = 8740;
 
         private const string ManifestSha256 =
-            "a36ad5e75daaa0ad8924b4ed624d765f42b14516b0ef985ad2a1f99efb20"
-            + "9705";
+            "16cc116a79b739ccba6c1dd8a607eb5478c151053b7cdc2962bd9e86bbbf3"
+            + "9dc";
 
         /// <summary>
         /// The 25 published segments in recorder emission order, with the
@@ -528,7 +523,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// VALUE. Both sides must be LF-only and newline-terminated, have
         /// the same line count, carry exactly one recording_date line at
         /// the same index (well-formed on the produced side), carry exactly
-        /// one lua_script_version line equal to the pinned 6.32 literal,
+        /// one lua_script_version line equal to the pinned v6.37 literal,
         /// and carry the run_id line for the id this pass was given — which
         /// is not a delta at all in either case, because each fixture set
         /// was itself captured under the run id its case supplies.
@@ -556,29 +551,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 1,
                 CountOccurrences(
                     producedText, HardwareTimingSchemaLine));
-            producedText = producedText.Replace(
-                CurrentVersionLine, FixtureVersionLine);
-            producedText = producedText.Replace(
-                HardwareTimingSchemaLine, "");
-            if (fixtureText.IndexOf(
-                FixtureTraceSchemaLine, StringComparison.Ordinal) >= 0)
-            {
-                AssertEx.Equal(
-                    1,
-                    CountOccurrences(
-                        producedText, CurrentTraceSchemaLine));
-                producedText = producedText.Replace(
-                    CurrentTraceSchemaLine, FixtureTraceSchemaLine);
-            }
-            else
-            {
-                AssertEx.Equal(
-                    1,
-                    CountOccurrences(
-                        producedText, CurrentTraceSchemaLine + "\n"));
-                producedText = producedText.Replace(
-                    CurrentTraceSchemaLine + "\n", "");
-            }
+            AssertEx.Equal(
+                1,
+                CountOccurrences(
+                    producedText, CurrentTraceSchemaLine));
 
             string[] fixtureLines = fixtureText.Split('\n');
             string[] producedLines = producedText.Split('\n');
@@ -612,7 +588,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                     continue;
                 }
-                if (fixtureLines[index] == FixtureVersionLine)
+                if (fixtureLines[index] == CurrentVersionLine)
                 {
                     versionLines++;
                 }
@@ -741,8 +717,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 1,
                 CountOccurrences(
                     producedText, CurrentVersionLine));
-            producedText = producedText.Replace(
-                CurrentVersionLine, FixtureVersionLine);
             AssertTextEqual(
                 "run_manifest.json",
                 ReadAllTextExact(

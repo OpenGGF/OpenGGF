@@ -52123,3 +52123,44 @@ TestS3kHczCompleteRunTraceReplay>#replayMatchesTrace" test
   and the composed live-window/rings/recorded-rewind scenario. Fleet-wide
   committed fixture publication for every S3K level remains required beyond
   these three corrected fixtures. LBZ was not inspected or changed.
+
+## 2026-07-27 - S3K native v6.37 timing fleet publication
+
+- Worktree: `.worktrees/trace-green-integration-20260727`, branch
+  `bugfix/ai-trace-green-integration-20260727`, capture base
+  `94d7356df860ed1149c18a7a41804522fc91f757`.
+- Five fresh native identities were captured and installed: standard CNZ,
+  standard MGZ, the 15-segment Sonic+Tails route through the ending, and the
+  25-segment/22-transition Knuckles B and C identities.
+- The complete-run publication adds `fbz_completerun`, `soz_completerun`,
+  `lrz_completerun`, `hpz_completerun`, `ssz_completerun`,
+  `dez_completerun`, `ddz_completerun`, and `ending_completerun`.
+  Raw terminal recorder tokens are retained in exact metadata but mapped to
+  semantic destination ownership in
+  `hardware-timing-publication.tsv`.
+- All pre-existing destination physics and aux logical bytes matched before
+  publication. Exact native v6.37 metadata, timing streams, compressed
+  payloads, and the fresh B run manifest were installed. The immutable
+  publication manifest freezes 47 destinations plus the run manifest.
+- Strict installed-fleet loaders pass all 47 destinations. The focused
+  publication/compression/reference command passes 17 tests:
+
+```bash
+mvn -q -Dmse=off \
+  "-Dtest=com.openggf.trace.TestTraceFixtureCompressionGuard,\
+com.openggf.tests.trace.TestTraceReplayReferenceClosureGuard,\
+com.openggf.trace.timing.TestCommittedHardwareTimingFixtures" test
+```
+
+- Native compressor validation passes 12 cases, including a new bulk/streamed
+  empty-gzip regression. Native non-gate `HardwareTiming` validation passes
+  22 cases (the ROM-span case was skipped until the ROM-backed gate command).
+- ROM-backed native S3K publication gates are 9/9 green with the verified
+  `s3k.gen` ROM. This includes one fresh full-movie differential over all 15
+  Sonic+Tails destinations and parallel fresh B/C differentials over both
+  25-segment Knuckles identities.
+- Replay frontiers were intentionally **not remeasured** in this
+  publication-only phase. The eight later-route frontiers are **unmeasured**;
+  no green/red claim is made. Existing observed frontiers remain unchanged.
+  LBZ was regenerated, strictly loaded, and guard-validated only; its replay
+  frontier was neither inspected nor remediated.
