@@ -13,8 +13,40 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class TestBubblerObjectInstance {
+
+    @Test
+    void makerBeginsFirstProductionDispatchBeforeRenderVisibilityRefresh() {
+        WaterSystem waterSystem = new WaterSystem() {
+            @Override
+            public boolean hasWater(int zoneId, int actId) {
+                return true;
+            }
+
+            @Override
+            public int getWaterLevelY(int zoneId, int actId) {
+                return 0x0040;
+            }
+        };
+        StubObjectServices services = new StubObjectServices() {
+            @Override
+            public WaterSystem waterSystem() {
+                return waterSystem;
+            }
+        };
+        long seed = 0x14A7ABBBL;
+        services.rng().setSeed(seed);
+        BubblerObjectInstance maker =
+                new BubblerObjectInstance(new ObjectSpawn(0x0190, 0x0080, 0x54, 0x80, 0, false, 0));
+        maker.setServices(services);
+
+        maker.update(0, null);
+
+        assertNotEquals(seed, services.rng().getSeed(),
+                "SetUp_ObjAttributes render_flags=$84 makes the first maker dispatch production-eligible");
+    }
 
     @Test
     void childBubbleInitializesWobbleAngleFromSharedRomRng() {

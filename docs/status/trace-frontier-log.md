@@ -51502,6 +51502,36 @@ stage boot, return, and water-restore lifecycle tests also passed. The literal
 S1 inventory covered all 30 concrete replay classes (30 tests), and the
 literal S2 inventory covered all 20 concrete replay classes (21 tests).
 Neither inventory had a missing class, failure, error, or skip.
+## 2026-07-27 - HCZ Bubbler initialization visibility
+
+Worktree `.worktrees/trace-s3k-hcz-complete-6292`, branch
+`bugfix/ai-trace-s3k-hcz-complete-6292`, based on `6f48f3d9a`.
+
+Native probing established that the maker at `$3270,$07F8` enters
+`Obj_Bubbler` on trace frame 5480. `SetUp_ObjAttributes` writes
+`render_flags=$84`, then branches directly to `loc_2FA50`, so that first
+dispatch is production-eligible before `Render_Sprites` refreshes visibility.
+The engine instead queried current camera bounds immediately and postponed
+production, shifting the maker's RNG, child lifetime, and allocation epoch.
+An engine-only large bubble then occupied Tails' position at frame 6292 and
+correctly triggered the ROM bubble-pickup path.
+
+Fresh standalone command:
+
+```bash
+mvn -Dmse=off \
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace \
+  -Ds3k.rom.path=<discovered-locked-on-rom> \
+  -Dsurefire.forkCount=1 \
+  '-Dsurefire.argLine=-Xshare:off -Xmx3g' test -B
+```
+
+- Before: 2,411 errors, first f6292 `tails_x_speed`
+  (expected `$0100`, actual `$0000`).
+- After: 1,206 errors, first f9047 `tails_cpu_ctrl2_pressed`
+  (expected `$0010`, actual `$0000`).
+- Result: frontier advances 2,755 frames and removes 1,205 errors.
+
 ## 2026-07-27 - AIZ end-sign owner lifecycle
 
 Worktree `.worktrees/trace-s3k-aiz-shadow-owner`, branch
