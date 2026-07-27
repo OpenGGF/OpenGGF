@@ -17,6 +17,7 @@ These runbooks implement **Option 1** of
 | [`runbook-multi-agent-trace-orchestration.md`](runbook-multi-agent-trace-orchestration.md) | Running a fleet of trace-replay bug-fixing agents as the lead/orchestrator (the continuous survey → assign → gate → merge → reassign loop). |
 | [`runbook-rom-art-mappings-plc.md`](runbook-rom-art-mappings-plc.md) | Adding ROM-backed object art, sprite mappings, DPLCs, or PLC registration. |
 | [`runbook-gameplay-level-mutation.md`](runbook-gameplay-level-mutation.md) | Editing level tile data from gameplay code (terrain modifiers, breakables, layout changes). |
+| [`runbook-jvm-benchmark.md`](runbook-jvm-benchmark.md) | Measuring engine performance — comparing JVMs, checking a change for frame-time cost, or finding which subsystem dominates a frame. |
 
 ## Non-negotiable project rules (apply to every runbook)
 
