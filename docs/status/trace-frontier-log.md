@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+## 2026-07-27 - HCZ end-sign control-entry boundary restored
+
+- Worktree: `.worktrees/aiz-hcz-kos-readiness`, branch
+  `bugfix/ai-aiz-hcz-kos-readiness`, based on `origin/develop`
+  `9b5391450`.
+- Command:
+  `mvn -q -Dmse=relaxed -Dtrace.frontierOnly=true
+  -Dtrace.context.radius=20 -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path=<discovered-locked-on-rom>
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace
+  test`.
+- Baseline HCZ complete-run replay reproduced the regression introduced at
+  f9760 `player_animation_id` (expected `$09`, actual `$13`) with 11 bounded
+  errors in the clean-base run. The previous accepted frontier was f10423
+  `rings` (expected `149`, actual `0`).
+- A bounded native execute trace showed `Obj_EndSignControlWait` reach zero,
+  `Obj_EndSignControlDoSign`, and the later-slot sign initialization together
+  at VBlank `$8F7D`. The engine initialized HCZ's sign at `$8F7C`. MGZ's
+  native and engine initialization both occur at `$3F1E`.
+- `Obj_EndSignControl` always installs its `$77` timer and returns; its first
+  wait decrement belongs to the next object pass. HCZ alone supplied
+  `initialWaitCatchUpEntries=1`, a synthetic subtraction with no corresponding
+  ROM state. The construction site now uses the ordinary shared flow.
+- Focused RED coverage observed `$76` after initialization and now verifies
+  the full `$77`. HCZ complete-run fails only at the restored f10423 frontier
+  with one bounded error. MGZ remains at
+  f23561 standalone and f28398 complete-run; AIZ remains at f8837. CNZ
+  standalone f15058 and complete-run f0 are byte-for-byte unchanged from the
+  clean base.
+- The same native capture corrected the earlier MGZ results-child audit:
+  MGZ sign slot 9 allocates results slot 8, and HCZ sign slot 24 also
+  allocates results slot 8. Both children begin on the next object pass, so
+  the existing `UNSUPPORTED_GROUNDED_COMPENSATION` catch-up is explicit engine
+  debt pending identification of MGZ's real owner.
+
 ## 2026-07-27 - CNZ external launch releases cylinder mapping ownership
 
 - Worktree: `.worktrees/trace-s3k-cnz-f10728`, branch
@@ -51,20 +87,19 @@
   complete run retained its accepted f28398 `rings` mismatch.
 - Live diagnostics distinguished the routes without route identity:
   standalone entered sign routine 6 already grounded, while the complete run
-  first entered it airborne and waited for landing. The no-wait path's results
-  child occupies a native later SST slot whose one dispatch was absent from
-  both the engine create gate and its carried child-retirement tail.
-- `ResultsChildAllocationOwner` now makes that later-slot ownership explicit.
-  The sign publishes Player 1's routine-6 victory pose immediately and carries
-  the one-entry catch-up through results creation and retirement. Airborne-wait
-  and already-preserved owner boundaries keep their existing timing.
+  first entered it airborne and waited for landing. A later execute trace
+  corrected the original allocation interpretation: the standalone sign is
+  in slot 9 and allocates results slot 8, so the child starts on the next pass.
+- The sign accurately publishes Player 1's routine-6 victory pose
+  immediately. `ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION`
+  and its one-entry catch-up are not ROM-backed; they remain isolated pending
+  a separate investigation of MGZ's real missing owner.
 - The standalone frontier-only replay now reports one error at f23561 `rings`
   (expected `0`, actual `1`); complete MGZ remains at f28398 `rings`
   (expected `2`, actual `1`). Paired AIZ canaries were byte-for-byte stable
   against the clean baseline at f8837 and f26107, and standalone CNZ retained
-  f10728. Detailed evidence is in
+  f10728 at the time of that run. Detailed evidence is in
   `docs/architecture/audits/2026-07-27-mgz-f13903-results-child-owner.md`.
-  LBZ was not inspected or run.
 
 ## 2026-07-27 - CNZ cylinder exact right edge retains ground push
 

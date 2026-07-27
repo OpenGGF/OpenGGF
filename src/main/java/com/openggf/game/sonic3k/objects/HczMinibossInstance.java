@@ -878,8 +878,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
                         services().featureZoneId(), services().featureActId(), true);
                 defeatHandoffStarted = true;
                 spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                        state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE,
-                        1, 0, 0, 0));
+                        state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
             }
         }
         if (!defeatHandoffStarted || !defeatExplosionController.isFinished()

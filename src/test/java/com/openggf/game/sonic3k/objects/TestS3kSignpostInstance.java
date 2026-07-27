@@ -122,20 +122,23 @@ class TestS3kSignpostInstance {
     }
 
     @Test
-    void groundedNoWaitAndAirborneWaitSelectDistinctResultsChildOwners() {
-        assertEquals(S3kSignpostInstance.ResultsChildAllocationOwner.NATIVE_LATER_SLOT,
-                S3kSignpostInstance.resultsChildAllocationOwner(false, false, false),
-                "a grounded routine-6 sign dispatch allocates Obj_LevelResults in its later child slot");
-        assertEquals(1, S3kSignpostInstance.ResultsChildAllocationOwner.NATIVE_LATER_SLOT.catchUpEntries());
-        assertEquals(S3kSignpostInstance.ResultsChildAllocationOwner.ENGINE_NEXT_PASS,
-                S3kSignpostInstance.resultsChildAllocationOwner(true, false, false),
-                "a sign that waited in routine 6 has already exposed the allocation owner boundary");
-        assertEquals(S3kSignpostInstance.ResultsChildAllocationOwner.ENGINE_NEXT_PASS,
-                S3kSignpostInstance.resultsChildAllocationOwner(false, true, false),
-                "a post-object sign already preserves its later-slot allocation boundary");
-        assertEquals(S3kSignpostInstance.ResultsChildAllocationOwner.ENGINE_NEXT_PASS,
-                S3kSignpostInstance.resultsChildAllocationOwner(false, false, true),
-                "a retained grounded owner already preserves the allocation boundary");
+    void groundedNoWaitKeepsIsolatedTimingCompensationUntilRealOwnerIsKnown() {
+        assertEquals(S3kSignpostInstance.ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION,
+                S3kSignpostInstance.resultsChildTimingAdjustment(false, false, false),
+                "the grounded no-wait path retains an explicit engine compensation, "
+                        + "not a claimed native SST owner");
+        assertEquals(1,
+                S3kSignpostInstance.ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION
+                        .catchUpEntries());
+        assertEquals(S3kSignpostInstance.ResultsChildTimingAdjustment.NONE,
+                S3kSignpostInstance.resultsChildTimingAdjustment(true, false, false),
+                "a sign that waited in routine 6 does not use the unsupported compensation");
+        assertEquals(S3kSignpostInstance.ResultsChildTimingAdjustment.NONE,
+                S3kSignpostInstance.resultsChildTimingAdjustment(false, true, false),
+                "a post-object sign does not use the unsupported compensation");
+        assertEquals(S3kSignpostInstance.ResultsChildTimingAdjustment.NONE,
+                S3kSignpostInstance.resultsChildTimingAdjustment(false, false, true),
+                "a separately retained grounded boundary does not use the unsupported compensation");
     }
 
     @Test

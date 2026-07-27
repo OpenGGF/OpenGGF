@@ -89,8 +89,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int waitDurationAdjustment;
     private int postControlHandoffDelayEntries;
     private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
-    private S3kSignpostInstance.ResultsChildAllocationOwner resultsChildAllocationOwner =
-            S3kSignpostInstance.ResultsChildAllocationOwner.ENGINE_NEXT_PASS;
+    private S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment =
+            S3kSignpostInstance.ResultsChildTimingAdjustment.NONE;
     private boolean controlsReleasedAheadOfHandoff;
     private boolean carriedAcrossSeamlessTransition;
 
@@ -138,19 +138,19 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             int postControlHandoffDelayEntries, int carriedResultsRetireDispatches) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
                 carriedResultsRetireDispatches,
-                S3kSignpostInstance.ResultsChildAllocationOwner.ENGINE_NEXT_PASS);
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
-            S3kSignpostInstance.ResultsChildAllocationOwner resultsChildAllocationOwner) {
+            S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment) {
         super("S3kResults");
         this.character = character;
         this.act = act;
         this.waitDurationAdjustment = Math.max(0, waitDurationAdjustment);
         this.postControlHandoffDelayEntries = Math.max(0, postControlHandoffDelayEntries);
         this.carriedResultsRetireDispatches = Math.max(0, carriedResultsRetireDispatches);
-        this.resultsChildAllocationOwner = resultsChildAllocationOwner;
+        this.resultsChildTimingAdjustment = resultsChildTimingAdjustment;
 
         // Calculate bonuses from current game state (ROM lines 62550-62578)
         calculateBonuses();
@@ -410,7 +410,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         if (createGateFrames < 0) {
             createGateFrames = Math.max(0,
                     S3kTransitionWriteSupport.resultsCreateGateDispatches(services())
-                            - resultsChildAllocationOwner.catchUpEntries());
+                            - resultsChildTimingAdjustment.catchUpEntries());
         }
 
         createGateFrames--;

@@ -39,13 +39,19 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // ---- State machine ----
     private enum State { INIT, FALLING, LANDED, RESULTS, AFTER }
 
-    enum ResultsChildAllocationOwner {
-        ENGINE_NEXT_PASS(0),
-        NATIVE_LATER_SLOT(1);
+    /**
+     * Engine-only timing adjustment retained until MGZ's real missing ROM
+     * owner is identified. This does not describe native SST allocation:
+     * captured MGZ and HCZ results children both allocate into lower slot 8
+     * and begin on the next object pass.
+     */
+    enum ResultsChildTimingAdjustment {
+        NONE(0),
+        UNSUPPORTED_GROUNDED_COMPENSATION(1);
 
         private final int catchUpEntries;
 
-        ResultsChildAllocationOwner(int catchUpEntries) {
+        ResultsChildTimingAdjustment(int catchUpEntries) {
             this.catchUpEntries = catchUpEntries;
         }
 
@@ -523,19 +529,19 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         if (services().gameState() != null) {
             services().gameState().setEndOfLevelActive(true);
         }
-        ResultsChildAllocationOwner resultsChildAllocationOwner = resultsChildAllocationOwner(
+        ResultsChildTimingAdjustment resultsChildTimingAdjustment = resultsChildTimingAdjustment(
                 resultsWaitedForPlayerLanding,
                 preservesPostObjectResultDispatchBoundary,
                 preservesGroundedResultsDispatchBoundary);
-        int resultsChildOwnerCatchUpEntries = resultsChildAllocationOwner.catchUpEntries();
+        int resultsChildCatchUpEntries = resultsChildTimingAdjustment.catchUpEntries();
         spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries
                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
                 resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary
                         ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
-                        : RESULTS_CARRIED_RETIRE_DISPATCHES - resultsChildOwnerCatchUpEntries,
-                resultsChildAllocationOwner));
+                        : RESULTS_CARRIED_RETIRE_DISPATCHES - resultsChildCatchUpEntries,
+                resultsChildTimingAdjustment));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
         if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
@@ -543,11 +549,11 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         }
     }
 
-    static ResultsChildAllocationOwner resultsChildAllocationOwner(boolean waitedForPlayerLanding,
+    static ResultsChildTimingAdjustment resultsChildTimingAdjustment(boolean waitedForPlayerLanding,
             boolean preservesPostObjectBoundary, boolean preservesGroundedOwnerBoundary) {
         return waitedForPlayerLanding || preservesPostObjectBoundary || preservesGroundedOwnerBoundary
-                ? ResultsChildAllocationOwner.ENGINE_NEXT_PASS
-                : ResultsChildAllocationOwner.NATIVE_LATER_SLOT;
+                ? ResultsChildTimingAdjustment.NONE
+                : ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION;
     }
 
     static void applySidekickInputLock(AbstractPlayableSprite sprite) {
