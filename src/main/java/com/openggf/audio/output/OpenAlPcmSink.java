@@ -25,13 +25,18 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
     public static final int DEVICE_BUFFER_FRAMES = 1_024;
     private static final long WARNING_INTERVAL_NANOS = 1_000_000_000L;
     private static final int OPENAL_BUFFER_COUNT = 8;
+    // Match the former streamer: one 21 ms buffer is not enough to absorb
+    // ordinary game-loop scheduling jitter without stopping the AL source.
+    private static final int DEVICE_QUEUE_TARGET = 3;
+    private static final int DEVICE_PRIME_FRAMES =
+            DEVICE_BUFFER_FRAMES * DEVICE_QUEUE_TARGET;
 
     public interface Device {
         int initialize();
 
         void enqueue(short[] stereoPcm, int stereoFrames, int sampleRate);
 
-        void update();
+        int update();
 
         void flush();
 
@@ -54,6 +59,7 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
 
     private boolean warned;
     private long lastWarningNanos;
+    private boolean paused;
     private boolean failed;
     private boolean closed;
 
@@ -100,7 +106,7 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
     @Override
     public void accept(AudioPresentationFrameView frame) {
         Objects.requireNonNull(frame, "frame");
-        if (closed || failed) {
+        if (closed || failed || paused) {
             return;
         }
         int stereoFrames = frame.stereoFrames();
@@ -118,15 +124,20 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
     }
 
     public void updateDevice() {
-        if (closed || failed) {
+        if (closed || failed || paused) {
             return;
         }
         try {
-            device.update();
-            if (fifo.queuedStereoFrames() >= DEVICE_BUFFER_FRAMES) {
+            int deviceQueuedBuffers = device.update();
+            int requiredFrames = deviceQueuedBuffers == 0
+                    ? DEVICE_PRIME_FRAMES : DEVICE_BUFFER_FRAMES;
+            while (deviceQueuedBuffers < DEVICE_QUEUE_TARGET
+                    && fifo.queuedStereoFrames() >= requiredFrames) {
                 int drained = fifo.drain(
                         deviceScratch, DEVICE_BUFFER_FRAMES);
                 device.enqueue(deviceScratch, drained, sampleRate);
+                deviceQueuedBuffers++;
+                requiredFrames = DEVICE_BUFFER_FRAMES;
             }
         } catch (Throwable failure) {
             fail(failure);
@@ -147,7 +158,8 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
     }
 
     public void pause() {
-        if (!closed && !failed) {
+        if (!closed && !failed && !paused) {
+            paused = true;
             try {
                 device.pause();
             } catch (Throwable failure) {
@@ -157,7 +169,8 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
     }
 
     public void resume() {
-        if (!closed && !failed) {
+        if (!closed && !failed && paused) {
+            paused = false;
             try {
                 device.resume();
             } catch (Throwable failure) {
@@ -286,9 +299,11 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
         }
 
         @Override
-        public void update() {
+        public int update() {
             reclaimProcessed();
             checkError("update final PCM");
+            return AL10.alGetSourcei(
+                    presentationSource, AL10.AL_BUFFERS_QUEUED);
         }
 
         @Override
