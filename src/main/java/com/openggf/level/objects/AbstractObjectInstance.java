@@ -948,7 +948,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * rather than {@link #getX()}. Matches the S1/S2 {@code out_of_range} macro
      * (Macros.asm) exactly when called with {@code getX()}.
      * <p>
-     * See docs/KNOWN_DISCREPANCIES.md entry #14 (Object Despawn and Visibility Windows).
+     * See docs/status/known-discrepancies.md entry #14 (Object Despawn and Visibility Windows).
      *
      * @param objectX the X coordinate to check (typically a custom spawnX/origX/baseX)
      * @return true if the coordinate is within range (should NOT be deleted)
@@ -998,7 +998,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * At native viewport width (320 px, {@code DISPLAY_ASPECT = NATIVE_4_3}) this is
      * byte-identical to the ROM: {@code 0 <= dx < 320} and {@code 0 <= dy < 224}.
      * At widescreen widths the rectangle widens to match the configured viewport
-     * (declared divergence — see docs/KNOWN_DISCREPANCIES.md "Object Despawn and
+     * (declared divergence — see docs/status/known-discrepancies.md "Object Despawn and
      * Visibility Windows").
      * <p>
      * Used by objects that call {@code ChkObjectVisible} in the ROM
@@ -1032,7 +1032,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * the limit evaluates to exactly 640, reproducing the ROM constant bit-for-bit.
      * At widescreen widths the limit widens to {@code 128 + viewportWidth + 192}
      * so objects near the visible right edge are not incorrectly despawned
-     * (declared divergence — see docs/KNOWN_DISCREPANCIES.md "Object Despawn and
+     * (declared divergence — see docs/status/known-discrepancies.md "Object Despawn and
      * Visibility Windows").
      *
      * @return true if object is within range (should NOT be deleted)

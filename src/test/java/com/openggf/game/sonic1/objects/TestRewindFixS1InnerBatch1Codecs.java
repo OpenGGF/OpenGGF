@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * (the {@code Sonic1ScrapEggmanInstance} constructor directly calls
  * {@code spawnDynamicObject(button)}). Registering a codec would double it on
  * rewind restore (1 → 2) because boss reconstruction already re-adds it.
- * See {@code TestBossChildNoDoubleSpawnParity} and {@code docs/KNOWN_DISCREPANCIES.md}.
+ * See {@code TestBossChildNoDoubleSpawnParity} and {@code docs/status/known-discrepancies.md}.
  *
  * <p>The SBZ rotating-junction display child now uses spawn-based generic recreate and
  * is asserted by {@code TestScalarOnlyCodecDeletion}.

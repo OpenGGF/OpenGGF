@@ -746,7 +746,7 @@ public final class GameplayModeContext implements ModeContext {
      * Resets session-progress counters to "fresh gameplay" defaults — score,
      * rings, lives, emeralds, timer, and (via LevelManager) checkpoint state.
      * Per the session ownership migration design
-     * (docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md),
+     * (docs/architecture/designs/2026-04-07-runtime-ownership-migration-design.md),
      * editor exit must reinitialize gameplay session state as fresh gameplay,
      * not resumed state. Call this from the exit-editor flow after a new
      * gameplay mode context is wired up.

@@ -152,7 +152,7 @@ The method that has worked three times, in order:
    what shows it is the same emulated run rather than a similar one.
 4. Install, then make this harness reproduce the new bytes and re-pin the gates.
 5. Measure the trace-replay frontiers **before and after** and record the movement
-   in `docs/TRACE_FRONTIER_LOG.md`. Every instance of this so far has un-masked a
+   in `docs/status/trace-frontier-log.md`. Every instance of this so far has un-masked a
    latent bug elsewhere; expect one and look for it.
 
 ## Diagnostic hooks are deliberately not ported

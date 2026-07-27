@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Reusable base for multi-stage trace RUN chain tests (spec/API contract:
  * "Decisions locked with the owner" and Component 2 in
- * docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md). Drives
+ * docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md). Drives
  * ONE continuous {@link GameLoop} through EVERY segment of a
  * {@link TraceRunManifest} — with NO hardcoded segment count and NO
  * zone/route/frame carve-out — and asserts that the engine organically raises
@@ -660,7 +660,7 @@ abstract class AbstractRunChainTest {
      * field comparison is an explicitly LATER workflow; when it lands, build the
      * special-stage comparator HERE instead of returning {@code null} for a
      * {@code special_stage} segment. See "Decisions locked with the owner" item 1
-     * in docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md.
+     * in docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md.
      *
      * <p>v1: a {@code bonus_stage} interior returns a per-frame
      * {@link LiveTraceComparator}; a {@code special_stage} interior returns

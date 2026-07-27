@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Unit-level coverage for {@link RunSegmentAdvancer}, the segment-advance
  * state machine driving a visual multi-stage trace run session (Task 3,
- * spec: docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md).
+ * spec: docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md).
  * No ROM/engine involved — feeds synthetic (mode, cursorFrame) sequences
  * against the real {@code run_aiz_gumball_3seg} synthetic fixture's
  * SegmentPlans (level/bonus_stage/level, offsets 500/1900/2900, 2 trace

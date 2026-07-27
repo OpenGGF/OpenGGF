@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>{@code Sonic1SplashObjectInstance} is intentionally excluded: it is an
  * accept-drop transient cosmetic (LZ water splash re-emitted on water
- * entry/exit), documented in {@code docs/KNOWN_DISCREPANCIES.md}.
+ * entry/exit), documented in {@code docs/status/known-discrepancies.md}.
  */
 class TestRewindFixS1Batch3Codecs {
 

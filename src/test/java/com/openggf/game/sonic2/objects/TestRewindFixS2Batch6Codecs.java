@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>The remaining cosmetic transient child evaluated in this batch,
  * {@code SuperSonicStarsObjectInstance}, is still intentionally accept-drop and
- * documented in {@code docs/KNOWN_DISCREPANCIES.md}.
+ * documented in {@code docs/status/known-discrepancies.md}.
  */
 class TestRewindFixS2Batch6Codecs {
 

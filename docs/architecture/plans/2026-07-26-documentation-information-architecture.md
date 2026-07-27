@@ -134,7 +134,7 @@ Expected: every category appears in the appropriate index.
 Use these exact mappings:
 
 ```text
-docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md
+docs/agent-workflow/support-options.md
   → docs/agent-workflow/support-options.md
 docs/SINGLETON_LIFECYCLE.md
   → docs/architecture/singleton-lifecycle.md
@@ -159,7 +159,7 @@ docs/doc-gap-audit-2026-06-12.md
   → docs/architecture/audits/2026-06-12-documentation-gap.md
 docs/opus-branch-review.md
   → docs/architecture/audits/opus-common-utility-branch-review.md
-docs/release-architecture-review-issues.md
+docs/architecture/audits/release-architecture-review-issues.md
   → docs/architecture/audits/release-architecture-review-issues.md
 ```
 
@@ -175,9 +175,9 @@ docs/TRACE_REMEDIATION_PLAN.md
 ```text
 docs/AI_JOURNEY.md
   → docs/project/ai-journey.md
-docs/DEVELOPMENT_TIMELINE.md
+docs/project/development-timeline.md
   → docs/project/development-timeline.md
-docs/RELEASE_READINESS_ROADMAP.md
+docs/project/release-readiness-roadmap.md
   → docs/project/release-readiness-roadmap.md
 ```
 
@@ -186,7 +186,7 @@ docs/RELEASE_READINESS_ROADMAP.md
 ```text
 docs/BUGLIST.md
   → docs/status/bug-list.md
-docs/BUGLIST_S3K_TODAY.md
+docs/status/s3k-bug-list.md
   → docs/status/s3k-bug-list.md
 docs/BUGLIST_SPECIAL_STAGES.md
   → docs/status/special-stage-bug-list.md
@@ -194,11 +194,11 @@ docs/KNOWN_BUGS.md
   → docs/status/known-bugs.md
 docs/status/known-discrepancies.md
   → docs/status/known-discrepancies.md
-docs/S3K_KNOWN_BUGS.md
+docs/status/s3k-known-bugs.md
   → docs/status/s3k-known-bugs.md
 docs/S3K_KNOWN_DISCREPANCIES.md
   → docs/status/s3k-known-discrepancies.md
-docs/TRACE_FRONTIER_LOG.md
+docs/status/trace-frontier-log.md
   → docs/status/trace-frontier-log.md
 ```
 
@@ -399,7 +399,7 @@ Use these mappings:
 ```text
 docs/s3k-zones/cnz-post-workstream-c-baseline.md
   → docs/architecture/validation/s3k-zones/cnz-post-workstream-c.md
-docs/s3k-zones/cnz-post-workstream-d-baseline.md
+docs/architecture/validation/s3k-zones/cnz-post-workstream-d.md
   → docs/architecture/validation/s3k-zones/cnz-post-workstream-d.md
 docs/s3k-zones/cnz-trace-divergence-baseline.md
   → docs/architecture/validation/s3k-zones/cnz-trace-divergence.md

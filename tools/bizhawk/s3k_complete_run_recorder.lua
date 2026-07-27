@@ -130,7 +130,7 @@
 -- plus the Ctrl_1_logical / Ctrl_2_logical 16-bit latches. Emitted on
 -- every frame where any of those four bytes change, plus a baseline
 -- snapshot every SNAPSHOT_INTERVAL frames. Diagnostic-only.
--- Targets the AIZ F7361-F7365 blocker (docs/S3K_KNOWN_BUGS.md "AIZ2
+-- Targets the AIZ F7361-F7365 blocker (docs/status/s3k-known-bugs.md "AIZ2
 -- Trace F7381"): the engine never enters controlLocked, so its
 -- inputHistory mirror never zeroes the Tails leader-input slot that
 -- ROM zeroes via Ctrl_1_locked, causing the F7381 -0x18 x_vel drift.
@@ -139,7 +139,7 @@
 -- v6.13-s3k adds terrain_wall_sensor_per_frame and extends the existing
 -- velocity_write / position_write windows with an AIZ F7549-F7560
 -- sub-window. Targets the AIZ F7552 sidekick airborne wall-collision
--- blocker (docs/S3K_KNOWN_BUGS.md "AIZ F7552"): Tails wedges at
+-- blocker (docs/status/s3k-known-bugs.md "AIZ F7552"): Tails wedges at
 -- x=0x1208 with x_sub=0x0000 and x_speed=0x0000 across many airborne
 -- frames -- the canonical ROM right-wall-collision-while-airborne
 -- result of Tails_DoLevelCollision (sonic3k.asm:28871-29117). The new
@@ -166,7 +166,7 @@
 -- these events.
 -- v6.15-s3k adds collision_response_list_per_frame and
 -- collision_response_list_end_of_frame events. Targets the CNZ F=621
--- Clamer re-fire blocker (docs/S3K_KNOWN_BUGS.md "CNZ F=621 Clamer
+-- Clamer re-fire blocker (docs/status/s3k-known-bugs.md "CNZ F=621 Clamer
 -- re-fire — ROM dispatch path narrowing"): the prior round narrowed
 -- the dispatch path to Touch_Special writing collision_property(a1)
 -- ($29) inside Touch_Loop when a player rect overlaps a SPECIAL-
@@ -267,7 +267,7 @@
 -- (no aiz_fire_transition key in aux_schema_extras) stay valid.
 --
 -- v6.31-s3k-completerun (blue-spheres plan Task 3,
--- docs/superpowers/plans/2026-07-19-multi-stage-trace-runs-bluespheres.md):
+-- docs/architecture/plans/2026-07-19-multi-stage-trace-runs-bluespheres.md):
 -- the special-stage ($34) detour becomes a REAL "special_stage" segment
 -- instead of a rowless manifest-only detour. Adds start_ss_segment/
 -- write_ss_row/finalize_ss_segment writing a dedicated 20-column ss/
@@ -4296,7 +4296,7 @@ end
 -- AIZ terrain wall-sensor per-frame snapshot (v6.13-s3k)
 -- =====================================================================
 -- Targets the AIZ F7552 sidekick airborne wall-collision blocker
--- (docs/S3K_KNOWN_BUGS.md "AIZ F7552"): Tails wedges at x=0x1208 with
+-- (docs/status/s3k-known-bugs.md "AIZ F7552"): Tails wedges at x=0x1208 with
 -- x_sub=0x0000 and x_speed=0x0000 across many consecutive airborne
 -- frames while still rising (y_speed negative, decreasing). The triple
 -- signature is the canonical ROM right-wall-collision-while-airborne
@@ -4570,7 +4570,7 @@ end
 -- =====================================================================
 -- Collision_response_list per-frame snapshot (v6.15-s3k)
 -- =====================================================================
--- Targets the CNZ F=621 Clamer re-fire blocker (docs/S3K_KNOWN_BUGS.md
+-- Targets the CNZ F=621 Clamer re-fire blocker (docs/status/s3k-known-bugs.md
 -- "CNZ F=621 Clamer re-fire — ROM dispatch path narrowing"): the prior
 -- diagnosis rounds traced ROM dispatch through Check_PlayerCollision
 -- (sonic3k.asm:179904-179916) reading collision_property(a0) ($29)
@@ -5068,7 +5068,7 @@ end
 
 -- ---------------------------------------------------------------------------
 -- Special-stage (blue spheres) segment helpers (v6.31, blue-spheres plan
--- docs/superpowers/plans/2026-07-19-multi-stage-trace-runs-bluespheres.md
+-- docs/architecture/plans/2026-07-19-multi-stage-trace-runs-bluespheres.md
 -- Task 3). Mirror start_new_segment/finalize_segment's dir-count bookkeeping
 -- and shared started/trace_frame/bk2_frame_offset/current_segment_zone state
 -- (so the level re-arm's double-finalize protection keeps working unchanged)

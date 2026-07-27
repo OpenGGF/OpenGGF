@@ -2972,7 +2972,7 @@ public class ObjectManager {
      * constant bit-for-bit.  At widescreen widths the limit widens with the
      * configured viewport so objects near the visible right edge are not
      * incorrectly despawned (declared divergence — see
-     * docs/KNOWN_DISCREPANCIES.md "Object Despawn and Visibility Windows", entry #14).
+     * docs/status/known-discrepancies.md "Object Despawn and Visibility Windows", entry #14).
      * <p>
      * Used by {@link #isOutOfRangeS1} for non-S1-counter placement and mirrored
      * in {@link AbstractObjectInstance#isInRange()}.
@@ -4050,7 +4050,7 @@ public class ObjectManager {
                 // ObjectTouchResponseController' double-buffer overlap state must be restored
                 // AFTER object restoration so slot lookup resolves to live
                 // post-restore instances. See iter-1631 root-cause analysis in
-                // docs/superpowers/plans/2026-05-07-rewind-encounter-validation.md.
+                // docs/architecture/plans/2026-05-07-rewind-encounter-validation.md.
                 if (touchResponses != null) {
                     touchResponses.restoreRewindState(s.touchResponseOverlap());
                 }

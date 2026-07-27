@@ -55,7 +55,7 @@ class TestSonic1GlassReflectionGraphRewind {
     }
 
     /**
-     * S1 bug-triage row 4 investigation (docs/plans/s1-bug-batch-ledger-2026-07-05.md,
+     * S1 bug-triage row 4 investigation (docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md,
      * "Glass reflection oscillates incorrectly"): a subtype-4 (switch-activated
      * lowering) glass block reflection's Y motion, verified against
      * "docs/s1disasm/_incObj/30 MZ Large Green Glass Blocks.asm".
@@ -75,7 +75,7 @@ class TestSonic1GlassReflectionGraphRewind {
      * project targets), not an engine defect. This test locks in that
      * ROM-accurate independence rather than "fixing" it to track the parent,
      * which the ledger's initial (untriaged) symptom description suggested but
-     * the disassembly disproves. See docs/plans/s1-bug-batch-ledger-2026-07-05.md
+     * the disassembly disproves. See docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md
      * row 4 for the ledger disposition.
      */
     @Test
@@ -183,7 +183,7 @@ class TestSonic1GlassReflectionGraphRewind {
      * RAM+screenshot capture AND the engine's own headless TraceCaptureTool
      * pixel diff, both confirming the engine reproduces real hardware
      * frame-for-frame -- this is deliberate, verified ROM behavior, not an
-     * engine defect (ledger row 4, docs/plans/s1-bug-batch-ledger-2026-07-05.md,
+     * engine defect (ledger row 4, docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md,
      * disposition {@code rom-confirmed-intentional}).
      * <p>
      * <b>This is a PINNING test, not a regression repro: it passes unmodified

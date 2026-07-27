@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Chained-driver core for multi-stage trace runs (spec: docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md).
+ * Chained-driver core for multi-stage trace runs (spec: docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md).
  * Plans a {@link TraceRunManifest} into per-segment {@link SegmentPlan}s and drives a boundary-observing
  * {@link BoundaryProbe} across a transition. Serves both the headless chain test and the visual run session.
  *
@@ -199,7 +199,7 @@ public final class TraceRunReplayWalker {
      * special-stage comparison is an explicitly later workflow — see the
      * SS-interior seam documented on {@link #interSegmentStepCap} callers and
      * "Decisions locked with the owner" item 1 in
-     * docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md.
+     * docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md.
      */
     public static boolean isUncomparedInterior(TraceRunManifest.Segment segment) {
         return "special_stage".equals(segment.kind());

@@ -922,7 +922,7 @@ mvn -q -Dmse=off -Dsurefire.argLine=-Xmx6g \
 - The 116-test sidekick/platform/rewind owner matrix passes.
 - S1 GHZ1 and S2 EHZ1 trace replays pass.
 - Architecture, per-game-rule, and rewind guards pass. `TestBuildToolingGuard`
-  remains independently blocked on its stale `docs/KNOWN_DISCREPANCIES.md`
+  remains independently blocked on its stale `docs/status/known-discrepancies.md`
   path; that repository path migration is outside this ICZ change.
 
 ### 2026-07-26 -- ICZ invisible hurt block uses ordinary Obj37 owner timing
@@ -962,7 +962,7 @@ bootstrap, and decoding canaries pass 91/91.
 
 `TestBuildToolingGuard` was checked separately: 43 of its 44 tests pass and
 the remaining test has the known base-only `NoSuchFileException` for the
-removed `docs/KNOWN_DISCREPANCIES.md` path. Its sibling lowercase
+removed `docs/status/known-discrepancies.md` path. Its sibling lowercase
 `docs/status/known-discrepancies.md` correction is outside this isolated
 worktree and was not modified here.
 
@@ -997,7 +997,7 @@ field-audit, and transient guards pass 126/126.
 
 `TestBuildToolingGuard` was checked separately and remains blocked at this
 base by its pre-existing reference to the removed
-`docs/KNOWN_DISCREPANCIES.md`; the already-staged sibling correction to the
+`docs/status/known-discrepancies.md`; the already-staged sibling correction to the
 lowercase `docs/status/known-discrepancies.md` is outside this isolated
 worktree and this commit.
 
@@ -11796,7 +11796,7 @@ Worktree `.worktrees/ai-s2-ss-trace-green`, branch
   touches no S1 lamppost/checkpoint code or that test, and the exact test passed
   immediately on a fresh focused rerun (1 / 0 / 0 / 0); no unrelated change was
   made. The rerun left the final Surefire aggregate at 11,487 tests / 0 failures /
-  0 errors / 12 skipped. The sweep-generated `docs/rewind/real-gaps.md` rewrite
+  0 errors / 12 skipped. The sweep-generated `docs/status/rewind-round-trip-gaps.md` rewrite
   was restored to its tracked contents.
 - Three existing S2 level-select spot routes passed together with no
   `frontierOnly` or failure-ignore switch:
@@ -33468,8 +33468,8 @@ Result:
   `TestBundledConfigResource` environment noise.
 - Verdict: spec acceptance criterion 1 (no trace regression vs the pre-work
   baseline) is MET. Final measurements live in
-  `docs/performance/2026-06-11-performance-baseline.md` (Task 13 section)
-  and `docs/performance/2026-06-11-performance-results-tally.md`.
+  `docs/architecture/validation/performance/2026-06-11-baseline.md` (Task 13 section)
+  and `docs/architecture/validation/performance/2026-06-11-results.md`.
 
 ## 2026-06-11 - Performance-optimization pre-work full sweep baseline
 
@@ -33487,7 +33487,7 @@ Result:
   `TestS2Ehz1TraceReplay`, `TestS2SczLevelSelectTraceReplay`,
   `TestS2WfzLevelSelectTraceReplay`, `TestS3kAizTraceReplay` (16/16).
 - Failing classes (error count, first-error frame/field) -- full per-class
-  table lives in `docs/performance/2026-06-11-performance-baseline.md`:
+  table lives in `docs/architecture/validation/performance/2026-06-11-baseline.md`:
   - S1: all 19 `CompleteRun` classes + `TestS1Mz1TraceReplay` fail (e.g.
     Ghz1CompleteRun 292 errors, first frame 1394 x_speed; Lz1 2992 errors,
     first frame 302 y_speed).
@@ -51344,7 +51344,7 @@ mvn -Dtest=TestS3kAizTraceReplay \
   singleton closure, trace invariants, hydration default, and fixture
   compression pass (119 tests/assertions across the selected command).
   `TestArchitecturalSourceGuard` alone errors because this worktree predates
-  the separately staged path correction from `docs/KNOWN_DISCREPANCIES.md` to
+  the separately staged path correction from `docs/status/known-discrepancies.md` to
   `docs/status/known-discrepancies.md`; it is not caused by this fix.
 
 ## 2026-07-26 - AIZ complete-run S3K flight target preserves Pos_table Y

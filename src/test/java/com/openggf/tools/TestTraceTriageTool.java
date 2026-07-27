@@ -198,7 +198,7 @@ class TestTraceTriageTool {
         assertTrue(brief.contains("COMPARISON-ONLY"), "brief must warn trace is comparison-only");
         assertTrue(brief.contains("must reproduce ROM behaviour"),
                 "brief must say engine reproduces ROM behaviour natively");
-        assertTrue(brief.contains("docs/TRACE_FRONTIER_LOG.md"),
+        assertTrue(brief.contains("docs/status/trace-frontier-log.md"),
                 "brief must mention the frontier log");
         assertTrue(brief.contains("YES"), "frontier update should read YES when errors present");
     }

@@ -158,7 +158,7 @@ class TestSonic1EggPrisonButtonGraphRewind {
     }
 
     /**
-     * Bug repro (S1 bug-triage row 3, docs/plans/s1-bug-batch-ledger-2026-07-05.md):
+     * Bug repro (S1 bug-triage row 3, docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md):
      * "Egg prison capsule button visual persists after destruction." Per
      * docs/s1disasm/_incObj/3E Prison Capsule.asm:81-137, the button
      * (Pri_Switch, routine 4) and the capsule's explosion/animal-spawn driver

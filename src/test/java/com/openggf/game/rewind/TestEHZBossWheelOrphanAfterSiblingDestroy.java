@@ -221,7 +221,7 @@ class TestEHZBossWheelOrphanAfterSiblingDestroy {
         // ArticulatedChild.recreateForRewind(), which calls addChildComponentOnce()).
         // That orphan-on-recreate gap is real but out of scope for the ordinal-counter
         // fix this test targets; tracked separately in
-        // docs/plans/s1-bug-batch-ledger-2026-07-05.md rather than silently left.
+        // docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md rather than silently left.
     }
 
     /**

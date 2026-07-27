@@ -605,7 +605,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         // fade-out above already mirrors sonic3k.asm:144841. Workstream D
         // shipped the boss without this fade-in by design (out of scope for
         // D — see the workstream-D entries in CHANGELOG.md and the
-        // post-D baseline doc at docs/s3k-zones/cnz-post-workstream-d-baseline.md).
+        // post-D baseline doc at docs/architecture/validation/s3k-zones/cnz-post-workstream-d.md).
 
         // ROM sonic3k.asm:144844 — `moveq #$5D,d0; jsr Load_PLC`.
         applyPlc(Sonic3kConstants.PLC_CNZ_MINIBOSS);

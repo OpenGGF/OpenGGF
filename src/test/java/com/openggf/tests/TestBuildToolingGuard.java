@@ -57,7 +57,7 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && checkpointName.equals(checkpoint.name())) {",
             // s3k_bonus_stage profile discriminator gates the bonus-stage entry
-            // bootstrap seam (spec docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md,
+            // bootstrap seam (spec docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md,
             // engine addition #7); data-driven trace_profile gate, not a
             // zone/route/frame carve-out; comparison-only -- seeds only the
             // bootstrap "load save state" set (frame-0 rings, mirroring ROM

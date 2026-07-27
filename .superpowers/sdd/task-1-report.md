@@ -9,7 +9,7 @@
 - Commit: `5bda21b64322eb4e85d9e2b6c940165a7d0ed09c`
   (`feat(trace): bootstrap headless GPGX host`)
 - Scope: only `tools/bizhawk-headless` was committed. Pre-existing changes to
-  `docs/rewind/real-gaps.md` and the pre-existing untracked disassembly links
+  `docs/status/rewind-round-trip-gaps.md` and the pre-existing untracked disassembly links
   were preserved and excluded.
 
 ## Files

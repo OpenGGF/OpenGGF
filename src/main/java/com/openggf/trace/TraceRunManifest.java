@@ -15,7 +15,7 @@ import java.util.Set;
 
 /**
  * Parsed {@code run_manifest.json} for a multi-segment trace run
- * (spec: docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md).
+ * (spec: docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md).
  * A run bundles ordered per-mode segment trace directories recorded from one
  * shared BK2 movie, plus the transition boundary records between them.
  * Comparison-only: this class is read by replay/validation code and never

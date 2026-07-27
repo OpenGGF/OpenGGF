@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.function.IntFunction;
 
 /**
- * Preflight Checklist Generator (Option 2 of {@code docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md}).
+ * Preflight Checklist Generator (Option 2 of {@code docs/agent-workflow/support-options.md}).
  *
  * <p>Prints a task-specific preflight checklist for an agent that is about to implement
  * an OpenGGF object. The checklist surfaces the discovery commands, registry/zone-set
@@ -356,14 +356,14 @@ public final class AgentWorkflowTool {
         line(sb, "  If a trace diverges, model ROM state (object id/routine/status bits/event flag/");
         line(sb, "  profile) -- never branch on zone id/name, route, or frame number.");
         line(sb, "  Trace data is comparison-only: never hydrate/sync engine state from a trace.");
-        line(sb, "  Use the trace-replay-bug-fixing skill; keep docs/TRACE_FRONTIER_LOG.md current.");
+        line(sb, "  Use the trace-replay-bug-fixing skill; keep docs/status/trace-frontier-log.md current.");
         line(sb, "");
 
         // 10. Likely-affected docs.
         line(sb, "## Documentation Likely Affected (commit-trailer obligations)");
         line(sb, "  - CHANGELOG.md            (Changelog: updated -- engine src/main change)");
-        line(sb, "  - docs/KNOWN_DISCREPANCIES.md / AGENTS_S3K.md S3K discrepancies if behaviour diverges");
-        line(sb, "  - docs/TRACE_FRONTIER_LOG.md if a trace frontier moves/regresses");
+        line(sb, "  - docs/status/known-discrepancies.md / AGENTS_S3K.md S3K discrepancies if behaviour diverges");
+        line(sb, "  - docs/status/trace-frontier-log.md if a trace frontier moves/regresses");
         line(sb, "  - rom-pitfalls.md (mirror BOTH .agents/skills/ and .claude/skills/) for reusable pitfalls");
         line(sb, "  - Trailers required on non-master commits: Changelog, Guide, Known-Discrepancies,");
         line(sb, "    S3K-Known-Discrepancies, Agent-Docs, Configuration-Docs, Skills.");

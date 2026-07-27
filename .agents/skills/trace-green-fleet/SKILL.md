@@ -33,6 +33,15 @@ Optional `greenByGame` may provide same-game passing trace classes:
 }
 ```
 
+Optional `excluded` lists routes, trace classes, or fixture prefixes that another owner has
+reserved. Treat exclusions as a hard scope boundary, not merely a queue filter:
+
+```json
+{
+  "excluded": ["<game>/<route>", "TestReservedTraceReplay"]
+}
+```
+
 If no failing list is supplied, run one discovery sweep from the main checkout.
 
 ## Constants
@@ -68,6 +77,11 @@ Always use `trace-replay-bug-fixing` for actual trace investigation or fixes.
 - This repo may have concurrent agent sessions. Stage only files you changed. Never use `git add -A`.
 - Never use `git stash`; stash is shared across worktrees. For clean-HEAD A/B checks, copy changed files aside, restore with `git checkout -- <path>`, run the baseline, then restore the copies, or create a throwaway worktree.
 - Do not delete other sessions' `.claude/worktrees/*` or `.worktrees/*`.
+- Freeze caller exclusions before discovery. Excluded routes/classes must not be discovered,
+  run, inspected, assigned, fixed, or documented. Apply the exclusion to shell globs and
+  broad validation commands before launching them; never run a wildcard sweep and filter
+  the report afterward. Repeat the exclusion ledger in every worker prompt and final
+  validation checklist.
 
 ## Codex Orchestration Contract
 
@@ -192,6 +206,10 @@ If the caller supplied `failing`, use it. Otherwise run one sweep from the repo 
 ```bash
 mvn -q -Dmse=relaxed "-Ds1.rom.path=$S1_ROM" "-Ds2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" "-Dtest=*TraceReplay" test
 ```
+
+Do not use this wildcard form when any exclusion is active. First enumerate concrete,
+executable replay classes, remove every excluded class/route, print the resulting allowlist,
+then pass only that comma-separated allowlist to `-Dtest=...`.
 
 Then read `target/surefire-reports/*TraceReplay*.txt`.
 

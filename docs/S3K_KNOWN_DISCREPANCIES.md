@@ -261,7 +261,7 @@ The engine reproduces this behavior with a feature-scoped gate rather than a fla
 ### Rationale
 
 1. **Feature-scoped gate over raw flag** — `double_jump_flag` is overloaded in the ROM: Sonic's insta-shield uses it (values 1-$20 during shield timing), Knuckles's glide uses it (1=gliding, 2=stopped, 3=sliding), and Tails's flight uses it (non-zero = flight-gravity). Gating the flight-gravity substitution on `SecondaryAbility.FLY` prevents Sonic's insta-shield and Knuckles's glide from accidentally acquiring the `+0x08` gravity. The ROM achieves the same scoping naturally because only Tails's code path hits `Tails_Stand_Freespace`.
-2. **Plan reference** — See `docs/superpowers/plans/2026-04-24-s3k-tails-cpu-flight-ai.md` for the full breakdown of the carry-release and flight-AI ports.
+2. **Plan reference** — See `docs/architecture/plans/2026-04-24-s3k-tails-cpu-flight-ai.md` for the full breakdown of the carry-release and flight-AI ports.
 
 ### Verification
 
@@ -331,7 +331,7 @@ cam `$4240`) the burning-forest background renders continuously with **no seam,
 no repeated columns, and no empty `$200`–`$400` filler scrolling into view** — the
 current non-wrapping `SwScrlAiz.battleshipSmoothScrollX` BG deform handles the loop
 seamlessly. The earlier-deferred forest-loop BG fix
-(`docs/superpowers/plans/2026-05-29-aiz2-battleship-wrap-seam.md`) is **not
+(`docs/architecture/plans/2026-05-29-aiz2-battleship-wrap-seam.md`) is **not
 warranted**: its premise (empty filler scrolls into view) does not manifest with
 the current smooth-scroll renderer. No remaining display gap.
 
@@ -1158,5 +1158,5 @@ decode (three phases above; `game_mode=0x8C` throughout via the frame-1277
 `zone_act_state` event). `TestS3kGumballBonusTraceReplay` stays green (interior
 comparator stops at the exit). `TestS3kMegaRunChain` clears the gumball round trip;
 the chain's remaining seg2 (aiz_2) blocker is a separate landing/animation-state
-fidelity slip at f186/f192, tracked in docs/TRACE_FRONTIER_LOG.md, not this
+fidelity slip at f186/f192, tracked in docs/status/trace-frontier-log.md, not this
 divergence.

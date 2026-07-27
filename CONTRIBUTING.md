@@ -133,7 +133,7 @@ Use the narrowest useful verification:
   route behavior.
 
 When a trace frontier moves, regresses, or a trace sweep is used to choose the next target, update
-[`docs/TRACE_FRONTIER_LOG.md`](docs/TRACE_FRONTIER_LOG.md) in the same change.
+[`docs/status/trace-frontier-log.md`](docs/status/trace-frontier-log.md) in the same change.
 
 ## Branches, Commits, And Documentation
 

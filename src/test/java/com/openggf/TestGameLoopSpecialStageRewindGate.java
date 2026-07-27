@@ -60,7 +60,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
  * correctly blocked" end-to-end would require the heavier level-loading machinery
  * used by trace-replay/{@code HeadlessTestFixture}-style tests (real ROM, real
  * zone/act, spawned player sprite) -- tracked as an open follow-up in
- * {@code docs/plans/s1-bug-batch-ledger-2026-07-05.md}, not attempted here.
+ * {@code docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md}, not attempted here.
  */
 class TestGameLoopSpecialStageRewindGate {
 
