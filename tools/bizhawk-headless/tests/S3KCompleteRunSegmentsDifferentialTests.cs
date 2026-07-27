@@ -30,15 +30,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// Comparison strength, per fixture:
     /// - physics.csv and aux_state.jsonl by raw byte length AND sha256,
     ///   with ZERO normalization. 1.43 GB of aux across the seven.
-    /// - metadata.json line for line, with exactly ONE permitted
-    ///   difference: the recording_date VALUE. There is no version delta to
-    ///   normalize away — the fixtures were captured by Lua
-    ///   6.33-s3k-completerun, which is the stamp this port emits, so the
-    ///   gate pins that line as an exact literal on BOTH sides and would
-    ///   fail if either drifted. That is the whole of the metadata
-    ///   allowance; no key is dropped, no line count is normalized, and the
-    ///   absence of a <c>run_id</c> key is asserted explicitly because it
-    ///   is what distinguishes identity (A) from identities (B)/(C).
+    /// - metadata.json line for line after exact approved normalization of
+    ///   6.34 -> 6.33, trace_schema 7 -> 6, and removal of the single
+    ///   hardware_timing_schema line; recording_date values may also differ.
+    ///   No other key or line may move, and the absence of a <c>run_id</c>
+    ///   key is asserted explicitly.
     ///
     /// The seven physics.csv hashes below were last moved by Lua
     /// 6.33-s3k-completerun, the ADDR_VBLA_WORD fix: vblank_counter reads
@@ -51,7 +47,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// why both are pinned.
     ///
     /// The output root must hold exactly the fifteen segment directories,
-    /// three files each, and NO run_manifest.json: the Sonic route takes no
+    /// four files each, and NO run_manifest.json: the Sonic route takes no
     /// bonus/giant-ring detour and no --run-id is supplied, so the Lua's
     /// manifest gate (a disjunction of those two) stays closed. Pre-created
     /// dirs for unvisited zones are not published because the publisher
@@ -84,13 +80,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// The identity-(A) version stamp, pinned as an exact literal on
-        /// both sides. The fixtures and this port agree, so unlike the S1
-        /// complete-run gate there is no version line to normalize; the
-        /// gate asserts the equality instead of tolerating a difference.
+        /// Exact fixture/current literals used by the approved schema
+        /// normalization. Any other version or schema value fails.
         /// </summary>
-        private const string LuaScriptVersionLine =
+        private const string FixtureLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
+        private const string CurrentLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.34-s3k-completerun\",";
+        private const string FixtureTraceSchemaLine =
+            "  \"trace_schema\": 6,";
+        private const string CurrentTraceSchemaLine =
+            "  \"trace_schema\": 7,";
+        private const string HardwareTimingSchemaLine =
+            "  \"hardware_timing_schema\": 1,\n";
 
         /// <summary>
         /// Identity (A) carries no run_id key at all. Identities (B) and
@@ -298,7 +300,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         /// <summary>
         /// The pass must publish exactly the fifteen segment directories
-        /// with three files each and nothing else — in particular no
+        /// with four files each and nothing else — in particular no
         /// run_manifest.json, whose absence is the observable form of the
         /// Lua's closed manifest gate for a detour-free, run-id-free
         /// capture (spec §4.1).
@@ -339,7 +341,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 actualFiles.Sort(StringComparer.Ordinal);
                 AssertEx.Equal(
-                    "aux_state.jsonl\nmetadata.json\nphysics.csv",
+                    "aux_state.jsonl\nhardware_timing.jsonl\nmetadata.json\nphysics.csv",
                     string.Join("\n", actualFiles.ToArray()));
                 AssertEx.Equal(
                     0, Directory.GetDirectories(directory).Length);
@@ -347,13 +349,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
-        /// Asserts the produced metadata.json is byte-identical to the
-        /// fixture's apart from the recording_date VALUE. Both sides must
-        /// be LF-only and newline-terminated, must have the same line
-        /// count, must carry exactly one recording_date line at the same
-        /// index (well-formed on the produced side), must carry exactly one
-        /// lua_script_version line equal to the pinned 6.33 literal, and
-        /// must carry no run_id line. Every other line is compared raw.
+        /// Normalizes only the exact approved 6.34/schema-7/hardware-schema
+        /// additions, then requires line equality apart from the
+        /// recording_date value. Both sides stay LF-only and carry no
+        /// run_id line.
         /// </summary>
         private static void AssertMetadataEqualExceptRecordingDate(
             string context, string fixturePath, string producedPath)
@@ -363,6 +362,25 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertMetadataShape(
                 context + " (fixture)", fixtureText);
             AssertMetadataShape(context, producedText);
+            AssertEx.Equal(
+                1,
+                CountOccurrences(
+                    producedText, CurrentLuaScriptVersionLine));
+            AssertEx.Equal(
+                1,
+                CountOccurrences(
+                    producedText, HardwareTimingSchemaLine));
+            producedText = producedText.Replace(
+                CurrentLuaScriptVersionLine,
+                FixtureLuaScriptVersionLine);
+            producedText = producedText.Replace(
+                HardwareTimingSchemaLine, "");
+            AssertEx.Equal(
+                1,
+                CountOccurrences(
+                    producedText, CurrentTraceSchemaLine));
+            producedText = producedText.Replace(
+                CurrentTraceSchemaLine, FixtureTraceSchemaLine);
 
             string[] fixtureLines = fixtureText.Split('\n');
             string[] producedLines = producedText.Split('\n');
@@ -393,7 +411,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                     continue;
                 }
-                if (fixtureLines[index] == LuaScriptVersionLine)
+                if (fixtureLines[index] == FixtureLuaScriptVersionLine)
                 {
                     versionLines++;
                 }
@@ -408,6 +426,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             AssertEx.Equal(1, recordingDateLines);
             AssertEx.Equal(1, versionLines);
+        }
+
+        private static int CountOccurrences(
+            string value, string expected)
+        {
+            var count = 0;
+            var index = 0;
+            while ((index = value.IndexOf(
+                expected, index, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                index += expected.Length;
+            }
+            return count;
         }
 
         private static void AssertMetadataShape(string context, string text)

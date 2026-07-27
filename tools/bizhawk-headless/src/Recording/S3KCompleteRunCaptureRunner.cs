@@ -5,7 +5,7 @@ using System.IO;
 namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
-    /// The two output streams of one armed segment, handed to the runner by
+    /// The three output streams of one armed segment, handed to the runner by
     /// its sink at every arm. A special-stage segment gets an
     /// <see cref="AuxStateJsonl"/> writer too even though nothing is ever
     /// written to it: the Lua opens the file on the SS path and never
@@ -17,6 +17,14 @@ namespace OpenGGF.BizHawk.Headless
     {
         public S3KSegmentStreams(
             TextWriter physicsCsv, TextWriter auxStateJsonl)
+            : this(physicsCsv, auxStateJsonl, TextWriter.Null)
+        {
+        }
+
+        public S3KSegmentStreams(
+            TextWriter physicsCsv,
+            TextWriter auxStateJsonl,
+            TextWriter hardwareTimingJsonl)
         {
             if (physicsCsv == null)
             {
@@ -26,12 +34,18 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw new ArgumentNullException("auxStateJsonl");
             }
+            if (hardwareTimingJsonl == null)
+            {
+                throw new ArgumentNullException("hardwareTimingJsonl");
+            }
             PhysicsCsv = physicsCsv;
             AuxStateJsonl = auxStateJsonl;
+            HardwareTimingJsonl = hardwareTimingJsonl;
         }
 
         public TextWriter PhysicsCsv { get; private set; }
         public TextWriter AuxStateJsonl { get; private set; }
+        public TextWriter HardwareTimingJsonl { get; private set; }
     }
 
     /// <summary>
@@ -84,7 +98,7 @@ namespace OpenGGF.BizHawk.Headless
 
     /// <summary>
     /// Native port of the S3K complete-run recorder's DRIVER
-    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.33-s3k-completerun
+    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.34-s3k-completerun
     /// main loop L5850-5900; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It owns only
     /// the loop and the wiring; every decision it makes is delegated:
@@ -175,6 +189,27 @@ namespace OpenGGF.BizHawk.Headless
             int effectiveMovieLength,
             IS3KCompleteRunSegmentSink sink)
         {
+            return Capture(
+                movie,
+                host,
+                runId,
+                sourceBk2,
+                recordingDate,
+                effectiveMovieLength,
+                new byte[0],
+                sink);
+        }
+
+        public static S3KCompleteRunCaptureResult Capture(
+            Bk2Movie movie,
+            IGpgxHost host,
+            string runId,
+            string sourceBk2,
+            string recordingDate,
+            int effectiveMovieLength,
+            byte[] rom,
+            IS3KCompleteRunSegmentSink sink)
+        {
             if (movie == null)
             {
                 throw new ArgumentNullException("movie");
@@ -195,6 +230,10 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw new ArgumentNullException("sink");
             }
+            if (rom == null)
+            {
+                throw new ArgumentNullException("rom");
+            }
             if (effectiveMovieLength < 0)
             {
                 throw new ArgumentOutOfRangeException(
@@ -206,7 +245,7 @@ namespace OpenGGF.BizHawk.Headless
                 ? movie.FrameCount
                 : effectiveMovieLength;
             var state = new CaptureState(
-                host, sink, runId, sourceBk2, recordingDate);
+                host, sink, runId, sourceBk2, recordingDate, rom);
             var segmenter = new S3KCompleteRunSegmenter(
                 true, movieLength, 0, 0);
             segmenter.SegmentOpened = state.OpenSegment;
@@ -224,6 +263,17 @@ namespace OpenGGF.BizHawk.Headless
                 var advanced = 0;
                 while (true)
                 {
+                    bool observedSpecialStageResults =
+                        S3KRam.U8(host, S3KRam.GameMode)
+                            == S3KRam.GameModeSpecialStageResults;
+                    if (observedSpecialStageResults)
+                    {
+                        // Results mode returns before every row path. Poll
+                        // first with no segment writer: results work advances
+                        // the run ledger/ordinals but belongs to no represented
+                        // segment and therefore emits no event.
+                        state.ObserveSpecialStageResultsBoundary();
+                    }
                     S3KCompleteRunFrameAction action = segmenter.Step(host);
                     if (action == S3KCompleteRunFrameAction.LevelRow)
                     {
@@ -238,6 +288,10 @@ namespace OpenGGF.BizHawk.Headless
                         state.WriteSpecialStageRow(
                             segmenter.RowIndex,
                             InputRow(appliedRows, segmenter));
+                    }
+                    else if (!observedSpecialStageResults)
+                    {
+                        state.ObserveUnexportedHardwareBoundary();
                     }
 
                     // The Lua's runaway backstop, evaluated by the main loop
@@ -337,6 +391,8 @@ namespace OpenGGF.BizHawk.Headless
             private S3KSegmentArm arm;
             private TextWriter physics;
             private TextWriter aux;
+            private TextWriter hardwareTiming;
+            private readonly HardwareTimingEventEngine hardwareTimingEngine;
 
             // Per-segment: a fresh engine at every arm, so each segment
             // re-emits its own pre-trace snapshot and re-latches its own
@@ -349,13 +405,16 @@ namespace OpenGGF.BizHawk.Headless
                 IS3KCompleteRunSegmentSink sink,
                 string runId,
                 string sourceBk2,
-                string recordingDate)
+                string recordingDate,
+                byte[] rom)
             {
                 this.host = host;
                 this.sink = sink;
                 this.runId = runId;
                 this.sourceBk2 = sourceBk2;
                 this.recordingDate = recordingDate;
+                hardwareTimingEngine =
+                    new HardwareTimingEventEngine(rom);
                 ManifestSegments = new List<RunManifestSegment>();
             }
 
@@ -367,7 +426,7 @@ namespace OpenGGF.BizHawk.Headless
 
             /// <summary>
             /// open_files (L1236) / start_ss_segment's file block (L5154):
-            /// both files are created at arm and the CSV header is written
+            /// all three files are created at arm and the CSV header is written
             /// and flushed immediately. The two headers are different
             /// schemas — 42 columns versus 20 — and an SS segment's aux file
             /// stays byte-empty.
@@ -378,6 +437,7 @@ namespace OpenGGF.BizHawk.Headless
                 S3KSegmentStreams streams = sink.BeginSegment(opened);
                 physics = streams.PhysicsCsv;
                 aux = streams.AuxStateJsonl;
+                hardwareTiming = streams.HardwareTimingJsonl;
                 if (opened.Kind == RunManifestSegment.SpecialStageKind)
                 {
                     WriteLine(physics, S3KSpecialStageCsvWriter.Header);
@@ -409,6 +469,8 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     WriteLine(aux, line);
                 }
+                hardwareTimingEngine.ObservePostObjects(
+                    rowIndex, host, hardwareTiming);
             }
 
             /// <summary>
@@ -423,12 +485,33 @@ namespace OpenGGF.BizHawk.Headless
                 int rowIndex, Bk2Frame inputRow)
             {
                 RequireArmed(rowIndex, inputRow);
+                // The special-stage continuation branch returns before the
+                // level path, so the authoritative observer belongs before
+                // write_ss_row at this boundary.
+                hardwareTimingEngine.ObservePostObjects(
+                    rowIndex, host, hardwareTiming);
                 WriteLine(physics, S3KSpecialStageCsvWriter.FormatRow(
                     rowIndex,
                     S3KSpecialStageCsvWriter.InputMask(inputRow),
                     0,
                     host.IsLagged,
                     host));
+            }
+
+            internal void ObserveUnexportedHardwareBoundary()
+            {
+                byte gameMode = S3KRam.U8(host, S3KRam.GameMode);
+                if (S3KRam.IsLevelFamilyMode(gameMode)
+                    || gameMode == S3KRam.GameModeSpecialStage)
+                {
+                    hardwareTimingEngine.ObservePostObjects(0, host, null);
+                }
+            }
+
+            internal void ObserveSpecialStageResultsBoundary()
+            {
+                hardwareTimingEngine.ObservePostObjects(
+                    0, host, null);
             }
 
             /// <summary>
@@ -473,6 +556,7 @@ namespace OpenGGF.BizHawk.Headless
                 arm = null;
                 physics = null;
                 aux = null;
+                hardwareTiming = null;
                 auxEngine = null;
             }
 

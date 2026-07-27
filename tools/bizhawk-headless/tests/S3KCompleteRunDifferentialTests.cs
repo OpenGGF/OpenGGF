@@ -10,7 +10,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// <summary>
     /// ROM-backed differential gate for the native S3K COMPLETE-RUN
     /// recorder (tools/bizhawk/s3k_complete_run_recorder.lua
-    /// v6.33-s3k-completerun; spec
+    /// v6.34-s3k-completerun; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It runs the
     /// real CLI end-to-end through run.sh over the canonical Knuckles
     /// multi-bonus movie and asserts that the published bonus segment is
@@ -37,12 +37,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// special_stage) would each need their own long pass over THIS movie
     /// and remain uncovered.
     ///
-    /// Only two things may differ from the fixture, both pinned as exact
-    /// literals: the recording_date VALUE (nondeterministic), and the
-    /// presence of run_id — which is not a delta at all here, because the
-    /// fixture itself was captured under --run-id s3k-multibonus and this
-    /// gate passes the same id. physics.csv and aux_state.jsonl are
-    /// compared by sha256 with ZERO normalization.
+    /// Metadata permits only the exact approved 6.34 -> 6.33,
+    /// trace_schema 7 -> 6, hardware_timing_schema removal, and
+    /// recording_date-value normalization. run_id is identical in the
+    /// bonus case. physics.csv and aux_state.jsonl use ZERO normalization.
     ///
     /// Skips (does not pass) when S3K_ROM_PATH, a BizHawk distribution or
     /// the fixtures are absent; fails (does not skip) on any mismatch.
@@ -62,8 +60,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// The stamp the fixture and this port both carry, pinned as an
         /// exact literal so a shared drift fails rather than cancels out.
         /// </summary>
-        private const string LuaScriptVersionLine =
+        private const string FixtureLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
+        private const string CurrentLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.34-s3k-completerun\",";
+        private const string FixtureTraceSchemaLine =
+            "  \"trace_schema\": 6,";
+        private const string CurrentTraceSchemaLine =
+            "  \"trace_schema\": 7,";
+        private const string HardwareTimingSchemaLine =
+            "  \"hardware_timing_schema\": 1,";
+        private const string HczTimingSha256 =
+            "ff922817c416cca6bc17533ee8bcb93bbdcd84a1da677a387ce9bd5f0af30c1f";
+        private const string AizTimingSha256 =
+            "d6f454521127c1152e78c8c1358fd2c1b02d951d2121e9f64043ae2758a2cf46";
 
         // docs/s3k-run-publication.md §0.3, identity (C). The physics hash
         // was last moved by Lua 6.33-s3k-completerun (ADDR_VBLA_WORD 0xFE12
@@ -86,6 +96,121 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 movie: "s3-knux-multibonus-ss",
                 kind: TestKind.Gate,
                 estimatedSeconds: 5.0));
+            tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunDifferential native capture matches canonical"
+                + " AIZ timing stream",
+                NativeCaptureMatchesCanonicalAizTimingStream,
+                game: "s3k",
+                movie: "s3k-complete-sonic-tails",
+                kind: TestKind.Gate,
+                estimatedSeconds: 22.0));
+            tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunDifferential native capture matches canonical"
+                + " HCZ timing stream",
+                NativeCaptureMatchesCanonicalHczTimingStream,
+                game: "s3k",
+                movie: "s3k-complete-sonic-tails",
+                kind: TestKind.Gate,
+                estimatedSeconds: 45.0));
+        }
+
+        private static void NativeCaptureMatchesCanonicalAizTimingStream()
+        {
+            string s3kRoot = Path.Combine(
+                EndToEndTests.RepositoryRoot,
+                "src", "test", "resources", "traces", "s3k");
+            string fixtureDirectory =
+                Path.Combine(s3kRoot, "aiz_completerun");
+            string moviePath = Path.Combine(
+                s3kRoot, "_movies", "s3k-complete-sonic-tails.bk2");
+            Dependencies dependencies = Resolve(fixtureDirectory, moviePath);
+            string root = TestScratch.CreateRootPath(
+                "openggf-s3k-aiz-timing-differential");
+            string output = Path.Combine(root, "capture");
+            try
+            {
+                Directory.CreateDirectory(root);
+                RunCapture(
+                    dependencies.RomPath,
+                    dependencies.BizHawkHome,
+                    moviePath,
+                    output,
+                    null,
+                    27170);
+                string aiz = Path.Combine(output, "aiz");
+                AssertEx.Equal(
+                    "2f8d3d0c2f5a4b3f30b7784ed28fa37071951f6d8d538f08573b4631fa33f872",
+                    EndToEndTests.ComputeSha256(
+                        Path.Combine(aiz, "physics.csv")));
+                AssertEx.Equal(
+                    "d55efb44c7fadc022591c56054964e002c8ade868867a8965a0efbe820f2d210",
+                    EndToEndTests.ComputeSha256(
+                        Path.Combine(aiz, "aux_state.jsonl")));
+                string timing =
+                    Path.Combine(aiz, "hardware_timing.jsonl");
+                AssertEx.Equal(
+                    AizTimingSha256,
+                    EndToEndTests.ComputeSha256(timing));
+                AssertEx.Equal(false, File.Exists(timing + ".gz"));
+                AssertMetadataEqualExceptRecordingDate(
+                    Path.Combine(fixtureDirectory, "metadata.json"),
+                    Path.Combine(aiz, "metadata.json"));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
+        }
+
+        private static void NativeCaptureMatchesCanonicalHczTimingStream()
+        {
+            string s3kRoot = Path.Combine(
+                EndToEndTests.RepositoryRoot,
+                "src", "test", "resources", "traces", "s3k");
+            string fixtureDirectory =
+                Path.Combine(s3kRoot, "hcz_completerun");
+            string moviePath = Path.Combine(
+                s3kRoot, "_movies", "s3k-complete-sonic-tails.bk2");
+            Dependencies dependencies = Resolve(fixtureDirectory, moviePath);
+            string root = TestScratch.CreateRootPath(
+                "openggf-s3k-hcz-timing-differential");
+            string output = Path.Combine(root, "capture");
+            try
+            {
+                Directory.CreateDirectory(root);
+                RunCapture(
+                    dependencies.RomPath,
+                    dependencies.BizHawkHome,
+                    moviePath,
+                    output,
+                    "task7-hcz",
+                    58653);
+                string hcz = Path.Combine(output, "hcz");
+                AssertEx.Equal(
+                    "5d829f35729bb9254f272283dd078d3c6b259c771ca3d57eea3fb249d7ed73c7",
+                    EndToEndTests.ComputeSha256(
+                        Path.Combine(hcz, "physics.csv")));
+                AssertEx.Equal(
+                    "9fa13b138dd4e22749bdf0cfb66c71cd28e0e72568372b683efbc0255208077f",
+                    EndToEndTests.ComputeSha256(
+                        Path.Combine(hcz, "aux_state.jsonl")));
+                string timing =
+                    Path.Combine(hcz, "hardware_timing.jsonl");
+                AssertEx.Equal(
+                    HczTimingSha256,
+                    EndToEndTests.ComputeSha256(timing));
+                AssertEx.Equal(false, File.Exists(timing + ".gz"));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
         }
 
         private static void NativeCaptureMatchesCanonicalBonusSegment()
@@ -213,24 +338,33 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
-        /// Line-for-line equality with exactly one permitted difference:
-        /// the recording_date VALUE. Both sides must carry a
-        /// well-formed recording_date line at the same index; every other
-        /// line must be identical, and the line counts must match — no
-        /// key-dropping normalization.
-        ///
-        /// lua_script_version is additionally pinned as an exact literal on
-        /// BOTH sides, exactly as the three sibling S3K gates do. It is not
-        /// an allowance — raw line equality already forces the two sides to
-        /// agree — but it forces them to agree on the CURRENT stamp rather
-        /// than on any shared value, so a fixture and a port that drifted
-        /// together fail here instead of passing quietly.
+        /// Applies only the exact approved version/schema additions, then
+        /// requires line equality apart from a well-formed recording_date
+        /// value. No loose key dropping or unknown-version allowance.
         /// </summary>
         private static void AssertMetadataEqualExceptRecordingDate(
             string fixturePath, string producedPath)
         {
             string[] expected = ReadLines(fixturePath);
-            string[] actual = ReadLines(producedPath);
+            string actualText = File.ReadAllText(producedPath);
+            AssertEx.Equal(
+                1, CountOccurrences(
+                    actualText, CurrentLuaScriptVersionLine));
+            AssertEx.Equal(
+                1, CountOccurrences(actualText, CurrentTraceSchemaLine));
+            AssertEx.Equal(
+                1, CountOccurrences(actualText, HardwareTimingSchemaLine));
+            actualText = actualText.Replace(
+                CurrentLuaScriptVersionLine,
+                FixtureLuaScriptVersionLine);
+            actualText = actualText.Replace(
+                CurrentTraceSchemaLine,
+                FixtureTraceSchemaLine);
+            actualText = actualText.Replace(
+                HardwareTimingSchemaLine + "\n",
+                "");
+            string[] actual = actualText.Split(
+                new[] { '\n' }, StringSplitOptions.None);
             if (expected.Length != actual.Length)
             {
                 throw new InvalidOperationException(
@@ -240,7 +374,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var versionLines = 0;
             for (var index = 0; index < expected.Length; index++)
             {
-                if (expected[index] == LuaScriptVersionLine)
+                if (expected[index] == FixtureLuaScriptVersionLine)
                 {
                     versionLines++;
                 }
@@ -273,6 +407,23 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string moviePath,
             string output)
         {
+            return RunCapture(
+                romPath,
+                bizHawkHome,
+                moviePath,
+                output,
+                RunId,
+                EffectiveMovieLength);
+        }
+
+        private static string RunCapture(
+            string romPath,
+            string bizHawkHome,
+            string moviePath,
+            string output,
+            string captureRunId,
+            int effectiveMovieLength)
+        {
             var start = new ProcessStartInfo
             {
                 FileName = "/bin/bash",
@@ -284,8 +435,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " --rom " + EndToEndTests.Quote(romPath)
                     + " --movie " + EndToEndTests.Quote(moviePath)
                     + " --output " + EndToEndTests.Quote(output)
-                    + " --run-id " + RunId
-                    + " --effective-movie-length " + EffectiveMovieLength,
+                    + (captureRunId == null
+                        ? " --trace-profile complete_run"
+                        : " --run-id " + captureRunId)
+                    + " --effective-movie-length " + effectiveMovieLength,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
@@ -335,6 +488,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + result.StandardError);
             }
             return result.StandardOutput;
+        }
+
+        private static int CountOccurrences(string value, string needle)
+        {
+            int count = 0;
+            int start = 0;
+            while ((start = value.IndexOf(
+                needle, start, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                start += needle.Length;
+            }
+            return count;
         }
 
         private static Dependencies Resolve(

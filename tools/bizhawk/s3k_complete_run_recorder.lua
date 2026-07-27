@@ -297,6 +297,9 @@
 -- constant except on 1UPs -- rather than the ROM's free-running V-int counter.
 -- Matches the S1 and S2 recorders, which already read 0xFE0E, and is the low
 -- word of the same ADDR_V_INT_RUN_COUNT long (0xFE0C) that v6.32 added above.
+-- v6.34-s3k-completerun adds trace_schema 7 / hardware_timing_schema 1 for
+-- every level, bonus, and special-stage segment. The run-scoped Kos module
+-- FIFO observer stays live through unexported boundaries and SS-results $48.
 -- Existing captures carry the wrong column and need recapture.
 ------------------------------------------------------------------------------
 
@@ -321,7 +324,10 @@ do
     end
     -- assert() so a bad path surfaces as a load error (visible without
     -- --chromeless) instead of silently skipping the whole recorder.
-    C = assert(loadfile(oggf_lib_dir() .. "oggf_trace_common.lua"))()
+    local dir = oggf_lib_dir()
+    C = assert(loadfile(dir .. "oggf_trace_common.lua"))()
+    HARDWARE_TIMING =
+        assert(loadfile(dir .. "oggf_hardware_timing.lua"))()
 end
 
 -----------------
@@ -362,7 +368,7 @@ end
 BIZHAWK_VERSION = "2.11"
 GENESIS_CORE = "Genplus-gx"
 S3K_ROM_CHECKSUM = "C5B1C655C19F462ADE0AC4E17A844D10"
-LUA_SCRIPT_VERSION = "6.33-s3k-completerun"   -- no "v" prefix (existing convention)
+LUA_SCRIPT_VERSION = "6.34-s3k-completerun"   -- no "v" prefix (existing convention)
 -- Overridable so non-default movies (e.g. the Knuckles multi-bonus route)
 -- get truthful source_bk2 metadata instead of the complete-run default.
 SOURCE_BK2_NAME = os.getenv("OGGF_BK2_BASENAME") or "s3k-complete-sonic-tails.bk2"
@@ -977,6 +983,8 @@ local WRITE_DIAG = {
 }
 local physics_file = nil
 local aux_file = nil
+hardware_timing_file = nil
+HARDWARE_TIMING_TRACKER = HARDWARE_TIMING.new_tracker()
 
 -----------------
 --- Helpers   ---
@@ -1195,10 +1203,13 @@ local function reset_recording_state(keep_files)
     -- counters so the next level-gameplay entry starts fresh.
     -- keep_files=true: do NOT delete the just-finalised segment's output
     -- files (used by finalize_segment in the per-zone complete-run path).
+    deactivate_diagnostic_hooks()
     if physics_file then physics_file:close() end
     if aux_file then aux_file:close() end
+    if hardware_timing_file then hardware_timing_file:close() end
     physics_file = nil
     aux_file = nil
+    hardware_timing_file = nil
     started = false
     trace_frame = 0
     bk2_frame_offset = 0
@@ -1237,6 +1248,7 @@ local function reset_recording_state(keep_files)
     if not keep_files then
         os.remove(OUTPUT_DIR .. "physics.csv")
         os.remove(OUTPUT_DIR .. "aux_state.jsonl")
+        os.remove(OUTPUT_DIR .. "hardware_timing.jsonl")
         os.remove(OUTPUT_DIR .. "metadata.json")
     end
 end
@@ -1244,6 +1256,9 @@ end
 local function open_files()
     physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
     aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
+    hardware_timing_file =
+        io.open(OUTPUT_DIR .. "hardware_timing.jsonl", "w")
+    activate_diagnostic_hooks()
 
     physics_file:write("frame,input,camera_x,camera_y,rings,gameplay_frame_counter,"
         .. "vblank_counter,lag_counter,player_present,player_x,player_y,player_x_speed,"
@@ -1313,7 +1328,8 @@ local function write_metadata()
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     meta_file:write(string.format('  "lua_script_version": %q,\n', LUA_SCRIPT_VERSION))
-    -- trace_schema remains 6 for the auxiliary event vocabulary. csv_version 7
+    -- trace_schema 7 adds the authoritative hardware timing stream.
+    -- csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
     -- events are detected by parsers via aux_schema_extras rather than a
@@ -1378,7 +1394,8 @@ local function write_metadata()
     -- and camera copy).
     -- Diagnostic-only.
     -- All diagnostic-only.
-    meta_file:write('  "trace_schema": 6,\n')
+    meta_file:write('  "trace_schema": 7,\n')
+    meta_file:write('  "hardware_timing_schema": 1,\n')
     meta_file:write('  "csv_version": 7,\n')
     if LIGHTWEIGHT_REGEN then
         meta_file:write('  "capture_mode": "physics_animation_aux_without_diagnostic_hooks",\n')
@@ -1743,6 +1760,7 @@ local function read_character_trace_state(base)
 end
 
 local function close_files()
+    deactivate_diagnostic_hooks()
     if physics_file then
         physics_file:close()
         physics_file = nil
@@ -1750,6 +1768,10 @@ local function close_files()
     if aux_file then
         aux_file:close()
         aux_file = nil
+    end
+    if hardware_timing_file then
+        hardware_timing_file:close()
+        hardware_timing_file = nil
     end
 end
 
@@ -4105,6 +4127,8 @@ local V69_AIZ = {
     ADDR_DYNAMIC_RESIZE_ROUTINE = 0xEE33,
     ADDR_OBJECT_LOAD_ROUTINE = 0xF76C,
     ADDR_RINGS_MANAGER_ROUTINE = 0xF710,
+    -- Published schema-6 diagnostic compatibility. The authoritative
+    -- schema-7 observer reads the audited $FF60 owner in its shared module.
     ADDR_KOS_MODULES_LEFT = 0xFF04,
     OFF_TOP_SOLID_BIT = 0x46,
     HANDOFF_TERRAIN_FRAME_START =
@@ -5120,6 +5144,8 @@ function write_ss_metadata()
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write(string.format('  "source_bk2": %q,\n', SOURCE_BK2_NAME))
     meta_file:write(string.format('  "lua_script_version": %q,\n', LUA_SCRIPT_VERSION))
+    meta_file:write('  "trace_schema": 7,\n')
+    meta_file:write('  "hardware_timing_schema": 1,\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     meta_file:write('  "bizhawk_version": "' .. BIZHAWK_VERSION .. '",\n')
     meta_file:write('  "genesis_core": "' .. GENESIS_CORE .. '",\n')
@@ -5161,6 +5187,8 @@ function start_ss_segment()
 
     physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
     aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
+    hardware_timing_file =
+        io.open(OUTPUT_DIR .. "hardware_timing.jsonl", "w")
     physics_file:write("frame,input,input_p2,lag,anim_frame,x_pos,y_pos,angle,velocity,"
         .. "turning,jumping,fade_timer,spheres_left,ring_count,rings_left,rate,rate_timer,"
         .. "clear_timer,clear_routine,started\n")
@@ -5180,6 +5208,8 @@ end
 -- decimal; lag is 0/1 via emu.islagged(); started is 0/1; every other
 -- column is lowercase hex (S2 SS recorder convention).
 function write_ss_row()
+    HARDWARE_TIMING.observe(
+        HARDWARE_TIMING_TRACKER, trace_frame, hardware_timing_file)
     local raw_input = mainmemory.read_u8(ADDR_CTRL1)
     local raw_input_p2 = mainmemory.read_u8(ADDR_CTRL2)
     local input_mask = ss_input_mask(1, raw_input, trace_frame)
@@ -5333,6 +5363,23 @@ function on_frame_end()
     local game_mode = mainmemory.read_u8(ADDR_GAME_MODE)
     local zone_id = mainmemory.read_u8(ADDR_ZONE)
 
+    -- SS-results returns before every row path, but its art load queue is
+    -- active. Reconcile it first with no segment writer: all results-art
+    -- jobs advance the run ledger/ordinals, but emit no event because $48
+    -- is outside every represented segment.
+    if game_mode == GAMEMODE_SS_RESULTS then
+        HARDWARE_TIMING.observe(
+            HARDWARE_TIMING_TRACKER, 0, nil)
+    end
+
+    -- The production FIFO ledger is run-scoped, not segment-scoped. Poll
+    -- eligible level-family boundaries before the first segment arms so work
+    -- submitted during the settled load tail still owns the earliest whole-
+    -- run ordinals. No event is exported until a segment owns a stream.
+    if not started and is_level_family_mode(game_mode) then
+        HARDWARE_TIMING.observe(HARDWARE_TIMING_TRACKER, 0, nil)
+    end
+
     -- ---- v6.31 stage-detour state machine ----
     -- SPECIAL STAGE ($34) now produces a REAL special_stage segment (blue-
     -- spheres plan Task 3) instead of a rowless manifest-only detour.
@@ -5464,6 +5511,7 @@ function on_frame_end()
                 }
             end
             start_new_segment(zone_id)
+            HARDWARE_TIMING.observe(HARDWARE_TIMING_TRACKER, 0, nil)
             if movie.isloaded() then
                 print(string.format("Movie length: %d frames (segment %s armed)",
                     movie.length(), start_zone_name))
@@ -5790,6 +5838,8 @@ function on_frame_end()
 
     scan_objects(x, y)
 
+    HARDWARE_TIMING.observe(
+        HARDWARE_TIMING_TRACKER, trace_frame, hardware_timing_file)
     trace_frame = trace_frame + 1
 end
 
@@ -5820,24 +5870,66 @@ print(string.format(
     "S3K Complete-Run Recorder v%s loaded. Profile=%s. Base output=%s. Waiting for %s",
     LUA_SCRIPT_VERSION, TRACE_PROFILE, BASE_OUTPUT_DIR, WAIT_DESC))
 
--- Register the CNZ wire cage execution hooks. Done once at script load
--- before the main loop runs so the memoryexecute callbacks are armed for
--- every frame the script processes. Only active when 'started' so we
--- don't accumulate hits during pre-trace level loading.
-if not LIGHTWEIGHT_REGEN then
-    CAGE_DIAG.register_cage_hooks()
-    WRITE_DIAG.register_velocity_hooks()
-    WRITE_DIAG.register_position_hooks()
-    V618_AIZ_SHIP.register_hooks()
-    V621_SONIC_RECORD.register_hooks()
-    V625_RNG_CALLS.register_hooks()
-    V65.register_tails_cpu_normal_step_hooks()
-    V66.register_aiz_boundary_hooks()
-    V67_AIZ.register_aiz_transition_floor_hooks()
-    V69_AIZ.register_aiz_handoff_terrain_hooks()
-    V67_CNZ.register_cnz_cylinder_hooks()
-    V611_SOLID.register_hooks()
-    V615_CRL.register_hooks()
+-- Optional diagnostics are registered only while a level/bonus segment owns
+-- an aux stream. The opaque ids let close/reset unregister them before
+-- special-stage and load phases, then a later segment can re-register cleanly.
+DIAGNOSTIC_HOOK_IDS = {}
+function activate_diagnostic_hooks()
+    if LIGHTWEIGHT_REGEN or #DIAGNOSTIC_HOOK_IDS > 0 then return end
+    local original_execute = event.onmemoryexecute
+    local original_write = event.onmemorywrite
+    event.onmemoryexecute = function(...)
+        local id = original_execute(...)
+        if id ~= nil then
+            DIAGNOSTIC_HOOK_IDS[#DIAGNOSTIC_HOOK_IDS + 1] = id
+        end
+        return id
+    end
+    event.onmemorywrite = function(...)
+        local id = original_write(...)
+        if id ~= nil then
+            DIAGNOSTIC_HOOK_IDS[#DIAGNOSTIC_HOOK_IDS + 1] = id
+        end
+        return id
+    end
+    local ok, message = pcall(function()
+        CAGE_DIAG.register_cage_hooks()
+        WRITE_DIAG.register_velocity_hooks()
+        WRITE_DIAG.register_position_hooks()
+        V618_AIZ_SHIP.register_hooks()
+        V621_SONIC_RECORD.register_hooks()
+        V625_RNG_CALLS.register_hooks()
+        V65.register_tails_cpu_normal_step_hooks()
+        V66.register_aiz_boundary_hooks()
+        V67_AIZ.register_aiz_transition_floor_hooks()
+        V69_AIZ.register_aiz_handoff_terrain_hooks()
+        V67_CNZ.register_cnz_cylinder_hooks()
+        V611_SOLID.register_hooks()
+        V615_CRL.register_hooks()
+    end)
+    event.onmemoryexecute = original_execute
+    event.onmemorywrite = original_write
+    if not ok then error(message) end
+end
+
+function deactivate_diagnostic_hooks()
+    for _, id in ipairs(DIAGNOSTIC_HOOK_IDS or {}) do
+        pcall(event.unregisterbyid, id)
+    end
+    DIAGNOSTIC_HOOK_IDS = {}
+    CAGE_DIAG.hooks_registered = false
+    WRITE_DIAG.velocity_hooks_registered = false
+    WRITE_DIAG.position_hooks_registered = false
+    V618_AIZ_SHIP.hooks_registered = false
+    V621_SONIC_RECORD.hooks_registered = false
+    V625_RNG_CALLS.hooks_registered = false
+    V65.tails_cpu_hooks_registered = false
+    V66.hooks_registered = false
+    V67_AIZ.hooks_registered = false
+    V69_AIZ.hooks_registered = false
+    V67_CNZ.hooks_registered = false
+    V611_SOLID.hooks_registered = false
+    V615_CRL.hooks_registered = false
 end
 
 -- v6.27 hard safety net: even if every movie-end signal fails (movie.length()==0,

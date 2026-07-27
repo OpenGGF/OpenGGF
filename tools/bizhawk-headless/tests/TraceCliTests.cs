@@ -132,7 +132,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         /// <summary>
         /// S3K standard trace (auto-detected from the locked-on ROM's
-        /// SHA-1): the shared three-file publication pipeline with the
+        /// SHA-1): the shared four-file publication pipeline with the
         /// S3K runner and the S2-style stdout contract minus the
         /// segment line (S3K has no --gameplay-segment).
         /// </summary>
@@ -193,6 +193,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "Aux state JSONL: "
                             + Path.Combine(fullOutput, "aux_state.jsonl")
                             + "\n"
+                            + "Hardware timing JSONL: "
+                            + Path.Combine(
+                                fullOutput, "hardware_timing.jsonl")
+                            + "\n"
                             + "Metadata JSON: "
                             + Path.Combine(fullOutput, "metadata.json")
                             + "\n",
@@ -206,13 +210,27 @@ namespace OpenGGF.BizHawk.Headless.Tests
                                 S3KTraceCsvWriter.Header + "\n0000,"));
                         string metadata = File.ReadAllText(
                             Path.Combine(fullOutput, "metadata.json"));
+                        string hardwareTimingPath = Path.Combine(
+                            fullOutput, "hardware_timing.jsonl");
+                        AssertContains(
+                            stdout.ToString(),
+                            "Hardware timing JSONL: "
+                            + hardwareTimingPath + "\n");
+                        AssertEx.Equal(
+                            true, File.Exists(hardwareTimingPath));
+                        AssertEx.Equal(
+                            "aux_state.jsonl,hardware_timing.jsonl,"
+                            + "metadata.json,physics.csv",
+                            PublishedNames(fullOutput));
                         AssertContains(
                             metadata,
                             "  \"game\": \"s3k\",\n"
                             + "  \"zone\": \"cnz\",\n");
                         AssertContains(
                             metadata,
-                            "  \"lua_script_version\": \"6.32-s3k\",\n");
+                            "  \"lua_script_version\": \"6.34-s3k\",\n"
+                            + "  \"trace_schema\": 7,\n"
+                            + "  \"hardware_timing_schema\": 1,\n");
                         AssertContains(
                             metadata,
                             "  \"trace_profile\": \"gameplay_unlock\",\n");

@@ -22,14 +22,26 @@ namespace OpenGGF.BizHawk.Headless
     internal sealed class S3KStagedSegmentSink
         : IS3KCompleteRunSegmentSink, IDisposable
     {
-        private readonly StagedRunSegmentSink inner;
+        private const string PhysicsFileName = "physics.csv";
+        private const string AuxStateFileName = "aux_state.jsonl";
+        private const string HardwareTimingFileName =
+            "hardware_timing.jsonl";
+        private const string MetadataFileName = "metadata.json";
+
+        private readonly NoReplacePublisher.IncrementalStagingSession session;
+        private NoReplacePublisher.StagedStream physics;
+        private NoReplacePublisher.StagedStream aux;
+        private NoReplacePublisher.StagedStream hardwareTiming;
+        private string dirToken;
 
         internal S3KStagedSegmentSink(
             NoReplacePublisher.IncrementalStagingSession session)
         {
-            // false = no line-ending rewrite, which is the whole S3K
-            // delta from the S1/S2 run-mode publication.
-            inner = new StagedRunSegmentSink(session, false);
+            if (session == null)
+            {
+                throw new ArgumentNullException("session");
+            }
+            this.session = session;
         }
 
         public S3KSegmentStreams BeginSegment(S3KSegmentArm arm)
@@ -38,14 +50,57 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw new ArgumentNullException("arm");
             }
-            RunSegmentStreams streams = inner.BeginSegment(arm.DirToken);
+            if (physics != null || aux != null || hardwareTiming != null)
+            {
+                throw new InvalidOperationException(
+                    "Segment " + dirToken + " is still open.");
+            }
+            dirToken = arm.DirToken;
+            physics = session.OpenFile(
+                dirToken + "/" + PhysicsFileName);
+            try
+            {
+                aux = session.OpenFile(
+                    dirToken + "/" + AuxStateFileName);
+                hardwareTiming = session.OpenFile(
+                    dirToken + "/" + HardwareTimingFileName);
+            }
+            catch
+            {
+                DisposeOpenStreams();
+                throw;
+            }
             return new S3KSegmentStreams(
-                streams.PhysicsCsv, streams.AuxStateJsonl);
+                physics.Writer,
+                aux.Writer,
+                hardwareTiming.Writer);
         }
 
         public void EndSegment(RunManifestSegment entry, string metadataJson)
         {
-            inner.EndSegment(entry, metadataJson);
+            if (entry == null)
+            {
+                throw new ArgumentNullException("entry");
+            }
+            if (metadataJson == null)
+            {
+                throw new ArgumentNullException("metadataJson");
+            }
+            if (physics == null || aux == null || hardwareTiming == null)
+            {
+                throw new InvalidOperationException(
+                    "No segment is open for " + entry.Dir + ".");
+            }
+            physics.Complete();
+            physics = null;
+            aux.Complete();
+            aux = null;
+            hardwareTiming.Complete();
+            hardwareTiming = null;
+            session.StageFile(
+                entry.Dir + "/" + MetadataFileName,
+                metadataJson);
+            dirToken = null;
         }
 
         /// <summary>
@@ -55,7 +110,27 @@ namespace OpenGGF.BizHawk.Headless
         /// </summary>
         public void Dispose()
         {
-            inner.Dispose();
+            DisposeOpenStreams();
+        }
+
+        private void DisposeOpenStreams()
+        {
+            if (physics != null)
+            {
+                physics.Dispose();
+                physics = null;
+            }
+            if (aux != null)
+            {
+                aux.Dispose();
+                aux = null;
+            }
+            if (hardwareTiming != null)
+            {
+                hardwareTiming.Dispose();
+                hardwareTiming = null;
+            }
+            dirToken = null;
         }
     }
 }

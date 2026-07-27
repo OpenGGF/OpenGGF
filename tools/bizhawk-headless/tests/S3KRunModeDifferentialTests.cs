@@ -22,7 +22,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///    <c>bonus_slots</c>, <c>bonus_pachinko</c>, <c>special_stage</c> —
     ///    with physics.csv and aux_state.jsonl byte-identical (length AND
     ///    sha256, ZERO normalization) and metadata.json equal line for line
-    ///    apart from the recording_date VALUE. Three of those four were
+    ///    after exact 6.34/schema-7/hardware-schema normalization, apart
+    ///    from the recording_date VALUE. Three of those four were
     ///    previously verified only by hand
     ///    (docs/s3k-run-publication.md §10.5); this closes them.
     ///
@@ -31,8 +32,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///    src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/ — all
     ///    25 segment directories and run_manifest.json, on the same terms:
     ///    physics.csv and aux_state.jsonl by raw length AND sha256 with
-    ///    ZERO normalization, run_manifest.json byte-identical, and
-    ///    metadata.json line for line apart from the recording_date VALUE.
+    ///    ZERO normalization, run_manifest.json equal after its exact
+    ///    6.34 -> 6.33 version normalization, and metadata.json line for
+    ///    line after the approved schema normalization plus recording_date.
     ///
     /// ## (B) is byte-reproducible; it did not used to be
     ///
@@ -89,7 +91,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// emeralds_after). S3KCompleteRunPublicationTests already gates the
     /// formatter given the right data; this gates the recorder discovering
     /// that data from the movie. The manifest carries no recording_date, so
-    /// it is compared with no free field at all.
+    /// its only normalized field is the exact 6.34 -> 6.33 version stamp.
     ///
     /// Cost, measured: 1m08s wall and 234 MB peak RSS per pass, 370 MB of
     /// output each. The passes run sequentially and each output tree is
@@ -119,12 +121,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// The stamp both fixture sets and this port carry, pinned as an
-        /// exact literal on BOTH sides of every metadata comparison. There
-        /// is no version line to normalize in either case any more.
+        /// Exact fixture/current stamps for the approved 6.34 -> 6.33
+        /// normalization applied to metadata and run manifests. Any other
+        /// version value fails rather than being normalized loosely.
         /// </summary>
-        private const string CurrentVersionLine =
+        private const string FixtureVersionLine =
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
+        private const string CurrentVersionLine =
+            "  \"lua_script_version\": \"6.34-s3k-completerun\",";
+        private const string FixtureTraceSchemaLine =
+            "  \"trace_schema\": 6,";
+        private const string CurrentTraceSchemaLine =
+            "  \"trace_schema\": 7,";
+        private const string HardwareTimingSchemaLine =
+            "  \"hardware_timing_schema\": 1,\n";
 
         // ------------------------------------------------------------------
         // Identity (C): four byte-exact directories.
@@ -538,6 +548,37 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string producedText = ReadAllTextExact(producedPath);
             AssertPublishedShape(context + " (fixture)", fixtureText);
             AssertPublishedShape(context, producedText);
+            AssertEx.Equal(
+                1,
+                CountOccurrences(
+                    producedText, CurrentVersionLine));
+            AssertEx.Equal(
+                1,
+                CountOccurrences(
+                    producedText, HardwareTimingSchemaLine));
+            producedText = producedText.Replace(
+                CurrentVersionLine, FixtureVersionLine);
+            producedText = producedText.Replace(
+                HardwareTimingSchemaLine, "");
+            if (fixtureText.IndexOf(
+                FixtureTraceSchemaLine, StringComparison.Ordinal) >= 0)
+            {
+                AssertEx.Equal(
+                    1,
+                    CountOccurrences(
+                        producedText, CurrentTraceSchemaLine));
+                producedText = producedText.Replace(
+                    CurrentTraceSchemaLine, FixtureTraceSchemaLine);
+            }
+            else
+            {
+                AssertEx.Equal(
+                    1,
+                    CountOccurrences(
+                        producedText, CurrentTraceSchemaLine + "\n"));
+                producedText = producedText.Replace(
+                    CurrentTraceSchemaLine + "\n", "");
+            }
 
             string[] fixtureLines = fixtureText.Split('\n');
             string[] producedLines = producedText.Split('\n');
@@ -571,7 +612,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                     continue;
                 }
-                if (fixtureLines[index] == CurrentVersionLine)
+                if (fixtureLines[index] == FixtureVersionLine)
                 {
                     versionLines++;
                 }
@@ -696,16 +737,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             string producedText = ReadAllTextExact(producedPath);
             AssertPublishedShape("run_manifest.json", producedText);
+            AssertEx.Equal(
+                1,
+                CountOccurrences(
+                    producedText, CurrentVersionLine));
+            producedText = producedText.Replace(
+                CurrentVersionLine, FixtureVersionLine);
             AssertTextEqual(
                 "run_manifest.json",
                 ReadAllTextExact(
                     Path.Combine(runRoot, "run_manifest.json")),
                 producedText);
-            AssertProducedBytes(
-                "run_manifest.json",
-                producedPath,
-                ManifestLength,
-                ManifestSha256);
         }
 
         // ==================================================================
@@ -799,7 +841,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 actualFiles.Sort(StringComparer.Ordinal);
                 AssertTextEqual(
                     dirToken + " files",
-                    "aux_state.jsonl\nmetadata.json\nphysics.csv",
+                    "aux_state.jsonl\nhardware_timing.jsonl\nmetadata.json\nphysics.csv",
                     string.Join("\n", actualFiles.ToArray()));
                 AssertEx.Equal(
                     0, Directory.GetDirectories(directory).Length);
@@ -974,6 +1016,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 return reader.ReadToEnd();
             }
+        }
+
+        private static int CountOccurrences(
+            string value, string expected)
+        {
+            var count = 0;
+            var index = 0;
+            while ((index = value.IndexOf(
+                expected, index, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                index += expected.Length;
+            }
+            return count;
         }
 
         private static void AssertFixtureBytes(

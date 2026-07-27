@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -66,6 +67,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string MultiBonusSourceBk2 =
             "s3-knux-multibonus-ss.bk2";
         private const string MultiBonusRunId = "s3k-multibonus";
+        private const string FixtureVersionLine =
+            "  \"lua_script_version\": \"6.33-s3k-completerun\",";
+        private const string CurrentVersionLine =
+            "  \"lua_script_version\": \"6.34-s3k-completerun\",";
+        private const string FixtureTraceSchemaLine =
+            "  \"trace_schema\": 6,";
+        private const string CurrentTraceSchemaLine =
+            "  \"trace_schema\": 7,";
+        private const string HardwareTimingSchemaLine =
+            "  \"hardware_timing_schema\": 1,\n";
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
@@ -74,7 +85,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 MetadataFixture captured = fixture;
                 tests.Add(new TestMain.TestCase(
                     "S3KCompleteRunPublication metadata.json reproduces "
-                    + captured.Directory + " byte for byte",
+                    + captured.Directory + " with approved schema bump",
                     () => MetadataReproducesFixture(captured)));
             }
             tests.Add(new TestMain.TestCase(
@@ -93,6 +104,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3KCompleteRunCaptureRunner publishes a level-bonus-level"
                 + "-ss-level round trip",
                 CapturesRoundTrip));
+            tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunCaptureRunner reconciles unexported"
+                + " special-stage results work across native and Lua",
+                CapturesSpecialStageResultsHardwareTiming));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunCaptureRunner aligns each row's input column"
                 + " with BK2 row bk2_frame_offset + N",
@@ -298,7 +313,32 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + "/metadata.json unexpectedly contains CR; the S3K"
                     + " complete-run recorder publishes LF in both modes.");
             }
-            AssertEx.Equal(expected, FormatFixture(fixture));
+            string actual = FormatFixture(fixture);
+            AssertEx.Equal(
+                1, CountOccurrences(actual, CurrentVersionLine));
+            AssertEx.Equal(
+                1, CountOccurrences(actual, HardwareTimingSchemaLine));
+            actual = actual.Replace(
+                CurrentVersionLine, FixtureVersionLine);
+            actual = actual.Replace(HardwareTimingSchemaLine, "");
+            if (expected.IndexOf(
+                FixtureTraceSchemaLine, StringComparison.Ordinal) >= 0)
+            {
+                AssertEx.Equal(
+                    1, CountOccurrences(actual, CurrentTraceSchemaLine));
+                actual = actual.Replace(
+                    CurrentTraceSchemaLine, FixtureTraceSchemaLine);
+            }
+            else
+            {
+                AssertEx.Equal(
+                    1,
+                    CountOccurrences(
+                        actual, CurrentTraceSchemaLine + "\n"));
+                actual = actual.Replace(
+                    CurrentTraceSchemaLine + "\n", "");
+            }
+            AssertEx.Equal(expected, actual);
         }
 
         private static string FormatFixture(MetadataFixture fixture)
@@ -590,10 +630,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " fixture is LF and this port publishes LF in both"
                     + " modes (docs/s3k-run-publication.md section 6).");
             }
-            const string CurrentVersionLine =
-                "  \"lua_script_version\": \""
-                + S3KCompleteRunMetadataWriter.LuaScriptVersion + "\",\n";
-            AssertContains(expected, CurrentVersionLine);
+            const string FixtureManifestVersionLine =
+                "  \"lua_script_version\": \"6.33-s3k-completerun\",\n";
+            AssertContains(expected, FixtureManifestVersionLine);
 
             var transitions = new List<RunManifestTransition>();
             foreach (TransitionSpec spec in SetBTransitions)
@@ -611,13 +650,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 transitions.Add(entry);
             }
 
-            AssertEx.Equal(
-                expected,
-                S3KRunManifestWriter.Format(
+            string actual = S3KRunManifestWriter.Format(
                     "s3-knux-multibonus-ss",
                     MultiBonusSourceBk2,
                     SetBSegments,
-                    transitions));
+                    transitions);
+            const string CurrentManifestVersionLine =
+                "  \"lua_script_version\": \"6.34-s3k-completerun\",\n";
+            AssertEx.Equal(
+                1,
+                CountOccurrences(actual, CurrentManifestVersionLine));
+            actual = actual.Replace(
+                CurrentManifestVersionLine, FixtureManifestVersionLine);
+            AssertEx.Equal(expected, actual);
         }
 
         /// <summary>
@@ -688,19 +733,22 @@ namespace OpenGGF.BizHawk.Headless.Tests
             internal readonly List<string> DirTokens = new List<string>();
             internal readonly List<string> Physics = new List<string>();
             internal readonly List<string> Aux = new List<string>();
+            internal readonly List<string> Timing = new List<string>();
             internal readonly List<string> Metadata = new List<string>();
             internal readonly List<RunManifestSegment> Entries =
                 new List<RunManifestSegment>();
 
             private StringWriter physics;
             private StringWriter aux;
+            private StringWriter timing;
 
             public S3KSegmentStreams BeginSegment(S3KSegmentArm arm)
             {
                 DirTokens.Add(arm.DirToken);
                 physics = new StringWriter(CultureInfo.InvariantCulture);
                 aux = new StringWriter(CultureInfo.InvariantCulture);
-                return new S3KSegmentStreams(physics, aux);
+                timing = new StringWriter(CultureInfo.InvariantCulture);
+                return new S3KSegmentStreams(physics, aux, timing);
             }
 
             public void EndSegment(
@@ -709,9 +757,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 Entries.Add(entry);
                 Physics.Add(physics.ToString());
                 Aux.Add(aux.ToString());
+                Timing.Add(timing.ToString());
                 Metadata.Add(metadataJson);
                 physics = null;
                 aux = null;
+                timing = null;
             }
         }
 
@@ -957,6 +1007,244 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " \"zone_id\": 0, \"act\": 0,"
                     + " \"special_stage_index\": 7},\n");
             });
+        }
+
+        private static void CapturesSpecialStageResultsHardwareTiming()
+        {
+            const int firstSource = 0x100;
+            const int destination = 0x6000;
+            byte[] rom = FiveSingleModuleArchives(firstSource);
+            WithMovie(MaskRows(26), movie =>
+            {
+                var host = new FakeS1Host((h, frame) =>
+                {
+                    h.Ram[S3KRam.GameMode] = frame >= 4 && frame <= 7
+                        ? (byte)S3KRam.GameModeLevel
+                        : frame >= 8 && frame <= 10
+                            ? (byte)S3KRam.GameModeSpecialStage
+                            : frame >= 11 && frame <= 20
+                                ? (byte)S3KRam.GameModeSpecialStageResults
+                                : frame >= 21
+                                    ? (byte)S3KRam.GameModeLevel
+                                    : (byte)0;
+                    h.Ram[S3KRam.Zone] = frame >= 21 ? (byte)1 : (byte)0;
+                    h.SetU16(
+                        S3KRam.PlayerBase + S3KRam.OffMoveLock, 0);
+                    h.Ram[S3KRam.Ctrl1Locked] = 0;
+                    ClearKosQueue(h);
+                    if (frame >= 11 && frame <= 18)
+                    {
+                        int lifecycle = (frame - 11) / 2;
+                        if (((frame - 11) & 1) == 0)
+                        {
+                            int source = firstSource + lifecycle * 0x20;
+                            h.Ram[S3KRam.KosModulesLeft] = 0x81;
+                            h.SetU32(
+                                S3KRam.KosModuleQueue,
+                                (uint)(source + 2));
+                            h.SetU16(
+                                S3KRam.KosModuleDestination,
+                                (ushort)(destination + lifecycle * 0x1000));
+                        }
+                    }
+                    else if (frame == 22)
+                    {
+                        h.Ram[S3KRam.KosModulesLeft] = 0x81;
+                        h.SetU32(
+                            S3KRam.KosModuleQueue,
+                            (uint)(firstSource + 4 * 0x20 + 2));
+                        h.SetU16(
+                            S3KRam.KosModuleDestination,
+                            (ushort)(destination + 4 * 0x1000));
+                    }
+                });
+                var sink = new RecordingSink();
+                S3KCompleteRunCaptureResult result =
+                    S3KCompleteRunCaptureRunner.Capture(
+                    movie,
+                    host,
+                    "results-timing",
+                    "synthetic.bk2",
+                    "2026-07-27",
+                    0,
+                    rom,
+                    sink);
+
+                AssertEx.Equal(3, sink.Timing.Count);
+                AssertEx.Equal(string.Empty, sink.Timing[1]);
+                string[] events = sink.Timing[2].Split(
+                    new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+                AssertEx.Equal(1, events.Length);
+                string fingerprint =
+                    HardwareTimingEventEngine.ComputeSubmissionFingerprint(
+                        "KOS_MODULE_QUEUE",
+                        firstSource + 4 * 0x20,
+                        7,
+                        destination + 4 * 0x1000,
+                        1,
+                        "kosinski_moduled",
+                        1);
+                AssertEx.Equal(
+                    "{\"event\":\"hardware_work_completed\","
+                    + "\"raw_frame\":1,"
+                    + "\"boundary\":\"post_objects\","
+                    + "\"kind\":\"kos_module_queue\","
+                    + "\"ordinal\":4,"
+                    + "\"submission_fingerprint\":\""
+                    + fingerprint + "\"}",
+                    events[0]);
+
+                for (var segment = 0;
+                    segment < sink.Timing.Count;
+                    segment++)
+                {
+                    foreach (string line in sink.Timing[segment].Split(
+                        new[] {'\n'},
+                        StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        int rawFrame = JsonInteger(line, "\"raw_frame\":");
+                        AssertEx.Equal(
+                            true,
+                            rawFrame >= 0
+                                && rawFrame
+                                    < result.Segments[segment]
+                                        .TraceFrameCount);
+                    }
+                }
+                AssertLuaResultsParity(sink.Timing[2]);
+            });
+        }
+
+        private static byte[] FiveSingleModuleArchives(int firstSource)
+        {
+            var rom = new byte[0x200];
+            for (var index = 0; index < 5; index++)
+            {
+                int source = firstSource + index * 0x20;
+                rom[source] = 0x00;
+                rom[source + 1] = 0x01;
+                rom[source + 2] = 0x02;
+            }
+            return rom;
+        }
+
+        private static int JsonInteger(string json, string key)
+        {
+            int start = json.IndexOf(key, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                throw new InvalidOperationException(
+                    "Missing JSON integer key " + key + " in " + json);
+            }
+            start += key.Length;
+            int end = start;
+            while (end < json.Length
+                && json[end] >= '0' && json[end] <= '9')
+            {
+                end++;
+            }
+            return int.Parse(
+                json.Substring(start, end - start),
+                CultureInfo.InvariantCulture);
+        }
+
+        private static void AssertLuaResultsParity(string nativeOutput)
+        {
+            const string lua = "/usr/bin/lua";
+            if (!File.Exists(lua))
+            {
+                throw new TestMain.SkipTestException(
+                    "/usr/bin/lua is absent; native results invariants"
+                    + " passed but the Lua byte differential cannot run.");
+            }
+            string root = TestScratch.CreateRootPath(
+                "s3k-results-lua-parity");
+            string harness = Path.Combine(root, "harness.lua");
+            string output = Path.Combine(root, "timing.jsonl");
+            try
+            {
+                Directory.CreateDirectory(root);
+                File.WriteAllText(
+                    harness,
+                    "local module_path, output_path = arg[1], arg[2]\n"
+                    + "local ram, rom = {}, {}\n"
+                    + "mainmemory = {}\n"
+                    + "function mainmemory.read_u8(a) return ram[a] or 0 end\n"
+                    + "function mainmemory.read_u16_be(a) return"
+                    + " ((ram[a] or 0)<<8)|(ram[a+1] or 0) end\n"
+                    + "function mainmemory.read_u32_be(a) return"
+                    + " ((ram[a] or 0)<<24)|((ram[a+1] or 0)<<16)|"
+                    + "((ram[a+2] or 0)<<8)|(ram[a+3] or 0) end\n"
+                    + "memory = {}\n"
+                    + "function memory.read_u8(a, domain)"
+                    + " return rom[a] or 0 end\n"
+                    + "local function put16(a,v) ram[a]=(v>>8)&255;"
+                    + " ram[a+1]=v&255 end\n"
+                    + "local function put32(a,v) ram[a]=(v>>24)&255;"
+                    + " ram[a+1]=(v>>16)&255;"
+                    + " ram[a+2]=(v>>8)&255; ram[a+3]=v&255 end\n"
+                    + "local function clear() for i=0,23 do"
+                    + " ram[0xFF64+i]=0 end; ram[0xFF60]=0 end\n"
+                    + "local function active(source,dest) clear();"
+                    + " ram[0xFF60]=0x81; put32(0xFF64,source+2);"
+                    + " put16(0xFF68,dest) end\n"
+                    + "for i=0,4 do local s=0x100+i*0x20;"
+                    + " rom[s]=0; rom[s+1]=1; rom[s+2]=2 end\n"
+                    + "local M=assert(loadfile(module_path))()\n"
+                    + "local tracker=M.new_tracker()\n"
+                    + "for i=0,3 do active(0x100+i*0x20,"
+                    + "0x6000+i*0x1000); M.observe(tracker,0,nil);"
+                    + " clear(); M.observe(tracker,0,nil) end\n"
+                    + "local out=assert(io.open(output_path,'w'))\n"
+                    + "active(0x180,0xA000); M.observe(tracker,0,out);"
+                    + " clear(); M.observe(tracker,1,out); out:close()\n",
+                    new UTF8Encoding(false));
+                var start = new ProcessStartInfo
+                {
+                    FileName = lua,
+                    Arguments = harness + " "
+                        + Path.Combine(
+                            EndToEndTests.RepositoryRoot,
+                            "tools", "bizhawk", "lib",
+                            "oggf_hardware_timing.lua")
+                        + " " + output,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                using (Process process = Process.Start(start))
+                {
+                    string stdout = process.StandardOutput.ReadToEnd();
+                    string stderr = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+                    if (process.ExitCode != 0)
+                    {
+                        throw new InvalidOperationException(
+                            "Lua timing differential failed: " + stderr
+                            + stdout);
+                    }
+                }
+                AssertEx.Equal(nativeOutput, File.ReadAllText(output));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
+        }
+
+        private static void ClearKosQueue(FakeS1Host host)
+        {
+            host.Ram[S3KRam.KosModulesLeft] = 0;
+            for (var offset = 0;
+                offset < S3KRam.KosModuleQueueCapacity
+                    * S3KRam.KosModuleQueueEntrySize;
+                offset++)
+            {
+                host.Ram[S3KRam.KosModuleQueue + offset] = 0;
+            }
         }
 
         /// <summary>
@@ -1523,6 +1811,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 text.Append((char)value);
             }
             return text.ToString();
+        }
+
+        private static int CountOccurrences(
+            string value, string expected)
+        {
+            var count = 0;
+            var index = 0;
+            while ((index = value.IndexOf(
+                expected, index, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                index += expected.Length;
+            }
+            return count;
         }
 
         private static void AssertContains(
