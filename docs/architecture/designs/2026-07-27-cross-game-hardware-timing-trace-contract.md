@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed design under independent review. The symptom-first direction and the
+Approved after independent review. The symptom-first direction and the
 narrow authoritative hardware-completion exception are user-approved. This
 document inventories timing-sensitive Mega Drive activities used by Sonic 1,
 Sonic 2, and Sonic 3 & Knuckles and defines the minimum authority a dedicated
