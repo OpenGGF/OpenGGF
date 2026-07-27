@@ -2651,9 +2651,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             fireOverlayKosHandle = null;
             fireOverlayKosQueue = null;
             fireOverlayKosOrdinal = -1;
-            fireOverlayTileCount = fireOverlay8x8.length / Pattern.PATTERN_SIZE_IN_ROM;
-            int destOffset = FIRE_OVERLAY_TILE_DEST * Pattern.PATTERN_SIZE_IN_ROM;
-            sonic3kLevel.applyPatternOverlay(fireOverlay8x8, destOffset, false);
+            fireOverlayTileCount =
+                    S3kSeamlessMutationExecutor.applyAiz1FireOverlayPreparedArt(
+                            levelManager, fireOverlay8x8);
+            AizPreparedTransitionArtBridge.current()
+                    .retainAizFireOverlay(fireOverlay8x8);
             applyPlc(FIRE_OVERLAY_PLC);
             levelManager.invalidateAllTilemaps();
             fireOverlayTilesLoaded = true;
@@ -2695,9 +2697,17 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         postFireHazeActive = false;
         act2TransitionRequested = false;
         setTransitionControlLock(false);
-        // Reload fire overlay tiles from ROM — they were lost during the act 2 level reload.
-        fireOverlayTilesLoaded = false;
-        ensureFireOverlayTilesLoaded();
+        // The ROM keeps the fire tiles resident in VDP memory across Load_Level.
+        // The engine's host-level recreation reapplies the already-prepared ROM
+        // payload in the seamless mutation; it must not enqueue another job.
+        fireOverlayTileCount =
+                AizPreparedTransitionArtBridge.current()
+                        .aizFireOverlayTileCount();
+        if (fireOverlayTileCount == 0) {
+            throw new IllegalStateException(
+                    "AIZ fire continuation restored without its prepared overlay");
+        }
+        fireOverlayTilesLoaded = true;
         // Re-apply fire palette after act 2 reload so palette line 3 has fire colors.
         // The level reload loads the normal AIZ2 palette which may not match the
         // fire transition state; PalPointers #$0B + fire line 4 words restore it.

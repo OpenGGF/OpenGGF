@@ -98,7 +98,7 @@ namespace OpenGGF.BizHawk.Headless
 
     /// <summary>
     /// Native port of the S3K complete-run recorder's DRIVER
-    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.35-s3k-completerun
+    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.37-s3k-completerun
     /// main loop L5850-5900; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It owns only
     /// the loop and the wiring; every decision it makes is delegated:
@@ -469,7 +469,7 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     WriteLine(aux, line);
                 }
-                hardwareTimingEngine.ObservePostObjects(
+                hardwareTimingEngine.ObserveFrameEnd(
                     rowIndex, host, hardwareTiming);
             }
 
@@ -488,7 +488,7 @@ namespace OpenGGF.BizHawk.Headless
                 // The special-stage continuation branch returns before the
                 // level path, so the authoritative observer belongs before
                 // write_ss_row at this boundary.
-                hardwareTimingEngine.ObservePostObjects(
+                hardwareTimingEngine.ObserveFrameEnd(
                     rowIndex, host, hardwareTiming);
                 WriteLine(physics, S3KSpecialStageCsvWriter.FormatRow(
                     rowIndex,
@@ -504,13 +504,13 @@ namespace OpenGGF.BizHawk.Headless
                 if (S3KRam.IsLevelFamilyMode(gameMode)
                     || gameMode == S3KRam.GameModeSpecialStage)
                 {
-                    hardwareTimingEngine.ObservePostObjects(0, host, null);
+                    hardwareTimingEngine.ObserveFrameEnd(0, host, null);
                 }
             }
 
             internal void ObserveSpecialStageResultsBoundary()
             {
-                hardwareTimingEngine.ObservePostObjects(
+                hardwareTimingEngine.ObserveFrameEnd(
                     0, host, null);
             }
 

@@ -10,7 +10,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// <summary>
     /// ROM-backed differential gate for the native S3K COMPLETE-RUN
     /// recorder (tools/bizhawk/s3k_complete_run_recorder.lua
-    /// v6.35-s3k-completerun; spec
+    /// v6.37-s3k-completerun; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It runs the
     /// real CLI end-to-end through run.sh over the canonical Knuckles
     /// multi-bonus movie and asserts that the published bonus segment is
@@ -63,9 +63,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string LegacyLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
         private const string PublishedHardwareLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.34-s3k-completerun\",";
-        private const string CurrentLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.35-s3k-completerun\",";
+        private const string CurrentLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.37-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -73,9 +73,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string HardwareTimingSchemaLine =
             "  \"hardware_timing_schema\": 1,";
         private const string HczTimingSha256 =
-            "edfa009a8c908b55702c5fa110ca8a72251e9c0f42343995c631d92ed83eb86eec";
+            "8d7d92b3eb03ceaf4b563b10da9cf4268c27690e0a5625ef429cb9f8c5f0c67e";
         private const string AizTimingSha256 =
-            "beef512cb1aec1da9c08b3e306fd7f40cb1455829eaddd3476a2c78e6a4c211a";
+            "a61c169cc98facbdd7aa4af62c7bc0eca89733f2dce695531e787bdf046f89ba";
 
         // docs/s3k-run-publication.md §0.3, identity (C). The physics hash
         // was last moved by Lua 6.33-s3k-completerun (ADDR_VBLA_WORD 0xFE12

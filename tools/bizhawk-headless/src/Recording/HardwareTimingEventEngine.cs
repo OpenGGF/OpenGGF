@@ -7,8 +7,8 @@ using System.Text;
 namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
-    /// Mirrors the S3K Kosinski-module FIFO and emits the authoritative
-    /// completion edge at the post-objects observation boundary.
+    /// Mirrors the S3K Kosinski-module FIFO and emits an authoritative
+    /// completion edge at the boundary admitted by the observed frame.
     /// Submission identity is retained while the active RAM aliases advance.
     /// </summary>
     public sealed class HardwareTimingEventEngine
@@ -16,6 +16,9 @@ namespace OpenGGF.BizHawk.Headless
         private const string KindName = "KOS_MODULE_QUEUE";
         private const string EventKind = "kos_module_queue";
         private const string CompressionVariant = "kosinski_moduled";
+        private const uint TitleCardObjectCode = 0x0002D690;
+        private const int TitleCardParentSlot = 8;
+        private const int TitleCardWaitOffset = 0x48;
 
         private sealed class Submission
         {
@@ -36,6 +39,8 @@ namespace OpenGGF.BizHawk.Headless
         private readonly List<Submission> queue = new List<Submission>();
         private long nextOrdinal;
         private byte priorModulesLeft;
+        private ushort? priorLevelFrameCounter;
+        private bool titleCardLoadLoopActive;
 
         public HardwareTimingEventEngine(byte[] rom)
         {
@@ -47,11 +52,17 @@ namespace OpenGGF.BizHawk.Headless
         }
 
         /// <summary>
-        /// Observes one eligible post-objects boundary. A null writer keeps
-        /// the run-wide FIFO/ordinal ledger current without exporting an
-        /// event into the current segment.
+        /// Observes one frame-end RAM sample. A changed Level_frame_counter
+        /// proves that the main loop and its post-objects boundary ran.
+        /// A duplicate counter normally proves only VInt admission. The
+        /// in-level title-card loop is the ROM-owned exception: loc_62CC
+        /// executes Process_Sprites and Process_Kos_Module_Queue without
+        /// incrementing Level_frame_counter, while its Obj_TitleCard parent
+        /// remains in the SST. A null writer keeps the run-wide FIFO/ordinal
+        /// ledger current without exporting an event into the current
+        /// segment.
         /// </summary>
-        public void ObservePostObjects(
+        public void ObserveFrameEnd(
             int rawFrame,
             IGpgxHost host,
             TextWriter writer)
@@ -64,6 +75,16 @@ namespace OpenGGF.BizHawk.Headless
             byte modulesLeft =
                 S3KRam.U8(host, S3KRam.KosModulesLeft);
             int physicalCount = ReadPhysicalCount(host);
+            ushort levelFrameCounter =
+                S3KRam.U16(host, S3KRam.LevelFrameCounter);
+            bool titleCardLoopAdmitted =
+                UpdateTitleCardLoadLoop(host, levelFrameCounter);
+            string boundary =
+                priorLevelFrameCounter.HasValue
+                    && priorLevelFrameCounter.Value == levelFrameCounter
+                    && !titleCardLoopAdmitted
+                ? "vint_service"
+                : "post_objects";
 
             // 0x81 is specifically "the final module is active in the
             // direct decoder". A fall from any other busy value is only a
@@ -77,12 +98,50 @@ namespace OpenGGF.BizHawk.Headless
                 queue.RemoveAt(0);
                 if (writer != null)
                 {
-                    WriteCompletion(writer, rawFrame, completed);
+                    WriteCompletion(
+                        writer, rawFrame, boundary, completed);
                 }
             }
 
             ReconcileQueue(host, physicalCount);
             priorModulesLeft = modulesLeft;
+            priorLevelFrameCounter = levelFrameCounter;
+        }
+
+        private bool UpdateTitleCardLoadLoop(
+            IGpgxHost host,
+            ushort levelFrameCounter)
+        {
+            int parent = S3KRam.SlotAddress(TitleCardParentSlot);
+            ushort parentWait =
+                S3KRam.U16(host, parent + TitleCardWaitOffset);
+            bool armNow = levelFrameCounter == 0
+                && S3KRam.U32(host, parent) == TitleCardObjectCode
+                && parentWait != 0;
+            bool admitted = levelFrameCounter == 0
+                && (titleCardLoadLoopActive || armNow);
+
+            // loc_62CC exists only before gameplay starts. Arm from its
+            // exact Obj_TitleCard parent state, then retain through the
+            // tail using the two raw loop predicates. The final iteration
+            // has already run Process_Sprites before both predicates clear,
+            // so admitted is computed from lifecycle state on entry and the
+            // clear applies to the following sample. A Nemesis job by itself
+            // can never arm or reclassify an unrelated gameplay stall.
+            if (levelFrameCounter != 0)
+            {
+                titleCardLoadLoopActive = false;
+            }
+            else if (!titleCardLoadLoopActive)
+            {
+                titleCardLoadLoopActive = armNow;
+            }
+            else if (parentWait == 0
+                && S3KRam.U32(host, S3KRam.NemDecompQueue) == 0)
+            {
+                titleCardLoadLoopActive = false;
+            }
+            return admitted;
         }
 
         public static string ComputeSubmissionFingerprint(
@@ -357,12 +416,15 @@ namespace OpenGGF.BizHawk.Headless
         private static void WriteCompletion(
             TextWriter writer,
             int rawFrame,
+            string boundary,
             Submission submission)
         {
             writer.Write("{\"event\":\"hardware_work_completed\",");
             writer.Write("\"raw_frame\":");
             writer.Write(rawFrame);
-            writer.Write(",\"boundary\":\"post_objects\",");
+            writer.Write(",\"boundary\":\"");
+            writer.Write(boundary);
+            writer.Write("\",");
             writer.Write("\"kind\":\"");
             writer.Write(EventKind);
             writer.Write("\",\"ordinal\":");

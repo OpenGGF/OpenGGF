@@ -246,7 +246,8 @@ public abstract class AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null,
                 "No BK2 found for " + traceDir + " (no _movies/<source_bk2> and no .bk2 in dir)");
         boolean requiresFreshLevelLoad =
-                TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace);
+                TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace)
+                        || meta.hasHardwareTimingStream();
 
         // 3. Validate test configuration matches metadata
         validateMetadata(meta);
@@ -262,6 +263,7 @@ public abstract class AbstractTraceReplayTest {
         // *_report.json from an earlier run, silently masking the real result.
         TraceBinder binder = null;
         HeadlessTestFixture fixture = null;
+        boolean hardwareTimingReplayClosed = false;
         try {
             HeadlessTestFixture.Builder fixtureBuilder = HeadlessTestFixture.builder()
                 .withRecording(bk2Path)
@@ -449,6 +451,7 @@ public abstract class AbstractTraceReplayTest {
             }
 
             fixture.closeHardwareTimingReplayRun();
+            hardwareTimingReplayClosed = true;
 
             // 6. Build report
             DivergenceReport report = buildDivergenceReport(binder, meta, trace);
@@ -482,6 +485,9 @@ public abstract class AbstractTraceReplayTest {
                 } catch (RuntimeException | java.io.IOError ignored) {
                     // diagnostics only
                 }
+            }
+            if (fixture != null && !hardwareTimingReplayClosed) {
+                fixture.abortHardwareTimingReplayRun();
             }
             if (sharedLevel != null) {
                 sharedLevel.dispose();
@@ -769,10 +775,13 @@ public abstract class AbstractTraceReplayTest {
     }
 
     private S3kCheckpointProbe captureS3kProbe(int replayFrame, AbstractPlayableSprite sprite) {
-        boolean resultsActive = GameServices.level().getObjectManager().getActiveObjects().stream()
+        var level = GameServices.levelOrNull();
+        ObjectManager objectManager = level != null ? level.getObjectManager() : null;
+        boolean resultsActive = objectManager != null
+                && objectManager.getActiveObjects().stream()
                 .anyMatch(S3kResultsScreenObjectInstance.class::isInstance);
-        boolean signpostActive =
-                S3kSignpostInstance.activeSignpost(GameServices.level().getObjectManager()) != null;
+        boolean signpostActive = objectManager != null
+                && S3kSignpostInstance.activeSignpost(objectManager) != null;
         boolean eventsFg5 =
                 GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager manager
                         && manager.isEventsFg5();

@@ -504,11 +504,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         // Load 3 KosinskiM star art variants (ROM: Queue_Kos_Module at loc_2D436).
         // Each variant is 3 tiles replacing tiles at ArtTile_StarPost+8 (index 8 in our blob).
         loadStarVariant(rom, allPatterns, adjustedStars,
-                Sonic3kConstants.ART_KOSM_STARPOST_STARS3_ADDR, ObjectArtKeys.CHECKPOINT_STAR_YELLOW);
+                Sonic3kConstants.ART_KOSM_STARPOST_STARS3_ADDR, ObjectArtKeys.CHECKPOINT_STAR_RED);
         loadStarVariant(rom, allPatterns, adjustedStars,
                 Sonic3kConstants.ART_KOSM_STARPOST_STARS1_ADDR, ObjectArtKeys.CHECKPOINT_STAR_BLUE);
         loadStarVariant(rom, allPatterns, adjustedStars,
-                Sonic3kConstants.ART_KOSM_STARPOST_STARS2_ADDR, ObjectArtKeys.CHECKPOINT_STAR_RED);
+                Sonic3kConstants.ART_KOSM_STARPOST_STARS2_ADDR, ObjectArtKeys.CHECKPOINT_STAR_YELLOW);
 
         LOG.info("Loaded S3K StarPost art: " + allPatterns.length + " patterns, "
                 + adjusted.size() + " frames, " + adjustedStars.size() + " star frames"
@@ -1272,6 +1272,48 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         return cnzEndBossArtState == RuntimeArtState.COMPLETE;
     }
 
+    /**
+     * Mirrors {@code sub_2D3C8}'s runtime {@code Queue_Kos_Module} request
+     * after a StarPost creates its four bonus stars.
+     *
+     * <p>The StarPost does not poll the job after submission. The ROM's global
+     * module FIFO remains the owner, so this session-owned provider retains
+     * and claims the handle while other ROM consumers can observe the shared
+     * queue as non-empty.
+     */
+    public void queueStarPostBonusArt(int sourceAddress) {
+        if (sourceAddress != Sonic3kConstants.ART_KOSM_STARPOST_STARS1_ADDR
+                && sourceAddress
+                != Sonic3kConstants.ART_KOSM_STARPOST_STARS2_ADDR
+                && sourceAddress
+                != Sonic3kConstants.ART_KOSM_STARPOST_STARS3_ADDR) {
+            throw new IllegalArgumentException(
+                    "unsupported StarPost bonus-art source: 0x"
+                            + Integer.toHexString(sourceAddress));
+        }
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (enemyKosQueue == null) {
+                enemyKosQueue =
+                        new S3kKosModuleQueue(GameServices.hardwareTiming());
+            }
+            // Preserve native FIFO order if activation occurs while the
+            // title-retired enemy group is waiting to submit.
+            for (EnemyKosEntry entry : pendingEnemyKosEntries) {
+                enemyKosHandles.add(enemyKosQueue.queue(
+                        rom, entry.source(), entry.destinationTile()));
+            }
+            pendingEnemyKosEntries = List.of();
+            enemyKosHandles.add(enemyKosQueue.queue(
+                    rom,
+                    sourceAddress,
+                    Sonic3kConstants.ARTTILE_STARPOST + 8));
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Unable to queue S3K StarPost bonus art", e);
+        }
+    }
+
     @Override
     public void processRuntimeArtQueue() {
         boolean registeredRuntimeSheet = false;
@@ -1387,6 +1429,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * title-card KosM entries have retired. A ready-but-unclaimed title job is
      * not retirement and must not advance the structural submission ordinal.
      */
+    @Override
     public void onTitleCardArtRetired() {
         enemyKosSubmissionArmed = true;
     }

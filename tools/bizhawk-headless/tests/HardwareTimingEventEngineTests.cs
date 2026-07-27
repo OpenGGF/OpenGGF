@@ -18,6 +18,30 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTiming pending final module emits one LF event",
                 PendingFinalModuleEmitsOneLfEvent));
             tests.Add(new TestMain.TestCase(
+                "HardwareTiming duplicate level frame uses VINT boundary",
+                DuplicateLevelFrameUsesVintBoundary));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming advanced level frame uses post-objects boundary",
+                AdvancedLevelFrameUsesPostObjectsBoundary));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming title-card scan keeps post-objects boundary",
+                TitleCardScanKeepsPostObjectsBoundary));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming title-card predicate rejects wrong slot and flag",
+                TitleCardPredicateRejectsWrongSlotAndFlag));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming armed title-card Nem tail stays post-objects",
+                ArmedTitleCardNemTailStaysPostObjects));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming armed title-card raw wait survives code deletion",
+                ArmedTitleCardRawWaitSurvivesCodeDeletion));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming gameplay Nem queue stays VINT",
+                GameplayNemQueueStaysVint));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming exited title-card loop stays VINT",
+                ExitedTitleCardLoopStaysVint));
+            tests.Add(new TestMain.TestCase(
                 "HardwareTiming repeated zero emits a zero-byte stream",
                 RepeatedZeroEmitsZeroByteStream));
             tests.Add(new TestMain.TestCase(
@@ -46,8 +70,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTiming Lua and native scanners match at descriptor refill",
                 LuaAndNativeScannersMatchAtDescriptorRefill));
             tests.Add(new TestMain.TestCase(
-                "HardwareTiming corrected identity has a new recorder version",
-                CorrectedIdentityHasNewRecorderVersion));
+                "HardwareTiming Lua and native title-card scans stay post-objects",
+                LuaAndNativeTitleCardScansStayPostObjects));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming Lua and native title-card lifecycle predicates match",
+                LuaAndNativeTitleCardLifecyclePredicatesMatch));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming lag boundary has a new recorder version",
+                LagBoundaryHasNewRecorderVersion));
             tests.Add(new TestMain.TestCase(
                 "HardwareTiming four-file publication is atomic and no-replace",
                 FourFilePublicationIsAtomicAndNoReplace));
@@ -65,11 +95,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var writer = new StringWriter();
             var engine = new HardwareTimingEventEngine(rom);
 
+            SetLevelFrame(host, 0x1234);
             StageActive(host, source, destination, 0x81);
-            engine.ObservePostObjects(12, host, writer);
+            engine.ObserveFrameEnd(12, host, writer);
+            SetLevelFrame(host, 0x1235);
             StageEmpty(host);
-            engine.ObservePostObjects(13, host, writer);
-            engine.ObservePostObjects(14, host, writer);
+            engine.ObserveFrameEnd(13, host, writer);
+            engine.ObserveFrameEnd(14, host, writer);
 
             string fingerprint =
                 HardwareTimingEventEngine.ComputeSubmissionFingerprint(
@@ -88,6 +120,240 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 writer.ToString());
         }
 
+        private static void DuplicateLevelFrameUsesVintBoundary()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0);
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(20, host, writer);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(21, host, writer);
+
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains(
+                    "\"raw_frame\":21,\"boundary\":\"vint_service\""));
+            AssertEx.Equal(
+                false,
+                writer.ToString().Contains("\"boundary\":\"pre_main_loop\""));
+            AssertEx.Equal(
+                false,
+                writer.ToString().Contains("\"boundary\":\"post_objects\""));
+        }
+
+        private static void AdvancedLevelFrameUsesPostObjectsBoundary()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x3210);
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(20, host, writer);
+            SetLevelFrame(host, 0x3211);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(21, host, writer);
+
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains(
+                    "\"raw_frame\":21,\"boundary\":\"post_objects\""));
+            AssertEx.Equal(
+                false,
+                writer.ToString().Contains("\"boundary\":\"vint_service\""));
+        }
+
+        private static void TitleCardScanKeepsPostObjectsBoundary()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0);
+            SetTitleCardParent(host);
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(20, host, writer);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(21, host, writer);
+
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains(
+                    "\"raw_frame\":21,\"boundary\":\"post_objects\""));
+            AssertEx.Equal(
+                false,
+                writer.ToString().Contains("\"boundary\":\"vint_service\""));
+        }
+
+        private static void TitleCardPredicateRejectsWrongSlotAndFlag()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithSingleModule(source);
+
+            AssertEx.Equal(
+                true,
+                CompleteDuplicateSubmission(
+                    rom, source, true, false).Contains(
+                        "\"boundary\":\"vint_service\""));
+            AssertEx.Equal(
+                true,
+                CompleteDuplicateSubmission(
+                    rom, source, false, true).Contains(
+                        "\"boundary\":\"vint_service\""));
+        }
+
+        private static void ArmedTitleCardNemTailStaysPostObjects()
+        {
+            AssertEx.Equal(
+                true,
+                CompleteTitleCardLifecycle(
+                    nemQueueAtCompletion: true).Contains(
+                        "\"boundary\":\"post_objects\""));
+        }
+
+        private static void ArmedTitleCardRawWaitSurvivesCodeDeletion()
+        {
+            AssertEx.Equal(
+                true,
+                CompleteTitleCardRawWaitTail().Contains(
+                    "\"boundary\":\"post_objects\""));
+        }
+
+        private static void GameplayNemQueueStaysVint()
+        {
+            AssertEx.Equal(
+                true,
+                CompleteGameplayNemSubmission().Contains(
+                    "\"boundary\":\"vint_service\""));
+        }
+
+        private static string CompleteGameplayNemSubmission()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x3210);
+            host.SetU32(S3KRam.NemDecompQueue, 0x00123456);
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(0, host, writer);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(1, host, writer);
+            return writer.ToString();
+        }
+
+        private static void ExitedTitleCardLoopStaysVint()
+        {
+            string output = CompleteExitedTitleCardLifecycle();
+            AssertEx.Equal(
+                true,
+                output.Contains(
+                    "\"raw_frame\":1,\"boundary\":\"post_objects\""));
+            AssertEx.Equal(
+                true,
+                output.Contains(
+                    "\"raw_frame\":3,\"boundary\":\"vint_service\""));
+        }
+
+        private static string CompleteTitleCardLifecycle(
+            bool nemQueueAtCompletion)
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0);
+            SetTitleCardParent(host);
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(0, host, writer);
+
+            int parent = S3KRam.SlotAddress(8);
+            host.SetU16(parent + 0x48, 0);
+            host.SetU32(
+                S3KRam.NemDecompQueue,
+                nemQueueAtCompletion ? 0x00123456u : 0u);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(1, host, writer);
+            return writer.ToString();
+        }
+
+        private static string CompleteTitleCardRawWaitTail()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0);
+            SetTitleCardParent(host);
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(0, host, writer);
+            host.SetU32(S3KRam.SlotAddress(8), 0);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(1, host, writer);
+            return writer.ToString();
+        }
+
+        private static string CompleteExitedTitleCardLifecycle()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0);
+            SetTitleCardParent(host);
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(0, host, writer);
+            int parent = S3KRam.SlotAddress(8);
+            host.SetU32(parent, 0);
+            host.SetU16(parent + 0x48, 0);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(1, host, writer);
+
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(2, host, writer);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(3, host, writer);
+            return writer.ToString();
+        }
+
+        private static string CompleteDuplicateSubmission(
+            byte[] rom,
+            int source,
+            bool wrongSlot,
+            bool clearedWait)
+        {
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+            SetLevelFrame(host, 0x3210);
+            int slot = wrongSlot ? 7 : 8;
+            int parent = S3KRam.SlotAddress(slot);
+            host.SetU32(parent, 0x0002D690);
+            host.SetU16(parent + 0x48, (ushort)(clearedWait ? 0 : 1));
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(20, host, writer);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(21, host, writer);
+            return writer.ToString();
+        }
+
         private static void RepeatedZeroEmitsZeroByteStream()
         {
             var host = NewHost();
@@ -95,9 +361,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var engine = new HardwareTimingEventEngine(new byte[0x400]);
 
             StageEmpty(host);
-            engine.ObservePostObjects(0, host, writer);
-            engine.ObservePostObjects(1, host, writer);
-            engine.ObservePostObjects(2, host, writer);
+            engine.ObserveFrameEnd(0, host, writer);
+            engine.ObserveFrameEnd(1, host, writer);
+            engine.ObserveFrameEnd(2, host, writer);
 
             AssertEx.Equal("", writer.ToString());
         }
@@ -111,13 +377,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var engine = new HardwareTimingEventEngine(rom);
 
             StageActive(host, source, 0x4000, 0x81);
-            engine.ObservePostObjects(0, host, writer);
+            engine.ObserveFrameEnd(0, host, writer);
             StageEmpty(host);
-            engine.ObservePostObjects(1, host, writer);
+            engine.ObserveFrameEnd(1, host, writer);
             StageActive(host, source, 0x4000, 0x81);
-            engine.ObservePostObjects(2, host, writer);
+            engine.ObserveFrameEnd(2, host, writer);
             StageEmpty(host);
-            engine.ObservePostObjects(3, host, writer);
+            engine.ObserveFrameEnd(3, host, writer);
 
             string[] lines = writer.ToString().Split(
                 new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
@@ -135,13 +401,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var engine = new HardwareTimingEventEngine(rom);
 
             StageActive(host, source, 0x4000, 0x81);
-            engine.ObservePostObjects(0, host, null);
+            engine.ObserveFrameEnd(0, host, null);
             StageEmpty(host);
-            engine.ObservePostObjects(1, host, null);
+            engine.ObserveFrameEnd(1, host, null);
             StageActive(host, source, 0x6000, 0x81);
-            engine.ObservePostObjects(2, host, writer);
+            engine.ObserveFrameEnd(2, host, writer);
             StageEmpty(host);
-            engine.ObservePostObjects(3, host, writer);
+            engine.ObserveFrameEnd(3, host, writer);
 
             string output = writer.ToString();
             AssertEx.Equal(
@@ -161,17 +427,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             StageActive(host, firstSource, 0x4000, 0x81);
             StageQueued(host, 1, secondSource, 0x6000);
-            engine.ObservePostObjects(20, host, writer);
+            engine.ObserveFrameEnd(20, host, writer);
 
             // Process_Kos_Module_Queue retires the first head, shifts the
             // second entry, and initializes it before returning. No frame-end
             // sample ever sees Kos_modules_left == 0.
             StageActive(host, secondSource, 0x6000, 0x01);
-            engine.ObservePostObjects(21, host, writer);
+            engine.ObserveFrameEnd(21, host, writer);
             StageActive(host, secondSource, 0x6000, 0x81);
-            engine.ObservePostObjects(22, host, writer);
+            engine.ObserveFrameEnd(22, host, writer);
             StageEmpty(host);
-            engine.ObservePostObjects(23, host, writer);
+            engine.ObserveFrameEnd(23, host, writer);
 
             string[] lines = writer.ToString().Split(
                 new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
@@ -312,6 +578,73 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static void LuaAndNativeScannersMatchAtDescriptorRefill()
         {
+            const int source = 0x100;
+            const int destination = 0xA520;
+            byte[] rom = RomWithDescriptorBoundaryModule(source, false);
+            string expected = CompleteSingleSubmission(
+                rom, source, destination);
+            AssertEx.Equal(
+                expected,
+                RunLuaBehaviorVector(
+                    rom, source, destination, TimingVector.None));
+        }
+
+        private static void LuaAndNativeTitleCardScansStayPostObjects()
+        {
+            const int source = 0x100;
+            const int destination = 0xA520;
+            byte[] rom = RomWithSingleModule(source);
+            string expected = CompleteSingleSubmission(
+                rom, source, destination, true);
+            AssertEx.Equal(
+                true,
+                expected.Contains("\"boundary\":\"post_objects\""));
+            AssertEx.Equal(
+                expected,
+                RunLuaBehaviorVector(
+                    rom, source, destination, TimingVector.TitleParentWait));
+        }
+
+        private static void LuaAndNativeTitleCardLifecyclePredicatesMatch()
+        {
+            const int source = 0x100;
+            const int destination = 0xA400;
+            byte[] rom = RomWithSingleModule(source);
+
+            AssertEx.Equal(
+                CompleteTitleCardLifecycle(nemQueueAtCompletion: true),
+                RunLuaBehaviorVector(
+                    rom, source, destination, TimingVector.TitleNemTail));
+            AssertEx.Equal(
+                CompleteTitleCardRawWaitTail(),
+                RunLuaBehaviorVector(
+                    rom, source, destination, TimingVector.TitleRawWaitTail));
+            AssertEx.Equal(
+                CompleteGameplayNemSubmission(),
+                RunLuaBehaviorVector(
+                    rom, source, destination, TimingVector.GameplayNem));
+            AssertEx.Equal(
+                CompleteExitedTitleCardLifecycle(),
+                RunLuaBehaviorVector(
+                    rom, source, destination, TimingVector.TitleExited));
+        }
+
+        private enum TimingVector
+        {
+            None,
+            TitleParentWait,
+            TitleNemTail,
+            TitleRawWaitTail,
+            GameplayNem,
+            TitleExited
+        }
+
+        private static string RunLuaBehaviorVector(
+            byte[] rom,
+            int source,
+            int destination,
+            TimingVector vector)
+        {
             const string lua = "/usr/bin/lua";
             if (!File.Exists(lua))
             {
@@ -319,11 +652,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "/usr/bin/lua is not installed.");
             }
 
-            const int source = 0x100;
-            const int destination = 0xA520;
-            byte[] rom = RomWithDescriptorBoundaryModule(source, false);
-            string expected = CompleteSingleSubmission(
-                rom, source, destination);
             string root = TestScratch.CreateRootPath(
                 "hardware-timing-lua-vector");
             try
@@ -334,7 +662,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 File.WriteAllBytes(romPath, rom);
                 File.WriteAllText(
                     scriptPath,
-                    LuaBehaviorVectorScript(),
+                    LuaBehaviorVectorScript(vector),
                     new UTF8Encoding(false));
 
                 var start = new ProcessStartInfo
@@ -363,7 +691,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         throw new InvalidOperationException(
                             "Lua hardware timing vector failed: " + error);
                     }
-                    AssertEx.Equal(expected, actual);
+                    return actual;
                 }
             }
             finally
@@ -375,13 +703,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void CorrectedIdentityHasNewRecorderVersion()
+        private static void LagBoundaryHasNewRecorderVersion()
         {
             AssertEx.Equal(
-                "6.35-s3k",
+                "6.37-s3k",
                 S3KTraceMetadataWriter.LuaScriptVersion);
             AssertEx.Equal(
-                "6.35-s3k-completerun",
+                "6.37-s3k-completerun",
                 S3KCompleteRunMetadataWriter.LuaScriptVersion);
 
             string standard = File.ReadAllText(Path.Combine(
@@ -393,15 +721,57 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 true,
                 standard.Contains(
-                    "\"lua_script_version\": \"6.35-s3k\""));
+                    "\"lua_script_version\": \"6.37-s3k\""));
             AssertEx.Equal(
                 true,
                 complete.Contains(
-                    "LUA_SCRIPT_VERSION = \"6.35-s3k-completerun\""));
+                    "LUA_SCRIPT_VERSION = \"6.37-s3k-completerun\""));
         }
 
-        private static string LuaBehaviorVectorScript()
+        private static string LuaBehaviorVectorScript(
+            TimingVector vector)
         {
+            string initialState = "";
+            string completionState = "";
+            string afterCompletionState = "";
+            if (vector == TimingVector.TitleParentWait
+                || vector == TimingVector.TitleNemTail
+                || vector == TimingVector.TitleRawWaitTail
+                || vector == TimingVector.TitleExited)
+            {
+                initialState =
+                    "local title=0xB000+8*0x4A;"
+                    + " set32(title,0x2D690);"
+                    + " set16(title+0x48,1)\n";
+            }
+            if (vector == TimingVector.TitleNemTail)
+            {
+                completionState =
+                    "set16(title+0x48,0); set32(0xF680,0x123456)\n";
+            }
+            else if (vector == TimingVector.TitleRawWaitTail)
+            {
+                completionState = "set32(title,0)\n";
+            }
+            else if (vector == TimingVector.TitleExited)
+            {
+                completionState =
+                    "set32(title,0); set16(title+0x48,0);"
+                    + " set32(0xF680,0)\n";
+                afterCompletionState =
+                    "ram[0xFF60]=0x81; set32(0xFF64,source+2);"
+                    + " set16(0xFF68,destination)\n"
+                    + "timing.observe(tracker,2,output)\n"
+                    + "for address=0xFF64,0xFF7B do ram[address]=0 end\n"
+                    + "ram[0xFF60]=0\n"
+                    + "timing.observe(tracker,3,output)\n";
+            }
+            else if (vector == TimingVector.GameplayNem)
+            {
+                initialState =
+                    "set16(0xFE04,0x3210); set32(0xF680,0x123456)\n";
+            }
+
             return
                 "local module_path, rom_path = arg[1], arg[2]\n"
                 + "local source, destination = tonumber(arg[3]), tonumber(arg[4])\n"
@@ -434,13 +804,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "local timing = assert(loadfile(module_path))()\n"
                 + "local tracker = timing.new_tracker()\n"
                 + "local output = assert(io.tmpfile())\n"
+                + initialState
                 + "ram[0xFF60] = 0x81\n"
                 + "set32(0xFF64, source + 2)\n"
                 + "set16(0xFF68, destination)\n"
                 + "timing.observe(tracker, 0, output)\n"
+                + completionState
                 + "for address = 0xFF64, 0xFF7B do ram[address] = 0 end\n"
                 + "ram[0xFF60] = 0\n"
                 + "timing.observe(tracker, 1, output)\n"
+                + afterCompletionState
                 + "output:seek('set', 0)\n"
                 + "io.write(output:read('*a'))\n"
                 + "output:close()\n";
@@ -457,13 +830,27 @@ namespace OpenGGF.BizHawk.Headless.Tests
             int source,
             int destination)
         {
+            return CompleteSingleSubmission(
+                rom, source, destination, false);
+        }
+
+        private static string CompleteSingleSubmission(
+            byte[] rom,
+            int source,
+            int destination,
+            bool titleCardParent)
+        {
             var host = NewHost();
             var writer = new StringWriter();
             var engine = new HardwareTimingEventEngine(rom);
+            if (titleCardParent)
+            {
+                SetTitleCardParent(host);
+            }
             StageActive(host, source, destination, 0x81);
-            engine.ObservePostObjects(0, host, writer);
+            engine.ObserveFrameEnd(0, host, writer);
             StageEmpty(host);
-            engine.ObservePostObjects(1, host, writer);
+            engine.ObserveFrameEnd(1, host, writer);
             return writer.ToString();
         }
 
@@ -655,6 +1042,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             host.SetU16(
                 S3KRam.KosModuleDestination,
                 (ushort)destination);
+        }
+
+        private static void SetLevelFrame(FakeS1Host host, int value)
+        {
+            host.SetU16(S3KRam.LevelFrameCounter, (ushort)value);
+        }
+
+        private static void SetTitleCardParent(FakeS1Host host)
+        {
+            int parent = S3KRam.SlotAddress(8);
+            host.SetU32(parent, 0x0002D690);
+            host.SetU16(parent + 0x48, 1);
         }
 
         private static void StageQueued(

@@ -73,7 +73,9 @@ class TestBuildToolingGuard {
             // carve-out; comparison-only (removes a fixture-side mutation).
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && \"s3k_bonus_stage\".equals(metadata.traceProfile());");
     private static final Set<String> REVIEWED_S3K_STATIC_SESSION_STATE = Set.of(
-            "src/main/java/com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java - private static volatile AizFireOverlayData cachedAizFireOverlay;",
+            // Immutable ROM-derived terrain bytes only; no readiness or
+            // timing-produced runtime payload is stored in this cache.
+            "src/main/java/com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java - private static volatile AizFireTerrainData cachedAizFireTerrain;",
             "src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java - private static volatile PendingFireSequence pendingFireSequence;",
             "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean skimActiveP1;",
             "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean skimActiveP2;",
@@ -131,7 +133,6 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/game/sonic3k/objects/AizIntroTerrainSwap.java - private static OverlayData cachedOverlayData;",
             "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static int introScrollOffset = 0;",
             "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static boolean mainLevelPhaseActive = false;",
-            "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static boolean mainLevelTerrainSwapAttempted = false;",
             "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static AizPlaneIntroInstance activeIntroInstance;",
             "src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesCnz2AInstance.java - private static volatile CutsceneKnucklesCnz2AInstance activeInstance;",
             "src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesCnz2BInstance.java - private static volatile CutsceneKnucklesCnz2BInstance activeInstance;",

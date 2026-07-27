@@ -56,6 +56,10 @@
 -- compressed span consumed by the ROM decoder. Synchronous LoadLevelLoadBlock
 -- jobs remain in the ordinal ledger but are not exported as completion
 -- authority before the ordinary LevelLoop becomes observable.
+-- v6.37-s3k classifies a completion on a held Level_frame_counter row at
+-- vint_service unless the frame-zero Obj_TitleCard parent has armed loc_62CC.
+-- That semantic lifecycle remains active while either the parent wait flag or
+-- Nem_decomp_queue keeps its Process_Sprites/module-service loop alive.
 -- v6.0-s3k changes: emit per-frame cpu_state events with the full Tails CPU
 -- global block plus Ctrl_2_logical so engine SidekickCpuController state can
 -- be hydrated each frame in trace replay (closes the visibility gap that
@@ -1000,7 +1004,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.35-s3k",\n')
+    meta_file:write('  "lua_script_version": "6.37-s3k",\n')
     -- trace_schema 7 adds the authoritative hardware timing stream.
     -- csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
@@ -4987,7 +4991,7 @@ elseif is_level_gated_reset_aware_profile() then
 else
     WAIT_DESC = "level gameplay (Game_Mode=0x0C, controls unlocked)"
 end
-print(string.format("S3K Trace Recorder v6.35-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
+print(string.format("S3K Trace Recorder v6.37-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
 
 -- Optional diagnostics are stage-gated. Capture the opaque event ids while
 -- registering so every segment close/reset can unregister the hooks instead

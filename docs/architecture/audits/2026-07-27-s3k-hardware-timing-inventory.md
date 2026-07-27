@@ -241,20 +241,22 @@ The design's three raw boundaries map to ROM visibility as follows:
 
 | boundary | ROM work visible | module-completion rule |
 |---|---|---|
-| `vint_service` | Controller sampling, DMA draining, and `Set_Kos_Bookmark` in VInt (`docs/skdisasm/sonic3k.asm:701-840`). | No module completion is emitted. VInt can interrupt/bookmark direct decoding, but it does not run module-queue service. |
+| `vint_service` | Controller sampling, DMA draining, and `Set_Kos_Bookmark` in VInt (`docs/skdisasm/sonic3k.asm:701-840`). | VInt does not itself run module-queue service. A pending-to-complete transition first observable on a held-counter row is admitted here only when no ROM-owned object-scan loop is active. This is an admission/visibility boundary, not a claim that VInt caused decompression. |
 | `pre_main_loop` | Direct decoder progress from `Process_Kos_Queue`, which precedes `Wait_VSync` in `LevelLoop` (`docs/skdisasm/sonic3k.asm:7884-7888`). | No module completion is emitted. Direct-queue observations remain non-authoritative. |
-| `post_objects` | Normal `Process_Sprites` executes before `Process_Kos_Module_Queue` (`docs/skdisasm/sonic3k.asm:7894-7908`). The recurring special-stage loop likewise performs sprites, collision, drawing, and `sub_9B62` before module service (`docs/skdisasm/sonic3k.asm:10737-10753,12613-12625`). | Emit retirement of the tracked final-module head here, whether RAM exposes zero or immediately exposes the initialized next job. Consumers in that same scan saw the preceding pending state; they consume readiness on their next admitted scan. |
+| `post_objects` | Normal `Process_Sprites` executes before `Process_Kos_Module_Queue` (`docs/skdisasm/sonic3k.asm:7894-7908`). The held-counter title-card loop at `loc_62CC` has the same ordering, then branches on physical slot 8's `objoff_48` word or `Nem_decomp_queue` (`docs/skdisasm/sonic3k.asm:7735-7748`). The recurring special-stage loop likewise performs sprites, collision, drawing, and `sub_9B62` before module service (`docs/skdisasm/sonic3k.asm:10737-10753,12613-12625`). | Emit retirement here when the frame counter advances or the exact title-card lifecycle proves that the held-counter row ran `Process_Sprites`. The lifecycle can arm only from the fixed `Obj_TitleCard` parent and cannot be inferred from a Nemesis job alone. Consumers in that same scan saw the preceding pending state; they consume readiness on their next admitted scan. |
 
 This ordering prevents the recorder from making completion visible to an object one
-iteration too early. It also keeps event identity independent of a particular capture:
-the event is keyed by submission ordinal and ROM-derived fingerprint, not by an expected
-numeric frame.
+iteration too early or inventing a main-loop/object scan on a lag row. It also keeps event
+identity independent of a particular capture: the event is keyed by submission ordinal
+and ROM-derived fingerprint, not by an expected numeric frame. Recorder v6.37 refines the
+held-`Level_frame_counter` symptom introduced in v6.36: genuine lag/loading rows remain
+`vint_service`, while `loc_62CC` completions retain the loop's actual post-object boundary.
 
 ## Version-1 conclusion
 
 | candidate | version-1 status | evidence needed for any later promotion |
 |---|---|---|
-| `KOS_MODULE_QUEUE` | `KOS_MODULE_QUEUE_AUTHORITATIVE_V1`; the sole authoritative version-1 kind. | The RAM ownership, eligible submission, pending lifecycle, and `post_objects` completion edge above are sufficient for implementation under the approved design. |
+| `KOS_MODULE_QUEUE` | `KOS_MODULE_QUEUE_AUTHORITATIVE_V1`; the sole authoritative version-1 kind. | The RAM ownership, eligible submission, pending lifecycle, and symptom-selected `vint_service` / `post_objects` completion edges above are sufficient for implementation under the approved design. |
 | `KOS_DECOMPRESSION_QUEUE` | `NATIVE_SERVICE_QUEUE_PENDING_REVIEW`. | ROM-derived job identity, evidence that direct completion varies beyond lag/phase, an unambiguous completion edge for queued streams, and recorder tests covering both consumers without aliasing module work. |
 | DMA queue | `NATIVE_SERVICE_QUEUE_PENDING_REVIEW` only if future ROM evidence reveals a gameplay completion poll; currently diagnostic. | A persistent hardware-owned readiness state and a production gameplay lifecycle consumer. |
 | Delayed plane drawing | Not authoritative; deterministic `PHASE`. | Evidence of a hardware-owned completion fence distinct from the software row counter and admitted-loop cadence. |

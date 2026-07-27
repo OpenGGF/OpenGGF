@@ -105,6 +105,7 @@ namespace OpenGGF.BizHawk.Headless
         // See Kos_decomp_queue_count at lines 866 and
         // Kos_modules_left/Kos_module_queue at lines 896-909.
         public const int KosDecompQueueCount = 0xFF0E;   // u16be: bit 15 busy, low 15 queued direct streams
+        public const int NemDecompQueue = 0xF680;        // first u32be source in Nem_decomp_queue; loc_62CC title-card wait predicate
         public const int KosModulesLeft = 0xFF60;        // u8: bit 7 busy, low 7 modules remaining
         public const int KosLastModuleSize = 0xFF62;     // u16be words
         public const int KosModuleQueue = 0xFF64;        // four source:u32be,destination:u16be entries

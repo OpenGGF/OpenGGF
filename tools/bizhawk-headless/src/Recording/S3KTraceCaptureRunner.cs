@@ -23,7 +23,7 @@ namespace OpenGGF.BizHawk.Headless
 
     /// <summary>
     /// Native port of the S3K standard Lua trace recorder's frame loop
-    /// (tools/bizhawk/s3k_trace_recorder.lua v6.35-s3k; spec
+    /// (tools/bizhawk/s3k_trace_recorder.lua v6.37-s3k; spec
     /// tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md §1/§3).
     /// Supports all three profiles:
     ///
@@ -422,7 +422,7 @@ namespace OpenGGF.BizHawk.Headless
                         auxEngine = new S3KAuxEventEngine(profile);
                         if (!aiz)
                         {
-                            hardwareTimingEngine.ObservePostObjects(
+                            hardwareTimingEngine.ObserveFrameEnd(
                                 0, host, null);
                             continue;   // Arm frame dropped (row 0 = next).
                         }
@@ -485,7 +485,7 @@ namespace OpenGGF.BizHawk.Headless
                     {
                         auxSink.AppendLine(line);
                     }
-                    hardwareTimingEngine.ObservePostObjects(
+                    hardwareTimingEngine.ObserveFrameEnd(
                         traceFrame,
                         host,
                         hardwareCompletionAuthorityArmed

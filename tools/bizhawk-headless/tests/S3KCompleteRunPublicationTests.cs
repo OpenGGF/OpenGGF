@@ -70,9 +70,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string FixtureVersionLine =
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
         private const string PublishedHardwareVersionLine =
-            "  \"lua_script_version\": \"6.34-s3k-completerun\",";
-        private const string CurrentVersionLine =
             "  \"lua_script_version\": \"6.35-s3k-completerun\",";
+        private const string CurrentVersionLine =
+            "  \"lua_script_version\": \"6.37-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -775,7 +775,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     SetBSegments,
                     transitions);
             const string CurrentManifestVersionLine =
-                "  \"lua_script_version\": \"6.35-s3k-completerun\",\n";
+                "  \"lua_script_version\": \"6.37-s3k-completerun\",\n";
             AssertEx.Equal(
                 1,
                 CountOccurrences(actual, CurrentManifestVersionLine));
@@ -1150,6 +1150,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     h.SetU16(
                         S3KRam.PlayerBase + S3KRam.OffMoveLock, 0);
                     h.Ram[S3KRam.Ctrl1Locked] = 0;
+                    h.SetU16(S3KRam.LevelFrameCounter, 0x4444);
                     ClearKosQueue(h);
                     if (frame >= 11 && frame <= 18)
                     {
@@ -1206,7 +1207,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(
                     "{\"event\":\"hardware_work_completed\","
                     + "\"raw_frame\":1,"
-                    + "\"boundary\":\"post_objects\","
+                    // Results mode leaves Level_frame_counter unchanged,
+                    // so frame-end observation proves only VInt admission.
+                    + "\"boundary\":\"vint_service\","
                     + "\"kind\":\"kos_module_queue\","
                     + "\"ordinal\":4,"
                     + "\"submission_fingerprint\":\""

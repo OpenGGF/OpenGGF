@@ -52010,3 +52010,116 @@ mvn -Dmse=off \
 ```
 
 - Pass: 26 tests, 0 failures.
+
+## 2026-07-27 - Task 9B corrected fixtures and production frontier freeze
+
+- Worktree: `.worktrees/trace-green-integration-20260727`, branch
+  `bugfix/ai-trace-green-integration-20260727`, HEAD `79b12b4fef`.
+- The approved native recorder output replaces only each fixture's
+  `hardware_timing.jsonl` and timing metadata declaration. Physics and aux
+  payloads are unchanged:
+  - AIZ end-to-end: 38 edges, 8,246 bytes,
+    `sha256:349894a74ab42d2241f6e87a814e1795a716f276c6b41c2aca4edcf9b65d77e3`
+    (38 `POST_OBJECTS`, 0 `VINT_SERVICE`).
+  - AIZ complete-run: 41 edges, 8,909 bytes,
+    `sha256:a61c169cc98facbdd7aa4af62c7bc0eca89733f2dce695531e787bdf046f89ba`
+    (38 `POST_OBJECTS`, 3 `VINT_SERVICE`).
+  - HCZ complete-run: 45 edges, 9,779 bytes,
+    `sha256:8d7d92b3eb03ceaf4b563b10da9cf4268c27690e0a5625ef429cb9f8c5f0c67e`
+    (43 `POST_OBJECTS`, 2 `VINT_SERVICE`).
+- Production corrections established before the freeze:
+  - Recorder v6.37 classifies genuine held-counter lag/loading completions as
+    `VINT_SERVICE`, but retains `POST_OBJECTS` for the ROM's `loc_62CC`
+    held-counter title-card scan. The exception arms only from physical slot
+    8's `Obj_TitleCard` parent (`$2D690`) with `objoff_48` set, then follows
+    the loop's raw `objoff_48` / `Nem_decomp_queue` predicates. Nemesis work
+    alone cannot arm it. AIZ raw frame 6351 remains a confirmed gameplay lag
+    symptom; the late AIZ/HCZ VInt pairs occur after the title-card lifecycle
+    has exited. Live and recorded admission use the same production
+    boundaries, and shifted completion edges fail rather than hydrating
+    readiness.
+  - AIZ keeps the already-prepared fire-overlay bytes across its host-side act
+    rebuild in a session-owned resettable and rewindable adapter, matching the
+    ROM's retained VDP contents instead of using process-global readiness or
+    submitting a synthetic second fire job. A title-card-free seamless reload
+    opens the ordinary enemy-art admission gate directly.
+  - StarPost activation submits the exact ROM-selected bonus-star KosM job in
+    the activating object scan. The remainder-zero route uses
+    `ArtKosM_StarPostStars3` at source `$187C4E`, destination tile `$5EC`,
+    compressed length 93, output length 96, fingerprint
+    `sha256:28a69b8f385d0f7355d90a7aa996d75d45e26eb4b2672d7ce3e0eec11a513b3f`.
+    The session-owned PLC snapshot retains its pending handle ordinal across
+    rewind.
+
+Fresh focused command:
+
+```bash
+mvn -Dmse=off -Ds3k.rom.path=s3k.gen \
+  "-Dtest=com.openggf.game.sonic3k.TestSonic3kLevelEventRewindSnapshot,\
+com.openggf.tools.TestRecordingFrameDriverHardwareTiming,\
+com.openggf.game.sonic3k.resources.TestS3kKosStructuralSequence,\
+com.openggf.game.sonic3k.resources.TestS3kKosTimingRewindIntegration,\
+com.openggf.tests.trace.s3k.TestS3kHardwareTimingReplay,\
+com.openggf.trace.timing.TestCommittedHardwareTimingFixtures,\
+com.openggf.tests.TestBuildToolingGuard" test
+```
+
+- Pass: 100 tests, 0 failures, 0 errors, 0 skips. The two real-ROM integration
+  classes verify the corrected fixture identities and a real HCZ KosM
+  before/on/after rewind.
+
+Focused architecture/rewind/fixture guards:
+
+```bash
+mvn -Dmse=off \
+  "-Dtest=com.openggf.game.rewind.coverage.TestRewindCoverageGuard,\
+com.openggf.game.rewind.coverage.TestStaticStateRewindCoverageGuard,\
+com.openggf.trace.TestTraceFixtureCompressionGuard,\
+com.openggf.tests.TestArchitecturalSourceGuard#hardwareTimingAuthorityExceptionStaysDocumentedAndAgentGuidanceStaysMirrored+levelFrameStepDoesNotUseAmbientGameServices+objectArtDataDoesNotGainNewGameOrZoneSpecificSurface+productionGameplayCodeDoesNotBypassLevelMutationSurfaceWithRawLevelMutators,\
+com.openggf.tests.TestBuildToolingGuard#traceReplayBootstrapMustNotHydrateEngineStateFromTraceRows+traceReplayBootstrapPolicySignalsStayBounded" \
+  test
+```
+
+- Pass: 10 tests, 0 failures.
+- The complete `TestBuildToolingGuard` plus the immutable committed-fixture
+  publication guard pass 45 tests with zero failures. The static-session debt
+  inventory now removes the rejected fire-overlay payload and separately
+  records only the pre-existing immutable ROM-terrain byte cache.
+- Native recorder verification with the discovered `s3k.gen` ROM passes all
+  23 `HardwareTiming` tests. Fresh ROM differential capture matches the
+  committed standard AIZ, complete-run AIZ, and complete-run HCZ timing
+  streams byte-for-byte (3 tests, 0 failures). `luac -p` accepts the shared
+  timing module and both recorder entry points.
+
+Strict frontier command:
+
+```bash
+mvn -Dmse=off -Ds3k.rom.path=s3k.gen \
+  -Dtrace.hardwareTiming.strict=true \
+  "-Dtest=<one of TestS3kAizTraceReplay,\
+TestS3kAizCompleteRunTraceReplay,\
+TestS3kHczCompleteRunTraceReplay>#replayMatchesTrace" test
+```
+
+- AIZ end-to-end consumes exact ordinals 2 through 22 (21 of 38 edges).
+  The first unconsumed edge is ordinal 23 at raw frame 8800,
+  `POST_OBJECTS`, fingerprint
+  `sha256:10eb568a70724c579f022914f56227c2c7fa421aafa8578aebaa874f0cffb0ca`;
+  production pending is empty. This is the ROM's AIZ1 miniboss-results owner
+  mutating into the in-level Act 2 title card and submitting RedAct art, not a
+  bonus-stage or hardware-gap event. The remaining 17 end-to-end edges are
+  not claimed.
+- AIZ complete-run independently reaches the analogous boundary after
+  consuming ordinals 2 through 21 (20 of 41 edges). Its first unconsumed edge
+  is ordinal 22 at raw frame 11860 with the same RedAct fingerprint and no
+  production pending work. The remaining 21 edges are not claimed.
+- HCZ complete-run reaches its first external edge at raw frame 36,
+  `POST_OBJECTS`, ordinal 43, fingerprint
+  `sha256:f7d726c95e019598b69ed655a53fca44b42967d9361230092ba02e539abfa45f`
+  (Blastoid art), with production pending empty. No HCZ edge is consumed; all
+  45 remain outstanding.
+- Outstanding Task 9B acceptance work is therefore the native
+  results-to-title owner timing, strict admission of every later AIZ/HCZ edge,
+  and the composed live-window/rings/recorded-rewind scenario. Fleet-wide
+  committed fixture publication for every S3K level remains required beyond
+  these three corrected fixtures. LBZ was not inspected or changed.

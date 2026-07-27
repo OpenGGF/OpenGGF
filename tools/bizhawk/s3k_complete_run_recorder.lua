@@ -303,6 +303,11 @@
 -- v6.35-s3k-completerun fixes Kosinski descriptor-word refill timing in the
 -- shared hardware-timing scanner so submission fingerprints use the
 -- canonical compressed span consumed by the ROM decoder.
+-- v6.37-s3k-completerun classifies a completion on a held
+-- Level_frame_counter row at vint_service unless the frame-zero Obj_TitleCard
+-- parent has armed loc_62CC. That semantic lifecycle remains active while
+-- either its wait flag or Nem_decomp_queue keeps the Process_Sprites/module-
+-- service loop alive.
 -- Existing captures carry the wrong column and need recapture.
 ------------------------------------------------------------------------------
 
@@ -371,7 +376,7 @@ end
 BIZHAWK_VERSION = "2.11"
 GENESIS_CORE = "Genplus-gx"
 S3K_ROM_CHECKSUM = "C5B1C655C19F462ADE0AC4E17A844D10"
-LUA_SCRIPT_VERSION = "6.35-s3k-completerun"   -- no "v" prefix (existing convention)
+LUA_SCRIPT_VERSION = "6.37-s3k-completerun"   -- no "v" prefix (existing convention)
 -- Overridable so non-default movies (e.g. the Knuckles multi-bonus route)
 -- get truthful source_bk2 metadata instead of the complete-run default.
 SOURCE_BK2_NAME = os.getenv("OGGF_BK2_BASENAME") or "s3k-complete-sonic-tails.bk2"

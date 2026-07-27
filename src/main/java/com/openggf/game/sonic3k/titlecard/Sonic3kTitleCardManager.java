@@ -915,9 +915,9 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         artLoading = false;
         artLoaded = true;
         artCached = false;
-        if (GameServices.module().getObjectArtProvider()
-                instanceof Sonic3kObjectArtProvider provider) {
-            provider.onTitleCardArtRetired();
+        if (GameServices.module().getObjectArtProvider() != null) {
+            GameServices.module().getObjectArtProvider()
+                    .onTitleCardArtRetired();
         }
         return true;
     }

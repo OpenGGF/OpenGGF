@@ -19,6 +19,7 @@ import com.openggf.game.sonic3k.objects.HCZLargeFanObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
 import com.openggf.game.sonic3k.objects.HCZWaterWallObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.timing.HardwareServiceBoundary;
@@ -74,6 +75,10 @@ class TestS3kKosStructuralSequence {
     private static final Spec AIZ_CATERKILLER = new Spec(
             "AIZ Caterkiller Jr", 0x3681FE, 0x55F, 509, 928, 1,
             "sha256:4728f00c19173741198c7795aa9cbea9b8277cde40083df9543743c89d273805");
+    private static final Spec STARPOST_RED = new Spec(
+            "StarPost red bonus stars", 0x187C4E, 0x5EC,
+            93, 96, 1,
+            "sha256:28a69b8f385d0f7355d90a7aa996d75d45e26eb4b2672d7ce3e0eec11a513b3f");
     private static final Spec AIZ_INTRO_PLANE = new Spec(
             "AIZ intro plane", 0x382624, 0x529, 1951, 4352, 2,
             "sha256:4423f6be47e039925c8575c68ed5eb22e9cba75f2aadd05f1d288d6c9579e723");
@@ -256,7 +261,56 @@ class TestS3kKosStructuralSequence {
     }
 
     @Test
-    void productionAizPostReloadOwnerRetiresSecondFireOverlayRequeue() {
+    void productionStarPostActivationQueuesExactBonusStarArt()
+            throws Exception {
+        HardwareTimingService timing = startLevel(0, 0);
+        Sonic3kObjectArtProvider provider =
+                (Sonic3kObjectArtProvider) GameServices.module()
+                        .getObjectArtProvider();
+        provider.reloadStandaloneArtForActTransition(0);
+
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        title.initialize(0, 0);
+        drainHardware(timing);
+        title.update();
+        provider.processRuntimeArtQueue();
+        drainHardware(timing);
+        provider.processRuntimeArtQueue();
+
+        var services = TestEnvironment.objectServices();
+        GameServices.gameState().configureSpecialStageProgress(7, 7);
+        GameServices.level().getCheckpointState().clear();
+        Sonic3kStarPostObjectInstance starPost =
+                ObjectConstructionContext.construct(
+                        services,
+                        () -> new Sonic3kStarPostObjectInstance(
+                                new ObjectSpawn(
+                                        0x0200, 0x0300, 0x34, 1,
+                                        0, false, 0)));
+        starPost.setServices(services);
+        Sonic player =
+                new Sonic("sonic", (short) 0x0200, (short) 0x0300);
+        player.setCentreX((short) 0x0200);
+        player.setCentreY((short) 0x0300);
+        player.addRings(28);
+        starPost.update(0, player);
+
+        assertLiteralJob(timing, 7, 0x187C4E, 0x5EC);
+        drainHardware(timing);
+        provider.processRuntimeArtQueue();
+        var job = timing.capture().jobs().get(7);
+        assertEquals(STARPOST_RED.compressedLength(),
+                job.compressedLength());
+        assertEquals(STARPOST_RED.destinationLength(),
+                job.destinationLength());
+        assertEquals(STARPOST_RED.moduleCount(), job.moduleCount());
+        assertEquals(STARPOST_RED.fingerprint(),
+                job.handle().submissionFingerprint());
+        assertTrue(job.claimed());
+    }
+
+    @Test
+    void productionAizPostReloadPreservesFireOverlayWithoutRequeue() {
         HardwareTimingService timing = startLevel(0, 0);
         AizPlaneIntroInstance.setMainLevelPhaseActive(true);
         Sonic3kAIZEvents act1 = new Sonic3kAIZEvents(
@@ -282,25 +336,27 @@ class TestS3kKosStructuralSequence {
         assertNotNull(request);
         GameServices.level().applySeamlessTransition(request);
 
-        assertLiteralJob(timing, 3, 0x3AF5D0, 0x500);
-        drainHardware(timing);
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module()
                         .getLevelEventProvider();
         Sonic3kAIZEvents postReload = manager.getAizEvents();
         assertNotNull(postReload);
+        assertTrue(postReload.isFireOverlayTilesLoaded(),
+                "ROM-visible fire art must survive the act reload");
+        assertTrue(postReload.getFireOverlayTileCount() > 0,
+                "the resumed fire curtain must retain its prepared tile range");
         postReload.update(1, 0);
 
-        var secondFireOverlay = timing.capture().jobs().get(3);
-        assertEquals(AIZ_FIRE.fingerprint(),
-                secondFireOverlay.handle().submissionFingerprint());
-        assertEquals(AIZ_FIRE.compressedLength(),
-                secondFireOverlay.compressedLength());
-        assertEquals(AIZ_FIRE.destinationLength(),
-                secondFireOverlay.destinationLength());
-        assertEquals(AIZ_FIRE.moduleCount(), secondFireOverlay.moduleCount());
-        assertTrue(secondFireOverlay.claimed(),
-                "the post-reload AIZ event owner must retire its second fire-overlay handle");
+        Sonic3kObjectArtProvider provider =
+                (Sonic3kObjectArtProvider) GameServices.module()
+                        .getObjectArtProvider();
+        provider.processRuntimeArtQueue();
+        assertLiteralJob(timing, 3, 0x36800C, 0x548);
+        assertLiteralJob(timing, 4, 0x367DCA, 0x52A);
+        assertLiteralJob(timing, 5, 0x3681FE, 0x55F);
+        assertEquals(6, timing.capture().jobs().size(),
+                "AIZ1BGE_Finish must continue with LoadEnemyArt, without "
+                        + "inserting a second fire-overlay job");
     }
 
     @Test

@@ -12,7 +12,7 @@
   "sidekicks": ["tails"],
   "rng_seed": "0x00000000",
   "recording_date": "2026-07-27",
-  "lua_script_version": "6.34-s3k",
+  "lua_script_version": "6.37-s3k",
   "trace_schema": 7,
   "hardware_timing_schema": 1,
   "csv_version": 7,

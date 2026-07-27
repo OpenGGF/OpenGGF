@@ -86,7 +86,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string FixtureLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.35-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.37-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =

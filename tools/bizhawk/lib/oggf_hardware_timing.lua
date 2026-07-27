@@ -165,10 +165,23 @@ local RAM = {
     queue=0xFF64,
     entry_size=6,
     capacity=4,
+    nem_decomp_queue=0xF680,
+    level_frame_counter=0xFE04,
+    object_ram=0xB000,
+    object_size=0x4A,
+    title_card_parent_slot=8,
+    title_card_code=0x0002D690,
+    title_card_wait_offset=0x48,
 }
 
 function M.new_tracker()
-    return {queue={}, next_ordinal=0, prior_modules_left=0}
+    return {
+        queue={},
+        next_ordinal=0,
+        prior_modules_left=0,
+        prior_level_frame_counter=nil,
+        title_card_load_loop_active=false,
+    }
 end
 
 local function physical_count()
@@ -180,6 +193,33 @@ local function physical_count()
         count = count + 1
     end
     return count
+end
+
+local function update_title_card_load_loop(tracker, level_frame_counter)
+    local parent = RAM.object_ram
+        + RAM.title_card_parent_slot * RAM.object_size
+    local parent_wait =
+        mainmemory.read_u16_be(parent + RAM.title_card_wait_offset)
+    local arm_now = level_frame_counter == 0
+        and mainmemory.read_u32_be(parent) == RAM.title_card_code
+        and parent_wait ~= 0
+    local admitted = level_frame_counter == 0
+        and (tracker.title_card_load_loop_active or arm_now)
+    -- loc_62CC is a frame-zero Process_Sprites loop. Its exact parent state
+    -- arms the lifecycle. Once armed, its raw wait word or the Nemesis queue
+    -- retains it even if the object code has been deleted. The exit sample
+    -- is still admitted because Process_Sprites ran before both tests clear;
+    -- the clear applies to the next sample.
+    if level_frame_counter ~= 0 then
+        tracker.title_card_load_loop_active = false
+    elseif not tracker.title_card_load_loop_active then
+        tracker.title_card_load_loop_active = arm_now
+    elseif parent_wait == 0
+        and mainmemory.read_u32_be(RAM.nem_decomp_queue) == 0
+    then
+        tracker.title_card_load_loop_active = false
+    end
+    return admitted
 end
 
 local function make_job(tracker, source, destination)
@@ -199,6 +239,14 @@ end
 function M.observe(tracker, raw_frame, output_file)
     local modules_left = mainmemory.read_u8(RAM.modules_left)
     local count = physical_count()
+    local level_frame_counter =
+        mainmemory.read_u16_be(RAM.level_frame_counter)
+    local title_card_loop_admitted =
+        update_title_card_load_loop(tracker, level_frame_counter)
+    local boundary = tracker.prior_level_frame_counter ~= nil
+        and tracker.prior_level_frame_counter == level_frame_counter
+        and not title_card_loop_admitted
+        and "vint_service" or "post_objects"
     local retired = false
     if tracker.prior_modules_left == 0x81 and #tracker.queue > 0 then
         retired = modules_left == 0 or count == 0
@@ -215,9 +263,10 @@ function M.observe(tracker, raw_frame, output_file)
         if output_file then
             output_file:write(string.format(
                 '{"event":"hardware_work_completed","raw_frame":%d,'
-                    .. '"boundary":"post_objects","kind":"kos_module_queue",'
+                    .. '"boundary":"%s","kind":"kos_module_queue",'
                     .. '"ordinal":%d,"submission_fingerprint":"%s"}\n',
-                raw_frame, completed.ordinal, completed.fingerprint))
+                raw_frame, boundary,
+                completed.ordinal, completed.fingerprint))
         end
     end
 
@@ -242,6 +291,7 @@ function M.observe(tracker, raw_frame, output_file)
             tracker, source, mainmemory.read_u16_be(address + 4))
     end
     tracker.prior_modules_left = modules_left
+    tracker.prior_level_frame_counter = level_frame_counter
 end
 
 return M

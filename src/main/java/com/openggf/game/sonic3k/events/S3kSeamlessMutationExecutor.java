@@ -43,6 +43,7 @@ public final class S3kSeamlessMutationExecutor {
     private static final int AIZ2_LEVEL_LOAD_BLOCK_INDEX = 1;
     private static final int AIZ_SECONDARY_ART_DEST_TILE = 0x01FC;
     private static final int AIZ_SECONDARY_CHUNK_DEST_BYTES = 0x0AB8;
+    private static final int AIZ_FIRE_OVERLAY_DEST_TILE = 0x0500;
     private static final int PAL_POINTER_AIZ_FIRE_INDEX = 0x0B;
     private static final int PLC_SPIKES_SPRINGS = 0x4E;
 
@@ -164,6 +165,13 @@ public final class S3kSeamlessMutationExecutor {
         LOG.info("Published prepared AIZ2 primary and secondary module art");
     }
 
+    /** Publishes the one prepared fire-overlay payload queued by the ROM. */
+    static int applyAiz1FireOverlayPreparedArt(
+            LevelManager levelManager,
+            byte[] fireOverlayTiles8x8) {
+        return applyAiz1FireOverlay(levelManager, fireOverlayTiles8x8);
+    }
+
     private static void spawnAizTransitionFloor(LevelManager levelManager) {
         if (levelManager == null || levelManager.getObjectManager() == null) {
             return;
@@ -214,6 +222,13 @@ public final class S3kSeamlessMutationExecutor {
             return;
         }
 
+        byte[] fireOverlayTiles8x8 =
+                AizPreparedTransitionArtBridge.current()
+                        .aizFireOverlayCopy();
+        if (applyAiz1FireOverlay(levelManager, fireOverlayTiles8x8) == 0) {
+            throw new IllegalStateException(
+                    "AIZ fire continuation has no prepared fire-overlay payload");
+        }
         applyImmediateMutation(levelManager, context -> {
             AizAct2LayoutAdjuster.apply(context, level.getMap());
             return MutationEffects.redrawAllTilemaps();
@@ -224,6 +239,31 @@ public final class S3kSeamlessMutationExecutor {
         Sonic3kZoneEvents.loadPaletteFromPalPointers(PAL_POINTER_AIZ_FIRE_INDEX);
         Sonic3kAIZEvents.applyFireTransitionPaletteLine4(levelManager);
         LOG.info("Applied AIZ1 post-reload act 2 layout adjustment and fire palette");
+    }
+
+    private static int applyAiz1FireOverlay(
+            LevelManager levelManager,
+            byte[] tiles8x8) {
+        if (tiles8x8 == null || tiles8x8.length == 0) {
+            return 0;
+        }
+        if (tiles8x8.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
+            throw new IllegalArgumentException(
+                    "prepared AIZ fire overlay must contain whole patterns");
+        }
+        Level level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
+            throw new IllegalStateException(
+                    "prepared AIZ fire overlay requires a live Sonic3kLevel");
+        }
+        applyImmediateMutation(levelManager, context -> {
+            sonic3kLevel.applyPatternOverlay(
+                    tiles8x8,
+                    AIZ_FIRE_OVERLAY_DEST_TILE * Pattern.PATTERN_SIZE_IN_ROM,
+                    false);
+            return MutationEffects.redrawAllTilemaps();
+        });
+        return tiles8x8.length / Pattern.PATTERN_SIZE_IN_ROM;
     }
 
     private static void applyImmediateMutation(LevelManager levelManager, LayoutMutationIntent intent) {

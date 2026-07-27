@@ -214,8 +214,8 @@ The container contract is exact:
 - filename: `hardware_timing.jsonl`;
 - metadata discovery key: `"hardware_timing_schema": 1`;
 - fixture trace schema: `trace_schema: 7`;
-- S3K standard recorder version: `6.35-s3k`;
-- S3K complete-run recorder version: `6.35-s3k-completerun`.
+- S3K standard recorder version: `6.37-s3k`;
+- S3K complete-run recorder version: `6.37-s3k-completerun`.
 
 For legacy `trace_schema <= 6` fixtures, absence of both the metadata key and
 file means no authoritative timing input; replay uses only the production
@@ -376,9 +376,17 @@ semantics, behavioral and unit tests, cross-implementation vectors where
 available, and independent code review. An existing candidate is valid when it
 was produced by the unchanged implementation that receives that review.
 Lua/native byte equivalence is optional corroboration, not a publication
-prerequisite. Version-1 differential coverage includes `6.35-s3k` standard and
-`6.35-s3k-completerun` captures and byte-exact empty streams for routes with no
-eligible completion. The stream is not declared through `aux_schema_extras`.
+prerequisite. Version-1 differential coverage includes `6.37-s3k` standard and
+`6.37-s3k-completerun` captures and byte-exact empty streams for routes with no
+eligible completion. Recorder 6.37 treats an unchanged
+`Level_frame_counter` as `vint_service` unless the ROM is inside its
+held-counter title-card load loop. That loop is armed only by the fixed
+`Obj_TitleCard` parent in physical SST slot 8 with `objoff_48` set, and its
+post-object admission remains active for the iteration selected by the ROM's
+raw `objoff_48` or `Nem_decomp_queue` exit predicates. An advancing counter
+also admits `post_objects`. A Nemesis job alone cannot arm the exception, so
+ordinary lag rows remain VInt-only. The stream is not declared through
+`aux_schema_extras`.
 
 After capture, publication records and pins the native candidate's digests,
 lengths, event counts, ordering, ranges, and semantic inventory as immutable
