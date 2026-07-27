@@ -87,9 +87,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
 
     // Bump detection box relative to signpost center
     private static final int BUMP_LEFT = -0x20;
-    private static final int BUMP_RIGHT = 0x40;
+    private static final int BUMP_RIGHT = 0x20;
     private static final int BUMP_TOP = -0x18;
-    private static final int BUMP_BOTTOM = 0x30;
+    private static final int BUMP_BOTTOM = 0x18;
 
     // Wall bounce margins relative to camera
     private static final int WALL_RIGHT_MARGIN = 0x128;
@@ -271,8 +271,18 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // =========================================================================
 
     private void updateFalling(int frameCounter, AbstractPlayableSprite player) {
-        // Apply gravity
-        yVel += GRAVITY;
+        // ROM Obj_EndSignFall owns interaction before gravity and MoveSprite2:
+        // sparkle -> EndSign_CheckPlayerHit -> addi #$C,y_vel -> movement.
+        if (isRomSparkleFrame(frameCounter)) {
+            spawnRomSparkle();
+        }
+        if (romBumpCheckAvailableAfterCooldownEntry(bumpCooldown)) {
+            checkBumpFromBelow(player);
+        } else {
+            bumpCooldown--;
+        }
+
+        yVel = romVelocityAfterGravity(yVel);
 
         // Move (8.8 fixed-point accumulation)
         subX += xVel;
@@ -282,21 +292,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         subY += yVel;
         worldY += subY >> 8;
         subY &= 0xFF;
-
-        // Decrement bump cooldown
-        if (bumpCooldown > 0) {
-            bumpCooldown--;
-        }
-
-        // Sparkle effect
-        // ROM tests the global V_int_run_count low bits, not a counter local
-        // to the signpost's allocation frame.
-        if (isRomSparkleFrame(frameCounter)) {
-            spawnRomSparkle();
-        }
-
-        // Check bump from below
-        checkBumpFromBelow(player);
 
         // Wall bounce
         var camera = services().camera();
@@ -348,6 +343,14 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
 
     static boolean isRomSparkleFrame(int frameCounter) {
         return (frameCounter & (SPARKLE_INTERVAL - 1)) == 0;
+    }
+
+    static int romVelocityAfterGravity(int velocity) {
+        return (short) (velocity + GRAVITY);
+    }
+
+    static boolean romBumpCheckAvailableAfterCooldownEntry(int cooldown) {
+        return (cooldown & 0xFF) == 0;
     }
 
     /**

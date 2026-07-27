@@ -51472,3 +51472,40 @@ stage boot, return, and water-restore lifecycle tests also passed. The literal
 S1 inventory covered all 30 concrete replay classes (30 tests), and the
 literal S2 inventory covered all 20 concrete replay classes (21 tests).
 Neither inventory had a missing class, failure, error, or skip.
+## 2026-07-27 - AIZ end-sign owner lifecycle
+
+Worktree `.worktrees/trace-s3k-aiz-shadow-owner`, branch
+`bugfix/ai-trace-s3k-aiz-shadow-owner`, based on `203bf3145`.
+
+ROM verification found that the defeated-miniboss collision bridge overlaps
+twelve entries of `Obj_EndSignControlWait`'s `$77` timer. Carrying those
+entries into the wait owner, rather than subtracting a fixed sixteen entries
+from the later signpost timer, restores the complete-run sign's physical
+player interaction. `Obj_EndSignFall` now checks hits before gravity and
+movement, treats `EndSign_Range` as offset-plus-width pairs, and preserves the
+cooldown byte's decrement-and-return entry.
+
+Fresh standalone command:
+
+```bash
+mvn -Dmse=off -q \
+  -Dtest=TestS3kAizTraceReplay#replayMatchesTrace \
+  -Dsonic3k.rom.path=<discovered-locked-on-rom> test
+```
+
+- Before: 1,275 errors, first f8215 `player_animation_id`
+  (expected `$0005`, actual `$0013`).
+- After: 1,200 errors, first f8837 `rings`
+  (expected `0`, actual `100`).
+- Result: frontier advances 622 frames and removes 75 errors.
+
+Fresh complete-run command:
+
+```bash
+mvn -Dmse=off -q \
+  -Dtest=TestS3kAizCompleteRunTraceReplay#replayMatchesTrace \
+  -Dsonic3k.rom.path=<discovered-locked-on-rom> test
+```
+
+- 26 errors, first f26107 `x` (expected `$0000`, actual `$4A9B`).
+- Result: accepted complete-run frontier retained.
